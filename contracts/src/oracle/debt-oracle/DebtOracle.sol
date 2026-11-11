@@ -58,9 +58,10 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         DebtOracleInitParams calldata params
     ) external override initializer {
         if (params.timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, params.timelock);
-        if (!_readListed(params.marketRegistry, params.asset)) revert NotDebtAsset(params.asset);
-        (bool routesOk,,) = _readRouteFeeds(params.marketRegistry, params.asset);
-        if (!routesOk) revert NotDebtAsset(params.asset);
+        if (!_readListed(params.marketRegistry, params.asset) || !_routesReadable(params.marketRegistry, params.asset))
+        {
+            revert NotDebtAsset(params.asset);
+        }
         _checkPokeMinGas(params.pokeMinGas);
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -74,7 +75,7 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         $.pokeMinGas = params.pokeMinGas;
         DebtEvaluation memory e = _evaluate();
         if (e.state != PriceState.Live) revert NotLive(uint8(e.state), e.reasons);
-        $.accepted = Accepted({price8: SafeCast.toUint128(e.quote), updatedAt: e.quoteUpdatedAt});
+        _accept($, e);
         $.routeVersion = e.routeVersion;
         $.lastRoute = uint8(e.routeUsed);
         $.lastCachedWindow = e.cachedWindow;
@@ -164,7 +165,7 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         _applyFailure($, e);
         _applyDisagreement($, e, versionChanged);
         if (e.state == PriceState.Live && e.quoteUpdatedAt > $.accepted.updatedAt) {
-            $.accepted = Accepted({price8: SafeCast.toUint128(e.quote), updatedAt: e.quoteUpdatedAt});
+            _accept($, e);
             emit DebtPriceAccepted(e.quote, e.quoteUpdatedAt, e.routeUsed);
         }
         if (e.sourceTimestampFailure && !$.expiredLatched && block.timestamp >= uint256(e.staleAt) + e.cachedWindow) {
@@ -293,6 +294,25 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         $.recoveredAt = rec;
         $.expiredLatched = false;
         emit DebtGraceStarted(rec, rec + e.graceDuration, fromLatch);
+    }
+
+    /// @dev Stores the evaluation's quote and its source timestamp as the accepted price (`REQ-ORACLE-029`); shared by
+    /// `initialize` and `poke()`.
+    /// @custom:spec REQ-ORACLE-029, REQ-ORACLE-091
+    function _accept(
+        DebtOracleLayout storage $,
+        DebtEvaluation memory e
+    ) internal {
+        $.accepted = Accepted({price8: SafeCast.toUint128(e.quote), updatedAt: e.quoteUpdatedAt});
+    }
+
+    /// @dev Whether the registry returns readable routes in force for `asset` (`initialize`).
+    /// @custom:spec REQ-ORACLE-091
+    function _routesReadable(
+        address registry,
+        address asset
+    ) internal view returns (bool ok) {
+        (ok,,) = _readRouteFeeds(registry, asset);
     }
 
     /// @dev `REQ-ORACLE-031`: every leg whose read decoded records its aggregator, round and timestamp; legs that did

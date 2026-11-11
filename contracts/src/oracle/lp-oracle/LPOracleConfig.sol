@@ -27,9 +27,11 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// so a standby switch reaches the feed in the same block. The return data is read as the words of
 /// `OracleInputsLayout`, each range-checked, so a malformed return is a failed read and never a decoder revert. A failed
 /// read, another market, a route with no leg or more than two legs, or a leg with no feed definition fails the market
-/// with reason bit 1 (`REQ-ORACLE-017`). Token decimals are the values stored at `initialize` (`REQ-ORACLE-058`); the
+/// with reason bit 1 (`REQ-ORACLE-017`); an out-of-range second-source word only leaves that token unconfirmed
+/// (`REQ-ORACLE-100`). Token decimals are the values stored at `initialize` (`REQ-ORACLE-058`); `poke()` re-reads them
+/// (`REQ-ORACLE-107`) and every evaluation fails while the last `poke()` found one changed or unreadable. The
 /// quote-change cap is the chain constant `MAX_QUOTE_CHANGE_BPS` (`REQ-ORACLE-103`).
-/// @custom:spec REQ-ORACLE-017, REQ-ORACLE-083, REQ-ORACLE-094, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, SPEC-ORC-021, SPEC-ORC-023
+/// @custom:spec REQ-ORACLE-017, REQ-ORACLE-083, REQ-ORACLE-094, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-107, SPEC-ORC-021, SPEC-ORC-023
 abstract contract LPOracleConfig is LPOracleReads {
     // ─── Live evaluation ───
 
@@ -80,7 +82,9 @@ abstract contract LPOracleConfig is LPOracleReads {
             uint256 k = OracleInputsLayout.HEAD_WORDS + i * stride;
             TokenEval memory t = e.tokens[i];
             if (!_setToken(t, w, k)) return false;
-            if (secondSources && !_setSecond(t, w, k + OracleInputsLayout.TOKEN_WORDS)) return false;
+            // A second-source word beyond its type leaves the token's second source unset (`None`): the token is
+            // unconfirmed and the primary pricing goes on (`REQ-ORACLE-100`).
+            if (secondSources) _setSecond(t, w, k + OracleInputsLayout.TOKEN_WORDS);
         }
         e.cfg.ok = true;
     }
@@ -170,17 +174,19 @@ abstract contract LPOracleConfig is LPOracleReads {
     }
 
     /// @dev The second source in force from `k`: kind, source, pool reference, maximum age, window, tolerance and the
-    /// source's pinned decimals and bounds; false for a word beyond its type.
+    /// source's pinned decimals and bounds. A word beyond its type sets nothing, so the token's second source stays
+    /// `None` and the token is unconfirmed (token bit 5); the ParameterStore's setters refuse such a configuration, and
+    /// this check keeps the rule for any store implementation behind the proxy.
     function _setSecond(
         TokenEval memory t,
         uint256[] memory w,
         uint256 k
-    ) private pure returns (bool) {
+    ) private pure {
         if (
             _at(w, k) > uint256(type(SecondSourceKind).max) || _at(w, k + 1) > type(uint160).max
                 || _at(w, k + 3) > type(uint32).max || _at(w, k + 4) > type(uint32).max
                 || _at(w, k + 5) > type(uint16).max || _at(w, k + 6) > type(uint8).max
-        ) return false;
+        ) return;
         t.second = SecondSource({
             kind: SecondSourceKind(uint8(_at(w, k))),
             source: address(uint160(_at(w, k + 1))),
@@ -191,7 +197,6 @@ abstract contract LPOracleConfig is LPOracleReads {
         });
         (t.secondDecimals, t.secondMinAnswer, t.secondMaxAnswer) =
         (uint8(_at(w, k + 6)), int256(_at(w, k + 7)), int256(_at(w, k + 8)));
-        return true;
     }
 
     // forge-lint: disable-end(unsafe-typecast)
@@ -211,7 +216,12 @@ abstract contract LPOracleConfig is LPOracleReads {
     // ─── Seed evaluation (initialize and checkConfig) ───
 
     /// @dev Loads `config` as the configuration, its routes as the routes in force and its legs' pinned settings, and
-    /// reads every leg; the stored route versions stand for the versions, so no version change is observed.
+    /// reads every leg; the stored route versions stand for the versions, so no version change is observed. Every
+    /// token's `decimals()` is read and compared with the stored value, so the seed relies on a verification at `now`.
+    /// The token-count and market check is defensive: `checkConfig` returns `CHECK_TOKENS` on the same condition
+    /// before it reaches the seed, and `initialize` stores the tokens and market from the configuration it seeds, so no
+    /// current path reaches it (recorded as unreachable in `security/coverage-thresholds.json`); it stays for any later
+    /// initialization or upgrade flow that calls this function, and is reviewed whenever that flow changes.
     /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-058, REQ-ORACLE-059
     function _loadSeed(
         Evaluation memory e,
@@ -243,6 +253,7 @@ abstract contract LPOracleConfig is LPOracleReads {
             _readRoute(t.routes[0]);
             _readRoute(t.routes[1]);
         }
+        e.decimalsCheckedAt = _now64();
     }
 
     /// @dev Copies the market-wide fields of `config`.
@@ -286,6 +297,29 @@ abstract contract LPOracleConfig is LPOracleReads {
             leg.liquidationAge = lc.liquidationPriceMaxAge;
         }
         return true;
+    }
+
+    // ─── Token decimals (poke) ───
+
+    /// @dev Reads every token's `decimals()` and compares it with the value stored at `initialize` (`REQ-ORACLE-107`).
+    /// A verified evaluation relies on `now`; a failed read or a different value fails the market with reason bit 1 and
+    /// records the first such token, what it read and whether it was readable. The stored decimals are never replaced.
+    /// @custom:spec REQ-ORACLE-107, REQ-ORACLE-017
+    function _verifyDecimals(
+        Evaluation memory e
+    ) internal view {
+        Layout storage $ = _s();
+        uint256 n = $.tokens.length;
+        for (uint256 i = 0; i < n; ++i) {
+            (bool readable, uint8 dec) = _tokenDecimals($.tokens[i]);
+            if (readable && dec == $.tokenDecimals[i]) continue;
+            (e.decimalsMismatch, e.decimalsToken, e.decimalsRead, e.decimalsReadable) =
+            (true, SafeCast.toUint8(i), dec, readable);
+            e.decimalsCheckedAt = $.decimalsCheckedAt;
+            _failRead(e);
+            return;
+        }
+        e.decimalsCheckedAt = _now64();
     }
 
     // ─── Sequencer ───

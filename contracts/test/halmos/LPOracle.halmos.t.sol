@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {Evaluation, TokenEval} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {Evaluation, LegEval, TokenEval} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LPOracleHarnessPokeLogic} from "../utils/harness/LPOracleHarness.sol";
 import {Test} from "forge-std/Test.sol";
@@ -24,6 +24,7 @@ contract LPOracleDecisionHarness is LPOracleHarnessPokeLogic {
         uint256 fresh;
         uint256 lower;
         uint256 accepted;
+        uint64 decimalsCheckedAt;
     }
 
     struct Outcome {
@@ -37,6 +38,7 @@ contract LPOracleDecisionHarness is LPOracleHarnessPokeLogic {
         uint64 disagreeSince;
         uint32 borrowMaxAge;
         uint32 liquidationMaxAge;
+        uint256 reasons;
     }
 
     constructor() LPOracleHarnessPokeLogic(address(0x7173), 12, 556_588, 3_000_000, false) {}
@@ -51,7 +53,13 @@ contract LPOracleDecisionHarness is LPOracleHarnessPokeLogic {
         $.accepted.answer = int256(x.accepted);
         // No accepted price in this block: the quote-change cap never applies here.
         $.acceptedBlock = type(uint64).max;
-        e.tokens = new TokenEval[](0);
+        // One token quoted on a one-leg primary read now, so the age limits are the leg's and `borrowAllowed` can hold.
+        e.tokens = new TokenEval[](1);
+        TokenEval memory t = e.tokens[0];
+        (t.used, t.chosen, t.chosenAt) = (1, 1, uint64(block.timestamp));
+        t.routes[0].legCount = 1;
+        LegEval memory leg = t.routes[0].legs[0];
+        (leg.updatedAt, leg.borrowAge, leg.liquidationAge) = (uint64(block.timestamp), 88_200, 88_200);
         e.cfg.ok = true;
         e.cfg.cachedWindow = x.cachedWindow;
         e.cfg.disagreementPauseMax = x.pauseMax;
@@ -63,6 +71,9 @@ contract LPOracleDecisionHarness is LPOracleHarnessPokeLogic {
         e.reasons = x.reasons;
         e.fresh = x.fresh;
         e.lower = x.lower;
+        e.decimalsCheckedAt = x.decimalsCheckedAt;
+        // A chain without a sequencer feed: ready (SPEC-ORC-021), so borrowAllowed depends on the gates under test.
+        e.seq.ready = true;
     }
 
     function decide(
@@ -80,6 +91,7 @@ contract LPOracleDecisionHarness is LPOracleHarnessPokeLogic {
         o.disagreeSince = e.disagreeSince;
         o.borrowMaxAge = e.borrowMaxAge;
         o.liquidationMaxAge = e.liquidationMaxAge;
+        o.reasons = e.reasons;
     }
 
     function writeTimers(
@@ -222,5 +234,42 @@ contract LPOracleHalmosTest is Test {
         }
         if (failed && failedSince != 0) assertEq(failedAfter, failedSince, "the failure timer moved");
         if (!failed) assertEq(failedAfter, 0, "a market that is not failed keeps a failure timer");
+    }
+
+    // PROP-100 verifies: REQ-ORACLE-100, REQ-ORACLE-107, REQ-ORACLE-016, SPEC-ORC-020, Q-323
+    // Sources: MATH-UO-72
+    /// @notice The second-source result (market bit 16) and the age of the token-decimals verification are borrow-only
+    /// gates: two evaluations that differ only in them have the same state, served price, `liquidationPaused`, age
+    /// limits and failure start, and `borrowAllowed` implies Live, bit 16 clear and a verification within 7,200 s.
+    function check_PROP_100_borrowOnlyGates(
+        bool failed,
+        bool disagreeing,
+        bool unconfirmed,
+        uint64 checkedA,
+        uint64 checkedB,
+        uint256 fresh,
+        uint256 accepted,
+        uint64 failedSince
+    ) public {
+        vm.assume(checkedA <= block.timestamp && checkedB <= block.timestamp);
+        LPOracleDecisionHarness.Inputs memory x =
+            _inputs(failed, disagreeing, false, failedSince, 0, 3600, 3600, fresh, fresh, accepted);
+        x.decimalsCheckedAt = checkedA;
+        LPOracleDecisionHarness.Outcome memory a = h.decide(x);
+        x.decimalsCheckedAt = checkedB;
+        if (unconfirmed) x.reasons |= uint256(1) << 16;
+        LPOracleDecisionHarness.Outcome memory b = h.decide(x);
+        assertEq(uint8(a.state), uint8(b.state), "state");
+        assertEq(a.served, b.served, "served price");
+        assertEq(a.liquidationPaused, b.liquidationPaused, "liquidationPaused");
+        assertEq(a.failureStart, b.failureStart, "failure start");
+        assertEq(a.borrowMaxAge, b.borrowMaxAge, "borrow age");
+        assertEq(a.liquidationMaxAge, b.liquidationMaxAge, "liquidation age");
+        if (b.borrowAllowed) {
+            assertEq(uint8(b.state), uint8(PriceState.Live), "borrowAllowed only when Live");
+            assertFalse(unconfirmed, "borrowAllowed with an unconfirmed token");
+            assertLe(block.timestamp - checkedB, 7200, "borrowAllowed with an old verification");
+        }
+        if (block.timestamp - checkedB > 7200) assertTrue(b.reasons & (uint256(1) << 19) != 0, "bit 19");
     }
 }

@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-"""MATH-UO-50..57 — AMM-neutral LPOracle rules of [2.10]: per-feed freshness, the clamped
+"""MATH-UO-50..57 and 72 — AMM-neutral LPOracle rules of [2.10]: per-feed freshness, the clamped
 concentrated-liquidity composition with floor-then-one-unit, monotonicity in every price, the
 n-token USD band, second-source agreement, the L2 sequencer gate, the observation buffer per
-chain block time and the 63/64 gas guard.
+chain block time, the 63/64 gas guard, and the token-decimals verification with the
+second-source confirmation as borrow-only gates.
 
 Formulas (final text of spec/02-contracts/10-lp-oracle.md):
   SPEC-ORC-019  feedMaxAge = feedHeartbeat + heartbeatMargin; borrowPriceMaxAge <= feedMaxAge
@@ -17,6 +18,7 @@ Formulas (final text of spec/02-contracts/10-lp-oracle.md):
   SPEC-ORC-021  ready = up and now >= startedAt + grace; down pauses seizure; unknown blocks borrow only
   SPEC-ORC-022  twapMinObservations = ceil(W / blockTime) + 1
   SPEC-ORC-023  pre-call check gasleft >= ceil(64 G / 63) + POST; forwarded = min(G, g - floor(g/64))
+  REQ-ORACLE-107 borrowAllowed requires now - decimalsCheckedAt <= 7,200; a mismatch fails the market
 """
 import importlib.util
 import math
@@ -247,7 +249,50 @@ prove('MATH-UO-57e', 'the per-read floor is at most the single-term bound W_poke
 pre_i = lambda Gk: (64 * Gk + 62) // 63 + 5_000
 note('MATH-UO-57d', 'SPEC-ORC-023 example', f'G = 50,000: bound {pre_i(50_000)}; forwarded at that gasleft '
      f'{min(50_000, pre_i(50_000) - pre_i(50_000) // 64)}; G_inputs(2) = 150,000 + 2 * 140,000 = '
-     f'{150_000 + 2 * 140_000}, bound {pre_i(430_000)}; measured worst-case two-token poke: W_poke = 805,471, binding '
-     f'feed read at u = 698,983: {698_983 + pre_i(50_000)}; floor max(...) = {max(805_471, 698_983 + pre_i(50_000))}')
+     f'{150_000 + 2 * 140_000}, bound {pre_i(430_000)}; measured worst-case two-token poke with the token-decimals '
+     f'reads of REQ-ORACLE-107: W_poke = 830,781, binding feed read at u = 718,836: {718_836 + pre_i(50_000)}; floor '
+     f'max(...) = {max(830_781, 718_836 + pre_i(50_000))}; POKE_MIN_GAS_FLOOR = 900,000 leaves '
+     f'{900_000 - max(830_781, 718_836 + pre_i(50_000))} gas until the fork calibration')
+gl1, gl2, uk, Gk = Ints('gasleft1 gasleft2 uk Gk')
+fwdf = lambda gl, Gx: If(Gx < gl - gl / 64, Gx, gl - gl / 64)
+prove('MATH-UO-57f', 'any two gas limits at which a read passes its pre-call check forward the same G to it, so a poke '
+      'that completes reads every source with its full gas and computes the same failure, timers and decimals result '
+      'at any limit; a limit short of a check reverts before that read and commits nothing',
+      [Gk > 0, uk >= 0, gl1 - uk >= pre(Gk), gl2 - uk >= pre(Gk)], fwdf(gl1 - uk, Gk) == fwdf(gl2 - uk, Gk))
+c_e, p_e = Ints('callerLimit entryLeft')
+prove('MATH-UO-57g', 'the entry check measures gas left at the implementation: with a proxy that keeps 1/64 and spends '
+      'o >= 0 before its delegatecall, entry gas <= caller limit - o - floor((limit - o)/64) < caller limit, so a '
+      'transaction must cover pokeMinGas plus the work before the check',
+      [c_e >= 0, P >= 0, c_e - P >= 0, p_e == (c_e - P) - (c_e - P) / 64, c_e > 0], p_e <= c_e)
+
+# ---------------------------------------------------------------- MATH-UO-72 decimals verification, confirmation
+# MATH-UO-72 verifies: REQ-ORACLE-107, REQ-ORACLE-100, SPEC-ORC-020, REQ-ORACLE-016
+MAX_VERIFY_AGE = 7_200
+t72, chk, keeper = Ints('now72 decimalsCheckedAt keeperInterval')
+mismatch, otherFail, liveBits, seqReady, confirmed, ageOk, otherPause = Bools(
+    'mismatch otherFailure noDriftBits sequencerReady confirmed servedAgeOk otherSeizurePause')
+failed72 = Or(mismatch, otherFail)
+live72 = And(Not(failed72), liveBits)
+verified = t72 - chk <= MAX_VERIFY_AGE
+borrow72 = And(live72, seqReady, confirmed, ageOk, verified)
+paused72 = Or(failed72, otherPause)
+b72 = [chk >= 0, chk <= t72]
+prove('MATH-UO-72a', 'borrowAllowed implies every token confirmed and a token-decimals verification at most 7,200 s old',
+      b72, Implies(borrow72, And(confirmed, t72 - chk <= MAX_VERIFY_AGE)))
+prove('MATH-UO-72b', 'a decimals mismatch fails the market: borrowing and this market\'s seizure are both blocked', b72,
+      Implies(mismatch, And(Not(borrow72), paused72, Not(live72))))
+prove('MATH-UO-72c', 'an unconfirmed token or an old verification blocks borrowing only: the state and the seizure '
+      'pause are those of the same evaluation with every token confirmed and a fresh verification', b72,
+      And(live72 == And(Not(failed72), liveBits), paused72 == Or(failed72, otherPause),
+          Implies(Or(Not(confirmed), Not(verified)), Not(borrow72))))
+prove('MATH-UO-72d', 'with a successful poke at least every keeper interval of at most 3,600 s, the age gate never '
+      'blocks: two intervals fit 7,200 s, so one missed keeper run blocks nothing', b72 + [keeper <= 3_600, keeper > 0],
+      Implies(t72 - chk <= 2 * keeper, verified))
+witness('MATH-UO-72e', 'delayed detection: a token changed at c and read by a view at v before the next poke at p > v '
+        'is still priced with the stored decimals (window p - c); a risk-increasing call pokes first (p = v), so its '
+        'window is empty', [chk == 1_000, t72 == 1_500, keeper == 3_600, t72 < chk + keeper])
+note('MATH-UO-72f', 'REQ-ORACLE-107 example', f'verified at 1,000; a poke-less view at {1_000 + MAX_VERIFY_AGE} allows '
+     f'borrowing, at {1_000 + MAX_VERIFY_AGE + 1} it does not (reason bit 19); a 6 -> 18 decimals change found at '
+     f'1,060 fails the market from 1,060: Cached until {1_060 + 3_600 - 1}, Expired from {1_060 + 3_600}')
 
 finish()

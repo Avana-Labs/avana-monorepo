@@ -16331,12 +16331,24 @@
     ]
   },
   "REQ-ORACLE-016": {
-    "hash": "476f272215ee6f10",
+    "hash": "9e95b8d961a55d42",
     "checks": [
+      "DebtOracleEvaluation",
       "FV-CTL-68",
       "ILPOracle",
+      "LPOracle",
+      "LPOracleEval",
+      "LPOracleTypes",
+      "LPOracleViews",
+      "MATH-UO-72",
+      "PROP-100",
       "PriceState",
-      "PriceStateView"
+      "PriceStateView",
+      "TEST-039",
+      "TEST-042",
+      "TEST-219",
+      "TEST-276",
+      "TEST-294"
     ]
   },
   "REQ-ORACLE-017": {
@@ -16416,14 +16428,21 @@
     ]
   },
   "REQ-ORACLE-024": {
-    "hash": "62ab4ed84b0c52bd",
+    "hash": "40b3d8f343593de2",
     "checks": [
+      "DebtOracle",
       "FV-CTL-65",
       "HYP-37",
       "IDebtOracleErrors",
       "ILPOracle",
       "ILPOracleErrors",
-      "MATH-UO-57"
+      "LPOracle",
+      "LPOraclePoke",
+      "LPOraclePokeLogic",
+      "MATH-UO-57",
+      "TEST-042",
+      "TEST-062",
+      "TEST-159"
     ]
   },
   "REQ-ORACLE-025": {
@@ -16434,10 +16453,19 @@
     ]
   },
   "REQ-ORACLE-026": {
-    "hash": "853bd9df3db396f4",
+    "hash": "e8f6cba61085275a",
     "checks": [
+      "DebtOracle",
+      "DebtOracleEvaluation",
       "FV-CTL-66",
-      "ILPOracle"
+      "ILPOracle",
+      "ILPOracleLogic",
+      "LPOracle",
+      "LPOracleEval",
+      "LPOraclePoke",
+      "LPOraclePokeLogic",
+      "LPOracleTypes",
+      "TEST-042"
     ]
   },
   "REQ-ORACLE-027": {
@@ -16543,13 +16571,22 @@
     ]
   },
   "REQ-ORACLE-038": {
-    "hash": "59508965fed922af",
+    "hash": "fe32e9f10e2ee25f",
     "checks": [
+      "DebtOracle",
       "ILPOracle",
       "ILPOracleErrors",
       "ILPOracleEvents",
+      "LPOracle",
+      "LPOracleStorage",
+      "LPPriceMath",
       "MATH-UO-57",
-      "SYM-172"
+      "MATH-UO-66",
+      "PROP-034",
+      "SYM-172",
+      "TEST-042",
+      "TEST-062",
+      "TEST-231"
     ]
   },
   "REQ-ORACLE-039": {
@@ -16725,7 +16762,7 @@
     "checks": []
   },
   "REQ-ORACLE-058": {
-    "hash": "19236deb8a6d26c1",
+    "hash": "5e1cff6ffe83e0a5",
     "checks": [
       "DebtOracle",
       "ILPOracle",
@@ -16738,7 +16775,9 @@
       "LPOracleListingLogic",
       "LPOracleStorage",
       "TEST-062",
-      "TEST-242"
+      "TEST-219",
+      "TEST-242",
+      "TEST-294"
     ]
   },
   "REQ-ORACLE-059": {
@@ -16777,10 +16816,14 @@
     ]
   },
   "REQ-ORACLE-062": {
-    "hash": "c8eb6e973c26a93d",
+    "hash": "09460d172ff2bc7c",
     "checks": [
       "FV-CTL-125",
-      "ILPOracle"
+      "ILPOracle",
+      "ILPOracleErrors",
+      "LPOracle",
+      "LPOraclePoke",
+      "TEST-062"
     ]
   },
   "REQ-ORACLE-063": {
@@ -16819,7 +16862,7 @@
     "checks": []
   },
   "REQ-ORACLE-069": {
-    "hash": "e4f19a81d956bceb",
+    "hash": "5097e53ff7416d20",
     "checks": [
       "TEST-040",
       "TEST-219"
@@ -16883,11 +16926,21 @@
     ]
   },
   "REQ-ORACLE-080": {
-    "hash": "8a189d47623e01d6",
+    "hash": "8b3b37dee603b276",
     "checks": [
+      "DebtOracle",
+      "DebtOracleStorage",
       "FV-CTL-86",
       "FV-CTL-88",
-      "ILPOracle"
+      "ILPOracle",
+      "ILPOracleErrors",
+      "ILPOracleLogic",
+      "ILPOracleRouter",
+      "LPOracle",
+      "LPOracleLogicBase",
+      "LPOracleStorage",
+      "TEST-062",
+      "TEST-242"
     ]
   },
   "REQ-ORACLE-081": {
@@ -17162,7 +17215,7 @@
     ]
   },
   "REQ-ORACLE-100": {
-    "hash": "b7ae143c04baf412",
+    "hash": "2f2f6f50596a23fe",
     "checks": [
       "DebtOracleEvaluation",
       "DebtPriceView",
@@ -17178,16 +17231,21 @@
       "LPOracleViews",
       "LPPriceMath",
       "MATH-UO-54",
+      "MATH-UO-72",
       "OracleConfig",
+      "PROP-100",
       "ParameterStoreForwardAdmin",
       "PriceStateView",
       "SecondSource",
       "SecondSourceKind",
       "TEST-038",
+      "TEST-040",
+      "TEST-042",
       "TEST-157",
       "TEST-219",
       "TEST-250",
       "TEST-276",
+      "TEST-294",
       "TokenOracleConfig",
       "TokenPriceView"
     ]
@@ -17197,10 +17255,19 @@
     "checks": []
   },
   "REQ-ORACLE-102": {
-    "hash": "b1e8ae25c2860de8",
+    "hash": "7559a062c22141a2",
     "checks": [
+      "DebtOracleReads",
       "ILPOracle",
-      "MATH-UO-57"
+      "LPOracleCalls",
+      "LPOracleReads",
+      "LPPriceMath",
+      "MATH-UO-57",
+      "MATH-UO-66",
+      "TEST-038",
+      "TEST-042",
+      "TEST-219",
+      "TEST-276"
     ]
   },
   "REQ-ORACLE-103": {
@@ -24767,7 +24834,7 @@
     ]
   },
   "SPEC-ORC-023": {
-    "hash": "04ea64fd48bc15fe",
+    "hash": "2364a166a948b155",
     "checks": [
       "DebtOracleReads",
       "ILPOracle",

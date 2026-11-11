@@ -15,7 +15,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// (concentrated liquidity: `LPOracleCL`) implements the hooks as internal functions and keeps its own market struct
 /// (pool and exact shape) in its own namespace. Immutables are per chain and per implementation: `TIMELOCK`,
 /// `CHAIN_BLOCK_TIME`, `POKE_MIN_GAS_FLOOR`, `POKE_MIN_GAS_CEILING` and whether the chain runs an L2 sequencer.
-/// @custom:spec REQ-ORACLE-080, REQ-ORACLE-097, REQ-ORACLE-103, SPEC-ORC-023, Q-240, Q-321
+/// @custom:spec REQ-ORACLE-080, REQ-ORACLE-097, REQ-ORACLE-103, REQ-ORACLE-107, SPEC-ORC-023, Q-240, Q-321
 abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
     /// @notice The aggregator and round a writing call last read for one leg (`REQ-ORACLE-031`).
     struct Seen {
@@ -63,6 +63,10 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
         uint64[8] routeVersion;
         uint8[8] lastRoute;
         Seen[2][2][8] seen;
+        // Last time a `poke()` (or `initialize`) read every token's `decimals()` equal to `tokenDecimals`, and whether
+        // the last `poke()` found a token's decimals unreadable or different (`REQ-ORACLE-107`).
+        uint64 decimalsCheckedAt;
+        bool decimalsInvalid;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracle")) - 1)) & ~bytes32(uint256(0xff)).
@@ -88,6 +92,10 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
     uint16 internal constant MAX_QUOTE_CHANGE_BPS = 100;
     /// @notice Interval of the price checkpoint, seconds (`REQ-ORACLE-088`).
     uint64 internal constant CHECKPOINT_INTERVAL = 3600;
+    /// @notice Largest age of the last successful token-decimals verification at which `borrowAllowed` may be true,
+    /// seconds (`REQ-ORACLE-107`): two keeper intervals of `REQ-ORACLE-037`, so one missed keeper run blocks nothing
+    /// and a stopped keeper blocks new borrowing and withdraw-with-debt after two hours.
+    uint64 internal constant DECIMALS_CHECK_MAX_AGE = 7200;
     /// @notice Price shock a market must survive at listing (`REQ-ORACLE-050`).
     uint256 internal constant LISTING_SHOCK_FACTOR = 100;
     /// @notice Largest feed heartbeat and heartbeat margin a leg may carry, seconds (`REQ-ORACLE-054`, `SPEC-ORC-019`).

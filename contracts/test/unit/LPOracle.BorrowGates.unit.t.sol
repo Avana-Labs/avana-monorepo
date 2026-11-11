@@ -65,6 +65,8 @@ contract LPOracleBorrowGatesUnitTest is LPOracleFixture {
     function test_TEST_250_borrowAgeAtHeartbeatPlusMargin() public {
         _sequencerUp(T0 - 7200);
         vm.warp(T0 + MAX_AGE);
+        // A borrow pokes first (REQ-ORACLE-036), which also verifies the token decimals (REQ-ORACLE-107).
+        oracle.poke();
         PriceStateView memory v = _state();
         assertEq(v.borrowPriceMaxAge, MAX_AGE);
         assertEq(v.liquidationPriceMaxAge, MAX_AGE);

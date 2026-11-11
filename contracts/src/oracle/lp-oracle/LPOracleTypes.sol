@@ -9,7 +9,7 @@ import {SecondSource} from "../../types/SecondSource.sol";
 /// @title LPOracleCodes
 /// @notice Leg and route classes, route slots, market and token reason bits and `checkConfig` bits of the LPOracle
 /// (2.10 Reason bits, `REQ-ORACLE-003`, `REQ-ORACLE-004`, `REQ-ORACLE-046`).
-/// @custom:spec REQ-ORACLE-003, REQ-ORACLE-004, REQ-ORACLE-042, REQ-ORACLE-046
+/// @custom:spec REQ-ORACLE-003, REQ-ORACLE-004, REQ-ORACLE-042, REQ-ORACLE-046, REQ-ORACLE-107
 library LPOracleCodes {
     // Leg and route classes (`REQ-ORACLE-003`, `REQ-ORACLE-004`).
     uint8 internal constant VALID = 0;
@@ -42,6 +42,7 @@ library LPOracleCodes {
     uint256 internal constant SECOND_SOURCE_DISAGREE = 1 << 16;
     uint256 internal constant POOL_REENTRANCY_LOCKED = 1 << 17;
     uint256 internal constant QUOTE_CHANGE_CAPPED = 1 << 18;
+    uint256 internal constant DECIMALS_UNVERIFIED = 1 << 19;
 
     /// @dev Bits 2 to 6 make a market that is not failed Drifting (`REQ-ORACLE-018`).
     uint256 internal constant DRIFTING_BITS = (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6);
@@ -191,7 +192,7 @@ struct SequencerEval {
 }
 
 /// @notice One evaluation of the market: what every view and `poke()` computes with the same code in a block.
-/// @custom:spec REQ-ORACLE-016, REQ-ORACLE-026, REQ-ORACLE-042, SPEC-ORC-012, SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-017
+/// @custom:spec REQ-ORACLE-016, REQ-ORACLE-026, REQ-ORACLE-042, REQ-ORACLE-107, SPEC-ORC-012, SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-017
 struct Evaluation {
     ConfigEval cfg;
     TokenEval[] tokens;
@@ -229,4 +230,11 @@ struct Evaluation {
     uint64 graceEndsAt;
     uint32 borrowMaxAge;
     uint32 liquidationMaxAge;
+    // Token decimals (`REQ-ORACLE-107`): the time of the last successful verification this evaluation relies on (now
+    // when this `poke()` verified them), and, for a `poke()` whose verification failed, the token and what it read.
+    uint64 decimalsCheckedAt;
+    bool decimalsMismatch;
+    uint8 decimalsToken;
+    uint8 decimalsRead;
+    bool decimalsReadable;
 }

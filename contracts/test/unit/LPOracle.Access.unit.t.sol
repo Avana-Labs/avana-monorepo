@@ -76,9 +76,9 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         oracle.setPokeMinGas(POKE_CEILING + 1);
         vm.prank(tl);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PokeMinGasUpdated(POKE_FLOOR, 700_000);
-        oracle.setPokeMinGas(700_000);
-        assertEq(oracle.pokeMinGas(), 700_000);
+        emit ILPOracleEvents.PokeMinGasUpdated(POKE_FLOOR, 1_000_000);
+        oracle.setPokeMinGas(1_000_000);
+        assertEq(oracle.pokeMinGas(), 1_000_000);
         LPOracleHarness next = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, admin));

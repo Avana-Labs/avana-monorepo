@@ -31,7 +31,30 @@ abstract contract LPOracleEval is LPOracleConfig {
     ) internal view returns (Evaluation memory e) {
         _allocate(e);
         _loadLive(e, secondSources);
+        _storedDecimals(e);
         _complete(e, secondSources);
+    }
+
+    /// @dev The evaluation of `poke()`: the evaluation of `getPriceState()` with the token decimals verified by reading
+    /// them (`_verifyDecimals`) in place of the stored result of the last `poke()` (`REQ-ORACLE-107`).
+    /// @custom:spec REQ-ORACLE-026, REQ-ORACLE-107
+    function _evaluatePoke() internal view returns (Evaluation memory e) {
+        _allocate(e);
+        _loadLive(e, true);
+        _verifyDecimals(e);
+        _complete(e, true);
+    }
+
+    /// @dev The token-decimals result of the last `poke()` (`REQ-ORACLE-107`): its verification time, and reason bit 1
+    /// with a failed market while it found a token's decimals changed or unreadable.
+    /// @custom:spec REQ-ORACLE-107
+    function _storedDecimals(
+        Evaluation memory e
+    ) internal view {
+        Layout storage $ = _s();
+        e.decimalsCheckedAt = $.decimalsCheckedAt;
+        if (!$.decimalsInvalid) return;
+        _failRead(e);
     }
 
     /// @dev Evaluation of the market with `config` as configuration and routes (`initialize`). Second sources are not
@@ -236,7 +259,9 @@ abstract contract LPOracleEval is LPOracleConfig {
     // ─── State ───
 
     /// @dev State, failure start, disagreement windows, served price and timestamp, age limits, grace and gates.
-    /// @custom:spec REQ-ORACLE-016, REQ-ORACLE-017, REQ-ORACLE-018, REQ-ORACLE-020, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-084, REQ-ORACLE-090, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-103, SPEC-ORC-013, SPEC-ORC-016, SPEC-ORC-017
+    /// `borrowAllowed` also requires every token confirmed (`REQ-ORACLE-100`) and the token decimals verified within
+    /// `DECIMALS_CHECK_MAX_AGE` (reason bit 19, `REQ-ORACLE-107`); neither changes the state, the served price or a timer.
+    /// @custom:spec REQ-ORACLE-016, REQ-ORACLE-017, REQ-ORACLE-018, REQ-ORACLE-020, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-084, REQ-ORACLE-090, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-103, REQ-ORACLE-107, SPEC-ORC-013, SPEC-ORC-016, SPEC-ORC-017
     function _decide(
         Evaluation memory e
     ) internal view {
@@ -251,8 +276,11 @@ abstract contract LPOracleEval is LPOracleConfig {
         _grace(e);
         e.liquidationPaused = e.state == PriceState.Cached || e.state == PriceState.Expired || e.pauseActive
             || e.disagreementExpired || e.alternatePastBorrowAge || e.seq.down;
+        if (block.timestamp - e.decimalsCheckedAt > DECIMALS_CHECK_MAX_AGE) {
+            e.reasons |= LPOracleCodes.DECIMALS_UNVERIFIED;
+        }
         e.borrowAllowed = e.state == PriceState.Live && e.seq.ready
-            && (e.reasons & LPOracleCodes.SECOND_SOURCE_DISAGREE) == 0
+            && (e.reasons & (LPOracleCodes.SECOND_SOURCE_DISAGREE | LPOracleCodes.DECIMALS_UNVERIFIED)) == 0
             && block.timestamp - e.servedUpdatedAt <= e.borrowMaxAge;
     }
 

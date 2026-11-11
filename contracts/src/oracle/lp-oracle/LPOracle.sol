@@ -36,7 +36,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// every caller in a block. No token, ETH or approval moves through it. Example: a USDC/USDT market at $1.00 per
 /// token holding 1 USDC + 1 USDT per whole vault token serves 200,000,000 ($2.00) while Live; once Cached it serves
 /// the accepted price, once Expired 1.
-/// @custom:spec REQ-ORACLE-106, REQ-ORACLE-016, REQ-ORACLE-020, REQ-ORACLE-040, REQ-ORACLE-041, REQ-ORACLE-042, REQ-ORACLE-043, REQ-ORACLE-044, REQ-ORACLE-045, REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-060, REQ-ORACLE-061, REQ-ORACLE-062, REQ-ORACLE-063, REQ-ORACLE-064, REQ-ORACLE-078, REQ-ORACLE-080, REQ-ORACLE-082, REQ-ORACLE-087, REQ-ORACLE-088, REQ-ORACLE-097, REQ-ORACLE-101, Q-128, Q-247, Q-259, Q-321
+/// @custom:spec REQ-ORACLE-106, REQ-ORACLE-107, REQ-ORACLE-016, REQ-ORACLE-020, REQ-ORACLE-040, REQ-ORACLE-041, REQ-ORACLE-042, REQ-ORACLE-043, REQ-ORACLE-044, REQ-ORACLE-045, REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-060, REQ-ORACLE-061, REQ-ORACLE-062, REQ-ORACLE-063, REQ-ORACLE-064, REQ-ORACLE-078, REQ-ORACLE-080, REQ-ORACLE-082, REQ-ORACLE-087, REQ-ORACLE-088, REQ-ORACLE-097, REQ-ORACLE-101, Q-128, Q-247, Q-259, Q-321
 abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeable, UUPSUpgradeable, LPOracleListing {
     /// @dev Poke logic contract (`LPOraclePokeLogic` with this implementation's pricing module).
     address internal immutable _POKE_LOGIC;
@@ -132,6 +132,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
             $.routeVersion[i] = _routeVersion(token);
         }
         if (!ok || !_initMarket(params.market, _tokenList())) revert MarketMismatch(params.marketId);
+        $.decimalsCheckedAt = _now64();
     }
 
     /// @dev The registry's route version of `token`, 0 when it cannot be read (a token not yet listed).
@@ -354,6 +355,13 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     /// @custom:spec REQ-ORACLE-038
     function pokeMinGas() external view override returns (uint32 value) {
         value = _s().pokeMinGas;
+    }
+
+    /// @inheritdoc ILPOracle
+    /// @custom:spec REQ-ORACLE-107
+    function decimalsStatus() external view override returns (bool invalid, uint64 verifiedAt) {
+        Layout storage $ = _s();
+        (invalid, verifiedAt) = ($.decimalsInvalid, $.decimalsCheckedAt);
     }
 
     /// @inheritdoc ILPOracle

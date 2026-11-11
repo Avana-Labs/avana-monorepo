@@ -52,15 +52,49 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         }
     }
 
-    /// @dev One configuration word of at most `maxValue` from a registry or store getter with a single return value.
+    /// @dev `_call` with `CONFIG_CALL_GAS` of a registry or store view taking one address argument, `selector(arg)`: the
+    /// selector followed by the address as one ABI word, the same bytes `abi.encodeCall` gives for that view.
+    /// @custom:spec SPEC-ORC-023
+    function _callOf(
+        address target,
+        bytes4 selector,
+        address arg,
+        uint256 maxWords
+    ) internal view returns (bool ok, uint256 size, uint256[] memory words) {
+        return _call(target, CONFIG_CALL_GAS, abi.encodePacked(selector, uint256(uint160(arg))), maxWords);
+    }
+
+    /// @dev One configuration word of at most `maxValue` from a registry or store getter with no argument and a single
+    /// return value; the calldata is the bare selector.
     /// @custom:spec SPEC-ORC-023, REQ-ORACLE-017
     function _readWord(
         address target,
-        bytes memory data,
+        bytes4 selector,
         uint256 maxValue
     ) internal view returns (bool ok, uint256 value) {
-        (bool s,, uint256[] memory w) = _call(target, CONFIG_CALL_GAS, data, 1);
-        if (!s || w.length < 1 || w[0] > maxValue) return (false, 0);
+        (bool s,, uint256[] memory w) = _call(target, CONFIG_CALL_GAS, abi.encodePacked(selector), 1);
+        return _boundedWord(s, w, maxValue);
+    }
+
+    /// @dev `_readWord` of a getter taking one address argument, `selector(arg)`.
+    /// @custom:spec SPEC-ORC-023, REQ-ORACLE-017
+    function _readWordOf(
+        address target,
+        bytes4 selector,
+        address arg,
+        uint256 maxValue
+    ) internal view returns (bool ok, uint256 value) {
+        (bool s,, uint256[] memory w) = _callOf(target, selector, arg, 1);
+        return _boundedWord(s, w, maxValue);
+    }
+
+    /// @dev The first word of a successful read when it is at most `maxValue`; `ok` false otherwise.
+    function _boundedWord(
+        bool called,
+        uint256[] memory w,
+        uint256 maxValue
+    ) private pure returns (bool ok, uint256 value) {
+        if (!called || w.length < 1 || w[0] > maxValue) return (false, 0);
         return (true, w[0]);
     }
 
@@ -71,8 +105,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         address store,
         LegRead memory leg
     ) internal view returns (bool ok) {
-        (bool s,, uint256[] memory w) =
-            _call(store, CONFIG_CALL_GAS, abi.encodeCall(IParameterStoreViews.getFeed, (leg.feed)), 10);
+        (bool s,, uint256[] memory w) = _callOf(store, IParameterStoreViews.getFeed.selector, leg.feed, 10);
         if (!s || w.length < 10 || w[0] == 0 || w[0] > type(uint8).max) return false;
         if (w[3] > type(uint32).max || w[4] > type(uint32).max || w[5] > type(uint32).max) return false;
         if (w[6] > type(uint16).max || w[7] > type(uint16).max) return false;

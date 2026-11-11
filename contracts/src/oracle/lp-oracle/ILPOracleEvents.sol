@@ -98,6 +98,21 @@ interface ILPOracleEvents {
     /// @custom:spec REQ-ORACLE-088, REQ-ORACLE-059, Q-241
     event PriceCheckpointed(uint256 price8, uint64 at);
 
+    /// @notice Emitted when `poke()` finds a token's `decimals()` unreadable or different from the value stored at
+    /// `initialize` while the stored result was valid; the market is failed (reason bit 1) until a `poke()` reads every
+    /// stored value again, and the stored decimals are never replaced.
+    /// @param token Token index in pool order.
+    /// @param stored Decimals stored at `initialize`.
+    /// @param read Decimals read (0 when unreadable).
+    /// @param readable False when the `decimals()` read failed or returned a malformed word.
+    /// @custom:spec REQ-ORACLE-107
+    event TokenDecimalsMismatch(uint8 token, uint8 stored, uint8 read, bool readable);
+
+    /// @notice Emitted when `poke()` reads every token's stored decimals again after a mismatch.
+    /// @param verifiedAt Block timestamp of the verification.
+    /// @custom:spec REQ-ORACLE-107
+    event TokenDecimalsRestored(uint64 verifiedAt);
+
     /// @notice Emitted when `poke()` observes a token's `MarketRegistry.priceRouteVersion` differ from the stored one.
     /// @param token Token index in pool order.
     /// @param previous Version stored at the last writing call.

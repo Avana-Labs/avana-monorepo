@@ -495,8 +495,8 @@ library LPPriceMath {
     /// (`SPEC-ORC-023`): `u_k + ceil(64 * G_k / 63) + POST_CALL_GAS`, with `u_k` the gas used before read `k`.
     /// @dev An entry gas of at least the term leaves read `k` its pre-call bound; with `u_k = W_poke` and `G_k = G_max`
     /// it is the single-term bound that needs no per-read measurement. A sum of 256 bits or more gives
-    /// `type(uint256).max`. Example: the binding read of the two-token worst-case poke, a feed read at `u = 698,983`,
-    /// gives 754,777; `W_poke = 450,000` with `G = 100,000` gives 556,588.
+    /// `type(uint256).max`. Example: the binding read of the two-token worst-case poke, a feed read at `u = 718,836`,
+    /// gives 774,630; `W_poke = 450,000` with `G = 100,000` gives 556,588.
     /// @custom:spec SPEC-ORC-023, REQ-ORACLE-038
     function pokeMinGasFloor(
         uint256 usedBefore,
