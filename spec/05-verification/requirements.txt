@@ -1,4 +1,4 @@
-z3-solver==4.13.0.0
+z3-solver==5.3.2.0
 sympy==1.13.3
 hypothesis==6.112.5
 pytest==8.3.3
