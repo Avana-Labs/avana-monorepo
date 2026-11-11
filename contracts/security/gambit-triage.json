@@ -15,6 +15,13 @@
       "reason": "Equivalent: HOP_ZERO_FOR_ONE_SLOT moves from HOP_SLOT + 3 to HOP_SLOT - 3; both are transient slots no other code uses, written and cleared within each concentrated-liquidity hop (REQ-ROUTE-013), so no read can observe the difference. Direction and callback behaviour covered by test_TEST_232_everyHopRunsWithZeroMinimumAndExtremeLimit and the TEST-046 callback suites.",
       "approval": "approved (Josue, 2026-11-11)",
       "function": "DexHops (constant)"
+    },
+    {
+      "fingerprint": "5a5e0df0ef1ffe86",
+      "check": "SwapArgumentsOperatorMutation",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "Equivalent mutant: the loop only computes `listed` over the market's pool tokens in _checkOracleAndRoutes (REQ-CONFIG-047 'registration'). Skipping it leaves listed = true, which is always the value: listCollateralMarket refuses an unlisted pool token (TokenNotListed, REQ-CONFIG-017) and the registry has no function that unlists a token, so a Registered market's tokens are always listed. The common-mode half of the same check cannot fail either, since setPriceSource re-checks every Registered market (test_TEST_231_priceSourceChangeGuardsARegisteredMarket).",
+      "approval": "approved (Josue, 2026-11-11)"
     }
   ]
 }

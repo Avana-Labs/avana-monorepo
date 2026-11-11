@@ -50,17 +50,17 @@
     "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol": 100,
     "src/periphery/flash-liquidator/OperatorFlashLiquidator.sol": 66,
     "src/policy/market-registry/MarketRegistry.sol": 100,
-    "src/policy/market-registry/MarketRegistryActivationLogic.sol": 92,
-    "src/policy/market-registry/MarketRegistryDebtChecks.sol": 75,
-    "src/policy/market-registry/MarketRegistryDriftView.sol": 61,
-    "src/policy/market-registry/MarketRegistryHubsLogic.sol": 85,
-    "src/policy/market-registry/MarketRegistryListingLogic.sol": 91,
-    "src/policy/market-registry/MarketRegistryMarketChecks.sol": 76,
-    "src/policy/market-registry/MarketRegistryOracleChecks.sol": 50,
+    "src/policy/market-registry/MarketRegistryActivationLogic.sol": 97,
+    "src/policy/market-registry/MarketRegistryDebtChecks.sol": 100,
+    "src/policy/market-registry/MarketRegistryDriftView.sol": 100,
+    "src/policy/market-registry/MarketRegistryHubsLogic.sol": 97,
+    "src/policy/market-registry/MarketRegistryListingLogic.sol": 100,
+    "src/policy/market-registry/MarketRegistryMarketChecks.sol": 100,
+    "src/policy/market-registry/MarketRegistryOracleChecks.sol": 100,
     "src/policy/market-registry/MarketRegistryRouter.sol": 100,
-    "src/policy/market-registry/MarketRegistryRoutesLogic.sol": 90,
-    "src/policy/market-registry/MarketRegistrySafetyLogic.sol": 96,
-    "src/policy/market-registry/MarketRegistryStorage.sol": 80,
+    "src/policy/market-registry/MarketRegistryRoutesLogic.sol": 96,
+    "src/policy/market-registry/MarketRegistrySafetyLogic.sol": 100,
+    "src/policy/market-registry/MarketRegistryStorage.sol": 100,
     "src/policy/market-registry/MarketRegistryViews.sol": 100,
     "src/policy/market-registry/MarketRegistryWindDownLogic.sol": 100,
     "src/policy/parameter-store/ParameterStore.sol": 100,
@@ -105,6 +105,30 @@
         "branch": "token count or marketId mismatch",
         "reason": "checkConfig returns CHECK_TOKENS on the same condition (token count, market id 0 or another market) before _checkAtCurrentQuotes calls _loadSeed, and initialize stores $.tokens and $.marketId from the same configuration it then seeds (LPOracle._storeMarket reverts MarketMismatch otherwise); kept as a defensive check (Josue, 2026-11-11). Revisit whenever the initialization or upgrade flow changes (a reinitializer, a migration, or a caller of _loadSeed other than checkConfig and initializeMarket).",
         "tests": "TEST-219 test_TEST_219_checkConfigRefusesAnotherMarketOrTokenCount, test_TEST_219_checkConfigRefusesOtherTokensInPlace, test_TEST_219_marketChecks; TEST-062 test_TEST_062_initializeRefusesAnotherMarketOrTokenList, test_TEST_062_initializeRefusesUnusableMarketData, test_TEST_062_initializeRefusesRepeatedToken"
+      }
+    ],
+    "src/policy/market-registry/MarketRegistryActivationLogic.sol": [
+      {
+        "function": "_checkOracleAndRoutes",
+        "branch": "!listed || !_commonModeHolds(tokens) reverts ActivationCheckFailed(marketId, \"registration\")",
+        "reason": "A Registered market's pool tokens were all listed and passed the common-mode guard at listCollateralMarket; the registry has no function that unlists a token, and setPriceSource re-runs the common-mode guard on every market that is not Cancelled or Closed (Registered included) and reverts on failure. So both halves hold at activation; the check is kept as defence in depth for a later upgrade that could change token records. The surviving Gambit mutant on the same loop (fingerprint 5a5e0df0ef1ffe86) is equivalent for the same reason.",
+        "tests": "TEST-139 test_TEST_139_firstUnlistedTokenReported and test_TEST_139_commonModeEveryPairing (listing refusals), TEST-231 test_TEST_231_priceSourceChangeGuardsARegisteredMarket (a route change that would break the guard is refused)"
+      }
+    ],
+    "src/policy/market-registry/MarketRegistryHubsLogic.sol": [
+      {
+        "function": "_removeId",
+        "branch": "at == n returns without removing",
+        "reason": "removeDebtReserve calls _removeId only for an approved reserve, and enableDebtReserve pushes the id into debtReserveIds in the same write that approves it, so the id is always present when _removeId runs.",
+        "tests": "TEST-213 test_TEST_213_removeFirstKeepsTheOrder, test_TEST_213_removeMiddleKeepsTheOrder, test_TEST_213_removeLastKeepsTheOrder, test_TEST_213_removalRefusals (UnknownDebtReserve before any removal)"
+      }
+    ],
+    "src/policy/market-registry/MarketRegistryRoutesLogic.sol": [
+      {
+        "function": "useStandbyRoute",
+        "branch": "t.standbyRoute.length == 0 reverts NoStandbyRoute",
+        "reason": "listToken and setPriceSource run _routeLegsCheck on the standby route and refuse 0 feeds (\"routeLength\"), and nothing else writes it, so every listed token has a standby route of 1 or 2 feeds; an unlisted token is refused earlier with TokenNotListed.",
+        "tests": "TEST-250 test_TEST_250_routeLengthInEverySlot (empty standby refused at listing), TEST-231 test_TEST_231_standbySwitch (TokenNotListed for an unlisted token)"
       }
     ]
   }
