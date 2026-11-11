@@ -27,7 +27,9 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// `2 * (10^6 - 1) * 10^8 / 10^6 = 199,999,800`.
 abstract contract LPOracleFixture is AvanaTest {
     uint32 internal constant BLOCK_TIME = 12;
-    uint32 internal constant POKE_FLOOR = 556_588;
+    /// @dev `POKE_MIN_GAS_FLOOR` of a two-token implementation (`SPEC-ORC-023`): 900,000, provisional until the fork
+    /// calibration that is a launch requirement.
+    uint32 internal constant POKE_FLOOR = 900_000;
     uint32 internal constant POKE_CEILING = 3_000_000;
     uint256 internal constant MARKET = 1;
     uint256 internal constant T0 = 1_762_650_000;

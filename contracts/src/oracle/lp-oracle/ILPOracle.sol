@@ -39,7 +39,8 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// the store reads from `MarketRegistry.activePriceRoutes(token)` and `priceRouteVersion(token)` in that call, each
 /// leg's feed definition, tolerances, consistency-check settings, band, timers, the sequencer check and (for
 /// `getPriceState` and `poke`) the second sources, applied exactly; no override exists. Token decimals are those stored
-/// at `initialize` and the quote-change cap is the chain constant 100 bps. A guardian's standby switch reaches the
+/// at `initialize`; `poke()` re-reads them and a changed or unreadable value fails the market until a `poke()` reads
+/// the stored values again (`decimalsStatus`). The quote-change cap is the chain constant 100 bps. A guardian's standby switch reaches the
 /// feed only through those routes; a route-version change restarts `disagreeSince` and never `failedSince`.
 /// Only `poke()` writes price, timer, latch, route-version or checkpoint storage; no role can push a price. Views never
 /// revert except `InsufficientGas`, and return the same result for every caller in a block. No token, ETH or approval
@@ -48,12 +49,15 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// and 1 once Expired (SPEC-ORC-017); its own seizure waits, while the account's other fresh markets stay liquidatable.
 /// Freshness is per feed: a leg is fresh while `now - updatedAt <= heartbeat + heartbeatMargin` of that feed. On an L2
 /// the chain's sequencer-uptime feed must report up and past its grace period, and every token's independent second
-/// source must agree within its tolerance, before `borrowAllowed` is true. The second source never gates
+/// source must agree within its tolerance, before `borrowAllowed` is true; an invalid, unreadable or disagreeing
+/// second source only leaves its token unconfirmed (token bits 4 and 5, market bit 16), never changes the state, the
+/// served price or a timer, and `latestAnswer`, `getPriceState` and `poke` price the market with the same primary
+/// computation. The second source never gates
 /// liquidation; while the sequencer feed reports down this market's seizure is paused (`liquidationPaused`), during
 /// its grace period `inGrace` applies the grace bound, and an unreadable feed blocks borrowing only (REQ-ORACLE-099).
 /// `_grantRole` reverts `AdminRoleOnlyTimelock` for `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` and any account other
 /// than `TIMELOCK`.
-/// @custom:spec REQ-ORACLE-011, REQ-ORACLE-012, REQ-ORACLE-013, REQ-ORACLE-016, REQ-ORACLE-045, REQ-ORACLE-060, REQ-ORACLE-061, REQ-ORACLE-062, REQ-ORACLE-063, REQ-ORACLE-064, REQ-ORACLE-065, REQ-ORACLE-066, REQ-ORACLE-078, REQ-ORACLE-079, REQ-ORACLE-080, REQ-ORACLE-081, REQ-ORACLE-083, REQ-ORACLE-084, REQ-ORACLE-094, REQ-ORACLE-095, REQ-ORACLE-097, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-102, REQ-ORACLE-103, SPEC-ORC-005, SPEC-ORC-008, SPEC-ORC-017, SPEC-ORC-023, Q-028, Q-128, Q-208, Q-226, Q-247, Q-248, Q-259, Q-370, Q-321, Q-322, Q-323, Q-324
+/// @custom:spec REQ-ORACLE-011, REQ-ORACLE-012, REQ-ORACLE-013, REQ-ORACLE-016, REQ-ORACLE-045, REQ-ORACLE-060, REQ-ORACLE-061, REQ-ORACLE-062, REQ-ORACLE-063, REQ-ORACLE-064, REQ-ORACLE-065, REQ-ORACLE-066, REQ-ORACLE-078, REQ-ORACLE-079, REQ-ORACLE-080, REQ-ORACLE-081, REQ-ORACLE-083, REQ-ORACLE-084, REQ-ORACLE-094, REQ-ORACLE-095, REQ-ORACLE-097, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-102, REQ-ORACLE-103, REQ-ORACLE-107, SPEC-ORC-005, SPEC-ORC-008, SPEC-ORC-017, SPEC-ORC-023, Q-028, Q-128, Q-208, Q-226, Q-247, Q-248, Q-259, Q-370, Q-321, Q-322, Q-323, Q-324
 interface ILPOracle is IAaveV4PriceFeed, IAccessControl, ILPOracleEvents, ILPOracleErrors {
     /// @notice Initializes the feed, runs the listing checks and seeds the accepted price.
     /// @dev Runs once, in the same transaction as the proxy deployment, before the listing batch is scheduled
@@ -200,6 +204,16 @@ interface ILPOracle is IAaveV4PriceFeed, IAccessControl, ILPOracleEvents, ILPOra
     /// @return value Gas.
     /// @custom:spec REQ-ORACLE-038, REQ-ORACLE-039
     function pokeMinGas() external view returns (uint32 value);
+
+    /// @notice The stored token-decimals result (`REQ-ORACLE-107`).
+    /// @dev `poke()` reads every token's `decimals()` and compares it with the value stored at `initialize`. `invalid`
+    /// is true while the last `poke()` found one unreadable or different: every evaluation is then failed (reason bit
+    /// 1). `verifiedAt` is the last time every value matched; `borrowAllowed` is false once `now - verifiedAt` exceeds
+    /// `DECIMALS_CHECK_MAX_AGE` (7,200 s, reason bit 19).
+    /// @return invalid A token's decimals were found changed or unreadable by the last `poke()`.
+    /// @return verifiedAt Block timestamp of the last successful verification (`initialize` or `poke()`).
+    /// @custom:spec REQ-ORACLE-107
+    function decimalsStatus() external view returns (bool invalid, uint64 verifiedAt);
 
     /// @notice MarketRegistry identifier of the market this feed prices, stored at `initialize`.
     /// @return id Market identifier.

@@ -226,10 +226,10 @@ prove('MATH-UO-66b', 'one read term u_k + ceil(64 G_k / 63) + POST_CALL_GAS (LPP
       'an entry gas at least the term leaves the read its pre-call bound after u_k of work, whatever u_k is',
       [G > 0, u >= 0, g >= u + (64 * G + 62) / 63 + 5_000], g - u >= pre)
 witness('MATH-UO-66c', 'wrong reading (term without POST_CALL_GAS): a poke entered at u_k + ceil(64 G / 63) fails the '
-        'pre-call check of read k', [G == 50_000, u == 698_983, g == u + (64 * G + 62) / 63, g - u < pre])
-note('MATH-UO-66d', 'SPEC-ORC-023 floor example (two-token worst-case poke, measured)',
-     f'binding read 698,983 + {(64 * 50_000 + 62) // 63} + 5,000 = {698_983 + (64 * 50_000 + 62) // 63 + 5_000}; '
-     f'W_poke 805,471; floor max = {max(805_471, 698_983 + (64 * 50_000 + 62) // 63 + 5_000)}; configuration read '
+        'pre-call check of read k', [G == 50_000, u == 718_836, g == u + (64 * G + 62) / 63, g - u < pre])
+note('MATH-UO-66d', 'SPEC-ORC-023 floor example (two-token worst-case poke with the token-decimals reads, measured)',
+     f'binding read 718,836 + {(64 * 50_000 + 62) // 63} + 5,000 = {718_836 + (64 * 50_000 + 62) // 63 + 5_000}; '
+     f'W_poke 830,781; floor max = {max(830_781, 718_836 + (64 * 50_000 + 62) // 63 + 5_000)}; configuration read '
      f'bound G_inputs(2) = 430,000: {(64 * 430_000 + 62) // 63 + 5_000}')
 
 finish()

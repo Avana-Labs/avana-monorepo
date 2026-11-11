@@ -12,26 +12,29 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // only static calls), so no call can reenter and reorder the events emitted after it (REQ-ORACLE-025).
 // forge-lint: disable-start(reentrancy-events)
 /// @title LPOraclePoke
-/// @notice The writing call: `poke()` evaluates the market with the code of every view and stores, in the order of
-/// `REQ-ORACLE-026`, the route versions, the failure and disagreement timers, the accepted price, the outage latch,
-/// the `seen` rounds, the grace window and the checkpoint, emitting an event for each write.
+/// @notice The writing call: `poke()` evaluates the market with the code of every view, verifies the token decimals
+/// (`REQ-ORACLE-107`) and stores, in the order of `REQ-ORACLE-026`, the decimals result, the route versions, the failure
+/// and disagreement timers, the accepted price, the outage latch, the `seen` rounds, the grace window and the
+/// checkpoint, emitting an event for each write.
 /// @dev Makes only static calls, takes no lock and is permissionless. Reverts `InsufficientGas(gasleft(), pokeMinGas)`
 /// at the implementation's entry before any call or write (`LPOracle.poke`); every read inside follows the pre-call
-/// gas check. Example: a market Cached since
+/// gas check, so a call starved of gas reverts and commits no failure, timer or latch (`REQ-ORACLE-024`). Example: a
+/// market Cached since
 /// `failedSince = 1,762,650,000` keeps that timer across a standby switch; the poke that observes the switch restarts
 /// `disagreeSince` at `now` if a token disagrees on the new routes and emits `PriceRouteVersionObserved`.
-/// @custom:spec REQ-ORACLE-024, REQ-ORACLE-025, REQ-ORACLE-026, REQ-ORACLE-027, REQ-ORACLE-028, REQ-ORACLE-029, REQ-ORACLE-030, REQ-ORACLE-031, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-035, REQ-ORACLE-062, REQ-ORACLE-065, REQ-ORACLE-066, REQ-ORACLE-088, REQ-ORACLE-095, REQ-ORACLE-103
+/// @custom:spec REQ-ORACLE-107, REQ-ORACLE-024, REQ-ORACLE-025, REQ-ORACLE-026, REQ-ORACLE-027, REQ-ORACLE-028, REQ-ORACLE-029, REQ-ORACLE-030, REQ-ORACLE-031, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-035, REQ-ORACLE-062, REQ-ORACLE-065, REQ-ORACLE-066, REQ-ORACLE-088, REQ-ORACLE-095, REQ-ORACLE-103
 abstract contract LPOraclePoke is LPOracleRecovery {
     /// @dev `poke()`: evaluate, then write in the specified order. The caller checks `pokeMinGas` at entry.
     /// @custom:spec REQ-ORACLE-026
     function _poke() internal returns (PriceState) {
         Layout storage $ = _s();
-        Evaluation memory e = _evaluate(true);
+        Evaluation memory e = _evaluatePoke();
         // Recovery evidence reads the `seen` rounds before this poke overwrites them.
         bool evidence = false;
         uint64 recovered = 0;
         if (!e.failed) (evidence, recovered) = _recoveryEvidence(e);
         bool wasLatched = $.expiredLatched;
+        _writeDecimals(e);
         _writeVersions(e);
         _writeFailure(e);
         if (!e.versionChanged) _writeDisagreement(e);
@@ -44,6 +47,26 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         _writeEvents(e);
         if (e.cfg.ok) $.lastCachedWindow = e.cfg.cachedWindow;
         return e.state;
+    }
+
+    /// @dev `REQ-ORACLE-107`: a verified poke stores `decimalsCheckedAt = now` and clears a stored mismatch
+    /// (`TokenDecimalsRestored`); a failed verification marks the configuration invalid (`TokenDecimalsMismatch` when it
+    /// was valid) and keeps the time of the last successful one. The stored decimals are never replaced.
+    function _writeDecimals(
+        Evaluation memory e
+    ) internal {
+        Layout storage $ = _s();
+        if (!e.decimalsMismatch) {
+            $.decimalsCheckedAt = e.decimalsCheckedAt;
+            if (!$.decimalsInvalid) return;
+            $.decimalsInvalid = false;
+            emit TokenDecimalsRestored(e.decimalsCheckedAt);
+            return;
+        }
+        if ($.decimalsInvalid) return;
+        $.decimalsInvalid = true;
+        uint8 i = e.decimalsToken;
+        emit TokenDecimalsMismatch(i, $.tokenDecimals[i], e.decimalsRead, e.decimalsReadable);
     }
 
     /// @dev `REQ-ORACLE-095`: on a route-version change, `disagreeSince = now` if some token disagrees and 0

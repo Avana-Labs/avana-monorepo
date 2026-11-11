@@ -13,18 +13,21 @@ import {TokenPriceView} from "./TokenPriceView.sol";
 /// CONSISTENCY_UNAVAILABLE, 6 PRICE_CLAMPED (oracle ratio clamped to the market's range), 7 ANY_TOKEN_ON_ALTERNATE, 8
 /// SOURCE_TIMESTAMP_FAILURE, 9 DISAGREEMENT_PAUSE, 10 IN_GRACE, 11 DISAGREEMENT_EXPIRED, 12 ALTERNATE_PAST_BORROW_AGE,
 /// 13 ANY_TOKEN_ON_STANDBY, 14 SEQUENCER_DOWN, 15 SEQUENCER_GRACE, 16 SECOND_SOURCE_DISAGREE, 17
-/// POOL_REENTRANCY_LOCKED, 18 QUOTE_CHANGE_CAPPED; bits 2 to 6, 11, 12 and 16 are 0 when the market is failed. The
-/// per-token detail is in `tokens[i].reasons`. `liquidationPaused = state in {Cached, Expired} or
+/// POOL_REENTRANCY_LOCKED, 18 QUOTE_CHANGE_CAPPED, 19 DECIMALS_UNVERIFIED (REQ-ORACLE-107); bits 2 to 6, 11, 12 and 16
+/// are 0 when the market is failed. The per-token detail is in `tokens[i].reasons`. Second-source confirmation
+/// (REQ-ORACLE-100): token i is unconfirmed when its bit 4 (disagrees) or 5 (unavailable, an out-of-range configuration
+/// word included) is set; every token is confirmed when the state is Live or Drifting and bit 16 is 0. It never
+/// changes the state, the served price or a timer. `liquidationPaused = state in {Cached, Expired} or
 /// disagreementPauseActive or disagreementExpired or alternatePastBorrowAge or sequencerDown` (SPEC-ORC-016,
 /// REQ-ORACLE-090, REQ-ORACLE-099) gates the seizure of this market only (SPEC-ORC-017). `borrowAllowed = state == Live
-/// and sequencerReady and every token's second source confirmed and now - servedUpdatedAt <= borrowPriceMaxAge()`
-/// (REQ-ORACLE-100). `usdLevel = max{L : L^(x)n <= q_0 (x) q_1 (x) ... (x) q_(n-1)}`, the largest 8-decimal level whose
+/// and sequencerReady and every token's second source confirmed and now - servedUpdatedAt <= borrowPriceMaxAge() and
+/// the token decimals verified within DECIMALS_CHECK_MAX_AGE` (REQ-ORACLE-100, REQ-ORACLE-107). `usdLevel = max{L : L^(x)n <= q_0 (x) q_1 (x) ... (x) q_(n-1)}`, the largest 8-decimal level whose
 /// fixed-point power does not exceed the product of the quotes, with `x (x) y = floor(x * y / 1e8)` taken left to right
 /// in pool order (SPEC-ORC-011); `usdBandLow <= usdLevel` holds exactly when the lower band test passes. Example:
 /// quotes (99,987,000, 100,010,000) give 99,998,499. Bit 18 QUOTE_CHANGE_CAPPED holds the market Cached for one block
 /// (REQ-ORACLE-103). AMM-protocol detail (ticks, sqrt prices) is in the integration's extension view, for concentrated
 /// liquidity `ILPOracleCL.getClPriceState()`.
-/// @custom:spec REQ-ORACLE-042, REQ-ORACLE-016, REQ-ORACLE-021, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-084, REQ-ORACLE-090, REQ-ORACLE-099, REQ-ORACLE-100, SPEC-ORC-011, SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-017, SPEC-ORC-020, SPEC-ORC-021, Q-128, Q-208, Q-247, Q-323, Q-324
+/// @custom:spec REQ-ORACLE-042, REQ-ORACLE-107, REQ-ORACLE-016, REQ-ORACLE-021, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-084, REQ-ORACLE-090, REQ-ORACLE-099, REQ-ORACLE-100, SPEC-ORC-011, SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-017, SPEC-ORC-020, SPEC-ORC-021, Q-128, Q-208, Q-247, Q-323, Q-324
 struct PriceStateView {
     // Current price state.
     PriceState state;

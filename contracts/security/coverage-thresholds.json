@@ -103,8 +103,8 @@
       {
         "function": "_loadSeed",
         "branch": "token count or marketId mismatch",
-        "reason": "checkConfig returns CHECK_TOKENS on the same condition before _checkAtCurrentQuotes calls _loadSeed, and initialize stores $.tokens and $.marketId from the same config it then checks; kept as a defensive check (Josue, 2026-11-11). Revisit whenever the initialization or upgrade flow changes.",
-        "tests": "TEST-062 initialize rejections, TEST-219 checkConfig CHECK_TOKENS"
+        "reason": "checkConfig returns CHECK_TOKENS on the same condition (token count, market id 0 or another market) before _checkAtCurrentQuotes calls _loadSeed, and initialize stores $.tokens and $.marketId from the same configuration it then seeds (LPOracle._storeMarket reverts MarketMismatch otherwise); kept as a defensive check (Josue, 2026-11-11). Revisit whenever the initialization or upgrade flow changes (a reinitializer, a migration, or a caller of _loadSeed other than checkConfig and initializeMarket).",
+        "tests": "TEST-219 test_TEST_219_checkConfigRefusesAnotherMarketOrTokenCount, test_TEST_219_checkConfigRefusesOtherTokensInPlace, test_TEST_219_marketChecks; TEST-062 test_TEST_062_initializeRefusesAnotherMarketOrTokenList, test_TEST_062_initializeRefusesUnusableMarketData, test_TEST_062_initializeRefusesRepeatedToken"
       }
     ]
   }

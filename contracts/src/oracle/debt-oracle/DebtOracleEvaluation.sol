@@ -60,27 +60,24 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         uint256 v;
         bool r;
         ok = true;
-        (r, v) = _readWord(store, abi.encodeCall(IParameterStoreViews.cachedWindow, ()), type(uint32).max);
+        (r, v) = _readWord(store, IParameterStoreViews.cachedWindow.selector, type(uint32).max);
         ok = ok && r;
         e.cachedWindowRead = r;
         e.cachedWindow = r ? SafeCast.toUint32(v) : $.lastCachedWindow;
-        (r, v) =
-            _readWord(store, abi.encodeCall(IParameterStoreLiquidation.debtStressRiseBps, (asset)), type(uint16).max);
+        (r, v) = _readWordOf(store, IParameterStoreLiquidation.debtStressRiseBps.selector, asset, type(uint16).max);
         ok = ok && r;
         e.stressRiseRead = r;
         e.stressRiseBps = r ? SafeCast.toUint16(Math.min(v, MAX_STRESS_RISE_BPS)) : $.lastStressRiseBps;
-        (r, v) = _readWord(store, abi.encodeCall(IParameterStoreViews.disagreementPauseMax, ()), type(uint32).max);
+        (r, v) = _readWord(store, IParameterStoreViews.disagreementPauseMax.selector, type(uint32).max);
         ok = ok && r;
         e.disagreementPauseMax = SafeCast.toUint32(v);
-        (r, v) = _readWord(store, abi.encodeCall(IParameterStoreViews.graceDuration, ()), type(uint32).max);
+        (r, v) = _readWord(store, IParameterStoreViews.graceDuration.selector, type(uint32).max);
         ok = ok && r;
         e.graceDuration = SafeCast.toUint32(v);
-        (r, v) =
-            _readWord(store, abi.encodeCall(IParameterStoreViews.feedAgreementToleranceBps, (asset)), type(uint16).max);
+        (r, v) = _readWordOf(store, IParameterStoreViews.feedAgreementToleranceBps.selector, asset, type(uint16).max);
         ok = ok && r;
         e.toleranceBps = SafeCast.toUint16(v);
-        (r, v) =
-            _readWord(registry, abi.encodeCall(IMarketRegistryStandby.priceRouteVersion, (asset)), type(uint64).max);
+        (r, v) = _readWordOf(registry, IMarketRegistryStandby.priceRouteVersion.selector, asset, type(uint64).max);
         e.routeVersionRead = r;
         e.routeVersion = SafeCast.toUint64(v);
         ok = ok && r && _readListed(registry, asset);
@@ -102,8 +99,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         address registry,
         address asset
     ) internal view returns (bool listed) {
-        (bool s,, uint256[] memory w) =
-            _call(registry, CONFIG_CALL_GAS, abi.encodeCall(IMarketRegistryViews.getToken, (asset)), 2);
+        (bool s,, uint256[] memory w) = _callOf(registry, IMarketRegistryViews.getToken.selector, asset, 2);
         return s && w.length == 2 && w[0] == 32 && w[1] == 1;
     }
 
@@ -115,7 +111,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         address asset
     ) internal view returns (bool ok, RouteSlot replaced, RouteRead[2] memory routes) {
         (bool s, uint256 size, uint256[] memory w) =
-            _call(registry, CONFIG_CALL_GAS, abi.encodeCall(IMarketRegistryStandby.activePriceRoutes, (asset)), 9);
+            _callOf(registry, IMarketRegistryStandby.activePriceRoutes.selector, asset, 9);
         if (!s || (size & 31) != 0 || size > 288 || w.length < 5 || w[0] != 96 || w[2] > 2) {
             return (false, replaced, routes);
         }
@@ -359,8 +355,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         DebtEvaluation memory e
     ) internal view {
         address store = $.parameterStore;
-        (bool s,, uint256[] memory w) =
-            _call(store, CONFIG_CALL_GAS, abi.encodeCall(IParameterStoreViews.secondSource, ($.asset)), 6);
+        (bool s,, uint256[] memory w) = _callOf(store, IParameterStoreViews.secondSource.selector, $.asset, 6);
         bool usable = s && w.length == 6 && w[0] == uint256(SecondSourceKind.OracleNetwork) && w[1] <= type(uint160).max
             && w[3] <= type(uint32).max && w[5] <= type(uint16).max;
         if (usable) {
