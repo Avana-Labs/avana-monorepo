@@ -14,7 +14,7 @@ Each release section lists, under **Contracts**, every changed contract with the
 
 ### Added
 
-- Repository setup: fork blocks pinned in `contracts/test/utils/fixtures/ForkConstants.sol` (`TEST-003`), `contracts/.env.example`, dependency review and Dependabot, actions pinned by commit, gas snapshots, contract-size margins, `contracts/Makefile`, `SECURITY.md`, CODEOWNERS, pull-request and issue templates, governance operation folders, the external audit index, the generated address library and tool version files.
+- Repository setup: fork blocks pinned in `contracts/test/utils/fixtures/ForkConstants.sol` (`TEST-003`), `contracts/.env.example`, dependency review, actions pinned by commit, gas snapshots, contract-size margins, `contracts/Makefile`, `SECURITY.md`, CODEOWNERS, pull-request and issue templates, governance operation folders, the external audit index, the generated address library and tool version files.
 
 ### Changed
 
