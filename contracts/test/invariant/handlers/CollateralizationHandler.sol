@@ -34,7 +34,8 @@ struct CollWorld {
 /// V4: two borrowers pledge, withdraw, borrow and repay; the price moves; LPVaultSwap liquidates honestly (snapshot,
 /// seizure, burn, settlement under the Lock) or, as a non-conforming implementation, seizes and keeps the units with no
 /// Collateralization call; kept units are later burned and paid out through `settlePending`. Ghosts record, per proxy,
-/// the kept units no reconciliation has debited yet, and the kept units LPVaultSwap still holds.
+/// the kept units no reconciliation has debited yet, and the kept units LPVaultSwap still holds. The ledger actions
+/// (partial removal, deleverage release, re-credit, zero-credit release) each reconcile the proxy first.
 contract CollateralizationHandler is CommonBase, StdUtils {
     CollWorld internal w;
     address[2] internal proxies;
@@ -49,6 +50,10 @@ contract CollateralizationHandler is CommonBase, StdUtils {
     uint256 public keptSeizures;
     uint256 public pendingSettlements;
     uint256 public withdrawals;
+    uint256 public partialRemovals;
+    uint256 public deleverages;
+    uint256 public recredits;
+    uint256 public zeroReleases;
 
     constructor(
         CollWorld memory world,
@@ -210,10 +215,136 @@ contract CollateralizationHandler is CommonBase, StdUtils {
         ++pendingSettlements;
     }
 
+    /// @notice A borrower removes 1 % to 99 % of one record's post-reconcile units as a partial removal (the proxy
+    /// withdraws them, the Adapter burns them and calls `releasePartial`); the release reconciles first.
+    function partialRemove(
+        uint256 who,
+        uint256 index,
+        uint256 pct
+    ) external {
+        address proxy = proxies[who % 2];
+        (bytes32 key, uint256 units) = _exitUnits(proxy, index, pct, false);
+        if (units == 0) return;
+        _adapterExit(proxy, key, units, false);
+        ++partialRemovals;
+    }
+
+    /// @notice A deleverage release of 1 % to 100 % of one record's post-reconcile units (the principal goes to
+    /// LPVaultSwap; all of them closes the record).
+    function deleverage(
+        uint256 who,
+        uint256 index,
+        uint256 pct
+    ) external {
+        address proxy = proxies[who % 2];
+        (bytes32 key, uint256 units) = _exitUnits(proxy, index, pct, true);
+        if (units == 0) return;
+        _adapterExit(proxy, key, units, true);
+        ++deleverages;
+    }
+
+    /// @notice Someone adds 1 to 10^9 units to a pledged position and its depositor re-credits it; the Adapter mints
+    /// the added units and the proxy supplies them.
+    function recredit(
+        uint256 who,
+        uint256 index,
+        uint256 extra
+    ) external {
+        uint256 i = who % 2;
+        address proxy = proxies[i];
+        (, BackingRecord[] memory page) = w.coll.getAccountRecords(proxy, address(w.token), 0, 16);
+        if (page.length == 0) return;
+        BackingRecord memory r = page[index % page.length];
+        if (w.coll.previewRelease(r.integrationId, r.positionKey) == 0) return;
+        // Bounded to 10^9 below.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        w.lpVault.addUnits(r.positionKey, uint128(bound(extra, 1, 1e9)));
+        vm.startPrank(w.adapter);
+        w.lock.acquire();
+        (uint128 added,) = w.coll.recredit(depositors[i], proxy, address(w.token), r.positionKey, "", false);
+        w.token.mint(proxy, added);
+        vm.stopPrank();
+        vm.startPrank(proxy);
+        w.token.approve(address(w.spoke), added);
+        w.spoke.supply(w.vtReserveId, added, proxy);
+        vm.stopPrank();
+        vm.prank(w.adapter);
+        w.lock.release();
+        unreconciled[proxy] = 0;
+        ++recredits;
+    }
+
+    /// @notice The depositor releases a record whose credit a kept seizure took (`previewRelease == 0`).
+    function releaseZero(
+        uint256 who,
+        uint256 index
+    ) external {
+        uint256 i = who % 2;
+        address proxy = proxies[i];
+        (, BackingRecord[] memory page) = w.coll.getAccountRecords(proxy, address(w.token), 0, 16);
+        if (page.length == 0) return;
+        BackingRecord memory r = page[index % page.length];
+        if (w.coll.previewRelease(r.integrationId, r.positionKey) != 0) return;
+        vm.startPrank(w.adapter);
+        w.lock.acquire();
+        w.coll.releaseZeroCredit(depositors[i], address(w.token), r.positionKey);
+        w.lock.release();
+        vm.stopPrank();
+        unreconciled[proxy] = 0;
+        ++zeroReleases;
+    }
+
     function proxyAt(
         uint256 i
     ) external view returns (address) {
         return proxies[i];
+    }
+
+    /// @dev One record's key and `pct` % of its post-reconcile units: at most `units - 1` for a partial removal, at
+    /// most all of them for a deleverage release; 0 when nothing qualifies.
+    function _exitUnits(
+        address proxy,
+        uint256 index,
+        uint256 pct,
+        bool all
+    ) internal view returns (bytes32 key, uint256 units) {
+        (, BackingRecord[] memory page) = w.coll.getAccountRecords(proxy, address(w.token), 0, 16);
+        if (page.length == 0) return (key, 0);
+        BackingRecord memory r = page[index % page.length];
+        uint256 credited = w.coll.previewRelease(r.integrationId, r.positionKey);
+        uint256 most = all ? credited : (credited == 0 ? 0 : credited - 1);
+        if (most == 0) return (key, 0);
+        key = r.positionKey;
+        units = credited * bound(pct, 1, 100) / 100;
+        if (units == 0) units = 1;
+        if (units > most) units = most;
+    }
+
+    /// @dev The Adapter's exit: the proxy withdraws `units`, the Adapter burns them and calls `releasePartial` or
+    /// `releaseForDeleverage`, one Lock session.
+    function _adapterExit(
+        address proxy,
+        bytes32 key,
+        uint256 units,
+        bool deleverageRelease
+    ) internal {
+        vm.prank(w.adapter);
+        w.lock.acquire();
+        vm.prank(proxy);
+        w.spoke.withdraw(w.vtReserveId, units, proxy);
+        vm.startPrank(w.adapter);
+        w.token.burn(proxy, units);
+        // At most the record's credit, below 2^120.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint128 u = uint128(units);
+        if (deleverageRelease) {
+            w.coll.releaseForDeleverage(proxy, address(w.token), key, u, new uint256[](2));
+        } else {
+            w.coll.releasePartial(proxy, address(w.token), key, u, new uint256[](2));
+        }
+        w.lock.release();
+        vm.stopPrank();
+        unreconciled[proxy] = 0;
     }
 
     /// @dev Lowers the vault token's price by 20 % to 60 %, to no less than $0.10.

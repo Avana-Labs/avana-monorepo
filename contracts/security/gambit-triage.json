@@ -1,3 +1,20 @@
 {
-  "accepted": []
+  "accepted": [
+    {
+      "fingerprint": "5ec4806fec176ea1",
+      "check": "BinaryOpMutation",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "reason": "Equivalent: releaseForDeleverage's early minAmounts-length and checkReadSafe checks are skipped by the mutant, but the market LPVault's unwind performs the same two checks before any AMM call (REQ-VAULT-010, REQ-AMM-CORE-018, REQ-COLL-028) and reverts with the same LengthMismatch(expected, actual) and PoolLocked data; every state write before it reverts with it. Covered by test_TEST_239_deleverageUnitBounds and test_TEST_239_poolLockAndMinimums.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "function": "CollateralizationRelease.releaseForDeleverage"
+    },
+    {
+      "fingerprint": "35efdd11ab726193",
+      "check": "BinaryOpMutation",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "reason": "Equivalent: HOP_ZERO_FOR_ONE_SLOT moves from HOP_SLOT + 3 to HOP_SLOT - 3; both are transient slots no other code uses, written and cleared within each concentrated-liquidity hop (REQ-ROUTE-013), so no read can observe the difference. Direction and callback behaviour covered by test_TEST_232_everyHopRunsWithZeroMinimumAndExtremeLimit and the TEST-046 callback suites.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "function": "DexHops (constant)"
+    }
+  ]
 }

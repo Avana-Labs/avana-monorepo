@@ -21740,7 +21740,7 @@
     ]
   },
   "REQ-VAULT-091": {
-    "hash": "1f3b656439b3e385",
+    "hash": "ddadc5f10fa7021b",
     "checks": [
       "CollateralizationBase",
       "CollateralizationViews",
@@ -21749,7 +21749,8 @@
       "ICollateralizationViews",
       "PROP-037",
       "TEST-028",
-      "TEST-060"
+      "TEST-060",
+      "TEST-236"
     ]
   },
   "REQ-VAULT-092": {
