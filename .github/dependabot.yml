@@ -1,13 +1,16 @@
-# Update pull requests for the GitHub Actions (pinned by commit SHA) and the npm and pip tool pins. A release is
-# proposed only once it is at least 14 days old, the same rule the pins in contracts/script/install-security-tools.sh
-# follow. Soldeer dependencies (contracts/soldeer.lock) are not covered and change only by a reviewed
-# `forge soldeer update`.
+# Security updates only for the pinned npm and pip tool versions: `open-pull-requests-limit: 0` stops routine
+# version-bump pull requests while Dependabot security alerts and security-fix pull requests stay on (repository
+# settings). The verification tools (Z3, SymPy, Hypothesis, Quint, pytest) are pinned on purpose: each model's
+# documented result is tied to a version, so an upgrade is a deliberate change that re-runs the whole verification
+# suite. GitHub Actions (pinned by commit SHA) get one grouped pull request a month. A release is proposed only once it
+# is at least 14 days old, the same rule the pins in contracts/script/install-security-tools.sh follow. Soldeer
+# dependencies (contracts/soldeer.lock) are not covered and change only by a reviewed `forge soldeer update`.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 14
     groups:
@@ -18,26 +21,22 @@ updates:
     directory: /contracts
     schedule:
       interval: weekly
-    cooldown:
-      default-days: 14
+    open-pull-requests-limit: 0
 
   - package-ecosystem: npm
     directory: /spec/05-verification
     schedule:
       interval: weekly
-    cooldown:
-      default-days: 14
+    open-pull-requests-limit: 0
 
   - package-ecosystem: pip
     directory: /contracts
     schedule:
       interval: weekly
-    cooldown:
-      default-days: 14
+    open-pull-requests-limit: 0
 
   - package-ecosystem: pip
     directory: /spec/05-verification
     schedule:
       interval: weekly
-    cooldown:
-      default-days: 14
+    open-pull-requests-limit: 0
