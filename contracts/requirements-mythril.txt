@@ -2,4 +2,4 @@
 # Separate from requirements.txt: Mythril 0.24.8 pins z3-solver 4.12.5.0, while Halmos pins 4.12.6.0.
 mythril==0.24.8
 # py-evm 0.7.0a1 (a Mythril dependency) imports pkg_resources, which setuptools 81 and later no longer ship.
-setuptools==75.8.2
+setuptools==84.2.1
