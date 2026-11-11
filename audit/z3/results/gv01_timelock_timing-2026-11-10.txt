@@ -1,0 +1,28 @@
+[PROVED] MATH-GOV-01: requiredDelay is SHORT_DELAY only when every call is short-listed with a 4-byte selector, else normalDelay (a short payload or an empty batch takes normalDelay); always in [SHORT, MAX]
+[PROVED] MATH-GOV-02: an operation executes only in [t_s + requiredDelay, t_s + d + GRACE): never early, never after grace
+[PROVED] MATH-GOV-03: from scheduling a delay cut to the first operation under the new delay takes >= old + new >= 2 x MIN_NORMAL_DELAY (8 days)
+[PROVED] MATH-GOV-04: executable and expired are exclusive, and a ready operation that is not executable is expired
+[PROVED] MATH-GOV-05: launch normal delay 432,000 s: exit fits for any k <= 14,399 NFTs and reaction r <= 3 days
+[COUNTEREXAMPLE] MATH-GOV-06: wrong reading: if an upgrade could run at SHORT_DELAY, a 3-day reaction time could not exit first (deliberate counterexample)
+      k = 10
+      r = 43069
+      d = 43200
+[PROVED] MATH-GOV-07: a key holding only APPLICATION_FREEZE_GUARDIAN never returns Frozen or Paused to None and never changes a pause reason in 4 calls
+[PROVED] MATH-GOV-07b: over 4 calls by any caller the reason is None exactly when the state is not Paused
+[PROVED] MATH-GOV-08: repay, fees, debt-free withdrawal and removal, liquidation, pending settlement and zero-credit release are open in None, Frozen, Paused(General) and Paused(MintPathSuspect)
+[PROVED] MATH-GOV-08b: a rescue top-up is open under Paused(General) and Frozen, and no pledge of any kind (so no mint) is open under Paused(MintPathSuspect)
+[COUNTEREXAMPLE] MATH-GOV-09: wrong reading (any-call marking): one no-op grantRole shields a malicious upgrade batch from every non-DAO canceller (deliberate counterexample)
+      n = 6
+      role_0 = false
+      role_1 = false
+      role_2 = true
+      role_3 = true
+      role_4 = true
+      role_5 = true
+[PROVED] MATH-GOV-10: every-call marking: any batch with a call that is neither a role call nor DAO-only is cancellable by every canceller; a pure role-change or pure restoring batch only with DAO_CANCELLER_ROLE
+[PROVED] MATH-GOV-11: 4 tighten executions: value never rises and never falls below max(hard bound, liveness bound)
+[PROVED] MATH-GOV-12: 4 keeper removals, freezes, unfreezes and additions: a removal never leaves fewer than keeperFloor = 1 active keeper, the approved list never exceeds MAX_KEEPERS = 32, and new borrowing is open iff at least 1 keeper is active
+[PROVED] MATH-GOV-13: no settlement mode is governance-timed, and a refused payout is credited in full to its payee in the escrow (received + credited = x, credited = x when the transfer fails)
+[PROVED] MATH-GOV-14: accepted grace settings: HF < 0.90 is never shielded and no grace wait exceeds 7,200 s
+[PROVED] MATH-GOV-15: the window in which a canceller can act lasts at least requiredDelay
+-- 17 checks, 0 differ from documented result

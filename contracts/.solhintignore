@@ -1,0 +1,4 @@
+# solhint runs on src/ only (security-fast.sh passes 'src/**/*.sol').
+# Minimal mirrors of third-party ABIs (Aave V4, Chainlink, Curve, GHO, Sky, Uniswap v3): parameter names and layout
+# follow the deployed contracts, so findings there are not actionable in Avana code.
+src/interfaces/external/

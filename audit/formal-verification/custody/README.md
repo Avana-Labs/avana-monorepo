@@ -1,0 +1,34 @@
+# Custody area: internal formal verification (FV-CUS)
+
+This folder holds Avana's internal formal verification of the custody area defined in [methodology.md](../methodology.md) §1: the chain's one AMM-neutral Collateralization ledger, the vault token and its factory, each AMM protocol's LPVault, and the AaveAdapter's mint and burn calls in pledge, re-credit, withdrawal, partial removal, repay with collateral, seizure and pending settlement. The models are written from the spec text of the AMM-neutral design (decisions `Q-001`…`Q-380`): records keyed by (`integrationId`, `positionKey`), n-token amount arrays, exact range match, one immutable PositionProxy per wallet × CDP Spoke × market, Hub-keyed caps and a Lock with two members ([report.md](report.md) §10). They do not reuse the models in `spec/05-verification/`.
+
+- [report.md](report.md) is the verification report: scope, method, assumptions, findings with counterexamples, and every property with its status.
+- [audit-mapping.md](audit-mapping.md) maps each property to the prover rule (CVL) that proves it on the real code, and to its `PROP-NNN` in [5.2](../../../spec/05-verification/02-formal-properties.md).
+
+## Running
+
+```
+./run.sh
+```
+
+`run.sh` runs every Z3 model with the spec's Python environment (`spec/05-verification/.venv`, z3-solver 4.13). It then runs the Quint model twice with `quint run`, each time with 10,000 randomized samples of 20 steps. It then checks that every spec ID cited by a model is defined (`check_ids.py`, `trace.py`'s rules). It exits non-zero when any check is VIOLATED, VACUOUS or UNKNOWN or a cited ID is undefined. A check registered as an open finding (`common.open_finding`) prints as `OPEN` with its counterexample and does not fail the run. Against the AMM-neutral spec (`FV-CUS-R5`), 532 Z3 and enumeration checks and both Quint runs pass, and `FV-CUS-42-surface` is the open finding F-10 ([report.md](report.md) §10.3), so `run.sh` exits 0. A full run takes about 35 seconds on an idle machine, most of it in Quint. `QUINT_SAMPLES=n ./run.sh` changes the number of Quint samples.
+
+## Files
+
+| File | What it proves | Targets |
+|---|---|---|
+| `common.py` | Harness. A rule is proved by asking Z3 for a model of `hypotheses ∧ ¬claim`: unsat means VERIFIED, sat means VIOLATED and prints the counterexample. Every rule also gets a `satisfy` witness: hypotheses with no model are reported as VACUOUS, never as verified. | — |
+| `fv_backing.py` | Inductive invariants of one market over every outer call: one-sided backing `supply ≤ credited + pending`, the backing gap and its accounting, equality under conforming calls, credited and per-account sums, rescue units ≤ credited and their account sum, per-proxy shares ≤ credited, units at rest, live ≥ credited. Covers base case and step case for pledge, donation, withdrawal, partial removal, re-credit, deleverage release, zero-credit release, conforming liquidation, `settlePending`, and four non-conforming LPVaultSwap behaviours. Also proves liveness of every Adapter call after an orphan burn, exactness of the gap check, non-interference, commutation of withdrawals and nothing-for-zero. | T-01, T-03, T-04, T-07, T-08, T-09, T-15, T-17, T-19, T-20; partial removal, re-credit, deleverage release, rescue units |
+| `fv_list.py` | Largest-first seizure list: exact debit, prefix walk, at most one partial record, split additivity, revert above the account's credit, insertion order, and in-place changes by a partial removal or re-credit. | T-12 |
+| `fv_exposure.py` | Exit-release charge: monotone, exact at both ends, independent of how an exit is split. The re-credit rebase and a record's lifetime release. Counter sums over open records with pledges, re-credits and exits, with no saturation ever reachable. The rescue-unit formula. Cap bounds, Hub `addCap` headroom, and the $10 `minPledgeUsd`. | T-13, T-14; rescue units |
+| `fv_pending.py` | Pending-settlement payout: no overpayment, backing per remaining unit never falls, the final settlement is exact, and a split sequence is conserved. Also the fee-on-transfer witness. | T-08 |
+| `fv_hub.py` | Aave V4 Hub math at `a3ef63e`: shares stay equal to assets, the share price never falls, and a donation does not change the seizure debit (two-execution comparison). | T-15, T-16 |
+| `fv_token.py` | Vault token under OpenZeppelin v5.1.0 semantics: Adapter-only mint, burn and registry; the recipient invariant; self-transfer; re-registration. Factory decimals from the value of one credited unit, and signed exact-range tick alignment. Proxy unit movement. | T-06, T-10, T-22, T-23 |
+| `fv_lpvault.py` | Custody of one Uniswap v3 or Slipstream ERC-721 position under any Adapter: custody exactly when a record is open, a stray NFT never pledged, exit paths, partial-removal principal only to the depositor, re-credit, fee collection, the LP journey, reentrancy and views under the Lock with their two exceptions. | T-02, T-05, T-11, T-18 |
+| `fv_arith.py` | No overflow in the custody formulas inside the stated bounds, including rescue units and the rebase. | T-21 |
+| `fv_lpvalue.py` | Credited LP value against realizable exit value for the full-range case (the bounded range is in `fv_amm.py`): AM-GM bound at any pool price, collateral-factor and price-move margins, the one-raw-unit-per-leg residual, and a randomized check with exact Uniswap v3 amounts compared as exact rationals. | item 1 |
+| `fv_amm.py` | AMM-neutral rules: records keyed by (`integrationId`, `positionKey`); exact range match and the narrower-range overvaluation witness; composition at the clamped oracle price as the minimum over spot prices; n-token pending payout and split conservation for 2 to 8 tokens; one market per proxy and CREATE2 binding over the triple; one counter per Hub for the Hub-wide caps; 16 records per account-market and the seizure gas bound; value-moving custody calls only under the two Lock members | AMM-neutral design (§10) |
+| `fv_solvency.py` | A withdrawal with debt that passes the post-withdrawal health check leaves the account solvent; why the check must be read after the withdrawal; Hub liquidity for a proxy's own units. | item 2 |
+| `custody.qnt` | Quint state machine (one market, one ERC-721 position model): position custody, records, the list walk, reconcile, partial removal, re-credit, deleverage release, rescue units, pending settlement, supply and the Adapter's gap check. `step`: every conforming call plus unsettled seizures, invariant `inv`. `stepOrphan`: also a `burnSeized` and a `settlePending` without the other side, invariant `invOneSided`. | T-01, T-02, T-04, T-05, T-19 |
+
+`check_ids.py` fails on any cited spec ID the spec does not define. Every model file tags its checks as `# FV-CUS-NN verifies: <IDs>`. `spec/05-verification/trace.py` reads these tags.

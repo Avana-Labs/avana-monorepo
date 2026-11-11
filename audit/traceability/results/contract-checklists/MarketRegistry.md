@@ -1,0 +1,221 @@
+# Checklist: MarketRegistry
+
+Spec pages: 08-market-registry.md. CVL specs: MarketRegistry.spec.
+
+## REQ / SPEC on the page (97)
+
+- [x] `REQ-CONFIG-001` (08-market-registry.md:184) The MarketRegistry MUST sit behind one fixed ERC-1967 proxy address using the UUPS pattern, whose `_authorizeU — TEST-168
+- [x] `REQ-CONFIG-002` (08-market-registry.md:185) Upgrades MUST go only through `upgradeToAndCall` on the proxy, executed by the timelock at the normal delay an — TEST-168, TEST-242
+- [ ] `REQ-CONFIG-003` (08-market-registry.md:186) The MarketRegistry MUST NOT hold or approve any token or NFT and MUST NOT call any state-changing function on 
+- [ ] `REQ-CONFIG-004` (08-market-registry.md:187) Immutable Avana contracts (vault tokens, LPVaults, Collateralization, the Lock, the ProxyManager, PositionProx
+- [x] `REQ-CONFIG-005` (08-market-registry.md:188) Canonical per-chain Avana addresses (`TIMELOCK`, `AAVE_GOVERNANCE_EXECUTOR`, `VAULT_TOKEN_FACTORY`, `AAVE_ADAP — TEST-168, TEST-285
+- [x] `REQ-CONFIG-006` (08-market-registry.md:192) A market is one (chain, AMM integration, pool, exact position shape) = one vault token = one Hub asset `(homeH — TEST-138
+- [x] `REQ-CONFIG-007` (08-market-registry.md:193) Each of `marketOfKey`, `marketOfVaultToken`, `marketOfLpOracle`, `marketOfHubAsset` and `marketOfReserve` MUST — TEST-138, TEST-252
+- [x] `REQ-CONFIG-008` (08-market-registry.md:194) `hub`, `spoke`, `integrationId`, `integration`, `pool` or `poolId`, `shape`, `tokens`, `tokenDecimals`, `vault — TEST-138
+- [x] `REQ-CONFIG-009` (08-market-registry.md:195) A market's `lpOracle` address MUST be immutable for the market; a new price source or a change to price comput — TEST-231
+- [ ] `REQ-CONFIG-010` (08-market-registry.md:196) Each vault token is permanently bound to its market's home Hub and CDP Spoke; a market moves to another Hub or
+- [x] `REQ-CONFIG-011` (08-market-registry.md:197) A market MUST be registered only for an AMM integration registered on this chain whose readiness guards hold ( — TEST-138
+- [x] `REQ-CONFIG-012` (08-market-registry.md:198) A market in `Registered` or `Cancelled` status MUST be treated as not listed by every Avana contract and the L — TEST-138
+- [x] `REQ-CONFIG-013` (08-market-registry.md:199) A market MUST NOT be deleted or returned to `Active` once it leaves `Registered`; offboarding is `setMarketOff — TEST-213
+- [ ] `REQ-CONFIG-014` (08-market-registry.md:200) The MarketRegistry MUST NOT store a risk parameter value, a settlement mode, an allowlist or a markets-per-wal
+- [x] `REQ-CONFIG-016` (08-market-registry.md:204) `deployCdpSpoke(def)` for a Spoke already recorded MUST re-approve it after an Aave DAO upgrade of its impleme — TEST-182, TEST-185
+- [x] `REQ-CONFIG-074` (08-market-registry.md:205) `deployCdpSpoke`, for a new Spoke and for a re-approval, MUST revert with `InvalidSpoke` unless `implementatio — TEST-182, TEST-185
+- [x] `REQ-CONFIG-083` (08-market-registry.md:206) Every Hub of the chain MUST be recorded with `recordHub(hub, tier)` (tier `StableLP`, `CorrelatedLP` or `Volat — TEST-185, TEST-285
+- [x] `REQ-CONFIG-077` (08-market-registry.md:207) `deployCdpSpoke(def)` MUST, as one normal-delay timelock operation, record the standard Aave V4 Spoke that the — TEST-182, TEST-185
+- [x] `REQ-CONFIG-078` (08-market-registry.md:208) `listCollateralMarket(def)` MUST: require the Spoke, Hub and integration of `REQ-CONFIG-033`; require the inte — TEST-138
+- [x] `REQ-CONFIG-079` (08-market-registry.md:209) `enableDebtReserve(spoke, def)` MUST run the checks of `REQ-MREG-006` (funding Hub and asset, Aave reserve ide — TEST-185
+- [x] `REQ-CONFIG-075` (08-market-registry.md:210) **Integration pinning.** `registerIntegration(integrationId, lpVault, pricing)` MUST pin, per AMM protocol per — TEST-264
+- [x] `REQ-CONFIG-076` (08-market-registry.md:211) **Standard-Spoke settings at listing.** `deployCdpSpoke`, `listCollateralMarket` and `activateMarket` MUST run — TEST-138, TEST-204
+- [x] `REQ-CONFIG-081` (08-market-registry.md:212) **Credit-line registry.** The MarketRegistry MUST keep, per (funding Hub, asset), the line the funding Hub's g — TEST-185, TEST-273
+- [x] `REQ-CONFIG-082` (08-market-registry.md:213) **Pause per Hub, freeze per chain.** Pause state and reason MUST be keyed by Hub (`REQ-MREG-001`), so stopping — PROP-041, TEST-035, TEST-065
+- [x] `REQ-MREG-006` (08-market-registry.md:217) `enableDebtReserve(spoke, def)` MUST revert with `InvalidSpoke` unless the Spoke is approved, and with `Invali — TEST-185, TEST-285, TEST-287
+- [x] `REQ-MREG-007` (08-market-registry.md:218) The MarketRegistry's enabled debt-reserve set of each Spoke MUST equal the set of reserves the Spoke marks bor — TEST-185
+- [x] `REQ-MREG-008` (08-market-registry.md:219) A debt reserve whose funding Hub prices the asset at a fixed value (GHO) MUST have `fixedPrice = true` and a p — TEST-185
+- [x] `REQ-MREG-009` (08-market-registry.md:220) Each debt reserve's funding path MUST be explicit in its record: `fundingHub` is the Hub whose asset the CDP S — TEST-185, TEST-273
+- [x] `REQ-MREG-010` (08-market-registry.md:221) `removeDebtReserve(spoke, reserveId)` MUST revert with `UnknownDebtReserve` unless the reserve is approved, an — TEST-213
+- [x] `REQ-CONFIG-017` (08-market-registry.md:225) Every pool token MUST be listed with `listToken` before a market using it is registered, and every debt asset  — TEST-139, TEST-250
+- [x] `REQ-CONFIG-018` (08-market-registry.md:226) A listed token's class MUST match the tier of every Hub whose markets use it (stablecoins only for Stable LP H — TEST-139
+- [x] `REQ-CONFIG-021` (08-market-registry.md:227) Each token MUST have a primary, an alternate and a standby Chainlink route, each a list of one or two aggregat — TEST-231, TEST-250
+- [x] `REQ-CONFIG-025` (08-market-registry.md:228) `pegModule` MUST record the peg module (a Sky PSM, or a GHO Stability Module with a non-zero cap) a token's pr — TEST-054, TEST-250
+- [x] `REQ-CONFIG-026` (08-market-registry.md:229) Listing a token, adding a feed definition (ParameterStore `setFeed`) or replacing a token's routes (`setPriceS — TEST-231
+- [x] `REQ-CONFIG-027` (08-market-registry.md:230) `setPriceSource(token, primary, alternate, standby)` MUST re-run `REQ-CONFIG-021`, `REQ-CONFIG-034` (with the  — TEST-231
+- [x] `REQ-MREG-027` (08-market-registry.md:236) `TokenDef` MUST record, beside the primary and alternate routes, a `standbyRoute` (`address[]`, one or two fee — TEST-231, TEST-250
+- [x] `REQ-MREG-028` (08-market-registry.md:237) Standby switch: — TEST-066, TEST-231
+- [x] `REQ-CONFIG-028` (08-market-registry.md:249) `listCollateralMarket` (`registerMarket`) MUST be reachable only through the timelock at the normal delay, whi — TEST-062, TEST-138
+- [ ] `REQ-CONFIG-029` (08-market-registry.md:250) Pool identity and orientation: the market's integration MUST validate the pool and shape in `bindMarket(market
+- [x] `REQ-CONFIG-030` (08-market-registry.md:251) The shape MUST be valid for the integration: for concentrated liquidity, `tickLower < tickUpper`, both aligned — TEST-138
+- [x] `REQ-CONFIG-031` (08-market-registry.md:252) Decimals rule: the vault-token decimals `d` MUST equal the value the market's integration fixes for its unit ( — TEST-138
+- [x] `REQ-CONFIG-032` (08-market-registry.md:253) Vault-token and LPOracle binding: the listing batch deploys the market's vault token with the timelock's `Vaul — TEST-138
+- [x] `REQ-CONFIG-033` (08-market-registry.md:254) Every pool token MUST be listed, and `spoke` MUST be a CDP Spoke registered by `deployCdpSpoke` whose integrat — TEST-138
+- [x] `REQ-CONFIG-034` (08-market-registry.md:255) Common-mode guard: the alternate routes of the market's pool tokens MUST share no feed address pairwise, with  — TEST-139, TEST-231
+- [x] `REQ-CONFIG-035` (08-market-registry.md:256) Raw-price bound: with `a0`, `a1` the current 8-decimal normalised answers of each token's primary route, `mulD — TEST-139
+- [x] `REQ-CONFIG-036` (08-market-registry.md:257) Listing margin [SPEC-CF-004](07-risk-module.md#collateral-factor-math) MUST hold with `CF_LP` from [SPEC-CF-00 — TEST-138, TEST-231
+- [x] `REQ-CONFIG-037` (08-market-registry.md:258) LPOracle seed: at registration the market's `lpOracle` MUST report `decimals() == 8` and `latestAnswer() > 0`  — TEST-138, TEST-139
+- [x] `REQ-CONFIG-038` (08-market-registry.md:259) Consistency check: when the AMM protocol offers a time-weighted price, the TWAP source is the market's own poo — TEST-138
+- [x] `REQ-CONFIG-039` (08-market-registry.md:260) Swap routes: for each pool token and each enabled debt asset of the Spoke other than that token, a primary (`k — TEST-054, TEST-138, TEST-245
+- [x] `REQ-CONFIG-040` (08-market-registry.md:261) No route's `dependencies()` MAY include the market's own pool, because unwinding seized collateral must not tr — TEST-054
+- [x] `REQ-CONFIG-042` (08-market-registry.md:265) `activateMarket` MUST revert with `MarketNotRegistered` unless the market is `Registered`; it sets `hubAssetId — TEST-138
+- [x] `REQ-CONFIG-043` (08-market-registry.md:266) Activation MUST run the RiskModule's full drift check `RISK_MODULE.checkAaveConfig(spoke, [marketId])` (the st — TEST-138
+- [x] `REQ-CONFIG-044` (08-market-registry.md:267) Activation MUST require on the reserve's latest dynamic key: collateral factor `> 0` and `≤ RISK_MODULE.expect — TEST-138
+- [x] `REQ-CONFIG-045` (08-market-registry.md:268) Activation MUST require the Spoke's `getLiquidationConfig()` to have `targetHealthFactor > 1e18` and equal to  — TEST-138
+- [x] `REQ-CONFIG-046` (08-market-registry.md:269) Activation MUST require the market's parameters, caps and `minPledgeUsd` to be set in the ParameterStore and t — TEST-138
+- [x] `REQ-CONFIG-047` (08-market-registry.md:270) Activation MUST require the vault-token reserve to be neither paused nor frozen, the market's LPOracle to be L — TEST-138
+- [x] `REQ-CONFIG-048` (08-market-registry.md:271) `cancelRegistration` (short delay) MUST work only for a `Registered` market (else `MarketNotRegistered`), MUST — TEST-213, TEST-229, TEST-252
+- [x] `REQ-CONFIG-073` (08-market-registry.md:272) A listing MUST carry one normal delay and one short delay: the listing batch with `listCollateralMarket` (and  — TEST-138
+- [x] `REQ-MREG-030` (08-market-registry.md:274) Relisting: `cancelRegistration` keeps the cancelled `marketId` reserved for its (Spoke, market key) pair. `reg — TEST-252
+- [x] `REQ-MREG-032` (08-market-registry.md:275) `enableDebtReserve` (for reserve `r`, against every Active or Offboarding market of the Spoke) and `activateMa — TEST-245
+- [x] `REQ-MREG-033` (08-market-registry.md:277) **Settlement debt reserve of a market.** Each market MUST record `settlementReserve(marketId)`, the debt reser — TEST-138, TEST-213
+- [x] `REQ-MREG-015` (08-market-registry.md:281) `setMarketOffboarding(marketId)` MUST revert with `MarketNotActive` unless the market is `Active`, set `Offboa — TEST-213
+- [x] `REQ-CONFIG-080` (08-market-registry.md:282) **Wind-down ends.** After `OFFBOARD_NOTICE_SECONDS` (5 days, the normal delay) from `offboardedAt`, anyone MAY — TEST-213
+- [x] `REQ-MREG-001` (08-market-registry.md:286) The MarketRegistry MUST hold one `PauseState` per registered Hub, initially `None`, changed only by these tran — PROP-041, TEST-065
+- [ ] `REQ-MREG-002` (08-market-registry.md:287) Effects: Frozen MUST block new pledges by accounts with zero debt on every debt reserve, and every borrow; it 
+- [x] `REQ-MREG-003` (08-market-registry.md:288) The pause state MUST have no on-chain expiry. Avana's only restrictions on new activity are the pause state wi — TEST-035, TEST-065, TEST-168
+- [x] `REQ-MREG-004` (08-market-registry.md:289) `freeze()` MUST require `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN`; `pause(reason)`, `unfreeze()` an — PROP-041, TEST-062, TEST-065, TEST-066
+- [x] `REQ-MREG-005` (08-market-registry.md:290) `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` MUST be held only by the timelock: `_grantRole` MUST revert `Admi — TEST-242
+- [x] `REQ-MREG-024` (08-market-registry.md:292) `pause(reason)` MUST record a `PauseReason` with the Paused state: `General` (new activity stopped; rescue top — PROP-041, TEST-065
+- [x] `REQ-MREG-019` (08-market-registry.md:298) `freezeAddress(account)` MUST require `APPLICATION_FREEZE_GUARDIAN` (immediate) or `APPLICATION_ADMIN` (short  — PROP-071, TEST-229
+- [x] `REQ-MREG-020` (08-market-registry.md:299) `freezeAddress` MUST revert `ProtectedAddress(account)` for: `TIMELOCK` and `AAVE_GOVERNANCE_EXECUTOR`; the Aa — PROP-071, TEST-229
+- [x] `REQ-MREG-021` (08-market-registry.md:300) `freezeAddress` MUST NOT check any keeper floor and MUST NOT read LPVaultSwap's registry: a guardian can alway — PROP-071, TEST-229
+- [x] `REQ-MREG-022` (08-market-registry.md:301) `unfreezeAddress(account)` MUST require `APPLICATION_ADMIN` at the normal delay, revert `AddressNotFrozen(acco — TEST-066, TEST-229
+- [ ] `REQ-MREG-023` (08-market-registry.md:302) The freeze MUST be read only on new-activity paths, by the calling wallet: the AaveAdapter (a frozen caller's 
+- [x] `REQ-MREG-025` (08-market-registry.md:308) The MarketRegistry MUST store, per key (market key `bytes32(marketId)`, debt key `keccak256(abi.encode(spoke,  — TEST-228
+- [x] `REQ-MREG-026` (08-market-registry.md:309) `recordBreach(key, reasons)` MUST revert `NotRiskModule` unless `msg.sender == RISK_MODULE`; it ORs the securi — TEST-062, TEST-228
+- [x] `SPEC-BRK-005` (08-market-registry.md:310) **Seizure surge (monitoring alert, no on-chain trip).** Monitoring alerts when the units seized in one market  — TEST-228
+- [x] `SPEC-BRK-006` (08-market-registry.md:311) **Swap-route failures (monitoring alert, no on-chain trip).** Monitoring alerts at 3 failed primary swap-route — TEST-228
+- [x] `REQ-MREG-031` (08-market-registry.md:312) `activeMarketCount(spoke)` MUST return the number of markets on `spoke` whose status is `Active` or `Offboardi — TEST-204
+- [x] `REQ-CONFIG-059` (08-market-registry.md:316) Each market MUST hold, per pool token and enabled debt asset, a fixed primary swap route and a pre-approved ba — TEST-054
+- [x] `REQ-CONFIG-060` (08-market-registry.md:317) Adding or changing a route MUST go through `setRoute` at the normal delay, MUST re-run `REQ-CONFIG-039` and `R — TEST-054
+- [x] `REQ-CONFIG-061` (08-market-registry.md:318) `disableRoute` (short delay) MUST set the record's status to `Disabled` until `restoreRoute` or `setRoute` cha — TEST-054
+- [x] `REQ-CONFIG-062` (08-market-registry.md:319) `restoreRoute` (short delay) MUST revert with `NotPreviouslyApproved` unless `route` is in that slot's set of  — TEST-054
+- [x] `REQ-CONFIG-063` (08-market-registry.md:320) `getRoute(marketId, token, asset, kind)` MUST return the route and `usable = (status == Active)`; LPVaultSwap  — TEST-054
+- [x] `REQ-MREG-011` (08-market-registry.md:324) There MUST be no buy route: the liquidation caller funds the repayment in the debt asset itself, from its own  — TEST-053
+- [x] `REQ-MREG-012` (08-market-registry.md:325) Swap-route containment MUST use `disableRoute` and `restoreRoute` per (market, token, asset, kind) at the shor — TEST-054
+- [x] `REQ-MREG-013` (08-market-registry.md:326) There MUST be no sell-back route: leftover value of a liquidation is paid in the debt asset that was repaid (k — TEST-053
+- [x] `REQ-MREG-014` (08-market-registry.md:327) `getRoute(marketId, token, asset, kind)` MUST return the route and `usable = (status == Active)`, and `(addres — TEST-054
+- [x] `REQ-MREG-016` (08-market-registry.md:331) The MarketRegistry MUST hold no in-kind settlement window: `enableInKind`, `disableInKind`, `isInKindEnabled`  — TEST-053
+- [x] `REQ-MREG-029` (08-market-registry.md:332) There MUST be no automatic in-kind trigger: `setInKindAutoTrigger`, `autoEnableInKind`, the listing flag and ` — TEST-053
+- [x] `REQ-CONFIG-064` (08-market-registry.md:336) Every view MUST be `view`, never revert for a listed market, and return the values in force at the current blo — TEST-168
+- [ ] `REQ-CONFIG-065` (08-market-registry.md:342) Any registration check fails | `registerMarket` reverts with the failing check's error; the listing batch fail
+- [x] `REQ-CONFIG-066` (08-market-registry.md:343) Any activation check fails, such as a wrong Aave flag or CF in the DAO payload | `activateMarket` reverts; the — TEST-138
+- [ ] `REQ-CONFIG-068` (08-market-registry.md:344) A market's swap routes cannot settle | There is no in-kind window to end (`Q-401`); liquidations of that marke
+- [x] `REQ-MREG-017` (08-market-registry.md:345) A pause-state call is not a valid transition or comes from a caller without the role | The call reverts (`Alre — PROP-041, TEST-065, TEST-066
+- [x] `REQ-MREG-018` (08-market-registry.md:346) A debt-reserve, swap-route, credit-line or deployment call fails its checks | The call reverts with `InvalidSp — TEST-185
+- [ ] `REQ-CONFIG-069` (08-market-registry.md:347) MarketRegistry implementation broken or reverting | Reads fail: pledges, re-credits, borrow, withdraw-with-deb
+
+## TEST rows (45)
+
+- [ ] `TEST-012` [unit] Pledge gates: a new account (no debt on any debt reserve) requires the market Live; a top-up is allowed into a
+- [x] `TEST-171` [unit] Market identity from the vault token: during a pledge Collateralization takes the market ID and the LPOracle o
+- [ ] `TEST-030` [unit] Fixed targets: the proxy calls only the Spoke it was initialized with; vault-token reserve IDs are derived at 
+- [ ] `TEST-033` [unit] Drift checks on pledge of a new account and on borrow and withdraw-with-debt (`RiskModule.checkAaveConfig`, re
+- [x] `TEST-035` [unit] Per-market containment: Avana has no per-function or per-market pause selector (inventory over the AaveAdapter
+- [x] `TEST-053` [unit] No in-kind settlement: LPVaultSwap has no in-kind branch and the MarketRegistry has no in-kind window, so `ena
+- [x] `TEST-054` [unit] Routes: a fixed swap route from each pool token into each debt asset the CDP Spoke can borrow (Uniswap v3, Sli
+- [x] `TEST-063` [unit] Delay classes: an operation gets the short delay (43,200 s) only when every call in it is on the short-delay l
+- [x] `TEST-065` [unit] Pause-state transitions: `freeze()` moves None → Frozen for `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMI
+- [x] `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- [ ] `TEST-162` [unit] Pause-state readers: the AaveAdapter reads `MarketRegistry.pauseState()` and `pauseReason()` only in `pledge`,
+- [x] `TEST-168` [access-control] Pause location: the only pause state is the MarketRegistry's `PauseState`; the AaveAdapter, RiskModule, Parame
+- [x] `TEST-185` [unit] `MarketRegistry.approveSpoke(spoke, implementation)` reverts `InvalidSpoke` when any Avana collateral reserve 
+- [ ] `TEST-192` [unit] Pause matrix: for each state and reason and each action, with every other check passing: None allows new pledg
+- [x] `TEST-213` [unit] Market offboarding: `setMarketOffboarding(marketId)` (short delay) sets status `Offboarding`; afterwards pledg
+- [ ] `TEST-098` [invariant] Keeper floor: the number of active (registered and unfrozen) committed operators on LPVaultSwap never falls be
+- [ ] `TEST-101` [invariant] Pause-state machine: a guardian handler calls `freeze`, `pause`, `unfreeze` and `unpause` with every role (Eme
+- [ ] `TEST-193` [invariant] Exits and liquidation under every pause state and reason (`fail_on_revert` on for the live actions): a pause h
+- [ ] `TEST-211` [invariant] Accounts and multi-asset accounting: handlers pledge, borrow, repay and liquidate on two Borrow Spokes, severa
+- [ ] `TEST-215` [invariant] Multi-actor invariant suite (Foundry invariant test with handlers, extending `TEST-082`). Actors: borrowers wi
+- [ ] `TEST-218` [invariant] Withdrawal and liquidation cascades: N accounts (N up to 200) opened near HF 1.10 in two markets; outside LPs 
+- [ ] `TEST-129` [fork] Guardian rehearsal, before launch and quarterly: the Emergency Guardian (3-of-5) and the Aave Protocol Guardia
+- [x] `TEST-182` [fork] Implementation drift through `extSload`: `Spoke.extSload(0x3608…2bbc)` equals `eth_getStorageAt` of the proxy'
+- [ ] `TEST-195` [fork] Exit inside the delay: the governance multisig schedules an AaveAdapter upgrade to a hostile implementation (n
+- [x] `TEST-221` [fork] Token edge cases. A fee-on-transfer mock pool token is rejected at listing; a fee switched on after listing se
+- [ ] `TEST-133` [hostile] Hostile MarketRegistry and ParameterStore: remapping a market to an attacker pool, Spoke, vault token or debt 
+- [x] `TEST-138` [deployment-check] Listing order: token and feed are deployed and a valid price is seeded before the DAO payload; the governance 
+- [x] `TEST-139` [deployment-check] Listing guards reject a market unless: `d0 + d1` is even; every feed's normalised `minAnswer` is ≥ 1; the pool
+- [x] `TEST-204` [deployment-check] Debt-reserve set: for every CDP Spoke, the set of borrowable reserves read on-chain equals `MarketRegistry.get
+- [x] `TEST-225` [invariant] Governance drift sequences: random tighten, loosen and structural operations within bounds, scheduled and exec
+- [x] `TEST-228` [unit] Circuit breakers: each on-chain trigger (ORACLE, POOL_SHARE, ISSUER, COVERAGE, DEFICIT, MANUAL) trips and bloc
+- [x] `TEST-229` [unit] Address freeze: a frozen wallet's new pledge (non-rescue), borrow (as caller or receiver), withdraw-with-debt,
+- [x] `TEST-231` [unit] Standby switch: the pause guardian's `useStandbyRoute` takes effect at once, increments `priceRouteVersion`, a
+- [ ] `TEST-234` [unit] No automatic in-kind: repeated primary-route failures in a market change nothing about how its liquidations se
+- [x] `TEST-242` [access-control] Admin grant: on every upgradeable Avana contract, `grantRole(APPLICATION_ADMIN, a)` and `grantRole(DEFAULT_ADM
+- [ ] `TEST-243` [hostile] Hostile MarketRegistry: an implementation that returns an empty debt set, `isApprovedDebtReserve` false for ev
+- [x] `TEST-245` [unit] Two-leg liveness: `setBuySlippageAllowanceBps`, `enableDebtReserve` and `activateMarket` revert `LivenessBound
+- [x] `TEST-250` [unit] Feed cadence: a feed is fresh while its age is at most its own heartbeat, read from the feed's configuration a
+- [x] `TEST-252` [unit] Small fixes: grace starts at the newest leg in use of the fresh price, never after `block.timestamp`, includin
+- [x] `TEST-273` [unit] Cross-Hub credit line: the funding Hub owns the cap of every line drawing its asset; the registry sums the `dr
+- [ ] `TEST-274` [invariant] Draw gate: handlers borrow, accrue interest, cut a Spoke's `drawCap` below its drawn amount and record deficit
+- [ ] `TEST-281` [fork] One-sided unwind stress: for each concentrated-liquidity market, a seizure at and beyond each range edge retur
+- [ ] `TEST-283` [unit] Readiness listing guards for AMM protocols beyond Uniswap v3 and Slipstream: a Uniswap v2 pricing that reads `
+- [x] `TEST-285` [unit] Flash source that borrows from a Hub (`ATTACK-195`): a mock flash source whose own address is a Spoke but whos
+- [x] `TEST-287` [fork] Transfer fee on a debt asset (`ATTACK-197`): on a fork with a USDT debt reserve, Tether's `basisPointsRate` is
+
+## Cross-cutting TEST rows, every contract (17)
+
+- [ ] `TEST-001` [environment] The Foundry workspace builds with solc 0.8.28 and EVM `cancun`, the same compiler as Aave V4; dependencies are
+- [x] `TEST-032` [access-control] Selector inventory: the external selectors of every deployed Avana contract are enumerated from bytecode and c
+- [x] `TEST-061` [unit] Events: every borrower and keeper action is one atomic call that emits the inventory events of its contracts, 
+- [x] `TEST-177` [unit] Zero-amount transfers skipped: with mock tokens that revert on a zero-amount `transfer` and `transferFrom`, ev
+- [x] `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
+- [x] `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- [x] `TEST-080` [fuzz] Dust donations: sending 1 wei up to 10^6 wei of GHO, USDC, WETH, DAI, pool tokens or vault tokens (where the r
+- [ ] `TEST-092` [invariant] Conservation: for every token (each debt asset, each pool token, each vault token), the sum of tracked balance
+- [ ] `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
+- [x] `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
+- [x] `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
+- [ ] `TEST-121` [fork] End-to-end lifecycle on one fork (Avana-deployed Aave V4 plus Ethereum Uniswap v3, Chainlink, GHO, the Aave V3
+- [ ] `TEST-126` [fork] Emergency matrix: for every row of the matrix in [3.6](../03-operations/06-emergency-operations.md) (applicati
+- [ ] `TEST-127` [fork] Halt deterioration and caps: with liquidation of an account stopped for the 48-hour incident window of `Q-192`
+- [ ] `TEST-137` [deployment-check] Upgrade safety: every UUPS contract (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, LPVaul
+- [ ] `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
+- [x] `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme
+
+## PROP rows (7)
+
+- [x] `PROP-021` [Certora] LPVaultSwap has no in-kind branch and the MarketRegistry has no in-kind window: neither contract exposes `enab
+- [x] `PROP-034` [Certora] Every restricted selector of every upgradeable Avana contract (AaveAdapter, MarketRegistry, ParameterStore, Ri
+- [x] `PROP-041` [Certora] `MarketRegistry.pauseState()` and `pauseReason()` change only by `freeze` (None → Frozen; `APPLICATION_FREEZE_
+- [x] `PROP-061` [Certora] Debt-reserve set: `MarketRegistry.activateMarket` and the RiskModule's drift check revert (`ActivationCheckFai
+- [x] `PROP-070` [Certora] Inductive admin invariant: for every upgradeable Avana contract (not the ProxyManager, which is immutable with
+- [x] `PROP-071` [Certora] Address freeze: `freezeAddress(a)` succeeds only if `a` is not in the protected set, `a` is not frozen, and th
+- [ ] `PROP-096` [Certora] Flash source never a Hub: `MarketRegistry.setFlashSource(src)` reverts `InvalidRoute` and every flash call rev
+
+## INV (22)
+
+- [x] `INV-011` Transfer allowlist. A market's vault-token balances change only on these paths, and every other `transfer` and
+- [x] `INV-013` A proxy's vault-token supply on the Spoke decreases only through (a) `Spoke.withdraw` called by the proxy in `
+- [x] `INV-017` Collateralization and each LPVault obtain an AMM protocol's position manager, factory and a market's pool only
+- [ ] `INV-018` Blast radius of upgradeable contracts. (a) AaveAdapter implementation faulty or hostile (one per chain, servin
+- [ ] `INV-020` In a borrow of debt reserve `r`, `r`'s asset moves from `r`'s funding Hub (the CDP Spoke's home Hub, or anothe
+- [ ] `INV-022` Calldata built by `packages/protocol` asks a user for only two kinds of approval: an approval of exactly one p
+- [x] `INV-023` A borrow or a withdrawal that leaves debt completes only after the AaveAdapter's call to `RiskModule.preBorrow
+- [ ] `INV-024` A borrow, a withdrawal that leaves debt, and a partial removal that leaves debt complete only if: the caller (
+- [x] `INV-029` No new-account pledge, borrow or withdrawal that leaves debt completes while the RiskModule's drift check find
+- [x] `INV-073` A CDP Spoke's borrowable reserves through Avana are exactly the debt reserves the MarketRegistry approves for 
+- [x] `INV-030` `LPVaultSwap.liquidate`, the only liquidation entry point (`INV-062`), admits any caller that is not a frozen 
+- [x] `INV-040` Flash and swap callbacks. `liquidate` takes no flash loan and has no flash callback (Q-404). The core flash so
+- [x] `INV-095` Flash source rules. No liquidation takes a flash loan inside LPVaultSwap (Q-404): `liquidate` calls no lender,
+- [x] `INV-043` For any proxy with debt in reserve `r`, `AaveAdapter.repay(borrower, spoke, r, maxRepaySpend, repayAll, deadli
+- [x] `INV-045` When the proxy has no debt on its Spoke (`spoke.getUserAccountData(proxy).borrowCount == 0`), the depositor's 
+- [x] `INV-047` Every ParameterStore setter for `slippageAllowanceBps`, `graceHealthFactor`, `graceDuration`, `consistencyTole
+- [ ] `INV-075` No contagion from pool-level failures. A failure confined to collateral market `m′` (its pool, its LPOracle st
+- [x] `INV-081` Stops never reach exits or liquidation. The application pause state and reason, the market and debt breakers a
+- [x] `INV-049` Pause-state transitions. The MarketRegistry holds one `PauseState` and one `PauseReason` for Avana, and they c
+- [x] `INV-065` Implementation changes only by timelock; proxy code never changes. A PositionProxy's code is fixed at creation
+- [x] `INV-084` Admin roles only for the timelock. On every upgradeable Avana contract, `DEFAULT_ADMIN_ROLE` and `APPLICATION_
+- [x] `INV-085` Address freeze bounds. `freezeAddress` never covers the protected set (the AvanaTimelock, the Aave governance 
+
+## ATTACK (11)
+
+- [x] `ATTACK-005` Fake backing through an upgradeable market map
+- [x] `ATTACK-033` Re-pointing proxies or the LPVault through configuration
+- [ ] `ATTACK-035` Hostile RiskModule or Adapter blocks repay or exits
+- [ ] `ATTACK-086` Emergency pause used to halt liquidation
+- [ ] `ATTACK-098` Pause guardian used as an instant loosen key
+- [x] `ATTACK-121` Listing on a Spoke that is not a reviewed standard Spoke with the required settings
+- [ ] `ATTACK-132` Pause-state misuse
+- [x] `ATTACK-136` Debt-reserve offboarding with open debt
+- [ ] `ATTACK-139` Compromised guardian uses address freeze, breakers and the standby switch
+- [x] `ATTACK-140` Standby switch to a stale or diverged route
+- [x] `ATTACK-163` Cross-Hub credit line drawn past the funding Hub's limit
+30 IDs without a link from contracts/: REQ-CONFIG-003, REQ-CONFIG-004, REQ-CONFIG-010, REQ-CONFIG-014, REQ-CONFIG-029, REQ-MREG-002, REQ-MREG-023, REQ-CONFIG-065, REQ-CONFIG-068, REQ-CONFIG-069, TEST-012, TEST-030, TEST-033, TEST-162, TEST-192, TEST-098, TEST-101, TEST-193, TEST-211, TEST-215 …

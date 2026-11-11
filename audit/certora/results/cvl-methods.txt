@@ -1,0 +1,1 @@
+check-methods: 694 methods entries in 30 spec files, 0 error(s)

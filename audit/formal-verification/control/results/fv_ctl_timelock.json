@@ -1,0 +1,323 @@
+[
+ {
+  "id": "FV-CTL-16",
+  "title": "schedule succeeds only with delay >= requiredDelay; one non-listed call makes the batch normal",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-001",
+   "REQ-ACCESS-141",
+   "REQ-ACCESS-117",
+   "INV-068"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "batches of up to 4 calls",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-17",
+  "title": "A batch never needs less delay than any of its parts (no riding a loosening on a tightening batch)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-001",
+   "REQ-ROLE-105"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-18",
+  "title": "From readyAt on an operation is exactly one of executable or expired; never executable before readyAt",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-002",
+   "SPEC-GOV-013",
+   "REQ-ACCESS-118",
+   "REQ-ACCESS-126"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-18-EX",
+  "title": "SPEC-GOV-002 example: last executable second 1,781,641,599, expiry at 1,781,641,600",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-GOV-002"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-19",
+  "title": "After a normal-delay cut, any operation using the shorter delay executes no earlier than old + new (at least 8 days) after the cut was scheduled",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-003",
+   "REQ-ACCESS-125",
+   "REQ-ACCESS-017"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-20",
+  "title": "normalDelay stays within [MIN_NORMAL_DELAY, MAX_DELAY] = [345,600, 432,000] (base 432,000; every step preserves it)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-012",
+   "SPEC-GOV-015",
+   "REQ-ACCESS-030",
+   "REQ-ACCESS-140",
+   "REQ-ACCESS-154",
+   "REQ-ACCESS-125"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-20-EX",
+  "title": "setNormalDelay examples: 345,600 and 432,000 accepted; 345,599, 259,200, 300,000, 432,001 and 864,000 revert DelayOutOfBounds; a cut scheduled at 1,780,000,000 lets an upgrade be ready at 1,780,777,600",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-GOV-003",
+   "SPEC-GOV-012",
+   "SPEC-GOV-015"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-21",
+  "title": "Only DAO_CANCELLER cancels a pure role-change or pure restoring operation; every canceller cancels a mixed batch or any other operation",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-005",
+   "REQ-ACCESS-020",
+   "REQ-ACCESS-143",
+   "REQ-ACCESS-156",
+   "REQ-ACCESS-163",
+   "INV-068",
+   "INV-090"
+  ],
+  "targets": [
+   "T-55"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-21-EX",
+  "title": "SPEC-GOV-005 and SPEC-GOV-006 examples: who may cancel each listed batch",
+  "status": "Verified",
+  "method": "exhaustive enumeration (9 cases)",
+  "verifies": [
+   "SPEC-GOV-005",
+   "SPEC-GOV-006",
+   "REQ-MREG-022",
+   "REQ-MREG-028"
+  ],
+  "targets": [
+   "T-55"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-22",
+  "title": "The cancel window lasts at least requiredDelay; a guardian cannot cancel its own pure revocation, which anyone executes at readyAt",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-007",
+   "SPEC-GOV-006",
+   "REQ-ACCESS-112"
+  ],
+  "targets": [
+   "T-55"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-23",
+  "title": "The constructor accepts the whole SHORT_ELIGIBLE list, and every reachable short list stays inside it: no role, upgrade, implementation-setter, initializer or timelock selector ever takes the short delay",
+  "status": "Verified under bounded model",
+  "method": "exhaustive enumeration (22 cases)",
+  "verifies": [
+   "REQ-ACCESS-142",
+   "REQ-ACCESS-155",
+   "REQ-ACCESS-141",
+   "REQ-ACCESS-148",
+   "REQ-ACCESS-018",
+   "INV-090"
+  ],
+  "targets": [
+   "T-54",
+   "T-64"
+  ],
+  "detail": "(bounded: two setShortDelaySelector operations over 12 probe pairs)",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-24",
+  "title": "setShortDelaySelector refuses every risk-raising, loosening, lifting or code-changing selector (InvalidShortDelaySelector)",
+  "status": "Verified",
+  "method": "exhaustive enumeration (19 cases)",
+  "verifies": [
+   "REQ-ACCESS-016",
+   "REQ-ACCESS-141",
+   "REQ-ACCESS-142",
+   "REQ-ACCESS-155",
+   "REQ-ROLE-105"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-27",
+  "title": "Every stop selector (freeze, pause, freezeAddress, tripMarketBreaker, tripDebtBreaker) is short-eligible, so the governance Safe halts new activity in 43,200 s; no lifting selector is",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-ACCESS-155",
+   "REQ-ACCESS-128",
+   "REQ-ACCESS-062",
+   "REQ-ACCESS-063",
+   "SPEC-GOV-001"
+  ],
+  "targets": [
+   "T-54",
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-25",
+  "title": "At the launch normal delay a borrower with a 3-day reaction and up to 14,399 positions exits before any normal-delay change",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-014",
+   "REQ-ACCESS-148",
+   "INV-068"
+  ],
+  "targets": [
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-25-EX",
+  "title": "SPEC-GOV-014 example: k = 14,400 no longer fits the launch delay (bound is exactly 14,399)",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-GOV-014"
+  ],
+  "targets": [
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-26",
+  "title": "For every reachable normalDelay, a borrower with a 3-day reaction and up to 7,199 positions exits before any normal-delay operation executes",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-015",
+   "SPEC-GOV-014",
+   "REQ-ACCESS-148",
+   "REQ-ACCESS-154",
+   "REQ-ROLE-104",
+   "INV-068"
+  ],
+  "targets": [
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_timelock"
+ },
+ {
+  "id": "FV-CTL-26-EX",
+  "title": "SPEC-GOV-015 example: k_max = 7,199 at the floor; k = 1 leaves 86,376 s to spare; k = 7,200 needs 345,612 s",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-GOV-015"
+  ],
+  "targets": [
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_timelock"
+ }
+]

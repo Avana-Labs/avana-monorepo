@@ -1,0 +1,83 @@
+Avana
+Copyright (c) 2026 Avana Labs
+
+Avana's code is licensed under the Business Source License 1.1 (LICENSE).
+Files that contain or copy third-party code keep that code's licence; they are
+listed in LICENSING.md, and each third-party component is described in
+THIRD_PARTY_LICENSES.md.
+
+-------------------------------------------------------------------------------
+Third-party code in this repository
+-------------------------------------------------------------------------------
+
+Uniswap v3-core and v3-periphery
+  Copyright (c) 2021 Uniswap Labs
+  Licensed under the GNU General Public License v2.0 or later (LICENSES/GPL-2.0.txt).
+  Ported in contracts/src/amm/concentrated-liquidity/ClPriceMath.sol,
+  contracts/test/differential/reference/avana_reference.py,
+  spec/05-verification/z3/units-oracle/_common.py and
+  spec/05-verification/hypothesis/model/uniswap.py; interface subsets copied in
+  contracts/src/interfaces/external/uniswap/.
+
+Aerodrome Slipstream
+  Copyright (c) 2023 Perpetual Cyclist Services LLC
+  Interface subsets copied in contracts/src/interfaces/external/aerodrome/,
+  under GPL-2.0-or-later (LICENSES/GPL-2.0.txt).
+
+Aave V4
+  Copyright (c) Aave Labs
+  Licensed under the Aave V4 licence (LICENSES/LicenseRef-BUSL-AaveV4.md), which
+  permits use in test environments only. Ported in
+  spec/05-verification/hypothesis/model/aave.py,
+  spec/05-verification/hypothesis/model/mathlib.py,
+  spec/05-verification/z3/aave-risk/_v4ref.py and
+  audit/formal-verification/liquidation/aave_ref.py, all of which are used only
+  to check Avana's specification and tests.
+
+Aave V3 (aave-v3-core, aave-v3-origin)
+  Copyright (c) Aave
+  contracts/src/interfaces/external/aave/IAaveV3ACLManager.sol under AGPL-3.0
+  (LICENSES/AGPL-3.0.txt); IAaveV3Pool.sol, IAaveV3PoolAddressesProvider.sol and
+  IAaveV3FlashLoanReceiver.sol under the MIT License.
+
+GHO (gho-core)
+  Copyright (c) 2023 Aave
+  Interface subsets copied in contracts/src/interfaces/external/gho/, under the
+  MIT License.
+
+Chainlink (chainlink-evm, libocr)
+  Copyright (c) 2018 SmartContract ChainLink Limited SEZC
+  Interface subsets copied in contracts/src/interfaces/external/chainlink/,
+  under the MIT License.
+
+Sky (usds, dss-lite-psm)
+  Copyright (C) 2023 Dai Foundation
+  Interface subsets copied in contracts/src/interfaces/external/sky/, under
+  AGPL-3.0-or-later (LICENSES/AGPL-3.0.txt).
+
+-------------------------------------------------------------------------------
+Dependencies compiled into Avana's contracts
+-------------------------------------------------------------------------------
+
+OpenZeppelin Contracts and OpenZeppelin Contracts Upgradeable 5.1.0
+  Copyright (c) 2016-2024 Zeppelin Group Ltd
+  MIT License.
+
+Solady 0.1.26
+  Copyright (c) 2022-2025 Solady.
+  MIT License.
+
+-------------------------------------------------------------------------------
+Dependencies used in tests and test deployments only
+-------------------------------------------------------------------------------
+
+Forge Standard Library 1.17.0
+  Copyright Contributors to Forge Standard Library
+  MIT License or Apache License 2.0, at your option.
+
+Aave V4 (a3ef63ea6415d25237a9775bf66e76e9993561c2)
+  Copyright (c) Aave Labs
+  Aave V4 licence (LICENSES/LicenseRef-BUSL-AaveV4.md); compiled only for local,
+  Sepolia and fork test deployments.
+
+The full licence texts and notices are in THIRD_PARTY_LICENSES.md and LICENSES/.

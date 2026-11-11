@@ -1,0 +1,131 @@
+{
+ "accounts": 671,
+ "bad_debt": {
+  "by_asset": {
+   "GHO": 0.0,
+   "USDC": 0.0
+  },
+  "by_spoke": {},
+  "pct_hub_reserve": 0.0,
+  "underwater_usd": 0.0,
+  "usd": 0.0
+ },
+ "blocked": {
+  "deficit_breaker_usd_h": 0,
+  "other_usd_h": 0,
+  "own_usd_h": 874626.9395427486
+ },
+ "capital": {
+  "accounts": 579,
+  "capacity_usd": 5342422.4564788155,
+  "collateral_usd": 18621990.109715115,
+  "day": 24.95,
+  "debt_usd": 2580194.762674976,
+  "drawcap_accounts": 27,
+  "drawcap_refusals": 78,
+  "headroom_beyond_draw_caps_usd": 2342101.099214423,
+  "headroom_usd": 2762227.693803843,
+  "shock_safe_debt_usd": 5264724.979498999,
+  "shock_safe_over_capacity": 0.9854565082389559,
+  "spokes": {
+   "A:Stable": {
+    "GHO": {
+     "cap": 1500000.0,
+     "drawn": 1231712.33
+    },
+    "USDC": {
+     "cap": 600000.0,
+     "drawn": 574374.01
+    },
+    "cap_room_usd": 293913.6645096084,
+    "headroom_usd": 1826260.691482436
+   },
+   "B:Stable": {
+    "GHO": {
+     "cap": 500000.0,
+     "drawn": 374927.76
+    },
+    "USDC": {
+     "cap": 200000.0,
+     "drawn": 198859.31
+    },
+    "cap_room_usd": 126212.93007981175,
+    "headroom_usd": 560607.2178871735
+   },
+   "V:Volatile": {
+    "USDC": {
+     "cap": 200000.0,
+     "drawn": 200038.15
+    },
+    "cap_room_usd": 0.0,
+    "headroom_usd": 375359.78443423373
+   }
+  },
+  "used": 0.4829634465814183
+ },
+ "days": 40,
+ "deleverage": {
+  "conversion_loss_usd": 53.775585420028506,
+  "done": 10,
+  "repaid_usd": 58656.328926404516,
+  "reverted:DeadlineExpired": 1
+ },
+ "drawcap_refusals": {
+  "after": 73,
+  "pre_shock": 79
+ },
+ "invariants": {
+  "checks": 178002,
+  "violations": {}
+ },
+ "keeper": {
+  "blocks_with_liquidations": 8,
+  "budget_draws": 0.0,
+  "keeper_pnl": -4792.7403645368695,
+  "peak_block_calls": 5,
+  "peak_block_usd": 8400.280181290025,
+  "reimbursement": 4792.7403645368695
+ },
+ "liquidations": {
+  "accounts": 14,
+  "blocked": {},
+  "blocked_accounts": {},
+  "bonus_usd": 422.813986498189,
+  "by_spoke": {
+   "V:Volatile": {
+    "accounts": 14,
+    "calls": 16,
+    "contagion": 0,
+    "seized": 19192.19264796447
+   }
+  },
+  "calls": 16,
+  "contagion_accounts": 0,
+  "contagion_calls": 0,
+  "in_kind": 0,
+  "persons": 14,
+  "seized_usd": 19192.19264796447,
+  "stable_accounts": 0,
+  "stable_calls": 0
+ },
+ "persons": 645,
+ "rescues": {},
+ "scenario": "eth-crash",
+ "seed": 20261111,
+ "spokes": [
+  "A:Stable",
+  "B:Stable",
+  "V:Volatile"
+ ],
+ "supplier_loss": {
+  "by_asset": {
+   "GHO": 0.0,
+   "USDC": 0.0,
+   "underwater": 0.0
+  },
+  "first_loss_used": 0.0,
+  "usd": 0.0
+ },
+ "topology": "T3",
+ "user_gas_usd": 78676.7718272472
+}

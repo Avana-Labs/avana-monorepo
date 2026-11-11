@@ -1,0 +1,20 @@
+# Pre-commit checks, installed once per clone with `lefthook install` (a single binary; no Node runtime in the hook).
+# Each command runs only when matching files are staged; CI repeats every check, so a skipped hook never lets a
+# failure through.
+pre-commit:
+  parallel: false
+  commands:
+    forge-fmt:
+      root: contracts/
+      glob: "*.sol"
+      run: forge fmt --check {staged_files}
+    file-size:
+      root: contracts/
+      glob: "*.sol"
+      run: script/check-file-size.sh
+    licence:
+      glob: "*.{sol,py,js,mjs,sh,json}"
+      run: contracts/script/check-licence.sh
+    traceability:
+      glob: "{spec/**,contracts/src/**,contracts/test/**,contracts/certora/**}"
+      run: cd spec/05-verification && .venv/bin/python trace.py

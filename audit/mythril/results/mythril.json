@@ -1,0 +1,37 @@
+{
+ "AmmConstants": {
+  "error": null,
+  "issues": [],
+  "success": true
+ },
+ "AvanaRoles": {
+  "error": null,
+  "issues": [],
+  "success": true
+ },
+ "BreakerReasons": {
+  "error": null,
+  "issues": [],
+  "success": true
+ },
+ "LensConstants": {
+  "error": null,
+  "issues": [],
+  "success": true
+ },
+ "Lock": {
+  "error": null,
+  "issues": [],
+  "success": true
+ },
+ "LockSlot": {
+  "error": null,
+  "issues": [],
+  "success": true
+ },
+ "RiskModuleConstants": {
+  "error": null,
+  "issues": [],
+  "success": true
+ }
+}

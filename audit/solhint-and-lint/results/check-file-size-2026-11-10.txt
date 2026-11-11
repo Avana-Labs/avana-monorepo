@@ -1,0 +1,3 @@
+largest implementation file: src/governance/timelock/AvanaTimelock.sol (346 lines of code, limit 500)
+largest interface file: src/interfaces/external/aave/IAaveV4Spoke.sol (266 lines, limit 300)
+check-file-size: every file is within its limit

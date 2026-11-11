@@ -1,0 +1,27 @@
+# Review owners. With branch protection requiring code-owner review on main, a change to a path below needs
+# approval from its team. Teams are in the Avana-Labs GitHub organisation.
+
+*                               @Avana-Labs/core
+
+# Contract code, deployment scripts and the tests that check them.
+/contracts/                     @Avana-Labs/contracts
+# Triage files can silence an analyzer finding, so a security reviewer approves every change.
+/contracts/security/            @Avana-Labs/security
+/contracts/test/utils/fixtures/ForkConstants.sol @Avana-Labs/contracts @Avana-Labs/security
+
+# Specification and its verification models.
+/spec/                          @Avana-Labs/contracts
+
+# Release manifests and generated address libraries: a verified manifest is approved by the deployment signers.
+/deployments/verified/          @Avana-Labs/deployers
+/packages/protocol/sol/         @Avana-Labs/deployers
+
+# Governance operations and payloads.
+/governance/                    @Avana-Labs/governance
+
+# CI, dependency policy and these rules.
+/.github/                       @Avana-Labs/security
+/lefthook.yml                   @Avana-Labs/security
+
+/audit/                         @Avana-Labs/security
+/SECURITY.md                    @Avana-Labs/security

@@ -1,0 +1,35 @@
+[CONSISTENT] SYM-01: V4 HF(D) = 1  <=>  D = V_LP x min(CF0,CF1) x R_pool (SPEC-CF-001)
+      residual: 0
+[CONSISTENT] SYM-02a: dB/dV = min(CF0,CF1) x R >= 0
+      residual: 0
+[CONSISTENT] SYM-02b: dB/dR = V x min(CF0,CF1) >= 0
+      residual: 0
+[CONSISTENT] SYM-02c[CF0<CF1]: on CF0<CF1: dB/d(min) = V x R >= 0 and dB/d(max) = 0
+      residual: 0
+[CONSISTENT] SYM-02c[CF1<CF0]: on CF1<CF0: dB/d(min) = V x R >= 0 and dB/d(max) = 0
+      residual: 0
+[CONSISTENT] SYM-02d[CF0<=CF1]: B(CF0 + e) - B(CF0) >= 0 on branch CF0<=CF1
+      residual: 0
+[CONSISTENT] SYM-02d[CF1<=CF0]: B(CF0 + e) - B(CF0) >= 0 on branch CF1<=CF0
+      residual: 0
+[CONSISTENT] SYM-03[CF0<=CF1]: V x (larger CF) x R - B >= 0 on branch CF0<=CF1 (and = 0 for the smaller leg)
+      residual: 0
+[CONSISTENT] SYM-03[CF1<=CF0]: V x (larger CF) x R - B >= 0 on branch CF1<=CF0 (and = 0 for the smaller leg)
+      residual: 0
+[CONSISTENT] SYM-04a: HF(V_liq) = 1 with V_liq = D / CF
+      residual: 0
+[CONSISTENT] SYM-04b: collateral drop to HF 1 = 1 - 1/HF0 (HF0 = V x CF / D)
+      residual: 0
+[CONSISTENT] SYM-05a: max debt at opening HF h_o = B / h_o
+      residual: 0
+[DERIVED] SYM-05b: binding opening limit (Q-398)
+      D_max = B / max(1, hardHealthFloor, minHealthFactor); with the hard floor off (0) and minHealthFactor <= 1 the
+      limit is Aave's own HF 1.00, D_max = B. The Lens recommended borrow uses h_o = 1.10 (D = B / 1.10), a display
+      value only: $100,000 at CF 0.70 gives $63,636 recommended and $70,000 maximum.
+[DERIVED] SYM-06a: pool-risk-factor ceiling implied by maxLB x CF < 1 (SPEC-HUB-005 (a), SPEC-CF-002)
+      R < 1 / (maxLB x min(CF0, CF1))
+[CONSISTENT] SYM-06b: T - LB x CF = (T - 1) + (1 - LB x CF) > 0 for T >= 1, LB x CF < 1
+      residual: 0
+[CONSISTENT] SYM-07: two markets: D at HF 1 equals B_1 + B_2 (capacity is additive across markets)
+      residual: 0
+-- 14 checks: 14 CONSISTENT, 0 INCONSISTENT; 0 differ from README

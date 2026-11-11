@@ -1,0 +1,9 @@
+{
+  "default": 1024,
+  "contracts": {
+    "SlipstreamIntegration": {
+      "margin": 128,
+      "reason": "24,436 bytes on 2026-11-11 (140 bytes under EIP-170). The Slipstream integration carries the four NPM and factory generations as immutables; a change that grows it must split code out, not lower this margin."
+    }
+  }
+}

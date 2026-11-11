@@ -1,0 +1,130 @@
+
+##### build
+Compiling 245 files with Solc 0.8.28
+Solc 0.8.28 finished in 3.44s
+Compiler run successful!
+##### build: pass (5s)
+
+##### echidna
+=== echidna AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol), property mode
+property_roleIdsAreNameHashes: passing
+property_roleIdsPairwiseDistinct: passing
+property_noRoleIsDefaultAdmin: passing
+=== echidna AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol), assertion mode
+checkRolePair(uint8,uint8): passing
+pairsChecked(): passing
+AssertionFailed(..): passing
+=== echidna LockProperties (test/invariant/echidna/LockProperties.sol), property mode
+property_freeAtTransactionStart: passing
+property_membersFixedDistinctAndSet: passing
+=== echidna LockProperties (test/invariant/echidna/LockProperties.sol), assertion mode
+memberCycle(bool): passing
+revertedOuterCall(bool): passing
+sequences(): passing
+outsiderAcquire(bool): passing
+acquireWithoutRelease(bool): passing
+AssertionFailed(..): passing
+=== echidna LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol), property mode
+property_holderSlotIsErc7201: passing
+property_holderSlotLowByteIsZero: passing
+property_holderSlotEmptyAtTransactionStart: passing
+=== echidna LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol), assertion mode
+entries(): passing
+enterAndRelease(address): passing
+enter(address): passing
+AssertionFailed(..): passing
+##### echidna: pass (117s)
+
+##### medusa
+=== medusa AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol)
+⇾ [PASSED] Assertion Test: AvanaRolesProperties.checkRolePair(uint8,uint8)
+⇾ [PASSED] Assertion Test: AvanaRolesProperties.pairsChecked()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_noRoleIsDefaultAdmin()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_roleIdsAreNameHashes()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_roleIdsPairwiseDistinct()
+⇾ Test summary: 5 test(s) passed, 0 test(s) failed
+=== medusa LockProperties (test/invariant/echidna/LockProperties.sol)
+⇾ [PASSED] Assertion Test: LockProperties.acquireWithoutRelease(bool)
+⇾ [PASSED] Assertion Test: LockProperties.memberCycle(bool)
+⇾ [PASSED] Assertion Test: LockProperties.outsiderAcquire(bool)
+⇾ [PASSED] Assertion Test: LockProperties.revertedOuterCall(bool)
+⇾ [PASSED] Assertion Test: LockProperties.sequences()
+⇾ [PASSED] Property Test: LockProperties.property_freeAtTransactionStart()
+⇾ [PASSED] Property Test: LockProperties.property_membersFixedDistinctAndSet()
+⇾ Test summary: 7 test(s) passed, 0 test(s) failed
+=== medusa LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol)
+⇾ [PASSED] Assertion Test: LockSlotProperties.enter(address)
+⇾ [PASSED] Assertion Test: LockSlotProperties.enterAndRelease(address)
+⇾ [PASSED] Assertion Test: LockSlotProperties.entries()
+⇾ [PASSED] Property Test: LockSlotProperties.property_holderSlotEmptyAtTransactionStart()
+⇾ [PASSED] Property Test: LockSlotProperties.property_holderSlotIsErc7201()
+⇾ [PASSED] Property Test: LockSlotProperties.property_holderSlotLowByteIsZero()
+⇾ Test summary: 6 test(s) passed, 0 test(s) failed
+##### medusa: pass (821s)
+
+##### halmos
+Unable to resolve imports:
+      "../../../src/governance/timelock/AvanaTimelock.sol" in "contracts/test/utils/fixtures/TimelockFixture.sol"
+with remappings:
+      forge-std/=contracts/dependencies/forge-std-1.17.0/src/
+      halmos-cheatcodes/=contracts/dependencies/halmos-cheatcodes-6da4e69/src/
+      @openzeppelin/contracts/=contracts/dependencies/@openzeppelin-contracts-5.1.0/
+      @openzeppelin/contracts-upgradeable/=contracts/dependencies/@openzeppelin-contracts-upgradeable-5.1.0/
+      aave-v4/=contracts/dependencies/aave-v4-a3ef63e/src/
+      dependencies/aave-v4-a3ef63e/:forge-std/=contracts/dependencies/forge-std-1.17.0/src/
+      @uniswap/v3-core/=contracts/dependencies/uniswap-v3-core-5ea68a7/
+      @uniswap/v3-periphery/=contracts/dependencies/uniswap-v3-periphery-24ccf01/
+      gho-core/=contracts/dependencies/gho-core-c6335a0/src/
+      solady/=contracts/dependencies/solady-0.1.26/src/
+Compiling 256 files with Solc 0.8.28
+Solc 0.8.28 finished in 330.99ms
+Error: Compiler run failed:
+Error (6275): Source "src/governance/timelock/AvanaTimelock.sol" not found: File not found. Searched the following locations: "contracts".
+ParserError: Source "src/governance/timelock/AvanaTimelock.sol" not found: File not found. Searched the following locations: "contracts".
+ --> test/utils/fixtures/TimelockFixture.sol:5:1:
+  |
+5 | import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ERROR    Build failed: ['forge', 'build', '--ast', '--root', '.',               
+         '--extra-output', 'storageLayout', 'metadata']                         
+##### halmos: FAIL (2s)
+
+##### hevm
+hevm AvanaRolesProperties.checkRolePair(uint8,uint8): QED
+hevm LockProperties.acquireWithoutRelease(bool): QED
+hevm LockProperties.memberCycle(bool): QED
+hevm LockProperties.outsiderAcquire(bool): QED
+hevm LockProperties.revertedOuterCall(bool): QED
+hevm LockSlotProperties.enter(address): QED
+hevm LockSlotProperties.enterAndRelease(address): QED
+hevm src AmmConstants: QED
+hevm src AvanaRoles: QED
+hevm src BreakerReasons: QED
+hevm src LensConstants: QED
+hevm src Lock: QED
+hevm src LockSlot: QED
+hevm src RiskModuleConstants: QED
+hevm test: skipped, test/symbolic/ holds no prove_ function
+##### hevm: pass (5s)
+
+##### mythril
+=== mythril AmmConstants
+=== mythril AvanaRoles
+=== mythril BreakerReasons
+=== mythril LensConstants
+=== mythril Lock
+=== mythril LockSlot
+=== mythril RiskModuleConstants
+mythril: 0 finding(s); gate at low and above
+mythril: pass (0 blocking, 0 accepted)
+##### mythril: pass (28s)
+
+Not run, by design:
+  manticore  archived upstream (trailofbits/manticore, last release 0.3.7 in February 2022); hevm, Halmos and
+             Mythril run the symbolic execution it provided
+  mythx      the hosted service shut down effective 31 March (mythx.io/sunset) and its API no longer answers;
+             Mythril, its open-source engine, runs locally above
+  kontrol    needs the K framework (kup and Nix); hevm and Halmos cover symbolic proofs of Foundry tests
+
+security-slow: FAIL in halmos (reports in out-security/)
+exit=1

@@ -1,0 +1,404 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+# Slow security tier: nightly and before a release.
+#
+#   build    forge build --force --build-info of src/, test/ and script/ into out-security/build/all, warnings denied;
+#            Echidna, Medusa, hevm and Mythril read this build, so out/ and cache/ are never cleaned or overwritten
+#   echidna  every `*Properties` harness in test/invariant/echidna/, in property mode and in assertion mode; corpora
+#            in out-security/corpus/ persist between runs
+#   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
+#            assertion tests in one campaign)
+#   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest)
+#   hevm     `hevm symbolic` on each assertion entry point of every harness (each must reach QED), on the runtime
+#            code of every src/ contract and library (no assertion violation), and `hevm test` on every `prove_`
+#            function in test/symbolic/
+#   mythril  script/security-mythril.sh on the runtime code of every src/ contract and library
+#   mutate   slither-mutate on every implementation file of the layers in security/mutation-layers.json, each mutant
+#            run against its Foundry tests (`forge test -j 2 --match-path <tests>`) in an isolated copy of src/ and
+#            test/ under out-security/mutation/root; uncaught mutants are listed per layer in
+#            out-security/mutation/<layer>/survivors.txt and kept in out-security/mutation/<layer>/<Contract>/
+#   gambit   script/security-gambit.sh: Gambit expression mutants of the same files (fixed seed, operators and per-file
+#            cap from the `gambit` object of security/mutation-layers.json), each run against the same tests with a
+#            per-mutant timeout in an isolated copy under out-security/gambit/root; survivors are listed in
+#            out-security/gambit/<layer>/survivors.txt, and any survived or timed-out mutant not accepted in
+#            security/gambit-triage.json fails the step
+#   necessist  Necessist (tools/bin/necessist) on the test files of the same layers, in the same kind of isolated copy;
+#            every statement whose removal leaves the tests passing is listed in out-security/necessist/<layer>.txt
+#
+# A step with nothing to run prints what it skipped and why and passes; a step whose targets exist fails on any
+# failed property, counterexample, unproven harness assertion, untriaged finding or tool error. Every step runs even
+# after an earlier one fails; the script exits 1 when any step fails. Reports go to out-security/.
+#
+# Budgets (environment, with defaults): ECHIDNA_TEST_LIMIT (echidna.yaml), ECHIDNA_TIMEOUT=900 and MEDUSA_TIMEOUT=900
+# seconds per harness and mode, ECHIDNA_HARNESSES (space-separated harness names; empty: all), MEDUSA_TEST_LIMIT
+# (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query,
+# HALMOS_LOOP=8; MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
+# security/mutation-layers.json), MUTATE_TIMEOUT=300 seconds per mutant test run, MUTATE_FUZZ_RUNS=256,
+# MUTATE_MUTATORS (comma-separated slither-mutate mutators; empty: all), NECESSIST_TIMEOUT=300 seconds per removal.
+# GAMBIT_TIMEOUT=300 seconds per Gambit mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS).
+# Survivors of `mutate` and `necessist` are a report for the layer gate review, not a failure; a tool error fails.
+# Survivors of `gambit` fail until a test kills them or the layer gate review accepts them in the triage file.
+#
+# Usage, from contracts/:  script/security-slow.sh [step ...]     (no step: all, in the order above)
+
+set -uo pipefail
+
+cd "$(dirname "$0")/.."
+ROOT=$PWD
+OUT=out-security
+BUILD="$OUT/build/all"
+export PATH="$ROOT/tools/bin:$ROOT/.venv/bin:$HOME/.foundry/bin:$PATH"
+PY="$ROOT/.venv/bin/python"
+# Fuzzing corpora persist across runs (and across nightly CI runs through the cache), so each campaign starts from
+# every sequence that reached new coverage before.
+CORPUS="$OUT/corpus"
+ECHIDNA_DIR=test/invariant/echidna
+MEDUSA_DIR=test/invariant/medusa
+
+ECHIDNA_TIMEOUT=${ECHIDNA_TIMEOUT:-900}
+MEDUSA_TIMEOUT=${MEDUSA_TIMEOUT:-900}
+HEVM_SMT_TIMEOUT=${HEVM_SMT_TIMEOUT:-300}
+HALMOS_LOOP=${HALMOS_LOOP:-8}
+
+mkdir -p "$OUT"
+failed=()
+
+require() {
+  for bin in "$@"; do
+    if ! command -v "$bin" >/dev/null 2>&1; then
+      echo "missing $bin: run script/install-security-tools.sh" >&2
+      return 1
+    fi
+  done
+}
+
+step_build() {
+  rm -rf "$BUILD" "$BUILD-cache"
+  # Without dynamic test linking: its foundry-pp/DeployHelper sources are not resolvable by crytic-compile.
+  # With the CBOR metadata and its IPFS hash, which the release build drops (bytecode_hash = "none"): Echidna tells
+  # deployed contracts apart by the metadata hash in their runtime code, and without it a harness that deploys
+  # contracts in its constructor and keeps them in immutables crashes every worker with `Set.elemAt: index out of
+  # range` before the first call (crytic/echidna#1118). This build is read only by the slow-tier tools; the release
+  # bytecode check compares out/, which keeps foundry.toml's settings.
+  FOUNDRY_DYNAMIC_TEST_LINKING=false FOUNDRY_CBOR_METADATA=true FOUNDRY_BYTECODE_HASH=ipfs \
+    forge build --force --build-info -D warnings --out "$BUILD" --cache-path "$BUILD-cache" 2>&1 | tee "$OUT/build-all.txt"
+}
+
+ensure_build() { [ -d "$BUILD/build-info" ] || step_build >/dev/null; }
+
+# harness_list <dir>...: "<Name><TAB><source>" per harness found in the build.
+harness_list() { "$PY" script/security-targets.py harnesses "$BUILD" "$@"; }
+
+# echidna_ran <log>: true when the campaign printed its summary with at least one call, no worker crashed, and no test
+# failed or errored.
+echidna_ran() {
+  local log=$1 calls
+  grep -qE 'Crashed|Please report it to https://github.com/crytic/echidna' "$log" && return 1
+  calls=$(sed -nE 's/^Total calls: ([0-9]+).*/\1/p' "$log" | tail -n1)
+  [ -n "$calls" ] && [ "$calls" -gt 0 ] || return 1
+  grep -qE ': (failed|FAILED|falsified|error)' "$log" && return 1
+  return 0
+}
+
+step_echidna() {
+  require echidna || return 1
+  ensure_build || return 1
+  local list status=0 name source mode log limit=()
+  list=$(harness_list "$ECHIDNA_DIR") || return 1
+  if [ -z "$list" ]; then
+    echo "echidna: skipped, $ECHIDNA_DIR/ holds no contract named *Properties"
+    return 0
+  fi
+  [ -n "${ECHIDNA_TEST_LIMIT:-}" ] && limit=(--test-limit "$ECHIDNA_TEST_LIMIT")
+  mkdir -p "$OUT/echidna"
+  while IFS=$'\t' read -r name source; do
+    if [ -n "${ECHIDNA_HARNESSES:-}" ] && [[ " $ECHIDNA_HARNESSES " != *" $name "* ]]; then continue; fi
+    for mode in property assertion; do
+      echo "=== echidna $name ($source), $mode mode"
+      mkdir -p "$CORPUS/echidna/$name-$mode"
+      log="$OUT/echidna/$name-$mode.log"
+      if ! echidna . --config echidna.yaml --contract "$name" --test-mode "$mode" --timeout "$ECHIDNA_TIMEOUT" \
+        ${limit[@]+"${limit[@]}"} --corpus-dir "$CORPUS/echidna/$name-$mode" --format text >"$log" 2>&1; then
+        status=1
+        echo "echidna: $name failed in $mode mode"
+      fi
+      grep -E ': (passing|failed|FAILED|falsified|error)|Error|ERROR|Crashed|^Total calls' "$log" | grep -v '^\[' || true
+      # Echidna exits 0 even when its workers crash, and then still prints every test as passing; a run counts only
+      # when it executed calls and printed its summary.
+      if ! echidna_ran "$log"; then
+        status=1
+        echo "echidna: $name did not fuzz in $mode mode (crash, no calls or no summary; see $log)"
+      fi
+    done
+  done <<<"$list"
+  return $status
+}
+
+step_medusa() {
+  require medusa || return 1
+  ensure_build || return 1
+  local list status=0 name source limit=()
+  list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
+  if [ -z "$list" ]; then
+    echo "medusa: skipped, $ECHIDNA_DIR/ and $MEDUSA_DIR/ hold no contract named *Properties"
+    return 0
+  fi
+  [ -n "${MEDUSA_TEST_LIMIT:-}" ] && limit=(--test-limit "$MEDUSA_TEST_LIMIT")
+  # Medusa caches Slither's results for a build; a fresh build needs a fresh cache. The corpus is kept.
+  rm -rf "$OUT/medusa" && mkdir -p "$OUT/medusa" "$CORPUS/medusa"
+  while IFS=$'\t' read -r name source; do
+    echo "=== medusa $name ($source)"
+    if ! medusa fuzz --config medusa.json --target-contracts "$name" --timeout "$MEDUSA_TIMEOUT" ${limit[@]+"${limit[@]}"} \
+      --corpus-dir "$CORPUS/medusa/$name" --no-color >"$OUT/medusa/$name.log" 2>&1; then
+      status=1
+      echo "medusa: $name failed"
+    fi
+    grep -E '\[(PASSED|FAILED)\]|Test summary|[Ee]rror' "$OUT/medusa/$name.log" || true
+  done <<<"$list"
+  return $status
+}
+
+step_halmos() {
+  require halmos || return 1
+  if ! grep -rqs --include='*.sol' 'function check_' test/halmos; then
+    echo "halmos: skipped, test/halmos/ holds no check_ function"
+    return 0
+  fi
+  # Halmos has no deployCode cheatcode, which dynamic test linking turns `new C(...)` into.
+  FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract 'HalmosTest$' --loop "$HALMOS_LOOP" \
+    --solver-timeout-assertion 0 2>&1 |
+    tee "$OUT/halmos.txt"
+  local rc=${PIPESTATUS[0]}
+  # A build failure, or a run that never reached a result line, fails the step whatever the exit code says.
+  if grep -qE 'Build failed|Unable to resolve imports|Compiler run failed' "$OUT/halmos.txt"; then
+    echo "halmos: the build failed (see $OUT/halmos.txt)" >&2
+    return 1
+  fi
+  if ! grep -qE 'Symbolic test result: [0-9]+ passed' "$OUT/halmos.txt"; then
+    echo "halmos: no test result in $OUT/halmos.txt" >&2
+    return 1
+  fi
+  return "$rc"
+}
+
+# hevm_symbolic <log> <args...>: 0 on QED, 1 on a counterexample or error, 2 on a partial exploration.
+hevm_symbolic() {
+  local log=$1
+  shift
+  hevm symbolic --solver z3 --smt-timeout "$HEVM_SMT_TIMEOUT" "$@" >"$log" 2>&1
+  local rc=$?
+  if grep -q 'QED' "$log" && ! grep -qi 'partially explore' "$log"; then return 0; fi
+  if [ $rc -ne 0 ] || grep -qiE 'counterexample|discovered the following' "$log"; then return 1; fi
+  if grep -qi 'partially explore' "$log"; then return 2; fi
+  return 1
+}
+
+step_hevm() {
+  require hevm z3 || return 1
+  ensure_build || return 1
+  local status=0 list name source sig hex rc
+  mkdir -p "$OUT/hevm"
+
+  list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
+  if [ -z "$list" ]; then
+    echo "hevm harnesses: skipped, no *Properties harness in $ECHIDNA_DIR/ or $MEDUSA_DIR/"
+  fi
+  while IFS=$'\t' read -r name source; do
+    [ -n "$name" ] || continue
+    hex="$OUT/hevm/$name.hex"
+    "$PY" script/security-targets.py code "$BUILD" "$name" "$hex" || return 1
+    while IFS= read -r sig; do
+      [ -n "$sig" ] || continue
+      hevm_symbolic "$OUT/hevm/$name.${sig%%(*}.log" --code-file "$hex" --sig "$sig" --initial-storage Empty
+      rc=$?
+      case $rc in
+        0) echo "hevm $name.$sig: QED" ;;
+        2) echo "hevm $name.$sig: FAIL, explored only partially (see $OUT/hevm/$name.${sig%%(*}.log)"; status=1 ;;
+        *) echo "hevm $name.$sig: FAIL (see $OUT/hevm/$name.${sig%%(*}.log)"; status=1 ;;
+      esac
+    done < <("$PY" script/security-targets.py assertion-sigs "$BUILD" "$name")
+  done <<<"$list"
+
+  list=$("$PY" script/security-targets.py runtime-code "$BUILD" "$OUT/hevm/code") || return 1
+  if [ -z "$list" ]; then
+    echo "hevm src: skipped, no contract or library under src/ compiles to runtime code"
+  fi
+  while IFS=$'\t' read -r name hex; do
+    [ -n "$name" ] || continue
+    hevm_symbolic "$OUT/hevm/src-$name.log" --code-file "$hex"
+    rc=$?
+    case $rc in
+      0) echo "hevm src $name: QED" ;;
+      2) echo "hevm src $name: no assertion violation found, explored partially (see $OUT/hevm/src-$name.log)" ;;
+      *) echo "hevm src $name: FAIL (see $OUT/hevm/src-$name.log)"; status=1 ;;
+    esac
+  done <<<"$list"
+
+  if ! grep -rqs --include='*.sol' 'function prove_' test/symbolic; then
+    echo "hevm test: skipped, test/symbolic/ holds no prove_ function"
+  else
+    # hevm test reads <root>/out; an isolated root keeps that build out of the workspace's out/.
+    local root="$OUT/hevm/root" f
+    rm -rf "$root" && mkdir -p "$root"
+    for f in src test dependencies foundry.toml remappings.txt; do ln -s "$ROOT/$f" "$root/$f"; done
+    if (cd "$root" && forge build --ast --skip script >"$ROOT/$OUT/hevm/test-build.log" 2>&1) &&
+      hevm test --root "$root" --solver z3 --smt-timeout "$HEVM_SMT_TIMEOUT" 2>&1 | tee "$OUT/hevm/test.log"; then
+      echo "hevm test: pass"
+    else
+      echo "hevm test: FAIL (see $OUT/hevm/test.log)"
+      status=1
+    fi
+  fi
+  return $status
+}
+
+step_mythril() {
+  ensure_build || return 1
+  script/security-mythril.sh "$BUILD"
+}
+
+MUTATE_TIMEOUT=${MUTATE_TIMEOUT:-300}
+MUTATE_FUZZ_RUNS=${MUTATE_FUZZ_RUNS:-256}
+NECESSIST_TIMEOUT=${NECESSIST_TIMEOUT:-300}
+
+# solc_bin: the solc of foundry.toml's solc_version, from Foundry's svm cache (macOS or Linux) or tools/bin.
+solc_bin() {
+  local v d
+  v=$(sed -nE 's/^solc_version *= *"([0-9.]+)".*/\1/p' foundry.toml | head -n1)
+  for d in "$HOME/Library/Application Support/svm" "${XDG_DATA_HOME:-$HOME/.local/share}/svm" "$HOME/.svm"; do
+    [ -x "$d/$v/solc-$v" ] && { echo "$d/$v/solc-$v"; return 0; }
+  done
+  [ -x "$ROOT/tools/bin/solc-$v" ] && { echo "$ROOT/tools/bin/solc-$v"; return 0; }
+  echo "missing solc $v: run forge build once so Foundry installs it" >&2
+  return 1
+}
+
+# isolated_root <dir>: a project copy whose src/ and test/ the mutation tools may edit in place, so an interrupted run
+# never leaves a mutant in the workspace; its own out/ and cache/ keep the workspace build untouched. bin/solc is the
+# project's solc, first on PATH, because slither-mutate compiles each mutant with the `solc` it finds.
+isolated_root() {
+  local root=$1 f solc
+  solc=$(solc_bin) || return 1
+  rm -rf "$root" && mkdir -p "$root/bin"
+  cp -R src test "$root/"
+  for f in dependencies foundry.toml remappings.txt out-aave; do
+    [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
+  done
+  ln -s "$solc" "$root/bin/solc"
+}
+
+step_mutate() {
+  require slither-mutate forge || return 1
+  local list status=0 layer name file tests root="$OUT/mutation/root" dir log remaps mutators=()
+  list=$("$PY" script/mutation-targets.py contracts --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}") || return 1
+  if [ -z "$list" ]; then
+    echo "mutate: skipped, no implementation file in the selected layers of security/mutation-layers.json"
+    return 0
+  fi
+  isolated_root "$root" || return 1
+  remaps=$(tr '\n' ' ' <remappings.txt)
+  [ -n "${MUTATE_MUTATORS:-}" ] && mutators=(--mutators-to-run "$MUTATE_MUTATORS")
+  while IFS=$'\t' read -r layer name file tests; do
+    dir="$ROOT/$OUT/mutation/$layer"
+    mkdir -p "$dir"
+    log="$dir/$name.log"
+    echo "=== slither-mutate $name ($file), layer $layer, tests $tests"
+    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" slither-mutate "$file" \
+      --contract-names "$name" --solc "$PWD/bin/solc" --solc-remaps "$remaps" --timeout "$MUTATE_TIMEOUT" \
+      --test-cmd "forge test -j 2 --match-path '$tests'" --output-dir "$dir/$name" ${mutators[@]+"${mutators[@]}"} \
+      >"$log" 2>&1); then
+      status=1
+      echo "mutate: slither-mutate failed on $name (see $log)"
+    fi
+    if grep -qE 'Test suite fails|Cannot find contracts|Traceback|too short for tests' "$log"; then
+      status=1
+      echo "mutate: $name did not run (see $log)"
+    fi
+    grep -oE '(Revert|Comment|Tweak) mutants: .*|Zero (Revert|Comment|Tweak) mutants analyzed' "$log" | sed 's/^/  /' || true
+    grep 'UNCAUGHT' "$log" | sed "s|^|$name: |" >>"$dir/survivors.txt" || true
+    # The isolated copy must be unchanged after the campaign: slither-mutate restores every file it mutates.
+    if ! diff -q "$file" "$root/$file" >/dev/null; then
+      status=1
+      echo "mutate: $file was not restored in the isolated copy; recreating it"
+      isolated_root "$root" || return 1
+    fi
+  done <<<"$list"
+  for dir in "$OUT"/mutation/*; do
+    [ -f "$dir/survivors.txt" ] && echo "survivors: $(wc -l <"$dir/survivors.txt" | tr -d ' ') in $dir/survivors.txt"
+  done
+  return $status
+}
+
+step_gambit() {
+  MUTATE_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" script/security-gambit.sh
+}
+
+step_necessist() {
+  require forge || return 1
+  if ! command -v necessist >/dev/null 2>&1; then
+    echo "missing necessist: run script/install-security-tools.sh --necessist (needs cargo)" >&2
+    return 1
+  fi
+  local list status=0 layer files root="$OUT/necessist/root"
+  list=$("$PY" script/mutation-targets.py tests --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}") || return 1
+  if [ -z "$list" ]; then
+    echo "necessist: skipped, no test file in the selected layers of security/mutation-layers.json"
+    return 0
+  fi
+  mkdir -p "$OUT/necessist"
+  for layer in $(cut -f1 <<<"$list" | sort -u); do
+    files=$(awk -F'\t' -v l="$layer" '$1 == l {print $2}' <<<"$list")
+    isolated_root "$root" || return 1
+    echo "=== necessist, layer $layer: $(wc -l <<<"$files" | tr -d ' ') test file(s)"
+    # shellcheck disable=SC2086
+    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" necessist --framework foundry \
+      --timeout "$NECESSIST_TIMEOUT" --no-sqlite $files -- -j 2 >"$ROOT/$OUT/necessist/$layer.log" 2>&1); then
+      status=1
+      echo "necessist: layer $layer failed (see $OUT/necessist/$layer.log)"
+    fi
+    grep -E ' passed$' "$OUT/necessist/$layer.log" >"$OUT/necessist/$layer.txt" || true
+    echo "necessist: $(wc -l <"$OUT/necessist/$layer.txt" | tr -d ' ') removal(s) left the tests passing (see $OUT/necessist/$layer.txt)"
+  done
+  return $status
+}
+
+notes() {
+  cat <<'EOF'
+Not run, by design:
+  manticore  archived upstream (trailofbits/manticore, last release 0.3.7 in February 2022); hevm, Halmos and
+             Mythril run the symbolic execution it provided
+  mythx      the hosted service shut down effective 31 March (mythx.io/sunset) and its API no longer answers;
+             Mythril, its open-source engine, runs locally above
+  kontrol    needs the K framework (kup and Nix); hevm and Halmos cover symbolic proofs of Foundry tests
+EOF
+}
+
+ALL=(build echidna medusa halmos hevm mythril mutate gambit necessist)
+steps=("$@")
+[ ${#steps[@]} -eq 0 ] && steps=("${ALL[@]}")
+
+for s in "${steps[@]}"; do
+  if ! declare -F "step_$s" >/dev/null; then
+    echo "security-slow: unknown step $s (steps: ${ALL[*]})" >&2
+    exit 2
+  fi
+  echo
+  echo "##### $s"
+  start=$SECONDS
+  if "step_$s"; then
+    echo "##### $s: pass ($((SECONDS - start))s)"
+  else
+    echo "##### $s: FAIL ($((SECONDS - start))s)"
+    failed+=("$s")
+  fi
+done
+
+echo
+notes
+echo
+if [ ${#failed[@]} -gt 0 ]; then
+  echo "security-slow: FAIL in ${failed[*]} (reports in $OUT/)"
+  exit 1
+fi
+echo "security-slow: every step passed (reports in $OUT/)"

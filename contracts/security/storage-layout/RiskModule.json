@@ -1,0 +1,68 @@
+{
+  "contract": "RiskModule",
+  "source": "src/policy/risk-module/RiskModule.sol",
+  "storage": [],
+  "namespaces": {
+    "erc7201:openzeppelin.storage.AccessControl": {
+      "baseSlot": "0x02dd7bc7dec4dceedda775e58dd541e08a116c6c53815c0bd028192f7b626800",
+      "declaredIn": "dependencies/@openzeppelin-contracts-upgradeable-5.1.0/access/AccessControlUpgradeable.sol",
+      "fields": [
+        {
+          "path": "_roles",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+        },
+        {
+          "path": "_roles[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "64",
+          "type": "struct AccessControlUpgradeable.RoleData"
+        },
+        {
+          "path": "_roles[].hasRole",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "_roles[].hasRole[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "_roles[].adminRole",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
+        }
+      ]
+    },
+    "erc7201:openzeppelin.storage.Initializable": {
+      "baseSlot": "0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00",
+      "declaredIn": "dependencies/@openzeppelin-contracts-upgradeable-5.1.0/proxy/utils/Initializable.sol",
+      "fields": [
+        {
+          "path": "_initialized",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "_initializing",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "1",
+          "type": "bool"
+        }
+      ]
+    }
+  }
+}

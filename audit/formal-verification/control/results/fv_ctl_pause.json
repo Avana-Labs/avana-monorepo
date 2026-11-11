@@ -1,0 +1,152 @@
+[
+ {
+  "id": "FV-CTL-31",
+  "title": "2.15 SPEC-GOV-004 and 2.8 REQ-MREG-001/004/024 define the same transition and revert for every state, reason, call and caller",
+  "status": "Verified",
+  "method": "exhaustive enumeration (192 cases)",
+  "verifies": [
+   "SPEC-GOV-004",
+   "REQ-MREG-001",
+   "REQ-MREG-004",
+   "REQ-MREG-024",
+   "REQ-ACCESS-085",
+   "REQ-ACCESS-122",
+   "REQ-ACCESS-123",
+   "INV-049"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_pause"
+ },
+ {
+  "id": "FV-CTL-32",
+  "title": "A freeze-only key never leaves Frozen or Paused; P or A reaches None from every state; Paused never returns to Frozen; the reason is None exactly when not Paused; either guardian raises General to MintPathSuspect at once",
+  "status": "Verified",
+  "method": "exhaustive enumeration (4 cases)",
+  "verifies": [
+   "SPEC-GOV-004",
+   "REQ-ACCESS-086",
+   "REQ-ACCESS-087",
+   "REQ-ROLE-071",
+   "REQ-MREG-024",
+   "INV-050"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_pause"
+ },
+ {
+  "id": "FV-CTL-33",
+  "title": "Every page's pause matrix (four states, twelve actions) allows exactly what the AaveAdapter's decision procedure allows",
+  "status": "Verified",
+  "method": "exhaustive enumeration (288 cases)",
+  "verifies": [
+   "REQ-ACCESS-072",
+   "REQ-ACCESS-073",
+   "REQ-ACCESS-074",
+   "REQ-ACCESS-164",
+   "REQ-MREG-002",
+   "REQ-ROLE-073",
+   "INV-067",
+   "REQ-ADAPTER-045",
+   "REQ-ADAPTER-046",
+   "REQ-ADAPTER-083",
+   "REQ-LENS-031",
+   "REQ-SWAP-003"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_pause"
+ },
+ {
+  "id": "FV-CTL-36",
+  "title": "Every error a page names for a blocked action is the error the Adapter and RiskModule raise",
+  "status": "Verified",
+  "method": "exhaustive enumeration (42 cases)",
+  "verifies": [
+   "REQ-ACCESS-074",
+   "REQ-ADAPTER-083",
+   "REQ-RISK-066",
+   "INV-026"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_pause"
+ },
+ {
+  "id": "FV-CTL-34",
+  "title": "Repay, repayAllAndWithdraw, fees, debt-free withdrawal and removal, zero-credit release, liquidation and pending settlement are open in every state and reason",
+  "status": "Verified",
+  "method": "exhaustive enumeration (28 cases)",
+  "verifies": [
+   "REQ-ACCESS-068",
+   "REQ-ROLE-068",
+   "REQ-ADAPTER-047",
+   "REQ-RISK-040",
+   "LIQ-002",
+   "INV-081"
+  ],
+  "targets": [
+   "T-56",
+   "T-57"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_pause"
+ },
+ {
+  "id": "FV-CTL-37",
+  "title": "A rescue top-up is open in None, Frozen and Paused(General) and is the only pledge Paused(General) admits; Paused(MintPathSuspect) admits no minting action",
+  "status": "Verified",
+  "method": "exhaustive enumeration (4 cases)",
+  "verifies": [
+   "REQ-MREG-024",
+   "REQ-ADAPTER-083",
+   "REQ-ACCESS-164",
+   "REQ-RISK-066",
+   "INV-067"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_pause"
+ },
+ {
+  "id": "FV-CTL-35",
+  "title": "A stronger pause state or reason never allows an action a weaker one blocks",
+  "status": "Verified",
+  "method": "exhaustive enumeration (192 cases)",
+  "verifies": [
+   "SPEC-GOV-004",
+   "REQ-ACCESS-074",
+   "REQ-ACCESS-164"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_pause"
+ }
+]

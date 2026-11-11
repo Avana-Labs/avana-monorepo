@@ -1,0 +1,213 @@
+# Checklist: SettlementMath
+
+Spec pages: 11-lpvaultswap.md. CVL specs: none.
+
+## REQ / SPEC on the page (170)
+
+- [ ] `REQ-SWAP-001` (11-lpvaultswap.md:191) `liquidate` MUST NOT check `msg.sender` against the committed-operator registry or any role: any address may c
+- [ ] `REQ-SWAP-002` (11-lpvaultswap.md:192) `liquidate` and `settlePending` MUST acquire the Lock before any state-changing external call and release it a
+- [ ] `REQ-SWAP-003` (11-lpvaultswap.md:193) LPVaultSwap MUST NOT read the MarketRegistry's `PauseState`, its pause reason or any circuit breaker: `liquida
+- [ ] `REQ-SWAP-004` (11-lpvaultswap.md:194) `liquidate` MUST revert with `UnknownMarket` unless `params.marketId` is a market in the MarketRegistry whose 
+- [ ] `REQ-SWAP-005` (11-lpvaultswap.md:195) `liquidate` MUST revert with `InvalidAmount` if `debtToCover == 0`, if `debtToCover` or `maxShortfall` exceeds
+- [ ] `REQ-SWAP-006` (11-lpvaultswap.md:196) `liquidate` MUST revert with `NotLiquidatable` if `HF ≥ 1e18`. Aave's own check inside `liquidationCall` still
+- [ ] `REQ-SWAP-007` (11-lpvaultswap.md:197) `liquidate` MUST revert with `SharesNotEqualAssets` unless `Hub.getAddedAssets(vaultAssetId) == Hub.getAddedSh
+- [ ] `REQ-SWAP-008` (11-lpvaultswap.md:198) Collateral price rule (`Q-247`). Before funding, LPVaultSwap MUST call `poke()` on the market's LPOracle, so t
+- [ ] `REQ-SWAP-009` (11-lpvaultswap.md:199) Grace latch. If the market's `getPriceState()` reports `inGrace` (a feed recovery, `recoveredAt ≤ block.timest
+- [ ] `REQ-SWAP-010` (11-lpvaultswap.md:200) No in-kind mode exists (`Q-401`): `RouteMode` has only `PrimaryThenBackup` and `BackupOnly`, and calldata with
+- [ ] `REQ-SWAP-011` (11-lpvaultswap.md:204) LPVaultSwap MUST pull the caller's funding with `T.transferFrom(msg.sender, address(this), X)` before any othe
+- [ ] `REQ-SWAP-012` (11-lpvaultswap.md:205) `liquidate` MUST NOT call the flash source or any lender, and MUST NOT measure a flash loan: no `F`, `φ` or fl
+- [x] `REQ-SWAP-013` (11-lpvaultswap.md:206) `onFlashLoan(asset, amount, premium, data)` runs only inside `deleverage`. It MUST revert with `InvalidFlashCa — TEST-198
+- [ ] `REQ-SWAP-014` (11-lpvaultswap.md:207) Funding availability. A caller without the debt asset liquidates through the public flash liquidation helper o
+- [x] `REQ-FLASH-001` (11-lpvaultswap.md:225) `AaveV3FlashSource` MUST hold the immutables `LENDER` (the chain's Aave V3 Pool), `LP_VAULT_SWAP` and `PARAMET — PROP-080, TEST-032, TEST-046, TEST-052, TEST-061, TEST-080, TEST-108, TEST-177, TEST-267, TEST-285
+- [x] `REQ-FLASH-002` (11-lpvaultswap.md:226) Before calling `flashLoan`, LPVaultSwap MUST revert with `FlashLiquidityShort(available, F)` if `F > flashSour — PROP-080, TEST-052, TEST-198
+- [x] `REQ-FLASH-003` (11-lpvaultswap.md:227) `AaveV3FlashSource.executeOperation(assets, amounts, premiums, initiator, params)` MUST revert with `InvalidFl — PROP-036, PROP-080, TEST-046, TEST-052, TEST-080, TEST-177, TEST-287
+- [x] `REQ-FLASH-004` (11-lpvaultswap.md:228) LPVaultSwap's `onFlashLoan` checks are `REQ-SWAP-013`; the premium it accepts is the one the Pool reports in t — PROP-080, TEST-046, TEST-052
+- [x] `REQ-FLASH-005` (11-lpvaultswap.md:229) On every `deleverage` call LPVaultSwap MUST revert with `FlashSourceIsHub()` if `MarketRegistry.isRecordedHub( — PROP-080, TEST-285
+- [ ] `REQ-FLASH-006` (11-lpvaultswap.md:230) The chain's flash source is recorded on the MarketRegistry: `MarketRegistry.setFlashSource(newSource)` is call
+- [x] `REQ-FLASH-007` (11-lpvaultswap.md:231) The deployment payload of each chain requests, by AIP on that chain's Aave V3 market, the `FLASH_BORROWER` rol — TEST-052
+- [ ] `REQ-FLASH-008` (11-lpvaultswap.md:232) `enableDebtReserve` on a chain sizes the reserve's `drawCap` so that the largest single liquidation the market
+- [x] `REQ-FLASH-009` (11-lpvaultswap.md:233) The flash source MUST NOT be named by any caller: `deleverage` reads only `MarketRegistry.flashSource()`, and  — PROP-080, TEST-046
+- [ ] `REQ-FLASH-010` (11-lpvaultswap.md:234) The GhoFlashMinter is not used on any chain. A GHO debt reserve is flash-borrowed from the chain's V3 Pool GHO
+- [ ] `REQ-SWAP-015` (11-lpvaultswap.md:238) Before `liquidationCall`, LPVaultSwap MUST call `Collateralization.beginSeizure(proxy, vaultToken)` so Collate
+- [ ] `REQ-SWAP-016` (11-lpvaultswap.md:239) LPVaultSwap MUST `forceApprove` the CDP Spoke for exactly `Kf` of `T`, call the standard Aave V4 `Spoke.liquid
+- [ ] `REQ-SWAP-017` (11-lpvaultswap.md:240) `D` and `c` MUST be measured as balance deltas across `liquidationCall`. `liquidate` MUST revert with `Nothing
+- [ ] `REQ-SWAP-018` (11-lpvaultswap.md:241) When the seizure exhausts the account's collateral, Aave records the deficit inside `liquidationCall`, for eve
+- [ ] `REQ-SWAP-019` (11-lpvaultswap.md:242) Every LPVaultSwap measurement MUST be a per-call delta or a per-call snapshot. The vault token admits a seizur
+- [ ] `REQ-SWAP-020` (11-lpvaultswap.md:246) After `liquidationCall`, LPVaultSwap MUST call `AaveAdapter.burnSeized(vaultToken, c)` and then `Collateraliza
+- [ ] `REQ-SWAP-021` (11-lpvaultswap.md:247) The token amounts `a₁…aₙ` used for swaps and dust legs MUST be the balance deltas of the market's `n` tokens a
+- [ ] `REQ-SWAP-022` (11-lpvaultswap.md:248) In `PrimaryThenBackup` mode, for each released token `i ≠ T` with `aᵢ > 0` that is not a dust leg (`REQ-SWAP-1
+- [ ] `REQ-SWAP-023` (11-lpvaultswap.md:249) Before each route call LPVaultSwap MUST `forceApprove` that route for exactly the input amount and set the all
+- [ ] `REQ-SWAP-024` (11-lpvaultswap.md:250) Input or intermediate tokens a route returns unswapped count as zero toward `R` and toward the recovery floor;
+- [x] `REQ-SWAP-025` (11-lpvaultswap.md:251) In `PrimaryThenBackup` and `BackupOnly` modes, `liquidate` MUST revert with `RecoveryBelowFloor` if `R + short — TEST-198
+- [x] `SPEC-LIQ-001` (11-lpvaultswap.md:257) **Net bonus.** `bNet = 10⁴ + ⌊(b − 10⁴) × (10⁴ − lf) / 10⁴⌋` bps, with `b` and `lf` read before `liquidationCa — PROP-017, TEST-198
+- [x] `SPEC-LIQ-002` (11-lpvaultswap.md:258) **No cost term.** A liquidation has no cost paid outside `R`: LPVaultSwap takes no flash loan (`REQ-SWAP-012`) — PROP-017, TEST-198
+- [x] `SPEC-LIQ-003` (11-lpvaultswap.md:259) **Effective slippage.** `s = min(slippageAllowanceBps, ⌊10⁴ × (bNet − 10⁴) / bNet⌋)` if `bNet > 10⁴`, else `s  — PROP-017, PROP-018, TEST-198
+- [x] `SPEC-LIQ-004` (11-lpvaultswap.md:260) **Seized oracle value.** `V = mulDiv(c × Pc, 10^dd, 10^dv × Pdebt)`, rounded down. Units: debt units; `c` in v — PROP-018, TEST-198
+- [x] `SPEC-LIQ-005` (11-lpvaultswap.md:261) **Recovery floor.** `U = Σᵢ ⌈pᵢ × 10^dd / (10^dᵢ × Pdebt)⌉` over the `n` released tokens (one raw unit of each — PROP-018, PROP-048, TEST-198
+- [ ] `SPEC-LIQ-006` (11-lpvaultswap.md:262) **Recovered amount.** `R = T balance after the last route call − T balance immediately before LPVaultSwap call
+- [x] `SPEC-LIQ-007` (11-lpvaultswap.md:263) **No flash premium on the debt.** The term `φD` does not exist in a liquidation (`Q-404`): the oracle gain `G` — PROP-018, TEST-052, TEST-198
+- [x] `SPEC-LIQ-008` (11-lpvaultswap.md:264) **Realized surplus.** `S = max(0, R_f − D)`, with `R_f = max(R, minRec) = R + max(0, minRec − R)`, the recover — PROP-015, PROP-069, TEST-198
+- [x] `SPEC-LIQ-009` (11-lpvaultswap.md:265) **Avana fee.** `A = min(⌊G × avanaFeeShareBps / 10⁴⌋, S)` with the oracle gain `G = max(0, V − D)`. Units: deb — PROP-015, PROP-069, TEST-198
+- [x] `SPEC-LIQ-010` (11-lpvaultswap.md:266) **Caller payout and conservation.** `keeperOut = (Kf + R') − (D + A + B)`, with `R' = R + shortfall` and `B` f — PROP-015, TEST-198
+- [ ] `SPEC-LIQ-011` (11-lpvaultswap.md:267) **No in-kind cap.** Replaces the in-kind cap (`Q-401`). Every liquidation pays the caller in the debt asset by
+- [ ] `SPEC-LIQ-012` (11-lpvaultswap.md:268) **No in-kind valuation.** Replaces the in-kind oracle value (`Q-401`). Released tokens are valued only by the 
+- [ ] `SPEC-LIQ-013` (11-lpvaultswap.md:269) **No in-kind split.** Replaces the in-kind split (`Q-401`). When both routes of a token into the debt asset ar
+- [x] `SPEC-LIQ-014` (11-lpvaultswap.md:270) **Pending-settlement floor.** For the tokens `aᵢ` released by `Collateralization.settlePending`, valued in the — PROP-018, TEST-198
+- [x] `SPEC-LIQ-015` (11-lpvaultswap.md:271) **Flash pre-loan bound.** Applies to `deleverage` and to the flash liquidation helper, never to `liquidate`, w — PROP-080, TEST-052, TEST-198, TEST-267
+- [x] `SPEC-LIQ-016` (11-lpvaultswap.md:272) **Listing liveness.** A liquidation needs `minLB × (10⁴ − slippageAllowanceMinBps) ≥ 10⁸` for every market on  — TEST-198
+- [ ] `SPEC-LIQ-017` (11-lpvaultswap.md:273) **Leftover debt asset.** `leftover = Kf − D` stays in LPVaultSwap's `T` balance and returns to the caller insi
+- [x] `SPEC-LIQ-018` (11-lpvaultswap.md:274) **Per-leg minimum output.** For each released token `i ≠ T` with `aᵢ > 0` that a call swaps, LPVaultSwap passe — PROP-018, TEST-198, TEST-232
+- [x] `SPEC-LIQ-019` (11-lpvaultswap.md:275) **Caller shortfall top-up.** With the call's `maxShortfall`, every leg runs at `sLeg = min(9,999, s + min(maxS — PROP-015, PROP-019, TEST-198
+- [x] `SPEC-LIQ-020` (11-lpvaultswap.md:276) **Repay-with-collateral sizing.** For `deleverage` of `units` of market `m` against debt reserve `r`: `V = mul — TEST-198
+- [ ] `SPEC-LIQ-021` (11-lpvaultswap.md:277) **Liquidation throughput.** For a market with `N` liquidation calls queued after a price drop (accounts liquid
+- [x] `SPEC-LIQ-022` (11-lpvaultswap.md:278) **Keeper reward and borrower surplus.** With `S` from `SPEC-LIQ-008`, `G = max(0, V − D)` and `A` from `SPEC-L — PROP-015, TEST-198
+- [ ] `REQ-SWAP-026` (11-lpvaultswap.md:282) In `PrimaryThenBackup` and `BackupOnly` modes, after the last route call LPVaultSwap MUST, in this order: (1) 
+- [ ] `REQ-SWAP-027` (11-lpvaultswap.md:283) The borrower keeps the collateral Aave did not seize and receives the borrower surplus `B` of `SPEC-LIQ-022` i
+- [ ] `REQ-SWAP-028` (11-lpvaultswap.md:284) Avana's fee MUST be paid in the same call, in the debt asset, to the `feeRecipient` read from the ParameterSto
+- [x] `REQ-SWAP-029` (11-lpvaultswap.md:285) No settlement budget exists (`Q-397`). No Avana contract pays any part of a liquidation: the caller funds `D`  — PROP-019, TEST-198
+- [ ] `REQ-SWAP-030` (11-lpvaultswap.md:289) No in-kind settlement exists (`Q-401`). Every liquidation runs the routed path: entry checks, caller funding, 
+- [ ] `REQ-SWAP-031` (11-lpvaultswap.md:290) The MarketRegistry holds no in-kind window, trigger or expiry, and LPVaultSwap has no `reportRecoveryShortfall
+- [x] `REQ-SWAP-076` (11-lpvaultswap.md:291) Payout delivery. Every escrowable payout LPVaultSwap makes is delivered by this procedure: Avana's fee `A` to  — TEST-179
+- [ ] `REQ-SWAP-032` (11-lpvaultswap.md:297) The committed-operator registry lives on each chain's LPVaultSwap and covers every Hub on that chain. At launc
+- [ ] `REQ-SWAP-033` (11-lpvaultswap.md:298) `addKeeper(operator)` registers a committed operator. It MUST be callable only by `APPLICATION_ADMIN` (the cha
+- [ ] `REQ-SWAP-034` (11-lpvaultswap.md:299) `KEEPER_FLOOR` is `keeperFloor = 1` (Avana's keeper at launch), counted per chain over active committed operat
+- [ ] `REQ-SWAP-035` (11-lpvaultswap.md:300) `removeKeeper(operator)` MUST be callable only by `APPLICATION_ADMIN` at the short delay (12 hours), and MUST 
+- [ ] `REQ-SWAP-036` (11-lpvaultswap.md:301) No operator suspension exists: an operator is registered or removed at the short delay. Registration grants no
+- [ ] `REQ-SWAP-037` (11-lpvaultswap.md:302) No operator or account quarantine exists; a key that should not act is removed from its Safe, and a guardian c
+- [ ] `REQ-SWAP-038` (11-lpvaultswap.md:303) A removed operator returns to the registry only through `addKeeper` at the normal delay; removal never stops i
+- [ ] `REQ-SWAP-039` (11-lpvaultswap.md:307) No Avana switch halts liquidation (`REQ-SWAP-003`). Liquidation of an account is unavailable only when its pri
+- [x] `REQ-SWAP-040` (11-lpvaultswap.md:308) LPVaultSwap MUST be a UUPS proxy (ERC-1967) whose `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only  — PROP-070
+- [ ] `REQ-SWAP-041` (11-lpvaultswap.md:312) One account (one PositionProxy, one market) and one debt reserve per call; no batching inside a call and no fl
+- [ ] `REQ-SWAP-042` (11-lpvaultswap.md:313) LPVaultSwap MUST end every `liquidate` call with no change in its balance of the debt asset, the vault token o
+- [ ] `REQ-SWAP-043` (11-lpvaultswap.md:314) LPVaultSwap MUST have no rescue, sweep or arbitrary-call function. Inside a liquidation, tokens leave only to 
+- [ ] `REQ-SWAP-044` (11-lpvaultswap.md:315) Seized vault tokens MUST leave LPVaultSwap only by `AaveAdapter.burnSeized`, in the same call they were receiv
+- [ ] `REQ-SWAP-045` (11-lpvaultswap.md:316) LPVaultSwap MUST call `beginSeizure`, `burnSeized` and `settleSeizure` only for the proxy and vault token of t
+- [ ] `REQ-SWAP-046` (11-lpvaultswap.md:317) A caller MUST NOT supply a route address, a flash lender, a funding source, a recipient, an override of the re
+- [ ] `REQ-SWAP-047` (11-lpvaultswap.md:318) LPVaultSwap MUST read every parameter from the ParameterStore and every market, debt reserve and route from th
+- [ ] `REQ-SWAP-077` (11-lpvaultswap.md:319) LPVaultSwap MUST skip, not attempt, every transfer, `transferFrom`, route call and escrow deposit whose amount
+- [ ] `REQ-SWAP-087` (11-lpvaultswap.md:323) LPVaultSwap MUST revert with `UnknownDebtReserve(debtReserveId)` unless `MarketRegistry.isApprovedDebtReserve(
+- [ ] `REQ-SWAP-088` (11-lpvaultswap.md:324) Debt asset funding. The repayment is funded only by the caller's `Kf` of the debt asset itself (`REQ-SWAP-011`
+- [ ] `REQ-SWAP-089` (11-lpvaultswap.md:325) Leftover. The debt asset LPVaultSwap holds after `liquidationCall` above what it held before funding, `Kf − D`
+- [ ] `REQ-SWAP-090` (11-lpvaultswap.md:326) `debtToCover` bounds the repayment for every debt reserve: Aave pulls `D ≤ Kf ≤ X` (`REQ-SWAP-011`, `REQ-SWAP-
+- [ ] `REQ-SWAP-091` (11-lpvaultswap.md:327) Debt price rule for the repaid reserve (`Q-247`, `Q-248`). For `r`, LPVaultSwap MUST revert with `DebtPriceSta
+- [ ] `REQ-SWAP-092` (11-lpvaultswap.md:328) Seized-unit burn. LPVaultSwap MUST call `AaveAdapter.burnSeized(vaultToken, units)` while it holds the Lock, f
+- [ ] `REQ-SWAP-093` (11-lpvaultswap.md:329) One debt reserve per call. An account owing several debt reserves is liquidated by sequential calls, each nami
+- [ ] `REQ-SWAP-094` (11-lpvaultswap.md:330) Any debt asset settles the same way: the repayment comes from the caller's funding in the debt asset, and ever
+- [ ] `REQ-SWAP-072` (11-lpvaultswap.md:334) `liquidatePermissionless` does not exist: `liquidate(params)` is the only liquidation entry point, callable by
+- [ ] `REQ-SWAP-073` (11-lpvaultswap.md:335) Every caller settles the same way (`Q-397`): LPVaultSwap pulls `Kf` from `msg.sender`, draws on no protocol ba
+- [ ] `REQ-SWAP-074` (11-lpvaultswap.md:336) `liquidate` MUST revert with `DeadlineExpired(deadline)` if `block.timestamp > params.deadline`, as its first 
+- [ ] `REQ-SWAP-075` (11-lpvaultswap.md:337) LPVaultSwap MUST revert with `PayoutTooLow(keeperOut, minPayout)` if `keeperOut < params.minPayout`. `keeperOu
+- [ ] `REQ-SWAP-066` (11-lpvaultswap.md:343) `settlePending(marketId, debtReserveId)` MUST be callable by any address and MUST NOT read the pause state, an
+- [ ] `REQ-SWAP-067` (11-lpvaultswap.md:344) `settleSeizure` reconciles the account-market before it settles the current seizure (`Q-201`): an earlier gap 
+- [ ] `REQ-SWAP-070` (11-lpvaultswap.md:345) `settlePending` funds `Rt = R + carry[Tp]`, the recovery plus any amount an earlier settlement of the same ass
+- [x] `REQ-SWAP-100` (11-lpvaultswap.md:349) Every route call LPVaultSwap makes MUST carry an oracle-derived minimum: each leg in `liquidate`, `settlePendi — TEST-198
+- [x] `REQ-SWAP-121` (11-lpvaultswap.md:350) **Dust legs.** A released token `i ≠ T` with `aᵢ > 0` and `Vlegᵢ ≤ Ulegᵢ` (`SPEC-LIQ-018`) is a dust leg. In ` — TEST-198
+- [x] `REQ-SWAP-101` (11-lpvaultswap.md:351) In both route modes of `liquidate`, LPVaultSwap MUST apply `SPEC-LIQ-019`; `R` stays the amount recovered from — TEST-198
+- [ ] `REQ-SWAP-102` (11-lpvaultswap.md:352) No recovery-shortfall report exists (`Q-399`, `Q-401`): LPVaultSwap has no `reportRecoveryShortfall` and no `p
+- [ ] `REQ-SWAP-103` (11-lpvaultswap.md:353) LPVaultSwap MUST keep no per-market shortfall or failure state across calls (no `shortfallSince`, `lastShortfa
+- [ ] `REQ-SWAP-104` (11-lpvaultswap.md:354) LPVaultSwap MUST NOT report liquidation outcomes to the MarketRegistry and MUST NOT read any breaker (`Q-399`)
+- [ ] `REQ-SWAP-105` (11-lpvaultswap.md:355) `liquidate` MUST revert with `AddressIsFrozen(msg.sender)` if the caller is frozen, checked right after the de
+- [ ] `REQ-SWAP-107` (11-lpvaultswap.md:356) `activeKeeperCount()` MUST return the number of registered committed operators not frozen. `addKeeper` refuses
+- [x] `REQ-SWAP-108` (11-lpvaultswap.md:357) Balance-delta accounting (`Q-271`, `Q-390`). Every amount LPVaultSwap receives MUST be measured as the rise of — TEST-198
+- [x] `REQ-SWAP-122` (11-lpvaultswap.md:358) Flash repayment by balance delta, in `deleverage` only (a liquidation takes no flash loan, `REQ-SWAP-012`). In — TEST-052, TEST-080, TEST-287
+- [x] `REQ-SWAP-123` (11-lpvaultswap.md:359) Transfer fee on a debt asset. A debt asset is enabled only while its transfer fee is zero: `MarketRegistry.ena — TEST-287
+- [ ] `REQ-SWAP-118` (11-lpvaultswap.md:360) Liquidation throughput (`Q-344`). Callers MAY batch separate `liquidate` calls in one transaction through a mu
+- [ ] `REQ-SWAP-119` (11-lpvaultswap.md:361) Aave-side halts (`Q-346`). An Aave halt of a CDP Spoke or a pause of the vault-token or debt reserve blocks re
+- [x] `REQ-SWAP-106` (11-lpvaultswap.md:367) `deleverage(r)` MUST revert with `NotAdapter` unless `msg.sender == AAVE_ADAPTER` and the Lock is held by `AAV — TEST-198
+- [ ] `REQ-SWAP-084` (11-lpvaultswap.md:375) Liquidation exclusivity comes from the vault token, not from the Spoke. The CDP Spoke is a standard Aave V4 Sp
+- [ ] `REQ-SWAP-085` (11-lpvaultswap.md:376) `liquidate` MUST be the only liquidation entry point, open with both route modes to every address that is not 
+- [ ] `REQ-SWAP-086` (11-lpvaultswap.md:377) Any address with no role, the Aave DAO executor included, MAY call `liquidate` directly or through the public 
+- [ ] `REQ-HELPER-001` (11-lpvaultswap.md:412) The helper MUST hold the immutables `POOL` (the chain's Aave V3 Pool), `LP_VAULT_SWAP`, `MARKET_REGISTRY` and 
+- [ ] `REQ-HELPER-002` (11-lpvaultswap.md:413) Source rule. The constructor MUST revert with `FlashSourceIsHub` if `MarketRegistry.isRecordedHub(POOL)` is tr
+- [ ] `REQ-HELPER-003` (11-lpvaultswap.md:414) Request checks. `flashLiquidate(request)` MUST, in order, revert with `ContextActive` while a context of this 
+- [ ] `REQ-HELPER-004` (11-lpvaultswap.md:415) Bound context. Before calling the Pool, the helper MUST record a single-use context in transient storage: the 
+- [ ] `REQ-HELPER-005` (11-lpvaultswap.md:416) Callback binding. `executeOperation(assets, amounts, premiums, initiator, params)` MUST revert with `InvalidFl
+- [ ] `REQ-HELPER-006` (11-lpvaultswap.md:417) Liquidation inside the callback. The callback MUST `forceApprove` LPVaultSwap for exactly `X` of `T`, call `LP
+- [ ] `REQ-HELPER-007` (11-lpvaultswap.md:418) Repayment. With `owed = F + premiums[0]`, if `keeperOut < owed` the callback MUST pull `topUp = owed − keeperO
+- [ ] `REQ-HELPER-008` (11-lpvaultswap.md:419) Caller payout. After `flashLoan` returns and the context is checked, the helper MUST compute `payout` as the r
+- [ ] `REQ-HELPER-009` (11-lpvaultswap.md:420) Quotes. `maxFlashLoan(asset)` MUST return 0 unless the Pool's reserve of `asset` is active, not paused and fla
+- [ ] `REQ-HELPER-010` (11-lpvaultswap.md:421) Public instance. The public helper takes its payer and payout recipient from `msg.sender`, so a caller can pul
+- [ ] `REQ-HELPER-011` (11-lpvaultswap.md:422) Operator variant. An operator's helper MUST refuse every caller except `SIGNER` (`NotSigner`), pull the invent
+- [ ] `REQ-HELPER-012` (11-lpvaultswap.md:423) The helper MUST NOT take a swap step, a route, a recipient other than its payer or the bound Safe, or executab
+- [ ] `REQ-SWAP-048` (11-lpvaultswap.md:444) Caller of `liquidate` not a registered committed operator | No effect: the call runs every check like any othe
+- [ ] `REQ-SWAP-049` (11-lpvaultswap.md:445) `PauseState` is Frozen, `Paused(General)` or `Paused(MintPathSuspect)` on the market's Hub, or a breaker is tr
+- [ ] `REQ-SWAP-050` (11-lpvaultswap.md:446) The market's price is Cached, Expired, older than `liquidationPriceMaxAge`, from an unrecorded source, or in a
+- [ ] `REQ-SWAP-051` (11-lpvaultswap.md:447) Inside a grace window (feed recovery or sequencer restart) and `HF ≥ graceHealthFactor` | reverts with `GraceH
+- [ ] `REQ-SWAP-052` (11-lpvaultswap.md:448) Vault-token Hub shares ≠ assets | reverts with `SharesNotEqualAssets`; monitoring alarm (Source: Q-189)
+- [ ] `REQ-SWAP-053` (11-lpvaultswap.md:449) In `deleverage`, a flash premium quoted or charged above `maxFlashFeeBps`, or `F` above the flash source's idl
+- [ ] `REQ-SWAP-054` (11-lpvaultswap.md:450) `onFlashLoan` from anyone but the current flash source, outside `deleverage`, or with a wrong asset, amount or
+- [ ] `REQ-SWAP-055` (11-lpvaultswap.md:451) `liquidationCall` reverts (HF ≥ 1, `MustNotLeaveDust`, collateral or debt reserve paused, Spoke halted, insuff
+- [ ] `REQ-SWAP-056` (11-lpvaultswap.md:452) `c == 0` | reverts with `NothingSeized` (Source: Q-127, Q-144)
+- [ ] `REQ-SWAP-057` (11-lpvaultswap.md:453) Collateralization share-drop, supply-drop or debit check, the AaveAdapter burn, or the LPVault unwind fails | 
+- [ ] `REQ-SWAP-058` (11-lpvaultswap.md:454) Primary route not usable or reverts | Falls back to the backup; emits `RouteFailed` when the primary reverted 
+- [ ] `REQ-SWAP-059` (11-lpvaultswap.md:455) Primary and backup routes of a token into the debt asset both unusable | reverts with `NoRouteAvailable`; gove
+- [x] `REQ-SWAP-060` (11-lpvaultswap.md:456) `minRec − R > maxShortfall` | reverts with `RecoveryBelowFloor`; the caller retries with a larger `maxShortfal — TEST-198
+- [x] `REQ-SWAP-061` (11-lpvaultswap.md:457) Settlement gap `g` above the caller's `maxShortfall` | Unreachable while `Kf ≥ D`, because `g` never exceeds t — TEST-198
+- [x] `REQ-SWAP-062` (11-lpvaultswap.md:458) `Kf + R' < D + A + B` | Unreachable while `Kf ≥ D` (`SPEC-LIQ-010`); the defensive check reverts with `Insuffi — PROP-015, TEST-198
+- [ ] `REQ-SWAP-063` (11-lpvaultswap.md:459) A `routeMode` value other than `PrimaryThenBackup` or `BackupOnly` | reverts on ABI decoding; no in-kind mode 
+- [ ] `REQ-SWAP-064` (11-lpvaultswap.md:460) A transfer of the caller's funding or of `keeperOut`, or a transfer to a route or the PayoutEscrow, reverts | 
+- [ ] `REQ-SWAP-065` (11-lpvaultswap.md:461) Removal would leave fewer than `KEEPER_FLOOR` active committed operators | reverts with `KeeperFloor`; with `K
+- [ ] `REQ-SWAP-068` (11-lpvaultswap.md:462) `settlePending` with nothing pending | reverts with `NothingPending` (Source: Q-201)
+- [ ] `REQ-SWAP-071` (11-lpvaultswap.md:463) `settlePending` while a price fails, with no usable route, with `R < minPending`, or when `fund` reverts | rev
+- [ ] `REQ-SWAP-069` (11-lpvaultswap.md:464) `addKeeper`, `removeKeeper` or `upgradeToAndCall` from any address other than the timelock | reverts with `Acc
+- [ ] `REQ-SWAP-078` (11-lpvaultswap.md:465) `block.timestamp > deadline` | reverts with `DeadlineExpired(deadline)` (Source: Q-216)
+- [ ] `REQ-SWAP-079` (11-lpvaultswap.md:466) `keeperOut < minPayout` | reverts with `PayoutTooLow` (Source: Q-216, Q-401)
+- [ ] `REQ-SWAP-080` (11-lpvaultswap.md:467) A call to `liquidatePermissionless` | No such function exists; the call reverts on dispatch, and the same liqu
+- [ ] `REQ-SWAP-081` (11-lpvaultswap.md:468) A helper's payout below its loan and premium beyond the caller's top-up bound | The helper reverts with `TopUp
+- [ ] `REQ-SWAP-082` (11-lpvaultswap.md:469) An escrowable payout transfer (Avana's fee, a residue or dust leg, the borrower surplus) reverts, returns `fal
+- [ ] `REQ-SWAP-083` (11-lpvaultswap.md:470) `gasleft()` below the payout headroom | reverts with `InsufficientGas`; the keeper retries with more gas (Sour
+- [ ] `REQ-SWAP-095` (11-lpvaultswap.md:471) `debtReserveId` not approved for the Spoke or not borrowable | reverts with `UnknownDebtReserve(debtReserveId)
+- [ ] `REQ-SWAP-096` (11-lpvaultswap.md:472) The repaid reserve's price source unrecorded, not Live or too old | reverts with `DebtPriceStale(reserveId)` (
+- [ ] `REQ-SWAP-097` (11-lpvaultswap.md:473) The flash source's `LENDER()` (the pool or Hub it borrows from) is any Hub recorded on the chain | `deleverage
+- [ ] `REQ-SWAP-098` (11-lpvaultswap.md:474) Caller funding outside `0 < Kf ≤ X` (a token that delivered nothing, or more than was pulled) | reverts with `
+- [ ] `REQ-SWAP-099` (11-lpvaultswap.md:475) The flash source is being replaced, paused or flash-disabled for the asset | `maxFlashLoan` returns 0 and `del
+- [ ] `REQ-SWAP-109` (11-lpvaultswap.md:476) Caller frozen | reverts with `AddressIsFrozen(caller)` (Source: Q-242)
+- [ ] `REQ-SWAP-110` (11-lpvaultswap.md:477) A route would return less than its `minOut` | The route reverts with `MinOutNotMet`; LPVaultSwap tries the bac
+- [ ] `REQ-SWAP-111` (11-lpvaultswap.md:478) Debt asset left after `liquidationCall` (`Kf − D`) | No sale and no revert: the leftover returns in `keeperOut
+- [ ] `REQ-SWAP-120` (11-lpvaultswap.md:479) `MarketRegistry.setFlashSource` with a source whose `LP_VAULT_SWAP()` is not this LPVaultSwap or whose `LENDER
+- [ ] `REQ-SWAP-124` (11-lpvaultswap.md:480) In `deleverage`, the flash source's balance is below `owed` after `MAX_REPAY_TRANSFERS` top-ups (a transfer fe
+- [ ] `REQ-SWAP-112` (11-lpvaultswap.md:481) Shortfall pull fails or the amount received differs | reverts in the token or with `FundingMismatch` (Source: 
+- [ ] `REQ-SWAP-113` (11-lpvaultswap.md:482) A call to `reportRecoveryShortfall` or `probeLiquidation` | No such function exists; the call reverts on dispa
+- [ ] `REQ-SWAP-114` (11-lpvaultswap.md:483) `gasleft()` below a payout's headroom | reverts with `InsufficientGas` (`REQ-SWAP-076`); no breaker-report hea
+- [ ] `REQ-SWAP-115` (11-lpvaultswap.md:484) A breaker report | None is made; a failed route shows only in `RouteFailed` for monitoring (Source: Q-241, Q-2
+- [x] `REQ-SWAP-116` (11-lpvaultswap.md:485) Invalid `deleverage` call, repayable 0 or below `minDebtRepaid`, swaps short of the flash repayment, price or  — TEST-198
+- [ ] `REQ-SWAP-117` (11-lpvaultswap.md:486) `addKeeper` for a frozen address | reverts with `AddressIsFrozen(operator)` (Source: Q-242)
+- [ ] `REQ-HELPER-013` (11-lpvaultswap.md:487) A helper call nested in another of its calls, from a non-signer (operator variant), with `F` outside `(0, X]`,
+- [ ] `REQ-HELPER-014` (11-lpvaultswap.md:488) A helper's net payout below `request.minPayout` | reverts with `PayoutTooLow(payout, minPayout)`; the whole li
+
+## TEST rows (1)
+
+- [x] `TEST-198` [fuzz] Debt-asset settlement arithmetic: for debt assets of 6 and 18 decimals and `Pdebt` across `[0.5e8, 5,000e8]`, 
+
+## Cross-cutting TEST rows, every contract (17)
+
+- [ ] `TEST-001` [environment] The Foundry workspace builds with solc 0.8.28 and EVM `cancun`, the same compiler as Aave V4; dependencies are
+- [x] `TEST-032` [access-control] Selector inventory: the external selectors of every deployed Avana contract are enumerated from bytecode and c
+- [x] `TEST-061` [unit] Events: every borrower and keeper action is one atomic call that emits the inventory events of its contracts, 
+- [x] `TEST-177` [unit] Zero-amount transfers skipped: with mock tokens that revert on a zero-amount `transfer` and `transferFrom`, ev
+- [x] `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
+- [x] `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- [x] `TEST-080` [fuzz] Dust donations: sending 1 wei up to 10^6 wei of GHO, USDC, WETH, DAI, pool tokens or vault tokens (where the r
+- [ ] `TEST-092` [invariant] Conservation: for every token (each debt asset, each pool token, each vault token), the sum of tracked balance
+- [ ] `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
+- [x] `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
+- [x] `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
+- [ ] `TEST-121` [fork] End-to-end lifecycle on one fork (Avana-deployed Aave V4 plus Ethereum Uniswap v3, Chainlink, GHO, the Aave V3
+- [ ] `TEST-126` [fork] Emergency matrix: for every row of the matrix in [3.6](../03-operations/06-emergency-operations.md) (applicati
+- [ ] `TEST-127` [fork] Halt deterioration and caps: with liquidation of an account stopped for the 48-hour incident window of `Q-192`
+- [ ] `TEST-137` [deployment-check] Upgrade safety: every UUPS contract (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, LPVaul
+- [ ] `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
+- [x] `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme
+
+## PROP rows (1)
+
+- [x] `PROP-044` [SMTChecker] LPOracle (with the pricing library of each AMM protocol), LPVaultSwap (with SettlementMath), each AMM integrat
+
+## INV (2)
+
+- [x] `INV-038` The loss a liquidation can leave its caller below the debt it funded is bounded. With `s` as in `INV-034` and 
+- [x] `INV-086` Avana fee bounded and independent of routing. In every routed liquidation `A ≤ S = max(0, R_f − D)` with `R_f 
+
+## ATTACK (0)
+
+131 IDs without a link from contracts/: REQ-SWAP-001, REQ-SWAP-002, REQ-SWAP-003, REQ-SWAP-004, REQ-SWAP-005, REQ-SWAP-006, REQ-SWAP-007, REQ-SWAP-008, REQ-SWAP-009, REQ-SWAP-010, REQ-SWAP-011, REQ-SWAP-012, REQ-SWAP-014, REQ-FLASH-006, REQ-FLASH-008, REQ-FLASH-010, REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-018 …

@@ -1,0 +1,11 @@
+{
+  "filter_paths": "dependencies/|test/|script/|src/interfaces/external/",
+  "exclude_dependencies": true,
+  "detectors_to_exclude": "naming-convention,unindexed-event-address",
+  "fail_on": "none",
+  "foundry_ignore_compile": true,
+  "foundry_out_directory": "out-security/build/src",
+  "sarif": "out-security/slither.sarif",
+  "json": "out-security/slither.json",
+  "disable_color": true
+}

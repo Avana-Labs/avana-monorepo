@@ -1,0 +1,28 @@
+{
+  "name": "@avana/keeper",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Avana's liquidation keeper: discovery, live check, simulation and private submission for liquidation, pending settlement, oracle and breaker pokes, and monitoring signals.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@avana/protocol": "*",
+    "@avana/services-common": "*",
+    "@aws-sdk/client-kms": "3.1156.0",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12"
+  }
+}

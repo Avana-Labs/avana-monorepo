@@ -1,0 +1,401 @@
+[
+ {
+  "id": "FV-CTL-91",
+  "title": "No combination of pause state and reason, market or debt breaker, offboarding, or freeze of the caller or borrower blocks repay, debt-free withdrawal or removal, repayAllAndWithdraw, fees, zero-credit release, pending settlement, burnSeized, escrow claims or the liquidation of a frozen wallet's positions",
+  "status": "Verified",
+  "method": "exhaustive enumeration (1536 cases)",
+  "verifies": [
+   "INV-081",
+   "REQ-ADAPTER-086",
+   "REQ-ADAPTER-047",
+   "REQ-MREG-023",
+   "REQ-RISK-065",
+   "REQ-ACCESS-068",
+   "REQ-ROLE-068",
+   "INV-067"
+  ],
+  "targets": [
+   "T-56",
+   "T-57"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-151",
+  "title": "A rescue top-up passes every combination of breakers, address freeze, Frozen and Paused(General); only Paused(MintPathSuspect) and Offboarding stop it",
+  "status": "Verified",
+  "method": "exhaustive enumeration (128 cases)",
+  "verifies": [
+   "REQ-RISK-066",
+   "REQ-RISK-065",
+   "REQ-ADAPTER-082",
+   "REQ-ADAPTER-083",
+   "INV-081",
+   "INV-082"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-96",
+  "title": "Pause state, breakers, offboarding and the address freeze combine monotonically: a stronger combination never allows an action a weaker one blocks",
+  "status": "Verified",
+  "method": "exhaustive enumeration (53460 cases)",
+  "verifies": [
+   "INV-081",
+   "REQ-MREG-003",
+   "REQ-ADAPTER-049",
+   "REQ-ACCESS-082"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.03,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-109",
+  "title": "Breakers are read only in checkPledge (non-rescue), preBorrowCheck and preWithdrawCheck; no exit, liquidation path or repay with collateral reads one",
+  "status": "Verified",
+  "method": "exhaustive enumeration (20 cases)",
+  "verifies": [
+   "REQ-RISK-065",
+   "REQ-ACCESS-082",
+   "REQ-ADAPTER-086",
+   "REQ-ADAPTER-080",
+   "INV-081"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-93",
+  "title": "freezeAddress reverts ProtectedAddress for every protected kind (timelock, Aave governance executor, every Avana contract, live vault tokens and oracles, DebtOracles, every Hub, Spoke and Coverage Spoke, every listed debt asset, the IFlashSource, the public flash liquidation helper, every integration's LPVault, position manager and factory, recorded swap routes, registered proxies), each named on 2.8",
+  "status": "Verified",
+  "method": "exhaustive enumeration (28 cases)",
+  "verifies": [
+   "REQ-MREG-020",
+   "REQ-ACCESS-157",
+   "INV-085",
+   "REQ-ACCESS-089",
+   "REQ-ACCESS-112"
+  ],
+  "targets": [
+   "T-53"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-92",
+  "title": "No sequence of guardian freezes (up to 4) stops liquidation: LPVaultSwap is never frozen, and when freezes leave 0 active keepers liquidation stays open to liquidatePermissionless while new borrowing halts on the chain (Q-400)",
+  "status": "Verified under bounded model",
+  "method": "exhaustive enumeration (396 cases)",
+  "verifies": [
+   "INV-046",
+   "INV-085",
+   "REQ-MREG-021",
+   "REQ-RISK-071",
+   "SPEC-GOV-008",
+   "REQ-ACCESS-112"
+  ],
+  "targets": [
+   "T-56",
+   "T-53"
+  ],
+  "detail": "(bounded: up to 4 freeze calls over 10 addresses, 1, 2, 4 or 5 approved keepers)",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-92-W",
+  "title": "Witness (Q-400): freezing the last active keeper is reachable, so freezeAddress checks no keeper floor",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-MREG-021",
+   "SPEC-GOV-008"
+  ],
+  "targets": [
+   "T-53"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-105",
+  "title": "Only a guardian freeze can take active keepers below keeperFloor: from |A| >= keeperFloor, every removeKeeper, addKeeper, unfreezeAddress and non-keeper freeze keeps |A| >= keeperFloor, and a keeper freeze lowers |A| by exactly 1 and never below 0",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-008",
+   "REQ-MREG-021",
+   "INV-085",
+   "INV-046"
+  ],
+  "targets": [
+   "T-53",
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.03,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-105-EX",
+  "title": "keeperFloor 1 example: with 2 active keepers removing one passes and removing the last reverts KeeperFloor(0, 1); freezing the last active keeper succeeds and new borrowing then halts, since it halts only at 0 active keepers",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-GOV-008",
+   "REQ-MREG-021"
+  ],
+  "targets": [
+   "T-53"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-104",
+  "title": "No caller makes more than 20 freezes in any 24 consecutive hours: the rolling-window check keeps every window, past and future, at or below 20",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-MREG-019",
+   "INV-085",
+   "REQ-ACCESS-157"
+  ],
+  "targets": [
+   "T-53"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-104-EX",
+  "title": "REQ-MREG-019 example: the 21st freeze at hour H0+2 reverts FreezeLimitReached; at H0+24 the window covers H0+1..H0+24 and 7 more freezes are allowed",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-MREG-019"
+  ],
+  "targets": [
+   "T-53"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-94",
+  "title": "A frozen address becomes unfrozen only by an unfreezeAddress the timelock executes after the normal delay",
+  "status": "Verified",
+  "method": "exhaustive enumeration (45 cases)",
+  "verifies": [
+   "REQ-MREG-022",
+   "REQ-ACCESS-157",
+   "REQ-ACCESS-111",
+   "REQ-ACCESS-003",
+   "INV-085"
+  ],
+  "targets": [
+   "T-53"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-95",
+  "title": "No guardian can cancel a pure unfreezeAddress operation; a batch that mixes it with another call stays cancellable by every canceller, and only delays the unfreeze",
+  "status": "Verified",
+  "method": "exhaustive enumeration (4 cases)",
+  "verifies": [
+   "SPEC-GOV-005",
+   "REQ-ACCESS-156",
+   "REQ-MREG-022",
+   "REQ-ACCESS-112",
+   "INV-085"
+  ],
+  "targets": [
+   "T-55"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-106",
+  "title": "Price-drop alert (Q-399, monitoring only, no on-chain trip): fires only on a fall strictly larger than the alert threshold (300 bps) against a checkpoint at most 2 hours old, is monotone in the price, and its products stay below 2^78",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-BRK-001",
+   "REQ-RISK-065",
+   "REQ-ORACLE-088"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-106-EX",
+  "title": "Q-399 examples: a price of 193,990,000 against a 200,000,000 checkpoint fires the 300 bps alert and 194,000,000 does not; Avana's combined share of 2.1e12 against pool liquidity 2e13 trips the 1,000 bps concentration gate and 2e12 does not, whatever the token quotes",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-BRK-001",
+   "SPEC-BRK-002"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-152",
+  "title": "Concentration gate (Q-399): trips exactly when Avana's combined share exceeds poolShareMaxBps; a pledge the pool-share cap admits never trips the gate at the same liquidity; a tripped gate refuses every pledge that increases the share; products stay below 2^256",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-BRK-002",
+   "REQ-RISK-065",
+   "EMG-068"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-107",
+  "title": "Seizure and route-failure alerts (Q-399): the window base equals the credited units before the window's first seizure, the alert compares exact products, and no new-activity gate reads an alert, so no seizure or route failure can stop activity on chain",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-BRK-005",
+   "SPEC-BRK-006",
+   "REQ-MREG-025",
+   "REQ-MREG-026",
+   "INV-081"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-107-EX",
+  "title": "Q-399 alert examples: 2,000,000,000 seized units of 10,000,000,000 in one hour do not alert and one more does; route failures at 10:05, 10:31 and 10:52 alert, while a third at 11:07 restarts the count at 1; none of them stops activity",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-BRK-005",
+   "SPEC-BRK-006"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-108",
+  "title": "Issuer probe fails closed: a paused flag, a positive fee rate, a revert, an out-of-gas or malformed return trips the breaker; a probe of None never trips",
+  "status": "Verified",
+  "method": "exhaustive enumeration (15 cases)",
+  "verifies": [
+   "SPEC-BRK-003",
+   "SPEC-BRK-004",
+   "REQ-MREG-027",
+   "REQ-RISK-065"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-108-EX",
+  "title": "SPEC-BRK-004 examples (Q-399): a GHO deficit of 10,000.5 against breakerDeficitMax 10,000 GHO freezes new borrowing on that debt reserve and 10,000 does not; there is no SettlementBudget and so no BUDGET condition",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-BRK-004"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ },
+ {
+  "id": "FV-CTL-150",
+  "title": "Only the freeze guardian or the admin trips and only the pause guardian or the admin resets; LPVaultSwap and the AaveAdapter can do neither, and no liquidation makes a breaker call that could revert it (Q-399)",
+  "status": "Verified",
+  "method": "exhaustive enumeration (48 cases)",
+  "verifies": [
+   "REQ-MREG-025",
+   "REQ-MREG-026",
+   "REQ-ACCESS-158",
+   "REQ-ROLE-108",
+   "INV-081"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_breakers"
+ }
+]

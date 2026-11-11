@@ -1,0 +1,276 @@
+# Checklist: AvanaTimelock
+
+Spec pages: 15-governance-and-timelock.md. CVL specs: AvanaTimelock.spec.
+
+## REQ / SPEC on the page (198)
+
+- [x] `REQ-ACCESS-001` (15-governance-and-timelock.md:131) Timelock `DEFAULT_ADMIN_ROLE` | The AvanaTimelock itself only; the OpenZeppelin constructor `admin` argument i — TEST-242
+- [ ] `REQ-ACCESS-002` (15-governance-and-timelock.md:132) `DEFAULT_ADMIN_ROLE` on each upgradeable Avana contract (AaveAdapter, RiskModule, MarketRegistry, ParameterSto
+- [x] `REQ-ACCESS-003` (15-governance-and-timelock.md:133) `APPLICATION_ADMIN` | The AvanaTimelock only, on every upgradeable Avana contract; a grant to any other accoun — TEST-062
+- [x] `REQ-ACCESS-004` (15-governance-and-timelock.md:134) `PROPOSER_ROLE` (timelock) | Governance multisig (4-of-7) and the Aave governance executor; never fewer than t — TEST-194, TEST-242
+- [x] `REQ-ACCESS-005` (15-governance-and-timelock.md:135) `CANCELLER_ROLE` (timelock) | Governance multisig, Emergency Guardian (3-of-5), Aave Protocol Guardian, Aave g — TEST-242, TEST-244
+- [x] `REQ-ACCESS-006` (15-governance-and-timelock.md:136) `DAO_CANCELLER_ROLE` (timelock) | Aave governance executor only | Timelock `DEFAULT_ADMIN_ROLE` | Required in  — TEST-062, TEST-242
+- [x] `REQ-ACCESS-007` (15-governance-and-timelock.md:137) `EXECUTOR_ROLE` (timelock) | Governance multisig | Timelock `DEFAULT_ADMIN_ROLE` | `execute`, `executeBatch` w — TEST-242
+- [x] `REQ-ACCESS-008` (15-governance-and-timelock.md:138) `APPLICATION_PAUSE_GUARDIAN` (MarketRegistry) | Emergency Guardian, Aave Protocol Guardian | `APPLICATION_ADMI — TEST-062
+- [x] `REQ-ACCESS-009` (15-governance-and-timelock.md:139) `APPLICATION_FREEZE_GUARDIAN` (MarketRegistry) | Emergency Guardian, Aave Protocol Guardian | `APPLICATION_ADM — TEST-062
+- [ ] `REQ-ACCESS-010` (15-governance-and-timelock.md:140) `TIMELOCK` immutable address | The AvanaTimelock | Not a role: fixed at construction | `returnStray` on each A
+- [ ] `REQ-ACCESS-011` (15-governance-and-timelock.md:141) Committed operators (keepers) | Accounts or per-operator flash liquidation helpers registered on the chain's L
+- [ ] `REQ-ACCESS-012` (15-governance-and-timelock.md:142) Unprivileged callers | Everyone | Not applicable | Borrower entry points of the AaveAdapter (including `remove
+- [x] `REQ-ACCESS-013` (15-governance-and-timelock.md:146) Each chain MUST use exactly one AvanaTimelock, deployed directly (not behind a proxy) from Avana's extension o — TEST-242
+- [ ] `REQ-ACCESS-014` (15-governance-and-timelock.md:147) Every upgradeable Avana contract (AaveAdapter, RiskModule, MarketRegistry, ParameterStore, each LPOracle, each
+- [ ] `REQ-ACCESS-015` (15-governance-and-timelock.md:148) Each upgradeable Avana contract MUST be a UUPS implementation behind an ERC-1967 proxy whose `_authorizeUpgrad
+- [x] `REQ-ACCESS-016` (15-governance-and-timelock.md:149) The governance multisig MUST act only through the timelock: it proposes and cancels and holds no role on any o — TEST-063
+- [x] `REQ-ACCESS-017` (15-governance-and-timelock.md:150) `getMinDelay()` MUST return `SHORT_DELAY` for life and `updateDelay` MUST revert `UpdateDelayDisabled`; the de — TEST-194, TEST-212
+- [x] `REQ-ACCESS-018` (15-governance-and-timelock.md:151) The timelock's own administrative selectors (`grantRole`, `revokeRole` on the timelock, `setNormalDelay`, `set — TEST-194, TEST-244
+- [x] `REQ-ACCESS-019` (15-governance-and-timelock.md:152) An operation in which every call is `grantRole`, `revokeRole` or `renounceRole`, on any target (the timelock c — TEST-212, TEST-242, TEST-244
+- [x] `REQ-ACCESS-020` (15-governance-and-timelock.md:153) Every pending operation that is neither a role-change operation (`REQ-ACCESS-019`) nor a restoring operation ( — TEST-194, TEST-244
+- [x] `REQ-ACCESS-021` (15-governance-and-timelock.md:154) The operation identifier MUST be OpenZeppelin's `hashOperation(Batch)` over targets, values, payloads, predece — TEST-194
+- [ ] `REQ-ACCESS-022` (15-governance-and-timelock.md:155) No Avana contract MAY have a stop other than the per-Hub `PauseState` with its `PauseReason` in the chain's Ma
+- [ ] `REQ-ACCESS-023` (15-governance-and-timelock.md:156) Every role MUST be held exactly by the holders in the role table and the release manifest. The live-config che
+- [x] `REQ-ACCESS-024` (15-governance-and-timelock.md:157) Role-change operations MUST NOT be on the short-delay list and always wait the full normal delay, the longest  — TEST-242, TEST-244
+- [ ] `REQ-ACCESS-025` (15-governance-and-timelock.md:158) Every privileged selector on every Avana contract MUST be guarded by `onlyRole(APPLICATION_ADMIN)`, a guardian
+- [ ] `REQ-ACCESS-026` (15-governance-and-timelock.md:159) A holder MAY `renounceRole`. Monitoring alerts when `PROPOSER_ROLE` has fewer than two holders, `DAO_CANCELLER
+- [x] `REQ-ACCESS-027` (15-governance-and-timelock.md:160) Deployment on each chain MUST: deploy that chain's timelock with `admin = address(0)`, `PROPOSER_ROLE` for tha — TEST-194, TEST-224, TEST-242
+- [x] `SPEC-GOV-001` (15-governance-and-timelock.md:185) **Required delay of an operation.** For an operation with calls `(targetᵢ, payloadᵢ)`, `i = 1…n`, let `selᵢ` b — TEST-063, TEST-194, TEST-212
+- [x] `SPEC-GOV-002` (15-governance-and-timelock.md:189) **Schedule and execution window.** Scheduling at `t_s` with `delay ≥ requiredDelay` stores `readyAt = t_s + de — TEST-194, TEST-212
+- [x] `SPEC-GOV-003` (15-governance-and-timelock.md:193) **Normal-delay changes.** `setNormalDelay(newDelay)` requires `MIN_NORMAL_DELAY ≤ newDelay ≤ MAX_DELAY`, that  — TEST-194, TEST-212
+- [x] `REQ-ACCESS-028` (15-governance-and-timelock.md:206) `grantRole`, `revokeRole` on the timelock | Timelock `DEFAULT_ADMIN_ROLE` (itself) | Role change (normal) | DA — TEST-242
+- [x] `REQ-ACCESS-029` (15-governance-and-timelock.md:207) `setNormalDelay`, `setShortDelaySelector`, `togglePublicExecution` | Self-call | Normal | Any canceller | `SPE — TEST-194, TEST-244
+- [x] `REQ-ACCESS-030` (15-governance-and-timelock.md:208) `updateDelay(uint256)` | None | Not callable | Not applicable | Always reverts `UpdateDelayDisabled`; `getMinD — TEST-194
+- [ ] `REQ-ACCESS-031` (15-governance-and-timelock.md:214) `upgradeToAndCall(newImplementation, data)` | `APPLICATION_ADMIN` | Normal | Any canceller | Only an already d
+- [ ] `REQ-ACCESS-032` (15-governance-and-timelock.md:215) `grantRole`, `revokeRole` (OpenZeppelin `AccessControl`) | `DEFAULT_ADMIN_ROLE` (or the role's admin) | Role c
+- [ ] `REQ-ACCESS-033` (15-governance-and-timelock.md:221) `listCollateralMarket(spoke, def)` | `APPLICATION_ADMIN` | Normal | Any canceller | The collateral-market depl
+- [ ] `REQ-ACCESS-034` (15-governance-and-timelock.md:222) `activateMarket(marketId)` | `APPLICATION_ADMIN` | Short | Any canceller | Completes the `listCollateralMarket
+- [ ] `REQ-ACCESS-045` (15-governance-and-timelock.md:223) `setPriceSource(token, primary, alternate, standby)` | `APPLICATION_ADMIN` | Normal | Any canceller | New pric
+- [ ] `REQ-ACCESS-046` (15-governance-and-timelock.md:224) `setRoute(marketId, token, debtAsset, kind, route)` | `APPLICATION_ADMIN` | Normal | Any canceller | Records t
+- [ ] `REQ-ACCESS-047` (15-governance-and-timelock.md:225) `disableRoute(marketId, token, debtAsset, kind)` | `APPLICATION_ADMIN` | Short | Any canceller | Keeps the app
+- [ ] `REQ-ACCESS-048` (15-governance-and-timelock.md:226) `restoreRoute(marketId, token, debtAsset, kind, route)` | `APPLICATION_ADMIN` | Short | DAO only (restoring) |
+- [ ] `REQ-ACCESS-133` (15-governance-and-timelock.md:227) `deployCdpSpoke(hub, integrationId, riskTier, spoke, aaveOracle)`, `listToken(token, def)` | `APPLICATION_ADMI
+- [ ] `REQ-ACCESS-134` (15-governance-and-timelock.md:228) `cancelRegistration(marketId)` | `APPLICATION_ADMIN` | Short | Any canceller | Deletes a market still in `Regi
+- [ ] `REQ-ACCESS-036` (15-governance-and-timelock.md:229) `setMarketOffboarding(marketId)` | `APPLICATION_ADMIN` | Short | Any canceller | Moves an `Active` market to `
+- [ ] `REQ-ACCESS-145` (15-governance-and-timelock.md:230) `enableDebtReserve(spoke, reserveId, fundingHub, asset)`, `removeDebtReserve(spoke, reserveId)` (zero drawn on
+- [ ] `REQ-ACCESS-175` (15-governance-and-timelock.md:231) `setCrossHubLinesEnabled(bool enabled)`, `setCrossHubLine(fundingHub, asset, spoke, cap)` | `APPLICATION_ADMIN
+- [ ] `REQ-ACCESS-055` (15-governance-and-timelock.md:232) No `enableInKind` selector | None | Not applicable | Not applicable | Avana has no in-kind settlement (`Q-401`
+- [ ] `REQ-ACCESS-056` (15-governance-and-timelock.md:233) No `disableInKind` selector | None | Not applicable | Not applicable | No in-kind window exists, so none needs
+- [ ] `REQ-ACCESS-062` (15-governance-and-timelock.md:234) `freeze(hub)` | `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN` | Emergency (guardian) / Short (admin) | 
+- [ ] `REQ-ACCESS-063` (15-governance-and-timelock.md:235) `pause(hub, reason)`; `unpause(hub)`, `unfreeze(hub)` | `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN` | 
+- [ ] `REQ-ACCESS-172` (15-governance-and-timelock.md:236) `freezeAll()`; `pauseAll(reason)` | `freezeAll`: `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN`; `pauseA
+- [ ] `REQ-ACCESS-157` (15-governance-and-timelock.md:237) `freezeAddress(account)`; `unfreezeAddress(account)` | `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN` fo
+- [ ] `REQ-ACCESS-158` (15-governance-and-timelock.md:238) `tripMarketBreaker(marketId)`, `tripDebtBreaker(spoke, debtReserveId)`; `resetMarketBreaker(marketId)`, `reset
+- [ ] `REQ-ACCESS-159` (15-governance-and-timelock.md:239) `useStandbyRoute(token, slot)`; `cancelStandbySwitch(token)`; `restorePriceRoute(token)` | `useStandbyRoute`: 
+- [ ] `REQ-ACCESS-163` (15-governance-and-timelock.md:240) No `setInKindAutoTrigger`, `autoEnableInKind` or `reportRecoveryShortfall` selector | None | Not applicable | 
+- [ ] `REQ-ACCESS-037` (15-governance-and-timelock.md:246) `tightenHardHealthFloor(marketId, v)` / `loosenHardHealthFloor(marketId, v)` | `APPLICATION_ADMIN` | Short / N
+- [ ] `REQ-ACCESS-038` (15-governance-and-timelock.md:247) `tightenBorrowPriceMaxAge(feed, v)` / `setBorrowPriceMaxAge(feed, v)` | `APPLICATION_ADMIN` | Short / Normal |
+- [ ] `REQ-ACCESS-039` (15-governance-and-timelock.md:248) `tightenConsistencyToleranceBps(marketId, v)` / `setConsistencyToleranceBps(marketId, v)` | `APPLICATION_ADMIN
+- [ ] `REQ-ACCESS-040` (15-governance-and-timelock.md:249) `tightenFeedAgreementToleranceBps(token, v)` / `setFeedAgreementToleranceBps(token, v)` | `APPLICATION_ADMIN` 
+- [ ] `REQ-ACCESS-041` (15-governance-and-timelock.md:250) `tightenSlippageAllowanceBps(marketId, v)` / `loosenSlippageAllowanceBps(marketId, v)` | `APPLICATION_ADMIN` |
+- [ ] `REQ-ACCESS-042` (15-governance-and-timelock.md:251) No `restoreApproved` selector | None | Not applicable | Not applicable | Each parameter has one value, the las
+- [ ] `REQ-ACCESS-043` (15-governance-and-timelock.md:252) `setAvanaFeeShareBps(v)` | `APPLICATION_ADMIN` | Normal (either direction) | Any canceller | 1.5 hard bounds; 
+- [ ] `REQ-ACCESS-044` (15-governance-and-timelock.md:253) `setFeeRecipient`, `setMaxFlashFeeBps`, `setCachedWindow`, `setDisagreementPauseMax`, `setTwapWindow(marketId,
+- [ ] `REQ-ACCESS-131` (15-governance-and-timelock.md:254) `tightenRouteDepthThreshold(marketId, token, kind, v)` / `loosenRouteDepthThreshold(marketId, token, kind, v)`
+- [ ] `REQ-ACCESS-132` (15-governance-and-timelock.md:255) `tightenFloorRoundingAllowance(asset, v)` / `loosenFloorRoundingAllowance(asset, v)` | `APPLICATION_ADMIN` | S
+- [ ] `REQ-ACCESS-138` (15-governance-and-timelock.md:256) `tightenPoolRiskFactor(marketId, v)` / `setPoolRiskFactor(marketId, v)` | `APPLICATION_ADMIN` | Short / Normal
+- [ ] `REQ-ACCESS-049` (15-governance-and-timelock.md:257) `tightenMarketUsdCap` / `loosenMarketUsdCap`, `tightenTokenUsdCap` / `loosenTokenUsdCap`, `tightenDepositorUsd
+- [ ] `REQ-ACCESS-050` (15-governance-and-timelock.md:258) `setStressFloorUsd(marketId, value)` | `APPLICATION_ADMIN` | Normal | Any canceller | 1.5 hard bounds; lowerin
+- [ ] `REQ-ACCESS-135` (15-governance-and-timelock.md:259) `setInitialMarketCaps(marketId, marketUsdCap, topUpSliceUsd, stressFloorUsd)`, `setInitialTokenCap(token, cap)
+- [ ] `REQ-ACCESS-146` (15-governance-and-timelock.md:260) `setInitialMarketParams(marketId, params)` (its `minPledgeUsd` field) / `tightenMinPledgeUsd(marketId, v)` / `
+- [ ] `REQ-ACCESS-151` (15-governance-and-timelock.md:261) No buy-leg selectors | None | Not applicable | Not applicable | The liquidation caller funds the debt asset it
+- [ ] `REQ-ACCESS-057` (15-governance-and-timelock.md:262) No `setInKindExpiry` or `setInKindAutoDelay` selector | None | Not applicable | Not applicable | `inKindExpiry
+- [ ] `REQ-ACCESS-165` (15-governance-and-timelock.md:263) `tightenBreakerDeficitMax` / `loosenBreakerDeficitMax`; `tightenGateRecoverySeconds` / `loosenGateRecoverySeco
+- [ ] `REQ-ACCESS-035` (15-governance-and-timelock.md:269) No `freezeMarket` / `unfreezeMarket` selector | None | Not applicable | Not applicable | The RiskModule holds 
+- [ ] `REQ-ACCESS-147` (15-governance-and-timelock.md:275) No `setProxyImplementation`; `deployProxy(wallet, spoke, marketId)` | `deployProxy`: the chain's AaveAdapter o
+- [ ] `REQ-ACCESS-051` (15-governance-and-timelock.md:281) `setPokeMinGas(v)` on each LPOracle and each DebtOracle | `APPLICATION_ADMIN` | Normal | Any canceller | Withi
+- [ ] `REQ-ACCESS-052` (15-governance-and-timelock.md:287) `liquidate(params)`, `settlePending(marketId)` | Any address that is not frozen, directly or through a flash l
+- [ ] `REQ-ACCESS-139` (15-governance-and-timelock.md:288) No `liquidatePermissionless(params)` selector | None | Not applicable | Not applicable | One liquidation entry
+- [ ] `REQ-ACCESS-053` (15-governance-and-timelock.md:289) `addKeeper(address)` | `APPLICATION_ADMIN` | Normal | DAO only (restoring) | Registers a committed operator; r
+- [ ] `REQ-ACCESS-054` (15-governance-and-timelock.md:290) `removeKeeper(address)` | `APPLICATION_ADMIN` | Short | Any canceller | Reverts at execution if the chain's ac
+- [ ] `REQ-ACCESS-174` (15-governance-and-timelock.md:291) `setFlashSource(flashSource)` | `APPLICATION_ADMIN` | Normal | Any canceller | Replaces the chain's `IFlashSou
+- [ ] `REQ-ACCESS-179` (15-governance-and-timelock.md:292) ParameterStore `useStandbySecondSource(token)`; `restoreSecondSource(token)` | `APPLICATION_PAUSE_GUARDIAN` (E
+- [ ] `REQ-ACCESS-058` (15-governance-and-timelock.md:298) No SettlementBudget cap, window or reserved-floor selectors | None | Not applicable | Not applicable | Avana h
+- [ ] `REQ-ACCESS-059` (15-governance-and-timelock.md:299) No SettlementBudget `withdraw` | None | Not applicable | Not applicable | No Avana contract holds a settlement
+- [ ] `REQ-ACCESS-060` (15-governance-and-timelock.md:305) `returnStray(positionKey, recipient)` on each AMM protocol's LPVault | `TIMELOCK` | Normal | Any canceller | O
+- [ ] `REQ-ACCESS-061` (15-governance-and-timelock.md:306) `VaultTokenFactory.deployVaultToken(def)` | `TIMELOCK` | Normal | Any canceller | One vault token per market (
+- [ ] `REQ-ACCESS-064` (15-governance-and-timelock.md:312) A timelocked lift of a single restriction | Lifting is `unfreeze` or `unpause`: immediate by `APPLICATION_PAUS
+- [ ] `REQ-ACCESS-065` (15-governance-and-timelock.md:313) Incident duration and new-incident cooldown setters | No incident clock, cooldown or their setters and bounds 
+- [ ] `REQ-ACCESS-176` (15-governance-and-timelock.md:314) Any selector that changes PositionProxy code or moves an account to a new proxy (including `setProxyImplementa
+- [ ] `REQ-ACCESS-177` (15-governance-and-timelock.md:315) A liquidation-manager Spoke variant with a manager address and an approved debt-reserve set | Every CDP Spoke 
+- [ ] `REQ-ACCESS-178` (15-governance-and-timelock.md:316) GHO FlashMinter funding and the GHO buy leg | Liquidation funding is the caller's own debt asset, from its bal
+- [ ] `REQ-ACCESS-180` (15-governance-and-timelock.md:317) On-chain opening health floors (`minOpeningHealthFactor`, `PROXY_HEALTH_FACTOR_FLOOR`) and their setters | Non
+- [ ] `REQ-ACCESS-066` (15-governance-and-timelock.md:321) The AaveAdapter has no privileged selector other than its UUPS upgrade (`APPLICATION_ADMIN`) and its one-time 
+- [ ] `REQ-ACCESS-067` (15-governance-and-timelock.md:322) No selector exists for any parameter whose 1.5 change class is Immutable (`stableCeilingUsd`, `keeperFloor`, `
+- [ ] `REQ-ACCESS-068` (15-governance-and-timelock.md:326) Repay (anyone, for any borrower, through `AaveAdapter.repay`), fee collection (`LPVault.collectFees`), debt-fr
+- [ ] `REQ-ACCESS-069` (15-governance-and-timelock.md:327) `AaveAdapter.pledge`, `recredit`, `borrow`, `withdraw` and `removeLiquidity` with debt, and `repayWithCollater
+- [ ] `REQ-ACCESS-070` (15-governance-and-timelock.md:331) On each CDP Spoke's SpokeConfigurator the Aave Protocol Guardian holds only the one-way `freezeReserve` and `p
+- [ ] `REQ-ACCESS-071` (15-governance-and-timelock.md:332) No Avana contract, multisig or keeper holds `SPOKE_USER_POSITION_UPDATER_ROLE`, which stays with the Aave DAO;
+- [ ] `REQ-ACCESS-072` (15-governance-and-timelock.md:342) `None` | Nothing | Every action, subject to the price-state, Aave-side and RiskModule checks | AaveAdapter | (
+- [ ] `REQ-ACCESS-073` (15-governance-and-timelock.md:343) `Frozen` | New pledges and re-credits by accounts with no debt on any debt reserve (`ApplicationFrozen`); borr
+- [ ] `REQ-ACCESS-074` (15-governance-and-timelock.md:344) `Paused(General)` | Every pledge and re-credit except a rescue top-up (the Adapter sets `requireRescue`, so an
+- [ ] `REQ-ACCESS-164` (15-governance-and-timelock.md:345) `Paused(MintPathSuspect)` | Every pledge, top-up and re-credit, rescue included, borrowing, withdraw-with-debt
+- [ ] `REQ-ACCESS-075` (15-governance-and-timelock.md:346) Former guardian route suspension | No instant route block exists; a swap route stops by `disableRoute` at the 
+- [ ] `REQ-ACCESS-076` (15-governance-and-timelock.md:347) Former TWAP-tolerance override | No override exists; the TWAP tolerance is lowered only by `tightenConsistency
+- [ ] `REQ-ACCESS-077` (15-governance-and-timelock.md:348) Former feed-tolerance override | No override exists; the feed-agreement tolerance is lowered only by `tightenF
+- [ ] `REQ-ACCESS-078` (15-governance-and-timelock.md:349) Address freeze (former quarantine of keepers, routes and accounts) | An address is quarantined by the address 
+- [ ] `REQ-ACCESS-079` (15-governance-and-timelock.md:350) Former pledge pause | Replaced by `Frozen` (new pledges by accounts with no debt) and `Paused` (every pledge e
+- [ ] `REQ-ACCESS-080` (15-governance-and-timelock.md:351) Former borrow pause | Replaced by `Frozen` and `Paused`, which both block borrowing for every account | Not ap
+- [ ] `REQ-ACCESS-081` (15-governance-and-timelock.md:352) Former Avana market freeze | Replaced by the market circuit breaker (automatic conditions and latches, and `tr
+- [ ] `REQ-ACCESS-136` (15-governance-and-timelock.md:353) Former pool-broken flag | No flag exists; a failing pool trips the concentration (`POOL_SHARE`) and pool-depth
+- [ ] `REQ-ACCESS-082` (15-governance-and-timelock.md:355) The AaveAdapter MUST read `MarketRegistry.pauseState(hub)` and `pauseReason(hub)` on `pledge`, `recredit`, `bo
+- [ ] `REQ-ACCESS-083` (15-governance-and-timelock.md:356) Enforcement of the pause state lives in the upgradeable AaveAdapter, which also executes every borrower action
+- [ ] `REQ-ACCESS-084` (15-governance-and-timelock.md:357) Containment of one market MUST start with `tripMarketBreaker(marketId)` by either guardian, which stops new ac
+- [ ] `SPEC-GOV-004` (15-governance-and-timelock.md:361) **Pause-state transitions.** For each Hub `h` of the chain, with `s_h ∈ {None, Frozen, Paused}`, reason `ρ ∈ {
+- [x] `SPEC-GOV-005` (15-governance-and-timelock.md:365) **Cancel rights.** For operation `id` with calls `(targetᵢ, payloadᵢ)`, `i = 1…n`, both marks are fixed at sch — TEST-212, TEST-244
+- [ ] `SPEC-GOV-006` (15-governance-and-timelock.md:369) **Removal of a guardian.** A guardian role is revoked by a role-change operation on the MarketRegistry, every 
+- [ ] `REQ-ACCESS-085` (15-governance-and-timelock.md:373) `freeze(hub)`, `pause(hub, reason)`, `freezeAll()` and `pauseAll(reason)` MUST change states only per `SPEC-GO
+- [ ] `REQ-ACCESS-086` (15-governance-and-timelock.md:374) `unfreeze(hub)` and `unpause(hub)` MUST be callable only by `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN
+- [ ] `REQ-ACCESS-087` (15-governance-and-timelock.md:375) No party has an instant way to lift a stop other than `unfreeze(hub)`, `unpause(hub)`, `resetMarketBreaker` an
+- [ ] `REQ-ACCESS-088` (15-governance-and-timelock.md:376) The governance path to lift a stop MUST be a timelock operation through `APPLICATION_ADMIN` at the normal dela
+- [ ] `REQ-ACCESS-089` (15-governance-and-timelock.md:377) The guardians' powers on each chain MUST be exactly: `freeze(hub)`, `freezeAll()`, `freezeAddress`, `tripMarke
+- [ ] `REQ-ACCESS-090` (15-governance-and-timelock.md:378) The pause state MUST have no on-chain expiry and no duration parameter. Caps are sized by `Q-192` for the 48-h
+- [ ] `REQ-ACCESS-091` (15-governance-and-timelock.md:382) A misbehaving keeper, route or role holder MUST be handled by: `freezeAddress` of the keeper (immediate) and `
+- [x] `SPEC-GOV-007` (15-governance-and-timelock.md:383) **Cancel window.** A canceller may cancel operation `id` at any `t` with `t_s ≤ t` while the operation is pend — TEST-194, TEST-244
+- [ ] `REQ-ACCESS-092` (15-governance-and-timelock.md:387) Registration grants no power: a misbehaving committed operator, registered or removed, frozen (calling through
+- [ ] `REQ-ACCESS-093` (15-governance-and-timelock.md:391) Every ParameterStore and MarketRegistry value MUST have exactly one stored value, the last one a timelock oper
+- [ ] `REQ-ACCESS-094` (15-governance-and-timelock.md:392) No Recovery multisig exists; its 3-of-5 seat is each chain's Emergency Guardian, which holds only the powers o
+- [ ] `REQ-ACCESS-162` (15-governance-and-timelock.md:393) `MarketRegistry.pause` and `pauseAll` MUST take a `PauseReason` (`General` or `MintPathSuspect`); there is no 
+- [ ] `REQ-ACCESS-166` (15-governance-and-timelock.md:394) The circuit breakers and the address freeze MUST stop new activity only. A market breaker on `m` blocks new-ac
+- [ ] `REQ-ACCESS-095` (15-governance-and-timelock.md:402) `slippageAllowanceBps` (every market) and `maxFlashFeeBps` | `slippageAllowanceBps ≥ slippageAllowanceMinBps(m
+- [ ] `REQ-ACCESS-096` (15-governance-and-timelock.md:403) `graceHealthFactor`, `graceDuration` | `graceHealthFactorMin ≤ graceHealthFactor < 1 WAD`; `graceDuration ≤ gr
+- [ ] `REQ-ACCESS-097` (15-governance-and-timelock.md:404) `consistencyToleranceBps` | `≥ consistencyToleranceMinBps` | ParameterStore | (Source: Q-139, Q-209)
+- [ ] `REQ-ACCESS-098` (15-governance-and-timelock.md:405) `feedAgreementToleranceBps` | `≥` the per-token listing lower bound `feedAgreementToleranceMinBps` of [2.10](1
+- [ ] `REQ-ACCESS-099` (15-governance-and-timelock.md:406) `disagreementPauseMax` | Within its 1.5 bound, so a feed-disagreement pause ends | ParameterStore | (Source: Q
+- [ ] `REQ-ACCESS-100` (15-governance-and-timelock.md:407) Active committed operators (registered and not frozen), per chain | `activeKeeperCount() ≥ keeperFloor` (1) on
+- [ ] `REQ-ACCESS-167` (15-governance-and-timelock.md:408) Circuit breakers | No breaker is read by liquidation, so no threshold value can stop it; a temporary gate clea
+- [ ] `REQ-ACCESS-101` (15-governance-and-timelock.md:410) `graceHealthFactorMin` (0.90 WAD), `graceDurationMax` (7,200 seconds) and `consistencyToleranceMinBps` (10 bps
+- [ ] `SPEC-GOV-008` (15-governance-and-timelock.md:411) **Keeper floor.** Let `K` be the registered committed operators (the keeper list) and `A = {k ∈ K : ¬isFrozenA
+- [x] `SPEC-GOV-009` (15-governance-and-timelock.md:415) **Tolerance tightening.** `tightenConsistencyToleranceBps(m, v)` succeeds at execution iff `consistencyToleran — PROP-042, TEST-064
+- [ ] `SPEC-GOV-010` (15-governance-and-timelock.md:419) **No in-kind window.** Avana has no in-kind settlement (`Q-401`): `enableInKind`, `disableInKind`, `autoEnable
+- [x] `SPEC-GOV-011` (15-governance-and-timelock.md:423) **Tighten predicate and loosening steps.** For a parameter `p` with stored value `old` at execution and safer  — TEST-063, TEST-225
+- [x] `SPEC-GOV-012` (15-governance-and-timelock.md:427) **Liveness and governance bounds.** Every setter below checks its new value `v` against fixed bounds and rever — PROP-042, TEST-064
+- [ ] `REQ-ACCESS-102` (15-governance-and-timelock.md:434) Each chain's governance multisig MUST be a Safe with seven signers from Avana Labs and external parties and a 
+- [ ] `REQ-ACCESS-103` (15-governance-and-timelock.md:435) Each chain's Emergency Guardian MUST be an independent Safe with five signers and a threshold of three (`emerg
+- [ ] `REQ-ACCESS-104` (15-governance-and-timelock.md:436) On each chain, the signer sets of the governance multisig, the Emergency Guardian and the Aave Protocol Guardi
+- [ ] `REQ-ACCESS-173` (15-governance-and-timelock.md:437) Governance MUST be per chain (`Q-285`). Each chain where Avana runs (Ethereum and Base at launch) has its own 
+- [x] `REQ-ACCESS-160` (15-governance-and-timelock.md:438) The Aave governance executor of each chain MUST hold `PROPOSER_ROLE` on that chain's AvanaTimelock beside its  — TEST-224, TEST-242
+- [ ] `REQ-ACCESS-105` (15-governance-and-timelock.md:442) Handover of administration to the Aave DAO MUST follow the pre-agreed plan on each chain: that chain's governa
+- [ ] `REQ-ACCESS-106` (15-governance-and-timelock.md:443) Wind-down MUST follow the pre-agreed offboarding plan on each chain: `setMarketOffboarding(marketId)` for ever
+- [ ] `REQ-ACCESS-107` (15-governance-and-timelock.md:444) If the governance multisig stops acting, every Avana contract keeps running on its current configuration, oper
+- [ ] `REQ-ACCESS-161` (15-governance-and-timelock.md:448) Every Avana-side risk parameter MUST change through one process: (1) the risk service providers publish the ch
+- [ ] `REQ-ACCESS-108` (15-governance-and-timelock.md:482) Expiry of an operation emits no event; indexers derive it from `getTimestamp(id) + GRACE_PERIOD`, the views of
+- [ ] `REQ-ACCESS-109` (15-governance-and-timelock.md:483) Every privileged setter in the matrix MUST emit an event carrying the old value, the new value and the key (ma
+- [x] `REQ-ACCESS-110` (15-governance-and-timelock.md:484) `pauseState(hub)`, `pauseReason(hub)`, `isFrozenAddress`, `marketBreaker`, `debtBreaker`, `activePriceRoutes`, — TEST-194
+- [ ] `REQ-ACCESS-111` (15-governance-and-timelock.md:490) No account MAY, except through a timelock operation that waited its required delay, upgrade an Avana contract,
+- [ ] `REQ-ACCESS-112` (15-governance-and-timelock.md:491) The Emergency Guardian and the Aave Protocol Guardian MUST NOT be able to upgrade, change parameters, propose,
+- [ ] `REQ-ACCESS-113` (15-governance-and-timelock.md:492) No role MAY move user collateral, vault tokens or borrowed assets directly; the only fund-moving privileged se
+- [ ] `REQ-ACCESS-114` (15-governance-and-timelock.md:493) The AvanaTimelock MUST NOT be upgradeable; `SHORT_DELAY`, `MIN_NORMAL_DELAY`, `MAX_DELAY` and `GRACE_PERIOD` a
+- [ ] `REQ-ACCESS-115` (15-governance-and-timelock.md:497) Foundry fork tests on the deployed configuration MUST show: every operation type can be cancelled, role-change
+- [x] `REQ-ACCESS-116` (15-governance-and-timelock.md:503) Caller lacks the role for a privileged selector, or calls a timelock self-only selector directly | Reverts `Ac — TEST-194
+- [x] `REQ-ACCESS-117` (15-governance-and-timelock.md:504) `schedule` with `delay < requiredDelay` or `< getMinDelay()`, by a non-proposer, or for an operation already s — TEST-194, TEST-212
+- [x] `REQ-ACCESS-118` (15-governance-and-timelock.md:505) `execute` before `readyAt`, at or after `readyAt + GRACE_PERIOD`, with an unexecuted predecessor, or by a non- — TEST-194
+- [x] `REQ-ACCESS-119` (15-governance-and-timelock.md:506) A canceller without `DAO_CANCELLER_ROLE` cancels a role-change or restoring operation; anyone without `CANCELL — TEST-244
+- [ ] `REQ-ACCESS-120` (15-governance-and-timelock.md:507) A tighten setter receives, at execution, a value that is not strictly safer, outside hard bounds, or outside a
+- [ ] `REQ-ACCESS-121` (15-governance-and-timelock.md:508) A keeper removal would leave fewer than `keeperFloor` active keepers | Reverts `KeeperFloor(activeAfter, keepe
+- [ ] `REQ-ACCESS-122` (15-governance-and-timelock.md:509) `freeze(hub)` outside `None`; `pause(hub, reason)` with `reason = None` or with the Hub's current reason while
+- [ ] `REQ-ACCESS-123` (15-governance-and-timelock.md:510) `unfreeze(hub)` outside `Frozen` (in `Paused`: `CannotUnfreezeWhilePaused()`); `unpause(hub)` outside `Paused`
+- [ ] `REQ-ACCESS-124` (15-governance-and-timelock.md:511) A pause-switch call by a caller without the required role, including `unfreeze` or `unpause` by a holder of on
+- [x] `REQ-ACCESS-125` (15-governance-and-timelock.md:512) `setNormalDelay` outside `[MIN_NORMAL_DELAY, MAX_DELAY]`; any call of `updateDelay` | Reverts `DelayOutOfBound — TEST-194
+- [x] `REQ-ACCESS-126` (15-governance-and-timelock.md:513) `cleanupExpiredOperation` on an operation that is not expired (not scheduled, done, or still inside its window — TEST-194
+- [ ] `REQ-ACCESS-127` (15-governance-and-timelock.md:514) `restoreRoute` with an address that is not the previously approved one | Reverts `NotPreviouslyApproved()` (So
+- [ ] `REQ-ACCESS-128` (15-governance-and-timelock.md:515) A chain's Emergency Guardian is unavailable | The Aave Protocol Guardian on that chain holds the same guardian
+- [ ] `REQ-ACCESS-129` (15-governance-and-timelock.md:516) A chain's governance multisig is unavailable | The Aave governance executor schedules operations as second pro
+- [ ] `REQ-ACCESS-130` (15-governance-and-timelock.md:517) The Aave Protocol Guardian pauses or freezes an Aave reserve | Not covered by any Avana expiry; lasts until th
+- [ ] `REQ-ACCESS-137` (15-governance-and-timelock.md:518) A call of a former in-kind selector (`enableInKind`, `disableInKind`, `setInKindExpiry`, `setInKindAutoTrigger
+- [x] `REQ-ACCESS-152` (15-governance-and-timelock.md:519) `setShortDelaySelector` enabling a pair that is not in `SHORT_ELIGIBLE`, which never contains the timelock as  — TEST-244
+- [x] `REQ-ACCESS-168` (15-governance-and-timelock.md:520) A grant of `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` on an upgradeable Avana contract to any account other t — TEST-242
+- [ ] `REQ-ACCESS-169` (15-governance-and-timelock.md:521) `freezeAddress` of a protected address, of an already frozen address, or beyond 20 freezes by one caller in a 
+- [ ] `REQ-ACCESS-170` (15-governance-and-timelock.md:522) A breaker reset with no latched reason, or while a latched deficit or security condition still holds; a trip o
+- [ ] `REQ-ACCESS-171` (15-governance-and-timelock.md:523) `useStandbyRoute` for a token with no standby, with a switch already active or with slot `None`; `cancelStandb
+- [x] `REQ-ACCESS-140` (15-governance-and-timelock.md:527) The AvanaTimelock MUST define `SHORT_DELAY = 43,200`, `MIN_NORMAL_DELAY = 345,600`, `MAX_DELAY = 432,000` and  — TEST-194
+- [x] `REQ-ACCESS-141` (15-governance-and-timelock.md:528) `schedule` and `scheduleBatch` MUST compute `requiredDelay(targets, payloads)` per `SPEC-GOV-001` from the sto — TEST-063, TEST-194, TEST-212, TEST-244
+- [x] `REQ-ACCESS-142` (15-governance-and-timelock.md:529) The constructor MUST fix the immutable set `SHORT_ELIGIBLE` of `(target, selector)` pairs equal to the launch  — TEST-244
+- [x] `REQ-ACCESS-143` (15-governance-and-timelock.md:530) At scheduling the timelock MUST record `isRoleChangeOperation(id) = true` iff the operation has at least one c — TEST-244
+- [x] `REQ-ACCESS-144` (15-governance-and-timelock.md:531) `execute` and `executeBatch` MUST accept any caller while `publicExecution` is true and only `EXECUTOR_ROLE` h — PROP-058, TEST-194, TEST-212
+- [ ] `REQ-ACCESS-148` (15-governance-and-timelock.md:532) Every operation that can change code with custody power or the rules of an exit (upgrades of the AaveAdapter, 
+- [ ] `REQ-ACCESS-149` (15-governance-and-timelock.md:533) On the MarketRegistry, `APPLICATION_PAUSE_GUARDIAN` and `APPLICATION_FREEZE_GUARDIAN` MUST have `APPLICATION_A
+- [ ] `REQ-ACCESS-150` (15-governance-and-timelock.md:534) Each upgradeable Avana contract's `initialize(timelock, …)` MUST run in the transaction that deploys its ERC-1
+- [x] `REQ-ACCESS-153` (15-governance-and-timelock.md:535) Every upgradeable Avana contract MUST override `_grantRole` to revert `AdminRoleOnlyTimelock(role, account)` w — TEST-242
+- [x] `REQ-ACCESS-154` (15-governance-and-timelock.md:536) `setNormalDelay` MUST revert `DelayOutOfBounds(newDelay)` unless `MIN_NORMAL_DELAY ≤ newDelay ≤ MAX_DELAY`. Wi — TEST-194, TEST-212
+- [x] `REQ-ACCESS-155` (15-governance-and-timelock.md:537) `SHORT_ELIGIBLE` MUST be exactly the launch short-delay list of "Delay classes and timing": every ParameterSto — TEST-063, TEST-244
+- [x] `REQ-ACCESS-156` (15-governance-and-timelock.md:538) The constructor MUST fix the immutable DAO-only cancel set: the MarketRegistry `restoreRoute`, `useStandbyRout — TEST-212, TEST-244
+- [x] `REQ-ACCESS-181` (15-governance-and-timelock.md:539) The constructor MUST revert `InvalidDaoCancelSelector(target, selector)` for any DAO-only cancel pair whose ta — TEST-244
+- [x] `REQ-ACCESS-182` (15-governance-and-timelock.md:540) The timelock MUST keep its own `DEFAULT_ADMIN_ROLE` for life: `revokeRole(DEFAULT_ADMIN_ROLE, timelock)` and ` — PROP-070, TEST-212, TEST-242
+- [x] `REQ-ACCESS-183` (15-governance-and-timelock.md:541) The constructor MUST revert `InvalidRoleHolders()` when any account in `proposers`, `executors`, `cancellers`  — TEST-194, TEST-224
+- [x] `SPEC-GOV-013` (15-governance-and-timelock.md:542) **Expiry and clean-up.** For a scheduled operation with `readyAt = getTimestamp(id) > 1` that is not done, `is — PROP-058, TEST-194, TEST-212
+- [ ] `SPEC-GOV-014` (15-governance-and-timelock.md:546) **Exit window before a change.** For an operation scheduled on chain `c` at `t_s` with `requiredDelay = normal
+- [x] `SPEC-GOV-015` (15-governance-and-timelock.md:550) **Delay floor for the exit window.** Every normal delay a chain's timelock can reach satisfies `normalDelay ≥  — TEST-194
+
+## TEST rows (24)
+
+- [ ] `TEST-015` [unit] Stray NFTs: an NFT sent to the LPVault outside a pledge is not credited and cannot be pledged; `onERC721Receiv
+- [ ] `TEST-196` [unit] Minimum pledge value: `RiskModule.checkPledge` computes `pledgeUsd = mulDiv(L, price8, 10^d, Floor)` with the 
+- [ ] `TEST-045` [access-control] Committed-operator registry: `liquidate` checks no registry or role, so a registered committed operator, an un
+- [x] `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
+- [x] `TEST-063` [unit] Delay classes: an operation gets the short delay (43,200 s) only when every call in it is on the short-delay l
+- [x] `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- [ ] `TEST-067` [fork] Cancellation coverage on the real AvanaTimelock: every queued operation type can be cancelled before execution
+- [x] `TEST-166` [access-control] Single timelock delay for immutable contracts: `LPVault.returnStray` and `VaultTokenFactory.deployVaultToken` 
+- [x] `TEST-194` [unit] AvanaTimelock timing: `schedule` with a delay below `requiredDelay(targets, payloads)` reverts `DelayBelowRequ
+- [x] `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
+- [x] `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
+- [ ] `TEST-215` [invariant] Multi-actor invariant suite (Foundry invariant test with handlers, extending `TEST-082`). Actors: borrowers wi
+- [ ] `TEST-129` [fork] Guardian rehearsal, before launch and quarterly: the Emergency Guardian (3-of-5) and the Aave Protocol Guardia
+- [x] `TEST-191` [fork] No proxy upgrade path through the real AvanaTimelock: the ProxyManager exposes no function that changes Positi
+- [ ] `TEST-195` [fork] Exit inside the delay: the governance multisig schedules an AaveAdapter upgrade to a hostile implementation (n
+- [ ] `TEST-210` [hostile] Hostile AaveAdapter against proxies: the governance multisig schedules an AaveAdapter upgrade to a hostile imp
+- [x] `TEST-138` [deployment-check] Listing order: token and feed are deployed and a valid price is seeded before the DAO payload; the governance 
+- [ ] `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
+- [x] `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme
+- [x] `TEST-225` [invariant] Governance drift sequences: random tighten, loosen and structural operations within bounds, scheduled and exec
+- [x] `TEST-229` [unit] Address freeze: a frozen wallet's new pledge (non-rescue), borrow (as caller or receiver), withdraw-with-debt,
+- [x] `TEST-231` [unit] Standby switch: the pause guardian's `useStandbyRoute` takes effect at once, increments `priceRouteVersion`, a
+- [x] `TEST-242` [access-control] Admin grant: on every upgradeable Avana contract, `grantRole(APPLICATION_ADMIN, a)` and `grantRole(DEFAULT_ADM
+- [x] `TEST-244` [unit] Timelock allowlists: `setNormalDelay` below `MIN_NORMAL_DELAY` (345,600) or above `MAX_DELAY` reverts `DelayOu
+
+## Cross-cutting TEST rows, every contract (17)
+
+- [ ] `TEST-001` [environment] The Foundry workspace builds with solc 0.8.28 and EVM `cancun`, the same compiler as Aave V4; dependencies are
+- [x] `TEST-032` [access-control] Selector inventory: the external selectors of every deployed Avana contract are enumerated from bytecode and c
+- [x] `TEST-061` [unit] Events: every borrower and keeper action is one atomic call that emits the inventory events of its contracts, 
+- [x] `TEST-177` [unit] Zero-amount transfers skipped: with mock tokens that revert on a zero-amount `transfer` and `transferFrom`, ev
+- [x] `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
+- [x] `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- [x] `TEST-080` [fuzz] Dust donations: sending 1 wei up to 10^6 wei of GHO, USDC, WETH, DAI, pool tokens or vault tokens (where the r
+- [ ] `TEST-092` [invariant] Conservation: for every token (each debt asset, each pool token, each vault token), the sum of tracked balance
+- [ ] `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
+- [x] `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
+- [x] `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
+- [ ] `TEST-121` [fork] End-to-end lifecycle on one fork (Avana-deployed Aave V4 plus Ethereum Uniswap v3, Chainlink, GHO, the Aave V3
+- [ ] `TEST-126` [fork] Emergency matrix: for every row of the matrix in [3.6](../03-operations/06-emergency-operations.md) (applicati
+- [ ] `TEST-127` [fork] Halt deterioration and caps: with liquidation of an account stopped for the 48-hour incident window of `Q-192`
+- [ ] `TEST-137` [deployment-check] Upgrade safety: every UUPS contract (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, LPVaul
+- [ ] `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
+- [x] `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme
+
+## PROP rows (3)
+
+- [x] `PROP-058` [Certora] AvanaTimelock: `execute`/`executeBatch` succeed only when `readyAt ≤ block.timestamp < readyAt + GRACE_PERIOD`
+- [x] `PROP-070` [Certora] Inductive admin invariant: for every upgradeable Avana contract (not the ProxyManager, which is immutable with
+- [x] `PROP-073` [Certora] AvanaTimelock allowlists: `normalDelay() ∈ [MIN_NORMAL_DELAY, MAX_DELAY]` after every call (`DelayOutOfBounds`
+
+## INV (7)
+
+- [x] `INV-051` Every privileged change to Avana executes through the AvanaTimelock: proposed only by the governance multisig 
+- [x] `INV-052` The vault tokens, VaultTokenFactory, every LPVault (one per AMM protocol per chain), Collateralization (one pe
+- [x] `INV-065` Implementation changes only by timelock; proxy code never changes. A PositionProxy's code is fixed at creation
+- [x] `INV-068` Timelock timing. An operation scheduled with delay `δ` executes only when `δ ≥ requiredDelay(targets, payloads
+- [x] `INV-084` Admin roles only for the timelock. On every upgradeable Avana contract, `DEFAULT_ADMIN_ROLE` and `APPLICATION_
+- [x] `INV-085` Address freeze bounds. `freezeAddress` never covers the protected set (the AvanaTimelock, the Aave governance 
+- [x] `INV-090` Timelock allowlists. `normalDelay ∈ [MIN_NORMAL_DELAY, MAX_DELAY]` = [345,600, 432,000] s; the enabled short-d
+
+## ATTACK (5)
+
+- [ ] `ATTACK-085` Role or keeper grant that bypasses the delay or cannot be cancelled
+- [ ] `ATTACK-097` Abuse of timelock and pause powers
+- [ ] `ATTACK-131` Timing attacks on timelock execution
+- [ ] `ATTACK-133` Guardian cancels its own removal
+- [ ] `ATTACK-152` Admin-role grant takeover
+155 IDs without a link from contracts/: REQ-ACCESS-002, REQ-ACCESS-010, REQ-ACCESS-011, REQ-ACCESS-012, REQ-ACCESS-014, REQ-ACCESS-015, REQ-ACCESS-022, REQ-ACCESS-023, REQ-ACCESS-025, REQ-ACCESS-026, REQ-ACCESS-031, REQ-ACCESS-032, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-133, REQ-ACCESS-134 …

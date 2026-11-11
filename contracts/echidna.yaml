@@ -1,0 +1,24 @@
+# Echidna configuration for the property harnesses in test/invariant/echidna/ (run by script/security-slow.sh).
+# Each harness runs twice: in property mode (functions prefixed `property_` must return true after every transaction)
+# and in assertion mode (no `assert` reachable in any fuzzed call); the runner sets --test-mode, --contract,
+# --corpus-dir and, through ECHIDNA_TEST_LIMIT, the sequence budget.
+testMode: property
+prefix: "property_"
+# Sequences per run. 50,000 sequences of up to 100 calls reach the long histories the invariant handlers need
+# (timelock delays, grace windows) once implementations exist; the nightly job raises it with ECHIDNA_TEST_LIMIT.
+testLimit: 50000
+seqLen: 100
+shrinkLimit: 5000
+# Time and block jumps up to 14 days per call, so a sequence crosses the 5-day normal delay, the 12-hour short
+# delay and the 14-day grace period.
+maxTimeDelay: 1209600
+maxBlockDelay: 100800
+coverage: true
+coverageFormats: ["txt", "lcov"]
+# security-slow.sh builds once with `forge build --build-info` into out-security/build/all; crytic-compile reads that
+# build instead of running `forge clean` and recompiling, so out/ and cache/ are never touched. Echidna reads the
+# combined export from crytic-export/ in the working directory (gitignored).
+cryticArgs: ["--foundry-ignore-compile", "--foundry-out-directory", "out-security/build/all"]
+# Every source comes from the local build; nothing is fetched from Sourcify or Etherscan.
+disableOnchainSources: true
+format: text

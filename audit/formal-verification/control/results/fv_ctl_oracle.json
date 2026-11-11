@@ -1,0 +1,745 @@
+[
+ {
+  "id": "FV-CTL-63",
+  "title": "Served price by state (SPEC-ORC-017): fresh when Live, min(fresh, A) when Drifting without disagreement, min(lower, A) during a disagreement, A when Cached, 1 when Expired; served >= 1 always, <= A whenever not Live, <= fresh whenever not failed, <= price8 of getTokenPrices() and equal to it when Live or Cached; the accepted price and checkpoint stay >= 1 after every poke",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-055",
+   "INV-087",
+   "REQ-ORACLE-020",
+   "SPEC-ORC-017",
+   "REQ-ORACLE-085",
+   "REQ-ORACLE-044",
+   "REQ-ORACLE-060"
+  ],
+  "targets": [
+   "T-66"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-64",
+  "title": "The accepted price changes only from a Live observation newer than the stored one; its timestamp never decreases and is a source timestamp; re-reading the same rounds never refreshes it; the served timestamp is a source timestamp (accepted when failed, the routes in use otherwise)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-056",
+   "REQ-ORACLE-021",
+   "REQ-ORACLE-029",
+   "SPEC-ORC-012",
+   "REQ-ORACLE-041",
+   "REQ-ORACLE-066"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-65",
+  "title": "expiredLatched is set only when source timestamps show Expired; a caught error, a config/decimals failure or a gas shortfall never sets it, and a gas-short poke changes nothing",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-030",
+   "INV-031",
+   "REQ-ORACLE-024",
+   "REQ-ORACLE-065"
+  ],
+  "targets": [
+   "T-70",
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-66",
+  "title": "poke() is idempotent within a block: a second poke on the same reads changes no stored field (timers, latch, recoveredAt, accepted price, checkpoint)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-031",
+   "REQ-ORACLE-026",
+   "REQ-ORACLE-033",
+   "REQ-ORACLE-088",
+   "REQ-ORACLE-095"
+  ],
+  "targets": [
+   "T-70"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-67",
+  "title": "After a poke a disagreeing market is Drifting, served at its lower routes and liquidation-paused; the first-observation time is set once per episode (per route version) and never moves; the pause lasts < disagreementPauseMax from it, then disagreementExpired holds until the routes agree",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-016",
+   "REQ-ORACLE-022",
+   "REQ-ORACLE-028",
+   "INV-059",
+   "REQ-ORACLE-018",
+   "REQ-ORACLE-084"
+  ],
+  "targets": [
+   "T-68"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-68",
+  "title": "No stored timer, latch or route version keeps a market out of Live once its inputs are valid, fresh and agree; a failed market is Expired at most cachedWindow after its failure start",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-016",
+   "REQ-ORACLE-006",
+   "REQ-ORACLE-023",
+   "REQ-ORACLE-019"
+  ],
+  "targets": [
+   "T-67",
+   "T-68"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-69",
+  "title": "Cached window (SPEC-ORC-013): Cached is never reported at or after min(F + H, S_ts) + cachedWindow, F the true failure start and H the keeper poke interval; once a poke saw the recovery, Expired is never reported before F + cachedWindow; a stored failedSince only brings Expired earlier, and later failed pokes never move it",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-013",
+   "REQ-ORACLE-017",
+   "REQ-ORACLE-027",
+   "REQ-ORACLE-037"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-70",
+  "title": "A grace window started by the latch fallback recoveredAt = min(newest leg in use, now) never starts after the poke's block and, when the recovered route's timestamp is its new round, never before the recovery; the REQ-ORACLE-032 example gives grace until 1,762,651,800",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-031",
+   "REQ-ORACLE-032",
+   "REQ-ORACLE-034",
+   "SPEC-ORC-014"
+  ],
+  "targets": [
+   "T-67",
+   "T-70"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-115",
+  "title": "The latch fallback never starts a grace window before the recovery, also when the recovered token is on a two-leg route or recovered through a standby switch (REQ-ORACLE-032: 'The window must start no earlier than the recovery')",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-032",
+   "SPEC-ORC-002",
+   "REQ-ORACLE-094",
+   "INV-031"
+  ],
+  "targets": [
+   "T-67",
+   "T-70"
+  ],
+  "detail": "REQ-ORACLE-032 examples: a two-leg recovery (new USDT/ETH round 1,762,700,000, ETH/USD 1,762,697,000, token0 1,762,696,500) gives recoveredAt 1,762,700,000; a standby switched in at 1,762,700,000 and observed by the poke at 1,762,700,012 gives recoveredAt 1,762,700,012.",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-115-EX",
+  "title": "REQ-ORACLE-032 examples: two-leg recovery (USDT/ETH 1,762,700,000, ETH/USD 1,762,697,000, token0 1,762,696,500, poke 1,762,700,060) gives recoveredAt 1,762,700,000 and grace until 1,762,701,800 (route timestamps would give 1,762,697,000); standby switch observed at 1,762,700,012 gives recoveredAt 1,762,700,012 and grace until 1,762,701,812 (newest leg 1,762,698,000 would end grace at 1,762,699,800, before the poke)",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-ORACLE-032"
+  ],
+  "targets": [
+   "T-67",
+   "T-70"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-71",
+  "title": "now - servedUpdatedAt <= borrowPriceMaxAge() (resp. liquidationPriceMaxAge()) holds exactly when every leg in use is within its own borrow (resp. liquidation, alternates held to min(liq, borrow)) limit; both derived limits are never negative",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-015",
+   "REQ-ORACLE-043",
+   "SPEC-PROXY-002",
+   "REQ-ADAPTER-016",
+   "REQ-ORACLE-090"
+  ],
+  "targets": [
+   "T-59",
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-72",
+  "title": "For every combination of leg behaviours (10^4 cases x gas x Cached/Expired) latestAnswer() returns a value >= 1 (1 exactly when Expired, <= A when not Live), and reverts only with InsufficientGas after a caught failure below pokeMinGas",
+  "status": "Verified",
+  "method": "exhaustive enumeration (40000 cases)",
+  "verifies": [
+   "INV-055",
+   "REQ-ORACLE-020",
+   "REQ-ORACLE-039",
+   "REQ-ORACLE-001",
+   "REQ-ORACLE-002",
+   "REQ-ORACLE-061"
+  ],
+  "targets": [
+   "T-66"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.09,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-73",
+  "title": "price8 = isqrt(4 v0 v1) - 1 is >= 1, (price8 + 1)^2 <= 4 v0 v1 (never above 2*sqrt(v0 v1)), within 2 units of it, and 4 v0 v1 < 2^256",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-008",
+   "INV-055",
+   "REQ-ORACLE-012"
+  ],
+  "targets": [
+   "T-69"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-74",
+  "title": "The stable ceiling never raises a price, is monotone, and is a no-op at or below the ceiling",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-004",
+   "REQ-ORACLE-009"
+  ],
+  "targets": [
+   "T-69"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-75",
+  "title": "The agreement check |p - b| * 10^4 <= T * min(p, b) is symmetric in p and b (both sides are order-free) and uses no division; the SPEC-ORC-003 examples agree (b = 99,900,000) and disagree (b = 97,500,000) at T = 225",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-003",
+   "REQ-ORACLE-008"
+  ],
+  "targets": [
+   "T-69"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-75-W",
+  "title": "Witness: floor division would admit T + 1 bps where the exact check refuses (why the cross-multiplied form is required)",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "SPEC-ORC-003"
+  ],
+  "targets": [
+   "T-69"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-76",
+  "title": "The reference sqrt price never overflows and lies in [MIN_SQRT_RATIO, MAX_SQRT_RATIO) after clamping",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-009",
+   "REQ-ORACLE-014"
+  ],
+  "targets": [
+   "T-69"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-110",
+  "title": "Lower-route price (SPEC-ORC-017): with w_i = ceil_i(min(p_i, b_i)) when both routes are valid (else v_i), 1 <= w_i <= v_i, so w0 w1 <= v0 v1 and lower = isqrt(4 w0 w1) - 1 satisfies 1 <= lower <= fresh; served = min(lower, A) lies in [1, A]",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation, 4 lemmas)",
+  "verifies": [
+   "SPEC-ORC-017",
+   "SPEC-ORC-008",
+   "REQ-ORACLE-086",
+   "INV-055"
+  ],
+  "targets": [
+   "T-66",
+   "T-69"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.07,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-111",
+  "title": "SPEC-ORC-017 example: A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give lower = 197,484,175 and served 197,484,175; Cached serves 199,980,000; Expired serves 1; TWAP Drifting with fresh 199,986,998 serves 199,980,000; SPEC-ORC-012 fresh = 199,986,998",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-ORC-017",
+   "INV-087",
+   "SPEC-ORC-008",
+   "SPEC-ORC-012"
+  ],
+  "targets": [
+   "T-66"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-112",
+  "title": "Whenever some token disagrees (REQ-ORACLE-008) and the market is not failed, pauseActive or disagreementExpired holds, so the market is served at its lower routes and liquidationPaused is true (REQ-ORACLE-086: 'While some token disagrees (SPEC-ORC-016 pauseActive or disagreementExpired)')",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-016",
+   "SPEC-ORC-017",
+   "REQ-ORACLE-086",
+   "REQ-ORACLE-022",
+   "INV-059"
+  ],
+  "targets": [
+   "T-68"
+  ],
+  "detail": "Includes disagreementPauseMax = 0 (allowed: the bound is <= 3,600) with disagreeSince read as 0 (no poke yet in the episode, or a route-version change since the last poke): s = now, so disagreementExpired = D and now >= now + 0 holds.",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-113",
+  "title": "Expired serves exactly 1 (REQ-ORACLE-085) and Cached serves A; whenever the served price is one of the stress values (Cached A, Expired 1, a disagreement's lower routes), liquidationPaused is true, so no stress value sizes a seizure of this market",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-085",
+   "SPEC-ORC-016",
+   "SPEC-ORC-017",
+   "INV-087",
+   "REQ-SWAP-008"
+  ],
+  "targets": [
+   "T-66"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-114",
+  "title": "USD band: when both tokens are stables v0 v1 <= 10^16 < usdBandHigh^2, so only the uncapped lower bound can trip and a stable premium never breaches; testing capped values never breaches where uncapped would not; examples: GHO 104,700,000 with USDC 1e8 is in band (uncapped it would breach), 99,987,000 x 100,010,000 in band, both at 89,000,000 breach low",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation, 5 lemmas)",
+  "verifies": [
+   "SPEC-ORC-011",
+   "REQ-ORACLE-009",
+   "REQ-ORACLE-056",
+   "REQ-ORACLE-015",
+   "REQ-ORACLE-073"
+  ],
+  "targets": [
+   "T-69"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.25,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-116",
+  "title": "Feed age rules: borrowPriceMaxAge = min(hb + 600, 4,200) is at most 4,200 and at most liquidationPriceMaxAge; for every primary or standby leg (hb <= 3,600) it equals hb + 600, so a feed whose next round comes at most hb + d after the last (d < 600 s network delay) is never refused by the borrow age",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-CONFIG-023",
+   "REQ-CONFIG-021",
+   "REQ-ORACLE-054",
+   "SPEC-ORC-015"
+  ],
+  "targets": [
+   "T-59"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-116-W",
+  "title": "Witness: the REQ-CONFIG-023 examples are admissible: USDC/USD hb 3,600 (borrow 4,200, feedMaxAge = liquidation 4,200) and a USDC/ETH alternate leg hb 86,400 (borrow 4,200, feedMaxAge = liquidation 87,000)",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-CONFIG-023",
+   "REQ-ORACLE-054"
+  ],
+  "targets": [
+   "T-59"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-117",
+  "title": "Alternates held to their borrow age: each leg's liquidation limit is >= its borrow limit (so borrowPriceMaxAge() <= liquidationPriceMaxAge()); while a serving alternate leg is past its borrowPriceMaxAge (ALTERNATE_PAST_BORROW_AGE) the liquidation age test already fails",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-090",
+   "SPEC-ORC-015",
+   "SPEC-ORC-016",
+   "REQ-ORACLE-019"
+  ],
+  "targets": [
+   "T-59",
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-118",
+  "title": "SPEC-ORC-015 / REQ-ORACLE-090 examples: servedUpdatedAt 1,762,646,400, liquidation and borrow deadlines 1,762,650,600, both age limits 4,200 (own alternate limit would allow seizure until 1,762,733,400); with token1 back on its primary both deadlines 1,762,650,600; at 1,762,650,601 the USDT/ETH leg is 4,201 s old and ALTERNATE_PAST_BORROW_AGE is set",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-ORC-015",
+   "REQ-ORACLE-090",
+   "REQ-ORACLE-054"
+  ],
+  "targets": [
+   "T-59"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-119",
+  "title": "SPEC-ORC-013 examples: staleFrom 1,004,201 and 1,134,201 give staleAt 1,134,201, Cached until 1,137,800 and Expired from 1,137,801; a failedSince of 1,000,000 left by an unobserved recovery gives failureStart 1,000,000 at the poke at 1,004,100, Expired at once instead of Cached until 1,007,600",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-ORC-013"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-120",
+  "title": "Phase rollover: with the fallback prev = seen.updatedAt <= the true previous round, every leg gap, route stale interval S_r and both-stale interval B_i contains the true one with the same end, so Expired-by-timestamps evidence is never lost on an aggregator upgrade, recoveredAt_new never decreases, and recoveredAt_new <= now",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-014",
+   "REQ-ORACLE-089",
+   "REQ-ORACLE-075",
+   "REQ-ORACLE-033"
+  ],
+  "targets": [
+   "T-67",
+   "T-70"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.08,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-121",
+  "title": "SPEC-ORC-014 examples: S_primary = [1,004,201, 1,200,000), alternate gap [1,134,201, 1,190,000), B lasts 55,799 s >= 3,600, recoveredAt = 1,190,000, graceEndsAt = 1,191,800; phase fallback from seen 996,400 gives [1,000,601, 1,200,000), which contains the true gap, and B is unchanged",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-ORC-014",
+   "REQ-ORACLE-089",
+   "REQ-ORACLE-034"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-122",
+  "title": "A caught error never starts grace by itself: over every route outcome pair and latch origin, a grace window starts only from source timestamps (getRoundData, the previous-phase round, the oracle's own seen timestamp, staleFrom, or a latch set from timestamps); an unusable lookup or an Invalid/Error route gives no evidence",
+  "status": "Verified",
+  "method": "exhaustive enumeration (320 cases)",
+  "verifies": [
+   "REQ-ORACLE-065",
+   "REQ-ORACLE-089",
+   "REQ-ORACLE-030",
+   "REQ-ORACLE-075",
+   "SPEC-ORC-014"
+  ],
+  "targets": [
+   "T-70"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-123",
+  "title": "A route-version change changes only disagreeSince (now if some token disagrees, else 0) and, while latched and not failed, starts grace at recoveredAt = now (REQ-ORACLE-032 (a)); failedSince, expiredLatched, the accepted price and the checkpoint are as without the change, and recoveredAt too when not latched; the state is the same (never Live by itself); a failed market with failedSince != 0 is Expired from failedSince + cachedWindow whatever the new routes give; REQ-ORACLE-095 example: Expired from 1,762,653,600, disagreeSince 1,762,652,000",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-095",
+   "REQ-ORACLE-094",
+   "REQ-ORACLE-028",
+   "REQ-MREG-028",
+   "INV-059"
+  ],
+  "targets": [
+   "T-67",
+   "T-68"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-123-W",
+  "title": "Witness (REQ-ORACLE-095 example): Cached with failedSince 1,762,650,000; a switch at 1,762,652,000 to a standby that disagrees with the alternate yields Drifting with disagreeSince 1,762,652,000",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-ORACLE-095",
+   "REQ-MREG-028"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-124",
+  "title": "Failover and standby: over every primary/alternate/standby validity and slot, the quote is the primary slot when valid, else the alternate slot, else none; the standby in force is evaluated exactly as the route it replaces; every route in the primary slot has hourly legs (hb <= 3,600)",
+  "status": "Verified",
+  "method": "exhaustive enumeration (375 cases)",
+  "verifies": [
+   "REQ-ORACLE-005",
+   "REQ-ORACLE-006",
+   "REQ-ORACLE-094",
+   "REQ-MREG-028",
+   "REQ-CONFIG-021",
+   "REQ-MREG-027"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-125",
+  "title": "The checkpoint is written only by a poke with now >= checkpoint.at + 3,600, at block time, and always equals the accepted price after REQ-ORACLE-029 (never a stress-served price); a gas-short poke never writes it",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-088",
+   "SPEC-BRK-001",
+   "REQ-ORACLE-062"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-126",
+  "title": "Checkpoint example: (199,980,000, 1,762,650,000) is kept by a poke at 1,762,652,000 and replaced by (199,950,000, 1,762,653,700) at 1,762,653,700; 193,900,000 is 3.03 % below it and trips a 300 bps price-drop breaker until 1,762,660,900 (SPEC-BRK-001 compares while now - at <= 7,200)",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-ORACLE-088",
+   "SPEC-BRK-001"
+  ],
+  "targets": [
+   "T-67"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-127",
+  "title": "DebtOracle (SPEC-ORC-018): served = q Live, max(p, b, A) disagreeing, A Cached, ceil(A(10^4 + delta)/10^4) Expired; served >= 1, served >= A whenever not Live, the Expired value is >= the exact rise, < exact + 1 and <= 1.5 A + 1, and A (10^4 + delta) < 2^256; liquidationPaused whenever not Live, so no stress value prices a repayment; accepted is written only when Live and newer; no stable ceiling (served = q above $1)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-ORC-018",
+   "REQ-ORACLE-093",
+   "REQ-ORACLE-092",
+   "REQ-ORACLE-091",
+   "REQ-ORACLE-096",
+   "REQ-ORACLE-098",
+   "INV-087",
+   "REQ-SWAP-091"
+  ],
+  "targets": [
+   "T-66"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-127-W",
+  "title": "Witness: a Live debt asset above $1 is served uncapped (q = 100,300,000)",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "SPEC-ORC-018",
+   "REQ-ORACLE-093"
+  ],
+  "targets": [
+   "T-66"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-128",
+  "title": "SPEC-ORC-018 examples: A = 99,990,000 Expired serves 104,989,500 at delta 500 (10,000 USDC of debt counts $10,498.95) and 101,989,800 at delta 200; A = 99,987,001 at delta 500 rounds 104,986,351.05 up to 104,986,352; routes 99,990,000 / 100,300,000 disagreeing with A = 99,995,000 serve 100,300,000; Cached serves 99,995,000",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-ORC-018",
+   "INV-087"
+  ],
+  "targets": [
+   "T-66"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_oracle"
+ },
+ {
+  "id": "FV-CTL-129",
+  "title": "inGrace iff recoveredAt != 0 and recoveredAt <= now < recoveredAt + graceDuration: a grace window lasts exactly graceDuration seconds from recoveredAt, never before it, and a recoveredAt capped at now (SPEC-ORC-014, REQ-ORACLE-032) is in grace at the poke that sets it whenever graceDuration > 0",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ORACLE-034",
+   "REQ-ORACLE-033",
+   "INV-031"
+  ],
+  "targets": [
+   "T-70"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_oracle"
+ }
+]

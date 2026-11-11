@@ -1,0 +1,203 @@
+[
+ {
+  "id": "FV-CTL-86",
+  "title": "An implementation of an upgradeable contract whose constructor ran _disableInitializers() can never be initialized or reinitialized; a proxy's initializer runs once",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ACCESS-150",
+   "REQ-ADAPTER-004",
+   "REQ-ORACLE-080",
+   "REQ-ACCESS-031"
+  ],
+  "targets": [
+   "T-64",
+   "T-62"
+  ],
+  "detail": "Changed for the AMM-neutral design: the PositionProxy has no initializer at all (REQ-PROXY-001), so this check now covers only the UUPS contracts; the proxy is covered by FV-CTL-87.",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-87",
+  "title": "After any implementation change only the timelock (UUPS reinitializer inside upgradeToAndCall) changes an upgradeable contract's state, and only the AaveAdapter (execute) can make a PositionProxy act: the proxy has no initializer, upgrade, role, receiver or fallback selector, and the page states its inventory as execute plus the four views",
+  "status": "Verified",
+  "method": "exhaustive enumeration (85 cases)",
+  "verifies": [
+   "REQ-PROXY-001",
+   "REQ-PROXY-007",
+   "REQ-PROXY-086",
+   "REQ-PROXY-103",
+   "REQ-PROXY-101",
+   "REQ-ACCESS-147",
+   "REQ-ACCESS-176"
+  ],
+  "targets": [
+   "T-64",
+   "T-62"
+  ],
+  "detail": "Changed for the AMM-neutral design: the beacon form and its no-reinitializer rule are gone; the proxy is logic-free and immutable, so an Adapter upgrade changes account logic for every proxy at once.",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-88",
+  "title": "The append-only layout rule accepts exactly the appending and identical layouts and rejects every delete, retype, insert and reorder",
+  "status": "Verified",
+  "method": "exhaustive enumeration (20 cases)",
+  "verifies": [
+   "REQ-ADAPTER-004",
+   "REQ-ORACLE-080"
+  ],
+  "targets": [
+   "T-64"
+  ],
+  "detail": "Namespaces are disjoint by construction: each root is keccak256(keccak256(id) - 1) & ~0xff over distinct ids; collision resistance is assumed. The PositionProxy has no storage layout to keep (immutables only).",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-89",
+  "title": "One PositionProxy per (wallet, CDP Spoke, market): equal CREATE2 addresses from the ProxyManager imply the same triple, no other deployer and no other Adapter can produce a triple's address, so no Hub, Spoke or market occupies another's proxy (keccak and CREATE2 modelled as injective)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-012",
+   "REQ-PROXY-052",
+   "REQ-PROXY-053",
+   "REQ-PROXY-055",
+   "REQ-PROXY-100",
+   "REQ-ARCH-035"
+  ],
+  "targets": [
+   "T-62"
+  ],
+  "detail": "Changed for the AMM-neutral design: the key is (wallet, spoke, marketId), not (wallet, spoke), and the init code carries the Adapter and the triple.",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-90",
+  "title": "For every deployed account the Adapter, Lens and previewPledge views equal the stored proxyOf(wallet, marketId), Lens reports deployed = true; deployProxy refuses a frozen wallet and predictProxy reads no MarketRegistry state",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PROXY-049",
+   "REQ-LENS-008",
+   "REQ-RISK-031",
+   "REQ-PROXY-099",
+   "REQ-PROXY-053"
+  ],
+  "targets": [
+   "T-62",
+   "T-74"
+  ],
+  "detail": "Changed for the AMM-neutral design: the ProxyManager is immutable, so no upgrade can change the creation code; predictProxy has no registry input (REQ-PROXY-099).",
+  "counterexample": null,
+  "seconds": 0.03,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-149",
+  "title": "The address the views show before an account exists (deployed = false) is the address deployProxy later creates, and deployProxy's own equality check with predictProxy cannot fail, for the chain's lifetime (immutable ProxyManager, fixed ADAPTER and creation-code hash)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PROXY-050",
+   "REQ-PROXY-052",
+   "REQ-LENS-008",
+   "REQ-PROXY-085"
+  ],
+  "targets": [
+   "T-62",
+   "T-74"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-77",
+  "title": "checkRecordBacking returns an empty page whenever offset >= nextRecordId and otherwise walks offset .. offset + min(limit, n - offset) - 1 with no underflow or overflow, at most limit IDs, all below nextRecordId, for every 256-bit offset, limit and nextRecordId",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-LENS-014",
+   "REQ-LENS-024",
+   "REQ-LENS-023"
+  ],
+  "targets": [
+   "T-74"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 1.92,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-148",
+  "title": "The Lens paging rules give checkRecordBacking one outcome for every (offset, limit, nextRecordId)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-LENS-014",
+   "REQ-LENS-020",
+   "REQ-LENS-023",
+   "REQ-LENS-024"
+  ],
+  "targets": [
+   "T-74"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-78",
+  "title": "previewLiquidation's premiumWithinMax is true exactly when LPVaultSwap's pre-loan and callback flash-premium checks accept the same loan: every page (2.17 REQ-LENS-029, 2.9 REQ-PSTORE-024, 2.11 SPEC-LIQ-015 and REQ-FLASH-002, 2.7 REQ-RISK-062) states the exact form phi x 10^4 <= maxFlashFeeBps x F, launch 10 bps (SPEC-LIQ-015 example: 5 bps on 1,950 USDC passes, 20 bps fails)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-LENS-029",
+   "REQ-LENS-016",
+   "SPEC-LIQ-015",
+   "REQ-FLASH-002",
+   "REQ-PSTORE-024",
+   "REQ-RISK-062"
+  ],
+  "targets": [
+   "T-74"
+  ],
+  "detail": "Changed for the AMM-neutral design: maxGhoSpend no longer exists. Resolves FV-CTL-F-27: the Lens flag had rounded the ceiling up while LPVaultSwap compared exact products; every page now states the exact form. Page forms: REQ-LENS-029=ok, REQ-PSTORE-024=ok, SPEC-LIQ-015=ok, REQ-FLASH-002=ok, REQ-RISK-062=ok, launch 10=ok, example=ok.",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_upgrade_lens"
+ },
+ {
+  "id": "FV-CTL-97",
+  "title": "Every view a third party can call mid-operation either reverts while the Lock is held or reads state the locked call does not write before its last external call",
+  "status": "Verified",
+  "method": "exhaustive enumeration (8 cases)",
+  "verifies": [
+   "REQ-LENS-006",
+   "REQ-LENS-021",
+   "REQ-VAULT-125",
+   "REQ-ORACLE-025",
+   "REQ-SWAP-104",
+   "REQ-MREG-026"
+  ],
+  "targets": [
+   "T-73"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_upgrade_lens"
+ }
+]

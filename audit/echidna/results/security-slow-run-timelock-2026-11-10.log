@@ -1,0 +1,69 @@
+
+##### build
+Compiling 263 files with Solc 0.8.28
+Solc 0.8.28 finished in 6.89s
+Compiler run successful!
+##### build: pass (9s)
+
+##### echidna
+=== echidna AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol), property mode
+property_roleIdsAreNameHashes: passing
+property_roleIdsPairwiseDistinct: passing
+property_noRoleIsDefaultAdmin: passing
+=== echidna AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol), assertion mode
+checkRolePair(uint8,uint8): passing
+pairsChecked(): passing
+AssertionFailed(..): passing
+=== echidna AvanaTimelockProperties (test/invariant/echidna/AvanaTimelockProperties.sol), property mode
+property_publicExecutionIsOpenRole: passing
+property_selfOnlyAdmin: passing
+property_minDelayIsShort: passing
+property_normalDelayInBounds: passing
+property_shortListWithinEligible: passing
+=== echidna AvanaTimelockProperties (test/invariant/echidna/AvanaTimelockProperties.sol), assertion mode
+cancelAt(uint256,bool): passing
+scheduleKind(uint8,uint8,uint256): passing
+cleanupAt(uint256): passing
+executeAt(uint256): passing
+AssertionFailed(..): passing
+=== echidna LockProperties (test/invariant/echidna/LockProperties.sol), property mode
+property_freeAtTransactionStart: passing
+property_membersFixedDistinctAndSet: passing
+=== echidna LockProperties (test/invariant/echidna/LockProperties.sol), assertion mode
+memberCycle(bool): passing
+revertedOuterCall(bool): passing
+sequences(): passing
+outsiderAcquire(bool): passing
+acquireWithoutRelease(bool): passing
+AssertionFailed(..): passing
+=== echidna LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol), property mode
+property_holderSlotIsErc7201: passing
+property_holderSlotLowByteIsZero: passing
+property_holderSlotEmptyAtTransactionStart: passing
+=== echidna LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol), assertion mode
+entries(): passing
+enterAndRelease(address): passing
+enter(address): passing
+AssertionFailed(..): passing
+##### echidna: pass (658s)
+
+##### medusa
+=== medusa AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol)
+⇾ [PASSED] Assertion Test: AvanaRolesProperties.checkRolePair(uint8,uint8)
+⇾ [PASSED] Assertion Test: AvanaRolesProperties.pairsChecked()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_noRoleIsDefaultAdmin()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_roleIdsAreNameHashes()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_roleIdsPairwiseDistinct()
+⇾ Test summary: 5 test(s) passed, 0 test(s) failed
+=== medusa AvanaTimelockProperties (test/invariant/echidna/AvanaTimelockProperties.sol)
+⇾ [PASSED] Assertion Test: AvanaTimelockProperties.cancelAt(uint256,bool)
+⇾ [PASSED] Assertion Test: AvanaTimelockProperties.cleanupAt(uint256)
+⇾ [PASSED] Assertion Test: AvanaTimelockProperties.executeAt(uint256)
+⇾ [PASSED] Assertion Test: AvanaTimelockProperties.scheduleKind(uint8,uint8,uint256)
+⇾ [PASSED] Property Test: AvanaTimelockProperties.property_minDelayIsShort()
+⇾ [PASSED] Property Test: AvanaTimelockProperties.property_normalDelayInBounds()
+⇾ [PASSED] Property Test: AvanaTimelockProperties.property_publicExecutionIsOpenRole()
+⇾ [PASSED] Property Test: AvanaTimelockProperties.property_selfOnlyAdmin()
+⇾ [PASSED] Property Test: AvanaTimelockProperties.property_shortListWithinEligible()
+⇾ Test summary: 9 test(s) passed, 0 test(s) failed
+=== medusa LockProperties (test/invariant/echidna/LockProperties.sol)

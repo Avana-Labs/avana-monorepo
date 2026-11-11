@@ -1,0 +1,115 @@
+{
+ "accounts": 627,
+ "bad_debt": {
+  "by_asset": {
+   "GHO": 0.0,
+   "USDC": 0.0
+  },
+  "by_spoke": {},
+  "pct_hub_reserve": 0.0,
+  "underwater_usd": 0.0,
+  "usd": 0.0
+ },
+ "blocked": {
+  "deficit_breaker_usd_h": 0,
+  "other_usd_h": 11731277.474379841,
+  "own_usd_h": 425280096.4389358
+ },
+ "capital": {
+  "accounts": 512,
+  "capacity_usd": 4665387.194447389,
+  "collateral_usd": 16640777.608640548,
+  "day": 24.95,
+  "debt_usd": 2279542.187498317,
+  "drawcap_accounts": 0,
+  "drawcap_refusals": 0,
+  "headroom_beyond_draw_caps_usd": 1665321.2569343795,
+  "headroom_usd": 2385845.0069490722,
+  "shock_safe_debt_usd": 4594707.137950291,
+  "shock_safe_over_capacity": 0.984850119925476,
+  "spokes": {
+   "A:Stable": {
+    "GHO": {
+     "cap": 1500000.0,
+     "drawn": 1193959.53
+    },
+    "USDC": {
+     "cap": 750000.0,
+     "drawn": 493334.53
+    },
+    "cap_room_usd": 562705.9450132388,
+    "headroom_usd": 1945183.4382432061
+   },
+   "B:Stable": {
+    "GHO": {
+     "cap": 500000.0,
+     "drawn": 489687.2
+    },
+    "USDC": {
+     "cap": 250000.0,
+     "drawn": 102494.99
+    },
+    "cap_room_usd": 157817.8050014539,
+    "headroom_usd": 440661.568705866
+   }
+  },
+  "used": 0.48860728863219827
+ },
+ "days": 40,
+ "deleverage": {
+  "conversion_loss_usd": 6.223922539325997,
+  "done": 5,
+  "repaid_usd": 11782.702310631023,
+  "reverted:DeadlineExpired": 2
+ },
+ "drawcap_refusals": {
+  "after": 5,
+  "pre_shock": 0
+ },
+ "invariants": {
+  "checks": 157614,
+  "violations": {}
+ },
+ "keeper": {
+  "blocks_with_liquidations": 0,
+  "budget_draws": 0,
+  "keeper_pnl": 0.0,
+  "peak_block_calls": 0,
+  "peak_block_usd": 0.0,
+  "reimbursement": 0.0
+ },
+ "liquidations": {
+  "accounts": 0,
+  "blocked": {},
+  "blocked_accounts": {},
+  "bonus_usd": 0,
+  "by_spoke": {},
+  "calls": 0,
+  "contagion_accounts": 0,
+  "contagion_calls": 0,
+  "in_kind": 0,
+  "persons": 0,
+  "seized_usd": 0,
+  "stable_accounts": 0,
+  "stable_calls": 0
+ },
+ "persons": 595,
+ "rescues": {},
+ "scenario": "dai-depeg",
+ "seed": 20261109,
+ "spokes": [
+  "A:Stable",
+  "B:Stable"
+ ],
+ "supplier_loss": {
+  "by_asset": {
+   "GHO": 0.0,
+   "USDC": 0.0,
+   "underwater": 0.0
+  },
+  "first_loss_used": 0.0,
+  "usd": 0.0
+ },
+ "topology": "T2",
+ "user_gas_usd": 65476.760389048155
+}

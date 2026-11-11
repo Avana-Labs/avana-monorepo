@@ -1,0 +1,2225 @@
+{
+ "address_freeze": [
+  {
+   "borrow": "N (AddressIsFrozen)",
+   "debt-dependent rows": "- (the frozen dust wallet has no debt in this run)",
+   "new account from a frozen wallet": "N (AddressIsFrozen)",
+   "non-rescue top-up": "N (NotRescueTopUp)",
+   "non-rescue top-up (probe account)": "N (BelowMinPledge)",
+   "repay": "Y",
+   "rescue top-up": "- (the probe account has no debt to restore)"
+  }
+ ],
+ "attacks": [
+  {
+   "attack": "dust accounts",
+   "result": "0 opened; gas paid $5296",
+   "step": "open 40 x $10.60 USDe/USDT accounts at HF 1.10",
+   "t": 3.0
+  },
+  {
+   "attack": "address freeze of the dust wallets",
+   "result": "40 frozen; a 21st freeze by the same guardian within 24 h refused: FreezeRateLimited",
+   "step": "40 freezeAddress calls by two guardians",
+   "t": 3.5
+  },
+  {
+   "attack": "flash-loan pledge-borrow-exit",
+   "result": "reverts: withdraw-with-debt needs HF >= 1.10 after (HealthFactorTooLow); borrow (<= 28% of the LP) cannot repay the flash loan; no loss",
+   "step": "flash-mint $5M of LP, pledge, borrow max, withdraw in one tx",
+   "t": 5.0
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f1 pledges $1022",
+   "t": 10.004166666666666
+  },
+  {
+   "attack": "direct Spoke.liquidationCall",
+   "result": "Unauthorized() (LIQ-055): only LPVaultSwap is LIQUIDATION_MANAGER",
+   "step": "call liquidationCall on an account",
+   "t": 12.0
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f2 pledges $4014",
+   "t": 12.045833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f3 pledges $2784",
+   "t": 16.2125
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f4 pledges $7720",
+   "t": 16.879166666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f5 pledges $3762",
+   "t": 17.670833333333334
+  },
+  {
+   "attack": "donate liquidity to a victim NFT",
+   "result": "no effect on credit, HF or withdrawal; the liquidity returns to the victim with the NFT",
+   "step": "NFPM.increaseLiquidity on a pledged tokenId",
+   "t": 20.0
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f6 pledges $3236",
+   "t": 20.754166666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f7 pledges $2879",
+   "t": 22.2125
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f8 pledges $17653",
+   "t": 23.7125
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f9 pledges $13483",
+   "t": 24.379166666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.0875
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.133333333333333
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.175
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.220833333333335
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.2625
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.308333333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.35
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.395833333333332
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.4375
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.483333333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.525
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.570833333333333
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.6125
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.658333333333335
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.7
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.745833333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.7875
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.833333333333332
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 27.875
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.208333333333332
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.254166666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.295833333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.341666666666665
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.383333333333333
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.429166666666667
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.470833333333335
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.516666666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.558333333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.604166666666668
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.645833333333332
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.691666666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.733333333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.779166666666665
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.820833333333333
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.866666666666667
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.908333333333335
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.954166666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 28.995833333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.041666666666668
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.083333333333332
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.291666666666668
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.3375
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.379166666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.425
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.466666666666665
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.5125
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.554166666666667
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.6
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.641666666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.6875
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.729166666666668
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.775
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.816666666666666
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.8625
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.904166666666665
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.95
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 29.991666666666667
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.0375
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.091666666666665
+  },
+  {
+   "attack": "pledge while pool is pushed off peg",
+   "result": "refused: PriceNotAccepted(Drifting)",
+   "step": "move USDC/USDT pool 2% then pledge",
+   "t": 30.1
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.1375
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.183333333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.229166666666668
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.275
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.320833333333333
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.3625
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.408333333333335
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.45
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.495833333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.5375
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.583333333333332
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.625
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.670833333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.7125
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.758333333333333
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.8
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.845833333333335
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.8875
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.933333333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 30.975
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 31.020833333333332
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 31.0625
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 31.108333333333334
+  },
+  {
+   "attack": "slice re-leverage",
+   "result": "refused: SliceNotAvailable",
+   "step": "top-up",
+   "t": 31.15
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f10 pledges $13398",
+   "t": 34.06666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f11 pledges $3626",
+   "t": 35.025
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f12 pledges $2015",
+   "t": 36.108333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f13 pledges $23443",
+   "t": 36.983333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f14 pledges $9438",
+   "t": 37.44166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f15 pledges $6523",
+   "t": 38.525
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f16 pledges $9225",
+   "t": 38.56666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f17 pledges $13150",
+   "t": 38.65
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f18 pledges $2265",
+   "t": 39.15
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f19 pledges $12357",
+   "t": 39.19166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f20 pledges $22022",
+   "t": 40.025
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f21 pledges $31288",
+   "t": 40.44166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f22 pledges $15221",
+   "t": 41.44166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f23 pledges $1967",
+   "t": 41.733333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f24 pledges $4217",
+   "t": 41.775
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f25 pledges $74755",
+   "t": 43.31666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f26 pledges $10588",
+   "t": 43.733333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f27 pledges $4492",
+   "t": 45.15
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f28 pledges $13417",
+   "t": 45.733333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f29 pledges $1232",
+   "t": 46.06666666666667
+  },
+  {
+   "attack": "TWAP griefing in drained GHO/USDC pool",
+   "result": "market Drifting(TWAP): borrow and withdraw-with-debt blocked for its holders; liquidation unaffected; estimated cost $695814",
+   "step": "hold pool 0.7% off Chainlink for 2.4 h",
+   "t": 47.0
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f30 pledges $9075",
+   "t": 47.81666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f31 pledges $5358",
+   "t": 48.358333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f32 pledges $1214",
+   "t": 49.358333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f33 pledges $6495",
+   "t": 49.483333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f34 pledges $1249",
+   "t": 50.19166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f35 pledges $16445",
+   "t": 51.525
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f36 pledges $4089",
+   "t": 52.483333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f37 pledges $3596",
+   "t": 53.06666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f38 pledges $8650",
+   "t": 53.31666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f39 pledges $17225",
+   "t": 53.94166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f40 pledges $1146",
+   "t": 54.19166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f41 pledges $2952",
+   "t": 55.19166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f42 pledges $4438",
+   "t": 56.608333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f43 pledges $2539",
+   "t": 57.483333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f44 pledges $145",
+   "t": 57.608333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f45 pledges $1198",
+   "t": 58.44166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f46 pledges $27900",
+   "t": 58.94166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f47 pledges $32313",
+   "t": 60.275
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f48 pledges $17019",
+   "t": 60.65
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f49 pledges $15854",
+   "t": 60.81666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f50 pledges $137",
+   "t": 61.4
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f51 pledges $5875",
+   "t": 62.358333333333334
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f52 pledges $23654",
+   "t": 62.65
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f53 pledges $9429",
+   "t": 62.81666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f54 pledges $7931",
+   "t": 62.9
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f55 pledges $15397",
+   "t": 63.06666666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f56 pledges $20889",
+   "t": 63.19166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f57 pledges $6055",
+   "t": 63.94166666666667
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f58 pledges $11",
+   "t": 64.10833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f59 pledges $5404",
+   "t": 65.44166666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f60 pledges $10990",
+   "t": 66.4
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f61 pledges $6887",
+   "t": 67.025
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f62 pledges $6352",
+   "t": 68.025
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f63 pledges $12161",
+   "t": 68.31666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f64 pledges $50",
+   "t": 69.35833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f65 pledges $53625",
+   "t": 69.60833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f66 pledges $9180",
+   "t": 70.69166666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f67 pledges $6631",
+   "t": 70.81666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f68 pledges $2735",
+   "t": 70.94166666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f69 pledges $1586",
+   "t": 72.19166666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f70 pledges $9309",
+   "t": 72.31666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f71 pledges $4238",
+   "t": 73.73333333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f72 pledges $16806",
+   "t": 74.525
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f122 pledges $11569",
+   "t": 77.275
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f123 pledges $8462",
+   "t": 77.31666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f124 pledges $13594",
+   "t": 77.4
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f125 pledges $2254",
+   "t": 79.31666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f126 pledges $37476",
+   "t": 80.06666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f127 pledges $2768",
+   "t": 81.23333333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f128 pledges $9784",
+   "t": 81.35833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f129 pledges $579728",
+   "t": 83.85833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f130 pledges $3113",
+   "t": 84.19166666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f131 pledges $71158",
+   "t": 84.35833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f132 pledges $10306",
+   "t": 84.4
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f133 pledges $77486",
+   "t": 84.775
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f134 pledges $38526",
+   "t": 85.31666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f135 pledges $5923",
+   "t": 85.73333333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f136 pledges $2633",
+   "t": 85.81666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f137 pledges $13835",
+   "t": 86.60833333333333
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f138 pledges $8589",
+   "t": 87.31666666666666
+  },
+  {
+   "attack": "cap squatting",
+   "result": "regular room of USDC/USDT now $0",
+   "step": "filler wallet w985f139 pledges $3783",
+   "t": 88.4
+  }
+ ],
+ "borrow_availability": {
+  "DAI/USDC": {
+   "age": 0.9439814814814815,
+   "breaker": 0.000462962962962963,
+   "ok": 0.0466820987654321,
+   "state": 0.008873456790123456
+  },
+  "GHO/USDC": {
+   "age": 0.9830246913580247,
+   "breaker": 0.000462962962962963,
+   "ok": 0.015509259259259259,
+   "state": 0.0010030864197530865
+  },
+  "USDC debt price": {
+   "age": 0.9522376543209876,
+   "breaker": 0.0,
+   "ok": 0.047762345679012344,
+   "state": 0.0
+  },
+  "USDC/USDT": {
+   "age": 0.9922067901234568,
+   "breaker": 0.0006944444444444445,
+   "ok": 0.002932098765432099,
+   "state": 0.004166666666666667
+  },
+  "USDe/USDT": {
+   "age": 0.6579475308641975,
+   "breaker": 0.000925925925925926,
+   "ok": 0.0033950617283950617,
+   "state": 0.33773148148148147
+  }
+ },
+ "breakers": {
+  "borrow_blocked_hours": {
+   "DAI/USDC MANUAL": 0.9999999999999999,
+   "GHO/USDC POOL_SHARE": 0.9999999999999999,
+   "GHO/USDC during gho_premium": 0.9999999999999999,
+   "USDC/USDT POOL_SHARE": 1.5,
+   "USDC/USDT during usdt_depeg": 1.5,
+   "USDe/USDT POOL_SHARE": 2.0,
+   "USDe/USDT during usdt_depeg": 2.0
+  },
+  "latched": []
+ },
+ "days": 90,
+ "deleverage": {
+  "conversion_loss_usd": 18.582994569652215,
+  "done": 9,
+  "refused:StalePrice": 28,
+  "repaid_usd": 36064.30473574925
+ },
+ "exits": {
+  "repay_all_first_attempt": 42
+ },
+ "frustrations": [
+  {
+   "cause": "Every collateral input must be Live and within borrowPriceMaxAge (1 h) at the block (BOR-006); heartbeat = max age leaves windows each hour",
+   "code": "borrow_blocked_price",
+   "events": 60564,
+   "fix": "Set borrowPriceMaxAge >= heartbeat + margin; app explains the state and when it clears",
+   "say": "Borrow is blocked even though prices look normal.",
+   "users": 420,
+   "where": "spec parameter + app"
+  },
+  {
+   "cause": "Full-range positions only (Q-017, DEP-007 NotFullRange)",
+   "code": "concentrated_rejected",
+   "events": 385,
+   "fix": "Explain before the NFT approval, show the fee-yield difference, offer a one-click convert; concentrated ranges are a later expansion",
+   "say": "My concentrated-range position was rejected; full range earns far less in fees.",
+   "users": 377,
+   "where": "app (now), contracts (later)"
+  },
+  {
+   "cause": "LP CF = min(CF0, CF1) x poolRiskFactor (~25-31%) and then minOpeningHealthFactor 1.10 on top (Q-018)",
+   "code": "low_ltv",
+   "events": 317,
+   "fix": "Show the effective borrow limit before pledging; raise poolRiskFactor for the deepest pools after a track record",
+   "say": "I can only borrow about $28 per $100 of LP.",
+   "users": 317,
+   "where": "app + risk"
+  },
+  {
+   "cause": "marketUsdCap per market (1.5, Q-055); caps fill on a first-come basis and a debt-free pledger keeps its cap room while earning fees",
+   "code": "cap_full",
+   "events": 1144,
+   "fix": "Show remaining cap room and a queue/notify-when-room; publish cap-raise plans; consider a per-wallet share of new cap room",
+   "say": "The market is full, so I can't pledge.",
+   "users": 316,
+   "where": "app + governance"
+  },
+  {
+   "cause": "minPledgeUsd $10 is far below the mainnet gas cost of approve + pledge + borrow (~$30-80)",
+   "code": "gas_exceeds_value",
+   "events": 80,
+   "fix": "Raise minPledgeUsd to a gas-aware level (e.g. $500-1,000) or show a break-even warning",
+   "say": "The gas to pledge and borrow cost more than I can borrow.",
+   "users": 80,
+   "where": "app + parameter"
+  },
+  {
+   "cause": "Fees always go to the depositor (Q-105); no collect-and-repay",
+   "code": "fees_manual",
+   "events": 121,
+   "fix": "Batch collect + swap + repay (EIP-5792 batch in the app, or an Adapter helper)",
+   "say": "I collect fees and then repay by hand; it should be one step.",
+   "users": 66,
+   "where": "app (contracts optional)"
+  },
+  {
+   "cause": "removeLiquidity (Q-254)",
+   "code": "used_partial_removal",
+   "events": 69,
+   "fix": "-",
+   "say": "I took part of my liquidity out without withdrawing the NFT.",
+   "users": 29,
+   "where": "outcome"
+  },
+  {
+   "cause": "One PositionProxy per wallet per Spoke; worst-state rule over every collateral market (Q-081, Q-225, Q-234)",
+   "code": "borrow_blocked_other_market",
+   "events": 78,
+   "fix": "Allow several accounts per wallet (proxy index) so markets can be isolated; app shows which market blocks",
+   "say": "A problem in one of my markets blocked borrowing and withdrawing in all of them.",
+   "users": 25,
+   "where": "contracts + app"
+  },
+  {
+   "cause": "With debt it is a withdraw-with-debt: gates, rescue-excluded HF >= 1.10 and a $10 remaining record (Q-254)",
+   "code": "partial_removal_refused",
+   "events": 49,
+   "fix": "Preview the largest removal that passes",
+   "say": "My partial removal was refused.",
+   "users": 23,
+   "where": "app"
+  },
+  {
+   "cause": "Market and debt breakers stop new borrowing and withdraw-with-debt (Q-241)",
+   "code": "borrow_blocked_breaker",
+   "events": 39,
+   "fix": "App names the breaker and when it clears; repay and rescue top-ups stay open",
+   "say": "Borrowing stopped because a circuit breaker tripped on one of my markets.",
+   "users": 23,
+   "where": "app"
+  },
+  {
+   "cause": "Deadline checked on every call (DEP-002, BOR-003)",
+   "code": "deadline_expired",
+   "events": 24,
+   "fix": "Longer default deadline on mobile; re-prepare automatically",
+   "say": "My transaction failed with DeadlineExpired.",
+   "users": 20,
+   "where": "app"
+  },
+  {
+   "cause": "TWAP guard (SPEC-ORC-010) can be pushed in a drained pool; Drifting blocks borrow/withdraw-with-debt",
+   "code": "twap_griefed",
+   "events": 33,
+   "fix": "Monitor pool depth vs listing threshold; offboard/cap when depth falls; explain Drifting(TWAP) in the app",
+   "say": "Borrowing was blocked for hours in a thin pool for no visible reason.",
+   "users": 19,
+   "where": "risk ops + app"
+  },
+  {
+   "cause": "recredit is a top-up with every top-up check, caps included (Q-254)",
+   "code": "recredit_refused",
+   "events": 62,
+   "fix": "App shows cap room and retries",
+   "say": "My added liquidity could not be credited yet.",
+   "users": 14,
+   "where": "app"
+  },
+  {
+   "cause": "It needs fresh liquidation-grade prices, Paused refuses it, routes must meet the per-leg minimum (Q-255)",
+   "code": "deleverage_refused",
+   "events": 28,
+   "fix": "App explains the gate; repay with outside funds stays open",
+   "say": "Repay with collateral was refused.",
+   "users": 9,
+   "where": "app"
+  },
+  {
+   "cause": "Slow network / low fee",
+   "code": "tx_dropped",
+   "events": 10,
+   "fix": "Fee bumping and pending-tx status in the app",
+   "say": "My transaction never confirmed.",
+   "users": 9,
+   "where": "app"
+  },
+  {
+   "cause": "repayWithCollateral (Q-255)",
+   "code": "used_repay_with_collateral",
+   "events": 9,
+   "fix": "-",
+   "say": "I repaid part of my loan with my own LP.",
+   "users": 7,
+   "where": "outcome"
+  },
+  {
+   "cause": "repayWithCollateral (Q-255)",
+   "code": "exit_via_repay_with_collateral",
+   "events": 7,
+   "fix": "-",
+   "say": "I closed my loan with my own LP instead of outside funds.",
+   "users": 7,
+   "where": "outcome"
+  },
+  {
+   "cause": "Top-ups need Live or Drifting (Q-132); Cached/Expired refuse them",
+   "code": "topup_refused_stale",
+   "events": 22,
+   "fix": "App suggests repay (always open) during outages; notify when top-ups reopen",
+   "say": "I couldn't add collateral during the price outage.",
+   "users": 6,
+   "where": "app"
+  },
+  {
+   "cause": "HF < 1 (LIQ-003)",
+   "code": "liquidated",
+   "events": 4,
+   "fix": "Alerts, previews of liquidation price, rescue paths",
+   "say": "I was liquidated.",
+   "users": 4,
+   "where": "app"
+  },
+  {
+   "cause": "The app plan has no notification service (apps/README.md)",
+   "code": "no_alerts",
+   "events": 4,
+   "fix": "Opt-in health alerts (email/push/Telegram) at user-chosen HF levels via the indexer",
+   "say": "Nobody told me my position was at risk.",
+   "users": 4,
+   "where": "app/services"
+  },
+  {
+   "cause": "depositorUsdCap (Q-055) is per wallet and easy to bypass with more wallets",
+   "code": "depositor_cap_split",
+   "events": 3,
+   "fix": "Either accept and document, or drop the per-depositor cap in favour of market/token caps",
+   "say": "I hit the per-depositor cap and had to split across wallets.",
+   "users": 3,
+   "where": "governance"
+  },
+  {
+   "cause": "One borrow nonce per proxy (Q-106)",
+   "code": "bad_nonce",
+   "events": 2,
+   "fix": "Single pending borrow across tabs/devices (already planned); clear message",
+   "say": "My second borrow failed with BadNonce.",
+   "users": 2,
+   "where": "app"
+  },
+  {
+   "cause": "Slice only while HF < 1.10 and only up to the restore amount (Q-157); pre-emptive top-ups at HF 1.10-1.3 need regular room",
+   "code": "topup_refused_slice",
+   "events": 2,
+   "fix": "Allow slice top-ups up to a higher rescue target (e.g. HF 1.25) and show slice room",
+   "say": "My top-up was refused because the market is full, even though my account is getting weak.",
+   "users": 2,
+   "where": "spec parameter + app"
+  },
+  {
+   "cause": "Pool-share cap applies to every pledge, including rescue top-ups (REQ-RISK-023, SPEC-CAP-005); in-range liquidity collapses in a depeg",
+   "code": "topup_refused_pool_share",
+   "events": 2,
+   "fix": "Exempt top-ups of indebted accounts below 1.10 (up to the restore amount) from the pool-share test, as the slice already is from token/depositor caps",
+   "say": "My rescue top-up was refused because Avana holds too much of the pool.",
+   "users": 2,
+   "where": "contracts/spec"
+  },
+  {
+   "cause": "minPledgeUsd = $10 (Q-230)",
+   "code": "below_min",
+   "events": 1,
+   "fix": "Pre-check value before approval; state the minimum on the pledge screen",
+   "say": "My small position is below the $10 minimum.",
+   "users": 1,
+   "where": "app"
+  },
+  {
+   "cause": "Rescue exemption from pool share, breakers, Paused(General) and the address freeze (Q-252)",
+   "code": "rescued_by_topup_exemption",
+   "events": 1,
+   "fix": "-",
+   "say": "A rescue top-up went through although the market was constrained.",
+   "users": 1,
+   "where": "outcome"
+  }
+ ],
+ "governance": [
+  [
+   75.0,
+   "pause state -> Frozen"
+  ],
+  [
+   75.25,
+   "pause state -> Paused(General)"
+  ],
+  [
+   77.25,
+   "pause state -> None"
+  ]
+ ],
+ "invariants": {
+  "checks": 474442,
+  "examples": [],
+  "kinds": {
+   "Hub drawn == sum of account debt": 182,
+   "LP liquidity conservation per NFT": 1006,
+   "address freeze gates match EMG-070": 5,
+   "backing: supply <= credited + pending, equal with a conforming LPVaultSwap (Q-257)": 364,
+   "credited == sum of records": 364,
+   "custody iff open record": 63267,
+   "debt conservation per account": 117016,
+   "fee conservation per NFT": 100202,
+   "liquidation GHO conservation": 4,
+   "market regular counter <= cap": 364,
+   "re-credit: record credited == live liquidity": 15,
+   "record live liquidity >= credited": 63267,
+   "record live liquidity >= credited after removal": 69,
+   "repay with collateral: conversion covers the flash loan (SPEC-LIQ-020)": 9,
+   "repay-all leaves no allowance (refund of the unused pull, REP-009)": 230,
+   "rescue units <= credited per record": 64214,
+   "rescue-excluded HF >= 1.10 after every borrow (REQ-RISK-068)": 229,
+   "routed liquidation meets the recovery floor (R + shortfall >= minGho)": 4,
+   "slice counter <= slice cap": 364,
+   "vault holds only NFTs with an open record": 63267
+  },
+  "violations": {}
+ },
+ "liquidations": {
+  "accounts": 4,
+  "auto_in_kind": [],
+  "avana_fee": 45.71041204740835,
+  "blocked_account_hours": {
+   "StalePrice(Cached/Expired)": 263.5,
+   "StalePrice(disagree_pause)": 1.1666666666666667
+  },
+  "blocked_accounts": {
+   "StalePrice(Cached/Expired)": 48,
+   "StalePrice(disagree_pause)": 2
+  },
+  "bonus_paid": 235.4019277106928,
+  "budget_draws": 0.0,
+  "by_asset": {
+   "GHO": 3,
+   "USDC": 1
+  },
+  "by_episode": {
+   "GHO/USDC drain": 1,
+   "USDe crash": 3
+  },
+  "by_market": {
+   "USDC/USDT": 1,
+   "USDe/USDT": 3
+  },
+  "by_mode": {
+   "keeper/gho": 3,
+   "permissionless/gho": 1
+  },
+  "calls": 4,
+  "cross_market_on_failed_market": 1,
+  "debt_repaid": 6479.838833790995,
+  "deficit": 0.0,
+  "dust_attack_calls": 0,
+  "dust_calls": 0,
+  "dust_keeper_loss": 0,
+  "keeper_pnl": -2353.3352367744196,
+  "keeper_reimbursement": 2353.3352367744196,
+  "max_calls_one_account": 1,
+  "max_gas_usd": 776.2500000000001,
+  "regular_calls": 4,
+  "regular_calls_under_100": 0,
+  "regular_debt_repaid": 6479.838833790995,
+  "regular_gas": 2362.0594524770063,
+  "regular_reimbursement": 2353.3352367744196,
+  "sandwich_extracted": 0.0,
+  "searcher_profit": 96.37758152116334,
+  "shortfall_calls": 3,
+  "shortfall_gho": 41.71882609160241,
+  "shortfall_reports": 0
+ },
+ "oracle": {
+  "DAI/USDC": {
+   "alt_past_borrow_age_min": 1340,
+   "cached_min": 60,
+   "disagree_min": 0,
+   "drifting_band_min": 0,
+   "drifting_twap_min": 756,
+   "expired_min": 333
+  },
+  "GHO/USDC": {
+   "alt_past_borrow_age_min": 0,
+   "cached_min": 0,
+   "disagree_min": 0,
+   "drifting_band_min": 0,
+   "drifting_twap_min": 131,
+   "expired_min": 0
+  },
+  "USDC/USDT": {
+   "alt_past_borrow_age_min": 0,
+   "cached_min": 35,
+   "disagree_min": 63,
+   "drifting_band_min": 0,
+   "drifting_twap_min": 427,
+   "expired_min": 0
+  },
+  "USDe/USDT": {
+   "alt_past_borrow_age_min": 0,
+   "cached_min": 35,
+   "disagree_min": 137,
+   "drifting_band_min": 43077,
+   "drifting_twap_min": 1071,
+   "expired_min": 0
+  },
+  "gho_premium_band_hours": 0.0,
+  "listable": {
+   "DAI": true,
+   "GHO": false,
+   "USDC": false,
+   "USDT": false,
+   "USDe": false
+  },
+  "standby_events": [
+   [
+    19.016666666666666,
+    "USDT",
+    "primary",
+    "useStandbyRoute"
+   ],
+   [
+    24.601388888888888,
+    "USDT",
+    "primary",
+    "restorePriceRoute"
+   ],
+   [
+    52.07361111111111,
+    "DAI",
+    "DAI/USDC",
+    "tripMarketBreaker"
+   ],
+   [
+    53.95625,
+    "DAI",
+    "DAI/USDC",
+    "resetMarketBreaker"
+   ]
+  ],
+  "usdc_stall_debt_borrow_blocked_min": 360,
+  "usdc_stall_debt_liquidation_blocked_min": 0,
+  "usdt_stall_seizable_on_stale_leg_min": 709
+ },
+ "people": 1000,
+ "personas": [
+  {
+   "borrowers": 29,
+   "exits_done": 43,
+   "exits_wanted": 43,
+   "fee_foregone": 29524.286636518827,
+   "gave_up": 93,
+   "liquidated": 0,
+   "median_cost_pct": 0.008445845205507261,
+   "median_fees": 48.60107352213781,
+   "median_gas": 68.71177222802677,
+   "median_interest": 0.0,
+   "median_size": 7930.60917861952,
+   "onboarded": 177,
+   "persona": "passive_lp",
+   "share_cost_over_fees": 0.615819209039548,
+   "stuck_exit": 0,
+   "total_bonus": 0,
+   "users": 270
+  },
+  {
+   "borrowers": 24,
+   "exits_done": 26,
+   "exits_wanted": 26,
+   "fee_foregone": 43555.844874504146,
+   "gave_up": 55,
+   "liquidated": 0,
+   "median_cost_pct": 0.01421872801827436,
+   "median_fees": 86.01190932977725,
+   "median_gas": 243.0923843638385,
+   "median_interest": 0.0,
+   "median_size": 14502.652431672786,
+   "onboarded": 65,
+   "persona": "active_lp",
+   "share_cost_over_fees": 0.7692307692307693,
+   "stuck_exit": 0,
+   "total_bonus": 0,
+   "users": 120
+  },
+  {
+   "borrowers": 54,
+   "exits_done": 32,
+   "exits_wanted": 32,
+   "fee_foregone": 8982.367922169218,
+   "gave_up": 31,
+   "liquidated": 3,
+   "median_cost_pct": 0.010340679396880553,
+   "median_fees": 131.13199311204528,
+   "median_gas": 175.84326616082615,
+   "median_interest": 37.818067664497946,
+   "median_size": 18119.50696072074,
+   "onboarded": 69,
+   "persona": "leveraged",
+   "share_cost_over_fees": 0.6376811594202898,
+   "stuck_exit": 0,
+   "total_bonus": 64.1552408694148,
+   "users": 100
+  },
+  {
+   "borrowers": 7,
+   "exits_done": 17,
+   "exits_wanted": 17,
+   "fee_foregone": 227.05376360798584,
+   "gave_up": 65,
+   "liquidated": 0,
+   "median_cost_pct": 0.4268358023677056,
+   "median_fees": 0.7510183979807712,
+   "median_gas": 80.74091288755172,
+   "median_interest": 0.0,
+   "median_size": 184.67914259151593,
+   "onboarded": 55,
+   "persona": "small",
+   "share_cost_over_fees": 1.0,
+   "stuck_exit": 0,
+   "total_bonus": 0,
+   "users": 120
+  },
+  {
+   "borrowers": 13,
+   "exits_done": 4,
+   "exits_wanted": 4,
+   "fee_foregone": 59654.95986996969,
+   "gave_up": 2,
+   "liquidated": 0,
+   "median_cost_pct": 0.0003678875050535009,
+   "median_fees": 2565.0926088397305,
+   "median_gas": 262.56502728414785,
+   "median_interest": 443.68417989846705,
+   "median_size": 490686.82443574426,
+   "onboarded": 18,
+   "persona": "whale",
+   "share_cost_over_fees": 0.0,
+   "stuck_exit": 0,
+   "total_bonus": 0,
+   "users": 20
+  },
+  {
+   "borrowers": 16,
+   "exits_done": 18,
+   "exits_wanted": 18,
+   "fee_foregone": 11315.207639511318,
+   "gave_up": 12,
+   "liquidated": 1,
+   "median_cost_pct": 0.006587881238218856,
+   "median_fees": 66.29742371920489,
+   "median_gas": 108.07633729531611,
+   "median_interest": 0.0,
+   "median_size": 16977.654133897282,
+   "onboarded": 71,
+   "persona": "multi_market",
+   "share_cost_over_fees": 0.6619718309859155,
+   "stuck_exit": 0,
+   "total_bonus": 171.246686841278,
+   "users": 85
+  },
+  {
+   "borrowers": 22,
+   "exits_done": 17,
+   "exits_wanted": 17,
+   "fee_foregone": 6273.301745954726,
+   "gave_up": 44,
+   "liquidated": 0,
+   "median_cost_pct": 0.013876987491262788,
+   "median_fees": 32.297184612882674,
+   "median_gas": 70.51576125721945,
+   "median_interest": 0.0,
+   "median_size": 4451.253613914108,
+   "onboarded": 66,
+   "persona": "mobile",
+   "share_cost_over_fees": 0.7121212121212122,
+   "stuck_exit": 0,
+   "total_bonus": 0,
+   "users": 110
+  },
+  {
+   "borrowers": 3,
+   "exits_done": 0,
+   "exits_wanted": 0,
+   "fee_foregone": 3263.6233975800374,
+   "gave_up": 25,
+   "liquidated": 0,
+   "median_cost_pct": 0.006827582566714342,
+   "median_fees": 46.65823567610339,
+   "median_gas": 52.815537789774275,
+   "median_interest": 0.0,
+   "median_size": 8700.034639877655,
+   "onboarded": 65,
+   "persona": "forgetful",
+   "share_cost_over_fees": 0.5384615384615384,
+   "stuck_exit": 0,
+   "total_bonus": 0,
+   "users": 90
+  },
+  {
+   "borrowers": 24,
+   "exits_done": 19,
+   "exits_wanted": 19,
+   "fee_foregone": 6531.481072148647,
+   "gave_up": 26,
+   "liquidated": 0,
+   "median_cost_pct": 0.00499779521590296,
+   "median_fees": 78.66955194580537,
+   "median_gas": 72.94459860824763,
+   "median_interest": 5.215631010698555,
+   "median_size": 14135.38660204097,
+   "onboarded": 44,
+   "persona": "usdc_borrower",
+   "share_cost_over_fees": 0.5454545454545454,
+   "stuck_exit": 0,
+   "total_bonus": 0,
+   "users": 70
+  }
+ ],
+ "probes": [
+  {
+   "day": 5.0,
+   "expected": {},
+   "label": "Live (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 9.0,
+   "expected": {},
+   "label": "GHO premium (skipped: probe account could not borrow)",
+   "market": "GHO/USDC",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 18.53,
+   "expected": {},
+   "label": "USDT routes stalled (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 18.75,
+   "expected": {},
+   "label": "USDT routes stalled, standby serving (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 19.2,
+   "expected": {},
+   "label": "USDT routes stalled, later (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 19.61,
+   "expected": {},
+   "label": "After USDT recovery (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 52.05416666666667,
+   "expected": {},
+   "label": "DAI routes stalled (skipped: probe account could not borrow)",
+   "market": "DAI/USDC",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 52.984722222222224,
+   "expected": {},
+   "label": "DAI Cached (skipped: probe account could not borrow)",
+   "market": "DAI/USDC",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 53.03333333333333,
+   "expected": {},
+   "label": "DAI Expired (skipped: probe account could not borrow)",
+   "market": "DAI/USDC",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 53.25416666666667,
+   "expected": {},
+   "label": "DAI grace after recovery (skipped: probe account could not borrow)",
+   "market": "DAI/USDC",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 60.21,
+   "expected": {},
+   "label": "Drifting (feed disagreement) (skipped: probe account could not borrow)",
+   "market": "USDe/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 60.24900000000001,
+   "expected": {},
+   "label": "Disagreement beyond disagreementPauseMax (skipped: probe account could not borrow)",
+   "market": "USDe/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 66.0,
+   "expected": {},
+   "label": "Drifting (USD band breach) (skipped: probe account could not borrow)",
+   "market": "USDe/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 75.1,
+   "expected": {},
+   "label": "Application Frozen (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 76.0,
+   "expected": {},
+   "label": "Application Paused (General) (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 85.06,
+   "expected": {},
+   "label": "USDC primary stalled (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  },
+  {
+   "day": 85.1,
+   "expected": {},
+   "label": "USDC primary stalled, standby serving (skipped: probe account could not borrow)",
+   "market": "USDC/USDT",
+   "observed": {},
+   "state": null
+  }
+ ],
+ "profile": "mainnet",
+ "protocol": {
+  "deficit": {
+   "GHO": 0.0,
+   "USDC": 0.0
+  },
+  "drawn": {
+   "GHO": 1267324.0182197196,
+   "USDC": 351556.20251703146
+  },
+  "market_regular": {
+   "DAI/USDC": 3389996.464095272,
+   "GHO/USDC": 3477156.7806038987,
+   "USDC/USDT": 8000000.0,
+   "USDe/USDT": 2581412.657141003
+  },
+  "slice_by_wallet": {
+   "w985": 38117.664930169
+  },
+  "slice_used": {
+   "DAI/USDC": 0.0,
+   "GHO/USDC": 0.0,
+   "USDC/USDT": 0.0,
+   "USDe/USDT": 0.0
+  },
+  "slice_used_by_attacker": 38117.664930169,
+  "supply": {
+   "DAI/USDC": 1695116.571360673,
+   "GHO/USDC": 1738903.6931221897,
+   "USDC/USDT": 4000736.3765270812,
+   "USDe/USDT": 1291200.5551183098
+  }
+ },
+ "recredit": {
+  "done": 15,
+  "liquidity_added": 30,
+  "refused:CapExceeded": 43,
+  "refused:PoolShareExceeded": 5,
+  "refused:SliceNotAvailable": 14,
+  "units": 59813.14735959035
+ },
+ "refusals": [
+  [
+   "borrow",
+   "PriceTooOld",
+   53059,
+   420
+  ],
+  [
+   "borrow",
+   "PriceNotLive(Drifting:band)",
+   6954,
+   64
+  ],
+  [
+   "pledge",
+   "CapExceeded(market)",
+   1074,
+   283
+  ],
+  [
+   "borrow",
+   "PriceNotLive(Drifting:twap)",
+   391,
+   103
+  ],
+  [
+   "pledge",
+   "NotFullRange",
+   385,
+   377
+  ],
+  [
+   "borrow",
+   "ApplicationPaused",
+   342,
+   153
+  ],
+  [
+   "borrow",
+   "DebtPriceTooOld",
+   77,
+   13
+  ],
+  [
+   "borrow",
+   "PriceNotLive(Drifting:mixed)",
+   59,
+   14
+  ],
+  [
+   "removeLiquidity(rebalance)",
+   "PriceTooOld",
+   48,
+   23
+  ],
+  [
+   "pledge",
+   "SliceNotAvailable",
+   46,
+   10
+  ],
+  [
+   "borrow",
+   "ApplicationFrozen",
+   45,
+   45
+  ],
+  [
+   "pledge",
+   "PoolShareExceeded",
+   43,
+   32
+  ],
+  [
+   "recredit",
+   "CapExceeded(market)",
+   43,
+   10
+  ],
+  [
+   "borrow",
+   "BreakerTripped(POOL_SHARE)",
+   36,
+   20
+  ],
+  [
+   "repayWithCollateral",
+   "StalePrice(Cached/Expired)",
+   28,
+   9
+  ],
+  [
+   "borrow",
+   "PriceNotLive(Cached/Expired)",
+   26,
+   25
+  ],
+  [
+   "borrow",
+   "PriceNotLive(Drifting:disagree)",
+   26,
+   13
+  ],
+  [
+   "pledge(loop)",
+   "SliceNotAvailable",
+   23,
+   23
+  ],
+  [
+   "top-up",
+   "PriceNotAccepted(Cached/Expired)",
+   22,
+   6
+  ],
+  [
+   "pledge",
+   "PriceNotAccepted(Drifting)",
+   18,
+   8
+  ],
+  [
+   "recredit",
+   "SliceNotAvailable",
+   14,
+   3
+  ],
+  [
+   "pledge",
+   "PriceNotAccepted(Cached/Expired)",
+   5,
+   5
+  ],
+  [
+   "recredit",
+   "PoolShareExceeded",
+   5,
+   1
+  ],
+  [
+   "pledge",
+   "CapExceeded(depositor)",
+   3,
+   3
+  ],
+  [
+   "borrow",
+   "BreakerTripped(MANUAL)",
+   3,
+   3
+  ],
+  [
+   "top-up",
+   "SliceNotAvailable",
+   2,
+   2
+  ],
+  [
+   "top-up",
+   "PoolShareExceeded",
+   2,
+   2
+  ],
+  [
+   "pledge",
+   "NotRescueTopUp",
+   2,
+   2
+  ],
+  [
+   "pledge",
+   "BelowMinPledge",
+   1,
+   1
+  ],
+  [
+   "removeLiquidity(rebalance)",
+   "ApplicationPaused",
+   1,
+   1
+  ]
+ ],
+ "regular_users": 985,
+ "removal": {
+  "done": 69,
+  "reverted:DeadlineExpired": 2
+ },
+ "repay_quote": "deadline",
+ "rescue": {
+  "attacker_borrowed_after_first_slice": 0.0,
+  "attacker_slice_used": 38117.664930169,
+  "borrowed_after_slice_all": 0,
+  "rescue_excluded_borrow_refusals": 1,
+  "rescue_excluded_refusals_attacker": 1,
+  "rescue_units_booked": 19563.73108921179,
+  "stats": {
+   "planned:pool_share+breaker": 1,
+   "refused:PriceNotAccepted": 22,
+   "rescue_topups_done": 1,
+   "rescue_topups_done:breaker": 1,
+   "rescue_topups_done:pool_share": 1,
+   "sized_to_restore": 1,
+   "sized_to_restore_below_accepted": 1
+  }
+ },
+ "reverts": [
+  [
+   "pledge",
+   "DeadlineExpired",
+   10,
+   9,
+   239.23350906385107
+  ],
+  [
+   "pledge",
+   "Dropped(not mined)",
+   6,
+   6,
+   0.0
+  ],
+  [
+   "borrow",
+   "PriceTooOld",
+   5,
+   5,
+   31.60872721755089
+  ],
+  [
+   "withdraw",
+   "DeadlineExpired",
+   4,
+   4,
+   30.825195548216882
+  ],
+  [
+   "collectFees",
+   "DeadlineExpired",
+   4,
+   4,
+   13.209764394165386
+  ],
+  [
+   "removeLiquidity",
+   "DeadlineExpired",
+   2,
+   2,
+   24.030528902405898
+  ],
+  [
+   "borrow",
+   "Dropped(not mined)",
+   2,
+   1,
+   0.0
+  ],
+  [
+   "borrow",
+   "BadNonce",
+   2,
+   2,
+   7.941893663272099
+  ],
+  [
+   "repayAllAndWithdraw",
+   "Dropped(not mined)",
+   2,
+   2,
+   0.0
+  ],
+  [
+   "borrow",
+   "DeadlineExpired",
+   2,
+   2,
+   11.7626765197611
+  ],
+  [
+   "repayAllAndWithdraw",
+   "DeadlineExpired",
+   2,
+   2,
+   23.20478139834905
+  ],
+  [
+   "pledge",
+   "CapExceeded(market)",
+   1,
+   1,
+   18.37493828307873
+  ]
+ ],
+ "seed": 20261109,
+ "stuck": {
+  "added liquidity sitting uncredited in pledged NFTs (USD)": {
+   "usd": 101201.7660456486,
+   "users": 8
+  },
+  "forgetful accounts still open with debt (not stuck, idle)": {
+   "usd": 0,
+   "users": 3
+  },
+  "uncollected fees in the vault (claimable at any time)": {
+   "usd": 32383.07717654094,
+   "users": 455
+  }
+ },
+ "successes": {
+  "borrow": 229,
+  "collectFees": 486,
+  "pledge": 800,
+  "recredit": 15,
+  "removeLiquidity": 69,
+  "repay": 225,
+  "repayAllAndWithdraw": 42,
+  "repayWithCollateral": 9,
+  "top-up": 5,
+  "withdraw": 167
+ },
+ "third_party": {
+  "repaid": 5,
+  "repaid_in_None": 5,
+  "usd": 142618.0141173772
+ }
+}

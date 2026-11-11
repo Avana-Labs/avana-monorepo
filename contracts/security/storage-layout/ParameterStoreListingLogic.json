@@ -1,0 +1,643 @@
+{
+  "contract": "ParameterStoreListingLogic",
+  "source": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+  "storage": [],
+  "namespaces": {
+    "erc7201:avana.storage.ParameterStore": {
+      "baseSlot": "0x97d60a1f76524429d85918aee5154ffd84c83f78fddb1d1f3d0a0bfeca081800",
+      "declaredIn": "src/policy/parameter-store/ParameterStoreStorage.sol",
+      "fields": [
+        {
+          "path": "g",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "224",
+          "type": "struct GlobalParams"
+        },
+        {
+          "path": "g.cachedWindow",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "g.disagreementPauseMax",
+          "slot": "0",
+          "offset": 4,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "g.usdBandLow",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "g.usdBandHigh",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "g.graceDuration",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "g.graceHealthFactor",
+          "slot": "4",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "g.maxFlashFeeBps",
+          "slot": "5",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "g.avanaFeeShareBps",
+          "slot": "5",
+          "offset": 2,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "g.feeRecipient",
+          "slot": "5",
+          "offset": 4,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "g.feedAgreementMarginBps",
+          "slot": "5",
+          "offset": 24,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "g.gateRecoverySeconds",
+          "slot": "6",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "g.maxShortfallBps",
+          "slot": "6",
+          "offset": 8,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "sequencer",
+          "slot": "7",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct SequencerConfig"
+        },
+        {
+          "path": "sequencer.feed",
+          "slot": "7",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "sequencer.gracePeriod",
+          "slot": "7",
+          "offset": 20,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "poolShareMaxBps",
+          "slot": "8",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "coverageRatioBps",
+          "slot": "8",
+          "offset": 2,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "market",
+          "slot": "9",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct MarketParams)"
+        },
+        {
+          "path": "market[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "96",
+          "type": "struct MarketParams"
+        },
+        {
+          "path": "market[].twapWindow",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "market[].consistencyToleranceBps",
+          "slot": "0",
+          "offset": 4,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "market[].slippageAllowanceBps",
+          "slot": "0",
+          "offset": 6,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "market[].slippageAllowanceMinBps",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "market[].poolRiskFactor",
+          "slot": "0",
+          "offset": 10,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "market[].minPledgeUsd",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "market[].hardHealthFloor",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "marketUsdCap",
+          "slot": "10",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint256)"
+        },
+        {
+          "path": "marketUsdCap[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "topUpSliceUsd",
+          "slot": "11",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint256)"
+        },
+        {
+          "path": "topUpSliceUsd[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "stressFloorUsd",
+          "slot": "12",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint256)"
+        },
+        {
+          "path": "stressFloorUsd[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "tokenUsdCap",
+          "slot": "13",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => uint256))"
+        },
+        {
+          "path": "tokenUsdCap[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "tokenUsdCap[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "depositorUsdCap",
+          "slot": "14",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "depositorUsdCap[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "poolShareOverride",
+          "slot": "15",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => uint16)"
+        },
+        {
+          "path": "poolShareOverride[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "tokenCollateralFactorBps",
+          "slot": "16",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint16)"
+        },
+        {
+          "path": "tokenCollateralFactorBps[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "feedAgreementToleranceBps",
+          "slot": "17",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint16)"
+        },
+        {
+          "path": "feedAgreementToleranceBps[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "secondSource",
+          "slot": "18",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct SecondSource)"
+        },
+        {
+          "path": "secondSource[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "96",
+          "type": "struct SecondSource"
+        },
+        {
+          "path": "secondSource[].kind",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum SecondSourceKind"
+        },
+        {
+          "path": "secondSource[].source",
+          "slot": "0",
+          "offset": 1,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "secondSource[].poolRef",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
+        },
+        {
+          "path": "secondSource[].maxAge",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "secondSource[].twapWindow",
+          "slot": "2",
+          "offset": 4,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "secondSource[].toleranceBps",
+          "slot": "2",
+          "offset": 8,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "standby",
+          "slot": "19",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct SecondSource)"
+        },
+        {
+          "path": "standby[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "96",
+          "type": "struct SecondSource"
+        },
+        {
+          "path": "standby[].kind",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum SecondSourceKind"
+        },
+        {
+          "path": "standby[].source",
+          "slot": "0",
+          "offset": 1,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "standby[].poolRef",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
+        },
+        {
+          "path": "standby[].maxAge",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "standby[].twapWindow",
+          "slot": "2",
+          "offset": 4,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "standby[].toleranceBps",
+          "slot": "2",
+          "offset": 8,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "onStandby",
+          "slot": "20",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "onStandby[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "feeds",
+          "slot": "21",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct FeedDef)"
+        },
+        {
+          "path": "feeds[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "160",
+          "type": "struct FeedDef"
+        },
+        {
+          "path": "feeds[].decimals",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "feeds[].minAnswer",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "int256"
+        },
+        {
+          "path": "feeds[].maxAnswer",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "32",
+          "type": "int256"
+        },
+        {
+          "path": "feeds[].feedHeartbeat",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "feeds[].heartbeatMargin",
+          "slot": "3",
+          "offset": 4,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "feeds[].feedMaxAge",
+          "slot": "3",
+          "offset": 8,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "feeds[].feedDeviationThresholdBps",
+          "slot": "3",
+          "offset": 12,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "feeds[].heartbeatDriftBps",
+          "slot": "3",
+          "offset": 14,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "feeds[].borrowPriceMaxAge",
+          "slot": "3",
+          "offset": 16,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "feeds[].liquidationPriceMaxAge",
+          "slot": "3",
+          "offset": 20,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "feeds[].maxAnswerCap",
+          "slot": "4",
+          "offset": 0,
+          "bytes": "32",
+          "type": "int256"
+        },
+        {
+          "path": "routeDepth",
+          "slot": "22",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => uint256)"
+        },
+        {
+          "path": "routeDepth[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "floorRoundingAllowance",
+          "slot": "23",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "floorRoundingAllowance[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "breakerDeficitMax",
+          "slot": "24",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => uint256))"
+        },
+        {
+          "path": "breakerDeficitMax[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "breakerDeficitMax[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "debtStressRiseBps",
+          "slot": "25",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint16)"
+        },
+        {
+          "path": "debtStressRiseBps[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "targetHealthFactor",
+          "slot": "26",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "targetHealthFactor[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "minLiquidationBonus",
+          "slot": "27",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint16)"
+        },
+        {
+          "path": "minLiquidationBonus[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "lastLoosenedAt",
+          "slot": "28",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => uint64)"
+        },
+        {
+          "path": "lastLoosenedAt[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        }
+      ]
+    }
+  }
+}

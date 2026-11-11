@@ -1,0 +1,3859 @@
+{
+  "$schema": "http://json.schemastore.org/sarif-2.1.0-rtm.6",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "results": [
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 14,
+                  "byteOffset": 2638
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 14,
+                  "byteOffset": 2259
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "It appears that the contract includes a payable function to accept Ether but lacks a corresponding function to withdraw it, which leads to the Ether being locked in the contract. To resolve this issue, please implement a public or external function that allows for the withdrawal of Ether from the contract."
+          },
+          "ruleId": "contract-locks-ether"
+        },
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 9,
+                  "byteOffset": 4218
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 4462
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 16,
+                  "byteOffset": 4729
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 4980
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 5263
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 14,
+                  "byteOffset": 5509
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 14,
+                  "byteOffset": 5768
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 6083
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 6344
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 9,
+                  "byteOffset": 6886
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 14,
+                  "byteOffset": 7154
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 7484
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 14,
+                  "byteOffset": 7817
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 8050
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 8285
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 8,
+                  "byteOffset": 8804
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 12,
+                  "byteOffset": 9092
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 12,
+                  "byteOffset": 9367
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 9658
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 10214
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 6,
+                  "byteOffset": 10743
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 5,
+                  "byteOffset": 11019
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 9,
+                  "byteOffset": 11302
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 8,
+                  "byteOffset": 11548
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 8,
+                  "byteOffset": 11815
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 7,
+                  "byteOffset": 12092
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 13,
+                  "byteOffset": 12341
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 12597
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 13093
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 13355
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 13632
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 16,
+                  "byteOffset": 13894
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 12,
+                  "byteOffset": 14478
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 11,
+                  "byteOffset": 14670
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 14859
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 16,
+                  "byteOffset": 15118
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 11,
+                  "byteOffset": 15390
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 7540
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 7805
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 8077
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 8384
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 8692
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 8965
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 9236
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 9528
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 9818
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 12,
+                  "byteOffset": 10128
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 10389
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 1198
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 1485
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 28,
+                  "byteOffset": 1778
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 2073
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 2346
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 2581
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 2866
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 3122
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 3425
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 3728
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 3985
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 4228
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 4468
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 13,
+                  "byteOffset": 4725
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 10,
+                  "byteOffset": 5010
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 5272
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 13,
+                  "byteOffset": 5580
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 16,
+                  "byteOffset": 5835
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 6076
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 6331
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 6613
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 27,
+                  "byteOffset": 6904
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 7176
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 7525
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 7808
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 8095
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 8375
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 7,
+                  "byteOffset": 8728
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 9000
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 975
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 27,
+                  "byteOffset": 1246
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 29,
+                  "byteOffset": 1535
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 1820
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 30,
+                  "byteOffset": 2108
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 32,
+                  "byteOffset": 2418
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 2698
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 2958
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 3278
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 3542
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 3807
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 4087
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 4354
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 4598
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 4890
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 5200
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 5500
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 28,
+                  "byteOffset": 5793
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 6059
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 6406
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 6697
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 6975
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 7268
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 7548
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 7789
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreForwardRisk.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 8078
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Making a `delegatecall` to an arbitrary address without any checks is dangerous. Consider adding requirements on the target address."
+          },
+          "ruleId": "delegate-call-unchecked-address"
+        },
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/governance/timelock/AvanaTimelock.sol"
+                },
+                "region": {
+                  "byteLength": 7,
+                  "byteOffset": 8961
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/governance/timelock/AvanaTimelock.sol"
+                },
+                "region": {
+                  "byteLength": 12,
+                  "byteOffset": 9519
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Consider introducing checks for `msg.sender` to ensure the recipient of the money is as intended."
+          },
+          "ruleId": "eth-send-unchecked-address"
+        },
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "message": {
+                "text": "State is changed at: `totalCovered += amount`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/coverage/coverage-spoke/CoverageSpoke.sol"
+                },
+                "region": {
+                  "byteLength": 74,
+                  "byteOffset": 7070
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `allowedBorrowSpoke[spoke] = allowed`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/coverage/coverage-spoke/CoverageSpoke.sol"
+                },
+                "region": {
+                  "byteLength": 37,
+                  "byteOffset": 8350
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `indebted[proxy] = false`, `--indebtedCount[vt]`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationDebtMark.sol"
+                },
+                "region": {
+                  "byteLength": 135,
+                  "byteOffset": 1934
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `recordId = _nextRecordId++`, `_recordIdOf[c.integrationId][positionKey] = recordId`, `records[recordId] = BackingRecord({\n            positionKey: positionKey,\n            depositor: depositor,\n            integrationId: c.integrationId,\n            marketId: SafeCast.toUint32(c.marketId),\n            inList: true,\n            proxy: proxy,\n            // uint40 seconds last until the year 36812.\n            // forge-lint: disable-next-line(unsafe-typecast)\n            pledgedAt: uint40(block.timestamp),\n            lastDebitedAt: 0,\n            credited: credited,\n            originalUnits: credited,\n            rescueUnits: charge.rescueUnits,\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            originalUsdCharge: uint64(charge.usdCharge),\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            currentUsdCharge: uint64(charge.usdCharge)\n        })`, `marketRecords[vaultToken].push(recordId)`, `marketRecordIndex[recordId] = marketRecords[vaultToken].length`, `proxyMarket[proxy] = vaultToken`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationPledge.sol"
+                },
+                "region": {
+                  "byteLength": 89,
+                  "byteOffset": 4530
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `recordId = _nextRecordId++`, `_recordIdOf[c.integrationId][positionKey] = recordId`, `records[recordId] = BackingRecord({\n            positionKey: positionKey,\n            depositor: depositor,\n            integrationId: c.integrationId,\n            marketId: SafeCast.toUint32(c.marketId),\n            inList: true,\n            proxy: proxy,\n            // uint40 seconds last until the year 36812.\n            // forge-lint: disable-next-line(unsafe-typecast)\n            pledgedAt: uint40(block.timestamp),\n            lastDebitedAt: 0,\n            credited: credited,\n            originalUnits: credited,\n            rescueUnits: charge.rescueUnits,\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            originalUsdCharge: uint64(charge.usdCharge),\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            currentUsdCharge: uint64(charge.usdCharge)\n        })`, `marketRecords[vaultToken].push(recordId)`, `marketRecordIndex[recordId] = marketRecords[vaultToken].length`, `proxyMarket[proxy] = vaultToken`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationPledge.sol"
+                },
+                "region": {
+                  "byteLength": 70,
+                  "byteOffset": 4753
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `claimable[token][account] += received`, `totalClaimable[token] += received`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/payout-escrow/PayoutEscrow.sol"
+                },
+                "region": {
+                  "byteLength": 37,
+                  "byteOffset": 3688
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `claimable[token][account] += received`, `totalClaimable[token] += received`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/payout-escrow/PayoutEscrow.sol"
+                },
+                "region": {
+                  "byteLength": 54,
+                  "byteOffset": 3900
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `claimable[token][account] += received`, `totalClaimable[token] += received`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/payout-escrow/PayoutEscrow.sol"
+                },
+                "region": {
+                  "byteLength": 53,
+                  "byteOffset": 4034
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `claimable[token][msg.sender] = 0`, `totalClaimable[token] -= amount`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/payout-escrow/PayoutEscrow.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 5052
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `_GEM_CONVERSION = gemConversion`, `_KIND = step.kind`, `_MODULE = step.module`, `_WRAPPER = step.wrapper`, `_INTERMEDIATE = step.intermediate`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/PegModuleRoute.sol"
+                },
+                "region": {
+                  "byteLength": 176,
+                  "byteOffset": 3649
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `_GEM_CONVERSION = gemConversion`, `_KIND = step.kind`, `_MODULE = step.module`, `_WRAPPER = step.wrapper`, `_INTERMEDIATE = step.intermediate`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/PegModuleRoute.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 4010
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `_WRAPPER_KIND = step.kind`, `_WRAPPER = step.wrapper`, `_UNDERLYING = step.underlying`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/WrapperThenDexRoute.sol"
+                },
+                "region": {
+                  "byteLength": 83,
+                  "byteOffset": 2733
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `m.status = MarketStatus.Active`, `m.activatedAt = uint64(block.timestamp)`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryActivationLogic.sol"
+                },
+                "region": {
+                  "byteLength": 131,
+                  "byteOffset": 4286
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `m.status = MarketStatus.Active`, `m.activatedAt = uint64(block.timestamp)`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryActivationLogic.sol"
+                },
+                "region": {
+                  "byteLength": 36,
+                  "byteOffset": 4430
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `m.status = MarketStatus.Active`, `m.activatedAt = uint64(block.timestamp)`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryActivationLogic.sol"
+                },
+                "region": {
+                  "byteLength": 83,
+                  "byteOffset": 4529
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `m.status = MarketStatus.Offboarding`, `l.windDown[marketId] =\n        // Block timestamps and chain identifiers fit 64 bits.\n        // forge-lint: disable-next-line(unsafe-typecast)\n        WindDownState({offboardedAt: uint64(block.timestamp), lastStepAt: 0, startLtBps: cf, currentLtBps: cf})`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryActivationLogic.sol"
+                },
+                "region": {
+                  "byteLength": 111,
+                  "byteOffset": 6159
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `l.hubTier[hub] = tier`, `l.hubList.push(hub)`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryHubsLogic.sol"
+                },
+                "region": {
+                  "byteLength": 52,
+                  "byteOffset": 3736
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `l.integrationLpVault[integrationId] = lpVault`, `l.integrationPricing[integrationId] = pricing`, `l.integrationIdOf[lpVault] = integrationId`, `l.isPricing[pricing] = true`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryHubsLogic.sol"
+                },
+                "region": {
+                  "byteLength": 226,
+                  "byteOffset": 4511
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `l.coverageSpokeOf[hub][asset] = coverageSpoke`, `l.knownCoverageSpoke[coverageSpoke] = true`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryHubsLogic.sol"
+                },
+                "region": {
+                  "byteLength": 306,
+                  "byteOffset": 5485
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `l.crossHubLineCap[fundingHub][asset][spoke] = cap`, `l.crossHubLineTotal[fundingHub][asset] = total`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryHubsLogic.sol"
+                },
+                "region": {
+                  "byteLength": 76,
+                  "byteOffset": 6915
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `cl.drawCapSum -= l.recordedDrawCap[spoke][reserveId]`, `delete l.recordedDrawCap[spoke][reserveId]`, `delete l.latched[key]`, `delete l.lastBreachAt[key]`, `delete l.debtReserves[spoke][reserveId]`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryHubsLogic.sol"
+                },
+                "region": {
+                  "byteLength": 130,
+                  "byteOffset": 13440
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `t.listed = true`, `t.decimals = dec`, `t.isUsdStable = def.isUsdStable`, `t.primaryRoute = def.primaryRoute`, `t.alternateRoute = def.alternateRoute`, `t.standbyRoute = def.standbyRoute`, `t.replacedSlot = RouteSlot.None`, `t.issuerProbe = def.issuerProbe`, `t.pegModule = def.pegModule`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryListingLogic.sol"
+                },
+                "region": {
+                  "byteLength": 44,
+                  "byteOffset": 3950
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `m.status = MarketStatus.Closed`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryWindDownLogic.sol"
+                },
+                "region": {
+                  "byteLength": 76,
+                  "byteOffset": 4838
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `$.marketUsdCap[marketId] = initialMarketUsdCap`, `$.topUpSliceUsd[marketId] = initialTopUpSliceUsd`, `$.stressFloorUsd[marketId] = initialStressFloorUsd`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreListingLogic.sol"
+                },
+                "region": {
+                  "byteLength": 63,
+                  "byteOffset": 5707
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreListingLogic.sol"
+                },
+                "region": {
+                  "byteLength": 47,
+                  "byteOffset": 8534
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreListingLogic.sol"
+                },
+                "region": {
+                  "byteLength": 56,
+                  "byteOffset": 8591
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreListingLogic.sol"
+                },
+                "region": {
+                  "byteLength": 62,
+                  "byteOffset": 8657
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreListingLogic.sol"
+                },
+                "region": {
+                  "byteLength": 62,
+                  "byteOffset": 8729
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `_lpVaultOf[integrationId] = lpVault`, `_isLpVault[lpVault] = true`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/vault-token/vault-token-factory/VaultTokenFactory.sol"
+                },
+                "region": {
+                  "byteLength": 176,
+                  "byteOffset": 5606
+                }
+              }
+            },
+            {
+              "message": {
+                "text": "State is changed at: `_lpVaultOf[integrationId] = lpVault`, `_isLpVault[lpVault] = true`"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/vault-token/vault-token-factory/VaultTokenFactory.sol"
+                },
+                "region": {
+                  "byteLength": 42,
+                  "byteOffset": 5830
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Changing state after an external call can lead to re-entrancy attacks.Use the checks-effects-interactions pattern to avoid this issue."
+          },
+          "ruleId": "reentrancy-state-change"
+        },
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationLedger.sol"
+                },
+                "region": {
+                  "byteLength": 14,
+                  "byteOffset": 8926
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Downcasting int/uints in Solidity can be unsafe due to the potential for data loss and unintended behavior.When downcasting a larger integer type to a smaller one (e.g., uint256 to uint128), the value may exceed the range of the target type,leading to truncation and loss of significant digits. Use OpenZeppelin's SafeCast library to safely downcast integers."
+          },
+          "ruleId": "unsafe-casting"
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationBase.sol"
+                },
+                "region": {
+                  "byteLength": 244,
+                  "byteOffset": 17275
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationBase.sol"
+                },
+                "region": {
+                  "byteLength": 336,
+                  "byteOffset": 19287
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationLedger.sol"
+                },
+                "region": {
+                  "byteLength": 220,
+                  "byteOffset": 3797
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationLedger.sol"
+                },
+                "region": {
+                  "byteLength": 224,
+                  "byteOffset": 4607
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationLedger.sol"
+                },
+                "region": {
+                  "byteLength": 1233,
+                  "byteOffset": 5777
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationLedger.sol"
+                },
+                "region": {
+                  "byteLength": 204,
+                  "byteOffset": 7479
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationLedger.sol"
+                },
+                "region": {
+                  "byteLength": 67,
+                  "byteOffset": 7692
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationLedger.sol"
+                },
+                "region": {
+                  "byteLength": 231,
+                  "byteOffset": 12026
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationPending.sol"
+                },
+                "region": {
+                  "byteLength": 395,
+                  "byteOffset": 3056
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryHubsLogic.sol"
+                },
+                "region": {
+                  "byteLength": 81,
+                  "byteOffset": 15795
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Invoking `SSTORE` operations in loops may waste gas. Use a local variable to hold the loop computation result."
+          },
+          "ruleId": "costly-loop"
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 15660
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 10664
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Consider removing empty blocks."
+          },
+          "ruleId": "empty-block"
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationPending.sol"
+                },
+                "region": {
+                  "byteLength": 106,
+                  "byteOffset": 3589
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/DexHops.sol"
+                },
+                "region": {
+                  "byteLength": 837,
+                  "byteOffset": 8303
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/SwapRouteBase.sol"
+                },
+                "region": {
+                  "byteLength": 244,
+                  "byteOffset": 5701
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Avoid `require` / `revert` statements in a loop because a single bad item can cause the whole transaction to fail. It's better to forgive on fail and return failed elements post processing of the loop"
+          },
+          "ruleId": "require-revert-in-loop"
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationDebtMark.sol"
+                },
+                "region": {
+                  "byteLength": 12,
+                  "byteOffset": 1102
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationDebtMark.sol"
+                },
+                "region": {
+                  "byteLength": 12,
+                  "byteOffset": 1501
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "There are state variable changes in this function but no event is emitted. Consider emitting an event to enable offchain indexers to track the changes."
+          },
+          "ruleId": "state-change-without-event"
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationBase.sol"
+                },
+                "region": {
+                  "byteLength": 54,
+                  "byteOffset": 13517
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationPledge.sol"
+                },
+                "region": {
+                  "byteLength": 54,
+                  "byteOffset": 11741
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationRelease.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 2593
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationRelease.sol"
+                },
+                "region": {
+                  "byteLength": 77,
+                  "byteOffset": 4030
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/collateralization/CollateralizationRelease.sol"
+                },
+                "region": {
+                  "byteLength": 43,
+                  "byteOffset": 6479
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/governance/timelock/AvanaTimelock.sol"
+                },
+                "region": {
+                  "byteLength": 41,
+                  "byteOffset": 4619
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/governance/timelock/AvanaTimelock.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 4745
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/DexHops.sol"
+                },
+                "region": {
+                  "byteLength": 62,
+                  "byteOffset": 8923
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/DexHops.sol"
+                },
+                "region": {
+                  "byteLength": 80,
+                  "byteOffset": 10774
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/PegModuleRoute.sol"
+                },
+                "region": {
+                  "byteLength": 49,
+                  "byteOffset": 6438
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/PegModuleRoute.sol"
+                },
+                "region": {
+                  "byteLength": 47,
+                  "byteOffset": 7068
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/PegModuleRoute.sol"
+                },
+                "region": {
+                  "byteLength": 48,
+                  "byteOffset": 8290
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/WrapperThenDexRoute.sol"
+                },
+                "region": {
+                  "byteLength": 63,
+                  "byteOffset": 4500
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 40,
+                  "byteOffset": 3681
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 50,
+                  "byteOffset": 3731
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryRouter.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 7554
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 40,
+                  "byteOffset": 3973
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 50,
+                  "byteOffset": 4023
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStoreRouter.sol"
+                },
+                "region": {
+                  "byteLength": 45,
+                  "byteOffset": 4246
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Function returns a value but it is ignored. Consider checking the return value."
+          },
+          "ruleId": "unchecked-return"
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 29,
+                  "byteOffset": 624
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 847
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 996
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 38,
+                  "byteOffset": 1207
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 1541
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 1806
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 1951
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 54,
+                  "byteOffset": 2415
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 2704
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 2891
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 27,
+                  "byteOffset": 3090
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 18,
+                  "byteOffset": 3232
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 3448
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 3614
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 17,
+                  "byteOffset": 3819
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 4010
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 4210
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 4382
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 55,
+                  "byteOffset": 4609
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 69,
+                  "byteOffset": 4903
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 5114
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 5272
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 5460
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/custody/lp-vault/ILPVaultErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 5649
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/lens/lens/ILensErrors.sol"
+                },
+                "region": {
+                  "byteLength": 15,
+                  "byteOffset": 395
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/lens/lens/ILensErrors.sol"
+                },
+                "region": {
+                  "byteLength": 34,
+                  "byteOffset": 584
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/lens/lens/ILensErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 857
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/lens/lens/ILensErrors.sol"
+                },
+                "region": {
+                  "byteLength": 34,
+                  "byteOffset": 1120
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/lens/lens/ILensErrors.sol"
+                },
+                "region": {
+                  "byteLength": 42,
+                  "byteOffset": 1350
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 714
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 31,
+                  "byteOffset": 892
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 1063
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 1243
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 48,
+                  "byteOffset": 1515
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 1862
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 1986
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 29,
+                  "byteOffset": 2158
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 2532
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 44,
+                  "byteOffset": 2868
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 3071
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 3309
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 24,
+                  "byteOffset": 3542
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 3853
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 53,
+                  "byteOffset": 4162
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 29,
+                  "byteOffset": 4477
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 4623
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 4860
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 64,
+                  "byteOffset": 5252
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 28,
+                  "byteOffset": 6314
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 6552
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 60,
+                  "byteOffset": 6849
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 41,
+                  "byteOffset": 7075
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 7289
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 40,
+                  "byteOffset": 7604
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 57,
+                  "byteOffset": 7925
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 57,
+                  "byteOffset": 8336
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 39,
+                  "byteOffset": 8676
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 9603
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 9875
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/debt-oracle/IDebtOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 57,
+                  "byteOffset": 535
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/debt-oracle/IDebtOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 44,
+                  "byteOffset": 775
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/debt-oracle/IDebtOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 34,
+                  "byteOffset": 1060
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/debt-oracle/IDebtOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 42,
+                  "byteOffset": 1297
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/debt-oracle/IDebtOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 1577
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/lp-oracle/ILPOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 57,
+                  "byteOffset": 572
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/lp-oracle/ILPOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 46,
+                  "byteOffset": 814
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/lp-oracle/ILPOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 44,
+                  "byteOffset": 1059
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/lp-oracle/ILPOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 42,
+                  "byteOffset": 1274
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/lp-oracle/ILPOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 39,
+                  "byteOffset": 1551
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/oracle/lp-oracle/ILPOracleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 1844
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 501
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 1025
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 40,
+                  "byteOffset": 1217
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 60,
+                  "byteOffset": 1510
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 19,
+                  "byteOffset": 1764
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 40,
+                  "byteOffset": 1966
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 48,
+                  "byteOffset": 2261
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 34,
+                  "byteOffset": 2488
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 2763
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 38,
+                  "byteOffset": 3064
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 66,
+                  "byteOffset": 3337
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 3732
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 31,
+                  "byteOffset": 4065
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 4372
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 53,
+                  "byteOffset": 4729
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 54,
+                  "byteOffset": 5078
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 88,
+                  "byteOffset": 5668
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 5914
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 23,
+                  "byteOffset": 6158
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 20,
+                  "byteOffset": 6286
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 39,
+                  "byteOffset": 6598
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 44,
+                  "byteOffset": 6856
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 65,
+                  "byteOffset": 7238
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 28,
+                  "byteOffset": 7526
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 7801
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 29,
+                  "byteOffset": 8069
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/aave-adapter/IAaveAdapterErrors.sol"
+                },
+                "region": {
+                  "byteLength": 46,
+                  "byteOffset": 8308
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/IMarketRegistryErrors.sol"
+                },
+                "region": {
+                  "byteLength": 70,
+                  "byteOffset": 5743
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 40,
+                  "byteOffset": 457
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 42,
+                  "byteOffset": 726
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 925
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 21,
+                  "byteOffset": 1205
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 1587
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 1696
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 36,
+                  "byteOffset": 1930
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 31,
+                  "byteOffset": 2102
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 28,
+                  "byteOffset": 2255
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 25,
+                  "byteOffset": 2428
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 2613
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 35,
+                  "byteOffset": 2805
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 3003
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 29,
+                  "byteOffset": 3244
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 26,
+                  "byteOffset": 3575
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 62,
+                  "byteOffset": 4028
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 42,
+                  "byteOffset": 4414
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 51,
+                  "byteOffset": 4790
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 34,
+                  "byteOffset": 4981
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 43,
+                  "byteOffset": 5202
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 56,
+                  "byteOffset": 5569
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 55,
+                  "byteOffset": 5854
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 45,
+                  "byteOffset": 6267
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 74,
+                  "byteOffset": 6795
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 71,
+                  "byteOffset": 7117
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 43,
+                  "byteOffset": 7357
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 47,
+                  "byteOffset": 7631
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 39,
+                  "byteOffset": 7893
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 48,
+                  "byteOffset": 8250
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 65,
+                  "byteOffset": 8670
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 55,
+                  "byteOffset": 9052
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 79,
+                  "byteOffset": 9417
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 85,
+                  "byteOffset": 9921
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 71,
+                  "byteOffset": 10325
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 59,
+                  "byteOffset": 10623
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 38,
+                  "byteOffset": 11231
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 66,
+                  "byteOffset": 11496
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 22,
+                  "byteOffset": 11748
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 42,
+                  "byteOffset": 12016
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 43,
+                  "byteOffset": 12577
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/risk-module/IRiskModuleErrors.sol"
+                },
+                "region": {
+                  "byteLength": 57,
+                  "byteOffset": 12869
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Consider using or removing the unused error."
+          },
+          "ruleId": "unused-error"
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/governance/timelock/AvanaTimelock.sol"
+                },
+                "region": {
+                  "byteLength": 72,
+                  "byteOffset": 169
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/governance/timelock/AvanaTimelock.sol"
+                },
+                "region": {
+                  "byteLength": 62,
+                  "byteOffset": 242
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/liquidation/settlement-routes/DexPathRoute.sol"
+                },
+                "region": {
+                  "byteLength": 56,
+                  "byteOffset": 103
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 70,
+                  "byteOffset": 348
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 76,
+                  "byteOffset": 419
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 66,
+                  "byteOffset": 496
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 62,
+                  "byteOffset": 563
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 68,
+                  "byteOffset": 626
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 64,
+                  "byteOffset": 695
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 66,
+                  "byteOffset": 760
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 68,
+                  "byteOffset": 827
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistry.sol"
+                },
+                "region": {
+                  "byteLength": 70,
+                  "byteOffset": 896
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/market-registry/MarketRegistryRouter.sol"
+                },
+                "region": {
+                  "byteLength": 64,
+                  "byteOffset": 195
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 64,
+                  "byteOffset": 304
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 70,
+                  "byteOffset": 369
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 64,
+                  "byteOffset": 440
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 70,
+                  "byteOffset": 505
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/policy/parameter-store/ParameterStore.sol"
+                },
+                "region": {
+                  "byteLength": 76,
+                  "byteOffset": 576
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Redundant import statement. Consider removing it."
+          },
+          "ruleId": "unused-import"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "fullName": "Cyfrin - Aderyn",
+          "informationUri": "https://github.com/Cyfrin/aderyn",
+          "name": "Aderyn",
+          "organization": "Cyfrin",
+          "semanticVersion": "0.6.8",
+          "version": "0.6.8"
+        }
+      }
+    }
+  ]
+}

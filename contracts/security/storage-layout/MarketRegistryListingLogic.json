@@ -1,0 +1,1189 @@
+{
+  "contract": "MarketRegistryListingLogic",
+  "source": "src/policy/market-registry/MarketRegistryListingLogic.sol",
+  "storage": [],
+  "namespaces": {
+    "erc7201:avana.storage.MarketRegistry": {
+      "baseSlot": "0x598189494afc908fd08b2b882e497a0aa6147de6d30a80184ae623e37f6d8000",
+      "declaredIn": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "fields": [
+        {
+          "path": "marketCount",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "markets",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct Market)"
+        },
+        {
+          "path": "markets[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "416",
+          "type": "struct Market"
+        },
+        {
+          "path": "markets[].chainId",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "markets[].hub",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "markets[].spoke",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "markets[].integrationId",
+          "slot": "1",
+          "offset": 20,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "markets[].integration",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "markets[].pool",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "markets[].poolId",
+          "slot": "4",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
+        },
+        {
+          "path": "markets[].shape",
+          "slot": "5",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct PositionShape"
+        },
+        {
+          "path": "markets[].shape.kind",
+          "slot": "5",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum ShapeKind"
+        },
+        {
+          "path": "markets[].shape.tickLower",
+          "slot": "5",
+          "offset": 1,
+          "bytes": "3",
+          "type": "int24"
+        },
+        {
+          "path": "markets[].shape.tickUpper",
+          "slot": "5",
+          "offset": 4,
+          "bytes": "3",
+          "type": "int24"
+        },
+        {
+          "path": "markets[].tokens",
+          "slot": "6",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "markets[].tokens[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "markets[].tokenDecimals",
+          "slot": "7",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint8[]"
+        },
+        {
+          "path": "markets[].tokenDecimals[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "markets[].vaultToken",
+          "slot": "8",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "markets[].decimals",
+          "slot": "8",
+          "offset": 20,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "markets[].lpOracle",
+          "slot": "9",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "markets[].hubAssetId",
+          "slot": "10",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "markets[].reserveId",
+          "slot": "11",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "markets[].status",
+          "slot": "12",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum MarketStatus"
+        },
+        {
+          "path": "markets[].registeredAt",
+          "slot": "12",
+          "offset": 1,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "markets[].activatedAt",
+          "slot": "12",
+          "offset": 9,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "settlementReserve",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint256)"
+        },
+        {
+          "path": "settlementReserve[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "windDown",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct WindDownState)"
+        },
+        {
+          "path": "windDown[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct WindDownState"
+        },
+        {
+          "path": "windDown[].offboardedAt",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "windDown[].lastStepAt",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "windDown[].startLtBps",
+          "slot": "0",
+          "offset": 16,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "windDown[].currentLtBps",
+          "slot": "0",
+          "offset": 18,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "keyOf",
+          "slot": "4",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => bytes32)"
+        },
+        {
+          "path": "keyOf[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
+        },
+        {
+          "path": "marketOfKey",
+          "slot": "5",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => uint256)"
+        },
+        {
+          "path": "marketOfKey[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "marketOfVaultToken",
+          "slot": "6",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "marketOfVaultToken[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "marketOfLpOracle",
+          "slot": "7",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "marketOfLpOracle[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "marketOfHubAsset",
+          "slot": "8",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(uint256 => uint256))"
+        },
+        {
+          "path": "marketOfHubAsset[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint256)"
+        },
+        {
+          "path": "marketOfHubAsset[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "marketOfReserve",
+          "slot": "9",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(uint256 => uint256))"
+        },
+        {
+          "path": "marketOfReserve[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint256)"
+        },
+        {
+          "path": "marketOfReserve[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "marketsOfSpoke",
+          "slot": "10",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256[])"
+        },
+        {
+          "path": "marketsOfSpoke[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256[]"
+        },
+        {
+          "path": "marketsOfSpoke[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "hubList",
+          "slot": "11",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "hubList[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "hubTier",
+          "slot": "12",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => enum RiskTier)"
+        },
+        {
+          "path": "hubTier[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum RiskTier"
+        },
+        {
+          "path": "integrationLpVault",
+          "slot": "13",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint32 => address)"
+        },
+        {
+          "path": "integrationLpVault[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "integrationPricing",
+          "slot": "14",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint32 => address)"
+        },
+        {
+          "path": "integrationPricing[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "integrationIdOf",
+          "slot": "15",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint32)"
+        },
+        {
+          "path": "integrationIdOf[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "isPricing",
+          "slot": "16",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "isPricing[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "spokeList",
+          "slot": "17",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "spokeList[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "spokes",
+          "slot": "18",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct SpokeDef)"
+        },
+        {
+          "path": "spokes[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "96",
+          "type": "struct SpokeDef"
+        },
+        {
+          "path": "spokes[].approved",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "spokes[].hub",
+          "slot": "0",
+          "offset": 1,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "spokes[].integrationId",
+          "slot": "0",
+          "offset": 21,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "spokes[].riskTier",
+          "slot": "0",
+          "offset": 25,
+          "bytes": "1",
+          "type": "enum RiskTier"
+        },
+        {
+          "path": "spokes[].implementation",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "spokes[].aaveOracle",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "spokeOfTriple",
+          "slot": "19",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => address)"
+        },
+        {
+          "path": "spokeOfTriple[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "flashSource",
+          "slot": "20",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "debtReserves",
+          "slot": "21",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(uint256 => struct DebtReserveDef))"
+        },
+        {
+          "path": "debtReserves[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct DebtReserveDef)"
+        },
+        {
+          "path": "debtReserves[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "192",
+          "type": "struct DebtReserveDef"
+        },
+        {
+          "path": "debtReserves[][].reserveId",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "debtReserves[][].asset",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "debtReserves[][].decimals",
+          "slot": "1",
+          "offset": 20,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "debtReserves[][].fundingHub",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "debtReserves[][].hubAssetId",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "debtReserves[][].priceSource",
+          "slot": "4",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "debtReserves[][].fixedPrice",
+          "slot": "4",
+          "offset": 20,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "debtReserves[][].coverageSpoke",
+          "slot": "5",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "debtReserves[][].crossHub",
+          "slot": "5",
+          "offset": 20,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "debtReserves[][].approved",
+          "slot": "5",
+          "offset": 21,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "debtReserveIds",
+          "slot": "22",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256[])"
+        },
+        {
+          "path": "debtReserveIds[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256[]"
+        },
+        {
+          "path": "debtReserveIds[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "knownCoverageSpoke",
+          "slot": "23",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "knownCoverageSpoke[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "knownPriceSource",
+          "slot": "24",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "knownPriceSource[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "isDebtAsset",
+          "slot": "25",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "isDebtAsset[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "coverageSpokeOf",
+          "slot": "26",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => address))"
+        },
+        {
+          "path": "coverageSpokeOf[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => address)"
+        },
+        {
+          "path": "coverageSpokeOf[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "creditLines",
+          "slot": "27",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => struct MarketRegistryStorage.CreditLine))"
+        },
+        {
+          "path": "creditLines[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct MarketRegistryStorage.CreditLine)"
+        },
+        {
+          "path": "creditLines[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "64",
+          "type": "struct MarketRegistryStorage.CreditLine"
+        },
+        {
+          "path": "creditLines[][].line",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "creditLines[][].drawCapSum",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "recordedDrawCap",
+          "slot": "28",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(uint256 => uint256))"
+        },
+        {
+          "path": "recordedDrawCap[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint256)"
+        },
+        {
+          "path": "recordedDrawCap[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "crossHubLineCap",
+          "slot": "29",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => mapping(address => uint256)))"
+        },
+        {
+          "path": "crossHubLineCap[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => uint256))"
+        },
+        {
+          "path": "crossHubLineCap[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "crossHubLineCap[][][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "crossHubLineTotal",
+          "slot": "30",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => uint256))"
+        },
+        {
+          "path": "crossHubLineTotal[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "crossHubLineTotal[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "crossHubLinesEnabled",
+          "slot": "31",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "tokens",
+          "slot": "32",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct TokenDef)"
+        },
+        {
+          "path": "tokens[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "160",
+          "type": "struct TokenDef"
+        },
+        {
+          "path": "tokens[].listed",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "tokens[].decimals",
+          "slot": "0",
+          "offset": 1,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "tokens[].isUsdStable",
+          "slot": "0",
+          "offset": 2,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "tokens[].primaryRoute",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "tokens[].primaryRoute[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "tokens[].alternateRoute",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "tokens[].alternateRoute[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "tokens[].standbyRoute",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "tokens[].standbyRoute[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "tokens[].replacedSlot",
+          "slot": "4",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum RouteSlot"
+        },
+        {
+          "path": "tokens[].issuerProbe",
+          "slot": "4",
+          "offset": 1,
+          "bytes": "1",
+          "type": "enum IssuerProbe"
+        },
+        {
+          "path": "tokens[].pegModule",
+          "slot": "4",
+          "offset": 2,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "priceRouteVersion",
+          "slot": "33",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint64)"
+        },
+        {
+          "path": "priceRouteVersion[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "routes",
+          "slot": "34",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => struct MarketRegistryStorage.RouteRecord)"
+        },
+        {
+          "path": "routes[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct MarketRegistryStorage.RouteRecord"
+        },
+        {
+          "path": "routes[].route",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "routes[].active",
+          "slot": "0",
+          "offset": 20,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "approvedBefore",
+          "slot": "35",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => mapping(address => bool))"
+        },
+        {
+          "path": "approvedBefore[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "approvedBefore[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "knownRoute",
+          "slot": "36",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "knownRoute[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "pauseState",
+          "slot": "37",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => enum PauseState)"
+        },
+        {
+          "path": "pauseState[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum PauseState"
+        },
+        {
+          "path": "pauseReason",
+          "slot": "38",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => enum PauseReason)"
+        },
+        {
+          "path": "pauseReason[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "enum PauseReason"
+        },
+        {
+          "path": "latched",
+          "slot": "39",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => uint32)"
+        },
+        {
+          "path": "latched[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "lastBreachAt",
+          "slot": "40",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => uint64)"
+        },
+        {
+          "path": "lastBreachAt[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "frozen",
+          "slot": "41",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "frozen[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "freezeBuckets",
+          "slot": "42",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(uint64 => uint16))"
+        },
+        {
+          "path": "freezeBuckets[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint64 => uint16)"
+        },
+        {
+          "path": "freezeBuckets[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "approvedSpokeCodeHash",
+          "slot": "43",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => bool)"
+        },
+        {
+          "path": "approvedSpokeCodeHash[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "spokeCodeHash",
+          "slot": "44",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bytes32)"
+        },
+        {
+          "path": "spokeCodeHash[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
+        },
+        {
+          "path": "integrationContracts",
+          "slot": "45",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint32 => address[])"
+        },
+        {
+          "path": "integrationContracts[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "integrationContracts[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "knownIntegrationContract",
+          "slot": "46",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "knownIntegrationContract[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "standbyCancelledAt",
+          "slot": "47",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint64)"
+        },
+        {
+          "path": "standbyCancelledAt[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "routeEpoch",
+          "slot": "48",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => uint32)"
+        },
+        {
+          "path": "routeEpoch[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        }
+      ]
+    }
+  }
+}

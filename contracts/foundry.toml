@@ -1,0 +1,320 @@
+# Avana Foundry workspace.
+# Compiler settings follow REQ-ARCH-053: Solidity 0.8.28, EVM cancun, no linked libraries in
+# upgradeable contracts. Dependencies are installed by Soldeer into dependencies/ and pinned in
+# soldeer.lock (TEST-001); there are no git submodules.
+
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+cache_path = "cache"
+libs = ["dependencies"]
+solc_version = "0.8.28"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 10_000
+via_ir = false
+# No metadata hash in the bytecode: the bytecode check before deployments/verified/ compares
+# runtime code byte for byte, and a comment or path change must not alter it.
+bytecode_hash = "none"
+cbor_metadata = false
+# Deterministic builds across machines and CI.
+auto_detect_solc = false
+offline = false
+# Only the remappings in remappings.txt; no guessing from dependency folders.
+auto_detect_remappings = false
+# Libraries used only by test helpers are linked at test time.
+dynamic_test_linking = true
+# Fork tests run in their own profile and differential tests in theirs (FFI); Halmos `check_`
+# functions are ignored by forge test.
+no_match_path = "test/{fork,differential}/**"
+fs_permissions = [
+  { access = "read", path = "./out" },
+  { access = "read", path = "./out-aave" },
+  { access = "read", path = "../deployments" },
+  { access = "read-write", path = "./deployments-local" },
+]
+gas_reports = ["*"]
+# Collateralization is immutable and may not delegatecall (REQ-COLL-001), so it cannot be split into logic contracts
+# the way the ParameterStore is; under the legacy pipeline its runtime code is about 27 KB at any optimizer setting.
+# The IR pipeline at 200 runs brings it to about 22.3 KB, inside EIP-170's 24,576 bytes with margin. Only the
+# deployable file is restricted: its facets, the harnesses that inherit them and every other contract keep the
+# default settings. certora/conf/Collateralization.conf compiles with the same two settings.
+# Each LPOracle implementation is a proxy target plus three logic contracts (views, poke, listing), each carrying the
+# evaluation core and the AMM protocol's pricing module; at 10,000 runs the poke and listing logic exceed EIP-170, at 200
+# runs they fit. The base's test harness and fuzz target compile the same way; each AMM protocol's deployable LPOracle
+# files take the same restriction when they land.
+# The concentrated-liquidity LPVaults carry the shared custody, binding and pricing base plus their AMM protocol's hooks;
+# at 10,000 runs the Slipstream LPVault is within about 140 bytes of EIP-170. At 1,000 runs both have about 2 KB of
+# margin. Both deployable files take the same setting so their margins stay alike; everything compiled with them (the
+# shared base, the Uniswap v3 test harness, their test suites) builds with it too, and every other contract keeps the
+# default. certora/conf/LPVault.conf,
+# LPVaultSlipstream.conf, UniswapV3Integration.conf and SlipstreamIntegration.conf compile with the same runs.
+additional_compiler_profiles = [
+  { name = "collateralization", optimizer = true, via_ir = true, optimizer_runs = 200 },
+  { name = "lporacle", optimizer = true, via_ir = false, optimizer_runs = 200 },
+  { name = "clvault", optimizer = true, via_ir = false, optimizer_runs = 1_000 },
+]
+# The DebtOracle implementation (one proxy per non-GHO debt asset) is about 27.8 KB under the legacy pipeline at 10,000
+# runs and 24.5 KB at 200 runs, too close to EIP-170; the IR pipeline at 200 runs brings it to about 23.3 KB. The
+# restriction covers its abstract parts (DebtOracleStorage, Reads, Evaluation, Recovery) too, so they are compiled
+# only with the contract that uses them. certora/conf/DebtOracle.conf compiles with the same two settings.
+compilation_restrictions = [
+  { paths = "src/custody/collateralization/Collateralization.sol", via_ir = true, optimizer_runs = 200 },
+  { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true, optimizer_runs = 200 },
+  { paths = "test/utils/harness/LPOracleHarness.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "test/invariant/echidna/LPOracleProperties.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 1_000 },
+  { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 1_000 },
+]
+
+[profile.default.fuzz]
+# 1,000 runs keeps the local loop under a few minutes; CI raises it to Aave V4's 10,000 (TEST-007).
+runs = 1_000
+# Fixed seed so a local failure reproduces on every machine; CI overrides it per run.
+seed = "0xa7a7a"
+max_test_rejects = 131_072
+# Dictionary weighting toward values seen in storage and events: share, liquidity and price
+# boundaries matter more than uniform random words.
+dictionary_weight = 60
+include_storage = true
+include_push_bytes = true
+
+[profile.default.invariant]
+# Local smoke depth; the invariant and ci profiles run the full campaign.
+runs = 64
+depth = 64
+# Off by default: safety handlers bound their inputs but are allowed to hit reverting paths
+# (TEST-007). Liveness handlers assert success inside the handler instead.
+fail_on_revert = false
+call_override = false
+dictionary_weight = 80
+include_storage = true
+include_push_bytes = true
+shrink_run_limit = 5_000
+show_metrics = true
+
+[profile.ci]
+# Fresh seed per CI run (taken from the environment by the workflow) so coverage grows over time.
+[profile.ci.fuzz]
+runs = 10_000
+max_test_rejects = 1_000_000
+
+[profile.ci.invariant]
+# 10,000 runs per TEST-007; depth 100 covers the longest operation sequence in the Quint models
+# (pledge, borrow, price move, liquidation, repay, withdraw interleaved across 3 accounts).
+runs = 10_000
+depth = 100
+fail_on_revert = false
+shrink_run_limit = 10_000
+
+[profile.aave]
+# Builds the pinned Aave V4 release with Aave's own compiler settings into out-aave/, so the Hub,
+# Spokes, AaveOracle, configurators and LiquidationLogic that fixtures and deploy scripts use have
+# the runtime code of the release (TEST-002, TEST-134). Fixtures deploy from these artifacts with
+# deployCode/vm.getCode; nothing in Avana's src/ or test/ imports Aave sources, so Aave's settings
+# never leak into Avana's build. SpokeInstance links LiquidationLogic at its CREATE2 address,
+# supplied through FOUNDRY_LIBRARIES by the library step in script/README.md.
+src = "dependencies/aave-v4-a3ef63e/src"
+test = "dependencies/aave-v4-a3ef63e/src/deployments"
+# aave-deploy/ holds AvanaAaveV4Roles, which runs Aave's own role procedures for the local fixture; it is compiled here,
+# with Aave's settings, so Avana's default build never imports Aave sources.
+script = "aave-deploy"
+out = "out-aave"
+cache_path = "cache-aave"
+optimizer = true
+optimizer_runs = 44_444_444
+via_ir = false
+bytecode_hash = "none"
+# Aave keeps the CBOR metadata section (its default); only the hash is dropped.
+cbor_metadata = true
+no_match_path = ""
+additional_compiler_profiles = [
+  { name = "hub", optimizer = true, via_ir = true, optimizer_runs = 22_300 },
+  { name = "spoke", optimizer = true, via_ir = true, optimizer_runs = 750 },
+]
+compilation_restrictions = [
+  { paths = "dependencies/aave-v4-a3ef63e/src/hub/instances/HubInstance.sol", via_ir = true, optimizer_runs = 22_300 },
+  { paths = "dependencies/aave-v4-a3ef63e/src/spoke/instances/SpokeInstance.sol", via_ir = true, optimizer_runs = 750 },
+]
+
+[profile.differential]
+# FFI differential fuzzing of the LPOracle against the mpmath reference in
+# test/differential/reference/ (TEST-037). FFI is enabled only in this profile.
+ffi = true
+match_path = "test/differential/**"
+no_match_path = "test/fork/**"
+
+[profile.differential.fuzz]
+# Each run spawns a Python process; 2,000 runs bound a run to minutes while covering every tick
+# bucket the reference partitions.
+runs = 2_000
+
+[profile.invariant]
+# Dedicated deep campaign over test/invariant only: fewer runs than ci, but four times the call
+# depth, to reach states that need long histories (incident clock, cooldown, grace latch).
+match_path = "test/invariant/**"
+no_match_path = "test/fork/**"
+
+[profile.invariant.invariant]
+runs = 2_000
+depth = 400
+fail_on_revert = false
+shrink_run_limit = 10_000
+show_metrics = true
+
+[profile.fork]
+# Mainnet fork for third-party behaviour: Uniswap v3, Chainlink, GHO FlashMinter, the GHO
+# Stability Modules and the Sky LitePSM (Q-074). The fixture forks at MAINNET_FORK_BLOCK with
+# vm.createSelectFork("mainnet", vm.envUint("MAINNET_FORK_BLOCK")) so every run sees the same state.
+match_path = "test/fork/**"
+no_match_path = "test/halmos/**"
+eth_rpc_url = "${RPC_MAINNET}"
+# Fork RPC responses are cached under ~/.foundry/cache/rpc, keyed by block.
+no_storage_caching = false
+
+[profile.fork.fuzz]
+# Each fork run costs RPC round-trips; 256 runs keeps a cold-cache run under the CI time budget.
+runs = 256
+
+[profile.fork.invariant]
+runs = 32
+depth = 50
+fail_on_revert = false
+
+[profile.smt]
+# Solidity SMTChecker (PROP-043, PROP-044): no reachable overflow, underflow, division by zero or
+# failing assert in the immutable contracts, the LPOracle, DebtOracle, LPVaultSwap, the RiskModule, the
+# ParameterStore and the swap route contracts.
+# CHC finds loop and cross-function counterexamples that BMC misses.
+optimizer = false
+
+[profile.smt.model_checker]
+engine = "chc"
+timeout = 100_000
+targets = [
+  "assert",
+  "underflow",
+  "overflow",
+  "divByZero",
+  "constantCondition",
+  "popEmptyArray",
+  "outOfBounds",
+  "balance",
+]
+invariants = ["contract", "reentrancy"]
+show_unproved = true
+show_unsupported = true
+# PROP-043: the immutable contracts (LPVault, Collateralization, vault token, VaultTokenFactory, ProxyManager,
+# PositionProxy, Lock, PayoutEscrow, the Coverage Spoke, the AvanaTimelock extension), plus the MarketRegistry, which holds the pause
+# state. PROP-044: LPOracle, DebtOracle, LPVaultSwap, the RiskModule, the ParameterStore and one contract per swap
+# route type (PegModule, DexPath, WrapperThenDex).
+contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integration"], "src/custody/collateralization/Collateralization.sol" = ["Collateralization"], "src/vault-token/vault-token/VaultToken.sol" = ["VaultToken"], "src/vault-token/vault-token-factory/VaultTokenFactory.sol" = ["VaultTokenFactory"], "src/proxy/proxy-manager/ProxyManager.sol" = ["ProxyManager"], "src/proxy/position-proxy/PositionProxy.sol" = ["PositionProxy"], "src/lock/lock/Lock.sol" = ["Lock"], "src/governance/timelock/AvanaTimelock.sol" = ["AvanaTimelock"], "src/liquidation/payout-escrow/PayoutEscrow.sol" = ["PayoutEscrow"], "src/coverage/coverage-spoke/CoverageSpoke.sol" = ["CoverageSpoke"], "src/policy/market-registry/MarketRegistry.sol" = ["MarketRegistry"], "src/policy/parameter-store/ParameterStore.sol" = ["ParameterStore"], "src/policy/risk-module/RiskModule.sol" = ["RiskModule"], "src/oracle/lp-oracle/LPOracle.sol" = ["LPOracle"], "src/oracle/debt-oracle/DebtOracle.sol" = ["DebtOracle"], "src/liquidation/lp-vault-swap/LPVaultSwap.sol" = ["LPVaultSwap"], "src/liquidation/settlement-routes/PegModuleRoute.sol" = ["PegModuleRoute"], "src/liquidation/settlement-routes/DexPathRoute.sol" = ["DexPathRoute"], "src/liquidation/settlement-routes/WrapperThenDexRoute.sol" = ["WrapperThenDexRoute"] }
+
+[profile.coverage]
+# Coverage builds without the optimizer and without via-IR so source maps stay exact. Fork,
+# differential, Halmos and invariant suites are excluded: coverage measures the unit, fuzz,
+# integration and hostile suites.
+optimizer = false
+via_ir = false
+no_match_path = "test/{fork,differential,halmos,invariant}/**"
+
+[profile.coverage.fuzz]
+runs = 64
+
+[profile.gas]
+# Gas snapshots (`make gas`, CI `test` job): suites in test/gas/ name each measured operation with
+# vm.snapshotGasLastCall(group, label) or vm.startSnapshotGas/vm.stopSnapshotGas, and forge writes
+# snapshots/<group>.json, which is committed. With the check on, a value that differs from the committed
+# snapshot fails the run; `make gas` (FORGE_SNAPSHOT_CHECK=false) rewrites the files for review.
+match_path = "test/gas/**"
+isolate = true
+gas_snapshot_check = true
+
+[profile.governance]
+# Governance operation fork tests (governance/README.md, Operations): read and write the before/after
+# snapshots of each operation folder under ../governance/operations/.
+match_path = "test/governance/**"
+fs_permissions = [
+  { access = "read", path = "./out" },
+  { access = "read", path = "./out-aave" },
+  { access = "read", path = "../deployments" },
+  { access = "read-write", path = "./deployments-local" },
+  { access = "read-write", path = "../governance/operations" },
+]
+
+[rpc_endpoints]
+mainnet = "${RPC_MAINNET}"
+sepolia = "${RPC_SEPOLIA}"
+base = "${RPC_BASE}"
+base_sepolia = "${RPC_BASE_SEPOLIA}"
+anvil = "http://127.0.0.1:8545"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}", chain = 1 }
+sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
+base = { key = "${ETHERSCAN_API_KEY}", chain = 8453 }
+base_sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 84532 }
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+multiline_func_header = "params_first"
+quote_style = "double"
+number_underscore = "thousands"
+override_spacing = false
+wrap_comments = false
+sort_imports = true
+contract_new_lines = false
+ignore = ["dependencies/**"]
+
+[lint]
+# security-fast.sh and the fast-security CI job run `forge lint -D notes`: a finding of any severity fails. Scope is
+# src/ (the path is not passed on the command line, so `ignore` applies). Tests may use patterns (unchecked low-level
+# calls in hostile components, mixed-case helpers) that the lints flag in production code; external interfaces mirror
+# third-party ABIs.
+lint_on_build = false
+severity = ["high", "medium", "low", "info", "gas"]
+ignore = ["dependencies/**", "test/**", "script/**", "src/interfaces/external/**"]
+exclude_lints = [
+  # Indexed event fields are fixed by the spec's event definitions and the indexer's topic layout.
+  "event-fields",
+  # Getters of immutables and constants keep the SCREAMING_SNAKE_CASE name of the value (PROXY_HEALTH_FACTOR_FLOOR()).
+  "mixed-case-function",
+  # Time-based logic is part of the design (timelock delays, oracle staleness, grace periods); Slither's `timestamp`
+  # detector gates each comparison and its triage records the review.
+  "block-timestamp",
+  # solhint's no-inline-assembly and avoid-low-level-calls gate each site with one reviewed suppression comment.
+  "inline-assembly",
+  "low-level-calls",
+  # Gas suggestion to replace keccak256 with inline assembly, which the rule above keeps out of Avana code.
+  "asm-keccak256",
+  # Single-use internal functions and modifiers keep implementation files within the 500-line limit (Q-240).
+  "internal-function-used-once",
+  "modifier-used-only-once",
+  # Formula literals (1e18, 10_000 bps) stay inline where the spec writes them; forge fmt writes uint256/int256.
+  "literal-instead-of-constant",
+  "inconsistent-type-names",
+]
+
+[soldeer]
+# remappings.txt is maintained by hand: Aave V4 imports its own files as `src/...`, which needs a
+# context-scoped remapping that Soldeer does not generate.
+remappings_generate = false
+remappings_regenerate = false
+recursive_deps = false
+
+[dependencies]
+forge-std = "1.17.0"
+"@openzeppelin-contracts" = "5.1.0"
+"@openzeppelin-contracts-upgradeable" = "5.1.0"
+# CREATE3 for VaultTokenFactory (REQ-VTOKEN-020).
+solady = "0.1.26"
+halmos-cheatcodes = { version = "6da4e69", git = "https://github.com/a16z/halmos-cheatcodes.git", rev = "6da4e692c357ba6d641a2e677a28298cac9f76ab" }
+aave-v4 = { version = "a3ef63e", git = "https://github.com/aave/aave-v4.git", rev = "a3ef63ea6415d25237a9775bf66e76e9993561c2" }
+uniswap-v3-core = { version = "5ea68a7", git = "https://github.com/Uniswap/v3-core.git", rev = "5ea68a77cb541c6b3812df783be71ba8c081e25f" }
+uniswap-v3-periphery = { version = "24ccf01", git = "https://github.com/Uniswap/v3-periphery.git", rev = "24ccf014fe7f81d74a14c1689d6fdf123f280e45" }
+gho-core = { version = "c6335a0", git = "https://github.com/aave/gho-core.git", rev = "c6335a0bb9cba099960c5378b1ff0db190b8da8f" }

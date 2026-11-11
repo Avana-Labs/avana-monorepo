@@ -1,0 +1,679 @@
+{
+  "excluded_detectors": [
+    {
+      "check": "naming-convention",
+      "reason": "Getters of immutables and constants keep the SCREAMING_SNAKE_CASE name of the value they expose (HUB(), ADAPTER(), RESCUE_MIN_PLEDGE_USD()), as Aave V4 and OpenZeppelin name them; naming is not a security property."
+    },
+    {
+      "check": "unindexed-event-address",
+      "reason": "Which event fields are indexed is fixed by the spec's event definitions and the indexer's topic layout, not chosen per detector."
+    }
+  ],
+  "accepted": [
+    {
+      "fingerprint": "f28d08152321a0e7",
+      "check": "assembly",
+      "file": "src/lock/lock/Lock.sol",
+      "reason": "EIP-1153 TLOAD/TSTORE of the Lock holder at the fixed ERC-7201 slot LockSlot.HOLDER_SLOT (REQ-LOCK-002). Solidity 0.8.28 transient state variables cannot be placed at a chosen slot, so one opcode of assembly per access is required; each block is memory-safe, reads or writes one word and has no other effect. Covered by TEST-060, PROP-037 (Halmos, Certora) and LockProperties.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)",
+      "function": "Lock._holder()"
+    },
+    {
+      "fingerprint": "6f2ed9e8736758c4",
+      "check": "assembly",
+      "file": "src/lock/lock/Lock.sol",
+      "reason": "EIP-1153 TLOAD/TSTORE of the Lock holder at the fixed ERC-7201 slot LockSlot.HOLDER_SLOT (REQ-LOCK-002). Solidity 0.8.28 transient state variables cannot be placed at a chosen slot, so one opcode of assembly per access is required; each block is memory-safe, reads or writes one word and has no other effect. Covered by TEST-060, PROP-037 (Halmos, Certora) and LockProperties.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)",
+      "function": "Lock._setHolder(address)"
+    },
+    {
+      "fingerprint": "a4a2a56e7e2d052b",
+      "check": "timestamp",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "AvanaTimelock.isOperationExpired(bytes32)",
+      "reason": "Expiry is defined on block.timestamp (SPEC-GOV-013: expired iff block.timestamp >= readyAt + GRACE_PERIOD, 14 days). A validator's few-second timestamp drift cannot matter against a 14-day window; the comparison is the specified rule. Covered by TEST-194, TEST-212, PROP-058 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8075b2a83092dd6b",
+      "check": "assembly",
+      "file": "src/policy/parameter-store/ParameterStoreStorage.sol",
+      "function": "ParameterStoreStorage._s()",
+      "reason": "ERC-7201 namespaced storage: one `$.slot := _STORAGE_SLOT` with a compile-time constant slot (REQ-PSTORE-001), the OpenZeppelin 5 pattern; no other assembly.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "cfc9ed236e39e223",
+      "check": "low-level-calls",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "function": "ParameterStoreOracle._configFailures(address)",
+      "reason": "Two staticcalls: the store's own getOracleConfig view and LPOracle.checkConfig, passing the returned bytes unchanged (the return encoding of getOracleConfig(address) equals the argument encoding of checkConfig(OracleConfig)), which keeps the OracleConfig codec out of the size-limited setter contracts. Both are STATICCALL; a failed or malformed call counts as every check failing (OracleConfigRejected with 2^256-1), so it fails closed (REQ-PSTORE-009). Covered by TEST-064 (tightenRerunsCheckConfig), TEST-250.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "02434d186ccb60bf",
+      "check": "timestamp",
+      "file": "src/policy/parameter-store/ParameterStoreStorage.sol",
+      "function": "ParameterStoreStorage._spaceLoosening(bytes32,bytes32)",
+      "reason": "Loosening spacing is defined on block.timestamp (REQ-PSTORE-017, SPEC-GOV-011: block.timestamp >= lastLoosenedAt + normalDelay); a few seconds of drift cannot matter against a 4-5 day spacing. Covered by TEST-225, TEST-063.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d4ad5005c5e300c4",
+      "check": "unused-return",
+      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+      "function": "ParameterStoreListingLogic._sequencerFeedValid(address)",
+      "reason": "Only answer and startedAt of latestRoundData are part of the sequencer-feed check (REQ-PSTORE-023); roundId, updatedAt and answeredInRound are not.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "9c2950cd3e898ca5",
+      "check": "unused-return",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "function": "ParameterStoreOracle._usesFeed(address,address)",
+      "reason": "activePriceRoutes returns (primary, alternate, replaced); the two routes are already the ones in force, so the replaced slot carries nothing the caller needs (REQ-CONFIG-072).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "f63409f3ba9dc2b6",
+      "check": "unused-return",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "function": "ParameterStoreOracle._checkTwap(uint256,Market,uint32)",
+      "reason": "Only observationCardinality of slot0 is compared with twapMinObservations (REQ-PSTORE-027); price, tick and index are not used.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "cb07d39ee6d5db80",
+      "check": "unused-return",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "function": "ParameterStoreOracle._toleranceMin(address)",
+      "reason": "activePriceRoutes returns (primary, alternate, replaced); the two routes are already the ones in force, so the replaced slot carries nothing the caller needs (REQ-CONFIG-072).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "43b468909e6444c5",
+      "check": "unused-return",
+      "file": "src/policy/parameter-store/ParameterStoreRouter.sol",
+      "function": "ParameterStoreRouter._forward(address)",
+      "reason": "Setters return nothing, so the delegatecall's return data is empty by construction; Address.functionDelegateCall already bubbles any revert.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "21585235b80489dc",
+      "check": "unused-return",
+      "file": "src/policy/parameter-store/ParameterStoreViews.sol",
+      "function": "ParameterStoreViews._buildConfig(uint256,Market)",
+      "reason": "activePriceRoutes returns (primary, alternate, replaced); the two routes are already the ones in force, so the replaced slot carries nothing the caller needs (REQ-CONFIG-072).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "reason": "View calls in loops over the MarketRegistry's markets and a token's routes, made when a governance setter re-checks every affected LPOracle (REQ-PSTORE-009, REQ-CONFIG-024) or in getOracleConfig. All are STATICCALL to registry, LPOracle and integration views; the loop length is the registry's size, which only timelock operations grow, and a reverting callee only makes the governance call revert (fail closed).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "reason": "View calls in loops over the MarketRegistry's Spokes, markets and debt reserves for the liveness re-check (REQ-PSTORE-021, setMaxFlashFeeBps raise) and the debt-reserve scan (REQ-PSTORE-016, REQ-CONFIG-050). STATICCALL only, at execution of a governance setter or in a view; a reverting callee makes the setter revert (fail closed) and the liveness view return false.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "unused-state",
+      "files": "src/policy/parameter-store/ParameterStoreStorage.sol",
+      "reason": "The bounds are constants of the shared ParameterStoreStorage base; each of the six contracts that inherits it (the ParameterStore and its five logic contracts) uses only the bounds of its own setters, so every constant is unused in some of them. Constants occupy no storage.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/parameter-store/ParameterStoreViews.sol",
+      "reason": "getOracleConfig reads each pool token's routes in force from the MarketRegistry in a loop over the market's tokens (at most MAX_POOL_TOKENS = 8), view calls only (REQ-CONFIG-072).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "cd8bf0551034e764",
+      "check": "arbitrary-send-erc20",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow.deposit(address,address,uint256)",
+      "reason": "The `from` of safeTransferFrom is the immutable LP_VAULT_SWAP, not a caller-chosen address, and deposit reverts NotLPVaultSwap unless msg.sender == LP_VAULT_SWAP (REQ-ESCROW-002), so the escrow only ever pulls from the caller itself, the exact amount that caller approved for this call (REQ-ESCROW-003, REQ-SWAP-076). No third party's allowance can be spent. Covered by TEST-179 (depositOnlyFromLpVaultSwap fuzz), PROP-037 (Halmos, Certora).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "46fa1722a825fa02",
+      "check": "low-level-calls",
+      "file": "src/proxy/position-proxy/PositionProxy.sol",
+      "function": "PositionProxy.execute(address,bytes)",
+      "reason": "The proxy's one entry point forwards the AaveAdapter's calldata to the Adapter's target with no ETH (REQ-PROXY-007); a typed call cannot carry arbitrary calldata. Guarded by msg.sender == ADAPTER and a target with code that is not the proxy; an empty revert becomes CallFailed(target), revert data passes through unchanged and success returns the data (OpenZeppelin Address.verifyCallResult). Covered by TEST-187, TEST-032, PROP-010 and PROP-056 (Halmos, Certora).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c94c17a5e6aebafa",
+      "check": "too-many-digits",
+      "file": "src/proxy/proxy-manager/ProxyManager.sol",
+      "function": "ProxyManager.constructor(address,address)",
+      "reason": "The flagged literal is the compiler-embedded `type(PositionProxy).creationCode` bytes, not a numeric constant written in source; hashing it gives PROXY_CREATION_CODE_HASH (REQ-PROXY-085). Covered by TEST-190.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4ee62b238fd357ee",
+      "check": "too-many-digits",
+      "file": "src/proxy/proxy-manager/ProxyManager.sol",
+      "function": "ProxyManager._initCode(address,address,uint256)",
+      "reason": "Same as the constructor: the literal is `type(PositionProxy).creationCode`, the init-code prefix of REQ-PROXY-052, not a numeric constant. Covered by TEST-190, PROP-064, PROP-076.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b76c4f5503823111",
+      "check": "too-many-digits",
+      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+      "reason": "The 'literal' is the compiled VaultToken creation code from type(VaultToken).creationCode, which Slither prints as a hex constant; there is no hand-written numeric literal on the line. The creation code is the audited VaultToken (2.4) and the CREATE3 init code is bytes.concat(creationCode, abi.encode(bindings)) per REQ-VTOKEN-022. Covered by TEST-024 (bindings and predicted address of every deployed token).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)",
+      "function": "VaultTokenFactory._deployToken(VaultTokenBindings)"
+    },
+    {
+      "fingerprint": "8459d4ca08f0a108",
+      "check": "timestamp",
+      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "function": "CoverageSpoke.executeWithdrawal(uint256)",
+      "reason": "The withdrawal delay is defined on block.timestamp (SPEC-FLR-003: executable iff block.timestamp >= executableAt = requestTime + RESERVE_WITHDRAWAL_DELAY, 14 days). A validator's few-second timestamp drift cannot matter against a 1,209,600-second delay; the comparison is the specified rule. Covered by TEST-288 withdrawalWaitsFourteenDays (one second before and at executableAt) and CoverageSpokeProperties.execute.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "427a9680b053d9f7",
+      "check": "reentrancy-events",
+      "file": "src/flash/AaveV3FlashSource.sol",
+      "reason": "FlashLoanServed reports the premium the Aave V3 Pool charged, which the source learns only in the Pool's executeOperation callback, so the event follows the Pool's flashLoan call by construction (REQ-FLASH-001). Only LP_VAULT_SWAP may call flashLoan, a nested flashLoan reverts FlashLoanActive (transient context), and executeOperation runs only from the Pool for the open context, so no reentrant call can emit a second or reordered log. Covered by TEST-046 (reentrantLoanRefused, reentrantCallbackRefused), TEST-052 (premiumWithinCapIsRepaid checks the event), PROP-036 and PROP-080 (Halmos, Certora).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)",
+      "function": "AaveV3FlashSource.flashLoan(address,uint256,address,bytes)"
+    },
+    {
+      "fingerprint": "8e88e806765a59ca",
+      "check": "unused-return",
+      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "reason": "Only the answer of latestRoundData is used: the raw-price bound (REQ-CONFIG-035) is a listing-time magnitude check, not a price read, so round id and timestamps are irrelevant; freshness is enforced by the LPOracle. Covered by TEST-139.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "459238e867109301",
+      "check": "reentrancy-events",
+      "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
+      "reason": "MarketRegistered is emitted after the integration's bindMarket (the registered, immutable LPVault, callable only by this registry) and the RiskModule's view drift check; reaching listCollateralMarket again needs APPLICATION_ADMIN (the timelock), so no re-entry can reorder the event. Covered by TEST-138.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c58e65c69435c50c",
+      "check": "timestamp",
+      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+      "reason": "The wind-down schedule is defined on block.timestamp (REQ-CONFIG-080: notice 5 days, one step a day, 30-day ramp); a few seconds of validator drift cannot matter against day-scale intervals. Covered by TEST-213.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4f6f26b1fcdf8d06",
+      "check": "timestamp",
+      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+      "reason": "The wind-down schedule is defined on block.timestamp (REQ-CONFIG-080: notice 5 days, one step a day, 30-day ramp); a few seconds of validator drift cannot matter against day-scale intervals. Covered by TEST-213.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "15ff415436474f66",
+      "check": "assembly",
+      "file": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "reason": "One assignment of `.slot` binds the storage pointer to the fixed ERC-7201 slot of `avana.storage.MarketRegistry` (REQ-CONFIG-002); memory-safe, no other effect. Same pattern as ParameterStoreStorage._s().",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "fc4adc2216f2ce45",
+      "check": "low-level-calls",
+      "file": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+      "reason": "Two STATICCALLs: the ParameterStore's getOracleConfig view and LPOracle.checkConfig, passing the returned bytes unchanged (the return encoding of getOracleConfig(address) equals the argument encoding of checkConfig(OracleConfig)), because decoding OracleConfig into memory exceeds the legacy pipeline's stack; a failed or malformed call counts as a failed check (REQ-CONFIG-027, REQ-CONFIG-047). getPriceState is read the same way for its first field. Covered by TEST-231, TEST-138.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e989e2b325da6ec4",
+      "check": "low-level-calls",
+      "file": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+      "reason": "Two STATICCALLs: the ParameterStore's getOracleConfig view and LPOracle.checkConfig, passing the returned bytes unchanged (the return encoding of getOracleConfig(address) equals the argument encoding of checkConfig(OracleConfig)), because decoding OracleConfig into memory exceeds the legacy pipeline's stack; a failed or malformed call counts as a failed check (REQ-CONFIG-027, REQ-CONFIG-047). getPriceState is read the same way for its first field. Covered by TEST-231, TEST-138.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "2c85d9c8be3e6c72",
+      "check": "uninitialized-state",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "CollateralizationBase",
+      "reason": "False positive of the per-contract analysis: proxyMarket, indebtedCount and marketRecords are declared in the abstract CollateralizationBase and written by other facets of the one deployed contract (pledge writes proxyMarket and marketRecords, markIndebted writes indebtedCount); the abstract facet Slither analyzes alone (DebtMark, Views, Ledger) does not contain the writer. In the deployed Collateralization every variable has its writer. Covered by TEST-010, TEST-272, TEST-269.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b1a358f135cc90cf",
+      "check": "uninitialized-state",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "CollateralizationBase",
+      "reason": "False positive of the per-contract analysis: proxyMarket, indebtedCount and marketRecords are declared in the abstract CollateralizationBase and written by other facets of the one deployed contract (pledge writes proxyMarket and marketRecords, markIndebted writes indebtedCount); the abstract facet Slither analyzes alone (DebtMark, Views, Ledger) does not contain the writer. In the deployed Collateralization every variable has its writer. Covered by TEST-010, TEST-272, TEST-269.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "0a2096962aac65dc",
+      "check": "uninitialized-state",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "CollateralizationBase",
+      "reason": "False positive of the per-contract analysis: proxyMarket, indebtedCount and marketRecords are declared in the abstract CollateralizationBase and written by other facets of the one deployed contract (pledge writes proxyMarket and marketRecords, markIndebted writes indebtedCount); the abstract facet Slither analyzes alone (DebtMark, Views, Ledger) does not contain the writer. In the deployed Collateralization every variable has its writer. Covered by TEST-010, TEST-272, TEST-269.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e284f01cefb57761",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releaseForDeleverage",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "be953f3fc4664a5f",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "recredit",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c3907100c7723506",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_reconcile",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1732600171e2b0bf",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releasePartial",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6f3fc246cb42c7e5",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releaseZeroCredit",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "29ebeceebb9e32ce",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "release",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "681a5383e975716e",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "settleSeizure",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d32ea28e17a1254b",
+      "check": "reentrancy-no-eth",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "pledge",
+      "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "7ccd604bd33cad2c",
+      "check": "unused-return",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "_charge",
+      "reason": "The ignored values are not needed and using them would be wrong: marketOf's shape is the LPVault's to enforce (Collateralization needs pool, poolId and tokens only); returnPosition's depositor is the LPVault's own record; topUpPosition's report is superseded by the live units read next (REQ-COLL-037); poke's price state is read by the RiskModule itself (Q-199); releaseToDepositor's report is replaced by the depositor's measured balance deltas (REQ-VAULT-088). Each call reverts on failure. Covered by TEST-238, TEST-237, TEST-018.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a449d23b8fc72c17",
+      "check": "unused-return",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_load",
+      "reason": "The ignored values are not needed and using them would be wrong: marketOf's shape is the LPVault's to enforce (Collateralization needs pool, poolId and tokens only); returnPosition's depositor is the LPVault's own record; topUpPosition's report is superseded by the live units read next (REQ-COLL-037); poke's price state is read by the RiskModule itself (Q-199); releaseToDepositor's report is replaced by the depositor's measured balance deltas (REQ-VAULT-088). Each call reverts on failure. Covered by TEST-238, TEST-237, TEST-018.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "9945ae0e30e46dd2",
+      "check": "unused-return",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releasePartial",
+      "reason": "The ignored values are not needed and using them would be wrong: marketOf's shape is the LPVault's to enforce (Collateralization needs pool, poolId and tokens only); returnPosition's depositor is the LPVault's own record; topUpPosition's report is superseded by the live units read next (REQ-COLL-037); poke's price state is read by the RiskModule itself (Q-199); releaseToDepositor's report is replaced by the depositor's measured balance deltas (REQ-VAULT-088). Each call reverts on failure. Covered by TEST-238, TEST-237, TEST-018.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "7d177c858e0e537d",
+      "check": "unused-return",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_returnPosition",
+      "reason": "The ignored values are not needed and using them would be wrong: marketOf's shape is the LPVault's to enforce (Collateralization needs pool, poolId and tokens only); returnPosition's depositor is the LPVault's own record; topUpPosition's report is superseded by the live units read next (REQ-COLL-037); poke's price state is read by the RiskModule itself (Q-199); releaseToDepositor's report is replaced by the depositor's measured balance deltas (REQ-VAULT-088). Each call reverts on failure. Covered by TEST-238, TEST-237, TEST-018.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6d980f0e8d4a2b77",
+      "check": "unused-return",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "_prepareRecredit",
+      "reason": "The ignored values are not needed and using them would be wrong: marketOf's shape is the LPVault's to enforce (Collateralization needs pool, poolId and tokens only); returnPosition's depositor is the LPVault's own record; topUpPosition's report is superseded by the live units read next (REQ-COLL-037); poke's price state is read by the RiskModule itself (Q-199); releaseToDepositor's report is replaced by the depositor's measured balance deltas (REQ-VAULT-088). Each call reverts on failure. Covered by TEST-238, TEST-237, TEST-018.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "17da900663f3a79c",
+      "check": "calls-loop",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_unwind",
+      "reason": "Bounded loops over Avana-controlled callees: one unwind per debited record (at most 16 per account-market, SPEC-BACK-016) and one balanceOf per market token (at most 8, REQ-COLL-028). A reverting callee reverts the whole call by design (any failure reverts the liquidation, REQ-VAULT-053). Covered by TEST-057, TEST-269, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "bda109ea8467567d",
+      "check": "calls-loop",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_balances",
+      "reason": "Bounded loops over Avana-controlled callees: one unwind per debited record (at most 16 per account-market, SPEC-BACK-016) and one balanceOf per market token (at most 8, REQ-COLL-028). A reverting callee reverts the whole call by design (any failure reverts the liquidation, REQ-VAULT-053). Covered by TEST-057, TEST-269, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "45aa62736846ed9e",
+      "check": "reentrancy-benign",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "release",
+      "reason": "Same call graph as the reentrancy-no-eth entries: callees are Avana immutables, Aave, and the RiskModule view, all under the Lock, so no re-entry is possible; the order (custody before credit, measured deltas) is the one 2.3 fixes (REQ-VAULT-089). Covered by TEST-060, TEST-010, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ee14f95026d47419",
+      "check": "reentrancy-benign",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "pledge",
+      "reason": "Same call graph as the reentrancy-no-eth entries: callees are Avana immutables, Aave, and the RiskModule view, all under the Lock, so no re-entry is possible; the order (custody before credit, measured deltas) is the one 2.3 fixes (REQ-VAULT-089). Covered by TEST-060, TEST-010, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8ab72d2ad89f0d95",
+      "check": "reentrancy-benign",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releaseZeroCredit",
+      "reason": "Same call graph as the reentrancy-no-eth entries: callees are Avana immutables, Aave, and the RiskModule view, all under the Lock, so no re-entry is possible; the order (custody before credit, measured deltas) is the one 2.3 fixes (REQ-VAULT-089). Covered by TEST-060, TEST-010, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "f655d9168b1e990c",
+      "check": "reentrancy-benign",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releaseForDeleverage",
+      "reason": "Same call graph as the reentrancy-no-eth entries: callees are Avana immutables, Aave, and the RiskModule view, all under the Lock, so no re-entry is possible; the order (custody before credit, measured deltas) is the one 2.3 fixes (REQ-VAULT-089). Covered by TEST-060, TEST-010, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e08c6d86b4f89d93",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "settleSeizure",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "90c60d6017fcce29",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releaseZeroCredit",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8295356cd00796e0",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releaseForDeleverage",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d5d6b1373ccc45fc",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "recredit",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4cd1097403a38a05",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_reconcile",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c316797a7b55bd01",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "_settleDebits",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a3bcb5d7c3ee0060",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "pledge",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "f6d923c44e6c75e0",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "release",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "9e00ec38e3530c8c",
+      "check": "reentrancy-events",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releasePartial",
+      "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1d4b77e028815a07",
+      "check": "timestamp",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_insert",
+      "reason": "No time comparison exists in _insert; Slither associates the BackingRecord read (whose struct carries pledgedAt and lastDebitedAt) with block.timestamp. The comparison is of credited units (SPEC-BACK-006). Covered by TEST-057, TEST-124, PROP-014 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "30bfa0e90f80d257",
+      "check": "assembly",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_storeSnapshot",
+      "reason": "EIP-1153 TSTORE/TLOAD of the seizure snapshot (proxy, vault token, reserve, shares, supply) at five fixed transient slots (REQ-VAULT-048); transient storage keeps a snapshot that is never settled from outliving its transaction, and the transient keyword is not used because the SMTChecker profile cannot compile it. Each block is memory-safe and touches only those slots. Covered by TEST-056, TEST-208.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ab1b64aeabef71f4",
+      "check": "assembly",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_loadSnapshot",
+      "reason": "EIP-1153 TSTORE/TLOAD of the seizure snapshot (proxy, vault token, reserve, shares, supply) at five fixed transient slots (REQ-VAULT-048); transient storage keeps a snapshot that is never settled from outliving its transaction, and the transient keyword is not used because the SMTChecker profile cannot compile it. Each block is memory-safe and touches only those slots. Covered by TEST-056, TEST-208.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ef24f14ff0f0c97f",
+      "check": "low-level-calls",
+      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "function": "markDebtFree",
+      "reason": "markDebtFree reads Spoke.getUserAccountData with a STATICCALL so that a failing or short read changes nothing and never reverts an authorized caller (REQ-COLL-040: a stale mark only delays closeMarket, while a revert would block repay and liquidation); the return data is length-checked before decoding. Covered by TEST-272 (debtFreeNeverReverts).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "9dc044a97129416c",
+      "check": "unimplemented-functions",
+      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "function": "CollateralizationPending",
+      "reason": "The facet is abstract and implements its share of the interface by design (the Adapter path is split into CollateralizationPledge and CollateralizationRelease, the seizure interface into CollateralizationSeizure and CollateralizationPending); the deployed Collateralization inherits every facet and implements every ICollateralization function (the build would fail otherwise). Covered by TEST-060, TEST-032.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "7cfd7fb4f67c0921",
+      "check": "unimplemented-functions",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "CollateralizationSeizure",
+      "reason": "The facet is abstract and implements its share of the interface by design (the Adapter path is split into CollateralizationPledge and CollateralizationRelease, the seizure interface into CollateralizationSeizure and CollateralizationPending); the deployed Collateralization inherits every facet and implements every ICollateralization function (the build would fail otherwise). Covered by TEST-060, TEST-032.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "32a14326a8019b6e",
+      "check": "unimplemented-functions",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "CollateralizationPledge",
+      "reason": "The facet is abstract and implements its share of the interface by design (the Adapter path is split into CollateralizationPledge and CollateralizationRelease, the seizure interface into CollateralizationSeizure and CollateralizationPending); the deployed Collateralization inherits every facet and implements every ICollateralization function (the build would fail otherwise). Covered by TEST-060, TEST-032.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "919236ccd8fcba54",
+      "check": "unimplemented-functions",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "CollateralizationRelease",
+      "reason": "The facet is abstract and implements its share of the interface by design (the Adapter path is split into CollateralizationPledge and CollateralizationRelease, the seizure interface into CollateralizationSeizure and CollateralizationPending); the deployed Collateralization inherits every facet and implements every ICollateralization function (the build would fail otherwise). Covered by TEST-060, TEST-032.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/market-registry/MarketRegistryDriftView.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/market-registry/MarketRegistryListingLogic.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "calls-loop",
+      "files": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "unused-state",
+      "files": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "reason": "MarketRegistryStorage is the shared base of the registry and its six logic contracts; each uses only the immutables and constants its own bodies need, so every one is unused in some of them. Immutables and constants occupy no storage.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e5853431879c99e7",
+      "check": "unused-return",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._concentratedHop: IUniswapV3Pool.swap",
+      "reason": "Route accounting is by balance deltas over the swap call, never by an external contract's return value: inRecv, each leg's output and every residue are rises of the route's own balances, and the output is LPVaultSwap's balance rise in TOKEN_OUT (REQ-ROUTE-008, REQ-ROUTE-009, REQ-ROUTE-014, REQ-ROUTE-015). The pool's returned (amount0, amount1) are not needed: the callback pays at most the hop's amount, once, only to the stored pool (REQ-ROUTE-013), and the hop's output is measured by _runHops as the route's balance rise. Trusting the returned deltas would be weaker than the measurement. Covered by TEST-232, TEST-177 and the callback tests of the DexPathRoute and WrapperThenDexRoute unit suites, PROP-068.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "167f85ddd071f2ec",
+      "check": "unused-return",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._runHops: ICurveStableSwapNG.exchange",
+      "reason": "Route accounting is by balance deltas over the swap call, never by an external contract's return value: inRecv, each leg's output and every residue are rises of the route's own balances, and the output is LPVaultSwap's balance rise in TOKEN_OUT (REQ-ROUTE-008, REQ-ROUTE-009, REQ-ROUTE-014, REQ-ROUTE-015). The dy that exchange returns duplicates the measured rise of hop.tokenOut that _runHops uses as the next hop's amount; a pool that over-reports cannot inflate it. Every hop runs with min_dy = 0 by specification (REQ-ROUTE-009); the single minOut check on LPVaultSwap's rise catches value lost on any hop. Covered by TEST-232, TEST-227, PROP-068.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "5a4d4b1800498ada",
+      "check": "unused-return",
+      "file": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+      "function": "PegModuleRoute._runLegs: IERC4626.deposit, IGsm.sellAsset, ILitePsm.buyGem",
+      "reason": "Route accounting is by balance deltas over the swap call, never by an external contract's return value: inRecv, each leg's output and every residue are rises of the route's own balances, and the output is LPVaultSwap's balance rise in TOKEN_OUT (REQ-ROUTE-008, REQ-ROUTE-009, REQ-ROUTE-014, REQ-ROUTE-015). The shares minted are the route's measured static-aToken rise; the GHO or USDC output is LPVaultSwap's measured rise (the module pays it directly), and unsold shares and DAI below one gem unit are measured residues returned to LPVaultSwap (REQ-ROUTE-011, REQ-ROUTE-012). The returned share count, (assetAmount, ghoBought) and daiInWad duplicate these measurements. Covered by the PegModuleRoute unit suite, TEST-232, PROP-068 and PROP-044.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a3356e08d193fad7",
+      "check": "unused-return",
+      "file": "src/liquidation/settlement-routes/WrapperThenDexRoute.sol",
+      "function": "WrapperThenDexRoute._runLegs: IERC4626.redeem",
+      "reason": "Route accounting is by balance deltas over the swap call, never by an external contract's return value: inRecv, each leg's output and every residue are rises of the route's own balances, and the output is LPVaultSwap's balance rise in TOKEN_OUT (REQ-ROUTE-008, REQ-ROUTE-009, REQ-ROUTE-014, REQ-ROUTE-015). The assets that redeem returns duplicate the route's measured rise of the underlying, which is what the hops spend; with a fee-on-transfer underlying the measurement is the correct amount and the return value would overstate it. Covered by the WrapperThenDexRoute unit suite, TEST-232, PROP-068.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e962ac2565e018c9",
+      "check": "calls-loop",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._runHops: Curve exchange in the hop loop",
+      "reason": "The loop is bounded by construction and every callee is an immutable address fixed and checked in the constructor; the hop loop runs at most MAX_HOPS = 3 times over the fixed hop pools. A reverting pool reverts the whole swap with no state change, and LPVaultSwap then uses the other route slot (REQ-ROUTE-009, REQ-ROUTE-043); this is the specified failure mode, not a denial of service of anything but this route.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ed04a66f6cf310ff",
+      "check": "calls-loop",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._concentratedHop: pool swap in the hop loop",
+      "reason": "The loop is bounded by construction and every callee is an immutable address fixed and checked in the constructor; the hop loop runs at most MAX_HOPS = 3 times over the fixed hop pools. A reverting pool reverts the whole swap with no state change, and LPVaultSwap then uses the other route slot (REQ-ROUTE-009, REQ-ROUTE-013); the transient hop context is cleared after each hop.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "3a1031d80b4228ba",
+      "check": "calls-loop",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._checkHop: token0/token1/coins view calls in the constructor's hop loop",
+      "reason": "Constructor only: one check per hop (at most MAX_HOPS = 3) reads the hop pool's token0/token1 or coins(i)/coins(j) as view calls (STATICCALL) to verify the hop against its pool (REQ-ROUTE-043, REQ-ROUTE-045). The loop stops at the first failed hop and the constructor then reverts InvalidRouteConfig; a reverting pool makes the deployment fail (fail closed).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d92f9de3948dd69b",
+      "check": "calls-loop",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "function": "SwapRouteBase.swap: balanceOf of each held token before and after the legs",
+      "reason": "The loop is bounded by construction and every callee is an immutable address fixed and checked in the constructor; held = [TOKEN_IN, intermediates, TOKEN_OUT] has at most five tokens, all distinct (checked in each route type's constructor). The before/after balanceOf reads are how residues are measured (REQ-ROUTE-015, REQ-ROUTE-016); a reverting token reverts the swap with no state change and LPVaultSwap uses the other route slot.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "f8d5f5d008543aa2",
+      "check": "calls-loop",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "function": "SwapRouteBase._balance: balanceOf read in the DexHops hop loop",
+      "reason": "The loop is bounded by construction and every callee is an immutable address fixed and checked in the constructor; _balance reads the route's balance of a fixed hop output once per hop (at most MAX_HOPS = 3) to measure the hop's output (REQ-ROUTE-009). A reverting token reverts the swap and LPVaultSwap uses the other route slot.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b0cb80316300158f",
+      "check": "calls-loop",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "function": "SwapRouteBase._rise: balanceOf read in the DexHops hop loop",
+      "reason": "The loop is bounded by construction and every callee is an immutable address fixed and checked in the constructor; _rise reads the route's balance of a fixed hop output once per hop (at most MAX_HOPS = 3) to measure the hop's output as a balance rise (REQ-ROUTE-008, REQ-ROUTE-009). A reverting token reverts the swap and LPVaultSwap uses the other route slot.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    }
+  ]
+}

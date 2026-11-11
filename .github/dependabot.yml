@@ -1,0 +1,43 @@
+# Update pull requests for the GitHub Actions (pinned by commit SHA) and the npm and pip tool pins. A release is
+# proposed only once it is at least 14 days old, the same rule the pins in contracts/script/install-security-tools.sh
+# follow. Soldeer dependencies (contracts/soldeer.lock) are not covered and change only by a reviewed
+# `forge soldeer update`.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /contracts
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+
+  - package-ecosystem: npm
+    directory: /spec/05-verification
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+
+  - package-ecosystem: pip
+    directory: /contracts
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+
+  - package-ecosystem: pip
+    directory: /spec/05-verification
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14

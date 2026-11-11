@@ -1,0 +1,19 @@
+[CONSISTENT] SYM-141: SPEC-GOV-001: [tightenMarketUsdCap, disableRoute] needs 43,200 s; adding loosenTopUpSliceUsd needs 432,000 s and delay 43,200 reverts
+      residual: 0
+[CONSISTENT] SYM-142: SPEC-GOV-002/013: ready at 1,780,432,000, executable through 1,781,641,599, expired at 1,781,641,600; clean-up at 1,781,000,000 is refused
+      residual: 0
+[CONSISTENT] SYM-143: SPEC-GOV-003/012: cut to 345,600 executes at 1,780,432,000; next upgrade ready at 1,780,777,600, 9 days after; 345,599, 259,200, 432,001, 864,000, 300,000 rejected
+      residual: 0
+[CONSISTENT] SYM-144: SPEC-GOV-007/010: disableRoute scheduled at 1,780,000,000 executes no earlier than 1,780,043,200 and no later than 1,781,252,799; expired at 1,781,252,800
+      residual: 0
+[CONSISTENT] SYM-145: SPEC-GOV-008: 3 keepers, keeperFloor 1, MAX_KEEPERS 32: freeze -> 2, remove -> 1; next freeze reverts (0 < 1); removing the last active one reverts; add -> 2; a 33rd keeper reverts
+      residual: 0
+[CONSISTENT] SYM-146: SPEC-GOV-009/011: twap 50 -> 30 ok, then 40 NotStricter, 8 LivenessBound; minOpeningHF 1.10 -> 1.07 ok, 1.06 too large; slippage 100 -> 125 ok, 126 too large
+      residual: 0
+[CONSISTENT] SYM-147: SPEC-GOV-011: cap 4e6 -> 6e6 passes (6e10 <= 6e10); next loosening refused until 1,780,864,000; slice from 0 capped at 600,000e8
+      residual: 0
+[CONSISTENT] SYM-148: SPEC-GOV-012: grace HF 0.88 rejected; grace 7,200 ok and 7,201 rejected; twap 9 rejected
+      residual: 0
+[CONSISTENT] SYM-149: SPEC-GOV-014/015: k = 3 needs 259,248; k_max 14,399 at 432,000 and 7,199 at 345,600; k = 1 spare 86,376; k = 7,200 needs 345,612; 7,200 transactions at the floor; 43,200 < 3-day reaction
+      residual: 0
+-- 9 checks: 9 CONSISTENT, 0 INCONSISTENT; 0 differ from README

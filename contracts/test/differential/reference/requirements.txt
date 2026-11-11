@@ -1,0 +1,3 @@
+# The reference uses the Python standard library only (exact integer and Fraction arithmetic).
+# mpmath==1.3.0 (the version the spec models use) is added here when the CL pricing reference needs
+# arbitrary-precision powers of 1.0001 (contract 13, MATH-UO-06, MATH-UO-07, MATH-UO-17).

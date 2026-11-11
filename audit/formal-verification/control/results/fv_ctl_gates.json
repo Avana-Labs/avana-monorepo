@@ -1,0 +1,362 @@
+[
+ {
+  "id": "FV-CTL-38",
+  "title": "postHealthCheck passes only if the collateral without rescue units covers the debt at max(1.00, the optional per-market hard floor, minHealthFactor), exactly, whether the hard floor is off (0) or set within bounds",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-PROXY-001",
+   "SPEC-CF-003",
+   "SPEC-CF-005",
+   "REQ-ADAPTER-026",
+   "REQ-RISK-068",
+   "REQ-PROXY-022",
+   "INV-025",
+   "REQ-RISK-059"
+  ],
+  "targets": [
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.05,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-38-W",
+  "title": "Witness: with the hard floor off, a borrow leaving hfEx exactly 1.00 with no rescue units passes",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "SPEC-CF-005",
+   "REQ-ADAPTER-026"
+  ],
+  "targets": [
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.15,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-102",
+  "title": "SPEC-CF-005 example: E = 3.12e28, subtraction 0.0312e18, hfEx = 1.1688e18; borrowing back to Aave hf 1.00 gives hfEx 0.974 and reverts",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-CF-005",
+   "REQ-RISK-068"
+  ],
+  "targets": [
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-39",
+  "title": "Every Adapter path that can lower an indebted account's health ends with postHealthCheck or the repay-with-collateral direction check; the unchecked paths run only at zero debt",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-ADAPTER-027",
+   "REQ-ADAPTER-078",
+   "REQ-ADAPTER-080",
+   "REQ-ADAPTER-071",
+   "INV-025"
+  ],
+  "targets": [
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-40",
+  "title": "The Adapter's debt-free test (Spoke borrowCount == 0) is exact: no indebted account takes the unchecked path and no debt-free account the gated one, for any MarketRegistry",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PROXY-034",
+   "REQ-PROXY-035",
+   "INV-025",
+   "INV-045"
+  ],
+  "targets": [
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-100",
+  "title": "Repay, the debt-free branches of withdraw and removeLiquidity, repayAllAndWithdraw, burnSeized and the deleverage callbacks read no MarketRegistry, RiskModule, ParameterStore or oracle state; every new-activity path does read the registry",
+  "status": "Verified",
+  "method": "exhaustive enumeration (11 cases)",
+  "verifies": [
+   "REQ-ADAPTER-047",
+   "REQ-ADAPTER-086",
+   "REQ-PROXY-027",
+   "REQ-PROXY-035",
+   "REQ-ADAPTER-070",
+   "REQ-ADAPTER-081",
+   "REQ-ACCESS-148",
+   "INV-045",
+   "INV-081"
+  ],
+  "targets": [
+   "T-57",
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-41",
+  "title": "Repay succeeds whenever Aave allows it and the payer funds it, for every pause state and reason, payer or borrower freeze, breaker and MarketRegistry implementation",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-043",
+   "REQ-PROXY-027",
+   "REQ-PROXY-032",
+   "REQ-ACCESS-068",
+   "REQ-ADAPTER-047",
+   "REQ-ADAPTER-082"
+  ],
+  "targets": [
+   "T-57"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-42",
+  "title": "Repay pulls min(maxRepaySpend, live debt) for a partial repay and maxRepaySpend for a repay-all, refunds received - spent, nets exactly the live debt for a fee-free repay-all, and moves nothing at zero debt",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-PROXY-003",
+   "REQ-PROXY-028",
+   "REQ-PROXY-029",
+   "REQ-PROXY-030",
+   "REQ-PROXY-083",
+   "REQ-PROXY-084",
+   "REQ-ADAPTER-085"
+  ],
+  "targets": [
+   "T-57"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-42-EX",
+  "title": "REQ-PROXY-083 example: Aave takes 3,024,657,535 and 2,005,342,465 return to the borrower",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-PROXY-083",
+   "REQ-ADAPTER-085"
+  ],
+  "targets": [
+   "T-57"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-43",
+  "title": "A borrow passes preBorrowCheck only if every collateral market is Live, fresh and unbroken, no collateral reserve is paused or frozen, every debt price is GHO's or a Live, fresh DebtOracle on the recorded source, the borrowed reserve's debt breaker is clear, an active keeper exists, with no drift and Hub shares == assets",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-PROXY-002",
+   "REQ-ADAPTER-015",
+   "REQ-ADAPTER-016",
+   "REQ-RISK-061",
+   "REQ-ADAPTER-061",
+   "REQ-ADAPTER-019",
+   "REQ-ADAPTER-021",
+   "REQ-RISK-065",
+   "REQ-RISK-071",
+   "REQ-ADAPTER-010",
+   "INV-023",
+   "INV-024",
+   "INV-060",
+   "INV-029",
+   "INV-072"
+  ],
+  "targets": [
+   "T-59",
+   "T-60",
+   "T-78"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-43-W",
+  "title": "Witness: a two-market, three-reserve account (GHO and a Live DebtOracle reserve) passes preBorrowCheck",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-ADAPTER-024"
+  ],
+  "targets": [
+   "T-59"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-103",
+  "title": "A withdraw-with-debt passes preWithdrawCheck only under the same gates except Offboarding and Aave-frozen collateral, and with the debt breaker of every held reserve clear",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ADAPTER-025",
+   "REQ-PROXY-036",
+   "REQ-RISK-065",
+   "INV-024"
+  ],
+  "targets": [
+   "T-59"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-44",
+  "title": "The borrowed reserve's price source, DebtOracle state and freshness are checked even before the account holds that debt",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PROXY-019",
+   "SPEC-PROXY-002",
+   "REQ-RISK-061"
+  ],
+  "targets": [
+   "T-59"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-45",
+  "title": "T-60 as scoped: with the reviewed RiskModule no borrow completes against a paused or frozen collateral reserve; with any RiskModule Aave refuses a paused or frozen borrowed reserve",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-060",
+   "REQ-PROXY-079",
+   "REQ-ADAPTER-019",
+   "REQ-ADAPTER-061"
+  ],
+  "targets": [
+   "T-60"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-101",
+  "title": "A pledge admitted through an exemption (Paused(General), a frozen caller, a tripped market breaker, the pool-share cap or minPledgeUsd above $10) is a rescue top-up: indebted, below the rescue target HF 1.10, charged at most its restore amount and worth at least min(minPledgeUsd, $10); and every such rescue passes unless the reason is MintPathSuspect",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-RISK-066",
+   "REQ-RISK-067",
+   "REQ-ADAPTER-083",
+   "REQ-ADAPTER-082",
+   "REQ-RISK-016",
+   "INV-082"
+  ],
+  "targets": [
+   "T-56",
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-101-EX",
+  "title": "REQ-RISK-066 example: restoreBooked = 266,666,666,667 ($2,666.67); a $2,000 rescue passes, a $3,000 one reverts NotRescueTopUp; at price8 80,000,000 the restore amount is 333,333,333,334",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-RISK-066",
+   "SPEC-CAP-003",
+   "REQ-ADAPTER-083"
+  ],
+  "targets": [
+   "T-58"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-46",
+  "title": "borrowNonce rises by exactly 1 per successful borrow, is unchanged by a reverted one, and admits one borrow per nonce value",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-019",
+   "REQ-PROXY-015"
+  ],
+  "targets": [
+   "T-61"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_gates"
+ },
+ {
+  "id": "FV-CTL-47",
+  "title": "A wallet's pledge, borrow or withdrawal can act only on its own proxy, never on another wallet's account",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ADAPTER-066",
+   "REQ-PROXY-053",
+   "Q-223"
+  ],
+  "targets": [
+   "T-62"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_gates"
+ }
+]

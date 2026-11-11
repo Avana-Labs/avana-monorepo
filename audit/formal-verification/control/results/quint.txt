@@ -1,0 +1,6 @@
+[quint] FV-CTL-98 gov  execWaitedNormalDelay            no violation (10,000 samples)
+[quint] FV-CTL-98 gov  pauseTransitionsLegal            no violation (10,000 samples)
+[quint] FV-CTL-98 gov  upgradesGuardianCancellable      no violation (10,000 samples)
+[quint] FV-CTL-98 gov  adminOnlyTimelock                no violation (10,000 samples)
+[quint] FV-CTL-98 gov  normalDelayInBounds              no violation (10,000 samples)
+[quint] FV-CTL-98 gov  restoringNotGuardianCancellable  no violation (10,000 samples)

@@ -1,0 +1,36 @@
+{
+  "accepted": [
+    {
+      "fingerprint": "0410eb7b4d80fdce",
+      "check": "initialize-target",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "ParameterStore.initialize(address,GlobalParams,uint256,uint16)",
+      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-PSTORE-001), and the implementation's constructor calls _disableInitializers. Covered by TEST-242 (initializeRefusesOtherTimelockAndRunsOnce).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "44499e6d1cee9a4b",
+      "check": "initialize-target",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-CONFIG-002, REQ-MREG-005), and the implementation's constructor calls _disableInitializers. Covered by TEST-242 (initializeOnlyWithTimelockAndOnce).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "2a1c646e4fe8715c",
+      "check": "initialize-target",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle.initialize(DebtOracleInitParams)",
+      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-091), and the implementation's constructor calls _disableInitializers. Covered by TEST-062 (initializeEmitsSeedAndRunsOnce) and TEST-242 (initializeRejectsAnotherTimelock).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern. initialize runs in the ERC1967Proxy constructor and rejects any timelock other than the immutable TIMELOCK."
+    },
+    {
+      "fingerprint": "d5db8888ac8cc58f",
+      "check": "initialize-target",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.initialize(address)",
+      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-RISK-002, Q-226), and the implementation's constructor calls _disableInitializers. Covered by TEST-242 (initializeOnce, adminRolesOnlyTimelock).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    }
+  ]
+}

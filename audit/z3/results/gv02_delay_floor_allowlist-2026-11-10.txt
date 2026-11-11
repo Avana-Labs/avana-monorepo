@@ -1,0 +1,17 @@
+[PROVED] MATH-GOV-16: at every reachable normal delay (>= MIN_NORMAL_DELAY) a borrower with k <= 7,199 NFTs and a 3-day reaction exits first
+[COUNTEREXAMPLE] MATH-GOV-17: the bound is exact: k = 7,200 at the floor needs 345,612 s > 345,600 s (deliberate counterexample, why k_max = 7,199)
+      k = 7200
+      r = 259200
+      normalDelay = 345600
+[PROVED] MATH-GOV-18: k_max = floor((MIN_NORMAL_DELAY - r) / 12) - 1 is the largest k with r + 12(k+1) <= MIN_NORMAL_DELAY, for every r <= MIN_NORMAL_DELAY - 12
+[PROVED] MATH-GOV-19: over 5 setShortDelaySelector calls a pair outside SHORT_ELIGIBLE (every role, upgrade, beacon and timelock pair) never becomes short
+[PROVED] MATH-GOV-19b: hence any batch containing an upgrade or role call is ready no earlier than t_s + MIN_NORMAL_DELAY
+[PROVED] MATH-GOV-20: cap step new * 10^4 <= old * 15,000 admits exactly new <= 1.5 * old (no rounding in the loosener's favour)
+[PROVED] MATH-GOV-20b: three loosenings of one cap key: at most 3.375x the start value and at least 2 x MIN_NORMAL_DELAY between the first and the third
+[PROVED] MATH-GOV-20c: hardHealthFloor loosening: old - new <= 0.03e18 per step (0, off, counts as 1.00e18), so one step from 1.10 reaches at most 1.07 and cannot switch the floor off; switching off needs a set floor of at most 1.03
+[PROVED] MATH-GOV-20d: topUpSliceUsd loosening from 0 is capped by 1.5 x floor(marketUsdCap / 10): a 4,000,000e8 cap admits at most 600,000e8
+[PROVED] MATH-GOV-21: an operation is restoring iff it has at least one call and every call is in the DAO-only cancel set; an empty batch or one mixing a DAO-only call with any other call is never restoring
+[PROVED] MATH-GOV-22: cleanupExpiredOperation succeeds only when the operation can no longer execute, and the same calls scheduled again are ready only after a fresh requiredDelay
+[PROVED] MATH-GOV-23: an accepted setNormalDelay value v (MIN_NORMAL_DELAY <= v <= MAX_DELAY) gives a wait of 4 to 5 days at the required delay
+[PROVED] MATH-GOV-24: a pure revokeRole batch cannot be cancelled by a guardian, and executed at readyAt it leaves the guardian no power from t_s + delay on
+-- 13 checks, 0 differ from documented result

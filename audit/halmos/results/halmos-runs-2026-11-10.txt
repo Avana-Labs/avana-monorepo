@@ -1,0 +1,75 @@
+Halmos 0.3.3 runs of 2026-11-10, per harness. Lines are copied from each run's console output (Running, PASS, FAIL, TIMEOUT and result lines; solver shutdown messages after a timeout are left out).
+
+=== VaultToken — 2026-11-10 17:04
+Running 7 tests for test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest
+[PASS] check_PROP_005_adapterOnlyFunctionsRefuseOtherCallers(address,address,uint256,uint8) (paths: 6, time: 0.25s, bounds: [])
+[PASS] check_PROP_005_supplyChangesOnlyThroughAdapter(address,bytes4,address,address,uint256) (paths: 92, time: 4.76s, bounds: [])
+[PASS] check_PROP_008_movementsOnlyOnAllowedPaths(address,address,address,uint256,uint8) (paths: 37, time: 4.07s, bounds: [])
+[PASS] check_PROP_009_registryAppendOnlyByAdapter(address,bytes4,address,address,uint256) (paths: 135, time: 15.44s, bounds: [])
+[PASS] check_PROP_055_bindingsNeverChange(address,bytes4,address,address,uint256) (paths: 91, time: 18.45s, bounds: [])
+[PASS] check_PROP_055_burnNeedsNoAllowanceAndLowersExactly(address,address,address,uint256) (paths: 17, time: 1.43s, bounds: [])
+[PASS] check_PROP_055_viewsAreTheFixedFormulas(address,address) (paths: 10, time: 1.85s, bounds: [])
+Symbolic test result: 7 passed; 0 failed; time: 46.59s
+
+=== VaultTokenFactory (first run against the stub; superseded by the merged contract) — 2026-11-10 18:02
+Running 4 tests for test/halmos/VaultTokenFactory.halmos.t.sol:VaultTokenFactoryHalmosTest
+Symbolic test result: 0 passed; 4 failed; time: 0.15s
+
+=== AaveV3FlashSource (before the balance-snapshot fix) — 2026-11-10 19:15
+Running 1 tests for test/halmos/AaveV3FlashSource.halmos.t.sol:AaveV3FlashSourceHalmosTest
+[TIMEOUT] check_PROP_080_completedLoanWithinBoundsAndRepaid(uint64) (paths: 85, time: 77.81s, bounds: [])
+Symbolic test result: 0 passed; 1 failed; time: 77.90s
+
+=== AaveV3FlashSource (after the balance-snapshot fix) — 2026-11-10 20:20
+Running 8 tests for test/halmos/AaveV3FlashSource.halmos.t.sol:AaveV3FlashSourceHalmosTest
+[PASS] check_PROP_036_callbackOutsideContextRefused(address,address,uint256,uint256) (paths: 5, time: 0.05s, bounds: [])
+[PASS] check_PROP_036_onlyOwnInitiator(address,uint64) (paths: 75, time: 3.39s, bounds: [])
+[PASS] check_PROP_080_capAboveRateAdmits(uint64,uint8) (paths: 14, time: 17.01s, bounds: [])
+[PASS] check_PROP_080_completedLoanLeavesSourceEmpty(uint64) (paths: 55, time: 2.26s, bounds: [])
+[PASS] check_PROP_080_completedLoanRepaidWithinCap(uint64) (paths: 74, time: 5.37s, bounds: [])
+[PASS] check_PROP_080_donationNeverForwarded(uint64,uint64) (paths: 83, time: 3.44s, bounds: [])
+[PASS] check_PROP_080_neverTheLiquidatedHub(uint256) (paths: 1, time: 0.01s, bounds: [])
+[PASS] check_PROP_080_onlyLPVaultSwapBorrows(address,address,uint256,address) (paths: 4, time: 0.02s, bounds: [])
+Symbolic test result: 8 passed; 0 failed; time: 31.72s
+
+=== PegModuleRoute — 2026-11-10 20:10
+Running 4 tests for test/halmos/PegModuleRoute.halmos.t.sol:PegModuleRouteHalmosTest
+[PASS] check_PROP_036_callbackAlwaysRefused(address,int256,int256) (paths: 2, time: 0.07s, bounds: [])
+[PASS] check_PROP_037_swapOnlyForLPVaultSwapUnderLock(address,uint8,uint128,uint128) (paths: 134, time: 8.81s, bounds: [])
+(no result line for the other two checks: the run was stopped and the solver executor shut down)
+
+=== Collateralization (PROP-028) — 2026-11-10 19:38
+Running 1 tests for test/halmos/Collateralization.halmos.t.sol:CollateralizationHalmosTest
+(no result line: the run was stopped and the solver executor shut down)
+
+=== SettlementMath — 2026-11-10 20:21
+Running 14 tests for test/halmos/SettlementMath.halmos.t.sol:SettlementMathHalmosTest
+(no result line: the run was stopped and the solver executor shut down)
+
+=== SettlementMath (per-check wall clock 240 s) — 2026-11-10 20:51
+check_PROP_015_gapSettlesWithoutRevert -> WALL TIMEOUT after 240 s
+check_PROP_018_unitAndPendingValues -> WALL TIMEOUT after 240 s
+check_PROP_018_floorCoversDebtUsdc -> WALL TIMEOUT after 240 s
+check_PROP_018_floorCoversDebtGho -> WALL TIMEOUT after 240 s
+
+=== LPPriceMath (PROP-023) — 2026-11-10 20:26
+Running 6 tests for test/halmos/LPPriceMath.halmos.t.sol:LPPriceMathHalmosTest
+[TIMEOUT] check_PROP_023_price8PositiveAndBelowExact_18_18(uint128,uint128,uint256,uint256) (paths: 173, time: 1113.04s, bounds: [])
+
+=== LPPriceMath (PROP-024, PROP-026) — 2026-11-10 20:31
+Running 3 tests for test/halmos/LPPriceMath.halmos.t.sol:LPPriceMathHalmosTest
+[PASS] check_PROP_024_stableCeilingNeverRaisesAndIsMonotone(uint256,uint256,bool) (paths: 5, time: 0.09s, bounds: [])
+[TIMEOUT] check_PROP_024_valuationSymmetricInTokenOrder(uint128,uint128,uint256,uint256) (paths: 53, time: 181.55s, bounds: [])
+[TIMEOUT] check_PROP_026_agreementCheckIsExactAndSymmetric(uint128,uint128,uint16) (paths: 46, time: 116.90s, bounds: [])
+Symbolic test result: 1 passed; 2 failed; time: 298.77s
+
+=== DebtOracle — 2026-11-10 22:05
+Running 2 tests for test/halmos/DebtOracle.halmos.t.sol:DebtOracleHalmosTest
+[PASS] check_PROP_034_setPokeMinGasNeedsApplicationAdmin(address,uint32) (paths: 7, time: 0.28s, bounds: [])
+[PASS] check_PROP_070_adminRolesOnlyTimelock(address,bytes32,address) (paths: 24, time: 1.53s, bounds: [])
+Symbolic test result: 2 passed; 0 failed; time: 4.02s
+
+=== DebtOracle (PROP-074) — 2026-11-10 22:19
+Running 1 tests for test/halmos/DebtOracle.halmos.t.sol:DebtOracleHalmosTest
+[PASS] check_PROP_074_servedDebtPriceAgainstFixedAlternate(uint40) (paths: 167, time: 100.81s, bounds: [])
+Symbolic test result: 1 passed; 0 failed; time: 103.49s

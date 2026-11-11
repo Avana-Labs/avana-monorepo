@@ -1,0 +1,105 @@
+[2026-11-10 16:50:20.71] Compiling `.`... Done! (5.734649s)
+Analyzing contract: contracts/test/invariant/echidna/LockSlotProperties.sol:LockSlotProperties
+[2026-11-10 16:50:29.80] Running slither on `.`... Done! (113.76786s)
+Loaded 0 transaction sequences from out-security/corpus/echidna/LockSlotProperties-assertion/reproducers
+Loaded 6 transaction sequences from out-security/corpus/echidna/LockSlotProperties-assertion/coverage
+[2026-11-10 16:52:28.31] [status] tests: 0/4, fuzzing: 0/50000, values: [], cov: 203, corpus: 0, gas/s: 0
+[2026-11-10 16:52:28.51] [Worker 3] New coverage: 203 instr, 1 contracts, 1 seqs in corpus
+[2026-11-10 16:52:28.64] [Worker 2] New coverage: 203 instr, 1 contracts, 2 seqs in corpus
+[2026-11-10 16:52:28.64] [Worker 1] New coverage: 203 instr, 1 contracts, 3 seqs in corpus
+[2026-11-10 16:52:28.64] [Worker 0] New coverage: 203 instr, 1 contracts, 4 seqs in corpus
+[2026-11-10 16:52:28.77] [Worker 3] Sequence replayed from corpus file 6913390837369634491.txt (1/1)
+[2026-11-10 16:52:28.77] [Worker 0] Sequence replayed from corpus file 8083143026170184619.txt (1/2)
+[2026-11-10 16:52:28.77] [Worker 2] Sequence replayed from corpus file 7606230833945690226.txt (1/1)
+[2026-11-10 16:52:28.79] [Worker 1] Sequence replayed from corpus file 2209519240164230957.txt (1/2)
+[2026-11-10 16:52:28.81] [Worker 0] New coverage: 206 instr, 1 contracts, 5 seqs in corpus
+[2026-11-10 16:52:28.84] [Worker 0] Sequence replayed from corpus file 1659326548253950324.txt (2/2)
+[2026-11-10 16:52:28.86] [Worker 1] New coverage: 206 instr, 1 contracts, 6 seqs in corpus
+[2026-11-10 16:52:28.89] [Worker 1] Sequence replayed from corpus file 670005511855374405.txt (2/2)
+[2026-11-10 16:52:31.32] [status] tests: 0/4, fuzzing: 11633/50000, values: [], cov: 206, corpus: 6, gas/s: 93517017
+[2026-11-10 16:52:34.32] [status] tests: 0/4, fuzzing: 17352/50000, values: [], cov: 206, corpus: 6, gas/s: 45967600
+[2026-11-10 16:52:37.33] [status] tests: 0/4, fuzzing: 24572/50000, values: [], cov: 206, corpus: 6, gas/s: 58035949
+[2026-11-10 16:52:40.33] [status] tests: 0/4, fuzzing: 35246/50000, values: [], cov: 206, corpus: 6, gas/s: 85796980
+[2026-11-10 16:52:43.33] [status] tests: 0/4, fuzzing: 42453/50000, values: [], cov: 206, corpus: 6, gas/s: 57931085
+[2026-11-10 16:52:46.34] [status] tests: 0/4, fuzzing: 49440/50000, values: [], cov: 206, corpus: 6, gas/s: 56160048
+[2026-11-10 16:52:46.37] [Worker 2] Test limit reached. Stopping.
+[2026-11-10 16:52:46.42] [Worker 1] Test limit reached. Stopping.
+[2026-11-10 16:52:46.63] [Worker 0] Test limit reached. Stopping.
+[2026-11-10 16:52:46.66] [Worker 3] Test limit reached. Stopping.
+[2026-11-10 16:52:46.67] [status] tests: 0/4, fuzzing: 50222/50000, values: [], cov: 206, corpus: 6, gas/s: 0
+entries(): passing
+enterAndRelease(address): passing
+enter(address): passing
+AssertionFailed(..): passing
+
+Unique instructions: 206
+Unique codehashes: 1
+Corpus size: 6
+Seed: 9199853526280054370
+Total calls: 50222
+
+WARNING: assertion at file: test/invariant/echidna/AvanaRolesProperties.sol starting at line: 55 was never reached
+WARNING: assertion at file: test/invariant/echidna/AvanaRolesProperties.sol starting at line: 54 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 185 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 188 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 186 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 184 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 206 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 207 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 209 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 109 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 109 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 120 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 121 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 123 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 119 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 136 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 134 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 159 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 157 was never reached
+WARNING: assertion at file: test/halmos/AvanaTimelock.halmos.t.sol starting at line: 147 was never reached
+WARNING: assertion at file: test/invariant/echidna/AvanaTimelockProperties.sol starting at line: 142 was never reached
+WARNING: assertion at file: test/invariant/echidna/AvanaTimelockProperties.sol starting at line: 155 was never reached
+WARNING: assertion at file: test/invariant/echidna/AvanaTimelockProperties.sol starting at line: 125 was never reached
+WARNING: assertion at file: test/invariant/echidna/AvanaTimelockProperties.sol starting at line: 112 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 45 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 40 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 48 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 43 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 47 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 41 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 103 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 67 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 71 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 70 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 68 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 72 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 85 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 121 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 123 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 120 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 110 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 109 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 111 was never reached
+WARNING: assertion at file: test/halmos/Lock.halmos.t.sol starting at line: 108 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 108 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 106 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 55 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 64 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 67 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 73 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 75 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 77 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 59 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 62 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 70 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 57 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 88 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 92 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 90 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 120 was never reached
+WARNING: assertion at file: test/invariant/echidna/LockProperties.sol starting at line: 118 was never reached
+[2026-11-10 16:52:46.68] Saving test reproducers... Done! (0.000174s)
+[2026-11-10 16:52:46.68] Saving corpus... Done! (0.000585s)
+[2026-11-10 16:52:46.68] Saving foundry reproducers... Done! (0.000039s)
+[2026-11-10 16:52:46.68] Saving coverage... Done! (6.47232s)

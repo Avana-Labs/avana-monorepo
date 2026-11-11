@@ -1,0 +1,5 @@
+INFO:Slither:
+Detector: initialize-target
+MarketRegistry (src/policy/market-registry/MarketRegistry.sol#37-444) needs to be initialized by MarketRegistry.initialize(address) (src/policy/market-registry/MarketRegistry.sol#49-59).
+Reference: https://github.com/crytic/slither/wiki/Upgradeability-Checks#initialize-function
+INFO:Slither:1 findings, 8 detectors run

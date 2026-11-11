@@ -1,0 +1,63 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Node
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/out-aave/
+contracts/cache-aave/
+contracts/dependencies/
+contracts/deployments-local/
+contracts/broadcast/*/31337/
+
+# Security tooling (contracts/script/install-security-tools.sh, security-fast.sh, security-slow.sh)
+contracts/out-security/
+contracts/tools/bin/
+contracts/tools/jdk-21/
+contracts/tools/semgrep-smart-contracts/
+contracts/tools/4naly3er/
+contracts/.venv-*/
+contracts/crytic-export/
+
+# Certora local run artifacts
+contracts/.certora_internal/
+contracts/.certora_sources/
+contracts/emv-*/
+
+# Ponder
+.ponder/
+generated/
+
+# Python
+.venv/
+contracts/.venv/
+__pycache__/
+
+# Spec verification tooling
+spec/05-verification/node_modules/
+spec/05-verification/tools/
+.hypothesis/
+
+# EVM decompiler binary (downloaded, not committed)
+tools/heimdall/bin/
+
+# Not started yet: pushed when work on them begins
+apps/
+deployments/
+packages/
+.github/workflows/protocol.yml
+
+# Python test cache
+.pytest_cache/
+
+# Empty placeholder folders (tools create them when they first write results)
+**/.gitkeep

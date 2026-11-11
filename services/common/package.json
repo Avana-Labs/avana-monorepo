@@ -1,0 +1,25 @@
+{
+  "name": "@avana/services-common",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Types shared by the Avana indexer, keeper and Convex import: chains, manifest view, provenance, export pages.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./export": "./src/export.ts"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "@types/node": "22.20.5"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

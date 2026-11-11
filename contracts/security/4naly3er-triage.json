@@ -1,0 +1,1174 @@
+{
+  "excluded_detectors": [
+    {
+      "check": "Using `delegatecall` inside a loop",
+      "reason": "Not run: its regex nests unbounded repetitions ((...\\n)*)* and backtracks exponentially on files with loops and no delegatecall (more than ten minutes on CollateralizationLedger.sol alone). Slither's delegatecall-loop and msg-value-loop detectors, which run in the same fast tier with no exclusion, check the same pattern on the compiled code.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector (performance). Checked 2026-11-11 repo-wide: the five delegatecall sites (ParameterStoreRouter, MarketRegistryRouter, LPOracle x3) are single calls, none in a loop, and src/ has no msg.value; Slither delegatecall-loop and msg-value-loop run unexcluded. Recommend approve."
+    },
+    {
+      "check": "Solidity version 0.8.20+ may not work on other chains due to `PUSH0`",
+      "reason": "Avana compiles for EVM cancun (REQ-ARCH-053); PUSH0 exists on every chain Avana deploys to. Aderyn's push-zero-opcode is excluded for the same reason.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11: foundry.toml evm_version = cancun and solc 0.8.28 for all of src/; not one of the eight approved patterns (was marked approved-pattern by mistake). Recommend approve."
+    },
+    {
+      "check": "Centralization Risk for trusted owners",
+      "reason": "Every privileged function is held by the AvanaTimelock by design (2.15 role table); the role checks are reviewed through the spec's permission tables and the hostile-component tests, not one finding per function. Aderyn's centralization-risk is excluded for the same reason.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11: every admin role is TIMELOCK-only by _grantRole override; not one of the eight approved patterns. Recommend approve."
+    },
+    {
+      "check": "Upgradeable contract is missing a `__gap[50]` storage variable to allow for new storage variables in later versions",
+      "reason": "Avana's upgradeable contracts keep all state in ERC-7201 namespaces (OpenZeppelin 5 pattern, REQ-ARCH-050), where a storage gap has no role; the layout step snapshots every namespace and fails on any change to an existing slot.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11 repo-wide: the three UUPS contracts (DebtOracle, MarketRegistry, ParameterStore) and the LPOracle keep state only in ERC-7201 namespaces; every layout snapshot has zero plain storage slots. Not one of the eight approved patterns. Recommend approve."
+    },
+    {
+      "check": "Upgradeable contract not initialized",
+      "reason": "Regex on any line that names an upgradeable base or an initializer (it matches interfaces, the timelock's selector list and the initializer bodies themselves). The property it approximates, that every upgradeable base is initialized and the implementation's initializers are disabled, is checked on compiled code by slither-check-upgradeability and by OpenZeppelin upgrades-core validate (missing-initializer, missing-initializer-call) in the same tier.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11: each UUPS constructor calls _disableInitializers and slither-check-upgradeability plus upgrades-core validate run in the same tier. Recommend approve."
+    },
+    {
+      "check": "Initializers could be front-run",
+      "reason": "Every Avana proxy runs initialize in the ERC1967Proxy constructor, in the deploying transaction (REQ-ACCESS-150, script/README.md step 3), so no transaction can come between deployment and initialization; the regex matches every initialize declaration, interfaces included. slither-check-upgradeability's initialize checks run in the same tier.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11: initialize runs in the ERC1967Proxy constructor (REQ-ACCESS-150, script/README.md step 3), and each initialize also rejects any timelock other than the implementation's immutable TIMELOCK, so a front-run could not take the admin role. Recommend approve."
+    },
+    {
+      "check": "Fees can be set to be greater than 100%.",
+      "reason": "Regex on any setter whose name contains `fee` (it also matches setFeed*, setFeeRecipient and _feedChanged) without a literal bound in the same function. Every ParameterStore setter checks the hard bounds of 1.5 (OutOfBounds; maxFlashFeeBps <= FLASH_FEE_MAX_BPS, avanaFeeShareBps <= FEE_SHARE_MAX_BPS), covered by the ParameterStore unit tests; collectFees transfers accrued fees and sets none.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11 repo-wide: the only fee setters are ParameterStore's (setMaxFlashFeeBps <= FLASH_FEE_MAX_BPS = 100, setAvanaFeeShareBps <= FEE_SHARE_MAX_BPS = 5,000, and the same bounds in initialize). Recommend approve; a new fee setter elsewhere would not be flagged, so the spec's hard-bounds review must cover it."
+    },
+    {
+      "check": "Loss of precision",
+      "reason": "Flags every division. Avana's rounding direction is part of each formula's specification (floor or ceil against the user or protocol), checked by the Z3 and SymPy models and the differential suites; Slither's divide-before-multiply runs in the same tier.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11: rounding direction is specified per formula and checked by Z3/SymPy and the differential suites; Slither divide-before-multiply runs. Recommend approve."
+    },
+    {
+      "check": "`decimals()` is not a part of the ERC-20 standard",
+      "reason": "Avana reads decimals() only from tokens it configures through a timelock operation or a deployment: listed tokens (the listing reverts if the call fails, REQ-CONFIG-050; MarketRegistry's credit-line coverage check reads a listed debt asset), the constructor checks of PegModuleRoute (its tokenOut) and CoverageSpoke (its Hub asset), the LPOracle's guarded static read, and oracle interfaces (Chainlink AggregatorV3, Aave V4 oracle and price feeds, Avana's LPOracle) where decimals() is part of the interface. A token without decimals() makes the configuring call revert (fail closed).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue: excluded detector. Checked 2026-11-11 repo-wide; the reason was incomplete and is corrected: besides listed tokens and oracle interfaces, decimals() is read in constructors of PegModuleRoute (tokenOut) and CoverageSpoke (Hub asset) and by MarketRegistry's credit-line coverage check, each of which reverts for a token without decimals() (fail closed). Recommend approve."
+    }
+  ],
+  "accepted": [
+    {
+      "fingerprint": "89d93c5b428c4eec",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: take <= credited < 2^120.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "a1e70e3281e6b996",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: usdCharge < 2^64 (_checkCharge).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "7b3312941ab5fd8e",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: usdCharge < 2^64 (_checkCharge).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "d24c1f6a3aa95475",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: live <= 2^120 - 1.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "66a027406e7e00ef",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: rebased < 2^64, checked above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "4f46e5e3b681bbf0",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: rebased < 2^64, checked above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "37a3c4f509b67bcb",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/custody/collateralization/CollateralizationViews.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: live units cover credit (SPEC-BACK-010) and are below 2^128, and the subtraction runs only when live > before.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "0614d8260ec68208",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: drop <= startLt - LTf, so the result lies in [LTf, startLt].",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "742921ff25c7cbf1",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: bounded above by 86,400 + 3,600 s by the checks above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "62b65a65266bc548",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: saturated, the cast runs only for count <= type(uint16).max.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "0d748554afe6ecbd",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: saturated, the cast runs only for sum <= type(uint16).max.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "1f04c6f194b77dbc",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreViews.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: n is 1 or 2 here.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "2033df50dd4e571f",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreViews.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: v is within the int128 range after the two checks above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "13f261328e71fdb4",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreStorage.sol",
+      "reason": "Widening conversion address -> uint160 -> uint256 -> bytes32 (a parameter key); nothing is truncated.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern. The conversion widens (address -> uint160 -> uint256 -> bytes32)."
+    },
+    {
+      "fingerprint": "a61018616f4de70f",
+      "check": "Division by zero not prevented",
+      "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+      "reason": "Division by zero not possible: bNet <= BPS returns 0 on the line before, so bNet > BPS > 0.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "2cbe3ff5473ea4cd",
+      "check": "Division by zero not prevented",
+      "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+      "reason": "Division by zero not possible: swappedLegs is n', at least 1 for a swapped leg; n' = 0 reverts by specification (SPEC-LIQ-018, documented on the function); BPS is a constant.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "fed9048f1bbf3192",
+      "check": "Division by zero not prevented",
+      "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+      "reason": "Division by zero not possible: denominators are the constant BPS and BPS + maxFlashFeeBps >= BPS.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "d6516c425a527751",
+      "check": "Division by zero not prevented",
+      "file": "src/oracle/lp-oracle/LPPriceMath.sol",
+      "reason": "Division by zero not possible: lo == 0 returns SATURATED on the line before.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "23975a8a7f7ee0e0",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "Division by zero not possible: _BPS is a constant (10,000).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "ead29c0b789fa7f1",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+      "reason": "Division by zero not possible: _WIND_DOWN_RAMP_SECONDS is a non-zero constant.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "25c89656ac9fbcc2",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "reason": "Division by zero not possible: _BLOCK_TIME is an immutable that the constructor rejects when 0 (OutOfBounds).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "9d6d595c1819108d",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "reason": "Division by zero not possible: _BLOCK_TIME is an immutable that the constructor rejects when 0 (OutOfBounds).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "10e5bb8581d6edd2",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "reason": "Division by zero not possible: floor is the market's stress floor, which setInitialMarketCaps and setStressFloorUsd reject when 0, and the check runs only for a live (listed) market.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "b62ba3335fd39181",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "reason": "Division by zero not possible: price is at least 1 whenever found is true: _price maps a failed call and a non-positive answer to type(uint256).max.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "9535cf1c776bd1de",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "reason": "Zero-value transfer not possible: amount == 0 reverts ZeroAmount at the top of fund.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "855ab4cdf7b816b9",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "reason": "Zero-value transfer not possible: guarded by amounts[i] != 0 on the same line.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "cf3d4af0f12d70f4",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/flash/AaveV3FlashSource.sol",
+      "reason": "Zero-value transfer not possible: guarded by received != 0 on the same line.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "fe82380a518bbb3c",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "reason": "Zero-value transfer not possible: amount == 0 reverts ZeroAmount above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "69ea29356ada887c",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "reason": "Zero-value transfer not possible: amount == 0 reverts NothingToClaim above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern. Fingerprint moved with the claim's balance check (f8263af498b453b8 to 69ea29356ada887c); guard and transfer unchanged."
+    },
+    {
+      "fingerprint": "65c0f57ac565c040",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "reason": "Zero-value transfer not possible: pay > 0: a non-positive owed amount reverts InvalidCallback above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "59653c2f8673bace",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "reason": "Zero-value transfer not possible: amountIn == 0 reverts TransferMismatch at the top of swap.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "8f2b3edd60d03269",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "reason": "Zero-value transfer not possible: guarded by balance > before[k] on the same line.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "9b8646dcf7d6176d",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "reason": "The amount received is measured as the escrow's balance rise over the transfer: a rise of 0 reverts TransferMismatch and the credit is the rise capped at the request (balance-delta accounting), so a fee-on-transfer token is never credited more than it delivered; claim reverts TransferMismatch if the escrow's balance falls by more than the credit paid (REQ-ESCROW-003, REQ-ESCROW-004).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: returns measured by balance delta. The credited amount is the escrow's balance rise and must equal amount (TransferMismatch)."
+    },
+    {
+      "fingerprint": "6be561cfbd07af27",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "reason": "The route measures the input it received as its balance rise over the transfer (TransferMismatch when nothing arrives or more than amountIn), and swaps only that rise; every leg is accounted by balance deltas (REQ-ROUTE-009, REQ-ROUTE-015).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: returns measured by balance delta. The route swaps only its measured balance rise; every leg is a balance delta."
+    },
+    {
+      "fingerprint": "397b12ef304aca3a",
+      "check": "`decimals()` should be of type `uint8`",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "reason": "Regex false positive: the returned `decimals` is declared uint8 on this line.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "ce72a1b8859c87ff",
+      "check": "Do not leave an implementation contract uninitialized",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "The constructor runs MarketRegistryRouter's constructor, which calls _disableInitializers(); the regex does not follow base constructors. Covered by TEST-242 (initializeOnlyWithTimelockAndOnce).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group I (UUPS and initializer tool artefacts): checked 2026-11-11, the property is enforced by a base constructor or the delegating proxy, which the tool does not follow; not in an approved pattern."
+    },
+    {
+      "fingerprint": "8ed00f6514f25319",
+      "check": "Do not leave an implementation contract uninitialized",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "reason": "The constructor runs ParameterStoreRouter's constructor, which calls _disableInitializers(); the regex does not follow base constructors. Covered by TEST-242 (initializeRefusesOtherTimelockAndRunsOnce).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group I (UUPS and initializer tool artefacts): checked 2026-11-11, the property is enforced by a base constructor or the delegating proxy, which the tool does not follow; not in an approved pattern."
+    },
+    {
+      "fingerprint": "93df6335a6238afa",
+      "check": "Do not leave an implementation contract uninitialized",
+      "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
+      "reason": "A logic contract, not a proxy implementation: its initialize is the body the ParameterStore proxy delegatecalls after running its own `initializer` modifier. A direct call writes only the logic contract's own storage, which nothing reads (unlike the MarketRegistry logic contracts, the ParameterStore logic contracts have no delegated-only check; see the tooling report).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group I (UUPS and initializer tool artefacts): checked 2026-11-11, the property is enforced by a base constructor or the delegating proxy, which the tool does not follow; not in an approved pattern. Recommend approving once the ParameterStore delegated-only guard (Josue 2026-11-11) lands."
+    },
+    {
+      "fingerprint": "bfe0270c114353b8",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+      "reason": "Aave V4 price sources expose latestAnswer() as their interface (IAaveV4PriceFeed, the AaveOracle source interface); this is a registration-time positivity check of the source Aave itself reads, not a Chainlink round read.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
+    },
+    {
+      "fingerprint": "f6e20c39abc4da81",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "reason": "Avana's LPOracle is an Aave V4 price source whose interface is latestAnswer(); the activation check requires a positive answer from it (MKT-026).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
+    },
+    {
+      "fingerprint": "5ed35f80b0fdf44c",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "reason": "Aave V4 price source interface (IAaveV4PriceFeed.latestAnswer), read in try/catch to size the rounding-allowance bound; a failure or non-positive answer makes the bound strictest (type(uint256).max price).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
+    },
+    {
+      "fingerprint": "42f2f7931506967e",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "reason": "Not a signature or typed-data hash: keccak256(abi.encode(im)) fingerprints the implementation immutables (MarketRegistryImmutables) for the deployment check; EIP-712 does not apply.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern. keccak256(abi.encode(...)) here fingerprints implementation immutables, not typed data."
+    },
+    {
+      "fingerprint": "638e8ab4b3dcacd6",
+      "check": "Chainlink's `latestRoundData` might return stale or incorrect results",
+      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "reason": "Listing-time magnitude check of the primary route's raw answer (0 < answer < 2^96), not a price used for any amount, as the comment above states; staleness, round completeness and the sequencer are enforced by the LPOracle on every price read (2.10).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
+    },
+    {
+      "fingerprint": "7674208ff70e6cf8",
+      "check": "Missing checks for whether the L2 Sequencer is active",
+      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "reason": "Same site: a listing-time magnitude check, not a price read; the LPOracle applies the sequencer-uptime check (ParameterStore sequencer config) on every price read.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
+    },
+    {
+      "fingerprint": "a97b0ac88844a0f4",
+      "check": "External call recipient may consume all transaction gas",
+      "file": "src/proxy/position-proxy/PositionProxy.sol",
+      "reason": "Same site as the accepted Slither low-level-calls and Semgrep arbitrary-low-level-call entries: only the AaveAdapter can call execute, and it chooses the target (Aave V4 Spoke or the market's vault token) and checks every balance delta; the callee's return data is forwarded unchanged by design (REQ-PROXY-012).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group D (PositionProxy.execute, same site as the Josue-approved Slither low-level-calls entry): checked 2026-11-11."
+    },
+    {
+      "fingerprint": "8d7b3a7939539b2b",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/vault-token/vault-token/VaultToken.sol",
+      "reason": "mint reverts ZeroAddress for to == address(0) on the line before (and OpenZeppelin's _mint rejects the zero address).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "70d7e6da40abc0bd",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/vault-token/vault-token/VaultToken.sol",
+      "reason": "burn reverts ZeroAddress for from == address(0) on the line before (and OpenZeppelin's _burn rejects the zero address).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "e8ae241b2aa2f712",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: Uniswap v3-core TickMath (sqrtRatioAtTick, differential test TEST-037); before the division `ratio` is the Q128.128 square-root ratio of -|tick|, at least about MIN_SQRT_RATIO * 2^32 > 0 for |tick| <= MAX_TICK (checked on the first line).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "03eb570ddacbad1b",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: isUsableRange returns false for spacing <= 0 on the first line, before both divisions by `spacing`.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "175ab36d4d799831",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: maxLiquidityPerTick runs only in bindMarket after isUsableRange accepted the range, which requires spacing > 0 (InvalidShape otherwise); the function documents `s > 0` (Uniswap Tick.tickSpacingToMaxLiquidityPerTick).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "e4ddf35888de7d6c",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: same `spacing > 0` precondition as the line above (bindMarket checks isUsableRange first).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "73cc698f57c6bb07",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: same `spacing > 0` precondition (bindMarket checks isUsableRange first).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "7d4a5f6d60a2a0cc",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: numTicks = (maxTick - minTick) / spacing + 1 >= 1.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "0a9713ef87af9900",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: `w` is the window, and meanTick's only caller (consistencyDeviation) returns before it when window == 0; the function documents `window > 0`.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "aa2a8be49e2aa35b",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: harmonicMeanLiquidity returns (0, false) on the line before when secondsPerLiquidityDelta == 0, and a non-zero uint160 shifted left by 32 stays non-zero in uint256.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "0e41d13013f9cb4c",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Division by zero not possible: `sLow` is `sa` or the clamped price `s > sa`, and every `sa` is sqrtRatioAtTick(tickLower) >= MIN_SQRT_RATIO > 0 (amountsForLiquidity documents 0 < sa < sb).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "61d80744e934256e",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Cannot truncate: Uniswap v3-core TickMath, Q128.128 to Q64.96; the result is at most MAX_SQRT_RATIO < 2^160 for every tick in range (checked on the first line); forge-lint unsafe-typecast suppression on the line above states the bound; differential test TEST-037 over every tick bucket.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "063afc7243c78431",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Cannot truncate: Uniswap v3-core TickMath getTickAtSqrtRatio; for a sqrt price in [MIN_SQRT_RATIO, MAX_SQRT_RATIO) (checked on the first line) both candidate ticks lie within one tick of the true tick, inside int24; suppression comment on the line above; fuzz TEST-279 inverts sqrtRatioAtTick over every tick.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "f266c56c5d130aad",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Cannot truncate: the second candidate tick of the same TickMath step, within one tick of the true tick (see the line above).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "d002cb842ffcf0eb",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Cannot truncate: `high` is false here, so `raw` is below MAX_SQRT_RATIO < 2^160 (SPEC-ORC-009 branches (a) and (b), MATH-UO-11b); suppression comment on the line above states the bound; differential test TEST-037 over prices up to 2^128 - 1.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "712fec8b56417ba0",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "reason": "Cannot truncate: type(uint128).max divided by numTicks >= 1 is at most type(uint128).max.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "9a56655a20e1afad",
+      "check": "`abi.encodePacked()` should not be used with dynamic types when passing the result to a hash function such as `keccak256()`",
+      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "reason": "No dynamic type: the operands are the 1-byte literal 0xff, an address, and two bytes32 values, the 85-byte CREATE2 preimage of EIP-1014 (Uniswap v3-periphery PoolAddress.computeAddress), which must be packed; fixed sizes make the encoding injective.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "8362743f85c77f66",
+      "check": "Unsafe ERC20 operation(s)",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "reason": "Not an ERC-20 call: `manager` is the ERC-721 position manager (IClPositionManager); its `transferFrom` returns nothing, and the LPVault checks `ownerOf(tokenId) == address(this)` on the next line (REQ-VAULT-147).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "5d736c8152a1811d",
+      "check": "Unsafe ERC20 operation(s)",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "reason": "Not an ERC-20 call: ERC-721 `transferFrom` on the position manager returning the NFT to its depositor of record (REQ-AMM-CORE-007); an ERC-721 transfer reverts on failure.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "5163e0110723d8b5",
+      "check": "Unsafe ERC20 operation(s)",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "reason": "Not an ERC-20 call: ERC-721 `transferFrom` on the position manager returning a stray NFT to the timelock's recipient (REQ-VAULT-079); an ERC-721 transfer reverts on failure.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "f53e1c9f7fa4f578",
+      "check": "Using `transferFrom` on ERC721 tokens",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "reason": "Specified call (REQ-VAULT-147, REQ-AMM-CORE-005: the pull runs no receiver hook). `safeTransferFrom` to the LPVault would call its own onERC721Received, which treats every pushed NFT as a stray and emits StrayReceived (ATTACK-006), so a pledge would log a stray. The LPVault is the receiver and checks `ownerOf(tokenId) == address(this)` right after the pull.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "fb7e78c7cac09848",
+      "check": "Using `transferFrom` on ERC721 tokens",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "reason": "Specified call (REQ-AMM-CORE-007, REQ-VAULT-148): the NFT returns to its depositor of record, the wallet it was pulled from with `transferFrom`, so that wallet already held it. `safeTransferFrom` would call the depositor's onERC721Received: a Safe or contract wallet without the hook could never withdraw its own position, and the call would hand control to the depositor inside Collateralization's Lock session.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "7802f502d6f0e3f0",
+      "check": "Using `transferFrom` on ERC721 tokens",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "reason": "Specified call (REQ-VAULT-079, REQ-VAULT-080): a stray NFT goes to the recipient the AvanaTimelock names after its delay, with the Lock free and the recipient neither 0 nor the LPVault. `safeTransferFrom` would let a recipient contract without the hook block the timelock's recovery; the recipient is a governance decision reviewed during the delay.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "9f514dcb4cff15c6",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle._startGrace",
+      "reason": "Not a deadline or signature: `if (rec > block.timestamp) rec = now` clamps the recovery start so it is never after now (REQ-ORACLE-032 (c)). Avana uses no signatures.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the regex `(<|>)=? block.timestamp` matched a specified timestamp rule."
+    },
+    {
+      "fingerprint": "ac2d1437151a80ac",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle._routeValueAge",
+      "reason": "Not a deadline or signature: a route timestamp after now has no age and is reported as type(uint64).max (REQ-ORACLE-093 report), the same rule that makes such a leg Invalid (REQ-ORACLE-002).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the regex `(<|>)=? block.timestamp` matched a specified timestamp rule."
+    },
+    {
+      "fingerprint": "cf4cf79101baf82d",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._grace",
+      "reason": "Not a deadline or signature: the grace window is `recoveredAt <= now < recoveredAt + graceDuration`, exactly REQ-ORACLE-034 (inclusive start, exclusive end).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the regex `(<|>)=? block.timestamp` matched a specified timestamp rule."
+    },
+    {
+      "fingerprint": "4931efdc7dce6548",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/debt-oracle/DebtOracleReads.sol",
+      "function": "DebtOracleReads._readLeg",
+      "reason": "Not a deadline or signature: a leg whose updatedAt is after now is Invalid (REQ-ORACLE-002, SPEC-ORC-001).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the regex `(<|>)=? block.timestamp` matched a specified timestamp rule."
+    },
+    {
+      "fingerprint": "0e39989a37116cf4",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/debt-oracle/DebtOracleRecovery.sol",
+      "function": "DebtOracleRecovery._evidence",
+      "reason": "Not a deadline or signature: the recovery time from source-timestamp evidence is min(hi, now), never after now (SPEC-ORC-014, REQ-ORACLE-032 (b)).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the regex `(<|>)=? block.timestamp` matched a specified timestamp rule."
+    },
+    {
+      "fingerprint": "f4ab143b61727593",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase.flashLiquidate (inventory pull)",
+      "reason": "Zero-value transfer not possible: the pull of debtToCover - flashAmount runs only when flashAmount < debtToCover (same line).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "6ad52bf59bf1b166",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._repay (top-up)",
+      "reason": "Zero-value transfer not possible: topUp = owed - keeperOut is pulled only inside `if (keeperOut < owed)`, so topUp >= 1.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "1b626a08a1c55264",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._payOut (payout)",
+      "reason": "Zero-value transfer not possible: guarded by `payout != 0` on the same line.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "9f30f4dcf8b4fb92",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._forwardTokens (residue)",
+      "reason": "Zero-value transfer not possible: guarded by `balance > tokensBefore[i]` on the same line.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "8ab8d6bbd42ac726",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase.flashLiquidate (inventory pull)",
+      "reason": "The helper credits nothing from the nominal amount: keeperOut is measured as a balance rise plus the allowance LPVaultSwap consumed, and the payout as the rise of the T balance over the whole call; a transfer fee that leaves the helper short makes LPVaultSwap's pull or the Pool's pull fail, or ends the call below its start and reverts PayoutTooLow(0, minPayout), so nothing held before the call pays for it (REQ-HELPER-006, REQ-HELPER-008).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: returns measured by balance delta (keeperOut and the payout are balance deltas; a shortfall reverts)."
+    },
+    {
+      "fingerprint": "182db800edc9fedd",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._repay (top-up)",
+      "reason": "Same as the inventory pull: the top-up's arrival is not credited by its nominal amount; the Pool pulls exactly owed and the payout is the whole-call balance delta, which reverts PayoutTooLow(0, minPayout) if a fee left the helper short.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: returns measured by balance delta (the payout is the whole-call balance delta; a shortfall reverts)."
+    },
+    {
+      "fingerprint": "3a6c4b6e842c79d0",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._openContext",
+      "reason": "Not a signature or typed-data hash: keccak256(abi.encode(request.params)) binds the liquidation parameters to the transient context, and executeOperation compares it with keccak256 of the params the Pool hands back (REQ-HELPER-004, REQ-HELPER-005). EIP-712 does not apply.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern. Same class as the MarketRegistryStorage immutables fingerprint."
+    },
+    {
+      "fingerprint": "7be11e74ddc06b96",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol",
+      "function": "ParameterStoreAdminOracleLogic._route",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: n is 1 or 2 here (the line before returns for n == 0 or n > 2). Same code as entry 1f04c6f194b77dbc, moved from ParameterStoreViews in the LPOracle gas refactor.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "b451ba283398d406",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol",
+      "function": "ParameterStoreAdminOracleLogic._clamp",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: v is within the int128 range after the two checks above. Same code as entry 2033df50dd4e571f, moved from ParameterStoreViews in the LPOracle gas refactor.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
+    },
+    {
+      "fingerprint": "ab1094e12ede19e2",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 103",
+      "reason": "uint32(_at(w, 1)) (twapWindow): _setHead returns false when word 1 exceeds type(uint32).max, on the lines above. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "dea83d324b0e8e2e",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 104",
+      "reason": "uint16(_at(w, 2)) (consistencyToleranceBps): _setHead returns false when word 2 exceeds type(uint16).max. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "bfb86aa7648eafd4",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 108",
+      "reason": "uint32 of words 5, 6 and 7 (cachedWindow, disagreementPauseMax, graceDuration): _setHead returns false when any exceeds type(uint32).max. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "96020a10f3689da2",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 109",
+      "reason": "address(uint160(_at(w, 8))) and uint32(_at(w, 9)) (sequencer feed and grace period): _setHead returns false when word 8 exceeds type(uint160).max or word 9 exceeds type(uint32).max. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "8001c7cc9d31cbb0",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 121",
+      "reason": "uint16, uint64 and uint8 of the tolerance, route version and replaced slot: _setToken returns false on the line before when they exceed uint16, uint64 or 2. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "635e9ecc4f4b7a2a",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 126",
+      "reason": "uint8(count): count is 1 or 2 (_setToken returns false for 0 or more than 2 on the line before). A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "bed066d958a83e7f",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 165",
+      "reason": "address(uint160(feed)) and uint8(dec): the assembly range check above requires feed < 2^160 and dec < 2^8, else _setLeg returns false. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "625cd97094437370",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 168",
+      "reason": "uint32(heartbeat) and uint32(margin): the assembly range check above requires both below 2^32. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "1ee06c47117853b5",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 169",
+      "reason": "uint32(borrowAge) and uint32(liquidationAge): the assembly range check above requires both below 2^32. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "5d7fc6a3cc642f64",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 185",
+      "reason": "SecondSourceKind(uint8(_at(w, k))): _setSecond returns false when the word exceeds the largest SecondSourceKind. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "744db447dad60ea3",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 186",
+      "reason": "address(uint160(_at(w, k + 1))): _setSecond returns false when the word exceeds type(uint160).max. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "cfc585625b2385b2",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 188",
+      "reason": "uint32(_at(w, k + 3)) (maxAge): _setSecond returns false when the word exceeds type(uint32).max. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "3e8dc865b39e3a89",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 189",
+      "reason": "uint32(_at(w, k + 4)) (twapWindow): _setSecond returns false when the word exceeds type(uint32).max. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "b728602fec6de1c8",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig line 190",
+      "reason": "uint16(_at(w, k + 5)) (toleranceBps): _setSecond returns false when the word exceeds type(uint16).max. A word beyond its type fails the read and the market with reason bit 1 (REQ-ORACLE-017, REQ-ORACLE-094); nothing truncates. Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "e8684260d89e0bf4",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleListing.sol",
+      "function": "LPOracleListing._bounds",
+      "reason": "address(uint160(aggregator)): uintAt on the line above returns ok only for a word at most type(uint160).max, and a failed or zero read returns before the cast (the aggregator-bound read of checkConfig, REQ-ORACLE-046). Covered by TEST-219 (malformedAggregatorBoundFailsTheCheck). forge-lint unsafe-typecast suppression on the line above with the bound.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "010697bcaf5f54e9",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "function": "LPOraclePoke._storeAccepted",
+      "reason": "uint128(e.prices[i]): an accepted evaluation passed LPPriceMath.lpPrice, which refuses any price outside [1, MAX_ROUTE_ANSWER = 10^12] (SPEC-ORC-005, REQ-ORACLE-029), far below 2^128. Covered by TEST-040, TEST-219. forge-lint unsafe-typecast suppression on the line above with the bound.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "4688ab581cf5d2db",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
+      "function": "LPOracleRecovery._previousPhase",
+      "reason": "address(uint160(aggregator)): uintAt on the line above returns ok only for a word at most type(uint160).max, and a failed or zero read returns before the cast (the phase-rollover evidence of SPEC-ORC-014, REQ-ORACLE-032). Covered by TEST-042 (phaseRolloverUsesPreviousPhase). forge-lint unsafe-typecast suppression on the line above with the bound.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "3198db416f389b3e",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic._tripped",
+      "reason": "uint64(until): until = lastBreach + gateRecoverySeconds with lastBreach a uint64 timestamp and gateRecoverySeconds at most 7,200 (GATE_RECOVERY_MAX, the ParameterStore bound), so it fits 64 bits for any reachable block time (SPEC-BRK-007). Covered by TEST-228 (poolShareGateRecovers). forge-lint unsafe-typecast suppression on the line above with the bound.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "278f069456f00b59",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "RiskModulePledgeLogic.checkPledge",
+      "reason": "uint128(ceil(units * sliceUsd / usdCharge)): RiskModuleMath.split returns sliceUsd <= usdCharge, so the quotient is at most units, a uint128 (SPEC-CAP-002, REQ-RISK-022). Covered by TEST-013 (sliceForEligibleTopUp), the RiskModule fuzz suite. forge-lint unsafe-typecast suppression on the line above with the bound.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "6c24f2dcace75778",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "function": "LPOracleEval._grace",
+      "reason": "Not a deadline or signature: the recovery grace window is recoveredAt <= now < recoveredAt + graceDuration (REQ-ORACLE-034, REQ-ORACLE-099). Covered by TEST-042 (recoveredAtFirstFreshRound, oneGraceWindowPerOutage), TEST-252.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "dcab921f9eb066f3",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "function": "LPOraclePoke._newestLegInUse",
+      "reason": "Not a deadline or signature: a newest leg timestamp after now is clamped to now, so a stored time is never in the future (REQ-ORACLE-032 (c)). Covered by TEST-252 (graceAtNewestLegWhenNoInterval), TEST-219.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "18c9dbd44f9997e9",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
+      "function": "LPOracleReads._classify",
+      "reason": "Not a deadline or signature: a leg whose updatedAt is 0 or after now is Invalid (REQ-ORACLE-002, SPEC-ORC-001). Covered by TEST-219, TEST-038.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "d9bc44c201f2d35a",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
+      "function": "LPOracleRecovery._recoveryEvidence",
+      "reason": "Not a deadline or signature: the recovery time from source-timestamp evidence is min(latest, now), never in the future (SPEC-ORC-014, REQ-ORACLE-032). Covered by TEST-042 (recoveredAtFirstFreshRound, evidenceWithoutObservingTheOutage).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "43fd52db3970ae91",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "RiskModuleBorrowLogic._collateralPrice",
+      "reason": "Not a deadline or signature: a leg timestamp after now reverts PriceTooOld(feed, 0), the future-timestamp rule of REQ-ADAPTER-015. Covered by TEST-028 (futureTimestampsAreNeverFresh).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "37d3eb10f2c39399",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "RiskModuleBorrowLogic._debtPrices",
+      "reason": "Not a deadline or signature: the age of a future timestamp reads as 0 only for the revert data; the next line makes it not fresh (REQ-RISK-061). Covered by TEST-028 (futureTimestampsAreNeverFresh), TEST-201.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "ec1b62ae3ee3fdd8",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "RiskModuleBorrowLogic._debtPrices",
+      "reason": "Not a deadline or signature: fresh iff servedUpdatedAt <= now and the age is within the DebtOracle's borrowPriceMaxAge (REQ-RISK-061). Covered by TEST-201, TEST-028.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "f378e36fb163d325",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/policy/risk-module/RiskModuleStatusLogic.sol",
+      "function": "RiskModuleStatusLogic._marketStatus",
+      "reason": "Not a deadline or signature: the reported age of a future timestamp is 0 and the next line flags it too old (status of REQ-RISK-060). Covered by TEST-028 (statusFeedAges).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "4e620f06a65be709",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/policy/risk-module/RiskModuleStatusLogic.sol",
+      "function": "RiskModuleStatusLogic._marketStatus",
+      "reason": "Not a deadline or signature: feedTooOld when a leg timestamp is after now or older than borrowPriceMaxAge(feed) (status of REQ-ADAPTER-015, REQ-RISK-060). Covered by TEST-028 (statusFeedAges).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+    },
+    {
+      "fingerprint": "8323004a7acb875f",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "function": "LPOracleEval._quoteCapped",
+      "reason": "The quote-change cap of REQ-ORACLE-103 applies only when the accepted price was stored in the current block ($.acceptedBlock == block.number); on Ethereum and Base (the chains Avana deploys on) block.number is the chain's own block, so the rule is the same-block rule on both. Covered by TEST-219 (test_TEST_219_quoteChangeCapHoldsOneBlock).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Y (block.number for a same-block rule): checked 2026-11-11, REQ-ORACLE-103 compares only whether the accepted price was stored in the current block; Avana deploys on Ethereum and Base, where block.number is the chain's own block (Base: the L2 block, 2 s), so the rule means the same block on both. On an Arbitrum-style chain block.number is the L1 block and the window would widen; recheck before any such deployment. Recommend approve."
+    },
+    {
+      "fingerprint": "4bee369298d44c03",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "function": "LPOraclePoke._storeAccepted",
+      "reason": "Records the block of the accepted price for the same-block quote-change cap of REQ-ORACLE-103; see the LPOracleEval._quoteCapped entry. Covered by TEST-219 (quoteChangeCapHoldsOneBlock).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Y (block.number for a same-block rule): checked 2026-11-11, REQ-ORACLE-103 compares only whether the accepted price was stored in the current block; Avana deploys on Ethereum and Base, where block.number is the chain's own block (Base: the L2 block, 2 s), so the rule means the same block on both. On an Arbitrum-style chain block.number is the L1 block and the window would widen; recheck before any such deployment. Recommend approve."
+    },
+    {
+      "fingerprint": "84aaa7a1ec765e68",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase.flashLiquidate (prefund pull)",
+      "reason": "Zero-value transfer not possible: the pull of prefund = debtToCover - flashAmount + maxShortfall runs only when prefund != 0 (same line). Replaces entry f4ab143b61727593 after the shortfall budget joined the pull.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
+    },
+    {
+      "fingerprint": "b968fe610fa9b07c",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase.flashLiquidate (prefund pull)",
+      "reason": "The helper credits nothing from the nominal amount: keeperOut is measured as a balance rise plus the allowance LPVaultSwap consumed, and the payout as the rise of the T balance over the whole call (assetBefore is read before the pull); a transfer fee that leaves the helper short makes LPVaultSwap's pull or the Pool's pull fail, or ends the call below its start and reverts PayoutTooLow, so nothing held before the call pays for it (REQ-HELPER-006, REQ-HELPER-008, SPEC-LIQ-019). Replaces entry 8ab8d6bbd42ac726 after the shortfall budget joined the pull. Covered by TEST-174, TEST-289.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: returns measured by balance delta (keeperOut and the payout are balance deltas; a shortfall reverts). Same site as 8ab8d6bbd42ac726."
+    },
+    {
+      "fingerprint": "b45a14f7bd581bd4",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol",
+      "function": "FlashLiquidatorLenders line 82",
+      "reason": "Regex false positive on `_mintsAsset`: the line chooses the GHO flash minter as lender or quotes its maxFlashLoan or flashFee; no token is minted, burned or transferred here (REQ-HELPER-015).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "821eec3048cdc323",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol",
+      "function": "FlashLiquidatorLenders line 99",
+      "reason": "Regex false positive on `_mintsAsset`: the line chooses the GHO flash minter as lender or quotes its maxFlashLoan or flashFee; no token is minted, burned or transferred here (REQ-HELPER-015).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "f7288ecdee62964b",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol",
+      "function": "FlashLiquidatorLenders line 113",
+      "reason": "Regex false positive on `_mintsAsset`: the line chooses the GHO flash minter as lender or quotes its maxFlashLoan or flashFee; no token is minted, burned or transferred here (REQ-HELPER-015).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "37556efb5421ef8a",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic._debtLive",
+      "reason": "Division by zero not possible: the divisor RiskModuleMath.RAY is the constant 1e27; the division bounds maxDeficit so maxDeficit * RAY cannot overflow (SPEC-BRK-004).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "624e1693e55b50ee",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/risk-module/RiskModuleMath.sol",
+      "function": "RiskModuleMath.atOrBelowPeg",
+      "reason": "Division by zero not possible: acc starts at 1 and is multiplied only by quotes that the loop above checked to be non-zero (a zero quote returns true before), so acc >= 1 (SPEC-BRK-002). Covered by the RiskModule Halmos and fuzz suites, TEST-228.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
+    },
+    {
+      "fingerprint": "4101e769027a3228",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/risk-module/RiskModuleBase.sol",
+      "function": "RiskModuleBase.constructor",
+      "reason": "Not a signature or typed-data hash: keccak256(abi.encode(im)) fingerprints the implementation immutables so each logic contract can be checked to share them (REQ-RISK-002); same as the MarketRegistryStorage entry 42f2f7931506967e.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "f2fa70288cbe8da1",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/policy/risk-module/RiskModuleBase.sol",
+      "function": "RiskModuleBase._served",
+      "reason": "Avana's LPOracle is the Aave V4 price source of the vault-token reserve and its interface is latestAnswer() (SPEC-ORC-017); the served price is what Aave values the collateral at, and the LPOracle applies freshness, failover and the sequencer itself. Read here for the rescue-excluded health factor and the booked restore (SPEC-CF-005, SPEC-CAP-003). Covered by TEST-236 (servedPriceBelowOneReadsAsOne), TEST-013.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
+    },
+    {
+      "fingerprint": "7e3136e5d070724b",
+      "check": "Missing checks for `address(0)` when assigning values to address state variables",
+      "file": "src/policy/risk-module/RiskModuleBorrowScope.sol",
+      "function": "RiskModuleBorrowScope constructor line 59",
+      "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+    },
+    {
+      "fingerprint": "27466c38b90b0e60",
+      "check": "Missing checks for `address(0)` when assigning values to address state variables",
+      "file": "src/policy/risk-module/RiskModuleBorrowScope.sol",
+      "function": "RiskModuleBorrowScope constructor line 60",
+      "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+    },
+    {
+      "fingerprint": "e899999916c025e1",
+      "check": "Missing checks for `address(0)` when assigning values to address state variables",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic constructor line 62",
+      "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+    },
+    {
+      "fingerprint": "22b7fbde0629fdb9",
+      "check": "Missing checks for `address(0)` when assigning values to address state variables",
+      "file": "src/policy/risk-module/RiskModulePreview.sol",
+      "function": "RiskModulePreview constructor line 69",
+      "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+    },
+    {
+      "fingerprint": "9de3e55d1d0960a0",
+      "check": "Missing checks for `address(0)` when assigning values to address state variables",
+      "file": "src/policy/risk-module/RiskModulePreview.sol",
+      "function": "RiskModulePreview constructor line 70",
+      "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+    },
+    {
+      "fingerprint": "4fd997f5e068ea02",
+      "check": "Missing checks for `address(0)` when assigning values to address state variables",
+      "file": "src/policy/risk-module/RiskModuleStatusLogic.sol",
+      "function": "RiskModuleStatusLogic constructor line 55",
+      "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+    },
+    {
+      "fingerprint": "e111b058f0c83b4d",
+      "check": "`decimals()` should be of type `uint8`",
+      "file": "src/oracle/lp-oracle/LPOracleListing.sol",
+      "function": "LPOracleListing._checkRoute",
+      "reason": "Regex false positive: a.decimals and b.decimals are the uint8 decimals fields of OracleLeg; the uint256 cast only widens the sum (SPEC-ORC-003).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "2a197191bc7a81ad",
+      "check": "`decimals()` should be of type `uint8`",
+      "file": "src/oracle/lp-oracle/LPOracleListing.sol",
+      "function": "LPOracleListing._marketMatches",
+      "reason": "Regex false positive: dec is a raw ABI word of the registry's market record compared with the stored uint8 vaultDecimals; any word above 255 differs and fails the check (CHECK_MARKET of checkConfig, REQ-ORACLE-046, REQ-ORACLE-058).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
+    },
+    {
+      "fingerprint": "f4a03628811e5ee5",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
+      "function": "ParameterStoreAdminRiskLogic._isProxy",
+      "reason": "Explicit downcast at the forge-lint unsafe-typecast suppression on the line above: the line before returns unless the WALLET() word is non-zero and at most type(uint160).max, so address(uint160(wallet)) truncates nothing (REQ-CONFIG-056). Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract).",
+      "approval": "approved by pattern",
+      "review": "Josue group R (downcast after an explicit range check, new code 2026-11-11): the range check is on the line before the suppression."
+    },
+    {
+      "fingerprint": "f49dd6e8c4bbb3de",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
+      "function": "ParameterStoreAdminRiskLogic._isProxy",
+      "reason": "Explicit downcast at the forge-lint unsafe-typecast suppression on the line above: the earlier check returns unless the SPOKE() word is non-zero and at most type(uint160).max, so address(uint160(spoke)) truncates nothing (REQ-CONFIG-056). Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract).",
+      "approval": "approved by pattern",
+      "review": "Josue group R (downcast after an explicit range check, new code 2026-11-11): the range check precedes the suppression."
+    },
+    {
+      "fingerprint": "f09ec58a59d4dfde",
+      "check": "`decimals()` should be of type `uint8`",
+      "file": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "reason": "IERC20Metadata.decimals() returns uint8; the value is widened to uint256 only as the exponent of 10 in the coverage test of REQ-CONFIG-081 (_coverage, moved from _requireCovered). Covered by TEST-273.",
+      "approval": "approved by pattern",
+      "review": "group F (same reading of decimals() as the approved MarketRegistryStorage entry before the line moved)."
+    },
+    {
+      "fingerprint": "371e7ac9d08fe81e",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "reason": "Division by zero not possible: the guard `k != 0 &&` short-circuits before `(type(uint256).max - _BPS) / k` (REQ-CONFIG-081 saturation; MATH-CAP-10g/h). Covered by TEST-273 (recordCreditLineEmitsTheLine).",
+      "approval": "approved by pattern",
+      "review": "group G (division by a non-zero divisor excluded by the named guard)."
+    },
+    {
+      "fingerprint": "f9021d9cfc83f884",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/market-registry/MarketRegistryStorage.sol",
+      "reason": "Division by zero not possible: _BPS is a constant (10,000).",
+      "approval": "approved by pattern",
+      "review": "group G (division by a constant)."
+    }
+  ]
+}

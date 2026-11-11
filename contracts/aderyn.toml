@@ -1,0 +1,32 @@
+# Aderyn configuration (security-fast.sh). Format version 1 is the only one Aderyn 0.6.8 reads.
+version = 1
+
+root = "."
+# Avana's own sources; the scan grows with every file added under src/.
+src = "src/"
+# Minimal mirrors of third-party ABIs (Aave V4, Chainlink, Curve, GHO, Sky, Uniswap v3): names and layout follow the
+# deployed contracts, so findings there are not actionable in Avana code.
+exclude = ["src/interfaces/external/"]
+
+[detectors]
+# Every other detector runs. security-fast.sh fails on any High or Low finding that is not accepted in
+# security/aderyn-triage.json.
+exclude = [
+  # Avana compiles for EVM cancun (REQ-ARCH-053); PUSH0 exists on every chain Avana deploys to.
+  "push-zero-opcode",
+  # Every privileged function is held by the AvanaTimelock by design (2.15 role table); the role checks are reviewed
+  # through the spec's permission tables and the hostile-component tests, not one finding per function.
+  "centralization-risk",
+  # Splitting logic into single-use internal functions keeps implementation files within the 500-line limit (Q-240).
+  "internal-function-used-once",
+  # Single-use modifiers keep each access rule named once and next to its role.
+  "modifier-used-only-once",
+  # Public versus external visibility is fixed by the interfaces in src/; this is a gas note, not a defect.
+  "unused-public-function",
+  # forge fmt (`int_types = "long"`) already writes every integer type as uint256/int256.
+  "inconsistent-type-names",
+  # forge fmt (`number_underscore = "thousands"`) groups digits; WAD and RAY literals follow the spec's formulas.
+  "large-numeric-literal",
+  # Formula literals (1e18, 10_000 bps) stay inline where the spec writes them inline.
+  "literal-instead-of-constant",
+]

@@ -1,0 +1,36 @@
+name: Bug report
+description: A defect that is not a security vulnerability. Security issues go to support@avana.cc (see SECURITY.md).
+labels: [bug]
+body:
+  - type: checkboxes
+    id: not-security
+    attributes:
+      label: Not a vulnerability
+      options:
+        - label: This issue cannot lead to a loss of funds, a stuck position or a bypass of a protocol rule.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [contracts, spec, scripts and deployment, governance, packages/protocol, keeper, indexer, web app, CI]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens, and what should happen
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Commands, commit, chain and block, or a failing test.
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: Spec IDs involved
+      description: For example REQ-SWAP-016, INV-011.

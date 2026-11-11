@@ -1,0 +1,30 @@
+{
+  "name": "@avana/indexer",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Ponder indexer of Avana and Aave V4 events with a PostgreSQL store and the private versioned export.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "ponder dev",
+    "start": "ponder start",
+    "codegen": "ponder codegen",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@avana/protocol": "*",
+    "@avana/services-common": "*",
+    "hono": "4.13.13",
+    "ponder": "0.18.2",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12"
+  }
+}

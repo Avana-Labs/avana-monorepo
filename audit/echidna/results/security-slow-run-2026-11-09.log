@@ -1,0 +1,79 @@
+
+##### build
+Compiling 167 files with Solc 0.8.28
+Solc 0.8.28 finished in 337.19ms
+Compiler run successful!
+##### build: pass (1s)
+
+##### echidna
+=== echidna AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol), property mode
+property_roleIdsAreNameHashes: passing
+property_roleIdsPairwiseDistinct: passing
+property_noRoleIsDefaultAdmin: passing
+=== echidna AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol), assertion mode
+checkRolePair(uint8,uint8): passing
+pairsChecked(): passing
+AssertionFailed(..): passing
+=== echidna LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol), property mode
+property_holderSlotIsErc7201: passing
+property_holderSlotLowByteIsZero: passing
+property_holderSlotEmptyAtTransactionStart: passing
+=== echidna LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol), assertion mode
+entries(): passing
+enterAndRelease(address): passing
+enter(address): passing
+AssertionFailed(..): passing
+##### echidna: pass (21s)
+
+##### medusa
+=== medusa AvanaRolesProperties (test/invariant/echidna/AvanaRolesProperties.sol)
+⇾ [PASSED] Assertion Test: AvanaRolesProperties.checkRolePair(uint8,uint8)
+⇾ [PASSED] Assertion Test: AvanaRolesProperties.pairsChecked()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_noRoleIsDefaultAdmin()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_roleIdsAreNameHashes()
+⇾ [PASSED] Property Test: AvanaRolesProperties.property_roleIdsPairwiseDistinct()
+⇾ Test summary: 5 test(s) passed, 0 test(s) failed
+=== medusa LockSlotProperties (test/invariant/echidna/LockSlotProperties.sol)
+⇾ [PASSED] Assertion Test: LockSlotProperties.enter(address)
+⇾ [PASSED] Assertion Test: LockSlotProperties.enterAndRelease(address)
+⇾ [PASSED] Assertion Test: LockSlotProperties.entries()
+⇾ [PASSED] Property Test: LockSlotProperties.property_holderSlotEmptyAtTransactionStart()
+⇾ [PASSED] Property Test: LockSlotProperties.property_holderSlotIsErc7201()
+⇾ [PASSED] Property Test: LockSlotProperties.property_holderSlotLowByteIsZero()
+⇾ Test summary: 6 test(s) passed, 0 test(s) failed
+##### medusa: pass (350s)
+
+##### halmos
+halmos: skipped, test/halmos/ holds no check_ function
+##### halmos: pass (0s)
+
+##### hevm
+hevm AvanaRolesProperties.checkRolePair(uint8,uint8): QED
+hevm LockSlotProperties.enter(address): QED
+hevm LockSlotProperties.enterAndRelease(address): QED
+hevm src AvanaRoles: QED
+hevm src BreakerReasons: QED
+hevm src LensConstants: QED
+hevm src LockSlot: QED
+hevm src RiskModuleConstants: QED
+hevm test: skipped, test/symbolic/ holds no prove_ function
+##### hevm: pass (3s)
+
+##### mythril
+=== mythril AvanaRoles
+=== mythril BreakerReasons
+=== mythril LensConstants
+=== mythril LockSlot
+=== mythril RiskModuleConstants
+mythril: 0 finding(s); gate at low and above
+mythril: pass (0 blocking, 0 accepted)
+##### mythril: pass (22s)
+
+Not run, by design:
+  manticore  archived upstream (trailofbits/manticore, last release 0.3.7 in February 2022); hevm, Halmos and
+             Mythril run the symbolic execution it provided
+  mythx      the hosted service shut down effective 31 March (mythx.io/sunset) and its API no longer answers;
+             Mythril, its open-source engine, runs locally above
+  kontrol    needs the K framework (kup and Nix); hevm and Halmos cover symbolic proofs of Foundry tests
+
+security-slow: every step passed (reports in out-security/)

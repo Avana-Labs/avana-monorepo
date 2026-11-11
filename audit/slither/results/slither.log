@@ -1,0 +1,1313 @@
+
+Detector: arbitrary-send-erc20
+PayoutEscrow.deposit(address,address,uint256) (src/liquidation/payout-escrow/PayoutEscrow.sol#66-88) uses arbitrary from in transferFrom: asset.safeTransferFrom(LP_VAULT_SWAP,address(this),amount) (src/liquidation/payout-escrow/PayoutEscrow.sol#78)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#arbitrary-from-in-transferfrom
+
+Detector: uninitialized-state
+CollateralizationBase.proxyMarket (src/custody/collateralization/CollateralizationBase.sol#103) is never initialized. It is used in:
+	- CollateralizationDebtMark.markIndebted(address) (src/custody/collateralization/CollateralizationDebtMark.sol#18-27)
+	- CollateralizationDebtMark.markDebtFree(address) (src/custody/collateralization/CollateralizationDebtMark.sol#31-47)
+CollateralizationBase.proxyMarket (src/custody/collateralization/CollateralizationBase.sol#103) is never initialized. It is used in:
+	- CollateralizationLedger._checkMarket(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#44-49)
+CollateralizationBase.marketRecords (src/custody/collateralization/CollateralizationBase.sol#125) is never initialized. It is used in:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+CollateralizationBase.proxyMarket (src/custody/collateralization/CollateralizationBase.sol#103) is never initialized. It is used in:
+	- CollateralizationLedger._checkMarket(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#44-49)
+	- CollateralizationViews._previewRecord(uint32,bytes32) (src/custody/collateralization/CollateralizationViews.sol#203-212)
+CollateralizationBase.indebtedCount (src/custody/collateralization/CollateralizationBase.sol#123) is never initialized. It is used in:
+	- CollateralizationViews.getMarketDebtFree(address) (src/custody/collateralization/CollateralizationViews.sol#116-121)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#uninitialized-state-variables
+
+Detector: reentrancy-no-eth
+Reentrancy in CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#240-270):
+	External calls:
+	- booked = _unwindToSelf(c,debits[k],zeros) (src/custody/collateralization/CollateralizationLedger.sol#257)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- p.amounts[i_scope_0] += total[i_scope_0] (src/custody/collateralization/CollateralizationLedger.sol#267)
+Reentrancy in CollateralizationPledge.pledge(address,address,address,bytes32,bool) (src/custody/collateralization/CollateralizationPledge.sol#38-103):
+	External calls:
+	- credited = IAmmIntegration(c.lpVault).receivePosition(c.marketId,depositor,positionKey) (src/custody/collateralization/CollateralizationPledge.sol#56)
+	- charge = _charge(c,depositor,proxy,positionKey,credited,requireRescue) (src/custody/collateralization/CollateralizationPledge.sol#60)
+		- ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke() (src/custody/collateralization/CollateralizationPledge.sol#206)
+	State variables written after the call(s):
+	- _credit(c,proxy,credited,charge.rescueUnits) (src/custody/collateralization/CollateralizationPledge.sol#90)
+		- _poolUnits[c.poolKey] += units (src/custody/collateralization/CollateralizationPledge.sol#223)
+	CollateralizationBase._poolUnits (src/custody/collateralization/CollateralizationBase.sol#115) can be used in cross function reentrancies:
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationPledge._credit(CollateralizationBase.Ctx,address,uint256,uint256) (src/custody/collateralization/CollateralizationPledge.sol#215-225)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- _recordIdOf[c.integrationId][positionKey] = recordId (src/custody/collateralization/CollateralizationPledge.sol#64)
+	CollateralizationBase._recordIdOf (src/custody/collateralization/CollateralizationBase.sol#97) can be used in cross function reentrancies:
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- CollateralizationPledge.pledge(address,address,address,bytes32,bool) (src/custody/collateralization/CollateralizationPledge.sol#38-103)
+	- _book(c,depositor,charge) (src/custody/collateralization/CollateralizationPledge.sol#91)
+		- depositorUsd[c.hub][depositor] += charge.usdCharge (src/custody/collateralization/CollateralizationBase.sol#356)
+	CollateralizationBase.depositorUsd (src/custody/collateralization/CollateralizationBase.sol#119) can be used in cross function reentrancies:
+	- CollateralizationBase._book(CollateralizationBase.Ctx,address,PledgeCharge) (src/custody/collateralization/CollateralizationBase.sol#343-357)
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- _book(c,depositor,charge) (src/custody/collateralization/CollateralizationPledge.sol#91)
+		- marketUsd[c.vaultToken][Bucket.Regular] += charge.usdCharge - charge.sliceUsd (src/custody/collateralization/CollateralizationBase.sol#348)
+		- marketUsd[c.vaultToken][Bucket.Slice] += charge.sliceUsd (src/custody/collateralization/CollateralizationBase.sol#349)
+	CollateralizationBase.marketUsd (src/custody/collateralization/CollateralizationBase.sol#113) can be used in cross function reentrancies:
+	- CollateralizationBase._book(CollateralizationBase.Ctx,address,PledgeCharge) (src/custody/collateralization/CollateralizationBase.sol#343-357)
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- proxyMarket[proxy] = vaultToken (src/custody/collateralization/CollateralizationPledge.sol#86)
+	CollateralizationBase.proxyMarket (src/custody/collateralization/CollateralizationBase.sol#103) can be used in cross function reentrancies:
+	- CollateralizationLedger._checkMarket(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#44-49)
+	- CollateralizationPledge.pledge(address,address,address,bytes32,bool) (src/custody/collateralization/CollateralizationPledge.sol#38-103)
+	- _book(c,depositor,charge) (src/custody/collateralization/CollateralizationPledge.sol#91)
+		- tokenUsd[c.hub][c.tokens[i]] += charge.usdCharge (src/custody/collateralization/CollateralizationBase.sol#354)
+	CollateralizationBase.tokenUsd (src/custody/collateralization/CollateralizationBase.sol#117) can be used in cross function reentrancies:
+	- CollateralizationBase._book(CollateralizationBase.Ctx,address,PledgeCharge) (src/custody/collateralization/CollateralizationBase.sol#343-357)
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+Reentrancy in CollateralizationPledge.recredit(address,address,address,bytes32,bytes,bool) (src/custody/collateralization/CollateralizationPledge.sol#107-121):
+	External calls:
+	- (c,id,r) = _prepareRecredit(depositor,proxy,vaultToken,positionKey,topUp) (src/custody/collateralization/CollateralizationPledge.sol#115-116)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+		- IAmmIntegration(c.lpVault).topUpPosition(positionKey,depositor,topUp) (src/custody/collateralization/CollateralizationPledge.sol#189)
+	- charge = _charge(c,depositor,proxy,positionKey,added,requireRescue) (src/custody/collateralization/CollateralizationPledge.sol#118)
+		- ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke() (src/custody/collateralization/CollateralizationPledge.sol#206)
+	State variables written after the call(s):
+	- rescueUnits = _rebase(c,r,added,charge) (src/custody/collateralization/CollateralizationPledge.sol#119)
+		- _poolUnits[c.poolKey] += units (src/custody/collateralization/CollateralizationPledge.sol#223)
+	CollateralizationBase._poolUnits (src/custody/collateralization/CollateralizationBase.sol#115) can be used in cross function reentrancies:
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationPledge._credit(CollateralizationBase.Ctx,address,uint256,uint256) (src/custody/collateralization/CollateralizationPledge.sol#215-225)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- rescueUnits = _rebase(c,r,added,charge) (src/custody/collateralization/CollateralizationPledge.sol#119)
+		- accountCredited[proxy][c.vaultToken] += units (src/custody/collateralization/CollateralizationPledge.sol#221)
+	CollateralizationBase.accountCredited (src/custody/collateralization/CollateralizationBase.sol#105) can be used in cross function reentrancies:
+	- CollateralizationPledge._credit(CollateralizationBase.Ctx,address,uint256,uint256) (src/custody/collateralization/CollateralizationPledge.sol#215-225)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#240-270)
+	- rescueUnits = _rebase(c,r,added,charge) (src/custody/collateralization/CollateralizationPledge.sol#119)
+		- accountRescueUnits[proxy][c.vaultToken] += rescue (src/custody/collateralization/CollateralizationPledge.sol#224)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- CollateralizationPledge._credit(CollateralizationBase.Ctx,address,uint256,uint256) (src/custody/collateralization/CollateralizationPledge.sol#215-225)
+	- rescueUnits = _rebase(c,r,added,charge) (src/custody/collateralization/CollateralizationPledge.sol#119)
+		- depositorUsd[c.hub][depositor] += charge.usdCharge (src/custody/collateralization/CollateralizationBase.sol#356)
+	CollateralizationBase.depositorUsd (src/custody/collateralization/CollateralizationBase.sol#119) can be used in cross function reentrancies:
+	- CollateralizationBase._book(CollateralizationBase.Ctx,address,PledgeCharge) (src/custody/collateralization/CollateralizationBase.sol#343-357)
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- rescueUnits = _rebase(c,r,added,charge) (src/custody/collateralization/CollateralizationPledge.sol#119)
+		- marketUsd[c.vaultToken][Bucket.Regular] += charge.usdCharge - charge.sliceUsd (src/custody/collateralization/CollateralizationBase.sol#348)
+		- marketUsd[c.vaultToken][Bucket.Slice] += charge.sliceUsd (src/custody/collateralization/CollateralizationBase.sol#349)
+	CollateralizationBase.marketUsd (src/custody/collateralization/CollateralizationBase.sol#113) can be used in cross function reentrancies:
+	- CollateralizationBase._book(CollateralizationBase.Ctx,address,PledgeCharge) (src/custody/collateralization/CollateralizationBase.sol#343-357)
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- rescueUnits = _rebase(c,r,added,charge) (src/custody/collateralization/CollateralizationPledge.sol#119)
+		- tokenUsd[c.hub][c.tokens[i]] += charge.usdCharge (src/custody/collateralization/CollateralizationBase.sol#354)
+	CollateralizationBase.tokenUsd (src/custody/collateralization/CollateralizationBase.sol#117) can be used in cross function reentrancies:
+	- CollateralizationBase._book(CollateralizationBase.Ctx,address,PledgeCharge) (src/custody/collateralization/CollateralizationBase.sol#343-357)
+	- CollateralizationLedger._counters(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationLedger.sol#315-330)
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- rescueUnits = _rebase(c,r,added,charge) (src/custody/collateralization/CollateralizationPledge.sol#119)
+		- totalCredited[c.vaultToken] += units (src/custody/collateralization/CollateralizationPledge.sol#222)
+	CollateralizationBase.totalCredited (src/custody/collateralization/CollateralizationBase.sol#107) can be used in cross function reentrancies:
+	- CollateralizationPledge._credit(CollateralizationBase.Ctx,address,uint256,uint256) (src/custody/collateralization/CollateralizationPledge.sol#215-225)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+Reentrancy in CollateralizationRelease.release(address,address,bytes32,uint256) (src/custody/collateralization/CollateralizationRelease.sol#31-43):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,0) (src/custody/collateralization/CollateralizationRelease.sol#37)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- _poolUnits[c.poolKey] -= units (src/custody/collateralization/CollateralizationLedger.sol#201)
+	CollateralizationBase._poolUnits (src/custody/collateralization/CollateralizationBase.sol#115) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#41)
+		- delete _recordIdOf[r.integrationId][r.positionKey] (src/custody/collateralization/CollateralizationLedger.sol#229)
+	CollateralizationBase._recordIdOf (src/custody/collateralization/CollateralizationBase.sol#97) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- accountCredited[proxy][vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#199)
+	CollateralizationBase.accountCredited (src/custody/collateralization/CollateralizationBase.sol#105) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+	- CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#240-270)
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- accountRescueUnits[proxy][vt] -= rescue - credited (src/custody/collateralization/CollateralizationLedger.sol#179)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#41)
+		- accountRescueUnits[proxy][vt] -= rescue (src/custody/collateralization/CollateralizationLedger.sol#219)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- depositorUsd[c.hub][depositor] = _satSub(depositorUsd[c.hub][depositor],released,CounterKind.Depositor,c.hub,depositor) (src/custody/collateralization/CollateralizationBase.sol#397-398)
+	CollateralizationBase.depositorUsd (src/custody/collateralization/CollateralizationBase.sol#119) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- marketUsd[vt][Bucket.Slice] = slice - fromSlice (src/custody/collateralization/CollateralizationBase.sol#386)
+		- marketUsd[vt][Bucket.Regular] = _satSub(marketUsd[vt][Bucket.Regular],released - fromSlice,CounterKind.MarketRegular,c.hub,vt) (src/custody/collateralization/CollateralizationBase.sol#387-388)
+	CollateralizationBase.marketUsd (src/custody/collateralization/CollateralizationBase.sol#113) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- r.rescueUnits = credited (src/custody/collateralization/CollateralizationLedger.sol#180)
+		- r.currentUsdCharge = uint64(remaining) (src/custody/collateralization/CollateralizationBase.sol#382)
+	CollateralizationBase.records (src/custody/collateralization/CollateralizationBase.sol#95) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#41)
+		- delete records[id] (src/custody/collateralization/CollateralizationLedger.sol#230)
+	CollateralizationBase.records (src/custody/collateralization/CollateralizationBase.sol#95) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- tokenUsd[c.hub][token] = _satSub(tokenUsd[c.hub][token],released,CounterKind.Token,c.hub,token) (src/custody/collateralization/CollateralizationBase.sol#394)
+	CollateralizationBase.tokenUsd (src/custody/collateralization/CollateralizationBase.sol#117) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+		- totalCredited[vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#200)
+	CollateralizationBase.totalCredited (src/custody/collateralization/CollateralizationBase.sol#107) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+Reentrancy in CollateralizationRelease.releaseForDeleverage(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/CollateralizationRelease.sol#72-91):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,minAmounts.length + 1) (src/custody/collateralization/CollateralizationRelease.sol#79-80)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- _poolUnits[c.poolKey] -= units (src/custody/collateralization/CollateralizationLedger.sol#201)
+	CollateralizationBase._poolUnits (src/custody/collateralization/CollateralizationBase.sol#115) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#87)
+		- delete _recordIdOf[r.integrationId][r.positionKey] (src/custody/collateralization/CollateralizationLedger.sol#229)
+	CollateralizationBase._recordIdOf (src/custody/collateralization/CollateralizationBase.sol#97) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- accountCredited[proxy][vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#199)
+	CollateralizationBase.accountCredited (src/custody/collateralization/CollateralizationBase.sol#105) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+	- CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#240-270)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- accountRescueUnits[proxy][vt] -= rescue - credited (src/custody/collateralization/CollateralizationLedger.sol#179)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#87)
+		- accountRescueUnits[proxy][vt] -= rescue (src/custody/collateralization/CollateralizationLedger.sol#219)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- depositorUsd[c.hub][depositor] = _satSub(depositorUsd[c.hub][depositor],released,CounterKind.Depositor,c.hub,depositor) (src/custody/collateralization/CollateralizationBase.sol#397-398)
+	CollateralizationBase.depositorUsd (src/custody/collateralization/CollateralizationBase.sol#119) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- marketUsd[vt][Bucket.Slice] = slice - fromSlice (src/custody/collateralization/CollateralizationBase.sol#386)
+		- marketUsd[vt][Bucket.Regular] = _satSub(marketUsd[vt][Bucket.Regular],released - fromSlice,CounterKind.MarketRegular,c.hub,vt) (src/custody/collateralization/CollateralizationBase.sol#387-388)
+	CollateralizationBase.marketUsd (src/custody/collateralization/CollateralizationBase.sol#113) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- r.rescueUnits = credited (src/custody/collateralization/CollateralizationLedger.sol#180)
+		- r.currentUsdCharge = uint64(remaining) (src/custody/collateralization/CollateralizationBase.sol#382)
+	CollateralizationBase.records (src/custody/collateralization/CollateralizationBase.sol#95) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#87)
+		- delete records[id] (src/custody/collateralization/CollateralizationLedger.sol#230)
+	CollateralizationBase.records (src/custody/collateralization/CollateralizationBase.sol#95) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- tokenUsd[c.hub][token] = _satSub(tokenUsd[c.hub][token],released,CounterKind.Token,c.hub,token) (src/custody/collateralization/CollateralizationBase.sol#394)
+	CollateralizationBase.tokenUsd (src/custody/collateralization/CollateralizationBase.sol#117) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+		- totalCredited[vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#200)
+	CollateralizationBase.totalCredited (src/custody/collateralization/CollateralizationBase.sol#107) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+Reentrancy in CollateralizationRelease.releasePartial(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/CollateralizationRelease.sol#47-68):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,minAmounts.length + 1) (src/custody/collateralization/CollateralizationRelease.sol#54-55)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- _poolUnits[c.poolKey] -= units (src/custody/collateralization/CollateralizationLedger.sol#201)
+	CollateralizationBase._poolUnits (src/custody/collateralization/CollateralizationBase.sol#115) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- accountCredited[proxy][vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#199)
+	CollateralizationBase.accountCredited (src/custody/collateralization/CollateralizationBase.sol#105) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+	- CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#240-270)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- accountRescueUnits[proxy][vt] -= rescue - credited (src/custody/collateralization/CollateralizationLedger.sol#179)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- depositorUsd[c.hub][depositor] = _satSub(depositorUsd[c.hub][depositor],released,CounterKind.Depositor,c.hub,depositor) (src/custody/collateralization/CollateralizationBase.sol#397-398)
+	CollateralizationBase.depositorUsd (src/custody/collateralization/CollateralizationBase.sol#119) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- marketUsd[vt][Bucket.Slice] = slice - fromSlice (src/custody/collateralization/CollateralizationBase.sol#386)
+		- marketUsd[vt][Bucket.Regular] = _satSub(marketUsd[vt][Bucket.Regular],released - fromSlice,CounterKind.MarketRegular,c.hub,vt) (src/custody/collateralization/CollateralizationBase.sol#387-388)
+	CollateralizationBase.marketUsd (src/custody/collateralization/CollateralizationBase.sol#113) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- r.rescueUnits = credited (src/custody/collateralization/CollateralizationLedger.sol#180)
+		- r.currentUsdCharge = uint64(remaining) (src/custody/collateralization/CollateralizationBase.sol#382)
+	CollateralizationBase.records (src/custody/collateralization/CollateralizationBase.sol#95) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- tokenUsd[c.hub][token] = _satSub(tokenUsd[c.hub][token],released,CounterKind.Token,c.hub,token) (src/custody/collateralization/CollateralizationBase.sol#394)
+	CollateralizationBase.tokenUsd (src/custody/collateralization/CollateralizationBase.sol#117) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+		- totalCredited[vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#200)
+	CollateralizationBase.totalCredited (src/custody/collateralization/CollateralizationBase.sol#107) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._debitRecord(CollateralizationBase.Ctx,BackingRecord,uint256) (src/custody/collateralization/CollateralizationLedger.sol#187-202)
+Reentrancy in CollateralizationRelease.releaseZeroCredit(address,address,bytes32) (src/custody/collateralization/CollateralizationRelease.sol#95-110):
+	External calls:
+	- _reconcile(c,proxy,_supplied(c,proxy)) (src/custody/collateralization/CollateralizationRelease.sol#105)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#108)
+		- delete _recordIdOf[r.integrationId][r.positionKey] (src/custody/collateralization/CollateralizationLedger.sol#229)
+	CollateralizationBase._recordIdOf (src/custody/collateralization/CollateralizationBase.sol#97) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#108)
+		- accountRescueUnits[proxy][vt] -= rescue (src/custody/collateralization/CollateralizationLedger.sol#219)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#108)
+		- delete records[id] (src/custody/collateralization/CollateralizationLedger.sol#230)
+	CollateralizationBase.records (src/custody/collateralization/CollateralizationBase.sol#95) can be used in cross function reentrancies:
+	- CollateralizationLedger._close(CollateralizationBase.Ctx,uint256,BackingRecord) (src/custody/collateralization/CollateralizationLedger.sol#209-231)
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._record(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationLedger.sol#34-41)
+Reentrancy in CollateralizationSeizure.settleSeizure(address,address,uint256,uint256[]) (src/custody/collateralization/CollateralizationSeizure.sol#43-70):
+	External calls:
+	- _reconcile(c,proxy,sharesBefore) (src/custody/collateralization/CollateralizationSeizure.sol#57)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- _poolUnits[c.poolKey] -= units (src/custody/collateralization/CollateralizationLedger.sol#150)
+	CollateralizationBase._poolUnits (src/custody/collateralization/CollateralizationBase.sol#115) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- accountCredited[proxy][vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#148)
+	CollateralizationBase.accountCredited (src/custody/collateralization/CollateralizationBase.sol#105) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#240-270)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- accountRescueUnits[proxy][vt] -= rescue - credited (src/custody/collateralization/CollateralizationLedger.sol#179)
+	CollateralizationBase.accountRescueUnits (src/custody/collateralization/CollateralizationBase.sol#109) can be used in cross function reentrancies:
+	- CollateralizationLedger._capRescue(BackingRecord,address,address) (src/custody/collateralization/CollateralizationLedger.sol#171-182)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- depositorUsd[c.hub][depositor] = _satSub(depositorUsd[c.hub][depositor],released,CounterKind.Depositor,c.hub,depositor) (src/custody/collateralization/CollateralizationBase.sol#397-398)
+	CollateralizationBase.depositorUsd (src/custody/collateralization/CollateralizationBase.sol#119) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- marketUsd[vt][Bucket.Slice] = slice - fromSlice (src/custody/collateralization/CollateralizationBase.sol#386)
+		- marketUsd[vt][Bucket.Regular] = _satSub(marketUsd[vt][Bucket.Regular],released - fromSlice,CounterKind.MarketRegular,c.hub,vt) (src/custody/collateralization/CollateralizationBase.sol#387-388)
+	CollateralizationBase.marketUsd (src/custody/collateralization/CollateralizationBase.sol#113) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- r.rescueUnits = credited (src/custody/collateralization/CollateralizationLedger.sol#180)
+		- r.currentUsdCharge = uint64(remaining) (src/custody/collateralization/CollateralizationBase.sol#382)
+		- r.credited = uint128(credited - take) (src/custody/collateralization/CollateralizationLedger.sol#124)
+		- r.lastDebitedAt = uint40(block.timestamp) (src/custody/collateralization/CollateralizationLedger.sol#127)
+		- r.inList = false (src/custody/collateralization/CollateralizationLedger.sol#131)
+	CollateralizationBase.records (src/custody/collateralization/CollateralizationBase.sol#95) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- tokenUsd[c.hub][token] = _satSub(tokenUsd[c.hub][token],released,CounterKind.Token,c.hub,token) (src/custody/collateralization/CollateralizationBase.sol#394)
+	CollateralizationBase.tokenUsd (src/custody/collateralization/CollateralizationBase.sol#117) can be used in cross function reentrancies:
+	- CollateralizationBase._releaseExposure(CollateralizationBase.Ctx,BackingRecord) (src/custody/collateralization/CollateralizationBase.sol#372-399)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- totalCredited[vt] -= units (src/custody/collateralization/CollateralizationLedger.sol#149)
+	CollateralizationBase.totalCredited (src/custody/collateralization/CollateralizationBase.sol#107) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- zeroCreditList[proxy][vt].push(id) (src/custody/collateralization/CollateralizationLedger.sol#132)
+	CollateralizationBase.zeroCreditList (src/custody/collateralization/CollateralizationBase.sol#101) can be used in cross function reentrancies:
+	- CollateralizationLedger._debit(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#105-151)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-2
+
+Detector: unused-return
+CollateralizationBase._load(address) (src/custody/collateralization/CollateralizationBase.sol#191-213) ignores return value by (pool,poolId,None,tokens) = IAmmIntegration(c.lpVault).marketOf(c.marketId) (src/custody/collateralization/CollateralizationBase.sol#210)
+CollateralizationBase._returnPosition(CollateralizationBase.Ctx,bytes32) (src/custody/collateralization/CollateralizationBase.sol#249-256) ignores return value by IAmmIntegration(c.lpVault).returnPosition(positionKey) (src/custody/collateralization/CollateralizationBase.sol#255)
+CollateralizationPledge._prepareRecredit(address,address,address,bytes32,bytes) (src/custody/collateralization/CollateralizationPledge.sol#171-190) ignores return value by IAmmIntegration(c.lpVault).topUpPosition(positionKey,depositor,topUp) (src/custody/collateralization/CollateralizationPledge.sol#189)
+CollateralizationPledge._charge(CollateralizationBase.Ctx,address,address,bytes32,uint128,bool) (src/custody/collateralization/CollateralizationPledge.sol#196-211) ignores return value by ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke() (src/custody/collateralization/CollateralizationPledge.sol#206)
+CollateralizationRelease.releasePartial(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/CollateralizationRelease.sol#47-68) ignores return value by IAmmIntegration(c.lpVault).releaseToDepositor(positionKey,units,minAmounts) (src/custody/collateralization/CollateralizationRelease.sol#66)
+DexHops._runHops(uint256) (src/liquidation/settlement-routes/DexHops.sol#140-160) ignores return value by ICurveStableSwapNG(hop.pool).exchange(hop.i,hop.j,amount,0) (src/liquidation/settlement-routes/DexHops.sol#154)
+DexHops._concentratedHop(address,address,uint256,bool) (src/liquidation/settlement-routes/DexHops.sol#183-203) ignores return value by IUniswapV3Pool(pool).swap(address(this),zeroForOne,amountSpecified,limit,) (src/liquidation/settlement-routes/DexHops.sol#198)
+PegModuleRoute._runLegs(uint256) (src/liquidation/settlement-routes/PegModuleRoute.sol#112-156) ignores return value by IERC4626(_WRAPPER).deposit(amount,address(this)) (src/liquidation/settlement-routes/PegModuleRoute.sol#121)
+PegModuleRoute._runLegs(uint256) (src/liquidation/settlement-routes/PegModuleRoute.sol#112-156) ignores return value by IGsm(_MODULE).sellAsset(shares,_LP_VAULT_SWAP) (src/liquidation/settlement-routes/PegModuleRoute.sol#130)
+PegModuleRoute._runLegs(uint256) (src/liquidation/settlement-routes/PegModuleRoute.sol#112-156) ignores return value by ILitePsm(_MODULE).buyGem(_LP_VAULT_SWAP,gemAmt) (src/liquidation/settlement-routes/PegModuleRoute.sol#152)
+WrapperThenDexRoute._runLegs(uint256) (src/liquidation/settlement-routes/WrapperThenDexRoute.sol#82-98) ignores return value by IERC4626(_WRAPPER).redeem(amount,address(this),address(this)) (src/liquidation/settlement-routes/WrapperThenDexRoute.sol#90)
+MarketRegistryMarketChecks._primaryAnswer8(address) (src/policy/market-registry/MarketRegistryMarketChecks.sol#155-171) ignores return value by (None,answer,None,None,None) = IAggregatorV3(route[i]).latestRoundData() (src/policy/market-registry/MarketRegistryMarketChecks.sol#163)
+ParameterStoreViews._buildConfig(uint256,Market) (src/policy/parameter-store/ParameterStoreViews.sol#348-379) ignores return value by (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreViews.sol#361)
+ParameterStoreRouter._forward(address) (src/policy/parameter-store/ParameterStoreRouter.sol#78-82) ignores return value by Address.functionDelegateCall(logic,msg.data) (src/policy/parameter-store/ParameterStoreRouter.sol#81)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) ignores return value by (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) ignores return value by (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+ParameterStoreOracle._checkTwap(uint256,Market,uint32) (src/policy/parameter-store/ParameterStoreOracle.sol#161-185) ignores return value by (None,None,None,cardinality) = IPoolObservations(m.pool).slot0() (src/policy/parameter-store/ParameterStoreOracle.sol#177)
+ParameterStoreListingLogic._sequencerFeedValid(address) (src/policy/parameter-store/ParameterStoreListingLogic.sol#245-256) ignores return value by (answer,startedAt) = ISequencerUptimeFeed(feed).latestRoundData() (src/policy/parameter-store/ParameterStoreListingLogic.sol#249-255)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-return
+
+Detector: calls-loop
+CollateralizationBase._balances(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationBase.sol#274-285) has external calls inside a loop: balances[i] = IERC20(c.tokens[i]).balanceOf(account) (src/custody/collateralization/CollateralizationBase.sol#283)
+	Calls stack containing the loop:
+		CollateralizationPledge.recredit(address,address,address,bytes32,bytes,bool)
+		CollateralizationPledge._prepareRecredit(address,address,address,bytes32,bytes)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._unwind(CollateralizationBase.Ctx,bytes32,uint128,uint256[],address) (src/custody/collateralization/CollateralizationBase.sol#260-270) has external calls inside a loop: IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Calls stack containing the loop:
+		CollateralizationPledge.recredit(address,address,address,bytes32,bytes,bool)
+		CollateralizationPledge._prepareRecredit(address,address,address,bytes32,bytes)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._balances(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationBase.sol#274-285) has external calls inside a loop: balances[i] = IERC20(c.tokens[i]).balanceOf(account) (src/custody/collateralization/CollateralizationBase.sol#283)
+	Calls stack containing the loop:
+		CollateralizationRelease.release(address,address,bytes32,uint256)
+		CollateralizationRelease._prepareExit(address,bytes32,address,uint256,uint256)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._unwind(CollateralizationBase.Ctx,bytes32,uint128,uint256[],address) (src/custody/collateralization/CollateralizationBase.sol#260-270) has external calls inside a loop: IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Calls stack containing the loop:
+		CollateralizationRelease.release(address,address,bytes32,uint256)
+		CollateralizationRelease._prepareExit(address,bytes32,address,uint256,uint256)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._balances(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationBase.sol#274-285) has external calls inside a loop: balances[i] = IERC20(c.tokens[i]).balanceOf(account) (src/custody/collateralization/CollateralizationBase.sol#283)
+	Calls stack containing the loop:
+		CollateralizationRelease.releasePartial(address,address,bytes32,uint128,uint256[])
+		CollateralizationRelease._prepareExit(address,bytes32,address,uint256,uint256)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._unwind(CollateralizationBase.Ctx,bytes32,uint128,uint256[],address) (src/custody/collateralization/CollateralizationBase.sol#260-270) has external calls inside a loop: IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Calls stack containing the loop:
+		CollateralizationRelease.releasePartial(address,address,bytes32,uint128,uint256[])
+		CollateralizationRelease._prepareExit(address,bytes32,address,uint256,uint256)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._balances(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationBase.sol#274-285) has external calls inside a loop: balances[i] = IERC20(c.tokens[i]).balanceOf(account) (src/custody/collateralization/CollateralizationBase.sol#283)
+	Calls stack containing the loop:
+		CollateralizationRelease.releaseForDeleverage(address,address,bytes32,uint128,uint256[])
+		CollateralizationRelease._prepareExit(address,bytes32,address,uint256,uint256)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._unwind(CollateralizationBase.Ctx,bytes32,uint128,uint256[],address) (src/custody/collateralization/CollateralizationBase.sol#260-270) has external calls inside a loop: IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Calls stack containing the loop:
+		CollateralizationRelease.releaseForDeleverage(address,address,bytes32,uint128,uint256[])
+		CollateralizationRelease._prepareExit(address,bytes32,address,uint256,uint256)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._balances(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationBase.sol#274-285) has external calls inside a loop: balances[i] = IERC20(c.tokens[i]).balanceOf(account) (src/custody/collateralization/CollateralizationBase.sol#283)
+	Calls stack containing the loop:
+		CollateralizationRelease.releaseZeroCredit(address,address,bytes32)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._unwind(CollateralizationBase.Ctx,bytes32,uint128,uint256[],address) (src/custody/collateralization/CollateralizationBase.sol#260-270) has external calls inside a loop: IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Calls stack containing the loop:
+		CollateralizationRelease.releaseZeroCredit(address,address,bytes32)
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._balances(CollateralizationBase.Ctx,address) (src/custody/collateralization/CollateralizationBase.sol#274-285) has external calls inside a loop: balances[i] = IERC20(c.tokens[i]).balanceOf(account) (src/custody/collateralization/CollateralizationBase.sol#283)
+	Calls stack containing the loop:
+		CollateralizationSeizure.settleSeizure(address,address,uint256,uint256[])
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+CollateralizationBase._unwind(CollateralizationBase.Ctx,bytes32,uint128,uint256[],address) (src/custody/collateralization/CollateralizationBase.sol#260-270) has external calls inside a loop: IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Calls stack containing the loop:
+		CollateralizationSeizure.settleSeizure(address,address,uint256,uint256[])
+		CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256)
+		CollateralizationLedger._unwindToSelf(CollateralizationBase.Ctx,CollateralizationBase.Debit,uint256[])
+SwapRouteBase.swap(uint256,uint256) (src/liquidation/settlement-routes/SwapRouteBase.sol#67-111) has external calls inside a loop: before[k] = IERC20(held[k]).balanceOf(address(this)) (src/liquidation/settlement-routes/SwapRouteBase.sol#86)
+SwapRouteBase._balance(address) (src/liquidation/settlement-routes/SwapRouteBase.sol#198-204) has external calls inside a loop: IERC20(token).balanceOf(address(this)) (src/liquidation/settlement-routes/SwapRouteBase.sol#203)
+	Calls stack containing the loop:
+		SwapRouteBase.swap(uint256,uint256)
+		DexPathRoute._runLegs(uint256)
+		DexHops._runHops(uint256)
+DexHops._concentratedHop(address,address,uint256,bool) (src/liquidation/settlement-routes/DexHops.sol#183-203) has external calls inside a loop: IUniswapV3Pool(pool).swap(address(this),zeroForOne,amountSpecified,limit,) (src/liquidation/settlement-routes/DexHops.sol#198)
+	Calls stack containing the loop:
+		SwapRouteBase.swap(uint256,uint256)
+		DexPathRoute._runLegs(uint256)
+		DexHops._runHops(uint256)
+SwapRouteBase._rise(address,uint256) (src/liquidation/settlement-routes/SwapRouteBase.sol#207-215) has external calls inside a loop: balance = IERC20(token).balanceOf(address(this)) (src/liquidation/settlement-routes/SwapRouteBase.sol#213)
+	Calls stack containing the loop:
+		SwapRouteBase.swap(uint256,uint256)
+		DexPathRoute._runLegs(uint256)
+		DexHops._runHops(uint256)
+DexHops._runHops(uint256) (src/liquidation/settlement-routes/DexHops.sol#140-160) has external calls inside a loop: ICurveStableSwapNG(hop.pool).exchange(hop.i,hop.j,amount,0) (src/liquidation/settlement-routes/DexHops.sol#154)
+	Calls stack containing the loop:
+		SwapRouteBase.swap(uint256,uint256)
+		DexPathRoute._runLegs(uint256)
+SwapRouteBase.swap(uint256,uint256) (src/liquidation/settlement-routes/SwapRouteBase.sol#67-111) has external calls inside a loop: balance = IERC20(held[k_scope_0]).balanceOf(address(this)) (src/liquidation/settlement-routes/SwapRouteBase.sol#102)
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: token0 = IUniswapV3Pool(hop.pool).token0() (src/liquidation/settlement-routes/DexHops.sol#235)
+	Calls stack containing the loop:
+		DexPathRoute.constructor(RouteConfig,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: token1 = IUniswapV3Pool(hop.pool).token1() (src/liquidation/settlement-routes/DexHops.sol#237)
+	Calls stack containing the loop:
+		DexPathRoute.constructor(RouteConfig,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: curve.coins(SafeCast.toUint256(hop.i)) != input (src/liquidation/settlement-routes/DexHops.sol#244)
+	Calls stack containing the loop:
+		DexPathRoute.constructor(RouteConfig,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: ok = curve.coins(SafeCast.toUint256(hop.j)) == hop.tokenOut (src/liquidation/settlement-routes/DexHops.sol#246)
+	Calls stack containing the loop:
+		DexPathRoute.constructor(RouteConfig,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+DexHops._concentratedHop(address,address,uint256,bool) (src/liquidation/settlement-routes/DexHops.sol#183-203) has external calls inside a loop: IUniswapV3Pool(pool).swap(address(this),zeroForOne,amountSpecified,limit,) (src/liquidation/settlement-routes/DexHops.sol#198)
+	Calls stack containing the loop:
+		SwapRouteBase.swap(uint256,uint256)
+		WrapperThenDexRoute._runLegs(uint256)
+		DexHops._runHops(uint256)
+DexHops._runHops(uint256) (src/liquidation/settlement-routes/DexHops.sol#140-160) has external calls inside a loop: ICurveStableSwapNG(hop.pool).exchange(hop.i,hop.j,amount,0) (src/liquidation/settlement-routes/DexHops.sol#154)
+	Calls stack containing the loop:
+		SwapRouteBase.swap(uint256,uint256)
+		WrapperThenDexRoute._runLegs(uint256)
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: token0 = IUniswapV3Pool(hop.pool).token0() (src/liquidation/settlement-routes/DexHops.sol#235)
+	Calls stack containing the loop:
+		WrapperThenDexRoute.constructor(RouteConfig,WrapperStep,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: token1 = IUniswapV3Pool(hop.pool).token1() (src/liquidation/settlement-routes/DexHops.sol#237)
+	Calls stack containing the loop:
+		WrapperThenDexRoute.constructor(RouteConfig,WrapperStep,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: curve.coins(SafeCast.toUint256(hop.i)) != input (src/liquidation/settlement-routes/DexHops.sol#244)
+	Calls stack containing the loop:
+		WrapperThenDexRoute.constructor(RouteConfig,WrapperStep,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+DexHops._checkHop(DexHop,address) (src/liquidation/settlement-routes/DexHops.sol#227-248) has external calls inside a loop: ok = curve.coins(SafeCast.toUint256(hop.j)) == hop.tokenOut (src/liquidation/settlement-routes/DexHops.sol#246)
+	Calls stack containing the loop:
+		WrapperThenDexRoute.constructor(RouteConfig,WrapperStep,DexHop[])
+		DexHops.constructor(RouteConfig,address,DexHop[])
+MarketRegistryDriftView._marketDrift(address,address,Market) (src/policy/market-registry/MarketRegistryDriftView.sol#45-75) has external calls inside a loop: r = s.getReserve(rid) (src/policy/market-registry/MarketRegistryDriftView.sol#53-58)
+	Calls stack containing the loop:
+		MarketRegistryViews.spokeSettingsDrift(address)
+		MarketRegistryDriftView._spokeDrift(address)
+MarketRegistryDriftView._marketDrift(address,address,Market) (src/policy/market-registry/MarketRegistryDriftView.sol#45-75) has external calls inside a loop: rc = s.getReserveConfig(rid) (src/policy/market-registry/MarketRegistryDriftView.sol#59-63)
+	Calls stack containing the loop:
+		MarketRegistryViews.spokeSettingsDrift(address)
+		MarketRegistryDriftView._spokeDrift(address)
+MarketRegistryDriftView._marketDrift(address,address,Market) (src/policy/market-registry/MarketRegistryDriftView.sol#45-75) has external calls inside a loop: dc = s.getDynamicReserveConfig(rid,key) (src/policy/market-registry/MarketRegistryDriftView.sol#64-68)
+	Calls stack containing the loop:
+		MarketRegistryViews.spokeSettingsDrift(address)
+		MarketRegistryDriftView._spokeDrift(address)
+MarketRegistryDriftView._marketDrift(address,address,Market) (src/policy/market-registry/MarketRegistryDriftView.sol#45-75) has external calls inside a loop: ac = IAaveV4Hub(homeHub).getAssetConfig(m.hubAssetId) (src/policy/market-registry/MarketRegistryDriftView.sol#69-73)
+	Calls stack containing the loop:
+		MarketRegistryViews.spokeSettingsDrift(address)
+		MarketRegistryDriftView._spokeDrift(address)
+MarketRegistryStorage._marginHolds(uint256,address[]) (src/policy/market-registry/MarketRegistryStorage.sol#278-289) has external calls inside a loop: f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]) (src/policy/market-registry/MarketRegistryStorage.sol#285)
+	Calls stack containing the loop:
+		MarketRegistryActivationLogic.activateMarket(uint256)
+		MarketRegistryActivationLogic._checkOracleAndRoutes(uint256,Market,uint256)
+		MarketRegistryStorage._listingMarginHolds(uint256,address[])
+MarketRegistryActivationLogic._checkLiveness(uint256,address) (src/policy/market-registry/MarketRegistryActivationLogic.sol#220-234) has external calls inside a loop: ! IParameterStoreLiquidation(_PARAMETER_STORE).liquidationLivenessHolds(spoke,marketId,drs[i]) (src/policy/market-registry/MarketRegistryActivationLogic.sol#228)
+	Calls stack containing the loop:
+		MarketRegistryActivationLogic.activateMarket(uint256)
+MarketRegistryDebtChecks._checkMarketsLive(address,uint256,address) (src/policy/market-registry/MarketRegistryDebtChecks.sol#138-158) has external calls inside a loop: ! _routesCover(id,asset) || ! IParameterStoreLiquidation(_PARAMETER_STORE).liquidationLivenessHolds(spoke,id,reserveId) (src/policy/market-registry/MarketRegistryDebtChecks.sol#150-151)
+	Calls stack containing the loop:
+		MarketRegistryHubsLogic.enableDebtReserve(address,DebtReserveDef)
+MarketRegistryStorage._routeLegsCheck(address[]) (src/policy/market-registry/MarketRegistryStorage.sol#250-262) has external calls inside a loop: f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]) (src/policy/market-registry/MarketRegistryStorage.sol#256)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.listToken(address,TokenDef)
+		MarketRegistryListingLogic._checkThreeRoutes(address[],address[],address[])
+MarketRegistryStorage._routeLegsCheck(address[]) (src/policy/market-registry/MarketRegistryStorage.sol#250-262) has external calls inside a loop: f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]) (src/policy/market-registry/MarketRegistryStorage.sol#256)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.setPriceSource(address,address[],address[],address[])
+		MarketRegistryListingLogic._checkThreeRoutes(address[],address[],address[])
+MarketRegistryListingLogic._checkMarketRoutes(uint256,address[],address) (src/policy/market-registry/MarketRegistryListingLogic.sol#254-263) has external calls inside a loop: cfLp = IRiskModuleViews(_RISK_MODULE).expectedCollateralFactorBps(marketId) (src/policy/market-registry/MarketRegistryListingLogic.sol#260)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.setPriceSource(address,address[],address[],address[])
+MarketRegistryStorage._marginHolds(uint256,address[]) (src/policy/market-registry/MarketRegistryStorage.sol#278-289) has external calls inside a loop: f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]) (src/policy/market-registry/MarketRegistryStorage.sol#285)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.setPriceSource(address,address[],address[],address[])
+		MarketRegistryListingLogic._checkMarketRoutes(uint256,address[],address)
+		MarketRegistryStorage._listingMarginHolds(uint256,address[])
+MarketRegistryOracleChecks._oracleConfigPasses(address) (src/policy/market-registry/MarketRegistryOracleChecks.sol#21-30) has external calls inside a loop: (ok,cfg) = _PARAMETER_STORE.staticcall(abi.encodeCall(IParameterStoreViews.getOracleConfig,(lpOracle))) (src/policy/market-registry/MarketRegistryOracleChecks.sol#24-25)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.setPriceSource(address,address[],address[],address[])
+		MarketRegistryListingLogic._checkMarketRoutes(uint256,address[],address)
+MarketRegistryOracleChecks._oracleConfigPasses(address) (src/policy/market-registry/MarketRegistryOracleChecks.sol#21-30) has external calls inside a loop: (ok,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,cfg)) (src/policy/market-registry/MarketRegistryOracleChecks.sol#28)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.setPriceSource(address,address[],address[],address[])
+		MarketRegistryListingLogic._checkMarketRoutes(uint256,address[],address)
+MarketRegistryMarketChecks._primaryAnswer8(address) (src/policy/market-registry/MarketRegistryMarketChecks.sol#155-171) has external calls inside a loop: (None,answer,None,None,None) = IAggregatorV3(route[i]).latestRoundData() (src/policy/market-registry/MarketRegistryMarketChecks.sol#163)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.listCollateralMarket(MarketDef)
+		MarketRegistryListingLogic._bindAndCheck(MarketDef,address,bytes32,uint256,bool)
+		MarketRegistryMarketChecks._checkRawPrice(address[],uint8[])
+MarketRegistryMarketChecks._primaryAnswer8(address) (src/policy/market-registry/MarketRegistryMarketChecks.sol#155-171) has external calls inside a loop: dec = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]).decimals (src/policy/market-registry/MarketRegistryMarketChecks.sol#164)
+	Calls stack containing the loop:
+		MarketRegistryListingLogic.listCollateralMarket(MarketDef)
+		MarketRegistryListingLogic._bindAndCheck(MarketDef,address,bytes32,uint256,bool)
+		MarketRegistryMarketChecks._checkRawPrice(address[],uint8[])
+MarketRegistryStorage._routeLegsCheck(address[]) (src/policy/market-registry/MarketRegistryStorage.sol#250-262) has external calls inside a loop: f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]) (src/policy/market-registry/MarketRegistryStorage.sol#256)
+	Calls stack containing the loop:
+		MarketRegistryRoutesLogic.useStandbyRoute(address,RouteSlot)
+ParameterStoreViews._buildConfig(uint256,Market) (src/policy/parameter-store/ParameterStoreViews.sol#348-379) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreViews.sol#361)
+	Calls stack containing the loop:
+		ParameterStoreViews.getOracleConfig(address)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementToleranceBps(address,uint16)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementToleranceBps(address,uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementToleranceBps(address,uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementToleranceBps(address,uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setCachedWindow(uint32)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setCachedWindow(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setCachedWindow(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setCachedWindow(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setCachedWindow(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setDisagreementPauseMax(uint32)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setDisagreementPauseMax(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setDisagreementPauseMax(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setDisagreementPauseMax(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setDisagreementPauseMax(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setUsdBand(uint256,uint256)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setUsdBand(uint256,uint256)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setUsdBand(uint256,uint256)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setUsdBand(uint256,uint256)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setUsdBand(uint256,uint256)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setLiquidationPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setLiquidationPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setLiquidationPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setLiquidationPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setLiquidationPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setGraceDuration(uint32)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setGraceDuration(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setGraceDuration(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setGraceDuration(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setGraceDuration(uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementMarginBps(uint16)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementMarginBps(uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementMarginBps(uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementMarginBps(uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminOracleLogic.setFeedAgreementMarginBps(uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._checkListingMargin(Market,uint16) (src/policy/parameter-store/ParameterStoreOracle.sol#191-211) has external calls inside a loop: def = _REGISTRY.getToken(m.tokens[i_scope_0]) (src/policy/parameter-store/ParameterStoreOracle.sol#204)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setPoolRiskFactor(uint256,uint16)
+ParameterStoreRisk._hasEnabledReserve(address) (src/policy/parameter-store/ParameterStoreRisk.sol#78-85) has external calls inside a loop: ids = _REGISTRY.getDebtReserveIds(spoke) (src/policy/parameter-store/ParameterStoreRisk.sol#81)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+		ParameterStoreRisk._requireLivenessEverywhere(uint256)
+ParameterStoreRisk._hasEnabledReserve(address) (src/policy/parameter-store/ParameterStoreRisk.sol#78-85) has external calls inside a loop: _REGISTRY.isApprovedDebtReserve(spoke,ids[i]) (src/policy/parameter-store/ParameterStoreRisk.sol#83)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+		ParameterStoreRisk._requireLivenessEverywhere(uint256)
+ParameterStoreRisk._requireLivenessEverywhere(uint256) (src/policy/parameter-store/ParameterStoreRisk.sol#100-115) has external calls inside a loop: ids = _REGISTRY.marketsOfSpoke(spokes[s]) (src/policy/parameter-store/ParameterStoreRisk.sol#107)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+ParameterStoreRisk._requireLivenessEverywhere(uint256) (src/policy/parameter-store/ParameterStoreRisk.sol#100-115) has external calls inside a loop: m = _REGISTRY.getMarket(ids[i]) (src/policy/parameter-store/ParameterStoreRisk.sol#109)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+ParameterStoreRisk._minLb(Market) (src/policy/parameter-store/ParameterStoreRisk.sol#29-42) has external calls inside a loop: assetId = IAaveV4Hub(m.hub).getAssetId(m.vaultToken) (src/policy/parameter-store/ParameterStoreRisk.sol#33-41)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+		ParameterStoreRisk._requireLivenessEverywhere(uint256)
+ParameterStoreRisk._minLb(Market) (src/policy/parameter-store/ParameterStoreRisk.sol#29-42) has external calls inside a loop: reserveId = spoke.getReserveId(m.hub,assetId) (src/policy/parameter-store/ParameterStoreRisk.sol#34-38)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+		ParameterStoreRisk._requireLivenessEverywhere(uint256)
+ParameterStoreRisk._minLbOf(IAaveV4Spoke,uint256) (src/policy/parameter-store/ParameterStoreRisk.sol#44-64) has external calls inside a loop: res = spoke.getReserve(reserveId) (src/policy/parameter-store/ParameterStoreRisk.sol#48-63)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+		ParameterStoreRisk._requireLivenessEverywhere(uint256)
+		ParameterStoreRisk._minLb(Market)
+ParameterStoreRisk._minLbOf(IAaveV4Spoke,uint256) (src/policy/parameter-store/ParameterStoreRisk.sol#44-64) has external calls inside a loop: dyn = spoke.getDynamicReserveConfig(reserveId,res.dynamicConfigKey) (src/policy/parameter-store/ParameterStoreRisk.sol#49-60)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+		ParameterStoreRisk._requireLivenessEverywhere(uint256)
+		ParameterStoreRisk._minLb(Market)
+ParameterStoreRisk._minLbOf(IAaveV4Spoke,uint256) (src/policy/parameter-store/ParameterStoreRisk.sol#44-64) has external calls inside a loop: lc = spoke.getLiquidationConfig() (src/policy/parameter-store/ParameterStoreRisk.sol#52-57)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setMaxFlashFeeBps(uint16)
+		ParameterStoreRisk._requireLivenessEverywhere(uint256)
+		ParameterStoreRisk._minLb(Market)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setSecondSource(address,SecondSource,SecondSource)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setSecondSource(address,SecondSource,SecondSource)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setSecondSource(address,SecondSource,SecondSource)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setSecondSource(address,SecondSource,SecondSource)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setSecondSource(address,SecondSource,SecondSource)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreRisk._hasEnabledReserve(address) (src/policy/parameter-store/ParameterStoreRisk.sol#78-85) has external calls inside a loop: _REGISTRY.isApprovedDebtReserve(spoke,ids[i]) (src/policy/parameter-store/ParameterStoreRisk.sol#83)
+	Calls stack containing the loop:
+		ParameterStoreAdminRiskLogic.setSlippageAllowanceMinBps(uint256,uint16)
+		ParameterStoreRisk._requireLiveness(Market,uint256,uint256)
+ParameterStoreOracle._checkListingMargin(Market,uint16) (src/policy/parameter-store/ParameterStoreOracle.sol#191-211) has external calls inside a loop: def = _REGISTRY.getToken(m.tokens[i_scope_0]) (src/policy/parameter-store/ParameterStoreOracle.sol#204)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setInitialMarketParams(uint256,MarketParams)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setFeed(address,FeedDef)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setFeed(address,FeedDef)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setFeed(address,FeedDef)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setFeed(address,FeedDef)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setFeed(address,FeedDef)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: ids = _REGISTRY.getDebtReserveIds(spokes[s]) (src/policy/parameter-store/ParameterStoreRisk.sol#149)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setDebtAssetParams(address,DebtReserveParams)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: d = _REGISTRY.getDebtReserve(spokes[s],ids[i]) (src/policy/parameter-store/ParameterStoreRisk.sol#151)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setDebtAssetParams(address,DebtReserveParams)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: minimum = ICoverageSpoke(d.coverageSpoke).firstLossReserveMinimum() (src/policy/parameter-store/ParameterStoreRisk.sol#156)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setDebtAssetParams(address,DebtReserveParams)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+ParameterStoreRisk._price(address) (src/policy/parameter-store/ParameterStoreRisk.sol#166-176) has external calls inside a loop: answer = IAaveV4PriceFeed(source).latestAnswer() (src/policy/parameter-store/ParameterStoreRisk.sol#169-175)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setDebtAssetParams(address,DebtReserveParams)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+		ParameterStoreRisk._scanReserves(address,address)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setSequencer(address,uint32)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setSequencer(address,uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setSequencer(address,uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setSequencer(address,uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreListingLogic.setSequencer(address,uint32)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: ids = _REGISTRY.getDebtReserveIds(spokes[s]) (src/policy/parameter-store/ParameterStoreRisk.sol#149)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenFloorRoundingAllowance(address,uint256)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: d = _REGISTRY.getDebtReserve(spokes[s],ids[i]) (src/policy/parameter-store/ParameterStoreRisk.sol#151)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenFloorRoundingAllowance(address,uint256)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: minimum = ICoverageSpoke(d.coverageSpoke).firstLossReserveMinimum() (src/policy/parameter-store/ParameterStoreRisk.sol#156)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenFloorRoundingAllowance(address,uint256)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+ParameterStoreRisk._price(address) (src/policy/parameter-store/ParameterStoreRisk.sol#166-176) has external calls inside a loop: answer = IAaveV4PriceFeed(source).latestAnswer() (src/policy/parameter-store/ParameterStoreRisk.sol#169-175)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenFloorRoundingAllowance(address,uint256)
+		ParameterStoreRisk._requireRoundingAllowance(address,uint256)
+		ParameterStoreRisk._scanReserves(address,address)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: ids = _REGISTRY.getDebtReserveIds(spokes[s]) (src/policy/parameter-store/ParameterStoreRisk.sol#149)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenBreakerDeficitMax(address,address,uint256)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: d = _REGISTRY.getDebtReserve(spokes[s],ids[i]) (src/policy/parameter-store/ParameterStoreRisk.sol#151)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenBreakerDeficitMax(address,address,uint256)
+ParameterStoreRisk._scanReserves(address,address) (src/policy/parameter-store/ParameterStoreRisk.sol#142-164) has external calls inside a loop: minimum = ICoverageSpoke(d.coverageSpoke).firstLossReserveMinimum() (src/policy/parameter-store/ParameterStoreRisk.sol#156)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenBreakerDeficitMax(address,address,uint256)
+ParameterStoreRisk._price(address) (src/policy/parameter-store/ParameterStoreRisk.sol#166-176) has external calls inside a loop: answer = IAaveV4PriceFeed(source).latestAnswer() (src/policy/parameter-store/ParameterStoreRisk.sol#169-175)
+	Calls stack containing the loop:
+		ParameterStoreLoosenLogic.loosenBreakerDeficitMax(address,address,uint256)
+		ParameterStoreRisk._scanReserves(address,address)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._toleranceMin(address) (src/policy/parameter-store/ParameterStoreOracle.sol#44-54) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#49)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+		ParameterStoreOracle._toleranceHolds(address)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenBorrowPriceMaxAge(address,uint32)
+		ParameterStoreOracle._feedChanged(address,FeedDef)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._recheck(uint8,address,bool) (src/policy/parameter-store/ParameterStoreOracle.sol#108-135) has external calls inside a loop: m = _REGISTRY.getMarket(id) (src/policy/parameter-store/ParameterStoreOracle.sol#118)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenFeedAgreementToleranceBps(address,uint16)
+ParameterStoreOracle._usesFeed(address,address) (src/policy/parameter-store/ParameterStoreOracle.sol#138-146) has external calls inside a loop: (primary,alternate,None) = _REGISTRY.activePriceRoutes(token) (src/policy/parameter-store/ParameterStoreOracle.sol#144)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenFeedAgreementToleranceBps(address,uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenFeedAgreementToleranceBps(address,uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102) has external calls inside a loop: (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+	Calls stack containing the loop:
+		ParameterStoreTightenLogic.tightenFeedAgreementToleranceBps(address,uint16)
+		ParameterStoreOracle._recheck(uint8,address,bool)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation/#calls-inside-a-loop
+
+Detector: reentrancy-benign
+Reentrancy in CollateralizationPledge.pledge(address,address,address,bytes32,bool) (src/custody/collateralization/CollateralizationPledge.sol#38-103):
+	External calls:
+	- credited = IAmmIntegration(c.lpVault).receivePosition(c.marketId,depositor,positionKey) (src/custody/collateralization/CollateralizationPledge.sol#56)
+	- charge = _charge(c,depositor,proxy,positionKey,credited,requireRescue) (src/custody/collateralization/CollateralizationPledge.sol#60)
+		- ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke() (src/custody/collateralization/CollateralizationPledge.sol#206)
+	State variables written after the call(s):
+	- recordId = _nextRecordId ++ (src/custody/collateralization/CollateralizationPledge.sol#63)
+	- _credit(c,proxy,credited,charge.rescueUnits) (src/custody/collateralization/CollateralizationPledge.sol#90)
+		- accountCredited[proxy][c.vaultToken] += units (src/custody/collateralization/CollateralizationPledge.sol#221)
+	- _credit(c,proxy,credited,charge.rescueUnits) (src/custody/collateralization/CollateralizationPledge.sol#90)
+		- accountRescueUnits[proxy][c.vaultToken] += rescue (src/custody/collateralization/CollateralizationPledge.sol#224)
+	- marketRecordIndex[recordId] = marketRecords[vaultToken].length (src/custody/collateralization/CollateralizationPledge.sol#89)
+	- marketRecords[vaultToken].push(recordId) (src/custody/collateralization/CollateralizationPledge.sol#88)
+	- records[recordId] = BackingRecord({positionKey:positionKey,depositor:depositor,integrationId:c.integrationId,marketId:SafeCast.toUint32(c.marketId),inList:true,proxy:proxy,pledgedAt:uint40(block.timestamp),lastDebitedAt:0,credited:credited,originalUnits:credited,rescueUnits:charge.rescueUnits,originalUsdCharge:uint64(charge.usdCharge),currentUsdCharge:uint64(charge.usdCharge)}) (src/custody/collateralization/CollateralizationPledge.sol#65-85)
+	- _credit(c,proxy,credited,charge.rescueUnits) (src/custody/collateralization/CollateralizationPledge.sol#90)
+		- totalCredited[c.vaultToken] += units (src/custody/collateralization/CollateralizationPledge.sol#222)
+Reentrancy in CollateralizationRelease.release(address,address,bytes32,uint256) (src/custody/collateralization/CollateralizationRelease.sol#31-43):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,0) (src/custody/collateralization/CollateralizationRelease.sol#37)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#41)
+		- marketRecordIndex[last] = index + 1 (src/custody/collateralization/CollateralizationLedger.sol#225)
+		- delete marketRecordIndex[id] (src/custody/collateralization/CollateralizationLedger.sol#228)
+Reentrancy in CollateralizationRelease.releaseForDeleverage(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/CollateralizationRelease.sol#72-91):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,minAmounts.length + 1) (src/custody/collateralization/CollateralizationRelease.sol#79-80)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#87)
+		- marketRecordIndex[last] = index + 1 (src/custody/collateralization/CollateralizationLedger.sol#225)
+		- delete marketRecordIndex[id] (src/custody/collateralization/CollateralizationLedger.sol#228)
+Reentrancy in CollateralizationRelease.releaseZeroCredit(address,address,bytes32) (src/custody/collateralization/CollateralizationRelease.sol#95-110):
+	External calls:
+	- _reconcile(c,proxy,_supplied(c,proxy)) (src/custody/collateralization/CollateralizationRelease.sol#105)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	State variables written after the call(s):
+	- _close(c,id,r) (src/custody/collateralization/CollateralizationRelease.sol#108)
+		- marketRecordIndex[last] = index + 1 (src/custody/collateralization/CollateralizationLedger.sol#225)
+		- delete marketRecordIndex[id] (src/custody/collateralization/CollateralizationLedger.sol#228)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-3
+
+Detector: reentrancy-events
+Reentrancy in CollateralizationLedger._reconcile(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationLedger.sol#240-270):
+	External calls:
+	- booked = _unwindToSelf(c,debits[k],zeros) (src/custody/collateralization/CollateralizationLedger.sol#257)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Event emitted after the call(s):
+	- RecordDebited(d.recordId,d.positionKey,proxy,vt,d.take,d.creditedAfter,booked,d.capReleased) (src/custody/collateralization/CollateralizationLedger.sol#262)
+	- SeizureReconciled(proxy,vt,shortfall,total) (src/custody/collateralization/CollateralizationLedger.sol#269)
+Reentrancy in CollateralizationSeizure._settleDebits(CollateralizationBase.Ctx,address,uint256) (src/custody/collateralization/CollateralizationSeizure.sol#95-116):
+	External calls:
+	- got = _unwind(c,d.positionKey,d.take,zeros,_LP_VAULT_SWAP) (src/custody/collateralization/CollateralizationSeizure.sol#108)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Event emitted after the call(s):
+	- RecordDebited(d.recordId,d.positionKey,proxy,c.vaultToken,d.take,d.creditedAfter,got,d.capReleased) (src/custody/collateralization/CollateralizationSeizure.sol#112-114)
+Reentrancy in AaveV3FlashSource.flashLoan(address,uint256,address,bytes) (src/flash/AaveV3FlashSource.sol#97-136):
+	External calls:
+	- IAaveV3Pool(LENDER).flashLoan(address(this),assets,amounts,modes,address(this),context,0) (src/flash/AaveV3FlashSource.sol#123)
+	Event emitted after the call(s):
+	- FlashLoanServed(asset,amount,premium) (src/flash/AaveV3FlashSource.sol#135)
+Reentrancy in MarketRegistryListingLogic.listCollateralMarket(MarketDef) (src/policy/market-registry/MarketRegistryListingLogic.sol#113-137):
+	External calls:
+	- tokens = _bindAndCheck(def,lpVault,key,marketId,relisting) (src/policy/market-registry/MarketRegistryListingLogic.sol#119)
+		- IAmmIntegration(lpVault).bindMarket(marketId,def.pool,def.poolId,def.shape,def.integrationData) (src/policy/market-registry/MarketRegistryListingLogic.sol#204)
+	Event emitted after the call(s):
+	- MarketRegistered(marketId,def.integrationId,def.pool,def.poolId,tokens,def.vaultToken,def.lpOracle,def.spoke) (src/policy/market-registry/MarketRegistryListingLogic.sol#134-136)
+Reentrancy in CollateralizationPledge.pledge(address,address,address,bytes32,bool) (src/custody/collateralization/CollateralizationPledge.sol#38-103):
+	External calls:
+	- credited = IAmmIntegration(c.lpVault).receivePosition(c.marketId,depositor,positionKey) (src/custody/collateralization/CollateralizationPledge.sol#56)
+	- charge = _charge(c,depositor,proxy,positionKey,credited,requireRescue) (src/custody/collateralization/CollateralizationPledge.sol#60)
+		- ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke() (src/custody/collateralization/CollateralizationPledge.sol#206)
+	Event emitted after the call(s):
+	- CollateralPledged(recordId,positionKey,depositor,c.integrationId,proxy,vaultToken,credited,charge.usdCharge,charge.sliceUsd) (src/custody/collateralization/CollateralizationPledge.sol#92-102)
+Reentrancy in CollateralizationPledge.recredit(address,address,address,bytes32,bytes,bool) (src/custody/collateralization/CollateralizationPledge.sol#107-121):
+	External calls:
+	- (c,id,r) = _prepareRecredit(depositor,proxy,vaultToken,positionKey,topUp) (src/custody/collateralization/CollateralizationPledge.sol#115-116)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+		- IAmmIntegration(c.lpVault).topUpPosition(positionKey,depositor,topUp) (src/custody/collateralization/CollateralizationPledge.sol#189)
+	- charge = _charge(c,depositor,proxy,positionKey,added,requireRescue) (src/custody/collateralization/CollateralizationPledge.sol#118)
+		- ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke() (src/custody/collateralization/CollateralizationPledge.sol#206)
+	Event emitted after the call(s):
+	- RecordRecredited(id,added,charge.usdCharge,rescueUnits) (src/custody/collateralization/CollateralizationPledge.sol#120)
+Reentrancy in CollateralizationRelease.release(address,address,bytes32,uint256) (src/custody/collateralization/CollateralizationRelease.sol#31-43):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,0) (src/custody/collateralization/CollateralizationRelease.sol#37)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Event emitted after the call(s):
+	- CollateralReleased(id,positionKey,r.depositor,proxy,vaultToken,units) (src/custody/collateralization/CollateralizationRelease.sol#40)
+	- CounterSaturated(kind,hub,key,value,amount) (src/custody/collateralization/CollateralizationBase.sol#411)
+		- _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#39)
+Reentrancy in CollateralizationRelease.releaseForDeleverage(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/CollateralizationRelease.sol#72-91):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,minAmounts.length + 1) (src/custody/collateralization/CollateralizationRelease.sol#79-80)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Event emitted after the call(s):
+	- CollateralReleased(id,positionKey,r.depositor,proxy,vaultToken,units) (src/custody/collateralization/CollateralizationRelease.sol#86)
+	- CounterSaturated(kind,hub,key,value,amount) (src/custody/collateralization/CollateralizationBase.sol#411)
+		- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#82)
+	- RecordReduced(id,units,released) (src/custody/collateralization/CollateralizationRelease.sol#84)
+Reentrancy in CollateralizationRelease.releasePartial(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/CollateralizationRelease.sol#47-68):
+	External calls:
+	- (c,id,r) = _prepareExit(vaultToken,positionKey,proxy,units,minAmounts.length + 1) (src/custody/collateralization/CollateralizationRelease.sol#54-55)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Event emitted after the call(s):
+	- CounterSaturated(kind,hub,key,value,amount) (src/custody/collateralization/CollateralizationBase.sol#411)
+		- released = _debitRecord(c,r,units) (src/custody/collateralization/CollateralizationRelease.sol#59)
+	- RecordReduced(id,units,released) (src/custody/collateralization/CollateralizationRelease.sol#61)
+Reentrancy in CollateralizationRelease.releaseZeroCredit(address,address,bytes32) (src/custody/collateralization/CollateralizationRelease.sol#95-110):
+	External calls:
+	- _reconcile(c,proxy,_supplied(c,proxy)) (src/custody/collateralization/CollateralizationRelease.sol#105)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Event emitted after the call(s):
+	- CollateralReleased(id,positionKey,depositor,proxy,vaultToken,0) (src/custody/collateralization/CollateralizationRelease.sol#107)
+Reentrancy in CollateralizationSeizure.settleSeizure(address,address,uint256,uint256[]) (src/custody/collateralization/CollateralizationSeizure.sol#43-70):
+	External calls:
+	- _reconcile(c,proxy,sharesBefore) (src/custody/collateralization/CollateralizationSeizure.sol#57)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+		- IAmmIntegration(c.lpVault).unwind(positionKey,units,minAmounts,recipient) (src/custody/collateralization/CollateralizationBase.sol#269)
+	Event emitted after the call(s):
+	- CounterSaturated(kind,hub,key,value,amount) (src/custody/collateralization/CollateralizationBase.sol#411)
+		- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+	- RecordDebited(d.recordId,d.positionKey,proxy,c.vaultToken,d.take,d.creditedAfter,got,d.capReleased) (src/custody/collateralization/CollateralizationSeizure.sol#112-114)
+		- (amounts,count) = _settleDebits(c,proxy,units) (src/custody/collateralization/CollateralizationSeizure.sol#59)
+	- SeizureSettled(proxy,vaultToken,units,amounts,count) (src/custody/collateralization/CollateralizationSeizure.sol#69)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-4
+
+Detector: timestamp
+CoverageSpoke.executeWithdrawal(uint256) (src/coverage/coverage-spoke/CoverageSpoke.sol#211-227) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < executableAt (src/coverage/coverage-spoke/CoverageSpoke.sol#217)
+CollateralizationLedger._insert(uint256[],uint256,uint256) (src/custody/collateralization/CollateralizationLedger.sol#55-75) uses timestamp for comparisons
+	Dangerous comparisons:
+	- records[list[i]].credited < credited (src/custody/collateralization/CollateralizationLedger.sol#63)
+AvanaTimelock.isOperationExpired(bytes32) (src/governance/timelock/AvanaTimelock.sol#317-323) uses timestamp for comparisons
+	Dangerous comparisons:
+	- readyAt > _DONE_TIMESTAMP && block.timestamp >= readyAt && block.timestamp - readyAt >= GRACE_PERIOD (src/governance/timelock/AvanaTimelock.sol#322)
+MarketRegistryWindDownLogic.stepWindDown(uint256) (src/policy/market-registry/MarketRegistryWindDownLogic.sol#56-78) uses timestamp for comparisons
+	Dangerous comparisons:
+	- nowTs < next (src/policy/market-registry/MarketRegistryWindDownLogic.sol#73)
+MarketRegistryWindDownLogic._rampAt(uint16,uint64) (src/policy/market-registry/MarketRegistryWindDownLogic.sol#149-159) uses timestamp for comparisons
+	Dangerous comparisons:
+	- elapsed < _WIND_DOWN_RAMP_SECONDS (src/policy/market-registry/MarketRegistryWindDownLogic.sol#154)
+ParameterStoreStorage._spaceLoosening(bytes32,bytes32) (src/policy/parameter-store/ParameterStoreStorage.sol#210-223) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < nextAt (src/policy/parameter-store/ParameterStoreStorage.sol#218)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+
+Detector: assembly
+CollateralizationBase._storeSnapshot(address,address,uint256,uint256,uint256) (src/custody/collateralization/CollateralizationBase.sol#418-436) uses assembly
+	- INLINE ASM (src/custody/collateralization/CollateralizationBase.sol#429-435)
+CollateralizationBase._loadSnapshot() (src/custody/collateralization/CollateralizationBase.sol#439-454) uses assembly
+	- INLINE ASM (src/custody/collateralization/CollateralizationBase.sol#447-453)
+Lock._holder() (src/lock/lock/Lock.sol#96-103) uses assembly
+	- INLINE ASM (src/lock/lock/Lock.sol#100-102)
+Lock._setHolder(address) (src/lock/lock/Lock.sol#106-115) uses assembly
+	- INLINE ASM (src/lock/lock/Lock.sol#112-114)
+MarketRegistryStorage._s() (src/policy/market-registry/MarketRegistryStorage.sol#159-166) uses assembly
+	- INLINE ASM (src/policy/market-registry/MarketRegistryStorage.sol#163-165)
+ParameterStoreStorage._s() (src/policy/parameter-store/ParameterStoreStorage.sol#127-133) uses assembly
+	- INLINE ASM (src/policy/parameter-store/ParameterStoreStorage.sol#130-132)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#assembly-usage
+
+Detector: low-level-calls
+Low level call in CollateralizationDebtMark.markDebtFree(address) (src/custody/collateralization/CollateralizationDebtMark.sol#31-47):
+	- (ok,data) = IVaultToken(vt).spoke().staticcall(abi.encodeCall(IAaveV4Spoke.getUserAccountData,(proxy))) (src/custody/collateralization/CollateralizationDebtMark.sol#40-41)
+Low level call in MarketRegistryOracleChecks._oracleConfigPasses(address) (src/policy/market-registry/MarketRegistryOracleChecks.sol#21-30):
+	- (ok,cfg) = _PARAMETER_STORE.staticcall(abi.encodeCall(IParameterStoreViews.getOracleConfig,(lpOracle))) (src/policy/market-registry/MarketRegistryOracleChecks.sol#24-25)
+	- (ok,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,cfg)) (src/policy/market-registry/MarketRegistryOracleChecks.sol#28)
+Low level call in MarketRegistryOracleChecks._oracleLive(address) (src/policy/market-registry/MarketRegistryOracleChecks.sol#34-41):
+	- (ok,ret) = lpOracle.staticcall(abi.encodeCall(ILPOracle.getPriceState,())) (src/policy/market-registry/MarketRegistryOracleChecks.sol#37)
+Low level call in ParameterStoreOracle._configFailures(address) (src/policy/parameter-store/ParameterStoreOracle.sol#88-102):
+	- (ok,config) = address(this).staticcall(abi.encodeWithSelector(IParameterStoreViews.getOracleConfig.selector,lpOracle)) (src/policy/parameter-store/ParameterStoreOracle.sol#93-94)
+	- (done,ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector,config)) (src/policy/parameter-store/ParameterStoreOracle.sol#99)
+Low level call in PositionProxy.execute(address,bytes) (src/proxy/position-proxy/PositionProxy.sol#51-66):
+	- (success,result) = target.call(data) (src/proxy/position-proxy/PositionProxy.sol#62)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
+
+Detector: too-many-digits
+ProxyManager.constructor(address,address) (src/proxy/proxy-manager/ProxyManager.sol#32-40) uses literals with too many digits:
+	- _PROXY_CREATION_CODE_HASH = keccak256(bytes)(type()(PositionProxy).creationCode) (src/proxy/proxy-manager/ProxyManager.sol#39)
+ProxyManager._initCode(address,address,uint256) (src/proxy/proxy-manager/ProxyManager.sol#119-125) uses literals with too many digits:
+	- initCode = bytes.concat(type()(PositionProxy).creationCode,abi.encode(_ADAPTER,wallet,spoke,marketId)) (src/proxy/proxy-manager/ProxyManager.sol#124)
+VaultTokenFactory._deployToken(VaultTokenBindings) (src/vault-token/vault-token-factory/VaultTokenFactory.sol#250-266) uses literals with too many digits:
+	- vaultToken = CREATE3.deployDeterministic(bytes.concat(type()(VaultToken).creationCode,abi.encode(b)),salt) (src/vault-token/vault-token-factory/VaultTokenFactory.sol#265)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#too-many-digits
+
+Detector: unimplemented-functions
+CollateralizationPending (src/custody/collateralization/CollateralizationPending.sol#26-61) does not implement functions:
+	- ICollateralizationSeizure.beginSeizure(address,address) (src/custody/collateralization/ICollateralizationSeizure.sol#22-25)
+	- ICollateralizationSeizure.settleSeizure(address,address,uint256,uint256[]) (src/custody/collateralization/ICollateralizationSeizure.sol#46-51)
+CollateralizationPledge (src/custody/collateralization/CollateralizationPledge.sol#35-226) does not implement functions:
+	- ICollateralizationAdapter.release(address,address,bytes32,uint256) (src/custody/collateralization/ICollateralizationAdapter.sol#66-71)
+	- ICollateralizationAdapter.releaseForDeleverage(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/ICollateralizationAdapter.sol#127-133)
+	- ICollateralizationAdapter.releasePartial(address,address,bytes32,uint128,uint256[]) (src/custody/collateralization/ICollateralizationAdapter.sol#83-89)
+CollateralizationRelease (src/custody/collateralization/CollateralizationRelease.sol#24-162) does not implement functions:
+	- ICollateralizationAdapter.pledge(address,address,address,bytes32,bool) (src/custody/collateralization/ICollateralizationAdapter.sol#47-53)
+	- ICollateralizationAdapter.recredit(address,address,address,bytes32,bytes,bool) (src/custody/collateralization/ICollateralizationAdapter.sol#107-114)
+CollateralizationSeizure (src/custody/collateralization/CollateralizationSeizure.sol#24-117) does not implement functions:
+	- ICollateralizationSeizure.settlePending(address,uint256) (src/custody/collateralization/ICollateralizationSeizure.sol#65-68)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unimplemented-functions
+
+Detector: unused-state
+MarketRegistryStorage._ORACLE_DECIMALS (src/policy/market-registry/MarketRegistryStorage.sol#102) is never used in MarketRegistry (src/policy/market-registry/MarketRegistry.sol#37-444)
+MarketRegistryStorage._MAX_FREEZES_PER_DAY (src/policy/market-registry/MarketRegistryStorage.sol#100) is never used in MarketRegistryActivationLogic (src/policy/market-registry/MarketRegistryActivationLogic.sol#35-235)
+MarketRegistryStorage._ORACLE_DECIMALS (src/policy/market-registry/MarketRegistryStorage.sol#102) is never used in MarketRegistryActivationLogic (src/policy/market-registry/MarketRegistryActivationLogic.sol#35-235)
+MarketRegistryStorage._IMPLEMENTATION_SLOT (src/policy/market-registry/MarketRegistryStorage.sol#108) is never used in MarketRegistryActivationLogic (src/policy/market-registry/MarketRegistryActivationLogic.sol#35-235)
+MarketRegistryStorage._MAX_FREEZES_PER_DAY (src/policy/market-registry/MarketRegistryStorage.sol#100) is never used in MarketRegistryHubsLogic (src/policy/market-registry/MarketRegistryHubsLogic.sol#36-333)
+MarketRegistryStorage._MAX_FREEZES_PER_DAY (src/policy/market-registry/MarketRegistryStorage.sol#100) is never used in MarketRegistryListingLogic (src/policy/market-registry/MarketRegistryListingLogic.sol#37-275)
+MarketRegistryStorage._IMPLEMENTATION_SLOT (src/policy/market-registry/MarketRegistryStorage.sol#108) is never used in MarketRegistryListingLogic (src/policy/market-registry/MarketRegistryListingLogic.sol#37-275)
+MarketRegistryStorage._MAX_FREEZES_PER_DAY (src/policy/market-registry/MarketRegistryStorage.sol#100) is never used in MarketRegistryRoutesLogic (src/policy/market-registry/MarketRegistryRoutesLogic.sol#26-228)
+MarketRegistryStorage._ORACLE_DECIMALS (src/policy/market-registry/MarketRegistryStorage.sol#102) is never used in MarketRegistryRoutesLogic (src/policy/market-registry/MarketRegistryRoutesLogic.sol#26-228)
+MarketRegistryStorage._IMPLEMENTATION_SLOT (src/policy/market-registry/MarketRegistryStorage.sol#108) is never used in MarketRegistryRoutesLogic (src/policy/market-registry/MarketRegistryRoutesLogic.sol#26-228)
+MarketRegistryStorage._ORACLE_DECIMALS (src/policy/market-registry/MarketRegistryStorage.sol#102) is never used in MarketRegistrySafetyLogic (src/policy/market-registry/MarketRegistrySafetyLogic.sol#28-310)
+MarketRegistryStorage._IMPLEMENTATION_SLOT (src/policy/market-registry/MarketRegistryStorage.sol#108) is never used in MarketRegistrySafetyLogic (src/policy/market-registry/MarketRegistrySafetyLogic.sol#28-310)
+MarketRegistryStorage._MAX_FREEZES_PER_DAY (src/policy/market-registry/MarketRegistryStorage.sol#100) is never used in MarketRegistryWindDownLogic (src/policy/market-registry/MarketRegistryWindDownLogic.sol#30-160)
+MarketRegistryStorage._ORACLE_DECIMALS (src/policy/market-registry/MarketRegistryStorage.sol#102) is never used in MarketRegistryWindDownLogic (src/policy/market-registry/MarketRegistryWindDownLogic.sol#30-160)
+MarketRegistryStorage._IMPLEMENTATION_SLOT (src/policy/market-registry/MarketRegistryStorage.sol#108) is never used in MarketRegistryWindDownLogic (src/policy/market-registry/MarketRegistryWindDownLogic.sol#30-160)
+ParameterStoreStorage.WAD (src/policy/parameter-store/ParameterStoreStorage.sol#57) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.HARD_FLOOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#59) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.FEED_HEARTBEAT_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#67) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.FEED_DECIMALS_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#68) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.POOL_RISK_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#69) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.COLLATERAL_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#70) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.MIN_PLEDGE_USD_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#71) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.FEE_SHARE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#72) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.FLASH_FEE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#73) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.SHORTFALL_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#74) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.GATE_RECOVERY_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#75) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.GATE_RECOVERY_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#76) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.STRESS_RISE_MIN_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#77) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.STRESS_RISE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#78) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.DISAGREEMENT_PAUSE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#79) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.SEQUENCER_GRACE_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#80) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.SEQUENCER_GRACE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#81) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.USD_CAP_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#82) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.SECOND_SOURCE_TOLERANCE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#83) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.MIN_LIQUIDATION_BONUS_FLOOR (src/policy/parameter-store/ParameterStoreStorage.sol#84) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.ONE_USD (src/policy/parameter-store/ParameterStoreStorage.sol#86) is never used in ParameterStore (src/policy/parameter-store/ParameterStore.sol#31-266)
+ParameterStoreStorage.HARD_FLOOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#59) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.HF_STEP (src/policy/parameter-store/ParameterStoreStorage.sol#60) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.CAP_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#61) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.SLIPPAGE_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#62) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.HEARTBEAT_MARGIN_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#66) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.FEED_HEARTBEAT_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#67) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.FEED_DECIMALS_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#68) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.POOL_RISK_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#69) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.COLLATERAL_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#70) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.MIN_PLEDGE_USD_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#71) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.FEE_SHARE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#72) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.FLASH_FEE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#73) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.SHORTFALL_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#74) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.GATE_RECOVERY_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#75) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.GATE_RECOVERY_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#76) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.STRESS_RISE_MIN_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#77) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.STRESS_RISE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#78) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.SEQUENCER_GRACE_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#80) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.SEQUENCER_GRACE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#81) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.USD_CAP_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#82) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.SECOND_SOURCE_TOLERANCE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#83) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.MIN_LIQUIDATION_BONUS_FLOOR (src/policy/parameter-store/ParameterStoreStorage.sol#84) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.MAX_QUOTE_CHANGE_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#85) is never used in ParameterStoreAdminOracleLogic (src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol#23-206)
+ParameterStoreStorage.HARD_FLOOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#59) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.HF_STEP (src/policy/parameter-store/ParameterStoreStorage.sol#60) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.CAP_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#61) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.SLIPPAGE_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#62) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.CONSISTENCY_MIN_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#65) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.HEARTBEAT_MARGIN_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#66) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.FEED_HEARTBEAT_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#67) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.FEED_DECIMALS_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#68) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.MIN_PLEDGE_USD_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#71) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.STRESS_RISE_MIN_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#77) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.STRESS_RISE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#78) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.SEQUENCER_GRACE_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#80) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.SEQUENCER_GRACE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#81) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.MIN_LIQUIDATION_BONUS_FLOOR (src/policy/parameter-store/ParameterStoreStorage.sol#84) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.MAX_QUOTE_CHANGE_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#85) is never used in ParameterStoreAdminRiskLogic (src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol#30-282)
+ParameterStoreStorage.HF_STEP (src/policy/parameter-store/ParameterStoreStorage.sol#60) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.CAP_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#61) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.SLIPPAGE_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#62) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.GRACE_HF_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#63) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.GRACE_DURATION_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#64) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.COLLATERAL_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#70) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.FEE_SHARE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#72) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.FLASH_FEE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#73) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.SHORTFALL_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#74) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.GATE_RECOVERY_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#75) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.GATE_RECOVERY_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#76) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.STRESS_RISE_MIN_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#77) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.STRESS_RISE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#78) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.DISAGREEMENT_PAUSE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#79) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.SECOND_SOURCE_TOLERANCE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#83) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.MAX_QUOTE_CHANGE_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#85) is never used in ParameterStoreListingLogic (src/policy/parameter-store/ParameterStoreListingLogic.sol#31-268)
+ParameterStoreStorage.HARD_FLOOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#59) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.GRACE_HF_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#63) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.GRACE_DURATION_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#64) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.CONSISTENCY_MIN_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#65) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.HEARTBEAT_MARGIN_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#66) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.FEED_HEARTBEAT_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#67) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.FEED_DECIMALS_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#68) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.POOL_RISK_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#69) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.COLLATERAL_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#70) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.MIN_PLEDGE_USD_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#71) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.FEE_SHARE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#72) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.FLASH_FEE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#73) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.GATE_RECOVERY_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#76) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.STRESS_RISE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#78) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.DISAGREEMENT_PAUSE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#79) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.SEQUENCER_GRACE_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#80) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.SEQUENCER_GRACE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#81) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.SECOND_SOURCE_TOLERANCE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#83) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.MIN_LIQUIDATION_BONUS_FLOOR (src/policy/parameter-store/ParameterStoreStorage.sol#84) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.MAX_QUOTE_CHANGE_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#85) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.ONE_USD (src/policy/parameter-store/ParameterStoreStorage.sol#86) is never used in ParameterStoreLoosenLogic (src/policy/parameter-store/ParameterStoreLoosenLogic.sol#23-277)
+ParameterStoreStorage.HF_STEP (src/policy/parameter-store/ParameterStoreStorage.sol#60) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.CAP_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#61) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.SLIPPAGE_STEP_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#62) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.GRACE_HF_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#63) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.GRACE_DURATION_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#64) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.HEARTBEAT_MARGIN_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#66) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.FEED_HEARTBEAT_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#67) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.FEED_DECIMALS_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#68) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.POOL_RISK_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#69) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.COLLATERAL_FACTOR_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#70) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.FEE_SHARE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#72) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.FLASH_FEE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#73) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.SHORTFALL_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#74) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.GATE_RECOVERY_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#75) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.DISAGREEMENT_PAUSE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#79) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.SEQUENCER_GRACE_MIN (src/policy/parameter-store/ParameterStoreStorage.sol#80) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.SEQUENCER_GRACE_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#81) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.USD_CAP_MAX (src/policy/parameter-store/ParameterStoreStorage.sol#82) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.SECOND_SOURCE_TOLERANCE_MAX_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#83) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.MIN_LIQUIDATION_BONUS_FLOOR (src/policy/parameter-store/ParameterStoreStorage.sol#84) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.MAX_QUOTE_CHANGE_BPS (src/policy/parameter-store/ParameterStoreStorage.sol#85) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+ParameterStoreStorage.ONE_USD (src/policy/parameter-store/ParameterStoreStorage.sol#86) is never used in ParameterStoreTightenLogic (src/policy/parameter-store/ParameterStoreTightenLogic.sol#24-325)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-state-variable
+
+Detector: immutable-states
+CollateralizationBase._nextRecordId (src/custody/collateralization/CollateralizationBase.sol#93) should be immutable 
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#state-variables-that-could-be-declared-immutable
+. analyzed (428 contracts with 100 detectors), 342 result(s) found
+--ignore-compile used, if something goes wrong, consider removing the ignore compile flag
+'forge config --json' running

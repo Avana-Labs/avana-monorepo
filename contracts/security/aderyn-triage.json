@@ -1,0 +1,1462 @@
+{
+  "accepted": [
+    {
+      "check": "unused-error",
+      "files": "src/*/I*.sol",
+      "while": "no-implementation-in-folder",
+      "reason": "Errors are declared in the interface next to the file of the implementation that reverts with them; until that implementation exists in the same folder no code can use them."
+    },
+    {
+      "fingerprint": "fe35c273d6589dfa",
+      "check": "eth-send-unchecked-address",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "AvanaTimelock.execute",
+      "reason": "OpenZeppelin TimelockController execution: the target and value are the ones fixed when the operation was scheduled by a proposer and waited its delay in public (REQ-ACCESS-021, SPEC-GOV-002); forwarding them is the timelock's purpose. Anyone may trigger execution, but nobody can change the target or value. Covered by TEST-194, TEST-212, PROP-058.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "119f8068cf7e63ab",
+      "check": "eth-send-unchecked-address",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "AvanaTimelock.executeBatch",
+      "reason": "Same as execute: targets and values are fixed at scheduling and waited their delay; executeBatch forwards them unchanged.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6d12b814be96951c",
+      "check": "unchecked-return",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "constructor (CANCELLER_ROLE grants)",
+      "reason": "_grantRole returns false only when the account already holds the role. The proposers already hold CANCELLER_ROLE from OpenZeppelin's constructor, so listing them again as cancellers (as the role table does) is expected and harmless; there is nothing to act on.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "44b192b8fa17cc38",
+      "check": "unchecked-return",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "constructor (DAO_CANCELLER_ROLE grants)",
+      "reason": "Same as the CANCELLER_ROLE grants: a repeated holder returns false and changes nothing.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "67fcd78cb70f0c1c",
+      "check": "unused-import",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "import IAvanaTimelockGovernance",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; solc refuses @inheritdoc of the aggregate IAvanaTimelock. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "3c3de1235eb569d5",
+      "check": "unused-import",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "import IAvanaTimelockViews",
+      "reason": "Same as IAvanaTimelockGovernance: referenced by @inheritdoc.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "920045d1ee868675",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "LockHeld",
+      "reason": "`LockHeld` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "03e2f113a3bf73fd",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "UnknownProxy",
+      "reason": "`UnknownProxy` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "dbf63d8d255c2baa",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "UnknownMarket",
+      "reason": "`UnknownMarket` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ed6786c59cd534e6",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "UnknownDebtReserve",
+      "reason": "`UnknownDebtReserve` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "08cc87ca314bdad0",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "InvalidAmount",
+      "reason": "`InvalidAmount` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "cfae267de7e43c4a",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "NotLiquidatable",
+      "reason": "`NotLiquidatable` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c734f75bc305c1be",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "SharesNotEqualAssets",
+      "reason": "`SharesNotEqualAssets` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6f8ed4cbe30c178c",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "StalePrice",
+      "reason": "`StalePrice` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c25f5854116da0fc",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "DebtPriceStale",
+      "reason": "`DebtPriceStale` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "09fddbbd7b6e13bb",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "GraceHealthFactor",
+      "reason": "`GraceHealthFactor` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "02083982930f0138",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "FundingMismatch",
+      "reason": "`FundingMismatch` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e2df106fa0b7255a",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "FlashFeeTooHigh",
+      "reason": "`FlashFeeTooHigh` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "60bebc507068dacc",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "FlashSourceIsHub",
+      "reason": "`FlashSourceIsHub` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8dbb0e348d158736",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "FlashRepayShort",
+      "reason": "`FlashRepayShort` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "cc8b23fcd1fb6485",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "InvalidFlashCallback",
+      "reason": "`InvalidFlashCallback` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "cc8b1c6e67e42a16",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "NothingSeized",
+      "reason": "`NothingSeized` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "657463ceecf50d2b",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "NoRouteAvailable",
+      "reason": "`NoRouteAvailable` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "dd6514d769048bb0",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "FlashLiquidityShort",
+      "reason": "`FlashLiquidityShort` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6b67cddb03568b2e",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "InvalidFeeRecipient",
+      "reason": "`InvalidFeeRecipient` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "66ddca55761c96df",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "InvalidKeeper",
+      "reason": "`InvalidKeeper` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "96b2d252f3c01127",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "KeeperFloor",
+      "reason": "`KeeperFloor` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b8094b385369f45e",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "TooManyKeepers",
+      "reason": "`TooManyKeepers` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "41f1a34e584efb82",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "NothingPending",
+      "reason": "`NothingPending` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "bbe443e7a904d498",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "DeadlineExpired",
+      "reason": "`DeadlineExpired` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d302c7a60954dbf4",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "PayoutTooLow",
+      "reason": "`PayoutTooLow` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e2989f3dbc5893f5",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "InsufficientGas",
+      "reason": "`InsufficientGas` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e58385fa692e916d",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "AddressIsFrozen",
+      "reason": "`AddressIsFrozen` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "f8af48c1b558e8ac",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "NotAdapter",
+      "reason": "`NotAdapter` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "2e61c4a675743330",
+      "check": "unused-error",
+      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+      "error": "AdminRoleOnlyTimelock",
+      "reason": "`AdminRoleOnlyTimelock` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "3dbcd01d6b739bd5",
+      "check": "contract-locks-ether",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "ParameterStore",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock sends no value with ParameterStore operations. No other function accepts ETH.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c9b8a1238618c34d",
+      "check": "empty-block",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "ParameterStore._authorizeUpgrade(address)",
+      "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-PSTORE-001), as OpenZeppelin documents.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1ed698f2716b46fe",
+      "check": "unchecked-return",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "ParameterStore.initialize (DEFAULT_ADMIN_ROLE grant)",
+      "reason": "_grantRole returns false only when the account already holds the role; in initialize the timelock holds no role yet, so the grant always takes effect.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "04828a9e6b5ea083",
+      "check": "unchecked-return",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "ParameterStore.initialize (APPLICATION_ADMIN grant)",
+      "reason": "Same as the DEFAULT_ADMIN_ROLE grant: a first grant in initialize always returns true.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a48cd3861b1b8036",
+      "check": "unchecked-return",
+      "file": "src/policy/parameter-store/ParameterStoreRouter.sol",
+      "function": "ParameterStoreRouter._forward(address)",
+      "reason": "Setters return nothing, so the delegatecall's return data is empty; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8a267dec23f3aa42",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+      "function": "ParameterStoreListingLogic.setFeed (decimals read)",
+      "reason": "decimals(), aggregator(), minAnswer() and maxAnswer() are view interfaces compiled to STATICCALL, which cannot re-enter or change state; setFeed must read them before writing the pinned values (REQ-CONFIG-022).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "12c6d773dc37023f",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+      "function": "ParameterStoreListingLogic.setFeed (aggregator read)",
+      "reason": "As for the decimals read: a STATICCALL view read that must precede the write.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "db966f5470b5e01b",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+      "function": "ParameterStoreListingLogic.setFeed (minAnswer read)",
+      "reason": "As for the decimals read: a STATICCALL view read that must precede the write.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a4d1dff6afe6558d",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+      "function": "ParameterStoreListingLogic.setFeed (maxAnswer read)",
+      "reason": "As for the decimals read: a STATICCALL view read that must precede the write.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b5234e90fba60cdc",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+      "function": "ParameterStoreListingLogic.setInitialMarketParams (market status read)",
+      "reason": "MarketRegistry.getMarket and the time-weighted checks are views (STATICCALL); the market's status and integration must be read before the parameters are written (REQ-PSTORE-004).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4e3c40e9543da9bc",
+      "check": "unused-import",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "import IParameterStoreAdmin",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6b7fe521533a37d0",
+      "check": "unused-import",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "import IParameterStoreBreakers",
+      "reason": "Used by @inheritdoc NatSpec (see IParameterStoreAdmin entry).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c1d1c78f5227f386",
+      "check": "unused-import",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "import IParameterStoreChain",
+      "reason": "Used by @inheritdoc NatSpec (see IParameterStoreAdmin entry).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "15afccce346461a5",
+      "check": "unused-import",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "import IParameterStoreCoverage",
+      "reason": "Used by @inheritdoc NatSpec (see IParameterStoreAdmin entry).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8d763a413216eaec",
+      "check": "unused-import",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "import IParameterStoreLiquidation",
+      "reason": "Used by @inheritdoc NatSpec (see IParameterStoreAdmin entry).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "delegate-call-unchecked-address",
+      "files": "src/policy/parameter-store/ParameterStore.sol",
+      "reason": "Each setter forwards to one of the five logic contracts held in implementation immutables, checked at construction through logicConfig() (kind, timelock, MarketRegistry, block time, sequencer flag) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002). Covered by TEST-062 (everySetterNeedsItsRole, constructorChecksLogicContracts).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "delegate-call-unchecked-address",
+      "files": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+      "reason": "Each setter forwards to one of the five logic contracts held in implementation immutables, checked at construction through logicConfig() (kind, timelock, MarketRegistry, block time, sequencer flag) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002). Covered by TEST-062 (everySetterNeedsItsRole, constructorChecksLogicContracts).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "delegate-call-unchecked-address",
+      "files": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "reason": "Each setter forwards to one of the five logic contracts held in implementation immutables, checked at construction through logicConfig() (kind, timelock, MarketRegistry, block time, sequencer flag) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002). Covered by TEST-062 (everySetterNeedsItsRole, constructorChecksLogicContracts).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e5f479f21412ad2c",
+      "check": "reentrancy-state-change",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow.deposit (LOCK.holder())",
+      "reason": "Every external call of deposit and claim runs under the escrow's transient reentrancy flag, which is the first check of both functions (REQ-ESCROW-007): a callback into deposit or claim reverts Reentrancy before reading or writing any state, and the escrow has no other state-changing function. The flagged call is ILock.holder(), a view (STATICCALL) of the immutable protocol Lock, which can change no state; the check must precede the credit (REQ-ESCROW-002). Covered by TEST-179 (depositReentryReverts), PROP-037, PROP-052.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a224d7283c7c6756",
+      "check": "reentrancy-state-change",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow.deposit (balanceOf before)",
+      "reason": "Every external call of deposit and claim runs under the escrow's transient reentrancy flag, which is the first check of both functions (REQ-ESCROW-007): a callback into deposit or claim reverts Reentrancy before reading or writing any state, and the escrow has no other state-changing function. The flagged call is the token's balanceOf (a view, STATICCALL); measuring the balance before and after the pull is the specified way to credit what arrived (REQ-ESCROW-003), so the credit is necessarily written after these calls. Covered by TEST-179, PROP-052 (Halmos and Certora).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6edf4f085d8eb75a",
+      "check": "reentrancy-state-change",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow.deposit (balanceOf after)",
+      "reason": "Every external call of deposit and claim runs under the escrow's transient reentrancy flag, which is the first check of both functions (REQ-ESCROW-007): a callback into deposit or claim reverts Reentrancy before reading or writing any state, and the escrow has no other state-changing function. Same as the balanceOf before the pull: the measured rise is the credit (REQ-ESCROW-003), so the credit cannot be written before it is known. A token callback during safeTransferFrom finds the flag set (TEST-179 depositReentryReverts, PayoutEscrowProperties).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "82a647f5ee8e8dcf",
+      "check": "reentrancy-state-change",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow.claim (LOCK.isLocked())",
+      "reason": "Every external call of deposit and claim runs under the escrow's transient reentrancy flag, which is the first check of both functions (REQ-ESCROW-007): a callback into deposit or claim reverts Reentrancy before reading or writing any state, and the escrow has no other state-changing function. The flagged call is ILock.isLocked(), a view (STATICCALL) of the immutable protocol Lock; the LockHeld check must precede the effects (REQ-ESCROW-004). The token transfer itself comes after every state write (checks-effects-interactions). Covered by TEST-179, PROP-052.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "cbd537417a3e9389",
+      "check": "reentrancy-state-change",
+      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+      "function": "VaultTokenFactory.registerIntegration",
+      "reason": "The _lpVaultOf write follows only view calls to the LPVault (INTEGRATION_ID, COLLATERALIZATION, LOCK, AMM_PROTOCOL) and to Collateralization (LOCK), declared view in ILPVault/ICollateralizationViews and therefore compiled to STATICCALL, which cannot change state or re-enter a state-changing function. The function is callable only by the AvanaTimelock after the normal delay (REQ-VTOKEN-044), and every storage check precedes the calls. Covered by TEST-024 (registration rejections) and PROP-055 (Halmos check_PROP_055_registrationIsWriteOnce).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1fffe90232d9deb1",
+      "check": "reentrancy-state-change",
+      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+      "function": "VaultTokenFactory.registerIntegration",
+      "reason": "The _isLpVault write follows only view calls to the LPVault (INTEGRATION_ID, COLLATERALIZATION, LOCK, AMM_PROTOCOL) and to Collateralization (LOCK), declared view in ILPVault/ICollateralizationViews and therefore compiled to STATICCALL, which cannot change state or re-enter a state-changing function. The function is callable only by the AvanaTimelock after the normal delay (REQ-VTOKEN-044), and every storage check precedes the calls. Covered by TEST-024 (registration rejections) and PROP-055 (Halmos check_PROP_055_registrationIsWriteOnce).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "883341ec05617c7d",
+      "check": "reentrancy-state-change",
+      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "function": "CoverageSpoke.coverDeficit",
+      "reason": "The calls before the `totalCovered` write are the view reads `HUB.getSpokeDeficitRay` and `HUB.getSpokeAddedAssets` (through `fundedBalance()`), compiled as STATICCALL to the immutable Aave V4 Hub, so they cannot re-enter or change state; `totalCovered` needs the amount those reads determine (SPEC-FLR-001), and it is written before the one state-changing call, `HUB.eliminateDeficit` (REQ-FLR-006, REQ-FLR-018). The function is also non-reentrant (transient guard) and `restricted` to COVERAGE_ROLE. Covered by TEST-199, PROP-039, PROP-060.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "afe1bd4d6b6bec0b",
+      "check": "reentrancy-state-change",
+      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "function": "CoverageSpoke.setAllowedBorrowSpoke",
+      "reason": "The call before the allowlist write is the view check `HUB.isSpokeListed(ASSET_ID, spoke)` required by REQ-FLR-017, a STATICCALL to the immutable Aave V4 Hub that cannot re-enter or change state; the function makes no state-changing external call, is non-reentrant (transient guard) and `restricted` to RESERVE_ADMIN_ROLE. Covered by TEST-288 allowlistRules, TEST-199.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "749c41c7b9ea51c6",
+      "check": "contract-locks-ether",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock sends no value with MarketRegistry operations, and no other function accepts ETH.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "365e56976529c6c1",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8fa831f16a49b31c",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "c08cb2de9b7cb4e9",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1229ef1bb4b426a4",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d9cefb8605365730",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "fc6aabb569f3d045",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "2ee6f5a95ea3da8c",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6946d210f5d46122",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1ba394a568554656",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "34d88cb3febac875",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e7d81a47eb4e1801",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "bf58f43aa74128c1",
+      "check": "costly-loop",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "reason": "Removing a debt reserve keeps the other identifiers in approval order (REQ-MREG-007, getDebtReserveIds), so later entries shift down; the list holds a Spoke's few enabled debt reserves and changes only by a normal-delay timelock operation.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "00a3330512c51807",
+      "check": "empty-block",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-CONFIG-001), as OpenZeppelin documents.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b3af46630d479883",
+      "check": "unchecked-return",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true) or _forward: writes that return nothing have empty return data, and Address.functionDelegateCall reverts on failure and bubbles the logic contract's error.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6c3dcbc2667cc358",
+      "check": "unchecked-return",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true) or _forward: writes that return nothing have empty return data, and Address.functionDelegateCall reverts on failure and bubbles the logic contract's error.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "9dce35880f02f57d",
+      "check": "unchecked-return",
+      "file": "src/policy/market-registry/MarketRegistryRouter.sol",
+      "reason": "_forward discards the empty return data of a write that returns nothing; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6f57d59ad2766f2c",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "5824c7d246ea2773",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "18e83196c52e4927",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4083ae446c8018ba",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a662d43a9e83cdab",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4c7850a73b6669f6",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ecef53e08d398917",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "920b805a3e2bef67",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ef79f2c5be5442d8",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d1e8b0436feb59bd",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistryRouter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "22330cb295c0dba4",
+      "check": "reentrancy-state-change",
+      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "function": "markDebtFree",
+      "reason": "Aderyn form of the reentrancy finding: the record is written after receivePosition, marketOfPosition, poke and checkPledge because the credit must be the units read after custody (REQ-VAULT-012, SPEC-BACK-002) and the charge the RiskModule's answer; in markDebtFree the write follows a STATICCALL to the Aave Spoke, which cannot change state. All callees are Avana immutables, Aave or a view, under the Lock. Covered by TEST-010, TEST-272.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "aaed7b3d494173a3",
+      "check": "reentrancy-state-change",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "pledge",
+      "reason": "Aderyn form of the reentrancy finding: the record is written after receivePosition, marketOfPosition, poke and checkPledge because the credit must be the units read after custody (REQ-VAULT-012, SPEC-BACK-002) and the charge the RiskModule's answer; in markDebtFree the write follows a STATICCALL to the Aave Spoke, which cannot change state. All callees are Avana immutables, Aave or a view, under the Lock. Covered by TEST-010, TEST-272.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "f57848e52bdf6392",
+      "check": "reentrancy-state-change",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "pledge",
+      "reason": "Aderyn form of the reentrancy finding: the record is written after receivePosition, marketOfPosition, poke and checkPledge because the credit must be the units read after custody (REQ-VAULT-012, SPEC-BACK-002) and the charge the RiskModule's answer; in markDebtFree the write follows a STATICCALL to the Aave Spoke, which cannot change state. All callees are Avana immutables, Aave or a view, under the Lock. Covered by TEST-010, TEST-272.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "bd6ddd239e0ff442",
+      "check": "unsafe-casting",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_debitRecord",
+      "reason": "r.credited -= uint128(units): every caller checks units <= r.credited (< 2^120) before the debit (releasePartial: units < credited; releaseForDeleverage and release: units <= credited), so the cast never truncates. Covered by TEST-237, TEST-239, TEST-018, PROP-012 (Halmos).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a3325c90f300c483",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_book",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "eb86ea23c84b87c7",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_insert",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "501d39cdb4d52a8e",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_remove",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "e29563a2a6479151",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_debit",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "ef9a6194a8077fef",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_dropHead",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4c104edf13ba1482",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_dropHead",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "febb47567b450b83",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationLedger.sol",
+      "function": "_reconcile",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "8ca41ba89dadf74b",
+      "check": "costly-loop",
+      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "function": "settlePending",
+      "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "5a0d8b98e4734ab3",
+      "check": "require-revert-in-loop",
+      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "function": "settlePending",
+      "reason": "SafeERC20.safeTransfer of each non-zero pending amount to LPVaultSwap in settlePending: a reverting market token must revert the whole settlement and leave the pending balance for a later one (REQ-VAULT-142); the loop is at most 8 tokens. Covered by TEST-152, TEST-177.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "2084acb30d7e1cbc",
+      "check": "state-change-without-event",
+      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "function": "markIndebted",
+      "reason": "markIndebted and markDebtFree change only the indebted mark and indebtedCount, which 2.3 gives no event (REQ-COLL-039, REQ-COLL-040); they run inside the Adapter's borrow, repay and LPVaultSwap's liquidation, whose own events record the action, and getMarketDebtFree exposes the count. Covered by TEST-272.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "05570b5e610cc4d7",
+      "check": "state-change-without-event",
+      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "function": "markDebtFree",
+      "reason": "markIndebted and markDebtFree change only the indebted mark and indebtedCount, which 2.3 gives no event (REQ-COLL-039, REQ-COLL-040); they run inside the Adapter's borrow, repay and LPVaultSwap's liquidation, whose own events record the action, and getMarketDebtFree exposes the count. Covered by TEST-272.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "3029b3032865feba",
+      "check": "unchecked-return",
+      "file": "src/custody/collateralization/CollateralizationBase.sol",
+      "function": "_returnPosition",
+      "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b8d64bf7c434ba1d",
+      "check": "unchecked-return",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "_charge",
+      "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "eb38b6bef04559bb",
+      "check": "unchecked-return",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "release",
+      "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1c70fef2b3fa8eab",
+      "check": "unchecked-return",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "releasePartial",
+      "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "78006a2948516101",
+      "check": "unchecked-return",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "collectFees",
+      "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "check": "delegate-call-unchecked-address",
+      "files": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "Each write forwards to one of the six logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and the hash of every implementation immutable) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-CONFIG-001, REQ-CONFIG-002).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d87bb87f1555e7ac",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._runHops hop loop",
+      "reason": "The reverts reached from the hop loop are those of SafeCast, forceApprove and the pools themselves: a failed hop must revert the whole swap so that no partial swap or allowance remains, and LPVaultSwap then uses the other route slot (REQ-ROUTE-009, REQ-ROUTE-010). There is no index to find first and no later revert to move it to. The loop runs at most MAX_HOPS = 3 times.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "60a9922fd0886eba",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "function": "SwapRouteBase.swap residue loop",
+      "reason": "The revert reachable in the residue loop is SafeERC20.safeTransfer of a residue to LPVaultSwap: a residue that cannot be returned must revert the whole swap, because REQ-ROUTE-015 requires every leftover to reach LPVaultSwap in the same call. There is no index to find first. The loop runs over at most five held tokens.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "80e91ba4b6a3db51",
+      "check": "unchecked-return",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._runHops: ICurveStableSwapNG.exchange",
+      "reason": "Same finding as Slither unused-return 167f85ddd071f2ec: the hop's output is measured as the route's balance rise, never taken from the returned dy (REQ-ROUTE-009, REQ-ROUTE-015). forge-lint suppression on the line with the reason above it.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "4e0e6b08b9b5bebc",
+      "check": "unchecked-return",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops._concentratedHop: IUniswapV3Pool.swap",
+      "reason": "Same finding as Slither unused-return e5853431879c99e7: the callback bounds the payment (REQ-ROUTE-013) and the hop's output is measured as the route's balance rise, so the returned deltas are not used.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "01f1f5061c9921b8",
+      "check": "unchecked-return",
+      "file": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+      "function": "PegModuleRoute._runLegs: IERC4626.deposit",
+      "reason": "Same finding as Slither unused-return 5a4d4b1800498ada: the shares minted are measured as the route's static-aToken balance rise (REQ-ROUTE-011, REQ-ROUTE-015).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "7fbf9c391fd208e2",
+      "check": "unchecked-return",
+      "file": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+      "function": "PegModuleRoute._runLegs: IGsm.sellAsset",
+      "reason": "Same finding as Slither unused-return 5a4d4b1800498ada: the GHO output is LPVaultSwap's measured balance rise and unsold shares are the route's measured residue (REQ-ROUTE-009, REQ-ROUTE-011).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b2f6038ed917b1b9",
+      "check": "unchecked-return",
+      "file": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+      "function": "PegModuleRoute._runLegs: ILitePsm.buyGem",
+      "reason": "Same finding as Slither unused-return 5a4d4b1800498ada: the USDC output is LPVaultSwap's measured balance rise and DAI below one gem unit is the route's measured residue (REQ-ROUTE-012, REQ-ROUTE-015).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "1cc105c4d2279ef5",
+      "check": "unchecked-return",
+      "file": "src/liquidation/settlement-routes/WrapperThenDexRoute.sol",
+      "function": "WrapperThenDexRoute._runLegs: IERC4626.redeem",
+      "reason": "Same finding as Slither unused-return a3356e08d193fad7: the assets are measured as the route's balance rise of the underlying (REQ-ROUTE-008, REQ-ROUTE-015).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "6ee2273fdc9c8dba",
+      "check": "unused-import",
+      "file": "src/liquidation/settlement-routes/DexPathRoute.sol",
+      "function": "import ISettlementRoute",
+      "reason": "ISettlementRoute is named by the `@inheritdoc ISettlementRoute` tags of routeType and dependencies, which must name the interface that declares the function; Aderyn does not count NatSpec references as uses. Removing the import breaks the NatSpec inheritance.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "d6be2e0516a5c3c4",
+      "check": "arbitrary-transfer-from",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "function": "ClLPVaultCustody.receivePosition",
+      "reason": "Aderyn form of Slither arbitrary-send-erc20 on receivePosition: `from` is the NFT owner checked in the same call (`NFPM.ownerOf(tokenId) == owner`, not the LPVault), the caller is the immutable Collateralization under the Lock, the pull needs the owner's per-token approval of the LPVault, and the owner becomes the only address the NFT returns to (REQ-VAULT-147, REQ-VAULT-011, REQ-VAULT-094). Covered by TEST-010, TEST-011, PROP-038.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "90362596a142cef4",
+      "check": "reentrancy-state-change",
+      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "function": "constructor (UniswapV3Integration)",
+      "reason": "Constructor only: the call before the immutables are written is `INonfungiblePositionManager(nfpm).factory()`, a view compiled to STATICCALL that cannot change state, made to check REQ-AMM-V3-001 (NFPM.factory() == FACTORY) and fail closed with InvalidDeployment; the written values are immutables, which do not exist until the constructor returns. Covered by TEST-108 (constructorFailsClosed).",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "55379b2dff049dd1",
+      "check": "unchecked-return",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "function": "ClLPVaultCustody._removePrincipal",
+      "reason": "Aderyn form of Slither unused-return on the principal-capped collect of SPEC-BACK-008: capped at exactly the amounts decreaseLiquidity returned, which the position owes after the removal, so the collected amounts equal them; the reported amounts are the removal's and recipients measure receipts by balance delta (Q-271). The collect reverts on failure. Covered by TEST-058, TEST-177.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "89a061345af775a0",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultBase.sol",
+      "function": "import ILPVault",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "56f30b57237c9c91",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultBase.sol",
+      "function": "import IAmmIntegration",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "85888afe827dd7f9",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "function": "import ILPVault",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "88088524f3dccb1d",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "function": "import IAmmIntegration",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "a589e5a9c070570e",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "function": "import IClIntegration",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "44afa53cfb3a1c2c",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "function": "import IAmmIntegration",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "bca376d7c13467d3",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "function": "import IAmmIntegrationHooks",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "52cd314d2b7ee903",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "function": "import IClIntegration",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "0a73ed84ae4263c2",
+      "check": "unused-import",
+      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "function": "import IAmmIntegration",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "b783ea9e1201d901",
+      "check": "require-revert-in-loop",
+      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "function": "SlipstreamIntegration._positionKeyOf generation loop",
+      "reason": "The loop runs over the four allowlisted indices (GENERATION_COUNT = 4) and calls _generation(g), whose only revert (UnsupportedNft for an index at or above GENERATION_COUNT) is unreachable from it; that revert serves keys whose generation byte is outside the allowlist (REQ-AMM-SLIP-001). Bounded loop, nothing to move after it. forge-lint suppression on the revert line with the same reason. Covered by TEST-015 (onlyAnAllowlistedManagerMayPush, pushedNftIsOnlyAStrayOnEveryGeneration).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops (GENERATION_COUNT = 4; the revert in _generation is unreachable from the loop)."
+    },
+    {
+      "fingerprint": "573d24d47f457dca",
+      "check": "unused-import",
+      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "function": "import IAmmIntegration",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration for AMM_PROTOCOL); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (IAmmIntegration)."
+    },
+    {
+      "fingerprint": "680b3c00fbaa66c8",
+      "check": "contract-locks-ether",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock sends no value with DebtOracle operations, and the DebtOracle has no receive or other payable function (REQ-ORACLE-098). Covered by TEST-062 (noEtherAndNoPriceSetter).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Q (higher severity: contract-locks-ether): checked 2026-11-11, DebtOracle has no receive, fallback or payable function of its own; the only payable entry is OpenZeppelin upgradeToAndCall (APPLICATION_ADMIN = TIMELOCK only), and ERC1967Utils rejects value without calldata (ERC1967NonPayable). Identical to the Josue-approved ParameterStore and MarketRegistry entries. Recommend approve."
+    },
+    {
+      "fingerprint": "2c8083faaef7e454",
+      "check": "empty-block",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle._authorizeUpgrade",
+      "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-ORACLE-091, REQ-ORACLE-078), as OpenZeppelin documents. Covered by TEST-062 (upgradeOnlyApplicationAdmin).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern."
+    },
+    {
+      "fingerprint": "b27d930973ab3212",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._readConfig",
+      "reason": "The loop is bounded by the route shape (two routes of at most two legs each, REQ-ORACLE-017); the revert reachable inside it is the SPEC-ORC-023 gas guard InsufficientGas, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions applied only after an explicit range check, so they never revert. forge-lint suppression on the guard line. Covered by TEST-042, TEST-219.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops (two routes of at most two legs; the only reachable revert is the SPEC-ORC-023 gas guard)."
+    },
+    {
+      "fingerprint": "5410e10f938014f1",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._readConfig / _readRoute",
+      "reason": "The loop is bounded by the route shape (two routes of at most two legs each, REQ-ORACLE-017); the revert reachable inside it is the SPEC-ORC-023 gas guard InsufficientGas, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions applied only after an explicit range check, so they never revert. forge-lint suppression on the guard line. Covered by TEST-042, TEST-219.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops (two routes of at most two legs; the only reachable revert is the SPEC-ORC-023 gas guard)."
+    },
+    {
+      "fingerprint": "0a5b7f86f619c570",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._setFeeds",
+      "reason": "The loop is bounded by the route shape (two routes of at most two legs each, REQ-ORACLE-017); the revert reachable inside it is the SPEC-ORC-023 gas guard InsufficientGas, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions applied only after an explicit range check, so they never revert. forge-lint suppression on the guard line. Covered by TEST-042, TEST-219.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops (two routes of at most two legs; the only reachable revert is the SPEC-ORC-023 gas guard)."
+    },
+    {
+      "fingerprint": "73b82286a5b555b1",
+      "check": "unchecked-return",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle.initialize",
+      "reason": "_grantRole returns false only when the account already holds the role; initialize runs once on a fresh proxy, so both grants to TIMELOCK return true and there is nothing to act on. Covered by TEST-062 (initializeSeedsAndGrantsOnlyTimelock).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern."
+    },
+    {
+      "fingerprint": "495f5bade58d3095",
+      "check": "unchecked-return",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle.initialize",
+      "reason": "Same as the DEFAULT_ADMIN_ROLE grant: the APPLICATION_ADMIN grant to TIMELOCK on a fresh proxy always returns true.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern."
+    },
+    {
+      "fingerprint": "9a67876a90d34f21",
+      "check": "unsafe-casting",
+      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
+      "function": "LPOracleReads._decodeRound",
+      "reason": "answer = int256(rawAnswer): the ABI encoding of the int256 answer of latestRoundData() is its two's-complement word, so the cast is the decoding, not a truncation; LPPriceMath maps every answer outside (0, 2^128) to 0 (SPEC-ORC-001). Covered by TEST-219 (negative and extreme answers).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "d5bec8df2a852186",
+      "check": "empty-block",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "function": "LPOracle._authorizeUpgrade",
+      "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-ORACLE-078), as OpenZeppelin documents.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "152a98690e3f8fc8",
+      "check": "unchecked-return",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "function": "LPOracle.initialize",
+      "reason": "_grantRole returns false only when the account already holds the role; in initialize the timelock holds no role yet, so the grant always takes effect.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "32379f5a37c2b0d1",
+      "check": "unchecked-return",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "function": "LPOracle.initialize",
+      "reason": "Same as the DEFAULT_ADMIN_ROLE grant: a first grant in initialize always returns true.",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "ca763563d74e6166",
+      "check": "unchecked-return",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "function": "LPOracle.initialize",
+      "reason": "The listing logic's initializeMarket returns nothing, so the delegatecall's return data is empty; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error (REQ-ORACLE-106).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "7b524371a133b5a0",
+      "check": "unused-import",
+      "file": "src/oracle/lp-oracle/LPOracleListingLogic.sol",
+      "reason": "ILPOracleLogic is named by the @inheritdoc tags of the functions it declares; NatSpec requires the declaring interface in scope.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "e6b5824f8b978426",
+      "check": "unused-import",
+      "file": "src/oracle/lp-oracle/LPOraclePokeLogic.sol",
+      "reason": "ILPOracleLogic is named by the @inheritdoc tags of the functions it declares; NatSpec requires the declaring interface in scope.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "37269aa0035adfbc",
+      "check": "unused-import",
+      "file": "src/oracle/lp-oracle/LPOracleViewLogic.sol",
+      "reason": "ILPOracleLogic is named by the @inheritdoc tags of the functions it declares; NatSpec requires the declaring interface in scope.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b121b05f036cf252",
+      "check": "require-revert-in-loop",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._forwardTokens",
+      "reason": "The revert in the loop is SafeERC20's on a residue transfer the recipient's token refuses; the whole call must revert then (REQ-HELPER-008: the helper escrows nothing for its recipient). Bounded at MAX_POOL_TOKENS = 8. Covered by test_TEST_174_residueRefusedByRecipientRevertsWholeLiquidation.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops (at most 8 market tokens; a refused residue must revert the whole call, REQ-HELPER-008)."
+    },
+    {
+      "fingerprint": "f64a71575f3db858",
+      "check": "unchecked-return",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._liquidate",
+      "reason": "Same finding as Slither unused-return 88e6cfc381fb8ccd: keeperOut is measured by balance delta (REQ-HELPER-006), so the returned LiquidationResult is not used. forge-lint suppression on the line with the reason above it.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: returns measured by balance delta (same site as Slither 88e6cfc381fb8ccd)."
+    },
+    {
+      "fingerprint": "ac0d473439addc9e",
+      "check": "contract-locks-ether",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the RiskModule holds no funds (REQ-RISK-005) and has no receive or fallback, and ERC1967Utils.upgradeToAndCall reverts ERC1967NonPayable for value without calldata. Same as the ParameterStore and MarketRegistry entries. Covered by TEST-035 (noFundsNoPauseNoSetter), TEST-242 (upgradeNeedsApplicationAdmin).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group Q (higher severity: contract-locks-ether): checked 2026-11-11, RiskModule has no receive, fallback or payable function of its own; the only payable entry is OpenZeppelin upgradeToAndCall (APPLICATION_ADMIN = TIMELOCK only), and ERC1967Utils rejects value without calldata (ERC1967NonPayable). Same as the Josue-approved ParameterStore and MarketRegistry entries. Recommend approve."
+    },
+    {
+      "fingerprint": "14539534e56f1eb6",
+      "check": "empty-block",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule._authorizeUpgrade",
+      "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-RISK-002), as OpenZeppelin documents. Covered by TEST-242 (upgradeNeedsApplicationAdmin).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: same as the Josue-approved ParameterStore and MarketRegistry _authorizeUpgrade empty-block entries."
+    },
+    {
+      "fingerprint": "bfb3f99b4cbcc637",
+      "check": "empty-block",
+      "file": "src/periphery/flash-liquidator/FlashLiquidator.sol",
+      "function": "FlashLiquidator._checkLoanNeed",
+      "reason": "The public helper has no loan-size bound: anyone may borrow what the liquidation needs and pays its own premium (REQ-HELPER-007, REQ-HELPER-010); the operator variant bounds it in OperatorFlashLiquidator._checkLoanNeed. forge-lint suppression above the function with the same reason. Covered by TEST-174, TEST-289.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check. Recommend approve."
+    },
+    {
+      "fingerprint": "ed6c1761dd4c584c",
+      "check": "empty-block",
+      "file": "src/periphery/flash-liquidator/FlashLiquidator.sol",
+      "function": "FlashLiquidator._checkOutlay",
+      "reason": "The public helper has no outlay bound beyond maxTopUp and minPayout: the caller funds and keeps the result (REQ-HELPER-008, REQ-HELPER-010); the operator variant bounds it in OperatorFlashLiquidator._checkOutlay. forge-lint suppression above the function with the same reason. Covered by TEST-174, TEST-289.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check. Recommend approve."
+    },
+    {
+      "fingerprint": "e2e0eb20ced28780",
+      "check": "unchecked-return",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.initialize",
+      "reason": "_grantRole returns false only when the account already holds the role; initialize runs once on a fresh proxy, so the grant to TIMELOCK always takes effect (REQ-RISK-072). Covered by TEST-242 (adminRolesOnlyTimelock, initializeOnce).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: same as the Josue-approved ParameterStore and MarketRegistry initialize _grantRole entries."
+    },
+    {
+      "fingerprint": "f2a29e23327669a4",
+      "check": "unchecked-return",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.initialize",
+      "reason": "Same as the DEFAULT_ADMIN_ROLE grant: a first grant of APPLICATION_ADMIN to TIMELOCK on a fresh proxy always returns true (REQ-RISK-072). Covered by TEST-242.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: same as the Josue-approved ParameterStore and MarketRegistry initialize _grantRole entries."
+    },
+    {
+      "fingerprint": "43d03dd39f1a4fa0",
+      "check": "unchecked-return",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "RiskModuleBorrowLogic.preCheck",
+      "reason": "Aderyn form of Slither unused-return 53651fc621d8dd1e: LPOracle.poke stores first observations only (Q-199) and the gates read the price state themselves; the poke reverts on failure and the revert propagates (REQ-RISK-056). Covered by TEST-028 (borrowPassesAndPokes), TEST-163 (pokeRevertPropagates).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: same reason as the Josue-approved CollateralizationBase unchecked-return entry 3029b3032865feba (LPOracle.poke reverts on failure, its state is read separately)."
+    },
+    {
+      "fingerprint": "4e9df608c100c5ce",
+      "check": "unused-error",
+      "file": "src/policy/risk-module/IRiskModuleErrors.sol",
+      "function": "ShapeMismatch",
+      "reason": "Declared so the RiskModule ABI decodes the reason previewPledge reports: REQ-RISK-012 has the integration enforce the shape in validatePosition, checkPledge relies on that, and previewPledge returns the integration's ShapeMismatch selector (RiskModulePreview._position). No RiskModule code path raises it by specification. Covered by TEST-034 (previewPledge reports ShapeMismatch from validatePosition).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group P (error declared for selector parity, specified never raised): checked 2026-11-11, REQ-RISK-012 says the integration enforces the shape in validatePosition, checkPledge relies on that and previewPledge reports it; the RiskModule reports the integration's ShapeMismatch selector (RiskModulePreview._position) and declares the same error so its ABI decodes the preview reason. Recommend approve, or move the declaration into an interface the RiskModule does not implement if Aderyn must stay clean."
+    },
+    {
+      "fingerprint": "a2e7add59e680cf7",
+      "check": "unsafe-casting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig._setLeg",
+      "reason": "(leg.feed, leg.pinnedDecimals) = (address(uint160(feed)), uint8(dec)): the assembly block above checks every leg word against its type before these casts (aggregator non-zero and below 2^160, decimals non-zero and below 2^8, heartbeat, margin and both age limits below 2^32) and returns false otherwise, failing the market with reason bit 1 (REQ-ORACLE-017). Nothing truncates. Covered by TEST-040 (legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "c95cd4ddd858a79a",
+      "check": "unsafe-casting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig._setLeg",
+      "reason": "uint32(heartbeat), uint32(margin): the assembly block above checks every leg word against its type before these casts (aggregator non-zero and below 2^160, decimals non-zero and below 2^8, heartbeat, margin and both age limits below 2^32) and returns false otherwise, failing the market with reason bit 1 (REQ-ORACLE-017). Nothing truncates. Covered by TEST-040 (legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "cb221bc917c893f0",
+      "check": "unsafe-casting",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig._setLeg",
+      "reason": "uint32(borrowAge), uint32(liquidationAge): the assembly block above checks every leg word against its type before these casts (aggregator non-zero and below 2^160, decimals non-zero and below 2^8, heartbeat, margin and both age limits below 2^32) and returns false otherwise, failing the market with reason bit 1 (REQ-ORACLE-017). Nothing truncates. Covered by TEST-040 (legWordBeyondItsTypeFailsTheMarket).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+    },
+    {
+      "fingerprint": "e7f04f6386e47b75",
+      "check": "yul-return",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "function": "LPOracle._delegateAndReturn",
+      "reason": "The assembly return ends the external view with the view logic's raw return data (REQ-ORACLE-106, REQ-ORACLE-061); every caller (_forward) is an external view with no modifier whose only statement after the call names the return values, so no code that must run is skipped. Covered by TEST-219 (viewRevertsOnlyInsufficientGas), TEST-062 (logicContractsRunOnlyInTheProxy), testFuzz_TEST_219_servedViewsIndependentOfSecondSources.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+    },
+    {
+      "fingerprint": "fbc164a11814aa70",
+      "check": "yul-return",
+      "file": "src/policy/parameter-store/ParameterStoreRouter.sol",
+      "function": "ParameterStoreRouter._delegateAndReturn",
+      "reason": "The assembly return ends ParameterStoreViews.getOracleConfig, an external view with no modifier and no code after the call, with the admin-oracle logic's raw return data (REQ-PSTORE-011, REQ-CONFIG-072). Covered by TEST-250 (oracleConfigEndsWithTheLogicResult).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+    },
+    {
+      "fingerprint": "e854b55a3807e77b",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "RiskModuleBorrowLogic._collateralPrice",
+      "reason": "The reverts in the loop over the market's tokens (at most 8) are the collateral-price gates of REQ-ADAPTER-015, REQ-ADAPTER-016 and REQ-RISK-076 (PriceTooOld, SecondSourceDisagrees): one failing token must refuse the whole borrow or withdrawal. Covered by TEST-028 (collateralPriceGates), TEST-276 (secondSourceDisagrees).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "ab15baa49448f496",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "RiskModuleBorrowLogic._collateralPrice",
+      "reason": "Inner loop over a token's two legs: one stale or future leg must refuse the whole call (PriceTooOld, REQ-ADAPTER-015). Covered by TEST-028 (collateralPriceGates, futureTimestampsAreNeverFresh).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "b1ebff1f8b72b0ee",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "RiskModuleBorrowLogic._debtPrices, _breakers, _creditLine",
+      "reason": "Loops over the account's debt reserves (the reserves it borrows): one paused, mis-sourced, stale or breaker-tripped reserve, or a full credit line, must refuse the whole call (REQ-RISK-061, REQ-RISK-065, REQ-RISK-082). Covered by TEST-201, TEST-228 (breakersOnBorrowAndWithdraw), TEST-273.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "69ecb3a399e3f837",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModuleBorrowScope.sol",
+      "function": "RiskModuleBorrowScope._scope",
+      "reason": "One unapproved or mismatched debt reserve in the account's scope refuses the whole action (ConfigDrift, REQ-ADAPTER-014, REQ-ADAPTER-022). Covered by TEST-028 (scope).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "251496be77005ec3",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModuleBorrowScope.sol",
+      "function": "RiskModuleBorrowScope._debtScope",
+      "reason": "One collateral reserve that maps to no market of the account refuses the whole action (UnknownCollateral, REQ-ADAPTER-013); the loop is bounded by the CDP Spoke reserve count (REQ-ADAPTER-051). Covered by TEST-028 (scope).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "fc7429f9295725a0",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic._marketLive",
+      "reason": "The only revert reachable from the loop over the market's tokens (at most 8) is the probe's InsufficientGas of REQ-RISK-089, which must revert the whole call so a starved probe is never read as an issuer action. Covered by TEST-221 (probeGasFloor).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "2b2ed31cc71886fd",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "RiskModulePledgeLogic._newAccount",
+      "reason": "One paused enabled debt reserve refuses a new account's pledge (DebtReservePaused, REQ-RISK-018); the loop is over the Spoke's enabled debt reserves. Covered by TEST-012 (aavePreChecks).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "b3e0d330ea8d4f8e",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "RiskModulePledgeLogic._caps",
+      "reason": "One token over its USD cap refuses the whole pledge (CapExceeded(TOKEN), SPEC-CAP-002); at most 8 tokens. Covered by TEST-272 (tokenAndDepositorCaps).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
+    },
+    {
+      "fingerprint": "8a8a3344aef851cf",
+      "check": "unused-import",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "IFlashLiquidator",
+      "reason": "Used by @inheritdoc IFlashLiquidator NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "8fdd000312bf388a",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "IRiskModuleAdmin",
+      "reason": "Used by @inheritdoc IRiskModuleAdmin NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "20e47fadb4aa79e3",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "IRiskModuleViews",
+      "reason": "Used by @inheritdoc IRiskModuleViews NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "c72f98b92d4aba5b",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
+      "function": "IRiskModuleLogic",
+      "reason": "Used by @inheritdoc IRiskModuleLogic NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "11a9b4d7b381f5a4",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "IRiskModuleLogic",
+      "reason": "Used by @inheritdoc IRiskModuleLogic NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "71e774a4a103fbb6",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModuleDriftLogic.sol",
+      "function": "IRiskModuleLogic",
+      "reason": "Used by @inheritdoc IRiskModuleLogic NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "27f55f9277d4ef1d",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "IRiskModuleLogic",
+      "reason": "Used by @inheritdoc IRiskModuleLogic NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "c3af75e16e58dddb",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "IRiskModulePledgeLogic",
+      "reason": "Used by @inheritdoc IRiskModulePledgeLogic NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "539e78203b495ac6",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModuleStatusLogic.sol",
+      "function": "IRiskModuleLogic",
+      "reason": "Used by @inheritdoc IRiskModuleLogic NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
+    },
+    {
+      "fingerprint": "d38f53c157ba2d8c",
+      "check": "costly-loop",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "function": "MarketRegistryHubsLogic.recordIntegrationContracts",
+      "reason": "Each recorded AMM contract is appended to the integration's list and marked protected (REQ-MREG-020); the loop runs over the call's list, at most _MAX_INTEGRATION_CONTRACTS = 16 entries (refused above), and only in a normal-delay timelock operation. Covered by TEST-229 (integrationContractsAreProtected).",
+      "approval": "approved by pattern",
+      "review": "Pattern: bounded loops (at most 16 entries per timelock call)."
+    },
+    {
+      "fingerprint": "bca49a3b832de416",
+      "check": "unused-import",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
+      "reason": "IMarketRegistryApprovals is used by @inheritdoc NatSpec on approveSpokeCodeHash and recordIntegrationContracts, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "approved by pattern",
+      "review": "Pattern: unused import for @inheritdoc (same as the approved MarketRegistry entries 6f57d59ad2766f2c and 5824c7d246ea2773)."
+    }
+  ]
+}

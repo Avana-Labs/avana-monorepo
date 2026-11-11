@@ -1,0 +1,220 @@
+[
+ {
+  "id": "FV-CTL-155",
+  "title": "With receiveSharesEnabled = false, liquidationFee = 0 and no reinvestment controller, a liquidationCall on a standard Spoke seizes Avana collateral only when the liquidator is LPVaultSwap; every other liquidator, with either receiveShares value, reverts",
+  "status": "Verified",
+  "method": "exhaustive enumeration (26 cases)",
+  "verifies": [
+   "REQ-VTOKEN-006",
+   "REQ-VTOKEN-008",
+   "REQ-VTOKEN-026",
+   "REQ-ADAPTER-029",
+   "REQ-ADAPTER-030",
+   "REQ-ADAPTER-033",
+   "REQ-VTOKEN-025",
+   "REQ-PROXY-008"
+  ],
+  "targets": [
+   "T-63",
+   "T-65"
+  ],
+  "detail": "The token cannot tell a seizure Hub -> proxy from a withdrawal Hub -> proxy, so a registered proxy as liquidator is excluded by REQ-PROXY-008 (the Adapter never makes a proxy call liquidationCall), not by the transfer rule; without that rule the first run found the proxy case (see FV-CTL-F-29).",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-155-W",
+  "title": "Mutation witness: with receiveSharesEnabled = true a liquidator other than LPVaultSwap seizes with receiveShares = true and no token transfer, so the transfer rule alone does not give exclusivity; this is why the setting is a drift condition",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-ADAPTER-029",
+   "REQ-RISK-078"
+  ],
+  "targets": [
+   "T-65"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-156",
+  "title": "Any drift of a standard-Spoke setting (receiveSharesEnabled, liquidationFee, reinvestment controller, borrowable vault reserve, second Spoke, implementation, oracle) trips CONFIG_DRIFT, which blocks new-account pledges, debt-free re-credits, borrows, withdraw-with-debt and removal with debt, and never liquidation, repay, top-ups, debt-free exits, fee collection or pending settlement; REQ-RISK-078 names each setting and each effect",
+  "status": "Verified",
+  "method": "exhaustive enumeration (89 cases)",
+  "verifies": [
+   "REQ-RISK-078",
+   "REQ-RISK-086",
+   "REQ-ADAPTER-036",
+   "REQ-ADAPTER-020",
+   "REQ-HUB-110"
+  ],
+  "targets": [
+   "T-56",
+   "T-63"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-157",
+  "title": "A flash-funded settlement runs only for a loan LPVaultSwap requested within the source's liquidity and the fee ceiling, from a lender that is neither the CDP Spoke's home Hub nor the reserve's funding Hub, delivered by the Pool to the source's own initiation, for one asset and the amount of the active context, with a charged premium within maxFlashFeeBps",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-FLASH-001",
+   "REQ-FLASH-002",
+   "REQ-FLASH-003",
+   "REQ-FLASH-004",
+   "REQ-FLASH-005",
+   "REQ-FLASH-009",
+   "REQ-SWAP-012",
+   "REQ-SWAP-013",
+   "SPEC-LIQ-015"
+  ],
+  "targets": [
+   "T-65"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-157-W",
+  "title": "Witness: SPEC-LIQ-015's example loan (1,950 USDC, 5 bps, ceiling 10 bps) passes every check",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-FLASH-002",
+   "REQ-FLASH-003"
+  ],
+  "targets": [
+   "T-65"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-158",
+  "title": "Only the timelock replaces the flash source, and only with a non-zero contract bound to this LPVaultSwap; whenever the source is short, repriced above the ceiling, paused or being replaced, liquidation proceeds caller-funded instead of stopping",
+  "status": "Verified",
+  "method": "exhaustive enumeration (37 cases)",
+  "verifies": [
+   "REQ-FLASH-006",
+   "REQ-SWAP-014",
+   "REQ-FLASH-008",
+   "REQ-FLASH-010"
+  ],
+  "targets": [
+   "T-64",
+   "T-65"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-159",
+  "title": "With token, depositor and pool counters keyed by Hub in the chain's one ledger, pledges admitted on any number of Spokes and markets of that Hub never take the Hub's counter above its cap",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-COLL-026",
+   "REQ-VAULT-034",
+   "REQ-RISK-079",
+   "REQ-COLL-030"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-159-W",
+  "title": "Mutation witness: counters keyed per Spoke admit the cap once per Spoke (three Spokes book 3 x $10M of USDT against a $10M Hub cap)",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-COLL-026"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-160",
+  "title": "Across every drawCap change the draw caps of every Spoke on (funding Hub, asset) sum to at most the credit line, the cross-Hub part to at most crossHubCap <= the funding Hub's first-loss coverage (0 while lines are off), and a cross-Hub borrow needs lines enabled and the funding Hub unpaused",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-HUB-003",
+   "SPEC-CAP-010",
+   "REQ-FLR-043",
+   "REQ-RISK-082",
+   "REQ-HUB-103",
+   "REQ-CONFIG-081",
+   "REQ-HUB-020"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-161",
+  "title": "With no shared SettlementBudget (Q-397) each liquidation settles from its own caller's funding, so whatever other markets' liquidations need, market m's settlement is covered whenever its caller funded its own repayment and premium: one market cannot starve another",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-SET-006",
+   "SPEC-SET-005",
+   "REQ-BUDGET-020",
+   "REQ-BUDGET-021",
+   "REQ-BUDGET-024"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_amm"
+ },
+ {
+  "id": "FV-CTL-162",
+  "title": "Every page that states the vault token's transfer rule states the same paths: no page allows a Hub -> Adapter transfer, which REQ-VTOKEN-006 and REQ-VTOKEN-041 refuse (withdrawn units go Hub -> proxy and are burned there)",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-VTOKEN-006",
+   "REQ-ADAPTER-036",
+   "REQ-VTOKEN-041"
+  ],
+  "targets": [
+   "T-63"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_amm"
+ }
+]

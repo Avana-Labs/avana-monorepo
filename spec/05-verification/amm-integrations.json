@@ -1,0 +1,8 @@
+{
+  "V3": {"status": "review", "results": {}},
+  "SLIP": {"status": "review", "results": {}},
+  "V2": {"status": "draft"},
+  "CURVE": {"status": "draft"},
+  "BAL": {"status": "draft"},
+  "V4": {"status": "draft"}
+}

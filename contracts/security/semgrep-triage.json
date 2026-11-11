@@ -1,0 +1,238 @@
+{
+  "excluded_detectors": [],
+  "accepted": [
+    {
+      "fingerprint": "2e2c4cb6f3627377",
+      "check": "missing-assignment",
+      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "function": "CollateralizationDebtMark.markIndebted",
+      "reason": "Semgrep parse gap: the rule excludes `++$VAR` and `--$VAR` but not a prefix increment or decrement of an indexed element, so `++indebtedCount[vt];` (which writes storage) is matched as a statement without effect. The statement is the specified counter update. Runs once per proxy, guarded by the indebted flag (REQ-COLL-040).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
+    },
+    {
+      "fingerprint": "d017888c8895c335",
+      "check": "missing-assignment",
+      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "function": "CollateralizationDebtMark.markDebtFree",
+      "reason": "Semgrep parse gap: the rule excludes `++$VAR` and `--$VAR` but not a prefix increment or decrement of an indexed element, so `--indebtedCount[vt];` (which writes storage) is matched as a statement without effect. The statement is the specified counter update. Runs only after the indebted flag of the proxy was set, so the counter is at least 1 (REQ-COLL-040).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
+    },
+    {
+      "fingerprint": "b5e42058ba6c9e1d",
+      "check": "missing-assignment",
+      "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
+      "function": "MarketRegistryListingLogic (price route version bump)",
+      "reason": "Semgrep parse gap: the rule excludes `++$VAR` and `--$VAR` but not a prefix increment or decrement of an indexed element, so `++l.priceRouteVersion[token];` (which writes storage) is matched as a statement without effect. The statement is the specified counter update.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
+    },
+    {
+      "fingerprint": "c155c4d19228e48f",
+      "check": "missing-assignment",
+      "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
+      "function": "MarketRegistryRoutesLogic (two price route version bumps, same source line)",
+      "reason": "Semgrep parse gap: the rule excludes `++$VAR` and `--$VAR` but not a prefix increment or decrement of an indexed element, so `++l.priceRouteVersion[token];` (which writes storage) is matched as a statement without effect. The statement is the specified counter update.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
+    },
+    {
+      "fingerprint": "0f250a1f29a797a8",
+      "check": "missing-assignment",
+      "file": "src/policy/market-registry/MarketRegistrySafetyLogic.sol",
+      "function": "MarketRegistrySafetyLogic (freeze rate-limit bucket)",
+      "reason": "Semgrep parse gap: the rule excludes `++$VAR` and `--$VAR` but not a prefix increment or decrement of an indexed element, so `++l.freezeBuckets[msg.sender][hour];` (which writes storage) is matched as a statement without effect. The statement is the specified counter update.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
+    },
+    {
+      "fingerprint": "9a18544c14d1c401",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "function": "CollateralizationPending (SupplyDropMismatch argument)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `limit - units`: units <= pendingUnits <= limit is checked on the line before (PendingExceeded).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "6a9fe13501b9926f",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "function": "CollateralizationPending (pending amount debit)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `held - out`: out = mulDiv(held, units, pendingUnits) with units <= pendingUnits, so out <= held.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "23e4bf9b0d9ea5d7",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "function": "CollateralizationPending (pending units debit)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `pendingUnits - units`: units > pendingUnits reverts PendingExceeded first.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "da4e2478739df225",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "function": "CollateralizationRelease partial removal",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `credited - units`: units >= credited reverts PartialRemovalTooLarge two lines above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "e91eedeec5995782",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/custody/collateralization/CollateralizationViews.sol",
+      "function": "CollateralizationViews (added units)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `live - before` is evaluated only when live > before.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "485ee55aabdb452f",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/flash/AaveV3FlashSource.sol",
+      "function": "AaveV3FlashSource (received balance delta)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `balanceNow - balanceBefore` is evaluated only when balanceNow > balanceBefore.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "6fb30d020d4be0c3",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/governance/timelock/AvanaTimelock.sol",
+      "function": "AvanaTimelock.isOperationExpired",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `block.timestamp - readyAt` is evaluated only after block.timestamp >= readyAt (short-circuit &&).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "ab90c246542ac404",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow (transfer-in check)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `balanceAfter - balanceBefore` is evaluated only when balanceAfter > balanceBefore (short-circuit ||).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "684bd81458b5c6ef",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow (received amount)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. The line before reverts TransferMismatch when balanceAfter <= balanceBefore.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "148f14f7ef2bdc51",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+      "function": "PayoutEscrow.claim",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `totalClaimable[token] -= amount`: amount is one recipient's claimable credit, and totalClaimable is the sum of all credits of the token (every credit adds to both, every claim subtracts from both).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "ccfe0e1dfd26dae2",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "function": "MarketRegistryHubsLogic.setCrossHubLineCap",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `total - old + cap`: old is this spoke's current cap, which is included in crossHubLineTotal; the parameter cap is only added.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "b93fa650ad8ccdfd",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+      "function": "MarketRegistryHubsLogic (debt reserve removal)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `drawCapSum -= recordedDrawCap[spoke][reserveId]`: drawCapSum is the sum of the recorded draw caps of the credit line's reserves, this reserve's included.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "e71c5104d1930f1c",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+      "function": "MarketRegistryWindDownLogic (ramp step)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `nowTs - start`: nowTs >= next >= start is checked on the line before (WindDownStepTooEarly).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "ce406fadf7f36dee",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+      "function": "MarketRegistryWindDownLogic (draw cap sync)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `drawCapSum - old + cap`: old is this reserve's recorded draw cap, included in drawCapSum; cap is only added.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "915410a1dd68694e",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/policy/parameter-store/ParameterStoreLoosenLogic.sol",
+      "function": "ParameterStoreLoosenLogic.loosenHardHealthFloor",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `old - x`: value < old is checked first (NotLooser); x is value or 1.00 when value switches the floor off, and a stored floor is 0 (then value >= old always reverts) or at least 1.00 (hard bounds).",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "d7d763389a7cb58c",
+      "check": "uniswap-callback-not-protected",
+      "file": "src/liquidation/settlement-routes/DexHops.sol",
+      "function": "DexHops.uniswapV3SwapCallback",
+      "reason": "The rule looks for a factory-derived pool check. The callback is protected another way: it reverts InvalidCallback unless a hop is in progress and msg.sender equals the hop's pool held in transient storage, a pool fixed and checked against its tokens at construction; it pays at most the hop's amount, once (REQ-ROUTE-013, REQ-ROUTE-029, INV-040). Covered by the DexPathRoute and WrapperThenDexRoute unit and Halmos suites.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group C (callback guarded by a transient pool slot): checked 2026-11-11, `if (pool == 0 || msg.sender != pool) revert` before any transfer, payment bounded by the hop amount and cleared after one use; the rule recognises only require-form checks."
+    },
+    {
+      "fingerprint": "de3e6ef1085222b5",
+      "check": "uniswap-callback-not-protected",
+      "file": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+      "function": "SwapRouteBase.uniswapV3SwapCallback",
+      "reason": "The base implementation only reverts InvalidCallback (routes without a concentrated-liquidity hop never expect a callback); there is nothing to protect.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group C: checked 2026-11-11, the base callback only reverts InvalidCallback; nothing to protect."
+    },
+    {
+      "fingerprint": "497d861d3009e211",
+      "check": "arbitrary-low-level-call",
+      "file": "src/proxy/position-proxy/PositionProxy.sol",
+      "function": "PositionProxy.execute(address,bytes)",
+      "reason": "Same site as the accepted Slither low-level-calls entry: the proxy forwards the AaveAdapter's target and calldata with no ETH (REQ-PROXY-007). Only the AaveAdapter (immutable ADAPTER) can call execute; the target cannot be the proxy, address(0) or an address without code; return data and revert data pass through unchanged (REQ-PROXY-012). The Adapter builds every call and checks every balance delta around it. Covered by PositionProxy unit and Halmos suites.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group D (PositionProxy.execute, same site as the Josue-approved Slither low-level-calls entry): checked 2026-11-11, only the immutable ADAPTER can call; target not self/zero/codeless; no ETH."
+    },
+    {
+      "fingerprint": "01e8eda1bb78943b",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "function": "ClLPVaultMarkets.consistencyDeviation",
+      "reason": "Signed subtraction of two int24 ticks widened to int256 (meanTick and tickAtSqrtRatio, each within [-887,272, 887,272]): the difference is within +-1,774,544, so it cannot underflow, and the arithmetic is checked (solc 0.8.28, no unchecked block). The sign is tested before the absolute value is taken (SPEC-ORC-010).",
+      "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "2355c495795673d4",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase.flashLiquidate (inventory pull)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): `debtToCover - flashAmount` is evaluated only when `flashAmount < debtToCover` (the condition on the same line), and `flashAmount > debtToCover` already reverted InvalidFlashAmount above.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "c3f1df97f93570ce",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase.flashLiquidate (prefund)",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): `debtToCover - flashAmount` cannot underflow because flashAmount > debtToCover reverts InvalidFlashAmount above, and the sum with maxShortfall cannot overflow because both debtToCover and maxShortfall are checked to be at most type(uint128).max there. Replaces entry 2355c495795673d4 after the shortfall budget joined the line. Covered by TEST-174, TEST-289.",
+      "approval": "approved (Josue, 2026-11-11)",
+      "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    }
+  ]
+}

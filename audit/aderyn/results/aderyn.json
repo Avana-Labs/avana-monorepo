@@ -1,0 +1,3172 @@
+{
+  "files_summary": {
+    "total_source_units": 242,
+    "total_sloc": 12287
+  },
+  "files_details": {
+    "files_details": [
+      {
+        "file_path": "src/amm/IAmmIntegration.sol",
+        "n_sloc": 78
+      },
+      {
+        "file_path": "src/amm/IAmmIntegrationHooks.sol",
+        "n_sloc": 21
+      },
+      {
+        "file_path": "src/amm/IClIntegration.sol",
+        "n_sloc": 21
+      },
+      {
+        "file_path": "src/amm/slipstream/ISlipstreamIntegration.sol",
+        "n_sloc": 16
+      },
+      {
+        "file_path": "src/amm/types/ClMarketConfig.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/amm/types/FeeMode.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/amm/types/IntegrationCapabilities.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/amm/types/PoolKeying.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/amm/types/PricingMode.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/amm/types/RiskMetadata.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/amm/types/RiskStatus.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/amm/uniswap-v3/IUniswapV3Integration.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+        "n_sloc": 172
+      },
+      {
+        "file_path": "src/coverage/coverage-spoke/ICoverageSpoke.sol",
+        "n_sloc": 32
+      },
+      {
+        "file_path": "src/coverage/coverage-spoke/ICoverageSpokeAdmin.sol",
+        "n_sloc": 22
+      },
+      {
+        "file_path": "src/coverage/coverage-spoke/ICoverageSpokeErrors.sol",
+        "n_sloc": 14
+      },
+      {
+        "file_path": "src/coverage/coverage-spoke/ICoverageSpokeViews.sol",
+        "n_sloc": 16
+      },
+      {
+        "file_path": "src/coverage/coverage-spoke/types/Withdrawal.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/custody/collateralization/Collateralization.sol",
+        "n_sloc": 26
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationBase.sol",
+        "n_sloc": 298
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationDebtMark.sol",
+        "n_sloc": 33
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationLedger.sol",
+        "n_sloc": 240
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationPending.sol",
+        "n_sloc": 38
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationPledge.sol",
+        "n_sloc": 159
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationRelease.sol",
+        "n_sloc": 119
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationSeizure.sol",
+        "n_sloc": 84
+      },
+      {
+        "file_path": "src/custody/collateralization/CollateralizationViews.sol",
+        "n_sloc": 175
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralization.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralizationAdapter.sol",
+        "n_sloc": 38
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralizationDebtMark.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralizationErrors.sol",
+        "n_sloc": 33
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralizationEvents.sol",
+        "n_sloc": 43
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralizationSeizure.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralizationUser.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/custody/collateralization/ICollateralizationViews.sol",
+        "n_sloc": 72
+      },
+      {
+        "file_path": "src/custody/collateralization/types/BackingRecord.sol",
+        "n_sloc": 16
+      },
+      {
+        "file_path": "src/custody/collateralization/types/CounterKind.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/custody/collateralization/types/Pending.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/custody/lp-vault/ILPVault.sol",
+        "n_sloc": 18
+      },
+      {
+        "file_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+        "n_sloc": 27
+      },
+      {
+        "file_path": "src/custody/lp-vault/ILPVaultEvents.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/flash/AaveV3FlashSource.sol",
+        "n_sloc": 144
+      },
+      {
+        "file_path": "src/flash/IFlashReceiver.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/flash/IFlashSource.sol",
+        "n_sloc": 28
+      },
+      {
+        "file_path": "src/governance/roles/AvanaRoles.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/governance/timelock/AvanaTimelock.sol",
+        "n_sloc": 346
+      },
+      {
+        "file_path": "src/governance/timelock/IAvanaTimelock.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/governance/timelock/IAvanaTimelockErrors.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/governance/timelock/IAvanaTimelockEvents.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/governance/timelock/IAvanaTimelockGovernance.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/governance/timelock/IAvanaTimelockViews.sol",
+        "n_sloc": 34
+      },
+      {
+        "file_path": "src/governance/timelock/TimelockSelectors.sol",
+        "n_sloc": 93
+      },
+      {
+        "file_path": "src/governance/timelock/types/SelectorPair.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/lens/lens/ILens.sol",
+        "n_sloc": 20
+      },
+      {
+        "file_path": "src/lens/lens/ILensAccount.sol",
+        "n_sloc": 22
+      },
+      {
+        "file_path": "src/lens/lens/ILensErrors.sol",
+        "n_sloc": 8
+      },
+      {
+        "file_path": "src/lens/lens/ILensLiquidation.sol",
+        "n_sloc": 25
+      },
+      {
+        "file_path": "src/lens/lens/ILensMarket.sol",
+        "n_sloc": 22
+      },
+      {
+        "file_path": "src/lens/lens/ILensPreview.sol",
+        "n_sloc": 32
+      },
+      {
+        "file_path": "src/lens/lens/ILensRisk.sol",
+        "n_sloc": 26
+      },
+      {
+        "file_path": "src/lens/lens/LensConstants.sol",
+        "n_sloc": 8
+      },
+      {
+        "file_path": "src/lens/lens/types/AccountView.sol",
+        "n_sloc": 26
+      },
+      {
+        "file_path": "src/lens/lens/types/BackingView.sol",
+        "n_sloc": 30
+      },
+      {
+        "file_path": "src/lens/lens/types/DebtPosition.sol",
+        "n_sloc": 11
+      },
+      {
+        "file_path": "src/lens/lens/types/DebtPriceView.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/lens/lens/types/DrawHeadroom.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/lens/lens/types/HubAssetExposureView.sol",
+        "n_sloc": 19
+      },
+      {
+        "file_path": "src/lens/lens/types/LiquidationPreview.sol",
+        "n_sloc": 46
+      },
+      {
+        "file_path": "src/lens/lens/types/MarketPosition.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/lens/lens/types/PriceInput.sol",
+        "n_sloc": 10
+      },
+      {
+        "file_path": "src/lens/lens/types/RecordBackingView.sol",
+        "n_sloc": 12
+      },
+      {
+        "file_path": "src/lens/lens/types/RecordView.sol",
+        "n_sloc": 12
+      },
+      {
+        "file_path": "src/lens/lens/types/RouteStatus.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/lens/lens/types/TailCoverageView.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwap.sol",
+        "n_sloc": 19
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+        "n_sloc": 41
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol",
+        "n_sloc": 36
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwapKeeper.sol",
+        "n_sloc": 8
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwapPermissionless.sol",
+        "n_sloc": 12
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/ILPVaultSwapViews.sol",
+        "n_sloc": 21
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+        "n_sloc": 232
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/types/DeleverageRequest.sol",
+        "n_sloc": 14
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/types/LiquidationParams.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/types/LiquidationResult.sol",
+        "n_sloc": 14
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/types/PermissionlessLiquidationParams.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/liquidation/lp-vault-swap/types/RouteMode.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/liquidation/payout-escrow/IPayoutEscrow.sol",
+        "n_sloc": 33
+      },
+      {
+        "file_path": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+        "n_sloc": 63
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/DexHops.sol",
+        "n_sloc": 199
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/DexPathRoute.sol",
+        "n_sloc": 26
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/ISettlementRoute.sol",
+        "n_sloc": 29
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+        "n_sloc": 109
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/RouteMath.sol",
+        "n_sloc": 23
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+        "n_sloc": 121
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/WrapperThenDexRoute.sol",
+        "n_sloc": 70
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/types/DexHop.sol",
+        "n_sloc": 12
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/types/PegModuleStep.sol",
+        "n_sloc": 11
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/types/RouteConfig.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/liquidation/settlement-routes/types/WrapperStep.sol",
+        "n_sloc": 10
+      },
+      {
+        "file_path": "src/lock/lock/ILock.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/lock/lock/Lock.sol",
+        "n_sloc": 63
+      },
+      {
+        "file_path": "src/lock/lock/LockSlot.sol",
+        "n_sloc": 4
+      },
+      {
+        "file_path": "src/oracle/debt-oracle/IDebtOracle.sol",
+        "n_sloc": 33
+      },
+      {
+        "file_path": "src/oracle/debt-oracle/IDebtOracleErrors.sol",
+        "n_sloc": 8
+      },
+      {
+        "file_path": "src/oracle/debt-oracle/IDebtOracleEvents.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/oracle/debt-oracle/types/DebtOracleInitParams.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/oracle/debt-oracle/types/DebtPriceView.sol",
+        "n_sloc": 40
+      },
+      {
+        "file_path": "src/oracle/lp-oracle/ILPOracle.sol",
+        "n_sloc": 42
+      },
+      {
+        "file_path": "src/oracle/lp-oracle/ILPOracleCL.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/oracle/lp-oracle/ILPOracleErrors.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/oracle/lp-oracle/ILPOracleEvents.sol",
+        "n_sloc": 18
+      },
+      {
+        "file_path": "src/oracle/lp-oracle/LPPriceMath.sol",
+        "n_sloc": 331
+      },
+      {
+        "file_path": "src/oracle/lp-oracle/types/ClPriceStateView.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/oracle/lp-oracle/types/InitParams.sol",
+        "n_sloc": 12
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapter.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapterAdmin.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapterCollateral.sol",
+        "n_sloc": 22
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+        "n_sloc": 30
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapterEvents.sol",
+        "n_sloc": 75
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapterSettlement.sol",
+        "n_sloc": 20
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapterUser.sol",
+        "n_sloc": 51
+      },
+      {
+        "file_path": "src/policy/aave-adapter/IAaveAdapterViews.sol",
+        "n_sloc": 30
+      },
+      {
+        "file_path": "src/policy/aave-adapter/types/RepayWithCollateralParams.sol",
+        "n_sloc": 12
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistry.sol",
+        "n_sloc": 33
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryBreakers.sol",
+        "n_sloc": 34
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryCreditLines.sol",
+        "n_sloc": 24
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryErrors.sol",
+        "n_sloc": 39
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryEvents.sol",
+        "n_sloc": 46
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryFreeze.sol",
+        "n_sloc": 16
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryHubs.sol",
+        "n_sloc": 77
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryListing.sol",
+        "n_sloc": 43
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryLogic.sol",
+        "n_sloc": 4
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryPause.sol",
+        "n_sloc": 28
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryRouteViews.sol",
+        "n_sloc": 21
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryRoutes.sol",
+        "n_sloc": 23
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistrySafetyEvents.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryStandby.sol",
+        "n_sloc": 20
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryViews.sol",
+        "n_sloc": 50
+      },
+      {
+        "file_path": "src/policy/market-registry/IMarketRegistryWindDown.sol",
+        "n_sloc": 22
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistry.sol",
+        "n_sloc": 284
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+        "n_sloc": 182
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+        "n_sloc": 129
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryDriftView.sol",
+        "n_sloc": 60
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+        "n_sloc": 274
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryListingLogic.sol",
+        "n_sloc": 219
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+        "n_sloc": 135
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+        "n_sloc": 25
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryRouter.sol",
+        "n_sloc": 108
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
+        "n_sloc": 172
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistrySafetyLogic.sol",
+        "n_sloc": 232
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryStorage.sol",
+        "n_sloc": 287
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryViews.sol",
+        "n_sloc": 246
+      },
+      {
+        "file_path": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+        "n_sloc": 111
+      },
+      {
+        "file_path": "src/policy/market-registry/types/Breaker.sol",
+        "n_sloc": 16
+      },
+      {
+        "file_path": "src/policy/market-registry/types/DebtReserveDef.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/policy/market-registry/types/IssuerProbe.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/policy/market-registry/types/MarketRegistryImmutables.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/policy/market-registry/types/MarketRegistryLogics.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/policy/market-registry/types/MarketStatus.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/policy/market-registry/types/RiskTier.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/policy/market-registry/types/SpokeDef.sol",
+        "n_sloc": 10
+      },
+      {
+        "file_path": "src/policy/market-registry/types/TokenDef.sol",
+        "n_sloc": 14
+      },
+      {
+        "file_path": "src/policy/market-registry/types/WindDownState.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStore.sol",
+        "n_sloc": 29
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreAdmin.sol",
+        "n_sloc": 93
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreBreakers.sol",
+        "n_sloc": 24
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreChain.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreCoverage.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreErrors.sol",
+        "n_sloc": 24
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreEvents.sol",
+        "n_sloc": 28
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreLiquidation.sol",
+        "n_sloc": 37
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreListing.sol",
+        "n_sloc": 33
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreLogic.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreLoosen.sol",
+        "n_sloc": 50
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreRiskViews.sol",
+        "n_sloc": 37
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreTighten.sol",
+        "n_sloc": 66
+      },
+      {
+        "file_path": "src/policy/parameter-store/IParameterStoreViews.sol",
+        "n_sloc": 70
+      },
+      {
+        "file_path": "src/policy/parameter-store/IPoolObservations.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStore.sol",
+        "n_sloc": 169
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol",
+        "n_sloc": 146
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
+        "n_sloc": 208
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+        "n_sloc": 178
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+        "n_sloc": 169
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+        "n_sloc": 206
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreLoosenLogic.sol",
+        "n_sloc": 207
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreOracle.sol",
+        "n_sloc": 166
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreRisk.sol",
+        "n_sloc": 141
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreRouter.sol",
+        "n_sloc": 57
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreStorage.sol",
+        "n_sloc": 175
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreTightenLogic.sol",
+        "n_sloc": 241
+      },
+      {
+        "file_path": "src/policy/parameter-store/ParameterStoreViews.sol",
+        "n_sloc": 258
+      },
+      {
+        "file_path": "src/policy/parameter-store/types/DebtReserveParams.sol",
+        "n_sloc": 4
+      },
+      {
+        "file_path": "src/policy/parameter-store/types/FeedDef.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/policy/parameter-store/types/GlobalParams.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/policy/parameter-store/types/MarketParams.sol",
+        "n_sloc": 10
+      },
+      {
+        "file_path": "src/policy/parameter-store/types/ParameterStoreLogics.sol",
+        "n_sloc": 8
+      },
+      {
+        "file_path": "src/policy/risk-module/IRiskModule.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/policy/risk-module/IRiskModuleAdmin.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/policy/risk-module/IRiskModuleChecks.sol",
+        "n_sloc": 47
+      },
+      {
+        "file_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+        "n_sloc": 46
+      },
+      {
+        "file_path": "src/policy/risk-module/IRiskModuleViews.sol",
+        "n_sloc": 45
+      },
+      {
+        "file_path": "src/policy/risk-module/RiskModuleConstants.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/policy/risk-module/types/PledgeCharge.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/proxy/position-proxy/IPositionProxy.sol",
+        "n_sloc": 15
+      },
+      {
+        "file_path": "src/proxy/position-proxy/PositionProxy.sol",
+        "n_sloc": 46
+      },
+      {
+        "file_path": "src/proxy/proxy-manager/IProxyManager.sol",
+        "n_sloc": 22
+      },
+      {
+        "file_path": "src/proxy/proxy-manager/ProxyManager.sol",
+        "n_sloc": 73
+      },
+      {
+        "file_path": "src/types/AccountGateStatus.sol",
+        "n_sloc": 26
+      },
+      {
+        "file_path": "src/types/AmmConstants.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/types/CapView.sol",
+        "n_sloc": 20
+      },
+      {
+        "file_path": "src/types/DriftReason.sol",
+        "n_sloc": 26
+      },
+      {
+        "file_path": "src/types/Market.sol",
+        "n_sloc": 23
+      },
+      {
+        "file_path": "src/types/MarketDef.sol",
+        "n_sloc": 13
+      },
+      {
+        "file_path": "src/types/MarketGateStatus.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/types/OracleConfig.sol",
+        "n_sloc": 17
+      },
+      {
+        "file_path": "src/types/OracleLeg.sol",
+        "n_sloc": 12
+      },
+      {
+        "file_path": "src/types/OracleRoute.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/types/PauseReason.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/types/PauseState.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/types/PendingView.sol",
+        "n_sloc": 14
+      },
+      {
+        "file_path": "src/types/PledgeCounters.sol",
+        "n_sloc": 11
+      },
+      {
+        "file_path": "src/types/PledgePreview.sol",
+        "n_sloc": 14
+      },
+      {
+        "file_path": "src/types/PositionRef.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/types/PositionShape.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/types/PriceState.sol",
+        "n_sloc": 7
+      },
+      {
+        "file_path": "src/types/PriceStateView.sol",
+        "n_sloc": 30
+      },
+      {
+        "file_path": "src/types/PriceView.sol",
+        "n_sloc": 24
+      },
+      {
+        "file_path": "src/types/RouteSlot.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/types/SecondSource.sol",
+        "n_sloc": 10
+      },
+      {
+        "file_path": "src/types/SecondSourceKind.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/types/SequencerConfig.sol",
+        "n_sloc": 5
+      },
+      {
+        "file_path": "src/types/SettlementReport.sol",
+        "n_sloc": 22
+      },
+      {
+        "file_path": "src/types/ShapeKind.sol",
+        "n_sloc": 6
+      },
+      {
+        "file_path": "src/types/TokenOracleConfig.sol",
+        "n_sloc": 9
+      },
+      {
+        "file_path": "src/types/TokenPriceView.sol",
+        "n_sloc": 24
+      },
+      {
+        "file_path": "src/types/VaultTokenBindings.sol",
+        "n_sloc": 16
+      },
+      {
+        "file_path": "src/vault-token/vault-token-factory/IVaultTokenFactory.sol",
+        "n_sloc": 63
+      },
+      {
+        "file_path": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+        "n_sloc": 213
+      },
+      {
+        "file_path": "src/vault-token/vault-token/IVaultToken.sol",
+        "n_sloc": 42
+      },
+      {
+        "file_path": "src/vault-token/vault-token/VaultToken.sol",
+        "n_sloc": 174
+      }
+    ]
+  },
+  "issue_count": {
+    "high": 5,
+    "low": 7
+  },
+  "high_issues": {
+    "issues": [
+      {
+        "title": "Contract locks Ether without a withdraw function",
+        "description": "It appears that the contract includes a payable function to accept Ether but lacks a corresponding function to withdraw it, which leads to the Ether being locked in the contract. To resolve this issue, please implement a public or external function that allows for the withdrawal of Ether from the contract.",
+        "detector_name": "contract-locks-ether",
+        "instances": [
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 37,
+            "src": "2638:14",
+            "src_char": "2638:14"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 31,
+            "src": "2259:14",
+            "src_char": "2259:14"
+          }
+        ]
+      },
+      {
+        "title": "`delegatecall` to an Arbitrary Address",
+        "description": "Making a `delegatecall` to an arbitrary address without any checks is dangerous. Consider adding requirements on the target address.",
+        "detector_name": "delegate-call-unchecked-address",
+        "instances": [
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 67,
+            "src": "4218:9",
+            "src_char": "4218:9"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 76,
+            "src": "4462:19",
+            "src_char": "4462:19"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 86,
+            "src": "4729:16",
+            "src_char": "4729:16"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 96,
+            "src": "4980:15",
+            "src_char": "4980:15"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 107,
+            "src": "5263:23",
+            "src_char": "5263:23"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 115,
+            "src": "5509:14",
+            "src_char": "5509:14"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 123,
+            "src": "5768:14",
+            "src_char": "5768:14"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 131,
+            "src": "6083:17",
+            "src_char": "6083:17"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 140,
+            "src": "6344:17",
+            "src_char": "6344:17"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 153,
+            "src": "6886:9",
+            "src_char": "6886:9"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 162,
+            "src": "7154:14",
+            "src_char": "7154:14"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 173,
+            "src": "7484:20",
+            "src_char": "7484:20"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 181,
+            "src": "7817:14",
+            "src_char": "7817:14"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 189,
+            "src": "8050:18",
+            "src_char": "8050:18"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 197,
+            "src": "8285:20",
+            "src_char": "8285:20"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 209,
+            "src": "8804:8",
+            "src_char": "8804:8"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 221,
+            "src": "9092:12",
+            "src_char": "9092:12"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 232,
+            "src": "9367:12",
+            "src_char": "9367:12"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 244,
+            "src": "9658:15",
+            "src_char": "9658:15"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 263,
+            "src": "10214:17",
+            "src_char": "10214:17"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 275,
+            "src": "10743:6",
+            "src_char": "10743:6"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 284,
+            "src": "11019:5",
+            "src_char": "11019:5"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 294,
+            "src": "11302:9",
+            "src_char": "11302:9"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 301,
+            "src": "11548:8",
+            "src_char": "11548:8"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 310,
+            "src": "11815:8",
+            "src_char": "11815:8"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 319,
+            "src": "12092:7",
+            "src_char": "12092:7"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 328,
+            "src": "12341:13",
+            "src_char": "12341:13"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 337,
+            "src": "12597:15",
+            "src_char": "12597:15"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 355,
+            "src": "13093:17",
+            "src_char": "13093:17"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 364,
+            "src": "13355:15",
+            "src_char": "13355:15"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 374,
+            "src": "13632:18",
+            "src_char": "13632:18"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 383,
+            "src": "13894:16",
+            "src_char": "13894:16"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 397,
+            "src": "14478:12",
+            "src_char": "14478:12"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 405,
+            "src": "14670:11",
+            "src_char": "14670:11"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 413,
+            "src": "14859:20",
+            "src_char": "14859:20"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 422,
+            "src": "15118:16",
+            "src_char": "15118:16"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 432,
+            "src": "15390:11",
+            "src_char": "15390:11"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 166,
+            "src": "7540:26",
+            "src_char": "7540:26"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 174,
+            "src": "7805:25",
+            "src_char": "7805:25"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 182,
+            "src": "8077:24",
+            "src_char": "8077:24"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 192,
+            "src": "8384:23",
+            "src_char": "8384:23"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 202,
+            "src": "8692:22",
+            "src_char": "8692:22"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 210,
+            "src": "8965:21",
+            "src_char": "8965:21"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 218,
+            "src": "9236:24",
+            "src_char": "9236:24"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 227,
+            "src": "9528:23",
+            "src_char": "9528:23"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 236,
+            "src": "9818:26",
+            "src_char": "9818:26"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 246,
+            "src": "10128:12",
+            "src_char": "10128:12"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 255,
+            "src": "10389:19",
+            "src_char": "10389:19"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 21,
+            "src": "1198:20",
+            "src_char": "1198:20"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 30,
+            "src": "1485:26",
+            "src_char": "1485:26"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 39,
+            "src": "1778:28",
+            "src_char": "1778:28"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 48,
+            "src": "2073:17",
+            "src_char": "2073:17"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 57,
+            "src": "2346:19",
+            "src_char": "2346:19"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 65,
+            "src": "2581:15",
+            "src_char": "2581:15"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 73,
+            "src": "2866:17",
+            "src_char": "2866:17"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 81,
+            "src": "3122:21",
+            "src_char": "3122:21"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 89,
+            "src": "3425:15",
+            "src_char": "3425:15"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 99,
+            "src": "3728:22",
+            "src_char": "3728:22"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 107,
+            "src": "3985:19",
+            "src_char": "3985:19"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 115,
+            "src": "4228:15",
+            "src_char": "4228:15"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 123,
+            "src": "4468:23",
+            "src_char": "4468:23"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 131,
+            "src": "4725:13",
+            "src_char": "4725:13"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 140,
+            "src": "5010:10",
+            "src_char": "5010:10"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 149,
+            "src": "5272:25",
+            "src_char": "5272:25"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 158,
+            "src": "5580:13",
+            "src_char": "5580:13"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 167,
+            "src": "5835:16",
+            "src_char": "5835:16"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 175,
+            "src": "6076:20",
+            "src_char": "6076:20"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 183,
+            "src": "6331:25",
+            "src_char": "6331:25"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 191,
+            "src": "6613:26",
+            "src_char": "6613:26"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 200,
+            "src": "6904:27",
+            "src_char": "6904:27"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 209,
+            "src": "7176:17",
+            "src_char": "7176:17"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 218,
+            "src": "7525:22",
+            "src_char": "7525:22"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 227,
+            "src": "7808:20",
+            "src_char": "7808:20"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 238,
+            "src": "8095:17",
+            "src_char": "8095:17"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 247,
+            "src": "8375:18",
+            "src_char": "8375:18"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 257,
+            "src": "8728:7",
+            "src_char": "8728:7"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardAdmin.sol",
+            "line_no": 266,
+            "src": "9000:18",
+            "src_char": "9000:18"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 17,
+            "src": "975:22",
+            "src_char": "975:22"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 26,
+            "src": "1246:27",
+            "src_char": "1246:27"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 35,
+            "src": "1535:29",
+            "src_char": "1535:29"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 44,
+            "src": "1820:24",
+            "src_char": "1820:24"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 53,
+            "src": "2108:30",
+            "src_char": "2108:30"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 62,
+            "src": "2418:32",
+            "src_char": "2418:32"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 71,
+            "src": "2698:21",
+            "src_char": "2698:21"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 80,
+            "src": "2958:26",
+            "src_char": "2958:26"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 92,
+            "src": "3278:19",
+            "src_char": "3278:19"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 101,
+            "src": "3542:20",
+            "src_char": "3542:20"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 110,
+            "src": "3807:18",
+            "src_char": "3807:18"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 120,
+            "src": "4087:22",
+            "src_char": "4087:22"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 129,
+            "src": "4354:22",
+            "src_char": "4354:22"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 137,
+            "src": "4598:19",
+            "src_char": "4598:19"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 146,
+            "src": "4890:24",
+            "src_char": "4890:24"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 155,
+            "src": "5200:21",
+            "src_char": "5200:21"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 164,
+            "src": "5500:26",
+            "src_char": "5500:26"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 173,
+            "src": "5793:28",
+            "src_char": "5793:28"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 182,
+            "src": "6059:25",
+            "src_char": "6059:25"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 194,
+            "src": "6406:18",
+            "src_char": "6406:18"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 203,
+            "src": "6697:19",
+            "src_char": "6697:19"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 212,
+            "src": "6975:17",
+            "src_char": "6975:17"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 222,
+            "src": "7268:21",
+            "src_char": "7268:21"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 231,
+            "src": "7548:21",
+            "src_char": "7548:21"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 239,
+            "src": "7789:18",
+            "src_char": "7789:18"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+            "line_no": 248,
+            "src": "8078:23",
+            "src_char": "8078:23"
+          }
+        ]
+      },
+      {
+        "title": "ETH transferred without address checks",
+        "description": "Consider introducing checks for `msg.sender` to ensure the recipient of the money is as intended.",
+        "detector_name": "eth-send-unchecked-address",
+        "instances": [
+          {
+            "contract_path": "src/governance/timelock/AvanaTimelock.sol",
+            "line_no": 162,
+            "src": "8961:7",
+            "src_char": "8937:7"
+          },
+          {
+            "contract_path": "src/governance/timelock/AvanaTimelock.sol",
+            "line_no": 177,
+            "src": "9519:12",
+            "src_char": "9495:12"
+          }
+        ]
+      },
+      {
+        "title": "Reentrancy: State change after external call",
+        "description": "Changing state after an external call can lead to re-entrancy attacks.Use the checks-effects-interactions pattern to avoid this issue.",
+        "detector_name": "reentrancy-state-change",
+        "instances": [
+          {
+            "contract_path": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+            "line_no": 139,
+            "src": "7070:74",
+            "src_char": "7045:74",
+            "hint": "State is changed at: `totalCovered += amount`"
+          },
+          {
+            "contract_path": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+            "line_no": 163,
+            "src": "8350:37",
+            "src_char": "8313:37",
+            "hint": "State is changed at: `allowedBorrowSpoke[spoke] = allowed`"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationDebtMark.sol",
+            "line_no": 40,
+            "src": "1934:135",
+            "src_char": "1934:135",
+            "hint": "State is changed at: `indebted[proxy] = false`, `--indebtedCount[vt]`"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationPledge.sol",
+            "line_no": 56,
+            "src": "4530:89",
+            "src_char": "4530:89",
+            "hint": "State is changed at: `recordId = _nextRecordId++`, `_recordIdOf[c.integrationId][positionKey] = recordId`, `records[recordId] = BackingRecord({\n            positionKey: positionKey,\n            depositor: depositor,\n            integrationId: c.integrationId,\n            marketId: SafeCast.toUint32(c.marketId),\n            inList: true,\n            proxy: proxy,\n            // uint40 seconds last until the year 36812.\n            // forge-lint: disable-next-line(unsafe-typecast)\n            pledgedAt: uint40(block.timestamp),\n            lastDebitedAt: 0,\n            credited: credited,\n            originalUnits: credited,\n            rescueUnits: charge.rescueUnits,\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            originalUsdCharge: uint64(charge.usdCharge),\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            currentUsdCharge: uint64(charge.usdCharge)\n        })`, `marketRecords[vaultToken].push(recordId)`, `marketRecordIndex[recordId] = marketRecords[vaultToken].length`, `proxyMarket[proxy] = vaultToken`"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationPledge.sol",
+            "line_no": 59,
+            "src": "4753:70",
+            "src_char": "4753:70",
+            "hint": "State is changed at: `recordId = _nextRecordId++`, `_recordIdOf[c.integrationId][positionKey] = recordId`, `records[recordId] = BackingRecord({\n            positionKey: positionKey,\n            depositor: depositor,\n            integrationId: c.integrationId,\n            marketId: SafeCast.toUint32(c.marketId),\n            inList: true,\n            proxy: proxy,\n            // uint40 seconds last until the year 36812.\n            // forge-lint: disable-next-line(unsafe-typecast)\n            pledgedAt: uint40(block.timestamp),\n            lastDebitedAt: 0,\n            credited: credited,\n            originalUnits: credited,\n            rescueUnits: charge.rescueUnits,\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            originalUsdCharge: uint64(charge.usdCharge),\n            // usdCharge < 2^64 (`_checkCharge`).\n            // forge-lint: disable-next-line(unsafe-typecast)\n            currentUsdCharge: uint64(charge.usdCharge)\n        })`, `marketRecords[vaultToken].push(recordId)`, `marketRecordIndex[recordId] = marketRecords[vaultToken].length`, `proxyMarket[proxy] = vaultToken`"
+          },
+          {
+            "contract_path": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+            "line_no": 72,
+            "src": "3688:37",
+            "src_char": "3687:37",
+            "hint": "State is changed at: `claimable[token][account] += received`, `totalClaimable[token] += received`"
+          },
+          {
+            "contract_path": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+            "line_no": 77,
+            "src": "3900:54",
+            "src_char": "3899:54",
+            "hint": "State is changed at: `claimable[token][account] += received`, `totalClaimable[token] += received`"
+          },
+          {
+            "contract_path": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+            "line_no": 79,
+            "src": "4034:53",
+            "src_char": "4033:53",
+            "hint": "State is changed at: `claimable[token][account] += received`, `totalClaimable[token] += received`"
+          },
+          {
+            "contract_path": "src/liquidation/payout-escrow/PayoutEscrow.sol",
+            "line_no": 96,
+            "src": "5052:22",
+            "src_char": "5051:22",
+            "hint": "State is changed at: `claimable[token][msg.sender] = 0`, `totalClaimable[token] -= amount`"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+            "line_no": 61,
+            "src": "3649:176",
+            "src_char": "3647:176",
+            "hint": "State is changed at: `_GEM_CONVERSION = gemConversion`, `_KIND = step.kind`, `_MODULE = step.module`, `_WRAPPER = step.wrapper`, `_INTERMEDIATE = step.intermediate`"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+            "line_no": 66,
+            "src": "4010:59",
+            "src_char": "4008:59",
+            "hint": "State is changed at: `_GEM_CONVERSION = gemConversion`, `_KIND = step.kind`, `_MODULE = step.module`, `_WRAPPER = step.wrapper`, `_INTERMEDIATE = step.intermediate`"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/WrapperThenDexRoute.sol",
+            "line_no": 48,
+            "src": "2733:83",
+            "src_char": "2731:83",
+            "hint": "State is changed at: `_WRAPPER_KIND = step.kind`, `_WRAPPER = step.wrapper`, `_UNDERLYING = step.underlying`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+            "line_no": 69,
+            "src": "4286:131",
+            "src_char": "4286:131",
+            "hint": "State is changed at: `m.status = MarketStatus.Active`, `m.activatedAt = uint64(block.timestamp)`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+            "line_no": 73,
+            "src": "4430:36",
+            "src_char": "4430:36",
+            "hint": "State is changed at: `m.status = MarketStatus.Active`, `m.activatedAt = uint64(block.timestamp)`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+            "line_no": 74,
+            "src": "4529:83",
+            "src_char": "4529:83",
+            "hint": "State is changed at: `m.status = MarketStatus.Active`, `m.activatedAt = uint64(block.timestamp)`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+            "line_no": 112,
+            "src": "6159:111",
+            "src_char": "6159:111",
+            "hint": "State is changed at: `m.status = MarketStatus.Offboarding`, `l.windDown[marketId] =\n        // Block timestamps and chain identifiers fit 64 bits.\n        // forge-lint: disable-next-line(unsafe-typecast)\n        WindDownState({offboardedAt: uint64(block.timestamp), lastStepAt: 0, startLtBps: cf, currentLtBps: cf})`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+            "line_no": 62,
+            "src": "3736:52",
+            "src_char": "3736:52",
+            "hint": "State is changed at: `l.hubTier[hub] = tier`, `l.hubList.push(hub)`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+            "line_no": 82,
+            "src": "4511:226",
+            "src_char": "4511:226",
+            "hint": "State is changed at: `l.integrationLpVault[integrationId] = lpVault`, `l.integrationPricing[integrationId] = pricing`, `l.integrationIdOf[lpVault] = integrationId`, `l.isPricing[pricing] = true`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+            "line_no": 104,
+            "src": "5485:306",
+            "src_char": "5485:306",
+            "hint": "State is changed at: `l.coverageSpokeOf[hub][asset] = coverageSpoke`, `l.knownCoverageSpoke[coverageSpoke] = true`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+            "line_no": 132,
+            "src": "6915:76",
+            "src_char": "6915:76",
+            "hint": "State is changed at: `l.crossHubLineCap[fundingHub][asset][spoke] = cap`, `l.crossHubLineTotal[fundingHub][asset] = total`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+            "line_no": 272,
+            "src": "13440:130",
+            "src_char": "13440:130",
+            "hint": "State is changed at: `cl.drawCapSum -= l.recordedDrawCap[spoke][reserveId]`, `delete l.recordedDrawCap[spoke][reserveId]`, `delete l.latched[key]`, `delete l.lastBreachAt[key]`, `delete l.debtReserves[spoke][reserveId]`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryListingLogic.sol",
+            "line_no": 62,
+            "src": "3950:44",
+            "src_char": "3950:44",
+            "hint": "State is changed at: `t.listed = true`, `t.decimals = dec`, `t.isUsdStable = def.isUsdStable`, `t.primaryRoute = def.primaryRoute`, `t.alternateRoute = def.alternateRoute`, `t.standbyRoute = def.standbyRoute`, `t.replacedSlot = RouteSlot.None`, `t.issuerProbe = def.issuerProbe`, `t.pegModule = def.pegModule`"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
+            "line_no": 88,
+            "src": "4838:76",
+            "src_char": "4827:76",
+            "hint": "State is changed at: `m.status = MarketStatus.Closed`"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+            "line_no": 97,
+            "src": "5707:63",
+            "src_char": "5707:63",
+            "hint": "State is changed at: `$.marketUsdCap[marketId] = initialMarketUsdCap`, `$.topUpSliceUsd[marketId] = initialTopUpSliceUsd`, `$.stressFloorUsd[marketId] = initialStressFloorUsd`"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+            "line_no": 154,
+            "src": "8534:47",
+            "src_char": "8534:47",
+            "hint": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+            "line_no": 155,
+            "src": "8591:56",
+            "src_char": "8591:56",
+            "hint": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+            "line_no": 156,
+            "src": "8657:62",
+            "src_char": "8657:62",
+            "hint": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
+            "line_no": 157,
+            "src": "8729:62",
+            "src_char": "8729:62",
+            "hint": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
+          },
+          {
+            "contract_path": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+            "line_no": 98,
+            "src": "5606:176",
+            "src_char": "5594:176",
+            "hint": "State is changed at: `_lpVaultOf[integrationId] = lpVault`, `_isLpVault[lpVault] = true`"
+          },
+          {
+            "contract_path": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+            "line_no": 101,
+            "src": "5830:42",
+            "src_char": "5818:42",
+            "hint": "State is changed at: `_lpVaultOf[integrationId] = lpVault`, `_isLpVault[lpVault] = true`"
+          }
+        ]
+      },
+      {
+        "title": "Unsafe Casting of integers",
+        "description": "Downcasting int/uints in Solidity can be unsafe due to the potential for data loss and unintended behavior.When downcasting a larger integer type to a smaller one (e.g., uint256 to uint128), the value may exceed the range of the target type,leading to truncation and loss of significant digits. Use OpenZeppelin's SafeCast library to safely downcast integers.",
+        "detector_name": "unsafe-casting",
+        "instances": [
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationLedger.sol",
+            "line_no": 196,
+            "src": "8926:14",
+            "src_char": "8902:14"
+          }
+        ]
+      }
+    ]
+  },
+  "low_issues": {
+    "issues": [
+      {
+        "title": "Costly operations inside loop",
+        "description": "Invoking `SSTORE` operations in loops may waste gas. Use a local variable to hold the loop computation result.",
+        "detector_name": "costly-loop",
+        "instances": [
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationBase.sol",
+            "line_no": 351,
+            "src": "17275:244",
+            "src_char": "17239:244"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationBase.sol",
+            "line_no": 390,
+            "src": "19287:336",
+            "src_char": "19251:336"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationLedger.sol",
+            "line_no": 69,
+            "src": "3797:220",
+            "src_char": "3773:220"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationLedger.sol",
+            "line_no": 93,
+            "src": "4607:224",
+            "src_char": "4583:224"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationLedger.sol",
+            "line_no": 116,
+            "src": "5777:1233",
+            "src_char": "5753:1233"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationLedger.sol",
+            "line_no": 159,
+            "src": "7479:204",
+            "src_char": "7455:204"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationLedger.sol",
+            "line_no": 164,
+            "src": "7692:67",
+            "src_char": "7668:67"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationLedger.sol",
+            "line_no": 264,
+            "src": "12026:231",
+            "src_char": "11978:231"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationPending.sol",
+            "line_no": 47,
+            "src": "3056:395",
+            "src_char": "3056:395"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
+            "line_no": 328,
+            "src": "15795:81",
+            "src_char": "15795:81"
+          }
+        ]
+      },
+      {
+        "title": "Empty Block",
+        "description": "Consider removing empty blocks.",
+        "detector_name": "empty-block",
+        "instances": [
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 441,
+            "src": "15660:17",
+            "src_char": "15660:17"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 263,
+            "src": "10664:17",
+            "src_char": "10664:17"
+          }
+        ]
+      },
+      {
+        "title": "Loop Contains `require`/`revert`",
+        "description": "Avoid `require` / `revert` statements in a loop because a single bad item can cause the whole transaction to fail. It's better to forgive on fail and return failed elements post processing of the loop",
+        "detector_name": "require-revert-in-loop",
+        "instances": [
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationPending.sol",
+            "line_no": 57,
+            "src": "3589:106",
+            "src_char": "3589:106"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/DexHops.sol",
+            "line_no": 144,
+            "src": "8303:837",
+            "src_char": "8295:837"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/SwapRouteBase.sol",
+            "line_no": 100,
+            "src": "5701:244",
+            "src_char": "5701:244"
+          }
+        ]
+      },
+      {
+        "title": "State Change Without Event",
+        "description": "There are state variable changes in this function but no event is emitted. Consider emitting an event to enable offchain indexers to track the changes.",
+        "detector_name": "state-change-without-event",
+        "instances": [
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationDebtMark.sol",
+            "line_no": 18,
+            "src": "1102:12",
+            "src_char": "1102:12"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationDebtMark.sol",
+            "line_no": 31,
+            "src": "1501:12",
+            "src_char": "1501:12"
+          }
+        ]
+      },
+      {
+        "title": "Unchecked Return",
+        "description": "Function returns a value but it is ignored. Consider checking the return value.",
+        "detector_name": "unchecked-return",
+        "instances": [
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationBase.sol",
+            "line_no": 255,
+            "src": "13517:54",
+            "src_char": "13493:54"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationPledge.sol",
+            "line_no": 206,
+            "src": "11741:54",
+            "src_char": "11741:54"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationRelease.sol",
+            "line_no": 39,
+            "src": "2593:25",
+            "src_char": "2593:25"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationRelease.sol",
+            "line_no": 66,
+            "src": "4030:77",
+            "src_char": "4030:77"
+          },
+          {
+            "contract_path": "src/custody/collateralization/CollateralizationRelease.sol",
+            "line_no": 121,
+            "src": "6479:43",
+            "src_char": "6479:43"
+          },
+          {
+            "contract_path": "src/governance/timelock/AvanaTimelock.sol",
+            "line_no": 72,
+            "src": "4619:41",
+            "src_char": "4619:41"
+          },
+          {
+            "contract_path": "src/governance/timelock/AvanaTimelock.sol",
+            "line_no": 75,
+            "src": "4745:59",
+            "src_char": "4745:59"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/DexHops.sol",
+            "line_no": 154,
+            "src": "8923:62",
+            "src_char": "8915:62"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/DexHops.sol",
+            "line_no": 198,
+            "src": "10774:80",
+            "src_char": "10766:80"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+            "line_no": 121,
+            "src": "6438:49",
+            "src_char": "6436:49"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+            "line_no": 130,
+            "src": "7068:47",
+            "src_char": "7066:47"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+            "line_no": 152,
+            "src": "8290:48",
+            "src_char": "8288:48"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/WrapperThenDexRoute.sol",
+            "line_no": 90,
+            "src": "4500:63",
+            "src_char": "4498:63"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 57,
+            "src": "3681:40",
+            "src_char": "3681:40"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 58,
+            "src": "3731:50",
+            "src_char": "3731:50"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryRouter.sol",
+            "line_no": 166,
+            "src": "7554:24",
+            "src_char": "7554:24"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 67,
+            "src": "3973:40",
+            "src_char": "3973:40"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 68,
+            "src": "4023:50",
+            "src_char": "4023:50"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStoreRouter.sol",
+            "line_no": 81,
+            "src": "4246:45",
+            "src_char": "4246:45"
+          }
+        ]
+      },
+      {
+        "title": "Unused Error",
+        "description": "Consider using or removing the unused error.",
+        "detector_name": "unused-error",
+        "instances": [
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 12,
+            "src": "624:29",
+            "src_char": "624:29"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 16,
+            "src": "847:20",
+            "src_char": "847:20"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 20,
+            "src": "996:26",
+            "src_char": "996:26"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 25,
+            "src": "1207:38",
+            "src_char": "1207:38"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 30,
+            "src": "1541:20",
+            "src_char": "1541:20"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 35,
+            "src": "1806:21",
+            "src_char": "1806:21"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 39,
+            "src": "1951:21",
+            "src_char": "1951:21"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 47,
+            "src": "2415:54",
+            "src_char": "2415:54"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 52,
+            "src": "2704:19",
+            "src_char": "2704:19"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 56,
+            "src": "2891:22",
+            "src_char": "2891:22"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 60,
+            "src": "3090:27",
+            "src_char": "3090:27"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 64,
+            "src": "3232:18",
+            "src_char": "3232:18"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 68,
+            "src": "3448:21",
+            "src_char": "3448:21"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 72,
+            "src": "3614:21",
+            "src_char": "3614:21"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 76,
+            "src": "3819:17",
+            "src_char": "3819:17"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 80,
+            "src": "4010:25",
+            "src_char": "4010:25"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 84,
+            "src": "4210:23",
+            "src_char": "4210:23"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 88,
+            "src": "4382:20",
+            "src_char": "4382:20"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 94,
+            "src": "4609:55",
+            "src_char": "4609:55"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 101,
+            "src": "4903:69",
+            "src_char": "4903:69"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 105,
+            "src": "5114:21",
+            "src_char": "5114:21"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 109,
+            "src": "5272:22",
+            "src_char": "5272:22"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 113,
+            "src": "5460:15",
+            "src_char": "5460:15"
+          },
+          {
+            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "line_no": 117,
+            "src": "5649:26",
+            "src_char": "5649:26"
+          },
+          {
+            "contract_path": "src/lens/lens/ILensErrors.sol",
+            "line_no": 10,
+            "src": "395:15",
+            "src_char": "395:15"
+          },
+          {
+            "contract_path": "src/lens/lens/ILensErrors.sol",
+            "line_no": 15,
+            "src": "584:34",
+            "src_char": "584:34"
+          },
+          {
+            "contract_path": "src/lens/lens/ILensErrors.sol",
+            "line_no": 21,
+            "src": "857:59",
+            "src_char": "857:59"
+          },
+          {
+            "contract_path": "src/lens/lens/ILensErrors.sol",
+            "line_no": 26,
+            "src": "1120:34",
+            "src_char": "1120:34"
+          },
+          {
+            "contract_path": "src/lens/lens/ILensErrors.sol",
+            "line_no": 31,
+            "src": "1350:42",
+            "src_char": "1350:42"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 13,
+            "src": "714:26",
+            "src_char": "714:26"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 18,
+            "src": "892:31",
+            "src_char": "892:31"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 22,
+            "src": "1063:21",
+            "src_char": "1063:21"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 26,
+            "src": "1243:22",
+            "src_char": "1243:22"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 32,
+            "src": "1515:48",
+            "src_char": "1515:48"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 37,
+            "src": "1862:22",
+            "src_char": "1862:22"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 41,
+            "src": "1986:24",
+            "src_char": "1986:24"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 45,
+            "src": "2158:29",
+            "src_char": "2158:29"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 51,
+            "src": "2532:19",
+            "src_char": "2532:19"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 57,
+            "src": "2868:44",
+            "src_char": "2868:44"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 61,
+            "src": "3071:26",
+            "src_char": "3071:26"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 66,
+            "src": "3309:24",
+            "src_char": "3309:24"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 71,
+            "src": "3542:24",
+            "src_char": "3538:24"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 76,
+            "src": "3853:25",
+            "src_char": "3849:25"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 82,
+            "src": "4162:53",
+            "src_char": "4158:53"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 87,
+            "src": "4477:29",
+            "src_char": "4473:29"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 91,
+            "src": "4623:22",
+            "src_char": "4619:22"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 95,
+            "src": "4860:25",
+            "src_char": "4856:25"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 102,
+            "src": "5252:64",
+            "src_char": "5248:64"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 117,
+            "src": "6314:28",
+            "src_char": "6310:28"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 122,
+            "src": "6552:22",
+            "src_char": "6548:22"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 128,
+            "src": "6849:60",
+            "src_char": "6845:60"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 133,
+            "src": "7075:41",
+            "src_char": "7071:41"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 137,
+            "src": "7289:23",
+            "src_char": "7285:23"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 143,
+            "src": "7604:40",
+            "src_char": "7600:40"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 149,
+            "src": "7925:57",
+            "src_char": "7921:57"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 156,
+            "src": "8336:57",
+            "src_char": "8332:57"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 162,
+            "src": "8676:39",
+            "src_char": "8672:39"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 179,
+            "src": "9603:19",
+            "src_char": "9599:19"
+          },
+          {
+            "contract_path": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
+            "line_no": 185,
+            "src": "9875:59",
+            "src_char": "9871:59"
+          },
+          {
+            "contract_path": "src/oracle/debt-oracle/IDebtOracleErrors.sol",
+            "line_no": 12,
+            "src": "535:57",
+            "src_char": "535:57"
+          },
+          {
+            "contract_path": "src/oracle/debt-oracle/IDebtOracleErrors.sol",
+            "line_no": 18,
+            "src": "775:44",
+            "src_char": "775:44"
+          },
+          {
+            "contract_path": "src/oracle/debt-oracle/IDebtOracleErrors.sol",
+            "line_no": 24,
+            "src": "1060:34",
+            "src_char": "1060:34"
+          },
+          {
+            "contract_path": "src/oracle/debt-oracle/IDebtOracleErrors.sol",
+            "line_no": 29,
+            "src": "1297:42",
+            "src_char": "1297:42"
+          },
+          {
+            "contract_path": "src/oracle/debt-oracle/IDebtOracleErrors.sol",
+            "line_no": 35,
+            "src": "1577:59",
+            "src_char": "1577:59"
+          },
+          {
+            "contract_path": "src/oracle/lp-oracle/ILPOracleErrors.sol",
+            "line_no": 13,
+            "src": "572:57",
+            "src_char": "572:57"
+          },
+          {
+            "contract_path": "src/oracle/lp-oracle/ILPOracleErrors.sol",
+            "line_no": 18,
+            "src": "814:46",
+            "src_char": "814:46"
+          },
+          {
+            "contract_path": "src/oracle/lp-oracle/ILPOracleErrors.sol",
+            "line_no": 24,
+            "src": "1059:44",
+            "src_char": "1059:44"
+          },
+          {
+            "contract_path": "src/oracle/lp-oracle/ILPOracleErrors.sol",
+            "line_no": 29,
+            "src": "1274:42",
+            "src_char": "1274:42"
+          },
+          {
+            "contract_path": "src/oracle/lp-oracle/ILPOracleErrors.sol",
+            "line_no": 35,
+            "src": "1551:39",
+            "src_char": "1551:39"
+          },
+          {
+            "contract_path": "src/oracle/lp-oracle/ILPOracleErrors.sol",
+            "line_no": 41,
+            "src": "1844:59",
+            "src_char": "1844:59"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 10,
+            "src": "501:26",
+            "src_char": "501:26"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 17,
+            "src": "1025:26",
+            "src_char": "1025:26"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 22,
+            "src": "1217:40",
+            "src_char": "1217:40"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 28,
+            "src": "1510:60",
+            "src_char": "1510:60"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 32,
+            "src": "1764:19",
+            "src_char": "1764:19"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 37,
+            "src": "1966:40",
+            "src_char": "1966:40"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 43,
+            "src": "2261:48",
+            "src_char": "2261:48"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 48,
+            "src": "2488:34",
+            "src_char": "2488:34"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 54,
+            "src": "2763:59",
+            "src_char": "2763:59"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 59,
+            "src": "3064:38",
+            "src_char": "3064:38"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 65,
+            "src": "3337:66",
+            "src_char": "3337:66"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 70,
+            "src": "3732:23",
+            "src_char": "3732:23"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 76,
+            "src": "4065:31",
+            "src_char": "4065:31"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 82,
+            "src": "4372:59",
+            "src_char": "4372:59"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 88,
+            "src": "4729:53",
+            "src_char": "4729:53"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 94,
+            "src": "5078:54",
+            "src_char": "5078:54"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 102,
+            "src": "5668:88",
+            "src_char": "5668:88"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 106,
+            "src": "5914:25",
+            "src_char": "5914:25"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 111,
+            "src": "6158:23",
+            "src_char": "6158:23"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 115,
+            "src": "6286:20",
+            "src_char": "6286:20"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 121,
+            "src": "6598:39",
+            "src_char": "6598:39"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 126,
+            "src": "6856:44",
+            "src_char": "6856:44"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 132,
+            "src": "7238:65",
+            "src_char": "7238:65"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 137,
+            "src": "7526:28",
+            "src_char": "7526:28"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 143,
+            "src": "7801:59",
+            "src_char": "7801:59"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 147,
+            "src": "8069:29",
+            "src_char": "8069:29"
+          },
+          {
+            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "line_no": 152,
+            "src": "8308:46",
+            "src_char": "8308:46"
+          },
+          {
+            "contract_path": "src/policy/market-registry/IMarketRegistryErrors.sol",
+            "line_no": 138,
+            "src": "5743:70",
+            "src_char": "5743:70"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 13,
+            "src": "457:40",
+            "src_char": "457:40"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 18,
+            "src": "726:42",
+            "src_char": "726:42"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 22,
+            "src": "925:25",
+            "src_char": "925:25"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 27,
+            "src": "1205:21",
+            "src_char": "1205:21"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 33,
+            "src": "1587:22",
+            "src_char": "1587:22"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 37,
+            "src": "1696:22",
+            "src_char": "1696:22"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 42,
+            "src": "1930:36",
+            "src_char": "1930:36"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 46,
+            "src": "2102:31",
+            "src_char": "2102:31"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 50,
+            "src": "2255:28",
+            "src_char": "2255:28"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 54,
+            "src": "2428:25",
+            "src_char": "2428:25"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 58,
+            "src": "2613:26",
+            "src_char": "2613:26"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 63,
+            "src": "2805:35",
+            "src_char": "2805:35"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 67,
+            "src": "3003:26",
+            "src_char": "3003:26"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 72,
+            "src": "3244:29",
+            "src_char": "3244:29"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 77,
+            "src": "3575:26",
+            "src_char": "3575:26"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 84,
+            "src": "4028:62",
+            "src_char": "4028:62"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 90,
+            "src": "4414:42",
+            "src_char": "4414:42"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 96,
+            "src": "4790:51",
+            "src_char": "4786:51"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 101,
+            "src": "4981:34",
+            "src_char": "4977:34"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 106,
+            "src": "5202:43",
+            "src_char": "5198:43"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 112,
+            "src": "5569:56",
+            "src_char": "5565:56"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 118,
+            "src": "5854:55",
+            "src_char": "5850:55"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 125,
+            "src": "6267:45",
+            "src_char": "6263:45"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 133,
+            "src": "6795:74",
+            "src_char": "6791:74"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 139,
+            "src": "7117:71",
+            "src_char": "7113:71"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 144,
+            "src": "7357:43",
+            "src_char": "7353:43"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 149,
+            "src": "7631:47",
+            "src_char": "7627:47"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 154,
+            "src": "7893:39",
+            "src_char": "7889:39"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 160,
+            "src": "8250:48",
+            "src_char": "8246:48"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 166,
+            "src": "8670:65",
+            "src_char": "8666:65"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 172,
+            "src": "9052:55",
+            "src_char": "9048:55"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 179,
+            "src": "9417:79",
+            "src_char": "9413:79"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 186,
+            "src": "9921:85",
+            "src_char": "9917:85"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 192,
+            "src": "10325:71",
+            "src_char": "10321:71"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 198,
+            "src": "10623:59",
+            "src_char": "10619:59"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 206,
+            "src": "11231:38",
+            "src_char": "11226:38"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 212,
+            "src": "11496:66",
+            "src_char": "11491:66"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 216,
+            "src": "11748:22",
+            "src_char": "11743:22"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 221,
+            "src": "12016:42",
+            "src_char": "12011:42"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 228,
+            "src": "12577:43",
+            "src_char": "12572:43"
+          },
+          {
+            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "line_no": 234,
+            "src": "12869:57",
+            "src_char": "12864:57"
+          }
+        ]
+      },
+      {
+        "title": "Unused Import",
+        "description": "Redundant import statement. Consider removing it.",
+        "detector_name": "unused-import",
+        "instances": [
+          {
+            "contract_path": "src/governance/timelock/AvanaTimelock.sol",
+            "line_no": 6,
+            "src": "169:72",
+            "src_char": "169:72"
+          },
+          {
+            "contract_path": "src/governance/timelock/AvanaTimelock.sol",
+            "line_no": 7,
+            "src": "242:62",
+            "src_char": "242:62"
+          },
+          {
+            "contract_path": "src/liquidation/settlement-routes/DexPathRoute.sol",
+            "line_no": 5,
+            "src": "103:56",
+            "src_char": "103:56"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 9,
+            "src": "348:70",
+            "src_char": "348:70"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 10,
+            "src": "419:76",
+            "src_char": "419:76"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 11,
+            "src": "496:66",
+            "src_char": "496:66"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 12,
+            "src": "563:62",
+            "src_char": "563:62"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 13,
+            "src": "626:68",
+            "src_char": "626:68"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 14,
+            "src": "695:64",
+            "src_char": "695:64"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 15,
+            "src": "760:66",
+            "src_char": "760:66"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 16,
+            "src": "827:68",
+            "src_char": "827:68"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistry.sol",
+            "line_no": 17,
+            "src": "896:70",
+            "src_char": "896:70"
+          },
+          {
+            "contract_path": "src/policy/market-registry/MarketRegistryRouter.sol",
+            "line_no": 6,
+            "src": "195:64",
+            "src_char": "195:64"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 8,
+            "src": "304:64",
+            "src_char": "304:64"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 9,
+            "src": "369:70",
+            "src_char": "369:70"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 10,
+            "src": "440:64",
+            "src_char": "440:64"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 11,
+            "src": "505:70",
+            "src_char": "505:70"
+          },
+          {
+            "contract_path": "src/policy/parameter-store/ParameterStore.sol",
+            "line_no": 12,
+            "src": "576:76",
+            "src_char": "576:76"
+          }
+        ]
+      }
+    ]
+  },
+  "detectors_used": [
+    "abi-encode-packed-hash-collision",
+    "arbitrary-transfer-from",
+    "assert-state-change",
+    "block-timestamp-deadline",
+    "boolean-equality",
+    "builtin-symbol-shadowing",
+    "constant-function-changes-state",
+    "constant-function-contains-assembly",
+    "contract-locks-ether",
+    "costly-loop",
+    "dangerous-unary-operator",
+    "dead-code",
+    "delegate-call-unchecked-address",
+    "delegatecall-in-loop",
+    "delete-nested-mapping",
+    "deprecated-oz-function",
+    "division-before-multiplication",
+    "dynamic-array-length-assignment",
+    "ecrecover",
+    "empty-block",
+    "empty-require-revert",
+    "enumerable-loop-removal",
+    "eth-send-unchecked-address",
+    "experimental-encoder",
+    "function-initializing-state",
+    "function-pointer-in-constructor",
+    "function-selector-collision",
+    "incorrect-caret-operator",
+    "incorrect-erc20-interface",
+    "incorrect-erc721-interface",
+    "incorrect-shift-order",
+    "incorrect-use-of-modifier",
+    "local-variable-shadowing",
+    "missing-inheritance",
+    "misused-boolean",
+    "msg-value-in-loop",
+    "multiple-constructors",
+    "multiple-placeholders",
+    "nested-struct-in-mapping",
+    "non-reentrant-not-first",
+    "out-of-order-retryable",
+    "pre-declared-local-variable-usage",
+    "redundant-statement",
+    "reentrancy-state-change",
+    "require-revert-in-loop",
+    "return-bomb",
+    "reused-contract-name",
+    "rtlo",
+    "selfdestruct",
+    "signed-integer-storage-array",
+    "solmate-safe-transfer-lib",
+    "state-change-without-event",
+    "state-no-address-check",
+    "state-variable-could-be-constant",
+    "state-variable-could-be-immutable",
+    "state-variable-init-order",
+    "state-variable-read-external",
+    "state-variable-shadowing",
+    "storage-array-length-not-cached",
+    "storage-array-memory-edit",
+    "strict-equality-contract-balance",
+    "tautological-compare",
+    "tautology-or-contradiction",
+    "todo",
+    "tx-origin-used-for-auth",
+    "unchecked-low-level-call",
+    "unchecked-return",
+    "unchecked-send",
+    "uninitialized-local-variable",
+    "unprotected-initializer",
+    "unsafe-casting",
+    "unsafe-erc20-operation",
+    "unsafe-oz-erc721-mint",
+    "unspecific-solidity-pragma",
+    "unused-error",
+    "unused-import",
+    "unused-state-variable",
+    "void-constructor",
+    "weak-randomness",
+    "yul-return"
+  ]
+}

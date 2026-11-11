@@ -1,0 +1,10 @@
+WARNING: contract name Lock is the same as the file name and can be omitted from src/lock/lock/Lock.sol:Lock
+Compiling src/lock/lock/Lock.sol...
+Compiling src/lock/lock/Lock.sol to expose internal function information and local variables...
+ERROR: Failed to run Certora Prover typechecker locally.
+Please check the errors below for problems in the specifications (.spec files) or the prover_args defined in the .conf file.
+CRITICAL: [main] ERROR ALWAYS - Found errors in certora/specs/Lock.spec:
+CRITICAL: [main] ERROR ALWAYS - Error in spec file (Lock.spec:117:81): ‘lastReverted’ refers to the previous call from spec and is always false after non-reverting call(s) [Lock.LP_VAULT_SWAP()]. Did you mean to add `@withrevert`?
+
+CVL syntax or type check failed, please fix the issue.
+

@@ -1,0 +1,4 @@
+[1m[32m⇾[0m[0m [1mReading the configuration file at: [1mmedusa.json[0m[0m
+⇾ Compiling targets with crytic-compile
+⇾ Running command:
+contracts/.venv/bin/crytic-compile . --export-format solc --export-dir out-security/medusa/crytic-export --foundry-ignore-compile --foundry-out-directory out-security/build/all

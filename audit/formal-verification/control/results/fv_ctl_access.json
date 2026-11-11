@@ -1,0 +1,290 @@
+[
+ {
+  "id": "FV-CTL-01",
+  "title": "APPLICATION_ADMIN and DEFAULT_ADMIN_ROLE stay with the timelock across every grant, revoke and renounce, executed or not (AdminRoleOnlyTimelock)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ACCESS-153",
+   "REQ-ACCESS-032",
+   "REQ-ACCESS-003",
+   "REQ-MREG-005",
+   "REQ-ADAPTER-084",
+   "REQ-PROXY-101",
+   "REQ-ORACLE-097",
+   "INV-068",
+   "INV-084"
+  ],
+  "targets": [
+   "T-53",
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.04,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-01-W",
+  "title": "Witness: the timelock grants a guardian role to a Safe, while the same operation granting APPLICATION_ADMIN reverts",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-MREG-005",
+   "REQ-ACCESS-153"
+  ],
+  "targets": [
+   "T-53"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-02",
+  "title": "Initializers grant DEFAULT_ADMIN_ROLE and APPLICATION_ADMIN only to the TIMELOCK constant (any other argument reverts)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ACCESS-150",
+   "REQ-ACCESS-027",
+   "REQ-ADAPTER-074",
+   "REQ-PROXY-085",
+   "REQ-ACCESS-153"
+  ],
+  "targets": [
+   "T-53",
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-03",
+  "title": "Every Adapter upgrade is a timelock operation every canceller can cancel: a role-change operation cannot hand out upgrade power",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ACCESS-153",
+   "REQ-ACCESS-113",
+   "REQ-ADAPTER-003",
+   "REQ-ADAPTER-042",
+   "REQ-ADAPTER-084",
+   "SPEC-GOV-005"
+  ],
+  "targets": [
+   "T-53",
+   "T-55",
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-04",
+  "title": "Every page names the same allowed caller for each privileged selector, including the address freeze, breaker and standby selectors",
+  "status": "Verified",
+  "method": "exhaustive enumeration (1 cases)",
+  "verifies": [
+   "REQ-ACCESS-025",
+   "REQ-ACCESS-066",
+   "REQ-ROLE-019",
+   "REQ-ROLE-015",
+   "REQ-MREG-004",
+   "REQ-ACCESS-157",
+   "REQ-ACCESS-158",
+   "REQ-ACCESS-159",
+   "REQ-ROLE-107",
+   "REQ-ROLE-108",
+   "REQ-ROLE-109"
+  ],
+  "targets": [
+   "T-53",
+   "T-63"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-05",
+  "title": "Guardian keys reach exactly freeze, pause, unfreeze, unpause, freezeAddress, breaker trip and reset, useStandbyRoute and cancel; never unfreezeAddress, an upgrade, a setter or a route choice",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-ACCESS-089",
+   "REQ-ACCESS-112",
+   "REQ-ACCESS-094",
+   "REQ-ROLE-076"
+  ],
+  "targets": [
+   "T-53",
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-06",
+  "title": "A key holding only APPLICATION_FREEZE_GUARDIAN can call no lifting selector (unfreeze, unpause, breaker reset, address unfreeze)",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-ACCESS-086",
+   "REQ-ACCESS-124",
+   "REQ-ROLE-071",
+   "REQ-MREG-004",
+   "REQ-MREG-025"
+  ],
+  "targets": [
+   "T-56"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-07",
+  "title": "Every APPLICATION_ADMIN or TIMELOCK selector runs only as a timelock execution",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ACCESS-111",
+   "REQ-ACCESS-015",
+   "REQ-ACCESS-010",
+   "REQ-ACCESS-153"
+  ],
+  "targets": [
+   "T-53",
+   "T-64"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-08",
+  "title": "PositionProxy.execute succeeds only for msg.sender == ADAPTER, never for its own wallet, and never targets the proxy itself, address 0 or an address without code",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PROXY-007",
+   "REQ-PROXY-091",
+   "REQ-PROXY-040",
+   "REQ-ROLE-019"
+  ],
+  "targets": [
+   "T-63"
+  ],
+  "detail": "Changed for the AMM-neutral design: supply, borrow, repay and withdrawal are Adapter logic sent through execute.",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-08-W",
+  "title": "Witness: the Adapter's execute call to the Spoke succeeds",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-PROXY-040"
+  ],
+  "targets": [
+   "T-63"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-09",
+  "title": "The PositionProxy selector inventory is execute plus four views, with no generic multicall, delegatecall, signature, receiver, manager, upgrade, initializer or role selector; the Adapter's call builder never sends a liquidation, position-manager or risk-premium selector",
+  "status": "Verified",
+  "method": "exhaustive enumeration (14 cases)",
+  "verifies": [
+   "REQ-PROXY-007",
+   "REQ-PROXY-008",
+   "REQ-PROXY-001",
+   "REQ-PROXY-103",
+   "REQ-PROXY-101"
+  ],
+  "targets": [
+   "T-63"
+  ],
+  "detail": "Changed for the AMM-neutral design: the named supply, borrow, repay and withdraw functions of the old proxy are replaced by execute.",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-10",
+  "title": "No hostile RiskModule, ParameterStore, MarketRegistry, LPOracle, DebtOracle, LPVaultSwap or IFlashSource implementation reaches mint, proxy registration, position return, fee collection, stray return, or flash-source replacement",
+  "status": "Verified",
+  "method": "exhaustive enumeration (7 cases)",
+  "verifies": [
+   "INV-052",
+   "INV-053",
+   "REQ-RISK-007",
+   "REQ-PSTORE-003",
+   "REQ-ADAPTER-081",
+   "REQ-ORACLE-098"
+  ],
+  "targets": [
+   "T-65"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-11",
+  "title": "Methodology T-65 names only contained components (the AaveAdapter, which reaches mint and proxy registration, is in the reviewed scope instead)",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "INV-018",
+   "INV-052",
+   "INV-053"
+  ],
+  "targets": [
+   "T-65"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_access"
+ },
+ {
+  "id": "FV-CTL-154",
+  "title": "Every Collateralization and LPVault effect that moves a position, a token or a ledger amount is reachable only from a call tree opened by AaveAdapter or LPVaultSwap, the Lock's two members; the timelock reaches only returnStray of a never-recorded position, with the Lock free",
+  "status": "Verified",
+  "method": "exhaustive enumeration (9 cases)",
+  "verifies": [
+   "REQ-LOCK-004",
+   "REQ-LOCK-010",
+   "REQ-LOCK-028",
+   "REQ-COLL-029",
+   "REQ-ADAPTER-050"
+  ],
+  "targets": [
+   "T-65",
+   "T-73"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_access"
+ }
+]

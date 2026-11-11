@@ -1,0 +1,486 @@
+[
+ {
+  "id": "FV-CTL-53",
+  "title": "A regular pledge passes only if its exact value reaches minPledgeUsd and a rescue top-up only if it reaches min(minPledgeUsd, $10) and is eligible within the restore amount; an eligible rescue at or above that minimum is never refused for value; the booked charge is >= 1 and never below the value",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-CAP-001",
+   "REQ-RISK-057",
+   "REQ-RISK-066",
+   "REQ-RISK-067",
+   "REQ-PSTORE-005",
+   "INV-028"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.23,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-54",
+  "title": "After a passing pledge: sliceUsd <= usdCharge and > 0 only for an eligible top-up within restoreBooked; a non-zero slice fits topUpSliceUsd and the token and depositor counters exceed their caps by at most the slice; rescueUnits is L for a rescue, ceil(L*sliceUsd/usdCharge) for a slice top-up, 0 otherwise, and never above L",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-CAP-002",
+   "SPEC-CAP-003",
+   "REQ-RISK-025",
+   "REQ-RISK-066",
+   "INV-028"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.09,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-55",
+  "title": "Pledge price-state rule of the RiskModule equals the LPOracle state-effects table (read from 2.10) for new accounts and top-ups",
+  "status": "Verified",
+  "method": "exhaustive enumeration (15 cases)",
+  "verifies": [
+   "REQ-RISK-017",
+   "INV-026",
+   "REQ-ORACLE-015"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-56",
+  "title": "Every tighten setter (24 ParameterStore parameters) moves only in the safer direction inside its hard and liveness bounds; every step-limited loosening moves one step (0.03e18, x1.5 exact product, slice base max(old, floor(cap/10)), +25 bps) at least normalDelay >= 345,600 s after the previous one and records its time",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-011",
+   "SPEC-GOV-009",
+   "REQ-PSTORE-017",
+   "REQ-CONFIG-051",
+   "REQ-CONFIG-052",
+   "REQ-ACCESS-120",
+   "REQ-ACCESS-161"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.1,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-57",
+  "title": "slippageAllowanceBps never goes below slippageAllowanceMinBps(m), the floor never above the allowance, and the floor always covers the worst swap-route cost of every enabled debt asset, so every accepted allowance admits the honest swap (no buy leg exists)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PSTORE-015",
+   "REQ-PSTORE-006",
+   "REQ-CONFIG-052",
+   "INV-047",
+   "INV-046"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "Changed for the AMM-neutral design: the buy-leg allowance and its floor were removed (REQ-PSTORE-006); the per-market slippage floor is the lower side for every debt asset.",
+  "counterexample": null,
+  "seconds": 0.12,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-130",
+  "title": "minLB x (10^4 - slippageAllowanceMinBps) >= 10^4 x (10^4 + maxFlashFeeBps) holds for every Active/Offboarding market and enabled debt reserve after every slippageAllowanceMinBps or maxFlashFeeBps change, activateMarket, enableDebtReserve and reserve removal (inductive step, per pair)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PSTORE-021",
+   "REQ-MREG-032",
+   "REQ-CONFIG-052",
+   "INV-047",
+   "REQ-PSTORE-024"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "Changed for the AMM-neutral design: one swap leg per pool token into the debt asset, so the two-leg inequality with a buy allowance became the single-leg inequality of REQ-PSTORE-021. minLB is Aave configuration read at each check; an Aave bonus cut after activation is drift (REQ-HUB-108).",
+  "counterexample": null,
+  "seconds": 0.08,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-131",
+  "title": "Spec examples: minLB 10,200 with floor 30 bps gives 101,694,000, which admits maxFlashFeeBps 10 and 169 and refuses 170; raising the floor to 35 for a 35 bps route still passes at 10 bps; floor max(15, 30) = 30 admits tightening to 30, refuses 29 and a floor of 51 above a 50 bps allowance",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-PSTORE-021",
+   "REQ-MREG-032",
+   "REQ-PSTORE-015",
+   "REQ-CONFIG-052"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-139",
+  "title": "REQ-PSTORE-024 example: the 20,000 USDC loan's ceiling is 20 USDC; the 5 bps premium (10 USDC) passes and a 15 bps premium (30 USDC) is refused, so the keeper funds the debt; 2.9 has no buy-leg setter",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-PSTORE-024",
+   "REQ-PSTORE-006",
+   "SPEC-LIQ-015"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "Changed for the AMM-neutral design: the old GHO buy-leg example is replaced by the flash-fee ceiling.",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-132",
+  "title": "Each breaker tightener (2.9 table: price drop, pool share, seizure, route failures lowered; cooldown raised; deficit max lowered) is short, makes its breaker strictly more sensitive within its bounds, and breakerPoolShareBps >= poolShareMaxBps survives both setters",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PSTORE-016",
+   "REQ-ROLE-112",
+   "REQ-CONFIG-049"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "2.9 breaker table parsed: ['breakerCooldown', 'breakerDeficitMax', 'breakerPoolShareBps', 'breakerPriceDropBps', 'breakerRouteFailureCount', 'breakerSeizureBps']",
+  "counterexample": null,
+  "seconds": 0.1,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-133",
+  "title": "tightenMaxShortfallBps lowers within [0, 5,000] and never widens any leg's slippage; tightenDebtStressRiseBps raises within [100, 5,000] and the served stress price ceil(accepted*(10^4+rise)/10^4) is never below the accepted price; spec examples hold",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-PSTORE-018",
+   "REQ-PSTORE-020",
+   "SPEC-LIQ-019",
+   "SPEC-ORC-018",
+   "REQ-ROLE-112"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.05,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-134",
+  "title": "Three loosenings of one key span at least 2 x MIN_NORMAL_DELAY = 691,200 s, lower minOpeningHealthFactor by at most 0.09e18 and raise a cap by at most 3.375x, however normalDelay moves within its bounds",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-GOV-011",
+   "REQ-PSTORE-017",
+   "REQ-ACCESS-161",
+   "SPEC-GOV-003"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.05,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-135",
+  "title": "Spec examples: 1.10 -> 1.07 accepted, 1.0699 LoosenStepTooLarge, a second loosening at T + 3 days LoosenTooSoon(T + 432,000); $5M -> $7.5M accepted, +1 refused; 100 -> 125 bps accepted, 126 refused; 40 -> 65 -> 90 -> 100 in three steps; a slice at 0 restores to 1.5 x cap/10; 50 -> 75 bps, 76 refused",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-GOV-011",
+   "REQ-PSTORE-017",
+   "REQ-CONFIG-071",
+   "MKT-053",
+   "REQ-PSTORE-006"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-136",
+  "title": "Spec examples: $99,995 charge and value at 199,990,000; $50,000 charge at the $1 floor; 999,950,000 and 999,934,990 below $10, 1,000,149,990 and 1,000,134,976 above; a $12 rescue passes and a $12 ordinary top-up fails at minPledgeUsd $50",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "SPEC-CAP-001",
+   "REQ-PSTORE-005",
+   "REQ-RISK-067",
+   "REQ-RISK-057"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-137",
+  "title": "REQ-RISK-057 and REQ-RISK-066 name the same revert for every pledge below a minimum",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-RISK-057",
+   "REQ-RISK-066"
+  ],
+  "targets": [
+   "T-77"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.04,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-58",
+  "title": "Every page (1.4 role table, 1.5 class column, 2.9 setter table and REQ-CONFIG-049, 2.15 launch list, 3.8 MKT-027) names the same parameters as having a short-delay tighten selector, with the same safer direction; usdBand and grace parameters have none on any page",
+  "status": "Violated",
+  "method": "exhaustive enumeration (9 cases)",
+  "verifies": [
+   "REQ-CONFIG-049",
+   "REQ-ROLE-027",
+   "REQ-ROLE-105",
+   "REQ-ACCESS-155",
+   "REQ-PSTORE-002",
+   "MKT-027"
+  ],
+  "targets": [
+   "T-71",
+   "T-54"
+  ],
+  "detail": "37 parameters compared over 6 page readings",
+  "counterexample": {
+   "case": [
+    "param",
+    "consistencyToleranceBps"
+   ],
+   "why": {
+    "2.15 launch list / SHORT_ELIGIBLE": true,
+    "2.9 setter table": true,
+    "2.9 REQ-CONFIG-049": true,
+    "1.5 class column": true,
+    "1.4 role table": true,
+    "3.8 MKT-027": false
+   }
+  },
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-59",
+  "title": "Across tightenCaps, loosenCaps, the allowance setters and debt-reserve listing and removal: 0 <= perCall <= per24h <= 20,000 GHO, perCall <= 1,000 GHO, and every cap write leaves the key closed (0, 0) or perCall >= 2 x floorRoundingAllowanceGho",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-BUDGET-006",
+   "REQ-BUDGET-017",
+   "REQ-BUDGET-019",
+   "REQ-ACCESS-058",
+   "REQ-ROLE-094"
+  ],
+  "targets": [
+   "T-79"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.1,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-60",
+  "title": "REQ-CONFIG-050 as written: 2 x floorRoundingAllowanceGho <= perCallCap for every approved reserve whose caps are not both 0, across every cap and allowance setter and debt-reserve listing; a closed (0, 0) reserve is allowed and never bounds the allowance",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-CONFIG-050",
+   "REQ-ACCESS-132",
+   "REQ-BUDGET-017",
+   "REQ-BUDGET-022",
+   "REQ-ROLE-027"
+  ],
+  "targets": [
+   "T-79"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.14,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-142",
+  "title": "SPEC-SET-002 bound for every approved (spoke, debtReserveId) key: closed (0, 0) or 2 x floorRoundingAllowanceGho <= perCallCap, across every setter including the removal operation, which leaves the removed key closed (0, 0)",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-SET-002",
+   "REQ-CONFIG-050",
+   "REQ-MREG-010"
+  ],
+  "targets": [
+   "T-79"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.06,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-141",
+  "title": "Spec examples: per-call cap 25 GHO admits an allowance of 12.5e18 and refuses 12.5e18 + 1; with a 1 GHO allowance tightenCaps to 1.5 GHO reverts, to 10 GHO succeeds, (0, 0) closes the USDC reserve",
+  "status": "Verified",
+  "method": "direct computation",
+  "verifies": [
+   "REQ-CONFIG-050",
+   "REQ-BUDGET-006"
+  ],
+  "targets": [
+   "T-79"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-138",
+  "title": "The market sub-cap lies in [100 GHO, max(100 GHO, per24hCap)] for any reported count; with a correct count k and floor(per24hCap/k) >= 100 GHO, markets drawing within their sub-caps always leave each market its share in the reserve window; spec examples hold",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "SPEC-SET-006",
+   "REQ-BUDGET-024",
+   "REQ-BUDGET-025",
+   "REQ-MREG-031",
+   "REQ-ACCESS-058"
+  ],
+  "targets": [
+   "T-79"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.05,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-61",
+  "title": "Under any sequence of tighten, loosen, structural and setFeed calls every relational bound stays satisfied: slice <= cap, borrowPriceMaxAge <= min(heartbeat + 600, 4,200) and <= liquidationPriceMaxAge, heartbeat < feedMaxAge <= liquidationPriceMaxAge, slippage floor, grace bounds, breakerPoolShareBps >= poolShareMaxBps, buy floor <= allowance",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-CONFIG-050",
+   "REQ-CONFIG-052",
+   "REQ-CONFIG-023",
+   "REQ-PSTORE-016",
+   "REQ-PSTORE-015",
+   "REQ-ACCESS-095",
+   "REQ-ACCESS-096",
+   "INV-047"
+  ],
+  "targets": [
+   "T-71"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.08,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-99",
+  "title": "No borrow, withdraw-with-debt or new-account pledge completes while any Spoke can draw the vault-token asset",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-029",
+   "REQ-CONFIG-043",
+   "INV-057"
+  ],
+  "targets": [
+   "T-80"
+  ],
+  "detail": "The sum of Borrow Spoke drawCaps against the credit line is Aave DAO configuration checked by the live-config check.",
+  "counterexample": null,
+  "seconds": 0.21,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-62",
+  "title": "SHORT_ELIGIBLE (2.15 launch list) holds no loosen, structural set, role, upgrade, beacon, initializer, timelock, price-source, route, keeper-add, unfreeze or reset selector; setShortDelaySelector(..., true) admits only SHORT_ELIGIBLE pairs, so no loosen selector can ever be short",
+  "status": "Verified",
+  "method": "exhaustive enumeration (800 cases)",
+  "verifies": [
+   "REQ-ACCESS-142",
+   "REQ-ACCESS-155",
+   "REQ-ACCESS-141",
+   "REQ-CONFIG-053",
+   "REQ-PSTORE-002"
+  ],
+  "targets": [
+   "T-71",
+   "T-54"
+  ],
+  "detail": "44 SHORT_ELIGIBLE pairs; 54 ParameterStore/SettlementBudget loosen or set selectors",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ },
+ {
+  "id": "FV-CTL-140",
+  "title": "With both guardians unavailable the governance Safe halts new activity at the short delay: freeze, pause, freezeAddress, both breaker trips and useStandbyRoute are APPLICATION_ADMIN selectors in SHORT_ELIGIBLE, so a batch of them needs 43,200 s; adding a lift makes it normal",
+  "status": "Verified",
+  "method": "exhaustive enumeration (6 cases)",
+  "verifies": [
+   "REQ-ACCESS-155",
+   "REQ-ACCESS-128",
+   "REQ-ACCESS-062",
+   "REQ-ACCESS-063",
+   "REQ-MREG-028",
+   "SPEC-GOV-001"
+  ],
+  "targets": [
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "_dbg58"
+ }
+]

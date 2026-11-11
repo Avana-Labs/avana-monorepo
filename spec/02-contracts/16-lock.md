@@ -1,0 +1,130 @@
+# 2.16 Lock
+
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
+>
+> **Requirement prefix:** `REQ-LOCK-NNN`
+
+## Purpose
+
+One immutable reentrancy lock per chain, shared by every Avana contract on that chain that moves assets or changes accounting (`Q-148`, `Q-318`). It has exactly two members, the chain's AaveAdapter and LPVaultSwap. An outer entry point (a call from a wallet, a liquidation caller or helper, or the timelock into one of the two members) acquires the lock first. While it is held, a fixed set of inner calls among Avana contracts is accepted, each only from its expected caller and only while the expected member holds the lock. Any attempt to start a second outer entry point in the same call tree reverts. One shared lock replaces per-contract `nonReentrant` guards and settlement flags: a guard per contract cannot stop a call that re-enters through a different Avana contract, while a shared holder lets each callee check which call tree it is part of.
+
+Every Collateralization entry point and every LPVault entry point that moves value (one LPVault per AMM protocol per chain) is reachable only inside a call tree that one of the two members opened. The custody contracts check their caller and the holder; they never acquire. Every value-moving LPVault function is callable only by Collateralization, and only inside a call tree opened by a Lock member; each Collateralization entry point is callable only by the one member that drives its path; an LPVault's `returnStray` is callable only by the timelock and only while the Lock is free. A CDP Spoke, a market or a new AMM protocol's LPVault added later is therefore served by the same Lock with no redeploy and no membership change (`Q-318`).
+
+The Lock is **not** a pause, a role or an access-control list for governance. It never blocks a protocol action at the start of a transaction. It does not cover Aave contracts (the Spoke has its own `nonReentrant`; the Hub has none) and does not replace checks-effects-interactions, which every Avana contract still follows.
+
+## Inputs
+
+| From | What |
+|---|---|
+| AaveAdapter, LPVaultSwap | `acquire()` and `release()` calls |
+| Any contract or account | `holder()` and `isLocked()` reads |
+
+## Outputs
+
+| To | What |
+|---|---|
+| Inner-call callees | The current holder, so each callee checks the call tree it is part of |
+| Lens, Collateralization and LPVault views | Whether the lock is held, so reads during an in-flight Avana call can be refused |
+
+## Storage
+
+| Variable | Type | Description | Written by |
+|---|---|---|---|
+| `HOLDER_SLOT` | transient slot (EIP-1153), constant `bytes32` | Address of the member holding the lock; `address(0)` when free. Slot = `keccak256(abi.encode(uint256(keccak256("avana.lock.holder")) - 1)) & ~bytes32(uint256(0xff))` | `acquire`, `release` |
+| `AAVE_ADAPTER` | `address` (immutable) | The chain's AaveAdapter fixed proxy address | Constructor |
+| `LP_VAULT_SWAP` | `address` (immutable) | The chain's LPVaultSwap fixed proxy address | Constructor |
+| `SELF` | `address` (immutable) | The Lock's own address | Constructor |
+
+The Lock has no persistent storage.
+
+## Functions
+
+| Function | Description | Caller (role / contract) | Requirements |
+|---|---|---|---|
+| `acquire()` | Takes the lock for `msg.sender` | AaveAdapter or LPVaultSwap | `REQ-LOCK-004`…`REQ-LOCK-007` |
+| `release()` | Frees the lock | Current holder | `REQ-LOCK-008` |
+| `holder() returns (address)` | Current holder or `address(0)` | Anyone (view) | `REQ-LOCK-009` |
+| `isLocked() returns (bool)` | `holder() != address(0)` | Anyone (view) | `REQ-LOCK-009` |
+| `AAVE_ADAPTER()`, `LP_VAULT_SWAP()`, `SELF()` | Constructor immutables | Anyone | `REQ-LOCK-001` |
+
+## Use by Avana contracts
+
+**Outer entry points (acquire at entry, release before every successful return):**
+
+| Contract | Entry points |
+|---|---|
+| AaveAdapter ([2.6](06-aave-adapter.md)) | `pledge`, `recredit`, `borrow`, `repay` (from any payer), `withdraw`, `removeLiquidity`, `repayAllAndWithdraw`, `repayWithCollateral`, `collectFees`, `releaseZeroCredit` (there is no idle release, `Q-396`) |
+| LPVaultSwap ([2.11](11-lpvaultswap.md)) | `liquidate` (the only liquidation entry point, `Q-404`), `settlePending` (there is no in-kind probe or shortfall report, `Q-401`) |
+
+Fee collection and zero-credit release are Adapter entry points, so the custody contracts never acquire; each LPVault's timelock-only `returnStray` neither acquires nor joins the lock and reverts while it is held and the member set stays at two whatever number of LPVaults the chain runs (`REQ-LOCK-028`).
+
+**Inner calls that check the lock (accepted only while the lock is held by the named holder and only from the named caller):**
+
+| Callee | Caller (`msg.sender`) | Required `holder()` |
+|---|---|---|
+| Collateralization `pledge`, `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `collectFees`, `releaseZeroCredit` | AaveAdapter | AaveAdapter |
+| Collateralization `beginSeizure`, `settleSeizure`, `settlePending` | LPVaultSwap | LPVaultSwap |
+| Every LPVault's custody functions (`receivePosition`, `returnPosition`, `unwind`, `releaseToDepositor`, `collectFees`) | Collateralization | AaveAdapter or LPVaultSwap (either member; Collateralization has already checked the holder its own entry point requires) |
+| Every LPVault's `liquidityOf` (view) | Collateralization | Either member (readable by others only while the lock is free) |
+| AaveAdapter `burnSeized` | LPVaultSwap | LPVaultSwap |
+| LPVaultSwap `deleverage` ([2.11](11-lpvaultswap.md)) | AaveAdapter | AaveAdapter |
+| AaveAdapter `deleverageRepay`, `deleverageRelease` | LPVaultSwap | AaveAdapter, with the Adapter's deleverage session open |
+| LPVaultSwap flash callback (`onFlashLoan`), used only by `deleverage` | The chain's `IFlashSource` implementation (Aave V3 Pool `flashLoan`, initiator the flash source) | AaveAdapter while LPVaultSwap's transient deleverage flag is set; a call while LPVaultSwap holds the lock (inside `liquidate`, which takes no flash loan) reverts |
+| Swap-route calls ([2.12](12-settlement-routes.md)) | LPVaultSwap | LPVaultSwap; or AaveAdapter during a deleverage |
+| PayoutEscrow `deposit(token, borrower, amount)` ([2.18](18-payout-escrow.md)), the payout escrow for a borrower surplus, Avana fee, route residue or dust-leg transfer that the token refuses (`Q-401`); the caller's payout `keeperOut` is never escrowed (`Q-404`) | LPVaultSwap | LPVaultSwap |
+
+**Called under the lock without reading it.** The ProxyManager's `deployProxy`, the PositionProxy's `execute` ([2.5](05-position-proxy-and-proxy-manager.md)) and the vault token's `mint`, `burn` and `addValidProxy` ([2.4](04-vault-tokens.md)) check their caller (`OnlyAdapter`) and are reached only from the Adapter while it holds the lock; none of them acquires it. The `IFlashSource` implementation's `flashLoan`, called only inside `deleverage`, checks its caller (LPVaultSwap) and neither acquires nor checks the lock; a flash liquidation helper is an ordinary caller of `liquidate` whose own Aave V3 flash callback wraps the whole call and holds no lock; the callback it makes into LPVaultSwap is checked as listed above. LPVaultSwap writes no breaker state: no liquidation outcome or shortfall is recorded on-chain, because seizure surges and route failures are monitoring alerts, not on-chain trips (`Q-399`). The MarketRegistry's `recordBreach` ([2.8](08-market-registry.md)) is called only by the RiskModule's permissionless `pokeBreakers`, outside any liquidation, and neither acquires nor checks the lock. The PayoutEscrow's `claim` neither acquires nor joins the lock: it reverts with `LockHeld` while the lock is held, so a claim never runs inside an Avana call tree, and it guards itself with its own transient reentrancy flag ([2.18](18-payout-escrow.md)).
+
+Policy, price and registry contracts (RiskModule, MarketRegistry, ParameterStore, LPOracle feeds, DebtOracle, the L2 sequencer-uptime feed) are read with `view` calls inside a held lock and neither acquire nor check it; the RiskModule's issuer probes are gas-limited static calls to the pool tokens and debt assets. LPOracle `poke()` is called inside a held lock by Collateralization before the pledge and re-credit checks, by the RiskModule before the borrow-side checks the Adapter runs, and by LPVaultSwap before a liquidation (`Q-199`), and by keepers outside any lock; it neither acquires nor checks the lock. Contracts with no asset-moving cross-contract calls (governance setters, `pokeBreakers`) neither acquire nor check the lock. An Avana Umbrella (Coverage Spoke)'s `fund`, through which LPVaultSwap's `settlePending` adds recovered value in the debt asset of the market's (Hub, debt asset) pair ([2.14](14-first-loss-reserve.md)), moves only the caller's tokens into the Hub and neither acquires nor checks the lock.
+
+## Permissions
+
+No role administers the Lock. Acquisition is limited to the immutable member set: `AAVE_ADAPTER` and `LP_VAULT_SWAP`. Release is limited to the current holder. Membership cannot be granted or revoked. The two members are the chain's single AaveAdapter and single LPVaultSwap, both upgradeable proxies at fixed addresses, so an upgrade of either keeps its membership, and a new CDP Spoke, market, Hub or LPVault on the chain never changes the member set (`Q-318`).
+
+## Dependencies
+
+| Dependency | Type (internal / external) | Calls made | Why |
+|---|---|---|---|
+| EIP-1153 (Cancun) | External (EVM) | `TSTORE`, `TLOAD` | Transaction-scoped lock state, on Ethereum and on Base |
+
+## Events
+
+None. The lock is acquired and released in every Avana call; events would add gas without information that call traces and the callers' own events do not already provide.
+
+## Restrictions
+
+- `REQ-LOCK-001` The Lock MUST be immutable: no owner, no admin, no setters, no upgrade proxy, no pause, no `selfdestruct`. Its constructor fixes `AAVE_ADAPTER`, `LP_VAULT_SWAP` and `SELF`; deployment uses the CREATE3-predicted fixed proxy addresses of the chain's AaveAdapter and LPVaultSwap, and the deployment check verifies each immutable against the deployed address. Each chain (Ethereum, Base) deploys its own Lock with its own two members. (Source: Q-043, Q-148, Q-223, Q-226, Q-318)
+- `REQ-LOCK-002` The lock state MUST be a single address held in transient storage (EIP-1153) at the constant `HOLDER_SLOT`; the Lock MUST hold no persistent state that changes after deployment. Avana compiles with Solidity 0.8.28 for the `cancun` EVM, matching Aave V4, and uses transient storage only for reentrancy state and per-call settlement context. Per-call context is cleared before the call returns; the holder is cleared by `release()` on every successful return of an outer entry point and in any case at the end of the transaction (`REQ-LOCK-014`). (Source: Q-119, Q-148)
+- `REQ-LOCK-003` Every function MUST revert with `DelegateCallNotAllowed` when `address(this) != SELF`, so the Lock's transient slot is never written in another contract's context. Every function is non-payable: a call that carries ETH, directly or through a `delegatecall` from a payable frame, reverts with empty revert data before any check, and writes nothing. The errors named in this page apply to calls with `msg.value == 0`. (Source: Q-148)
+- `REQ-LOCK-004` `acquire()` MUST revert with `NotMember(msg.sender)` unless `msg.sender` is `AAVE_ADAPTER` or `LP_VAULT_SWAP`. Only these two can hold the lock: every user action enters through the Adapter and every liquidation and pending settlement through LPVaultSwap, so calls among Avana contracts are trusted only while one of them is running. PositionProxies, Collateralization and every LPVault are not members. (Source: Q-148, Q-223, Q-318)
+- `REQ-LOCK-005` `acquire()` MUST revert with `LockHeld(currentHolder)` if the lock is held by any address, including `msg.sender`. The checks run in this order: ETH sent (empty revert, `REQ-LOCK-003`), `DelegateCallNotAllowed`, `NotMember`, `LockHeld`; so a non-member calling while the lock is held gets `NotMember`. There is no nesting, counting or re-entry by the same holder. A settlement therefore covers one account per call, `liquidate` takes no flash loan, and liquidation callers batch accounts in separate calls, each acquiring and releasing the lock. (Source: Q-119, Q-148, Q-404)
+- `REQ-LOCK-006` On success `acquire()` MUST write `msg.sender` to `HOLDER_SLOT`. (Source: Q-148)
+- `REQ-LOCK-007` Every outer entry point listed in "Use by Avana contracts" MUST call `acquire()` before any external call other than view reads, and MUST call `release()` on every path that returns successfully. A view read before `acquire()` is allowed only where the callee's view would revert under the lock and the value is re-checked under the lock: LPVaultSwap's `settlePending` reads `Collateralization.getPending(marketId)` before acquiring, and Collateralization's `settlePending` re-checks each pending amount under the lock, so a stale read can only revert ([2.3](03-collateralization.md) `REQ-VAULT-145`). An entry point that composes steps (`repayAllAndWithdraw`, `repayWithCollateral`) acquires once and runs the steps as internal functions or as inner calls listed above. (Source: Q-148, Q-201, Q-223, Q-255)
+- `REQ-LOCK-008` `release()` MUST revert with `NotHolder(msg.sender)` unless the lock is held and `msg.sender` is its holder, so a free lock refuses every release, including one from `address(0)`; on success it MUST write `address(0)` to `HOLDER_SLOT`. (Source: Q-119, Q-148)
+- `REQ-LOCK-009` `holder()` MUST return the address in `HOLDER_SLOT` and `isLocked()` MUST return `holder() != address(0)`; both are `view` and, called without ETH, never revert outside a delegatecall. (Source: Q-119, Q-148)
+- `REQ-LOCK-010` Every inner-call callee listed in "Inner calls that check the lock" MUST revert unless `msg.sender` is its named caller and `LOCK.holder()` equals its named holder (for an LPVault's custody functions, unless `LOCK.holder()` is `AAVE_ADAPTER` or `LP_VAULT_SWAP`). Inner callees MUST NOT call `acquire()`. Every LPVault and Collateralization reads the chain's one Lock address as a constructor immutable. (Source: Q-045, Q-148, Q-160, Q-201, Q-224, Q-254, Q-255, Q-318)
+- `REQ-LOCK-011` A callee acting for an account MUST also check that the record or position it acts on belongs to the account its caller named: Collateralization's `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `collectFees` and `releaseZeroCredit` require the record of `(integrationId, positionKey)` to belong to the proxy and depositor the Adapter passed, its seizure functions act only on the proxy and market of the active snapshot, and an LPVault returns a position only to its depositor of record. One account's call tree therefore never authorizes action on another account. (Source: Q-148, Q-160, Q-224, Q-254, Q-255)
+- `REQ-LOCK-012` Because transient storage is cleared at the end of every transaction, the lock MUST be free at the start of every transaction; several Avana calls in one transaction (a smart-wallet batch of pledge then borrow through the Adapter) each acquire and release in turn. The proxy is keyed to its wallet, CDP Spoke and market and created by the Adapter on the first pledge to that market, so smart accounts can pledge and borrow in one user operation. (Source: Q-075, Q-148, Q-225)
+- `REQ-LOCK-013` A revert anywhere in an outer call MUST leave the lock free, which follows from EIP-1153 rolling back transient writes made in the reverted frame; no explicit release on revert paths is required. (Source: Q-119, Q-148)
+- `REQ-LOCK-014` If an outer entry point returns without releasing, every later Avana entry point in the same transaction MUST revert with `LockHeld` (fail closed) and the lock is free again in the next transaction. (Source: Q-148)
+- `REQ-LOCK-015` No Avana or Aave role, and no member, can set the holder to any address other than itself or clear it on behalf of another holder; the Lock cannot be used to pause the protocol across transactions. Repay, fee collection, debt-free withdrawal and partial removal, zero-credit release, pending settlement and liquidation therefore never wait on the Lock beyond their own call, whatever the pause state of any Hub, breakers or address freeze. (Source: Q-051, Q-148, Q-227, Q-241, Q-242, Q-254)
+- `REQ-LOCK-016` Read-only views that external integrators rely on for consistent state (the Lens, [2.17](17-lens.md); Collateralization's record, total and pending views, [2.3](03-collateralization.md); every LPVault's custody views, [2.2](02-lp-vault.md)) MUST revert with `Locked()` while `isLocked()` is true, so no view can observe accounting mid-call. The exceptions are Collateralization's views called by the current holder, which reads them only before or after its calls into Collateralization (the Adapter's backing-gap check, [2.3](03-collateralization.md) `REQ-VAULT-091`), Collateralization's `getAccountRescueUnits` while the AaveAdapter holds the lock (read by the RiskModule's health check, [2.3](03-collateralization.md) `REQ-COLL-018`), and an LPVault's `liquidityOf` called by Collateralization; any other member that needs a view reads it before acquiring the lock (`REQ-LOCK-007`). (Source: Q-119, Q-148, Q-201, Q-224, Q-253, Q-254)
+- `REQ-LOCK-017` Checks-effects-interactions remains required in every Avana contract: state updates (record status, counters, pending balances, nonces, custody map) happen before external transfers, independent of the Lock, and an LPVault moves a position last, with a transfer that calls no receiver hook where the AMM protocol offers one (`transferFrom` for an ERC-721 position). (Source: Q-119, Q-148, Q-201)
+- `REQ-LOCK-018` `acquire()` and `release()` MUST have a bounded cost that does not depend on the lock's history or on the number of Hubs, CDP Spokes, markets or LPVaults: the delegatecall check against `SELF` (`REQ-LOCK-003`), at most two member comparisons, one `TLOAD` and, on success, one `TSTORE`, with no external call and no storage read. The two members differ only by the second comparison. The cost does not grow with the number of Hubs, CDP Spokes, markets or LPVaults on the chain, because custody contracts are recognized by the callee-side caller checks, not by the Lock. (Source: Q-148, Q-318)
+- `REQ-LOCK-026` A repay with collateral MUST run as one call tree under the AaveAdapter's lock: the Adapter acquires the lock, opens a transient deleverage session keyed to `(proxy, marketId, integrationId, positionKey, units, debtReserveId)` and calls LPVaultSwap's `deleverage`; LPVaultSwap accepts that call only from the Adapter while the Adapter holds the lock, sets its transient deleverage flag, and only while that flag is set accepts the IFlashSource callback with the Adapter as holder and calls the swap routes with the Adapter as holder; the Adapter accepts `deleverageRepay` and `deleverageRelease` only from LPVaultSwap while it holds the lock and its session is open. Both the session and the flag are cleared before the Adapter releases the lock. Why: the deleverage needs the Adapter's proxy calls and LPVaultSwap's flash loan of the debt asset and conversion in one atomic call, and keying every inner call to the holder and a transient flag means no other call tree, including a liquidation, can reach those callbacks. Example: alice's `repayWithCollateral` holds the lock as the Adapter; a caller's `liquidate` sent in the same transaction afterwards finds the lock free and runs normally, while a token hook that tries `LPVaultSwap.liquidate` during the deleverage reverts `LockHeld(AaveAdapter)`. Checked by: TEST-222, TEST-239. (Source: Q-045, Q-148, Q-255)
+- `REQ-LOCK-027` No pause state, breaker, address freeze or breaker recording MUST be able to hold or block the Lock: a liquidation records no breaker state (seizure surges and route failures are monitoring alerts, `Q-399`), the RiskModule's `pokeBreakers` records breaches through `recordBreach` outside any Lock-holding call and neither acquires nor checks the lock, and the Lock itself reads no Avana state. (Source: Q-148, Q-241, Q-242, Q-399)
+- `REQ-LOCK-028` Every Collateralization and LPVault function that moves a position, a token or a ledger amount, other than the timelock-only `returnStray`, MUST be reachable only from a call tree opened by `AAVE_ADAPTER` or `LP_VAULT_SWAP`: user-facing actions that used to enter the custody contracts directly (fee collection and zero-credit release) MUST enter through the AaveAdapter, which acquires the lock and calls Collateralization, which calls the market's LPVault; the one exception is an LPVault's `returnStray`, which moves only a position with no custody entry, is callable only by the chain's timelock and reverts while the Lock is held ([2.2](02-lp-vault.md) `REQ-VAULT-165`), so it is not a Lock-gated entry point. Concretely, each such LPVault function requires `msg.sender == COLLATERALIZATION` and `LOCK.holder()` equal to `AAVE_ADAPTER` or `LP_VAULT_SWAP`; it never compares `msg.sender` with the Lock members, because no member calls an LPVault directly, and `returnStray` requires `msg.sender == TIMELOCK` and `LOCK.holder() == address(0)`. Deploying a CDP Spoke (`deployCdpSpoke`), listing a market (`listCollateralMarket`), enabling a debt reserve (`enableDebtReserve`) or adding an AMM protocol's LPVault MUST NOT require a new Lock or any change to it. Why: a Lock whose members included per-deployment custody contracts could never admit a Spoke or LPVault deployed later, so every flow on that Spoke would revert `NotMember`; with two fixed members and callee-side checks, the member set is independent of the deployment set. Example: Base runs a Slipstream LPVault at launch; a Uniswap v2 LPVault listed later reads the same Lock address as its immutable, its `unwind` accepts Collateralization while `holder()` is LPVaultSwap, and a liquidation on its market succeeds with no Lock change. Checked by: TEST-222. (Source: Q-148, Q-318)
+- `REQ-LOCK-029` The constructor MUST revert with `InvalidMembers()` if `aaveAdapter` or `lpVaultSwap` is `address(0)` or the two are equal, so the member set is always exactly two distinct, non-zero addresses (`INV-091`). It does not require code at either address: the Lock fixes the members' CREATE3-predicted proxy addresses, so it is valid whether it is deployed before or after the member proxies, and the deployment check compares each immutable with the deployed member. Example: `new Lock(adapterProxy, adapterProxy)` reverts `InvalidMembers()`, so a deployment typo that names the Adapter twice can never leave LPVaultSwap unable to acquire. (Source: Q-148, Q-318)
+- `REQ-LOCK-030` A member MUST call `release()` only as the last step of one of its outer entry points, after every inner call of that entry point has returned, and never from an inner callee (`burnSeized`, `deleverageRepay`, `deleverageRelease`, `deleverage`, the flash callback) or from a hook, callback or route reached during its own call tree; a member MUST NOT `delegatecall` code outside its own implementation. The Lock cannot tell which code inside a member calls it, so these are obligations on the AaveAdapter and LPVaultSwap. Why: a release in the middle of a call tree would free the lock while that tree still runs, and a call that reached the other member next would then acquire and re-enter. Example: if `deleverageRepay` released the Adapter's lock, a token hook during the following swap could start `LPVaultSwap.liquidate` on the same account; with release only at the end of `repayWithCollateral`, that hook reverts `LockHeld(AaveAdapter)`. (Source: Q-148, Q-255)
+
+## Failure Conditions
+
+| ID | Condition | Behavior (revert / pause / fallback) |
+|---|---|---|
+| `REQ-LOCK-019` | `acquire()` from a non-member | revert `NotMember(caller)` (Source: Q-148) |
+| `REQ-LOCK-020` | `acquire()` while held (reentry, nested entry point, second outer call in one call tree) | revert `LockHeld(holder)`; the whole outer call reverts and the lock state rolls back (Source: Q-148) |
+| `REQ-LOCK-021` | `release()` by an address that is not the holder | revert `NotHolder(caller)` (Source: Q-148) |
+| `REQ-LOCK-022` | Any function reached through `delegatecall` | revert `DelegateCallNotAllowed()` (Source: Q-148) |
+| `REQ-LOCK-023` | Inner call from the wrong caller or with the wrong holder | The callee reverts with its own error and no state changes: Collateralization's Adapter-side functions with `NotAdapter` or `LockNotHeld`, its seizure and pending functions with `NotLPVaultSwap` or `LockNotHeld`; an LPVault's custody functions with `NotCollateralization` or `LockNotHeld`; Adapter `burnSeized` with `NotLPVaultSwap`, and `deleverageRepay` or `deleverageRelease` with `NotLPVaultSwap` or `NoDeleverageSession` ([2.6](06-aave-adapter.md)); LPVaultSwap `deleverage` with `NotAdapter`; swap-route calls and PayoutEscrow `deposit` with `NotLPVaultSwap` or `NotLocked`; LPVaultSwap's `deleverage` flash callback with `InvalidFlashCallback` ([2.11](11-lpvaultswap.md)) (Source: Q-045, Q-148, Q-201, Q-224, Q-254, Q-255) |
+| `REQ-LOCK-024` | Membership changes after deployment, or a CDP Spoke, market, Hub or LPVault is added | Not possible and not needed: the two members are constructor immutables, `acquire()` makes no external call, so no registry, upgrade or failing call can add, remove or block a member; an upgrade of the Adapter or LPVaultSwap keeps its fixed proxy address and membership; new custody contracts are admitted by their callee-side checks (`REQ-LOCK-028`) (Source: Q-148, Q-226, Q-318) |
+| `REQ-LOCK-025` | A PositionProxy, the ProxyManager, Collateralization, an LPVault, a vault token, the IFlashSource implementation or any other non-member calls `acquire()` | revert `NotMember(caller)`; these contracts are reached only inside a member's call tree (Source: Q-148, Q-223, Q-318) |

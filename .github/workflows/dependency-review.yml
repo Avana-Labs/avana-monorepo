@@ -1,0 +1,26 @@
+name: dependency-review
+
+# Fails a pull request that adds an npm or pip dependency with a known vulnerability of moderate severity or above
+# (contracts/package-lock.json, spec/05-verification/package-lock.json and the requirements*.txt files). Soldeer
+# dependencies in contracts/soldeer.lock are pinned by checksum and reviewed by hand; GitHub's dependency graph does not
+# read that file.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: dependency review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: moderate

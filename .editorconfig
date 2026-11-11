@@ -1,0 +1,26 @@
+# Editor settings for every file in the monorepo. Solidity follows [fmt] in contracts/foundry.toml (4 spaces,
+# 120 columns), which `forge fmt --check` enforces in CI.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{sol,py}]
+indent_size = 4
+
+[*.sol]
+max_line_length = 120
+
+[*.spec]
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false

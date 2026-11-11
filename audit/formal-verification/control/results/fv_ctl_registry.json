@@ -1,0 +1,261 @@
+[
+ {
+  "id": "FV-CTL-79",
+  "title": "A market moves only None -> Registered -> Active -> Offboarding, Registered -> Cancelled and Cancelled -> Registered (relisting with its token and LPOracle); activation needs every check; Active never returns and Offboarding is final",
+  "status": "Verified",
+  "method": "exhaustive enumeration (100 cases)",
+  "verifies": [
+   "REQ-CONFIG-013",
+   "REQ-CONFIG-042",
+   "REQ-CONFIG-047",
+   "REQ-CONFIG-048",
+   "REQ-MREG-015",
+   "REQ-MREG-030",
+   "MKT-002"
+  ],
+  "targets": [
+   "T-75"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-80",
+  "title": "No MarketRegistry function opens in-kind settlement (Q-401): enableInKind, autoEnableInKind, disableInKind and the in-kind expiry and trigger do not exist, and every liquidation settles in the debt asset",
+  "status": "Verified",
+  "method": "exhaustive enumeration (10 cases)",
+  "verifies": [
+   "SPEC-GOV-010",
+   "REQ-MREG-016",
+   "REQ-MREG-029",
+   "REQ-ACCESS-057"
+  ],
+  "targets": [
+   "T-75"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-81",
+  "title": "From every reachable state with a cancelled registration, the pool's next listing batch (no new token) reuses the reserved marketId, leaves marketCount unchanged and can be activated; a different LPOracle reverts VaultTokenMismatch",
+  "status": "Verified under bounded model",
+  "method": "exhaustive enumeration (16 cases)",
+  "verifies": [
+   "REQ-CONFIG-048",
+   "REQ-CONFIG-007",
+   "REQ-CONFIG-032",
+   "REQ-MREG-030",
+   "MKT-051",
+   "REQ-VTOKEN-021",
+   "REQ-VTOKEN-038"
+  ],
+  "targets": [
+   "T-75"
+  ],
+  "detail": "(bounded: 2 pools, depth 7, 41 reachable states, 16 with a cancellation)",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-82",
+  "title": "Every pool (and so its vault-token, LPOracle and reserve keys) maps to at most one market that is not cancelled; a marketId belongs to one pool for life and equals the marketId its vault token carries",
+  "status": "Verified under bounded model",
+  "method": "exhaustive enumeration (41 cases)",
+  "verifies": [
+   "REQ-CONFIG-007",
+   "REQ-VTOKEN-021",
+   "REQ-MREG-030",
+   "MKT-051"
+  ],
+  "targets": [
+   "T-75"
+  ],
+  "detail": "(bounded: 2 pools, depth 7, 41 reachable states)",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-147",
+  "title": "activeMarketCount (Active or Offboarding markets of the Spoke) never decreases and grows by exactly one only on activateMarket; a cancelled or registered market is never counted (example: 3 Active + 1 Offboarding = 4)",
+  "status": "Verified under bounded model",
+  "method": "exhaustive enumeration (42 cases)",
+  "verifies": [
+   "REQ-MREG-031",
+   "SPEC-SET-006",
+   "REQ-BUDGET-024"
+  ],
+  "targets": [
+   "T-75",
+   "T-79"
+  ],
+  "detail": "(bounded: 2 pools, depth 7, 41 reachable states, one Spoke)",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-83",
+  "title": "getDebtReserveIds equals the approved set, without duplicates, after every approve/remove sequence",
+  "status": "Verified under bounded model",
+  "method": "exhaustive enumeration (62 cases)",
+  "verifies": [
+   "REQ-MREG-006",
+   "REQ-MREG-010",
+   "REQ-PROXY-034"
+  ],
+  "targets": [
+   "T-75"
+  ],
+  "detail": "(bounded: sequences up to 5 calls on one reserve)",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-84",
+  "title": "A conversion route slot always holds a previously approved route that avoids the market's pool and shares no dependency with the other slot (disable clears only the flag, restore admits only an approved address); a token's primary, alternate and standby share no feed, are defined and primary and standby legs are hourly, so the routes in force share no feed and the primary in force is hourly; replacedSlot is None at listing",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-ACCESS-047",
+   "REQ-ACCESS-048",
+   "REQ-CONFIG-060",
+   "REQ-CONFIG-061",
+   "REQ-CONFIG-062",
+   "REQ-ACCESS-127",
+   "REQ-CONFIG-021",
+   "REQ-CONFIG-027",
+   "REQ-MREG-027",
+   "REQ-MREG-028",
+   "REQ-ORACLE-054"
+  ],
+  "targets": [
+   "T-76"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.05,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-143",
+  "title": "useStandbyRoute succeeds only for the pause guardian or the timelock, onto the Primary or Alternate slot of a listed token with a non-empty standby, no active switch, every standby leg defined and, for Primary, hourly; otherwise it reverts with the REQ-MREG-028 error; a second switch always reverts",
+  "status": "Verified",
+  "method": "exhaustive enumeration (722 cases)",
+  "verifies": [
+   "REQ-MREG-028",
+   "REQ-ACCESS-159",
+   "REQ-CONFIG-021",
+   "MKT-033"
+  ],
+  "targets": [
+   "T-76"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-144",
+  "title": "priceRouteVersion rises by exactly one on every successful setPriceSource, useStandbyRoute, cancelStandbySwitch and restorePriceRoute and on nothing else; every change of the routes in force (activePriceRoutes) comes with an increment",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-MREG-028",
+   "REQ-CONFIG-027",
+   "MKT-033",
+   "REQ-CONFIG-003"
+  ],
+  "targets": [
+   "T-76"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-145",
+  "title": "useStandbyRoute: pause guardian (immediate) or timelock (short, DAO-only cancel); cancelStandbySwitch: only the Aave governance executor, immediate, never a timelock operation; restorePriceRoute: only APPLICATION_ADMIN, not short-eligible, so at the normal delay",
+  "status": "Verified",
+  "method": "exhaustive enumeration (15 cases)",
+  "verifies": [
+   "REQ-MREG-028",
+   "REQ-ACCESS-159",
+   "REQ-ACCESS-155",
+   "REQ-ACCESS-156",
+   "MKT-033"
+  ],
+  "targets": [
+   "T-76",
+   "T-54"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.0,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-146",
+  "title": "activePriceRoutes substitutes the standby into the replaced slot only: the other slot is its recorded route, None gives the recorded pair, and switch, cancel and restore never change the recorded primary, alternate or standby",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "REQ-MREG-028",
+   "REQ-MREG-027",
+   "REQ-CONFIG-027"
+  ],
+  "targets": [
+   "T-76"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.02,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-85",
+  "title": "Only a fixed member acquires a free Lock, only the holder releases it, nothing runs through delegatecall, and an inner call succeeds only while its named caller holds the Lock",
+  "status": "Verified",
+  "method": "Z3 (unsat of negation)",
+  "verifies": [
+   "INV-054",
+   "REQ-LOCK-019",
+   "REQ-LOCK-020",
+   "REQ-LOCK-021",
+   "REQ-LOCK-022",
+   "REQ-ROLE-021"
+  ],
+  "targets": [
+   "T-72"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_registry"
+ },
+ {
+  "id": "FV-CTL-85-W",
+  "title": "Witness: the Adapter acquires the free Lock",
+  "status": "Verified",
+  "method": "Z3 witness (sat)",
+  "verifies": [
+   "REQ-LOCK-019"
+  ],
+  "targets": [
+   "T-72"
+  ],
+  "detail": "",
+  "counterexample": null,
+  "seconds": 0.01,
+  "model": "fv_ctl_registry"
+ }
+]
