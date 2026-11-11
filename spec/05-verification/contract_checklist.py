@@ -15,7 +15,7 @@ Usage, from the repository root:
     spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py Lock [--out FILE] [--check]
 
 --check exits 1 when a REQ-/SPEC- ID of the page, a TEST row or a PROP row has no link from contracts/test or
-contracts/certora. It is the "every ID linked" step of the per-contract gate in spec/contracts-build-todo.md.
+contracts/certora. It is the "every ID linked" step of the per-contract gate.
 """
 from __future__ import annotations
 

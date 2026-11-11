@@ -11,8 +11,6 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 | `convex/` | [Design of the Convex import](convex/README.md): scheduled pull, checkpoints, duplicate protection, block-hash checks, atomic pages, reorg rebuild; the code lives in `apps/backend/convex/ingest/` |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys and the export wire types |
 
-The build checklist for the services is [spec/services-build-todo.md](../spec/services-build-todo.md).
-
 The indexer, the keeper and the monitoring service read addresses, start blocks and ABIs from the verified release manifest in [`packages/protocol`](../packages/), check the manifest's ABI hash at startup and refuse to run on a mismatch (`TEST-149`).
 
 ## Indexer (`indexer/`)

@@ -61,3 +61,7 @@ packages/
 
 # Empty placeholder folders (tools create them when they first write results)
 **/.gitkeep
+
+# Internal working to-do lists (kept locally, never committed)
+spec/contracts-build-todo.md
+spec/services-build-todo.md
