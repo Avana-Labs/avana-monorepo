@@ -18,4 +18,5 @@ Each release section lists, under **Contracts**, every changed contract with the
 
 ### Changed
 
+- CI: pull requests and pushes to `main` run the light set (format, lint, build, the `ci` and `gas` test profiles, coverage, traceability, the fast security tier). The invariant campaign, fork, differential, Halmos, SMTChecker and Certora jobs run on manual dispatch (`suite: full`), the slow security tier on manual dispatch (`suite: slow`) instead of nightly, and a `layer` dispatch runs only that layer's mutation gate.
 - The Hub, Spoke, oracle, price-feed and storage-read interfaces in `contracts/src/interfaces/external/aave/` are written by Avana and declare only the members Avana code, tests and CVL specs use, with selectors, struct layouts and event signatures equal to the pinned lending-market release.

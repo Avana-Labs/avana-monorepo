@@ -203,7 +203,7 @@ The two runners analyze everything under `src/` and every harness under `test/`,
 | Tier | Steps, in order | When |
 |---|---|---|
 | Fast, `script/security-fast.sh` | `fmt` (`forge fmt --check`), `size` (`script/check-file-size.sh`), `lint` (`forge lint -D notes`), `build` (warnings denied, `--sizes`), `cvl` (Certora methods check), `solhint`, `slither`, `upgradeability` (`slither-check-upgradeability`), `aderyn` | every push and pull request |
-| Slow, `script/security-slow.sh` | `build` (`src/`, `test/` and `script/` with build info, warnings denied), `echidna`, `medusa`, `halmos`, `hevm`, `mythril` | nightly at 02:30 UTC and before every release |
+| Slow, `script/security-slow.sh` | `build` (`src/`, `test/` and `script/` with build info, warnings denied), `echidna`, `medusa`, `halmos`, `hevm`, `mythril` | on demand (locally, or `workflow_dispatch` with `suite: slow`) and before every release |
 | Layer gate, `script/security-slow.sh mutate gambit necessist` | `mutate` (`slither-mutate` statement mutants), `gambit` (`script/security-gambit.sh`: Gambit expression mutants, each run against its Foundry tests with a per-mutant timeout; fails on any survivor not accepted in `security/gambit-triage.json`), `necessist`; targets in `security/mutation-layers.json` | at each layer gate |
 
 ```bash
@@ -397,7 +397,7 @@ Everything above runs offline once the tools are installed (the first `run_all.s
 
 ## Continuous integration
 
-[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs on every pull request and every push to `main` that touches `contracts/**`, `spec/05-verification/trace.py` or the workflow, with Foundry v1.9.0 and dependencies from `soldeer.lock`:
+[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs the light set (`build`, `test`, `coverage`, `traceability`, `fast-security`) on every pull request and every push to `main` that touches `contracts/**`, `spec/05-verification/trace.py` or the workflow, with Foundry v1.9.0 and dependencies from `soldeer.lock`. The long jobs (`invariant`, `fork`, `differential`, `halmos`, `smtchecker`, `certora`) run only on `workflow_dispatch` with `suite: full`, which also runs the light set:
 
 | Job | Runs |
 |---|---|
@@ -412,7 +412,7 @@ Everything above runs offline once the tools are installed (the first `run_all.s
 | `traceability` | `trace.py`; the `--strict` gap list goes to the job summary |
 | `fast-security` | `script/security-fast.sh`; uploads the Slither and Aderyn SARIF to code scanning and the reports as an artifact |
 
-The nightly schedule (02:30 UTC) and `workflow_dispatch` run `slow-security`, one job per tool with the nightly budgets (`ECHIDNA_TEST_LIMIT=1000000`, `ECHIDNA_TIMEOUT=1800`, `MEDUSA_TIMEOUT=1800`, `HEVM_SMT_TIMEOUT=600`, `HALMOS_LOOP=16`): Echidna and Medusa 300 minutes each, with their corpora restored from earlier nights, Halmos and Mythril 240, hevm 180. Each uploads its reports. `workflow_dispatch` with the `layer` input (for example `2.1`) also runs `layer-gate`, one job each for `mutate`, `gambit` and `necessist` over that layer's contracts (360 minutes each), uploading `out-security/mutation`, `out-security/gambit` and `out-security/necessist`.
+`workflow_dispatch` with `suite: slow` runs only `slow-security`, one job per tool with the slow-tier budgets (`ECHIDNA_TEST_LIMIT=1000000`, `ECHIDNA_TIMEOUT=1800`, `MEDUSA_TIMEOUT=1800`, `HEVM_SMT_TIMEOUT=600`, `HALMOS_LOOP=16`): Echidna and Medusa 300 minutes each, with their corpora restored from earlier runs, Halmos and Mythril 240, hevm 180. Each uploads its reports. There is no schedule. `workflow_dispatch` with the `layer` input (for example `2.1`) runs only `layer-gate`, one job each for `mutate`, `gambit` and `necessist` over that layer's contracts (360 minutes each), uploading `out-security/mutation`, `out-security/gambit` and `out-security/necessist`.
 
 [`.github/workflows/spec.yml`](.github/workflows/spec.yml) runs `spec/05-verification/run_all.sh` on every change to `spec/`, `contracts/src/`, `contracts/test/` or `contracts/certora/`. [`.github/workflows/dependency-review.yml`](.github/workflows/dependency-review.yml) fails a pull request that adds an npm or pip dependency with a known vulnerability of moderate severity or above, and [`.github/workflows/protocol.yml`](.github/workflows/protocol.yml) fails when the address libraries in `packages/protocol/sol/` differ from `deployments/verified/`. Every action is pinned by commit SHA, checkouts keep no credentials, and Dependency versions change only by a reviewed pull request; Dependabot is off.
 
