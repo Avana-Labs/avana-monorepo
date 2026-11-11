@@ -523,10 +523,10 @@ Folders for the keeper and off-chain rows (`TEST-140`–`TEST-149`, `TEST-178`) 
 | TEST-256 | static-analysis | `contracts/` (CI) | `script/security-fast.sh` (`aderyn`) | — (CI step) | Q-278 |
 | TEST-257 | static-analysis | `contracts/` (CI) | `script/security-fast.sh` (`size`); `forge build --sizes` | — (CI step) | Q-240, Q-278 |
 | TEST-258 | fuzz | `invariant/echidna/` | `*Properties` harnesses (`property_` functions and assertion entry points) | — (`script/security-slow.sh echidna`) | Q-278 |
-| TEST-259 | fuzz | `invariant/echidna/`, `invariant/medusa/` | same harnesses plus Medusa-only harnesses (`medusa.json`) | — (Medusa, nightly and release) | Q-278 |
+| TEST-259 | fuzz | `invariant/echidna/`, `invariant/medusa/` | same harnesses plus Medusa-only harnesses (`medusa.json`) | — (Medusa, on demand and release) | Q-278 |
 | TEST-260 | formal | `halmos/`, `symbolic/`, `invariant/echidna/` | `check_PROP_NNN_*`, `prove_*`, harness assertion entry points | — (`script/security-slow.sh halmos hevm`) | Q-041, Q-278 |
-| TEST-261 | static-analysis | `contracts/` (CI) | `script/security-mythril.sh` | — (`script/security-mythril.sh`, nightly and release) | Q-278 |
-| TEST-262 | formal | `contracts/` (CI) | `script/security-slow.sh hevm` on `src/` runtime code | — (nightly and release) | Q-278 |
+| TEST-261 | static-analysis | `contracts/` (CI) | `script/security-mythril.sh` | — (`script/security-mythril.sh`, on demand and release) | Q-278 |
+| TEST-262 | formal | `contracts/` (CI) | `script/security-slow.sh hevm` on `src/` runtime code | — (on demand and release) | Q-278 |
 | TEST-263 | environment | `contracts/` (CI) | CI workflow gates; `security/*-triage.json` | — (gating rule) | Q-228, Q-278 |
 | TEST-264 | fork | `fork/` | `UniswapV3.fork.t.sol` | `test_TEST_264_receiveValidatesPoolAndExactRange`, `test_TEST_264_signedTickAlignment`, `test_TEST_264_compositionFlooredMinusOneAndClamped`, `test_TEST_264_unwindExactUnitsAndMinimums`, `test_TEST_264_feeCollectionNeverTakesPrincipal`, `test_TEST_264_riskMetadataRangeStatusAndShare` | Q-359, Q-366, INV-002, INV-005, INV-017, INV-078 |
 | TEST-265 | fork | `fork/` | `Slipstream.fork.t.sol` | `test_TEST_265_sharedAssertionsAndDynamicFee`, `test_TEST_265_poolLookupByTickSpacing`, `test_TEST_265_positionsFeeFieldReadAsSpacing`, `test_TEST_265_slot0SixFieldsReentrancyFlag`, `test_TEST_265_generationPairedFactoryOnly`, `test_TEST_265_gaugeStakedRefusedNeverStaked` | Q-359, Q-366, INV-002, INV-005, INV-017, INV-078 |
@@ -689,7 +689,7 @@ Run from `contracts/` with Foundry 1.9.0 (`foundryup --install 1.9.0`; CI pins t
 | Halmos (`PROP-010`, `011`, `015`, `017`–`019`, `023`–`026`, `028`, `030`, `042`, `048`, `059`, `062`, `067`, `069`) | `.venv/bin/halmos --match-contract 'HalmosTest$' --match-test '^check_' --loop 8` |
 | SMTChecker (`PROP-043`, `PROP-044`) | `FOUNDRY_PROFILE=smt forge build` |
 | Fast security tier (`TEST-253`–`TEST-257`): format, lint, warnings-denied build, solhint, Slither and its upgradeability check, Aderyn, size; gates every merge | `script/security-fast.sh` (one step: `script/security-fast.sh slither`) |
-| Slow security tier (`TEST-258`–`TEST-262`): Echidna and Medusa over the `*Properties` harnesses, Halmos and hevm, Mythril; nightly and before every release | `script/security-slow.sh` (one tool after a build: `script/security-slow.sh build echidna`) |
+| Slow security tier (`TEST-258`–`TEST-262`): Echidna and Medusa over the `*Properties` harnesses, Halmos and hevm, Mythril; on demand and before every release | `script/security-slow.sh` (one tool after a build: `script/security-slow.sh build echidna`) |
 | Coverage (no fork, Halmos or invariant suites; via-IR off) | `FOUNDRY_PROFILE=coverage forge coverage --report lcov` |
 | Test inventory for the `TEST-005` and `TEST-008` CI checks | `forge test --list --json` and `FOUNDRY_PROFILE=fork forge test --list --json` |
 | Traceability (`Q-173`) | `python3 ../spec/05-verification/trace.py --strict` |

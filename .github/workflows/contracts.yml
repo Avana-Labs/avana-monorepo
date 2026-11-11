@@ -1,7 +1,9 @@
 name: contracts
 
-# Foundry workspace in contracts/: format, build, tests by profile, Halmos, SMTChecker, Certora and the two security
-# tiers (fast-security on every push and pull request, slow-security nightly and on demand).
+# Foundry workspace in contracts/. Every push and pull request runs the light set: format, lint and build, the ci and
+# gas test profiles, branch coverage, traceability and the fast security tier. The long jobs run only on demand
+# (workflow_dispatch): suite `full` adds the invariant campaign, fork, differential, Halmos, SMTChecker and Certora;
+# suite `slow` runs the slow security tier; a `layer` input runs only that layer's mutation gate.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -23,20 +25,22 @@ on:
       - "audit/**/*.sol"
       - "spec/05-verification/trace.py"
       - ".github/workflows/contracts.yml"
-  schedule:
-    # Nightly slow security tier (02:30 UTC).
-    - cron: "30 2 * * *"
   workflow_dispatch:
     inputs:
+      suite:
+        description: "full: the light set plus invariant, fork, differential, Halmos, SMTChecker and Certora; slow: the slow security tier only"
+        type: choice
+        options: [full, slow]
+        default: full
       layer:
-        description: "Layer gate (2.1 ... 2.6): also run slither-mutate, Gambit and Necessist over that layer's contracts"
+        description: "Layer gate (2.1 ... 2.6): run only slither-mutate, Gambit and Necessist over that layer's contracts (suite is ignored)"
         required: false
         default: ""
 
 concurrency:
-  # The nightly run and push runs on main never cancel each other, and each manually dispatched layer gate has its
-  # own group, so gates for different layers run side by side.
-  group: contracts-${{ github.ref }}-${{ github.event_name }}-${{ inputs.layer || 'all' }}
+  # Each manually dispatched suite and layer gate has its own group, so gates for different layers run side by side;
+  # a newer push or pull-request run cancels the older one on the same ref.
+  group: contracts-${{ github.ref }}-${{ github.event_name }}-${{ inputs.layer || inputs.suite || 'all' }}
   cancel-in-progress: true
 
 permissions:
@@ -52,7 +56,7 @@ defaults:
 jobs:
   build:
     name: fmt, lint, build
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -141,7 +145,7 @@ jobs:
 
   test:
     name: tests (ci profile)
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -188,7 +192,7 @@ jobs:
 
   invariant:
     name: deep invariant campaign
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -218,12 +222,8 @@ jobs:
 
   fork:
     name: Ethereum and Base fork tests
-    # GitHub gives no repository secrets to pull requests opened from another repository or by Dependabot, so those
-    # skip this job instead of failing it; pushes to main, other pull requests and manual runs always run it.
-    if: >-
-      github.event_name != 'schedule' &&
-      (github.event_name != 'pull_request' ||
-        (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'))
+    # Manual runs only (suite `full`): it needs the RPC_MAINNET and RPC_BASE secrets.
+    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -274,7 +274,7 @@ jobs:
 
   differential:
     name: FFI differential (LPOracle vs mpmath)
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -315,7 +315,7 @@ jobs:
 
   halmos:
     name: Halmos
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -362,7 +362,7 @@ jobs:
 
   smtchecker:
     name: SMTChecker
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -397,7 +397,7 @@ jobs:
 
   certora:
     name: Certora
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 240
@@ -464,7 +464,7 @@ jobs:
 
   traceability:
     name: traceability
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -492,7 +492,7 @@ jobs:
 
   coverage:
     name: branch coverage (per-file minimums)
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -530,7 +530,7 @@ jobs:
 
   fast-security:
     name: security (fast tier)
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -628,7 +628,7 @@ jobs:
 
   slow-security:
     name: security (slow tier, ${{ matrix.tool }})
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'slow'
     runs-on: ubuntu-24.04
     # One leg per tool, so each has its own timeout and a stuck tool never starves the others.
     timeout-minutes: ${{ matrix.timeout }}
@@ -652,7 +652,7 @@ jobs:
             binaries: ""
             timeout: 240
     env:
-      # Nightly budgets: per harness and mode for the fuzzers, per query for hevm. The fuzz seed is fresh every night.
+      # Slow-tier budgets: per harness and mode for the fuzzers, per query for hevm. The fuzz seed is fresh every run.
       ECHIDNA_TEST_LIMIT: "1000000"
       ECHIDNA_TIMEOUT: "1800"
       MEDUSA_TIMEOUT: "1800"
@@ -693,7 +693,7 @@ jobs:
           forge soldeer install
           script/install-security-tools.sh --binaries --python
 
-      - name: Restore the fuzzing corpus of earlier nightly runs
+      - name: Restore the fuzzing corpus of earlier slow-tier runs
         if: matrix.tool == 'echidna' || matrix.tool == 'medusa'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
