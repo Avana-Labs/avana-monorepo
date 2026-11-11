@@ -38,6 +38,8 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
     uint256 internal constant PRICE_USD_BAND = 1 << 3;
     /// @dev LPOracle token reason bits 4 SECOND_SOURCE_DISAGREE and 5 SECOND_SOURCE_UNAVAILABLE (`TokenPriceView`).
     uint32 internal constant TOKEN_SECOND_SOURCE_BITS = (1 << 4) | (1 << 5);
+    /// @dev LPOracle market reason bit 16: some token unconfirmed, evaluated while Live or Drifting (REQ-ORACLE-100).
+    uint256 internal constant PRICE_SECOND_SOURCE_BIT = 1 << 16;
     /// @dev A pool-share cap of 10,000 bps is no limit (SPEC-CAP-005, Q-403).
     uint256 internal constant NO_POOL_SHARE_CAP = 10_000;
 

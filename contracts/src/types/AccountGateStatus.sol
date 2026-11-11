@@ -10,7 +10,12 @@ import {PauseState} from "./PauseState.sol";
 
 /// @notice Every borrow-side gate outcome for one account on one CDP Spoke, returned without reverting.
 /// @dev Evaluated by `RiskModule.getAccountGateStatus` with the same code paths as the pre-checks, on stored LPOracle
-/// state. A reserve ID field holds `type(uint256).max` when no reserve fails that check.
+/// state. A reserve ID field holds `type(uint256).max` (no reserve) when no reserve fails that check, because reserve 0
+/// is a valid identifier. `borrowAllowed` and `withdrawWithDebtAllowed` are the RiskModule's own checks; the pause state
+/// of the market's Hub is reported in `pauseState` and `pauseReason` only and never changes another field (PROP-066).
+/// When the status cannot be computed, `statusUnavailable` is true, every reserve ID field is `type(uint256).max`, both
+/// "would pass" flags are false and every other field is zero, false or empty; the app then shows "Risk status
+/// unavailable. Refresh and try again." and reads no other field.
 /// @custom:spec REQ-ADAPTER-038, REQ-RISK-060, REQ-RISK-065, REQ-RISK-068, REQ-RISK-071, Q-241, Q-248, Q-252, Q-253
 struct AccountGateStatus {
     // True when `spoke` is an approved Avana CDP Spoke.
@@ -41,9 +46,10 @@ struct AccountGateStatus {
     uint256 healthFactor;
     // hardHealthFloor(marketId) from the ParameterStore, WAD; 0 when off (the default, Q-398).
     uint256 hardHealthFloor;
-    // True when a borrow would pass the pause gate and preBorrowCheck now.
+    // True when every check of preBorrowCheck that does not depend on the reserve borrowed passes now; no debt breaker,
+    // credit line or coverage is read, because preBorrowCheck reads them for the borrowed reserve only (REQ-ADAPTER-038).
     bool borrowAllowed;
-    // True when a withdraw-with-debt would pass the pause gate and preWithdrawCheck now for every collateral reserve.
+    // True when preWithdrawCheck would pass now, every held debt reserve's debt breaker included.
     bool withdrawWithDebtAllowed;
     // MarketRegistry pause reason (None unless Paused).
     PauseReason pauseReason;
@@ -53,4 +59,6 @@ struct AccountGateStatus {
     uint256 breakerDebtReserveId;
     // Bitmap of tripped BreakerReasons of that debt reserve.
     uint32 debtBreakerReasons;
+    // True when the status could not be computed (the fallback described above).
+    bool statusUnavailable;
 }

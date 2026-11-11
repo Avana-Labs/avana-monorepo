@@ -10786,11 +10786,14 @@
     ]
   },
   "REQ-ADAPTER-015": {
-    "hash": "5b423210483d082e",
+    "hash": "e717108e91ffa691",
     "checks": [
       "FV-CTL-43",
       "IRiskModuleChecks",
-      "IRiskModuleErrors"
+      "IRiskModuleErrors",
+      "RiskModuleBorrowLogic",
+      "TEST-028",
+      "TEST-276"
     ]
   },
   "REQ-ADAPTER-016": {
@@ -10981,7 +10984,7 @@
     ]
   },
   "REQ-ADAPTER-038": {
-    "hash": "edf8eb7892a1e7f0",
+    "hash": "b151a4333e9bb3e5",
     "checks": [
       "AccountGateStatus",
       "IRiskModuleBorrowLogic",
@@ -10997,7 +11000,9 @@
       "TEST-155",
       "TEST-201",
       "TEST-228",
-      "TEST-236"
+      "TEST-236",
+      "TEST-273",
+      "TEST-276"
     ]
   },
   "REQ-ADAPTER-039": {
@@ -11163,11 +11168,16 @@
     ]
   },
   "REQ-ADAPTER-063": {
-    "hash": "53859afbfa86cf0b",
+    "hash": "d8fa6c5ba27e04ae",
     "checks": [
       "DriftReason",
       "IAaveV4ExtSload",
-      "IRiskModuleChecks"
+      "IRiskModuleChecks",
+      "IRiskModuleDriftLogic",
+      "PROP-078",
+      "RiskModuleDriftLogic",
+      "TEST-182",
+      "TEST-268"
     ]
   },
   "REQ-ADAPTER-064": {
@@ -19046,12 +19056,15 @@
     ]
   },
   "REQ-RISK-082": {
-    "hash": "e034f43edd9acf11",
+    "hash": "07e80695a264de77",
     "checks": [
       "FV-CTL-160",
+      "IMarketRegistryCreditLines",
       "MATH-CAP-10",
+      "MarketRegistryViews",
       "RiskModule",
       "RiskModuleBorrowLogic",
+      "TEST-028",
       "TEST-273"
     ]
   },
@@ -19080,9 +19093,12 @@
     "checks": []
   },
   "REQ-RISK-088": {
-    "hash": "98567f0048168f56",
+    "hash": "4d9da1b89a92fa23",
     "checks": [
+      "IMarketRegistryApprovals",
       "IRiskModuleDriftLogic",
+      "MarketRegistryViews",
+      "PROP-078",
       "RiskModuleDriftLogic",
       "TEST-033",
       "TEST-181",

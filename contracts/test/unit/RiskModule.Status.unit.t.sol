@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
+import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
@@ -254,6 +255,51 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         _assertBlocked(s);
     }
 
+    // TEST-228 verifies: REQ-ADAPTER-038, REQ-RISK-065, REQ-RISK-073
+    function test_TEST_228_borrowAllowedIgnoresDebtBreakers() public {
+        // The account owes GHO and USDC; both debt breakers are tripped.
+        rSpoke.setStatus(address(proxy), GHO_RESERVE, false, true);
+        rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
+        vm.startPrank(emergencyGuardian);
+        registry.tripDebtBreaker(address(spoke), USDC_RESERVE);
+        registry.tripDebtBreaker(address(spoke), GHO_RESERVE);
+        vm.stopPrank();
+        AccountGateStatus memory s = _status();
+        // The status reports the first tripped reserve in reserve order, and the borrow flag ignores every debt
+        // breaker: which reserve's breaker applies depends on the reserve borrowed, which the status does not know.
+        uint256 first = GHO_RESERVE < USDC_RESERVE ? GHO_RESERVE : USDC_RESERVE;
+        assertEq(s.breakerDebtReserveId, first);
+        assertEq(s.debtBreakerReasons, BreakerReasons.MANUAL);
+        assertTrue(s.borrowAllowed);
+        // Withdraw-with-debt applies the breaker of every held reserve.
+        assertFalse(s.withdrawWithDebtAllowed);
+        // The pre-checks enforce them: a borrow of either reserve, and a withdraw-with-debt, revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), USDC_RESERVE, BreakerReasons.MANUAL
+            )
+        );
+        riskModule.preBorrowCheck(address(proxy), USDC_RESERVE, 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), GHO_RESERVE, BreakerReasons.MANUAL
+            )
+        );
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), first, BreakerReasons.MANUAL
+            )
+        );
+        riskModule.preWithdrawCheck(address(proxy));
+        // A held reserve's breaker never blocks a borrow of another reserve.
+        vm.prank(emergencyGuardian);
+        registry.resetDebtBreaker(address(spoke), GHO_RESERVE);
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
+        assertTrue(_status().borrowAllowed);
+        assertEq(_status().breakerDebtReserveId, USDC_RESERVE);
+    }
+
     // TEST-155 verifies: REQ-ADAPTER-038, REQ-ADAPTER-019, REQ-ADAPTER-061, REQ-ADAPTER-021
     function test_TEST_155_statusAaveFlagsAndHubShares() public {
         _vtConfig(true, false, false);
@@ -285,25 +331,27 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         _assertBlocked(s);
     }
 
-    // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-038
+    // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-038, REQ-ADAPTER-018
     function test_TEST_028_statusPauseStateAndFloor() public {
         store.setHardFloor(mid, 1.25e18);
         assertEq(_status().hardHealthFloor, 1.25e18);
-        // Frozen stops borrowing only.
+        // The pause state is reported in its own two fields; the RiskModule's own checks do not read it, so both
+        // "would pass" flags stay true (the Adapter applies the pause gate before calling the RiskModule).
         vm.prank(emergencyGuardian);
         registry.freeze(address(hub));
         AccountGateStatus memory s = _status();
         assertEq(uint8(s.pauseState), uint8(PauseState.Frozen));
         assertEq(uint8(s.pauseReason), uint8(PauseReason.None));
-        assertFalse(s.borrowAllowed);
+        assertTrue(s.borrowAllowed);
         assertTrue(s.withdrawWithDebtAllowed);
-        // Paused stops both, with its reason.
+        assertFalse(s.statusUnavailable);
         vm.prank(emergencyGuardian);
         registry.pause(address(hub), PauseReason.MintPathSuspect);
         s = _status();
         assertEq(uint8(s.pauseState), uint8(PauseState.Paused));
         assertEq(uint8(s.pauseReason), uint8(PauseReason.MintPathSuspect));
-        _assertBlocked(s);
+        assertTrue(s.borrowAllowed);
+        assertTrue(s.withdrawWithDebtAllowed);
     }
 
     // TEST-236 verifies: REQ-ADAPTER-038, SPEC-CF-005, REQ-RISK-068
@@ -326,9 +374,10 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         PositionProxy foreign = new PositionProxy(address(adapter), wallet, address(other), mid);
         AccountGateStatus memory s = riskModule.getAccountGateStatus(address(foreign));
         assertFalse(s.spokeApproved);
-        // The market record names another Spoke, so the market fails its reserve identity on this one.
-        assertEq(s.driftMarketId, mid);
-        assertEq(uint8(s.driftReason), uint8(DriftReason.ReserveIdentity));
+        assertFalse(s.statusUnavailable);
+        // The MarketRegistry has no implementation record for an unknown Spoke, so the Spoke-wide check fails first.
+        assertEq(s.driftMarketId, 0);
+        assertEq(uint8(s.driftReason), uint8(DriftReason.SpokeImplementation));
         assertEq(s.markets[0].marketId, mid);
         _assertNoDebtReason(s);
         _assertBlocked(s);
@@ -336,10 +385,106 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
 
     // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-060
     function test_TEST_028_statusNeverReverts() public {
-        AccountGateStatus memory s = riskModule.getAccountGateStatus(makeAddr("notAProxy"));
+        // An address that is not a proxy: the body reverts on `SPOKE()`.
+        _assertUnavailable(riskModule.getAccountGateStatus(makeAddr("notAProxy")));
+        // A proxy whose market record cannot be read.
+        PositionProxy orphan = new PositionProxy(address(adapter), wallet, address(spoke), 999);
+        _assertUnavailable(riskModule.getAccountGateStatus(address(orphan)));
+        // The account's LPOracle report reverts: the body reverts, the view does not.
+        vm.mockCallRevert(address(oracle), abi.encodeWithSignature("getPriceState()"), "oracle");
+        _assertUnavailable(_status());
+        vm.clearMockedCalls();
+        assertFalse(_status().statusUnavailable);
+    }
+
+    // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-060
+    function test_TEST_028_statusUnavailableWhenThePauseReadFails() public {
+        // The body reads no pause state, so it completes; the separate pause read reverts and the whole status is the
+        // unavailable one rather than a status with a guessed pause state.
+        vm.mockCallRevert(address(registry), abi.encodeWithSignature("pauseState(address)", address(hub)), "pause");
+        _assertUnavailable(_status());
+        vm.clearMockedCalls();
+        vm.mockCallRevert(address(registry), abi.encodeWithSignature("pauseReason(address)", address(hub)), "reason");
+        _assertUnavailable(_status());
+    }
+
+    // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-060
+    function test_TEST_028_statusUnavailableOnABrokenDebtOracle() public {
+        rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
+        assertTrue(_status().borrowAllowed);
+        vm.mockCallRevert(address(usdcOracle), abi.encodeWithSignature("getPriceState()"), "debt");
+        _assertUnavailable(_status());
+    }
+
+    // TEST-028 verifies: REQ-ADAPTER-038, REQ-ADAPTER-018
+    function test_TEST_028_pauseChangesOnlyThePauseFields() public {
+        rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
+        bytes32 base = _withoutPause(_status());
+        vm.startPrank(emergencyGuardian);
+        registry.freeze(address(hub));
+        assertEq(_withoutPause(_status()), base);
+        registry.pause(address(hub), PauseReason.General);
+        assertEq(_withoutPause(_status()), base);
+        registry.pause(address(hub), PauseReason.MintPathSuspect);
+        assertEq(_withoutPause(_status()), base);
+        vm.stopPrank();
+        // The same holds for a blocked account: the pause never turns a refused check into an allowed one or back.
+        swap.setKeepers(0);
+        bytes32 blocked = _withoutPause(_status());
+        assertTrue(blocked != base);
+        vm.prank(emergencyGuardian);
+        registry.unpause(address(hub));
+        assertEq(_withoutPause(_status()), blocked);
+    }
+
+    // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-060
+    function testFuzz_TEST_028_pauseChangesOnlyThePauseFields(
+        uint8 state,
+        bool mintPath
+    ) public {
+        bytes32 base = _withoutPause(_status());
+        state = uint8(bound(state, 0, 2));
+        vm.startPrank(emergencyGuardian);
+        if (state == 1) registry.freeze(address(hub));
+        if (state == 2) registry.pause(address(hub), mintPath ? PauseReason.MintPathSuspect : PauseReason.General);
+        vm.stopPrank();
+        AccountGateStatus memory s = _status();
+        assertEq(uint8(s.pauseState), state);
+        assertEq(_withoutPause(s), base);
+    }
+
+    /// @dev Hash of the status with its two pause fields cleared.
+    function _withoutPause(
+        AccountGateStatus memory s
+    ) internal pure returns (bytes32) {
+        s.pauseState = PauseState.None;
+        s.pauseReason = PauseReason.None;
+        return keccak256(abi.encode(s));
+    }
+
+    /// @dev Every field of the unavailable status (REQ-ADAPTER-038).
+    function _assertUnavailable(
+        AccountGateStatus memory s
+    ) internal pure {
+        assertTrue(s.statusUnavailable);
         assertFalse(s.spokeApproved);
         assertEq(s.markets.length, 0);
         assertEq(s.unknownCollateralReserveId, NONE);
-        _assertBlocked(s);
+        assertEq(s.unapprovedDebtReserveId, NONE);
+        assertEq(s.pausedDebtReserveId, NONE);
+        assertEq(s.staleDebtReserveId, NONE);
+        assertEq(s.haltedDebtReserveId, NONE);
+        assertEq(s.breakerDebtReserveId, NONE);
+        assertEq(s.debtBreakerReasons, 0);
+        assertEq(s.driftMarketId, 0);
+        assertEq(uint8(s.driftReason), uint8(DriftReason.None));
+        assertFalse(s.noApprovedKeeper);
+        assertEq(uint8(s.pauseState), uint8(PauseState.None));
+        assertEq(uint8(s.pauseReason), uint8(PauseReason.None));
+        assertEq(s.healthFactor, 0);
+        assertEq(s.healthFactorExcludingRescue, 0);
+        assertEq(s.hardHealthFloor, 0);
+        assertFalse(s.borrowAllowed);
+        assertFalse(s.withdrawWithDebtAllowed);
     }
 }

@@ -215,7 +215,7 @@ The other counterexamples are deliberate: wrong-reading checks (MATH-AR-17a, 22,
 | 2026-11-10 (no minimum debt, `Q-381`: `MATH-CH-01` and `MATH-CAP-09` rewritten from the keeper break-even to the `SPEC-CHAIN-001` gas units model, and `MATH-CAP-09` adds the `SPEC-CAP-009` idle test; scripts renamed `ch01_gas_model.py` and `ar11_record_gas_credit_lines.py`) | `../../.venv/bin/python ch01_gas_model.py`, `ar11_record_gas_credit_lines.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ch01 2, ar11 10 | 0 | ch01 7 figures, ar11 4 | 0 | 0 | 0 for both |
 | 2026-11-10 (parameter decisions `Q-396`, `Q-398`, `Q-399`, `Q-400`: `ar02` gate at HF 1.00 with an optional hard floor and the Lens recommended borrow at HF 1.10; `ar09` price drop, seizure surge and route failures as alerts, pool share 10%, deficit 10,000 GHO, 30-minute reopening; `ar10` keeperFloor 1; `ar11` `MATH-CAP-09e–h` rewritten from the removed idle test to the Lens capacity) | same | Python 3.9.6, z3-solver 4.13.0 | 120 s per query; integer bounds per table | 139 | 12 (all deliberate) | 52 | 0 | 0 | 0 for every script |
 
-Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 24/0/8/0 (includes MATH-AR-47f); ar09 12/2/6/0; ar10 14/1/6/0; ar11 10/0/4/0; ch01 2/0/7/0.
+Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 24/0/8/0 (includes MATH-AR-47f); ar09 12/2/6/0; ar10 14/1/6/0; ar11 13/0/5/0; ch01 2/0/7/0.
 
 ## Assumptions common to all models
 

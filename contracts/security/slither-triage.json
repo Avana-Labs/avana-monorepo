@@ -2076,6 +2076,15 @@
       "reason": "STATICCALL of the candidate LPVault's capabilities() in registerIntegration; the answer is used only if the call succeeded with exactly 256 bytes and a pool keying and shape kind inside their enums (shape kind not None); anything else reverts InvalidIntegration, so it fails closed (REQ-VTOKEN-049). Covered by TEST-024 (registerIntegrationRefusesForeignCore: reverting, short and out-of-range answers).",
       "approval": "pending (Josue)",
       "review": "Pattern: view-only calls before writes (length-checked STATICCALL that fails closed). Re-labelled by the lead: Josue decided (2026-11-11) that length-checked STATICCALLs get no blanket pattern; each call site is reviewed for target and selector, failure direction, decoding and range checks, return-data copying, and failure-response tests."
+    },
+    {
+      "fingerprint": "be2406ba1457c863",
+      "check": "unused-return",
+      "file": "src/policy/risk-module/RiskModuleDriftLogic.sol",
+      "function": "RiskModuleDriftLogic._spokeWide(address,RiskModuleDriftLogic.SpokeCtx)",
+      "reason": "spokeImplementationStatus returns (implementation, codeHash, current); the drift check needs only `current`, which the MarketRegistry computes from the same implementation address and code hash (REQ-ADAPTER-063, REQ-RISK-088); the address and hash are for monitoring. Covered by TEST-182 (implementationBoundByCodeHash, unreadableImplementationIsDrift, realSpokeUpgradeIsDrift) and PROP-078 (check_PROP_078_implementationNotCurrentIsDrift).",
+      "approval": "approved by pattern",
+      "review": "M"
     }
   ]
 }

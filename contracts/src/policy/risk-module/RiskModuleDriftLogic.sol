@@ -29,9 +29,6 @@ import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 // View calls in loops over the Spoke's reserves, debt reserves and markets, all bounded by timelock listings.
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
-    /// @dev EIP-1967 implementation slot of the Spoke proxy (REQ-ADAPTER-063).
-    bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
-
     /// @dev Spoke-wide values the per-market checks reuse.
     struct SpokeCtx {
         address spoke;
@@ -120,17 +117,20 @@ contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
         cfBps = RiskModuleMath.lpCollateralFactor(minCf, _store().getMarketParams(marketId).poolRiskFactor);
     }
 
-    /// @dev Spoke-wide reasons, in order: implementation, oracle, liquidation target, borrowable set, then each enabled
-    /// debt reserve's identity, price source and reinvestment controller. Fills `s` for the per-market checks.
+    /// @dev Spoke-wide reasons, in order: implementation (address and code hash, `spokeImplementationStatus`), oracle,
+    /// liquidation target, borrowable set, then each enabled debt reserve's identity, price source and reinvestment
+    /// controller. Fills `s` for the per-market checks.
     function _spokeWide(
         address spoke,
         SpokeCtx memory s
     ) internal view returns (DriftReason) {
+        // The implementation behind the Spoke proxy must be the one recorded at approval, by address and code hash; an
+        // unreadable slot or an unknown Spoke reads as not current (REQ-ADAPTER-063, REQ-RISK-088).
+        // forge-lint: disable-next-line(unused-return)
+        (,, bool current) = _registry().spokeImplementationStatus(spoke);
+        if (!current) return DriftReason.SpokeImplementation;
         SpokeDef memory sd = _registry().getSpoke(spoke);
         IAaveV4Spoke sp = IAaveV4Spoke(spoke);
-        if (address(uint160(uint256(sp.extSload(IMPLEMENTATION_SLOT)))) != sd.implementation) {
-            return DriftReason.SpokeImplementation;
-        }
         s.spoke = spoke;
         s.hub = sd.hub;
         s.oracle = sp.ORACLE();

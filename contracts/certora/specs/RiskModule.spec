@@ -43,6 +43,8 @@ import "setup/AaveModel.spec";
 import "setup/PriceStateModel.spec";
 import "setup/RegistryModel.spec";
 
+using RiskModuleStatusLogic as statusLogic;
+
 methods {
     function preBorrowCheck(address, uint256, uint256) external;
     function preWithdrawCheck(address) external;
@@ -135,6 +137,13 @@ methods {
     function _.marketsOfSpoke(address) external => NONDET;
     function _.crossHubLinesEnabled() external => NONDET;
     function _.creditLine(address, address) external => NONDET;
+    function _.creditLineCoverage(address, address) external => NONDET;
+    function _.spokeImplementationStatus(address) external => NONDET;
+
+    // The status view's two logic calls, as the RiskModule makes them (PROP-066 second rule). A summary applies to the
+    // RiskModule's call only; `statusBodyReadsNoPauseAndChangesNoState` calls the real body directly.
+    function statusLogic.getAccountGateStatus(address p) external returns (AccountGateStatus) => recordStatus(p);
+    function statusLogic.pauseOf(address p) external returns (PauseState, PauseReason) => recordPause(p);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -379,7 +388,7 @@ rule preBorrowCheckIsReachable(address proxy, uint256 debtReserveId, uint256 amo
 // No RiskModule check reads any Hub's pause state, its reason or the address freeze (they are read by the Adapter,
 // ProxyManager and LPVaultSwap only, for the calling wallet). The non-reverting status view `getAccountGateStatus`
 // reports the pause state of the market's Hub (REQ-ADAPTER-038) and gates nothing, so it is the one function outside
-// this rule.
+// this rule; the two rules after it prove that its pause read reaches only its two pause fields.
 // PROP-066 verifies: INV-030, INV-043, INV-045, INV-081, Q-241, Q-242
 rule riskModuleNeverReadsPauseOrFreeze(method f) filtered {
     f -> !isUpgrade(f) && f.selector != sig:getAccountGateStatus(address).selector
@@ -392,6 +401,111 @@ rule riskModuleNeverReadsPauseOrFreeze(method f) filtered {
 
     assert regPauseStateReads == 0 && regPauseReasonReads == 0, "a RiskModule function read the pause state or reason";
     assert regFreezeReads == 0, "a RiskModule function read the address freeze";
+}
+
+// The status view (PROP-066 second rule). The body that computes every gate outcome, `borrowAllowed` and
+// `withdrawWithDebtAllowed` included, reads no pause state, no pause reason and no address freeze, pokes nothing and
+// writes nothing, on every path including the reverting ones; a field it returns therefore cannot depend on the pause.
+// PROP-066 verifies: INV-030, INV-045, INV-081, Q-241, Q-242
+rule statusBodyReadsNoPauseAndChangesNoState(address proxy) {
+    env e;
+    resetRegistryReads();
+    mathint pokesBefore = totalPokes;
+    storage before = lastStorage;
+
+    statusLogic.getAccountGateStatus@withrevert(e, proxy);
+
+    assert regPauseStateReads == 0 && regPauseReasonReads == 0, "the status body read the pause state or reason";
+    assert regFreezeReads == 0, "the status body read the address freeze";
+    assert regBreakerWrites == 0, "the status body wrote breaker state";
+    assert totalPokes == pokesBefore, "the status body poked an oracle";
+    assert lastStorage[currentContract] == before[currentContract], "the status body changed RiskModule state";
+    assert lastStorage[statusLogic] == before[statusLogic], "the status body changed its own state";
+}
+
+// What the RiskModule's two logic calls returned in the current rule.
+persistent ghost bool recSpokeApproved;
+persistent ghost uint256 recUnknownCollateral;
+persistent ghost uint256 recUnapprovedDebt;
+persistent ghost uint256 recPausedDebt;
+persistent ghost uint256 recStaleDebt;
+persistent ghost uint256 recHaltedDebt;
+persistent ghost uint256 recBreakerDebt;
+persistent ghost uint32 recDebtBreakerReasons;
+persistent ghost uint256 recDriftMarket;
+persistent ghost DriftReason recDriftReason;
+persistent ghost bool recNoKeeper;
+persistent ghost uint256 recHf;
+persistent ghost uint256 recHfEx;
+persistent ghost uint256 recFloor;
+persistent ghost bool recBorrowAllowed;
+persistent ghost bool recWithdrawAllowed;
+persistent ghost bool recUnavailable;
+persistent ghost PauseState recPauseState;
+persistent ghost PauseReason recPauseReason;
+persistent ghost mathint recStatusCalls { init_state axiom recStatusCalls == 0; }
+persistent ghost mathint recPauseCalls { init_state axiom recPauseCalls == 0; }
+
+// An arbitrary status body result, pause fields included, recorded field by field.
+function recordStatus(address p) returns AccountGateStatus {
+    AccountGateStatus s;
+    recStatusCalls = recStatusCalls + 1;
+    recSpokeApproved = s.spokeApproved;
+    recUnknownCollateral = s.unknownCollateralReserveId;
+    recUnapprovedDebt = s.unapprovedDebtReserveId;
+    recPausedDebt = s.pausedDebtReserveId;
+    recStaleDebt = s.staleDebtReserveId;
+    recHaltedDebt = s.haltedDebtReserveId;
+    recBreakerDebt = s.breakerDebtReserveId;
+    recDebtBreakerReasons = s.debtBreakerReasons;
+    recDriftMarket = s.driftMarketId;
+    recDriftReason = s.driftReason;
+    recNoKeeper = s.noApprovedKeeper;
+    recHf = s.healthFactor;
+    recHfEx = s.healthFactorExcludingRescue;
+    recFloor = s.hardHealthFloor;
+    recBorrowAllowed = s.borrowAllowed;
+    recWithdrawAllowed = s.withdrawWithDebtAllowed;
+    recUnavailable = s.statusUnavailable;
+    return s;
+}
+
+// An arbitrary pause state and reason of the account's Hub, recorded.
+function recordPause(address p) returns (PauseState, PauseReason) {
+    PauseState st;
+    PauseReason r;
+    recPauseCalls = recPauseCalls + 1;
+    recPauseState = st;
+    recPauseReason = r;
+    return (st, r);
+}
+
+// The RiskModule copies every gate outcome of the body unchanged and the pause read into `pauseState` and
+// `pauseReason` only: for every body result and every pause value, `borrowAllowed`, `withdrawWithDebtAllowed` and every
+// other gate field equal the body's, whatever the pause; the pause fields equal the pause read, whatever the body
+// reported in them. The view changes no RiskModule state. With `statusBodyReadsNoPauseAndChangesNoState` this proves
+// that the pause read reaches only the two pause fields.
+// PROP-066 verifies: INV-030, INV-045, INV-081, Q-241, Q-242
+rule statusPauseReachesOnlyPauseFields(address proxy) {
+    env e;
+    require recStatusCalls == 0 && recPauseCalls == 0;
+    storage before = lastStorage;
+
+    AccountGateStatus st = getAccountGateStatus(e, proxy);
+
+    assert recStatusCalls == 1 && recPauseCalls == 1, "the view did not read the body and the pause once each";
+    assert st.borrowAllowed == recBorrowAllowed, "borrowAllowed differs from the body's gate result";
+    assert st.withdrawWithDebtAllowed == recWithdrawAllowed, "withdrawWithDebtAllowed differs from the body's";
+    assert st.spokeApproved == recSpokeApproved && st.statusUnavailable == recUnavailable;
+    assert st.unknownCollateralReserveId == recUnknownCollateral && st.unapprovedDebtReserveId == recUnapprovedDebt;
+    assert st.pausedDebtReserveId == recPausedDebt && st.staleDebtReserveId == recStaleDebt;
+    assert st.haltedDebtReserveId == recHaltedDebt && st.breakerDebtReserveId == recBreakerDebt;
+    assert st.debtBreakerReasons == recDebtBreakerReasons;
+    assert st.driftMarketId == recDriftMarket && st.driftReason == recDriftReason;
+    assert st.noApprovedKeeper == recNoKeeper && st.hardHealthFloor == recFloor;
+    assert st.healthFactor == recHf && st.healthFactorExcludingRescue == recHfEx;
+    assert st.pauseState == recPauseState && st.pauseReason == recPauseReason, "the pause fields are not the pause read";
+    assert lastStorage[currentContract] == before[currentContract], "the status view changed RiskModule state";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

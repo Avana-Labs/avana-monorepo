@@ -129,4 +129,13 @@ prove('MATH-CAP-10i', 'ceiling identity: required <= funded  <=>  line*k <= fund
       [gl >= 0, gk >= 0, gf >= 0, Not(sat_branch)],
       (exact_req <= gf) == (gl * gk <= gf * B))
 
+# MATH-CAP-10 verifies: REQ-RISK-082
+# The borrow gate of a cross-Hub reserve reads creditLineCoverage and refuses when required > funded (2.7 example).
+dai_required = -(-1_000_000 * E18 * 2_000 // 10**4)
+computed('MATH-CAP-10j', 'REQ-RISK-082 example: a 1,000,000 DAI line at 2,000 bps requires 2x10^23; funded 2x10^23 passes, one base unit less fails', [
+    ('required for 1,000,000 DAI at 2,000 bps', 2 * 10**23, dai_required),
+    ('funded = required passes', True, dai_required <= 2 * 10**23),
+    ('funded = required - 1 fails', False, dai_required <= 2 * 10**23 - 1),
+])
+
 finish()
