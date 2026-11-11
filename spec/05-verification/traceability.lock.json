@@ -15582,7 +15582,7 @@
     ]
   },
   "REQ-LENS-035": {
-    "hash": "bae9a64b81bf9274",
+    "hash": "a41d1c67c74a685c",
     "checks": [
       "ILensPreview",
       "LensConstants",
@@ -18352,7 +18352,7 @@
     ]
   },
   "REQ-PSTORE-029": {
-    "hash": "a2e7a78642499c59",
+    "hash": "86409511ecbe139d",
     "checks": [
       "AvanaRoles",
       "IParameterStoreAdmin",
@@ -18365,6 +18365,8 @@
       "ParameterStoreForwardAdmin",
       "ParameterStoreViews",
       "TEST-062",
+      "TEST-066",
+      "TEST-133",
       "TEST-250"
     ]
   },

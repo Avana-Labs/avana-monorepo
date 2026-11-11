@@ -8,7 +8,7 @@ Requirements: `REQ-*`, `INV-*`, `SPEC-*` (formulas), `ATTACK-*`, flow steps (`DE
 
 Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` rule names the row and the prover has not passed it; marked †), **Verified** (spec-stage checks plus a Foundry test or a prover-passed property), **Changed — re-verify**.
 
-**3488 requirements · 1433 with checks · 0 errors · 3766 warnings**
+**3489 requirements · 1433 with checks · 0 errors · 3766 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1334,6 +1334,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `Q-402` | Avana Umbrella | Each Coverage Spoke is also called Avana Umbrella, Avana's protocol safet… | — | — | — | `TEST-228` | `ParameterStoreLoosenLogic` | Unverified |
 | `Q-403` | Pool-share gate off by default | The chain-wide default `poolShareMaxBps` is 10,000 bps: n… | — | — | — | `TEST-061`, `TEST-062`, `TEST-242`, `TEST-272` | `ParameterStoreLoosenLogic`, `ParameterStoreTightenLogic`, `ParameterStoreViews` | Unverified |
 | `Q-404` | Caller-funded liquidation and one entry point | Two decisions of 2026-11-10. (1) Funding: … | `MATH-ST-07`, `MATH-ST-112`, `MATH-ST-121`, `MATH-ST-122`, `MATH-ST-13`, `MATH-ST-14`, `MATH-ST-15`, `MATH-ST-17`, `MATH-ST-18`, `MATH-ST-21`, `MATH-ST-23`, `MATH-ST-24`, `MATH-ST-25`, `MATH-ST-26`, `MATH-ST-51`, `MATH-ST-59`, `MATH-ST-60`, `SYM-41`, `SYM-44`, `SYM-45`, `SYM-49` | `QNT-T29` | — | `PROP-015`†, `PROP-016`†, `PROP-019`†, `PROP-022`†, `PROP-035`†, `PROP-036`†, `PROP-053`†, `TEST-174`, `TEST-229`, `TEST-288`, `TEST-289` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidator`, `IFlashLiquidator`, `ILPVaultSwapAdmin`, `ILPVaultSwapErrors`, `ILPVaultSwapEvents`, `ILPVaultSwapLiquidation`, `ILPVaultSwapViews`, `ILPVaultSwap`, `ILensLiquidation`, `IOperatorFlashLiquidator`, `LiquidationParams`, `LiquidationPreview`, `LiquidationResult`, `MarketRegistrySafetyLogic`, `OperatorFlashLiquidator`, `SettlementMath`, `SettlementReport` | Verified |
+| `Q-405` | Second-source confirmation and token decimals | An out-of-range second-source word leaves … | — | — | — | — | — | Unverified |
 | `REP-001` | `Y` calls `AD.repay(W, m, r, maxRepaySpend, repayAll, deadline)` | AaveAdapter (`Y`) | The… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-002` | Take the caller as the payer | `AD` | No caller check: any `msg.sender` is accepted and be… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-003` | Check the deadline | `AD` | `block.timestamp ≤ deadline`, in seconds. (Source: Q-075) | — | — | — | — | `IAaveAdapterUser` | Unverified |
