@@ -39,9 +39,11 @@ contract ParameterStoreHalmosTest is Test {
     address internal constant RECIPIENT = address(0xFEE);
     address internal constant TOKEN_A = address(0xA1);
     address internal constant TOKEN_B = address(0xB1);
+    address internal constant HUB = address(0x4B);
     uint256 internal constant M = 1;
 
     IParameterStore internal store;
+    address internal poolAddr;
 
     function setUp() public {
         MockMarketRegistry registry = new MockMarketRegistry();
@@ -78,6 +80,7 @@ contract ParameterStoreHalmosTest is Test {
         Market memory m;
         m.integration = address(integration);
         m.pool = address(new MockPool());
+        poolAddr = m.pool;
         m.tokens = new address[](2);
         (m.tokens[0], m.tokens[1]) = (TOKEN_A, TOKEN_B);
         m.tokenDecimals = new uint8[](2);
@@ -87,6 +90,7 @@ contract ParameterStoreHalmosTest is Test {
         address[] memory none = new address[](0);
         registry.setToken(TOKEN_A, none, none, none);
         registry.setToken(TOKEN_B, none, none, none);
+        registry.setHub(HUB, true);
         vm.startPrank(TIMELOCK);
         store.setTokenCollateralFactorBps(TOKEN_A, 7800);
         store.setTokenCollateralFactorBps(TOKEN_B, 7500);
@@ -98,6 +102,8 @@ contract ParameterStoreHalmosTest is Test {
         p.minPledgeUsd = 10e8;
         store.setInitialMarketParams(M, p);
         store.setInitialMarketCaps(M, 5_000_000e8, 500_000e8, 1e8);
+        store.setInitialHubCaps(HUB, 1_000_000e8);
+        store.setInitialTokenCap(HUB, TOKEN_A, 20_000_000e8);
         vm.stopPrank();
     }
 
@@ -206,5 +212,70 @@ contract ParameterStoreHalmosTest is Test {
         assert(okH == (hf >= 0.9e18 && hf < 1e18));
         assert(store.graceDuration() <= store.graceDurationMax());
         assert(store.graceHealthFactor() >= store.graceHealthFactorMin() && store.graceHealthFactor() < 1e18);
+    }
+
+    // PROP-042 verifies: REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
+    function check_PROP_042_tightenHubCapsOnlyLower(
+        uint256 tokenCap,
+        uint256 depositorCap
+    ) public {
+        bool okToken = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (HUB, TOKEN_A, tokenCap)));
+        assert(okToken == (tokenCap < 20_000_000e8 && tokenCap != 0));
+        assert(store.tokenUsdCap(HUB, TOKEN_A) == (okToken ? tokenCap : 20_000_000e8));
+        bool okDep = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenDepositorUsdCap, (HUB, depositorCap)));
+        assert(okDep == (depositorCap < 1_000_000e8 && depositorCap != 0));
+        assert(store.depositorUsdCap(HUB) > 0);
+    }
+
+    // PROP-042 verifies: REQ-RISK-042, SPEC-CAP-005, Q-383
+    function check_PROP_042_tightenPoolShareOfStaysUnderTheDefault(
+        uint16 dflt,
+        uint16 over
+    ) public {
+        bool okDefault = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBps, (dflt)));
+        assert(okDefault == (dflt < 10_000 && dflt != 0));
+        uint16 d = store.poolShareMaxBps();
+        bool okOver = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBpsOf, (M, over)));
+        assert(okOver == (over < d && over != 0));
+        bytes32 key = keccak256(abi.encode(uint32(0), poolAddr, bytes32(0)));
+        uint16 served = store.poolShareMaxBpsOf(key);
+        assert(served <= store.poolShareMaxBps());
+        assert(served == (okOver ? over : d));
+    }
+
+    // PROP-042 verifies: REQ-PSTORE-020, REQ-CONFIG-050, REQ-CONFIG-051
+    function check_PROP_042_tightenStressRiseInRange(
+        uint16 first,
+        uint16 next
+    ) public {
+        bool ok1 = _asTimelock(abi.encodeCall(IParameterStoreLiquidation.tightenDebtStressRiseBps, (TOKEN_A, first)));
+        assert(ok1 == (first >= 100 && first <= 5000));
+        uint16 old = store.debtStressRiseBps(TOKEN_A);
+        bool ok2 = _asTimelock(abi.encodeCall(IParameterStoreLiquidation.tightenDebtStressRiseBps, (TOKEN_A, next)));
+        assert(ok2 == (next > old && next >= 100 && next <= 5000));
+        uint16 stored = store.debtStressRiseBps(TOKEN_A);
+        assert(stored == 0 || (stored >= 100 && stored <= 5000));
+    }
+
+    // PROP-042 verifies: REQ-CONFIG-015, REQ-CONFIG-051
+    function check_PROP_042_tightenPoolRiskFactorStaysPositive(
+        uint16 value
+    ) public {
+        bool ok = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenPoolRiskFactor, (M, value)));
+        assert(ok == (value < 4000 && value != 0));
+        uint16 stored = store.getMarketParams(M).poolRiskFactor;
+        assert(stored > 0 && stored <= 4000);
+    }
+
+    // PROP-042 verifies: REQ-CONFIG-070, REQ-CONFIG-051
+    function check_PROP_042_tightenRouteDepthOnlyRaises(
+        uint8 kind,
+        uint256 value
+    ) public {
+        bool ok = _asTimelock(
+            abi.encodeCall(IParameterStoreTighten.tightenRouteDepthThreshold, (M, TOKEN_A, TOKEN_B, kind, value))
+        );
+        assert(ok == (kind <= 1 && value != 0));
+        assert(store.routeDepthThreshold(M, TOKEN_A, TOKEN_B, kind) == (ok ? value : 0));
     }
 }

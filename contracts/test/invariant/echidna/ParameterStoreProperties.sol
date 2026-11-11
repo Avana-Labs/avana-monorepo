@@ -48,6 +48,7 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         $.stressFloorUsd[M] = 1e8;
         $.g.gateRecoverySeconds = 1800;
         $.g.maxShortfallBps = 1000;
+        $.g.maxFlashFeeBps = 10;
         $.poolShareMaxBps = 10_000;
     }
 
@@ -75,6 +76,15 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     function property_sliceWithinCap() external view returns (bool) {
         return _s().topUpSliceUsd[M] <= _s().marketUsdCap[M] && _s().marketUsdCap[M] > 0
             && _s().marketUsdCap[M] <= type(uint128).max;
+    }
+
+    function property_poolRiskFactorPositive() external view returns (bool) {
+        uint16 f = _s().market[M].poolRiskFactor;
+        return f > 0 && f <= 4000;
+    }
+
+    function property_flashFeeNeverRises() external view returns (bool) {
+        return _s().g.maxFlashFeeBps <= 10;
     }
 
     function property_chainValuesInRange() external view returns (bool) {
@@ -176,6 +186,64 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         uint64 before = _s().g.gateRecoverySeconds;
         bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenGateRecoverySeconds, (value)));
         assert(ok == (value < before && value >= 600));
+    }
+
+    function loosenSlice(
+        uint256 value
+    ) external {
+        (uint256 before, uint256 cap) = (_s().topUpSliceUsd[M], _s().marketUsdCap[M]);
+        uint256 base = cap / 10 > before ? cap / 10 : before;
+        bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenTopUpSliceUsd, (M, value)));
+        if (ok) assert(value > before && value <= cap && value * 10_000 <= base * 15_000);
+    }
+
+    function tightenShortfall(
+        uint16 value
+    ) external {
+        uint16 before = _s().g.maxShortfallBps;
+        bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenMaxShortfallBps, (value)));
+        assert(ok == (value < before));
+    }
+
+    function loosenShortfall(
+        uint16 value
+    ) external {
+        uint16 before = _s().g.maxShortfallBps;
+        bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenMaxShortfallBps, (value)));
+        assert(ok == (value > before && value <= 5000));
+    }
+
+    function tightenPoolShare(
+        uint16 value
+    ) external {
+        uint16 before = _s().poolShareMaxBps;
+        bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenPoolShareMaxBps, (value)));
+        assert(ok == (value < before && value != 0));
+    }
+
+    function loosenPoolShare(
+        uint16 value
+    ) external {
+        uint16 before = _s().poolShareMaxBps;
+        bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenPoolShareMaxBps, (value)));
+        assert(ok == (value > before && value <= 10_000));
+    }
+
+    function tightenFlashFee(
+        uint16 value
+    ) external {
+        uint16 before = _s().g.maxFlashFeeBps;
+        bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenMaxFlashFeeBps, (value)));
+        assert(ok == (value < before));
+        assert(_s().g.maxFlashFeeBps <= before);
+    }
+
+    function tightenPoolRiskFactor(
+        uint16 value
+    ) external {
+        uint16 before = _s().market[M].poolRiskFactor;
+        bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenPoolRiskFactor, (M, value)));
+        assert(ok == (value < before && value != 0));
     }
 
     function _call(
