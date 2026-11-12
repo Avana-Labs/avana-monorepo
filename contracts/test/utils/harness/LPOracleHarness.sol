@@ -16,8 +16,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @title LPOracleHarnessModule
 /// @notice A minimal pricing module for the LPOracle base's tests: a linear composition `a_i = floor(units * c_i /
 /// 10^18)` (price independent, so the fair composition is the same at every price) and switchable module answers: a
-/// failed composition, the pool lock, the consistency check and clamp, the pool-TWAP second source and listing
-/// failures. Its state sits at a fixed slot of the proxy, shared by the implementation and both logic contracts.
+/// failed composition, the pool lock, the consistency check and clamp, the pool-TWAP second source, the market's own
+/// pool reference and listing failures. Its state sits at a fixed slot of the proxy, shared by the implementation and
+/// both logic contracts.
 abstract contract LPOracleHarnessModule is LPOracleStorage {
     struct ModuleState {
         uint256[] coefficients;
@@ -30,6 +31,7 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         uint256 deviation;
         uint256 listingFailures;
         mapping(uint256 index => uint256 value) twapValue;
+        bytes32 ownPool;
     }
 
     bytes32 private constant MODULE_SLOT = keccak256("avana.test.LPOracleHarnessModule");
@@ -93,6 +95,14 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         uint256[] memory
     ) internal view override returns (uint256 failedChecks) {
         return _m().listingFailures;
+    }
+
+    /// @dev The harness market's pool reference (`setOwnPool`); unset (0) names no pool.
+    function _isOwnPool(
+        bytes32 poolRef
+    ) internal view override returns (bool own) {
+        bytes32 pool = _m().ownPool;
+        return pool != bytes32(0) && poolRef == pool;
     }
 }
 
@@ -189,6 +199,12 @@ contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
         uint256 bits
     ) external {
         _m().listingFailures = bits;
+    }
+
+    function setOwnPool(
+        bytes32 poolRef
+    ) external {
+        _m().ownPool = poolRef;
     }
 
     function setTwapValue(

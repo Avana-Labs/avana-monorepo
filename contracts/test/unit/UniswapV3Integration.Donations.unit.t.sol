@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {LPVaultLedgerFixture} from "../utils/fixtures/LPVaultLedgerFixture.sol";
 import {UniswapV3IntegrationFixture} from "../utils/fixtures/UniswapV3IntegrationFixture.sol";
 import {MintableToken, NftHolder, OtherNft} from "../utils/mocks/UniswapV3Mocks.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
@@ -11,15 +12,41 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 /// @notice Uniswap v3 LPVault and value it never asked for: pushed and stray NFTs, liquidity a third party adds to a
 /// custodied NFT, ERC-20 and ETH donations, and position-manager approvals. None of them changes a custody entry, a
-/// unit read, a reported amount or a composition, and no code path reads a balance of the LPVault.
+/// unit read, a reported amount or a composition, and no code path reads a balance of the LPVault. Market 1 is backed
+/// by the real Collateralization and vault token (`LPVaultLedgerFixture`), so every donation test also shows that the
+/// backing record's credited units, the cap counters, the credited totals and the vault token's supply and balances do
+/// not move.
 /// forge-config: default.isolate = false
-contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
+contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture, LPVaultLedgerFixture {
+    function setUp() public override {
+        super.setUp();
+        _deployLedger(
+            LedgerCore(adapter, lpVaultSwap, coll, address(lock), timelock, registry),
+            INTEGRATION,
+            address(vault),
+            M1,
+            9
+        );
+    }
+
+    /// @notice A market-1 position of `owner` pledged through the real Collateralization for `proxy`.
+    function _ledgerPledge(
+        address owner,
+        address proxy,
+        uint128 liquidity
+    ) internal returns (bytes32 key) {
+        key = _mint1(owner, liquidity);
+        _pledgeThroughLedger(owner, proxy, key);
+    }
+
     // ─── Stray NFTs ───
 
-    // TEST-015 verifies: REQ-VAULT-078, REQ-VAULT-093, REQ-VAULT-003, REQ-VAULT-152, ATTACK-006
+    // TEST-015 verifies: REQ-VAULT-078, REQ-VAULT-093, REQ-VAULT-003, REQ-VAULT-152, ATTACK-006, INV-006
     // Sources: 5.1 TEST-015 (pushed NFT recorded as stray only, never credited or pledgeable)
     function test_TEST_015_pushedNftIsOnlyAStray() public {
+        bytes32 backed = _ledgerPledge(bob, bobProxy, 1e12);
         bytes32 key = _mint1(alice, 1e9);
+        LedgerState memory before = _ledgerState(backed, bob, bobProxy, alice);
         vm.expectEmit(address(vault));
         emit StrayReceived(key, alice, alice);
         vm.prank(alice);
@@ -30,6 +57,8 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
         assertFalse(vault.isInCustody(key));
         vm.expectRevert(NotInCustody.selector);
         vault.unitsOf(key);
+        assertEq(ledger.recordIdOf(INTEGRATION, key), 0, "a pushed NFT has no backing record");
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
         _lock();
         vm.startPrank(coll);
         vm.expectRevert(NotTokenOwner.selector);
@@ -44,10 +73,13 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
         vault.collectFees(key, alice);
         vm.stopPrank();
         _unlock();
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
     }
 
     // TEST-015 verifies: REQ-VAULT-124, REQ-VAULT-078
     function test_TEST_015_onlyTheNfpmMayPush() public {
+        bytes32 backed = _ledgerPledge(bob, bobProxy, 1e12);
+        LedgerState memory before = _ledgerState(backed, bob, bobProxy, alice);
         OtherNft other = new OtherNft();
         other.mint(alice, 1);
         vm.prank(alice);
@@ -55,6 +87,7 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
         other.safeTransferFrom(alice, address(vault), 1);
         vm.expectRevert(UnsupportedNft.selector);
         vault.onERC721Received(alice, alice, 1, "");
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
     }
 
     // TEST-015 verifies: REQ-VAULT-165, REQ-VAULT-079, REQ-VAULT-080, REQ-VAULT-083, REQ-VAULT-122, REQ-VAULT-123, INV-007, ATTACK-006
@@ -62,9 +95,12 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
     // Sources: 5.1 TEST-015, TEST-166 (timelock-only, the stray condition at execution, no timer of its own)
     function test_TEST_015_returnStrayOnlyThroughTheTimelockForAStray() public {
         bytes32 stray = _mint1(alice, 1e9);
+        bytes32 pledged = _ledgerPledge(bob, bobProxy, 1e9);
+        LedgerState memory before = _ledgerState(pledged, bob, bobProxy, alice);
         vm.prank(alice);
         nfpm.transferFrom(alice, address(vault), uint256(stray)); // pushed without a hook: still stray
-        bytes32 pledged = _pledge1(bob, 1e9);
+        assertEq(ledger.recordIdOf(INTEGRATION, stray), 0, "a stray has no backing record");
+        _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));
         vm.prank(alice);
         vm.expectRevert(NotTimelock.selector);
         vault.returnStray(stray, alice);
@@ -95,18 +131,24 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
         vm.prank(timelock);
         vault.returnStray(stray, carol);
         assertEq(nfpm.ownerOf(uint256(stray)), carol);
+        _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));
     }
 
     // TEST-015 verifies: REQ-VAULT-083, REQ-VAULT-079, ATTACK-006
     // Sources: a return scheduled for a stray that is pledged before execution reverts NotStray; a closed record's NFT
     // sent back later is a stray again.
     function test_TEST_015_strayConditionIsEvaluatedAtExecution() public {
+        bytes32 backed = _ledgerPledge(bob, bobProxy, 1e12);
         bytes32 key = _pledge1(alice, 1e9);
         _asColl(abi.encodeCall(vault.returnPosition, (key)));
+        LedgerState memory before = _ledgerState(backed, bob, bobProxy, alice);
         vm.prank(alice);
         nfpm.transferFrom(alice, address(vault), uint256(key));
+        assertEq(ledger.recordIdOf(INTEGRATION, key), 0, "an NFT sent back has no backing record");
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
         vm.prank(timelock);
         vault.returnStray(key, alice);
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
         // Pledged again before a second scheduled return executes: refused.
         vm.prank(alice);
         nfpm.approve(address(vault), uint256(key));
@@ -118,13 +160,16 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
 
     // ─── Donated liquidity ───
 
-    // TEST-016 verifies: REQ-VAULT-077, REQ-AMM-CORE-009, REQ-VAULT-095, REQ-VAULT-162, INV-002
+    // TEST-016 verifies: REQ-VAULT-077, REQ-AMM-CORE-009, REQ-VAULT-095, REQ-VAULT-162, INV-002, INV-006
     // Sources: 5.1 TEST-016 (a third party's increaseLiquidity raises live liquidity only and is never removed)
     function test_TEST_016_donatedLiquidityIsLiveButNeverTakenOrMoved() public {
-        bytes32 key = _pledge1(alice, 1e12);
+        bytes32 key = _ledgerPledge(alice, aliceProxy, 1e12);
+        LedgerState memory before = _ledgerState(key, alice, aliceProxy, attacker);
+        assertEq(before.credited, 1e12);
         vm.prank(attacker);
         nfpm.increaseLiquidity(uint256(key), 3e11);
         assertEq(vault.unitsOf(key), 1.3e12, "live units rise");
+        _assertLedgerUnchanged(before, _ledgerState(key, alice, aliceProxy, attacker));
         assertEq(vault.depositorOf(key), alice, "the depositor of record does not change");
         assertEq(vault.marketOfPosition(key), M1);
         // Removal takes only the units Collateralization asks for; the rest stays with the NFT.
@@ -144,14 +189,29 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
 
     // ─── ERC-20 and ETH donations ───
 
-    // TEST-080 verifies: REQ-VAULT-085, REQ-VAULT-154, REQ-VAULT-164, REQ-VAULT-175, INV-021, Q-124
+    /// @notice Sends `dust` of `donated` and `dust` wei to the LPVault (ETH by balance; a plain transfer is refused)
+    /// and checks that the ledger of `key` (alice's, pledged through Collateralization) did not move.
+    function _donateTokenAndEth(
+        bytes32 key,
+        MintableToken donated,
+        uint256 dust
+    ) internal {
+        LedgerState memory before = _ledgerState(key, alice, aliceProxy, attacker);
+        donated.mint(address(vault), dust);
+        vm.deal(address(vault), dust);
+        (bool sent,) = address(vault).call{value: 1}("");
+        assertFalse(sent, "the LPVault accepts no ETH");
+        _assertLedgerUnchanged(before, _ledgerState(key, alice, aliceProxy, attacker));
+    }
+
+    // TEST-080 verifies: REQ-VAULT-085, REQ-VAULT-154, REQ-VAULT-164, REQ-VAULT-175, INV-021, Q-124, INV-006
     // Sources: 5.1 TEST-080; BRIEF 2026-11-10 (ERC-20 or ETH sent to the LPVault changes no record, cap, credit or mint)
     function testFuzz_TEST_080_tokenAndEthDonationsChangeNothing(
         uint256 dust,
         uint8 which
     ) public {
         dust = bound(dust, 1, 1e24);
-        bytes32 key = _pledge1(alice, 1e12);
+        bytes32 key = _ledgerPledge(alice, aliceProxy, 1e12);
         bytes32 twin = _pledge1(bob, 1e12);
         nfpm.accrue(uint256(key), 5, 6);
         nfpm.accrue(uint256(twin), 5, 6);
@@ -162,10 +222,7 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
         // Unwind the twin before the donation, the position after it: equal amounts.
         uint256[] memory a =
             abi.decode(_asColl(abi.encodeCall(vault.unwind, (twin, 4e11, _zeros(), lpVaultSwap))), (uint256[]));
-        donated.mint(address(vault), dust);
-        vm.deal(address(vault), dust);
-        (bool sent,) = address(vault).call{value: 1}("");
-        assertFalse(sent, "the LPVault accepts no ETH");
+        _donateTokenAndEth(key, donated, dust);
         uint256 r0 = _token0().balanceOf(lpVaultSwap);
         uint256[] memory b =
             abi.decode(_asColl(abi.encodeCall(vault.unwind, (key, 4e11, _zeros(), lpVaultSwap))), (uint256[]));
@@ -226,10 +283,14 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture {
 
     // TEST-015 verifies: REQ-VAULT-094, REQ-VAULT-093
     function test_TEST_015_safeTransferHolderAndPush() public {
+        bytes32 backed = _ledgerPledge(bob, bobProxy, 1e12);
         NftHolder holder = new NftHolder();
         bytes32 key = _mint1(address(holder), 1e9);
+        LedgerState memory before = _ledgerState(backed, bob, bobProxy, address(holder));
         vm.prank(address(holder));
         nfpm.safeTransferFrom(address(holder), address(vault), uint256(key), "data");
         assertEq(vault.depositorOf(key), address(0));
+        assertEq(ledger.recordIdOf(INTEGRATION, key), 0, "a pushed NFT has no backing record");
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, address(holder)));
     }
 }

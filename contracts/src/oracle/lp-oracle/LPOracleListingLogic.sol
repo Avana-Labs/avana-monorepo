@@ -27,7 +27,7 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
     }
 
     /// @inheritdoc ILPOracleLogic
-    /// @custom:spec REQ-ORACLE-046
+    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100
     function checkConfig(
         OracleConfig calldata config
     ) external view override returns (uint256 failedChecks) {

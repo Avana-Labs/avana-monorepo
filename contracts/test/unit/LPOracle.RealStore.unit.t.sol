@@ -4,7 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
+import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {Market} from "../../src/types/Market.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {OracleLeg} from "../../src/types/OracleLeg.sol";
@@ -157,5 +159,59 @@ contract LPOracleRealStoreUnitTest is ParameterStoreFixture {
         _tl();
         store.setFeedAgreementToleranceBps(usdc, 160);
         assertEq(oracle.getPriceState().tokens[0].feedAgreementToleranceBps, 160, "applied on the next read");
+    }
+
+    // ─── Own-pool TWAP second source: the LPOracle's own refusal ───
+
+    function _twap(
+        bytes32 poolRef
+    ) internal view returns (SecondSource memory) {
+        return SecondSource(SecondSourceKind.PoolTwap, address(integration), poolRef, 0, 1800, 120);
+    }
+
+    /// @dev The pricing module's pool, which the MarketRegistry record of market `M` does not name: the store's own
+    /// check (`REQ-PSTORE-028`) passes it, so only `checkConfig` can refuse it.
+    function _moduleOwnPool() internal returns (bytes32 own) {
+        own = bytes32(uint256(uint160(makeAddr("modulePool"))));
+        assertTrue(own != bytes32(uint256(uint160(registry.getMarket(M).pool))), "not the registry's pool");
+        oracle.setOwnPool(own);
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-046, REQ-ORACLE-100, REQ-PSTORE-009, REQ-PSTORE-029, SPEC-ORC-020
+    // Sources: 2026-11-11 decision (checkConfig refuses an own-pool TWAP as the recorded second source)
+    function test_TEST_219_storeRecheckRefusesOwnPoolTwapAsRecordedSource() public {
+        bytes32 own = _moduleOwnPool();
+        SecondSource memory empty;
+        _tl();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IParameterStoreErrors.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_SECOND_SOURCE
+            )
+        );
+        store.setSecondSource(usdc, _twap(own), empty);
+        assertEq(uint8(store.secondSource(usdc).kind), uint8(SecondSourceKind.OracleNetwork), "recorded source kept");
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-046, REQ-ORACLE-100, REQ-PSTORE-009, REQ-PSTORE-029, SPEC-ORC-020
+    // Sources: 2026-11-11 decision (checkConfig refuses an own-pool TWAP as the standby; another pool passes)
+    function test_TEST_219_storeRecheckRefusesOwnPoolTwapAsStandby() public {
+        bytes32 own = _moduleOwnPool();
+        _tl();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IParameterStoreErrors.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_SECOND_SOURCE
+            )
+        );
+        store.setSecondSource(usdc, _second(address(ssUsdc)), _twap(own));
+        assertEq(uint8(store.standbySecondSource(usdc).kind), uint8(SecondSourceKind.None), "no standby recorded");
+        // A deep pool other than the market's own passes as the recorded source and as the standby.
+        bytes32 deep = bytes32(uint256(uint160(makeAddr("deepPool"))));
+        _tl();
+        store.setSecondSource(usdc, _second(address(ssUsdc)), _twap(deep));
+        assertEq(store.standbySecondSource(usdc).poolRef, deep);
+        SecondSource memory empty;
+        _tl();
+        store.setSecondSource(usdt, _twap(deep), empty);
+        assertEq(store.secondSource(usdt).poolRef, deep);
     }
 }

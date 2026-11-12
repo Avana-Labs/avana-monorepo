@@ -180,13 +180,13 @@ interface ILPOracle is IAaveV4PriceFeed, IAccessControl, ILPOracleEvents, ILPOra
     /// @notice Runs the on-chain listing and configuration checks against a configuration.
     /// @dev Checks one token configuration per market token in pool order, pinned leg decimals and bounds, each leg's
     /// heartbeat and margin, route value range at `minAnswer + 1` and `maxAnswer`, two-leg decimals, the listing shock
-    /// bound, no shared aggregators, the feed-agreement lower bound, each second source's kind and tolerance, the
-    /// consistency window against the pool's observation buffer at this chain's block time (`twapMinObservations`),
+    /// bound, no shared aggregators, the feed-agreement lower bound, each second source's kind and tolerance and no
+    /// pool-TWAP second source on the market's own pool, the consistency window against the pool's observation buffer at this chain's block time (`twapMinObservations`),
     /// the quote-change cap, the sequencer feed (non-zero on an L2), and the USD band ordering. AMM-protocol listing
     /// guards (exact range, tick alignment, hook flags, minimum supply) are checked by the integration's `bindMarket`.
     /// @param config Configuration to check.
     /// @return failedChecks Bitmap of failed checks; 0 means every on-chain check passes.
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-047, REQ-ORACLE-048, REQ-ORACLE-049, REQ-ORACLE-050, REQ-ORACLE-051, REQ-ORACLE-053, REQ-ORACLE-055, REQ-ORACLE-056
+    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-047, REQ-ORACLE-048, REQ-ORACLE-049, REQ-ORACLE-050, REQ-ORACLE-051, REQ-ORACLE-053, REQ-ORACLE-055, REQ-ORACLE-056, REQ-ORACLE-100
     function checkConfig(
         OracleConfig calldata config
     ) external view returns (uint256 failedChecks);

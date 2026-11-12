@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {LPVaultLedgerFixture} from "../utils/fixtures/LPVaultLedgerFixture.sol";
 import {SlipstreamIntegrationFixture} from "../utils/fixtures/SlipstreamIntegrationFixture.sol";
 import {MintableToken, NftHolder, OtherNft} from "../utils/mocks/UniswapV3Mocks.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
@@ -12,16 +13,44 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// @notice Slipstream LPVault and value it never asked for: pushed and stray NFTs of every generation, liquidity a
 /// third party adds to a custodied NFT, ERC-20 and ETH donations, and position-manager approvals. None of them changes
 /// a custody entry, a unit read, a reported amount or a composition, and no code path reads a balance of the LPVault.
+/// Market 1 is backed by the real Collateralization and vault token (`LPVaultLedgerFixture`), so every donation test
+/// also shows that the backing record's credited units, the cap counters, the credited totals and the vault token's
+/// supply and balances do not move.
 /// forge-config: default.isolate = false
-contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture {
+contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture, LPVaultLedgerFixture {
+    function setUp() public override {
+        super.setUp();
+        _deployLedger(
+            LedgerCore(adapter, lpVaultSwap, coll, address(lock), timelock, registry),
+            INTEGRATION,
+            address(vault),
+            M1,
+            9
+        );
+    }
+
+    /// @notice A market-1 position of `owner` pledged through the real Collateralization for `proxy`.
+    function _ledgerPledge(
+        address owner,
+        address proxy,
+        uint128 liquidity
+    ) internal returns (bytes32 key) {
+        key = _mint1(owner, liquidity);
+        _pledgeThroughLedger(owner, proxy, key);
+    }
+
     // ─── Stray NFTs ───
 
-    // TEST-015 verifies: REQ-VAULT-078, REQ-VAULT-093, REQ-VAULT-003, REQ-VAULT-152, REQ-AMM-SLIP-001, ATTACK-006
+    // TEST-015 verifies: REQ-VAULT-078, REQ-VAULT-093, REQ-VAULT-003, REQ-VAULT-152, REQ-AMM-SLIP-001, ATTACK-006, INV-006
     // Sources: 5.1 TEST-015; BRIEF 2026-11-10 (an NFT pushed with safeTransferFrom is recorded only as a stray)
     function test_TEST_015_pushedNftIsOnlyAStrayOnEveryGeneration() public {
+        bytes32 backed = _ledgerPledge(bob, bobProxy, 1e12);
+        LedgerState memory before = _ledgerState(backed, bob, bobProxy, alice);
+        bytes32 k; // generation 2's pushed NFT
         for (uint8 g = 0; g < 4; ++g) {
             uint256 id = npms[g].mint(alice, pool1.token0(), pool1.token1(), 1, -50, 50, 1e9);
             bytes32 key = _key(g, id);
+            if (g == G1) k = key;
             vm.expectEmit(address(vault));
             emit StrayReceived(key, alice, alice);
             vm.prank(alice);
@@ -32,8 +61,9 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture 
             assertFalse(vault.isInCustody(key));
             vm.expectRevert(NotInCustody.selector);
             vault.unitsOf(key);
+            assertEq(ledger.recordIdOf(INTEGRATION, key), 0, "a pushed NFT has no backing record");
         }
-        bytes32 k = _key(G1, 1); // generation 2's pushed NFT (each manager numbers from 1)
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
         _lock();
         vm.startPrank(coll);
         vm.expectRevert(NotTokenOwner.selector);
@@ -48,10 +78,13 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture 
         vault.collectFees(k, alice);
         vm.stopPrank();
         _unlock();
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
     }
 
     // TEST-015 verifies: REQ-VAULT-124, REQ-VAULT-078
     function test_TEST_015_onlyAnAllowlistedManagerMayPush() public {
+        bytes32 backed = _ledgerPledge(bob, bobProxy, 1e12);
+        LedgerState memory before = _ledgerState(backed, bob, bobProxy, alice);
         OtherNft other = new OtherNft();
         other.mint(alice, 1);
         vm.prank(alice);
@@ -63,15 +96,19 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture 
         vm.prank(address(npms[0]));
         vm.expectRevert(UnsupportedNft.selector);
         vault.onERC721Received(alice, alice, uint256(1) << 248, "");
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
     }
 
     // TEST-015 verifies: REQ-VAULT-165, REQ-VAULT-079, REQ-VAULT-080, REQ-VAULT-083, REQ-VAULT-122, REQ-VAULT-123, INV-007, ATTACK-006
     // TEST-166 verifies: REQ-VAULT-082, REQ-VAULT-084, Q-228
     function test_TEST_015_returnStrayOnlyThroughTheTimelockForAStray() public {
         bytes32 stray = _mint1(alice, 1e9);
+        bytes32 pledged = _ledgerPledge(bob, bobProxy, 1e9);
+        LedgerState memory before = _ledgerState(pledged, bob, bobProxy, alice);
         vm.prank(alice);
         _npm1().transferFrom(alice, address(vault), _id(stray));
-        bytes32 pledged = _pledge1(bob, 1e9);
+        assertEq(ledger.recordIdOf(INTEGRATION, stray), 0, "a stray has no backing record");
+        _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));
         vm.prank(alice);
         vm.expectRevert(NotTimelock.selector);
         vault.returnStray(stray, alice);
@@ -97,18 +134,22 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture 
         vm.prank(timelock);
         vault.returnStray(stray, carol);
         assertEq(_npm1().ownerOf(_id(stray)), carol);
+        _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));
     }
 
     // ─── Donated liquidity ───
 
-    // TEST-016 verifies: REQ-VAULT-077, REQ-AMM-CORE-009, REQ-VAULT-095, REQ-VAULT-162, INV-002
+    // TEST-016 verifies: REQ-VAULT-077, REQ-AMM-CORE-009, REQ-VAULT-095, REQ-VAULT-162, INV-002, INV-006
     // Sources: 5.1 TEST-016; BRIEF 2026-11-10 (liquidity a third party adds to a custodied position is not credited)
     function test_TEST_016_donatedLiquidityIsLiveButNeverTakenOrMoved() public {
-        bytes32 key = _pledge1(alice, 1e12);
+        bytes32 key = _ledgerPledge(alice, aliceProxy, 1e12);
+        LedgerState memory before = _ledgerState(key, alice, aliceProxy, attacker);
+        assertEq(before.credited, 1e12);
         vm.prank(attacker);
         _npm1().increaseLiquidity(_id(key), 3e11);
         assertEq(vault.unitsOf(key), 1.3e12, "live units rise");
         assertEq(vault.depositorOf(key), alice);
+        _assertLedgerUnchanged(before, _ledgerState(key, alice, aliceProxy, attacker));
         _asColl(abi.encodeCall(vault.unwind, (key, 1e12, _zeros(), lpVaultSwap)));
         assertEq(vault.unitsOf(key), 3e11);
         _lock();
@@ -123,14 +164,29 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture 
 
     // ─── ERC-20 and ETH donations ───
 
-    // TEST-080 verifies: REQ-VAULT-085, REQ-VAULT-154, REQ-VAULT-164, REQ-VAULT-175, INV-021, Q-124
+    /// @notice Sends `dust` of `donated` and `dust` wei to the LPVault (ETH by balance; a plain transfer is refused)
+    /// and checks that the ledger of `key` (alice's, pledged through Collateralization) did not move.
+    function _donateTokenAndEth(
+        bytes32 key,
+        MintableToken donated,
+        uint256 dust
+    ) internal {
+        LedgerState memory before = _ledgerState(key, alice, aliceProxy, attacker);
+        donated.mint(address(vault), dust);
+        vm.deal(address(vault), dust);
+        (bool sent,) = address(vault).call{value: 1}("");
+        assertFalse(sent, "the LPVault accepts no ETH");
+        _assertLedgerUnchanged(before, _ledgerState(key, alice, aliceProxy, attacker));
+    }
+
+    // TEST-080 verifies: REQ-VAULT-085, REQ-VAULT-154, REQ-VAULT-164, REQ-VAULT-175, INV-021, Q-124, INV-006
     // Sources: 5.1 TEST-080; BRIEF 2026-11-10 (USDC, a market token, an LP token or ETH changes nothing)
     function testFuzz_TEST_080_tokenAndEthDonationsChangeNothing(
         uint256 dust,
         uint8 which
     ) public {
         dust = bound(dust, 1, 1e24);
-        bytes32 key = _pledge1(alice, 1e12);
+        bytes32 key = _ledgerPledge(alice, aliceProxy, 1e12);
         bytes32 twin = _pledge1(bob, 1e12);
         _npm1().accrue(_id(key), 5, 6);
         _npm1().accrue(_id(twin), 5, 6);
@@ -140,10 +196,7 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture 
         (uint256[] memory compBefore,) = vault.composition(M1, 1e12, _vec(1e8, 1e8));
         uint256[] memory a =
             abi.decode(_asColl(abi.encodeCall(vault.unwind, (twin, 4e11, _zeros(), lpVaultSwap))), (uint256[]));
-        donated.mint(address(vault), dust);
-        vm.deal(address(vault), dust);
-        (bool sent,) = address(vault).call{value: 1}("");
-        assertFalse(sent, "the LPVault accepts no ETH");
+        _donateTokenAndEth(key, donated, dust);
         uint256 r0 = _token0().balanceOf(lpVaultSwap);
         uint256[] memory b =
             abi.decode(_asColl(abi.encodeCall(vault.unwind, (key, 4e11, _zeros(), lpVaultSwap))), (uint256[]));
@@ -207,10 +260,14 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture 
 
     // TEST-015 verifies: REQ-VAULT-094, REQ-VAULT-093
     function test_TEST_015_safeTransferHolderAndPush() public {
+        bytes32 backed = _ledgerPledge(bob, bobProxy, 1e12);
         NftHolder holder = new NftHolder();
         bytes32 key = _mint1(address(holder), 1e9);
+        LedgerState memory before = _ledgerState(backed, bob, bobProxy, address(holder));
         vm.prank(address(holder));
         _npm1().safeTransferFrom(address(holder), address(vault), _id(key), "data");
         assertEq(vault.depositorOf(key), address(0));
+        assertEq(ledger.recordIdOf(INTEGRATION, key), 0, "a pushed NFT has no backing record");
+        _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, address(holder)));
     }
 }
