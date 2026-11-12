@@ -583,7 +583,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
 
     // ─── Route depth thresholds ───
 
-    // TEST-064 verifies: REQ-CONFIG-070, REQ-CONFIG-050
+    // TEST-064 verifies: REQ-CONFIG-070, REQ-CONFIG-050, REQ-ROUTE-006
     function test_TEST_064_routeDepthKindAndValue() public {
         _refuses(abi.encodeCall(store.tightenRouteDepthThreshold, (M, usdc, gho, 2, 1)), oob);
         _refuses(abi.encodeCall(store.tightenRouteDepthThreshold, (M, usdc, gho, type(uint8).max, 1)), oob);

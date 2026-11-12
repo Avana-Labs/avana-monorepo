@@ -95,7 +95,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         return abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id, bytes32("routes"));
     }
 
-    // TEST-054 verifies: REQ-CONFIG-039, REQ-CONFIG-047, REQ-MREG-032, REQ-CONFIG-073
+    // TEST-054 verifies: REQ-CONFIG-039, REQ-CONFIG-047, REQ-MREG-032, REQ-CONFIG-073, REQ-ROUTE-001
     // Sources: 5.1 TEST-054, TEST-138
     // With GHO and DAI enabled, activation needs both slots of every (pool token, debt asset) pair: each of the four
     // DAI slots missing alone fails "routes", and all present pass.
@@ -120,7 +120,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         _expectActivation(id, "");
     }
 
-    // TEST-054 verifies: REQ-CONFIG-039, REQ-CONFIG-061, REQ-MREG-012
+    // TEST-054 verifies: REQ-CONFIG-039, REQ-CONFIG-061, REQ-MREG-012, REQ-ROUTE-001, REQ-ROUTE-021
     // A disabled slot counts as missing at activation.
     function test_TEST_054_disabledSlotCountsAsMissing() public {
         _enableDai();
@@ -132,7 +132,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         _expectActivation(id, _routesErr(id));
     }
 
-    // TEST-054 verifies: REQ-CONFIG-039
+    // TEST-054 verifies: REQ-CONFIG-039, REQ-ROUTE-001
     // A pool token that is itself the debt asset needs no route into itself: with USDC enabled as debt asset only the
     // USDT slots into USDC are required.
     function test_TEST_054_poolTokenThatIsTheDebtAssetNeedsNoRoute() public {
@@ -188,7 +188,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         _expectActivation(id, "");
     }
 
-    // TEST-245 verifies: REQ-MREG-032, REQ-CONFIG-039, Q-261
+    // TEST-245 verifies: REQ-MREG-032, REQ-CONFIG-039, Q-261, REQ-ROUTE-001, REQ-ROUTE-036
     // A new debt reserve is checked against the Spoke's Active and Offboarding markets: missing routes or a failing
     // bound on either reverts LivenessBound with that market; Registered, Cancelled and Closed markets are not checked.
     function test_TEST_245_newReserveCheckedAgainstLiquidatableMarketsOnly() public {

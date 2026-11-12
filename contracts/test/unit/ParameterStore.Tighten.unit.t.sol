@@ -216,7 +216,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenMinPledgeUsd(M, 100_000e8);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-070, Q-379, REQ-ACCESS-131
+    // TEST-064 verifies: REQ-CONFIG-070, Q-379, REQ-ACCESS-131, REQ-ROUTE-006
     function test_TEST_064_routeDepthRaises() public {
         _tl();
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 1_000_000e8);

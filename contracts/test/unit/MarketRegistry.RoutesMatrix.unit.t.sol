@@ -7,6 +7,7 @@ import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketReg
 import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
 import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
+import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -17,6 +18,7 @@ import {
     RegistryRouteMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @notice Swap-route slots across market statuses, debt-asset classes and kinds; disable and restore across slots,
 /// markets and relistings; and the guardian's standby re-switch lock at its exact end.
@@ -163,7 +165,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         assertFalse(u1);
     }
 
-    // TEST-054 verifies: REQ-CONFIG-062, REQ-MREG-012, Q-151, REQ-ACCESS-048, REQ-ACCESS-127
+    // TEST-054 verifies: REQ-CONFIG-062, REQ-MREG-012, Q-151, REQ-ACCESS-048, REQ-ACCESS-127, REQ-ROUTE-019
     // A route approved in one slot cannot be restored into another slot, another market, or another debt asset.
     function test_TEST_054_restoreIsBoundToItsOwnSlot() public {
         address p = _setRoute(id, address(usdc), address(gho), 0, "dexA");
@@ -182,7 +184,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         assertTrue(usable);
     }
 
-    // TEST-054 verifies: REQ-CONFIG-062, REQ-CONFIG-060, REQ-MREG-012
+    // TEST-054 verifies: REQ-CONFIG-062, REQ-CONFIG-060, REQ-MREG-012, REQ-ROUTE-019, REQ-ROUTE-030
     // A restore re-runs the slot checks: a previously approved route that no longer supports the token class, or whose
     // market has closed, is refused.
     function test_TEST_054_restoreRerunsTheChecks() public {
@@ -234,7 +236,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         vm.stopPrank();
     }
 
-    // TEST-054 verifies: REQ-CONFIG-061, REQ-MREG-012, REQ-ACCESS-047
+    // TEST-054 verifies: REQ-CONFIG-061, REQ-MREG-012, REQ-ACCESS-047, REQ-ROUTE-018
     // Disabling an already disabled slot is accepted again (the record stays disabled) and emits again; the route stays
     // recorded so it can be restored.
     function test_TEST_054_disableIsIdempotentAndKeepsTheRoute() public {
@@ -247,6 +249,67 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
             (address cur, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
             assertEq(cur, p);
             assertFalse(usable);
+        }
+    }
+
+    // TEST-168 verifies: REQ-ROUTE-020, REQ-ROUTE-018, REQ-ROUTE-038, Q-227
+    // Sources: 2.12 REQ-ROUTE-020 (no route quarantine; a suspect route is disabled, guardians stop new activity)
+    /// @notice A route has no quarantine or suspension state: no such selector exists; neither guardian can disable a
+    /// route in either slot; a guardian's freeze or pause leaves both routes usable, so liquidation keeps its path;
+    /// and only the timelock's `disableRoute` takes a route out of use, in the primary and the backup slot alike.
+    /// @dev Kills: a quarantine or suspension selector added to the MarketRegistry, a guardian path into
+    /// `disableRoute`, and a freeze or pause that disables or hides routes.
+    function test_TEST_168_noRouteQuarantine() public {
+        string[4] memory absent = [
+            "quarantineRoute(uint256,address,address,uint8)",
+            "unquarantineRoute(uint256,address,address,uint8)",
+            "suspendRoute(uint256,address,address,uint8)",
+            "resumeRoute(uint256,address,address,uint8)"
+        ];
+        for (uint256 i = 0; i < absent.length; ++i) {
+            (bool ok, bytes memory ret) =
+                address(registry).call(abi.encodeWithSignature(absent[i], id, address(usdc), address(gho), uint8(0)));
+            assertFalse(ok, absent[i]);
+            assertEq(ret.length, 0, absent[i]);
+        }
+        address[2] memory routes = [
+            _setRoute(id, address(usdc), address(gho), 0, "dexA"), _setRoute(id, address(usdc), address(gho), 1, "dexB")
+        ];
+        address[2] memory guardians = [emergencyGuardian, aaveGuardian];
+        for (uint8 kind = 0; kind < 2; ++kind) {
+            for (uint256 g = 0; g < 2; ++g) {
+                vm.prank(guardians[g]);
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        IAccessControl.AccessControlUnauthorizedAccount.selector, guardians[g], APP_ADMIN
+                    )
+                );
+                registry.disableRoute(id, address(usdc), address(gho), kind);
+            }
+        }
+        uint256 snap = vm.snapshotState();
+        vm.prank(emergencyGuardian);
+        registry.freeze(address(hub));
+        _assertUsable(routes, true);
+        vm.revertToState(snap);
+        vm.prank(emergencyGuardian);
+        registry.pause(address(hub), PauseReason.General);
+        _assertUsable(routes, true);
+        vm.startPrank(address(timelock));
+        registry.disableRoute(id, address(usdc), address(gho), 0);
+        registry.disableRoute(id, address(usdc), address(gho), 1);
+        vm.stopPrank();
+        _assertUsable(routes, false);
+    }
+
+    function _assertUsable(
+        address[2] memory routes,
+        bool expected
+    ) internal view {
+        for (uint8 kind = 0; kind < 2; ++kind) {
+            (address r, bool usable) = registry.getRoute(id, address(usdc), address(gho), kind);
+            assertEq(r, routes[kind], "the route stays recorded");
+            assertEq(usable, expected, "usable");
         }
     }
 

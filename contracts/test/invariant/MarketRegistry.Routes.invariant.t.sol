@@ -29,7 +29,7 @@ contract MarketRegistryRoutesInvariantTest is Test {
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
     }
 
-    // TEST-054 verifies: REQ-CONFIG-060, REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-012, REQ-MREG-014, Q-151
+    // TEST-054 verifies: REQ-CONFIG-060, REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-012, REQ-MREG-014, Q-151, REQ-ROUTE-017, REQ-ROUTE-018, REQ-ROUTE-019, REQ-ROUTE-021, REQ-ROUTE-038
     // Sources: 5.1 TEST-054
     function invariant_TEST_054_everyRouteCallFollowsTheModel() public view {
         assertEq(handler.outcomeMismatch(), 0, "a route call succeeded or failed against the model");

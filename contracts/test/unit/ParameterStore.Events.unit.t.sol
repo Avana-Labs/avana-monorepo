@@ -308,7 +308,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);
     }
 
-    // TEST-061 verifies: REQ-PSTORE-005, REQ-CONFIG-070
+    // TEST-061 verifies: REQ-PSTORE-005, REQ-CONFIG-070, REQ-ROUTE-006
     function test_TEST_061_pledgeAndRouteDepthEvents() public {
         _tl();
         vm.expectEmit(address(store));

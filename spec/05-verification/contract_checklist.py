@@ -19,8 +19,9 @@ contracts/certora. It is the "every ID linked" step of the per-contract gate. Ro
 yet (PENDING) are shown as deferred to it and are not part of another contract's --check. A contract specified in
 one section of a shared page takes that section only ("page.md#Heading"); a row of that section another contract
 decides is shown as owned by it (OWNED_ELSEWHERE) and stays on the owner's checklist. Table rows of a shared page that
-only a pending contract decides are deferred by name (DEFERRED_ROWS); rows about a deployed chain's configuration are
-shown as checked outside contracts/ (OUTSIDE_CONTRACTS), with the reason, and are not part of --check.
+only a pending contract decides, and TEST rows whose test drives a pending contract, are deferred by name
+(DEFERRED_ROWS); rows about a deployed chain's configuration or an off-chain sizing rule are shown as checked outside
+contracts/ (OUTSIDE_CONTRACTS), with the reason, and are not part of --check.
 """
 from __future__ import annotations
 
@@ -123,9 +124,10 @@ OWNED_ELSEWHERE: dict[str, tuple[str, str]] = {
 
 # Rows of a shared page (a role table, a restricted-function matrix, or a list item that names written contracts only
 # as context) whose rule only a PENDING contract can satisfy, which deferred_to cannot see because it never reads
-# those tables: ID -> (the pending contracts, comma-separated, and the reason). Deferred exactly like deferred_to's
-# rows, on every checklist that lists the page; --check fails on an entry naming a contract that is not pending, so
-# each row returns to scope when its contract lands and the entry cannot go stale.
+# those tables, and TEST rows of 5.1 whose test drives a PENDING contract its "Contract / flow" column does not name:
+# ID -> (the pending contracts, comma-separated, and the reason). Deferred exactly like deferred_to's rows, on every
+# checklist that lists the row; --check fails on an entry naming a contract that is not pending, so each row returns
+# to scope when its contract lands and the entry cannot go stale.
 DEFERRED_ROWS: dict[str, tuple[str, str]] = {
     "REQ-ACCESS-011": ("LPVaultSwap", "the committed-operator registry (addKeeper, removeKeeper, activeKeeperCount) "
                        "is LPVaultSwap's keeper list"),
@@ -151,12 +153,17 @@ DEFERRED_ROWS: dict[str, tuple[str, str]] = {
     "REQ-ACCESS-164": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
     "REQ-ACCESS-079": ("AaveAdapter", "the pledge stops that replace the pledge pause are the AaveAdapter's reads"),
     "REQ-ACCESS-080": ("AaveAdapter", "the borrow stops that replace the borrow pause are the AaveAdapter's reads"),
+    "TEST-119": ("LPVaultSwap", "a failing GSM leg sending the liquidation to the next route, and no liquidation of "
+                 "another debt asset or on Base calling a GSM, are LPVaultSwap's route loop on the Ethereum fork; the "
+                 "PegModule route's own GSM checks (seized, frozen, cap 0, capacity) are TEST-054 in "
+                 "PegModuleRoute.unit.t.sol"),
 }
 
-# Rows that state a property of a deployed chain (release manifest, Safe owners and thresholds, Aave-side roles) or
-# of a contract that does not exist, which no test under contracts/ can check: ID -> reason. Listed as checked
-# outside contracts/ and left out of --check; the deployment checks (TEST-135, TEST-214, TEST-224) and the
-# live-config check own them.
+# Rows that state a property of a deployed chain (release manifest, Safe owners and thresholds, Aave-side roles, the
+# launch listing's routes measured on a fork), of a contract that does not exist, or a sizing rule the Aave DAO and
+# its risk service providers apply with no on-chain enforcement, which no test under contracts/ can check:
+# ID -> reason. Listed as checked outside contracts/ and left out of --check; the deployment checks (TEST-135,
+# TEST-214, TEST-224), the live-config check and the spec-stage sizing models own them.
 OUTSIDE_CONTRACTS: dict[str, str] = {
     "REQ-ACCESS-023": "the live-config check reads hasRole for every release-manifest pair on a deployed chain",
     "REQ-ACCESS-070": "the Aave Protocol Guardian's permissions on the Aave SpokeConfigurator are Aave's AccessManager",
@@ -172,6 +179,18 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
                       "selector inventory of REQ-ACCESS-025 fails on any unlisted selector",
     "TEST-129": "quarterly guardian rehearsal with the real Safe payloads on a fork of the deployed chain",
     "TEST-214": "role snapshot against the release manifest and the deployed Safes",
+    "REQ-FLR-009": "Aave Labs' confirmation of the coverage caller is recorded in each chain's deployment manifest "
+                   "before any CDP Spoke drawCap is raised above 0; the deployment check reads the manifest",
+    "SPEC-FLR-004": "reserve sizing against caps is Aave DAO and risk-service-provider guidance with no on-chain "
+                    "enforcement (Q-249); the spec-stage models MATH-ST-76 and MATH-ST-90 check the formula",
+    "REQ-FLR-028": "the risk service providers size caps against SPEC-FLR-004 and SPEC-FLR-005 before approval; no "
+                   "contract reads the sizing (Q-249)",
+    "REQ-ROUTE-039": "a Base GHO reserve's drawCap is sized to measured off-chain route depth and Aave V3 Pool "
+                     "liquidity by the listing payload; that every market has both routes into GHO before "
+                     "enableDebtReserve is REQ-ROUTE-036, tested in MarketRegistry.MultiDebt",
+    "TEST-120": "measures the launch listing's routes on both forks at the pinned blocks (RPC_MAINNET, RPC_BASE): "
+                "which pools, thresholds and stress sizes the listing payload sets; the route rules it relies on "
+                "(own pool refused, token class, primary and backup per debt asset) are TEST-054 locally",
 }
 
 
@@ -371,6 +390,8 @@ def main() -> int:
     req_later, test_later = deferred_page_rows(pages, args.contract), deferred_test_rows(args.contract)
     req_ids = {r for r, _, _ in reqs}
     req_later.update({r: owner for r, (owner, _) in DEFERRED_ROWS.items() if r in req_ids and r not in req_later})
+    test_ids = {t for t, _, _ in tests}
+    test_later.update({t: owner for t, (owner, _) in DEFERRED_ROWS.items() if t in test_ids and t not in test_later})
     stale = sorted(r for r, (owner, _) in DEFERRED_ROWS.items()
                    if any(k not in PENDING for k in owner.split(", ")))
     outside = {i: why for i, why in OUTSIDE_CONTRACTS.items()

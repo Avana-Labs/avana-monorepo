@@ -210,7 +210,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         _borrow(GHO_RESERVE);
     }
 
-    // TEST-068 verifies: REQ-ADAPTER-010, REQ-RISK-062, REQ-RISK-071, REQ-ADAPTER-054, REQ-ACCESS-075
+    // TEST-068 verifies: REQ-ADAPTER-010, REQ-RISK-062, REQ-RISK-071, REQ-ADAPTER-054, REQ-ACCESS-075, REQ-ROUTE-021
     // Sources: 2.7 REQ-RISK-071 example (freezing the last committed operator)
     function test_TEST_068_liquidationHalts() public {
         swap.setKeepers(0);
