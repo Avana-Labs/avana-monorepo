@@ -1,12 +1,12 @@
 name: contracts
 
-# Foundry workspace in contracts/. Every pull request runs the short set: format, lint and build, the ci test profile
-# in 10 shards, gas snapshots, branch coverage, traceability and the fast security tier. Every push to main (and a
-# manual run) adds the long checks: the deep invariant campaign, fork tests, the FFI differential suite, Halmos,
-# SMTChecker and Certora, one target per job, each at most 4 hours: `plan` lists the invariant files, Halmos test
-# contracts, SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the
-# next run. The slow security tier (security-slow.yml) and the per-layer mutation gates (mutation-gate.yml) also run
-# on every push to main.
+# Foundry workspace in contracts/. Every pull request runs the short set: format, lint and build, the ci test profile in
+# 10 shards (invariant suites as a short check, 256 runs at depth 64; the full 10,000 runs at depth 100 on main), gas
+# snapshots, branch coverage, traceability and the fast security tier. Every push to main (and a manual run) adds the
+# long checks: the deep invariant campaign, fork tests, the FFI differential suite, Halmos, SMTChecker and Certora, one
+# target per job, each at most 4 hours: `plan` lists the invariant files, Halmos test contracts, SMTChecker contracts
+# and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. The slow security tier
+# (security-slow.yml) and the per-layer mutation gates (mutation-gate.yml) also run on every push to main.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -175,12 +175,18 @@ jobs:
           name: forge-out
           path: contracts
 
-      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} of 10 (10,000 runs, TEST-007)
-        # A fresh seed per run widens coverage over time; the seed is printed for reproduction.
+      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} of 10 (fuzz 10,000 runs; invariants 10,000 x 100 on main, 256 x 64 on a pull request; TEST-007)
+        # A fresh seed per run widens coverage over time; the seed is printed for reproduction. A pull request runs the
+        # invariant suites as a short check; every push to main runs them at the full ci profile, and its gate requires
+        # every shard.
         # test/hostile/ does not exist yet: contracts/test/README.md section 6 describes the hostile suite it will hold.
         run: |
           SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
           echo "fuzz seed: $SEED"
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            export FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=64
+            echo "invariant suites: 256 runs at depth 64 (pull request)"
+          fi
           script/test-shard.sh ${{ matrix.shard }} 10 --fuzz-seed "$SEED" -vvv
 
   gas:
