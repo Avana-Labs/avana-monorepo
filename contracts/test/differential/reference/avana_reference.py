@@ -170,6 +170,31 @@ def keeper_payout(k: int, f: int, rp: int, d: int, repaid: int, a: int, b: int) 
     return [1, 0] if out < 0 else [0, out]
 
 
+def liquidation_settlement(v: int, d: int, kf: int, min_rec: int, r: int, share: int, max_shortfall: int) -> list[int]:
+    """One routed liquidation after its last route call, with no flash term (SPEC-LIQ-002, SPEC-LIQ-007):
+    R_f = max(R, minRec) (SPEC-LIQ-008), S, G, A, kr, B (SPEC-LIQ-009, SPEC-LIQ-022), the gap
+    g = max(0, D + A + B - Kf - R) and shortfall = max(0, minRec - R, g) (SPEC-LIQ-019),
+    keeperOut = Kf + R + shortfall - D - A - B (SPEC-LIQ-010, SPEC-LIQ-017).
+    [status, shortfall, A, kr, B, keeperOut]; status 1 = RecoveryBelowFloor, 2 = InsufficientProceeds (gap),
+    3 = InvalidFeeShare, 4 = InsufficientProceeds (keeperOut < 0)."""
+    if share > BPS:
+        return [3, 0, 0, 0, 0, 0]
+    rf = max(r, min_rec)
+    s = max(0, rf - d)
+    g = max(0, v - d)
+    a = min(_floor(Fraction(g * share, BPS)), s)
+    kr = min(s, g) - a
+    b = s - a - kr
+    gap = max(0, d + a + b - kf - r)
+    if min_rec - r > max_shortfall:
+        return [1, 0, 0, 0, 0, 0]
+    if gap > max_shortfall:
+        return [2, 0, 0, 0, 0, 0]
+    shortfall = max(0, min_rec - r, gap)
+    out = kf + r + shortfall - d - a - b
+    return [4, 0, 0, 0, 0, 0] if out < 0 else [0, shortfall, a, kr, b, out]
+
+
 def flash_premium_within_cap(phi: int, amount: int, max_fee: int) -> list[int]:
     """SPEC-LIQ-015: 1 if phi * 1e4 <= maxFlashFeeBps * amount, else 0."""
     return [1 if phi * BPS <= max_fee * amount else 0]
@@ -550,6 +575,7 @@ FUNCTIONS = {
     "shortfallTopUp": (shortfall_top_up, 4),
     "payouts": (payouts, 5),
     "keeperPayout": (keeper_payout, 7),
+    "liquidationSettlement": (liquidation_settlement, 7),
     "flashPremiumWithinCap": (flash_premium_within_cap, 3),
     "deleverageCap": (deleverage_cap, 5),
     "deleverageRepayment": (deleverage_repayment, 3),
