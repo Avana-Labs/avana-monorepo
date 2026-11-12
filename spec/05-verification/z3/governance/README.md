@@ -1,6 +1,6 @@
 # Governance timing models (MATH-GOV)
 
-Z3 models of the AvanaTimelock's delays and windows, the delay floor that protects the exit window, the short-delay allowlist, cancel rights with the role-change and restoring marks, the application pause state and its reasons, the keeper floor, and the bounds governance can change without stopping liquidation ([2.15](../../../02-contracts/15-governance-and-timelock.md)). Every `SPEC-GOV-001…015` formula is cited by at least one check here; the page's worked examples are recomputed in [`../../sympy/sym09_governance_timing_examples.py`](../../sympy/sym09_governance_timing_examples.py).
+Z3 models of the AvanaTimelock's delays and windows, the MarketRegistry's market-count limit, the delay floor that protects the exit window, the short-delay allowlist, cancel rights with the role-change and restoring marks, the application pause state and its reasons, the keeper floor, and the bounds governance can change without stopping liquidation ([2.15](../../../02-contracts/15-governance-and-timelock.md)). Every `SPEC-GOV-001…015` formula is cited by at least one check here; the page's worked examples are recomputed in [`../../sympy/sym09_governance_timing_examples.py`](../../sympy/sym09_governance_timing_examples.py).
 
 Run one script with `../../.venv/bin/python <file>.py`, or every model with `../../run_all.sh`. Each check asserts the negation of a property and prints `PROVED` (the negation is unsat), `COUNTEREXAMPLE` (the model is printed) or `TIMEOUT`; the script exits 1 only when a result differs from the one recorded beside the check. Every check carries a `# MATH-GOV-NN verifies: …` tag that `../../trace.py` reads.
 
@@ -20,6 +20,7 @@ Integer seconds (`block.timestamp`), no rounding. Batches of up to 6 calls, each
 | Tighten and loosen | tighten strictly safer within hard and liveness bounds; loosen one step (`≤ 0.03e18`, `new·10^4 ≤ old·15,000`, `≤ 25` bps) at most once per `normalDelay` per key | `SPEC-GOV-009`, `SPEC-GOV-011` |
 | No in-kind window | no governance-timed settlement state exists (`Q-401`); a payout `x` whose transfer fails is credited to its payee in the PayoutEscrow (payout escrow), `credited = x` | `SPEC-GOV-010` |
 | Exit window | exit guaranteed iff `r + 12·(k + 1) ≤ W`; at the floor `k_max = ⌊(MIN_NORMAL_DELAY − r)/12⌋ − 1 = 7,199` for `r = 259,200` | `SPEC-GOV-014`, `SPEC-GOV-015` |
+| Market-count limit | new market `id = c + 1` accepted only if `id ≤ N = MAX_MARKET_COUNT` (then `c' = c + 1`); relisting `1 ≤ id ≤ c`, `c' = c`; the ParameterStore re-check walks `1 … c`, gas `g(c) = a + b·c`, `N_max = ⌊(cap − a)/b⌋` | `REQ-MREG-034`, `REQ-MREG-030`, `REQ-PSTORE-009` |
 | Allowlist | `setShortDelaySelector(x, true)` only for `x ∈ SHORT_ELIGIBLE`, which holds no role, upgrade, beacon, initializer or timelock pair; at launch it is every ParameterStore `tighten*` selector (including `tightenHardHealthFloor`, `tightenGateRecoverySeconds` and `tightenPoolShareMaxBps`), the MarketRegistry stops and route restores, and `removeKeeper` | `REQ-ACCESS-142`, `REQ-ACCESS-152` |
 
 ## Properties
@@ -65,12 +66,23 @@ Integer seconds (`block.timestamp`), no rounding. Batches of up to 6 calls, each
 | `MATH-GOV-23` | an accepted setNormalDelay value v (MIN_NORMAL_DELAY <= v <= MAX_DELAY) gives a wait of 4 to 5 days at the required delay | `SPEC-GOV-012`, `SPEC-GOV-003`, `REQ-ACCESS-125` | integers (seconds) | PROVED |
 | `MATH-GOV-24` | a pure revokeRole batch cannot be cancelled by a guardian, and executed at readyAt it leaves the guardian no power from t_s + delay on | `SPEC-GOV-006`, `SPEC-GOV-005` | integers (seconds) | PROVED |
 
+### `gv03_market_count_limit.py`
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| `MATH-GOV-25` | over 6 listing calls (new or relisting) from any c0 ≤ N, marketCount never exceeds MAX_MARKET_COUNT | `REQ-MREG-034`, `REQ-MREG-030` | 6 calls, N ≥ 1, integers | PROVED |
+| `MATH-GOV-26` | wrong reading: without the check at registration the count passes the limit (deliberate counterexample) | `REQ-MREG-034` | N = 1, c0 = 1 | COUNTEREXAMPLE |
+| `MATH-GOV-27` | at the limit (c0 = N) a relisting of any cancelled id ≤ N is still accepted and leaves the count at N | `REQ-MREG-034`, `REQ-MREG-030` | integers | PROVED |
+| `MATH-GOV-28` | with g(c) = a + b·c, every walk of c ≤ N_max = ⌊(cap − a)/b⌋ markets fits the cap, and N_max + 1 markets do not | `REQ-MREG-034`, `REQ-PSTORE-009` | a ≥ 0, b ≥ 1, cap > a, integers | PROVED |
+| `MATH-GOV-28b` | fixture example: per-market gas ⌊(9,515,531 − 302,539)/63⌋ = 146,237, and the mock-LPOracle walk alone bounds N at 113 under 2^24 gas (an upper bound only; the real LPOracle costs more per market) | `REQ-MREG-034` | figures of the `REQ-MREG-034` example | PROVED |
+
 ## Findings
 
-No check in this folder finds a defect in the final spec. The 3 counterexamples are deliberate: `MATH-GOV-06` shows that an upgrade at the 12-hour short delay would beat a 3-day reaction (why upgrade and role selectors are never short), `MATH-GOV-09` shows that any-call role-change marking would let one no-op `grantRole` shield a harmful batch from the guardians (why the mark is every-call), and `MATH-GOV-17` shows that `k = 7,200` NFTs no longer fit the floor delay (why `k_max = 7,199` is exact).
+No check in this folder finds a defect in the final spec. The 4 counterexamples are deliberate: `MATH-GOV-26` shows that without the registration check the market count passes `MAX_MARKET_COUNT` (why the check sits in `listCollateralMarket`, before any write); `MATH-GOV-06` shows that an upgrade at the 12-hour short delay would beat a 3-day reaction (why upgrade and role selectors are never short), `MATH-GOV-09` shows that any-call role-change marking would let one no-op `grantRole` shield a harmful batch from the guardians (why the mark is every-call), and `MATH-GOV-17` shows that `k = 7,200` NFTs no longer fit the floor delay (why `k_max = 7,199` is exact).
 
 ## Results
 
 | Date | Command | Versions | Bounds | Proved | Counterexample | Timeout | Exit |
 |---|---|---|---|---|---|---|---|
 | 2026-11-10 | `../../.venv/bin/python gv01_timelock_timing.py`; `../../.venv/bin/python gv02_delay_floor_allowlist.py` | Python 3.9.6, z3-solver 4.13.0 | batches of 6 calls, sequences of 4–5 calls; 120 s per query | 27 (15 + 12) | 3 (2 + 1, all deliberate) | 0 | 0 for both scripts |
+| 2026-11-11 | `../../.venv/bin/python gv03_market_count_limit.py` | Python 3.9.6, z3-solver 4.13.0 | 6 listing calls; 120 s per query | 4 | 1 (deliberate) | 0 | 0 |

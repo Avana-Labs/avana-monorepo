@@ -15,7 +15,8 @@ Formulas (final text of spec/02-contracts/10-lp-oracle.md):
   SPEC-ORC-007  composition value is the minimum over pool prices, hence non-decreasing in each price
   SPEC-ORC-011  low^(x)n <= (x)_i q_i and (x)_i v_i <= high^(x)n, x (x) y = floor(x*y/1e8)
   SPEC-ORC-020  |q - s| * 1e4 <= S * min(q, s)
-  SPEC-ORC-021  ready = up and now >= startedAt + grace; down pauses seizure; unknown blocks borrow only
+  SPEC-ORC-021  ready = up and now >= startedAt + grace; down pauses seizure; unknown (incl. an answer
+                that is not exactly 160 bytes) blocks borrow only
   SPEC-ORC-022  twapMinObservations = ceil(W / blockTime) + 1
   SPEC-ORC-023  pre-call check gasleft >= ceil(64 G / 63) + POST; forwarded = min(G, g - floor(g/64))
   REQ-ORACLE-107 borrowAllowed requires now - decimalsCheckedAt <= 7,200; a mismatch fails the market
@@ -192,24 +193,44 @@ note('MATH-UO-54c', 'SPEC-ORC-020 example (S = 100, q = 100,020,000)',
 
 # ---------------------------------------------------------------- MATH-UO-55 sequencer gate
 # MATH-UO-55 verifies: SPEC-ORC-021, REQ-ORACLE-099, REQ-ORACLE-034, SPEC-ORC-016
-ans, st, gp, t = Ints('answer startedAt grace now55')
-readok, hasFeed, other = Bools('readOk hasFeed otherPause')
+ans, st, gp, t, sv, retLen = Ints('answer startedAt grace now55 servedUpdatedAt returnLength')
+called, decodes, hasFeed, other = Bools('called decodes hasFeed otherPause')
+# The uptime read succeeds only on a call that did not revert, a return of exactly 160 bytes (the five words of
+# latestRoundData()) and words that decode; any other length is unknown, whatever its first 160 bytes report.
+readok = And(called, retLen == 160, decodes)
 upS = And(hasFeed, readok, ans == 0, st != 0, st <= t)
 downS = And(hasFeed, readok, ans == 1)
 unknownS = And(hasFeed, Not(upS), Not(downS))
 ready = Or(Not(hasFeed), And(upS, t >= st + gp))
 graceS = And(upS, t < st + gp)
 paused = Or(other, downS)
-borrowOk = ready
-b55 = [gp >= 0, t >= 0]
+# The restart rule: on an L2 the served price's oldest round must be newer than the restart (startedAt).
+borrowOk = And(ready, Or(Not(upS), sv > st))
+b55 = [gp >= 0, t >= 0, sv >= 1, sv <= t]
 prove('MATH-UO-55a', 'borrowAllowed implies no feed, or the sequencer up for at least the grace period', b55,
       Implies(borrowOk, Or(Not(hasFeed), And(ans == 0, t - st >= gp))))
+prove('MATH-UO-55f', 'borrowAllowed on an L2 implies the served price comes from rounds newer than the restart', b55,
+      Implies(And(hasFeed, borrowOk), sv > st))
+prove('MATH-UO-55g', 'a chain without a sequencer feed is unchanged: borrowOk holds for every served round time',
+      b55, Implies(Not(hasFeed), borrowOk))
+witness('MATH-UO-55h', 'wrong reading (the grace period alone): past the grace period a price whose round is from '
+        'before the restart (sized on prices nobody could react to) would admit a borrow',
+        b55 + [hasFeed, upS, t >= st + gp, sv <= st, ready])
 prove('MATH-UO-55b', 'down: seizure paused and borrowing blocked', b55, Implies(downS, And(paused, Not(borrowOk))))
 prove('MATH-UO-55c', 'an unreadable or unexpected uptime feed blocks borrowing but never pauses seizure by itself',
       b55, Implies(And(unknownS, Not(other)), And(Not(borrowOk), Not(paused))))
 prove('MATH-UO-55d', 'after a restart grace and ready partition time: exactly one holds while the sequencer is up', b55,
       Implies(And(hasFeed, upS), Or(And(graceS, Not(ready)), And(ready, Not(graceS)))))
-note('MATH-UO-55e', 'Base example', f'restart 1,010,000, grace 3,600: grace until {1_010_000 + 3_600 - 1}, borrowing from {1_010_000 + 3_600}')
+prove('MATH-UO-55i', 'an uptime answer that is not exactly 160 bytes is unknown: borrowing blocked and seizure not '
+      'paused by it, whatever its words report', b55 + [retLen >= 0],
+      Implies(And(hasFeed, retLen != 160, Not(other)), And(unknownS, Not(borrowOk), Not(paused))))
+# The wrong reading decodes the first five words of any answer of at least 160 bytes.
+downLong = And(hasFeed, called, retLen >= 160, decodes, ans == 1)
+witness('MATH-UO-55j', 'wrong reading (at least 160 bytes): a 192-byte answer whose first five words report down '
+        'pauses seizure', b55 + [retLen == 192, downLong, Not(other)])
+note('MATH-UO-55e', 'Base example', f'restart 1,010,000, grace 3,600: grace until {1_010_000 + 3_600 - 1}, borrowing from {1_010_000 + 3_600} '
+     f'on a round newer than the restart; at 1,013,600 a round of 1,009,000 admits a borrow: {1_009_000 > 1_010_000}; '
+     f'a round of 1,010,000: {1_010_000 > 1_010_000}; a round of 1,013,000: {1_013_000 > 1_010_000}')
 
 # ---------------------------------------------------------------- MATH-UO-56 observation buffer
 # MATH-UO-56 verifies: SPEC-ORC-022, REQ-ORACLE-055

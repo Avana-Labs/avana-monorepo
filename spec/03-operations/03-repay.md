@@ -11,6 +11,8 @@ Repay has two paths. Both act on one account: the PositionProxy of one wallet fo
 
 Adapter behavior belongs to [2.6 Aave Adapter][2.6] (`SPEC-PROXY-003`, `SPEC-PROXY-007`, `SPEC-PROXY-009`); the proxy to [2.5 Position Proxy and Proxy Manager][2.5]; the record release and cap budgets to [2.3 Collateralization][2.3]; the valuation, flash loan and conversion of repay with collateral to [2.11 LPVaultSwap][2.11] (`SPEC-LIQ-020`); the unwind to the market's AMM integration, implemented by its LPVault ([2.2 LP Vault][2.2]); the lock to [2.16 Lock][2.16]; Aave behavior to [2.1 Avana Hub and Spokes][2.1]. Parameters are named as in [1.5][1.5].
 
+Repay with funds:
+
 ## Objective
 
 Move a debt asset to its funding Hub to reduce or clear one debt reserve of the account: any partial amount, or the full live debt of that reserve (drawn plus premium, accrued to the block) under a signed spending cap whose unused part is refunded in the same call (`Q-075`, `Q-153`, `Q-180`, `Q-234`, `Q-269`); or, with collateral, the debt that a stated number of the borrower's own units can pay at oracle value, leaving the account's health factor no lower than before (`Q-255`, `Q-356`).

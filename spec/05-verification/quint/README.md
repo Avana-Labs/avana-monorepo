@@ -17,7 +17,7 @@ QUINT_FULL=1 ./run.sh      # full mode: 10,000 traces × 20 steps per check
 QNT_ONLY='QNT-48|W-' ./run.sh                                      # a subset
 ```
 
-`../run_all.sh` runs `typecheck` and `test` on both `.qnt` files and then `run.sh` in quick mode. A `hold` line fails if a violation is found. A `witness` line checks that the random traces reach a state (a seizure, a deficit, a rescue top-up, an executed timelock operation and so on). In quick mode a missed witness is a warning; in full mode it is a failure. Logs with full traces go to a temp folder printed at the start.
+`../run_all.sh` runs `typecheck` and `test` on both `.qnt` files and then `run.sh` in quick mode. A `hold` line fails if a violation is found. A `witness` line checks that the random traces reach a state (a seizure, a deficit, a rescue top-up, an executed timelock operation and so on). In quick mode a missed witness is a warning; in full mode it is a failure. Logs with full traces go to a temp folder printed at the start. In CI, the `spec` workflow runs `../run_all.sh` (quick mode), and the `models` workflow (`.github/workflows/models.yml`) runs `topology_run.sh`, the checks `../run_all.sh --nightly` adds, on every push to `main`.
 
 ## What is modelled
 
@@ -57,7 +57,7 @@ Step relations: `step` (reviewed components, every attacker, guardians, the time
   - Aave's liquidation uses a flat bonus and no target-HF limit.
   - The two sell legs carry half the seized value each; realised slippage per leg is 0, 2 or 10 %. The flash fee is 0.
   - In-kind: the unwound tokens' oracle value is the LP's fair value plus a deviation of 0 or 5 %.
-  - Interest is a +50 step. Rolling 24-hour windows are fixed windows; one tick stands for one hour and `wait` advances one normal delay.
+  - Interest is a +50 step. The freeze limit's 24 one-hour buckets are modelled as one fixed 24-hour window; one tick stands for one hour and `wait` advances one normal delay.
   - Upgrades through the timelock land reviewed implementations; the hostile step relations model an implementation that has already landed (their delay is checked by QNT-52).
 - **Not modelled:** route selection inside a market (a market's sell routes are up, primary-down or down as a whole), the top-up slice and the cap counters (`Q-157`, `Q-158`; rescue units come from whole-pledge exemptions only), USD caps and the USD band, keeper reimbursement, risk premium, the recovery-evidence lookup across Chainlink phases (`Q-272`), feed ages within a state, `maxGhoSpend` on the GHO path.
 
@@ -78,7 +78,7 @@ Step relations: `step` (reviewed components, every attacker, guardians, the time
 
 ## Properties
 
-"Steps" is the step relation each run uses. "Holds (quick mode)" means no violation in the 2026-11-10 quick run (500 traces × 20 steps per property); the 10,000 × 20 full run is the next nightly run's job (`QUINT_FULL=1 ./run.sh`).
+"Steps" is the step relation each run uses. "Holds (quick mode)" means no violation in the 2026-11-10 quick run (500 traces × 20 steps per property); the 10,000 × 20 full run (`QUINT_FULL=1 ./run.sh`) runs by hand; no CI workflow runs it.
 
 QNT-13, QNT-32, QNT-33 and QNT-34 keep their IDs with a replacement statement, because the Guardian incident clock, the bounded liquidation halt and keeper quarantine no longer exist (`Q-227`): QNT-32 is now "no Avana restriction changes whether a liquidation succeeds", QNT-33 "no Avana restriction reaches an exit", QNT-34 the keeper floor counting unfrozen keepers, and QNT-13 the blast radius of hostile components.
 
@@ -196,7 +196,7 @@ Combined runs: `honestInvariants` (all 58) on `step` from `init`, `initStressed`
 
 ## Results
 
-Run on 2026-11-10 with Quint 0.22.4 on 8 cores, in quick mode: 500 traces × 20 steps per check, 96 checks, about 14 minutes. The 10,000 × 20 full run is the next nightly run's job: `QUINT_FULL=1 ./run.sh`. In full mode a missed witness fails the run, so the four quick-mode warnings below must be reached there.
+Run on 2026-11-10 with Quint 0.22.4 on 8 cores, in quick mode: 500 traces × 20 steps per check, 96 checks, about 14 minutes. The 10,000 × 20 full run, `QUINT_FULL=1 ./run.sh`, runs by hand; no CI workflow runs it. In full mode a missed witness fails the run, so the four quick-mode warnings below must be reached there.
 
 Re-run on 2026-11-11 after the one entry point (`Q-404`) replaced the keeper and permissionless actions with one `liquidate` action open to every caller that is not frozen: `quint typecheck` of `avana.qnt` and `avana_tests.qnt`; `quint test avana_tests.qnt` (50 passing, `QNT-T29` now `anyCallerLiquidationTest`); and `QNT_ONLY='^(QNT-ALL-H|QNT-32|QNT-36|QNT-40|QNT-42|W-PERM)$' QNT_JOBS=2 ./run.sh` in quick mode (500 traces × 20 steps): QNT-ALL-H, QNT-32, QNT-36, QNT-40 and QNT-42 hold, and W-PERM (now a liquidation by a caller outside the committed-operator registry) is again a quick-mode warning; 5 minutes 46 seconds. The other 90 checks were not re-run on this change; the next full run covers them.
 

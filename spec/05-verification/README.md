@@ -52,7 +52,7 @@ Limits: bounded and random checks do not establish correctness beyond their mode
 5. with `--nightly`, runs the topology simulator checks in `quint/topology_run.sh` (1,000 traces × 25 steps per check);
 6. runs `trace.py`, then prints the exit status of every step.
 
-It exits non-zero if any step fails. Single tools:
+It exits non-zero if any step fails. In CI, the `spec` workflow runs the quick path; the `models` workflow (`.github/workflows/models.yml`) runs `quint/topology_run.sh`, the part `--nightly` adds, on every push to `main`, and on every pull request and push to `main` it runs the formal-verification areas of `audit/formal-verification/`, the user simulation of `audit/user-simulation/` and `contract_checklist.py --check` for every contract with a checklist in `audit/traceability/results/contract-checklists/`. Single tools:
 
 ```bash
 .venv/bin/python z3/aave-risk/ar01_health_factor.py         # one Z3 model

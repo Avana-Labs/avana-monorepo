@@ -227,7 +227,7 @@ module avana {
     riskHostile: bool,
     swapHostile: bool,
     adapterHostile: bool,
-    // rolling 24-hour window start (freeze rate); there is no settlement budget (Q-397)
+    // freeze-rate window start: one fixed 24-hour window stands for the contract's 24 one-hour buckets; there is no settlement budget (Q-397)
     winStart: int,
     // AvanaTimelock
     ops: int -> Op,
@@ -294,7 +294,7 @@ module avana {
   pure val MAX_SH_PCT = 10         // maxShortfallBps, percent (Q-251)
   pure val CACHED_WINDOW = 2
   pure val GRACE = 3
-  pure val DAY = 24                // rolling 24-hour windows (freeze rate)
+  pure val DAY = 24                // freeze-rate window, the contract's 24 one-hour buckets
   pure val LINE = Map("GHO" -> 5000, "USDT" -> 2000)
   pure val RESERVE0 = 500
   pure val RESERVE_MIN = 300       // firstLossReserveMinimum
@@ -1218,7 +1218,7 @@ module avana {
   }
 
   // ================================================================ FEES
-  // depositor -> LPVault.collectFees -> NFPM.collect (Q-030, Q-051); never gated
+  // depositor -> AaveAdapter.collectFees -> Collateralization.collectFees -> LPVault.collectFees -> NFPM.collect under the Adapter's Lock (Q-030, Q-051, Q-377); never gated
 
   pure def collectOk(st: St, c: str, rid: int): bool =
     st.recs.keys().contains(rid) and { val r = st.recs.get(rid) and { r.open, c == r.depositor } }

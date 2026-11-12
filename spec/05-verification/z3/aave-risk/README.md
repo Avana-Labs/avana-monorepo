@@ -34,7 +34,7 @@ Run: `../../run_all.sh`, or `../../.venv/bin/python <file>.py` from this folder.
 | `SPEC-CF-004`, `SPEC-HUB-006` | `10^4 − CF > dev(r) + drift(r)` for every route | none | ar10 |
 | `SPEC-BRK-001` | alert only (`Q-399`): ⇔ `now − at ≤ 7,200 ∧ price8 × 10^4 < cp × (10^4 − 300)`; no on-chain trip | none | ar09 |
 | `SPEC-BRK-002` | tripped ⇔ `supply × 10^4 > poolShareMaxBps × liqHM` (one 10% value, `Q-399`) | floored liqHM | ar09 |
-| `SPEC-BRK-003` | probe `None` never trips; revert, out-of-gas or malformed return trips; `paused()` true or `basisPointsRate() > 0` trips | none | ar09 |
+| `SPEC-BRK-003` | probe `None` never trips; revert, out-of-gas or malformed return of any read the kind makes trips; `paused()` true or `basisPointsRate() > 0` trips; `UsdtFeeRateAndPaused` trips ⇔ `PausedFlag` or `UsdtFeeRate` would trip on the same reads | none | ar09 |
 | `SPEC-BRK-004` | `DEFICIT` ⇔ `deficitRay > breakerDeficitMax × RAY`, `breakerDeficitMax` 10,000 GHO (`Q-399`); no budget condition (`Q-397`) | none | ar09 |
 | `SPEC-BRK-005`, `SPEC-BRK-006` | alerts only (`Q-399`): window of 3,600 s opened at the first record after expiry; alert when `seized_w × 10^4 > 2,000 × creditedAtStart` or 3 route failures; no latch or cooldown; a temporary gate reopens after 1,800 s of healthy observations | none | ar09 |
 | `REQ-ADAPTER-082`, `REQ-MREG-023` | freeze read only on new-activity paths | — | ar10 |
@@ -171,7 +171,9 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 | MATH-AR-54a–b | pledges within the pool-share cap never trip the 10% gate (one value, `Q-399`); floored liqHM trips earlier | SPEC-BRK-002, SPEC-CAP-005, REQ-PSTORE-016 | breaker ≥ cap | PROVED |
 | MATH-AR-54c | an exempt rescue top-up can raise the share past the breaker | SPEC-BRK-002 | deliberate | COUNTEREXAMPLE |
 | MATH-AR-54d, 55c, 56c | 2.1e12 trips at 1,000 bps; USDT rate 10 trips; deficit 10,000.5 GHO trips and exactly 10,000 does not | SPEC-BRK-002, SPEC-BRK-003, SPEC-BRK-004 | — | COMPUTED |
-| MATH-AR-55a–b | `None` never trips; failure modes trip; fee rate > 0 trips | SPEC-BRK-003 | — | PROVED |
+| MATH-AR-55a–b | `None` never trips; failure modes of each read the kind makes trip; fee rate > 0 trips | SPEC-BRK-003, REQ-MREG-027 | four kinds | PROVED |
+| MATH-AR-55d–e | the combined kind `UsdtFeeRateAndPaused` trips exactly when `PausedFlag` or `UsdtFeeRate` would trip on the same two reads; with both answers well formed, ⇔ `paused()` true or rate > 0 | SPEC-BRK-003, REQ-MREG-027 | — | PROVED |
+| MATH-AR-55f | Ethereum USDT combined probe: clear at (false, 0), tripped at (true, 0) and (false, 10) | SPEC-BRK-003 | — | COMPUTED |
 | MATH-AR-56a–b | DEFICIT on the ray value equals the rounded-up base units; max 0 trips on any deficit | SPEC-BRK-004, DEF-018 | — | PROVED |
 | MATH-AR-57a–b | `creditedAtStart` is the credited total before the window; a temporary gate reopens only after 1,800 s of healthy observations (`Q-399`) | SPEC-BRK-005, REQ-MREG-026, EMG-089 | — | PROVED |
 | MATH-AR-57c | rolling-hour reading of the window | SPEC-BRK-005 | deliberate | COUNTEREXAMPLE |
@@ -192,6 +194,19 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 | MATH-AR-63a–b | margin keeps true collateral above debt; 50, 350, 75; 7,000 and 7,188 > 350 | SPEC-CF-004, SPEC-HUB-006 | reals | PROVED / COMPUTED |
 | MATH-AR-64a–c | the freeze never changes an exit or liquidation; a frozen wallet opens no new exposure; unfrozen wallets unaffected | REQ-ADAPTER-082, REQ-MREG-023, REQ-PROXY-099, INV-081 | boolean model | PROVED |
 | MATH-AR-65 | `keeperFloor` 1 (`Q-400`): freezing a third of 4 keepers is allowed, the last refused; MAX_KEEPERS 32; 4 active markets; target 1e18 out of bounds; one 10% pool-share value; breakerDeficitMax 10,000 GHO in bounds | REQ-MREG-021, REQ-MREG-031, REQ-PSTORE-022, REQ-PSTORE-016 | — | COMPUTED |
+
+### `ar12_wind_down.py`
+
+The wind-down ramp `LT(e) = LT0 − ⌊(LT0 − LTf) × min(e, R) / R⌋` for `LT0 > LTf`, else `LT0`, with `LTf = 5,000` bps and `R = 30` days (2.8 `REQ-CONFIG-080`).
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| MATH-AR-70a | for `0 ≤ d` and `0 ≤ s1 ≤ s2 ≤ R`, `0 ≤ d·s1 ≤ d·s2 ≤ d·R` (lemma, over the reals) | REQ-CONFIG-080 | `d < 10⁴` | PROVED |
+| MATH-AR-70b | the ramp stays within `[LTf, LT0]` | REQ-CONFIG-080 | integers | PROVED |
+| MATH-AR-70c | the ramp never rises: a later step drops at least as much as an earlier one | REQ-CONFIG-080 | integers | PROVED |
+| MATH-AR-70d | from the end of the ramp the threshold is `LTf` (when `LT0 > LTf`) | REQ-CONFIG-080 | integers | PROVED |
+| MATH-AR-70e | a start at or below `LTf` never moves, and every result fits `uint16` | REQ-CONFIG-080 | integers | PROVED |
+| MATH-AR-70f | `REQ-CONFIG-080` worked example and the unit-test vectors | REQ-CONFIG-080 | exact integers | COMPUTED |
 
 ## Findings
 
@@ -214,8 +229,9 @@ The other counterexamples are deliberate: wrong-reading checks (MATH-AR-17a, 22,
 | 2026-11-10 (restore amount divided by the served price, `SPEC-CAP-003`; `MATH-AR-47f` added) | same | Python 3.9.6, z3-solver 4.13.0 | 120 s per query; integer bounds per table | 127 | 12 (all deliberate) | 41 | 0 | 0 | 0 for every script; `ar08` 24 proved, 8 computed |
 | 2026-11-10 (no minimum debt, `Q-381`: `MATH-CH-01` and `MATH-CAP-09` rewritten from the keeper break-even to the `SPEC-CHAIN-001` gas units model, and `MATH-CAP-09` adds the `SPEC-CAP-009` idle test; scripts renamed `ch01_gas_model.py` and `ar11_record_gas_credit_lines.py`) | `../../.venv/bin/python ch01_gas_model.py`, `ar11_record_gas_credit_lines.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ch01 2, ar11 10 | 0 | ch01 7 figures, ar11 4 | 0 | 0 | 0 for both |
 | 2026-11-10 (parameter decisions `Q-396`, `Q-398`, `Q-399`, `Q-400`: `ar02` gate at HF 1.00 with an optional hard floor and the Lens recommended borrow at HF 1.10; `ar09` price drop, seizure surge and route failures as alerts, pool share 10%, deficit 10,000 GHO, 30-minute reopening; `ar10` keeperFloor 1; `ar11` `MATH-CAP-09e–h` rewritten from the removed idle test to the Lens capacity) | same | Python 3.9.6, z3-solver 4.13.0 | 120 s per query; integer bounds per table | 139 | 12 (all deliberate) | 52 | 0 | 0 | 0 for every script |
+| 2026-11-11 (combined USDT issuer probe `UsdtFeeRateAndPaused`: `MATH-AR-55` rewritten over four kinds with one outcome per read; `MATH-AR-55d–f` added) | `../../.venv/bin/python ar09_breakers.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar09 14 | 2 (both deliberate) | ar09 7 | 0 | 0 | 0 |
 
-Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 24/0/8/0 (includes MATH-AR-47f); ar09 12/2/6/0; ar10 14/1/6/0; ar11 13/0/5/0; ch01 2/0/7/0.
+Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 24/0/8/0 (includes MATH-AR-47f); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the wind-down ramp); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
 
 ## Assumptions common to all models
 

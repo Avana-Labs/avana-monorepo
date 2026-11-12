@@ -362,7 +362,8 @@ class System(SwapMixin):
         self.pause_state = NONE
 
     def freeze_address(self, guardian, account):
-        """Q-242: immediate for a freeze guardian, at most 20 per guardian per rolling 24 h, never the protected
+        """Q-242: immediate for a freeze guardian, at most 20 per guardian in the contract's 24 one-hour buckets
+        (modelled as a continuous 24 h window), never the protected
         set; no keeper floor, so the last unfrozen keeper can be frozen and new borrowing then halts (Q-400)."""
         def f():
             need(guardian in GUARDIANS, "Unauthorized")

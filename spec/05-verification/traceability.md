@@ -8,7 +8,7 @@ Requirements: `REQ-*`, `INV-*`, `SPEC-*` (formulas), `ATTACK-*`, flow steps (`DE
 
 Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` rule names the row and the prover has not passed it; marked †), **Verified** (spec-stage checks plus a Foundry test or a prover-passed property), **Changed — re-verify**.
 
-**3489 requirements · 1433 with checks · 0 errors · 3766 warnings**
+**3497 requirements · 1438 with checks · 0 errors · 3782 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -226,7 +226,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `BOR-015` | Check the pause state of the home Hub | `AD` → `MR.pauseState(HD)` (view) | `Frozen` → `Ap… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `BOR-016` | Check the address freeze | `AD` → `MR.isFrozenAddress(W)`, `MR.isFrozenAddress(receiver)` … | — | — | — | — | `IAaveAdapterErrors`, `IAaveAdapterUser` | Unverified |
 | `BOR-017` | Circuit breakers (`Q-399`) | `RM` (inside `preBorrowCheck`) → `MR.marketBreaker(m)`, vault… | — | — | — | — | `IAaveAdapterUser`, `IRiskModuleChecks` | Unverified |
-| `BOR-018` | Check the chain's sequencer gate | `AD` → `ParameterStore.sequencer()` → the chain's seque… | — | — | — | — | — | Unverified |
+| `BOR-018` | Check the chain's sequencer gate | `AD` → `RM.preBorrowCheck` → `RiskModuleBorrowLogic.pre… | — | — | — | — | — | Unverified |
 | `BOR-019` | Funding Hub and credit line | `AD` → `MR.pauseState(HF_r)`, `MR.crossHubLineCap(HF_r, A, S… | — | — | — | — | — | Unverified |
 | `BOR-020` | No minimum debt | None | No call. Avana has no minimum debt on any chain: a borrow of any … | — | — | — | — | — | Unverified |
 | `BOR-021` | No idle-charge step (`Q-396`) | None | No call. The idle-collateral mechanism does not exi… | — | — | — | — | — | Unverified |
@@ -289,8 +289,8 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `DEF-015` | Pending-settlement proceeds. When anyone calls `LPVaultSwap.settlePending(marketId, debtRe… | `MATH-ST-67`, `MATH-ST-95` | `QNT-03`, `QNT-37`, `QNT-T09` | — | — | — | Modelled |
 | `DEF-016` | `enableDebtReserve` (timelock, normal delay) for any debt asset, GHO included, deploys or … | — | — | — | — | — | Unverified |
 | `DEF-017` | A liquidation that records deficits in two assets is covered by two coverage calls, each o… | — | — | — | — | — | Modelled |
-| `DEF-018` | Coverage and deficit breakers (`Q-399`). For every debt reserve `(S, r)` of asset `a` fund… | `MATH-AR-56`, `MATH-CAP-10` | — | — | — | — | Modelled |
-| `DEF-019` | Coverage bound on credit lines. For each `(chain, funding Hub h, asset a)`, with `D_j` the… | `MATH-AR-29`, `MATH-AR-30`, `MATH-CAP-10` | — | — | — | — | Modelled |
+| `DEF-018` | Deficit breaker (`Q-399`). For every debt reserve `(S, r)` of asset `a` funded by Hub `h`,… | `MATH-AR-56`, `MATH-CAP-10` | — | — | — | — | Modelled |
+| `DEF-019` | Coverage bound on credit lines. For each `(chain, funding Hub h, asset a)`, the MarketRegi… | `MATH-AR-29`, `MATH-AR-30`, `MATH-CAP-10` | — | — | — | — | Modelled |
 | `DEF-020` | Cross-Hub credit lines (off at launch). A debt reserve whose funding Hub differs from its … | — | — | — | — | — | Unverified |
 | `DEF-021` | Exposure publication. The Lens reports, per `(chain, Hub, asset)`: each drawing Spoke and … | — | — | — | — | — | Unverified |
 | `DEF-022` | Chain specifics. Each chain has its own Hubs, Coverage Spokes, `COVERAGE_ROLE` holder, Gua… | — | — | — | — | — | Unverified |
@@ -301,7 +301,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `DEF-F-004` | `DEF-006` | Funded balance below the deficit | Covers the funded balance only; the remaind… | — | — | — | — | — | Modelled |
 | `DEF-F-005` | `DEF-006` | Coverage Spoke inactive on its asset, or lacks `HUB_DEFICIT_ELIMINATOR_ROLE` |… | — | — | — | — | — | Unverified |
 | `DEF-F-006` | `DEF-003` | The liquidation that would report the deficit fails its recovery floor, its ca… | — | — | — | — | — | Unverified |
-| `DEF-F-007` | `DEF-018` | A borrow of the asset, or a withdraw-with-debt by an account with debt in it, … | — | — | — | — | — | Modelled |
+| `DEF-F-007` | `DEF-018`, `DEF-019` | A borrow of the asset, or a withdraw-with-debt by an account with d… | — | — | — | — | — | Modelled |
 | `DEF-F-008` | `DEF-016`, `DEF-019` | `enableDebtReserve` or a recorded drawCap raise would break `Σ D × … | — | — | — | — | — | Unverified |
 | `DEF-F-009` | `DEF-016` | The named Coverage Spoke's `HUB()`, `ASSET_ID()` or `ASSET()` differs from the… | — | — | — | — | — | Unverified |
 | `DEF-F-010` | `DEF-020` | A cross-Hub reserve while `crossHubLinesEnabled` is false, without the funding… | — | — | — | — | — | Unverified |
@@ -317,7 +317,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `DEP-005` | Register the proxy in the market's token | AaveAdapter → `VT.isValidProxy(P)`; `VT.addVali… | — | — | — | — | `IVaultToken` | Unverified |
 | `DEP-006` | Ask Collateralization to pledge | AaveAdapter → `CO.pledge(W, P, VT, positionKey, requireR… | — | — | — | — | `ICollateralizationAdapter` | Unverified |
 | `DEP-007` | Take custody and check the exact shape | Collateralization → `LV.receivePosition(m, W, pos… | — | — | — | — | `ICollateralizationAdapter` | Unverified |
-| `DEP-008` | Repeat the market check and refuse a second record | Collateralization → `LV.marketOfPosit… | — | — | — | `TEST-010` | `IAmmIntegration`, `ICollateralizationAdapter`, `ILPVaultEvents` | Unverified |
+| `DEP-008` | Refuse a second record, then repeat the market check after custody | Collateralization → `… | — | — | — | `TEST-010` | `IAmmIntegration`, `ICollateralizationAdapter`, `ILPVaultEvents` | Unverified |
 | `DEP-009` | Check the credited units read after custody | Collateralization | `units` is the value `re… | — | — | — | — | `ICollateralizationAdapter` | Unverified |
 | `DEP-010` | Poke the price and gather the counters | Collateralization → `O.poke()`; own storage | `O.… | — | — | — | — | `ICollateralizationAdapter` | Unverified |
 | `DEP-011` | Eligibility, minimum value, caps, breakers and rescue | Collateralization → `RM.checkPledg… | `MATH-UO-27`, `MATH-UO-28` | `QNT-25` | `HYP-22`, `HYP-55` | — | `ICollateralizationAdapter` | Modelled |
@@ -359,7 +359,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `DEP-F-018` | `DEP-011` | `mulDiv(units, price8, 10^d, Floor) < minPledgeUsd[m]` and the pledge is not a… | — | — | — | — | — | Unverified |
 | `DEP-F-019` | `DEP-011` | Post-pledge total above `marketUsdCap` for the `Regular` part, above `tokenUsd… | — | — | — | — | — | Unverified |
 | `DEP-F-020` | `DEP-011` | Pledge needs the top-up slice and is a new-account pledge, or the account's HF… | — | — | — | — | — | Unverified |
-| `DEP-F-021` | `DEP-012` | `checkPledge` returned `usdCharge == 0`, `usdCharge ≥ 2^128`, `sliceUsd > usdC… | — | — | — | — | — | Unverified |
+| `DEP-F-021` | `DEP-012` | `checkPledge` returned `usdCharge == 0`, `usdCharge ≥ 2^64`, `sliceUsd > usdCh… | — | — | — | — | — | Unverified |
 | `DEP-F-022` | `DEP-015` | Aave rejects the supply | `ReservePaused`, `ReserveFrozen`, `SpokeNotActive`, … | — | — | — | — | — | Unverified |
 | `DEP-F-023` | `DEP-016`, `DEP-017` | Aave rejects the collateral enable (including `spokeUserReservesLim… | — | — | — | — | — | Unverified |
 | `DEP-F-024` | `DEP-018` | `P`'s supplied shares did not rise by `credited`, `VT.totalSupply()` exceeds `… | — | — | — | — | — | Unverified |
@@ -378,7 +378,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `DEP-POST-003` | `P`'s supplied vault tokens in the reserve rose by `units` and the reserve is enabled as c… | — | — | — | — | — | Unverified |
 | `DEP-POST-004` | The per-Hub token counters of every pool token and the depositor counter rose by the pledg… | — | — | `HYP-10`, `HYP-55` | — | — | Modelled |
 | `DEP-POST-005` | `P` exists at `predictProxy(W, S, m)`, is bound to `(W, S, m)` in the Adapter and register… | — | `QNT-08` | — | — | — | Modelled |
-| `DEP-POST-006` | `P`'s record list for the market is ordered by credited units, largest first, ties by lowe… | — | — | `HYP-45` | — | — | Modelled |
+| `DEP-POST-006` | The new record is inserted in `P`'s record list for the market before the first record wit… | — | — | `HYP-45` | — | — | Modelled |
 | `DEP-POST-007` | No debt asset moved and `P`'s debt on every debt reserve is unchanged; the position's liqu… | — | — | — | — | — | Unverified |
 | `DEP-POST-008` | `accountCredited[P][VT]` rose by exactly `units` and equals the sum of credited units of `… | — | — | — | — | — | Unverified |
 | `DEP-POST-009` | The record's rescue units equal `units` for a pledge admitted through a rescue exemption, … | — | — | — | — | — | Unverified |
@@ -518,7 +518,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `EMG-F-017` | `EMG-091`, `EMG-076` | A standby switch whose route is itself stale, invalid or disagrees … | — | — | — | — | — | Unverified |
 | `EMG-F-018` | `EMG-090` | `freezeAddress` on an address in the protected set | Reverts with `ProtectedAd… | — | — | — | — | — | Unverified |
 | `EMG-F-019` | `EMG-090` | `freezeAddress` on the last active committed operator of a chain | Succeeds: t… | — | — | — | — | — | Unverified |
-| `EMG-F-020` | `EMG-090` | A caller's freeze beyond `MAX_ADDRESS_FREEZES_PER_DAY` (20) in a rolling 24 ho… | — | — | — | — | — | Unverified |
+| `EMG-F-020` | `EMG-090` | A caller's freeze beyond `MAX_ADDRESS_FREEZES_PER_DAY` (20) in the 24 one-hour… | — | — | — | — | — | Unverified |
 | `EMG-F-021` | `EMG-090` | `freezeAddress` on a frozen address, or `unfreezeAddress` on an address that i… | — | — | — | — | — | Unverified |
 | `EMG-F-022` | `EMG-070`, `EMG-045` | A frozen address borrows, is a borrow receiver, withdraws or remove… | — | — | — | — | — | Unverified |
 | `EMG-F-023` | `EMG-018`, `EMG-068`, `EMG-070` | A pledge, top-up or re-credit that is not a rescue top-u… | — | — | — | — | — | Unverified |
@@ -588,8 +588,8 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `INV-013` | A proxy's vault-token supply on the Spoke decreases only through (a) `Spoke.withdraw` call… | `MATH-AR-28`, `SYM-16` | `QNT-09`, `QNT-23`, `QNT-T06`, `QNT-T07`, `QNT-TOPO-02B`, `QNT-TOPO-03` | `HYP-12`, `HYP-23` | `TEST-150`, `TEST-189` | — | Verified |
 | `INV-014` | In every LPVaultSwap liquidation of proxy `p` in market `m`, with `S0` and `T0` Collateral… | `MATH-ST-37`, `MATH-ST-38`, `MATH-ST-39`, `MATH-ST-40`, `MATH-ST-45`, `MATH-UO-31`, `MATH-UO-32` | `QNT-10`, `QNT-T05`, `QNT-T10`, `QNT-T11` | `HYP-26` | `PROP-004`†, `PROP-011`†, `TEST-056`, `TEST-208` | `CollateralizationSeizure`, `ICollateralizationSeizure` | Verified |
 | `INV-015` | Collateralization keeps the records of each `(p, m)` with credited units > 0 in one stored… | `MATH-ST-42`, `MATH-ST-43`, `MATH-ST-44` | `QNT-10` | `HYP-27`, `HYP-45` | `PROP-012`†, `PROP-013`†, `PROP-014`†, `TEST-020`, `TEST-057`, `TEST-102`, `TEST-124`, `TEST-153`, `TEST-269` | `CollateralizationLedger`, `ICollateralizationSeizure` | Verified |
-| `INV-016` | A PositionProxy is a logic-free immutable account. It has one entry point that executes a … | — | `QNT-T28` | — | `PROP-010`†, `PROP-033`†, `PROP-056`†, `TEST-025`, `TEST-032`, `TEST-172`, `TEST-187` | `IPositionProxy`, `PositionProxy` | Verified |
-| `INV-017` | Collateralization and each LPVault obtain an AMM protocol's position manager, factory and … | — | — | — | `PROP-083`†, `TEST-010`, `TEST-108`, `TEST-171`, `TEST-264`, `TEST-265` | `CollateralizationBase`, `ILPVault`, `IPositionProxy` | Planned (prover) |
+| `INV-016` | A PositionProxy is a logic-free immutable account. Its only state-changing function is `ex… | — | `QNT-T28` | — | `PROP-010`†, `PROP-033`†, `PROP-056`†, `TEST-025`, `TEST-032`, `TEST-172`, `TEST-187` | `IPositionProxy`, `PositionProxy` | Verified |
+| `INV-017` | Collateralization and each LPVault obtain an AMM protocol's position manager and factory o… | — | — | — | `PROP-083`†, `TEST-010`, `TEST-108`, `TEST-171`, `TEST-264`, `TEST-265` | `CollateralizationBase`, `ILPVault`, `IPositionProxy` | Planned (prover) |
 | `INV-018` | Blast radius of upgradeable contracts. (a) AaveAdapter implementation faulty or hostile (o… | — | `QNT-28`, `QNT-T09`, `QNT-T10` | — | `TEST-133` | — | Verified |
 | `INV-019` | `borrowNonce[p]`, stored per proxy in the AaveAdapter, increases by exactly 1 per successf… | — | `QNT-21` | `HYP-15` | `PROP-031`† | `IAaveAdapterViews` | Planned (prover) |
 | `INV-020` | In a borrow of debt reserve `r`, `r`'s asset moves from `r`'s funding Hub (the CDP Spoke's… | — | `QNT-11` | `HYP-15`, `HYP-19` | — | — | Modelled |
@@ -886,12 +886,12 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `MKT-052` | Collateral-factor changes are ordered across the two governance systems so that Avana neve… | `SYM-139` | — | — | — | — | Modelled |
 | `MKT-053` | Risk-parameter changes follow one process (governance/README, 2.15 `REQ-ACCESS-161`, `SPEC… | `SYM-139` | — | — | — | — | Modelled |
 | `MKT-054` | No SettlementBudget (`Q-397`): no budget, per-call cap, market window or asset window is s… | `MATH-ST-15`, `SYM-139` | — | — | — | — | Modelled |
-| `MKT-055` | `deployCdpSpoke(p)`, a normal-delay timelock operation on the chain: after the Aave payloa… | — | — | — | — | — | Unverified |
+| `MKT-055` | `deployCdpSpoke(def)`, a normal-delay timelock operation on the chain: after the Aave payl… | — | — | — | — | — | Unverified |
 | `MKT-056` | `listCollateralMarket(def)`, the listing batch of `MKT-018` to `MKT-021` at the normal del… | — | — | — | — | — | Unverified |
 | `MKT-057` | `enableDebtReserve(spoke, def)`, a normal-delay operation: records the reserve's asset and… | `MATH-AR-29`, `MATH-AR-30` | — | — | — | — | Modelled |
 | `MKT-058` | Every CDP Spoke is a standard Aave V4 Spoke, and the listing AIP sets on every Avana colla… | — | — | — | — | — | Unverified |
 | `MKT-059` | Wind-down ramp: after the offboarding notice, `MarketRegistry.stepWindDown(marketId)`, cal… | `MATH-AR-01` | — | — | — | — | Modelled |
-| `MKT-060` | Closure: when the market's total debt over all its accounts is 0, anyone calls `MarketRegi… | — | — | — | — | — | Unverified |
+| `MKT-060` | Closure: when the market is `Offboarding`, its offboarding notice has passed (`block.times… | — | — | — | — | — | Unverified |
 | `MKT-061` | Ledger or vault bug: a fault in an immutable LPVault or in Collateralization is handled by… | — | — | — | — | — | Unverified |
 | `MKT-062` | Each chain has its own AvanaTimelock, governance Safe, Guardian Safe, MarketRegistry, Para… | — | — | — | — | — | Unverified |
 | `MKT-063` | Containment of a CDP Spoke uses, in order: the vault-token reserve freeze, `drawCap = 0` o… | — | — | — | — | — | Unverified |
@@ -917,7 +917,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `MKT-F-017` | `MKT-027`, `MKT-029` | `setShortDelaySelector(target, selector, true)` for a pair outside … | — | — | — | — | — | Unverified |
 | `MKT-F-018` | `MKT-033` | `useStandbyRoute` for a token with no standby or with one already active; `can… | — | — | — | — | — | Unverified |
 | `MKT-F-019` | `MKT-054` | `SettlementBudget` caps with a non-zero per-call cap below `2 × floorRoundingA… | — | — | — | — | — | Unverified |
-| `MKT-F-020` | `MKT-055` | `deployCdpSpoke` for a Spoke not registered on the Hub, a duplicate (hub, inte… | — | — | — | — | — | Unverified |
+| `MKT-F-020` | `MKT-055` | `deployCdpSpoke` with an oracle that names no Spoke or another oracle, an impl… | — | — | — | — | — | Unverified |
 | `MKT-F-021` | `MKT-057` | `enableDebtReserve` or a drawCap raise that breaks the coverage bound, a pool … | — | — | — | — | — | Unverified |
 | `MKT-F-022` | `MKT-059`, `MKT-060` | `stepWindDown` before the step spacing or outside `Offboarding`; `c… | — | — | — | — | — | Unverified |
 | `MKT-F-023` | `MKT-003`, `MKT-056` | A listing whose pool is not from the integration's pinned factory, … | — | — | — | — | — | Unverified |
@@ -1335,6 +1335,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `Q-403` | Pool-share gate off by default | The chain-wide default `poolShareMaxBps` is 10,000 bps: n… | — | — | — | `TEST-061`, `TEST-062`, `TEST-242`, `TEST-272` | `ParameterStoreLoosenLogic`, `ParameterStoreTightenLogic`, `ParameterStoreViews` | Unverified |
 | `Q-404` | Caller-funded liquidation and one entry point | Two decisions of 2026-11-10. (1) Funding: … | `MATH-ST-07`, `MATH-ST-112`, `MATH-ST-121`, `MATH-ST-122`, `MATH-ST-13`, `MATH-ST-14`, `MATH-ST-15`, `MATH-ST-17`, `MATH-ST-18`, `MATH-ST-21`, `MATH-ST-23`, `MATH-ST-24`, `MATH-ST-25`, `MATH-ST-26`, `MATH-ST-51`, `MATH-ST-59`, `MATH-ST-60`, `SYM-41`, `SYM-44`, `SYM-45`, `SYM-49` | `QNT-T29` | — | `PROP-015`†, `PROP-016`†, `PROP-019`†, `PROP-022`†, `PROP-035`†, `PROP-036`†, `PROP-053`†, `TEST-174`, `TEST-229`, `TEST-288`, `TEST-289` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidator`, `IFlashLiquidator`, `ILPVaultSwapAdmin`, `ILPVaultSwapErrors`, `ILPVaultSwapEvents`, `ILPVaultSwapLiquidation`, `ILPVaultSwapViews`, `ILPVaultSwap`, `ILensLiquidation`, `IOperatorFlashLiquidator`, `LiquidationParams`, `LiquidationPreview`, `LiquidationResult`, `MarketRegistrySafetyLogic`, `OperatorFlashLiquidator`, `SettlementMath`, `SettlementReport` | Verified |
 | `Q-405` | Second-source confirmation and token decimals | An out-of-range second-source word leaves … | — | — | — | — | — | Unverified |
+| `Q-406` | Decisions of 2026-11-11 | (1) Market-count limit: `MAX_MARKET_COUNT` is a MarketRegistry i… | — | — | — | — | — | Unverified |
 | `REP-001` | `Y` calls `AD.repay(W, m, r, maxRepaySpend, repayAll, deadline)` | AaveAdapter (`Y`) | The… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-002` | Take the caller as the payer | `AD` | No caller check: any `msg.sender` is accepted and be… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-003` | Check the deadline | `AD` | `block.timestamp ≤ deadline`, in seconds. (Source: Q-075) | — | — | — | — | `IAaveAdapterUser` | Unverified |
@@ -1436,7 +1437,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ACCESS-040` | `tightenFeedAgreementToleranceBps(token, v)` / `setFeedAgreementToleranceBps(token, v)` | … | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-041` | `tightenSlippageAllowanceBps(marketId, v)` / `loosenSlippageAllowanceBps(marketId, v)` | `… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-042` | No `restoreApproved` selector | None | Not applicable | Not applicable | Each parameter ha… | — | — | — | — | — | Unverified |
-| `REQ-ACCESS-043` | `setAvanaFeeShareBps(v)` | `APPLICATION_ADMIN` | Normal (either direction) | Any canceller… | — | — | — | — | — | Unverified |
+| `REQ-ACCESS-043` | `setAvanaFeeShareBps(v)` | `APPLICATION_ADMIN`, or `APPLICATION_RISK_STEWARD` (immediate),… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-044` | `setFeeRecipient`, `setMaxFlashFeeBps`, `setCachedWindow`, `setDisagreementPauseMax`, `set… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-045` | `setPriceSource(token, primary, alternate, standby)` | `APPLICATION_ADMIN` | Normal | Any … | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-046` | `setRoute(marketId, token, debtAsset, kind, route)` | `APPLICATION_ADMIN` | Normal | Any c… | — | — | — | — | — | Unverified |
@@ -1461,7 +1462,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ACCESS-065` | Incident duration and new-incident cooldown setters | No incident clock, cooldown or their… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-066` | The AaveAdapter has no privileged selector other than its UUPS upgrade (`APPLICATION_ADMIN… | — | — | — | — | `IPayoutEscrow` | Modelled |
 | `REQ-ACCESS-067` | No selector exists for any parameter whose 1.5 change class is Immutable (`stableCeilingUs… | — | — | — | — | — | Unverified |
-| `REQ-ACCESS-068` | Repay (anyone, for any borrower, through `AaveAdapter.repay`), fee collection (`LPVault.co… | `MATH-GOV-08` | — | — | — | — | Modelled |
+| `REQ-ACCESS-068` | Repay (anyone, for any borrower, through `AaveAdapter.repay`), fee collection (`AaveAdapte… | `MATH-GOV-08` | — | — | — | — | Modelled |
 | `REQ-ACCESS-069` | `AaveAdapter.pledge`, `recredit`, `borrow`, `withdraw` and `removeLiquidity` with debt, an… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-070` | On each CDP Spoke's SpokeConfigurator the Aave Protocol Guardian holds only the one-way `f… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-071` | No Avana contract, multisig or keeper holds `SPOKE_USER_POSITION_UPDATER_ROLE`, which stay… | — | — | — | — | — | Unverified |
@@ -1497,7 +1498,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ACCESS-101` | `graceHealthFactorMin` (0.90 WAD), `graceDurationMax` (7,200 seconds) and `consistencyTole… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-102` | Each chain's governance multisig MUST be a Safe with seven signers from Avana Labs and ext… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-103` | Each chain's Emergency Guardian MUST be an independent Safe with five signers and a thresh… | — | — | — | — | — | Unverified |
-| `REQ-ACCESS-104` | On each chain, the signer sets of the governance multisig, the Emergency Guardian and the … | — | — | — | — | — | Unverified |
+| `REQ-ACCESS-104` | On each chain, the signer sets of the four Safes (governance multisig, Emergency Guardian,… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-105` | Handover of administration to the Aave DAO MUST follow the pre-agreed plan on each chain: … | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-106` | Wind-down MUST follow the pre-agreed offboarding plan on each chain: `setMarketOffboarding… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-107` | If the governance multisig stops acting, every Avana contract keeps running on its current… | — | — | — | — | — | Unverified |
@@ -1526,7 +1527,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ACCESS-130` | The Aave Protocol Guardian pauses or freezes an Aave reserve | Not covered by any Avana ex… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-131` | `tightenRouteDepthThreshold(marketId, token, kind, v)` / `loosenRouteDepthThreshold(market… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-132` | `tightenFloorRoundingAllowance(asset, v)` / `loosenFloorRoundingAllowance(asset, v)` | `AP… | — | — | — | — | — | Modelled |
-| `REQ-ACCESS-133` | `deployCdpSpoke(hub, integrationId, riskTier, spoke, aaveOracle)`, `listToken(token, def)`… | — | — | — | — | — | Unverified |
+| `REQ-ACCESS-133` | `approveSpokeCodeHash(h)` when the implementation's hash is new, then `deployCdpSpoke(Spok… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-134` | `cancelRegistration(marketId)` | `APPLICATION_ADMIN` | Short | Any canceller | Deletes a m… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-135` | `setInitialMarketCaps(marketId, marketUsdCap, topUpSliceUsd, stressFloorUsd)`, `setInitial… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-136` | Former pool-broken flag | No flag exists; a failing pool trips the concentration (`POOL_SH… | — | — | — | — | — | Unverified |
@@ -1538,7 +1539,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ACCESS-142` | The constructor MUST fix the immutable set `SHORT_ELIGIBLE` of `(target, selector)` pairs … | `MATH-GOV-06`, `MATH-GOV-19` | — | — | `TEST-244` | `AvanaTimelock`, `IAvanaTimelockErrors`, `IAvanaTimelockGovernance`, `IAvanaTimelockViews`, `IAvanaTimelock`, `SelectorPair`, `TimelockSelectors` | Verified |
 | `REQ-ACCESS-143` | At scheduling the timelock MUST record `isRoleChangeOperation(id) = true` iff the operatio… | `MATH-GOV-09`, `MATH-GOV-10` | — | — | `TEST-244` | `AvanaTimelock`, `IAvanaTimelockViews`, `IAvanaTimelock`, `TimelockSelectors` | Verified |
 | `REQ-ACCESS-144` | `execute` and `executeBatch` MUST accept any caller while `publicExecution` is true and on… | — | — | — | `PROP-058`†, `TEST-194`, `TEST-212` | `AvanaTimelock`, `IAvanaTimelockErrors`, `IAvanaTimelockEvents`, `IAvanaTimelockGovernance`, `IAvanaTimelockViews`, `IAvanaTimelock` | Verified |
-| `REQ-ACCESS-145` | `enableDebtReserve(spoke, reserveId, fundingHub, asset)`, `removeDebtReserve(spoke, reserv… | — | — | — | — | — | Unverified |
+| `REQ-ACCESS-145` | `enableDebtReserve(spoke, def)`, `removeDebtReserve(spoke, reserveId)` (zero drawn only) |… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-146` | `setInitialMarketParams(marketId, params)` (its `minPledgeUsd` field) / `tightenMinPledgeU… | — | — | — | — | — | Unverified |
 | `REQ-ACCESS-147` | No `setProxyImplementation`; `deployProxy(wallet, spoke, marketId)` | `deployProxy`: the c… | — | — | — | — | — | Modelled |
 | `REQ-ACCESS-148` | Every operation that can change code with custody power or the rules of an exit (upgrades … | `MATH-GOV-05` | — | — | — | — | Modelled |
@@ -1577,6 +1578,9 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ACCESS-181` | The constructor MUST revert `InvalidDaoCancelSelector(target, selector)` for any DAO-only … | — | — | — | `TEST-244` | `AvanaTimelock`, `IAvanaTimelockErrors`, `SelectorPair`, `TimelockSelectors` | Unverified |
 | `REQ-ACCESS-182` | The timelock MUST keep its own `DEFAULT_ADMIN_ROLE` for life: `revokeRole(DEFAULT_ADMIN_RO… | — | — | — | `PROP-070`†, `TEST-212`, `TEST-242` | `AvanaTimelock`, `IAvanaTimelockErrors` | Planned (prover) |
 | `REQ-ACCESS-183` | The constructor MUST revert `InvalidRoleHolders()` when any account in `proposers`, `execu… | — | — | — | `TEST-194`, `TEST-224` | `AvanaTimelock`, `IAvanaTimelockErrors` | Unverified |
+| `REQ-ACCESS-184` | `recordIntegrationContracts(integrationId, contracts)`, `finalizeIntegrationContracts(inte… | — | — | — | — | — | Unverified |
+| `REQ-ACCESS-185` | `APPLICATION_RISK_STEWARD` (ParameterStore) | Joint Configuration Safe (2-of-3: one Avana … | — | — | — | — | — | Unverified |
+| `REQ-ACCESS-186` | `tightenMaxFlashFeeBps(v)` / `setMaxFlashFeeBps(v)` | `APPLICATION_ADMIN`; the tighten set… | — | — | — | — | — | Unverified |
 | `REQ-ADAPTER-001` | The chain's one Adapter MUST sit behind one fixed ERC-1967 proxy address that never change… | — | — | — | — | `IAaveAdapter` | Unverified |
 | `REQ-ADAPTER-002` | The user entry points (`pledge`, `recredit`, `borrow`, `repay`, `withdraw`, `removeLiquidi… | — | — | — | — | `IAaveAdapter` | Unverified |
 | `REQ-ADAPTER-003` | The Adapter MUST be a UUPS proxy whose `_authorizeUpgrade` requires `APPLICATION_ADMIN`, h… | — | — | — | — | `IAaveAdapterAdmin`, `IAaveAdapterViews`, `IAaveAdapter` | Modelled |
@@ -1890,7 +1894,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ARCH-130` | AvanaTimelock → LPVault.`returnStray(positionKey, recipient)` | AvanaTimelock; LPVault | P… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-131` | None (the SettlementBudget and its withdrawal and cap calls are removed) | Not applicable … | — | — | — | — | — | Unverified |
 | `REQ-ARCH-132` | Anyone → RiskModule.`pokeBreakers(marketId)`; RiskModule → MarketRegistry.`recordBreach(ke… | — | — | — | — | — | Unverified |
-| `REQ-ARCH-133` | AvanaTimelock (normal delay) → the three deployment operations: `deployCdpSpoke(hub, integ… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-133` | AvanaTimelock (normal delay) → the three deployment operations: `approveSpokeCodeHash(h)` … | — | — | — | — | — | Unverified |
 | `REQ-ARCH-134` | AvanaTimelock → `upgradeToAndCall(implementation, data)` on the AaveAdapter, RiskModule, M… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-135` | Avana outer entry points → Lock.`acquire()` / `release()`; inner Avana calls → Lock holder… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-136` | Between transactions, a pledged position MUST be held only by its AMM protocol's LPVault, … | — | — | — | — | — | Unverified |
@@ -1909,7 +1913,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ARCH-149` | LPVaultSwap → token.`approve(PayoutEscrow, amount)`; LPVaultSwap → PayoutEscrow.`deposit(t… | — | — | — | — | `IPayoutEscrow` | Unverified |
 | `REQ-ARCH-150` | Credited recipient → PayoutEscrow.`claim(token, to)`; PayoutEscrow → token.`transfer(to, a… | — | — | — | — | `IPayoutEscrow` | Unverified |
 | `REQ-ARCH-151` | Liquidation access, in summary: every liquidation of an Avana account enters through the c… | — | — | — | — | — | Unverified |
-| `REQ-ARCH-152` | Every borrower action except fee collection and zero-credit release MUST go wallet → AaveA… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-152` | Every borrower action MUST enter through the AaveAdapter. Every action that touches the ac… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-153` | Each Hub on a chain MUST have its own application pause state, held by the chain's MarketR… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-154` | Every privileged change to an Avana contract MUST execute through its chain's AvanaTimeloc… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-155` | On each chain the AaveAdapter, MarketRegistry, ParameterStore, RiskModule, each LPOracle, … | — | — | — | — | — | Unverified |
@@ -2057,7 +2061,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-CONFIG-025` | `pegModule` MUST record the peg module (a Sky PSM, or a GHO Stability Module with a non-ze… | — | — | — | `TEST-054`, `TEST-250` | `IMarketRegistryListing`, `MarketRegistryListingLogic`, `TokenDef` | Unverified |
 | `REQ-CONFIG-026` | Listing a token, adding a feed definition (ParameterStore `setFeed`) or replacing a token'… | — | — | — | `TEST-231` | `IMarketRegistryEvents`, `IMarketRegistryListing`, `MarketRegistryListingLogic`, `MarketRegistry` | Unverified |
 | `REQ-CONFIG-027` | `setPriceSource(token, primary, alternate, standby)` MUST re-run `REQ-CONFIG-021`, `REQ-CO… | — | — | — | `TEST-138`, `TEST-231`, `TEST-250` | `IMarketRegistryErrors`, `IMarketRegistryEvents`, `IMarketRegistryListing`, `MarketRegistryListingLogic`, `MarketRegistryOracleChecks`, `MarketRegistry` | Verified |
-| `REQ-CONFIG-028` | `listCollateralMarket` (`registerMarket`) MUST be reachable only through the timelock at t… | — | — | — | `TEST-062`, `TEST-138` | `IMarketRegistryEvents`, `IMarketRegistryListing`, `MarketDef`, `MarketRegistryListingLogic`, `MarketRegistry` | Unverified |
+| `REQ-CONFIG-028` | `listCollateralMarket` MUST be reachable only through the timelock at the normal delay, wh… | — | — | — | `TEST-062`, `TEST-138` | `IMarketRegistryEvents`, `IMarketRegistryListing`, `MarketDef`, `MarketRegistryListingLogic`, `MarketRegistry` | Unverified |
 | `REQ-CONFIG-029` | Pool identity and orientation: the market's integration MUST validate the pool and shape i… | — | — | — | `TEST-139` | `IMarketRegistryListing`, `MarketDef`, `MarketRegistryListingLogic`, `MarketRegistryMarketChecks` | Unverified |
 | `REQ-CONFIG-030` | The shape MUST be valid for the integration: for concentrated liquidity, `tickLower < tick… | `MATH-UO-04`, `MATH-UO-07` | — | — | `TEST-138`, `TEST-139` | `IMarketRegistryListing`, `MarketRegistryListingLogic`, `MarketRegistryMarketChecks` | Verified |
 | `REQ-CONFIG-031` | Decimals rule: the vault-token decimals `d` MUST equal the value the market's integration … | — | — | — | `TEST-138`, `TEST-139` | `IMarketRegistryListing`, `MarketRegistryListingLogic`, `MarketRegistryMarketChecks` | Unverified |
@@ -2069,7 +2073,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-CONFIG-037` | LPOracle seed: at registration the market's `lpOracle` MUST report `decimals() == 8` and `… | — | — | — | `TEST-138`, `TEST-139` | `IMarketRegistryListing`, `MarketRegistryListingLogic`, `MarketRegistryMarketChecks` | Unverified |
 | `REQ-CONFIG-038` | Consistency check: when the AMM protocol offers a time-weighted price, the TWAP source is … | — | — | — | `TEST-138` | `IMarketRegistryListing`, `IParameterStoreAdmin`, `IParameterStoreListing`, `MarketRegistryOracleChecks`, `ParameterStoreAdminOracleLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreOracle` | Unverified |
 | `REQ-CONFIG-039` | Swap routes: for each pool token and each enabled debt asset of the Spoke other than that … | — | — | — | `TEST-054`, `TEST-138`, `TEST-245` | `IMarketRegistryErrors`, `IMarketRegistryRoutes`, `MarketRegistryRoutesLogic` | Unverified |
-| `REQ-CONFIG-040` | No route's `dependencies()` MAY include the market's own pool, because unwinding seized co… | — | — | — | `TEST-054`, `TEST-229` | `IMarketRegistryApprovals`, `IMarketRegistryErrors`, `IMarketRegistryRoutes`, `MarketRegistryHubsLogic`, `MarketRegistryRoutesLogic`, `MarketRegistry` | Unverified |
+| `REQ-CONFIG-040` | No route's `dependencies()` MAY include the market's own pool or its integration's LPVault… | — | — | — | `TEST-054`, `TEST-229` | `IMarketRegistryApprovals`, `IMarketRegistryErrors`, `IMarketRegistryRoutes`, `MarketRegistryHubsLogic`, `MarketRegistryRoutesLogic`, `MarketRegistry` | Unverified |
 | `REQ-CONFIG-041` | `slippageAllowanceMinBps` for the market MUST be set at listing (`setInitialMarketParams`)… | `MATH-ST-13` | — | — | `TEST-064`, `TEST-245`, `TEST-250` | `IParameterStoreAdmin`, `IParameterStoreListing`, `IParameterStoreViews`, `MarketParams`, `ParameterStoreAdminRiskLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreListingLogic`, `ParameterStoreViews` | Verified |
 | `REQ-CONFIG-042` | `activateMarket` MUST revert with `MarketNotRegistered` unless the market is `Registered`;… | — | — | — | `PROP-098`†, `TEST-138`, `TEST-213` | `IMarketRegistryErrors`, `IMarketRegistryEvents`, `IMarketRegistryListing`, `MarketRegistryActivationLogic`, `MarketRegistry`, `MarketStatus` | Verified |
 | `REQ-CONFIG-043` | Activation MUST run the RiskModule's full drift check `RISK_MODULE.checkAaveConfig(spoke, … | — | — | — | `TEST-138` | `IMarketRegistryListing`, `MarketRegistryActivationLogic` | Verified |
@@ -2094,7 +2098,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-CONFIG-062` | `restoreRoute` (short delay) MUST revert with `NotPreviouslyApproved` unless `route` is in… | — | — | — | `TEST-054`, `TEST-066`, `TEST-252` | `IMarketRegistryErrors`, `IMarketRegistryEvents`, `IMarketRegistryRoutes`, `MarketRegistryRoutesLogic`, `MarketRegistry` | Verified |
 | `REQ-CONFIG-063` | `getRoute(marketId, token, asset, kind)` MUST return the route and `usable = (status == Ac… | — | — | — | `TEST-054` | `IMarketRegistryRouteViews`, `MarketRegistryViews` | Unverified |
 | `REQ-CONFIG-064` | Every view MUST be `view`, never revert for a listed market, and return the values in forc… | — | — | — | `TEST-168` | `IMarketRegistryViews`, `IMarketRegistry`, `MarketRegistryViews`, `MarketRegistry` | Unverified |
-| `REQ-CONFIG-065` | Any registration check fails | `registerMarket` reverts with the failing check's error; th… | — | — | — | `TEST-138` | `IMarketRegistryErrors`, `IMarketRegistryListing`, `MarketRegistryListingLogic` | Unverified |
+| `REQ-CONFIG-065` | Any registration check fails | `listCollateralMarket` reverts with the failing check's err… | — | — | — | `TEST-138` | `IMarketRegistryErrors`, `IMarketRegistryListing`, `MarketRegistryListingLogic` | Unverified |
 | `REQ-CONFIG-066` | Any activation check fails, such as a wrong Aave flag or CF in the DAO payload | `activate… | — | — | — | `TEST-138` | `IMarketRegistryErrors`, `IMarketRegistryListing`, `MarketRegistryActivationLogic` | Unverified |
 | `REQ-CONFIG-067` | A tighten value is not strictly safer, a loosen value not strictly looser, a value crosses… | — | — | — | `TEST-064`, `TEST-225` | `IParameterStoreErrors` | Unverified |
 | `REQ-CONFIG-068` | A market's swap routes cannot settle | There is no in-kind window to end (`Q-401`); liquid… | — | — | — | — | — | Unverified |
@@ -2189,15 +2193,15 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-FLR-045` | `executeWithdrawal` while an allowlisted Spoke has a recorded deficit on the asset | The c… | — | — | — | `TEST-293` | `CoverageSpoke`, `ICoverageSpokeErrors` | Unverified |
 | `REQ-HELPER-001` | The helper MUST hold the immutables `POOL` (the chain's Aave V3 Pool), `GHO_FLASH_MINTER` … | — | — | — | `TEST-174`, `TEST-288`, `TEST-290` | `FlashLiquidatorBase`, `FlashLiquidatorLenders`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `IOperatorFlashLiquidator`, `OperatorFlashLiquidator` | Unverified |
 | `REQ-HELPER-002` | Source rule. The constructor MUST revert with `FlashSourceIsHub` if `MarketRegistry.isReco… | `MATH-ST-110` | — | — | `PROP-096`†, `TEST-174`, `TEST-285`, `TEST-288`, `TEST-292` | `FlashLiquidatorBase`, `FlashLiquidatorLenders`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `OperatorFlashLiquidator` | Verified |
-| `REQ-HELPER-003` | Request checks. `flashLiquidate(request)` MUST, in order, revert with `ContextActive` whil… | — | — | — | `TEST-052`, `TEST-174`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `OperatorFlashLiquidator` | Unverified |
-| `REQ-HELPER-004` | Bound context. Before calling the lender, the helper MUST record a single-use context in t… | `MATH-ST-124` | — | — | `TEST-046`, `TEST-174`, `TEST-289`, `TEST-290`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidatorLenders`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `OperatorFlashLiquidator` | Verified |
+| `REQ-HELPER-003` | Request checks. `flashLiquidate(request)` MUST, in order, revert with `ContextActive` whil… | `MATH-ST-129` | — | — | `TEST-052`, `TEST-174`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `OperatorFlashLiquidator` | Verified |
+| `REQ-HELPER-004` | Bound context. Before calling the lender, the helper MUST record a single-use context in t… | `MATH-ST-124`, `MATH-ST-129` | — | — | `TEST-046`, `TEST-174`, `TEST-289`, `TEST-290`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidatorLenders`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `OperatorFlashLiquidator` | Verified |
 | `REQ-HELPER-005` | Callback binding. `executeOperation(assets, amounts, premiums, initiator, params)` MUST re… | `MATH-ST-110`, `MATH-ST-13` | — | — | `PROP-036`†, `TEST-046`, `TEST-052`, `TEST-174`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator` | Verified |
 | `REQ-HELPER-006` | Liquidation inside the callback. The callback MUST `forceApprove` LPVaultSwap for exactly … | `MATH-ST-124`, `MATH-ST-128` | — | — | `TEST-174`, `TEST-289`, `TEST-292` | `FlashLiquidatorBase`, `IFlashLiquidator` | Verified |
 | `REQ-HELPER-007` | Repayment. With `owed = F + φ` and `held = keeperOut + u`, if `held < owed` the callback M… | `MATH-ST-100`, `MATH-ST-125`, `MATH-ST-127`, `MATH-ST-23`, `MATH-ST-60`, `SYM-45` | — | — | `PROP-036`†, `TEST-174`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `IOperatorFlashLiquidator`, `OperatorFlashLiquidator` | Verified |
-| `REQ-HELPER-008` | Caller payout. After the loan returns and the context is checked, the helper MUST compute … | `MATH-ST-100`, `MATH-ST-101`, `MATH-ST-125`, `MATH-ST-126`, `MATH-ST-128`, `MATH-ST-60` | — | — | `PROP-036`†, `TEST-174`, `TEST-176`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidatorEvents`, `IFlashLiquidator` | Verified |
+| `REQ-HELPER-008` | Caller payout. After the loan returns and the context is checked, the helper MUST compute … | `MATH-ST-100`, `MATH-ST-101`, `MATH-ST-125`, `MATH-ST-126`, `MATH-ST-128`, `MATH-ST-129`, `MATH-ST-60` | — | — | `PROP-036`†, `TEST-174`, `TEST-176`, `TEST-292` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidatorEvents`, `IFlashLiquidator` | Verified |
 | `REQ-HELPER-009` | Quotes. For the GHO a set `GHO_FLASH_MINTER` lends, `maxFlashLoan(GHO)` MUST return the mi… | — | — | — | `TEST-052`, `TEST-292` | `FlashLiquidatorBase`, `FlashLiquidatorLenders`, `IFlashLiquidatorErrors`, `IFlashLiquidator` | Verified |
 | `REQ-HELPER-010` | Public instance. The public helper takes its payer and payout recipient from `msg.sender`,… | — | — | — | `TEST-174`, `TEST-288`, `TEST-289` | `FlashLiquidatorBase`, `FlashLiquidator`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `IMarketRegistryViews`, `MarketRegistryRouter`, `OperatorFlashLiquidator` | Unverified |
-| `REQ-HELPER-011` | Operator variant. An operator's helper MUST refuse every caller except `SIGNER` (`NotSigne… | `MATH-ST-126`, `MATH-ST-127`, `MATH-ST-128` | — | — | `PROP-036`†, `TEST-174`, `TEST-288`, `TEST-292` | `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `IOperatorFlashLiquidator`, `OperatorFlashLiquidator` | Verified |
+| `REQ-HELPER-011` | Operator variant. An operator's helper MUST refuse every caller except `SIGNER` (`NotSigne… | `MATH-ST-126`, `MATH-ST-127`, `MATH-ST-128`, `MATH-ST-129` | — | — | `PROP-036`†, `TEST-174`, `TEST-288`, `TEST-292` | `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `IOperatorFlashLiquidator`, `OperatorFlashLiquidator` | Verified |
 | `REQ-HELPER-012` | The helper MUST NOT take a swap step, a route, a recipient other than its payer or the bou… | — | — | — | `TEST-174`, `TEST-288`, `TEST-289`, `TEST-290` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `IFlashLiquidator` | Unverified |
 | `REQ-HELPER-013` | A helper call nested in another of its calls, from a non-signer (operator variant), with `… | — | — | — | `PROP-036`†, `PROP-096`†, `TEST-046`, `TEST-174`, `TEST-285`, `TEST-292` | `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `OperatorFlashLiquidator` | Planned (prover) |
 | `REQ-HELPER-014` | A helper's net payout below `request.minPayout` | reverts with `PayoutTooLow(payout, minPa… | — | — | — | `TEST-174`, `TEST-176` | `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator` | Unverified |
@@ -2231,7 +2235,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-HUB-026` | No position manager is used: PositionProxies call the Spoke as `onBehalfOf == msg.sender`,… | — | — | — | — | — | Unverified |
 | `REQ-HUB-027` | v1 has no daily borrow limit. Every Avana borrow passes the RiskModule's borrow-side check… | — | — | — | — | — | Unverified |
 | `REQ-HUB-028` | Each vault-token reserve MUST be created by `Spoke.addReserve` with `borrowable = false`, … | — | — | — | — | — | Unverified |
-| `REQ-HUB-029` | Every dynamic-config key of every vault-token reserve MUST have `liquidationFee = 0` (or a… | — | — | — | — | — | Unverified |
+| `REQ-HUB-029` | Every dynamic-config key of every vault-token reserve MUST have `liquidationFee = 0`, `col… | — | — | — | — | — | Unverified |
 | `REQ-HUB-030` | Each vault-token reserve's `collateralRisk` MUST be set by the risk reviewer in BPS and MU… | — | — | — | — | — | Unverified |
 | `REQ-HUB-031` | Each vault token MUST be listed as a reserve on exactly one Spoke across its Hub, its CDP … | — | — | — | — | — | Unverified |
 | `REQ-HUB-032` | Avana-authored payloads MUST change vault-token reserves only through `SpokeConfigurator` … | — | — | — | — | — | Unverified |
@@ -2295,7 +2299,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-HUB-090` | Hub halts or deactivates the CDP Spoke, or a debt or vault-token reserve is paused | Behav… | — | — | — | — | — | Unverified |
 | `REQ-HUB-091` | A reported deficit stays uncovered | It counts against the CDP Spoke's `drawCap` on that d… | — | — | — | — | — | Unverified |
 | `REQ-HUB-092` | Each CDP Spoke MUST be the standard Aave V4 Spoke, whose only liquidation entry point is t… | — | — | — | — | `IAaveV4Spoke` | Unverified |
-| `REQ-HUB-093` | The liquidation fee of every dynamic key of every vault-token reserve MUST be 0, or a fee … | — | — | — | — | — | Unverified |
+| `REQ-HUB-093` | The liquidation fee of every dynamic key of every vault-token reserve MUST be 0, with no a… | — | — | — | — | — | Unverified |
 | `REQ-HUB-094` | Every vault-token reserve MUST stay non-borrowable (`borrowable = false`), with Hub-side `… | — | — | — | — | `IAaveV4Spoke` | Unverified |
 | `REQ-HUB-095` | Every part of each CDP Spoke MUST be canonical Aave V4 at the pinned release: storage layo… | — | — | — | — | `IAaveV4Spoke` | Unverified |
 | `REQ-HUB-096` | LPVaultSwap MUST be the only seizure recipient the vault token accepts, fixed as an immuta… | — | — | — | — | — | Unverified |
@@ -2413,13 +2417,15 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-MREG-024` | `pause(reason)` MUST record a `PauseReason` with the Paused state: `General` (new activity… | — | — | — | `PROP-041`†, `TEST-065`, `TEST-101` | `IMarketRegistryErrors`, `IMarketRegistryPause`, `IMarketRegistrySafetyEvents`, `MarketRegistrySafetyLogic`, `MarketRegistryViews`, `MarketRegistry`, `PauseReason`, `PauseState` | Verified |
 | `REQ-MREG-025` | The MarketRegistry MUST store, per key (market key `bytes32(marketId)`, debt key `keccak25… | — | — | — | `TEST-066`, `TEST-204`, `TEST-228`, `TEST-252` | `Breaker`, `IMarketRegistryBreakers`, `IMarketRegistryErrors`, `IMarketRegistrySafetyEvents`, `IRiskModuleViews`, `MarketRegistrySafetyLogic`, `MarketRegistryViews`, `MarketRegistry`, `RiskModule` | Verified |
 | `REQ-MREG-026` | `recordBreach(key, reasons)` MUST revert `NotRiskModule` unless `msg.sender == RISK_MODULE… | `MATH-AR-57`, `MATH-AR-58` | — | — | `TEST-062`, `TEST-228` | `IMarketRegistryBreakers`, `IMarketRegistryErrors`, `IMarketRegistrySafetyEvents`, `MarketRegistrySafetyLogic`, `MarketRegistry` | Verified |
-| `REQ-MREG-027` | `TokenDef` MUST record, beside the primary and alternate routes, a `standbyRoute` (`addres… | `MATH-UO-68` | — | — | `TEST-185`, `TEST-231`, `TEST-250` | `IMarketRegistryEvents`, `IMarketRegistryListing`, `IssuerProbe`, `MarketRegistryListingLogic`, `MarketRegistry`, `ParameterStoreOracle`, `RouteSlot`, `TokenDef` | Verified |
+| `REQ-MREG-027` | `TokenDef` MUST record, beside the primary and alternate routes, a `standbyRoute` (`addres… | `MATH-AR-55`, `MATH-UO-68` | — | — | `TEST-185`, `TEST-231`, `TEST-250` | `IMarketRegistryEvents`, `IMarketRegistryListing`, `IssuerProbe`, `MarketRegistryListingLogic`, `MarketRegistry`, `ParameterStoreOracle`, `RouteSlot`, `TokenDef` | Verified |
 | `REQ-MREG-028` | Standby switch: | — | — | — | `TEST-062`, `TEST-066`, `TEST-168`, `TEST-231` | `IMarketRegistryErrors`, `IMarketRegistrySafetyEvents`, `IMarketRegistryStandby`, `IMarketRegistryViews`, `MarketRegistryRouter`, `MarketRegistryRoutesLogic`, `MarketRegistryViews`, `MarketRegistry`, `RouteSlot` | Verified |
 | `REQ-MREG-029` | There MUST be no automatic in-kind trigger: `setInKindAutoTrigger`, `autoEnableInKind`, th… | — | — | — | `TEST-053` | `MarketRegistry` | Verified |
-| `REQ-MREG-030` | Relisting: `cancelRegistration` keeps the cancelled `marketId` reserved for its (Spoke, ma… | — | — | — | `PROP-098`†, `TEST-138`, `TEST-213`, `TEST-229`, `TEST-252` | `IMarketRegistryListing`, `MarketRegistryActivationLogic`, `MarketRegistryListingLogic`, `MarketRegistryMarketChecks`, `MarketStatus` | Verified |
+| `REQ-MREG-030` | Relisting: `cancelRegistration` keeps the cancelled `marketId` reserved for its (Spoke, ma… | `MATH-GOV-25`, `MATH-GOV-27` | — | — | `PROP-098`†, `TEST-138`, `TEST-213`, `TEST-229`, `TEST-252` | `IMarketRegistryListing`, `MarketRegistryActivationLogic`, `MarketRegistryListingLogic`, `MarketRegistryMarketChecks`, `MarketStatus` | Verified |
 | `REQ-MREG-031` | `activeMarketCount(spoke)` MUST return the number of markets on `spoke` whose status is `A… | `MATH-AR-65` | — | — | `TEST-138`, `TEST-204`, `TEST-213` | `IMarketRegistryBreakers`, `MarketRegistryViews` | Verified |
 | `REQ-MREG-032` | `enableDebtReserve` (for reserve `r`, against every Active or Offboarding market of the Sp… | — | — | — | `TEST-054`, `TEST-185`, `TEST-245` | `IMarketRegistryErrors`, `IMarketRegistryListing`, `MarketRegistryActivationLogic`, `MarketRegistryDebtChecks`, `MarketRegistryHubsLogic` | Verified |
 | `REQ-MREG-033` | **Settlement debt reserve of a market.** Each market MUST record `settlementReserve(market… | — | — | — | `TEST-138`, `TEST-213` | `IMarketRegistryWindDown`, `MarketRegistryHubsLogic`, `MarketRegistryListingLogic`, `MarketRegistryViews`, `MarketRegistryWindDownLogic`, `MarketRegistry` | Unverified |
+| `REQ-MREG-034` | **Market-count limit.** `listCollateralMarket` MUST revert `MarketCountLimit(MAX_MARKET_CO… | `MATH-GOV-25`, `MATH-GOV-26`, `MATH-GOV-27`, `MATH-GOV-28` | — | — | — | — | Modelled |
+| `REQ-MREG-035` | **Record of an integration's AMM contracts.** `recordIntegrationContracts(integrationId, c… | — | — | — | — | — | Unverified |
 | `REQ-ORACLE-001` | For each leg, LPOracle MUST call `latestRoundData()` and `decimals()` on the configured ag… | — | — | — | `TEST-038`, `TEST-219` | `DebtEvaluation`, `DebtOracleReads`, `LPOracleCalls`, `LPOracleReads`, `LPOracleTypes` | Verified |
 | `REQ-ORACLE-002` | A leg MUST be treated as valid only if all of these hold: `decimals()` equals the pinned d… | `MATH-UO-50`, `MATH-UO-58` | — | — | `TEST-037`, `TEST-038`, `TEST-040`, `TEST-070`, `TEST-219`, `TEST-276`, `TEST-294` | `DebtEvaluation`, `DebtOracleReads`, `FeedDef`, `IParameterStoreAdmin`, `LPOracleReads`, `LPOracleTypes`, `LPPriceMath`, `OracleLeg`, `ParameterStoreAdminOracleLogic`, `ParameterStoreForwardAdmin` | Verified |
 | `REQ-ORACLE-003` | A leg that fails only the `now − updatedAt ≤ feedMaxAge` condition MUST be classed `Stale`… | — | — | — | `TEST-040`, `TEST-219`, `TEST-276` | `DebtEvaluation`, `DebtOracleReads`, `LPOracleReads`, `LPOracleTypes` | Unverified |
@@ -2638,7 +2644,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-PSTORE-006` | No buy-leg slippage parameter exists: the liquidation caller funds the debt asset itself (… | — | — | — | `TEST-061`, `TEST-246` | `DebtReserveParams`, `IParameterStoreErrors`, `IParameterStoreEvents`, `IParameterStoreListing`, `IParameterStoreRiskViews`, `ParameterStoreForwardAdmin`, `ParameterStoreListingLogic`, `ParameterStoreRisk`, `ParameterStoreViews` | Verified |
 | `REQ-PSTORE-007` | No buy-route depth threshold exists, for the reason in `REQ-PSTORE-006`; the depth a liqui… | — | — | — | `TEST-278` | `IParameterStoreEvents`, `IParameterStoreRiskViews` | Unverified |
 | `REQ-PSTORE-008` | There MUST be no `inKindExpiry` and no `setInKindExpiry`: in-kind settlement is removed (`… | — | — | — | `TEST-278` | `GlobalParams` | Unverified |
-| `REQ-PSTORE-009` | `setFeed` and every per-feed setter MUST revert with `OracleConfigRejected(lpOracle, faile… | — | — | — | `TEST-062`, `TEST-064`, `TEST-225`, `TEST-250` | `IParameterStoreAdmin`, `IParameterStoreErrors`, `IParameterStoreListing`, `IParameterStoreTighten`, `ParameterStoreAdminOracleLogic`, `ParameterStoreAdminRiskLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreForwardRisk`, `ParameterStoreListingLogic`, `ParameterStoreOracle`, `ParameterStoreStorage`, `ParameterStoreTightenLogic` | Unverified |
+| `REQ-PSTORE-009` | `setFeed` and every per-feed setter MUST revert with `OracleConfigRejected(lpOracle, faile… | `MATH-GOV-28` | — | — | `TEST-062`, `TEST-064`, `TEST-225`, `TEST-250` | `IParameterStoreAdmin`, `IParameterStoreErrors`, `IParameterStoreListing`, `IParameterStoreTighten`, `ParameterStoreAdminOracleLogic`, `ParameterStoreAdminRiskLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreForwardRisk`, `ParameterStoreListingLogic`, `ParameterStoreOracle`, `ParameterStoreStorage`, `ParameterStoreTightenLogic` | Verified |
 | `REQ-PSTORE-010` | `avanaFeeShareBps` MUST stay within `[0, 5,000]` with launch value 2,000 (a proposed defau… | — | — | — | `TEST-061`, `TEST-062`, `TEST-064`, `TEST-206`, `TEST-242` | `AvanaRoles`, `IParameterStoreAdmin`, `ParameterStoreAdminRiskLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreRouter`, `ParameterStoreViews` | Unverified |
 | `REQ-PSTORE-011` | Every view MUST be `view`, never revert for a listed market, token, feed or debt reserve, … | — | — | — | `TEST-062`, `TEST-064`, `TEST-133`, `TEST-250` | `IParameterStoreErrors`, `IParameterStoreViews`, `IParameterStore`, `OracleInputsLayout`, `ParameterStoreAdminOracleLogic`, `ParameterStoreStorage`, `ParameterStoreViews`, `ParameterStore` | Unverified |
 | `REQ-PSTORE-012` | An initial setter targets a market that is not `Registered` or a token that already has a … | — | — | — | `TEST-250`, `TEST-272` | `IParameterStoreErrors`, `IParameterStoreListing`, `ParameterStoreForwardAdmin`, `ParameterStoreListingLogic`, `ParameterStoreStorage` | Unverified |
@@ -2652,7 +2658,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-PSTORE-020` | `debtStressRiseBps(asset)` MUST be stored per debt asset that has a DebtOracle (every debt… | — | — | — | `PROP-042`†, `TEST-061`, `TEST-062`, `TEST-064`, `TEST-225`, `TEST-230`, `TEST-250` | `IParameterStoreLiquidation`, `ParameterStoreLoosenLogic`, `ParameterStoreStorage`, `ParameterStoreTightenLogic`, `ParameterStore` | Verified |
 | `REQ-PSTORE-021` | For every Active or Offboarding market `m` of a CDP Spoke and every enabled debt reserve `… | `MATH-ST-105`, `MATH-ST-13`, `SYM-44` | — | — | `TEST-225`, `TEST-245` | `IMarketRegistryErrors`, `IParameterStoreAdmin`, `IParameterStoreErrors`, `IParameterStoreLiquidation`, `ParameterStoreAdminRiskLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreRisk`, `ParameterStore` | Verified |
 | `REQ-PSTORE-022` | Each approved CDP Spoke MUST carry `aaveTargetHealthFactor(spoke)` (WAD) and `minLiquidati… | `MATH-AR-65` | — | — | `TEST-061`, `TEST-249`, `TEST-272` | `IParameterStoreErrors`, `IParameterStoreLiquidation`, `ParameterStoreListingLogic`, `ParameterStore` | Verified |
-| `REQ-PSTORE-023` | Each chain's ParameterStore MUST hold the chain's sequencer-uptime check `sequencer = Sequ… | — | — | — | `TEST-062`, `TEST-242`, `TEST-250` | `IParameterStoreChain`, `ParameterStoreAdminRiskLogic`, `ParameterStoreListingLogic`, `ParameterStoreRouter`, `ParameterStoreStorage`, `ParameterStore` | Unverified |
+| `REQ-PSTORE-023` | Each chain's ParameterStore MUST hold the chain's sequencer-uptime check `sequencer = Sequ… | `MATH-UO-73` | — | — | `TEST-062`, `TEST-242`, `TEST-250` | `IParameterStoreChain`, `ParameterStoreAdminRiskLogic`, `ParameterStoreListingLogic`, `ParameterStoreRouter`, `ParameterStoreStorage`, `ParameterStore` | Verified |
 | `REQ-PSTORE-024` | `maxFlashFeeBps` MUST be a chain parameter in bps within `[0, 100]`, launch 10 on Ethereum… | `MATH-ST-115`, `MATH-ST-13` | — | — | `PROP-042`†, `TEST-052`, `TEST-062`, `TEST-064`, `TEST-225`, `TEST-242`, `TEST-245` | `IParameterStoreAdmin`, `IParameterStoreViews`, `ParameterStoreAdminRiskLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreRisk`, `ParameterStoreTightenLogic`, `ParameterStoreViews` | Verified |
 | `REQ-PSTORE-025` | The ParameterStore MUST hold no minimum debt: it stores no debt floor, has no setter or ev… | — | — | — | `TEST-278` | `ParameterStore` | Unverified |
 | `REQ-PSTORE-026` | Hub-wide caps MUST be keyed by Hub: `tokenUsdCap(hub, token)` and `depositorUsdCap(hub)`. … | — | — | — | `PROP-042`†, `TEST-062`, `TEST-225`, `TEST-242`, `TEST-272` | `IParameterStoreErrors`, `IParameterStoreListing`, `IParameterStoreRiskViews`, `ParameterStoreForwardAdmin`, `ParameterStoreListingLogic`, `ParameterStoreLoosenLogic`, `ParameterStoreTightenLogic`, `ParameterStoreViews` | Planned (prover) |
@@ -2663,6 +2669,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-PSTORE-031` | `hardHealthFloor(marketId)` MUST be stored per market in WAD, 0 (off) by default and at la… | — | — | — | `PROP-042`†, `TEST-062`, `TEST-064`, `TEST-225` | `IParameterStoreLoosen`, `IParameterStoreTighten`, `IParameterStoreViews`, `ParameterStoreForwardRisk`, `ParameterStoreLoosenLogic`, `ParameterStoreTightenLogic`, `ParameterStoreViews` | Planned (prover) |
 | `REQ-PSTORE-032` | `coverageRatioBps` MUST be stored per chain in bps within `[0, 10,000]`, set by `setCovera… | `MATH-CAP-10` | — | — | `TEST-064`, `TEST-273` | `IParameterStoreCoverage`, `ParameterStoreListingLogic`, `ParameterStore` | Verified |
 | `REQ-PSTORE-033` | `getOracleInputs(lpOracle, tokens, withSecondSources)` MUST return the words of `OracleInp… | — | — | — | `TEST-250` | `IParameterStoreViews`, `OracleInputsLayout`, `ParameterStoreAdminRiskLogic`, `ParameterStoreViews` | Unverified |
+| `REQ-PSTORE-034` | On a chain with a sequencer (`HAS_SEQUENCER`), the ParameterStore MUST keep `sequencer.gra… | `MATH-UO-73`, `MATH-UO-74` | — | — | — | — | Modelled |
 | `REQ-READY-001` | A pool token whose reference price comes from a market-hours feed MUST NOT be listed, in a… | — | — | — | — | — | Unverified |
 | `REQ-RISK-001` | The RiskModule MUST sit behind one fixed UUPS proxy address referenced by Collateralizatio… | — | — | — | — | `IRiskModule`, `RiskModule` | Unverified |
 | `REQ-RISK-002` | The RiskModule MUST be a UUPS proxy whose `_authorizeUpgrade` requires `APPLICATION_ADMIN`… | — | — | — | `TEST-062`, `TEST-242` | `IRiskModuleAdmin`, `IRiskModuleErrors`, `IRiskModuleLogic`, `IRiskModule`, `RiskModuleBase`, `RiskModuleBorrowLogic`, `RiskModuleBorrowScope`, `RiskModuleBreakerLogic`, `RiskModuleDriftLogic`, `RiskModuleImmutables`, `RiskModuleLogics`, `RiskModulePledgeLogic`, `RiskModulePreview`, `RiskModuleStatusLogic`, `RiskModule` | Unverified |
@@ -2771,7 +2778,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ROLE-014` | LPVault (each AMM protocol's) | `returnStray(positionKey, recipient)` | `TIMELOCK` | Norma… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-015` | Vault token | `mint(to, amount)`, `burn(from, amount)`, `addValidProxy(proxy)` | AaveAdapt… | — | — | — | — | — | Modelled |
 | `REQ-ROLE-016` | Vault token | `transfer`, `transferFrom`, `approve` | Anyone; the recipient must be the Hu… | — | — | — | — | — | Unverified |
-| `REQ-ROLE-017` | VaultTokenFactory | `deployVaultToken(def)` | `TIMELOCK` | Normal (in the `listCollateralM… | — | — | — | — | — | Unverified |
+| `REQ-ROLE-017` | VaultTokenFactory | `deployVaultToken(integrationId, pool, poolId, shape, hub, spoke, mark… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-018` | AaveAdapter | `borrow`, `withdraw`, `repayAllAndWithdraw`; `repay` | Wallet, for its own p… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-019` | PositionProxy | `execute(target, data)` | AaveAdapter only (`OnlyAdapter()`), including wh… | — | — | — | — | — | Modelled |
 | `REQ-ROLE-020` | ProxyManager | `deployProxy(wallet, spoke, marketId)` | AaveAdapter | Contract | None | CR… | — | — | — | — | — | Unverified |
@@ -2849,7 +2856,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ROLE-092` | LPOracle, DebtOracle | `setPokeMinGas(v)` | `APPLICATION_ADMIN` | Normal | `CANCELLER_ROLE… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-093` | ParameterStore | `loosenGateRecoverySeconds(v)` (loosen, lower) and `tightenGateRecoverySe… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-094` | SettlementBudget (removed) | Cap, window, reserved-floor and asset-configuration setters |… | — | — | — | — | — | Modelled |
-| `REQ-ROLE-095` | PositionProxy | `initialize(wallet, spoke)` | ProxyManager, in the creating transaction | … | — | — | — | — | — | Unverified |
+| `REQ-ROLE-095` | PositionProxy | Constructor `(adapter, wallet, spoke, marketId)` | ProxyManager, in the CR… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-096` | AvanaTimelock | `updateDelay`; `setNormalDelay`, `setShortDelaySelector`, `togglePublicExe… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-097` | LPVaultSwap | `settlePending(marketId)` | Anyone | Public | None | Settles a pending-settl… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-098` | Flash liquidation helper | `flashLiquidate(FlashLiquidationRequest)` (no `liquidatePermiss… | — | — | — | — | — | Unverified |
@@ -2917,6 +2924,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ROUTE-043` | A backup `DexPath` of a market MUST NOT trade through that market's own pool on any hop, a… | — | — | `SIM-01C` | `TEST-054` | `DexHop`, `DexHops`, `DexPathRoute`, `ISettlementRoute`, `WrapperThenDexRoute` | Verified |
 | `REQ-ROUTE-044` | A route would deliver less than `minOut` | reverts with `MinOutNotMet(out, minOut)`; LPVau… | — | — | — | `TEST-177`, `TEST-232` | `ISettlementRoute`, `SwapRouteBase` | Unverified |
 | `REQ-ROUTE-045` | A route's constructor MUST revert with `InvalidRouteConfig` unless: `LP_VAULT_SWAP`, `LOCK… | — | — | — | `TEST-054`, `TEST-221` | `DexHops`, `DexPathRoute`, `ISettlementRoute`, `PegModuleRoute`, `RouteReads`, `SwapRouteBase`, `WrapperThenDexRoute` | Unverified |
+| `REQ-ROUTE-046` | Legacy Curve hops. A `DexPath` hop, or a hop of a `WrapperThenDex` route, MAY trade throug… | — | — | — | — | — | Unverified |
 | `REQ-SWAP-001` | `liquidate` MUST NOT check `msg.sender` against the committed-operator registry or any rol… | — | — | — | — | `ILPVaultSwapLiquidation`, `ILPVaultSwapViews` | Modelled |
 | `REQ-SWAP-002` | `liquidate` and `settlePending` MUST acquire the Lock before any state-changing external c… | — | — | — | — | `ILPVaultSwapErrors`, `ILPVaultSwapLiquidation`, `ILPVaultSwapViews`, `ILPVaultSwap` | Unverified |
 | `REQ-SWAP-003` | LPVaultSwap MUST NOT read the MarketRegistry's `PauseState`, its pause reason or any circu… | — | — | — | — | `ILPVaultSwapLiquidation`, `ILPVaultSwap` | Modelled |
@@ -3361,7 +3369,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `SPEC-LIQ-016` | **Listing liveness.** A liquidation needs `minLB × (10⁴ − slippageAllowanceMinBps) ≥ 10⁸` … | `MATH-ST-06`, `MATH-ST-101`, `MATH-ST-105`, `MATH-ST-10`, `MATH-ST-11`, `MATH-ST-13`, `MATH-ST-54`, `MATH-ST-80`, `SYM-180`, `SYM-41`, `SYM-44` | — | — | `TEST-198` | `ILPVaultSwapLiquidation`, `SettlementMath` | Verified |
 | `SPEC-LIQ-017` | **Leftover debt asset.** `leftover = Kf − D` stays in LPVaultSwap's `T` balance and return… | `MATH-ST-100`, `MATH-ST-101`, `MATH-ST-15`, `MATH-ST-23`, `MATH-ST-52`, `MATH-ST-70`, `MATH-ST-85`, `MATH-ST-94`, `SYM-46` | — | `HYP-83` | `TEST-174` | `ILPVaultSwapLiquidation`, `LiquidationResult`, `SettlementReport` | Verified |
 | `SPEC-LIQ-018` | **Per-leg minimum output.** For each released token `i ≠ T` with `aᵢ > 0` that a call swap… | `MATH-ST-101`, `MATH-ST-111`, `MATH-ST-123`, `MATH-ST-63`, `MATH-ST-64`, `MATH-ST-66`, `MATH-ST-67`, `MATH-ST-73`, `MATH-ST-86`, `SYM-48` | — | `HYP-85`, `SIM-01B`, `SIM-06C` | `PROP-018`†, `TEST-198`, `TEST-232` | `ILPVaultSwapDeleverage`, `ILPVaultSwapErrors`, `ILPVaultSwapLiquidation`, `SettlementMath` | Verified |
-| `SPEC-LIQ-019` | **Caller shortfall top-up.** With the call's `maxShortfall`, every leg runs at `sLeg = min… | `MATH-ST-01`, `MATH-ST-100`, `MATH-ST-101`, `MATH-ST-104`, `MATH-ST-109`, `MATH-ST-121`, `MATH-ST-122`, `MATH-ST-124`, `MATH-ST-125`, `MATH-ST-126`, `MATH-ST-128`, `MATH-ST-15`, `MATH-ST-18`, `MATH-ST-21`, `MATH-ST-24`, `MATH-ST-25`, `MATH-ST-55`, `MATH-ST-56`, `MATH-ST-57`, `MATH-ST-58`, `MATH-ST-59`, `MATH-ST-65`, `MATH-ST-66`, `MATH-ST-86`, `MATH-ST-88`, `MATH-ST-97`, `MATH-ST-99`, `SYM-46`, `SYM-47` | — | `HYP-86`, `SIM-06E` | `PROP-015`†, `PROP-019`†, `TEST-174`, `TEST-198` | `FlashLiquidatorBase`, `IFlashLiquidator`, `ILPVaultSwapErrors`, `ILPVaultSwapLiquidation`, `LiquidationParams`, `LiquidationPreview`, `LiquidationResult`, `SettlementMath`, `SettlementReport` | Verified |
+| `SPEC-LIQ-019` | **Caller shortfall top-up.** With the call's `maxShortfall`, every leg runs at `sLeg = min… | `MATH-ST-01`, `MATH-ST-100`, `MATH-ST-101`, `MATH-ST-104`, `MATH-ST-109`, `MATH-ST-121`, `MATH-ST-122`, `MATH-ST-124`, `MATH-ST-125`, `MATH-ST-126`, `MATH-ST-128`, `MATH-ST-129`, `MATH-ST-15`, `MATH-ST-18`, `MATH-ST-21`, `MATH-ST-24`, `MATH-ST-25`, `MATH-ST-55`, `MATH-ST-56`, `MATH-ST-57`, `MATH-ST-58`, `MATH-ST-59`, `MATH-ST-65`, `MATH-ST-66`, `MATH-ST-86`, `MATH-ST-88`, `MATH-ST-97`, `MATH-ST-99`, `SYM-46`, `SYM-47` | — | `HYP-86`, `SIM-06E` | `PROP-015`†, `PROP-019`†, `TEST-174`, `TEST-198` | `FlashLiquidatorBase`, `IFlashLiquidator`, `ILPVaultSwapErrors`, `ILPVaultSwapLiquidation`, `LiquidationParams`, `LiquidationPreview`, `LiquidationResult`, `SettlementMath`, `SettlementReport` | Verified |
 | `SPEC-LIQ-020` | **Repay-with-collateral sizing.** For `deleverage` of `units` of market `m` against debt r… | `MATH-ST-101`, `MATH-ST-123`, `MATH-ST-71`, `MATH-ST-72`, `MATH-ST-73`, `MATH-ST-74`, `MATH-ST-75`, `MATH-ST-87` | — | `HYP-79` | `TEST-198` | `DeleverageRequest`, `ILPVaultSwapDeleverage`, `ILPVaultSwapErrors`, `ILPVaultSwapEvents`, `ILensPreview`, `SettlementMath` | Verified |
 | `SPEC-LIQ-021` | **Liquidation throughput.** For a market with `N` liquidation calls queued after a price d… | `MATH-ST-102` | — | — | — | — | Modelled |
 | `SPEC-LIQ-022` | **Keeper reward and borrower surplus.** With `S` from `SPEC-LIQ-008`, `G = max(0, V − D)` … | `MATH-ST-101`, `MATH-ST-104`, `MATH-ST-17`, `MATH-ST-26`, `MATH-ST-57`, `MATH-ST-94`, `MATH-ST-96`, `MATH-ST-97`, `SYM-180` | — | — | `PROP-015`†, `TEST-198` | `ILPVaultSwapLiquidation`, `LiquidationResult`, `SettlementMath`, `SettlementReport` | Verified |
@@ -3385,7 +3393,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `SPEC-ORC-018` | **Served debt price by state.** Let `A = accepted.price8`, `q` the fresh quote (`REQ-ORACL… | `MATH-UO-43`, `MATH-UO-48`, `MATH-UO-65`, `MATH-UO-67`, `SYM-134` | — | `HYP-82`, `SIM-02H` | `PROP-074`†, `TEST-037`, `TEST-070`, `TEST-105`, `TEST-219`, `TEST-230` | `DebtEvaluation`, `DebtOracleEvaluation`, `DebtOracle`, `DebtPriceView`, `IDebtOracle`, `LPPriceMath` | Verified |
 | `SPEC-ORC-019` | **Feed age limit.** For each leg: `feedMaxAge = feedHeartbeat + heartbeatMargin`, where `f… | `MATH-UO-44`, `MATH-UO-50`, `SYM-139`, `SYM-166` | — | — | `TEST-040`, `TEST-219`, `TEST-250`, `TEST-276` | `DebtEvaluation`, `DebtOracleReads`, `FeedDef`, `IParameterStoreAdmin`, `IParameterStoreChain`, `IParameterStoreListing`, `IParameterStoreViews`, `LPOracleReads`, `LPOracleTypes`, `LPPriceMath`, `ParameterStoreAdminOracleLogic`, `ParameterStoreForwardAdmin`, `ParameterStoreListingLogic`, `ParameterStoreViews`, `ParameterStore` | Verified |
 | `SPEC-ORC-020` | **Second-source agreement.** For token *i* with quote `q_i` and second-source value `s_i` … | `MATH-UO-54`, `MATH-UO-60`, `MATH-UO-72`, `SYM-169` | — | — | `PROP-026`†, `PROP-100`†, `TEST-037`, `TEST-039`, `TEST-219`, `TEST-250`, `TEST-276`, `TEST-294` | `DebtOracleEvaluation`, `DebtPriceView`, `IParameterStoreAdmin`, `IParameterStoreViews`, `IRiskModuleErrors`, `LPOracleEval`, `LPOracleReads`, `LPOracleStorage`, `LPOracleTypes`, `LPPriceMath`, `OracleConfig`, `ParameterStoreAdminRiskLogic`, `ParameterStoreForwardAdmin`, `PriceStateView`, `SecondSourceKind`, `SecondSource`, `TokenOracleConfig`, `TokenPriceView` | Verified |
-| `SPEC-ORC-021` | **Sequencer gate.** On a chain whose `sequencer.feed ≠ address(0)`, read `(answer, started… | `MATH-UO-55`, `SYM-170` | — | — | `TEST-037`, `TEST-275`, `TEST-276` | `DebtOracleEvaluation`, `DebtPriceView`, `IParameterStoreChain`, `LPOracleConfig`, `LPOracleTypes`, `LPPriceMath`, `OracleConfig`, `ParameterStoreListingLogic`, `ParameterStore`, `PriceStateView`, `SequencerConfig` | Verified |
+| `SPEC-ORC-021` | **Sequencer gate.** On a chain whose `sequencer.feed ≠ address(0)`, read `(answer, started… | `MATH-UO-55`, `MATH-UO-73`, `SYM-170` | — | — | `TEST-037`, `TEST-275`, `TEST-276` | `DebtOracleEvaluation`, `DebtPriceView`, `IParameterStoreChain`, `LPOracleConfig`, `LPOracleTypes`, `LPPriceMath`, `OracleConfig`, `ParameterStoreListingLogic`, `ParameterStore`, `PriceStateView`, `SequencerConfig` | Verified |
 | `SPEC-ORC-022` | **Observation buffer per chain.** For a consistency check over window `W` on a pool that w… | `MATH-UO-56`, `MATH-UO-66`, `SYM-171` | — | — | `TEST-037`, `TEST-139`, `TEST-250`, `TEST-264`, `TEST-265` | `ClLPVaultMarkets`, `IParameterStoreChain`, `IPoolObservations`, `LPOracleStorage`, `LPPriceMath`, `OracleConfig`, `ParameterStoreOracle`, `ParameterStore` | Verified |
 | `SPEC-ORC-023` | **Gas guard for external reads.** Each external read `k` of an evaluation (legs, previous-… | `MATH-UO-57`, `MATH-UO-66`, `SYM-172` | — | — | `TEST-037`, `TEST-038`, `TEST-042`, `TEST-219` | `DebtOracleReads`, `ILPOracle`, `IRiskModuleErrors`, `LPOracleCalls`, `LPOracleConfig`, `LPOracleReads`, `LPOracleStorage`, `LPPriceMath`, `RiskModuleCalls` | Verified |
 | `SPEC-PROXY-001` | **Post-action health gate.** After the proxy's Spoke call in `borrow`, and after Collatera… | `MATH-AR-03`, `MATH-AR-06`, `MATH-AR-33`, `MATH-AR-37`, `SYM-05`, `SYM-164` | `QNT-20` | `HYP-13`, `HYP-20`, `HYP-54` | — | `IAaveAdapterUser`, `IRiskModuleChecks`, `IRiskModuleErrors`, `IRiskModuleViews`, `RiskModuleConstants`, `RiskModule` | Modelled |
@@ -3426,17 +3434,17 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `WDR-014` | Record checks, reconcile, units check | `CO` | An open record exists for `(I, positionKey)… | — | — | — | — | — | Unverified |
 | `WDR-015` | Close the record and release the charge | `CO` | Effects before the position moves: exit c… | `MATH-UO-29` | — | `HYP-10` | `TEST-018` | — | Verified |
 | `WDR-016` | Return the position | `CO` → `LV.returnPosition(positionKey)` | The LPVault's integration … | `SYM-138` | — | — | — | — | Modelled |
-| `WDR-017` | Events | `LV`, `CO` | `LV` emits `PositionReturned(integrationId, positionKey, W)`; `CO` e… | — | — | — | — | — | Unverified |
+| `WDR-017` | Events | `CO`, `LV` | `CO` emits `CollateralReleased(recordId, positionKey, W, P, VT, unit… | — | — | — | — | — | Unverified |
 | `WDR-018` | Adapter post-checks, event, unlock | `AD` | One-sided backing check with the gap preserved… | `SYM-138` | — | — | — | `IAaveAdapterEvents`, `IAaveAdapterUser` | Modelled |
-| `WDR-019` | `W` calls `AD.releaseZeroCredit(m, integrationId, positionKey)`; `AD` → `CO.releaseZeroCre… | — | — | — | — | — | Unverified |
+| `WDR-019` | `W` calls `AD.releaseZeroCredit(m, (integrationId, positionKey), deadline)`; `AD` → `CO.re… | — | — | — | — | — | Unverified |
 | `WDR-020` | Check the record, reconcile, check credit | `CO` | An open record exists for `(I, position… | — | `QNT-T15` | `HYP-18` | — | — | Modelled |
 | `WDR-021` | Close the record | `CO` | Any remaining charge is released from the account's budget part … | — | — | — | — | — | Unverified |
 | `WDR-022` | Return the position | `CO` → `LV.returnPosition(positionKey)` | Position LPVault → `W`, wi… | — | — | — | — | — | Unverified |
-| `WDR-023` | Events | `LV`, `CO` | `PositionReturned(integrationId, positionKey, W)`; `CollateralReleas… | — | — | — | — | — | Unverified |
+| `WDR-023` | Events | `CO`, `LV` | `CollateralReleased(recordId, positionKey, W, P, VT, 0)`, then `Posi… | — | — | — | — | — | Unverified |
 | `WDR-024` | `W` calls `AD.repayAllAndWithdraw(m, (integrationId, positionKey), units, debtReserveIds, … | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `WDR-025` | Read the account's Aave-side holding | `CO` → `S.getUserSuppliedShares(reserveId, P)` (vie… | — | — | — | — | — | Unverified |
 | `WDR-026` | Compute the missing units | `CO` | `missing = accountCredited[P][VT] > held ? accountCredi… | — | — | — | — | — | Unverified |
-| `WDR-027` | Debit records largest-first | `CO` | Walk `P`'s list for `VT` from the head (largest credi… | — | — | — | — | — | Unverified |
+| `WDR-027` | Debit records in list order from the head | `CO` | Walk `P`'s list for `VT` from the head … | — | — | — | — | — | Unverified |
 | `WDR-028` | Move the units into pending settlement | `CO` → the integration's pool-lock check (view); … | `SYM-138` | — | — | — | — | Modelled |
 | `WDR-029` | Events, then continue | `CO` | One `RecordDebited` per debited record and `SeizureReconcil… | — | — | — | — | — | Unverified |
 | `WDR-030` | Settle the pending balance (separate transaction) | Any caller → `LPVaultSwap.settlePendin… | — | — | — | — | `IAaveAdapterSettlement` | Unverified |
@@ -3453,7 +3461,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `WDR-041` | **Feed freshness and second source.** Each collateral and debt input of a withdraw-with-de… | `MATH-AR-59` | `QNT-54` | `HYP-42` | — | — | Modelled |
 | `WDR-042` | **Aave-side halts.** A Hub `haltSpoke` or `deactivateSpoke` of `S`, or an Aave pause of th… | — | — | — | — | — | Unverified |
 | `WDR-043` | **Offboarding and Closed markets.** In `Offboarding` every withdrawal runs as in an active… | — | — | — | — | — | Unverified |
-| `WDR-044` | **Budget part on exit.** Each account's booked charge sits in the market's `Regular` budge… | — | — | `HYP-10` | — | — | Modelled |
+| `WDR-044` | **Budget part on exit.** A pledge books its charge into the market's buckets, the regular … | — | — | `HYP-10` | — | — | Modelled |
 | `WDR-045` | Aerodrome Slipstream on Base (Carol, withdraw with USDC debt). Setup: Carol's account in m… | — | — | — | — | — | Unverified |
 | `WDR-F-001` | `WDR-001`, `WDR-019`, `WDR-024` | Lock already held | `LockHeld(holder)` from the Lock ([2… | — | — | — | — | `IAaveAdapterErrors` | Unverified |
 | `WDR-F-002` | `WDR-002` | `W` has no proxy for market `m` | `NoProxy(W, m)` (Source: Q-223) | — | — | — | — | `IAaveAdapterErrors` | Unverified |

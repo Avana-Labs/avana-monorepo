@@ -68,7 +68,7 @@ class Params:
     # Circuit breakers (Q-399): oracle/band, pool-share concentration (merged with poolShareMaxBps) and the
     # deficit freeze trip on-chain; price drop, seizure surge and route failures are monitoring alerts only.
     breaker_deficit_max: dict = field(default_factory=lambda: {"GHO": 10_000 * WAD, "USDC": 10_000 * 10 ** 6})
-    freeze_rate_limit: int = 20                  # freezeAddress per guardian per rolling 24 h (Q-242)
+    freeze_rate_limit: int = 20                  # freezeAddress per guardian in 24 one-hour buckets (Q-242); the model counts a continuous 24 h window
     # Funding (Q-233, Q-236): credit lines through the Lend Spoke, Coverage Spokes per asset
     credit_line: dict = field(default_factory=lambda: {"GHO": 2_000_000 * WAD, "USDC": 1_000_000 * 10 ** 6})
     first_loss: dict = field(default_factory=lambda: {"GHO": 400_000 * WAD, "USDC": 50_000 * 10 ** 6})
