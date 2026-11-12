@@ -37,7 +37,7 @@ Subsets of deployed contracts' interfaces, copied from the origin source with id
 | Sky `dss-lite-psm`, (C) 2023 Dai Foundation | `dbf0022225f645f5697e5517d0cf00810471bccf` | AGPL-3.0-or-later | `sky/ILitePsm.sol` | [`LICENSES/AGPL-3.0.txt`](LICENSES/AGPL-3.0.txt) |
 | Chainlink `chainlink-evm`, (c) 2018 SmartContract ChainLink Limited SEZC | `4d83db28afc6d54761ce324e633d89244a97907e` | MIT | `chainlink/IAggregatorV3.sol`, `chainlink/IAggregatorProxy.sol`, `chainlink/ISequencerUptimeFeed.sol` | [MIT](#mit-license) |
 | Chainlink `libocr` | `199a6f17c59863999480e990c7c0b6ba7796ec92` | MIT | `chainlink/IOffchainAggregator.sol` | [MIT](#mit-license) |
-| GHO `gho-core`, (c) 2023 Aave | `c6335a0bb9cba099960c5378b1ff0db190b8da8f` | MIT | `gho/IGhoFlashMinter.sol`, `gho/IGsm.sol` | [MIT](#mit-license) |
+| GHO `gho-core`, (c) 2023 Aave | `c6335a0bb9cba099960c5378b1ff0db190b8da8f` | MIT | `gho/IGsm.sol` | [MIT](#mit-license) |
 
 ## Solidity dependencies
 

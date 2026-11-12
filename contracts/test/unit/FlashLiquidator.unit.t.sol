@@ -61,43 +61,37 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         assertEq(opHelper.SIGNER(), signer);
         assertEq(opHelper.FUNDING_SAFE(), safe);
         assertEq(opHelper.MAX_TOP_UP_BPS(), OPERATOR_TOP_UP_BPS);
-        assertEq(helper.GHO_FLASH_MINTER(), address(ghoMinter));
-        address m = address(ghoMinter);
         address[4] memory core = [address(aavePool), address(lvs), address(registry), address(store)];
         for (uint256 i = 0; i < 4; ++i) {
             // A fresh copy: `address[4] memory args = core` would alias `core` and zero it for the checks below.
             address[4] memory args = [core[0], core[1], core[2], core[3]];
             args[i] = address(0);
             vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-            this.deployHelper(args[0], args[1], args[2], args[3], m);
+            this.deployHelper(args[0], args[1], args[2], args[3]);
             vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-            this.deployOperatorHelper([args[0], args[1], args[2], args[3], m], signer, safe, 100);
+            this.deployOperatorHelper(args, signer, safe, 100);
         }
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], address(0), safe, 100);
+        this.deployOperatorHelper(core, address(0), safe, 100);
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], signer, address(0), 100);
+        this.deployOperatorHelper(core, signer, address(0), 100);
         vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InvalidTopUpBps.selector, 10_001));
-        this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], signer, safe, 10_001);
-        OperatorFlashLiquidator full =
-            this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], signer, safe, 10_000);
+        this.deployOperatorHelper(core, signer, safe, 10_001);
+        OperatorFlashLiquidator full = this.deployOperatorHelper(core, signer, safe, 10_000);
         assertEq(full.MAX_TOP_UP_BPS(), 10_000);
-        // A chain whose GHO has no flash minter: address(0) is allowed and GHO falls back to the Pool.
-        FlashLiquidator noMinter = new FlashLiquidator(core[0], core[1], core[2], core[3], address(0));
-        assertEq(noMinter.GHO_FLASH_MINTER(), address(0));
     }
 
     /// @notice A zero LPVaultSwap or ParameterStore is refused once the Pool and the MarketRegistry pass.
     // TEST-288 verifies: REQ-HELPER-001
     function test_TEST_288_constructorRefusesZeroLpVaultSwap() public {
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        this.deployHelper(address(aavePool), address(0), address(registry), address(store), address(ghoMinter));
+        this.deployHelper(address(aavePool), address(0), address(registry), address(store));
     }
 
     // TEST-288 verifies: REQ-HELPER-001
     function test_TEST_288_constructorRefusesZeroParameterStore() public {
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        this.deployHelper(address(aavePool), address(lvs), address(registry), address(0), address(ghoMinter));
+        this.deployHelper(address(aavePool), address(lvs), address(registry), address(0));
     }
 
     /// @notice No delegatecall, callcode, selfdestruct or create in either variant's runtime code.
@@ -107,7 +101,7 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         _assertNoForbiddenOpcode(address(opHelper).code);
     }
 
-    /// @notice The public helper answers only its eleven selectors: no owner, role, setter, sweep, rescue, arbitrary
+    /// @notice The public helper answers only its nine selectors: no owner, role, setter, sweep, rescue, arbitrary
     /// call, fallback or `receive`.
     // TEST-288 verifies: REQ-HELPER-001, REQ-HELPER-010
     function testFuzz_TEST_288_publicHelperOnlyInterfaceSelectors(
@@ -513,11 +507,9 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
     function test_TEST_285_hubPoolRefusedAtDeploymentAndEveryCall() public {
         registry.setHub(address(aavePool), true);
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
-        this.deployHelper(address(aavePool), address(lvs), address(registry), address(store), address(0));
+        this.deployHelper(address(aavePool), address(lvs), address(registry), address(store));
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
-        this.deployOperatorHelper(
-            [address(aavePool), address(lvs), address(registry), address(store), address(0)], signer, safe, 1
-        );
+        this.deployOperatorHelper([address(aavePool), address(lvs), address(registry), address(store)], signer, safe, 1);
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
         _liquidate(_exampleRequest());
         vm.prank(signer);
@@ -585,8 +577,7 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
             || selector == IFlashLiquidator.POOL.selector || selector == IFlashLiquidator.LP_VAULT_SWAP.selector
             || selector == IFlashLiquidator.MARKET_REGISTRY.selector
             || selector == IFlashLiquidator.PARAMETER_STORE.selector
-            || selector == IFlashLiquidator.onFlashLoan.selector || selector == IFlashLiquidator.claimEscrowed.selector
-            || selector == IFlashLiquidator.GHO_FLASH_MINTER.selector;
+            || selector == IFlashLiquidator.claimEscrowed.selector;
     }
 
     function _assertNoForbiddenOpcode(

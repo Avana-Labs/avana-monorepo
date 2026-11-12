@@ -153,7 +153,7 @@ computed("MATH-ST-128", "2.11 helper examples (USDC 6 decimals, GHO 18)", [
     ("R = 1,940: Safe loss 10.975 USDC (settles)", 10_975_000, r1940[5] - r1940[4]),
     ("R = 1,940: payout 86.525 USDC", 86_525_000, r1940[4]),
     ("X = F = 2,047.5 against D = 1,950, R = 1,850: top-up 101.02375 USDC", 101_023_750, r1850[3]),
-    ("GHO at a 5 bps minter fee: fee 0.975 GHO", 975 * 10**15, (1_950 * E18 * 5 + 5_000) // BPS),
+    ("GHO from the Pool at its 5 bps premium (half up): 0.975 GHO", 975 * 10**15, (1_950 * E18 * 5 + 5_000) // BPS),
     ("GHO payout 69.825 GHO", 69_825 * 10**15, gho[4]),
     ("F < X example: payout 167.325 USDC", 167_325_000, inv[4]),
     ("net minimum of 69 USDC with F < X: minPayout 166.5 USDC", 166_500_000, 2_047_500_000 - 1_950 * E6 + 69 * E6),

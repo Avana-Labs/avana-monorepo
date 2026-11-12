@@ -127,7 +127,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
     // TEST-174 verifies: REQ-HELPER-011, REQ-HELPER-016
     function test_TEST_174_operatorRefusesLoanAboveNeed() public {
         OperatorFlashLiquidator noTopUp = new OperatorFlashLiquidator(
-            address(aavePool), address(lvs), address(registry), address(store), address(0), signer, safe, 0
+            address(aavePool), address(lvs), address(registry), address(store), signer, safe, 0
         );
         _fund(safe, address(noTopUp), 10_000e6);
         uint256 x = 10_000_000e6;

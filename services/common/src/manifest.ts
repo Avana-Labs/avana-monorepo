@@ -61,10 +61,8 @@ export interface ServiceManifest {
     readonly hub: Upgradeable;
     readonly borrowSpokes: readonly Upgradeable[];
     readonly lendSpoke: Upgradeable;
-    /** The Aave V3 Pool the helper flash-borrows non-GHO debt assets from. */
+    /** The Aave V3 Pool the helper flash-borrows every debt asset from, GHO included; its only lender. */
     readonly v3Pool: Upgradeable;
-    /** The GHO flash minter the helper borrows GHO from where the chain has one (Ethereum). */
-    readonly ghoFlashMinter: Immutable | null;
   };
   /** Chainlink sequencer-uptime feed on an L2, null on Ethereum. */
   readonly sequencerFeed: Address | null;

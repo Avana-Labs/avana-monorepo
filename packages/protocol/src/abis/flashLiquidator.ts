@@ -5,19 +5,6 @@
 export const flashLiquidatorAbi = [
   {
     "type": "function",
-    "name": "GHO_FLASH_MINTER",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "minter",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "LP_VAULT_SWAP",
     "inputs": [],
     "outputs": [
@@ -261,45 +248,6 @@ export const flashLiquidatorAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "onFlashLoan",
-    "inputs": [
-      {
-        "name": "initiator",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "fee",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "data",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "magic",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "event",

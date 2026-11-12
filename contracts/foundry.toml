@@ -165,7 +165,7 @@ shrink_run_limit = 10_000
 show_metrics = true
 
 [profile.fork]
-# Mainnet fork for third-party behaviour: Uniswap v3, Chainlink, GHO FlashMinter, the GHO
+# Mainnet fork for third-party behaviour: Uniswap v3, Chainlink, the Aave V3 Pool, the GHO
 # Stability Modules and the Sky LitePSM (Q-074). The fixture forks at the block pinned in
 # test/utils/fixtures/ForkConstants.sol (mainnetForkBlock(), baseForkBlock()); the
 # MAINNET_FORK_BLOCK/BASE_FORK_BLOCK variables override it whenever they are set, which only

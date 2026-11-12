@@ -24,15 +24,15 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title FlashLiquidatorBase
 /// @notice The flash liquidation helper's whole flow (2.11 Flash liquidation helper), shared by the public helper and
-/// the operator variant: request checks, the bound single-use context, the loan from the asset's lender, the
-/// liquidation inside the lender's callback, the repayment with a bounded top-up, the net payout after the loan returns
+/// the operator variant: request checks, the bound single-use context, the loan from the chain's Aave V3 Pool, the
+/// liquidation inside the Pool's callback, the repayment with a bounded top-up, the net payout after the loan returns
 /// and the claim of the helper's escrowed credits.
 /// @dev Immutable, with no owner, role, setter, sweep, rescue, arbitrary call, `delegatecall`, fallback or `receive`;
 /// no persistent storage. The context lives in transient storage at an ERC-7201 base slot, so it is empty at the start
 /// of every transaction and a reverted call leaves nothing. A variant fixes only who may call (`_callerAllowed`), who
 /// pays the inventory, the shortfall budget and the top-ups (`_payer`), who receives the payout (`_recipient`), who
 /// receives a claimed credit (`_claimRecipient`) and the operator bounds (`_topUpBound`, `_checkLoanNeed`,
-/// `_checkOutlay`). External calls beyond the lenders': the MarketRegistry (`getMarket`, `getDebtReserve`,
+/// `_checkOutlay`). External calls beyond the Pool's: the MarketRegistry (`getMarket`, `getDebtReserve`,
 /// `isRecordedHub`), the ParameterStore (`maxFlashFeeBps`, `feeRecipient`), LPVaultSwap (`liquidate`,
 /// `PAYOUT_ESCROW`), the PayoutEscrow (`claim`), the debt asset and the market's tokens (`balanceOf`, `allowance`,
 /// `approve`, `transfer`, `transferFrom`).
@@ -44,10 +44,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     using TransientSlot for TransientSlot.AddressSlot;
     using TransientSlot for TransientSlot.Bytes32Slot;
 
-    /// @notice ERC-3156 callback success value.
-    bytes32 private constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
-
-    /// @notice Context state: none open, open awaiting the lender's callback, callback ran (used).
+    /// @notice Context state: none open, open awaiting the Pool's callback, callback ran (used).
     uint256 private constant STATE_NONE = 0;
     uint256 private constant STATE_OPEN = 1;
     uint256 private constant STATE_USED = 2;
@@ -78,22 +75,20 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     /// @inheritdoc IFlashLiquidator
     address public immutable override PARAMETER_STORE;
 
-    /// @notice Fixes the chain's Aave V3 Pool, LPVaultSwap, MarketRegistry, ParameterStore and GHO flash minter.
-    /// @dev Reverts `ZeroAddress` for a zero address other than the minter (or a minter naming no GHO) and
-    /// `FlashSourceIsHub` if the MarketRegistry records the Pool or the minter as a Hub.
-    /// @param pool The chain's Aave V3 Pool, the lender of every asset but the minter's GHO.
+    /// @notice Fixes the chain's Aave V3 Pool, LPVaultSwap, MarketRegistry and ParameterStore.
+    /// @dev Reverts `ZeroAddress` for a zero address and `FlashSourceIsHub` if the MarketRegistry records the Pool as
+    /// a Hub.
+    /// @param pool The chain's Aave V3 Pool, the lender of every debt asset.
     /// @param lpVaultSwap The chain's LPVaultSwap.
     /// @param marketRegistry The chain's MarketRegistry.
     /// @param parameterStore The chain's ParameterStore.
-    /// @param ghoFlashMinter The chain's GHO flash minter, or `address(0)` on a chain whose GHO has none.
     /// @custom:spec REQ-HELPER-001, REQ-HELPER-002, REQ-HELPER-015
     constructor(
         address pool,
         address lpVaultSwap,
         address marketRegistry,
-        address parameterStore,
-        address ghoFlashMinter
-    ) FlashLiquidatorLenders(pool, ghoFlashMinter, marketRegistry) {
+        address parameterStore
+    ) FlashLiquidatorLenders(pool, marketRegistry) {
         if (lpVaultSwap == address(0) || parameterStore == address(0)) revert ZeroAddress();
         LP_VAULT_SWAP = lpVaultSwap;
         PARAMETER_STORE = parameterStore;
@@ -117,11 +112,11 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         IERC20 asset = IERC20(
             IMarketRegistryRouteViews(MARKET_REGISTRY).getDebtReserve(market.spoke, request.params.debtReserveId).asset
         );
-        // With F = 0 no lender is read or called: the context records `address(0)` as lender, so neither callback
-        // can bind to it.
+        // With F = 0 the Pool is neither read nor called: the context records `address(0)` as lender, so the Pool's
+        // callback cannot bind to it.
         address lender = address(0);
         if (flashAmount != 0) {
-            lender = _lenderOf(address(asset));
+            lender = POOL;
             if (IMarketRegistryHubs(MARKET_REGISTRY).isRecordedHub(lender)) revert FlashSourceIsHub();
             uint256 available = maxFlashLoan(address(asset));
             if (flashAmount > available) revert InsufficientFlashLiquidity(available);
@@ -145,7 +140,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
             STATE_SLOT.asUint256().tstore(STATE_USED);
             _liquidate(asset, request.params);
         } else {
-            _borrow(lender, address(asset), flashAmount, abi.encode(request.params));
+            _borrow(address(asset), flashAmount, abi.encode(request.params));
             if (STATE_SLOT.asUint256().tload() != STATE_USED) revert InvalidFlashCallback();
         }
 
@@ -173,26 +168,6 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         ) revert InvalidFlashCallback();
         _runLoan(IERC20(assets[0]), amounts[0], premiums[0], params);
         return true;
-    }
-
-    /// @inheritdoc IFlashLiquidator
-    /// @custom:spec REQ-HELPER-004, REQ-HELPER-005, REQ-HELPER-006, REQ-HELPER-007, REQ-HELPER-013, REQ-HELPER-015, SPEC-LIQ-015
-    function onFlashLoan(
-        address initiator,
-        address token,
-        uint256 amount,
-        uint256 fee,
-        bytes calldata data
-    ) external override returns (bytes32 magic) {
-        address minter = GHO_FLASH_MINTER;
-        if (
-            STATE_SLOT.asUint256().tload() != STATE_OPEN || minter == address(0) || msg.sender != minter
-                || LENDER_SLOT.asAddress().tload() != minter || initiator != INITIATOR_SLOT.asAddress().tload()
-                || token != ASSET_SLOT.asAddress().tload() || amount != AMOUNT_SLOT.asUint256().tload()
-                || keccak256(data) != PARAMS_HASH_SLOT.asBytes32().tload()
-        ) revert InvalidFlashCallback();
-        _runLoan(IERC20(token), amount, fee, data);
-        return CALLBACK_SUCCESS;
     }
 
     /// @inheritdoc IFlashLiquidator
@@ -263,7 +238,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
 
     /// @notice Records the single-use context: open, the lender, this helper as initiator, `T`, `F`, the two bounds,
     /// the `params` hash, the payer and the recipient.
-    /// @param lender The lender of `T`.
+    /// @param lender `POOL`, or `address(0)` when the call takes no loan.
     /// @param asset `T`.
     /// @param request The caller's request.
     /// @return payer The payer recorded.
@@ -286,11 +261,11 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         RECIPIENT_SLOT.asAddress().tstore(_recipient());
     }
 
-    /// @notice The body of both callbacks once bound: marks the context used, checks the premium, liquidates, checks
-    /// the loan against the need and repays.
+    /// @notice The body of the Pool's callback once bound: marks the context used, checks the premium, liquidates,
+    /// checks the loan against the need and repays.
     /// @param asset `T`.
     /// @param amount `F`.
-    /// @param premium The premium or fee the lender charges.
+    /// @param premium The premium the Pool charges.
     /// @param params The bound `abi.encode(params)`.
     /// @custom:spec REQ-HELPER-005, REQ-HELPER-006, REQ-HELPER-007, REQ-HELPER-011, SPEC-LIQ-015
     function _runLoan(
@@ -340,7 +315,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     }
 
     /// @notice Pulls the top-up `owed − held` from the payer when what the helper holds for the loan falls short,
-    /// within its bound, and approves the lender for exactly `owed`.
+    /// within its bound, and approves the Pool for exactly `owed`.
     /// @param asset `T`.
     /// @param owed `F + premium`.
     /// @param held `keeperOut` plus the unused shortfall budget.
@@ -358,7 +333,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
             if (topUp > bound) revert TopUpExceeded(topUp, bound);
             TOP_UP_SLOT.asUint256().tstore(topUp);
             // The payer recorded by `flashLiquidate` for this context (`msg.sender` or `FUNDING_SAFE`), never from the
-            // request; the context is reachable only through the lender's bound callback (REQ-HELPER-005).
+            // request; the context is reachable only through the Pool's bound callback (REQ-HELPER-005).
             // forge-lint: disable-next-line(arbitrary-send-erc20)
             asset.safeTransferFrom(PAYER_SLOT.asAddress().tload(), address(this), topUp);
         }
@@ -366,7 +341,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     }
 
     /// @notice After the loan returned: computes the net payout as the rise of the `T` balance over the whole call,
-    /// enforces `minPayout` and the variant's outlay bound, withdraws any lender allowance left, sends the payout and
+    /// enforces `minPayout` and the variant's outlay bound, withdraws any Pool allowance left, sends the payout and
     /// every market-token rise to the recipient and emits `FlashLiquidated`.
     /// @dev A `T` balance that ended below its start (only possible when `T` charges a transfer fee and the helper held
     /// `T` before the call) reverts `PayoutTooLow(0, minPayout)`, so nothing the helper held before pays for a call.
@@ -391,7 +366,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         payout = assetAfter - assetBefore;
         if (payout < minPayout) revert PayoutTooLow(payout, minPayout);
         _checkOutlay(prefund + TOP_UP_SLOT.asUint256().tload(), payout, DEBT_REPAID_SLOT.asUint256().tload());
-        // The lender pulls exactly `owed`; an allowance left by a short pull is withdrawn.
+        // The Pool pulls exactly `owed`; an allowance left by a short pull is withdrawn.
         address lender = LENDER_SLOT.asAddress().tload();
         if (lender != address(0) && asset.allowance(address(this), lender) != 0) asset.forceApprove(lender, 0);
 

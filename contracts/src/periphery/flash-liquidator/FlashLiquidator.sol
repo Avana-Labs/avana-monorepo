@@ -19,20 +19,18 @@ import {FlashLiquidatorBase} from "./FlashLiquidatorBase.sol";
 /// reverts, and callers fund `liquidate` themselves. It is never a committed operator.
 /// @custom:spec REQ-HELPER-001, REQ-HELPER-010, REQ-SWAP-105, Q-242, Q-404
 contract FlashLiquidator is FlashLiquidatorBase {
-    /// @notice Fixes the chain's Aave V3 Pool, LPVaultSwap, MarketRegistry, ParameterStore and GHO flash minter.
-    /// @param pool The chain's Aave V3 Pool.
+    /// @notice Fixes the chain's Aave V3 Pool, LPVaultSwap, MarketRegistry and ParameterStore.
+    /// @param pool The chain's Aave V3 Pool, the lender of every debt asset.
     /// @param lpVaultSwap The chain's LPVaultSwap.
     /// @param marketRegistry The chain's MarketRegistry.
     /// @param parameterStore The chain's ParameterStore.
-    /// @param ghoFlashMinter The chain's GHO flash minter, or `address(0)` on a chain whose GHO has none.
     /// @custom:spec REQ-HELPER-001, REQ-HELPER-002, REQ-HELPER-015
     constructor(
         address pool,
         address lpVaultSwap,
         address marketRegistry,
-        address parameterStore,
-        address ghoFlashMinter
-    ) FlashLiquidatorBase(pool, lpVaultSwap, marketRegistry, parameterStore, ghoFlashMinter) {}
+        address parameterStore
+    ) FlashLiquidatorBase(pool, lpVaultSwap, marketRegistry, parameterStore) {}
 
     /// @notice The public helper always takes a loan: `F = 0` reverts `InvalidFlashAmount`, since a caller funding the
     /// whole repayment calls `LPVaultSwap.liquidate` itself.

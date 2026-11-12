@@ -2533,7 +2533,7 @@
     "checks": []
   },
   "EMG-F-033": {
-    "hash": "a7a74c5670b5b70b",
+    "hash": "827af08b8c8bdbbb",
     "checks": []
   },
   "EMG-F-034": {
@@ -2640,8 +2640,9 @@
     ]
   },
   "FEE-002": {
-    "hash": "8adb9da4b9b27144",
+    "hash": "3fe47a7fae7a3606",
     "checks": [
+      "ClLPVaultCustody",
       "IAmmIntegration"
     ]
   },
@@ -2709,7 +2710,7 @@
     "checks": []
   },
   "FEE-F-008": {
-    "hash": "37061fb1fc7ddb1c",
+    "hash": "dfcb024f3149fdea",
     "checks": []
   },
   "FEE-F-009": {
@@ -4153,7 +4154,7 @@
     ]
   },
   "INV-098": {
-    "hash": "e6c3d71ca81dc806",
+    "hash": "9877f423ec8dc97b",
     "checks": [
       "MATH-UO-55",
       "SYM-170",
@@ -4403,11 +4404,11 @@
     "checks": []
   },
   "LIQ-036": {
-    "hash": "a652a0046d2a78e4",
+    "hash": "dd8228a34b911105",
     "checks": []
   },
   "LIQ-037": {
-    "hash": "1fd879dfb6f07915",
+    "hash": "d5df90eabcd27fbe",
     "checks": []
   },
   "LIQ-038": {
@@ -4675,11 +4676,11 @@
     ]
   },
   "LIQ-083": {
-    "hash": "d2d0213ad1424a6d",
+    "hash": "0901f956e37b8fba",
     "checks": []
   },
   "LIQ-084": {
-    "hash": "45ae7448d4c98fa5",
+    "hash": "24519eeee0adc23b",
     "checks": []
   },
   "LIQ-085": {
@@ -4762,7 +4763,7 @@
     "checks": []
   },
   "LIQ-F-012": {
-    "hash": "efb1a7306e8d5c00",
+    "hash": "bb955729d53f5e72",
     "checks": []
   },
   "LIQ-F-013": {
@@ -4858,7 +4859,7 @@
     "checks": []
   },
   "LIQ-F-036": {
-    "hash": "59724414262f28fa",
+    "hash": "c06d3a33e5b9f624",
     "checks": []
   },
   "LIQ-F-037": {
@@ -5330,7 +5331,7 @@
     "checks": []
   },
   "MKT-057": {
-    "hash": "58500cf7a9d8f00f",
+    "hash": "d76db08960e309db",
     "checks": [
       "MATH-AR-29",
       "MATH-AR-30"
@@ -5455,7 +5456,7 @@
     "checks": []
   },
   "MKT-F-021": {
-    "hash": "d3cc599c50be6910",
+    "hash": "a5b8711a88753b1b",
     "checks": []
   },
   "MKT-F-022": {
@@ -5463,7 +5464,7 @@
     "checks": []
   },
   "MKT-F-023": {
-    "hash": "98c7386b272e1b6c",
+    "hash": "a444e1f2f5d02de3",
     "checks": []
   },
   "MKT-POST-001": {
@@ -9476,7 +9477,7 @@
     ]
   },
   "REP-019": {
-    "hash": "cf71ea420f9ddac7",
+    "hash": "705b97731ef9a852",
     "checks": [
       "IAaveAdapterSettlement"
     ]
@@ -9592,7 +9593,7 @@
     "checks": []
   },
   "REP-F-019": {
-    "hash": "b74864c573465e93",
+    "hash": "40c1ab0e83b9c096",
     "checks": []
   },
   "REP-F-020": {
@@ -10088,8 +10089,11 @@
     ]
   },
   "REQ-ACCESS-075": {
-    "hash": "384db6665367dd40",
-    "checks": []
+    "hash": "86dff52bfb286dd7",
+    "checks": [
+      "TEST-062",
+      "TEST-068"
+    ]
   },
   "REQ-ACCESS-076": {
     "hash": "cd0dd3bd00309de0",
@@ -10131,10 +10135,11 @@
     "checks": []
   },
   "REQ-ACCESS-085": {
-    "hash": "fe962ae321a15615",
+    "hash": "26490b3cf9cbb248",
     "checks": [
       "FV-CTL-31",
-      "IMarketRegistryPause"
+      "IMarketRegistryPause",
+      "TEST-065"
     ]
   },
   "REQ-ACCESS-086": {
@@ -10335,11 +10340,12 @@
     ]
   },
   "REQ-ACCESS-122": {
-    "hash": "8896bb234bf5772c",
+    "hash": "253ec6a176d3c711",
     "checks": [
       "FV-CTL-31",
       "IMarketRegistryPause",
-      "MATH-GOV-07"
+      "MATH-GOV-07",
+      "TEST-065"
     ]
   },
   "REQ-ACCESS-123": {
@@ -10382,10 +10388,12 @@
     ]
   },
   "REQ-ACCESS-128": {
-    "hash": "6751109aa91fcad3",
+    "hash": "1b64dd034613b7e2",
     "checks": [
       "FV-CTL-140",
-      "FV-CTL-27"
+      "FV-CTL-27",
+      "TEST-063",
+      "TEST-066"
     ]
   },
   "REQ-ACCESS-129": {
@@ -10505,8 +10513,15 @@
     ]
   },
   "REQ-ACCESS-145": {
-    "hash": "0de645313a95505a",
-    "checks": []
+    "hash": "57c17e84f3525ac2",
+    "checks": [
+      "TEST-062",
+      "TEST-063",
+      "TEST-067",
+      "TEST-213",
+      "TEST-245",
+      "TEST-273"
+    ]
   },
   "REQ-ACCESS-146": {
     "hash": "066e14166a27eadd",
@@ -10726,9 +10741,13 @@
     "checks": []
   },
   "REQ-ACCESS-172": {
-    "hash": "636944fd4ff7bf10",
+    "hash": "fdf371adffbe299a",
     "checks": [
-      "IMarketRegistryPause"
+      "IMarketRegistryPause",
+      "TEST-062",
+      "TEST-063",
+      "TEST-065",
+      "TEST-067"
     ]
   },
   "REQ-ACCESS-173": {
@@ -10754,7 +10773,7 @@
     "checks": []
   },
   "REQ-ACCESS-178": {
-    "hash": "b2a51e64f318c36d",
+    "hash": "84138a5342047d80",
     "checks": []
   },
   "REQ-ACCESS-179": {
@@ -11497,7 +11516,7 @@
     "checks": []
   },
   "REQ-ADAPTER-089": {
-    "hash": "cc5fcb9f8d9886f3",
+    "hash": "b982ebdb381cad24",
     "checks": [
       "IAaveAdapterCollateral"
     ]
@@ -11558,7 +11577,7 @@
     "checks": []
   },
   "REQ-ADAPTER-101": {
-    "hash": "829d474505df56a3",
+    "hash": "2535c4b7d8df7526",
     "checks": []
   },
   "REQ-ADAPTER-102": {
@@ -12539,7 +12558,7 @@
     "checks": []
   },
   "REQ-ARCH-091": {
-    "hash": "ce1924e5fe09fbe4",
+    "hash": "cbe631a36e74c1e0",
     "checks": []
   },
   "REQ-ARCH-092": {
@@ -12707,7 +12726,7 @@
     "checks": []
   },
   "REQ-ARCH-133": {
-    "hash": "315b6e38a6a4bb6c",
+    "hash": "a335be83a27da8f0",
     "checks": []
   },
   "REQ-ARCH-134": {
@@ -12743,7 +12762,7 @@
     "checks": []
   },
   "REQ-ARCH-142": {
-    "hash": "e80f9e0ebaac9237",
+    "hash": "875ea062026885fb",
     "checks": []
   },
   "REQ-ARCH-143": {
@@ -14590,7 +14609,7 @@
     ]
   },
   "REQ-FLASH-007": {
-    "hash": "6c0b3ab81e1a3e4a",
+    "hash": "f1b6e381e3dfcb79",
     "checks": [
       "AaveV3FlashSource",
       "MATH-ST-115",
@@ -14598,7 +14617,7 @@
     ]
   },
   "REQ-FLASH-008": {
-    "hash": "a7cc8c14715fcd12",
+    "hash": "13a553251f2c4238",
     "checks": [
       "FV-CTL-158"
     ]
@@ -14613,7 +14632,7 @@
     ]
   },
   "REQ-FLASH-010": {
-    "hash": "1ab0a72c173b0be6",
+    "hash": "ca47e9d00872f926",
     "checks": [
       "AaveV3FlashSource",
       "FV-CTL-158",
@@ -16003,13 +16022,24 @@
     ]
   },
   "REQ-MREG-004": {
-    "hash": "a8efd89a8e3e08fa",
+    "hash": "153f1bc885b65a84",
     "checks": [
       "FV-CTL-04",
       "FV-CTL-06",
       "FV-CTL-31",
       "IMarketRegistryErrors",
-      "IMarketRegistryPause"
+      "IMarketRegistryPause",
+      "MarketRegistry",
+      "MarketRegistryRouter",
+      "MarketRegistrySafetyLogic",
+      "PROP-041",
+      "TEST-062",
+      "TEST-063",
+      "TEST-065",
+      "TEST-066",
+      "TEST-101",
+      "TEST-168",
+      "TEST-229"
     ]
   },
   "REQ-MREG-005": {
@@ -18448,7 +18478,7 @@
     ]
   },
   "REQ-PSTORE-024": {
-    "hash": "209527e19c419839",
+    "hash": "5cbaaa4cb795549b",
     "checks": [
       "FV-CTL-130",
       "FV-CTL-139",
@@ -18459,13 +18489,16 @@
       "MATH-ST-115",
       "MATH-ST-13",
       "PROP-042",
-      "ParameterStoreAdminRiskLogic",
+      "ParameterStoreAdminOracleLogic",
       "ParameterStoreForwardAdmin",
       "ParameterStoreRisk",
       "ParameterStoreTightenLogic",
       "ParameterStoreViews",
       "TEST-052",
+      "TEST-062",
       "TEST-064",
+      "TEST-225",
+      "TEST-242",
       "TEST-245"
     ]
   },
@@ -19587,7 +19620,7 @@
     ]
   },
   "REQ-ROLE-069": {
-    "hash": "e4cf069ab82df176",
+    "hash": "06c8d5fddc513a0a",
     "checks": []
   },
   "REQ-ROLE-070": {
@@ -20609,14 +20642,14 @@
     ]
   },
   "REQ-SWAP-053": {
-    "hash": "f104e0b4ccda0954",
+    "hash": "a05560663a886c03",
     "checks": [
       "FV-LIQ-03",
       "ILPVaultSwapErrors"
     ]
   },
   "REQ-SWAP-054": {
-    "hash": "1d3814fab94bd857",
+    "hash": "423ffef9cd68595f",
     "checks": [
       "FV-LIQ-03",
       "ILPVaultSwapErrors"
@@ -23774,7 +23807,7 @@
     ]
   },
   "SPEC-GOV-004": {
-    "hash": "89b847b3a5803fb1",
+    "hash": "1ea6dc3e4508e7f1",
     "checks": [
       "FV-CTL-31",
       "FV-CTL-32",
@@ -23782,7 +23815,10 @@
       "FV-CTL-98",
       "IMarketRegistryPause",
       "MATH-GOV-07",
-      "MATH-GOV-08"
+      "MATH-GOV-08",
+      "PROP-041",
+      "TEST-065",
+      "TEST-101"
     ]
   },
   "SPEC-GOV-005": {
@@ -24355,7 +24391,7 @@
     ]
   },
   "SPEC-LIQ-015": {
-    "hash": "1085769abeb820a5",
+    "hash": "cfc4036f730545e2",
     "checks": [
       "AaveV3FlashSource",
       "FV-CTL-139",
@@ -25561,7 +25597,7 @@
     "checks": []
   },
   "WDR-037": {
-    "hash": "6a8577f6c4d0e315",
+    "hash": "d3c2cda2d4feb8f5",
     "checks": []
   },
   "WDR-038": {
@@ -25731,7 +25767,7 @@
     "checks": []
   },
   "WDR-F-028": {
-    "hash": "df79336a82183edb",
+    "hash": "2119b6d4ad4ceb2e",
     "checks": []
   },
   "WDR-F-029": {

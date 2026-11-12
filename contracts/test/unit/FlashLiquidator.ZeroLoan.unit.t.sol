@@ -155,13 +155,6 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
         vm.prank(signer);
         vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
         opHelper.flashLiquidate(_request(1950e6, 0, 0, 0, 0));
-        bytes memory gho = abi.encodeCall(
-            IFlashLiquidator.onFlashLoan, (address(opHelper), address(usdcToken), 0, 0, abi.encode(_params(1950e6)))
-        );
-        lvs.setHook(address(opHelper), gho);
-        vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
-        opHelper.flashLiquidate(_request(1950e6, 0, 0, 0, 0));
         lvs.setHook(address(opHelper), abi.encodeCall(IFlashLiquidator.flashLiquidate, (_request(1950e6, 0, 0, 0, 0))));
         vm.prank(signer);
         vm.expectRevert(IFlashLiquidatorErrors.ContextActive.selector);

@@ -328,7 +328,7 @@ jobs:
         if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         run: FOUNDRY_PROFILE=aave forge build
 
-      - name: Fork tests (Uniswap v3, Chainlink, GHO FlashMinter, GSMs, Sky LitePSM)
+      - name: Fork tests (Uniswap v3, Chainlink, Aave V3 Pool, GSMs, Sky LitePSM)
         if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         run: forge test -vvv
 

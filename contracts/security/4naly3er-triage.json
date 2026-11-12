@@ -994,33 +994,6 @@
       "review": "Pattern: returns measured by balance delta (keeperOut and the payout are balance deltas; a shortfall reverts). Same site as 8ab8d6bbd42ac726."
     },
     {
-      "fingerprint": "b45a14f7bd581bd4",
-      "check": "Prevent accidentally burning tokens",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol",
-      "function": "FlashLiquidatorLenders line 82",
-      "reason": "Regex false positive on `_mintsAsset`: the line chooses the GHO flash minter as lender or quotes its maxFlashLoan or flashFee; no token is minted, burned or transferred here (REQ-HELPER-015).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
-    },
-    {
-      "fingerprint": "821eec3048cdc323",
-      "check": "Prevent accidentally burning tokens",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol",
-      "function": "FlashLiquidatorLenders line 99",
-      "reason": "Regex false positive on `_mintsAsset`: the line chooses the GHO flash minter as lender or quotes its maxFlashLoan or flashFee; no token is minted, burned or transferred here (REQ-HELPER-015).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
-    },
-    {
-      "fingerprint": "f7288ecdee62964b",
-      "check": "Prevent accidentally burning tokens",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol",
-      "function": "FlashLiquidatorLenders line 113",
-      "reason": "Regex false positive on `_mintsAsset`: the line chooses the GHO flash minter as lender or quotes its maxFlashLoan or flashFee; no token is minted, burned or transferred here (REQ-HELPER-015).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
-    },
-    {
       "fingerprint": "37556efb5421ef8a",
       "check": "Division by zero not prevented",
       "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",

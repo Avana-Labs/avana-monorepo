@@ -17,7 +17,6 @@ import {Market} from "../../src/types/Market.sol";
 import {MockAaveV3ACLManager, MockAaveV3AddressesProvider, MockAaveV3Pool} from "../utils/mocks/AaveV3PoolMocks.sol";
 import {LockMember} from "../utils/mocks/LockMember.sol";
 import {MockFlashFeeCap} from "../utils/mocks/MockFlashReceiver.sol";
-import {MockGhoFlashMinter} from "../utils/mocks/MockGhoFlashMinter.sol";
 import {MockLiquidationSwap} from "../utils/mocks/MockLiquidationSwap.sol";
 import {MockMarketRegistry} from "../utils/mocks/MockMarketRegistry.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
@@ -28,9 +27,9 @@ import {Test} from "forge-std/Test.sol";
 /// caller, initiator, amount and premium, `executeOperation` outside an open context reverts `InvalidFlashCallback`; a
 /// Pool reporting any initiator other than the helper makes the call revert; a completed call was charged a premium
 /// within the caller's `maxPremium` and the exact `maxFlashFeeBps` cap, repaid the Pool `F + premium`, paid the caller
-/// the rest and left the helper with no balance or allowance; a Pool or GHO flash minter recorded as a Hub is refused at
-/// deployment and on every call; the minter's `onFlashLoan` outside an open context reverts for every caller and
-/// argument; the operator variant's Safe loses at most `MAX_TOP_UP_BPS` of the debt repaid, with or without a loan, and
+/// the rest and left the helper with no balance or allowance; a Pool recorded as a Hub is refused at deployment and on
+/// every call; the ERC-3156 minter callback `onFlashLoan` reaches no function, for every caller and argument (the Pool
+/// is the only lender, REQ-HELPER-015); the operator variant's Safe loses at most `MAX_TOP_UP_BPS` of the debt repaid, with or without a loan, and
 /// never funds a loan above the need.
 /// @dev The Pool, ACLManager and PoolAddressesProvider are the unit suite's mocks; `maxFlashFeeBps` is
 /// `MockFlashFeeCap` (10, the launch value); LPVaultSwap is `MockLiquidationSwap` over the real Lock and PayoutEscrow,
@@ -57,8 +56,6 @@ contract FlashLiquidatorHalmosTest is Test {
     MockLiquidationSwap internal lvs;
     FlashLiquidator internal helper;
     OperatorFlashLiquidator internal op;
-    PayoutToken internal gho;
-    MockGhoFlashMinter internal minter;
 
     function setUp() public {
         acl = new MockAaveV3ACLManager();
@@ -90,11 +87,9 @@ contract FlashLiquidatorHalmosTest is Test {
         d.asset = address(usdc);
         d.approved = true;
         registry.setDebtReserve(SPOKE, d);
-        gho = new PayoutToken("GHO", 18);
-        minter = new MockGhoFlashMinter(gho, acl, 5, 2_000_000e18);
-        helper = new FlashLiquidator(address(pool), address(lvs), address(registry), address(capStore), address(minter));
+        helper = new FlashLiquidator(address(pool), address(lvs), address(registry), address(capStore));
         op = new OperatorFlashLiquidator(
-            address(pool), address(lvs), address(registry), address(capStore), address(minter), SIGNER, SAFE, 100
+            address(pool), address(lvs), address(registry), address(capStore), SIGNER, SAFE, 100
         );
         usdc.mint(SAFE, 1_000_000e6);
         vm.prank(SAFE);
@@ -195,7 +190,7 @@ contract FlashLiquidatorHalmosTest is Test {
     ) public {
         registry.setHub(address(pool), recorded);
         bool deployed;
-        try new FlashLiquidator(address(pool), address(lvs), address(registry), address(capStore), address(minter)) {
+        try new FlashLiquidator(address(pool), address(lvs), address(registry), address(capStore)) {
             deployed = true;
         } catch (bytes memory reason) {
             assert(_is(reason, IFlashLiquidatorErrors.FlashSourceIsHub.selector));
@@ -211,40 +206,32 @@ contract FlashLiquidatorHalmosTest is Test {
         assert(pool.flashLoanCalls() == (ok ? 1 : 0));
     }
 
-    /// @notice Outside an open context the GHO flash minter's callback reverts, whoever sends it and whatever it
-    /// carries.
-    // PROP-036 verifies: REQ-HELPER-005, REQ-HELPER-013, REQ-HELPER-015, INV-040
-    function check_PROP_036_helperGhoCallbackOutsideContextRefused(
+    /// @notice The helper has no ERC-3156 minter callback: `onFlashLoan(address,address,uint256,uint256,bytes)` reverts
+    /// with no data in both variants, whoever sends it and whatever it carries, because no function answers it.
+    // PROP-036 verifies: REQ-HELPER-001, REQ-HELPER-005, REQ-HELPER-015, INV-040
+    function check_PROP_036_helperHasNoMinterCallback(
         address caller,
         address initiator,
         address token,
         uint256 amount,
         uint256 fee
     ) public {
+        bytes memory data = abi.encodeWithSelector(
+            bytes4(keccak256("onFlashLoan(address,address,uint256,uint256,bytes)")),
+            initiator,
+            token,
+            amount,
+            fee,
+            abi.encode(_request(0).params)
+        );
         vm.prank(caller);
-        (bool ok, bytes memory ret) = address(helper)
-            .call(
-                abi.encodeCall(
-                    IFlashLiquidator.onFlashLoan, (initiator, token, amount, fee, abi.encode(_request(0).params))
-                )
-            );
+        (bool ok, bytes memory ret) = address(helper).call(data);
         assert(!ok);
-        assert(_is(ret, IFlashLiquidatorErrors.InvalidFlashCallback.selector));
-    }
-
-    /// @notice A GHO flash minter recorded as a Hub: deployment reverts.
-    // PROP-096 verifies: REQ-HELPER-002, REQ-HELPER-015, INV-095
-    function check_PROP_096_helperHubMinterRefused(
-        bool recorded
-    ) public {
-        registry.setHub(address(minter), recorded);
-        bool deployed;
-        try new FlashLiquidator(address(pool), address(lvs), address(registry), address(capStore), address(minter)) {
-            deployed = true;
-        } catch (bytes memory reason) {
-            assert(_is(reason, IFlashLiquidatorErrors.FlashSourceIsHub.selector));
-        }
-        assert(deployed == !recorded);
+        assert(ret.length == 0);
+        vm.prank(caller);
+        (ok, ret) = address(op).call(data);
+        assert(!ok);
+        assert(ret.length == 0);
     }
 
     /// @notice Operator variant, for every recovery and every `maxTopUp`: a completed call left the Safe at most

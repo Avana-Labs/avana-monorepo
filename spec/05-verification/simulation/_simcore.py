@@ -114,7 +114,7 @@ class Params:
     budget_per_call: float = 25.0     # Q-196
     budget_per_day: float = 500.0     # Q-196
     min_market_cap: float = 100.0     # MIN_MARKET_WINDOW_CAP (Q-267)
-    flash_cap: float = 2_000_000.0    # FlashMinter capacity per tx (ASSUMED)
+    flash_cap: float = 2_000_000.0    # flash liquidity per tx, the Aave V3 Pool's idle debt asset (ASSUMED)
     # --- conversion routes ---
     gsm_fee: float = 0.001            # GSM sell fee 0% or 0.10%
     gsm_buy_fee: float = 0.002        # GSM buy fee (USDC debt buy leg), ASSUMED

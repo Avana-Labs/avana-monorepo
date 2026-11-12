@@ -64,7 +64,7 @@ Outside the engine: Hub share/asset drift, risk-premium refresh (`Q-145`), the p
 | Agreement tolerance | 2.25% for USDC, USDT, DAI; 3.5% for GHO (the on-chain lower bound) | `Q-184` |
 | GSM | headroom USDC $20M, USDT $24M (cap $50M); outside arbitrage $10M/h; buy fee 0.20% | Live GSM settings |
 | Backup DEX depth | $5M (USDC), $3M (USDT, DAI) for 1% impact; ×0.25 while the token is > 1% off peg; 0.05% fee | Pools outside the market's own pool |
-| FlashMinter | 2M GHO per transaction, fee 0 | `Q-135` |
+| Flash liquidity (Aave V3 Pool, through the flash liquidation helper) | 2M GHO per transaction, premium 0 (`FLASH_BORROWER`) | `Q-135`, `Q-404` |
 | Gas | 650k base + 250k per GSM leg (+120k PSM) or 180k per DEX leg, 220k buy leg, 40k top-up, 600k in kind; ETH $3,000 | Fork-test estimates |
 | Reserves | First-Loss Reserve 400,000 per debt asset (`coverageRatioBps` 2,000 × the 2M drawCap, `DEF-019`); SettlementBudget 20,000 GHO | `Q-101`, `Q-167`, `Q-196`, `Q-236` |
 | Population | 200 accounts, 2M GHO drawn (60% in sim03); 25% small accounts 100–1,500 GHO (log-uniform), rest log-normal median 6,000 capped at 7.5% of total; 20% hold two markets; opening HF: 10% already drifted to 1.02–1.10, 30% 1.10–1.15, 30% 1.15–1.35, 30% 1.35–2.5; markets USDC/USDT 40%, USDC/GHO 25%, USDT/GHO 15%, DAI/USDC 20% | Representative book |

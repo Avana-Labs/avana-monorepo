@@ -143,7 +143,7 @@ FOUNDRY_PROFILE=aave forge build
 | Integration (`test/integration/`) | Multi-contract flows with every Avana and Aave V4 contract real | 7 test files |
 | Invariant (`test/invariant/`) | Global invariants after every call of every actor handler | 14 suites with their handlers |
 | Differential (`test/differential/`) | ClPriceMath, LPPriceMath, RouteMath and SettlementMath equal the exact Python reference `test/differential/reference/avana_reference.py` (integers and `fractions.Fraction`, called over FFI) | 26 tests in 5 suites |
-| Fork (`test/fork/`) | Behaviour against the deployed Uniswap v3, Aerodrome Slipstream, Chainlink, GHO flash minter and Aave V3 Pool at a pinned block | 5 test files |
+| Fork (`test/fork/`) | Behaviour against the deployed Uniswap v3, Aerodrome Slipstream, Chainlink and Aave V3 Pool at a pinned block | 5 test files |
 
 Each test name carries its row of 5.1 (`test_TEST_NNN_…`, `testFuzz_TEST_NNN_…`, `invariant_TEST_NNN_…`); the full map is in [`contracts/test/README.md`](contracts/test/README.md), and the counts of the latest run are in [`audit/foundry-tests/`](audit/foundry-tests/).
 

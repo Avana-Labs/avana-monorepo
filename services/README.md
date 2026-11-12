@@ -75,7 +75,7 @@ Avana's keeper liquidates every Avana account whose health factor falls below 1,
 `LPVaultSwap.liquidate`, the one liquidation entry point, is caller-funded: it pulls `debtToCover` of the debt asset from `msg.sender`, measured by balance delta, and takes no flash loan. Flash funding sits in a periphery contract, the flash liquidation helper ([2.11](../spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper)):
 
 - It is immutable and holds no funds or allowances between transactions.
-- It flash-borrows GHO from the chain's GHO flash minter where it has one (Ethereum) and every other debt asset from the chain's Aave V3 Pool (`flashLoan`, one asset, mode 0). Its callback accepts only that Pool as caller and itself as initiator, and only the asset, amount and calldata hash recorded in a single-use context before the loan, with a premium no higher than the caller's maximum and `maxFlashFeeBps`.
+- It flash-borrows every debt asset, GHO included, from the chain's Aave V3 Pool, its only lender (`flashLoan`, one asset, mode 0). Its callback accepts only that Pool as caller and itself as initiator, and only the asset, amount and calldata hash recorded in a single-use context before the loan, with a premium no higher than the caller's maximum and `maxFlashFeeBps`.
 - It calls LPVaultSwap, receives `keeperOut`, repays the flash principal and premium from it (pulling at most the top-up bound from its payer when `keeperOut` falls short), reverts unless the net payout meets the request's `minPayout`, and only after `flashLoan` returns sends the rest to its recipient.
 - It has no swap step. The unwind and the swap routes stay in LPVaultSwap, so the keeper never builds swap calldata.
 
