@@ -77,7 +77,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         registry.activateMarket(42);
     }
 
-    // TEST-138 verifies: REQ-CONFIG-042, REQ-CONFIG-043, REQ-CONFIG-066
+    // TEST-138 verifies: REQ-CONFIG-042, REQ-CONFIG-043, REQ-CONFIG-066, REQ-ACCESS-034
     function test_TEST_138_aaveSideAndDriftChecks() public {
         hub.setAsset(vt, 7);
         _expectCheck("reserve");
@@ -93,7 +93,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfReserve(address(spoke), VT_RESERVE), 0);
     }
 
-    // TEST-138 verifies: REQ-CONFIG-044, REQ-CONFIG-045, REQ-CONFIG-047, REQ-CONFIG-076, Q-270, Q-309
+    // TEST-138 verifies: REQ-CONFIG-044, REQ-CONFIG-045, REQ-CONFIG-047, REQ-CONFIG-076, Q-270, Q-309, REQ-ACCESS-034
     // Sources: 5.1 TEST-138, SYM-15
     function test_TEST_138_reserveConfigurationChecks() public {
         IAaveV4Spoke.ReserveConfig memory c;
@@ -168,7 +168,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         _expectCheck("routes");
     }
 
-    // TEST-245 verifies: REQ-MREG-032, Q-261
+    // TEST-245 verifies: REQ-MREG-032, Q-261, REQ-ACCESS-034, REQ-ACCESS-095
     // Sources: 5.1 TEST-245
     function test_TEST_245_activationLiveness() public {
         ps.setLivenessFails(address(spoke), id, GHO_RESERVE, true);
@@ -202,7 +202,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         d.shape = shape;
     }
 
-    // TEST-213 verifies: REQ-MREG-015, REQ-CONFIG-013, REQ-CONFIG-048, Q-227
+    // TEST-213 verifies: REQ-MREG-015, REQ-CONFIG-013, REQ-CONFIG-048, Q-227, REQ-ACCESS-036, REQ-ACCESS-134, REQ-ACCESS-106
     // Sources: 5.1 TEST-213
     function test_TEST_213_cancelAndOffboard() public {
         vm.prank(address(timelock));

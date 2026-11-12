@@ -50,7 +50,7 @@ contract MarketRegistryPauseStateInvariantTest is MarketRegistryFixture {
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
     }
 
-    // TEST-101 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-024, INV-049, INV-050, Q-227, Q-228
+    // TEST-101 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-024, INV-049, INV-050, Q-227, Q-228, SPEC-GOV-004
     // Sources: 5.1 TEST-101, QNT-32, QNT-33
     function invariant_TEST_101_everyCallFollowsTheModel() public view {
         assertEq(handler.outcomeMismatch(), 0, "a call succeeded or failed against the model");
@@ -69,7 +69,7 @@ contract MarketRegistryPauseStateInvariantTest is MarketRegistryFixture {
         assertEq(handler.eventMismatch(), 0, "a change without its exact event, or an event without a change");
     }
 
-    // TEST-101 verifies: REQ-MREG-003, INV-049, Q-227
+    // TEST-101 verifies: REQ-MREG-003, INV-049, Q-227, REQ-ACCESS-090
     function invariant_TEST_101_noStateExpires() public view {
         assertEq(handler.timeChangedState(), 0, "a warp changed the pause state");
     }

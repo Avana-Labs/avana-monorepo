@@ -211,7 +211,7 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         assertEq(ret.length, 0);
     }
 
-    // TEST-278 verifies: REQ-PSTORE-025, REQ-PSTORE-019, REQ-PSTORE-008, REQ-PSTORE-007, REQ-CONFIG-057, REQ-PSTORE-016
+    // TEST-278 verifies: REQ-PSTORE-025, REQ-PSTORE-019, REQ-PSTORE-008, REQ-PSTORE-007, REQ-CONFIG-057, REQ-PSTORE-016, REQ-ACCESS-057, REQ-ACCESS-076, REQ-ACCESS-077, REQ-ACCESS-137, REQ-ACCESS-165, REQ-ACCESS-180, REQ-ACCESS-065, SPEC-GOV-010
     function test_TEST_278_removedParametersHaveNoSelector() public view {
         string[18] memory removed = [
             "minDebtUsd()",

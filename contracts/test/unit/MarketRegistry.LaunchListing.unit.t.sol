@@ -149,7 +149,7 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
 
     // ─── Fixed-price debt asset: monitoring feed only ───
 
-    // TEST-139 verifies: REQ-CONFIG-021, REQ-CONFIG-017, REQ-MREG-006, REQ-MREG-008, REQ-MREG-027
+    // TEST-139 verifies: REQ-CONFIG-021, REQ-CONFIG-017, REQ-MREG-006, REQ-MREG-008, REQ-MREG-027, REQ-ACCESS-171
     // Sources: Launch configuration decision 2026-11-11 (GHO listing)
     /// @notice A fixed-price debt asset lists with its monitoring feed alone, after that feed's leg checks, and is
     /// enabled as a fixed-price debt reserve. Fails without the exemption in `listToken` (the listing reverts

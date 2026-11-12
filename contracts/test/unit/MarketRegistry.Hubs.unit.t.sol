@@ -66,7 +66,7 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         assertEq(hubs[1], address(hub2));
     }
 
-    // TEST-285 verifies: REQ-CONFIG-005, INV-095, Q-386, Q-388
+    // TEST-285 verifies: REQ-CONFIG-005, INV-095, Q-386, Q-388, REQ-ACCESS-174
     // Sources: 5.1 TEST-285
     function test_TEST_285_flashSourceLenderNeverAHub() public {
         RegistryFlashSourceMock viaHub = new RegistryFlashSourceMock(address(hub), address(lpVaultSwap));
@@ -132,7 +132,7 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         assertEq(registry.coverageSpokeOf(address(hub), address(gho)), address(ghoCoverage));
     }
 
-    // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, REQ-FLR-043, ATTACK-163, Q-378
+    // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, REQ-FLR-043, ATTACK-163, Q-378, REQ-ACCESS-175
     // Sources: 5.1 TEST-273
     function test_TEST_273_crossHubLines() public {
         vm.startPrank(address(timelock));
@@ -167,7 +167,7 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         assertEq(registry.crossHubLineTotal(address(hub), address(gho)), 2e24);
     }
 
-    // TEST-185 verifies: REQ-CONFIG-077, REQ-CONFIG-074, REQ-CONFIG-083, REQ-CONFIG-016, ATTACK-121, Q-312
+    // TEST-185 verifies: REQ-CONFIG-077, REQ-CONFIG-074, REQ-CONFIG-083, REQ-CONFIG-016, ATTACK-121, Q-312, REQ-ACCESS-133
     // Sources: 5.1 TEST-185
     function test_TEST_185_deployCdpSpokeChecks() public {
         vm.prank(address(timelock));
@@ -238,7 +238,7 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         _expectInvalidSpoke(d, address(spoke));
     }
 
-    // TEST-185 verifies: REQ-CONFIG-074, REQ-CONFIG-077, REQ-CONFIG-016
+    // TEST-185 verifies: REQ-CONFIG-074, REQ-CONFIG-077, REQ-CONFIG-016, REQ-ACCESS-133, REQ-ACCESS-177
     // Sources: MarketRegistry review 2026-11-10 finding 1 (approved Spoke code hashes)
     function test_TEST_185_approvedSpokeCodeHashes() public {
         vm.prank(address(timelock));

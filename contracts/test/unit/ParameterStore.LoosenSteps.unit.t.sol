@@ -177,7 +177,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
 
     // ─── Spacing ───
 
-    // TEST-225 verifies: REQ-PSTORE-017, SPEC-GOV-011, Q-246
+    // TEST-225 verifies: REQ-PSTORE-017, SPEC-GOV-011, Q-246, REQ-ACCESS-049
     function test_TEST_225_everyStepLimitedSetterIsSpaced() public {
         _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.2e18)));
         uint256 t = block.timestamp;
@@ -392,7 +392,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         _accepts(abi.encodeCall(store.loosenTopUpSliceUsd, (M, 500_000e8 + 1)));
     }
 
-    // TEST-272 verifies: REQ-RISK-045, SPEC-CAP-006
+    // TEST-272 verifies: REQ-RISK-045, SPEC-CAP-006, REQ-ACCESS-050
     function test_TEST_272_stressFloorLowerAndRaiseRules() public {
         _activate();
         // (5,000,000 + 500,000) / $0.50 = 11,000,000 whole tokens for a floor of 0.5e8.

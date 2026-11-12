@@ -40,7 +40,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         }
     }
 
-    // TEST-242 verifies: REQ-ORACLE-097, REQ-ORACLE-058, REQ-ACCESS-153, Q-259
+    // TEST-242 verifies: REQ-ORACLE-097, REQ-ORACLE-058, REQ-ACCESS-153, Q-259, REQ-ACCESS-002, REQ-ACCESS-014, REQ-ACCESS-032
     // Sources: 5.1 TEST-242, PROP-070
     function test_TEST_242_adminRolesOnlyTimelock() public {
         bytes32 admin = AvanaRoles.APPLICATION_ADMIN;
@@ -62,7 +62,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.AdminRoleOnlyTimelock.selector, root, alice));
     }
 
-    // TEST-062 verifies: REQ-ORACLE-038, REQ-ORACLE-078, REQ-ORACLE-062, Q-226, Q-228
+    // TEST-062 verifies: REQ-ORACLE-038, REQ-ORACLE-078, REQ-ORACLE-062, Q-226, Q-228, REQ-ACCESS-051, REQ-ACCESS-025
     function test_TEST_062_restrictedSelectors() public {
         bytes32 admin = AvanaRoles.APPLICATION_ADMIN;
         vm.prank(alice);
@@ -91,7 +91,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         oracle.poke();
     }
 
-    // TEST-062 verifies: REQ-ORACLE-080, REQ-ORACLE-058
+    // TEST-062 verifies: REQ-ORACLE-080, REQ-ORACLE-058, REQ-ACCESS-150
     function test_TEST_062_initializersLocked() public {
         InitParams memory p = _params();
         vm.expectRevert(Initializable.InvalidInitialization.selector);

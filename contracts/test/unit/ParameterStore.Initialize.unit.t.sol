@@ -233,7 +233,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // ─── What initialize writes ───
 
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-023, REQ-ACCESS-153
+    // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-023, REQ-ACCESS-153, REQ-ACCESS-150
     function test_TEST_242_initializeGrantsRolesAndEmits() public {
         bytes memory data =
             abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), _launchGlobals(), 0, 10_000));
@@ -258,7 +258,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         assertEq(s.coverageRatioBps(), 0);
     }
 
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050
+    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-ACCESS-101
     function test_TEST_242_everyLaunchValueReadsBack() public view {
         GlobalParams memory g = _launchGlobals();
         assertEq(store.cachedWindow(), g.cachedWindow);
@@ -302,7 +302,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         assertEq(vm.load(logics.adminRisk, slot), bytes32(0));
     }
 
-    // TEST-242 verifies: REQ-PSTORE-001
+    // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-150, REQ-ACCESS-031
     function test_TEST_242_implementationCannotBeInitialized() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         impl.initialize(address(timelock), _launchGlobals(), 0, 10_000);

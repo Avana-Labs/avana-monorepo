@@ -28,7 +28,7 @@ contract CollateralizationMaxRecordsUnitTest is CollateralizationLedgerModel {
         _deployCollateralization();
     }
 
-    // TEST-269 verifies: REQ-VAULT-025, REQ-VAULT-054, REQ-VAULT-062, REQ-VAULT-108, REQ-COLL-025, SPEC-BACK-006, SPEC-BACK-016, INV-015, INV-096, Q-294
+    // TEST-269 verifies: REQ-VAULT-025, REQ-VAULT-054, REQ-VAULT-062, REQ-VAULT-108, REQ-COLL-025, SPEC-BACK-006, SPEC-BACK-016, INV-015, INV-096, Q-294, REQ-ACCESS-101
     // Sources: 5.1 TEST-269, 2.3 REQ-VAULT-025 (records at 0 credited units included), SPEC-BACK-016
     /// @notice Sixteen records of 100e6 x (1..16, permuted) units sit largest-first; a liquidation of the whole debt
     /// debits all sixteen from the head with one event each, leaving sixteen zero-credit records in walk order; the bound

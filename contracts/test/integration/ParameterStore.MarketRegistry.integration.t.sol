@@ -322,7 +322,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         );
     }
 
-    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-024, REQ-PSTORE-015, REQ-CONFIG-052
+    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-024, REQ-PSTORE-015, REQ-CONFIG-052, REQ-ACCESS-095
     function test_TEST_245_livenessThroughTheRegistryAndSpoke() public {
         (uint256 id,,) = _activeMarket();
         // minLB = 10,000 + ⌊500 × 5,000 / 10⁴⌋ = 10,250.

@@ -189,7 +189,7 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
 
     // ─── Definition identity ───
 
-    // TEST-138 verifies: REQ-CONFIG-033, REQ-CONFIG-011, REQ-CONFIG-077, ATTACK-121
+    // TEST-138 verifies: REQ-CONFIG-033, REQ-CONFIG-011, REQ-CONFIG-077, ATTACK-121, REQ-ACCESS-033
     // The Spoke must be approved with the definition's Hub, and the integration the Spoke's own.
     function test_TEST_138_spokeHubAndIntegrationOfTheDefinition() public {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
@@ -328,7 +328,7 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         registry.listToken(address(0), d);
     }
 
-    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-027, REQ-MREG-027, REQ-MREG-028
+    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-027, REQ-MREG-027, REQ-MREG-028, REQ-ACCESS-045
     // setPriceSource accepts a tolerance equal to its lower bound and refuses one below it; it writes the three
     // routes, resets the replaced slot, clears a DAO-cancel lock and bumps the version by exactly one.
     function test_TEST_231_setPriceSourceToleranceBoundAndEffects() public {

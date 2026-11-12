@@ -229,7 +229,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         _setRoutesInto(m, address(gho));
     }
 
-    // TEST-213 verifies: REQ-CONFIG-042, REQ-CONFIG-048, REQ-MREG-015, REQ-CONFIG-080, Q-227, Q-355
+    // TEST-213 verifies: REQ-CONFIG-042, REQ-CONFIG-048, REQ-MREG-015, REQ-CONFIG-080, Q-227, Q-355, REQ-ACCESS-134, REQ-ACCESS-036
     // Sources: 5.1 TEST-213, TEST-138
     function test_TEST_213_everyTransitionFromEveryStatus() public {
         uint256[6] memory ids = _marketsInEveryStatus();

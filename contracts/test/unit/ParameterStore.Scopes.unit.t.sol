@@ -82,7 +82,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.routeDepthThreshold(UNKNOWN, usdc, gho, 0), 0);
     }
 
-    // TEST-250 verifies: REQ-PSTORE-004, REQ-PSTORE-012, REQ-RISK-041
+    // TEST-250 verifies: REQ-PSTORE-004, REQ-PSTORE-012, REQ-RISK-041, REQ-ACCESS-135
     function test_TEST_250_listingSettersOnlyWhileRegistered() public {
         MarketParams memory p = store.getMarketParams(M);
         bytes memory notInListing = abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector);
@@ -155,7 +155,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.tokenUsdCap(address(hub), usdc), 20_000_000e8);
     }
 
-    // TEST-272 verifies: REQ-RISK-041, REQ-PSTORE-012, REQ-PSTORE-026
+    // TEST-272 verifies: REQ-RISK-041, REQ-PSTORE-012, REQ-PSTORE-026, REQ-ACCESS-135
     function test_TEST_272_initialTokenCapChecksTokenThenHubThenSlot() public {
         // Unlisted token first, even under an unrecorded Hub.
         _refuses(

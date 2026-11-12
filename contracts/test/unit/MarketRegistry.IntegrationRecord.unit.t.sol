@@ -68,7 +68,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         registry.finalizeIntegrationContracts(integrationId);
     }
 
-    // TEST-296 verifies: REQ-MREG-035, REQ-CONFIG-040, REQ-CONFIG-060
+    // TEST-296 verifies: REQ-MREG-035, REQ-CONFIG-040, REQ-CONFIG-060, REQ-ACCESS-184
     // Sources: decisions of 2026-11-11 (no settlement route until the record is recorded and finalized)
     // Kills: removing `!rec.finalized` from `_touchesMarketAmm` lets the second `setRoute` through.
     function test_TEST_296_noRouteUntilTheRecordIsFinalized() public {
@@ -184,7 +184,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         assertEq(registry.integrationContracts(V3).length, 2);
     }
 
-    // TEST-296 verifies: REQ-MREG-035, REQ-MREG-020, REQ-CONFIG-040, REQ-CONFIG-061, REQ-CONFIG-062
+    // TEST-296 verifies: REQ-MREG-035, REQ-MREG-020, REQ-CONFIG-040, REQ-CONFIG-061, REQ-CONFIG-062, REQ-ACCESS-184
     // Sources: decisions of 2026-11-11 (an addition applies at once and re-checks existing routes)
     // An addition after finalizing disables, in the same call, every active route of the integration's markets that
     // names an added contract; the others stay usable, and the disabled route cannot be restored.

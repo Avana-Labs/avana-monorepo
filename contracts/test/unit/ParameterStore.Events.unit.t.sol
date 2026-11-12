@@ -112,7 +112,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         assertEq(_logs(abi.encodeCall(store.setUsdBand, (0.9e8, 1.02e8))), 2);
     }
 
-    // TEST-061 verifies: REQ-CONFIG-019, REQ-CONFIG-024, REQ-PSTORE-010, REQ-CONFIG-056
+    // TEST-061 verifies: REQ-CONFIG-019, REQ-CONFIG-024, REQ-PSTORE-010, REQ-CONFIG-056, REQ-ACCESS-109
     function test_TEST_061_tokenAndFeeEvents() public {
         _tl();
         vm.expectEmit(address(store));
@@ -228,7 +228,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
 
     // ─── Loosen setters: ParameterLoosened / CapLoosened with the caller ───
 
-    // TEST-061 verifies: REQ-CONFIG-053, REQ-RISK-043, REQ-PSTORE-017
+    // TEST-061 verifies: REQ-CONFIG-053, REQ-RISK-043, REQ-PSTORE-017, REQ-ACCESS-109
     function test_TEST_061_capLoosenEvents() public {
         address tl = address(timelock);
         _tl();
@@ -269,7 +269,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         assertEq(store.poolShareMaxBpsOf(key), 4000);
     }
 
-    // TEST-061 verifies: REQ-CONFIG-053, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030
+    // TEST-061 verifies: REQ-CONFIG-053, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030, REQ-ACCESS-109
     function test_TEST_061_parameterLoosenEvents() public {
         address tl = address(timelock);
         vm.startPrank(tl);

@@ -189,7 +189,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         c = [stranger, freezeOnly, pauseOnly, emergencyGuardian, aaveGovernanceExecutor, address(rm), address(timelock)];
     }
 
-    // TEST-062 verifies: REQ-MREG-004, REQ-MREG-005, REQ-MREG-019, REQ-MREG-022, REQ-MREG-026, REQ-MREG-028, REQ-CONFIG-001, REQ-CONFIG-002, INV-084
+    // TEST-062 verifies: REQ-MREG-004, REQ-MREG-005, REQ-MREG-019, REQ-MREG-022, REQ-MREG-026, REQ-MREG-028, REQ-CONFIG-001, REQ-CONFIG-002, INV-084, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-184, REQ-ACCESS-133, REQ-ACCESS-134, REQ-ACCESS-036, REQ-ACCESS-145, REQ-ACCESS-175, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-172, REQ-ACCESS-158, REQ-ACCESS-159, REQ-ACCESS-170, REQ-ACCESS-075, REQ-ACCESS-087, REQ-ACCESS-089, REQ-ACCESS-025, REQ-ACCESS-094, REQ-ACCESS-111, REQ-ACCESS-112, REQ-ACCESS-174
     // Sources: 5.1 TEST-062, TEST-066
     function test_TEST_062_everyWriteAgainstEveryCallerClass() public {
         Write[] memory w = _writes();
@@ -268,7 +268,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         vm.stopPrank();
     }
 
-    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-005, Q-259
+    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-005, Q-259, REQ-ACCESS-149, REQ-ACCESS-089
     // Guardian roles are administered by APPLICATION_ADMIN only: a guardian cannot add or remove a guardian, and a
     // revoked guardian loses its stops at once.
     function test_TEST_066_guardianRolesAdministeredByAdminOnly() public {

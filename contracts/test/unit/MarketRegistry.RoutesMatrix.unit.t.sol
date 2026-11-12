@@ -163,7 +163,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         assertFalse(u1);
     }
 
-    // TEST-054 verifies: REQ-CONFIG-062, REQ-MREG-012, Q-151
+    // TEST-054 verifies: REQ-CONFIG-062, REQ-MREG-012, Q-151, REQ-ACCESS-048, REQ-ACCESS-127
     // A route approved in one slot cannot be restored into another slot, another market, or another debt asset.
     function test_TEST_054_restoreIsBoundToItsOwnSlot() public {
         address p = _setRoute(id, address(usdc), address(gho), 0, "dexA");
@@ -234,7 +234,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         vm.stopPrank();
     }
 
-    // TEST-054 verifies: REQ-CONFIG-061, REQ-MREG-012
+    // TEST-054 verifies: REQ-CONFIG-061, REQ-MREG-012, REQ-ACCESS-047
     // Disabling an already disabled slot is accepted again (the record stays disabled) and emits again; the route stays
     // recorded so it can be restored.
     function test_TEST_054_disableIsIdempotentAndKeepsTheRoute() public {

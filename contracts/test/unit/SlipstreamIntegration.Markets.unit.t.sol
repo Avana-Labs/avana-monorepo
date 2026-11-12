@@ -101,7 +101,7 @@ contract SlipstreamIntegrationMarketsUnitTest is SlipstreamIntegrationFixture {
         assertEq(vault.positionKeyOf(3, 42), _key(3, 42));
     }
 
-    // TEST-108 verifies: REQ-VAULT-001, REQ-VAULT-085, REQ-VAULT-097, REQ-VAULT-150, REQ-AMM-SLIP-006, REQ-AMM-SLIP-010
+    // TEST-108 verifies: REQ-VAULT-001, REQ-VAULT-085, REQ-VAULT-097, REQ-VAULT-150, REQ-AMM-SLIP-006, REQ-AMM-SLIP-010, REQ-ACCESS-022, REQ-ACCESS-113
     // Sources: no proxy, owner, pause, sweep, rescue, allowlist setter, stake, claim or generic call entry point exists
     function test_TEST_108_noUpgradeOwnerPauseRescueOrGaugeSurface() public {
         bytes[12] memory probes = [

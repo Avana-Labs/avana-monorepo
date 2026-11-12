@@ -160,7 +160,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         registry.stepWindDown(marketId);
     }
 
-    // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002, INV-065, REQ-MREG-003
+    // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002, INV-065, REQ-MREG-003, REQ-ACCESS-015, REQ-ACCESS-031
     // Sources: 5.1 TEST-168, TEST-137
     // An upgrade through the timelock at the normal delay replaces the implementation and keeps every record; the
     // next ramp step runs on the new implementation from the kept wind-down state.

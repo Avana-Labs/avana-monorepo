@@ -228,7 +228,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         store.setInitialMarketParams(M, p);
     }
 
-    // TEST-272 verifies: REQ-RISK-041, REQ-PSTORE-012, REQ-PSTORE-026, REQ-RISK-044
+    // TEST-272 verifies: REQ-RISK-041, REQ-PSTORE-012, REQ-PSTORE-026, REQ-RISK-044, REQ-ACCESS-135
     function test_TEST_272_initialCaps() public {
         _listMarket();
         assertEq(store.marketUsdCap(M), 5_000_000e8);

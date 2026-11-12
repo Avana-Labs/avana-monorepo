@@ -203,7 +203,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
 
     // ─── Single-Hub table ───
 
-    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-017, REQ-MREG-024, INV-049, Q-227, Q-252
+    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-017, REQ-MREG-024, INV-049, Q-227, Q-252, SPEC-GOV-004, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-085, REQ-ACCESS-086, REQ-ACCESS-122, REQ-ACCESS-123, REQ-ACCESS-124
     // Sources: 5.1 TEST-065, QNT-T13
     function test_TEST_065_fullTransitionTableEveryCaller() public {
         address[5] memory callers = [emergencyGuardian, freezeOnly, pauseOnly, address(timelock), attacker];
@@ -286,7 +286,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         _enter(hubD, S_PAUSED_MINT);
     }
 
-    // TEST-065 verifies: REQ-MREG-001, REQ-CONFIG-082, INV-049
+    // TEST-065 verifies: REQ-MREG-001, REQ-CONFIG-082, INV-049, REQ-ACCESS-172, REQ-ACCESS-085
     function test_TEST_065_freezeAllMovesOnlyHubsInNone() public {
         _mixed();
         vm.expectEmit(address(registry));
@@ -305,7 +305,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         registry.freezeAll();
     }
 
-    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-024, REQ-CONFIG-082, INV-049
+    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-024, REQ-CONFIG-082, INV-049, REQ-ACCESS-172, REQ-ACCESS-162
     function test_TEST_065_pauseAllGeneralOverMixedStates() public {
         _mixed();
         address g = emergencyGuardian;
@@ -349,7 +349,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         _assertState(hubD, S_PAUSED_MINT);
     }
 
-    // TEST-065 verifies: REQ-MREG-024, REQ-CONFIG-082
+    // TEST-065 verifies: REQ-MREG-024, REQ-CONFIG-082, REQ-ACCESS-162
     function test_TEST_065_pauseAllNoneIsRefusedWhateverTheStates() public {
         _mixed();
         vm.prank(address(timelock));
@@ -359,7 +359,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         _assertState(hubB, S_FROZEN);
     }
 
-    // TEST-065 verifies: REQ-MREG-004, REQ-CONFIG-082
+    // TEST-065 verifies: REQ-MREG-004, REQ-CONFIG-082, REQ-ACCESS-172
     function test_TEST_065_allCallsNeedTheirRole() public {
         vm.prank(pauseOnly);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, pauseOnly));
@@ -387,7 +387,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         vm.stopPrank();
     }
 
-    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-024, INV-049
+    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-024, INV-049, SPEC-GOV-004, REQ-ACCESS-172
     // freezeAll and pauseAll change exactly the Hubs a per-Hub call would, for every combination of starting states.
     function testFuzz_TEST_065_batchEqualsPerHubCalls(
         uint8[4] calldata starts,

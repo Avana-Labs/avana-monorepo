@@ -64,7 +64,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         return new RegistryRouteMock(tokenIn, tokenOut, address(lpVaultSwap), deps);
     }
 
-    // TEST-054 verifies: REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-CONFIG-063, REQ-MREG-014, Q-379
+    // TEST-054 verifies: REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-CONFIG-063, REQ-MREG-014, Q-379, REQ-ACCESS-046
     // Sources: 5.1 TEST-054, TEST-252
     function test_TEST_054_setRouteChecks() public {
         address usdcIn = address(usdc);
@@ -179,7 +179,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         _set(usdcIn, address(gho), 1, address(viaPsm2));
     }
 
-    // TEST-054 verifies: REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-012, Q-151, Q-228
+    // TEST-054 verifies: REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-012, Q-151, Q-228, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-127, REQ-ACCESS-093
     function test_TEST_054_disableAndRestore() public {
         address usdcIn = address(usdc);
         address r1 = _setRoute(id, usdcIn, address(gho), 0, "dexA");
@@ -207,7 +207,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         assertEq(cur, r1);
     }
 
-    // TEST-231 verifies: REQ-MREG-028, REQ-CONFIG-009, REQ-CONFIG-026, Q-248, Q-262, Q-263
+    // TEST-231 verifies: REQ-MREG-028, REQ-CONFIG-009, REQ-CONFIG-026, Q-248, Q-262, Q-263, REQ-ACCESS-159, REQ-ACCESS-171, REQ-ACCESS-093
     // Sources: 5.1 TEST-231
     function test_TEST_231_standbySwitch() public {
         address t = address(usdc);

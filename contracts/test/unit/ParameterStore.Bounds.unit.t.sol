@@ -151,7 +151,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
 
     // ─── consistencyToleranceBps: [10, 10,000] ───
 
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-050, REQ-CONFIG-054
+    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-050, REQ-CONFIG-054, REQ-ACCESS-097
     function test_TEST_064_consistencyToleranceAtBothEnds() public {
         _refuses(abi.encodeCall(store.setConsistencyToleranceBps, (M, 9)), live);
         _accepts(abi.encodeCall(store.setConsistencyToleranceBps, (M, 10)));
@@ -223,7 +223,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
 
     // ─── minPledgeUsd: [0, 100,000e8] ───
 
-    // TEST-064 verifies: REQ-PSTORE-005, REQ-CONFIG-050
+    // TEST-064 verifies: REQ-PSTORE-005, REQ-CONFIG-050, REQ-ACCESS-146
     function test_TEST_064_minPledgeAtBothEnds() public {
         _accepts(abi.encodeCall(store.tightenMinPledgeUsd, (M, 100_000e8)));
         assertEq(store.minPledgeUsd(M), 100_000e8);
@@ -300,7 +300,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
 
     // ─── gateRecoverySeconds: [600, 7,200] ───
 
-    // TEST-064 verifies: REQ-PSTORE-030, REQ-CONFIG-050
+    // TEST-064 verifies: REQ-PSTORE-030, REQ-CONFIG-050, REQ-ACCESS-167, REQ-ACCESS-137, REQ-ACCESS-165
     function test_TEST_064_gateRecoveryAtBothEnds() public {
         _accepts(abi.encodeCall(store.tightenGateRecoverySeconds, (7200)));
         assertEq(store.gateRecoverySeconds(), 7200);
@@ -493,7 +493,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.graceDurationMax(), 7200);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-049, INV-047
+    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-049, INV-047, REQ-ACCESS-096
     function test_TEST_064_graceHealthFactorAtBothEnds() public {
         _refuses(abi.encodeCall(store.setGraceHealthFactor, (0.9e18 - 1)), live);
         _accepts(abi.encodeCall(store.setGraceHealthFactor, (0.9e18)));
@@ -506,7 +506,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.graceHealthFactorMin(), 0.9e18);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-054, INV-047
+    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-054, INV-047, REQ-ACCESS-099
     function test_TEST_064_disagreementPauseAtBothEnds() public {
         _accepts(abi.encodeCall(store.setDisagreementPauseMax, (0)));
         assertEq(store.disagreementPauseMax(), 0);
@@ -552,7 +552,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.feedAgreementMarginBps(), 100);
     }
 
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-CONFIG-050, REQ-CONFIG-052
+    // TEST-250 verifies: REQ-CONFIG-024, REQ-CONFIG-050, REQ-CONFIG-052, REQ-ACCESS-098
     function test_TEST_250_agreementToleranceAtBothEnds() public {
         // Lower bound 25 + 25 + 50 = 100.
         _refuses(abi.encodeCall(store.setFeedAgreementToleranceBps, (usdc, 99)), live);

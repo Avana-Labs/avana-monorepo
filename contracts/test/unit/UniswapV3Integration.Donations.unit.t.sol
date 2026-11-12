@@ -91,7 +91,7 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture, L
     }
 
     // TEST-015 verifies: REQ-VAULT-165, REQ-VAULT-079, REQ-VAULT-080, REQ-VAULT-083, REQ-VAULT-122, REQ-VAULT-123, INV-007, ATTACK-006
-    // TEST-166 verifies: REQ-VAULT-082, REQ-VAULT-084, Q-228
+    // TEST-166 verifies: REQ-VAULT-082, REQ-VAULT-084, Q-228, REQ-ACCESS-060, REQ-ACCESS-010
     // Sources: 5.1 TEST-015, TEST-166 (timelock-only, the stray condition at execution, no timer of its own)
     function test_TEST_015_returnStrayOnlyThroughTheTimelockForAStray() public {
         bytes32 stray = _mint1(alice, 1e9);

@@ -33,7 +33,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         registry.freezeAddress(a);
     }
 
-    // TEST-229 verifies: REQ-MREG-020, INV-085, Q-242
+    // TEST-229 verifies: REQ-MREG-020, INV-085, Q-242, REQ-ACCESS-169
     // Sources: 5.1 TEST-229
     function test_TEST_229_protectedSetIsRefused() public {
         address proxy = makeAddr("aliceProxy");
@@ -239,7 +239,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         d.shape = _wideShape();
     }
 
-    // TEST-229 verifies: REQ-MREG-019, REQ-MREG-021, REQ-MREG-022, INV-085, Q-242, Q-263, Q-400
+    // TEST-229 verifies: REQ-MREG-019, REQ-MREG-021, REQ-MREG-022, INV-085, Q-242, Q-263, Q-400, REQ-ACCESS-169, REQ-ACCESS-078, REQ-ACCESS-091, REQ-ACCESS-088
     function test_TEST_229_freezeUnfreezeAndKeeperFloorNotChecked() public {
         vm.expectEmit(address(registry));
         emit IMarketRegistrySafetyEvents.AddressFrozen(keeper, emergencyGuardian);
@@ -266,7 +266,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         registry.unfreezeAddress(keeper);
     }
 
-    // TEST-229 verifies: REQ-MREG-019, Q-262
+    // TEST-229 verifies: REQ-MREG-019, Q-262, REQ-ACCESS-169
     function test_TEST_229_twentyFreezesPerCallerPer24HourBuckets() public {
         vm.warp(100 * 3600 + 5 * 60);
         uint256 h0 = block.timestamp / 3600;

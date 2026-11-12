@@ -111,7 +111,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         assertEq(ret, abi.encodeWithSelector(IParameterStoreErrors.NotDelegated.selector));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, INV-065
+    // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, INV-065, REQ-ACCESS-015, REQ-ACCESS-031
     function test_TEST_062_onlyTheAdminUpgrades() public {
         ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, false, logics);
         address safe = makeAddr("jointConfigurationSafe");

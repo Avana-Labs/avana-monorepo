@@ -206,7 +206,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         assertEq(registry.crossHubLineTotal(address(hub), address(usdc)), 0);
     }
 
-    // TEST-273 verifies: REQ-CONFIG-081, Q-378
+    // TEST-273 verifies: REQ-CONFIG-081, Q-378, REQ-ACCESS-175
     // Turning cross-Hub lines off keeps every cap and only blocks raises; closing a line (cap 0) is always allowed,
     // and the switch emits its value each time.
     function test_TEST_273_switchOffKeepsCapsAndAllowsClosing() public {

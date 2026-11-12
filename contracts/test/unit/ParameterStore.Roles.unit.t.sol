@@ -59,7 +59,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
 
     // ─── The 21 steward selectors, one by one ───
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-031, REQ-CONFIG-051
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-031, REQ-CONFIG-051, REQ-ACCESS-037
     function test_TEST_062_stewardRaisesHardFloor() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -69,7 +69,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.1e18)));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-052, REQ-CONFIG-051
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-052, REQ-CONFIG-051, REQ-ACCESS-041, REQ-ACCESS-185
     function test_TEST_062_stewardLowersSlippage() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -82,7 +82,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         store.tightenSlippageAllowanceBps(M, 29);
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-050
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-050, REQ-ACCESS-132
     function test_TEST_062_stewardLowersRoundingAllowance() public {
         _tl();
         store.setDebtAssetParams(gho, DebtReserveParams(1e18));
@@ -96,7 +96,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenFloorRoundingAllowance, (gho, 0.5e18)));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-023, REQ-PSTORE-009
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-023, REQ-PSTORE-009, REQ-ACCESS-038
     function test_TEST_062_stewardLowersBorrowAge() public {
         address f = address(fUsdc);
         vm.prank(safe);
@@ -108,7 +108,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenBorrowPriceMaxAge, (f, 4200)));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-052
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-052, REQ-ACCESS-039
     function test_TEST_062_stewardLowersConsistencyTolerance() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -117,7 +117,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenConsistencyToleranceBps, (M, 40)));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-024, REQ-CONFIG-057
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-024, REQ-CONFIG-057, REQ-ACCESS-040, REQ-ACCESS-077
     function test_TEST_062_stewardLowersAgreementTolerance() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -133,7 +133,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         store.tightenFeedAgreementToleranceBps(usdc, 99);
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-015
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-015, REQ-ACCESS-138
     function test_TEST_062_stewardLowersPoolRiskFactor() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -142,7 +142,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenPoolRiskFactor, (M, 3000)));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-070
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-070, REQ-ACCESS-131
     function test_TEST_062_stewardRaisesRouteDepth() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -202,7 +202,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenPoolShareMaxBps, (2500)));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-005
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-005, REQ-ACCESS-146
     function test_TEST_062_stewardRaisesMinPledge() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -222,7 +222,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, 1000)));
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-024
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-024, REQ-ACCESS-186
     function test_TEST_062_stewardLowersFlashFee() public {
         vm.prank(safe);
         vm.expectEmit(address(store));
@@ -318,7 +318,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
 
     // ─── Guardian ───
 
-    // TEST-066 verifies: REQ-PSTORE-029, REQ-CONFIG-058, EMG-103
+    // TEST-066 verifies: REQ-PSTORE-029, REQ-CONFIG-058, EMG-103, REQ-ACCESS-179
     function test_TEST_066_bothGuardiansSwitchToTheStandby() public {
         _recordSources();
         vm.prank(aaveGuardian);
@@ -335,7 +335,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         assertTrue(store.onStandby(usdc));
     }
 
-    // TEST-066 verifies: REQ-PSTORE-029, REQ-PSTORE-002, REQ-CONFIG-058
+    // TEST-066 verifies: REQ-PSTORE-029, REQ-PSTORE-002, REQ-CONFIG-058, REQ-ACCESS-179
     function test_TEST_066_onlyGuardiansSwitch() public {
         _recordSources();
         // The timelock holds the admin roles but not the guardian role.

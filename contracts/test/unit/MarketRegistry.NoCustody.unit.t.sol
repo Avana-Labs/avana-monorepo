@@ -134,7 +134,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         assertEq(address(registry).balance, 0);
     }
 
-    // TEST-168 verifies: REQ-CONFIG-003
+    // TEST-168 verifies: REQ-CONFIG-003, REQ-ACCESS-113
     // No rescue, sweep or approval selector exists on the registry.
     function test_TEST_168_noRescueSweepOrApprove() public {
         string[6] memory absent = [

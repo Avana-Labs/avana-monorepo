@@ -16,7 +16,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         _listMarket();
     }
 
-    // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-050, REQ-CONFIG-051, REQ-CONFIG-067, Q-398
+    // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-050, REQ-CONFIG-051, REQ-CONFIG-067, Q-398, REQ-ACCESS-037, REQ-ACCESS-120
     function test_TEST_064_hardHealthFloorRaisesWithinBounds() public {
         _tl();
         vm.expectEmit(address(store));
@@ -56,14 +56,14 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenSlippageAllowanceBps(M, 31);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-009, INV-047
+    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-009, INV-047, REQ-ACCESS-095, REQ-ACCESS-120
     function test_TEST_064_slippageBelowFloorIsLivenessBound() public {
         _tl();
         vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
         store.tightenSlippageAllowanceBps(M, 29);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-009, REQ-PSTORE-009, INV-047
+    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-009, REQ-PSTORE-009, INV-047, REQ-ACCESS-039, REQ-ACCESS-097, REQ-ACCESS-076
     function test_TEST_064_consistencyTolerance() public {
         _tl();
         store.tightenConsistencyToleranceBps(M, 10);
@@ -101,7 +101,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         assertEq(store.getMarketParams(M).consistencyToleranceBps, 30);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-024, REQ-CONFIG-052, SPEC-GOV-009
+    // TEST-064 verifies: REQ-CONFIG-024, REQ-CONFIG-052, SPEC-GOV-009, REQ-ACCESS-040, REQ-ACCESS-098, REQ-ACCESS-077
     function test_TEST_064_feedToleranceNeverBelowLowerBound() public {
         // dev(primary) 25 + dev(alternate) 25 + margin 50 = 100.
         assertEq(store.feedAgreementToleranceMinBps(usdc), 100);
@@ -117,7 +117,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenFeedAgreementToleranceBps(usdc, 99);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-023, REQ-PSTORE-009, Q-182
+    // TEST-064 verifies: REQ-CONFIG-023, REQ-PSTORE-009, Q-182, REQ-ACCESS-038
     function test_TEST_064_borrowAgeOnlyLowers() public {
         address f = address(fUsdc);
         _tl();
@@ -216,7 +216,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenMinPledgeUsd(M, 100_000e8);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-070, Q-379
+    // TEST-064 verifies: REQ-CONFIG-070, Q-379, REQ-ACCESS-131
     function test_TEST_064_routeDepthRaises() public {
         _tl();
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 1_000_000e8);
@@ -230,7 +230,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenRouteDepthThreshold(M, usdc, gho, 2, 1);
     }
 
-    // TEST-064 verifies: REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-024, REQ-PSTORE-030, Q-399
+    // TEST-064 verifies: REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-024, REQ-PSTORE-030, Q-399, REQ-ACCESS-165
     function test_TEST_064_breakerShortfallStressFlash() public {
         _tl();
         store.tightenGateRecoverySeconds(7200);

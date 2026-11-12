@@ -131,7 +131,7 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
         assertEq(registry.freezesInWindow(emergencyGuardian), 2);
     }
 
-    // TEST-065 verifies: REQ-MREG-004, REQ-MREG-005, ATTACK-132, INV-049, Q-227
+    // TEST-065 verifies: REQ-MREG-004, REQ-MREG-005, ATTACK-132, INV-049, Q-227, SPEC-GOV-006, REQ-ACCESS-112
     // A guardian that re-pauses after every unpause holds the Hub only until the timelock revokes its roles; after
     // that its calls are refused and the timelock lifts the pause.
     function test_TEST_065_repausingGuardianIsRemovedByTheTimelock() public {

@@ -77,7 +77,7 @@ contract VaultTokenTransfersUnitTest is VaultTokenFixture {
 
     // ─── Refused paths (TEST-189) ───
 
-    // TEST-189 verifies: REQ-VTOKEN-006, REQ-VTOKEN-008, REQ-VTOKEN-026, REQ-VTOKEN-030, INV-011, ATTACK-002, ATTACK-018, ATTACK-181, Q-116, Q-224, Q-300
+    // TEST-189 verifies: REQ-VTOKEN-006, REQ-VTOKEN-008, REQ-VTOKEN-026, REQ-VTOKEN-030, INV-011, ATTACK-002, ATTACK-018, ATTACK-181, Q-116, Q-224, Q-300, REQ-ACCESS-177
     // Sources: 5.1 TEST-189, 2.4 REQ-VTOKEN-006
     /// @notice The Hub pays nobody but registered proxies and LPVaultSwap: not a third-party liquidator, the Adapter,
     /// the Spoke, the LPVault, Collateralization, the LPOracle, the Hub itself or an unregistered contract.

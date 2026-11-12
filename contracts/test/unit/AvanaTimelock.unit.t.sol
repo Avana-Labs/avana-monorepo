@@ -75,7 +75,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
 
     // ─── Construction (REQ-ACCESS-027, REQ-ACCESS-140, REQ-ACCESS-155, REQ-ACCESS-156) ───
 
-    // TEST-194 verifies: REQ-ACCESS-140, REQ-ACCESS-017, REQ-ACCESS-030, SPEC-GOV-003, Q-228, Q-262
+    // TEST-194 verifies: REQ-ACCESS-140, REQ-ACCESS-017, REQ-ACCESS-030, SPEC-GOV-003, Q-228, Q-262, REQ-ACCESS-114, REQ-ACCESS-067
     // Sources: 5.1 TEST-194, 2.15
     function test_TEST_194_constantsAndLaunchValues() public view {
         assertEq(timelock.SHORT_DELAY(), 43_200);
@@ -253,7 +253,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         assertEq(_required(calls), allShort ? SHORT_DELAY : NORMAL_DELAY);
     }
 
-    // TEST-194 verifies: REQ-ACCESS-141, REQ-ACCESS-117, SPEC-GOV-001, INV-068
+    // TEST-194 verifies: REQ-ACCESS-141, REQ-ACCESS-117, SPEC-GOV-001, INV-068, REQ-ACCESS-111, REQ-ACCESS-148
     function test_TEST_194_scheduleBelowRequiredReverts() public {
         TimelockFixture.Call[] memory calls = _two(_tighten(), _loosen());
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(calls);
@@ -306,7 +306,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
 
     // ─── Execution window (SPEC-GOV-002, SPEC-GOV-013) ───
 
-    // TEST-194 verifies: SPEC-GOV-002, REQ-ACCESS-118, REQ-ACCESS-144, INV-051, INV-068
+    // TEST-194 verifies: SPEC-GOV-002, REQ-ACCESS-118, REQ-ACCESS-144, INV-051, INV-068, SPEC-GOV-014, REQ-ACCESS-111
     // Sources: TEST-194 example (addKeeper)
     function test_TEST_194_executesOnlyInsideTheWindow() public {
         uint256 t0 = block.timestamp;
@@ -348,7 +348,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         assertTrue(timelock.isOperationDone(id2));
     }
 
-    // TEST-194 verifies: SPEC-GOV-013, REQ-ACCESS-126
+    // TEST-194 verifies: SPEC-GOV-013, REQ-ACCESS-126, REQ-ACCESS-108, REQ-ACCESS-012
     function test_TEST_194_cleanupOnlyAfterExpiryAndAllowsReschedule() public {
         TimelockFixture.Call[] memory calls = _one(address(other), hex"aabbccdd");
         bytes32 unscheduled = _id(calls, SALT);
@@ -391,7 +391,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
 
     // ─── Public execution (REQ-ACCESS-144) ───
 
-    // TEST-194 verifies: REQ-ACCESS-144, REQ-ACCESS-021, REQ-ACCESS-029
+    // TEST-194 verifies: REQ-ACCESS-144, REQ-ACCESS-021, REQ-ACCESS-029, REQ-ACCESS-012, REQ-ACCESS-129
     function test_TEST_194_publicExecutionToggle() public {
         TimelockFixture.Call[] memory off =
             _self(abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (false)));
@@ -442,7 +442,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         timelock.cancel(id);
     }
 
-    // TEST-244 verifies: REQ-ACCESS-019, REQ-ACCESS-024, REQ-ACCESS-143, SPEC-GOV-005, Q-136
+    // TEST-244 verifies: REQ-ACCESS-019, REQ-ACCESS-024, REQ-ACCESS-143, SPEC-GOV-005, Q-136, REQ-ACCESS-026, REQ-ACCESS-112
     // Sources: SPEC-GOV-005 example
     function test_TEST_244_roleChangeCancelledOnlyByDao() public {
         TimelockFixture.Call[] memory pure_ =
@@ -468,7 +468,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         timelock.cancel(mixed);
     }
 
-    // TEST-244 verifies: REQ-ACCESS-156, REQ-ACCESS-119, SPEC-GOV-005, Q-263
+    // TEST-244 verifies: REQ-ACCESS-156, REQ-ACCESS-119, SPEC-GOV-005, Q-263, REQ-ACCESS-112
     function test_TEST_244_restoringCancelledOnlyByDao() public {
         TimelockFixture.Call[] memory restoring = _two(_restoreRoute(), _addKeeper());
         assertEq(_required(restoring), NORMAL_DELAY, "addKeeper is normal");
@@ -584,7 +584,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         }
     }
 
-    // TEST-244 verifies: REQ-ACCESS-141, REQ-ACCESS-142, REQ-ACCESS-152, INV-090
+    // TEST-244 verifies: REQ-ACCESS-141, REQ-ACCESS-142, REQ-ACCESS-152, INV-090, REQ-ACCESS-114, REQ-ACCESS-067
     function test_TEST_244_shortListOnlyWithinEligible() public {
         bytes4 loosen = bytes4(keccak256("loosenTopUpSliceUsd(uint256,uint256)"));
         TimelockFixture.Call[] memory add = _self(
@@ -617,7 +617,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         assertEq(_required(_one(_tighten().target, _tighten().data)), SHORT_DELAY);
     }
 
-    // TEST-194 verifies: REQ-ACCESS-030, REQ-ACCESS-017, REQ-ACCESS-125
+    // TEST-194 verifies: REQ-ACCESS-030, REQ-ACCESS-017, REQ-ACCESS-125, REQ-ACCESS-114, REQ-ACCESS-067
     function test_TEST_194_updateDelayAlwaysReverts() public {
         vm.expectRevert(IAvanaTimelockErrors.UpdateDelayDisabled.selector);
         timelock.updateDelay(0);

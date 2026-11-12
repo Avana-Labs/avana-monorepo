@@ -118,7 +118,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
 
     // ─── The timelock keeps its own admin role (REQ-ACCESS-182, review finding 2) ───
 
-    // TEST-242 verifies: REQ-ACCESS-182, REQ-ACCESS-001, REQ-ACCESS-013, INV-084
+    // TEST-242 verifies: REQ-ACCESS-182, REQ-ACCESS-001, REQ-ACCESS-013, INV-084, REQ-ACCESS-026, REQ-ACCESS-114
     function test_TEST_242_selfAdminCannotBeRevokedOrRenounced() public {
         bytes32 admin = timelock.DEFAULT_ADMIN_ROLE();
         TimelockFixture.Call[] memory revoke =
