@@ -1,0 +1,928 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Avana-Labs/avana-monorepo/deployments/release-manifest.schema.json",
+  "title": "Avana release manifest",
+  "$defs": {
+    "immutable": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "codeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "startBlock": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifact": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "codeHash",
+        "startBlock",
+        "artifact"
+      ],
+      "additionalProperties": false
+    },
+    "upgradeable": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "codeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "implementation": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "implementationCodeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "implementationArtifact": {
+          "type": "string"
+        },
+        "logics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "codeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "artifact": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "codeHash",
+              "artifact"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "startBlock": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "address",
+        "codeHash",
+        "implementation",
+        "implementationCodeHash",
+        "implementationArtifact",
+        "logics",
+        "startBlock"
+      ],
+      "additionalProperties": false
+    },
+    "labelledUpgradeable": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "codeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "implementation": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "implementationCodeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "implementationArtifact": {
+          "type": "string"
+        },
+        "logics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "codeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "artifact": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "codeHash",
+              "artifact"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "startBlock": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "codeHash",
+        "implementation",
+        "implementationCodeHash",
+        "implementationArtifact",
+        "logics",
+        "startBlock",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "hub": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "codeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "implementation": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "implementationCodeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "implementationArtifact": {
+          "type": "string"
+        },
+        "logics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "codeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "artifact": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "address",
+              "codeHash",
+              "artifact"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "startBlock": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "label": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        }
+      },
+      "required": [
+        "address",
+        "codeHash",
+        "implementation",
+        "implementationCodeHash",
+        "implementationArtifact",
+        "logics",
+        "startBlock",
+        "label",
+        "tier"
+      ],
+      "additionalProperties": false
+    },
+    "market": {
+      "type": "object",
+      "properties": {
+        "marketId": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "integrationId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "spoke": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "vaultToken": {
+          "$ref": "#/$defs/immutable"
+        },
+        "lpOracle": {
+          "$ref": "#/$defs/upgradeable"
+        },
+        "reserveId": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "pool": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          }
+        },
+        "feeds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "feed": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "heartbeatSeconds": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "feed",
+              "heartbeatSeconds"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/immutable"
+          }
+        }
+      },
+      "required": [
+        "marketId",
+        "integrationId",
+        "spoke",
+        "vaultToken",
+        "lpOracle",
+        "reserveId",
+        "pool",
+        "tokens",
+        "feeds",
+        "routes"
+      ],
+      "additionalProperties": false
+    },
+    "debtReserve": {
+      "type": "object",
+      "properties": {
+        "spoke": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "debtReserveId": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "asset": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 36
+        },
+        "isGho": {
+          "type": "boolean"
+        },
+        "debtOracle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/upgradeable"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feeds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "feed": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "heartbeatSeconds": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "feed",
+              "heartbeatSeconds"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "spoke",
+        "debtReserveId",
+        "asset",
+        "decimals",
+        "isGho",
+        "debtOracle",
+        "feeds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "chainId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "network": {
+      "type": "string",
+      "pattern": "^(anvil|tenderly-[a-z0-9-]+|sepolia|base-sepolia|ethereum|base)$"
+    },
+    "release": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(-[a-z0-9.]+)?$"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "abiHash": {
+      "type": "string",
+      "pattern": "^0x[0-9a-f]{64}$"
+    },
+    "deployer": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "create3Factory": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "feeRecipient": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "sequencerFeed": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "avana": {
+      "type": "object",
+      "properties": {
+        "aaveAdapter": {
+          "$ref": "#/$defs/upgradeable"
+        },
+        "lpVaultSwap": {
+          "$ref": "#/$defs/upgradeable"
+        },
+        "marketRegistry": {
+          "$ref": "#/$defs/upgradeable"
+        },
+        "parameterStore": {
+          "$ref": "#/$defs/upgradeable"
+        },
+        "riskModule": {
+          "$ref": "#/$defs/upgradeable"
+        },
+        "timelock": {
+          "$ref": "#/$defs/immutable"
+        },
+        "proxyManager": {
+          "$ref": "#/$defs/immutable"
+        },
+        "collateralization": {
+          "$ref": "#/$defs/immutable"
+        },
+        "vaultTokenFactory": {
+          "$ref": "#/$defs/immutable"
+        },
+        "payoutEscrow": {
+          "$ref": "#/$defs/immutable"
+        },
+        "lock": {
+          "$ref": "#/$defs/immutable"
+        },
+        "lens": {
+          "$ref": "#/$defs/immutable"
+        },
+        "lensModules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/immutable"
+          }
+        },
+        "lensAaveSizing": {
+          "$ref": "#/$defs/immutable"
+        },
+        "flashSource": {
+          "$ref": "#/$defs/immutable"
+        },
+        "flashLiquidator": {
+          "$ref": "#/$defs/immutable"
+        },
+        "operatorHelpers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "codeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "startBlock": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "artifact": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "signer": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "fundingSafe": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              }
+            },
+            "required": [
+              "address",
+              "codeHash",
+              "startBlock",
+              "artifact",
+              "signer",
+              "fundingSafe"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "lpVaults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "codeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "startBlock": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "artifact": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "integrationId": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "kind": {
+                "enum": [
+                  "uniswap-v3",
+                  "slipstream"
+                ]
+              }
+            },
+            "required": [
+              "address",
+              "codeHash",
+              "startBlock",
+              "artifact",
+              "integrationId",
+              "kind"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "coverageSpokes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "codeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "startBlock": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "artifact": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "asset": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "hub": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              }
+            },
+            "required": [
+              "address",
+              "codeHash",
+              "startBlock",
+              "artifact",
+              "asset",
+              "hub"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "debtOracleImplementation": {
+          "$ref": "#/$defs/immutable"
+        },
+        "clOraclePricing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/immutable"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proxyCreationCodeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "aaveAdapter",
+        "lpVaultSwap",
+        "marketRegistry",
+        "parameterStore",
+        "riskModule",
+        "timelock",
+        "proxyManager",
+        "collateralization",
+        "vaultTokenFactory",
+        "payoutEscrow",
+        "lock",
+        "lens",
+        "lensModules",
+        "lensAaveSizing",
+        "flashSource",
+        "flashLiquidator",
+        "operatorHelpers",
+        "lpVaults",
+        "coverageSpokes",
+        "debtOracleImplementation",
+        "clOraclePricing",
+        "proxyCreationCodeHash"
+      ],
+      "additionalProperties": false
+    },
+    "markets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/market"
+      }
+    },
+    "debtReserves": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/debtReserve"
+      }
+    },
+    "aave": {
+      "type": "object",
+      "properties": {
+        "hubs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hub"
+          }
+        },
+        "borrowSpokes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/labelledUpgradeable"
+          }
+        },
+        "lendSpokes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/labelledUpgradeable"
+          }
+        },
+        "v3Pool": {
+          "$ref": "#/$defs/upgradeable"
+        },
+        "accessManager": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        }
+      },
+      "required": [
+        "hubs",
+        "borrowSpokes",
+        "lendSpokes",
+        "v3Pool",
+        "accessManager"
+      ],
+      "additionalProperties": false
+    },
+    "roles": {
+      "type": "object",
+      "properties": {
+        "timelock": {
+          "type": "object",
+          "properties": {
+            "proposers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              }
+            },
+            "executors": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              }
+            },
+            "cancellers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              }
+            },
+            "daoCancellers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              }
+            },
+            "normalDelay": {
+              "type": "integer",
+              "minimum": 345600,
+              "maximum": 432000
+            },
+            "publicExecution": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "proposers",
+            "executors",
+            "cancellers",
+            "daoCancellers",
+            "normalDelay",
+            "publicExecution"
+          ],
+          "additionalProperties": false
+        },
+        "governanceSafe": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "emergencyGuardian": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "aaveProtocolGuardian": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "aaveGovernanceExecutor": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "jointConfigSafe": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "marketRegistryGuardians": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          }
+        },
+        "parameterStorePauseGuardians": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          }
+        },
+        "riskStewards": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          }
+        },
+        "keepers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          }
+        }
+      },
+      "required": [
+        "timelock",
+        "governanceSafe",
+        "emergencyGuardian",
+        "aaveProtocolGuardian",
+        "aaveGovernanceExecutor",
+        "jointConfigSafe",
+        "marketRegistryGuardians",
+        "parameterStorePauseGuardians",
+        "riskStewards",
+        "keepers"
+      ],
+      "additionalProperties": false
+    },
+    "external": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "group": {
+            "enum": [
+              "aave-v4",
+              "aave-v3",
+              "uniswap-v3",
+              "slipstream",
+              "token",
+              "feed",
+              "safe"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "codeHash": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$"
+          },
+          "implementation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "standIn": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "group",
+          "address",
+          "codeHash",
+          "implementation",
+          "standIn"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "chainId",
+    "network",
+    "release",
+    "commit",
+    "abiHash",
+    "deployer",
+    "create3Factory",
+    "feeRecipient",
+    "sequencerFeed",
+    "avana",
+    "markets",
+    "debtReserves",
+    "aave",
+    "roles",
+    "external"
+  ],
+  "additionalProperties": false
+}

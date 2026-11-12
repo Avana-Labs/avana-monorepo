@@ -233,6 +233,17 @@ PRs that change gas update `snapshots/` in the same PR (`make gas`), and a contr
 
 Test folders, naming (`test_TEST_NNN_<behavior>`, `testFuzz_TEST_NNN_<behavior>`, `invariant_TEST_NNN_<name>`, `check_PROP_NNN_<behavior>`), the complete `TEST-…` and `INV-…` map, fixtures, invariant handlers and hostile-component tests are in [`test/README.md`](test/README.md). Certora specifications and run commands are in [`certora/README.md`](certora/README.md). Deployment order, environment variables and manifests are in [`script/README.md`](script/README.md).
 
+## Deploying
+
+Deployment is a sequence of `forge script` steps in [`script/deploy/`](script/deploy/), driven by one config file per network (`script/deploy/config/<network>.json`, selected by `AVANA_NETWORK`) and run the same way on anvil, a Tenderly Virtual TestNet, Sepolia, Ethereum and Base; the order, the CREATE3 namespacing and every step are in [`script/README.md`](script/README.md). On test networks steps 01 and 02 first deploy Avana's own Aave V4 (`aave` build) and the third-party world: Uniswap v3 (`univ3` build) and Aerodrome Slipstream (`slipstream-v1`, `slipstream-main` builds), tokens, feeds and pools. Each step writes `deployments-local/<network>/*.json`; `packages/protocol` turns them into the release manifest and checks it against the chain ([`deployments/README.md`](../deployments/README.md)).
+
+```bash
+make build build-aave build-external     # default, aave, univ3, slipstream-v1, slipstream-main
+make e2e-local                           # the whole rehearsal on a fresh anvil node, every step pass, fail or not-run
+AVANA_NETWORK=sepolia make deploy-03_DeployAvana chain=sepolia            # simulation with the keystore account
+AVANA_NETWORK=sepolia make deploy-03_DeployAvana chain=sepolia dry=0      # broadcast and verify sources
+```
+
 ## Security tooling
 
 Two tiers run every security tool on everything that exists under `src/` and on every property harness under `test/`, found through the build rather than a list of files: a contract, library or harness added later is analyzed on the next run. Each tier builds into its own directory under `out-security/` with `forge build --build-info`, so neither touches `out/` or `cache/`, and writes its reports there.
