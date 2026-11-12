@@ -1,7 +1,45 @@
 # Avana Monorepo
+<div align="center">
+
+![Avana](./spec/Avana.png)
+
+</div>
 
 Avana lets a liquidity provider borrow against a liquidity position in a listed AMM pool without taking the liquidity out of the pool. It runs on several chains, Hubs and AMM protocols: at launch on Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), each with an Avana Stable LP Hub; the core also supports Uniswap v2, Curve, Balancer and Uniswap v4 once each passes its listing guards. GHO is the first debt asset, and any asset can become borrowable through its own credit line.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor B as Borrower
+    participant A as AaveAdapter
+    participant C as Collateralization + LPVault
+    participant P as PositionProxy
+    participant R as RiskModule + LPOracle
+    participant S as CDP Spoke (Aave V4)
+    participant H as Avana Hub
+
+    Note over B,H: Pledge
+    B->>A: pledge(marketId, position, deadline)
+    A->>P: deploy proxy (first pledge to this market)
+    A->>C: take custody and credit the position
+    Note right of C: LPVault holds the NFT<br/>Liquidity stays in the pool
+    C-->>A: credited units
+    A->>P: mint vault tokens (1 unit per unit of liquidity)
+    P->>S: supply vault tokens and enable as collateral
+    S->>H: vault tokens move into the Hub
+
+    Note over B,H: Borrow
+    B->>A: borrow(marketId, debtReserveId, amount, receiver)
+    A->>R: preBorrowCheck(proxy, debtReserveId, amount)
+    Note right of R: Price Live and second source agrees<br/>Sequencer, caps, breakers, config drift
+    R-->>A: ok
+    A->>P: execute borrow
+    P->>S: borrow GHO
+    S->>H: draw from the GHO credit line
+    H-->>B: GHO to receiver (through the proxy)
+    A->>R: postHealthCheck(proxy, minHealthFactor)
+    R-->>A: health factor at or above max(1.00, minHealthFactor)
+```
 Each AMM protocol has an immutable LPVault per chain that holds its positions, and one AMM-neutral Collateralization ledger per chain records the units each position backs; a transfer-restricted vault token per market represents those units one for one. A market is one (chain, AMM protocol, pool, exact position shape). Every borrower action goes through the chain's AaveAdapter, which mints the vault token and supplies it from the borrower's own PositionProxy, a logic-free immutable account per (wallet, CDP Spoke, market), to a CDP Spoke: a standard, unmodified Aave V4 Spoke per (chain, Hub, AMM protocol, risk tier), owned by the Aave DAO. Every market therefore has its own health factor. Aave V4 values the collateral through Avana's LPOracle (fair composition at the oracle price), lends each debt asset from a DAO credit line, tracks the health factor and sizes liquidations. Avana's LPVaultSwap settles each liquidation in one transaction: it flash-borrows the debt asset from the Aave V3 Pool, repays, receives the seized vault tokens, removes exactly the seized units from the position and swaps them back into the debt asset. The vault token accepts seized collateral only to LPVaultSwap, and three settings set in each listing (`receiveSharesEnabled = false`, `liquidationFee = 0`, no reinvestment controller) keep that rule the only path, so no address can liquidate an Avana account except through LPVaultSwap; approved keepers use it, and any address can through a permissionless fallback. The borrower keeps the rest of the position and its trading fees.
 
 Each chain has its own AvanaTimelock: every privileged change there is scheduled by that chain's 4-of-7 governance multisig or the Aave governance executor, executable by anyone after 5 days (never less than 4; 12 hours for risk-reducing changes and stops of new activity), and cancellable in the meantime by the governance multisig, the 3-of-5 Emergency Guardian, the Aave Protocol Guardian and the Aave governance executor, with role changes and operations that restore reviewed configuration cancellable only by the Aave governance executor. Exits and liquidation never depend on a pause, circuit breaker or address freeze.
