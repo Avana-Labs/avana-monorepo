@@ -8,7 +8,7 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads. [EVENTS.md](indexer/EVENTS.md) lists every event and every live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
 | `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
-| `convex/` | [Design of the Convex import](convex/README.md): scheduled pull, checkpoints, duplicate protection, block-hash checks, atomic pages, reorg rebuild; the code lives in `apps/backend/convex/ingest/` |
+| `convex/` | [Design of the Convex import](convex/README.md): scheduled pull, checkpoints, duplicate protection, block-hash checks, atomic pages, reorg rebuild; the Convex project itself lives in the same folder, with the import under `convex/ingest/` |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys and the export wire types |
 
 The indexer, the keeper and the monitoring service read addresses and start blocks from the verified release manifest named in their configuration and ABIs from [`packages/protocol`](../packages/protocol/), check the manifest's ABI hash against the hash of those ABIs at startup and refuse to run on a mismatch (`TEST-149`).

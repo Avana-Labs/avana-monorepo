@@ -1,6 +1,6 @@
 # Convex import
 
-How the Convex backend (`apps/backend/convex/`) takes chain data from the indexer's [private export](../indexer/EXPORT.md). The code lives in the Convex project under `convex/ingest/`; this page is the design it follows. Convex serves current market and portfolio views, a bounded window of recent activity, transaction progress and authenticated action preparation; it never holds a transaction target, receiver, amount or calldata (apps/README.md).
+How the Convex backend takes chain data from the indexer's [private export](../indexer/EXPORT.md). This folder is the one Convex project: schema, public queries, authenticated mutations for sessions and intents (`convex/protocol/`), ingestion (`convex/ingest/`), daily history snapshots, receipt tracking and migrations; this page is the design the ingestion follows. Convex serves current market and portfolio views, a bounded window of recent activity, transaction progress and authenticated action preparation; it never holds a transaction target, receiver, amount or calldata (REQ-ARCH-140); the web app in `apps/web/` reads it.
 
 ## Tables
 

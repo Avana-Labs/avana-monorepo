@@ -54,7 +54,7 @@ Each chain has its own AvanaTimelock. Every privileged change there is scheduled
 |---|---|
 | [`spec/`](spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
 | [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts and Certora specifications |
-| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the design of the Convex import; `common/`: chains, manifest view and export types shared by the services |
+| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `common/`: chains, manifest view and export types shared by the services |
 | [`governance/`](governance/) | Aave DAO payloads (deployment, listing, collateral-factor, credit-line and refresh AIPs) and the AvanaTimelock operations scheduled by the governance multisig |
 | [`audit/`](audit/) | Audit scope, external reports, formal-verification reports and the evidence cited by findings |
 

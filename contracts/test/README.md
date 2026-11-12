@@ -408,10 +408,10 @@ Folders for the keeper and off-chain rows (`TEST-140`–`TEST-149`, `TEST-178`) 
 | TEST-142 | keeper | `services/keeper/` | `test/duty.fork.test.ts` | `TEST_142_liquidatesEveryUnhealthyAccountIncludingDust` | Q-098, Q-193, Q-198 |
 | TEST-143 | off-chain | `services/indexer/` | `test/replay.test.ts` | `TEST_143_replayMatchesRpc`, `TEST_143_reorgsAndDuplicatePages`, `TEST_143_reorgedIntentReturnsToPending` | Q-073, Q-119 |
 | TEST-144 | off-chain | `services/indexer/` + `apps/web/` | `test/attribution.test.ts`; `test/health-factor.test.ts` | `TEST_144_attributionFromVerifiedAdapter`, `TEST_144_attributionPerCdpSpokeAndDebtReserve`, `TEST_144_liquidatorFieldNotUsedForAttribution`, `TEST_144_healthFactorFromRpc` | Q-119, Q-144, Q-225, Q-233, Q-281 |
-| TEST-145 | off-chain | `apps/backend/convex/` | `test/intents.test.ts` | `TEST_145_storesOnlyIdAndStatus`, `TEST_145_rejectsCalldataFields`, `TEST_145_onePendingBorrowPerProxy`, `TEST_145_nonceReadOnChain` | Q-073, Q-106, Q-149, Q-229 |
+| TEST-145 | off-chain | `services/convex/` | `test/intents.test.ts` | `TEST_145_storesOnlyIdAndStatus`, `TEST_145_rejectsCalldataFields`, `TEST_145_onePendingBorrowPerProxy`, `TEST_145_nonceReadOnChain` | Q-073, Q-106, Q-149, Q-229 |
 | TEST-146 | off-chain | `packages/protocol/` + `apps/web/` | `test/calldata.test.ts`; `test/resume.test.ts` | `TEST_146_targetsFromManifest`, `TEST_146_tamperedIntentIgnored`, `TEST_146_promptShowsReceiverAndAmount`, `TEST_146_keyAddressesCheckedOnChain` | Q-073, Q-149, Q-223, INV-022 |
 | TEST-147 | off-chain | `packages/protocol/` | `test/approvals.test.ts` | `TEST_147_perTokenNftApprovalOnly`, `TEST_147_exactDebtAssetApprovalToAdapter`, `TEST_147_thirdPartyRepayApprovalShowsBorrower`, `TEST_147_noSetApprovalForAll`, `TEST_147_noApprovalToProxyOrProtocolContract` | Q-144, Q-212, Q-223, Q-224, INV-022 |
-| TEST-148 | off-chain | `apps/backend/convex/` + `apps/web/` | `test/sessions.test.ts`; `test/inputs.test.ts` | `TEST_148_siweNonceSingleUse`, `TEST_148_contractWalletsAccepted`, `TEST_148_rateLimits`, `TEST_148_strictDecimalParser`, `TEST_148_usdNeverInCalldata` | Q-119 |
+| TEST-148 | off-chain | `services/convex/` + `apps/web/` | `test/sessions.test.ts`; `test/inputs.test.ts` | `TEST_148_siweNonceSingleUse`, `TEST_148_contractWalletsAccepted`, `TEST_148_rateLimits`, `TEST_148_strictDecimalParser`, `TEST_148_usdNeverInCalldata` | Q-119 |
 | TEST-149 | off-chain | `apps/web/`, `services/indexer/`, `services/keeper/` | `test/abi-hash.test.ts` | `TEST_149_refusesAbiHashMismatch` | Q-119 |
 | TEST-150 | unit | `unit/` | `Collateralization.Reconcile.unit.t.sol` | `test_TEST_150_reconcileOnDebtFreeWithdrawal`, `test_TEST_150_reconcileOnWithdrawWithDebt`, `test_TEST_150_reconcileOnRepayAllAndWithdraw`, `test_TEST_150_example315Units`, `test_TEST_150_seizureReconciledEvent`, `test_TEST_150_sharesNotEqualAssetsSkipsReconcile` | Q-061, Q-194, Q-201, Q-240, INV-001, INV-008, INV-045, INV-058 |
 | TEST-151 | unit | `unit/` | `Collateralization.Reconcile.unit.t.sol` | `test_TEST_151_reconcileAfterBurnBeforeNewDebit`, `test_TEST_151_honestLiquidationNeverBlocked` | Q-160, Q-201, Q-224, INV-008, INV-058 |
@@ -698,7 +698,7 @@ Run from `contracts/` with Foundry 1.9.0 (`foundryup --install 1.9.0`; CI pins t
 | Shared fork environment (`TEST-004`) | `anvil --fork-url $RPC_MAINNET --fork-block-number $MAINNET_FORK_BLOCK`, then the same `script/` deployment |
 | Keeper tests (`TEST-140`–`TEST-142`) | `npm test --workspace services/keeper` (from the repository root) |
 | Indexer tests (`TEST-143`, `TEST-144`, `TEST-149`) | `npm test --workspace services/indexer` |
-| Convex tests (`TEST-145`, `TEST-148`) | `npm test --workspace apps/backend` |
+| Convex tests (`TEST-145`, `TEST-148`) | `npm test --workspace services/convex` |
 | Calldata and approval tests (`TEST-146`, `TEST-147`) | `npm test --workspace packages/protocol` |
 | Web tests (`TEST-144`, `TEST-146`, `TEST-148`, `TEST-149`) | `npm test --workspace apps/web` |
 

@@ -2,7 +2,7 @@
 
 > **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-09
 
-Avana's Foundry tests live under `contracts/test/` (`unit/`, `fuzz/`, `integration/`, `invariant/`, `fork/`, `hostile/`); tests of off-chain components live in the service that owns the code (`apps/web/`, `apps/backend/convex/`, the Ponder indexer, the keeper, `packages/protocol/`). The traceability matrix ([traceability.md](traceability.md)) records which requirements each test links. Formal proofs are in [5.2](02-formal-properties.md); the findings these tests close are in [5.3](03-audit-findings.md).
+Avana's Foundry tests live under `contracts/test/` (`unit/`, `fuzz/`, `integration/`, `invariant/`, `fork/`, `hostile/`); tests of off-chain components live in the service that owns the code (`apps/web/`, the Convex backend in `services/convex/`, the Ponder indexer, the keeper, `packages/protocol/`). The traceability matrix ([traceability.md](traceability.md)) records which requirements each test links. Formal proofs are in [5.2](02-formal-properties.md); the findings these tests close are in [5.3](03-audit-findings.md).
 
 Columns:
 
