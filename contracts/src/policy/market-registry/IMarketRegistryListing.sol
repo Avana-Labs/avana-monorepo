@@ -63,7 +63,7 @@ interface IMarketRegistryListing {
     /// the asset (`maxFlashLoan > 0`, premium `phi` on amount `F` with `phi × 1e4 ≤ maxFlashFeeBps × F`) from a
     /// `LENDER()` that is no recorded Hub, and it is not already enabled; reverts `TransferFeeActive(asset)` unless the
     /// asset's transfer fee is 0 at listing (a probe that reads `basisPointsRate()`, `UsdtFeeRate` or
-    /// `UsdtFeeRateAndPaused`, reads a fee of 0, or the asset has no fee switch; AMMN N2b); every asset, a fixed-price
+    /// `UsdtFeeRateAndPaused`, reads exactly one zero word, or the asset has no fee switch; AMMN N2b); every asset, a fixed-price
     /// one included, must be a listed token, so its issuer probe is recorded (`TokenNotListed`), and an asset without a
     /// fixed price also needs its three price routes (`InvalidDebtReserve("routes")` for a monitoring-only listing) and
     /// `debtStressRiseBps(asset) >= 100`. `def.crossHub` must equal `def.fundingHub != hubOf(spoke)`; a cross-Hub reserve also requires an open

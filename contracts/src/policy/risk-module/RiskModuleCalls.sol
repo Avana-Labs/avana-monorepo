@@ -18,11 +18,11 @@ import {RiskModuleMath} from "./RiskModuleMath.sol";
 /// @custom:spec REQ-RISK-089, SPEC-BRK-003, REQ-RISK-081, SPEC-ORC-023
 library RiskModuleCalls {
     /// @notice Static call with explicit gas `callGas`, copying at most `maxLength` bytes of return data; a longer
-    /// answer is truncated to `maxLength`, so a caller that needs an exact length checks it on the result.
+    /// answer is truncated to `maxLength`, so a caller needing exactly `n` bytes reads `n + 1` and checks the length.
     /// @param target Contract read.
     /// @param callGas Explicit gas of the read.
     /// @param data Calldata.
-    /// @param maxLength ABI length of the expected return data.
+    /// @param maxLength Most bytes copied: the expected ABI length, plus one to see a longer answer.
     /// @return ok The call did not revert.
     /// @return ret Return data, truncated to `maxLength`.
     /// @custom:spec REQ-RISK-089

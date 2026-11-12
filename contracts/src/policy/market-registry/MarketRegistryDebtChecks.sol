@@ -9,9 +9,12 @@ import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
+import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {IParameterStoreLiquidation} from "../parameter-store/IParameterStoreLiquidation.sol";
 import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
+import {RiskModuleConstants} from "../risk-module/RiskModuleConstants.sol";
+import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
 import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
@@ -114,8 +117,8 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
 
     /// @dev The chain's IFlashSource lends the asset from a lender that is no recorded Hub, at a premium within
     /// `maxFlashFeeBps` (`phi × 10^4 ≤ maxFlashFeeBps × F` on `F = maxFlashLoan(asset)`), and the asset's transfer
-    /// fee reads 0 when its probe reads `basisPointsRate()` (`UsdtFeeRate` or `UsdtFeeRateAndPaused`; the pause read
-    /// is not part of enablement for either kind, REQ-MREG-006, Q-386, Q-388, Q-390).
+    /// fee reads exactly one zero word when its probe reads `basisPointsRate()` (`UsdtFeeRate` or `UsdtFeeRateAndPaused`;
+    /// the pause read is not part of enablement for either kind, REQ-MREG-006, Q-386, Q-388, Q-390).
     function _checkFlashAndFee(
         DebtReserveDef calldata def
     ) internal view {
@@ -130,13 +133,23 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         if (premium > type(uint128).max || available > type(uint128).max || premium * _BPS > maxFee * available) {
             revert InvalidDebtReserve("flash");
         }
-        if (IssuerProbes.readsFeeRate(l.tokens[def.asset].issuerProbe)) {
-            try ITetherFee(def.asset).basisPointsRate() returns (uint256 rate) {
-                if (rate != 0) revert TransferFeeActive(def.asset);
-            } catch {
-                revert TransferFeeActive(def.asset);
-            }
+        if (IssuerProbes.readsFeeRate(l.tokens[def.asset].issuerProbe) && !_feeRateZero(def.asset)) {
+            revert TransferFeeActive(def.asset);
         }
+    }
+
+    /// @dev `basisPointsRate()` read as the RiskModule's breaker reads it (SPEC-BRK-003): a static call with
+    /// `ISSUER_PROBE_GAS` after the `ceil(64 × G / 63) + POST_CALL_GAS` floor, copying at most 33 bytes. Only exactly
+    /// one zero word reads 0; a revert, an address without code, a shorter or longer answer, or less gas left than
+    /// the floor refuses the asset (REQ-MREG-006).
+    function _feeRateZero(
+        address token
+    ) internal view returns (bool zero) {
+        if (gasleft() < RiskModuleMath.gasFloor(RiskModuleConstants.ISSUER_PROBE_GAS)) return false;
+        (bool ok, bytes memory ret) = RouteReads._staticRead(
+            token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodeCall(ITetherFee.basisPointsRate, ()), 33
+        );
+        zero = ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0;
     }
 
     /// @dev REQ-MREG-032 and REQ-CONFIG-039 for a newly enabled reserve: every Active or Offboarding market of the

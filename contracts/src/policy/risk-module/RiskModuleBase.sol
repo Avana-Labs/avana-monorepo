@@ -144,13 +144,14 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         price8 = a > 0 ? uint256(a) : 1;
     }
 
-    /// @dev Sequencer gate of the chain (REQ-RISK-081): `Up` on a chain without a feed; `Down` while the feed reports 1
-    /// or cannot be read; `Grace` until `startedAt + gracePeriod`, returned as `graceEndsAt`.
+    /// @dev Sequencer gate of the chain (REQ-RISK-081): `Up` on a chain without a feed; `Down` while the feed reports 1,
+    /// cannot be read or answers other than exactly 160 bytes (the read copies at most 161 bytes, so a longer answer is
+    /// seen and refused); `Grace` until `startedAt + gracePeriod`, returned as `graceEndsAt`.
     function _sequencerState() internal view returns (uint8 state, uint256 graceEndsAt) {
         (address feed, uint32 gracePeriod) = _store().sequencer();
         if (feed == address(0)) return (SEQUENCER_UP, 0);
         (bool ok, bytes memory ret) = RiskModuleCalls.staticRead(
-            feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH
+            feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
         );
         ok = ok && ret.length == ROUND_LENGTH;
         (, uint256 answerWord) = RiskModuleCalls.wordAt(ret, 32);

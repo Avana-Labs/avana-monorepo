@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {ITetherFee} from "../../src/interfaces/external/tether/ITetherFee.sol";
 import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
 import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
@@ -11,6 +12,7 @@ import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.so
 import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
+import {MarketRegistryDebtChecksHarness} from "../utils/harness/MarketRegistryDebtChecksHarness.sol";
 import {
     RegistryCoverageSpokeMock,
     RegistryDebtOracleMock,
@@ -329,5 +331,107 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
         tether.setFee(0, false);
         _enable(d);
         assertTrue(registry.getDebtReserve(address(spoke), NEW_RESERVE).approved);
+    }
+
+    // ─── The enablement fee read: exactly one word ───
+
+    /// @dev The fee read answers `answer`; `enableDebtReserve(d)` must revert `TransferFeeActive(asset)`.
+    function _expectFeeRefused(
+        address asset,
+        DebtReserveDef memory d,
+        bytes memory answer
+    ) internal {
+        vm.mockCall(asset, abi.encodeCall(ITetherFee.basisPointsRate, ()), answer);
+        vm.prank(address(timelock));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TransferFeeActive.selector, asset));
+        registry.enableDebtReserve(address(spoke), d);
+    }
+
+    /// @notice Gas of one refused enablement, run in its own frame so the test's memory, grown by a 1 MB answer, does
+    /// not price it; fails unless the refusal is `TransferFeeActive(asset)`.
+    function measureRefusedEnable(
+        DebtReserveDef calldata d,
+        address asset
+    ) external returns (uint256 used) {
+        vm.prank(address(timelock));
+        uint256 before = gasleft();
+        try registry.enableDebtReserve(address(spoke), d) {
+            revert("enabled");
+        } catch (bytes memory reason) {
+            used = before - gasleft();
+            assertEq(reason, abi.encodeWithSelector(IMarketRegistryErrors.TransferFeeActive.selector, asset));
+        }
+    }
+
+    // TEST-287 verifies: REQ-MREG-006, SPEC-BRK-003, Q-390
+    // Sources: Decision 2026-11-11 (listing check uses the breaker's exact one-word read)
+    /// @notice `enableDebtReserve` reads `basisPointsRate()` as the `ISSUER` breaker does: only an answer of exactly
+    /// one zero word passes. A zero word followed by a second zero word, by one byte, or 1 MB of zeros is refused,
+    /// as is a 31-byte answer and a reverting read; an exact 32-byte 0 is enabled. On the former `try ... returns
+    /// (uint256 rate)` read the 64-byte, 33-byte and 1 MB answers were enabled (the decoder accepts a longer answer)
+    /// and the 31-byte answer reverted with empty data outside the `catch`.
+    function test_TEST_287_enablementFeeReadIsExactlyOneWord() public {
+        RegistryTetherMock tether = new RegistryTetherMock();
+        _listWithProbe(address(tether), IssuerProbe.UsdtFeeRate);
+        DebtReserveDef memory d = _oracleReserveFor(address(tether), 6);
+        _expectFeeRefused(address(tether), d, abi.encode(uint256(0), uint256(0)));
+        _expectFeeRefused(address(tether), d, abi.encodePacked(uint256(0), uint8(0)));
+        _expectFeeRefused(address(tether), d, new bytes(31));
+        _expectFeeRefused(address(tether), d, new bytes(1 << 20));
+        vm.clearMockedCalls();
+        tether.setFee(0, true);
+        vm.prank(address(timelock));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TransferFeeActive.selector, address(tether)));
+        registry.enableDebtReserve(address(spoke), d);
+        tether.setFee(1, false);
+        vm.mockCall(address(tether), abi.encodeCall(ITetherFee.basisPointsRate, ()), abi.encode(uint256(0)));
+        _enable(d);
+        assertTrue(registry.getDebtReserve(address(spoke), NEW_RESERVE).approved);
+    }
+
+    // TEST-287 verifies: REQ-MREG-006, SPEC-BRK-003
+    /// @notice A fee read that reaches an address without code succeeds with no return data and refuses the asset.
+    /// On the former read the empty answer reverted with empty data outside the `catch`.
+    function test_TEST_287_enablementFeeReadWithoutCodeRefused() public {
+        RegistryTetherMock tether = new RegistryTetherMock();
+        _listWithProbe(address(tether), IssuerProbe.UsdtFeeRateAndPaused);
+        DebtReserveDef memory d = _oracleReserveFor(address(tether), 6);
+        vm.etch(address(tether), "");
+        vm.mockCall(address(tether), abi.encodeWithSignature("decimals()"), abi.encode(uint8(6)));
+        vm.prank(address(timelock));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TransferFeeActive.selector, address(tether)));
+        registry.enableDebtReserve(address(spoke), d);
+    }
+
+    // TEST-287 verifies: REQ-MREG-006, SPEC-BRK-003
+    /// @notice A 1 MB fee answer costs the refused enablement exactly what a 64-byte answer costs: the read copies at
+    /// most 33 bytes, whatever the answer's length. The former read copied and decoded the whole answer.
+    function test_TEST_287_oversizedFeeAnswerBoundedCost() public {
+        RegistryTetherMock tether = new RegistryTetherMock();
+        _listWithProbe(address(tether), IssuerProbe.UsdtFeeRate);
+        DebtReserveDef memory d = _oracleReserveFor(address(tether), 6);
+        bytes memory twoWords = abi.encode(uint256(0), uint256(0));
+        vm.mockCall(address(tether), abi.encodeCall(ITetherFee.basisPointsRate, ()), twoWords);
+        this.measureRefusedEnable(d, address(tether));
+        uint256 twoWordsGas = this.measureRefusedEnable(d, address(tether));
+        vm.mockCall(address(tether), abi.encodeCall(ITetherFee.basisPointsRate, ()), new bytes(1 << 20));
+        uint256 hugeGas = this.measureRefusedEnable(d, address(tether));
+        emit log_named_uint("refused enablement gas, 64-byte fee answer", twoWordsGas);
+        emit log_named_uint("refused enablement gas, 1 MB fee answer", hugeGas);
+        assertEq(hugeGas, twoWordsGas, "cost independent of the answer's length");
+    }
+
+    // TEST-287 verifies: REQ-MREG-006, REQ-RISK-089, SPEC-BRK-003
+    /// @notice The fee read runs only with at least `ceil(64 * 30,000 / 63) + 5,000 = 35,477` gas left, so the probe
+    /// always receives its full `ISSUER_PROBE_GAS`; below that the asset is refused even though the token answers 0.
+    /// Without the floor, a read entered with 34,000 gas still forwards 30,000 and the zero answer would pass.
+    function test_TEST_287_enablementFeeReadNeedsTheGasFloor() public {
+        RegistryTetherMock tether = new RegistryTetherMock();
+        MarketRegistryDebtChecksHarness h = new MarketRegistryDebtChecksHarness(im);
+        assertTrue(h.feeRateZero(address(tether)), "zero answer, ample gas");
+        assertFalse(h.feeRateZero{gas: 34_000}(address(tether)), "below the floor");
+        assertTrue(h.feeRateZero{gas: 50_000}(address(tether)), "above the floor");
+        tether.setFee(0, true);
+        assertFalse(h.feeRateZero(address(tether)), "reverting read");
     }
 }
