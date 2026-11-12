@@ -455,7 +455,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
 
     // ─── Backing gap and zero credit ───
 
-    // TEST-241 verifies: REQ-ADAPTER-069, REQ-ADAPTER-075, SPEC-PROXY-008, INV-080
+    // TEST-241 verifies: REQ-ADAPTER-069, REQ-ADAPTER-075, SPEC-PROXY-008, INV-080, REQ-VAULT-111
     /// @notice A Collateralization answer that credits nothing it recorded (a faulty or hostile credit) makes the
     /// mint unbacked, and the pledge reverts `BackingMismatch`.
     function test_TEST_241_unbackedMintReverts() public {

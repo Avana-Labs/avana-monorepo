@@ -172,7 +172,7 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
 
     // ─── SPEC-PROXY-002: the account price check ───
 
-    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-063, REQ-PROXY-066, REQ-PROXY-026, INV-004, INV-072
+    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-063, REQ-PROXY-066, REQ-PROXY-026, INV-004, INV-072, REQ-ADAPTER-017
     /// @notice A market that is not Live refuses every borrow and every withdrawal or removal with debt with the
     /// RiskModule's `PriceNotLive(market, state)`; repay and the debt-free exits pass in the same state.
     function test_TEST_019_priceNotLive() public {
@@ -271,7 +271,7 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
 
     // ─── Aave reserve states ───
 
-    // TEST-155 verifies: REQ-PROXY-079, REQ-PROXY-080, REQ-ADAPTER-049, INV-060, ATTACK-112
+    // TEST-155 verifies: REQ-PROXY-079, REQ-PROXY-080, REQ-ADAPTER-049, INV-060, ATTACK-112, REQ-RISK-015, REQ-ADAPTER-017, REQ-RISK-032
     // Sources: 5.1 TEST-155, 2.6 two-reserve example (market B's reserve frozen)
     /// @notice The vault-token reserve frozen on Aave refuses every borrow with `ReserveFrozen(reserveId)`; a
     /// withdrawal with debt, repay and the debt-free exits still pass, since Aave still allows them.
@@ -312,7 +312,7 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
 
     // ─── Offboarding and breakers ───
 
-    // TEST-213 verifies: REQ-ADAPTER-049, REQ-ADAPTER-086, REQ-PROXY-020
+    // TEST-213 verifies: REQ-ADAPTER-049, REQ-ADAPTER-086, REQ-PROXY-020, REQ-RISK-034
     /// @notice An `Offboarding` market refuses new borrowing (`MarketOffboarding`) while a withdrawal with debt,
     /// repay and every exit continue.
     function test_TEST_213_offboardingRefusesBorrowOnly() public {
@@ -351,7 +351,7 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
         _exitsPass();
     }
 
-    // TEST-028 verifies: REQ-ADAPTER-094, REQ-RISK-065
+    // TEST-028 verifies: REQ-ADAPTER-094, REQ-RISK-065, REQ-RISK-015
     /// @notice A live pool-depth condition trips the market breaker the same way.
     function test_TEST_028_liveDepthBreaker() public {
         riskVault.setDepth(0, false);
@@ -420,7 +420,7 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
         _exitsPass();
     }
 
-    // TEST-028 verifies: REQ-PROXY-081, REQ-PROXY-019
+    // TEST-028 verifies: REQ-PROXY-081, REQ-PROXY-019, REQ-ADAPTER-039
     /// @notice An LPOracle `poke()` that reverts makes the borrow revert with its data and changes nothing.
     function test_TEST_028_pokeRevertPropagates() public {
         lpOracleA.setPokeReverts(true);

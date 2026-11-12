@@ -254,7 +254,7 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
         _matrix(0);
     }
 
-    // TEST-192 verifies: REQ-ADAPTER-045, REQ-ADAPTER-072, REQ-ADAPTER-083, REQ-ACCESS-073, REQ-ACCESS-079, REQ-ACCESS-080, INV-049
+    // TEST-192 verifies: REQ-ADAPTER-045, REQ-ADAPTER-072, REQ-ADAPTER-083, REQ-ACCESS-073, REQ-ACCESS-079, REQ-ACCESS-080, INV-049, REQ-MREG-002
     // Sources: 5.1 TEST-192 (Frozen column)
     /// @notice Under Frozen a pledge or re-credit by an account with no debt and every borrow revert
     /// `ApplicationFrozen`; indebted top-ups and re-credits (with no rescue required), every exit, withdraw and removal
@@ -263,7 +263,7 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
         _matrix(1);
     }
 
-    // TEST-192 verifies: REQ-ADAPTER-046, REQ-ADAPTER-073, REQ-ADAPTER-083, REQ-ADAPTER-088, REQ-ACCESS-079, REQ-ACCESS-080, REQ-ACCESS-162, INV-049
+    // TEST-192 verifies: REQ-ADAPTER-046, REQ-ADAPTER-073, REQ-ADAPTER-083, REQ-ADAPTER-088, REQ-ACCESS-079, REQ-ACCESS-080, REQ-ACCESS-162, INV-049, REQ-MREG-002
     // Sources: 5.1 TEST-192 (Paused(General) column), TEST-235
     /// @notice Under `Paused(General)` every pledge and re-credit is passed on as a rescue top-up (refused here as not
     /// one), borrow and the with-debt exits revert `ApplicationPaused`, and repay, the debt-free exits,
@@ -273,7 +273,7 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
         _matrix(2);
     }
 
-    // TEST-192 verifies: REQ-ADAPTER-046, REQ-ADAPTER-073, REQ-ADAPTER-083, REQ-ACCESS-164, REQ-ACCESS-079, REQ-ACCESS-080, INV-049
+    // TEST-192 verifies: REQ-ADAPTER-046, REQ-ADAPTER-073, REQ-ADAPTER-083, REQ-ACCESS-164, REQ-ACCESS-079, REQ-ACCESS-080, INV-049, REQ-MREG-002
     // Sources: 5.1 TEST-192 (Paused(MintPathSuspect) column)
     /// @notice Under `Paused(MintPathSuspect)` every pledge, top-up and re-credit, borrow, the with-debt exits and repay
     /// with collateral revert `ApplicationPaused`; repay, the debt-free exits, `repayAllAndWithdraw`, fee collection,
@@ -282,7 +282,7 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
         _matrix(3);
     }
 
-    // TEST-235 verifies: REQ-ADAPTER-083, REQ-ADAPTER-046, REQ-ACCESS-074, REQ-ACCESS-162
+    // TEST-235 verifies: REQ-ADAPTER-083, REQ-ADAPTER-046, REQ-ACCESS-074, REQ-ACCESS-162, REQ-MREG-002
     /// @notice A rescue top-up the RiskModule admits passes `Paused(General)` and is refused once the reason moves to
     /// `MintPathSuspect`.
     function test_TEST_235_rescueTopUpGeneralNotMintPath() public {
@@ -308,7 +308,7 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
             || a == Action.Liquidation;
     }
 
-    // TEST-193 verifies: REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-068, REQ-ACCESS-148, INV-067, ATTACK-035
+    // TEST-193 verifies: REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-068, REQ-ACCESS-148, INV-067, ATTACK-035, REQ-MREG-002
     // Sources: 5.1 TEST-193 (Adapter side), TEST-162
     /// @notice In each of the four states, with a MarketRegistry and a RiskModule that revert on every call, every exit
     /// still passes: none of them reads the pause state, the registry or a RiskModule gate.

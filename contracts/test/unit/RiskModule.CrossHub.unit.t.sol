@@ -27,7 +27,7 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
         registry.setCrossHubLinesEnabled(on);
     }
 
-    // TEST-273 verifies: REQ-RISK-082, SPEC-CAP-010
+    // TEST-273 verifies: REQ-RISK-082, SPEC-CAP-010, REQ-RISK-085
     function test_TEST_273_crossHubBorrowNeedsLinesEnabled() public {
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);
         _setLinesEnabled(false);
@@ -41,7 +41,7 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);
     }
 
-    // TEST-273 verifies: REQ-RISK-082, SPEC-CAP-010
+    // TEST-273 verifies: REQ-RISK-082, SPEC-CAP-010, REQ-RISK-085
     function test_TEST_273_drawCapSumAboveLine() public {
         assertEq(registry.crossHubLinesEnabled(), true);
         (uint256 line, uint256 sum) = registry.creditLine(address(hub2), address(tDai));
@@ -161,7 +161,7 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 
-    // TEST-273 verifies: REQ-RISK-082, REQ-RISK-056
+    // TEST-273 verifies: REQ-RISK-082, REQ-RISK-056, REQ-ADAPTER-039
     function test_TEST_273_coverageReadRevertPropagates() public {
         vm.mockCallRevert(address(_daiCoverage()), abi.encodeWithSignature("fundedBalance()"), "coverage");
         vm.expectRevert("coverage");

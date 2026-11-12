@@ -15,7 +15,7 @@ contract LPOracleStatesUnitTest is LPOracleFixture {
         _deployMarket();
     }
 
-    // TEST-040 verifies: REQ-ORACLE-005, REQ-ORACLE-006, REQ-ORACLE-007, REQ-ORACLE-019, REQ-ORACLE-067, Q-079, Q-130
+    // TEST-040 verifies: REQ-ORACLE-005, REQ-ORACLE-006, REQ-ORACLE-007, REQ-ORACLE-019, REQ-ORACLE-067, Q-079, Q-130, REQ-ORACLE-079
     // Sources: 5.1 TEST-040, SIM-02C
     function test_TEST_040_failoverKeepsLive() public {
         vm.warp(T0 + MAX_AGE + 1);

@@ -119,7 +119,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         assertEq(riskModule.RESCUE_MIN_PLEDGE_USD(), 10e8);
     }
 
-    // TEST-035 verifies: REQ-RISK-003, REQ-RISK-039, REQ-RISK-054, REQ-ACCESS-035, REQ-ACCESS-022, REQ-ACCESS-113
+    // TEST-035 verifies: REQ-RISK-003, REQ-RISK-039, REQ-RISK-054, REQ-ACCESS-035, REQ-ACCESS-022, REQ-ACCESS-113, REQ-RISK-035, REQ-RISK-037
     function test_TEST_035_noFundsNoPauseNoSetter() public {
         (bool ok,) = address(riskModule).call{value: 1}("");
         assertFalse(ok);

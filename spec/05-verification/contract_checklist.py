@@ -103,24 +103,13 @@ PAGE_REQ = re.compile(r"^(?:REQ|SPEC)-")
 # of them (the test drives that contract), and a page REQ/SPEC row in which every contract named by its deciding
 # part is one of them (see deferred_to). Such a row returns to scope when the contract lands; --check fails once
 # a listed contract has a `contract <Name>` definition in contracts/src, so this tuple cannot go stale.
-PENDING = ("AaveAdapter", "LPVaultSwap", "Lens")
+PENDING: tuple[str, ...] = ("Lens",)
 MODAL = re.compile(r"\b(?:MUST|MAY|SHALL)\b")
 
 # Rows inside a "page.md#Heading" section that the section's library or adapter does not decide: ID -> (the contract
 # whose checklist keeps the row, the reason). Shown as owned there and left out of every other contract's --check;
 # --check fails if the owner's own pages do not define the row, so no row drops off every checklist.
-OWNED_ELSEWHERE: dict[str, tuple[str, str]] = {
-    "SPEC-LIQ-006": ("LPVaultSwap", "R is LPVaultSwap's balance delta around the burn, the release and the route "
-                     "calls; SettlementMath takes R as an input"),
-    "SPEC-LIQ-012": ("LPVaultSwap", "which prices value the released tokens (LPOracle's leg prices, never pool spot) "
-                     "is LPVaultSwap's read; SettlementMath values the prices it is given"),
-    "SPEC-LIQ-013": ("LPVaultSwap", "the NoRouteAvailable revert when both routes of a token are unusable is "
-                     "LPVaultSwap's route loop"),
-    "SPEC-LIQ-021": ("LPVaultSwap", "the drain-time bound is a listing check (listCollateralMarket, marketUsdCap "
-                     "raises) and the spec-stage throughput model; no SettlementMath function computes it"),
-    "REQ-FLASH-008": ("LPVaultSwap", "drawCap sizing at enableDebtReserve and its monitoring alert are listing-payload "
-                      "and operations rules; AaveV3FlashSource only reports maxFlashLoan"),
-}
+OWNED_ELSEWHERE: dict[str, tuple[str, str]] = {}
 
 # Rows of a shared page (a role table, a restricted-function matrix, or a list item that names written contracts only
 # as context) whose rule only a PENDING contract can satisfy, which deferred_to cannot see because it never reads
@@ -128,36 +117,7 @@ OWNED_ELSEWHERE: dict[str, tuple[str, str]] = {
 # ID -> (the pending contracts, comma-separated, and the reason). Deferred exactly like deferred_to's rows, on every
 # checklist that lists the row; --check fails on an entry naming a contract that is not pending, so each row returns
 # to scope when its contract lands and the entry cannot go stale.
-DEFERRED_ROWS: dict[str, tuple[str, str]] = {
-    "REQ-ACCESS-011": ("LPVaultSwap", "the committed-operator registry (addKeeper, removeKeeper, activeKeeperCount) "
-                       "is LPVaultSwap's keeper list"),
-    "REQ-ACCESS-052": ("LPVaultSwap", "liquidate and settlePending and their frozen-caller check are LPVaultSwap "
-                       "entry points"),
-    "REQ-ACCESS-139": ("LPVaultSwap", "the absence of a second liquidation selector is a property of LPVaultSwap"),
-    "REQ-ACCESS-053": ("LPVaultSwap", "addKeeper's role guard and its frozen-address and MAX_KEEPERS reverts; the "
-                       "timelock half (normal delay, DAO-only cancel) is tested in AvanaTimelock.Matrix"),
-    "REQ-ACCESS-054": ("LPVaultSwap", "removeKeeper's role guard and KeeperFloor revert; the timelock half (short "
-                       "delay, any canceller) is tested in AvanaTimelock.Matrix"),
-    "REQ-ACCESS-092": ("LPVaultSwap", "what a registered operator can do is LPVaultSwap.liquidate's caller rule"),
-    "REQ-ACCESS-100": ("LPVaultSwap", "activeKeeperCount() >= keeperFloor after every removal is LPVaultSwap's check"),
-    "SPEC-GOV-008": ("LPVaultSwap", "the keeper-floor arithmetic of removeKeeper and addKeeper"),
-    "REQ-ACCESS-121": ("LPVaultSwap", "the KeeperFloor revert of removeKeeper"),
-    "REQ-ACCESS-178": ("LPVaultSwap", "how a liquidation is funded is LPVaultSwap.liquidate's rule"),
-    "REQ-ACCESS-068": ("AaveAdapter, LPVaultSwap", "repay, fee collection, debt-free exits, zero-credit release, "
-                       "liquidation, settlePending and burnSeized are AaveAdapter and LPVaultSwap entry points"),
-    "REQ-ACCESS-069": ("AaveAdapter", "the pause, freeze and RiskModule gating of pledge, recredit, borrow and the "
-                       "with-debt exits is done by the AaveAdapter"),
-    "REQ-ACCESS-072": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
-    "REQ-ACCESS-073": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
-    "REQ-ACCESS-074": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
-    "REQ-ACCESS-164": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
-    "REQ-ACCESS-079": ("AaveAdapter", "the pledge stops that replace the pledge pause are the AaveAdapter's reads"),
-    "REQ-ACCESS-080": ("AaveAdapter", "the borrow stops that replace the borrow pause are the AaveAdapter's reads"),
-    "TEST-119": ("LPVaultSwap", "a failing GSM leg sending the liquidation to the next route, and no liquidation of "
-                 "another debt asset or on Base calling a GSM, are LPVaultSwap's route loop on the Ethereum fork; the "
-                 "PegModule route's own GSM checks (seized, frozen, cap 0, capacity) are TEST-054 in "
-                 "PegModuleRoute.unit.t.sol"),
-}
+DEFERRED_ROWS: dict[str, tuple[str, str]] = {}
 
 # Rows that state a property of a deployed chain (release manifest, Safe owners and thresholds, Aave-side roles, the
 # launch listing's routes measured on a fork), of a contract that does not exist, or a sizing rule the Aave DAO and
@@ -191,6 +151,24 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-120": "measures the launch listing's routes on both forks at the pinned blocks (RPC_MAINNET, RPC_BASE): "
                 "which pools, thresholds and stress sizes the listing payload sets; the route rules it relies on "
                 "(own pool refused, token class, primary and backup per debt asset) are TEST-054 locally",
+    "REQ-ORACLE-052": "an off-chain listing rule: which Chainlink proxy is each token's primary and that no alternate "
+                      "route assumes a peg are reviewed in the listing package (3.8); checkConfig's on-chain route "
+                      "rules are REQ-ORACLE-046 to REQ-ORACLE-051 (TEST-219)",
+    "REQ-ORACLE-057": "an off-chain listing rule: the (1 - CF) margin study, the per-pool manipulation-cost study and "
+                      "each second source's stress history are evidence in the listing package (3.8)",
+    "REQ-RISK-046": "cap and reserve sizing is the Aave DAO's and its risk service providers' off-chain decision with "
+                    "no on-chain enforcement (Q-249); the spec-stage models of SPEC-CAP-007 check the formula",
+    "SPEC-CAP-007": "cap sizing guidance for the Aave DAO and its risk service providers; Avana enforces none of it "
+                    "on-chain (Q-249); MATH-AR-29/30/31/43/44 and SIM-02B/08A check the formula",
+    "REQ-AMM-CORE-015": "a listing measurement: the worst-case seizure gas of a market is measured on a fork of its "
+                        "chain at listing; the local bound G(16) <= 5.15M is TEST-123 (LPVaultSwap.Liquidation.gas)",
+    "SPEC-AMM-SLIP-002": "Slipstream's own fee split on Base, which no Avana contract computes; the custodied position "
+                         "is paid whatever the NPM's collect returns (TEST-017); comparing tokensOwed growth with the "
+                         "formula is a Base fork measurement",
+    "TEST-117": "measures the deployed Chainlink feeds on both forks at the pinned blocks (decimals, min/max answers, "
+                "heartbeats of the launch feeds); the rules it relies on are local tests: same round never refreshes "
+                "(TEST-040), per-feed borrowPriceMaxAge (TEST-028, TEST-201), disjoint backup routes and normalised "
+                "minimum >= 1 (TEST-219), fixed GHO source (TEST-201)",
 }
 
 

@@ -41,14 +41,14 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         riskModule.preWithdrawCheck(address(proxy));
     }
 
-    // TEST-278 verifies: REQ-RISK-077, REQ-RISK-083
+    // TEST-278 verifies: REQ-RISK-077, REQ-RISK-083, REQ-RISK-008
     function test_TEST_278_noMinimumDebt() public {
         rSpoke.setAccount(address(proxy), 0, 0, 0);
         rSpoke.setStatus(address(proxy), GHO_RESERVE, false, false);
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 
-    // TEST-163 verifies: REQ-RISK-056, REQ-ORACLE-096, INV-004
+    // TEST-163 verifies: REQ-RISK-056, REQ-ORACLE-096, INV-004, REQ-ADAPTER-039
     function test_TEST_163_pokeRevertPropagates() public {
         oracle.setPokeReverts(true);
         vm.expectRevert(bytes("poke"));
@@ -165,7 +165,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         riskModule.preWithdrawCheck(address(proxy));
     }
 
-    // TEST-155 verifies: REQ-ADAPTER-019, REQ-ADAPTER-025, REQ-ADAPTER-056, REQ-PROXY-079, INV-060, REQ-ACCESS-036
+    // TEST-155 verifies: REQ-ADAPTER-019, REQ-ADAPTER-025, REQ-ADAPTER-056, REQ-PROXY-079, INV-060, REQ-ACCESS-036, REQ-RISK-032, REQ-RISK-034
     function test_TEST_155_frozenAndOffboardingBlockBorrowOnly() public {
         IAaveV4Spoke.ReserveConfig memory v;
         v.frozen = true;

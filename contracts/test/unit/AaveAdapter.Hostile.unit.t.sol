@@ -145,7 +145,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
 
     // ─── Exit inside the delay ───
 
-    // TEST-195 verifies: REQ-ADAPTER-042, REQ-ADAPTER-003, REQ-ADAPTER-047, REQ-ACCESS-148, REQ-PROXY-035, INV-045, ATTACK-122
+    // TEST-195 verifies: REQ-ADAPTER-042, REQ-ADAPTER-003, REQ-ADAPTER-047, REQ-ACCESS-148, REQ-PROXY-035, INV-045, ATTACK-122, REQ-ACCESS-083
     // Sources: 5.1 TEST-195, Q-228
     /// @notice The governance multisig schedules an upgrade to a hostile implementation at the normal delay; the
     /// Emergency Guardian pauses the Hub at once; the borrower repays both reserves and withdraws all three positions
@@ -187,7 +187,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         assertEq(lpVault.ownerOf(kA1), alice, "position stays with alice");
     }
 
-    // TEST-210 verifies: REQ-ADAPTER-003, REQ-ADAPTER-042, REQ-ACCESS-148
+    // TEST-210 verifies: REQ-ADAPTER-003, REQ-ADAPTER-042, REQ-ACCESS-148, REQ-ACCESS-083
     // Sources: 5.1 TEST-210
     /// @notice Every canceller of the Adapter upgrade (the two proposers and the two guardians) can cancel it inside
     /// the delay, and nobody can execute it early.
@@ -209,7 +209,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
 
     // ─── What a hostile implementation can and cannot do ───
 
-    // TEST-130 verifies: REQ-ADAPTER-040, REQ-ADAPTER-041, REQ-PROXY-086, INV-018, ATTACK-122, ATTACK-032
+    // TEST-130 verifies: REQ-ADAPTER-040, REQ-ADAPTER-041, REQ-PROXY-086, INV-018, ATTACK-122, ATTACK-032, REQ-ACCESS-083
     // Sources: 5.1 TEST-130, TEST-210
     /// @notice Once executed, the hostile Adapter can make a proxy borrow to the attacker, but only within Aave's own
     /// health factor and the Spoke's draw cap.
@@ -226,7 +226,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         assertLe(IAaveV4Hub(aave.hub).getSpokeTotalOwed(ghoAssetId, aave.cdpSpoke), cap, "within drawCap");
     }
 
-    // TEST-130 verifies: REQ-ADAPTER-040, REQ-ADAPTER-005, REQ-VTOKEN-007, INV-009, INV-012, ATTACK-124
+    // TEST-130 verifies: REQ-ADAPTER-040, REQ-ADAPTER-005, REQ-VTOKEN-007, INV-009, INV-012, ATTACK-124, REQ-ACCESS-083
     /// @notice It can mint to a registered proxy, register any non-reserved address, burn any holder's units and
     /// withdraw supplied units into a proxy; it cannot register a Hub, mint to an unregistered address, or supply
     /// beyond the Hub's add cap.
@@ -250,7 +250,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         h.supplyUnits(pA, aave.cdpSpoke, vt, vtReserveId, overCap);
     }
 
-    // TEST-130 verifies: REQ-ADAPTER-041, INV-007, ATTACK-122, ATTACK-022
+    // TEST-130 verifies: REQ-ADAPTER-041, INV-007, ATTACK-122, ATTACK-022, REQ-ACCESS-083
     /// @notice It cannot send a position to anyone but its depositor: Collateralization releases only to the
     /// depositor of record, the LPVault refuses a direct call, and fee collection pays only the depositor.
     function test_TEST_130_positionsOnlyToDepositor() public {
@@ -274,7 +274,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         assertEq(usdc.balanceOf(attacker), 0, "no fees to the attacker");
     }
 
-    // TEST-130 verifies: REQ-ADAPTER-041, REQ-PROXY-086, REQ-PROXY-091, INV-016, INV-065, ATTACK-172
+    // TEST-130 verifies: REQ-ADAPTER-041, REQ-PROXY-086, REQ-PROXY-091, INV-016, INV-065, ATTACK-172, REQ-ACCESS-083
     /// @notice It cannot change a Spoke setting, a proxy's binding or code, or deploy a second proxy for a bound
     /// triple; an approval it makes a proxy grant is inert until the Aave DAO activates that manager.
     function test_TEST_130_noSpokeSettingNoRebinding() public {
@@ -307,7 +307,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
 
     // ─── Hostile RiskModule ───
 
-    // TEST-132 verifies: REQ-PROXY-026, REQ-ADAPTER-008, REQ-ADAPTER-040, ATTACK-034, INV-025
+    // TEST-132 verifies: REQ-PROXY-026, REQ-ADAPTER-008, REQ-ADAPTER-040, ATTACK-034, INV-025, REQ-RISK-007
     // Sources: 5.1 TEST-132, TEST-156
     /// @notice A RiskModule that approves everything lets a borrow ignore the caller's minimum, but Aave still refuses
     /// a health factor below 1, the draw cap holds, and the Adapter still enforces the nonce, the deadline, the receiver
@@ -338,7 +338,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, attacker, d, 0, 0);
     }
 
-    // TEST-156 verifies: REQ-PROXY-026, REQ-ADAPTER-008
+    // TEST-156 verifies: REQ-PROXY-026, REQ-ADAPTER-008, SPEC-CF-003, REQ-RISK-007
     // Sources: 5.1 TEST-156 (approve-all scope; the frozen-reserve and Drifting refusals are the reviewed RiskModule's,
     // TEST-155 and TEST-028)
     /// @notice With an approve-all RiskModule the Adapter adds no gate of its own beyond its call bounds: a borrow up
@@ -354,7 +354,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         adapterC.borrow(MARKET_ID, debtReserveId, 5000e18, alice, d, 0, n);
     }
 
-    // TEST-132 verifies: REQ-PROXY-026, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-068, REQ-RISK-040, REQ-RISK-053, ATTACK-035, INV-043, INV-044, INV-045
+    // TEST-132 verifies: REQ-PROXY-026, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-068, REQ-RISK-040, REQ-RISK-053, ATTACK-035, INV-043, INV-044, INV-045, REQ-RISK-007
     // Sources: 5.1 TEST-132
     /// @notice A RiskModule that reverts everything blocks borrowing, withdraw-with-debt and removal with debt only;
     /// repay, fee collection, debt-free withdrawal (after the repay), zero-credit release and liquidation never call

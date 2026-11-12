@@ -32,7 +32,7 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         rSpoke.setUserKey(address(proxy), VT_RESERVE, 9);
     }
 
-    // TEST-236 verifies: REQ-RISK-068, REQ-ADAPTER-026, SPEC-CF-005, INV-082
+    // TEST-236 verifies: REQ-RISK-068, REQ-ADAPTER-026, SPEC-CF-005, INV-082, SPEC-CF-003
     // Sources: 2.7 SPEC-CF-005 example and 5.1 TEST-236 (HF 1.2000, debt $10,000, rescue $1,000 at CF 0.312)
     function test_TEST_236_rescueUnitsExcluded() public {
         _rescueAccount(1.2e18);
@@ -52,7 +52,7 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         riskModule.postHealthCheck(address(proxy), 0);
     }
 
-    // TEST-236 verifies: REQ-RISK-059, REQ-ADAPTER-027, INV-025
+    // TEST-236 verifies: REQ-RISK-059, REQ-ADAPTER-027, INV-025, SPEC-CF-003
     function test_TEST_236_noRescueUnitsIsAaveHealthFactor() public {
         _debt(1.05e18, 10_000);
         assertEq(riskModule.postHealthCheck(address(proxy), 1.05e18), 1.05e18);
@@ -101,7 +101,7 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         assertEq(riskModule.usdToRestore(address(proxy)), 0);
     }
 
-    // TEST-034 verifies: REQ-RISK-031, REQ-RISK-010, REQ-RISK-057
+    // TEST-034 verifies: REQ-RISK-031, REQ-RISK-010, REQ-RISK-057, REQ-RISK-008, REQ-RISK-012, REQ-RISK-027
     function test_TEST_034_previewPledge() public {
         bytes32 key = bytes32(uint256(7));
         rVault.setPosition(key, wallet, 10_000e18);

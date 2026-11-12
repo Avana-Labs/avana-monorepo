@@ -129,7 +129,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         assertEq(_shares(bobProxy), coll.getAccountCredited(bobProxy, vt), "supply = credited");
     }
 
-    // TEST-171 verifies: REQ-COLL-002, REQ-COLL-003, REQ-VAULT-014, REQ-VAULT-102, INV-017, ATTACK-005, ATTACK-033, Q-126, Q-224, Q-240
+    // TEST-171 verifies: REQ-COLL-002, REQ-COLL-003, REQ-VAULT-014, REQ-VAULT-102, INV-017, ATTACK-005, ATTACK-033, Q-126, Q-224, Q-240, REQ-RISK-058
     // Sources: 5.1 TEST-171
     /// @notice The pledge pokes the vault token's own LPOracle and passes the vault token's own market ID and
     /// integration to `checkPledge`; no registry is read.

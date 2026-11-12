@@ -209,7 +209,7 @@ contract RiskModuleBoundariesUnitTest is RiskModuleFixture {
     // Health floor (REQ-RISK-059, REQ-RISK-068)
     // -----------------------------------------------------------------------------------------------------------------
 
-    // TEST-236 verifies: REQ-RISK-059, REQ-ADAPTER-027, SPEC-CF-005
+    // TEST-236 verifies: REQ-RISK-059, REQ-ADAPTER-027, SPEC-CF-005, SPEC-CF-003
     function test_TEST_236_healthFloorBoundary() public {
         // Required level max(1.00, hardHealthFloor, minHealthFactor): equal passes, one wei below reverts.
         _debt(1.25e18, 1000);
@@ -229,7 +229,7 @@ contract RiskModuleBoundariesUnitTest is RiskModuleFixture {
         riskModule.postHealthCheck(address(proxy), 0.9e18);
     }
 
-    // TEST-236 verifies: REQ-RISK-059, SPEC-CF-005
+    // TEST-236 verifies: REQ-RISK-059, SPEC-CF-005, SPEC-CF-003
     function testFuzz_TEST_236_healthFloor(
         uint96 hf,
         uint96 hardFloor,

@@ -31,7 +31,7 @@ contract CollateralizationRescueUnitTest is CollateralizationFixture {
         return coll.getRecord(id).rescueUnits;
     }
 
-    // TEST-236 verifies: REQ-COLL-016, SPEC-BACK-014, SPEC-BACK-004, SPEC-BACK-006, INV-082
+    // TEST-236 verifies: REQ-COLL-016, SPEC-BACK-014, SPEC-BACK-004, SPEC-BACK-006, INV-082, SPEC-CAP-004
     // Sources: 2.3 SPEC-BACK-014 (rescueUnits never above credited; capped by every debit), SPEC-BACK-004
     /// @notice K1 (1e9 units, $500 of its $2,000 charge in the slice) books `ceil(1e9 x 5e10 / 2e11) = 2.5e8` rescue
     /// units; K2 (2e9, a rescue pledge) books all 2e9. A seizure that empties K2 and takes part of K1 drops K2's rescue

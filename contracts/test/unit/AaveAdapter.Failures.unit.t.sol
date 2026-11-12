@@ -81,7 +81,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         adapterC.pledge(MARKET_ID, _ref(key), d);
     }
 
-    // TEST-186 verifies: REQ-ADAPTER-068, REQ-PROXY-072, SPEC-PROXY-008
+    // TEST-186 verifies: REQ-ADAPTER-068, REQ-PROXY-072, SPEC-PROXY-008, REQ-VAULT-111
     /// @notice A supply that does not raise the proxy's supplied shares by exactly the credited units reverts
     /// `SupplyIncomplete`.
     function test_TEST_186_sharesNotRaisedReverts() public {

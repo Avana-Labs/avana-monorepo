@@ -25,7 +25,7 @@ contract CollateralizationFuzzTest is Test {
         h = new CollateralizationLedgerHarness(ADAPTER, SWAP, address(lock));
     }
 
-    // TEST-014 verifies: SPEC-BACK-005, SPEC-BACK-013, REQ-VAULT-036, INV-027, ATTACK-012, Q-174
+    // TEST-014 verifies: SPEC-BACK-005, SPEC-BACK-013, REQ-VAULT-036, INV-027, ATTACK-012, Q-174, SPEC-CAP-004
     // Sources: 5.1 TEST-014, PROP-028 fuzz twin, MATH-UO-25, MATH-UO-26
     /// @notice `ceil(V0 * remaining / U0)` is the same however exits are split, never rises as units leave, never
     /// exceeds `V0`, and is 0 exactly when nothing remains.
@@ -121,7 +121,7 @@ contract CollateralizationFuzzTest is Test {
         if (l.length > 0 && emptied < before.length) assertEq(l[0], before[emptied], "partial record at the head");
     }
 
-    // TEST-097 verifies: INV-027, REQ-VAULT-036, REQ-VAULT-037, REQ-VAULT-038, SPEC-BACK-005
+    // TEST-097 verifies: INV-027, REQ-VAULT-036, REQ-VAULT-037, REQ-VAULT-038, SPEC-BACK-005, SPEC-CAP-004
     // Sources: 5.1 TEST-097 (ledger side)
     /// @notice After any debit the market buckets equal the sum of the records' remaining charges, the token counter
     /// too, and closing every record returns every counter to 0 without saturation.
