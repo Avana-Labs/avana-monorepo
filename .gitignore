@@ -51,7 +51,7 @@ spec/05-verification/tools/
 tools/heimdall/bin/
 
 # Folders outside this repository's tracked tree
-apps/
+web/
 deployments/
 # Only packages/protocol (the ABIs the services import) is tracked under packages/.
 packages/*
