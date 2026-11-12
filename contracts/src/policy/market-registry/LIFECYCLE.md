@@ -4,6 +4,42 @@ Function links point to the interface that declares each function.
 
 The MarketRegistry is the chain's directory and safety switchboard: it records Hubs, CDP Spokes, debt reserves, tokens, markets and swap routes through timelock operations, and holds each Hub's pause state, the address freeze and the breaker latches that stop new activity.
 
+```mermaid
+stateDiagram-v2
+  [*] --> Registered: listCollateralMarket(def)
+  Registered --> Active: activateMarket(marketId), short delay
+  Registered --> Cancelled: cancelRegistration(marketId)
+  Cancelled --> Registered: listCollateralMarket(def), relisting
+  Active --> Offboarding: setMarketOffboarding(marketId), short delay
+  Offboarding --> Offboarding: stepWindDown(marketId) by anyone, 30-day ramp
+  Offboarding --> Closed: closeMarket(marketId) after the notice, no indebted account
+  Closed --> [*]
+```
+
+```mermaid
+stateDiagram-v2
+  state "Paused, General" as General
+  state "Paused, MintPathSuspect" as MintPathSuspect
+  [*] --> None
+  None --> Frozen: freeze(hub)
+  Frozen --> None: unfreeze(hub)
+  None --> General: pause(hub, General)
+  Frozen --> General: pause(hub, General)
+  None --> MintPathSuspect: pause(hub, MintPathSuspect)
+  Frozen --> MintPathSuspect: pause(hub, MintPathSuspect)
+  General --> MintPathSuspect: pause(hub, MintPathSuspect)
+  MintPathSuspect --> General: pause(hub, General)
+  General --> None: unpause(hub)
+  MintPathSuspect --> None: unpause(hub)
+  note right of None
+    freeze and pause by the Emergency Guardian at once
+    or the timelock at the short delay, unfreeze and unpause
+    by the pause guardian or the timelock at the normal delay.
+    Repay, debt-free withdrawal, fee collection and
+    liquidation never read this state.
+  end note
+```
+
 ## Walkthrough
 
 Setup (Ethereum market 1: Uniswap v3 USDC/USDT 0.01%, exact range, on the "Uniswap v3 Stable" CDP Spoke `S` of the Stable LP Hub). Normal delay 5 days, short delay 12 hours.

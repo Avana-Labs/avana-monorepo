@@ -12,6 +12,38 @@ The Adapter applies the call bounds (deadline, nonce, receiver, debt-reserve app
 
 Adapter behavior belongs to [2.6 Aave Adapter][2.6]; the gates to [2.7 Risk Module][2.7]; the proxy to [2.5 Position Proxy and Proxy Manager][2.5]; the cap budgets to [2.3 Collateralization][2.3]; the pause state, debt-reserve records and credit-line registry to [2.8 Market Registry][2.8]; parameter values to [2.9 Parameter Store][2.9]; price state to [2.10 LP Oracle][2.10]; the lock to [2.16 Lock][2.16]; Aave behavior to [2.1 Avana Hub and Spokes][2.1]. Parameters are named as in [1.5][1.5].
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor W as Wallet
+  participant AD as AaveAdapter
+  participant MR as MarketRegistry
+  participant RM as RiskModule
+  participant O as LPOracle
+  participant P as PositionProxy
+  participant S as CDP Spoke
+  participant A as Debt asset
+  W->>AD: borrow(marketId, debtReserveId, amount, receiver, deadline, minHealthFactor, expectedNonce)
+  Note right of AD: Lock.acquire(), deadline, amount above 0
+  AD->>MR: pauseState(homeHub)
+  Note right of AD: only None borrows
+  AD->>MR: isFrozenAddress(W), isFrozenAddress(receiver)
+  AD->>MR: isApprovedDebtReserve(spoke, debtReserveId)
+  Note right of AD: receiver rule, funding Hub, nonce consumed
+  AD->>RM: preBorrowCheck(P, debtReserveId, amount)
+  RM->>O: poke()
+  Note right of RM: sequencer gate, scope, prices, Aave flags, drift,<br/>liquidation halts, breakers, cross-Hub line<br/>DebtOracle.poke() for each non-fixed debt reserve
+  AD->>P: execute(S, borrow(debtReserveId, amount, P))
+  P->>S: borrow(debtReserveId, amount, P)
+  S-->>P: amount of the debt asset
+  AD->>P: execute(A, transfer(receiver, drawn))
+  P->>A: transfer(receiver, drawn)
+  AD->>RM: postHealthCheck(P, minHealthFactor)
+  RM->>S: getUserAccountData(P)
+  Note right of RM: hfEx ≥ max(1, minHealthFactor, hardHealthFloor)
+  Note right of AD: Borrowed event, Lock.release()
+```
+
 ## Objective
 
 Draw exactly `amount` of the chosen debt asset against the account's collateral in one market and deliver it to the receiver the wallet signed, leaving the account's rescue-excluded health factor `hfEx` at or above `max(1, minHealthFactor, hardHealthFloor(m))`, where `minHealthFactor` is the wallet's own bound and `hardHealthFloor(m)` the market's optional hard floor, 0 (off) by default (`Q-398`), and the draw inside the credit line of the reserve's funding Hub (`Q-018`, `Q-075`, `Q-105`, `Q-229`, `Q-233`, `Q-253`, `Q-398`).

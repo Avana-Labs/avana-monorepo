@@ -2,6 +2,29 @@
 
 The LPOracle is one market's Aave price source: it serves the USD value of one whole vault token with 8 decimals from the composition of the position at Chainlink prices, keeps a cached price through short outages, and tells Avana's contracts whether the price is Live, Drifting, Cached or Expired.
 
+```mermaid
+stateDiagram-v2
+  [*] --> Live: initialize seeds the accepted price
+  Live --> Drifting: a token's routes disagree, DisagreementRecorded
+  Drifting --> Live: the routes agree again or the standby route serves
+  Live --> Cached: a leg in use is stale, or the quote cap in the accepting block
+  Drifting --> Cached: a leg in use is stale
+  Cached --> Live: a fresh round is accepted
+  Cached --> Expired: cachedWindow (1 h) after staleAt
+  Expired --> Live: a fresh round is accepted, GraceStarted (30 min)
+  note right of Live
+    the only state that allows borrowing
+    and withdrawal with debt
+  end note
+  note right of Expired
+    latestAnswer() = 1, seizure refused
+  end note
+  note left of Cached
+    serves the accepted price, seizure refused,
+    repay and debt-free exits open in every state
+  end note
+```
+
 ## Walkthrough
 
 Setup (Ethereum market 1, Uniswap v3 USDC/USDT 0.01%, exact range; USDC/USD and USDT/USD heartbeats 86,400 s, so a leg is fresh for `86,400 + 1,800 = 88,200` s; `cachedWindow` 1 h, `disagreementPauseMax` 1 h, `graceDuration` 30 min, `graceHealthFactor` 0.95).

@@ -6,6 +6,35 @@
 
 A market is one (chain, AMM protocol, pool, exact position shape) = one vault token = one collateral reserve on one CDP Spoke, keyed `(chainId, spoke, reserveId)`; for concentrated liquidity (Uniswap v3, Aerodrome Slipstream) the shape is the exact `[tickLower, tickUpper]` range, and only positions with exactly that range are pledgeable. A CDP Spoke is one standard, unmodified Aave V4 Spoke per (chain, Hub, AMM protocol, risk tier), for example "Uniswap v3 Stable" on Ethereum and "Aerodrome Slipstream Stable" on Base, and lists several markets. The lifecycle runs from the three timelocked deployment operations (`deployCdpSpoke`, `listCollateralMarket`, `enableDebtReserve`, `MKT-055` to `MKT-057`) and their listing rules (eligibility per AMM protocol, decimals, feeds with each feed's own heartbeat and a second source, standby routes, issuer probes, swap routes into each debt asset, the Aave DAO payload with the standard-Spoke settings, and the activation match check), through parameter changes by delay class and the standard-Spoke drift check (`MKT-058`), to Aave-side freeze, offboarding and a wind-down that ends in `Closed` (`MKT-059` to `MKT-061`); a market never moves to another CDP Spoke. Debt reserves have a lifecycle of their own on the CDP Spoke (`MKT-044` to `MKT-046`, `MKT-057`), each recording its funding Hub, each non-GHO reserve priced by its own DebtOracle. Every operation runs on one chain through that chain's AvanaTimelock; Ethereum and Base differ in the values of `MKT-062`. Contract rules are in [2.4 Vault Tokens](../02-contracts/04-vault-tokens.md), [2.7 Risk Module](../02-contracts/07-risk-module.md), [2.8 Market Registry](../02-contracts/08-market-registry.md), [2.9 Parameter Store](../02-contracts/09-parameter-store.md), [2.10 LP Oracle](../02-contracts/10-lp-oracle.md), [2.15 Governance and Timelock](../02-contracts/15-governance-and-timelock.md) and the AMM integration interface page with its integration pages. Parameters are named as in [1.5](../01-architecture/05-parameters.md).
 
+```mermaid
+stateDiagram-v2
+  [*] --> Registered: listCollateralMarket(def), normal delay
+  Registered --> Active: activateMarket(marketId), short delay, match check
+  Registered --> Cancelled: cancelRegistration(marketId)
+  Active --> Frozen: Aave freeze of the vault-token reserve
+  Frozen --> Active: Aave DAO unfreezes the reserve
+  Active --> Offboarding: setMarketOffboarding(marketId)
+  Frozen --> Offboarding: setMarketOffboarding(marketId)
+  Offboarding --> Offboarding: stepWindDown(marketId), anyone, daily
+  Offboarding --> Closed: closeMarket(marketId), anyone
+  Cancelled --> [*]
+  Closed --> [*]
+  note right of Frozen
+    Derived, not stored. The registry status stays Active.
+    No pledges or borrowing. Repay, fees, withdrawal
+    and liquidation continue.
+  end note
+  note right of Offboarding
+    No pledges or borrowing. The liquidation threshold
+    ramps down after the notice. Repay, fees, withdrawal
+    and liquidation continue.
+  end note
+  note right of Closed
+    After the notice, once the market's total debt is 0.
+    Debt-free positions stay withdrawable.
+  end note
+```
+
 ## Objective
 
 Bring a pool and position shape into Avana only after it has passed every listing rule of its AMM protocol, a five-day public review enforced on-chain by the chain's AvanaTimelock, and a check that the Aave configuration, including the three standard-Spoke settings, matches what Avana expects; change its parameters only through the delay class each parameter belongs to; and take it out of service through a wind-down that ends, without any force-close power over a borrower who keeps a healthy position until the ramp.

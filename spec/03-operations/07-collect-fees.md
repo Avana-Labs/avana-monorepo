@@ -10,6 +10,25 @@ The call goes wallet → AaveAdapter → Collateralization → LPVault → posit
 
 Fee collection belongs to [2.2 LP Vault][2.2] and the AMM integration interface page (`collectFees` and `capabilities().feeMode`); the entry point to [2.6 Aave Adapter][2.6]; the record it relates to to [2.3 Collateralization][2.3]; the lock to [2.16 Lock][2.16].
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor W as Depositor of record
+  participant AD as AaveAdapter
+  participant CO as Collateralization
+  participant LV as LPVault
+  participant NFPM as Position manager
+  W->>AD: collectFees(marketId, (integrationId, positionKey), deadline)
+  Note right of AD: Lock.acquire(), deadline. No pause state, breaker,<br/>address freeze, price, sequencer gate, RiskModule or Aave read
+  AD->>CO: collectFees(W, VT, positionKey)
+  Note right of CO: open record of VT, W is its depositor
+  CO->>LV: collectFees(positionKey, W)
+  LV->>NFPM: collect(tokenId, recipient W, max, max)
+  NFPM-->>W: every amount owed to the position, pool to W
+  CO-->>AD: amounts per market token
+  Note right of AD: liquidity, credited units and vault-token supply unchanged<br/>Lock.release()
+```
+
 ## Objective
 
 Send all amounts owed to a pledged position, as an n-token array, from the pool to the depositor of record, at any time while the record exists. For v3 and Slipstream these are `tokensOwed` of each token after the position contract updates the position's fee growth: accrued fees, plus any principal already owed when the position was pledged (`Q-009`, `Q-030`, `Q-105`, `Q-218`).

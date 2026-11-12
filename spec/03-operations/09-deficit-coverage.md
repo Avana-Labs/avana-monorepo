@@ -8,6 +8,29 @@ A deficit is debt that Aave writes off an account when liquidation has exhausted
 
 At launch each chain (Ethereum and Base) has one Stable LP Hub, GHO is the first borrowable asset on each, and so each chain has one GHO Avana Umbrella (Coverage Spoke) on its Stable LP Hub. Each Coverage Spoke is also called Avana Umbrella: Avana's protocol safety module, named after Aave's Umbrella, whose design inspired it (`Q-402`). Every further debt asset enabled with `enableDebtReserve` gets its own Coverage Spoke on its funding Hub before its `drawCap` rises above 0. Cross-Hub credit lines are fully specified here (`DEF-020`) and off at launch.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant LS as LPVaultSwap
+  participant S as CDP Spoke
+  participant H as Funding Hub
+  actor C as COVERAGE_ROLE holder
+  participant CS as Coverage Spoke
+  actor AL as Avana Labs
+  LS->>S: liquidationCall(collateralReserveId, debtReserveId, proxy, Kf, false)
+  Note over S,H: the seizure empties the account's only collateral reserve while debt remains,<br/>so Aave records deficitRay against S on the funding Hub of each owed reserve
+  Note right of C: monitoring pages, coverage within deficitCoverageWindow (72 h)
+  C->>CS: coverDeficit(S, maxAmount)
+  Note right of CS: COVERAGE_ROLE and S allowlisted
+  CS->>H: getSpokeDeficitRay(ASSET_ID, S)
+  Note right of CS: amount = min(maxAmount, ⌈deficitRay / RAY⌉, fundedBalance())
+  CS->>H: eliminateDeficit(ASSET_ID, amount, S)
+  H-->>CS: shares burned, amount covered
+  Note right of CS: DeficitCovered, ReserveBelowMinimum when below the minimum
+  AL->>CS: fund(amount)
+  CS->>H: add(ASSET_ID, amount)
+```
+
 ## Objective
 
 Record bad debt exactly where Aave records it, cover it promptly and only from reserve capital Avana has funded in the same asset on the same funding Hub and chain (plus the value recovered from pending settlements of markets whose settlement debt reserve draws that asset from that Hub), only for approved Avana CDP Spokes and never beyond either the recorded deficit or the funded balance; bound every credit line by the coverage behind it, keep each reserve at its minimum, and state who bears a loss beyond the reserve and when (`Q-353`).

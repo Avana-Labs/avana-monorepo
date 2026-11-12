@@ -236,6 +236,44 @@ The concentrated-liquidity pricing module serves every Uniswap v3 market on Ethe
 
 ## Price states
 
+The state is computed on every read; each arrow is the condition that holds at that read.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Live
+  Live : borrow, pledge and seizure open
+  Live : borrow also needs borrowAllowed
+  Drifting : borrow and withdraw with debt blocked
+  Drifting : top-ups open, new pledges only on a USD band breach
+  Cached : borrow, pledge and seizure blocked
+  Cached : served at the last accepted price
+  Expired : borrow, pledge and seizure blocked
+  Expired : served at 1, worthless in the health factor
+  Live --> Drifting : routes disagree, USD band, consistency, clamp
+  Drifting --> Live : no Drifting condition left
+  Live --> Cached : market failed, or quote change capped in the block
+  Drifting --> Cached : market failed
+  Cached --> Expired : failureStart + cachedWindow reached
+  Cached --> Live : routes valid again
+  Expired --> Live : routes valid again, grace window starts
+  note right of Live
+    Second source disagrees or unavailable, or decimals unverified
+    keeps Live, sets borrowAllowed false and blocks borrowing.
+    Sequencer down blocks borrowing and seizure.
+    Sequencer grace blocks borrowing, seizure only below graceHealthFactor.
+  end note
+  note left of Drifting
+    Route disagreement pauses this market's seizure,
+    then blocks it after disagreementPauseMax
+    until the routes agree. Other Drifting reasons
+    leave seizure open while inputs are fresh.
+  end note
+  note right of Expired
+    Repay, fee collection and debt-free withdrawal
+    read no price and stay open in every state.
+  end note
+```
+
 - `REQ-ORACLE-016` LPOracle MUST report exactly one of four states with severity `Live (0) < Drifting (1) < Cached (2) < Expired (3)`, computed on every read from current feed and pool data plus the stored timers, with no hysteresis; the only stored state is the grace latch. `borrowAllowed`, the second-source result, the sequencer status and the age of the token-decimals verification are reported beside the state and never change it. (Source: Q-036, Q-056, Q-079, Q-119, Q-128, Q-129, Q-323, Q-324)
 - `REQ-ORACLE-017` The market MUST be failed when any token has no valid route; when the configuration read `getOracleInputs` fails (including a failed MarketRegistry route read inside it), is malformed or returns another market or no market, a route with no leg or more than two legs, or a leg with no aggregator or no feed definition; or when a pricing-module read reverts, returns malformed data or finds the pool's reentrancy lock held. A failed market is Cached while `now < failureStart + cachedWindow` and Expired from then on (`SPEC-ORC-013`); it serves the accepted price while Cached and 1 once Expired (`SPEC-ORC-017`). (Source: Q-056, Q-079, Q-119, Q-128, Q-130, Q-183, Q-240, Q-247, Q-248, Q-321)
 - `SPEC-ORC-013` **Failure start ("first failed read").** For a route that is `Stale`: `staleFrom_r = min over its Stale legs of (updatedAt + feedMaxAge) + 1`, the first second a read of it fails. For a token whose two routes are both `Stale`: `staleAt_i = max(staleFrom_primary, staleFrom_alternate)`. `S_ts = min over failed tokens with both routes Stale of staleAt_i` (undefined if none). `failureStart = min(S_ts, failedSince, now)`, ignoring undefined `S_ts` and `failedSince = 0`. Cached iff `now < failureStart + cachedWindow`, Expired otherwise; when the configuration read itself fails, the window is `lastCachedWindow`, the `cachedWindow` the last writing call (or `initialize`) read. Units: seconds, `uint64`. Rounding: none. Why: the Cached window must start when reads actually began to fail, not at the last round (feeds with long heartbeats would skip Cached) and not at the first poke after the failure (a late poke would extend it). Example: the primary USDC/USD leg (heartbeat 82,800, `feedMaxAge = 84,600`) updated at 1,000,000 is stale from 1,084,601; the alternate USDC/ETH × ETH/USD has its ETH/USD leg (heartbeat 3,600, `feedMaxAge = 5,400`) updated at 1,130,000, stale from 1,135,401; `staleAt = 1,135,401`; with `cachedWindow = 3,600` the market is Cached until 1,139,000 and Expired from 1,139,001, whenever `poke()` runs. Precision: Cached is measured from the first failed read observed since the last poke that saw the market not failed. When `S_ts` is undefined (a failure by `Invalid` or `Error`), the measured start differs from the true start by at most the keeper poke interval (`REQ-ORACLE-037`). A late reading can only report Expired earlier, never later: a `failedSince` left by an earlier failure whose recovery no poke observed is older than the new failure, and `failureStart` takes the minimum. Example: a poke at 1,000,000 records an `Error` (`failedSince = 1,000,000`); the feed recovers at 1,000,600 with no poke; a new failure starts at 1,004,000 and the poke at 1,004,100 computes `failureStart = 1,000,000`, so the market is Expired at once instead of Cached until 1,007,600. Checked by: SIM-02D (why the window starts at failure, not at the last round), SIM-02A, QNT-22, MATH-UO-44, SYM-131. (Source: Q-079, Q-154, Q-183, Q-322)

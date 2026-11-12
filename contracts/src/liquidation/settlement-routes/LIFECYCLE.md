@@ -2,6 +2,32 @@
 
 A swap route is an immutable contract that converts one pool token into one debt asset for LPVaultSwap, delivering at least the oracle-derived minimum LPVaultSwap passes, or reverting so LPVaultSwap can try the backup. Three contracts implement it: [`DexPathRoute`](DexPathRoute.sol) (type 1, one to three Uniswap v3, Slipstream, Curve StableSwap-NG or pinned legacy Curve hops), [`WrapperThenDexRoute`](WrapperThenDexRoute.sol) (type 2, an ERC-4626 redeem or the DAI/USDS converter, then hops) and [`PegModuleRoute`](PegModuleRoute.sol) (type 0, a GSM or the LitePSM). They share [`SwapRouteBase`](SwapRouteBase.sol) (checks, measured pull, residues, minimum) and [`DexHops`](DexHops.sol) (hops and callback).
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant TL as AvanaTimelock
+  participant MR as MarketRegistry
+  participant SW as LPVaultSwap
+  participant RT as Primary route
+  participant LK as Lock
+  participant PL as Hop pool
+  participant BK as Backup route
+  TL->>MR: setRoute(m, USDT, USDC, 0, route)
+  MR->>RT: tokenIn(), tokenOut(), LP_VAULT_SWAP(), supportsTokenClass(tier), dependencies()
+  Note over SW,BK: inside liquidate, settlePending or deleverage
+  SW->>RT: swap(amountIn, minOut)
+  RT->>LK: holder() is LPVaultSwap or the AaveAdapter
+  SW-->>RT: USDT pulled by transferFrom, measured
+  RT->>PL: swap(route, zeroForOne, amount, limit, data)
+  PL->>RT: uniswapV3SwapCallback(amount0Delta, amount1Delta, data)
+  RT-->>PL: USDT, at most the hop amount, once
+  RT-->>SW: USDC and any residue
+  Note right of SW: minOut checked on the<br/>balance rise of LPVaultSwap
+  alt the primary reverts, for example MinOutNotMet
+    SW->>BK: swap(amountIn, minOut) after RouteFailed
+  end
+```
+
 ## Walkthrough
 
 Setup (Ethereum market `m`, Uniswap v3 USDC/USDT, USDC debt, Bob's liquidation of 3.5 `LIQ-069`): the USDT→USDC primary route is a fixed-pool DEX hop; the backup avoids every peg module of the pair.

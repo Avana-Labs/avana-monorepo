@@ -2,6 +2,31 @@
 
 The chain's IFlashSource lends LPVaultSwap the debt asset itself for a repay with collateral (`deleverage`), from a lender that is never an Avana Hub (the chain's Aave V3 Pool at launch), checks the premium against `maxFlashFeeBps`, and repays the lender in the same call; LPVaultSwap receives the loan through IFlashReceiver. A liquidation never uses it: `liquidate` is funded by its caller, and a caller without the debt asset borrows through the [flash liquidation helper](../periphery/flash-liquidator/LIFECYCLE.md) (Q-404).
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor V as Borrower V
+  participant AD as AaveAdapter
+  participant SW as LPVaultSwap
+  participant FS as AaveV3FlashSource
+  participant PL as Aave V3 Pool
+  V->>AD: repayWithCollateral(params)
+  AD->>SW: deleverage(request)
+  SW->>FS: flashLoan(USDC, x, HD, context)
+  Note right of FS: caller is LPVaultSwap, no loan open,<br/>LENDER is not HD, premium within maxFlashFeeBps
+  FS->>PL: flashLoan(FS, [USDC], [x], [0], FS, context, 0)
+  PL->>FS: executeOperation([USDC], [x], [premium], FS, context)
+  FS-->>SW: USDC the Pool delivered
+  FS->>SW: onFlashLoan(USDC, x, premium, context)
+  SW->>AD: deleverageRepay(P, r_USDC, x)
+  SW->>AD: deleverageRelease(P, position, units, minAmounts)
+  Note over SW: swaps the unwound USDT into USDC
+  SW-->>FS: x + premium
+  FS-->>PL: approves x + premium, the Pool pulls it
+  FS-->>SW: premium, FlashLoanServed
+  SW-->>V: 29.41 USDC
+```
+
 ## Walkthrough
 
 Repay with collateral on Ethereum (V, USDC debt, the repay-with-collateral flow of [LIFECYCLES.md](../../LIFECYCLES.md)). Setup: Avana does not yet hold `FLASH_BORROWER` on the Ethereum Aave V3 Pool, so the premium is 5 bps; `maxFlashFeeBps = 10`, strictly above the rate as `SPEC-LIQ-015` requires (with the cap equal to the rate most loan sizes would fail the exact check).

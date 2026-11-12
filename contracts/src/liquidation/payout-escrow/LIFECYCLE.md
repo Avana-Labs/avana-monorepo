@@ -2,6 +2,29 @@
 
 The PayoutEscrow is the payout escrow: an immutable contract that holds a liquidation payout LPVaultSwap could not deliver (Avana's fee, the borrower's surplus, a route residue or a dust leg; never the caller's `keeperOut`) until its recipient claims it, so a recipient a token refuses never blocks a liquidation.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant H as Flash liquidation helper
+  participant SW as LPVaultSwap
+  participant U as USDC
+  participant E as PayoutEscrow
+  participant LK as Lock
+  actor T as Treasury Safe
+  H->>SW: liquidate(params) for K2
+  SW->>U: transfer(feeRecipient, 8e6), gas-limited
+  U-->>SW: reverts, feeRecipient blocklisted
+  SW->>E: deposit(USDC, feeRecipient, 8,000,000)
+  E->>LK: holder() must be LPVaultSwap
+  E->>U: transferFrom(LPVaultSwap, PayoutEscrow, 8,000,000)
+  Note right of E: claimable[USDC][feeRecipient] += 8,000,000
+  SW-->>H: keeperOut 2,030.5 USDC, never escrowed
+  Note over T,E: after 40 liquidations the credit is 320 USDC
+  T->>E: claim(USDC, newTreasury)
+  E->>LK: isLocked() must be false
+  E->>U: transfer(newTreasury, 320,000,000)
+```
+
 ## Walkthrough
 
 Aerodrome Slipstream on Base (Carol, USDC debt, 3.6 `EMG-113`). Setup: Circle blocklists Avana's treasury Safe, the chain's `feeRecipient`, on Base; Carol's liquidation is the one of 3.5 `LIQ-089`. The escrow was deployed after the Lock; its constructor reverts `LockMismatch` unless the Lock names the same LPVaultSwap.

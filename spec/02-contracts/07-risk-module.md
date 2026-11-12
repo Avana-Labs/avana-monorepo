@@ -203,6 +203,33 @@ The RiskModule emits `ConfigDriftDetected(spoke, reason)` from `pokeConfig` and 
 
 `preBorrowCheck(proxy, debtReserveId, amount)` and `preWithdrawCheck(proxy)` run their checks in this order and revert on the first failure: (0) the chain's sequencer gate (`REQ-RISK-081`); (1) the market's Spoke is approved (`REQ-ADAPTER-011`); (2) the account's market is on that Spoke and `Active` or `Offboarding` (`UnknownCollateral(reserveId)` otherwise); (3) the scope is read from the Spoke reserve by reserve (`REQ-ADAPTER-012`), each collateral-enabled reserve required to be the account's market reserve (`REQ-ADAPTER-013`), and then every debt reserve of the scope is approved and matches its recorded definition (`REQ-ADAPTER-014`, `REQ-ADAPTER-022`); (4) the market's LPOracle and the DebtOracle of every debt reserve in the debt scope priced by one are poked (`REQ-RISK-056`); (5) collateral price states and input ages (`REQ-ADAPTER-015`, `REQ-ADAPTER-016`); (6) debt-reserve pauses, price sources and ages (`REQ-RISK-061`); (7) Aave pauses of collateral reserves (`REQ-ADAPTER-061`); (8) `preBorrowCheck` only: `Offboarding` and Aave-frozen collateral reserves (`REQ-ADAPTER-019`); (9) Aave configuration drift (`REQ-ADAPTER-020`); (10) Hub shares == assets (`REQ-ADAPTER-021`); (11) liquidation halts of collateral markets and debt reserves (`REQ-ADAPTER-010`, `REQ-RISK-062`); (12) circuit breakers (`REQ-RISK-065`); (13) `preBorrowCheck` only: the credit-line switch, sum and coverage of a cross-Hub reserve (`REQ-RISK-082`). Mapping before the poke means only registered LPOracles are ever poked. The account's **collateral scope** is its market's reserve; any other reserve `getUserReserveStatus(·, proxy)` reports as collateral-enabled is drift. Its **debt scope** is every reserve it reports as borrowed, plus `debtReserveId` for a borrow.
 
+```mermaid
+flowchart TD
+  IN["preBorrowCheck(proxy, debtReserveId, amount)<br/>preWithdrawCheck(proxy)"]
+  C0["(0) Sequencer gate Up<br/>SequencerDown, SequencerGrace"]
+  C1["(1) Spoke approved<br/>UnknownSpoke"]
+  C2["(2-3) Scope read from the Spoke, the only collateral is the market's reserve,<br/>every debt reserve approved and matching its definition<br/>UnknownCollateral, ConfigDrift"]
+  C4["(4) LPOracle.poke(), then DebtOracle.poke() per non-fixed debt reserve"]
+  C5["(5) Market Live, feed ages, second sources, borrowAllowed<br/>PriceNotLive, PriceTooOld, SecondSourceDisagrees"]
+  C6["(6) Debt reserves unpaused, on their recorded source, Live and fresh<br/>DebtReservePaused, UnexpectedDebtPriceSource, DebtPriceTooOld"]
+  C7["(7) Collateral reserve not paused on Aave<br/>AaveReservePaused"]
+  B8{"Borrow?"}
+  C8["(8) Market not Offboarding, reserve not frozen on Aave<br/>MarketOffboarding, ReserveFrozen"]
+  C9["(9) No Aave configuration drift<br/>ConfigDrift"]
+  C10["(10) Hub shares equal assets<br/>HubSharesNotEqualAssets"]
+  C11["(11) An active committed operator, a usable swap route per pool token<br/>LiquidationHalted, DebtLiquidationHalted"]
+  C12["(12) Market breaker, debt breaker of the borrowed reserve<br/>or of every owed reserve on withdraw<br/>BreakerTripped, DebtBreakerTripped"]
+  B13{"Borrow?"}
+  C13["(13) Cross-Hub reserve only: lines enabled, line sum, coverage<br/>CrossHubLinesDisabled, CreditLineExceeded, CoverageBelowRatio"]
+  OK["Pass. After the Spoke call: postHealthCheck(proxy, minHealthFactor)<br/>HealthFactorTooLow"]
+  IN --> C0 --> C1 --> C2 --> C4 --> C5 --> C6 --> C7 --> B8
+  B8 -- yes --> C8 --> C9
+  B8 -- "no, withdraw" --> C9
+  C9 --> C10 --> C11 --> C12 --> B13
+  B13 -- yes --> C13 --> OK
+  B13 -- "no, withdraw" --> OK
+```
+
 - `REQ-RISK-056` — Both pre-checks MUST call `poke()` on the LPOracle of every market in the collateral scope (the market's `lpOracle`, which the drift check holds equal to `IAaveOracle(spoke.ORACLE()).getReserveSource(reserveId)`), in reserve order, and then on the DebtOracle of every reserve in the debt scope whose recorded `priceSource` is a DebtOracle ( [2.10](10-lp-oracle.md) `REQ-ORACLE-096`), before reading any price state, ignoring the return value; a revert of `poke()` (including `InsufficientGas`) MUST propagate, so the action fails closed and the borrower retries with more gas. The pre-checks are not `view` for this reason only: the poke stores the first observation of a primary-versus-alternate disagreement or a failure, which starts the disagreement and Cached windows on time ([2.10](10-lp-oracle.md)). Each oracle's `poke()` takes no lock and makes only static calls, so it cannot re-enter the Adapter's call. (Source: Q-199, Q-209, Q-229, Q-248)
 - `REQ-ADAPTER-009` — The pre-checks and `postHealthCheck` MUST be called only for borrow, withdraw-with-debt and partial removal with debt; repay, fee collection, debt-free withdrawal and removal, `repayAllAndWithdraw`, zero-credit release, repay with collateral and liquidation MUST NOT depend on any of them, so a RiskModule that reverts on every call cannot block them. (Source: Q-051, Q-134, Q-223, Q-229, Q-254, Q-255)
 - `REQ-ADAPTER-010` — Both pre-checks MUST revert with `LiquidationHalted(marketId)` while `LPVaultSwap.activeKeeperCount() == 0` on the chain (`REQ-RISK-071`): `liquidate` stays open to every address, but no party is then committed to clear small or unprofitable accounts, so new risk waits for a committed operator; with `keeperFloor = 1` this is the only operator condition that halts borrowing (`Q-400`, `Q-404`). They MUST revert with `DebtLiquidationHalted(r)` when some pool token of the market other than a debt asset of the account has neither a usable primary swap route (`kind = 0`) nor a usable backup swap route (`kind = 1`) into the asset of a debt reserve `r` in scope, read from `MarketRegistry.getRoute(marketId, token, asset, kind)` (`REQ-RISK-062`); there is no in-kind settlement to fall back on (`Q-401`). The pause state never halts liquidation (`Q-227` as amended); a route usable on record but failing at run time does not count, because LPVaultSwap falls back to the other route in the same call. Hub shares ≠ assets, a paused Aave collateral or debt reserve and a non-Live price also stop liquidation and are refused with their own errors. While liquidation cannot run, debt cannot be closed out on a falling price, so the account must not take on new debt or reduce its collateral. (Source: Q-213, Q-227, Q-229, Q-242, Q-400, Q-401, Q-404)

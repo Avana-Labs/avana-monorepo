@@ -2,6 +2,28 @@
 
 The ProxyManager is the immutable CREATE2 factory of PositionProxies: one per wallet × CDP Spoke × market, deployed only by the AaveAdapter at a wallet's first pledge to a market.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor C as Carol
+  participant App as App
+  participant LN as Lens
+  participant AD as AaveAdapter
+  participant PM as ProxyManager
+  participant MR as MarketRegistry
+  participant P as PositionProxy P
+  App->>LN: predictProxy(Carol, 3)
+  LN->>PM: predictProxy(Carol, S, 3)
+  PM-->>App: P, the CREATE2 address of (Carol, S, 3)
+  C->>AD: pledge(3, (I, key1), now + 600)
+  AD->>PM: deployProxy(Carol, S, 3)
+  Note right of PM: OnlyAdapter, ZeroAddress, ProxyExists
+  PM->>MR: isFrozenAddress(Carol)
+  PM->>P: CREATE2 with the same salt and init code
+  PM-->>AD: P, event ProxyDeployed(Carol, S, 3, P)
+  Note over C,P: a second pledge to market 3 reuses P and skips the ProxyManager
+```
+
 ## Walkthrough
 
 Setup (Base market 3 on Spoke `S`, Carol's first pledge, 3.1 `DEP-029`).

@@ -2,6 +2,38 @@
 
 The RiskModule decides whether new risk may open: it checks every pledge, borrow and withdrawal with debt against prices, caps, pool share, breakers and Aave's configuration, and books no state of its own except breaker observations through the MarketRegistry. Its check bodies run in five stateless logic contracts: [`RiskModuleDriftLogic`](RiskModuleDriftLogic.sol), [`RiskModuleBreakerLogic`](RiskModuleBreakerLogic.sol), [`RiskModulePledgeLogic`](RiskModulePledgeLogic.sol), [`RiskModuleBorrowLogic`](RiskModuleBorrowLogic.sol) and [`RiskModuleStatusLogic`](RiskModuleStatusLogic.sol), with the formulas in [`RiskModuleMath`](RiskModuleMath.sol).
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant CO as Collateralization
+  participant AD as AaveAdapter
+  actor K as Avana keeper
+  participant RM as RiskModule
+  participant BL as RiskModuleBorrowLogic
+  participant O as LPOracle
+  participant DO as DebtOracle
+  participant SW as LPVaultSwap
+  participant MR as MarketRegistry
+  CO->>RM: checkPledge(Carol, P, 3, integrationId, key1, units, counters, false)
+  RM-->>CO: PledgeCharge(20,000e8, 0, false, 0)
+  AD->>RM: preBorrowCheck(P, r_USDC, 5,000e6)
+  RM->>BL: preCheck(P, r_USDC, true), a plain external call
+  Note right of BL: sequencer Up first
+  BL->>O: poke()
+  BL->>DO: poke() for each debt reserve not at a fixed price
+  BL->>SW: activeKeeperCount() at least 1
+  Note right of BL: Aave config, Hub shares = assets,<br/>market and debt breakers
+  AD->>RM: postHealthCheck(P, 1.20e18)
+  RM->>BL: postHealthCheck(P, 1.20e18)
+  AD->>RM: preWithdrawCheck(P)
+  RM->>BL: preCheck(P, none, false), the same gates without the borrow-only ones
+  AD->>RM: checkRemainingRecord(3, 8,000,000,000)
+  K->>RM: pokeBreakers(m)
+  RM->>MR: recordBreach(bytes32(m), POOL_SHARE)
+  K->>RM: pokeConfig(S)
+  RM->>MR: recordBreach(bytes32(m), CONFIG_DRIFT) for each market of S
+```
+
 ## Walkthrough
 
 Setup (Base market 3, from 3.1 `DEP-029` and 3.2 `BOR-022`): $2.00 per whole vault token, `CF_LP = 3,120` bps, `minPledgeUsd = $10`, `marketUsdCap = $5,000,000` with $1,000,000 in `Regular`, `poolShareMaxBpsOf(poolKey) = 1,000` (illustrative per-pool cap), market supply 400,000,000,000 units, pool in-range liquidity 20,000,000,000,000; sequencer gate `Up`. No hard health floor (`hardHealthFloor = 0`) and no minimum debt.

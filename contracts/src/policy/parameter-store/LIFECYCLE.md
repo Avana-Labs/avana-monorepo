@@ -2,6 +2,30 @@
 
 The ParameterStore holds every risk and oracle parameter Avana reads (its views and role checks in [`ParameterStore`](ParameterStore.sol), each setter body in one of five logic contracts it delegatecalls, each refusing a direct call), written by the AvanaTimelock: listing values at the normal delay, tightenings at the short delay (12 hours) and step-limited loosenings at the normal delay (5 days). The Joint Configuration Safe (2-of-3: Avana Labs, Aave Labs, LlamaRisk) holds `APPLICATION_RISK_STEWARD` and calls the same tighten setters and `setAvanaFeeShareBps` (within 0–5,000 bps) at once.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor M as Governance multisig
+  actor A as Anyone
+  actor J as Joint Configuration Safe
+  actor G as Emergency Guardian
+  participant TL as AvanaTimelock
+  participant PS as ParameterStore
+  participant O as LPOracle
+  participant RM as RiskModule
+  M->>TL: schedule(PS, 0, setInitialMarketParams(1, params), 0, salt, normalDelay)
+  A->>TL: execute(PS, 0, data, 0, salt) after the delay
+  TL->>PS: setInitialMarketParams(1, params)
+  PS->>O: checkConfig(config) must return 0
+  M->>TL: schedule(PS, 0, loosenMarketUsdCap(1, 6,000,000e8), 0, salt, normalDelay)
+  Note right of PS: a loosening is at most 1.5 times<br/>the value, once per normalDelay
+  J->>PS: tightenMarketUsdCap(1, 4,000,000e8) at once
+  Note right of TL: the timelock runs the same tightening<br/>at the 12-hour short delay
+  G->>PS: useStandbySecondSource(USDC)
+  O->>PS: getOracleInputs(lpOracle, tokens, withSecondSources)
+  RM->>PS: getMarketParams(1), minPledgeUsd(1), poolShareMaxBpsOf(poolKey)
+```
+
 ## Walkthrough
 
 Setup (Ethereum market 1, Uniswap v3 USDC/USDT; proposed defaults from 1.5, final values set in the listing or funding ARFC).

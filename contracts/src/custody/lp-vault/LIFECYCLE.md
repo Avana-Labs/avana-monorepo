@@ -4,6 +4,25 @@ Function links point to the interface that declares each function.
 
 The LPVault is the immutable custodian of one AMM protocol's positions on one chain: it binds each market to its pool and exact shape, holds pledged positions, removes exactly the units Collateralization names, and pays fees and principal only to the depositor of record or LPVaultSwap. `ILPVault` extends [`IAmmIntegration`](../../amm/IAmmIntegration.sol) and [`IAmmIntegrationHooks`](../../amm/IAmmIntegrationHooks.sol).
 
+```mermaid
+stateDiagram-v2
+  state "Held by its owner" as Wallet
+  state "In custody, depositor of record" as Custody
+  state "Stray, held outside a pledge" as Stray
+  [*] --> Wallet
+  Wallet --> Custody: receivePosition(marketId, owner, key) by Collateralization
+  Custody --> Custody: collectFees(key, depositor), fees to the depositor
+  Custody --> Custody: releaseToDepositor(key, units, minAmounts), principal to the depositor
+  Custody --> Custody: unwind(key, units, minAmounts, LPVaultSwap), principal to LPVaultSwap
+  Custody --> Wallet: returnPosition(key), position and its fees to the depositor
+  Wallet --> Stray: sent outside a pledge, onERC721Received records it
+  Stray --> Wallet: returnStray(key, recipient) by the AvanaTimelock
+  note right of Custody
+    every change of custody comes from Collateralization
+    while a Lock member holds the Lock
+  end note
+```
+
 ## Walkthrough
 
 Setup (Base market 3, Aerodrome Slipstream USDC/USDT, tick spacing 1, exact range `[−887,272, 887,272]`, from 3.1 `DEP-029`). Every state-changing call except `bindMarket` and `returnStray` comes from Collateralization while the Lock is held.

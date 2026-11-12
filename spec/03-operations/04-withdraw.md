@@ -16,6 +16,42 @@ Every exit here (debt-free withdrawal and removal, `repayAllAndWithdraw`, zero-c
 
 Adapter steps belong to [2.6 Aave Adapter][2.6]; the proxy's Spoke calls to [2.5 Position Proxy and Proxy Manager][2.5]; release, records and reconcile to [2.3 Collateralization][2.3]; custody and unwind to [2.2 LP Vault][2.2] and the AMM integration of the market; the gates and the exit charge to [2.7 Risk Module][2.7] (`SPEC-CAP-004`); the pause state and market status to [2.8 Market Registry][2.8]; price state and the sequencer gate to [2.10 LP Oracle][2.10]; vault tokens to [2.4 Vault Tokens][2.4]; the lock to [2.16 Lock][2.16]; Aave behavior to [2.1 Avana Hub and Spokes][2.1]. Parameters are named as in [1.5][1.5].
 
+Path A, standard withdrawal:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor W as Wallet
+  participant AD as AaveAdapter
+  participant MR as MarketRegistry
+  participant RM as RiskModule
+  participant P as PositionProxy
+  participant S as CDP Spoke
+  participant VT as VaultToken
+  participant CO as Collateralization
+  participant LV as LPVault
+  W->>AD: withdraw(marketId, (integrationId, positionKey), units, deadline, minHealthFactor)
+  Note right of AD: Lock.acquire(), deadline, P = proxyOf[W][marketId]
+  AD->>S: getUserAccountData(P)
+  alt debt remains (borrowCount above 0)
+    AD->>MR: pauseState(homeHub), isFrozenAddress(W)
+    AD->>RM: preWithdrawCheck(P)
+  else debt-free
+    Note right of AD: no pause state, breaker, address freeze,<br/>sequencer gate, price or RiskModule read
+  end
+  AD->>P: execute(S, withdraw(reserveId, units, P))
+  P->>S: withdraw(reserveId, units, P)
+  AD->>VT: burn(P, units)
+  AD->>CO: release(P, VT, positionKey, units)
+  Note right of CO: reconcile an unsettled seizure first, then<br/>units = credited units, record closed, charge released
+  CO->>LV: returnPosition(positionKey)
+  Note right of LV: position sent to the depositor of record
+  opt debt remains
+    AD->>RM: postHealthCheck(P, minHealthFactor)
+  end
+  Note right of AD: backing gap unchanged, Lock.release()
+```
+
 ## Objective
 
 Close one backing record: remove exactly its credited units from the proxy's Spoke position, burn them, release the record's exposure charge from the budget part the account is booked in, and return the position to the depositor of record, without letting an account with debt fall below `max(1, minHealthFactor, hardHealthFloor(m))`, and without leaving any vault token unbacked when an earlier seizure was not settled (`Q-018`, `Q-066`, `Q-067`, `Q-105`, `Q-158`, `Q-201`, `Q-224`, `Q-229`, `Q-354`). Path E instead reduces one record by `units` and pays the unwound token amounts to the depositor of record, under the same floors when debt remains and with the record left behind worth at least `minPledgeUsd` (`Q-253`, `Q-254`).

@@ -34,6 +34,44 @@ Aave V4 accepts collateral only as ERC-20 reserves, while an AMM position is an 
 
 The collateral path is **position → the AMM protocol's LPVault (custody) and Collateralization (record) → AaveAdapter mints vault tokens → PositionProxy for (CDP Spoke, market) → CDP Spoke → debt asset**:
 
+The life of one position, from pledge to withdrawal or liquidation:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor W as Borrower wallet
+  participant AD as AaveAdapter
+  participant P as PositionProxy
+  participant CO as Collateralization
+  participant LV as LPVault
+  participant S as CDP Spoke
+  participant LS as LPVaultSwap
+  actor K as Liquidator
+  W->>AD: pledge(marketId, position, deadline)
+  AD->>CO: pledge(W, P, VT, positionKey, requireRescue)
+  CO->>LV: receivePosition(marketId, W, positionKey)
+  AD->>P: execute(S, supply(reserveId, units, P))
+  W->>AD: borrow(marketId, debtReserveId, amount, receiver, deadline, minHealthFactor, expectedNonce)
+  AD->>P: execute(S, borrow(debtReserveId, amount, P))
+  W->>AD: collectFees(marketId, position, deadline)
+  AD->>CO: collectFees(W, VT, positionKey)
+  CO->>LV: collectFees(positionKey, W)
+  alt health factor stays at or above 1
+    W->>AD: repay(W, marketId, debtReserveId, maxRepaySpend, repayAll, deadline)
+    AD->>P: execute(S, repay(debtReserveId, received, P))
+    W->>AD: withdraw(marketId, position, units, deadline, minHealthFactor)
+    AD->>P: execute(S, withdraw(reserveId, units, P))
+    AD->>CO: release(P, VT, positionKey, units)
+    CO->>LV: returnPosition(positionKey)
+  else health factor below 1
+    K->>LS: liquidate(params)
+    LS->>S: liquidationCall(collateralReserveId, debtReserveId, P, Kf, false)
+    LS->>CO: settleSeizure(P, VT, c, minAmounts)
+    CO->>LV: unwind(positionKey, take, minAmounts, LPVaultSwap)
+    Note right of LS: swaps into the debt asset, pays Avana's fee,<br/>the borrower's surplus and the liquidator
+  end
+```
+
 1. **Pledge.** The borrower approves the AMM protocol's LPVault for one position and calls `AaveAdapter.pledge`, naming the CDP Spoke, the market's vault token, the position's `positionKey` and a deadline. On the wallet's first pledge into that market on that Spoke the Adapter has the ProxyManager create the wallet's PositionProxy at its CREATE2 address predicted from `(wallet, spoke, marketId)` and registers it in the vault token. Collateralization has the LPVault named by the vault token check the position against the market (same pool, exact shape: for concentrated liquidity, `tickLower` and `tickUpper` equal the market's range exactly) and take custody of it from the wallet; it then reads the position's units, pokes the LPOracle and asks the RiskModule (`checkPledge`) for eligibility, the minimum pledge value, the circuit breakers and the USD cap charge, records the credited units (at most `MAX_RECORDS_PER_ACCOUNT_MARKET` open records per account and market) and books its counters, keyed by Hub. A rescue top-up (an indebted account below `rescueHealthFactor`, 1.10, adding at most what restores it) passes the pool-share cap, `Paused(General)`, a breaker and an address freeze, and its units are booked as rescue units that never support new debt. The Adapter mints exactly the credited units in vault-token base units to the proxy, has the proxy supply them to the CDP Spoke (which moves them into the Hub) and enable them as collateral, and checks that the market's backing gap (credited total plus pending-settlement balance minus supply) is unchanged. All of this is one transaction.
 2. **Borrow.** The borrower calls `AaveAdapter.borrow`, naming the CDP Spoke, the market, the debt reserve, the amount, the receiver, a deadline, a minimum health factor and the proxy's expected borrow nonce. The Adapter checks the deadline, the pause state of the Spoke's home Hub and of the debt reserve's funding Hub, the debt reserve, the receiver and the nonce, then has the RiskModule poke the market's LPOracle and check the market's and every debt reserve's prices (fresh within each feed's heartbeat plus margin, and agreeing with an independent second source), Aave reserve flags, Hub share rate, configuration match and circuit breakers; a frozen caller or receiver is refused. Any amount above 0 may be borrowed; there is no minimum debt (`Q-381`). It has the proxy call `Spoke.borrow` as itself; the proxy forwards exactly the drawn amount to the named receiver, and the RiskModule checks the account's health factor, with rescue units valued at zero, against the larger of the caller's `minHealthFactor` and the market's `hardHealthFloor` (0, off, unless stress tests justify setting it), while Aave itself refuses any borrow below health factor 1.00. Avana sets no opening health floor of its own (`Q-398`): the Lens shows a recommended borrow at health factor 1.10 beside the protocol maximum at 1.00, so $100,000 of collateral at a 70% CF shows $63,636 recommended and $70,000 maximum.
 3. **Collect fees.** Where the AMM protocol keeps fees apart, the depositor of record calls `collectFees` on the AaveAdapter; under the Adapter's Lock, Collateralization checks the record and has the AMM protocol's LPVault collect the position's fees and send them to the depositor. Units, vault tokens and debt are untouched, and no pause state, breaker or price is read.

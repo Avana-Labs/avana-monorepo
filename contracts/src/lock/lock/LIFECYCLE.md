@@ -4,6 +4,35 @@ Function links point to the interface that declares each function.
 
 The Lock is the chain's single transient mutex with two members, the AaveAdapter and LPVaultSwap: every Avana state change runs inside one holder's call, and every inner contract (Collateralization, LPVault, VaultToken burn paths, swap routes, the payout escrow) accepts calls only while the right member holds it.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor C as Carol
+  actor K as Keeper
+  participant AD as AaveAdapter
+  participant SW as LPVaultSwap
+  participant LK as Lock
+  participant CO as Collateralization
+  participant V as LPVault
+  participant E as PayoutEscrow
+  C->>AD: pledge(3, (I, key1), now + 600)
+  AD->>LK: acquire()
+  Note right of LK: holder = AaveAdapter<br/>for the rest of the transaction
+  AD->>CO: pledge(Carol, P, VT, key1, false)
+  CO->>LK: holder() must be the AaveAdapter
+  CO->>V: receivePosition(3, Carol, key1)
+  V->>LK: holder() must be non-zero
+  AD->>LK: release()
+  K->>SW: liquidate(params)
+  SW->>LK: acquire()
+  Note right of LK: a second acquire from a route or<br/>token callback reverts LockHeld
+  SW->>CO: beginSeizure, settleSeizure
+  CO->>LK: holder() must be LPVaultSwap
+  SW->>E: deposit(token, account, amount) for a refused payout
+  E->>LK: holder() must be LPVaultSwap
+  SW->>LK: release()
+```
+
 ## Walkthrough
 
 Setup (Base market 3, Carol's pledge of 3.1 `DEP-029`, then Bob's liquidation of 3.5 `LIQ-069` on Ethereum).

@@ -2,6 +2,38 @@
 
 Collateralization is the immutable backing ledger: it holds one record per pledged position, books the RiskModule's cap charge, decides which records a seizure debits, and keeps every market's vault-token supply at or below credited plus pending units.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant AD as AaveAdapter
+  participant SW as LPVaultSwap
+  participant CO as Collateralization
+  participant V as LPVault
+  participant O as LPOracle
+  participant RM as RiskModule
+  AD->>CO: pledge(Carol, P, VT, key1, false)
+  CO->>V: checkReadSafe(3)
+  CO->>V: receivePosition(3, Carol, key1)
+  CO->>O: poke()
+  CO->>RM: checkPledge(Carol, P, 3, integrationId, key1, units, counters, false)
+  CO-->>AD: credited = 10,000,000,000
+  AD->>CO: release(P, VT, keyB, 2,500,000,000)
+  CO->>V: returnPosition(keyB)
+  AD->>CO: releasePartial(P, VT, key1, 2,000,000,000, [1,990e6, 1,990e6])
+  CO->>V: releaseToDepositor(key1, 2,000,000,000, [1,990e6, 1,990e6])
+  AD->>CO: collectFees(Carol, VT, key1)
+  CO->>V: collectFees(key1, Carol)
+  Note over SW,V: liquidation, Lock held by LPVaultSwap
+  SW->>CO: beginSeizure(Q, VT)
+  Note right of SW: Spoke.liquidationCall, then<br/>AaveAdapter.burnSeized
+  SW->>CO: settleSeizure(Q, VT, 975e18, minAmounts)
+  loop each debited record, largest first
+    CO->>V: unwind(key, units, minAmounts, LPVaultSwap)
+  end
+  SW->>CO: settlePending(VT, units)
+  CO-->>SW: pending pool tokens, no LPVault call
+```
+
 ## Walkthrough
 
 Setup (Base market 3, from 3.1 `DEP-029` and 3.4 `WDR-045`): one whole vault token (10^6 units) is worth $2.00; `marketUsdCap = $5,000,000` with $1,000,000 booked in `Regular`; at most 16 open records per account and market. Every call below comes from the AaveAdapter or LPVaultSwap while it holds the Lock.

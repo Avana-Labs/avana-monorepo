@@ -4,6 +4,45 @@ Function links point to the interface that declares each function.
 
 The AaveAdapter is the borrower's only entry point: it takes the Lock, deploys and drives the wallet's PositionProxy, mints and burns vault tokens, and calls Collateralization and the RiskModule around each Aave V4 Spoke call.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor C as Carol
+  participant AD as AaveAdapter
+  participant PM as ProxyManager
+  participant VT as VaultToken
+  participant CO as Collateralization
+  participant RM as RiskModule
+  participant P as PositionProxy
+  participant S as CDP Spoke S
+  Note over C,S: every entry point takes the Lock first and releases it last
+  C->>AD: pledge(3, (integrationId, key1), now + 600)
+  AD->>PM: deployProxy(Carol, S, 3)
+  AD->>VT: addValidProxy(P)
+  AD->>CO: pledge(Carol, P, VT, key1, false)
+  AD->>VT: mint(P, 10,000,000,000)
+  AD->>P: execute: VT.approve, S.supply, S.setUsingAsCollateral
+  C->>AD: borrow(3, r_USDC, 5,000e6, Carol, now + 600, 1.20e18, 0)
+  AD->>RM: preBorrowCheck(P, r_USDC, 5,000e6)
+  AD->>CO: markIndebted(P)
+  AD->>P: execute: S.borrow(r_USDC, 5,000e6, P), USDC.transfer(Carol, 5,000e6)
+  AD->>RM: postHealthCheck(P, 1.20e18)
+  C->>AD: repay(Carol, 3, r_USDC, 5,029,687,935, true, now + 600)
+  Note right of AD: any payer, reads no pause state,<br/>breaker, freeze or price
+  AD->>P: execute: S.repay(r_USDC, received, P), refund to the payer
+  AD->>CO: markDebtFree(P) once borrowCount is 0
+```
+
+```mermaid
+flowchart TB
+  H{"Hub pause state<br/>read by the AaveAdapter"}
+  H -->|None| N["every entry point open,<br/>RiskModule checks still apply"]
+  H -->|Frozen| F["borrow reverts ApplicationFrozen,<br/>pledge and recredit only to an account with debt"]
+  H -->|"Paused, General"| G["borrow, withdraw and removeLiquidity with debt revert,<br/>pledge and recredit only as rescue top-ups"]
+  H -->|"Paused, MintPathSuspect"| M["pledge, recredit, borrow, repayWithCollateral revert,<br/>withdraw and removeLiquidity with debt revert"]
+  X["Never read by repay, repayAllAndWithdraw,<br/>debt-free withdraw and removeLiquidity, collectFees,<br/>releaseZeroCredit, refreshDebtMark and burnSeized"]
+```
+
 ## Walkthrough
 
 Setup (Base, from 3.1 `DEP-029`, 3.2 `BOR-022`, 3.4 `WDR-045`): market 3 is a USDC/USDT Aerodrome Slipstream market on the "Aerodrome Slipstream Stable" CDP Spoke `S`; one whole vault token (10^6 units) is worth $2.00; `CF_LP = 3,120` bps; `minPledgeUsd = $10`; USDC is priced at $0.9999. Carol holds an unstaked NFT `key1` with `L = 10,000,000,000`.

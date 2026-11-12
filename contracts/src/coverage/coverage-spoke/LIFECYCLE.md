@@ -2,6 +2,32 @@
 
 The Coverage Spoke holds the First-Loss Reserve of one `(Hub, debt asset)` as Hub added shares. Avana Labs funds it, the Aave DAO controls it through its AccessManager, and its shares leave only to eliminate a recorded deficit of an allowlisted CDP Spoke on its own asset, or through a DAO withdrawal after 14 days.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor L as Avana Labs
+  actor G as COVERAGE_ROLE holder
+  actor DAO as Aave DAO
+  participant SW as LPVaultSwap
+  participant CS as CoverageSpoke
+  participant T as GHO
+  participant H as Hub
+  L->>CS: fund(400,000e18)
+  CS->>T: transferFrom(Avana Labs, Hub, 400,000e18)
+  CS->>H: add(ghoAssetId, 400,000e18)
+  Note over CS,H: a liquidation leaves a 5,200 GHO deficit on the CDP Spoke
+  G->>CS: coverDeficit(uniswapV3Stable, 5,200e18)
+  CS->>H: getSpokeDeficitRay(ghoAssetId, uniswapV3Stable)
+  CS->>H: eliminateDeficit(ghoAssetId, 5,200e18, uniswapV3Stable)
+  Note right of CS: ReserveBelowMinimum while<br/>fundedBalance is below the minimum
+  SW->>CS: fund(83.8e18) in settlePending
+  DAO->>CS: requestWithdrawal(400,000e18, Avana Labs)
+  Note over DAO,CS: 14 days, cancelWithdrawal(1) stops it
+  DAO->>CS: executeWithdrawal(1)
+  Note right of CS: DeficitOutstanding while an allowlisted<br/>Spoke still has a GHO deficit
+  CS->>H: remove(ghoAssetId, min(400,000e18, fundedBalance), Avana Labs)
+```
+
 ## Walkthrough
 
 Ethereum GHO instance on the Stable LP Hub (illustrative 400,000 GHO minimum; the funding ARFC sets the real one).

@@ -4,6 +4,17 @@ Function links point to the interface that declares each function.
 
 `IAmmIntegration` and `IAmmIntegrationHooks` are the AMM-neutral surface every LPVault implements, so Collateralization, the LPOracle, the RiskModule and the Lens handle a Uniswap v3 NFT, a Slipstream NFT or a fungible LP share the same way: a position is `(integrationId, positionKey)` and every amount is an array in the market's token order.
 
+```mermaid
+flowchart LR
+  VTF[VaultTokenFactory] -->|"registerIntegration reads INTEGRATION_ID, AMM_PROTOCOL, capabilities"| V
+  MR[MarketRegistry] -->|"listCollateralMarket calls bindMarket"| V
+  CO[Collateralization ledger] -->|"marketOf, checkReadSafe, receivePosition, marketOfPosition, unitsOf, topUpPosition"| V
+  CO -->|"collectFees, releaseToDepositor, unwind, returnPosition"| V
+  RM[RiskModule] -->|"riskStatus in pokeBreakers, validatePosition and positionOwner in previewPledge"| V
+  PS[ParameterStore] -->|"riskStatus, capabilities"| V
+  V["LPVault per AMM protocol<br/>IAmmIntegration + IAmmIntegrationHooks"]
+```
+
 ## Walkthrough
 
 Setup (Ethereum market 1, Uniswap v3 USDC/USDT 0.01%, exact range `[−887,272, 887,272]`, `tokens = [USDC, USDT]`, from 3.1).

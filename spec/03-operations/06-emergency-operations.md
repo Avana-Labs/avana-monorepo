@@ -6,6 +6,28 @@
 
 The emergency matrix below lists, for every state Avana can be in, which user actions are open and which contract enforces each block; the procedures after it move the protocol between those states, and the playbooks give the ordered response to each kind of incident. The matrix is `Q-118` as amended by `Q-121`, `Q-128`, `Q-132`, `Q-140`, `Q-162`, `Q-182`, `Q-183`, `Q-189`, `Q-192`, `Q-195`, `Q-199`, `Q-202`, `Q-203`, `Q-206`, `Q-208`, `Q-209`, `Q-227`, `Q-229`, `Q-233`, `Q-234`, `Q-235`, `Q-236`, `Q-238`, `Q-241`, `Q-242`, `Q-247`, `Q-248` and `Q-252`. Every control is per chain: Ethereum and Base each have their own AvanaTimelock, governance Safe, Emergency Guardian Safe, MarketRegistry, keepers and alert routing, and no call on one chain changes state on the other. Within a chain every control is keyed by Hub, and by CDP Spoke and market where it applies. Avana restricts new activity at three levels, all held by the chain's MarketRegistry: one application pause state per Hub (`None`, `Frozen` or `Paused` with a reason), which covers every CDP Spoke and market homed on that Hub; circuit breakers per market and per (CDP Spoke, debt reserve), which the RiskModule evaluates; and a set of frozen addresses per chain, which the AaveAdapter, the ProxyManager and LPVaultSwap check. Two chain-level gates sit beside them: the sequencer gate on an L2 (`Up`, `Down`, `Grace`, Q-357) and the Aave-side flags of each CDP Spoke and reserve (Q-351). None of the three Avana levels ever reaches repay, debt-free withdrawal or partial removal, fee collection, zero-credit release, pending settlement or liquidation. Contract-level rules for each gate are in [2.6 Aave Adapter](../02-contracts/06-aave-adapter.md), [2.7 Risk Module](../02-contracts/07-risk-module.md), [2.8 Market Registry](../02-contracts/08-market-registry.md), [2.9 Parameter Store](../02-contracts/09-parameter-store.md), [2.10 LP Oracle](../02-contracts/10-lp-oracle.md), [2.11 LPVaultSwap](../02-contracts/11-lpvaultswap.md) and [2.15 Governance and Timelock](../02-contracts/15-governance-and-timelock.md). Parameters are named as in [1.5 Protocol Parameters](../01-architecture/05-parameters.md). Alerts `M-01` to `M-27` are defined in the monitoring section of [services](../../services/README.md#monitoring-and-alerting).
 
+```mermaid
+flowchart LR
+  subgraph PS["Application pause state, per Hub"]
+    N[None] -- "freeze(hub), freezeAll()" --> FR[Frozen]
+    FR -- "unfreeze(hub)" --> N
+    N -- "pause(hub, reason), pauseAll(reason)" --> PA["Paused(General or MintPathSuspect)"]
+    FR -- "pause(hub, reason), pauseAll(reason)" --> PA
+    PA -- "pause(hub, other reason)" --> PA
+    PA -- "unpause(hub)" --> N
+  end
+  FR --> FRB["Frozen blocks new-account pledges and borrowing"]
+  PA --> PAB["General blocks borrowing, withdraw with debt<br/>and every pledge except a rescue top-up<br/>MintPathSuspect also blocks rescue top-ups,<br/>re-credit and repay with collateral"]
+  MB["Market breaker of market m<br/>tripMarketBreaker or a condition"] --> MBB["Blocks pledges into m except rescue top-ups,<br/>borrowing and withdraw with debt on m"]
+  DB["Debt breaker of a CDP Spoke and debt reserve r<br/>tripDebtBreaker, DEFICIT or ISSUER"] --> DBB["Blocks borrowing r and<br/>withdraw with debt by accounts owing r"]
+  AF["Address freeze, per chain<br/>freezeAddress(account)"] --> AFB["Blocks the address's borrowing, non-rescue pledges,<br/>withdraw with debt and direct liquidate calls"]
+  OPEN["Never read by repay, fee collection, debt-free withdrawal<br/>and removal, zero-credit release, settlePending<br/>or the liquidation of any account"]
+  PS -. "not read" .-> OPEN
+  MB -. "not read" .-> OPEN
+  DB -. "not read" .-> OPEN
+  AF -. "not read" .-> OPEN
+```
+
 ## Objective
 
 Keep exits and liquidation open and losses bounded when prices, Aave configuration, external dependencies, keepers, Avana code or governance keys fail: repay, fee collection, debt-free withdrawal and partial removal, pending settlement and liquidation never stop for an Avana pause, breaker or address freeze, and stop only when Aave itself blocks them or, for liquidation, when the seized market or the repaid debt reserve has no fresh, valid and agreed price; a failing price elsewhere in the account only makes the account easier to liquidate. New risk stops first; withdraw-with-debt stops whenever liquidation of any reserve the account holds is halted; rescue top-ups stay open except when the minting code itself is suspect; and every loosening lands through the timelock, where borrowers can see it and leave before it executes.

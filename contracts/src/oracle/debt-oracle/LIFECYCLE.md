@@ -4,6 +4,28 @@ Function links point to the interface that declares each function.
 
 A DebtOracle is the Aave price source of one debt asset with a market price (USDC, USDT, WETH; GHO uses Aave's fixed $1 source): it serves the USD price with 8 decimals, keeps a cached price through outages, and reports whether borrowing and liquidation of that reserve may use it.
 
+```mermaid
+stateDiagram-v2
+  [*] --> Live: initialize seeds the accepted price
+  Live --> Drifting: primary and alternate fresh but apart
+  Drifting --> Live: the routes agree again
+  Live --> Cached: both routes stale or unreadable
+  Drifting --> Cached: both routes stale or unreadable
+  Cached --> Live: a fresh round is accepted
+  Cached --> Expired: cachedWindow (1 h) has passed
+  Expired --> Live: a fresh round is accepted, DebtGraceStarted (30 min)
+  note right of Drifting
+    serves max(primary, alternate, accepted)
+  end note
+  note right of Expired
+    serves the accepted price raised by debtStressRiseBps
+  end note
+  note left of Cached
+    only Live allows borrowing and liquidation of the reserve,
+    repay reads no price in any state
+  end note
+```
+
 ## Walkthrough
 
 Setup (Base, `r_USDC` on the "Aerodrome Slipstream Stable" CDP Spoke, from 3.2 `BOR-022`): Chainlink USDC/USD with an 86,400 s heartbeat (fresh until 88,200 s), reading $0.9999, and a second source that agrees.

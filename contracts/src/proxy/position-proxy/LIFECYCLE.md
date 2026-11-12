@@ -2,6 +2,36 @@
 
 A PositionProxy is the Aave V4 account of one wallet in one market on one CDP Spoke: a logic-free, immutable contract that executes only calls the AaveAdapter sends it, so each market's collateral and debt stay isolated in their own account.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant PM as ProxyManager
+  participant AD as AaveAdapter
+  participant P as PositionProxy P
+  participant VT as VaultToken
+  participant S as CDP Spoke S
+  participant U as USDC
+  participant SW as LPVaultSwap
+  actor X as Any other caller
+  PM->>P: CREATE2 with (ADAPTER, Carol, S, 3)
+  AD->>P: execute(VT, approve(S, 10,000,000,000))
+  P->>VT: approve(S, 10,000,000,000)
+  AD->>P: execute(S, supply(reserveId, 10,000,000,000, P))
+  P->>S: supply(reserveId, 10,000,000,000, P)
+  AD->>P: execute(S, borrow(r_USDC, 5,000e6, P))
+  P->>S: borrow(r_USDC, 5,000e6, P)
+  AD->>P: execute(USDC, transfer(Carol, 5,000e6))
+  P->>U: transfer(Carol, 5,000e6)
+  AD->>P: execute(S, repay(r_USDC, 5,029,687,935, P))
+  P->>S: repay(r_USDC, 5,029,687,935, P)
+  AD->>P: execute(S, withdraw(reserveId, 2,500,000,000, P))
+  P->>S: withdraw(reserveId, 2,500,000,000, P)
+  SW->>S: liquidationCall(collateral, debt, P, Kf, false)
+  Note over P,S: P makes no call in a liquidation
+  X->>P: execute(target, data)
+  P-->>X: reverts OnlyAdapter
+```
+
 ## Walkthrough
 
 Setup (Base market 3, Carol, from 3.1 `DEP-029`, 3.2 `BOR-022`, 3.3 `REP-024`): `P = proxyOf[Carol][3]` on the "Aerodrome Slipstream Stable" Spoke `S`.

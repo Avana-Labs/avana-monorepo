@@ -4,6 +4,31 @@ The contract is [`UniswapV3Integration`](UniswapV3Integration.sol) on the shared
 
 The Uniswap v3 LPVault on Ethereum custodies canonical NonfungiblePositionManager positions in exact-range markets; `positionKey = bytes32(tokenId)` and a position's units are its liquidity `L`.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant MR as MarketRegistry
+  participant CO as Collateralization
+  participant V as Uniswap v3 LPVault
+  participant NF as NonfungiblePositionManager
+  participant PL as USDC/USDT pool
+  MR->>V: bindMarket(1, pool, 0, shape, data)
+  V->>PL: token0(), token1(), fee(), tickSpacing(), factory()
+  Note right of V: FACTORY.getPool(USDC, USDT, 100) must equal the pool
+  CO->>V: checkReadSafe(1)
+  V->>PL: slot0().unlocked
+  CO->>V: receivePosition(1, W, bytes32(7))
+  V->>NF: ownerOf(7), positions(7)
+  V->>NF: transferFrom(W, LPVault, 7)
+  V-->>CO: units = L = 25,000,000,000
+  CO->>V: collectFees(bytes32(7), W)
+  V->>NF: collect(7, W, max, max)
+  CO->>V: unwind(key, 4,998,000,000, [0, 0], LPVaultSwap)
+  V->>NF: decreaseLiquidity, then collect to LPVaultSwap
+  CO->>V: returnPosition(bytes32(7))
+  V->>NF: transferFrom(LPVault, W, 7)
+```
+
 ## Walkthrough
 
 Setup (Ethereum market 1, USDC/USDT 0.01% pool, `tickSpacing = 1`, exact range `[−887,272, 887,272]`, vault token 6 decimals, $2.00 per whole token, from 3.1 and 3.7). Wallet `W` holds NFT #7 with `L = 25,000,000,000`.

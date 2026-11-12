@@ -14,6 +14,52 @@ Each flow lists who calls what, in order. Every step links the contract's walkth
 | AMM integrations | [Interface](src/amm/LIFECYCLE.md), [Uniswap v3](src/amm/uniswap-v3/LIFECYCLE.md), [Aerodrome Slipstream](src/amm/slipstream/LIFECYCLE.md) |
 | Infrastructure | [Lens](src/lens/lens/LIFECYCLE.md), [Lock](src/lock/lock/LIFECYCLE.md), [AvanaTimelock](src/governance/timelock/LIFECYCLE.md) |
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor B as Borrower
+  actor K as Liquidator
+  participant AD as AaveAdapter
+  participant PM as ProxyManager
+  participant VT as VaultToken
+  participant CO as Collateralization
+  participant V as LPVault
+  participant O as LPOracle
+  participant RM as RiskModule
+  participant P as PositionProxy
+  participant S as CDP Spoke
+  participant SW as LPVaultSwap
+  participant R as Swap route
+  B->>AD: pledge(m, (integrationId, key), deadline)
+  AD->>PM: deployProxy(B, S, m) on the first pledge
+  AD->>CO: pledge(B, P, VT, key, requireRescue)
+  CO->>V: receivePosition(m, B, key)
+  CO->>O: poke()
+  CO->>RM: checkPledge(B, P, m, integrationId, key, units, counters, requireRescue)
+  AD->>VT: mint(P, credited)
+  AD->>P: execute: VT.approve, S.supply, S.setUsingAsCollateral
+  B->>AD: borrow(m, r, amount, B, deadline, minHealthFactor, nonce)
+  AD->>RM: preBorrowCheck(P, r, amount)
+  RM->>O: poke()
+  AD->>P: execute: S.borrow(r, amount, P), asset.transfer(B, amount)
+  AD->>RM: postHealthCheck(P, minHealthFactor)
+  Note over O,S: the oracle price falls and the account's health factor drops below 1
+  K->>SW: liquidate(params), funded by the caller
+  Note right of SW: reads no pause state,<br/>breaker or keeper list
+  SW->>CO: beginSeizure(P, VT)
+  SW->>S: liquidationCall(collateral, r, P, Kf, false)
+  SW->>AD: burnSeized(m, VT, c)
+  SW->>CO: settleSeizure(P, VT, c, minAmounts)
+  CO->>V: unwind(key, units, minAmounts, LPVaultSwap)
+  SW->>R: swap(amountIn, minOut)
+  SW-->>K: keeperOut
+  B->>AD: repayAllAndWithdraw(m, (integrationId, key), units, [r], [cap], deadline)
+  Note right of AD: reads no pause state,<br/>breaker, freeze or price
+  AD->>P: execute: S.repay, then S.withdraw
+  AD->>CO: markDebtFree(P), then release(P, VT, key, units)
+  CO->>V: returnPosition(key)
+```
+
 Common setup for flows 1 to 7 (Base, from spec 3.1 `DEP-029`, 3.2 `BOR-022`, 3.4 `WDR-045`): market 3 is a USDC/USDT Aerodrome Slipstream market on the "Aerodrome Slipstream Stable" CDP Spoke `S`; one whole vault token (10^6 units) is worth $2.00; `CF_LP = 3,120` bps; the minimum pledge is $10 and an account holds at most 16 records per market; there is no minimum debt and no hard health floor; USDC is priced at $0.9999. Every user call takes the [Lock](src/lock/lock/LIFECYCLE.md) through [`acquire`](src/lock/lock/ILock.sol#L64) first and [`release`](src/lock/lock/ILock.sol#L70) last.
 
 ## 1. Pledge

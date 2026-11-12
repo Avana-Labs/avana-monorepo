@@ -4,6 +4,27 @@ Function links point to the interface that declares each function.
 
 The AvanaTimelock is the one executor of every privileged change to Avana on its chain: an OpenZeppelin `TimelockController` with a 12-hour short delay for tightenings and safety actions, a 4-to-5-day normal delay for everything else, a 14-day grace window and a DAO-only cancel for role changes and restorations.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor M as Governance multisig
+  actor A as Anyone
+  actor C as Canceller
+  participant TL as AvanaTimelock
+  participant PS as ParameterStore
+  participant SW as LPVaultSwap
+  M->>TL: schedule(PS, 0, tightenMarketUsdCap(1, 4,000,000e8), 0, salt, 43,200)
+  Note right of TL: requiredDelay = SHORT_DELAY,<br/>the selector is on the short-delay list
+  M->>TL: schedule(SW, 0, addKeeper(K2), 0, salt, 432,000)
+  Note right of TL: requiredDelay = normalDelay (5 days)
+  A->>TL: execute(PS, 0, data, 0, salt) once ready
+  Note right of TL: anyone while publicExecution is on,<br/>OperationExpired after 14 days
+  TL->>PS: tightenMarketUsdCap(1, 4,000,000e8)
+  C->>TL: cancel(id) before execution
+  Note right of TL: a role change or restoring operation<br/>needs DAO_CANCELLER_ROLE
+  A->>TL: cleanupExpiredOperation(id) after the 14-day grace
+```
+
 ## Walkthrough
 
 Setup (Ethereum; proposers: the 4-of-7 governance multisig and the Aave governance executor; `normalDelay` 432,000 s at launch).

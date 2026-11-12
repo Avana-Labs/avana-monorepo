@@ -2,6 +2,28 @@
 
 The VaultTokenFactory is the immutable registry of AMM integrations and the deployer of one VaultToken per (CDP Spoke, market key), at an address fixed by the factory, the Spoke and the market key; it holds no power over the tokens or LPVaults it records and calls no integration when it deploys.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant TL as AvanaTimelock
+  participant F as VaultTokenFactory
+  participant CO as Collateralization
+  participant V as Slipstream LPVault
+  participant VT as VaultToken avLP-3
+  participant MR as MarketRegistry
+  Note over TL,F: the listing payload names predictAddress(S, marketKey)
+  TL->>F: registerIntegration(2, slipstreamLPVault)
+  F->>CO: VAULT_TOKEN_FACTORY(), ADAPTER(), LP_VAULT_SWAP()
+  F->>V: INTEGRATION_ID(), AMM_PROTOCOL(), COLLATERALIZATION(), LOCK(), TIMELOCK(), MARKET_REGISTRY(), capabilities()
+  Note right of F: each a bounded STATICCALL<br/>answering one word
+  TL->>F: deployVaultToken(2, pool, 0, shape, hub, S, 3, lpOracle, 6, name, symbol)
+  F->>VT: CREATE3 at predictAddress(S, marketKey)
+  TL->>MR: listCollateralMarket(def) in the same batch
+  MR->>F: tokenOf(S, marketKey) must be def.vaultToken
+  MR->>V: bindMarket(3, pool, 0, shape, data)
+  CO->>F: isVaultToken(VT), lpVaultOf(2) on every pledge
+```
+
 ## Walkthrough
 
 Setup (Base: the Aerodrome Slipstream LPVault as integration 2 and market 3 on the "Aerodrome Slipstream Stable" Spoke `S`).

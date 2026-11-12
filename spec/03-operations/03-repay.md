@@ -13,6 +13,34 @@ Adapter behavior belongs to [2.6 Aave Adapter][2.6] (`SPEC-PROXY-003`, `SPEC-PRO
 
 Repay with funds:
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Y as Payer
+  participant AD as AaveAdapter
+  participant A as Debt asset
+  participant P as PositionProxy
+  participant S as CDP Spoke
+  Y->>AD: repay(borrower, marketId, debtReserveId, maxRepaySpend, repayAll, deadline)
+  Note right of AD: Lock.acquire(). No pause state, breaker, address freeze,<br/>sequencer gate, MarketRegistry, RiskModule or oracle read
+  AD->>S: getUserTotalDebt(debtReserveId, P)
+  S-->>AD: live debt D
+  Note right of AD: D = 0 returns 0. x = min(maxRepaySpend, D),<br/>or maxRepaySpend for a repay-all
+  AD->>A: transferFrom(payer, P, x)
+  AD->>P: execute(A, approve(S, received))
+  AD->>P: execute(S, repay(debtReserveId, received, P))
+  P->>S: repay(debtReserveId, received, P)
+  AD->>P: execute(A, approve(S, 0))
+  opt part not taken by Aave
+    AD->>P: execute(A, transfer(payer, received − spent))
+  end
+  opt repayAll
+    AD->>S: getUserTotalDebt(debtReserveId, P)
+    Note right of AD: remaining debt must be 0
+  end
+  Note right of AD: Repaid event, Lock.release()
+```
+
 ## Objective
 
 Move a debt asset to its funding Hub to reduce or clear one debt reserve of the account: any partial amount, or the full live debt of that reserve (drawn plus premium, accrued to the block) under a signed spending cap whose unused part is refunded in the same call (`Q-075`, `Q-153`, `Q-180`, `Q-234`, `Q-269`); or, with collateral, the debt that a stated number of the borrower's own units can pay at oracle value, leaving the account's health factor no lower than before (`Q-255`, `Q-356`).

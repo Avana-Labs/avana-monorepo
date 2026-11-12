@@ -2,6 +2,32 @@
 
 The Aerodrome Slipstream LPVault on Base custodies unstaked Slipstream positions in exact-range markets across the four position-manager and factory generations it accepts (Initial, Gauge Caps, Gauges V3, Aero); the position key carries the generation, and pools are looked up by tick spacing. Custody, removal, fees and pricing are the shared concentrated-liquidity base ([ClLPVaultCustody](../concentrated-liquidity/ClLPVaultCustody.sol), [ClLPVaultMarkets](../concentrated-liquidity/ClLPVaultMarkets.sol)); [SlipstreamIntegration](SlipstreamIntegration.sol) supplies the Slipstream layouts, the generation allowlist and the gauge check.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant CO as Collateralization
+  participant V as Slipstream LPVault
+  participant NPM as NPM of generation 2
+  participant F as CLFactory of generation 2
+  participant PL as USDC/USDT pool
+  CO->>V: checkReadSafe(3)
+  V->>PL: slot0(), six-field layout, lock flag only
+  CO->>V: receivePosition(3, Carol, key)
+  Note right of V: the key's top byte is generation 2,<br/>so it names that generation's NPM
+  V->>NPM: ownerOf(tokenId) must be Carol
+  V->>PL: gauge() must not be the owner
+  V->>NPM: positions(tokenId)
+  V->>F: getPool(USDC, USDT, 1) must be the market's pool
+  V->>NPM: transferFrom(Carol, LPVault, tokenId)
+  V-->>CO: units = 10,000,000,000
+  CO->>V: collectFees(key, Carol)
+  V->>NPM: collect, recipient Carol
+  CO->>V: unwind(key, 1,020,000,000, [0, 0], LPVaultSwap)
+  V->>NPM: decreaseLiquidity, then collect to LPVaultSwap
+  CO->>V: returnPosition(keyB)
+  V->>NPM: transferFrom(LPVault, Carol, tokenId of keyB)
+```
+
 ## Walkthrough
 
 Setup (Base market 3, USDC/USDT, tick spacing 1 on the Gauges V3 generation (index 2), exact range `[−887,272, 887,272]`, vault token 6 decimals, $2.00 per whole token, from 3.1 `DEP-029`, 3.7 `FEE-009`, 3.5 `LIQ-089`). Carol holds an unstaked NFT with `L = 10,000,000,000`.

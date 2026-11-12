@@ -10,6 +10,46 @@ A market is one (chain, AMM protocol, pool, exact position shape). For concentra
 
 The Adapter runs the whole pledge in one transaction under the protocol lock: Collateralization (one AMM-neutral ledger per chain) has the LPVault validate the position against the market and take custody, then records the backing; the Adapter mints exactly the credited units to the proxy and has the proxy supply them. Record layout and credit rules belong to [2.3 Collateralization][2.3]; custody and the AMM integration's position checks to [2.2 LP Vault][2.2] and the AMM integration interface page; the entry point, call bounds, pause gate, mint and post-checks to [2.6 Aave Adapter][2.6]; the eligibility checks, `minPledgeUsd`, the cap charge and its budget split to [2.7 Risk Module][2.7]; the proxy and its supply step to [2.5 Position Proxy and Proxy Manager][2.5]; the pause state and market status to [2.8 Market Registry][2.8]; parameter values to [2.9 Parameter Store][2.9]; price state and the sequencer gate to [2.10 LP Oracle][2.10]; the lock to [2.16 Lock][2.16]; vault tokens to [2.4 Vault Tokens][2.4]. Parameters are named as in [1.5][1.5].
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor W as Wallet
+  participant AD as AaveAdapter
+  participant PM as ProxyManager
+  participant VT as VaultToken
+  participant CO as Collateralization
+  participant LV as LPVault
+  participant O as LPOracle
+  participant RM as RiskModule
+  participant P as PositionProxy
+  participant S as CDP Spoke
+  W->>AD: pledge(marketId, (integrationId, positionKey), deadline)
+  Note right of AD: Lock.acquire(), deadline, home Hub pause state<br/>Paused(MintPathSuspect) refuses every pledge
+  opt first pledge into the market
+    AD->>PM: deployProxy(W, spoke, marketId)
+    PM-->>AD: P at its CREATE2 address
+    AD->>VT: addValidProxy(P)
+  end
+  AD->>CO: pledge(W, P, VT, positionKey, requireRescue)
+  CO->>LV: receivePosition(marketId, W, positionKey)
+  LV-->>CO: units read after custody
+  CO->>LV: marketOfPosition(positionKey)
+  CO->>O: poke()
+  CO->>RM: checkPledge(W, P, marketId, integrationId, positionKey, units, counters, requireRescue)
+  RM-->>CO: PledgeCharge or revert
+  Note right of CO: record written, caps booked
+  CO-->>AD: (recordId, credited = units)
+  AD->>VT: mint(P, units)
+  AD->>P: execute(VT, approve(S, units))
+  AD->>P: execute(S, supply(reserveId, units, P))
+  P->>S: supply(reserveId, units, P)
+  opt reserve not yet enabled
+    AD->>P: execute(S, setUsingAsCollateral(reserveId, true, P))
+    P->>S: setUsingAsCollateral(reserveId, true, P)
+  end
+  Note right of AD: supplied shares rose by units, backing gap unchanged<br/>Lock.release()
+```
+
 ## Objective
 
 Take custody of one AMM position from its owner, record its units as backing exactly once, mint exactly that many vault-token base units to the owner's PositionProxy for (CDP Spoke, market), and have the proxy supply them to the Spoke and enable them as collateral, all in one atomic transaction (`Q-066`, `Q-223`, `Q-224`).

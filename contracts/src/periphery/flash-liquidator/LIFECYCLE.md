@@ -2,6 +2,26 @@
 
 The flash liquidation helper lets a caller that holds no debt asset liquidate an Avana account. It is periphery, outside the audited core ([`FlashLiquidator`](FlashLiquidator.sol) is the public instance, [`OperatorFlashLiquidator`](OperatorFlashLiquidator.sol) the operator variant, both over [`FlashLiquidatorBase`](FlashLiquidatorBase.sol) and its lenders in [`FlashLiquidatorLenders`](FlashLiquidatorLenders.sol)): public, immutable, with no owner, and holding no funds or allowances between transactions. It borrows GHO from the chain's GHO flash minter where it has one (Ethereum) and every other debt asset from the chain's Aave V3 Pool, calls [`LPVaultSwap.liquidate`](../../liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol#L48) inside the lender's callback, repays the lender from the payout and pays its caller after the loan returns. LPVaultSwap sees the helper as an ordinary caller.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor E as Caller E
+  participant H as FlashLiquidator
+  participant PL as Aave V3 Pool
+  participant SW as LPVaultSwap
+  E->>H: maxFlashLoan(USDC), flashPremium(USDC, 1,950e6)
+  E->>H: flashLiquidate(params, flashAmount 1,950e6, maxPremium 975,000, maxTopUp 0, minPayout 69e6)
+  Note right of H: records a single-use context, pulls<br/>debtToCover − F + maxShortfall from E when positive
+  H->>PL: flashLoan(H, [USDC], [1,950e6], [0], H, data, 0)
+  PL->>H: executeOperation([USDC], [1,950e6], [975,000], H, data)
+  H->>SW: liquidate(params)
+  SW-->>H: keeperOut 2,020.8 USDC
+  Note right of H: a short repayment pulls a top-up<br/>from E, up to maxTopUp
+  H-->>PL: approves 1,950.975 USDC, the Pool pulls it
+  H-->>E: payout 69.825 USDC, at least minPayout
+  Note over H,PL: GHO on Ethereum uses GhoFlashMinter.flashLoan and onFlashLoan instead
+```
+
 ## Walkthrough
 
 Uniswap v3 on Ethereum (Bob, USDC debt, 3.5 `LIQ-069`), through the public helper before Aave grants it `FLASH_BORROWER` (5 bps premium).

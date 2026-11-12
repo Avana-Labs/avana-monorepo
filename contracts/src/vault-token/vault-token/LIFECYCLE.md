@@ -2,6 +2,18 @@
 
 A VaultToken is one market's Aave collateral asset: one base unit is one credited unit of a pledged position, minted and burned only by the AaveAdapter, and moved only from a registered proxy to the market's Hub, from the Hub to a registered proxy, and from the Hub to LPVaultSwap.
 
+```mermaid
+flowchart LR
+  AD[AaveAdapter] -->|"mint(P, units)"| P["PositionProxy P<br/>isValidProxy"]
+  P -->|"transferFrom(P, Hub, units) in Spoke.supply"| H[Hub]
+  H -->|"transfer(P, units) in Spoke.withdraw"| P
+  H -->|"transfer(LPVaultSwap, seized) in Spoke.liquidationCall"| SW[LPVaultSwap]
+  P -->|"burn(P, units) by the AaveAdapter"| B["burned"]
+  SW -->|"burn(LPVaultSwap, c) by AaveAdapter.burnSeized"| B
+  O["any other from and to, a spender path or a zero amount"] -.->|"UnauthorizedTransfer"| RV["revert"]
+  MO["mint to anything but a registered proxy"] -.->|"UnauthorizedRecipient"| RV
+```
+
 ## Walkthrough
 
 Setup (Base market 3: vault token `VT` with 6 decimals, $2.00 per whole token, from 3.1 `DEP-029`, 3.4 `WDR-045`, 3.5 `LIQ-089`).

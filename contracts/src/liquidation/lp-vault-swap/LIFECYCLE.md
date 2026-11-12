@@ -4,6 +4,39 @@ Function links point to the interface that declares each function.
 
 LPVaultSwap is Avana's only liquidator: it pulls the repayment from its caller, repays an unhealthy account's debt on the Aave V4 Spoke, receives the seized vault tokens, has them burned and unwound into pool tokens, swaps those into the debt asset and pays Avana's fee, the borrower and the caller, all in one call. It takes no flash loan in a liquidation; a caller without the debt asset uses the [flash liquidation helper](../../periphery/flash-liquidator/LIFECYCLE.md).
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor K as Keeper K1
+  participant SW as LPVaultSwap
+  participant LK as Lock
+  participant O as LPOracle
+  participant CO as Collateralization
+  participant S as CDP Spoke
+  participant AD as AaveAdapter
+  participant R as Swap route
+  participant E as PayoutEscrow
+  K->>SW: liquidate(proxy Q, debtToCover 1,950e6, minPayout 2,019e6, maxShortfall 0)
+  Note right of SW: deadline, caller freeze. Never reads the pause<br/>state, a breaker or the keeper registry
+  SW->>LK: acquire()
+  SW->>O: poke()
+  Note right of SW: HF below 1, Hub shares = assets,<br/>the USDC DebtOracle Live
+  K-->>SW: 1,950 USDC pulled by transferFrom, Kf
+  SW->>CO: beginSeizure(Q, VT)
+  SW->>S: liquidationCall(collateral, debt, Q, Kf, false)
+  S-->>SW: 975 vault tokens
+  SW->>AD: burnSeized(m, VT, 975e18)
+  SW->>CO: settleSeizure(Q, VT, 975e18, minAmounts)
+  CO-->>SW: about 1,030 USDC + 1,010 USDT from the LPVault unwind
+  SW->>R: swap(1,010 USDT, minOut)
+  Note right of R: on a revert, RouteFailed and the backup route
+  SW-->>K: keeperOut 2,020.8 USDC, a plain transfer
+  opt the fee or surplus transfer is refused
+    SW->>E: deposit(USDC, recipient, amount)
+  end
+  SW->>LK: release()
+```
+
 ## Walkthrough
 
 Uniswap v3 on Ethereum (Bob, USDC debt, 3.5 `LIQ-069`). Setup: Bob pledged a USDC/USDT position; each vault token is priced at $2.10; he borrowed USDC; HF < 1; Aave's bonus is 5%; `slippageAllowanceBps = 100`; `floorRoundingAllowance` = 1 USDC.

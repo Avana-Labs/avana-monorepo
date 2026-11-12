@@ -22,6 +22,43 @@ Liquidation is never paused by the application pause switch, a circuit breaker o
 
 Contract rules are defined in [2.3 Collateralization](../02-contracts/03-collateralization.md), [2.2 LP Vault](../02-contracts/02-lp-vault.md), [2.4 Vault Tokens](../02-contracts/04-vault-tokens.md), [2.6 Aave Adapter](../02-contracts/06-aave-adapter.md), [2.11 LPVaultSwap](../02-contracts/11-lpvaultswap.md), [2.12 Settlement Routes](../02-contracts/12-settlement-routes.md), [2.10 LP Oracle](../02-contracts/10-lp-oracle.md), [2.8 Market Registry](../02-contracts/08-market-registry.md), [2.9 Parameter Store](../02-contracts/09-parameter-store.md), [2.15 Governance and Timelock](../02-contracts/15-governance-and-timelock.md), [2.16 Lock](../02-contracts/16-lock.md), [2.17 Lens](../02-contracts/17-lens.md) and [2.18 PayoutEscrow](../02-contracts/18-payout-escrow.md) (the payout escrow, `Q-401`). The flash source used by `deleverage`, the AMM integration interface and the per-chain settings are on the flash-source, AMM-integration and chain pages. Parameters are named as in [1.5 Protocol Parameters](../01-architecture/05-parameters.md). Emergency states and playbooks are in [FLOW-006](06-emergency-operations.md); deficit coverage is in [FLOW-009](09-deficit-coverage.md).
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor K as Liquidator
+  participant LS as LPVaultSwap
+  participant O as LPOracle
+  participant DA as Debt asset
+  participant CO as Collateralization
+  participant S as CDP Spoke
+  participant AD as AaveAdapter
+  participant LV as LPVault
+  participant RT as Swap route
+  K->>LS: liquidate(params)
+  Note right of LS: deadline, Lock.acquire(). Reads no pause state,<br/>breaker, drift or keeper list
+  LS->>O: poke(), getPriceState()
+  Note right of LS: seized market and repaid reserve fresh,<br/>sequencer gate, HF and bonus read from the Spoke
+  LS->>DA: transferFrom(caller, LPVaultSwap, debtToCover)
+  LS->>CO: beginSeizure(proxy, vaultToken)
+  LS->>S: liquidationCall(collateralReserveId, debtReserveId, proxy, Kf, false)
+  S-->>LS: c vault tokens seized, D of debt asset pulled
+  LS->>AD: burnSeized(marketId, vaultToken, c)
+  LS->>CO: settleSeizure(proxy, vaultToken, c, minAmounts)
+  loop each debited record, largest credited first
+    CO->>LV: unwind(positionKey, take, zero minimums, LPVaultSwap)
+    LV-->>LS: principal of the market's n tokens
+  end
+  loop each unwound token that is not the debt asset
+    LS->>RT: swap(amountIn, minOut)
+    RT-->>LS: debt asset
+  end
+  Note right of LS: recovery floor, capped shortfall top-up from the caller,<br/>waterfall A, Kr, B
+  LS->>DA: transfer fee A to feeRecipient, surplus B to the borrower
+  Note right of LS: a refused A or B is deposited in the PayoutEscrow
+  LS->>DA: transfer keeperOut to the caller
+  Note right of LS: Lock.release()
+```
+
 ## Notation
 
 The symbols follow [2.11 LPVaultSwap](../02-contracts/11-lpvaultswap.md#notation). Every settlement amount is in the repaid debt asset's base units (`dd` decimals: 6 for USDC and USDT, 18 for GHO and WETH). Prices are 8-decimal USD. Bps use 10,000 = 100 %. `⌊·⌋` rounds down and `⌈·⌉` rounds up. `W` is the borrower's wallet, `S` the CDP Spoke, `HD` its home Hub, `VT` the market's vault token, `m` the market, `P` the PositionProxy, `LV` the LPVault of the market's AMM protocol, `H` the flash liquidation helper, and `n` the market's token count. The helper's loan `F` and premium `φ` appear only in the helper's own steps; no liquidation formula of LPVaultSwap contains them.
