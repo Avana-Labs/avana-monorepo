@@ -330,6 +330,9 @@ computed("MATH-ST-111", "REQ-SWAP-122 example: USDT at 10 bps, owed 5,002.5 USDT
 
 # ---------------- (i) measured conservation with a transfer fee (SPEC-LIQ-010, REQ-SWAP-108, Q-390) ----------------
 # Here K is the amount pulled (X) and Kr what arrived (Kf); pf is the fee on the keeperOut transfer.
+# This is the general form for measured amounts. A fee on the debt asset itself never reaches it on Aave V4: the Hub
+# refuses the fee-reduced repayment (InsufficientTransferred) and the liquidation reverts (REQ-SWAP-123). The form still
+# covers a funding transfer that delivers less than asked and a payout that arrives short.
 Kr, Fr_, P, pf = Ints("Kf_measured Fr P payoutFee")
 mdom = base + [Kr >= D, Kr <= K, Fr_ == 0, P == 0, pf >= 0, pf <= (Kr + Rp) - (D + A + B)]
 keeperOutM = (Kr + Rp) - (D + A + B)
@@ -349,7 +352,7 @@ check("MATH-ST-112",
                           - (zmin(pos(Rp - D - phiD - tau), G) - zmin(Au, pos(Rp - D - phiD - tau))) < B)],
       "COUNTEREXAMPLE", show=[tau, R, D])
 # MATH-ST-112 verifies: REQ-SWAP-108
-computed("MATH-ST-112", "REQ-SWAP-108 example: USDT at 10 bps, debtToCover = 5,000 USDT", [
+computed("MATH-ST-112", "measured funding: a 10 bps fee on the funding transfer of debtToCover = 5,000 USDT", [
     ("Kf after the caller's transfer", 4_995_000_000, _usdt(5_000 * 10**6, 10)),
 ])
 

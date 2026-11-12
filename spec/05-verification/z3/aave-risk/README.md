@@ -98,7 +98,7 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 |---|---|---|---|---|
 | MATH-AR-16a–d | partial repay: `D − x ≤ D' ≤ D − x + ⌈idx/RAY⌉`; premium-only exact; repaying `x = D` restores every drawn share | SPEC-PROXY-003, SPEC-HUB-008 | idx < 2^100 | PROVED |
 | MATH-AR-17a | a repay-all signed as a fixed amount leaves debt after one block | SPEC-PROXY-003, SPEC-PROXY-007 | deliberate | COUNTEREXAMPLE |
-| MATH-AR-17b–d | `D_e ≤ M ⇒ spent = D_e`, debt 0, refund `M − D_e ≥ 0`; with a transfer fee nothing above `M` is pulled; partial `x ≤ min(M, D)` | SPEC-PROXY-003, SPEC-PROXY-007 | — | PROVED |
+| MATH-AR-17b–d | `D_e ≤ M ⇒ spent = D_e`, debt 0, refund `M − D_e ≥ 0`; with a short delivery (`received < M`) nothing above `M` is pulled (a transfer fee on the debt asset is refused earlier by Aave V4's Hub, `REQ-SWAP-123`); partial `x ≤ min(M, D)` | SPEC-PROXY-003, SPEC-PROXY-007 | — | PROVED |
 | MATH-AR-18a–c | interest never lowers debt | SPEC-PROXY-003, SPEC-HUB-007 | — | PROVED |
 | MATH-AR-19 | total GHO debt < $1,000 is liquidated in full by the dust rule | SPEC-HUB-008, Q-169 | — | PROVED |
 | MATH-AR-39 | `quoteRepayAll` ≥ live debt at any inclusion up to the deadline | SPEC-PROXY-007 | `D_s ≥ 20,000` units; growth ≤ quoted + 9 bps | PROVED |

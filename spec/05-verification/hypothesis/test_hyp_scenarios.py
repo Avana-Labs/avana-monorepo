@@ -995,7 +995,9 @@ def test_hyp89_orphan_burn_keeps_market_working(m, burn, drop):
 @cfg(30)
 @given(fee=st.integers(1, 50), drop=CRASH, path=st.sampled_from(["liquidate", "settle", "remove", "deleverage"]))
 def test_hyp91_usdt_fee_switch(fee, drop, path):
-    """With USDT's transfer fee switched on, settlement, removal and deleverage of a USDT market keep working at the
+    """USDT is a pool token here and GHO the debt, so no fee-charged transfer enters the Hub (a fee on a debt asset is
+    refused by Aave V4's Hub, REQ-SWAP-123).
+    With USDT's transfer fee switched on, settlement, removal and deleverage of a USDT market keep working at the
     amounts that actually arrive, the issuer breaker trips, and no Avana contract keeps a token (Q-271)."""
     s = fresh()
     tid = pledge(s, "u", 0, 50_000)

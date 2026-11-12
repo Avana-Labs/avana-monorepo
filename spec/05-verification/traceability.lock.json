@@ -3425,7 +3425,7 @@
     ]
   },
   "INV-043": {
-    "hash": "a9db5cad8ebcb056",
+    "hash": "3e5d60970dd960e4",
     "checks": [
       "FV-CTL-41",
       "HYP-16",
@@ -3441,7 +3441,13 @@
       "QNT-17",
       "QNT-39",
       "QNT-T03",
-      "QNT-T28"
+      "QNT-T28",
+      "TEST-029",
+      "TEST-075",
+      "TEST-099",
+      "TEST-132",
+      "TEST-162",
+      "TEST-193"
     ]
   },
   "INV-044": {
@@ -4005,13 +4011,15 @@
     ]
   },
   "INV-086": {
-    "hash": "162bccd0ecce845d",
+    "hash": "ffff99db1181918e",
     "checks": [
       "FV-LIQ-01",
       "HYP-84",
       "PROP-069",
       "SettlementMath",
-      "TEST-198"
+      "TEST-048",
+      "TEST-198",
+      "TEST-240"
     ]
   },
   "INV-087": {
@@ -4110,7 +4118,7 @@
     ]
   },
   "INV-095": {
-    "hash": "295869d7a7f58fd7",
+    "hash": "6c2e2ea2ec3fab39",
     "checks": [
       "AaveV3FlashSource",
       "FV-LIQ-01",
@@ -4128,8 +4136,10 @@
       "MarketRegistryViews",
       "PROP-080",
       "PROP-096",
+      "PROP-097",
       "TEST-046",
       "TEST-052",
+      "TEST-055",
       "TEST-267",
       "TEST-285",
       "TEST-287",
@@ -4384,7 +4394,7 @@
     ]
   },
   "LIQ-032": {
-    "hash": "86da8325bd2ba117",
+    "hash": "b6ccc46adb2de17a",
     "checks": []
   },
   "LIQ-033": {
@@ -5057,7 +5067,7 @@
     "checks": []
   },
   "MKT-004": {
-    "hash": "80933e24555bc421",
+    "hash": "ec2c8bfe00d2fb7f",
     "checks": []
   },
   "MKT-005": {
@@ -5282,7 +5292,7 @@
     "checks": []
   },
   "MKT-048": {
-    "hash": "a5149952f6272ffe",
+    "hash": "923c26b8a14f252f",
     "checks": []
   },
   "MKT-049": {
@@ -8380,8 +8390,9 @@
     ]
   },
   "Q-271": {
-    "hash": "29ee17f750857342",
+    "hash": "8139c96363447370",
     "checks": [
+      "CollateralizationLedger",
       "HYP-25",
       "HYP-80",
       "HYP-91",
@@ -8389,12 +8400,20 @@
       "IAaveAdapterUser",
       "IAmmIntegration",
       "ICollateralizationAdapter",
-      "IPayoutEscrow",
       "ILPVaultSwap",
       "IMarketRegistryErrors",
+      "IPayoutEscrow",
       "ISettlementRoute",
+      "PROP-052",
+      "PayoutEscrow",
       "Pending",
-      "QNT-11"
+      "QNT-11",
+      "SwapRouteBase",
+      "TEST-151",
+      "TEST-179",
+      "TEST-221",
+      "TEST-237",
+      "TEST-248"
     ]
   },
   "Q-272": {
@@ -9218,10 +9237,18 @@
     ]
   },
   "Q-390": {
-    "hash": "6d8c359578259f64",
+    "hash": "e87611de79567aba",
     "checks": [
+      "AaveV3FlashSource",
       "MATH-ST-111",
-      "MATH-ST-112"
+      "MATH-ST-112",
+      "MATH-ST-53",
+      "MarketRegistryHubsLogic",
+      "PROP-097",
+      "TEST-048",
+      "TEST-080",
+      "TEST-239",
+      "TEST-287"
     ]
   },
   "Q-391": {
@@ -9407,7 +9434,7 @@
     ]
   },
   "REP-006": {
-    "hash": "5b583b3f666db77c",
+    "hash": "5d75f7612253abe8",
     "checks": [
       "IAaveAdapterUser"
     ]
@@ -9427,7 +9454,7 @@
     ]
   },
   "REP-010": {
-    "hash": "a09aa28399397546",
+    "hash": "5727d9d8407fe7f6",
     "checks": [
       "HYP-17",
       "IAaveAdapterUser",
@@ -9615,7 +9642,7 @@
     "checks": []
   },
   "REP-POST-001": {
-    "hash": "01a274d49cd1a106",
+    "hash": "0716942177f3f78c",
     "checks": [
       "HYP-17",
       "HYP-47"
@@ -10806,17 +10833,39 @@
     ]
   },
   "REQ-ADAPTER-004": {
-    "hash": "261962bb84dced45",
+    "hash": "31730bedde01a8ae",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterCollateralLogic",
+      "AaveAdapterExitLogic",
+      "AaveAdapterImmutables",
+      "AaveAdapterLogics",
+      "AaveAdapterSettlementLogic",
+      "AaveAdapterStorage",
+      "AaveAdapterUserLogic",
       "FV-CTL-86",
       "FV-CTL-88",
-      "IAaveAdapter"
+      "IAaveAdapter",
+      "IAaveAdapterErrors",
+      "IAaveAdapterLogic",
+      "TEST-062",
+      "TEST-242"
     ]
   },
   "REQ-ADAPTER-005": {
-    "hash": "ef90298d4ccce052",
+    "hash": "53ec329651adeb5a",
     "checks": [
-      "IAaveAdapter"
+      "AaveAdapter",
+      "AaveAdapterSettlementLogic",
+      "IAaveAdapter",
+      "PROP-011",
+      "TEST-018",
+      "TEST-073",
+      "TEST-088",
+      "TEST-130",
+      "TEST-186",
+      "TEST-208",
+      "TEST-241"
     ]
   },
   "REQ-ADAPTER-006": {
@@ -10826,17 +10875,31 @@
     ]
   },
   "REQ-ADAPTER-007": {
-    "hash": "5cf43dd28eaa7e03",
+    "hash": "e7da469c9ab3e353",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterSteps",
       "IAaveAdapter",
-      "IAaveAdapterErrors"
+      "IAaveAdapterErrors",
+      "TEST-010",
+      "TEST-027",
+      "TEST-031",
+      "TEST-099"
     ]
   },
   "REQ-ADAPTER-008": {
-    "hash": "c90e012a5c2bb62e",
+    "hash": "25c97cae1997345e",
     "checks": [
+      "AaveAdapter",
       "IAaveAdapter",
-      "IAaveAdapterViews"
+      "IAaveAdapterViews",
+      "TEST-019",
+      "TEST-026",
+      "TEST-027",
+      "TEST-028",
+      "TEST-114",
+      "TEST-132",
+      "TEST-156"
     ]
   },
   "REQ-ADAPTER-009": {
@@ -11164,8 +11227,10 @@
     ]
   },
   "REQ-ADAPTER-047": {
-    "hash": "0a892ee7dca29076",
+    "hash": "b5759e98d8788b90",
     "checks": [
+      "AaveAdapterExitLogic",
+      "AaveAdapterSettlementLogic",
       "FV-CTL-100",
       "FV-CTL-34",
       "FV-CTL-41",
@@ -11174,7 +11239,21 @@
       "IAaveAdapterUser",
       "IAaveAdapterViews",
       "QNT-14",
-      "QNT-15"
+      "QNT-15",
+      "TEST-029",
+      "TEST-060",
+      "TEST-099",
+      "TEST-107",
+      "TEST-132",
+      "TEST-151",
+      "TEST-162",
+      "TEST-193",
+      "TEST-195",
+      "TEST-208",
+      "TEST-229",
+      "TEST-237",
+      "TEST-239",
+      "TEST-243"
     ]
   },
   "REQ-ADAPTER-048": {
@@ -11292,12 +11371,18 @@
     ]
   },
   "REQ-ADAPTER-065": {
-    "hash": "e3ca65dbc8f8dbef",
+    "hash": "c359cb98dab1e710",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterUserLogic",
       "IAaveAdapterErrors",
       "IAaveAdapterEvents",
       "IAaveAdapterUser",
-      "IAaveAdapterViews"
+      "IAaveAdapterViews",
+      "TEST-010",
+      "TEST-012",
+      "TEST-030",
+      "TEST-061"
     ]
   },
   "REQ-ADAPTER-066": {
@@ -11343,23 +11428,41 @@
     ]
   },
   "REQ-ADAPTER-070": {
-    "hash": "d287eafd2dc0be16",
+    "hash": "00730bef58779a3e",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterSettlementLogic",
       "FV-CTL-100",
       "FV-CUS-19",
       "FV-CUS-QNT-02",
       "IAaveAdapterErrors",
       "IAaveAdapterEvents",
       "IAaveAdapterSettlement",
-      "IAaveAdapterViews"
+      "IAaveAdapterViews",
+      "TEST-061",
+      "TEST-088",
+      "TEST-099",
+      "TEST-208",
+      "TEST-269",
+      "TEST-270"
     ]
   },
   "REQ-ADAPTER-071": {
-    "hash": "82965e74354e9aad",
+    "hash": "d61f48e011345463",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterExitLogic",
+      "AaveAdapterUserLogic",
       "FV-CTL-39",
       "IAaveAdapterErrors",
-      "IAaveAdapterUser"
+      "IAaveAdapterUser",
+      "TEST-018",
+      "TEST-099",
+      "TEST-165",
+      "TEST-193",
+      "TEST-203",
+      "TEST-243",
+      "TEST-269"
     ]
   },
   "REQ-ADAPTER-072": {
@@ -11377,12 +11480,22 @@
     ]
   },
   "REQ-ADAPTER-074": {
-    "hash": "b5da6952c36442d7",
+    "hash": "8c69c89e701daa95",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterCollateralLogic",
+      "AaveAdapterExitLogic",
+      "AaveAdapterImmutables",
+      "AaveAdapterSettlementLogic",
+      "AaveAdapterStorage",
+      "AaveAdapterUserLogic",
       "FV-CTL-02",
       "IAaveAdapterAdmin",
       "IAaveAdapterErrors",
-      "IAaveAdapterViews"
+      "IAaveAdapterViews",
+      "TEST-062",
+      "TEST-242",
+      "TEST-247"
     ]
   },
   "REQ-ADAPTER-075": {
@@ -11408,12 +11521,17 @@
     ]
   },
   "REQ-ADAPTER-078": {
-    "hash": "eee1828c2cfb2ac3",
+    "hash": "48179a772e87c6cd",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterCollateralLogic",
       "FV-CTL-39",
       "FV-CUS-30",
       "IAaveAdapterCollateral",
-      "IAaveAdapterEvents"
+      "IAaveAdapterEvents",
+      "TEST-061",
+      "TEST-237",
+      "TEST-269"
     ]
   },
   "REQ-ADAPTER-079": {
@@ -11426,25 +11544,39 @@
     ]
   },
   "REQ-ADAPTER-080": {
-    "hash": "5f44f86ce74033e8",
+    "hash": "2d79a3c80e8757f6",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterCollateralLogic",
       "FV-CTL-109",
       "FV-CTL-39",
       "FV-CUS-32",
       "IAaveAdapterCollateral",
       "IAaveAdapterErrors",
       "IAaveAdapterEvents",
-      "RepayWithCollateralParams"
+      "RepayWithCollateralParams",
+      "TEST-061",
+      "TEST-099",
+      "TEST-192",
+      "TEST-239",
+      "TEST-241",
+      "TEST-275"
     ]
   },
   "REQ-ADAPTER-081": {
-    "hash": "bc79f283423f65b7",
+    "hash": "8cb4c4b8bd7995a2",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterSettlementLogic",
+      "AaveAdapterStorage",
       "FV-CTL-10",
       "FV-CTL-100",
       "FV-CUS-32",
       "IAaveAdapterErrors",
-      "IAaveAdapterSettlement"
+      "IAaveAdapterSettlement",
+      "TEST-060",
+      "TEST-239",
+      "TEST-270"
     ]
   },
   "REQ-ADAPTER-082": {
@@ -11516,9 +11648,11 @@
     "checks": []
   },
   "REQ-ADAPTER-089": {
-    "hash": "b982ebdb381cad24",
+    "hash": "7c3ab1a638967509",
     "checks": [
-      "IAaveAdapterCollateral"
+      "AaveAdapterCollateralLogic",
+      "IAaveAdapterCollateral",
+      "TEST-237"
     ]
   },
   "REQ-ADAPTER-090": {
@@ -11557,12 +11691,27 @@
     "checks": []
   },
   "REQ-ADAPTER-096": {
-    "hash": "185febd6f4358e28",
-    "checks": []
+    "hash": "c2c5dd90ab3710e6",
+    "checks": [
+      "AaveAdapter",
+      "AaveAdapterExitLogic",
+      "AaveAdapterUserLogic",
+      "TEST-060",
+      "TEST-099",
+      "TEST-193",
+      "TEST-270"
+    ]
   },
   "REQ-ADAPTER-097": {
-    "hash": "fe8471e6f9eaa77d",
-    "checks": []
+    "hash": "d96955e443253831",
+    "checks": [
+      "AaveAdapter",
+      "AaveAdapterExitLogic",
+      "AaveAdapterUserLogic",
+      "TEST-060",
+      "TEST-151",
+      "TEST-270"
+    ]
   },
   "REQ-ADAPTER-098": {
     "hash": "21335895576f1b9f",
@@ -12243,7 +12392,7 @@
     "checks": []
   },
   "REQ-ARCH-014": {
-    "hash": "fecccdd066aa6722",
+    "hash": "3157e9ab39fccb09",
     "checks": [
       "FV-CUS-28",
       "IMarketRegistryErrors"
@@ -14560,14 +14709,14 @@
     ]
   },
   "REQ-FLASH-003": {
-    "hash": "c8029b0fc13610f2",
+    "hash": "932b2c0218bcf461",
     "checks": [
       "AaveV3FlashSource",
       "FV-CTL-157",
       "FV-CTL-157-W",
+      "FV-CTL-78",
       "IFlashSource",
       "MATH-ST-111",
-      "MATH-ST-112",
       "MATH-ST-115",
       "PROP-036",
       "PROP-080",
@@ -17693,11 +17842,16 @@
     ]
   },
   "REQ-PROXY-029": {
-    "hash": "5bace77f18e73517",
+    "hash": "9b63225e2df113e1",
     "checks": [
+      "AaveAdapterUserLogic",
       "FV-CTL-42",
       "IAaveAdapterErrors",
-      "IAaveAdapterUser"
+      "IAaveAdapterUser",
+      "TEST-029",
+      "TEST-075",
+      "TEST-221",
+      "TEST-248"
     ]
   },
   "REQ-PROXY-030": {
@@ -17715,20 +17869,33 @@
     ]
   },
   "REQ-PROXY-032": {
-    "hash": "c75d9a0970f4293d",
+    "hash": "d8920d7e0b93afd5",
     "checks": [
+      "AaveAdapterUserLogic",
       "FV-CTL-41",
       "HYP-16",
       "IAaveAdapterEvents",
       "IAaveAdapterUser",
-      "QNT-14"
+      "QNT-14",
+      "TEST-029",
+      "TEST-061",
+      "TEST-099",
+      "TEST-158",
+      "TEST-192",
+      "TEST-193",
+      "TEST-275"
     ]
   },
   "REQ-PROXY-033": {
-    "hash": "5f1343a0bd3f661d",
+    "hash": "2f642daff775175a",
     "checks": [
+      "AaveAdapter",
+      "AaveAdapterExitLogic",
+      "AaveAdapterUserLogic",
       "IAaveAdapterUser",
-      "IAaveAdapterViews"
+      "IAaveAdapterViews",
+      "TEST-018",
+      "TEST-026"
     ]
   },
   "REQ-PROXY-034": {
@@ -17740,13 +17907,22 @@
     ]
   },
   "REQ-PROXY-035": {
-    "hash": "9ceaf012c329524b",
+    "hash": "76449c7df89fb211",
     "checks": [
+      "AaveAdapterExitLogic",
+      "AaveAdapterUserLogic",
       "FV-CTL-100",
       "FV-CTL-40",
       "HYP-18",
       "IAaveAdapterUser",
-      "QNT-15"
+      "QNT-15",
+      "TEST-018",
+      "TEST-099",
+      "TEST-158",
+      "TEST-193",
+      "TEST-195",
+      "TEST-229",
+      "TEST-243"
     ]
   },
   "REQ-PROXY-036": {
@@ -17821,10 +17997,16 @@
     ]
   },
   "REQ-PROXY-048": {
-    "hash": "6c0eca923b0294dc",
+    "hash": "5a72d612f3f36b8b",
     "checks": [
+      "AaveAdapterCollateralLogic",
+      "AaveAdapterExitLogic",
+      "AaveAdapterStorage",
+      "AaveAdapterUserLogic",
       "IAaveAdapterErrors",
-      "IAaveAdapterViews"
+      "IAaveAdapterViews",
+      "TEST-010",
+      "TEST-060"
     ]
   },
   "REQ-PROXY-049": {
@@ -17924,9 +18106,13 @@
     ]
   },
   "REQ-PROXY-060": {
-    "hash": "f97f6c17391c8816",
+    "hash": "ca43d503226cb77b",
     "checks": [
-      "IAaveAdapterErrors"
+      "IAaveAdapterErrors",
+      "TEST-018",
+      "TEST-027",
+      "TEST-165",
+      "TEST-237"
     ]
   },
   "REQ-PROXY-061": {
@@ -17936,9 +18122,16 @@
     ]
   },
   "REQ-PROXY-062": {
-    "hash": "038a3f01cd69b949",
+    "hash": "b82b12a58e8569b9",
     "checks": [
-      "IAaveAdapterErrors"
+      "IAaveAdapterErrors",
+      "TEST-012",
+      "TEST-018",
+      "TEST-027",
+      "TEST-029",
+      "TEST-030",
+      "TEST-208",
+      "TEST-237"
     ]
   },
   "REQ-PROXY-063": {
@@ -20315,18 +20508,23 @@
     ]
   },
   "REQ-SWAP-013": {
-    "hash": "691c4bbbe05652ab",
+    "hash": "b13ecd76bd573858",
     "checks": [
       "FV-CTL-157",
+      "FV-CTL-78",
       "FV-LIQ-03",
       "FV-LIQ-07",
       "ILPVaultSwapDeleverage",
       "ILPVaultSwapErrors",
       "ILPVaultSwapEvents",
+      "LPVaultSwap",
+      "LPVaultSwapDeleverageLogic",
       "MATH-ST-110",
       "MATH-ST-68",
       "SettlementMath",
-      "TEST-198"
+      "TEST-046",
+      "TEST-198",
+      "TEST-239"
     ]
   },
   "REQ-SWAP-014": {
@@ -21169,7 +21367,7 @@
     ]
   },
   "REQ-SWAP-106": {
-    "hash": "498eaacd0c30e263",
+    "hash": "3f07f7380af975a0",
     "checks": [
       "DeleverageRequest",
       "FV-LIQ-01",
@@ -21203,16 +21401,24 @@
     ]
   },
   "REQ-SWAP-108": {
-    "hash": "53c09fabf0a1b11d",
+    "hash": "9043109eb61c5d86",
     "checks": [
       "FV-LIQ-02",
       "FV-LIQ-06",
       "ILPVaultSwap",
       "ILPVaultSwapLiquidation",
+      "LPVaultSwapDeleverageLogic",
+      "LPVaultSwapLiquidationLogic",
+      "LPVaultSwapSettlement",
       "MATH-ST-112",
       "MATH-ST-53",
+      "TEST-046",
+      "TEST-048",
+      "TEST-080",
       "TEST-174",
-      "TEST-198"
+      "TEST-179",
+      "TEST-198",
+      "TEST-239"
     ]
   },
   "REQ-SWAP-109": {
@@ -21291,7 +21497,7 @@
     ]
   },
   "REQ-SWAP-122": {
-    "hash": "183a830c25622bb3",
+    "hash": "0e0d317919d5b527",
     "checks": [
       "AaveV3FlashSource",
       "IFlashSource",
@@ -21309,11 +21515,14 @@
     ]
   },
   "REQ-SWAP-123": {
-    "hash": "c7427abd1e041a05",
+    "hash": "707614de6b29ca2d",
     "checks": [
       "IMarketRegistryErrors",
       "MATH-ST-112",
+      "TEST-048",
       "TEST-174",
+      "TEST-228",
+      "TEST-239",
       "TEST-287"
     ]
   },
@@ -23446,7 +23655,7 @@
     ]
   },
   "SPEC-BRK-003": {
-    "hash": "c7b2667d74f14c83",
+    "hash": "924c07f7a6aec781",
     "checks": [
       "FV-CTL-108",
       "HYP-80",
@@ -23454,12 +23663,14 @@
       "IRiskModuleChecks",
       "IRiskModuleErrors",
       "IRiskModuleViews",
+      "IssuerProbe",
       "MATH-AR-55",
       "RiskModuleBreakerLogic",
       "RiskModuleCalls",
       "RiskModuleConstants",
       "TEST-221",
-      "TEST-228"
+      "TEST-228",
+      "TEST-287"
     ]
   },
   "SPEC-BRK-004": {
@@ -24364,7 +24575,7 @@
     ]
   },
   "SPEC-LIQ-010": {
-    "hash": "abbbde98ba5d54f2",
+    "hash": "7173b6e631768a3a",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-03",
@@ -24376,6 +24587,7 @@
       "HYP-31",
       "ILPVaultSwapErrors",
       "ILPVaultSwapLiquidation",
+      "LPVaultSwapLiquidationLogic",
       "LiquidationResult",
       "MATH-ST-100",
       "MATH-ST-101",
@@ -24398,12 +24610,23 @@
       "MATH-ST-94",
       "MATH-ST-96",
       "PROP-015",
+      "PROP-059",
       "QNT-26",
       "SYM-180",
       "SYM-46",
       "SettlementMath",
       "SettlementReport",
-      "TEST-198"
+      "TEST-048",
+      "TEST-051",
+      "TEST-078",
+      "TEST-093",
+      "TEST-104",
+      "TEST-170",
+      "TEST-174",
+      "TEST-198",
+      "TEST-216",
+      "TEST-233",
+      "TEST-246"
     ]
   },
   "SPEC-LIQ-011": {

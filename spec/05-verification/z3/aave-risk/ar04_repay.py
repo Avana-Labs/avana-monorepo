@@ -43,7 +43,9 @@ witness('MATH-AR-17a', 'wrong reading: repay-all signed as a fixed amount = debt
 rule = [D1 >= 0, M >= D1, recv == M, spent == If(recv < D1, recv, D1), refund == recv - spent]
 prove('MATH-AR-17b', 'SPEC-PROXY-007: D_e <= M, received = M  =>  spent = D_e, debt after 0, refund = M - D_e >= 0, pulled <= M',
       rule, And(spent == D1, D1 - spent == 0, refund == M - D1, refund >= 0, recv <= M))
-prove('MATH-AR-17c', 'fee-on-transfer token (received <= M): spent <= min(received, D_e), refund >= 0, nothing above M is pulled',
+# A token that delivers less than sent: the Adapter's measured accounting. A transfer fee on the debt asset never gets
+# this far on Aave V4, whose Hub refuses the fee-reduced restore with InsufficientTransferred (REQ-SWAP-123).
+prove('MATH-AR-17c', 'short delivery (received <= M): spent <= min(received, D_e), refund >= 0, nothing above M is pulled',
       [D1 >= 0, M >= D1, recv >= 0, recv <= M, spent == If(recv < D1, recv, D1), refund == recv - spent],
       And(spent <= recv, spent <= D1, refund >= 0, recv <= M))
 xp = Ints('xpartial')[0]
