@@ -5,8 +5,10 @@ pragma solidity 0.8.28;
 
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
+import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockProxyManager} from "../utils/mocks/ParameterStoreMocks.sol";
+import {FreezeRegistryMock} from "../utils/mocks/ProxyMocks.sol";
 
 /// @notice A fee-recipient candidate whose answer to each selector is programmed: a fixed return blob, or a revert.
 contract ProgrammableCandidate {
@@ -171,6 +173,23 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
         // The same bindings mapped elsewhere: not this proxy.
         pm.setPrediction(alice, address(spoke), M + 1, address(c));
         _accepted(address(c));
+    }
+
+    // TEST-062 verifies: REQ-CONFIG-056
+    function test_TEST_062_realPositionProxyRefusedThroughPredictProxy() public {
+        // A real ProxyManager and a real PositionProxy it deployed, bound to an adapter other than the registry's
+        // AaveAdapter: only the predictProxy branch can recognise it.
+        address otherAdapter = makeAddr("otherAdapter");
+        assertTrue(otherAdapter != registry.AAVE_ADAPTER());
+        ProxyManager pm = new ProxyManager(otherAdapter, address(new FreezeRegistryMock()));
+        vm.prank(otherAdapter);
+        address proxy = pm.deployProxy(alice, address(spoke), M);
+        // Recorded as the chain's ProxyManager: its prediction maps the proxy's bindings to the proxy itself.
+        registry.setProxyManager(address(pm));
+        _refused(proxy);
+        // Another ProxyManager's prediction of the same bindings is another address: not a proxy of this chain.
+        registry.setProxyManager(address(new ProxyManager(otherAdapter, address(new FreezeRegistryMock()))));
+        _accepted(proxy);
     }
 
     // ─── Event and plain accounts ───

@@ -23,7 +23,7 @@ import {FeedDef} from "./types/FeedDef.sol";
 /// @dev Every external call here is a view. A setter writes first and then re-checks with the stored values, so the
 /// checked configuration is exactly the one the change gives each affected LPOracle; a failed check reverts the
 /// whole operation.
-/// @custom:spec REQ-CONFIG-072, REQ-CONFIG-024, REQ-PSTORE-009, REQ-PSTORE-013, REQ-PSTORE-027, SPEC-CF-004
+/// @custom:spec REQ-CONFIG-072, REQ-CONFIG-024, REQ-PSTORE-009, REQ-PSTORE-013, REQ-PSTORE-027, REQ-PSTORE-028, REQ-PSTORE-034, SPEC-CF-004
 // The loops below walk the MarketRegistry's markets, Spokes and debt reserves with view calls at execution of a
 // governance setter (or in a view); their length is the registry's size, which only timelock operations grow.
 // forge-lint: disable-start(calls-loop)
@@ -122,8 +122,21 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         address key,
         bool tolerance
     ) internal view {
-        (address[] memory oracles, bool toleranceBroken) = _affected(scope, key, tolerance);
+        _recheck(scope, key, tolerance, false);
+    }
+
+    /// @dev `_recheck`, and with `fit` every affected market must also fit its tokens' second sources and the
+    /// sequencer grace (`_marketFits`, `OutOfBounds`), checked before any LPOracle is called.
+    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-013, REQ-PSTORE-028, REQ-PSTORE-034, REQ-CONFIG-024
+    function _recheck(
+        uint8 scope,
+        address key,
+        bool tolerance,
+        bool fit
+    ) internal view {
+        (address[] memory oracles, bool toleranceBroken, bool misfit) = _affected(scope, key, tolerance, fit);
         if (toleranceBroken) revert LivenessBound();
+        if (misfit) revert OutOfBounds();
         address rejected = address(0);
         uint256 rejectedChecks = 0;
         for (uint256 i = 0; i < oracles.length; ++i) {
@@ -135,13 +148,14 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
     }
 
     /// @dev The LPOracles a change of `scope` and `key` affects, one slot per market identifier (`address(0)` for a
-    /// market it does not affect), and whether a token it affects has a tolerance below its lower bound (only computed
-    /// with `tolerance`).
+    /// market it does not affect), whether a token it affects has a tolerance below its lower bound (only computed
+    /// with `tolerance`) and whether a market it affects does not fit (`_marketFits`, only computed with `fit`).
     function _affected(
         uint8 scope,
         address key,
-        bool tolerance
-    ) internal view returns (address[] memory oracles, bool toleranceBroken) {
+        bool tolerance,
+        bool fit
+    ) internal view returns (address[] memory oracles, bool toleranceBroken, bool misfit) {
         uint256 count = _REGISTRY.marketCount();
         oracles = new address[](count);
         for (uint256 id = 1; id <= count; ++id) {
@@ -153,7 +167,9 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
                 hit = true;
                 if (tolerance && !_toleranceHolds(m.tokens[i])) toleranceBroken = true;
             }
-            if (hit) oracles[id - 1] = m.lpOracle;
+            if (!hit) continue;
+            oracles[id - 1] = m.lpOracle;
+            if (fit && !_marketFits(m, _s().market[id].twapWindow)) misfit = true;
         }
     }
 
@@ -168,33 +184,107 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
                 || (scope == SCOPE_FEED && _usesFeed(token, key));
     }
 
-    /// @dev `checkConfig` of each LPOracle in `oracles` (0 for an empty slot), before a tighten setter writes.
-    /// @custom:spec REQ-PSTORE-009, REQ-CONFIG-051
+    /// @dev `checkConfig` of each LPOracle in `oracles` (0 for an empty slot; slot `i` is market `i + 1`, as
+    /// `_affected` lays them out), before a tighten setter writes: entry `i` with the recorded second sources, entry
+    /// `n + i` with the standby second source of every token of market `i + 1` in force, as guardians can switch them
+    /// (0 for a market with no standby to switch in). The switches are undone before the function returns.
+    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-029, REQ-CONFIG-051
     function _failures(
         address[] memory oracles
-    ) internal view returns (uint256[] memory before) {
-        before = new uint256[](oracles.length);
-        for (uint256 i = 0; i < oracles.length; ++i) {
-            if (oracles[i] != address(0)) before[i] = _configFailures(oracles[i]);
+    ) internal returns (uint256[] memory failed) {
+        uint256 n = oracles.length;
+        failed = new uint256[](2 * n);
+        for (uint256 i = 0; i < n; ++i) {
+            if (oracles[i] == address(0)) continue;
+            failed[i] = _configFailures(oracles[i]);
+            address[] memory tokens = _REGISTRY.getMarket(i + 1).tokens;
+            uint256 switched = _switchStandbys(tokens, 0);
+            if (switched == 0) continue;
+            failed[n + i] = _configFailures(oracles[i]);
+            // Switching back returns the same mask.
+            switched = _switchStandbys(tokens, switched);
+        }
+    }
+
+    /// @dev With `undo == 0`, puts in force the standby of every token in `tokens` that has one and runs on its
+    /// recorded source, returning a mask of the tokens it switched (bit `j` for `tokens[j]`; a market holds at most
+    /// `MAX_POOL_TOKENS` = 8); otherwise switches back the tokens `undo` marks and returns `undo`.
+    function _switchStandbys(
+        address[] memory tokens,
+        uint256 undo
+    ) private returns (uint256 mask) {
+        Layout storage $ = _s();
+        for (uint256 j = 0; j < tokens.length; ++j) {
+            address t = tokens[j];
+            bool flip = undo == 0 ? $.standby[t].kind != SecondSourceKind.None && !$.onStandby[t] : (undo >> j) & 1 == 1;
+            if (!flip) continue;
+            // A transient switch of at most MAX_POOL_TOKENS slots, undone in the same call.
+            $.onStandby[t] = undo == 0;
+            mask |= 1 << j;
         }
     }
 
     /// @dev After a tighten setter writes: reverts `OracleConfigRejected(lpOracle, added)` for the first LPOracle whose
-    /// `checkConfig` now fails a check it passed before the write (`added = after & ~before`). A check that already
-    /// failed is not the tightening's doing, so it never blocks one: a tightening can only make a value safer.
-    /// @custom:spec REQ-PSTORE-009, REQ-CONFIG-051, SPEC-GOV-011
+    /// `checkConfig` now fails a check it passed before the write (`added = after & ~before`), with the recorded
+    /// second sources first, then with the standbys in force (`_failures`). A check that already failed is not the
+    /// tightening's doing, so it never blocks one: a tightening can only make a value safer, and never leaves a
+    /// configuration that fails once a guardian switches a standby in.
+    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-029, REQ-CONFIG-051, SPEC-GOV-011
     function _requireNoNewFailures(
         address[] memory oracles,
         uint256[] memory before
-    ) internal view {
+    ) internal {
+        uint256[] memory failed = _failures(oracles);
+        uint256 n = oracles.length;
         address rejected = address(0);
         uint256 added = 0;
-        for (uint256 i = 0; i < oracles.length; ++i) {
-            if (oracles[i] == address(0) || rejected != address(0)) continue;
-            uint256 more = _configFailures(oracles[i]) & ~before[i];
-            if (more != 0) (rejected, added) = (oracles[i], more);
+        for (uint256 k = 0; k < 2 * n; ++k) {
+            address oracle = oracles[k % n];
+            if (oracle == address(0) || rejected != address(0)) continue;
+            uint256 more = failed[k] & ~before[k];
+            if (more != 0) (rejected, added) = (oracle, more);
         }
         if (rejected != address(0)) revert OracleConfigRejected(rejected, added);
+    }
+
+    /// @dev Whether a TWAP window of `window` seconds fits the chain's sequencer grace period: on a chain with a
+    /// sequencer, `window ≤ gracePeriod`, so once borrowing reopens after a restart every window read lies after the
+    /// restart; always on a chain without one.
+    /// @custom:spec REQ-PSTORE-034
+    function _withinGrace(
+        uint32 window
+    ) internal view returns (bool) {
+        return !_HAS_SEQUENCER || window <= _s().sequencer.gracePeriod;
+    }
+
+    /// @dev Whether market `m` with TWAP window `twapWindow` fits: the window is within the sequencer grace, and the
+    /// recorded and standby second source of each of its tokens is not a `PoolTwap` of the market's own pool and has
+    /// a window within the grace.
+    /// @custom:spec REQ-PSTORE-028, REQ-PSTORE-034
+    function _marketFits(
+        Market memory m,
+        uint32 twapWindow
+    ) internal view returns (bool fits) {
+        fits = _withinGrace(twapWindow);
+        // Slot 2i is token i's recorded source, slot 2i + 1 its standby.
+        for (uint256 k = 0; k < 2 * m.tokens.length; ++k) {
+            address t = m.tokens[k >> 1];
+            if (!_sourceFits(m, k & 1 == 0 ? _s().secondSource[t] : _s().standby[t])) fits = false;
+        }
+    }
+
+    /// @dev Whether second source `s` of a token of market `m` fits it: anything but a `PoolTwap`, or a `PoolTwap`
+    /// whose pool reference is neither the market's pool address nor its pool identifier and whose window is within
+    /// the sequencer grace.
+    function _sourceFits(
+        Market memory m,
+        SecondSource storage s
+    ) private view returns (bool) {
+        if (s.kind != SecondSourceKind.PoolTwap) return true;
+        bytes32 ref = s.poolRef;
+        // An address-keyed pool's reference is `bytes32(uint160(pool))`, the word `_a` builds.
+        bool ownPool = (m.pool != address(0) && ref == _a(m.pool)) || (m.poolId != bytes32(0) && ref == m.poolId);
+        return !ownPool && _withinGrace(s.twapWindow);
     }
 
     /// @dev Whether `feed` is in one of the token's recorded routes (primary, alternate, standby; the routes in force
@@ -229,13 +319,15 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
 
     /// @dev The time-weighted price over `window`: 0 exactly when the AMM protocol has none; otherwise the pool's
     /// observation buffer (concentrated liquidity) holds `twapMinObservations` slots and the integration's read over
-    /// the window succeeds. Any failure reverts `OutOfBounds`.
-    /// @custom:spec REQ-PSTORE-004, REQ-PSTORE-027, REQ-CONFIG-038
+    /// the window succeeds, and the window fits the sequencer grace period (`_withinGrace`). Any failure reverts
+    /// `OutOfBounds`.
+    /// @custom:spec REQ-PSTORE-004, REQ-PSTORE-027, REQ-PSTORE-034, REQ-CONFIG-038
     function _checkTwap(
         uint256 marketId,
         Market memory m,
         uint32 window
     ) internal view {
+        if (!_withinGrace(window)) revert OutOfBounds();
         IntegrationCapabilities memory caps = IAmmIntegration(m.integration).capabilities();
         if (!caps.hasTwap) {
             if (window != 0) revert OutOfBounds();

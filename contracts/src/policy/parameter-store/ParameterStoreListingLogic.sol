@@ -7,6 +7,7 @@ import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorP
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
 import {IOffchainAggregator} from "../../interfaces/external/chainlink/IOffchainAggregator.sol";
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
+import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {Market} from "../../types/Market.sol";
 import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
 import {IParameterStoreChain} from "./IParameterStoreChain.sol";
@@ -22,7 +23,7 @@ import {MarketParams} from "./types/MarketParams.sol";
 /// @notice Bodies of the listing-batch setters (a registered market's parameters and caps, a Hub's depositor cap, a (Hub, token) cap, feed definitions, a debt asset's rounding allowance), of each CDP Spoke's liquidation expectations, of the sequencer check and of the coverage ratio. Normal delay.
 /// @dev Initial writes neither check nor update `lastLoosenedAt`. Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
 /// `IParameterStoreLogic`.
-/// @custom:spec REQ-PSTORE-004, REQ-PSTORE-006, REQ-PSTORE-012, REQ-PSTORE-022, REQ-PSTORE-023, REQ-PSTORE-026, REQ-PSTORE-032, REQ-RISK-041, REQ-CONFIG-022, REQ-CONFIG-023
+/// @custom:spec REQ-PSTORE-004, REQ-PSTORE-006, REQ-PSTORE-012, REQ-PSTORE-022, REQ-PSTORE-023, REQ-PSTORE-026, REQ-PSTORE-028, REQ-PSTORE-034, REQ-PSTORE-032, REQ-RISK-041, REQ-CONFIG-022, REQ-CONFIG-023
 // Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
 // itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
 // functions another contract serves.
@@ -31,6 +32,9 @@ import {MarketParams} from "./types/MarketParams.sol";
 // events; the events follow the checks that need those reads.
 // forge-lint: disable-start(reentrancy-events)
 contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListing, IParameterStoreLogic {
+    /// @dev `type(int192).max`, the largest bound an aggregator's `int192` `minAnswer` or `maxAnswer` can hold.
+    uint256 private constant INT192_MAX = 2 ** 191 - 1;
+
     /// @notice Fixes the implementation immutables; they must equal the ParameterStore's.
     /// @param timelock The chain's AvanaTimelock.
     /// @param marketRegistry The chain's MarketRegistry proxy.
@@ -56,7 +60,7 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
     }
 
     /// @inheritdoc IParameterStoreListing
-    /// @custom:spec REQ-PSTORE-004, REQ-PSTORE-005, REQ-PSTORE-027, REQ-CONFIG-015, REQ-CONFIG-041, SPEC-CF-004
+    /// @custom:spec REQ-PSTORE-004, REQ-PSTORE-005, REQ-PSTORE-027, REQ-PSTORE-028, REQ-PSTORE-034, REQ-CONFIG-015, REQ-CONFIG-041, SPEC-CF-004
     function setInitialMarketParams(
         uint256 marketId,
         MarketParams calldata params
@@ -76,6 +80,8 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         ) revert OutOfBounds();
         _checkTwap(marketId, m, params.twapWindow);
         _checkListingMargin(m, params.poolRiskFactor);
+        // The tokens' second sources were recorded before this market existed: none may read its pool.
+        if (!_marketFits(m, params.twapWindow)) revert OutOfBounds();
         MarketParams memory old = _s().market[marketId];
         _s().market[marketId] = params;
         _checkLpOracle(m.lpOracle);
@@ -196,23 +202,31 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
     }
 
     /// @dev The feed's decimals, its aggregator's `minAnswer`, and `min(aggregator maxAnswer, cap)`, checked by
-    /// REQ-CONFIG-022 and REQ-ORACLE-049: `1 <= decimals <= 18`, a positive `minAnswer` whose normalised value is at
-    /// least 1, and a pinned maximum above the minimum (`InvalidFeed`).
+    /// REQ-CONFIG-022 and REQ-ORACLE-049: `1 <= decimals <= 18`, a `minAnswer` in `[1, type(int192).max]` whose
+    /// normalised value is at least 1, an aggregator `maxAnswer` at most `type(int192).max`, and a pinned maximum
+    /// above the minimum (`InvalidFeed`). The two bounds are read as raw words, at most one word each, so a word
+    /// outside the aggregator's `int192` type, a failed read or a short answer reverts with the named check instead
+    /// of an ABI decoding error.
     function _pin(
         address feed,
         int256 cap
     ) private view returns (uint8 decimals, int256 minAnswer, int256 maxAnswer) {
         decimals = IAggregatorV3(feed).decimals();
         address aggregator = IAggregatorProxy(feed).aggregator();
-        minAnswer = IOffchainAggregator(aggregator).minAnswer();
-        maxAnswer = IOffchainAggregator(aggregator).maxAnswer();
-        if (cap < maxAnswer) maxAnswer = cap;
+        (bool minOk, uint256[3] memory lo) =
+            RouteReads.words(aggregator, abi.encodeCall(IOffchainAggregator.minAnswer, ()), false);
+        (bool maxOk, uint256[3] memory hi) =
+            RouteReads.words(aggregator, abi.encodeCall(IOffchainAggregator.maxAnswer, ()), false);
         if (decimals == 0 || decimals > FEED_DECIMALS_MAX) revert InvalidFeed(feed, "decimals");
-        // Normalised minimum ⌊minAnswer × 10⁸ / 10^decimals⌋ (or × 10^(8 − decimals)) must be at least 1.
-        if (minAnswer <= 0) revert InvalidFeed(feed, "minAnswer");
-        // minAnswer is positive here.
+        // A word above type(int192).max is a negative int192 or no int192 at all: either way no positive minimum.
+        if (!minOk || lo[0] == 0 || lo[0] > INT192_MAX) revert InvalidFeed(feed, "minAnswer");
+        if (!maxOk || hi[0] > INT192_MAX) revert InvalidFeed(feed, "maxAnswer");
+        // Both words are at most type(int192).max here.
         // forge-lint: disable-next-line(unsafe-typecast)
-        if (_normalised(uint256(minAnswer), decimals) == 0) revert InvalidFeed(feed, "minAnswer");
+        (minAnswer, maxAnswer) = (int256(lo[0]), int256(hi[0]));
+        if (cap < maxAnswer) maxAnswer = cap;
+        // Normalised minimum ⌊minAnswer × 10⁸ / 10^decimals⌋ (or × 10^(8 − decimals)) must be at least 1.
+        if (_normalised(lo[0], decimals) == 0) revert InvalidFeed(feed, "minAnswer");
         if (maxAnswer <= minAnswer) revert InvalidFeed(feed, "maxAnswer");
     }
 
@@ -260,7 +274,7 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
     }
 
     /// @notice Body of `IParameterStoreChain.setSequencer`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-023, REQ-ORACLE-099, REQ-PSTORE-009, SPEC-ORC-021, Q-324
+    /// @custom:spec REQ-PSTORE-023, REQ-PSTORE-034, REQ-ORACLE-099, REQ-PSTORE-009, SPEC-ORC-021, Q-324
     function setSequencer(
         address feed,
         uint32 gracePeriod
@@ -275,7 +289,8 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         }
         _s().sequencer.feed = feed;
         _s().sequencer.gracePeriod = gracePeriod;
-        _recheck(SCOPE_ALL, address(0), false);
+        // Every market's window and every second-source window of its tokens must fit the new grace period.
+        _recheck(SCOPE_ALL, address(0), false, true);
         emit IParameterStoreChain.SequencerSet(feed, gracePeriod);
     }
 

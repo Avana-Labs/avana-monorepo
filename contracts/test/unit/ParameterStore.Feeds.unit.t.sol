@@ -423,9 +423,10 @@ contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
 
     // TEST-250 verifies: REQ-PSTORE-023, REQ-PSTORE-009
     function test_TEST_250_l2SequencerReachesEveryLpOracle() public {
-        _listMarket();
+        // On an L2 the sequencer check comes before any TWAP window (REQ-PSTORE-034).
         (bool ok,) = _set(address(seq), 3600);
         assertTrue(ok);
+        _listMarket();
         uint256[] memory w = store.getOracleInputs(address(lpOracle), new address[](0), false);
         assertEq(w[8], uint160(address(seq)));
         assertEq(w[9], 3600);
@@ -456,7 +457,11 @@ contract ParameterStoreFeedsTwapUnitTest is ParameterStoreFixture {
         _deployStore(false);
         _listMarket();
         base = _storeWithBlockTime(2);
+        MockAggregator seq = new MockAggregator(0, 0, 0);
+        seq.setRound(0, 1);
         vm.startPrank(address(timelock));
+        // The 2-second chain has a sequencer: its grace period bounds every window (REQ-PSTORE-034).
+        base.setSequencer(address(seq), 3600);
         base.setTokenCollateralFactorBps(usdc, 7800);
         base.setTokenCollateralFactorBps(usdt, 7500);
         vm.stopPrank();

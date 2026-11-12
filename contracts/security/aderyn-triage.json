@@ -1475,6 +1475,24 @@
       "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record (inner loop over the market's listed route slots): storage reads per iteration and one write (`active = false`) per route it disables. Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the route slots governance set, and runs only inside a normal-delay timelock call. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt).",
       "approval": "approved by pattern",
       "review": "Pattern: bounded loops (bounded by MAX_MARKET_COUNT and timelock-set route slots)."
+    },
+    {
+      "fingerprint": "4973347c39d31818",
+      "check": "costly-loop",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "function": "ParameterStoreOracle._failures",
+      "reason": "Loop over the affected markets of a tighten setter that re-runs checkConfig (REQ-PSTORE-009, REQ-PSTORE-029): per market one checkConfig with the recorded second sources and, when a token has a standby on its recorded source, the standby switched in for one more checkConfig and switched back (_switchStandbys), so a tightening never leaves a configuration that fails with a standby in force. Bounded by the registry's market count, which only timelock operations grow, and by MAX_POOL_TOKENS (8) per market; every write is undone in the same call. Covered by TEST-250 (tightenConsistencyChecksTheStandby, tightenToleranceChecksTheStandby, tightenBorrowAgeChecksTheStandby, standbyFailureThatPredatesTheTighteningNeverBlocksIt).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops (2026-11-10 list); the storage writes are transient switches undone before return."
+    },
+    {
+      "fingerprint": "ef56ab2f47e7c23f",
+      "check": "costly-loop",
+      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "function": "ParameterStoreOracle._switchStandbys",
+      "reason": "Writes onStandby for at most MAX_POOL_TOKENS (8) tokens of one market to put each standby in force for one checkConfig, then writes the same slots back (REQ-PSTORE-029, REQ-PSTORE-009); bounded by the market's token count, net state change zero. Covered by TEST-250 (tightenBorrowAgeChecksTheStandby asserts onStandby is false after the call).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops (2026-11-10 list), at most 8 iterations."
     }
   ]
 }

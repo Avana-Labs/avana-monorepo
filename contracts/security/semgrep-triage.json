@@ -233,6 +233,15 @@
       "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): `debtToCover - flashAmount` cannot underflow because flashAmount > debtToCover reverts InvalidFlashAmount above, and the sum with maxShortfall cannot overflow because both debtToCover and maxShortfall are checked to be at most type(uint128).max there. Replaces entry 2355c495795673d4 after the shortfall budget joined the line. Covered by TEST-174, TEST-289.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Josue group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
+    },
+    {
+      "fingerprint": "ee7a0df6a9b29eaf",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/policy/parameter-store/ParameterStoreTightenLogic.sol",
+      "function": "ParameterStoreTightenLogic.tightenConsistencyToleranceBps",
+      "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): `marketId - 1` indexes the one-slot-per-market array `_affected` lays out; `_market(marketId)` above reverts UnknownMarket for an identifier the MarketRegistry never assigned, 0 included (REQ-PSTORE-011), so marketId >= 1 here and the subtraction cannot underflow (it would only revert). Covered by TEST-250 (tightenConsistencyChecksTheStandby) and the UnknownMarket tests of TEST-062.",
+      "approval": "approved by pattern",
+      "review": "Josue group B (checked subtraction with an enforced precondition)."
     }
   ]
 }

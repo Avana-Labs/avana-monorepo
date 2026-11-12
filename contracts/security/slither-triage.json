@@ -2011,8 +2011,8 @@
       "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
       "function": "ParameterStoreAdminRiskLogic._reportsAvana(address)",
       "reason": "A STATICCALL of logicConfig() on the fee-recipient candidate, whose success and return length alone mark it as an Avana logic contract (REQ-CONFIG-056); a typed call would revert setFeeRecipient for a candidate that has no such function or returns a short buffer. No state, no value, and a failed call reads as not Avana. Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract, feeRecipientRefusesAvanaAddresses).",
-      "approval": "pending (Josue)",
-      "review": "Same reasoning as the Josue-approved low-level STATICCALL entries cfc9ed236e39e223 (ParameterStoreOracle._configFailures) and ef24f14ff0f0c97f (markDebtFree): a length-checked static read that fails closed; not one of groups A-Y, so listed for Josue."
+      "approval": "pending (lead review)",
+      "review": "The call site is gone: _reportsAvana now probes logicConfig() with RouteReads._staticRead(r, PROBE_GAS = 30,000, data, 32) (bounded STATICCALL, at most 32 bytes copied), so Slither reports no low-level call here; the only assembly is RouteReads._staticRead (entry 96b57e4c1e66f7b8). Kept for the lead's per-call-site review of the wave 3 change (approval to be recorded against the reviewed file hash), then removable as stale."
     },
     {
       "fingerprint": "6ad16bee58e4f4b8",
@@ -2020,8 +2020,8 @@
       "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
       "function": "ParameterStoreAdminRiskLogic._word(address,bytes)",
       "reason": "One-word STATICCALL of a fee-recipient candidate (TIMELOCK(), MARKET_REGISTRY(), ADAPTER(), WALLET(), SPOKE(), MARKET_ID()) and of ProxyManager.predictProxy; the value is used only when the call succeeds and returns exactly 32 bytes, else 0, which matches no Avana address (REQ-CONFIG-056). A typed call or try/catch would revert setFeeRecipient on a short return, which Solidity cannot catch. Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract).",
-      "approval": "pending (Josue)",
-      "review": "Same reasoning as the Josue-approved low-level STATICCALL entries cfc9ed236e39e223 and ef24f14ff0f0c97f: a length-checked static read that fails closed; not one of groups A-Y, so listed for Josue."
+      "approval": "pending (lead review)",
+      "review": "The call site is gone: _word(target, data) now reads with RouteReads._staticRead(target, PROBE_GAS = 30,000, data, 64) and accepts exactly 32 bytes, so Slither reports no low-level call here; the only assembly is RouteReads._staticRead (entry 96b57e4c1e66f7b8). Kept for the lead's per-call-site review of the wave 3 change, then removable as stale."
     },
     {
       "fingerprint": "f03807028208b769",
@@ -2046,9 +2046,9 @@
       "check": "assembly",
       "file": "src/liquidation/settlement-routes/RouteReads.sol",
       "function": "RouteReads._staticRead(address,uint256,bytes,uint256)",
-      "reason": "Bounded static read of a swap route's constructor checks (REQ-ROUTE-045, REQ-ROUTE-008): one staticcall with explicit gas, copying at most maxLength (32, 64 or 96) bytes into the buffer allocated just before, whose length is only lowered. Solidity's own call syntax copies the whole return buffer, and its decoder reverts on short data, which would make a deployment fail with something other than InvalidRouteConfig. The fee-switch probe runs with FEE_SWITCH_PROBE_GAS after a ceil(64G/63) + POST_CALL_GAS check (a starved probe counts as a switch, fail closed); the other reads forward all gas and a failed read fails the deployment check. Memory-safe. Same construct as RiskModuleCalls.staticRead (511a336050dfd45d) and LPOracleCalls.staticRead. Covered by TEST-054 (unansweredReadsRevertInvalidRouteConfig, hopPoolsMustComeFromPinnedFactories), TEST-221 (feeSwitchTokenRefusedOnConcentratedHop, starvedFeeSwitchProbeNeverAcceptsTheToken).",
-      "approval": "approved by pattern",
-      "review": "Josue group L (bounded-returndata STATICCALL in assembly): same construct as RiskModuleCalls.staticRead and DebtOracleReads._call; memory-safe, copies at most maxLength bytes and only lowers the length; the gas-limited probe has its ceil(64G/63) + POST_CALL_GAS check before the call. Constructor-only."
+      "reason": "Bounded static read of a swap route's constructor checks (REQ-ROUTE-045, REQ-ROUTE-008): one staticcall with explicit gas, copying at most maxLength (32, 64 or 96) bytes into the buffer allocated just before, whose length is only lowered. Solidity's own call syntax copies the whole return buffer, and its decoder reverts on short data, which would make a deployment fail with something other than InvalidRouteConfig. The fee-switch probe runs with FEE_SWITCH_PROBE_GAS after a ceil(64G/63) + POST_CALL_GAS check (a starved probe counts as a switch, fail closed); the other reads forward all gas and a failed read fails the deployment check. Memory-safe. Same construct as RiskModuleCalls.staticRead (511a336050dfd45d) and LPOracleCalls.staticRead. Covered by TEST-054 (unansweredReadsRevertInvalidRouteConfig, hopPoolsMustComeFromPinnedFactories), TEST-221 (feeSwitchTokenRefusedOnConcentratedHop, starvedFeeSwitchProbeNeverAcceptsTheToken). Since wave 3 also the bounded read of the ParameterStore's fee-recipient identity probes (ParameterStoreAdminRiskLogic._reportsAvana and _word, 30,000 gas, 32 or 64 bytes copied), of the aggregator bounds in ParameterStoreListingLogic._pin (RouteReads.words, one word) and of the VaultTokenFactory's getter reads (_read, 30,000 gas, size + 32 bytes copied); each caller requires an exact length and range-checks the words.",
+      "approval": "pending (lead review)",
+      "review": "Josue group L (bounded-returndata STATICCALL in assembly): same construct as RiskModuleCalls.staticRead and DebtOracleReads._call; memory-safe, copies at most maxLength bytes and only lowers the length; the gas-limited probe has its ceil(64G/63) + POST_CALL_GAS check before the call. Constructor-only. Approved before wave 3 as \"approved by pattern\" for the route reads; the new callers (ParameterStore, VaultTokenFactory) need the lead's per-call-site review."
     },
     {
       "fingerprint": "c4f5145c3cf468f2",
@@ -2065,8 +2065,8 @@
       "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
       "function": "VaultTokenFactory._readWord(address,bytes)",
       "reason": "STATICCALL of one identity getter of a candidate LPVault or of Collateralization in registerIntegration; the answer is used only if the call succeeded with exactly 32 bytes, and any other answer (revert, short or long data, no code, a getter that writes state) makes the registration revert InvalidIntegration, so it fails closed (REQ-VTOKEN-044). Same reasoning as the Josue-approved ParameterStore staticcall entries. Covered by TEST-024 (registerIntegrationRefusesCodelessOrHostileGetters, registerIntegrationRefusesForeignCore, registerIntegrationRefusesMiswiredCollateralization) and PROP-099 (Halmos).",
-      "approval": "pending (Josue)",
-      "review": "Pattern: view-only calls before writes (length-checked STATICCALL that fails closed). Re-labelled by the lead: Josue decided (2026-11-11) that length-checked STATICCALLs get no blanket pattern; each call site is reviewed for target and selector, failure direction, decoding and range checks, return-data copying, and failure-response tests."
+      "approval": "pending (lead review)",
+      "review": "The call site is gone: _readWord now goes through _read(target, data, 32) = RouteReads._staticRead(target, READ_GAS = 30,000, data, 64) and requires exactly 32 bytes; Slither reports no low-level call here. Kept for the lead's per-call-site review of the wave 3 change, then removable as stale."
     },
     {
       "fingerprint": "f193056336ee06ef",
@@ -2074,8 +2074,8 @@
       "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
       "function": "VaultTokenFactory._readCapabilities(address)",
       "reason": "STATICCALL of the candidate LPVault's capabilities() in registerIntegration; the answer is used only if the call succeeded with exactly 256 bytes and a pool keying and shape kind inside their enums (shape kind not None); anything else reverts InvalidIntegration, so it fails closed (REQ-VTOKEN-049). Covered by TEST-024 (registerIntegrationRefusesForeignCore: reverting, short and out-of-range answers).",
-      "approval": "pending (Josue)",
-      "review": "Pattern: view-only calls before writes (length-checked STATICCALL that fails closed). Re-labelled by the lead: Josue decided (2026-11-11) that length-checked STATICCALLs get no blanket pattern; each call site is reviewed for target and selector, failure direction, decoding and range checks, return-data copying, and failure-response tests."
+      "approval": "pending (lead review)",
+      "review": "The call site is gone: _readCapabilities now goes through _read(lpVault, capabilities(), 256) = RouteReads._staticRead(lpVault, READ_GAS = 30,000, data, 288) and requires exactly 256 bytes; Slither reports no low-level call here. Kept for the lead's per-call-site review of the wave 3 change, then removable as stale."
     },
     {
       "fingerprint": "be2406ba1457c863",

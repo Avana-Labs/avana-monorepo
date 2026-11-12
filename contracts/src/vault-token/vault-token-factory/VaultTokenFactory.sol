@@ -7,6 +7,7 @@ import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {PoolKeying} from "../../amm/types/PoolKeying.sol";
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
+import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {PositionShape} from "../../types/PositionShape.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
 import {VaultTokenBindings} from "../../types/VaultTokenBindings.sol";
@@ -23,7 +24,8 @@ import {CREATE3} from "solady/utils/CREATE3.sol";
 /// is the only caller of the two writing functions. The factory holds no power over a token once deployed: the token
 /// never learns the factory's address. It calls no AMM integration on deployment (the MarketRegistry calls
 /// `bindMarket` in the same listing batch); it reads the LPVault's and Collateralization's identity getters only in
-/// `registerIntegration`, each with a length-checked `STATICCALL`. The CREATE3 proxy returns no revert data from the
+/// `registerIntegration`, each with a bounded, length-checked `STATICCALL` (`READ_GAS`, at most one word copied
+/// beyond the answer). The CREATE3 proxy returns no revert data from the
 /// token's constructor, so `deployVaultToken` checks every constructor condition of `REQ-VTOKEN-046` first and reverts
 /// with the token's own errors (`marketKey != 0` holds because it is a keccak output and `integrationId != 0` because
 /// only registered identifiers pass).
@@ -39,6 +41,10 @@ contract VaultTokenFactory is IVaultTokenFactory {
     uint256 private constant MAX_SYMBOL_LENGTH = 32;
     /// @dev ABI size of `IntegrationCapabilities`: eight static words.
     uint256 private constant CAPABILITIES_SIZE = 256;
+    /// @dev Gas each getter read runs with. The integrations' and Collateralization's getters return immutables or
+    /// constants and cost under 5,000; a getter that needs more, or answers with a huge buffer, runs out inside the
+    /// read, which fails it: the closed side, as is a read starved by the transaction's own gas limit.
+    uint256 private constant READ_GAS = 30_000;
 
     /// @dev The chain's AaveAdapter fixed proxy address, bound into every token as minter and burner.
     address private immutable _ADAPTER;
@@ -123,6 +129,9 @@ contract VaultTokenFactory is IVaultTokenFactory {
         _isLpVault[lpVault] = true;
         _poolKeyingOf[integrationId] = keying;
         _shapeKindOf[integrationId] = kind;
+        // The calls before this event are the bounded getter reads (STATICCALL through RouteReads), which cannot
+        // re-enter or reorder events; forge-lint counts the library read as an external call.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit IntegrationRegistered(integrationId, lpVault, ammProtocol, keying, kind);
     }
 
@@ -361,14 +370,13 @@ contract VaultTokenFactory is IVaultTokenFactory {
 
     /// @notice The integration's pool keying and shape kind from `capabilities()`: a 256-byte answer whose first word
     /// is a valid `PoolKeying` and fourth word a `ShapeKind` other than `None`, else `InvalidIntegration`.
-    /// @custom:spec REQ-VTOKEN-049, REQ-AMM-CORE-009, REQ-AMM-CORE-010
+    /// @custom:spec REQ-VTOKEN-044, REQ-VTOKEN-049, REQ-AMM-CORE-009, REQ-AMM-CORE-010
     function _readCapabilities(
         address lpVault
     ) private view returns (PoolKeying keying, ShapeKind kind) {
-        // A view of the candidate LPVault; the answer is length- and range-checked before it is read.
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool ok, bytes memory ret) = lpVault.staticcall(abi.encodeCall(IAmmIntegration.capabilities, ()));
-        if (!ok || ret.length != CAPABILITIES_SIZE) revert InvalidIntegration();
+        (bool ok, bytes memory ret) =
+            _read(lpVault, abi.encodeCall(IAmmIntegration.capabilities, ()), CAPABILITIES_SIZE);
+        if (!ok) revert InvalidIntegration();
         (uint256 keyingWord,,, uint256 kindWord) = abi.decode(ret, (uint256, uint256, uint256, uint256));
         if (
             keyingWord > uint256(type(PoolKeying).max) || kindWord == uint256(ShapeKind.None)
@@ -390,18 +398,28 @@ contract VaultTokenFactory is IVaultTokenFactory {
         if (ok && word <= type(uint160).max) value = address(uint160(word));
     }
 
-    /// @dev A one-word view answer: `ok` is false when the call fails or returns other than 32 bytes.
+    /// @dev A one-word view answer: `ok` is false when the call fails, runs out of its gas or returns other than
+    /// 32 bytes.
+    /// @custom:spec REQ-VTOKEN-044
     function _readWord(
         address target,
         bytes memory data
     ) private view returns (bool ok, uint256 word) {
-        // A view of a candidate contract; the answer is length-checked before it is read.
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory ret) = target.staticcall(data);
-        if (success && ret.length == 32) {
-            ok = true;
-            word = abi.decode(ret, (uint256));
-        }
+        bytes memory ret;
+        (ok, ret) = _read(target, data, 32);
+        if (ok) word = abi.decode(ret, (uint256));
+    }
+
+    /// @dev A static call of `target` with `READ_GAS` whose answer is exactly `size` bytes; at most `size + 32` bytes
+    /// are copied, so a longer answer is told apart without copying it.
+    /// @custom:spec REQ-VTOKEN-044
+    function _read(
+        address target,
+        bytes memory data,
+        uint256 size
+    ) private view returns (bool ok, bytes memory ret) {
+        (ok, ret) = RouteReads._staticRead(target, READ_GAS, data, size + 32);
+        ok = ok && ret.length == size;
     }
 
     /// @custom:spec REQ-VTOKEN-020, SPEC-AMM-CORE-002

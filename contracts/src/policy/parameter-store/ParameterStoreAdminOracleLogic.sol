@@ -18,7 +18,7 @@ import {MarketParams} from "./types/MarketParams.sol";
 /// @notice Bodies of the structural setters of the oracle configuration: feed age limits, tolerances, the consistency window, the USD band, the Cached and disagreement timers, grace and the feed-agreement margin. Normal delay, either direction.
 /// @dev Each setter writes, then re-runs `checkConfig` of every LPOracle whose configuration it changes (`OracleConfigRejected`), so no LPOracle is left with a configuration it refuses. Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
 /// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-052, REQ-CONFIG-054, REQ-CONFIG-055, REQ-PSTORE-009, SPEC-GOV-012
+/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-052, REQ-CONFIG-054, REQ-CONFIG-055, REQ-PSTORE-009, REQ-PSTORE-034, SPEC-GOV-012
 // Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
 // itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
 // functions another contract serves.
@@ -126,7 +126,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
     }
 
     /// @notice Body of `IParameterStoreAdmin.setTwapWindow`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-038, REQ-CONFIG-054, REQ-PSTORE-009, REQ-PSTORE-027
+    /// @custom:spec REQ-CONFIG-038, REQ-CONFIG-054, REQ-PSTORE-009, REQ-PSTORE-027, REQ-PSTORE-034
     function setTwapWindow(
         uint256 marketId,
         uint32 value

@@ -469,7 +469,7 @@ contract ParameterStoreCheckConfigUnitTest is ParameterStoreFixture {
     }
 
     // TEST-250 verifies: REQ-PSTORE-009, REQ-PSTORE-029
-    function test_TEST_250_guardianSwitchRunsNoCheck() public {
+    function test_TEST_250_guardianSwitchRunsCheckConfig() public {
         MockAggregator a = new MockAggregator(8, 1e6, 1e12);
         MockAggregator b = new MockAggregator(8, 1e6, 1e12);
         vm.startPrank(address(timelock));
@@ -482,7 +482,15 @@ contract ParameterStoreCheckConfigUnitTest is ParameterStoreFixture {
         );
         store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
         vm.stopPrank();
+        // The switch re-runs checkConfig with the standby in force: a failing LPOracle refuses it.
         lpOracle.setFailed(ALL);
+        vm.prank(emergencyGuardian);
+        vm.expectRevert(
+            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), ALL)
+        );
+        store.useStandbySecondSource(usdc);
+        assertFalse(store.onStandby(usdc));
+        lpOracle.setFailed(0);
         vm.prank(emergencyGuardian);
         store.useStandbySecondSource(usdc);
         assertTrue(store.onStandby(usdc));

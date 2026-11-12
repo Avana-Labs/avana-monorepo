@@ -3,13 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreStorage} from "../../../src/policy/parameter-store/ParameterStoreStorage.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {MockMarketRegistry} from "../../utils/mocks/MockMarketRegistry.sol";
+import {HarnessMarketRegistry} from "../../utils/mocks/HarnessMarketRegistry.sol";
 
 /// @title ParameterStoreProperties
 /// @notice Echidna and Medusa properties of the ParameterStore's tighten and loosen bodies: whatever sequence of
@@ -30,12 +28,9 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     /// @notice Number of setter calls attempted in assertion mode; written so each call is a transaction.
     uint256 public calls;
 
-    constructor() ParameterStoreStorage(address(this), address(new MockMarketRegistry()), 12, false) {
+    constructor() ParameterStoreStorage(address(this), address(new HarnessMarketRegistry()), 12, false) {
         TIGHTEN = address(new ParameterStoreTightenLogic(address(this), address(_REGISTRY), 12, false));
         LOOSEN = address(new ParameterStoreLoosenLogic(address(this), address(_REGISTRY), 12, false));
-        Market memory m;
-        m.status = MarketStatus.Registered;
-        MockMarketRegistry(address(_REGISTRY)).setMarket(M, m);
         Layout storage $ = _s();
         MarketParams storage p = $.market[M];
         p.consistencyToleranceBps = 50;

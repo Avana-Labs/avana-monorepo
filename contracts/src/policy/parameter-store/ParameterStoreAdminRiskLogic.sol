@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/Market.sol";
@@ -23,7 +24,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @notice Bodies of the structural setters of the risk configuration (pool risk factor, Avana's surplus share and recipient, the flash-fee ceiling, second sources and their standby, the slippage floor, token collateral factors, the stress floor) and of the initial parameter write.
 /// @dev Normal delay; `useStandbySecondSource` is the one ParameterStore function a guardian (`APPLICATION_PAUSE_GUARDIAN`) calls directly, and the ParameterStore checks that role before delegating. Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
 /// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-054, REQ-CONFIG-056, REQ-PSTORE-010, REQ-PSTORE-021, REQ-PSTORE-024, REQ-PSTORE-028, REQ-PSTORE-029, REQ-RISK-045
+/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-054, REQ-CONFIG-056, REQ-PSTORE-010, REQ-PSTORE-021, REQ-PSTORE-024, REQ-PSTORE-028, REQ-PSTORE-029, REQ-PSTORE-034, REQ-RISK-045
 // Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
 // itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
 // functions another contract serves.
@@ -32,6 +33,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // events; the events follow the checks that need those reads.
 // forge-lint: disable-start(reentrancy-events)
 contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogic {
+    /// @dev Gas each identity probe of a fee-recipient candidate runs with. An Avana getter, behind its proxy
+    /// included, costs under 10,000; a candidate that needs more, or answers with a huge buffer, runs out inside the
+    /// probe, which then reads as no answer. A probe starved below this by the transaction's own gas limit leaves the
+    /// setter at most `⌈64 × PROBE_GAS / 63⌉ / 64` (under 480) gas, less than the recipient write needs, so the
+    /// setter can never complete on a starved probe.
+    uint256 private constant PROBE_GAS = 30_000;
+
     /// @notice Fixes the implementation immutables; they must equal the ParameterStore's.
     /// @param timelock The chain's AvanaTimelock.
     /// @param marketRegistry The chain's MarketRegistry proxy.
@@ -141,8 +149,10 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
 
     /// @notice Body of `IParameterStoreAdmin.setSecondSource`; the ParameterStore checks the caller's role first.
     /// @dev Every word `getOracleInputs(..., true)` serves for either source is checked here, so the store never
-    /// serves a second-source word an LPOracle or DebtOracle reads as out of range (`_wellFormed`).
-    /// @custom:spec REQ-PSTORE-028, REQ-PSTORE-029, REQ-PSTORE-009, REQ-PSTORE-033, SPEC-ORC-020
+    /// serves a second-source word an LPOracle or DebtOracle reads as out of range (`_wellFormed`); an empty standby
+    /// has every field zero. Once written, neither source may read the pool of a market holding the token, and each
+    /// window must fit the sequencer grace period (`_recheck` with `fit`).
+    /// @custom:spec REQ-PSTORE-028, REQ-PSTORE-029, REQ-PSTORE-009, REQ-PSTORE-033, REQ-PSTORE-034, SPEC-ORC-020
     function setSecondSource(
         address token,
         SecondSource calldata src,
@@ -155,7 +165,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         SecondSource memory b = standby;
         if (!_wellFormed(s, debtOracle) || _sharesRoute(token, s.source)) revert OutOfBounds();
         bool hasStandby = b.kind != SecondSourceKind.None;
-        if (hasStandby && (!_wellFormed(b, debtOracle) || _shares(token, s, b))) revert OutOfBounds();
+        if (hasStandby ? !_wellFormed(b, debtOracle) || _shares(token, s, b) : !_empty(b)) revert OutOfBounds();
         Layout storage $ = _s();
         address oldSource = $.secondSource[token].source;
         address oldStandby = $.standby[token].source;
@@ -163,11 +173,11 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         $.standby[token] = b;
         bool wasOnStandby = $.onStandby[token];
         $.onStandby[token] = false;
-        _recheck(SCOPE_TOKEN, token, false);
+        _recheck(SCOPE_TOKEN, token, false, true);
         if (hasStandby) {
             // Check the standby as a guardian would put it in force, then return to the recorded source.
             $.onStandby[token] = true;
-            _recheck(SCOPE_TOKEN, token, false);
+            _recheck(SCOPE_TOKEN, token, false, false);
             $.onStandby[token] = false;
         }
         emit ParameterSet("secondSource", _a(token), uint160(oldSource), uint160(s.source));
@@ -178,7 +188,10 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
     /// @notice Body of `IParameterStoreAdmin.useStandbySecondSource`; the ParameterStore checks the caller's role first.
     /// @dev The standby must still share no feed or pool with the recorded source or the token's recorded routes
     /// (`OutOfBounds`): a route change after `setSecondSource` could have made it depend on the failure it replaces.
-    /// @custom:spec REQ-PSTORE-029, EMG-103
+    /// With the standby in force, every market holding the token must still fit it (`_recheck` with `fit`,
+    /// `OutOfBounds`) and pass its LPOracle's `checkConfig` (`OracleConfigRejected`), so a change made after
+    /// `setSecondSource` cannot leave the guardian a switch to a configuration the oracles refuse.
+    /// @custom:spec REQ-PSTORE-029, REQ-PSTORE-009, REQ-PSTORE-034, EMG-103
     function useStandbySecondSource(
         address token
     ) external {
@@ -189,6 +202,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         SecondSource memory recorded = _s().secondSource[token];
         if (_shares(token, recorded, b)) revert OutOfBounds();
         _s().onStandby[token] = true;
+        _recheck(SCOPE_TOKEN, token, false, true);
         emit SecondSourceSwitched(token, true, msg.sender);
     }
 
@@ -202,7 +216,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         _onlyDelegated();
         if (!_s().onStandby[token]) return;
         _s().onStandby[token] = false;
-        _recheck(SCOPE_TOKEN, token, false);
+        _recheck(SCOPE_TOKEN, token, false, false);
         emit SecondSourceSwitched(token, false, msg.sender);
     }
 
@@ -262,6 +276,8 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
     /// `MARKET_REGISTRY()`, or answers `logicConfig()` (every other Avana contract and logic contract); and not a
     /// PositionProxy: a contract whose `ADAPTER()` is the AaveAdapter, or whose `(WALLET(), SPOKE(), MARKET_ID())` the
     /// ProxyManager's `predictProxy` maps to it. The registry checks run once the MarketRegistry holds code, so `initialize` can run before it.
+    /// Every identity probe is a static call with `PROBE_GAS` that copies at most one word beyond the answer it
+    /// accepts (`_word`), so a candidate answering with a huge buffer costs at most `PROBE_GAS` per probe.
     /// @custom:spec REQ-CONFIG-056
     function _requireFeeRecipient(
         address r
@@ -269,11 +285,27 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         IMarketRegistry reg = _REGISTRY;
         bool bad = r == address(0) || r == address(this) || r == _TIMELOCK || r == address(reg);
         if (!bad && address(reg).code.length != 0) {
-            bad = r == reg.AAVE_ADAPTER() || r == reg.COLLATERALIZATION() || r == reg.PROXY_MANAGER()
-                || r == reg.LP_VAULT_SWAP() || r == reg.VAULT_TOKEN_FACTORY() || r == reg.RISK_MODULE()
-                || r == reg.LOCK() || r == reg.PAYOUT_ESCROW() || r == reg.PARAMETER_STORE()
-                || r == reg.FLASH_LIQUIDATOR() || r == reg.STANDARD_SPOKE_IMPLEMENTATION() || r == reg.flashSource()
-                || reg.isRecordedHub(r) || reg.getSpoke(r).approved || reg.integrationIdOf(r) != 0
+            // The registry's recorded addresses, read in turn by one call site.
+            function() external view returns (address)[12] memory recorded = [
+                reg.AAVE_ADAPTER,
+                reg.COLLATERALIZATION,
+                reg.PROXY_MANAGER,
+                reg.LP_VAULT_SWAP,
+                reg.VAULT_TOKEN_FACTORY,
+                reg.RISK_MODULE,
+                reg.LOCK,
+                reg.PAYOUT_ESCROW,
+                reg.PARAMETER_STORE,
+                reg.FLASH_LIQUIDATOR,
+                reg.STANDARD_SPOKE_IMPLEMENTATION,
+                reg.flashSource
+            ];
+            for (uint256 i = 0; i < recorded.length; ++i) {
+                // Twelve view calls of the MarketRegistry, a fixed count.
+                // forge-lint: disable-next-line(calls-loop)
+                if (r == recorded[i]()) bad = true;
+            }
+            bad = bad || reg.isRecordedHub(r) || reg.getSpoke(r).approved || reg.integrationIdOf(r) != 0
                 || reg.marketOfVaultToken(r) != 0 || reg.marketOfLpOracle(r) != 0 || _isReserveContract(reg, r)
                 || _reportsAvana(r) || _isProxy(reg, r);
         }
@@ -308,10 +340,10 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         address r
     ) private view returns (bool) {
         if (r.code.length == 0) return false;
-        // A view of the candidate; only its success and length are read.
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool logic, bytes memory ret) = r.staticcall(abi.encodeWithSignature("logicConfig()"));
-        return (logic && ret.length >= 32) || _word(r, abi.encodeWithSignature("TIMELOCK()")) == uint160(_TIMELOCK)
+        // Only the probe's success and the length of its first word are read.
+        (bool logic, bytes memory ret) =
+            RouteReads._staticRead(r, PROBE_GAS, abi.encodeWithSignature("logicConfig()"), 32);
+        return (logic && ret.length == 32) || _word(r, abi.encodeWithSignature("TIMELOCK()")) == uint160(_TIMELOCK)
             || _word(r, abi.encodeWithSignature("MARKET_REGISTRY()")) == uint160(address(_REGISTRY));
     }
 
@@ -336,23 +368,23 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         return _word(reg.PROXY_MANAGER(), abi.encodeCall(IProxyManager.predictProxy, (w, sp, marketId))) == uint160(r);
     }
 
-    /// @dev The one-word answer of a static call, 0 when the call fails or returns anything but 32 bytes.
+    /// @dev The one-word answer of a probe (a static call with `PROBE_GAS`): 0 when the call fails, runs out of its
+    /// gas or returns anything but exactly 32 bytes. At most 64 bytes of the answer are copied, so a longer answer is
+    /// told apart from a word without copying the rest.
     function _word(
         address target,
         bytes memory data
     ) private view returns (uint256 value) {
-        // A view of an arbitrary candidate address: the return is length-checked before it is read.
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool ok, bytes memory ret) = target.staticcall(data);
+        (bool ok, bytes memory ret) = RouteReads._staticRead(target, PROBE_GAS, data, 64);
         if (ok && ret.length == 32) value = abi.decode(ret, (uint256));
     }
 
     /// @dev A second source the oracles can read: `0 < toleranceBps ≤ 500` and a source holding code; an
     /// `OracleNetwork` source with `maxAge > 0`, no window or pool reference, and a feed definition (`setFeed`) whose
     /// pinned decimals and bounds `getOracleInputs` serves with it; a `PoolTwap` source with `twapWindow > 0`, a
-    /// non-zero pool reference and no `maxAge`, never for a debt asset with a DebtOracle (`debtOracle`), which reads
-    /// only an oracle network. `None` is not well formed.
-    /// @custom:spec REQ-PSTORE-028, REQ-PSTORE-029, SPEC-ORC-020
+    /// non-zero pool reference, no `maxAge` and a window within the sequencer grace period, never for a debt asset
+    /// with a DebtOracle (`debtOracle`), which reads only an oracle network. `None` is not well formed.
+    /// @custom:spec REQ-PSTORE-028, REQ-PSTORE-029, REQ-PSTORE-034, SPEC-ORC-020
     function _wellFormed(
         SecondSource memory s,
         bool debtOracle
@@ -364,7 +396,16 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
             return s.maxAge != 0 && s.twapWindow == 0 && s.poolRef == bytes32(0) && _s().feeds[s.source].decimals != 0;
         }
         return s.kind == SecondSourceKind.PoolTwap && !debtOracle && s.twapWindow != 0 && s.maxAge == 0
-            && s.poolRef != bytes32(0);
+            && s.poolRef != bytes32(0) && _withinGrace(s.twapWindow);
+    }
+
+    /// @dev Whether every field of `s` is zero, the only form of an empty (`None`) standby.
+    /// @custom:spec REQ-PSTORE-029
+    function _empty(
+        SecondSource memory s
+    ) private pure returns (bool) {
+        return s.kind == SecondSourceKind.None
+            && uint256(uint160(s.source)) | uint256(s.poolRef) | s.maxAge | s.twapWindow | s.toleranceBps == 0;
     }
 
     /// @dev Whether `source` is a feed of the token's recorded primary, alternate or standby route.
