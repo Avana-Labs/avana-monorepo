@@ -150,6 +150,9 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
+          # compiling one small file into a throwaway folder makes Foundry install it.
+          forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --python
           .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
 
@@ -210,6 +213,9 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
+          # compiling one small file into a throwaway folder makes Foundry install it.
+          forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --python
           .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
 
@@ -270,6 +276,9 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
+          # compiling one small file into a throwaway folder makes Foundry install it.
+          forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --python
           .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
 
@@ -330,6 +339,9 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
+          # compiling one small file into a throwaway folder makes Foundry install it.
+          forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --python --gambit
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -396,6 +408,9 @@ jobs:
         # Necessist has no release binaries; the runner's preinstalled cargo builds the pinned crate into tools/bin.
         run: |
           forge soldeer install
+          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
+          # compiling one small file into a throwaway folder makes Foundry install it.
+          forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --python --necessist
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
