@@ -393,6 +393,27 @@ def lp(v0, v1):
     return isqrt(4 * v0 * v1) - 1
 
 
+# SPEC-ORC-008 for a full-range concentrated-liquidity market (tick spacing 1, ticks -887,272 / 887,272) of two
+# 6-decimal tokens with d = 6, as the CL pricing module computes it: the oracle sqrt price
+# floor(sqrt(v0 * 10^d1 * 2^192 / (v1 * 10^d0))) clamped to the range, the amounts of 10^d units by Uniswap's
+# floor formulas, each reduced by 1 raw unit, then price8 = max(1, sum_i floor(a'_i * v_i / 10^d_i)).
+CL_SQRT_A, CL_SQRT_B = 4_295_128_739, 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342
+
+
+def cl_full_range_composition(v0, v1, d0=6, d1=6, units=10**6):
+    s = isqrt(v0 * 10**d1 * 2**192 // (v1 * 10**d0))
+    s = min(max(s, CL_SQRT_A), CL_SQRT_B)
+    a0 = (units * ((CL_SQRT_B - s) << 96) // CL_SQRT_B) // s
+    a1 = units * (s - CL_SQRT_A) // 2**96
+    return a0, a1
+
+
+def lp_sum(v0, v1, d0=6, d1=6):
+    a0, a1 = cl_full_range_composition(v0, v1, d0, d1)
+    a0, a1 = max(a0 - 1, 0), max(a1 - 1, 0)
+    return max(1, a0 * v0 // 10**d0 + a1 * v1 // 10**d1)
+
+
 def evaluate(legs, gas_ok, past_window):
     """2 tokens x (primary 1 leg, alternate 1 leg); primary 1.0000, alternate 0.9750 (disagreeing at T = 225).
     Returns ('revert', reason) or (served, state)."""
@@ -494,12 +515,14 @@ prove_lemmas("FV-CTL-110", "Lower-route price (SPEC-ORC-017): with w_i = ceil_i(
                  (z3.And(rr - 1 >= 1, zmin(rr - 1, A) >= 1, zmin(rr - 1, A) <= A),
                   [XX >= 4, rr >= 0, rr * rr <= XX, XX < (rr + 1) * (rr + 1), A >= 1])],
              verifies=["SPEC-ORC-017", "SPEC-ORC-008", "REQ-ORACLE-086", "INV-055"], targets=["T-66", "T-69"])
-ex_lower = lp(min(100_000_000, 100_000_000), min(100_000_000, 97_500_000))
+ex_w = (min(100_000_000, 100_000_000), min(100_000_000, 97_500_000))
+ex_lower = lp_sum(*ex_w)
+ex_fresh = lp_sum(100_000_000, 100_000_000)
 # FV-CTL-111 verifies: SPEC-ORC-017, INV-087, SPEC-ORC-008, SPEC-ORC-012
-expect("FV-CTL-111", "SPEC-ORC-017 example: A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give lower = 197,484,175 and served 197,484,175; Cached serves 199,980,000; Expired serves 1; TWAP Drifting with fresh 199,986,998 serves 199,980,000; SPEC-ORC-012 fresh = 199,986,998",
-       ex_lower == 197_484_175 and min(ex_lower, 199_980_000) == 197_484_175
-       and lp(99_987_000, 100_000_000) == 199_986_998 and min(199_986_998, 199_980_000) == 199_980_000
-       and isqrt(4 * 10**8 * 97_500_000) == 197_484_176,
+expect("FV-CTL-111", "SPEC-ORC-017 example (full-range USDC/USDT, spacing 1, d = 6): A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give the composition (987,420, 1,012,739), lower = 197,483,855 and served 197,483,855; Cached serves 199,980,000; Expired serves 1; Drifting on a consistency deviation with fresh 199,999,600 (both tokens at $1) serves 199,980,000",
+       cl_full_range_composition(*ex_w) == (987_420, 1_012_739)
+       and ex_lower == 197_483_855 and min(ex_lower, 199_980_000) == 197_483_855
+       and ex_fresh == 199_999_600 and min(ex_fresh, 199_980_000) == 199_980_000,
        verifies=["SPEC-ORC-017", "INV-087", "SPEC-ORC-008", "SPEC-ORC-012"], targets=["T-66"],
        cex={"lower": ex_lower})
 

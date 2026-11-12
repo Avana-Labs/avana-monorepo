@@ -21,7 +21,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.04,
+  "seconds": 0.05,
   "model": "fv_ctl_access"
  },
  {
@@ -38,7 +38,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.01,
+  "seconds": 0.02,
   "model": "fv_ctl_access"
  },
  {
@@ -59,7 +59,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_access"
  },
  {

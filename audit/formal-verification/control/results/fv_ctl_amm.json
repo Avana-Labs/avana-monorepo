@@ -176,7 +176,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.01,
+  "seconds": 0.02,
   "model": "fv_ctl_amm"
  },
  {

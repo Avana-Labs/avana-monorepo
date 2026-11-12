@@ -27,8 +27,9 @@ fails, so no target is ever dropped.
                                               three groups, each run as its own job per contract
     ci-shards.py mutators-check               reads `slither-mutate --list-mutators` on stdin and fails when a
                                               mutator is in no group
-    ci-shards.py certora-mutate [--layers L]  {"conf": "<Name>"} per Certora conf whose verified contract's file is in
-                                              a folder of the selected layers (every conf when no layer is given)
+    ci-shards.py certora-mutate [--layers L]  {"conf": "<Name>"} per Certora conf with a `mutations` section whose
+                                              verified contract's file is in a folder of the selected layers (every
+                                              such conf when no layer is given)
     ci-shards.py necessist [--layers L]       {"layer": "<l>", "test": "<path>"} per test file of each layer
     ci-shards.py campaign <build> <layer> <echidna|medusa>
                                               {"harness": "<Name>", "segment": <k>} for every harness of the layer
@@ -161,8 +162,12 @@ def certora_confs(layers: str) -> list[dict]:
     folders = [d for layer, dirs in layer_folders().items() if layer in selected for d in dirs]
     legs = []
     for conf in sorted((ROOT / "certora/conf").glob("*.conf")):
+        text = conf.read_text(encoding="utf8")
+        # A conf without a `mutations` section verifies code Avana does not own (Hub.conf: the unmodified Aave V4
+        # Hub), so it has no mutants; its rules still run in the certora job of contracts.yml.
+        if '"mutations"' not in text:
+            continue
         if selected:
-            text = conf.read_text(encoding="utf8")
             verify = re.search(r'"verify"\s*:\s*"(\w+):', text)
             files = re.findall(r'"([^":]+\.sol):(\w+)"', text)
             paths = [ROOT / f for f, name in files if verify and name == verify.group(1)]

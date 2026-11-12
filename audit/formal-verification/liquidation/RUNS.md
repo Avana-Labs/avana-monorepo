@@ -153,3 +153,15 @@ One entry per run of the liquidation checks (`FV-LIQ-*`). Each new run appends a
 | Models changed | `fv_liq_06`: `-06ae` checks the charged premium 1,037,962 and `assetOut = 19,237,965` beside the ceiling quote 1,037,963; `-06ae2` becomes the mutant of the earlier text (the quote gives 19,237,964, one unit below the wallet's receipt); `-06ah` checks `101,588 + 10,000 = 111,588`. `liquidation.qnt`: `liquidate(id, caller)` drops the permissionless flag, so any caller that is not frozen liquidates, a committed operator or not (`Q-404`) |
 | Findings produced | None. The `-06ae2` finding of `FV-LIQ-R9` is closed by the restated `SPEC-LIQ-020` example |
 | Output | Console only |
+
+## FV-LIQ-R11 — 2026-11-11 — full re-run at the default Quint size
+
+| Field | Value |
+|---|---|
+| Command | `bash run.sh`, from this folder (Quint at the default 10,000 traces × 25 steps) |
+| Versions | Python 3.9.6 from `spec/05-verification/.venv`, z3-solver 4.13.0, Quint 0.22.4 from `spec/05-verification/node_modules` |
+| Result | 277 `[PASS]`, 0 failed: `fv_liq_01` 60, `fv_liq_02` 29, `fv_liq_03` 36, `fv_liq_04` 19, `fv_liq_05` 30, `fv_liq_06` 76, `fv_liq_07` 18 obligations, and the 9 Quint checks `FV-LIQ-08a`…`08w6` as expected at 10,000 traces × 25 steps; `LIQUIDATION AREA: all checks passed`, exit 0 |
+| Spec state | Decisions through `Q-406` |
+| Models changed | None; full re-run alongside the control-area model updates of `FV-CTL-R11` |
+| Findings produced | None |
+| Output | Console only |

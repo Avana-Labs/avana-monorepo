@@ -39,7 +39,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -59,7 +59,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.01,
+  "seconds": 0.02,
   "model": "fv_ctl_oracle"
  },
  {
@@ -100,7 +100,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -179,7 +179,7 @@
   ],
   "detail": "REQ-ORACLE-032 examples: a two-leg recovery (new USDT/ETH round 1,762,700,000, ETH/USD 1,762,697,000, token0 1,762,696,500) gives recoveredAt 1,762,700,000; a standby switched in at 1,762,700,000 and observed by the poke at 1,762,700,012 gives recoveredAt 1,762,700,012.",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -290,7 +290,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.01,
+  "seconds": 0.02,
   "model": "fv_ctl_oracle"
  },
  {
@@ -323,7 +323,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -343,12 +343,12 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.07,
+  "seconds": 0.06,
   "model": "fv_ctl_oracle"
  },
  {
   "id": "FV-CTL-111",
-  "title": "SPEC-ORC-017 example: A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give lower = 197,484,175 and served 197,484,175; Cached serves 199,980,000; Expired serves 1; TWAP Drifting with fresh 199,986,998 serves 199,980,000; SPEC-ORC-012 fresh = 199,986,998",
+  "title": "SPEC-ORC-017 example (full-range USDC/USDT, spacing 1, d = 6): A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give the composition (987,420, 1,012,739), lower = 197,483,855 and served 197,483,855; Cached serves 199,980,000; Expired serves 1; Drifting on a consistency deviation with fresh 199,999,600 (both tokens at $1) serves 199,980,000",
   "status": "Verified",
   "method": "direct computation",
   "verifies": [
@@ -382,7 +382,7 @@
   ],
   "detail": "Includes disagreementPauseMax = 0 (allowed: the bound is <= 3,600) with disagreeSince read as 0 (no poke yet in the episode, or a route-version change since the last poke): s = now, so disagreementExpired = D and now >= now + 0 holds.",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -422,7 +422,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.25,
+  "seconds": 0.24,
   "model": "fv_ctl_oracle"
  },
  {
@@ -532,7 +532,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.08,
+  "seconds": 0.07,
   "model": "fv_ctl_oracle"
  },
  {

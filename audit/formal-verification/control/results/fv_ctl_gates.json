@@ -19,7 +19,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.05,
+  "seconds": 0.04,
   "model": "fv_ctl_gates"
  },
  {
@@ -36,7 +36,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.15,
+  "seconds": 0.14,
   "model": "fv_ctl_gates"
  },
  {
@@ -160,7 +160,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_gates"
  },
  {
@@ -356,7 +356,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_gates"
  }
 ]
