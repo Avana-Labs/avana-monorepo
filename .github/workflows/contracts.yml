@@ -1,11 +1,12 @@
 name: contracts
 
-# Foundry workspace in contracts/. Every push to main and every pull request runs every job here: format, lint and
-# build, the ci and gas test profiles, the deep invariant campaign, fork tests, the FFI differential suite, Halmos,
-# SMTChecker, Certora, branch coverage, traceability and the fast security tier. The long checks run one target per
-# job, each at most 4 hours: `plan` lists the invariant files, Halmos test contracts, SMTChecker contracts and Certora
-# confs with script/ci-shards.py, so a new one gets its own job on the next run. The slow security tier
-# (security-slow.yml) and the per-layer mutation gates (mutation-gate.yml) run on every push to main.
+# Foundry workspace in contracts/. Every pull request runs the short set: format, lint and build, the ci test profile
+# in 10 shards, gas snapshots, branch coverage, traceability and the fast security tier. Every push to main (and a
+# manual run) adds the long checks: the deep invariant campaign, fork tests, the FFI differential suite, Halmos,
+# SMTChecker and Certora, one target per job, each at most 4 hours: `plan` lists the invariant files, Halmos test
+# contracts, SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the
+# next run. The slow security tier (security-slow.yml) and the per-layer mutation gates (mutation-gate.yml) also run
+# on every push to main.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -30,9 +31,10 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # A newer push or pull-request run cancels the older one on the same ref.
+  # A newer pull-request run cancels the older one on the same ref; runs on main finish, so the next merge never
+  # cancels a long check.
   group: contracts-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -219,6 +221,8 @@ jobs:
 
   plan:
     name: plan the long jobs
+    # Long check: main and manual runs only.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -245,7 +249,7 @@ jobs:
     # at depth 400 per invariant.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
-    if: needs.plan.outputs.invariant != '[]'
+    if: github.event_name != 'pull_request' && needs.plan.outputs.invariant != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     strategy:
@@ -286,6 +290,8 @@ jobs:
     name: Ethereum and Base fork tests
     # Runs when the RPC_MAINNET and RPC_BASE secrets are set; without them it passes with a warning and runs nothing.
     needs: build
+    # Long check: main and manual runs only.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -353,6 +359,8 @@ jobs:
   differential:
     name: FFI differential (LPOracle vs mpmath)
     needs: build
+    # Long check: main and manual runs only.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -394,7 +402,7 @@ jobs:
     # One job per Halmos test contract (each file of test/halmos/ holds one), every check_ function at loop 8.
     name: Halmos ${{ matrix.contract }}
     needs: [build, plan]
-    if: needs.plan.outputs.halmos != '[]'
+    if: github.event_name != 'pull_request' && needs.plan.outputs.halmos != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -445,7 +453,7 @@ jobs:
     # unchanged.
     name: SMTChecker ${{ matrix.contract }}
     needs: [build, plan]
-    if: needs.plan.outputs.smt != '[]'
+    if: github.event_name != 'pull_request' && needs.plan.outputs.smt != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -491,7 +499,7 @@ jobs:
     # at once.
     name: Certora ${{ matrix.conf }}
     needs: [build, plan]
-    if: needs.plan.outputs.certora != '[]'
+    if: github.event_name != 'pull_request' && needs.plan.outputs.certora != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -728,11 +736,18 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Require every job and shard to pass
-        # This job has no checkout, so contracts/ does not exist here.
+        # This job has no checkout, so contracts/ does not exist here. On a pull request the long checks are skipped
+        # by design; on main and in a manual run every job must succeed.
         working-directory: .
         env:
           RESULTS: ${{ toJSON(needs) }}
+          LONG_SKIP_OK: ${{ github.event_name == 'pull_request' }}
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          bad=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          bad=$(echo "$RESULTS" | jq -r --argjson pr "$LONG_SKIP_OK" '
+            ["plan","invariant","fork","differential","halmos","smtchecker","certora"] as $long
+            | [to_entries[]
+               | select(.value.result != "success")
+               | select(($pr and (.key as $k | $long | index($k)) and .value.result == "skipped") | not)
+               | .key] | join(", ")')
           if [ -n "$bad" ]; then echo "not passed: $bad"; exit 1; fi

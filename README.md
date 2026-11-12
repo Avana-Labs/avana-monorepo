@@ -471,7 +471,7 @@ The fork tests need `RPC_MAINNET` and `RPC_BASE`, and the Certora loop needs `CE
 
 ## Continuous integration
 
-[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs every job below on every pull request and every push to `main` that touches `contracts/**`, `audit/**/*.sol`, `spec/05-verification/trace.py` or the workflow, and can be started by hand. It uses the Foundry release in `contracts/.foundry-version` and the dependencies in `soldeer.lock`.
+[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs on every pull request and every push to `main` that touches `contracts/**`, `audit/**/*.sol`, `spec/05-verification/trace.py` or the workflow, and can be started by hand. A pull request runs the short set (`build`, `test`, `gas`, `traceability`, `coverage`, `fast-security`); a push to `main` and a manual run add the long checks (`plan`, `invariant`, `fork`, `differential`, `halmos`, `smtchecker`, `certora`), and a run on `main` is never cancelled by the next push. `gate` accepts the long checks as skipped on a pull request and requires every job on `main`. It uses the Foundry release in `contracts/.foundry-version` and the dependencies in `soldeer.lock`.
 
 | Job | Runs |
 |---|---|
