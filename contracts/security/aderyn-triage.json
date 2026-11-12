@@ -1163,13 +1163,12 @@
       "review": "Pattern: bounded loops (at most 8 market tokens; a refused residue must revert the whole call, REQ-HELPER-008)."
     },
     {
-      "fingerprint": "f64a71575f3db858",
+      "fingerprint": "f617ade4761bef6f",
       "check": "unchecked-return",
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._liquidate",
-      "reason": "Same finding as Slither unused-return 88e6cfc381fb8ccd: keeperOut is measured by balance delta (REQ-HELPER-006), so the returned LiquidationResult is not used. forge-lint suppression on the line with the reason above it.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: returns measured by balance delta (same site as Slither 88e6cfc381fb8ccd)."
+      "function": "FlashLiquidatorBase.flashLiquidate (F = 0 branch)",
+      "reason": "The internal _liquidate(asset, request.params) of the operator helper's no-loan path returns (keeperOut, unused, debtRepaid), which only the loan path's _runLoan needs, to size the repayment owed to a lender (_checkLoanNeed and _repay). With F = 0 nothing is owed and there is no lender: _liquidate itself stores keeperOut and debtRepaid in the transient context (KEEPER_OUT_SLOT, DEBT_REPAID_SLOT), _payOut reads them for the operator's outlay bound and the FlashLiquidated event, and the payout is the rise of the helper's T balance over the whole call, which already holds the unused shortfall budget (REQ-HELPER-006, REQ-HELPER-008, REQ-HELPER-011). No value is lost by not binding the returns. Replaces stale entry f64a71575f3db858 (an unused LiquidationResult inside _liquidate, which now reads result.debtRepaid). Covered by TEST-174 (FlashLiquidator.ZeroLoan: operatorZeroLoanFundedBySafe, operatorZeroLoanOutlayBound, operatorZeroLoanShortfall, operatorZeroLoanMinPayout, testFuzz operatorZeroLoanBounded).",
+      "approval": "pending (lead review)"
     },
     {
       "fingerprint": "ac0d473439addc9e",

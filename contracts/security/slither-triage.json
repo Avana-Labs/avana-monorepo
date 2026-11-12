@@ -67,14 +67,6 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "9c2950cd3e898ca5",
-      "check": "unused-return",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._usesFeed(address,address)",
-      "reason": "activePriceRoutes returns (primary, alternate, replaced); the two routes are already the ones in force, so the replaced slot carries nothing the caller needs (REQ-CONFIG-072).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
       "fingerprint": "f63409f3ba9dc2b6",
       "check": "unused-return",
       "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
@@ -83,27 +75,11 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "cb07d39ee6d5db80",
-      "check": "unused-return",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._toleranceMin(address)",
-      "reason": "activePriceRoutes returns (primary, alternate, replaced); the two routes are already the ones in force, so the replaced slot carries nothing the caller needs (REQ-CONFIG-072).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
       "fingerprint": "43b468909e6444c5",
       "check": "unused-return",
       "file": "src/policy/parameter-store/ParameterStoreRouter.sol",
       "function": "ParameterStoreRouter._forward(address)",
       "reason": "Setters return nothing, so the delegatecall's return data is empty by construction; Address.functionDelegateCall already bubbles any revert.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "21585235b80489dc",
-      "check": "unused-return",
-      "file": "src/policy/parameter-store/ParameterStoreViews.sol",
-      "function": "ParameterStoreViews._buildConfig(uint256,Market)",
-      "reason": "activePriceRoutes returns (primary, alternate, replaced); the two routes are already the ones in force, so the replaced slot carries nothing the caller needs (REQ-CONFIG-072).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -1074,20 +1050,6 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
-      "fingerprint": "b71576b1a3c533f5",
-      "check": "uninitialized-local",
-      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
-      "reason": "A memory local (array or struct) declared and filled by the next call or field writes; Solidity zero-initialises memory, so every unread field is 0 by design (an unread word decodes as a failed read).",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
-      "fingerprint": "d8acb1fae9617705",
-      "check": "uninitialized-local",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
-      "reason": "A memory local (array or struct) declared and filled by the next call or field writes; Solidity zero-initialises memory, so every unread field is 0 by design (an unread word decodes as a failed read).",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
       "fingerprint": "b0d2a9f117831fc3",
       "check": "uninitialized-local",
       "file": "src/oracle/lp-oracle/LPOracleListingLogic.sol",
@@ -1112,13 +1074,6 @@
       "fingerprint": "7c61884f0c1a923a",
       "check": "uninitialized-local",
       "file": "src/oracle/lp-oracle/LPOracleReads.sol",
-      "reason": "A memory local (array or struct) declared and filled by the next call or field writes; Solidity zero-initialises memory, so every unread field is 0 by design (an unread word decodes as a failed read).",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
-      "fingerprint": "04325fcc50b99813",
-      "check": "uninitialized-local",
-      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
       "reason": "A memory local (array or struct) declared and filled by the next call or field writes; Solidity zero-initialises memory, so every unread field is 0 by design (an unread word decodes as a failed read).",
       "approval": "approved (Josue, 2026-11-11)"
     },
@@ -1263,13 +1218,6 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
-      "fingerprint": "c7da46b95b42f064",
-      "check": "assembly",
-      "file": "src/oracle/lp-oracle/LPOracle.sol",
-      "reason": "Re-raises the view logic's revert data verbatim (an InsufficientGas of a guarded read) so the only revert a view produces is InsufficientGas (REQ-ORACLE-061). Memory-safe, one revert.",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
       "fingerprint": "fea9d0fa0e75a6c6",
       "check": "assembly",
       "file": "src/oracle/lp-oracle/LPOracleStorage.sol",
@@ -1281,13 +1229,6 @@
       "check": "dead-code",
       "file": "src/oracle/lp-oracle/LPOracleListing.sol",
       "reason": "Used through an internal function pointer: LPPriceMath.vaultDecimals takes _compositionOrEmpty as its composition argument (SPEC-ORC-005, REQ-ORACLE-047); Slither does not follow function pointers.",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
-      "fingerprint": "5e7f071ad38b7228",
-      "check": "low-level-calls",
-      "file": "src/oracle/lp-oracle/LPOracle.sol",
-      "reason": "The view functions reach their logic contract through the feed's own delegateView by a static call to address(this) (REQ-ORACLE-106): a view cannot delegatecall, and the target is the feed itself. A failure re-raises the logic's revert data or reverts InsufficientGas.",
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
@@ -1335,15 +1276,6 @@
       "reason": "The top-up is pulled from the payer that flashLiquidate recorded in the transient context (msg.sender for the public helper, FUNDING_SAFE for the operator variant), never from calldata; the callback reaches this line only from the context's Pool, with the helper as initiator and an open, unused context whose asset, amount and params hash match (REQ-HELPER-005, REQ-HELPER-007), and the amount is bounded by maxTopUp (and MAX_TOP_UP_BPS). A forged executeOperation reverts InvalidFlashCallback before any transfer. Covered by TEST-046 (forged and third-party-loan callbacks), PROP-036 (Halmos), TEST-289.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Josue group N: checked 2026-11-11, the payer comes from the transient context written in flashLiquidate; executeOperation reaches the pull only with msg.sender == recorded Pool, initiator == this helper, an OPEN context (set USED before any external call) and matching asset/amount/params hash, so a third-party flashLoan (initiator != helper), flashLoanSimple (different selector) or a direct call reverts first; the amount is bounded by maxTopUp (and MAX_TOP_UP_BPS). Recommend approve."
-    },
-    {
-      "fingerprint": "88e6cfc381fb8ccd",
-      "check": "unused-return",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._liquidate(IERC20,LiquidationParams)",
-      "reason": "keeperOut is measured by balance delta (the rise of the helper's T balance across liquidate plus the allowance LPVaultSwap consumed, REQ-HELPER-006), so the returned LiquidationResult is not used for any amount. forge-lint suppression on the line with the reason above it. Covered by TEST-174 (test_TEST_174_helperApprovesExactlyXAndMeasuresKeeperOut, the payout fuzz).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: returns measured by balance delta (keeperOut = T balance rise + allowance consumed)."
     },
     {
       "fingerprint": "ae6148ed7c68603c",
@@ -1720,15 +1652,6 @@
       "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, spokeDrift's market id is not needed: any drift of the Spoke trips CONFIG_DRIFT; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
     },
     {
-      "fingerprint": "81f6923a210535d8",
-      "check": "unused-return",
-      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
-      "function": "RiskModuleBreakerLogic._readTrips(address,bytes4)",
-      "reason": "wordAt returns (ok, word); the probe's return is checked to be exactly 32 bytes on the line before, so the read at offset 0 is in bounds (SPEC-BRK-003). The same read, moved from _issuerTripped (former entry 3f1afd254e3e1a83) into _readTrips when the combined USDT probe made two reads per token (REQ-MREG-027). Covered by TEST-228 (issuerLatchesUntilReset, transferFeeTripsDebtBreaker, combinedProbeTripsOnPause, combinedProbeTripsOnFee, combinedProbeFailsClosedOnEitherRead), TEST-221.",
-      "approval": "approved by pattern",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, wordAt's ok is implied by the 32-byte length check above; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
-    },
-    {
       "fingerprint": "1862f51059c46f27",
       "check": "unused-return",
       "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
@@ -1968,6 +1891,14 @@
       "reason": "Bounded static read of the issuer probes and the sequencer feed (REQ-RISK-089, SPEC-BRK-003, REQ-RISK-081): one staticcall with explicit gas after the ceil(64G/63) + POST_CALL_GAS floor, copying at most maxLength bytes into the buffer allocated just before, whose length is only lowered. Same construct as LPOracleCalls.staticRead (c1bc1fda60b7cb8f). Covered by TEST-221 (probeGasFloor), TEST-228, TEST-275.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Josue group L (bounded-returndata STATICCALL in assembly): checked 2026-11-11, same construct as LPOracleCalls.staticRead and DebtOracleReads._call: memory-safe, copies at most maxLength bytes into the buffer allocated just before and only lowers its length; the gas floor ceil(64G/63) + POST_CALL_GAS precedes the call. Recommend approve."
+    },
+    {
+      "fingerprint": "a23c2db960165c54",
+      "check": "assembly",
+      "file": "src/policy/risk-module/RiskModuleCalls.sol",
+      "function": "RiskModuleCalls.staticReadWord(address,uint256,bytes)",
+      "reason": "Exact-length static read of each issuer probe (SPEC-BRK-003, REQ-RISK-089), called only by RiskModuleBreakerLogic._readTrips for paused() and basisPointsRate() (each read of UsdtFeeRateAndPaused too). One staticcall with ISSUER_PROBE_GAS after the ceil(64G/63) + POST_CALL_GAS floor, its output area the 32-byte scratch space 0x00-0x1f, so at most 32 bytes are copied whatever the answer's length; ok = success and returndatasize() == 32, checked after the call (a longer answer is refused even when its first word is 0); word = mload(0x00) only when ok, else 0. No free-memory allocation and no returndatacopy. Memory-safe (scratch space only). Solidity's high-level call copies the whole return data and its decoder accepts a longer answer, which SPEC-BRK-003 must trip. Covered by TEST-228 (RiskModule.ProbeAnswer: oneWordZeroAnswerIsClear, answerNotOneWordTrips, oversizedAnswerTripsAtBoundedCost, realAnswerLengths, for PausedFlag, UsdtFeeRate and UsdtFeeRateAndPaused), TEST-221 (probeWordReadsExactlyOneWord, testFuzz probeWordOkOnlyAtThirtyTwoBytes).",
+      "approval": "pending (lead review)"
     },
     {
       "fingerprint": "5c0185a2a3a32039",

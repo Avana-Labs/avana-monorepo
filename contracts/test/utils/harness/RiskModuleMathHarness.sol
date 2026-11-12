@@ -125,4 +125,12 @@ contract RiskModuleMathHarness {
         (ok, ret) = RiskModuleCalls.staticRead(target, callGas, abi.encodeWithSignature("paused()"), 32);
         length = ret.length;
     }
+
+    function probeWord(
+        address target,
+        uint256 callGas,
+        bytes4 sel
+    ) external view returns (bool ok, uint256 word) {
+        (ok, word) = RiskModuleCalls.staticReadWord(target, callGas, abi.encodePacked(sel));
+    }
 }

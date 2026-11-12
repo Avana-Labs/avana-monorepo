@@ -202,16 +202,15 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     }
 
     /// @dev One probe read: a static call to `sel` with `ISSUER_PROBE_GAS` behind the gas floor, copying at most one
-    /// word. A revert, an out-of-gas or a return that is not one word trips, and so does a non-zero word.
+    /// word. A revert, an out-of-gas or return data that is not exactly 32 bytes trips (a longer answer too, whatever
+    /// its first word), and so does a non-zero word.
     function _readTrips(
         address token,
         bytes4 sel
     ) private view returns (bool) {
-        (bool ok, bytes memory ret) =
-            RiskModuleCalls.staticRead(token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodePacked(sel), 32);
-        if (!ok || ret.length != 32) return true;
-        (, uint256 word) = RiskModuleCalls.wordAt(ret, 0);
-        return word != 0;
+        (bool ok, uint256 word) =
+            RiskModuleCalls.staticReadWord(token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodePacked(sel));
+        return !ok || word != 0;
     }
 }
 // forge-lint: disable-end(calls-loop)

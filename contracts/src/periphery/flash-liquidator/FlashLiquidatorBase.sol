@@ -119,7 +119,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         );
         // With F = 0 no lender is read or called: the context records `address(0)` as lender, so neither callback
         // can bind to it.
-        address lender;
+        address lender = address(0);
         if (flashAmount != 0) {
             lender = _lenderOf(address(asset));
             if (IMarketRegistryHubs(MARKET_REGISTRY).isRecordedHub(lender)) revert FlashSourceIsHub();
