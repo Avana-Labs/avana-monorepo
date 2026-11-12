@@ -59,7 +59,7 @@ The set is the union of the indexer stream and RPC logs read over both providers
 
 ## Fees, retries and errors
 
-- Fees (`chain/gas.ts`): tip = 90th percentile of the last 5 blocks' priority fees, at least 1 gwei; max fee = 2 × base fee + tip; gas limit ⌈1.25 × estimate⌉.
+- Fees (`chain/gas.ts`): tip = 90th percentile of the last 5 blocks' priority fees, at least 1 gwei; max fee = 2 × base fee + tip; gas limit ⌈1.3 × estimate⌉ + 25,000 (`@avana/services-common/gas`): `estimateGas` at `latest` runs at that block's timestamp, so a call touching a Hub asset already accrued in that second skips the accrual it pays when mined a second later.
 - Follow-up (`chain/submit.ts`, `followUp`): in every block a pending transaction is re-simulated. Mined: release. Still succeeding before its deadline: replace at the same nonce with both fee fields +15 %, through the same private endpoints. Past its deadline and still due: rebuild from a fresh preview at the same nonce. Past its deadline and no longer due: a zero-value transfer from the signer to itself at that nonce after 2 blocks. A nonce handed back for a rebuild that no pass used within 2 blocks is closed the same way.
 - Nonces (`chain/nonce.ts`): one lock per signer; reset from the provider at startup, after a reorg and after `nonce too low`.
 - Every attempt, skip, simulation failure, replacement and cancellation is one structured `keeper.attempt` line (`failureLog.ts`), from which the public failure log is published.
