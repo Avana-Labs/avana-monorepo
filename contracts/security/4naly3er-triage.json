@@ -145,22 +145,6 @@
       "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
     },
     {
-      "fingerprint": "1f04c6f194b77dbc",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/policy/parameter-store/ParameterStoreViews.sol",
-      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: n is 1 or 2 here.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
-    },
-    {
-      "fingerprint": "2033df50dd4e571f",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/policy/parameter-store/ParameterStoreViews.sol",
-      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: v is within the int128 range after the two checks above.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
-    },
-    {
       "fingerprint": "13f261328e71fdb4",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/policy/parameter-store/ParameterStoreStorage.sol",
@@ -625,15 +609,6 @@
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the regex `(<|>)=? block.timestamp` matched a specified timestamp rule."
     },
     {
-      "fingerprint": "f4ab143b61727593",
-      "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase.flashLiquidate (inventory pull)",
-      "reason": "Zero-value transfer not possible: the pull of debtToCover - flashAmount runs only when flashAmount < debtToCover (same line).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
-    },
-    {
       "fingerprint": "6ad52bf59bf1b166",
       "check": "Some tokens may revert when zero value transfers are made",
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
@@ -659,15 +634,6 @@
       "reason": "Zero-value transfer not possible: guarded by `balance > tokensBefore[i]` on the same line.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
-    },
-    {
-      "fingerprint": "8ab8d6bbd42ac726",
-      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase.flashLiquidate (inventory pull)",
-      "reason": "The helper credits nothing from the nominal amount: keeperOut is measured as a balance rise plus the allowance LPVaultSwap consumed, and the payout as the rise of the T balance over the whole call; a transfer fee that leaves the helper short makes LPVaultSwap's pull or the Pool's pull fail, or ends the call below its start and reverts PayoutTooLow(0, minPayout), so nothing held before the call pays for it (REQ-HELPER-006, REQ-HELPER-008).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: returns measured by balance delta (keeperOut and the payout are balance deltas; a shortfall reverts)."
     },
     {
       "fingerprint": "182db800edc9fedd",
