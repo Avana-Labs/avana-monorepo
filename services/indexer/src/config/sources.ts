@@ -18,6 +18,7 @@ import {
   requireEnv,
   rpcEnvName,
 } from "@avana/services-common";
+import type { ChainDeployment } from "@avana/services-common/views";
 
 const NETWORK_SET = (optionalEnv(process.env, "INDEXER_NETWORK_SET") ?? "testnet") as NetworkSet;
 if (NETWORK_SET !== "production" && NETWORK_SET !== "testnet") throw new Error("INDEXER_NETWORK_SET must be production or testnet");
@@ -100,3 +101,40 @@ export const coverageSpokeSource = () =>
     }),
     startBlock: registryStart(m),
   }));
+
+/** The addresses the series sampler reads on a chain (`@avana/services-common/views`), from its manifest. */
+export function deploymentOf(chainId: number): ChainDeployment {
+  const m = manifests.get(chainId);
+  if (!m) throw new Error(`no verified manifest for chain ${chainId}`);
+  return {
+    chainId,
+    lens: m.avana.lens.address,
+    lendSpoke: m.aave.lendSpoke.address,
+    cdpSpokes: m.aave.borrowSpokes.map((s) => s.address),
+    coverageSpokes: m.avana.coverageSpokes.map((c) => ({ address: c.address, asset: c.asset })),
+  };
+}
+
+/**
+ * Pools of listed markets, followed from `MarketRegistered`. Ponder matches a pool's logs only from the block that
+ * announced it; the history before listing is served by the export's pool-history endpoint (EXPORT.md).
+ */
+export const ammPoolSource = () =>
+  perChain((m) => ({
+    address: factory({
+      address: m.avana.marketRegistry.address,
+      event: factoryEvents.marketRegistered,
+      parameter: "pool",
+    }),
+    startBlock: registryStart(m),
+  }));
+
+/** One sample an hour of block time, from the later of the Lens and the Lend Spoke deployments. */
+export function samplerSource() {
+  return Object.fromEntries(
+    activeChains.map((c) => {
+      const m = manifests.get(c.id)!;
+      return [c.key, { startBlock: Math.max(m.avana.lens.startBlock, m.aave.lendSpoke.startBlock), interval: Math.round(3_600 / c.blockTimeSeconds) }];
+    }),
+  );
+}

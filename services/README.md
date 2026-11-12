@@ -2,20 +2,20 @@
 
 Off-chain services that read the chain and act on it. No service is trusted by the contracts: every on-chain check uses only on-chain data read in the same transaction (`REQ-ARCH-140`), and every service re-checks what it indexes against RPC before acting.
 
-Data path: contracts and their events → Ponder indexer with PostgreSQL → private versioned export → Convex → frontend. The indexer keeps the full history; Convex serves the app; live contract reads verify current state and every action. The frontend never queries the indexer.
+Data path: contracts and their events → Ponder indexer with PostgreSQL → private versioned export → Convex → frontend. The indexer keeps the full history and the hourly chart series; Convex reads current values from the chain every 30 s and serves the app; live contract reads verify wallet state and every action. The frontend never queries the indexer.
 
 | Path | Contents |
 |---|---|
-| `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads. [EVENTS.md](indexer/EVENTS.md) lists every event and every live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
+| `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
 | `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
-| `convex/` | [Design of the Convex import](convex/README.md): scheduled pull, checkpoints, duplicate protection, block-hash checks, atomic pages, reorg rebuild; the Convex project itself lives in the same folder, with the import under `convex/ingest/` |
-| `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys and the export wire types |
+| `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export |
+| `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
 
 The indexer, the keeper and the monitoring service read addresses and start blocks from the verified release manifest named in their configuration and ABIs from [`packages/protocol`](../packages/protocol/), check the manifest's ABI hash against the hash of those ABIs at startup and refuse to run on a mismatch (`TEST-149`).
 
 ## Build and test
 
-`services/common`, `services/indexer`, `services/keeper` and `packages/protocol` form one npm workspace. Its root is the repository's [`package.json`](../package.json), with a single `package-lock.json` beside it; `@avana/services-common` and `@avana/protocol` are linked from the workspace with `file:` and never fetched from a registry. Node is the version in [`.nvmrc`](../.nvmrc) (22.18.0) and every direct dependency is pinned to an exact version.
+`services/common`, `services/indexer`, `services/keeper`, `services/convex` and `packages/protocol` form one npm workspace. Its root is the repository's [`package.json`](../package.json), with a single `package-lock.json` beside it; `@avana/services-common` and `@avana/protocol` are linked from the workspace with `file:` and never fetched from a registry. Node is the version in [`.nvmrc`](../.nvmrc) (22.18.0) and every direct dependency is pinned to an exact version.
 
 ```bash
 npm ci --ignore-scripts                        # at the repository root: installs every package, runs no install scripts
@@ -27,12 +27,36 @@ npm run test -w services/keeper                # one package
 
 | Package | Unit tests |
 |---|---|
-| `services/common` | Manifest loading (ABI-hash refusal, exact bigint IDs), environment reads, chain lookup, provenance keys and ordering |
-| `services/indexer` | Factory events match the generated ABIs and decode the child address; every log-only event exists in its contract's ABI; export authentication (signature, key rotation, clock skew) |
+| `services/common` | Manifest loading (ABI-hash refusal, exact bigint IDs), environment reads, chain lookup, provenance keys and ordering; series buckets, merge rules and gap filling; Hub accounting identities on the fixture snapshot, cap room and shared liquidity, rate conversions; the snapshot reader against a scripted multicall |
+| `services/indexer` | Factory events match the generated ABIs and decode the child address; every log-only event exists in its contract's ABI; export authentication (signature, key rotation, clock skew); the snapshot reader's ABI fragments against the generated ABIs; pool series aggregation |
+| `services/convex` | Spoke slices reconcile to the Hub totals the Lend page shows; fee + gas totals; chart buckets and quick stats; export page checks, request signing and listing metadata hashes; activity feeds by page |
 | `services/keeper` | Liquidation decision and sizing rules at their boundaries; the pipeline sends only after a successful simulation with every guard passing, pages `M-26` on a code mismatch and logs observe-only calls |
 | `packages/protocol` | `ABI_HASH` matches the committed ABIs; no selector collision inside an ABI |
 
 The [`services`](../.github/workflows/services.yml) workflow runs the same steps for each package on every pull request and push to `main` that touches these packages, the workspace manifests or `.nvmrc`. Before installing it fails if any `@avana/` dependency is not a `file:` or `workspace:` link or the lock file resolves one from a registry; the `gate` job passes only when every package passed.
+
+## Scopes
+
+Each chain has one Aave V4 Hub with a supply-only Lend Spoke, one CDP Spoke per AMM protocol and one Coverage Spoke per (Hub, debt asset). The services keep every number at the scope that owns it:
+
+| Scope | Key | Owns |
+|---|---|---|
+| Hub asset | chain, Hub, assetId | Added, owed (drawn + premium), liquidity, deficit, rates, rate curve, reserve factor, the Lend Spoke's oracle price |
+| Spoke slice | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit and caps on that asset |
+| CDP debt reserve | chain, Spoke, reserveId | The reserve's flags, debt price and breaker; its Hub asset is joined, never copied |
+| Collateral market | chain, marketId | Pool, range, vault token, accepted price, collateral value, collateral factor, collateral risk, cap headroom |
+| Market debt | chain, marketId, Spoke, reserveId | Debt the market's accounts owe in that reserve |
+| Account | chain, Spoke, proxy | One wallet's position in one market |
+
+The Lend page is one Hub asset; a Borrow asset page is one CDP Spoke's slice of the same Hub asset, read from the same row; a pool page is one market. The identities that tie them, checked on fixture data by the tests:
+
+- Σ CDP slices' owed = the Hub's owed, up to one base unit per Spoke (each Spoke rounds up); only CDP Spokes draw.
+- Σ slices' added = the Hub's added (Lend Spoke + Coverage Spoke + fee receiver), each rounding down.
+- added + accrued fees = liquidity + owed + deficit: "available" is the Hub's liquidity, never added − owed.
+- What a Spoke can draw is `min(drawCap − owed − deficit, liquidity)`, and all CDP Spokes together `min(Σ cap room, liquidity)`.
+- Σ over a CDP Spoke's markets of the debt they back = the Spoke's owed amount, up to one unit per account.
+
+Every row of one read carries its block, so the indexer's hourly sampler and Convex's 30-second refresh, which run the same reader (`@avana/services-common/views`), produce rows for which these identities hold exactly.
 
 ## Indexer (`indexer/`)
 

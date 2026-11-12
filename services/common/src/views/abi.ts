@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Avana Labs
+// The view functions the snapshot reader calls, as human-readable ABI fragments that mirror the Solidity
+// declarations field for field: the Lens market and exposure views (contracts/src/lens/lens/), the Aave V4 Hub
+// and Spoke views at the pinned release, the asset rate strategy and the Spoke's AaveOracle. Struct fields are
+// decoded by position, so a field added in the middle of a struct must be added here in the same place.
+// services/indexer/test/views-abi.test.ts checks every selector against the ABIs generated in packages/protocol.
+
+import { parseAbi } from "viem";
+
+export const lensViewsAbi = parseAbi([
+  "struct MarketView { uint256 blockNumber; uint256 timestamp; uint256 marketId; uint64 chainId; uint8 status; address pool; bytes32 poolId; address[] tokens; uint8[] tokenDecimals; uint24 feeTier; int24 tickLower; int24 tickUpper; uint32 integrationId; bytes32 ammProtocol; address vaultToken; string name; string symbol; address lpOracle; address hub; address spoke; uint256 reserveId; uint256 hubAssetId; uint256 acceptedPrice; uint8 priceState; uint256 suppliedUnits; uint256 suppliedUsd; uint256 collateralFactorBps; uint256 liquidationThresholdBps; uint256 maxLiquidationBonusBps; uint256 marketHeadroomUsd; uint256 sliceHeadroomUsd; uint256 addHeadroom; uint8 pauseState; uint32 breakerReasons; }",
+  "struct DebtReserveView { uint256 blockNumber; uint256 timestamp; address spoke; uint256 reserveId; address asset; uint8 decimals; uint256 price; bool fixedPrice; address hub; uint256 hubAssetId; uint256 added; uint256 drawn; uint256 premium; uint256 liquidity; uint256 utilizationBps; uint256 drawnRateRay; uint256 supplyRateRay; uint256 liquidityFeeBps; uint256 optimalUsageBps; uint256 baseDrawnRateBps; uint256 rateGrowthBeforeOptimalBps; uint256 rateGrowthAfterOptimalBps; uint256 drawCap; uint256 drawHeadroom; bool paused; bool frozen; bool borrowable; uint32 breakerReasons; uint8 pauseState; }",
+  "struct SpokeDraw { address spoke; address homeHub; uint256 drawCap; uint256 drawn; uint256 deficit; }",
+  "struct HubAssetExposureView { uint256 blockNumber; uint256 timestamp; address hub; address asset; address coverageSpoke; uint256 fundedBalance; uint256 line; bool coverageBoundHolds; uint256 uncovered; uint256 priceAdj; SpokeDraw[] spokes; }",
+  "function LENS_MAX_PAGE() view returns (uint256 maxPage)",
+  "function getMarkets(uint256 offset, uint256 limit) view returns (MarketView[] markets)",
+  "function getDebtReserves(address spoke) view returns (DebtReserveView[] reserves)",
+  "function getHubAssetExposure(address hub, address asset) view returns (HubAssetExposureView view_)",
+]);
+
+export const hubViewsAbi = parseAbi([
+  "struct AssetConfig { address feeReceiver; uint16 liquidityFee; address irStrategy; address reinvestmentController; }",
+  "struct SpokeData { uint120 drawnShares; uint120 premiumShares; int200 premiumOffsetRay; uint120 addedShares; uint40 addCap; uint40 drawCap; uint24 riskPremiumThreshold; bool active; bool halted; uint200 deficitRay; }",
+  "function getAddedAssets(uint256 assetId) view returns (uint256)",
+  "function getAddedShares(uint256 assetId) view returns (uint256)",
+  "function getAssetOwed(uint256 assetId) view returns (uint256, uint256)",
+  "function getAssetLiquidity(uint256 assetId) view returns (uint256)",
+  "function getAssetDeficitRay(uint256 assetId) view returns (uint256)",
+  "function getAssetAccruedFees(uint256 assetId) view returns (uint256)",
+  "function getAssetDrawnRate(uint256 assetId) view returns (uint256)",
+  "function getAssetDrawnIndex(uint256 assetId) view returns (uint256)",
+  "function getAssetConfig(uint256 assetId) view returns (AssetConfig)",
+  "function getAssetUnderlyingAndDecimals(uint256 assetId) view returns (address, uint8)",
+  "function getSpokeCount(uint256 assetId) view returns (uint256)",
+  "function getSpokeAddress(uint256 assetId, uint256 index) view returns (address)",
+  "function getSpoke(uint256 assetId, address spoke) view returns (SpokeData)",
+  "function getSpokeAddedAssets(uint256 assetId, address spoke) view returns (uint256)",
+  "function getSpokeTotalOwed(uint256 assetId, address spoke) view returns (uint256)",
+]);
+
+export const spokeViewsAbi = parseAbi([
+  "struct Reserve { address underlying; address hub; uint16 assetId; uint8 decimals; uint24 collateralRisk; uint8 flags; uint32 dynamicConfigKey; }",
+  "struct ReserveConfig { uint24 collateralRisk; bool paused; bool frozen; bool borrowable; bool receiveSharesEnabled; }",
+  "struct LiquidationConfig { uint128 targetHealthFactor; uint64 healthFactorForMaxBonus; uint16 liquidationBonusFactor; }",
+  "function ORACLE() view returns (address)",
+  "function getReserveCount() view returns (uint256)",
+  "function getReserve(uint256 reserveId) view returns (Reserve)",
+  "function getReserveConfig(uint256 reserveId) view returns (ReserveConfig)",
+  "function getLiquidationConfig() view returns (LiquidationConfig)",
+  "function getUserSuppliedAssets(uint256 reserveId, address user) view returns (uint256)",
+  "function getUserDebt(uint256 reserveId, address user) view returns (uint256, uint256)",
+]);
+
+/** The asset's interest-rate strategy (`ILensRateStrategy`, same ABI as the pinned release). */
+export const rateStrategyAbi = parseAbi([
+  "struct InterestRateData { uint16 optimalUsageRatio; uint32 baseDrawnRate; uint32 rateGrowthBeforeOptimal; uint32 rateGrowthAfterOptimal; }",
+  "function getInterestRateData(uint256 assetId) view returns (InterestRateData)",
+]);
+
+/** The Lend Spoke's AaveOracle: the one USD price of every Hub asset on every page. */
+export const aaveOracleAbi = parseAbi([
+  "function DECIMALS() view returns (uint8)",
+  "function getReservePrice(uint256 reserveId) view returns (uint256)",
+]);
+
+/**
+ * Concentrated-liquidity pool events and views; Uniswap v3 and Aerodrome Slipstream pools share these signatures.
+ * Not Avana or Aave contracts, so they are not part of packages/protocol.
+ */
+export const clPoolAbi = parseAbi([
+  "event Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)",
+  "event Mint(address sender, address indexed owner, int24 indexed tickLower, int24 indexed tickUpper, uint128 amount, uint256 amount0, uint256 amount1)",
+  "event Burn(address indexed owner, int24 indexed tickLower, int24 indexed tickUpper, uint128 amount, uint256 amount0, uint256 amount1)",
+  "function fee() view returns (uint24)",
+]);

@@ -3,11 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "Types shared by the Avana indexer, keeper and Convex import: chains, manifest view, provenance, export pages.",
+  "description": "Types shared by the Avana indexer, keeper and Convex: chains, manifest view, provenance, export pages, chart series and the snapshot rows read at one block.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./export": "./src/export.ts"
+    "./export": "./src/export.ts",
+    "./series": "./src/series.ts",
+    "./views": "./src/views/index.ts",
+    "./fixtures": "./src/views/fixtures.ts",
+    "./chains": "./src/chains.ts",
+    "./env": "./src/env.ts"
   },
   "engines": {
     "node": ">=22.12"

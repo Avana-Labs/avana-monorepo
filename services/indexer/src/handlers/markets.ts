@@ -6,6 +6,7 @@ import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import { PAUSE_REASON, PAUSE_STATE, enumName, logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
+import { clPoolAbi } from "@avana/services-common/views";
 
 ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
   const p = await recordLog(event, context, "MarketRegistry.MarketRegistered");
@@ -23,6 +24,14 @@ ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
     status: "Registered",
     lastBlock: p.blockNumber,
   });
+  // The pool's series start here; its fee is read once (a dynamic-fee pool is re-read by the hourly sampler). An
+  // integration keyed by pool ID instead of a pool address has no pool contract to follow.
+  if (/^0x0{40}$/i.test(a.pool)) return;
+  const fee = await context.client.readContract({ address: a.pool, abi: clPoolAbi, functionName: "fee" });
+  await context.db
+    .insert(schema.ammPool)
+    .values({ chainId: p.chainId, pool: a.pool.toLowerCase() as `0x${string}`, integrationId: Number(a.integrationId), feePips: Number(fee), listedBlock: p.blockNumber, lastBlock: p.blockNumber })
+    .onConflictDoNothing();
 });
 
 ponder.on("MarketRegistry:MarketActivated", async ({ event, context }) => {

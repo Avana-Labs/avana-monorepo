@@ -5,13 +5,16 @@
 
 import { createConfig } from "ponder";
 import { abis } from "./src/config/abis.ts";
+import { clPoolAbi } from "@avana/services-common/views";
 import {
   activeChains,
+  ammPoolSource,
   chainSources,
   coverageSpokeSource,
   debtOracleSource,
   lpOracleSource,
   perChain,
+  samplerSource,
   vaultTokenSource,
 } from "./src/config/sources.ts";
 
@@ -60,11 +63,16 @@ export default createConfig({
       }),
     },
     AaveHub: { abi: abis.AaveHub, chain: perChain((m) => a(m.aave.hub)) },
+    // The AMM pool of every listed market, for its volume, fee and price series.
+    AmmPool: { abi: clPoolAbi, chain: ammPoolSource() },
   },
   // One row per chain records the last block handled at the realtime head; the export never serves past it.
   blocks: {
     Progress: {
       chain: Object.fromEntries(activeChains.map((c) => [c.key, { startBlock: "latest" as const, interval: 1 }])),
     },
+    // Reads every Hub asset, Spoke slice, market and account once an hour of block time, from the Lens deployment on,
+    // for the chart series (src/handlers/series.ts).
+    SeriesSampler: { chain: samplerSource() },
   },
 });

@@ -188,6 +188,29 @@ Avana's `IAaveV4Spoke` declares none of the Spoke's events, so the indexer decod
 
 Every `LiquidationCall` on a CDP Spoke has `liquidator == LPVaultSwap` (`Q-222`); attribution uses `user`, never `liquidator` (`LIQ-056`). The Spoke events of a user that is not an attributed account are logged and attributed to nobody.
 
+## AMM pools and chart series
+
+The pool of every listed market is followed from its `MarketRegistered` (`AmmPool`, a factory source on the `pool` field); Uniswap v3 and Aerodrome Slipstream pools share these signatures. Pool logs are not written to `event_log`: they only feed the pool's series, through the merge rules of `@avana/services-common/series` (volumes and fees add up, price and liquidity keep the last swap). Ponder matches a pool's logs from the block that announced it on; earlier history comes from the export's [pool-history endpoint](EXPORT.md#pool-history).
+
+| Contract | Event | Updates | Used by |
+|---|---|---|---|
+| MarketRegistry | `MarketRegistered` (above) | `amm_pool` (fee read once with `fee()`) | C |
+| Pool | `Swap(address sender idx, address recipient idx, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)` | `series_point` pool: `volume0`, `volume1`, `fees0`, `fees1` (input side × fee), `swaps`, `sqrtPriceX96`, `tick`, `tickHigh`, `tickLow`, `liquidity` | C |
+| Pool | `Mint(address sender, address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `mints`, `liquidityAdded` | C |
+| Pool | `Burn(address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `burns`, `liquidityRemoved` | C |
+
+The `SeriesSampler` block source runs once an hour of block time (300 blocks on Ethereum, 1,800 on Base) from the Lens deployment on, so a full reindex rebuilds the history from archive reads. At each sample block it reads, through Ponder's client pinned to that block:
+
+| Scope (`series_point.scopeKind`) | Key | Reads | Metrics |
+|---|---|---|---|
+| `hubAsset` | `chainId:hub:assetId` | Lend Spoke `getReserveCount`, `getReserve`, `getReserveConfig`, its `ORACLE().getReservePrice`; Hub `getAddedAssets`, `getAddedShares`, `getAssetOwed`, `getAssetLiquidity`, `getAssetDeficitRay`, `getAssetAccruedFees`, `getAssetDrawnRate`, `getAssetDrawnIndex`, `getAssetConfig`; the rate strategy's `getInterestRateData`; `Lens.getHubAssetExposure` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
+| `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getSpokeAddedAssets`, `getSpokeTotalOwed` | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
+| `market` | `chainId:marketId` | `Lens.getMarkets`, Spoke `getReserve` (collateral risk), Hub `getAssetUnderlyingAndDecimals` (vault-token decimals) | `suppliedUnits`, `acceptedPrice`, `suppliedUsd8`, `marketHeadroomUsd8`, `debtUsd8`, `borrowers` |
+| `marketReserve` | `chainId:marketId:spoke:reserveId` | `Spoke.getUserDebt(reserveId, proxy)` of every attributed account of the market | `debt`, `borrowers` |
+| `position` (daily) | `chainId:spoke:proxy` | `Spoke.getUserSuppliedAssets(collateralReserveId, proxy)`, `getUserDebt` per debt reserve | `marketId`, `collateralUnits`, `collateralUsd8`, `debtUsd8` |
+
+Every point of one sample carries that block, so a bucket's Spoke slices add up to its Hub totals and its market debts to the Spoke's owed amount. A sampled bucket keeps its first sample; a dynamic-fee pool's `fee()` is re-read at each sample and applies to the next hour's swaps.
+
 ## Live reads
 
 These values change with time, interest or prices and emit no event, or emit only when a transaction touches them. Convex and the keeper read them over RPC at a stated block; indexed values only choose which accounts and markets to read.
