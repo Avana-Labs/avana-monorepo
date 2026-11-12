@@ -32,7 +32,7 @@ Common assumptions: exact real arithmetic; GHO priced at $1 (Aave's fixed GHO so
 
 ## Results
 
-**230 checks: 229 hold, 1 counterexample; 16 derived closed forms.**
+**247 checks: 246 hold, 1 counterexample (the deliberate `SYM-42a`); 16 derived closed forms.** (Run of 2026-11-12, every script.)
 
 - `SYM-42a` is a deliberate wrong reading: a subtractive slippage bound `s = bonus` leaves the slippage term `r·b²` short of the debt. The specification uses the multiplicative bound of `SPEC-LIQ-003` and `SPEC-LIQ-016` (`SYM-41a`–`c`), which covers it exactly.
 - `SYM-138d` was a finding (below), now resolved in the spec; it holds against the corrected 3.4 figures.
@@ -53,6 +53,8 @@ Common assumptions: exact real arithmetic; GHO priced at $1 (Aave's fixed GHO so
 | 2026-11-10 (LPPriceMath input bounds) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 82/82 consistent; SYM-172 recomputes the poke floor with `POST_CALL_GAS` (556,588), SYM-190 the fixed-point USD level and the band's token order, SYM-191 the disagreement price `min(lower, fresh, A)` from full-range compositions | 0 |
 | 2026-11-11 (LPOracle price-read gas) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 82/82 consistent; SYM-172 restated to the per-read poke floor `max(W_poke, max_k(u_k + ⌈64 G_k / 63⌉ + POST_CALL_GAS))` with the measured two-token worst case (805,471) and `G_inputs(2) = 430,000` |
 | 2026-11-11 (LPOracle token-decimals reads in the poke) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 consistent; SYM-172 restated with the measured two-token worst case including the token-decimals reads (830,781, binding read at 718,836) and the 900,000 floor | 0 |
+| 2026-11-12 (public lending, `Q-407`) | `../.venv/bin/python sym10_risk_examples.py`, from `spec/05-verification/sympy` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym10 51/51 consistent; SYM-192a–d added: the supply rate lenders earn under the flat borrow rate of `SPEC-HUB-007` and its worked example | 0 |
+| 2026-11-12 (kinked rate curve and early withdrawals, `Q-408`) | `../.venv/bin/python sym10_risk_examples.py`, from `spec/05-verification/sympy` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym10 63/63 consistent; SYM-159b–d and SYM-192b–d restated at the curve rate of the `SPEC-HUB-007` example (7.50 % at U = 0.5), SYM-192e–k added (kink continuity, the curve at four utilizations, supply rate at U = 0.95), SYM-193a–e added (an early withdrawal before realization moves its share of an uncovered deficit onto the remaining suppliers, `DEF-014`) | 0 |
 
 ## Properties
 
@@ -329,7 +331,7 @@ Run: `9 checks: 9 CONSISTENT, 0 INCONSISTENT`, exit 0.
 
 ### `sym10_risk_examples.py`
 
-Run: `47 checks: 47 CONSISTENT, 0 INCONSISTENT`, exit 0.
+Run: `51 checks: 51 CONSISTENT, 0 INCONSISTENT`, exit 0.
 
 | ID | Statement | Verifies | Result |
 |---|---|---|---|
@@ -368,9 +370,9 @@ Run: `47 checks: 47 CONSISTENT, 0 INCONSISTENT`, exit 0.
 | SYM-158b | GHO 8,000 at 5.00% for 30 days = 8,032.876712328767123288 (rounded up) | `SPEC-PROXY-003`, `SPEC-PROXY-007` | Holds |
 | SYM-158c | quoteRepayAll = 5,024,657,535 x (1 + 0.06 x 600 / 31,536,000) x 1.001 -> 5,029,687,935 | `SPEC-PROXY-003`, `SPEC-PROXY-007` | Holds |
 | SYM-159a | drawn interest b plus premium b x rp = b (1 + rp) | `SPEC-HUB-007` | Holds |
-| SYM-159b | example: 100,000 x 5.50% = 5,500 GHO drawn interest (before compounding) | `SPEC-HUB-007` | Holds |
-| SYM-159c | example: premium 5,500 x 0.15 = 825 GHO | `SPEC-HUB-007` | Holds |
-| SYM-159d | example: effective 5.50% x 1.15 = 6.325% | `SPEC-HUB-007` | Holds |
+| SYM-159b | example: 100,000 x 7.50% (curve rate at U = 0.5) = 7,500 GHO drawn interest (before compounding) | `SPEC-HUB-007` | Holds |
+| SYM-159c | example: premium 7,500 x 0.15 = 1,125 GHO | `SPEC-HUB-007` | Holds |
+| SYM-159d | example: effective 7.50% x 1.15 = 8.625% | `SPEC-HUB-007` | Holds |
 | SYM-160a | cp (1e4 - b) - 1e4 p = 1e4 cp x ((cp - p)/cp - b/1e4): the alert fires iff the drop exceeds b bps | `SPEC-BRK-001` | Holds |
 | SYM-160b | example: $2.0000 to $1.9399 is a 3.005% drop, above the 3% alert threshold | `SPEC-BRK-001` | Holds |
 | SYM-161 | SPEC-CF-003 example: 24,600 / 1.10 = $22,363.63 (cents, down) | `SPEC-CF-003` | Holds |
@@ -380,4 +382,20 @@ Run: `47 checks: 47 CONSISTENT, 0 INCONSISTENT`, exit 0.
 | SYM-164a | 24,600 / 12,999.5 = 1.892380476172160467 (18 decimals, down) | `SPEC-PROXY-006`, `SPEC-PROXY-001` | Holds |
 | SYM-164b | 24,600 / 22,998.5 = 1.069634976194099615 (18 decimals, down) | `SPEC-PROXY-006`, `SPEC-PROXY-001` | Holds |
 | SYM-165 | SPEC-CF-001 example: (24,600 - 8,000) / 0.9999 = 16,601.66 USDC exhausts B | `SPEC-CF-001` | Holds |
+| SYM-192a | supply rate = D r (1 + rp)(1 - f) / S = r (1 + rp) U (1 - f) with U = D / S | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192b | example: 900,000 x 7.50% x 1.15 = 77,625 GHO of borrow interest a year | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192c | example: U = 900,000 / 1,800,000 = 0.5; supply rate 0.075 x 1.15 x 0.5 x 0.9 = 3.88125% | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192d | example: the public lender's 500,000 GHO earns 19,406.25 GHO a year | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192e | the kinked curve is continuous at the kink: both branches equal base + before at U = U* | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192f | curve example: 5.50% + 3.60% x 0.5 / 0.9 = 7.50% at U = 0.5 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192g | curve example: 9.10% + 50% x 0.05 / 0.10 = 34.10% at U = 0.95 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192h | at U = 0.95: supply rate 0.341 x 1.15 x 0.95 x 0.9 = 33.528825% | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192i | curve example: 9.10% at the kink U = 0.9 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192j | curve example: maximum 5.50% + 3.60% + 50% = 59.10% at U = 1 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192k | example: suppliers receive 77,625 x 0.9 = 69,862.5 GHO a year | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-193a | the early withdrawer is paid w A / Sh and carries none of the loss: the remaining (Sh - w) shares carry all Un | `DEF-014`, `Q-353`, `Q-408` | Holds |
+| SYM-193b | the loss per remaining share rises from Un / Sh to Un / (Sh - w) | `DEF-014`, `Q-353`, `Q-408` | Holds |
+| SYM-193c | DEF-014 example: 18,525 shares withdrawn before realization are paid 1,900,000 / 1,852,500 each, 19,000 GHO | `DEF-014`, `Q-353`, `Q-408` | Holds |
+| SYM-193d | DEF-014 example: the 1,834,000 remaining shares carry all 30,000 GHO: 0.016358 GHO a share instead of 0.016194 | `DEF-014`, `Q-353`, `Q-408` | Holds |
+| SYM-193e | DEF-014 example: the loss the early withdrawer avoided, 18,525 x 30,000 / 1,852,500 = 300 GHO | `DEF-014`, `Q-353`, `Q-408` | Holds |
 

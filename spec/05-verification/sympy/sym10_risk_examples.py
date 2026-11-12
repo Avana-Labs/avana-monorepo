@@ -7,7 +7,8 @@ Spec: SPEC-PROXY-009 (repay with collateral), SPEC-CAP-003 (restore amount), SPE
 units excluded), SPEC-CAP-007 / SPEC-CAP-008 (cap sizing guidance, tail ratio), SPEC-HUB-002 /
 SPEC-CAP-006 (addCap), SPEC-PROXY-003 / SPEC-PROXY-007 (repay sizing and quote), SPEC-HUB-007
 (borrow rate), SPEC-BRK-001 (price-drop alert), SPEC-CF-003 (opening bound), SPEC-HUB-005 (bonus curve),
-SPEC-CF-004 / SPEC-HUB-006 (listing margin), SPEC-PROXY-006 (health factor).
+SPEC-CF-004 / SPEC-HUB-006 (listing margin), SPEC-PROXY-006 (health factor), SPEC-HUB-007 supply rate
+(SYM-192, Q-407, Q-408), DEF-014 loss after an early withdrawal (SYM-193, Q-353, Q-408).
 Exact integer rounding of the same formulas is in the Z3 models (z3/aave-risk, MATH-AR-...).
 """
 import sympy as sp
@@ -113,9 +114,10 @@ numeric("SYM-158c", "quoteRepayAll = 5,024,657,535 x (1 + 0.06 x 600 / 31,536,00
 b, rp = sp.symbols("b rp", positive=True)
 # SYM-159 verifies: SPEC-HUB-007
 eq("SYM-159a", "drawn interest b plus premium b x rp = b (1 + rp)", b + b * rp, b * (1 + rp))
-numeric("SYM-159b", "example: 100,000 x 5.50% = 5,500 GHO drawn interest (before compounding)", 5500, 100000 * Q(55, 1000), 0)
-numeric("SYM-159c", "example: premium 5,500 x 0.15 = 825 GHO", 825, 5500 * Q(15, 100), 0)
-numeric("SYM-159d", "example: effective 5.50% x 1.15 = 6.325%", Q(6325, 100000), Q(55, 1000) * Q(115, 100), 0)
+numeric("SYM-159b", "example: 100,000 x 7.50% (curve rate at U = 0.5) = 7,500 GHO drawn interest (before compounding)",
+        7500, 100000 * Q(75, 1000), 0)
+numeric("SYM-159c", "example: premium 7,500 x 0.15 = 1,125 GHO", 1125, 7500 * Q(15, 100), 0)
+numeric("SYM-159d", "example: effective 7.50% x 1.15 = 8.625%", Q(8625, 100000), Q(75, 1000) * Q(115, 100), 0)
 
 # ---------- SYM-160: price-drop alert (SPEC-BRK-001; monitoring only, 3 % in 2 hours) ----------
 cp, pr, bp = sp.symbols("cp p b", positive=True)
@@ -151,5 +153,55 @@ numeric("SYM-164b", "24,600 / 22,998.5 = 1.069634976194099615 (18 decimals, down
 # SYM-165 verifies: SPEC-CF-001
 numeric("SYM-165", "SPEC-CF-001 example: (24,600 - 8,000) / 0.9999 = 16,601.66 USDC exhausts B", Q(1660166, 100),
         Q(16600) / Q(9999, 10000), Q(1, 100))
+
+# ---------- SYM-192: supply rate under the kinked borrow-rate curve (SPEC-HUB-007, Q-407, Q-408) ----------
+r_, rp_, f_, Dr, Sup = sp.symbols("r rp f D S", positive=True)
+interest = Dr * r_ * (1 + rp_)                       # borrow interest per year at constant state
+supply_rate = interest * (1 - f_) / Sup              # shared over every supplied unit
+# SYM-192 verifies: SPEC-HUB-007, REQ-HUB-008, REQ-HUB-009
+eq("SYM-192a", "supply rate = D r (1 + rp)(1 - f) / S = r (1 + rp) U (1 - f) with U = D / S",
+   supply_rate, r_ * (1 + rp_) * (Dr / Sup) * (1 - f_))
+b0, g1, g2, uo, uu = sp.symbols("b0 g1 g2 Uopt U", positive=True)
+below = b0 + g1 * uu / uo                            # Aave V4 AssetInterestRateStrategy, U <= U*
+above = b0 + g1 + g2 * (uu - uo) / (1 - uo)          # U > U*
+eq("SYM-192e", "the curve is continuous at the kink: both branches equal base + before at U = U*",
+   below.subs(uu, uo) - above.subs(uu, uo), 0)
+curve = {b0: Q(55, 1000), g1: Q(36, 1000), g2: Q(50, 100), uo: Q(9, 10)}
+r50 = below.subs(curve).subs(uu, Q(1, 2))
+r95 = above.subs(curve).subs(uu, Q(95, 100))
+numeric("SYM-192f", "curve example: 5.50% + 3.60% x 0.5 / 0.9 = 7.50% at U = 0.5", Q(75, 1000), r50, 0)
+numeric("SYM-192g", "curve example: 9.10% + 50% x 0.05 / 0.10 = 34.10% at U = 0.95", Q(341, 1000), r95, 0)
+numeric("SYM-192i", "curve example: 9.10% at the kink U = 0.9", Q(91, 1000), below.subs(curve).subs(uu, Q(9, 10)), 0)
+numeric("SYM-192j", "curve example: maximum 5.50% + 3.60% + 50% = 59.10% at U = 1", Q(591, 1000),
+        above.subs(curve).subs(uu, 1), 0)
+ex = {Dr: 900_000, Sup: 1_000_000 + 500_000 + 300_000, r_: r50, rp_: Q(15, 100), f_: Q(1, 10)}
+numeric("SYM-192b", "example: 900,000 x 7.50% x 1.15 = 77,625 GHO of borrow interest a year", Q(77625),
+        interest.subs(ex), 0)
+numeric("SYM-192c", "example: U = 900,000 / 1,800,000 = 0.5; supply rate 0.075 x 1.15 x 0.5 x 0.9 = 3.88125%",
+        Q(388125, 10**7), supply_rate.subs(ex), 0)
+numeric("SYM-192d", "example: the public lender's 500,000 GHO earns 19,406.25 GHO a year", Q(1940625, 100),
+        500_000 * supply_rate.subs(ex), 0)
+numeric("SYM-192k", "example: suppliers receive 77,625 x 0.9 = 69,862.5 GHO a year", Q(698625, 10),
+        interest.subs(ex) * (1 - ex[f_]), 0)
+ex95 = {**ex, Dr: 1_710_000, r_: r95}
+numeric("SYM-192h", "at U = 0.95: supply rate 0.341 x 1.15 x 0.95 x 0.9 = 33.528825%", Q(33528825, 10**8),
+        supply_rate.subs(ex95), 0)
+
+# ---------- SYM-193: who bears an uncovered deficit when a lender withdraws before realization (Q-353, Q-408) ----------
+A_, Sh_, Un_, w_ = sp.symbols("A Sh Un w", positive=True)   # assets, shares, uncovered deficit, withdrawn shares
+paid = w_ * A_ / Sh_                                           # Aave pays the unadjusted price before realization
+left_after = (A_ - paid) - Un_                                 # remaining suppliers' assets after realization
+# SYM-193 verifies: DEF-014, Q-353, Q-408
+eq("SYM-193a", "the early withdrawer is paid w A / Sh and carries none of the loss: the remaining (Sh - w) shares carry all Un",
+   (Sh_ - w_) * A_ / Sh_ - left_after, Un_)
+eq("SYM-193b", "the loss per remaining share rises from Un / Sh to Un / (Sh - w)",
+   Un_ / (Sh_ - w_) - Un_ / Sh_, Un_ * w_ / (Sh_ * (Sh_ - w_)))
+d14 = {A_: 2_000_000 - 100_000, Sh_: 1_950_000 - 97_500, Un_: 30_000, w_: 18_525}
+numeric("SYM-193c", "DEF-014 example: 18,525 shares withdrawn before realization are paid 1,900,000 / 1,852,500 each, "
+        "19,000 GHO", Q(19000), paid.subs(d14), 0)
+numeric("SYM-193d", "DEF-014 example: the 1,834,000 remaining shares carry all 30,000 GHO: 0.016358 GHO a share "
+        "instead of 0.016194", Q(16358, 10**6), (Un_ / (Sh_ - w_)).subs(d14), Q(1, 10**6))
+numeric("SYM-193e", "DEF-014 example: the loss the early withdrawer avoided, 18,525 x 30,000 / 1,852,500 = 300 GHO",
+        Q(300), (w_ * Un_ / Sh_).subs(d14), 0)
 
 done()

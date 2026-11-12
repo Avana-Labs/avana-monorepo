@@ -1,6 +1,6 @@
 # 3.6 Emergency Operations (FLOW-006)
 
-> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-09
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-12
 >
 > **Step prefix:** `EMG-NNN` · failures `EMG-F-NNN` · postconditions `EMG-POST-NNN`
 
@@ -37,7 +37,7 @@ Keep exits and liquidation open and losses bounded when prices, Aave configurati
 | Actor | Emergency powers |
 |---|---|
 | Emergency Guardian (one 3-of-5 Safe per chain; `APPLICATION_PAUSE_GUARDIAN`, `APPLICATION_FREEZE_GUARDIAN`, `CANCELLER_ROLE`) | Immediate: `MarketRegistry.freeze(hub)`, `pause(hub, reason)`, `freezeAddress`, `tripMarketBreaker`, `tripDebtBreaker` (freeze guardian); `unfreeze`, `unpause`, `resetMarketBreaker`, `resetDebtBreaker`, `useStandbyRoute`, `useStandbySecondSource` (pause guardian); cancels any queued timelock operation except a role-change operation and a restoring operation (`EMG-048`). No upgrade, parameter, unfreeze-address or fund-moving power |
-| Aave Protocol Guardian (`APPLICATION_PAUSE_GUARDIAN`, `APPLICATION_FREEZE_GUARDIAN`, `CANCELLER_ROLE`) | The same Avana powers as the Emergency Guardian; on Aave: one-way `freezeReserve` / `pauseReserve` on the SpokeConfigurator for vault-token and debt reserves |
+| Aave Protocol Guardian (`APPLICATION_PAUSE_GUARDIAN`, `APPLICATION_FREEZE_GUARDIAN`, `CANCELLER_ROLE`) | The same Avana powers as the Emergency Guardian; on Aave: one-way `freezeReserve` / `pauseReserve` on the SpokeConfigurator for vault-token and debt reserves of each CDP Spoke, and one-way `freezeReserve` only on each Lend Spoke reserve (a freeze stops new supply, never a withdrawal) |
 | Governance multisig (one 4-of-7 Safe per chain; `PROPOSER_ROLE`, `CANCELLER_ROLE`) | Schedules every privileged change on its chain's AvanaTimelock: short delay (12 hours) only for operations whose every call is in `SHORT_ELIGIBLE` (`EMG-049`, `REQ-ACCESS-155`), normal delay (5 days, never below `MIN_NORMAL_DELAY` of 4 days, `REQ-ACCESS-154`) for everything else; cancels any operation that is neither a role-change nor a restoring operation. No immediate power |
 | Aave governance executor (`PROPOSER_ROLE`, `CANCELLER_ROLE`, `DAO_CANCELLER_ROLE`) | Backup proposer of every timelock operation (`REQ-ACCESS-160`); cancels any queued operation and is the only canceller of role-change and restoring operations (`REQ-ACCESS-156`); undoes a guardian's standby switch at once with `cancelStandbySwitch` (`REQ-ACCESS-159`); unfreezes and unpauses Aave reserves; halts and resumes Hub Spokes; sets drawCaps; controls every Avana Umbrella (Coverage Spoke); on Base it acts through Aave's cross-chain governance path, whose delivery adds the bridge latency to every Aave-side step of a playbook |
 | Anyone (`EXECUTOR_ROLE` is open while `publicExecution` is on) | Executes a ready timelock operation within `GRACE_PERIOD`; `poke()` on every LPOracle and DebtOracle; liquidates through `LPVaultSwap.liquidate` ([FLOW-005](05-liquidation.md) `LIQ-061`), the one entry point, with either route mode, funded from its own debt asset or through the public flash liquidation helper; a frozen address cannot call `liquidate` directly but can liquidate through the helper, which LPVaultSwap sees as the caller (`Q-404`); clears pending settlement with `LPVaultSwap.settlePending` (proceeds to the Coverage Spoke of the market's (Hub, debt asset), `LIQ-058`); repays any account through the AaveAdapter ([FLOW-003](03-repay.md)) |
@@ -294,9 +294,9 @@ Every playbook runs on the chain where the incident is, with that chain's Safes,
 - **Detection**: `M-18` (`drawn / drawCap` per asset), `M-19` (Hub utilization and Lend Spoke withdrawals).
 - **Automatic**: none on the Avana side; Aave refuses borrows past available liquidity.
 - **Immediate actors**: the Emergency Guardian calls `pause(hub, General)` if new borrowing must stop.
-- **Steps**: (1) keep liquidations running so utilization falls; (2) the Aave DAO and its service providers adjust caps and rates.
-- **Stays open**: as above; lenders' withdrawals follow the Hub's available liquidity.
-- **Recovery**: unpause once utilization is below 90 %. (Source: Q-243)
+- **Steps**: (1) keep liquidations running so utilization falls; (2) the kinked rate curve of each lend asset (`SPEC-HUB-007`) responds on its own: past the optimal usage ratio the borrow rate climbs steeply, which draws new supply and pushes borrowers to repay (in the `SPEC-HUB-007` example, from 9.10 % at 90 % utilization to 34.10 % at 95 %); (3) the Aave DAO and its service providers adjust caps and, if the crunch persists, the curve's values; (4) the app's Lend page shows each lender the idle liquidity it can withdraw now.
+- **Stays open**: as above; lenders' withdrawals, public and DAO alike, follow the Hub's available liquidity, first come, and a withdrawal above it reverts until borrowers repay or are liquidated.
+- **Recovery**: unpause once utilization is below 90 %. (Source: Q-243, Q-408)
 
 ### `EMG-085` P-11 Token issuer action
 
@@ -410,10 +410,10 @@ Every playbook runs on the chain where the incident is, with that chain's Safes,
 
 - **Detection**: `M-15` (Hub deficit per (Hub, asset)) shows a deficit after the (Hub, asset)'s Coverage Spoke is exhausted; the Lens reports `uncoveredDeficit(hub, asset)`.
 - **Automatic**: the DEFICIT debt breaker stops borrowing that asset on each Spoke whose deficit is above its materiality, and every cross-Hub line of that (Hub, asset) refuses new borrows while its Coverage Spoke does not cover it (`CoverageBelowRatio`); the exhausted Coverage Spoke itself is an alert (`Q-399`).
-- **Immediate actors**: the Emergency Guardian asks the Aave DAO to set `drawCap = 0` for every Spoke drawing that (Hub, asset), and raises the `UncoveredDeficit(hub, asset, amount)` alert to lenders through the app.
+- **Immediate actors**: P-18 freezes new supply only. The app's Lend page stops building supply into that (Hub, asset) at once (`REQ-ARCH-211`), and the Aave Protocol Guardian freezes the Lend Spoke reserve of that (Hub, asset) with the one-way `freezeReserve` the deployment AIP grants it on the Lend Spoke (`REQ-ROLE-057`), so no new lender buys shares at a price that does not count the loss; the freeze never stops a withdrawal. The Emergency Guardian asks the Aave DAO to set `drawCap = 0` for every Spoke drawing that (Hub, asset) and raises the `UncoveredDeficit(hub, asset, amount)` alert to lenders through the app.
 - **Steps**: (1) confirm the uncovered amount per (Hub, asset); (2) publish it in the Lens with the deficit-adjusted supply price, so every lender sees the loss before withdrawing; (3) ask the Aave DAO to realize the deficit against that asset's suppliers pro rata, the Aave governance action that reduces the asset's total assets; (4) Avana Labs refunds the Coverage Spoke where it can, before realization reduces the amount; (5) root cause and parameter tightening as in P-09.
-- **Stays open**: as above; the Lend Spoke stays open, and lenders who withdraw before realization leave at a price at most the published deficit-adjusted price.
-- **Recovery**: the deficit is realized or covered; the pause guardian resets the manual breakers; a credit line's cross-Hub borrows reopen only when its Coverage Spoke again covers the line (`DEF-019`). (Source: Q-353)
+- **Stays open**: as above; Lend Spoke withdrawals stay open, up to the idle liquidity. Aave's share accounting pays a lender who withdraws before realization at the unadjusted price: that lender carries none of the loss, and the suppliers who remain at realization, DAO and public, carry the whole uncovered amount pro rata to their shares, so each early withdrawal raises the loss per remaining share. The app shows the deficit-adjusted price and each lender's share of the loss before any withdrawal (`DEF-014`), so every lender decides with the same information. Example (`DEF-014`): with 30,000 GHO uncovered on 1,852,500 shares, a lender holding 18,525 shares who withdraws first is paid 19,000 GHO and avoids its 300 GHO share; the 1,834,000 remaining shares carry all 30,000 GHO, about 0.016358 GHO a share instead of 0.016194. Checked by: SYM-193a–e.
+- **Recovery**: the deficit is realized or covered; the Aave DAO unfreezes the Lend Spoke reserve (the Guardian's freeze is one-way) and the Lend page reopens supply; the pause guardian resets the manual breakers; a credit line's cross-Hub borrows reopen only when its Coverage Spoke again covers the line (`DEF-019`). (Source: Q-353, Q-407, Q-408)
 
 ### `EMG-102` P-19 LPVault or ledger bug and relisting
 

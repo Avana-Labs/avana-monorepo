@@ -1369,7 +1369,7 @@
     "checks": []
   },
   "DEF-011": {
-    "hash": "903591a8de13f04b",
+    "hash": "eaeea22f72ab2441",
     "checks": [
       "MATH-CAP-10"
     ]
@@ -1388,15 +1388,17 @@
     ]
   },
   "DEF-014": {
-    "hash": "13960f52c94598cc",
+    "hash": "836732d8f7625c2c",
     "checks": [
       "FV-LIQ-05",
       "HYP-08",
-      "QNT-31"
+      "MATH-AR-51",
+      "QNT-31",
+      "SYM-193"
     ]
   },
   "DEF-015": {
-    "hash": "734a524b312a8959",
+    "hash": "2b8eb800d8bdb49e",
     "checks": [
       "FV-LIQ-06",
       "MATH-ST-67",
@@ -1439,7 +1441,7 @@
     "checks": []
   },
   "DEF-021": {
-    "hash": "db988a8f66b3ea4c",
+    "hash": "55262340a9f1a411",
     "checks": []
   },
   "DEF-022": {
@@ -3635,7 +3637,7 @@
     ]
   },
   "INV-057": {
-    "hash": "ee0f79fcf6189fd3",
+    "hash": "a1ede15f0774fc1a",
     "checks": [
       "FV-CTL-99",
       "HYP-07",
@@ -3646,7 +3648,8 @@
       "QNT-TOPO-04G",
       "QNT-TOPO-05",
       "QNT-TOPO-T04",
-      "QNT-TOPO-T05"
+      "QNT-TOPO-T05",
+      "TEST-274"
     ]
   },
   "INV-058": {
@@ -5273,7 +5276,7 @@
     ]
   },
   "MKT-044": {
-    "hash": "29b6f9400737a248",
+    "hash": "447d2d6fe5ab370c",
     "checks": []
   },
   "MKT-045": {
@@ -5382,7 +5385,7 @@
     "checks": []
   },
   "MKT-066": {
-    "hash": "b87f532b6b281d8b",
+    "hash": "b9ea066d59de7031",
     "checks": []
   },
   "MKT-F-001": {
@@ -5546,7 +5549,7 @@
     "checks": []
   },
   "Q-006": {
-    "hash": "68f35ade1e7b384b",
+    "hash": "3c711a857a3cb9d0",
     "checks": []
   },
   "Q-007": {
@@ -5685,7 +5688,7 @@
     "checks": []
   },
   "Q-033": {
-    "hash": "00d63d12f209eb0f",
+    "hash": "c0593d5aebb294d7",
     "checks": []
   },
   "Q-034": {
@@ -5922,13 +5925,14 @@
     ]
   },
   "Q-070": {
-    "hash": "3564a9788d9bdf25",
+    "hash": "b3cbbb9cb6ec8b9a",
     "checks": [
       "HYP-08",
       "HYP-32",
       "HYP-33",
       "HYP-49",
-      "QNT-31"
+      "QNT-31",
+      "TEST-293"
     ]
   },
   "Q-071": {
@@ -6104,14 +6108,15 @@
     ]
   },
   "Q-095": {
-    "hash": "ccac6fb4d54d6297",
+    "hash": "70f7693267487c54",
     "checks": [
       "QNT-20",
-      "QNT-31"
+      "QNT-31",
+      "TEST-293"
     ]
   },
   "Q-096": {
-    "hash": "8ea4bc4ac9d0dd73",
+    "hash": "ef423ff823b02407",
     "checks": [
       "SIM-07A",
       "SIM-07B"
@@ -6538,7 +6543,7 @@
     ]
   },
   "Q-143": {
-    "hash": "729acb7fdb288086",
+    "hash": "2dd0f99bdb638f08",
     "checks": []
   },
   "Q-144": {
@@ -6765,7 +6770,7 @@
     ]
   },
   "Q-168": {
-    "hash": "dfc908bfd6e8c0d9",
+    "hash": "0d5cacf674e02e93",
     "checks": []
   },
   "Q-169": {
@@ -7130,7 +7135,7 @@
     ]
   },
   "Q-202": {
-    "hash": "7d80db3614bb3213",
+    "hash": "49daa41192773c61",
     "checks": [
       "PROP-050",
       "QNT-T13"
@@ -7621,7 +7626,7 @@
     ]
   },
   "Q-233": {
-    "hash": "e391cfe15ee6eb21",
+    "hash": "883514d56e8da14c",
     "checks": [
       "DebtReserveDef",
       "HYP-94",
@@ -7629,7 +7634,10 @@
       "IAaveAdapterUser",
       "IMarketRegistryListing",
       "IMarketRegistryRouteViews",
-      "QNT-31"
+      "MarketRegistryHubsLogic",
+      "QNT-31",
+      "TEST-185",
+      "TEST-213"
     ]
   },
   "Q-234": {
@@ -8518,7 +8526,7 @@
     ]
   },
   "Q-282": {
-    "hash": "639810e48f71c191",
+    "hash": "0812060f86081ceb",
     "checks": []
   },
   "Q-283": {
@@ -8908,8 +8916,13 @@
     "checks": []
   },
   "Q-353": {
-    "hash": "dc14068c01b6c0de",
-    "checks": []
+    "hash": "873c5d0fa3c9673f",
+    "checks": [
+      "IParameterStoreCoverage",
+      "SYM-193",
+      "TEST-247",
+      "TEST-273"
+    ]
   },
   "Q-354": {
     "hash": "b09e88f9fb1f7e97",
@@ -9398,6 +9411,19 @@
   "Q-403": {
     "hash": "f95f0b769db7eafd",
     "checks": []
+  },
+  "Q-407": {
+    "hash": "a8709884cbf52070",
+    "checks": [
+      "HYP-97"
+    ]
+  },
+  "Q-408": {
+    "hash": "4492633df5d8154a",
+    "checks": [
+      "HYP-98",
+      "SYM-193"
+    ]
   },
   "REP-001": {
     "hash": "a467e2bc255a00c7",
@@ -10085,11 +10111,11 @@
     "checks": []
   },
   "REQ-ACCESS-070": {
-    "hash": "0743f17b96959d97",
+    "hash": "88693852a77c8f90",
     "checks": []
   },
   "REQ-ACCESS-071": {
-    "hash": "0e521fab2acf6b72",
+    "hash": "9e920432ddb8974d",
     "checks": []
   },
   "REQ-ACCESS-072": {
@@ -10540,7 +10566,7 @@
     ]
   },
   "REQ-ACCESS-145": {
-    "hash": "57c17e84f3525ac2",
+    "hash": "2ebb427dfbc32e47",
     "checks": [
       "TEST-062",
       "TEST-063",
@@ -12368,11 +12394,11 @@
     "checks": []
   },
   "REQ-ARCH-008": {
-    "hash": "3673b3955cfa60ad",
+    "hash": "c5b105f654e22973",
     "checks": []
   },
   "REQ-ARCH-009": {
-    "hash": "ba6ca293aa438b05",
+    "hash": "919a42581ed4a97f",
     "checks": []
   },
   "REQ-ARCH-010": {
@@ -12380,7 +12406,7 @@
     "checks": []
   },
   "REQ-ARCH-011": {
-    "hash": "ec94afd0e9de6b3e",
+    "hash": "21738f47db4c879f",
     "checks": []
   },
   "REQ-ARCH-012": {
@@ -12399,7 +12425,7 @@
     ]
   },
   "REQ-ARCH-015": {
-    "hash": "26d5ea93b18da1a5",
+    "hash": "15edcd8232e90949",
     "checks": []
   },
   "REQ-ARCH-016": {
@@ -12419,7 +12445,7 @@
     "checks": []
   },
   "REQ-ARCH-020": {
-    "hash": "ccf62176662e45b5",
+    "hash": "e7b56d0118b02752",
     "checks": []
   },
   "REQ-ARCH-021": {
@@ -12443,15 +12469,15 @@
     "checks": []
   },
   "REQ-ARCH-026": {
-    "hash": "55877a18ce5a178b",
+    "hash": "562dfbf7318f3750",
     "checks": []
   },
   "REQ-ARCH-027": {
-    "hash": "c8410ad0e13a43cb",
+    "hash": "623523ef445d3bd4",
     "checks": []
   },
   "REQ-ARCH-028": {
-    "hash": "0a13fc2e19657a35",
+    "hash": "c457981308ce30d1",
     "checks": []
   },
   "REQ-ARCH-029": {
@@ -12627,7 +12653,7 @@
     "checks": []
   },
   "REQ-ARCH-071": {
-    "hash": "bab17af53ac2080d",
+    "hash": "51beedcd1648303c",
     "checks": []
   },
   "REQ-ARCH-072": {
@@ -12803,11 +12829,11 @@
     "checks": []
   },
   "REQ-ARCH-115": {
-    "hash": "3fa8b60ee30ecf43",
+    "hash": "deea33c25f9f9932",
     "checks": []
   },
   "REQ-ARCH-116": {
-    "hash": "63446cfc73f81f71",
+    "hash": "d7b230a88f88e9fc",
     "checks": []
   },
   "REQ-ARCH-117": {
@@ -12823,7 +12849,7 @@
     "checks": []
   },
   "REQ-ARCH-120": {
-    "hash": "62d981f9ab6fa6c1",
+    "hash": "8f7641198969e871",
     "checks": []
   },
   "REQ-ARCH-121": {
@@ -13019,7 +13045,7 @@
     "checks": []
   },
   "REQ-ARCH-180": {
-    "hash": "9aac020505417504",
+    "hash": "b627d1eab6518d8e",
     "checks": []
   },
   "REQ-ARCH-181": {
@@ -13141,6 +13167,14 @@
   "REQ-ARCH-210": {
     "hash": "b35c54f24526a8a5",
     "checks": []
+  },
+  "REQ-ARCH-211": {
+    "hash": "5e1139d703e60033",
+    "checks": [
+      "HYP-97",
+      "MATH-AR-51",
+      "SYM-193"
+    ]
   },
   "REQ-BUDGET-001": {
     "hash": "24eae4b47e925aa6",
@@ -14432,13 +14466,14 @@
     ]
   },
   "REQ-CONFIG-078": {
-    "hash": "6edd0c00a443030c",
+    "hash": "5dcb5f585dd8e93f",
     "checks": [
       "MarketRegistry",
       "MarketRegistryListingLogic",
       "TEST-138",
       "TEST-139",
-      "TEST-213"
+      "TEST-213",
+      "TEST-295"
     ]
   },
   "REQ-CONFIG-079": {
@@ -15001,9 +15036,12 @@
     ]
   },
   "REQ-FLR-027": {
-    "hash": "6453ad1a75cd7f09",
+    "hash": "b3b78986d71066f4",
     "checks": [
-      "FV-LIQ-05"
+      "CoverageSpoke",
+      "FV-LIQ-05",
+      "TEST-094",
+      "TEST-199"
     ]
   },
   "REQ-FLR-028": {
@@ -15063,13 +15101,15 @@
     ]
   },
   "REQ-FLR-038": {
-    "hash": "9ce40f8a4c239d18",
+    "hash": "94a080429bbd1fcd",
     "checks": [
       "CoverageSpoke",
       "FV-LIQ-05",
       "FV-LIQ-06",
       "ICoverageSpoke",
       "ILPVaultSwapLiquidation",
+      "LPVaultSwapPendingLogic",
+      "TEST-170",
       "TEST-293"
     ]
   },
@@ -15109,7 +15149,7 @@
     ]
   },
   "REQ-FLR-044": {
-    "hash": "bc6cd191ee0fe382",
+    "hash": "416a79c07d61c3ea",
     "checks": [
       "TEST-293"
     ]
@@ -15119,11 +15159,11 @@
     "checks": []
   },
   "REQ-HUB-002": {
-    "hash": "ea287e658c07fdce",
+    "hash": "d2326d84f6e3943c",
     "checks": []
   },
   "REQ-HUB-003": {
-    "hash": "376cf2da518c75a3",
+    "hash": "f97faf19d087ef2b",
     "checks": []
   },
   "REQ-HUB-004": {
@@ -15143,12 +15183,19 @@
     "checks": []
   },
   "REQ-HUB-008": {
-    "hash": "68c989387754f40e",
-    "checks": []
+    "hash": "fe5bebecb5bc8345",
+    "checks": [
+      "HYP-98",
+      "MATH-AR-74",
+      "SYM-192"
+    ]
   },
   "REQ-HUB-009": {
-    "hash": "8a8f0f339006fc68",
-    "checks": []
+    "hash": "599b3ab0587cec3b",
+    "checks": [
+      "MATH-AR-75",
+      "SYM-192"
+    ]
   },
   "REQ-HUB-010": {
     "hash": "b561b1562dc92864",
@@ -15175,23 +15222,30 @@
     "checks": []
   },
   "REQ-HUB-016": {
-    "hash": "5dad46473ec88d6c",
+    "hash": "b88d303b20213fae",
     "checks": []
   },
   "REQ-HUB-017": {
-    "hash": "c0a8967a6fc030ce",
-    "checks": []
+    "hash": "cd569f9bbd5580f3",
+    "checks": [
+      "HYP-97",
+      "MATH-AR-51"
+    ]
   },
   "REQ-HUB-018": {
     "hash": "1438cd6871995deb",
     "checks": []
   },
   "REQ-HUB-019": {
-    "hash": "1f09a665ae22fbc1",
-    "checks": []
+    "hash": "d5644a968c950dc6",
+    "checks": [
+      "HYP-92",
+      "HYP-97",
+      "MATH-AR-51"
+    ]
   },
   "REQ-HUB-020": {
-    "hash": "22394bf1801a4533",
+    "hash": "4d939de590af821b",
     "checks": [
       "FV-CTL-160"
     ]
@@ -15251,7 +15305,7 @@
     ]
   },
   "REQ-HUB-034": {
-    "hash": "66d2226fa47a7cc5",
+    "hash": "04fff7a797d4d1bd",
     "checks": []
   },
   "REQ-HUB-035": {
@@ -15381,7 +15435,7 @@
     "checks": []
   },
   "REQ-HUB-066": {
-    "hash": "89561b6208bc9f72",
+    "hash": "f2b16aa11cefca44",
     "checks": []
   },
   "REQ-HUB-067": {
@@ -15535,7 +15589,7 @@
     "checks": []
   },
   "REQ-HUB-102": {
-    "hash": "50cf1a245a7ff558",
+    "hash": "a4c087b9781c5c98",
     "checks": []
   },
   "REQ-HUB-103": {
@@ -16653,9 +16707,17 @@
     ]
   },
   "REQ-MREG-033": {
-    "hash": "a789fa73f94bcd09",
+    "hash": "4b53315ab27568da",
     "checks": [
-      "IMarketRegistryWindDown"
+      "IMarketRegistryWindDown",
+      "LPVaultSwapPendingLogic",
+      "MarketRegistry",
+      "MarketRegistryHubsLogic",
+      "MarketRegistryListingLogic",
+      "MarketRegistryViews",
+      "MarketRegistryWindDownLogic",
+      "TEST-138",
+      "TEST-213"
     ]
   },
   "REQ-ORACLE-001": {
@@ -19872,11 +19934,11 @@
     "checks": []
   },
   "REQ-ROLE-056": {
-    "hash": "ad61c0fc85a79f8c",
+    "hash": "a18568e65048699e",
     "checks": []
   },
   "REQ-ROLE-057": {
-    "hash": "b6d474546c6040b0",
+    "hash": "46189514c9fea17e",
     "checks": []
   },
   "REQ-ROLE-058": {
@@ -19892,7 +19954,7 @@
     "checks": []
   },
   "REQ-ROLE-061": {
-    "hash": "22aa83f0079e3ffe",
+    "hash": "ed871050a8c6ddf0",
     "checks": []
   },
   "REQ-ROLE-062": {
@@ -19966,7 +20028,7 @@
     "checks": []
   },
   "REQ-ROLE-076": {
-    "hash": "e56f516c2b3f9bb2",
+    "hash": "7260e134ba4630b9",
     "checks": [
       "FV-CTL-05",
       "QNT-33"
@@ -24359,7 +24421,7 @@
     ]
   },
   "SPEC-HUB-003": {
-    "hash": "e97f888e18f09a1c",
+    "hash": "00b5b19f5331ca56",
     "checks": [
       "FV-CTL-160",
       "MATH-AR-51"
@@ -24418,11 +24480,15 @@
     ]
   },
   "SPEC-HUB-007": {
-    "hash": "6d970faa0c2344e5",
+    "hash": "6786667977a2f1fa",
     "checks": [
+      "HYP-98",
       "MATH-AR-08",
       "MATH-AR-18",
+      "MATH-AR-74",
+      "MATH-AR-75",
       "SYM-159",
+      "SYM-192",
       "SYM-50",
       "SYM-53",
       "SYM-72"

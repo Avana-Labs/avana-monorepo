@@ -1,6 +1,6 @@
 # 2.6 Aave Adapter
 
-> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-12
 >
 > **Requirement prefixes:** `REQ-ADAPTER-NNN`, `REQ-PROXY-NNN` (borrower entry points) · **Math prefix:** `SPEC-PROXY-NNN`
 
@@ -112,7 +112,7 @@ No guardian holds any Adapter role. The pause and freeze guardians act on the Ma
 | VaultTokenFactory ([2.4](04-vault-tokens.md)) | Internal (immutable) | `isVaultToken` | Vault-token identity without the MarketRegistry, at proxy creation and in `burnSeized` (`Q-260`) |
 | LPVaultSwap ([2.11](11-lpvaultswap.md)) | Internal | `deleverage` | Valuation, flash funding and conversion of a repay with collateral |
 | Lock ([2.16](16-lock.md)) | Internal | `acquire`, `release`, `holder` | Protocol-wide reentrancy lock |
-| Debt assets (every enabled debt asset, GHO first) | External | `transferFrom(payer, proxy, x)`, `transferFrom(LP_VAULT_SWAP, proxy, amount)`, `balanceOf` | Repay funding, measured by balance delta (`Q-271`) |
+| Debt assets (every enabled debt asset, for example GHO, USDC, USDT) | External | `transferFrom(payer, proxy, x)`, `transferFrom(LP_VAULT_SWAP, proxy, amount)`, `balanceOf` | Repay funding, measured by balance delta (`Q-271`) |
 | Each Hub (Aave V4): the home Hub of each vault token and the funding Hub of each debt reserve | External | `isSpokeListed`, `isUnderlyingListed`, `getAssetId` (views) | Receiver rule; collateral reserve resolution |
 
 ## Events

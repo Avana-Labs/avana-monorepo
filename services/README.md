@@ -244,6 +244,7 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-26 | Keeper code-check mismatch (implementation slot or code hash) | — | every | keeper on-call | P-08 (`EMG-082`) |
 | M-27 | Frontend bundle hash, DNS and hosting change | any | hash mismatch | engineering | P-13 (`EMG-087`) |
 | M-28 | Liquidity leaving a listed pool: the pool's total liquidity (and its liquidity around the current price) per listed market, independent of Avana's share | −20 % in 1 hour | −40 % in 1 hour | risk service providers, guardians | P-04 (`EMG-078`) |
+| M-29 | Rate curve per lend asset: the Hub's interest-rate data and drawn rate; for GHO, `baseDrawnRate` against the Core Hub GHO base rate (`SPEC-HUB-007`) | any change of a curve's values | GHO `baseDrawnRate` below the Core Hub GHO base rate | Aave DAO, risk service providers | P-10 (`EMG-084`) |
 
 Rules:
 
@@ -251,6 +252,7 @@ Rules:
 - Every signal is read from on-chain state at a known block, re-checked against a second RPC source before paging, and stored with the block number in the incident log.
 - The live tail-coverage variant of `M-14` replaces each token's cap by the debt currently backed by markets holding that token; `M-11` and `M-12` run against a fork of the latest block once a day and before every listing.
 - The app sends each borrower health alerts at the levels that borrower chooses, and shows the state of each of their markets in plain language: price state, breaker, pause reason and what still works.
+- The app's Lend page shows each lender, per (Hub, asset), the supply rate, the borrow rate the asset's utilization curve sets, the utilization and idle liquidity it can withdraw now (`M-19` uses the same reads), and any uncovered deficit with the deficit-adjusted share price from the Lens; while `UncoveredDeficit(hub, asset, amount)` is raised (`M-15`, P-18) it alerts every lender of that (Hub, asset), builds no new supply into it, keeps withdrawals open, and before each withdrawal shows the deficit-adjusted price beside the unadjusted price Aave will pay, so a lender sees that withdrawing first moves its share of the loss onto the lenders who stay.
 
 
 ## Licence

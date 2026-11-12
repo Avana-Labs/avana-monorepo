@@ -8,7 +8,7 @@ Requirements: `REQ-*`, `INV-*`, `SPEC-*` (formulas), `ATTACK-*`, flow steps (`DE
 
 Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` rule names the row and the prover has not passed it; marked †), **Verified** (spec-stage checks plus a Foundry test or a prover-passed property), **Changed — re-verify**.
 
-**3504 requirements · 1451 with checks · 0 errors · 3236 warnings**
+**3507 requirements · 1459 with checks · 0 errors · 3234 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -285,7 +285,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `DEF-011` | Avana Labs prefunds each Coverage Spoke with at least its `firstLossReserveMinimum` in its… | `MATH-CAP-10` | — | — | — | — | Modelled |
 | `DEF-012` | Monitoring alerts on `ReserveBelowMinimum` from any instance on any chain, on each Coverag… | — | — | — | — | — | Unverified |
 | `DEF-013` | Caps are sized so that each `(Hub, asset)` reserve covers the modelled losses in that asse… | `MATH-AR-29`, `MATH-AR-30` | — | `SIM-02B`, `SIM-08C` | — | — | Modelled |
-| `DEF-014` | A deficit larger than its instance's funded balance stays recorded on the funding Hub as t… | — | `QNT-31` | `HYP-08` | — | — | Modelled |
+| `DEF-014` | A deficit larger than its instance's funded balance stays recorded on the funding Hub as t… | `MATH-AR-51`, `SYM-193` | `QNT-31` | `HYP-08` | — | — | Modelled |
 | `DEF-015` | Pending-settlement proceeds. When anyone calls `LPVaultSwap.settlePending(marketId, debtRe… | `MATH-ST-67`, `MATH-ST-95` | `QNT-03`, `QNT-37`, `QNT-T09` | — | — | — | Modelled |
 | `DEF-016` | `enableDebtReserve` (timelock, normal delay) for any debt asset, GHO included, deploys or … | — | — | — | — | — | Unverified |
 | `DEF-017` | A liquidation that records deficits in two assets is covered by two coverage calls, each o… | — | — | — | — | — | Modelled |
@@ -1282,7 +1282,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `Q-350` | No pool spot gate before a liquidation unwind | There is no pool spot gate: LPVaultSwap ne… | `MATH-ST-106` | — | — | — | `ILPVaultSwapLiquidation` | Modelled |
 | `Q-351` | Aave-side halts are containment, never the first tool | A Hub `haltSpoke` of a CDP Spoke, … | — | — | — | — | — | Unverified |
 | `Q-352` | Liquidation exclusivity on a standard Spoke | CDP Spokes are standard, unmodified Aave V4 … | — | — | — | — | — | Unverified |
-| `Q-353` | Lenders' loss rule for uncovered deficits | Every credit line is bounded by first-loss cov… | — | — | — | `TEST-247`, `TEST-273` | `IParameterStoreCoverage` | Unverified |
+| `Q-353` | Lenders' loss rule for uncovered deficits | Every credit line is bounded by first-loss cov… | `SYM-193` | — | — | `TEST-247`, `TEST-273` | `IParameterStoreCoverage` | Verified |
 | `Q-354` | Debt-free pledges cannot fill the borrowers' cap budget | A market's USD cap budget has th… | — | — | — | — | — | Unverified |
 | `Q-355` | Wind-down ends; ledger-bug exit | Delisting is `Offboarding` → `Closed`. After the notice … | — | — | — | `TEST-024`, `TEST-099`, `TEST-213`, `TEST-272` | `CollateralizationDebtMark`, `IAaveAdapterUser`, `ICollateralizationDebtMark`, `ICollateralizationViews`, `IMarketRegistryWindDown`, `IVaultTokenFactory`, `MarketRegistryWindDownLogic`, `VaultTokenFactory` | Unverified |
 | `Q-356` | Repay with collateral that only reduces debt | `repayWithCollateral` runs under `Paused` w… | — | — | — | `TEST-192`, `TEST-239` | — | Unverified |
@@ -1336,6 +1336,8 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `Q-404` | Caller-funded liquidation and one entry point | Two decisions of 2026-11-10. (1) Funding: … | `MATH-ST-07`, `MATH-ST-112`, `MATH-ST-121`, `MATH-ST-122`, `MATH-ST-13`, `MATH-ST-14`, `MATH-ST-15`, `MATH-ST-17`, `MATH-ST-18`, `MATH-ST-21`, `MATH-ST-23`, `MATH-ST-24`, `MATH-ST-25`, `MATH-ST-26`, `MATH-ST-51`, `MATH-ST-59`, `MATH-ST-60`, `SYM-41`, `SYM-44`, `SYM-45`, `SYM-49` | `QNT-T29` | — | `PROP-015`†, `PROP-016`†, `PROP-017`†, `PROP-019`†, `PROP-022`†, `PROP-035`†, `PROP-036`†, `PROP-053`†, `PROP-059`†, `PROP-097`†, `TEST-045`, `TEST-048`, `TEST-055`, `TEST-069`, `TEST-098`, `TEST-100`, `TEST-174`, `TEST-198`, `TEST-205`, `TEST-229`, `TEST-288`, `TEST-289` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `FlashLiquidator`, `IFlashLiquidator`, `ILPVaultSwapAdmin`, `ILPVaultSwapErrors`, `ILPVaultSwapEvents`, `ILPVaultSwapLiquidation`, `ILPVaultSwapViews`, `ILPVaultSwap`, `ILensLiquidation`, `IOperatorFlashLiquidator`, `LPVaultSwap`, `LensLiquidation`, `LiquidationParams`, `LiquidationPreview`, `LiquidationResult`, `MarketRegistrySafetyLogic`, `OperatorFlashLiquidator`, `SettlementMath`, `SettlementReport` | Verified |
 | `Q-405` | Second-source confirmation and token decimals | An out-of-range second-source word leaves … | — | — | — | — | — | Unverified |
 | `Q-406` | Decisions of 2026-11-11 | (1) Market-count limit: `MAX_MARKET_COUNT` is a MarketRegistry i… | — | — | — | — | — | Unverified |
+| `Q-407` | Public lending from launch | Decision of 2026-11-12. (1) Structure: on each chain one Avan… | — | — | `HYP-97` | — | — | Modelled |
+| `Q-408` | Lend rates, deficit freeze, Lend Spoke freeze and debt assets | Decision of 2026-11-12, fo… | `SYM-193` | — | `HYP-98` | — | — | Modelled |
 | `REP-001` | `Y` calls `AD.repay(W, m, r, maxRepaySpend, repayAll, deadline)` | AaveAdapter (`Y`) | The… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-002` | Take the caller as the payer | `AD` | No caller check: any `msg.sender` is accepted and be… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-003` | Check the deadline | `AD` | `block.timestamp ≤ deadline`, in seconds. (Source: Q-075) | — | — | — | — | `IAaveAdapterUser` | Unverified |
@@ -1771,7 +1773,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ARCH-005` | One vault-token base unit MUST represent one unit of credited liquidity of that market (th… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-006` | Each borrower action, each repay and each liquidation, direct or through a flash liquidati… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-007` | Settlement MUST be partial seizure through the standard Aave V4 `liquidationCall` of the p… | — | — | — | — | — | Unverified |
-| `REQ-ARCH-008` | Each borrowable asset MUST come only from a credit line the Aave DAO approves: supply by t… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-008` | Each borrowable asset MUST be drawn only from the (Hub, asset) the debt reserve records as… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-009` | No Avana contract or role MAY hold authority over any Hub `addCap` or `drawCap`, any inter… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-010` | A recorded Hub deficit from an approved Avana CDP Spoke MUST be covered only from the Cove… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-011` | Avana's only on-chain revenue MUST be `avanaFeeShareBps` of a routed liquidation's surplus… | — | — | — | — | — | Unverified |
@@ -1783,7 +1785,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ARCH-017` | Liquidation MUST be possible only through LPVaultSwap's one entry point `liquidate`, open … | — | — | — | — | — | Unverified |
 | `REQ-ARCH-018` | There MUST be no borrower allowlist and no minimum debt. Exposure is limited by caps; each… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-019` | Each account MUST hold exactly one collateral market (its proxy's market) and at most `MAX… | — | — | — | — | — | Unverified |
-| `REQ-ARCH-020` | Avana v1 MUST NOT include an Invest Spoke, Multiply or any leveraged-LP loop, public lende… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-020` | Avana v1 MUST NOT include an Invest Spoke, Multiply or any leveraged-LP loop, an Avana con… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-021` | Avana v1 MUST NOT include any function that moves an account to a new proxy or contract, o… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-022` | Avana v1 MUST NOT convert liquidation proceeds through CoW Swap or any swap route that set… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-023` | Avana v1 MUST NOT include a daily borrow limit (the Adapter executes every borrow and coul… | — | — | — | — | — | Unverified |
@@ -1791,7 +1793,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ARCH-025` | Avana's guarantees are its on-chain behaviour and the operating commitments stated in its … | — | — | — | — | — | Unverified |
 | `REQ-ARCH-026` | Avana Hubs (Stable LP, Correlated LP, Volatile LP; per chain) | 2.1 | Standard Aave V4 Hub… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-027` | CDP Spokes (one per chain, Hub, AMM protocol and risk tier) and their AaveOracles | 2.1 | … | — | — | — | — | — | Unverified |
-| `REQ-ARCH-028` | Lend Spoke (one per chain) | 2.1 | Supply-only Spoke through which the DAO treasury suppli… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-028` | Lend Spoke (one per chain) | 2.1 | Supply-only Spoke through which any lender, public or t… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-029` | Coverage Spokes (First-Loss Reserve), one per (Hub, debt asset) per chain | 2.14 | Supply-… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-030` | Vault-token fee receiver | 2.1 | Aave treasury Spoke registered on each vault-token asset … | — | — | — | — | — | Unverified |
 | `REQ-ARCH-031` | LPVault (one per AMM protocol per chain; custody) | 2.2 | The AMM integration's custody co… | — | — | — | — | — | Unverified |
@@ -1878,12 +1880,12 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ARCH-112` | LPVaultSwap → debt asset.`transfer(feeRecipient, A)`; LPVaultSwap → debt asset.`safeTransf… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-113` | Inside `deleverage`: LPVaultSwap → debt asset.`transfer(flash source, need)` until the sou… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-114` | LPVaultSwap → token.`transfer` of each escrowable payout (Avana's fee to `feeRecipient`, t… | — | — | — | — | — | Unverified |
-| `REQ-ARCH-115` | DAO treasury → Lend Spoke.`supply(reserveId, amount, treasury)` for each approved (Hub, as… | — | — | — | — | — | Unverified |
-| `REQ-ARCH-116` | DAO treasury → Lend Spoke.`withdraw(reserveId, amount, treasury)`; Lend Spoke → Hub.`remov… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-115` | Lender wallet (any address; the DAO treasury for the bootstrap supply) → Lend Spoke.`suppl… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-116` | Lender wallet → Lend Spoke.`withdraw(reserveId, amount, lender)`; Lend Spoke → Hub.`remove… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-117` | Avana Labs or LPVaultSwap → Coverage Spoke(Hub, asset).`fund(amount)`; Coverage Spoke → Hu… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-118` | `COVERAGE_ROLE` holder → Coverage Spoke(Hub, asset).`coverDeficit(cdpSpoke, maxAmount)`; C… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-119` | Aave DAO → HubConfigurator (`updateSpokeAddCap`, `updateSpokeDrawCap`, `haltSpoke`, `updat… | — | — | — | — | — | Unverified |
-| `REQ-ARCH-120` | Aave Protocol Guardian → SpokeConfigurator.`freezeReserve` / `pauseReserve`; Aave DAO → `h… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-120` | Aave Protocol Guardian → SpokeConfigurator.`freezeReserve` / `pauseReserve` on CDP Spoke r… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-121` | DAO position-updater payload → Spoke.`updateUserRiskPremium(proxy)` for every proxy listed… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-122` | Aave DAO → the chain's Aave V3 ACLManager.`addFlashBorrower(flash source)` and `addFlashBo… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-123` | Governance multisig or Aave governance executor (`PROPOSER_ROLE`) → AvanaTimelock.`schedul… | — | — | — | — | — | Unverified |
@@ -1962,6 +1964,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ARCH-208` | Each wallet MUST have at most one PositionProxy per (CDP Spoke, market), created by CREATE… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-209` | Avana MUST add a CDP Spoke, a market or a debt reserve only through the chain's AvanaTimel… | — | — | — | — | — | Unverified |
 | `REQ-ARCH-210` | `IFlashSource` implementation (one per chain) | 2.11 | The flash-loan source of LPVaultSwa… | — | — | — | — | — | Unverified |
+| `REQ-ARCH-211` | Lending MUST run only through Aave's standard Lend Spoke: a lender's wallet calls the chai… | `MATH-AR-51`, `SYM-193` | — | `HYP-97` | — | — | Modelled |
 | `REQ-BUDGET-001` | LPVaultSwap MUST NOT call any settlement-budget contract; no such contract exists on any c… | — | — | — | — | — | Unverified |
 | `REQ-BUDGET-002` | A floor gap that the caller's `maxShortfall` does not cover MUST revert the liquidation wi… | — | — | — | — | `ILPVaultSwapErrors` | Unverified |
 | `REQ-BUDGET-003` | The caller's gap payment MUST be measured as the rise of LPVaultSwap's `T` balance and MUS… | — | — | — | — | — | Unverified |
@@ -2216,8 +2219,8 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-HUB-005` | The deployment check MUST assert that the runtime bytecode of each Hub implementation, eac… | — | — | — | — | — | Unverified |
 | `REQ-HUB-006` | Avana's own Aave V4 deployments on Sepolia and local Anvil MUST apply every Hub and Spoke … | — | — | — | — | — | Unverified |
 | `REQ-HUB-007` | Before a deployment enters `deployments/verified/`, and after every DAO payload that touch… | — | — | — | — | — | Unverified |
-| `REQ-HUB-008` | The GHO asset MUST use a flat interest-rate strategy per `SPEC-HUB-007`, set by the DAO; t… | — | — | — | — | — | Unverified |
-| `REQ-HUB-009` | Each debt asset's `feeReceiver` MUST be an Aave DAO treasury address, and its `liquidityFe… | — | — | — | — | — | Unverified |
+| `REQ-HUB-008` | Every lend asset of each Avana Hub MUST use Aave V4's standard kinked utilization curve pe… | `MATH-AR-74`, `SYM-192` | — | `HYP-98` | — | — | Modelled |
+| `REQ-HUB-009` | Each debt asset's `feeReceiver` MUST be an Aave DAO treasury address, and its `liquidityFe… | `MATH-AR-75`, `SYM-192` | — | — | — | — | Modelled |
 | `REQ-HUB-010` | `reinvestmentController` MUST be `address(0)` on every debt asset and every vault-token as… | — | — | — | — | — | Unverified |
 | `REQ-HUB-011` | Each vault-token asset MUST be added with the vault token as underlying and `decimals` equ… | — | — | — | — | — | Unverified |
 | `REQ-HUB-012` | Because `Hub.addAsset` registers the fee receiver with `addCap = MAX_ALLOWED_SPOKE_CAP`, t… | — | — | — | — | — | Unverified |
@@ -2225,10 +2228,10 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-HUB-014` | The CDP Spoke's `addCap` on each vault-token asset MUST equal the value from `SPEC-HUB-002… | — | — | — | — | — | Unverified |
 | `REQ-HUB-015` | Only these Spokes MAY be registered on a debt asset of each Avana Hub: the Lend Spoke, eac… | — | — | — | — | — | Unverified |
 | `REQ-HUB-016` | Each chain MUST have one Lend Spoke: a DAO-owned, supply-only Spoke whose reserves point t… | — | — | — | — | — | Unverified |
-| `REQ-HUB-017` | The Lend Spoke's `addCap` on each (Hub, asset) MUST equal `creditLine(hub, asset)` (`SPEC-… | — | — | — | — | — | Unverified |
+| `REQ-HUB-017` | The Lend Spoke's `addCap` on each (Hub, asset) MUST be the DAO-set supply cap, which bound… | `MATH-AR-51` | — | `HYP-97` | — | — | Modelled |
 | `REQ-HUB-018` | The Lend Spoke's `drawCap` MUST be 0 on every Hub asset. (Source: Q-070, Q-095) | — | — | — | — | — | Unverified |
-| `REQ-HUB-019` | Recall of a credit line MUST work by the DAO lowering the CDP Spoke `drawCap`s on that (Hu… | — | — | — | — | — | Unverified |
-| `REQ-HUB-020` | Raising any credit line MUST go through an Aave DAO AIP of that chain that raises the Lend… | — | — | — | — | — | Modelled |
+| `REQ-HUB-019` | Recall of a credit line MUST work by the DAO lowering the CDP Spoke `drawCap`s on that (Hu… | `MATH-AR-51` | — | `HYP-92`, `HYP-97` | — | — | Modelled |
+| `REQ-HUB-020` | Raising any credit line MUST go through an Aave DAO AIP of that chain that raises the CDP … | — | — | — | — | — | Modelled |
 | `REQ-HUB-021` | Each Coverage Spoke MUST be registered only on its own debt asset of its own Hub, one per … | — | — | — | — | — | Unverified |
 | `REQ-HUB-022` | The CDP Spoke's `ORACLE` MUST be an AaveOracle with 8 decimals whose only writer is that C… | — | — | — | — | — | Unverified |
 | `REQ-HUB-023` | The LPOracle feed MUST hold a valid positive price before `addReserve` executes, because `… | — | — | — | — | — | Unverified |
@@ -2825,11 +2828,11 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ROLE-054` | AvanaTimelock | `cancel(id)` | `CANCELLER_ROLE`; `DAO_CANCELLER_ROLE` for a role-change or… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-055` | Every Avana contract | Any function that would stop repay, fee collection, debt-free withd… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-056` | HubConfigurator, SpokeConfigurator | Every configuration function for Avana markets, debt … | — | — | — | — | — | Unverified |
-| `REQ-ROLE-057` | SpokeConfigurator | `freezeReserve`, `pauseReserve` | Aave Protocol Guardian (granted by t… | — | — | — | — | — | Unverified |
+| `REQ-ROLE-057` | SpokeConfigurator | `freezeReserve`, `pauseReserve` on each CDP Spoke reserve; `freezeRese… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-058` | CDP Spoke | `updateUserRiskPremium`, `updateUserDynamicConfig` | `SPOKE_USER_POSITION_UPDA… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-059` | CDP Spoke | `updatePositionManager`, `setUserPositionManager` | No position manager is act… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-060` | Coverage Spoke of each (Hub, debt asset) → Hub | `coverDeficit(cdpSpoke, maxAmount)` → `el… | — | — | — | — | — | Unverified |
-| `REQ-ROLE-061` | Lend Spoke, Coverage Spokes | Supply and withdrawal of each credit line and each reserve |… | — | — | — | — | — | Unverified |
+| `REQ-ROLE-061` | Lend Spoke, Coverage Spokes | Supply and withdrawal of each lender's Lend Spoke position a… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-062` | Aave V3 ACLManager | `addFlashBorrower` for the chain's `IFlashSource` implementation and … | — | — | — | — | — | Unverified |
 | `REQ-ROLE-063` | Every setter MUST enforce the hard-coded minimum and maximum stated in 1.5 and revert outs… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-064` | Each two-direction parameter MUST have separate tighten and loosen selectors; the tighten … | — | — | — | — | — | Unverified |
@@ -3356,7 +3359,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `SPEC-HUB-004` | **Risk premium threshold.** For each CDP Spoke on each debt asset: `riskPremiumThreshold_b… | `MATH-AR-20`, `MATH-AR-21`, `MATH-AR-22`, `MATH-AR-23`, `MATH-AR-24`, `MATH-AR-25`, `MATH-AR-41`, `SYM-50`, `SYM-51`, `SYM-52`, `SYM-54` | — | — | — | — | Modelled |
 | `SPEC-HUB-005` | **Liquidation configuration bounds.** (a) Every vault-reserve key satisfies `percentMulUp(… | `MATH-AR-02`, `MATH-AR-09`, `MATH-AR-10`, `MATH-AR-11`, `MATH-AR-12`, `MATH-AR-14`, `MATH-AR-38`, `MATH-ST-10`, `MATH-ST-93`, `SYM-06`, `SYM-10`, `SYM-11`, `SYM-12`, `SYM-13`, `SYM-14`, `SYM-15`, `SYM-162`, `SYM-17`, `SYM-68`, `SYM-69`, `SYM-70`, `SYM-71` | — | — | — | `ParameterStoreRisk` | Modelled |
 | `SPEC-HUB-006` | **Listing margin.** For every price route `r` (primary, alternate and standby) of either p… | `MATH-AR-63`, `SYM-163` | — | — | — | — | Modelled |
-| `SPEC-HUB-007` | **GHO borrow rate.** The GHO asset's strategy is flat: `drawnRate = baseRate` with both sl… | `MATH-AR-08`, `MATH-AR-18`, `SYM-159`, `SYM-50`, `SYM-53`, `SYM-72` | — | — | — | — | Modelled |
+| `SPEC-HUB-007` | **Borrow rate of every lend asset.** Each lend asset on an Avana Hub uses Aave V4's standa… | `MATH-AR-08`, `MATH-AR-18`, `MATH-AR-74`, `MATH-AR-75`, `SYM-159`, `SYM-192`, `SYM-50`, `SYM-53`, `SYM-72` | — | `HYP-98` | — | — | Modelled |
 | `SPEC-HUB-008` | **Rounding of the Aave calls Avana uses.** `supply`: shares `= floor(amount × (S + 1e6) / … | `MATH-AR-03`, `MATH-AR-05`, `MATH-AR-07`, `MATH-AR-11`, `MATH-AR-12`, `MATH-AR-13`, `MATH-AR-15`, `MATH-AR-16`, `MATH-AR-19`, `MATH-AR-20`, `MATH-AR-26`, `MATH-AR-27`, `MATH-AR-28`, `MATH-AR-35`, `SYM-10`, `SYM-16`, `SYM-63`, `SYM-67` | — | — | — | — | Modelled |
 | `SPEC-LIQ-001` | **Net bonus.** `bNet = 10⁴ + ⌊(b − 10⁴) × (10⁴ − lf) / 10⁴⌋` bps, with `b` and `lf` read b… | `MATH-ST-113`, `MATH-ST-12`, `MATH-ST-80`, `SYM-16`, `SYM-43` | — | — | `PROP-017`†, `TEST-050`, `TEST-069`, `TEST-113`, `TEST-198` | `ILPVaultSwapLiquidation`, `LPVaultSwapLiquidationLogic`, `LensLiquidation`, `SettlementMath`, `SettlementReport` | Verified |
 | `SPEC-LIQ-002` | **No cost term.** A liquidation has no cost paid outside `R`: LPVaultSwap takes no flash l… | `MATH-ST-07`, `MATH-ST-101`, `MATH-ST-13`, `MATH-ST-51`, `MATH-ST-68`, `MATH-ST-80`, `SYM-41` | — | `HYP-29` | `PROP-017`†, `TEST-198` | `ILPVaultSwapLiquidation`, `SettlementMath` | Verified |

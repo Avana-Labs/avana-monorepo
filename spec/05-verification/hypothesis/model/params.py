@@ -25,8 +25,11 @@ class Params:
     max_lb_bps: int = 10500
     collateral_risk_bps: int = 500
     max_user_reserves: int = 16                  # Spoke per-account reserve limit (Q-193)
-    gho_rate_ray: int = 8 * RAY // 100           # flat DAO-set rates
-    usdc_rate_ray: int = 6 * RAY // 100
+    # Kinked utilization curves set by the Aave DAO (SPEC-HUB-007, Q-408), in bps:
+    # (baseDrawnRate, rateGrowthBeforeOptimal, rateGrowthAfterOptimal, optimalUsageRatio). GHO keeps a 5.50 % base
+    # as its floor; the USDC curve has no floor.
+    gho_curve: tuple = (550, 360, 5000, 9000)
+    usdc_curve: tuple = (0, 650, 4000, 9200)
     # Exposure caps (Q-055, Q-174, Q-175, Q-197, SPEC-CAP-002): USD with 8 decimals
     cap_market_usd: int = 3_000_000 * USD
     topup_slice_usd: int = 300_000 * USD
@@ -69,8 +72,11 @@ class Params:
     # deficit freeze trip on-chain; price drop, seizure surge and route failures are monitoring alerts only.
     breaker_deficit_max: dict = field(default_factory=lambda: {"GHO": 10_000 * WAD, "USDC": 10_000 * 10 ** 6})
     freeze_rate_limit: int = 20                  # freezeAddress per guardian in 24 one-hour buckets (Q-242); the model counts a continuous 24 h window
-    # Funding (Q-233, Q-236): credit lines through the Lend Spoke, Coverage Spokes per asset
+    # Funding (Q-233, Q-236, Q-407): the credit line is the borrow side (the CDP Spokes' drawCap); lending is public, so
+    # the Lend Spoke addCap is a separate supply cap (whole tokens) on the DAO's bootstrap supply plus public supply
     credit_line: dict = field(default_factory=lambda: {"GHO": 2_000_000 * WAD, "USDC": 1_000_000 * 10 ** 6})
+    bootstrap_supply: dict = field(default_factory=lambda: {"GHO": 2_000_000 * WAD, "USDC": 1_000_000 * 10 ** 6})
+    lend_supply_cap: dict = field(default_factory=lambda: {"GHO": 10_000_000, "USDC": 5_000_000})
     first_loss: dict = field(default_factory=lambda: {"GHO": 400_000 * WAD, "USDC": 50_000 * 10 ** 6})
     first_loss_min: dict = field(default_factory=lambda: {"GHO": 400_000 * WAD, "USDC": 50_000 * 10 ** 6})
     # Faulty upgradeable RiskModule (only Aave's own checks bind, SPEC-CF-003)

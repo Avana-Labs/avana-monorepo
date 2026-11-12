@@ -1,6 +1,6 @@
 # 4.2 Attack Scenarios
 
-> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-12
 
 Attacks against Avana and the protection that blocks or bounds each one (decisions `Q-001`…`Q-278` and `Q-363`). *Attack approach* lists the calls the attacker would make; *Expected protection* states the rule that stops them.
 
@@ -1285,7 +1285,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Prerequisites | Several CDP Spokes, or several debt reserves funded from one Hub |
 | Attack approach | Borrow the whole line of one asset on the riskiest tier; leave deficits uncovered |
 | Impact | Capacity and losses decided by the riskiest tier |
-| Expected protection | `INV-041`, `INV-042`, `INV-057`, `INV-071`: at launch a Stable LP Hub on Ethereum and on Base, each with its CDP Spokes; DAO-set `drawCap` per (Hub, asset, Spoke), and no draw completes that leaves a Spoke above it; credit lines are Lend Spoke supply into the funding Hub, and a cross-Hub line is capped by the funding Hub (`INV-094`, off at launch); deficits are recorded per debt reserve in its own asset on the Hub that funded it, alert, and are covered from that asset's Coverage Spoke; only a Coverage Spoke calls `eliminateDeficit`, so coverage spends reserve capital only (Source: Q-032, Q-070, Q-071, Q-095, Q-101, Q-233, Q-236, Q-239, Q-363) |
+| Expected protection | `INV-041`, `INV-042`, `INV-057`, `INV-071`: at launch a Stable LP Hub on Ethereum and on Base, each with its CDP Spokes; DAO-set `drawCap` per (Hub, asset, Spoke), and no draw completes that leaves a Spoke above it; credit lines are draw caps on the funding Hub's Lend Spoke supply (public and DAO), and a cross-Hub line is capped by the funding Hub (`INV-094`, off at launch); deficits are recorded per debt reserve in its own asset on the Hub that funded it, alert, and are covered from that asset's Coverage Spoke; only a Coverage Spoke calls `eliminateDeficit`, so coverage spends reserve capital only (Source: Q-032, Q-070, Q-071, Q-095, Q-101, Q-233, Q-236, Q-239, Q-363) |
 | Result | Mitigated |
 | Checks | TEST-199 |
 
@@ -2616,14 +2616,14 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Field | Value |
 |---|---|
 | Target | Lend Spoke supply on the funding Hub |
-| Objective | Withdraw at full value before an uncovered deficit is realised, leaving the loss to the last lenders |
+| Objective | Withdraw at full value before an uncovered deficit is realised, leaving the loss to the last lenders, who include public lenders and new suppliers who enter at the unadjusted price |
 | Affected steps | `DEF`, Lend Spoke withdraw |
 | Prerequisites | A deficit larger than the Coverage Spoke's funds |
 | Attack approach | Watch for deficit reports and withdraw first |
 | Impact | Bounded by the funding Hub's first-loss coverage and the credit lines |
-| Expected protection | `INV-042`, `INV-074`, `INV-094`: each (Hub, debt asset) has its own Coverage Spoke and every credit line is capped at the coverage behind it; deficits and coverage per drawing Spoke and Hub are readable on-chain for lenders; an uncovered remainder follows Aave V4's Hub loss rule (Source: Q-236, Q-363) |
-| Result | Accepted risk — owner: Aave DAO and Lend Spoke lenders; bound: deficits beyond the Coverage Spoke's funds, which the credit-line caps size against |
-| Checks | TEST-273, FINDING-231 |
+| Expected protection | `INV-042`, `INV-074`, `INV-094`: each (Hub, debt asset) has its own Coverage Spoke and every credit line is capped at the coverage behind it (`DEF-019`); deficits and coverage per drawing Spoke and Hub are readable on-chain and in the Lens (`uncoveredDeficit`, the deficit-adjusted share price, `getHubAssetExposure`), so no lender has an information advantage; the moment `uncoveredDeficit > 0`, P-18 sets the drawing Spokes' `drawCap`s to 0 and the Aave Protocol Guardian freezes the Lend Spoke reserve of that (Hub, asset), which stops new supply while withdrawals stay open, and the app's Lend page builds no supply into it (`REQ-ARCH-211`); an uncovered remainder follows Aave V4's Hub loss rule once realized (Source: Q-236, Q-353, Q-363, Q-407) |
+| Result | Accepted risk — owner: Aave DAO and every Lend Spoke lender, public lenders included; bound: deficits beyond the Coverage Spoke's funds, which the credit-line caps size against; between report and realization a lender who withdraws first leaves at the unadjusted price, as Aave V4's share accounting allows, and its share of the loss falls on the suppliers who remain (`DEF-014`, `Q-408`) |
+| Checks | TEST-273, TEST-297, FINDING-231 |
 
 ### ATTACK-184: Debt-free LP filling every cap
 

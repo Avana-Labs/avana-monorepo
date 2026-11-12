@@ -1,6 +1,6 @@
 # 2.11 LPVaultSwap
 
-> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-12
 >
 > **Requirement prefix:** `REQ-SWAP-NNN`, `REQ-FLASH-NNN`, `REQ-HELPER-NNN` (flash liquidation helper) · **Formula prefix:** `SPEC-LIQ-NNN`
 
@@ -209,7 +209,7 @@ No guardian role can stop, suspend or restrict liquidation: the pause and freeze
 
 ## Flash source
 
-`IFlashSource` is the chain's adapter to one flash lender, used only by `deleverage` (a liquidation never calls it, `REQ-SWAP-012`; liquidation callers borrow through the [flash liquidation helper](#flash-liquidation-helper), which calls the same Aave V3 Pool directly for every debt asset, GHO included). Its only implementation, `AaveV3FlashSource`, calls the chain's Aave V3 Pool `flashLoan(receiver, [asset], [amount], [0], receiver, params, 0)` with one asset and interest-rate mode 0, borrowing the debt asset itself. Aave V4 has no flash loan; the V3 Pool is live on Ethereum and Base, holds deep idle liquidity of the launch debt assets (about 200M USDC and 33M GHO on Ethereum, about 18M USDC on Base), and its `flashLoan` (unlike `flashLoanSimple`) waives the premium for an address holding the Pool's `FLASH_BORROWER` role. A frozen V3 reserve can still be flash-borrowed; a paused or deactivated reserve, `flashLoanEnabled = false`, a premium increase or a drain of idle liquidity stops it, and the checks below turn each of these into a clean revert before the loan (`Q-334`, `Q-335`).
+`IFlashSource` is the chain's adapter to one flash lender, used only by `deleverage` (a liquidation never calls it, `REQ-SWAP-012`; liquidation callers borrow through the [flash liquidation helper](#flash-liquidation-helper), which calls the same Aave V3 Pool directly for every debt asset, GHO included). Its only implementation, `AaveV3FlashSource`, calls the chain's Aave V3 Pool `flashLoan(receiver, [asset], [amount], [0], receiver, params, 0)` with one asset and interest-rate mode 0, borrowing the debt asset itself. Aave V4 has no flash loan; the V3 Pool is live on Ethereum and Base, holds deep idle liquidity of the stable debt assets the Aave DAO may approve (for example about 200M USDC and 33M GHO on Ethereum, about 18M USDC on Base), and its `flashLoan` (unlike `flashLoanSimple`) waives the premium for an address holding the Pool's `FLASH_BORROWER` role. A frozen V3 reserve can still be flash-borrowed; a paused or deactivated reserve, `flashLoanEnabled = false`, a premium increase or a drain of idle liquidity stops it, and the checks below turn each of these into a clean revert before the loan (`Q-334`, `Q-335`).
 
 ```solidity
 interface IFlashSource {

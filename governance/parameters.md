@@ -1,6 +1,6 @@
 # Avana parameters
 
-Last updated: 2026-11-10
+Last updated: 2026-11-12
 
 This page lists Avana's main parameters, who sets each one and why. Values change through governance, and this page is updated with them. The full registry, with units, on-chain bounds and change delays, is [1.5 Protocol Parameters](../spec/01-architecture/05-parameters.md). The proposal these values belong to is the [ARFC](arfc-avana-lp-collateral.md). Each row links the spec rule that uses the value.
 
@@ -12,9 +12,12 @@ Avana proposes a starting point, and the Aave DAO decides.
 
 | Parameter | What it does | Avana's proposed starting point | Decided in |
 |---|---|---|---|
-| First-loss reserve and coverage ratio ([DEF-019](../spec/03-operations/09-deficit-coverage.md)) | Sets how much GHO Avana Labs funds into each Avana Umbrella (Coverage Spoke) per unit of draw caps: `fundedBalance × 10⁴ ≥ coverageRatioBps × Σ drawCap`. | Open. 20% is an illustrative guide only. | Funding ARFC |
-| Credit line per chain and Hub ([SPEC-HUB-003](../spec/02-contracts/01-avana-hub-and-spokes.md)) | Caps the GHO the Aave DAO supplies to each Avana Hub. | Ethereum: 2M GHO. Base: open, within the Base Pool's GHO flash liquidity. | Funding ARFC |
-| Draw caps ([SPEC-HUB-003](../spec/02-contracts/01-avana-hub-and-spokes.md), [REQ-HUB-045](../spec/02-contracts/01-avana-hub-and-spokes.md)) | Caps what each CDP Spoke can borrow from its credit line. | Open. Each cap stays within its chain's flash liquidity and swap-route depth. | Funding ARFC |
+| First-loss reserve and coverage ratio ([DEF-019](../spec/03-operations/09-deficit-coverage.md)) | Sets how much of each debt asset Avana Labs funds into that asset's Avana Umbrella (Coverage Spoke) per unit of draw caps: `fundedBalance × 10⁴ ≥ coverageRatioBps × Σ drawCap`. | Open. 20% is an illustrative guide only. | Funding ARFC |
+| Debt assets ([REQ-HUB-002](../spec/02-contracts/01-avana-hub-and-spokes.md), [Q-408](../spec/04-security/04-design-decisions.md)) | Which assets are listed on the Lend Spoke and borrowable on the CDP Spokes. | Stable debt assets the Aave DAO approves, for example GHO, USDC, USDT, each with its own line, draw cap, price source, swap routes and Avana Umbrella. No launch set is fixed. | Funding ARFC and listing AIP |
+| Credit line per chain, Hub and debt asset ([SPEC-HUB-003](../spec/02-contracts/01-avana-hub-and-spokes.md)) | Caps what the CDP Spokes together can draw of each debt asset; it does not cap supply. | GHO on Ethereum: 2M GHO. Every other line: open, within the asset's flash liquidity in the chain's Aave V3 Pool and its swap-route depth. | Funding ARFC |
+| Interest-rate curve per lend asset ([SPEC-HUB-007](../spec/02-contracts/01-avana-hub-and-spokes.md)) | Aave V4's standard kinked utilization curve: the borrow rate rises with utilization, gently up to the optimal ratio and steeply past it, which draws new supply and pushes borrowers to repay. | Set by the DAO per asset; for GHO the base rate may stay at or above the Core Hub GHO base rate. Illustration only: 5.50% base, 3.60% up to 90% utilization, 50% above it. | Funding ARFC and AIPs |
+| Lend Spoke supply cap and bootstrap supply ([REQ-HUB-016](../spec/02-contracts/01-avana-hub-and-spokes.md)) | Caps what all lenders together can supply of each asset; the DAO's bootstrap supply goes in before any draw cap is raised. | Open; illustration only: $1M GHO and $1M USDT of DAO supply | Funding ARFC |
+| Draw caps ([SPEC-HUB-003](../spec/02-contracts/01-avana-hub-and-spokes.md), [REQ-HUB-045](../spec/02-contracts/01-avana-hub-and-spokes.md)) | Caps what each CDP Spoke can borrow from its credit line; borrowing also needs idle Hub liquidity supplied by lenders through the Lend Spoke, public and DAO. | Open. Each cap stays within its chain's flash liquidity and swap-route depth. | Funding ARFC |
 | Collateral factor ([SPEC-CF-001](../spec/02-contracts/07-risk-module.md)) | Sets how much of a position's value can back debt. | `min(token CFs) × pool risk factor`, rounded down | Listing ARFC and AIP |
 | Pool risk factor ([SPEC-HUB-001](../spec/02-contracts/01-avana-hub-and-spokes.md)) | Discounts each pool for its range, depth and liquidation cost. | At most 40%, set per pool | Listing ARFC and AIP |
 | Liquidation bonus ([1.5](../spec/01-architecture/05-parameters.md#liquidation-and-settlement), `minLiquidationBonus`, [Q-393](../spec/04-security/04-design-decisions.md)) | Pays the liquidator for gas, swap costs and Avana's fee. | At least 2% just below health factor 1 | Listing AIP |
@@ -58,7 +61,7 @@ Economic values are a proposed default; the final value is set in the listing or
 | Avana's combined share of a pool ([SPEC-CAP-005](../spec/02-contracts/07-risk-module.md)) | Above 25% across all borrowers and Spokes on the chain | Alert only; a per-pool cap applies only where its listing sets one, and above it new borrowing and pledges that increase pool exposure are blocked |
 | Collateral seized | Above 20% of a market in 1 hour | Alert only |
 | Swap-route failures | 3 in 1 hour | Alert. A guardian freezes new borrowing only when the approved routes are confirmed unable to settle valid liquidations at the required size |
-| Outstanding GHO deficit | 10,000 GHO for the affected CDP Spoke; other assets at a level set at listing | Freeze new borrowing on that debt reserve automatically; alert on every new deficit |
+| Outstanding deficit | 10,000 GHO for the affected CDP Spoke's GHO reserve; other assets at a level set at listing | Freeze new borrowing on that debt reserve automatically; alert on every new deficit |
 | Reopening | 30 minutes of healthy observations (provisional launch setting) | Clear a temporary price or depth gate. A deficit or security freeze reopens only through the timelock or a guardian ([2.15](../spec/02-contracts/15-governance-and-timelock.md)) |
 
 Repayment, debt-free exits and eligible liquidations stay open through every breaker. An Aave reserve pause can still block repayment or liquidation on its own ([Q-399](../spec/04-security/04-design-decisions.md)).
@@ -75,7 +78,7 @@ Each chain has its own Safes and timelock; the values are the same on Ethereum a
 | Governance Safe ([REQ-ACCESS-102](../spec/02-contracts/15-governance-and-timelock.md)) | 4-of-7, at most 3 Avana Labs signers | Proposes and cancels timelock operations |
 | Emergency Guardian ([REQ-ACCESS-104](../spec/02-contracts/15-governance-and-timelock.md)) | 3-of-5 | Immediate freeze, pause, breaker trips and standby switches; cancel |
 | Aave governance executor ([REQ-ACCESS-156](../spec/02-contracts/15-governance-and-timelock.md)) | Second proposer and DAO canceller | Proposes; the only canceller of role changes and restoring operations |
-| Aave Protocol Guardian ([REQ-ACCESS-104](../spec/02-contracts/15-governance-and-timelock.md)) | Same immediate powers as the Emergency Guardian | Can also freeze or pause Avana reserves on the Aave side |
+| Aave Protocol Guardian ([REQ-ACCESS-104](../spec/02-contracts/15-governance-and-timelock.md)) | Same immediate powers as the Emergency Guardian | Can also freeze or pause Avana's CDP Spoke reserves on the Aave side, and freeze Lend Spoke reserves (new supply stops, withdrawals stay open) |
 | Coverage withdrawal delay ([1.5](../spec/01-architecture/05-parameters.md#governance)) | 14 days, with DAO approval | Withdrawal of unused Avana Umbrella funds |
 
 The three signer sets do not overlap.

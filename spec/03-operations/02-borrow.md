@@ -1,12 +1,12 @@
 # 3.2 Borrow (FLOW-002)
 
-> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-12
 >
 > **Step prefix:** `BOR-NNN`
 
 The borrower draws an approved debt asset on the Aave V4 account that holds one market's collateral. Every wallet has one PositionProxy per (CDP Spoke, market), so each market is its own Aave account with its own health factor and nothing is cross-collateralized: a wallet that uses two markets has two proxies and borrows against each separately (`Q-223`, `Q-349`). The call goes wallet → AaveAdapter → the wallet's PositionProxy for that Spoke and market → CDP Spoke. The proxy is a logic-free immutable account that executes only the Adapter's calls; every check lives in the Adapter and the RiskModule.
 
-Any asset the CDP Spoke lists as a debt reserve can be borrowed: GHO is the first, and USDC, USDT or WETH are listed the same way. Each debt reserve records its funding Hub and asset; the draw is bounded by the Aave `drawCap` of that (Hub, asset, Spoke), which is the credit line. At launch every debt reserve is funded by the Spoke's home Hub. Cross-Hub credit lines are fully specified below but off at launch (`Q-358`).
+Any asset the CDP Spoke lists as a debt reserve can be borrowed: the Aave DAO decides which, and on a Stable LP Hub they are stable debt assets it approves (for example GHO, USDC, USDT), each listed the same way. Each asset's borrow rate follows its kinked utilization curve ([2.1](../02-contracts/01-avana-hub-and-spokes.md) `SPEC-HUB-007`). Each debt reserve records its funding Hub and asset; the draw is bounded by the Aave `drawCap` of that (Hub, asset, Spoke), which is the credit line. At launch every debt reserve is funded by the Spoke's home Hub. Cross-Hub credit lines are fully specified below but off at launch (`Q-358`).
 
 The Adapter applies the call bounds (deadline, nonce, receiver, debt-reserve approval, pause state of the home and funding Hubs, the chain's sequencer gate, address freeze). The RiskModule applies every risk gate over the account's market and every debt reserve of the account, including the circuit breakers and the drift check of the standard-Spoke settings, then the health factor after the Spoke call with rescue units valued at zero (`Q-229`, `Q-234`, `Q-241`, `Q-242`, `Q-253`, `Q-352`, `Q-357`). Avana enforces no opening health floor above Aave's 1.00: the Lens recommends a borrow at HF 1.10 next to the protocol maximum at HF 1.00, and a market may carry an optional hard floor, off by default (`Q-398`).
 

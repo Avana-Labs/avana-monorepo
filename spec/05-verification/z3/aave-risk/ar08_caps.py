@@ -5,7 +5,8 @@
 Spec: SPEC-CAP-001 (stress-floor booking, minimum pledge value), SPEC-CAP-002 (cap tests and
 counter booking), SPEC-CAP-003 (top-up slice restore amount), SPEC-CAP-004 (exit release),
 SPEC-CAP-005 (pool-share cap), SPEC-CAP-006 / SPEC-HUB-002 (Hub addCap sizing), SPEC-HUB-003
-(credit-line caps), SPEC-CAP-008 (tail coverage ratio).
+(credit-line caps, and with public lending (Q-407) the idle-liquidity bound on draws and withdrawals),
+SPEC-CAP-008 (tail coverage ratio).
 Units: USD with 8 decimals; L, u in vault-token base units; d the vault-token decimals.
 """
 import math
@@ -214,6 +215,27 @@ computed('MATH-AR-51b', 'SPEC-HUB-003 example (creditLineGho 2,000,000)',
          [('owed + 100,000 GHO borrow', 2_003_475, 1_900_000 + 3_000 + 475 + 100_000),
           ('reverts DrawCapExceeded', True, 1_900_000 + 3_000 + 475 + 100_000 > 2_000_000),
           ('largest borrow that passes', 96_525, 2_000_000 - (1_900_000 + 3_000 + 475))])
+
+# MATH-AR-51c..e  SPEC-HUB-003 with public lending (Q-407): supply and borrow are bounded separately.
+# sup = Lend Spoke supply (DAO bootstrap + public lenders) plus Coverage Spoke supply, drw = drawn, liq = idle.
+sup, drw, liq, a51, w51 = Ints('supplied drawn liquidity amount withdrawal')
+hub = [sup >= 0, drw >= 0, liq >= 0, liq + drw == sup]
+# MATH-AR-51 verifies: SPEC-HUB-003, REQ-HUB-017, REQ-HUB-019, REQ-ARCH-211
+prove('MATH-AR-51c', 'a draw admitted only when amount <= idle liquidity keeps drawn <= supplied, whatever the supply cap or the line',
+      hub + [a51 > 0, a51 <= liq], drw + a51 <= sup)
+prove('MATH-AR-51d', 'a withdrawal admitted only when amount <= idle liquidity keeps drawn <= supplied after it',
+      hub + [w51 > 0, w51 <= liq], drw <= sup - w51)
+# A lender's loss bound: deficit <= line (draws stay in the line), coverage F x 1e4 >= ratio x line (DEF-019),
+# uncovered = max(0, deficit - F); each supplier's loss is uncovered x its shares / all shares (DEF-014).
+dfc, Fc, ratio, uncov, shi, sh = Ints('deficit funded ratioBps uncovered lenderShares allShares')
+b51e = [cl > 0, Or(dec == 10**6, dec == 10**18), dfc >= 0, dfc <= cl * dec, Fc >= 0, ratio >= 0, ratio <= BPS,
+        Fc * BPS >= ratio * cl * dec, uncov == If(dfc > Fc, dfc - Fc, 0), sh > 0, shi >= 0, shi <= sh]
+prove('MATH-AR-51e', 'a lender (DAO or public) loses at most its share of line x (1 - coverageRatioBps / 1e4), whatever it supplied',
+      b51e, uncov * shi * BPS <= cl * dec * (BPS - ratio) * sh)
+computed('MATH-AR-51f', 'REQ-ARCH-211 / TEST-297 example: idle liquidity a lender can withdraw now',
+         [('supplied: 1,000,000 DAO + 500,000 public + 300,000 Coverage Spoke', 1_800_000, 1_000_000 + 500_000 + 300_000),
+          ('idle = supplied - drawn 1,600,000', 200_000, 1_800_000 - 1_600_000),
+          ('the public lender withdraws at most min(500,000, idle)', 200_000, min(500_000, 1_800_000 - 1_600_000))])
 
 # ---------------------------------------------------------------------------
 # MATH-AR-52  SPEC-CAP-008 tail coverage ratio never overstates coverage.

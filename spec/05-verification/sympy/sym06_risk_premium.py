@@ -5,7 +5,7 @@
 Spec: SPEC-HUB-004 (riskPremium_i = ceil(sum w x collateralRisk / sum w) <= max collateralRisk;
 threshold = highest collateralRisk + 1), SPEC-HUB-007 (premium accrues at drawnRate x riskPremium
 on drawn debt and does not compound on itself; the effective rate at refresh is
-baseRate x (1 + riskPremium)).
+drawnRate x (1 + riskPremium), with drawnRate the kinked curve's rate at the utilization of the last Hub action).
 
 Aave V4 @ a3ef63e:
   Spoke._processUserAccountData: collaterals with CF > 0 sorted by collateralRisk ASC (value DESC);

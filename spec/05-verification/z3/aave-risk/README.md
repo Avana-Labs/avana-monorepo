@@ -22,7 +22,8 @@ Run: `../../run_all.sh`, or `../../.venv/bin/python <file>.py` from this folder.
 | `SPEC-PROXY-008` | `G = totalCredited + pending − totalSupply`; pass ⇔ `T' ≤ C' + P' ∧ G' = G` | none | ar10 |
 | `SPEC-PROXY-009` | `HF' = (A − a)/(D − y) ≥ max(HF, minHealthFactor)`; `HF' ≥ HF ⇔ yA ≥ aD`; `y ≤ (V(1 − s) − U)/(1 + f)` | floored HF compared | ar10 |
 | `SPEC-HUB-002`, `SPEC-CAP-006` | `addCap ≥ ⌈(max(marketUsdCap, regularUsed) + max(topUpSliceUsd, sliceUsed)) / stressFloorUsd⌉` | up | ar08 |
-| `SPEC-HUB-003` | `drawCap × 10^dec ≥ drawn + premium + ⌈deficitRay/RAY⌉ + amount`; `Σ_s drawCap_s ≤ creditLine` | Hub debt up | ar08 |
+| `SPEC-HUB-003` | `drawCap × 10^dec ≥ drawn + premium + ⌈deficitRay/RAY⌉ + amount`; `Σ_s drawCap_s ≤ creditLine`; `amount ≤ liquidity` for a draw and for a lender's withdrawal; the Lend Spoke `addCap` is a separate supply cap (`Q-407`) | Hub debt up | ar08 |
+| `SPEC-HUB-007` | Aave V4 kinked curve: `u = ⌈drawn × RAY / (liquidity + drawn)⌉`; `rate = base + ⌈⌈before × u / RAY⌉ × RAY / U*⌉` for `u ≤ U*`, else `base + before + ⌈⌈after × (u − U*) / RAY⌉ × RAY / (RAY − U*)⌉`, values in bps × 1e23 (`Q-408`) | up | ar14 |
 | `SPEC-HUB-004` | `threshold ≥ max collateralRisk + 1`; `Σ_i percentMulUp(d_i, r_i) ≤ percentMulUp(Σ d_i, T)` | premium shares up | ar05 |
 | `SPEC-CAP-001` | `usdCharge = ⌈L × max(price8, floor) / 10^d⌉`; `pledgeUsd = ⌊L × price8 / 10^d⌋ ≥ minPledgeUsd` | charge up, value down | ar08 |
 | `SPEC-CAP-002` | `room = max(K − R, 0)`; new pledge `c ≤ room`; top-up `slice = max(c − room, 0)`, `S + slice ≤ Z`; token and depositor tests on `c − slice` | none | ar08 |
@@ -160,6 +161,9 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 | MATH-AR-50c | with `addCap ≥ ⌈(max(K, R) + max(Z, S)) / floor⌉`, every pledge or top-up within the Avana budget fits under `addCap` | SPEC-CAP-006, SPEC-HUB-002 | counters may exceed tightened caps | PROVED (F-AR-5 resolved) |
 | MATH-AR-50d | 5,500,000; 4,230,770; 1,100,000; after a tightening 1,000,000, 910,000 > 600,000; `(2^40 − 1) × 10^18 < 2^120` | SPEC-HUB-002, SPEC-CAP-006 | — | COMPUTED |
 | MATH-AR-51a–b | draws stay within the credit line; 2,003,475 reverts; largest borrow 96,525 | SPEC-HUB-003 | two Spokes | PROVED / COMPUTED |
+| MATH-AR-51c–d | with public lending, a draw or a lender's withdrawal admitted only within idle liquidity keeps drawn ≤ supplied, whatever the supply cap or the line | SPEC-HUB-003, REQ-HUB-017, REQ-HUB-019 | supplied = idle + drawn (DAO, public and Coverage Spoke supply) | PROVED |
+| MATH-AR-51e | a lender, DAO or public, loses at most its share of `line × (1 − coverageRatioBps / 10⁴)`, whatever it supplied | SPEC-HUB-003, DEF-014, DEF-019, REQ-ARCH-211 | deficit ≤ line (draws within the line); loss pro rata to shares | PROVED |
+| MATH-AR-51f | supplied 1,800,000; idle 200,000 after 1,600,000 drawn; the public lender withdraws at most 200,000 now | REQ-ARCH-211, TEST-297 | — | COMPUTED |
 | MATH-AR-52a–b | the ratio never overstates; tail 56,160,000,000,000; 7,122 bps with 400,000 GHO funded | SPEC-CAP-008 | — | PROVED / COMPUTED |
 
 ### `ar09_breakers.py`
@@ -208,6 +212,21 @@ The wind-down ramp `LT(e) = LT0 − ⌊(LT0 − LTf) × min(e, R) / R⌋` for `L
 | MATH-AR-70e | a start at or below `LTf` never moves, and every result fits `uint16` | REQ-CONFIG-080 | integers | PROVED |
 | MATH-AR-70f | `REQ-CONFIG-080` worked example and the unit-test vectors | REQ-CONFIG-080 | exact integers | COMPUTED |
 
+### `ar14_rate_curve.py`
+
+The borrow rate of every lend asset (`SPEC-HUB-007`, `Q-408`), ported from `AssetInterestRateStrategy.calculateInterestRate`. `MATH-AR-74b`–`d` are proved in exact integers over every utilization for four curves: the `SPEC-HUB-007` example and three at the edges of V4's bounds. `MATH-AR-74h`–`l` are the lemmas that carry them to every curve: each growth term is `⌈⌈G·x / RAY⌉ · RAY / K⌉` with `0 ≤ x ≤ K` and `G·K` a multiple of RAY, so it is monotone in `x` (h, i), at most `G` (j, k) and exactly `G` at `x = K` (l).
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| MATH-AR-74a | every curve: the rate is never below `baseDrawnRate`, so a GHO floor set as the base holds at any utilization | SPEC-HUB-007, REQ-HUB-008 | V4 bounds: `U*` 1–99 %, `base + before + after ≤ 100,000` bps; `u ∈ [0, RAY]` | PROVED |
+| MATH-AR-74b1–b4 | base ≤ rate ≤ base + before + after | SPEC-HUB-007, REQ-HUB-008 | four curves, every `u ∈ [0, RAY]` | PROVED |
+| MATH-AR-74c1–c4 | higher utilization never lowers the rate, across the kink | SPEC-HUB-007, REQ-HUB-008 | as above | PROVED |
+| MATH-AR-74d1–d4 | at the kink the rate is exactly base + before | SPEC-HUB-007, REQ-HUB-008 | as above | PROVED |
+| MATH-AR-74e–g | a borrow or a withdrawal never lowers utilization; utilization stays in `[0, RAY]` | SPEC-HUB-007 | amounts `< 2^128`, nothing swept | PROVED |
+| MATH-AR-74h–l | lemmas: product monotone, ceiling monotone, ceiling below a RAY multiple, ceiling bound, exact ceiling | SPEC-HUB-007 | symbolic | PROVED |
+| MATH-AR-75a | example curve 550 / 360 / 5,000 bps at 90 %: 5.50 % at U 0, 7.50 % at 0.5, 9.10 % at 0.9, 34.10 % at 0.95, 59.10 % at 1 | SPEC-HUB-007, REQ-HUB-009 | V4 port | COMPUTED |
+| MATH-AR-75b | at U 0.5: 7,500 GHO drawn interest and 1,125 GHO premium on 100,000 GHO; 77,625 GHO of borrow interest on 900,000 GHO, 69,862.5 GHO to suppliers; at U 0.95: 39,215 GHO a year on 100,000 GHO | SPEC-HUB-007, REQ-HUB-009 | rp 15 %, `liquidityFee` 10 % | COMPUTED |
+
 ## Findings
 
 Five findings, all resolved in the spec. Each script now encodes the corrected text as its claim and passes; the text each finding replaced is quoted below.
@@ -230,8 +249,10 @@ The other counterexamples are deliberate: wrong-reading checks (MATH-AR-17a, 22,
 | 2026-11-10 (no minimum debt, `Q-381`: `MATH-CH-01` and `MATH-CAP-09` rewritten from the keeper break-even to the `SPEC-CHAIN-001` gas units model, and `MATH-CAP-09` adds the `SPEC-CAP-009` idle test; scripts renamed `ch01_gas_model.py` and `ar11_record_gas_credit_lines.py`) | `../../.venv/bin/python ch01_gas_model.py`, `ar11_record_gas_credit_lines.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ch01 2, ar11 10 | 0 | ch01 7 figures, ar11 4 | 0 | 0 | 0 for both |
 | 2026-11-10 (parameter decisions `Q-396`, `Q-398`, `Q-399`, `Q-400`: `ar02` gate at HF 1.00 with an optional hard floor and the Lens recommended borrow at HF 1.10; `ar09` price drop, seizure surge and route failures as alerts, pool share 10%, deficit 10,000 GHO, 30-minute reopening; `ar10` keeperFloor 1; `ar11` `MATH-CAP-09e–h` rewritten from the removed idle test to the Lens capacity) | same | Python 3.9.6, z3-solver 4.13.0 | 120 s per query; integer bounds per table | 139 | 12 (all deliberate) | 52 | 0 | 0 | 0 for every script |
 | 2026-11-11 (combined USDT issuer probe `UsdtFeeRateAndPaused`: `MATH-AR-55` rewritten over four kinds with one outcome per read; `MATH-AR-55d–f` added) | `../../.venv/bin/python ar09_breakers.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar09 14 | 2 (both deliberate) | ar09 7 | 0 | 0 | 0 |
+| 2026-11-12 (public lending, `Q-407`: `MATH-AR-51c–f` added for the idle-liquidity bound, the lender loss bound and the Lend page example) | `../../.venv/bin/python ar08_caps.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar08 27 | 0 | ar08 9 | 0 | 0 | 0 |
+| 2026-11-12 (kinked rate curve, `Q-408`: `ar14_rate_curve.py` added, `MATH-AR-74`, `MATH-AR-75`) | `../../.venv/bin/python ar14_rate_curve.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar14 21 | 0 | ar14 2 | 0 | 0 | 0 |
 
-Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 24/0/8/0 (includes MATH-AR-47f); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the wind-down ramp); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
+Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 24/0/8/0 (includes MATH-AR-47f); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the wind-down ramp); ar14 21/0/2/0 (`MATH-AR-74`, `MATH-AR-75`, the rate curve); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
 
 ## Assumptions common to all models
 

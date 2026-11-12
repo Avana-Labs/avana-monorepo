@@ -134,17 +134,18 @@ class System(SwapMixin):
             sp.manager = SWAP
             sp.max_user_reserves = self.p.max_user_reserves
             self.spokes[name] = sp
-        # --- debt assets on the Hub: Lend Spoke credit line, Coverage Spoke, Borrow Spoke draws (Q-233, Q-236)
-        for asset, dec, rate in ((GHO, 18, self.p.gho_rate_ray), (USDC_DEBT, 6, self.p.usdc_rate_ray)):
-            a = Asset(asset, dec, drawn_rate_ray=rate)
+        # --- debt assets on the Hub: Lend Spoke supply (DAO bootstrap, public lenders later) under its supply cap,
+        #     Coverage Spoke, Borrow Spoke draws within the credit line (Q-233, Q-236, Q-407)
+        for asset, dec, curve in ((GHO, 18, self.p.gho_curve), (USDC_DEBT, 6, self.p.usdc_curve)):
+            a = Asset(asset, dec, ir=curve)
             a.last_update = start
-            a.spokes = {LEND_SPOKE: SpokeData(), COV[asset]: SpokeData()}
+            a.spokes = {LEND_SPOKE: SpokeData(add_cap=self.p.lend_supply_cap[asset]), COV[asset]: SpokeData()}
             for name in spokes:
                 if (GHO_RID if asset == GHO else USDC_RID) in self.approved[name]:
                     a.spokes[name] = SpokeData(add_cap=0, draw_cap=self.p.credit_line[asset] // 10 ** dec)
             self.hub.assets[asset] = a
-            self.ledger.mint(asset, HUB, self.p.credit_line[asset], f"{asset} credit line (Lend Spoke supply)")
-            self.hub.add(asset, LEND_SPOKE, self.p.credit_line[asset])
+            self.ledger.mint(asset, HUB, self.p.bootstrap_supply[asset], f"{asset} DAO bootstrap supply (Lend Spoke)")
+            self.hub.add(asset, LEND_SPOKE, self.p.bootstrap_supply[asset])
             self.ledger.mint(asset, HUB, self.p.first_loss[asset], f"{asset} Coverage Spoke funding")
             self.hub.add(asset, COV[asset], self.p.first_loss[asset])
         for name, sp in self.spokes.items():
