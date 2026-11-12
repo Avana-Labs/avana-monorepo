@@ -622,6 +622,7 @@ Decisions with no test, and why:
 | `Q-096`, `Q-100`, `Q-143`, `Q-168` | Aave DAO configuration (debt-asset rates, the GHO debt price source, Lend Spoke supply); checked by the live-configuration check `TEST-135`, not by Avana code. |
 | `Q-102` | Monitoring alert and manual application freeze; the freeze itself is tested by `TEST-192` and `TEST-129`. |
 | `Q-244` | Off-chain monitoring and alerting; the Lens views the alerts read are tested by `TEST-247` and `TEST-228`, and the playbooks are rehearsed by `TEST-129`. |
+| `Q-409` | Frontend fee charged by the app outside the contracts; `TEST-206` shows no contract carries a fee index or fee recipient for it, and the rate, the 25 bps ceiling, the LP-value basis and the rounding are checked by the unit tests of the services' fee rules. |
 | `Q-276`, `Q-277` | Decisions to keep an existing rule (one account per wallet per market since `Q-359`; `minPledgeUsd` at $10); the rules themselves are tested by `TEST-190` and `TEST-196`, and the dust-account cost by `TEST-081`. |
 | `Q-110` | CF cuts by AIP on existing dynamic keys; the matching Aave reserve freeze and `Offboarding` status are tested by `TEST-213` and `TEST-126`. |
 

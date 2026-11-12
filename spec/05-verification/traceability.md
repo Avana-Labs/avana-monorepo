@@ -8,7 +8,7 @@ Requirements: `REQ-*`, `INV-*`, `SPEC-*` (formulas), `ATTACK-*`, flow steps (`DE
 
 Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` rule names the row and the prover has not passed it; marked †), **Verified** (spec-stage checks plus a Foundry test or a prover-passed property), **Changed — re-verify**.
 
-**3507 requirements · 1459 with checks · 0 errors · 3231 warnings**
+**3508 requirements · 1459 with checks · 0 errors · 3231 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1338,6 +1338,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `Q-406` | Decisions of 2026-11-11 | (1) Market-count limit: `MAX_MARKET_COUNT` is a MarketRegistry i… | — | — | — | — | — | Unverified |
 | `Q-407` | Public lending from launch | Decision of 2026-11-12. (1) Structure: on each chain one Avan… | — | — | `HYP-97` | — | — | Modelled |
 | `Q-408` | Lend rates, deficit freeze, Lend Spoke freeze and debt assets | Decision of 2026-11-12, fo… | `SYM-193` | — | `HYP-98` | — | — | Modelled |
+| `Q-409` | Frontend fee | Decision of 2026-11-12. (1) Rate and actions: the Avana app charges 10 bps … | — | — | — | — | — | Unverified |
 | `REP-001` | `Y` calls `AD.repay(W, m, r, maxRepaySpend, repayAll, deadline)` | AaveAdapter (`Y`) | The… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-002` | Take the caller as the payer | `AD` | No caller check: any `msg.sender` is accepted and be… | — | — | — | — | `IAaveAdapterUser` | Unverified |
 | `REP-003` | Check the deadline | `AD` | `block.timestamp ≤ deadline`, in seconds. (Source: Q-075) | — | — | — | — | `IAaveAdapterUser` | Unverified |

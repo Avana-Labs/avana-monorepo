@@ -14,6 +14,7 @@ Created: 2026-11-04 · Updated: 2026-11-12
 | Borrowing | Stable debt assets the Aave DAO approves (for example GHO, USDC, USDT), each with its own line, draw cap, price source, swap routes and Avana Umbrella. For GHO, a proposed 2M GHO line on Ethereum to start; every other line is set in the funding ARFC. |
 | Collateral factor | Lowest Core Hub collateral factor among the pool's tokens × a pool risk factor of at most 40%. |
 | Liquidation | Aave's standard `liquidationCall`, always partial. Only the seized share of the position is unwound and sold, in one transaction, and the debt is repaid in the debt asset. |
+| Avana's revenue | No share of interest. The Avana app charges 10 bps on every app action (ceiling 25 bps without a new ARFC), and Avana's contracts take 20% of each liquidation's surplus. Both go to one timelocked fee recipient; neither changes an interest rate or the Aave DAO's revenue. |
 | Loss coverage | One Avana-funded, DAO-controlled first-loss reserve (Avana Umbrella) per Hub and debt asset. |
 | Governance | The Aave DAO owns and configures every Avana Hub and Spoke. Changes to Avana's own contracts go through a per-chain timelock (5 days, 12 hours for risk-reducing changes) that the Aave governance executor can propose to and cancel. |
 | Status | Specification, contract interfaces and formal models complete; interfaces compile. Contract implementations and independent audits come next. |
@@ -95,7 +96,12 @@ Borrowing is bounded by the CDP Spokes' draw caps, which the DAO sets, and by th
 
 Interest goes to the Hub's suppliers in proportion to their supply, the DAO and public lenders alike, after the DAO's liquidity fee, which goes to the Aave DAO treasury. Every lend asset uses Aave V4's standard kinked utilization curve, whose values the Aave DAO sets, with each borrower's risk premium added. High utilization raises the borrow rate, which draws new supply and pushes borrowers to repay. For GHO the DAO may keep the curve's base rate at or above the Core Hub's GHO base rate, so Avana is never the cheaper way to borrow GHO. As an illustration only, a GHO curve with a 5.50% base, 3.60% of growth up to 90% utilization and 50% above it charges 7.50% at 50% utilization and 34.10% at 95%.
 
-Avana takes no share of interest. Avana's revenue is its app (frontend) fee, charged outside the contracts, plus 20% of each liquidation's surplus, measured at oracle prices and capped by the surplus actually realized.
+Avana takes no share of interest, and its fees change no interest rate and no Aave DAO revenue. Avana has two sources of revenue, both paid to one address, the `feeRecipient` set in Avana's contracts, which changes only through the timelock:
+
+- **App (frontend) fee.** The Avana app charges 10 bps on every action it builds: supply, withdraw, pledge, withdraw collateral, borrow, repay, repay with collateral, deleverage, and swap if the app offers it. The basis is the action's amount; for pledging or withdrawing an LP position it is the position's oracle USD value, and the fee is paid in the market's debt stablecoin. The fee is rounded down, so a user never pays above 10 bps. The app adds the fee transfer to the same transaction batch as the action, so both succeed or fail together; if the transfer would fail (for example a token that blocks the recipient), the app leaves it out and the action goes through. No contract charges or enforces the fee: a user who calls the contracts directly pays none, and keeper liquidations pay none. For example, borrowing 50,000 GHO costs 50 GHO, and pledging a position worth $200,000 in a GHO market costs 200 GHO.
+- **Liquidation fee share.** 20% of each liquidation's surplus, measured at oracle prices and capped by the surplus actually realized.
+
+Avana commits to a ceiling of 25 bps on the app fee: the app never charges more without a new ARFC. Frontend fees arrive as transfers from user accounts, and liquidation fees arrive from Avana's liquidation contracts with their own events, so the two are reported separately; Avana Labs reports frontend-fee revenue every quarter.
 
 ### Capacity
 
@@ -234,7 +240,7 @@ The reserve must satisfy `fundedBalance × 10⁴ ≥ coverageRatioBps × credit 
 
 ### Reporting and offboarding
 
-Avana Labs publishes weekly usage and monthly revenue reports per chain: debt and collateral by market, concentration, health factors, liquidations, first-loss reserve usage, bad debt, oracle incidents, pauses, breaker trips and alerts, credit-line and supply usage, and fees earned.
+Avana Labs publishes weekly usage and monthly revenue reports per chain: debt and collateral by market, concentration, health factors, liquidations, first-loss reserve usage, bad debt, oracle incidents, pauses, breaker trips and alerts, credit-line and supply usage, and fees earned. Each quarter it also reports frontend-fee revenue per chain, separately from the liquidation fee share.
 
 To offboard a market, a 12-hour timelock operation and an Aave reserve freeze stop new pledges and borrowing at once. After five days' public notice, the market's liquidation threshold falls once a day over 30 days to half its listed value, so remaining borrowers can repay in time. Debt is never cancelled and there is no force-close; repayment, withdrawal and liquidation stay open.
 
