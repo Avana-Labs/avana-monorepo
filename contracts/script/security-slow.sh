@@ -4,8 +4,15 @@
 # Slow security tier: on every push to main (.github/workflows/security-slow.yml), by hand (workflow_dispatch) and
 # before a release; the layer gate runs its mutate, gambit and necessist steps.
 #
-#   build    forge build --force --build-info of src/, test/ and script/ into out-security/build/all, warnings denied;
-#            Echidna, Medusa, hevm and Mythril read this build, so out/ and cache/ are never cleaned or overwritten
+#   build    first a strict pass: `forge build -D warnings` per group, so any warning in any file fails the step.
+#            The groups are src/, then each folder of test/ (a folder of more than BUILD_CHUNK=60 files is split
+#            into alphabetical chunks of that many files) and script/ when it holds Solidity. One compile of all of
+#            them would stop at solc's limit of 256 warnings (warning 4591, fatal under -D warnings), since the test
+#            contracts print about two contract-size warnings (5574, 3860) per file, which Foundry then ignores; each
+#            group stays at about half that limit, and a group that still reaches it fails with its name. Then
+#            forge build --force --build-info of src/, test/ and script/ into out-security/build/all, without
+#            -D warnings since the strict pass found none; Echidna, Medusa, hevm and Mythril read this build, so
+#            out/ and cache/ are never cleaned or overwritten. Strict-pass logs go to out-security/build-strict/
 #   echidna  every `*Properties` harness in test/invariant/echidna/, in property mode and in assertion mode; corpora
 #            in out-security/corpus/ persist between runs
 #   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
@@ -34,7 +41,8 @@
 # Budgets (environment, with defaults): ECHIDNA_TEST_LIMIT (echidna.yaml), ECHIDNA_TIMEOUT=900 and MEDUSA_TIMEOUT=900
 # seconds per harness and mode, ECHIDNA_HARNESSES (space-separated harness names; empty: all), MEDUSA_TEST_LIMIT
 # (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query,
-# HALMOS_LOOP=8; MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
+# HALMOS_LOOP=8; BUILD_CHUNK=60 files per strict build group;
+# MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
 # security/mutation-layers.json), MUTATE_TIMEOUT=300 seconds per mutant test run, MUTATE_FUZZ_RUNS=256,
 # MUTATE_MUTATORS (comma-separated slither-mutate mutators; empty: all), NECESSIST_TIMEOUT=300 seconds per removal.
 # GAMBIT_TIMEOUT=300 seconds per Gambit mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS).
@@ -78,16 +86,75 @@ require() {
   done
 }
 
+# slow_env <command...>: runs the command with the settings of the slow-tier build.
+# Without dynamic test linking: its foundry-pp/DeployHelper sources are not resolvable by crytic-compile.
+# With the CBOR metadata and its IPFS hash, which the release build drops (bytecode_hash = "none"): Echidna tells
+# deployed contracts apart by the metadata hash in their runtime code, and without it a harness that deploys
+# contracts in its constructor and keeps them in immutables crashes every worker with `Set.elemAt: index out of
+# range` before the first call (crytic/echidna#1118). This build is read only by the slow-tier tools; the release
+# bytecode check compares out/, which keeps foundry.toml's settings.
+slow_env() { FOUNDRY_DYNAMIC_TEST_LINKING=false FOUNDRY_CBOR_METADATA=true FOUNDRY_BYTECODE_HASH=ipfs "$@"; }
+
+BUILD_CHUNK=${BUILD_CHUNK:-60}
+
+# build_groups: one line per strict build group, "<name><TAB><space-separated paths>". Every Solidity file of src/,
+# test/ and script/ is in exactly one group; file names hold no spaces.
+build_groups() {
+  local d files
+  printf 'src\tsrc\n'
+  for d in test/*/ test script; do
+    d=${d%/}
+    if [ "$d" = test ]; then
+      files=$(find test -maxdepth 1 -name '*.sol' | LC_ALL=C sort)
+    else
+      files=$(find "$d" -name '*.sol' | LC_ALL=C sort)
+    fi
+    [ -n "$files" ] || continue
+    awk -v dir="$d" -v n="$BUILD_CHUNK" '
+      { f[NR] = $0 }
+      END {
+        k = int((NR + n - 1) / n)
+        for (i = 0; i < k; i++) {
+          name = (k == 1) ? dir : sprintf("%s %d/%d", dir, i + 1, k)
+          line = ""
+          for (j = i * n + 1; j <= NR && j <= (i + 1) * n; j++) line = line (line == "" ? "" : " ") f[j]
+          printf "%s\t%s\n", name, line
+        }
+      }' <<<"$files"
+  done
+}
+
+# build_strict: `forge build -D warnings` of each group into a throwaway output, with the slow-tier settings.
+build_strict() {
+  local dir="$OUT/build-strict" status=0 name paths log slug
+  rm -rf "$dir" && mkdir -p "$dir"
+  while IFS=$'\t' read -r name paths; do
+    slug=$(tr ' /' '__' <<<"$name")
+    log="$dir/$slug.txt"
+    echo "=== strict build: $name"
+    # shellcheck disable=SC2086
+    if ! slow_env forge build --force -D warnings $paths --out "$dir/$slug-out" --cache-path "$dir/$slug-cache" \
+      >"$log" 2>&1; then
+      status=1
+      cat "$log"
+      echo "build: $name has a warning or error (see $log)"
+    fi
+    if grep -qE '\(4591\)|more than 256 warnings' "$log"; then
+      status=1
+      echo "build: $name reached solc's limit of 256 warnings, so later warnings went unreported; lower BUILD_CHUNK"
+    fi
+    rm -rf "$dir/$slug-out" "$dir/$slug-cache"
+  done < <(build_groups)
+  return $status
+}
+
 step_build() {
   rm -rf "$BUILD" "$BUILD-cache"
-  # Without dynamic test linking: its foundry-pp/DeployHelper sources are not resolvable by crytic-compile.
-  # With the CBOR metadata and its IPFS hash, which the release build drops (bytecode_hash = "none"): Echidna tells
-  # deployed contracts apart by the metadata hash in their runtime code, and without it a harness that deploys
-  # contracts in its constructor and keeps them in immutables crashes every worker with `Set.elemAt: index out of
-  # range` before the first call (crytic/echidna#1118). This build is read only by the slow-tier tools; the release
-  # bytecode check compares out/, which keeps foundry.toml's settings.
-  FOUNDRY_DYNAMIC_TEST_LINKING=false FOUNDRY_CBOR_METADATA=true FOUNDRY_BYTECODE_HASH=ipfs \
-    forge build --force --build-info -D warnings --out "$BUILD" --cache-path "$BUILD-cache" 2>&1 | tee "$OUT/build-all.txt"
+  build_strict 2>&1 | tee "$OUT/build-all.txt"
+  [ "${PIPESTATUS[0]}" -eq 0 ] || return 1
+  echo "=== build with build info: src/, test/ and script/" | tee -a "$OUT/build-all.txt"
+  slow_env forge build --force --build-info --out "$BUILD" --cache-path "$BUILD-cache" 2>&1 | tee -a "$OUT/build-all.txt"
+  return "${PIPESTATUS[0]}"
 }
 
 ensure_build() { [ -d "$BUILD/build-info" ] || step_build >/dev/null; }

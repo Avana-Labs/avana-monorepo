@@ -41,6 +41,8 @@ Limits: bounded and random checks do not establish correctness beyond their mode
 ```bash
 ./run_all.sh              # quick path
 ./run_all.sh --nightly    # quick path plus the topology simulator runs
+./run_all.sh --list       # the parts: each z3/ folder, sympy, simulation, hypothesis, quint, trace
+./run_all.sh z3/settlement   # one part (with --nightly, the quint part adds the topology runs)
 ```
 
 `run_all.sh`, run from this folder or by path:
@@ -52,7 +54,7 @@ Limits: bounded and random checks do not establish correctness beyond their mode
 5. with `--nightly`, runs the topology simulator checks in `quint/topology_run.sh` (1,000 traces × 25 steps per check);
 6. runs `trace.py`, then prints the exit status of every step.
 
-It exits non-zero if any step fails. In CI, the `spec` workflow runs the quick path; the `models` workflow (`.github/workflows/models.yml`) runs `quint/topology_run.sh`, the part `--nightly` adds, on every push to `main`, and on every pull request and push to `main` it runs the formal-verification areas of `audit/formal-verification/`, the user simulation of `audit/user-simulation/` and `contract_checklist.py --check` for every contract with a checklist in `audit/traceability/results/contract-checklists/`. Single tools:
+It exits non-zero if any step fails. Given a part, it runs only that part's steps; the parts together are the quick path. In CI, the `spec` workflow runs the quick path one part per job in parallel: `trace` (with the licence-header check and a check that the committed `traceability.md` is current) on every pull request and push to `main` that touches `spec/`, `contracts/src/`, `contracts/test/` or `contracts/certora/`, and the model parts (each `z3/` folder, `sympy`, `simulation`, `hypothesis`, `quint`, each bounded at 4 hours) only on those pushes to `main` and on manual runs, never on a pull request; `spec-gate` passes on a pull request when `trace` passed, and on `main` only when every part passed; the `models` workflow (`.github/workflows/models.yml`) runs `quint/topology_run.sh`, the part `--nightly` adds, on every push to `main`, and on every pull request and push to `main` it runs the formal-verification areas of `audit/formal-verification/`, the user simulation of `audit/user-simulation/` and `contract_checklist.py --check` for every contract with a checklist in `audit/traceability/results/contract-checklists/`. Single tools:
 
 ```bash
 .venv/bin/python z3/aave-risk/ar01_health_factor.py         # one Z3 model
