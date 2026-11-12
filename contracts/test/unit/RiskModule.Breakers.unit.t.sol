@@ -50,7 +50,7 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         assertEq(riskModule.liveBreakerReasons(mid), BreakerReasons.ISSUER);
     }
 
-    // TEST-228 verifies: SPEC-BRK-002, SPEC-BRK-007, REQ-RISK-091
+    // TEST-228 verifies: SPEC-BRK-002, SPEC-BRK-007, REQ-RISK-091, REQ-ACCESS-158, REQ-ACCESS-167, REQ-ACCESS-136, REQ-ACCESS-087
     // Sources: 2.7 SPEC-BRK-007 example (breached through t = 1,600 after start, reopens 1,800 s later)
     function test_TEST_228_poolShareGateRecovers() public {
         store.setPoolShare(poolKey, 1000);
@@ -96,7 +96,7 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         assertEq(reasons, BreakerReasons.POOL_SHARE);
     }
 
-    // TEST-228 verifies: REQ-RISK-065, SPEC-BRK-007
+    // TEST-228 verifies: REQ-RISK-065, SPEC-BRK-007, REQ-ACCESS-136
     function test_TEST_228_depthAndOracleGates() public {
         rVault.setDepth(0, false);
         (uint32 reasons,) = riskModule.getBreakerStatus(mid);
@@ -112,8 +112,9 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         riskModule.preWithdrawCheck(address(proxy));
     }
 
-    // TEST-228 verifies: SPEC-BRK-004, SPEC-BRK-008, REQ-RISK-091, INV-081
-    // Sources: 2.7 SPEC-BRK-004 example (deficit 10,000.5 GHO above 10,000 GHO)
+    // TEST-228 verifies: SPEC-BRK-004, SPEC-BRK-008, REQ-RISK-091, INV-081, REQ-ACCESS-158, REQ-ACCESS-167, REQ-FLR-021
+    // Sources: 2.7 SPEC-BRK-004 example (deficit 10,000.5 GHO above 10,000 GHO), 2.14 REQ-FLR-021 (coverage alone
+    // does not reopen the reserve; a reset does, once the deficit is at or below the limit)
     function test_TEST_228_deficitFreezesDebtReserve() public {
         store.setDeficitMax(address(hub), address(gho), 10_000e18);
         hub.setOwed(GHO_ASSET, address(spoke), 0, 10_000e18 * 1e27);
@@ -127,8 +128,18 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         assertEq(riskModule.pokeBreakers(mid), BreakerReasons.DEFICIT);
+        // A reset is refused while the deficit is still above the limit.
+        vm.prank(emergencyGuardian);
+        vm.expectPartialRevert(IMarketRegistryErrors.ConditionStillHolds.selector);
+        registry.resetDebtBreaker(address(spoke), GHO_RESERVE);
         // Covered: the latch keeps the reserve closed until reset.
         hub.setOwed(GHO_ASSET, address(spoke), 0, 0);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), GHO_RESERVE, BreakerReasons.DEFICIT
+            )
+        );
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         (uint32 reasons,) = riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE);
         assertEq(reasons, BreakerReasons.DEFICIT);
         vm.prank(emergencyGuardian);
@@ -136,7 +147,7 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 
-    // TEST-228 verifies: REQ-MREG-026, REQ-RISK-091
+    // TEST-228 verifies: REQ-MREG-026, REQ-RISK-091, REQ-ACCESS-167
     function test_TEST_228_recordBreachOnlyRiskModule() public {
         vm.expectRevert(IMarketRegistryErrors.NotRiskModule.selector);
         registry.recordBreach(bytes32(mid), BreakerReasons.ISSUER);

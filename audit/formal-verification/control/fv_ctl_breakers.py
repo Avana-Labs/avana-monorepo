@@ -4,8 +4,8 @@
 How Avana works here:
 - Circuit breakers stop new activity in one market or one debt reserve. The on-chain breakers are the oracle
   and stablecoin-band checks, the pool-concentration gate (Avana's combined share of a pool above
-  `poolShareMaxBpsOf(poolKey)`: default 10,000 bps, off; per-pool cap optional, Q-403), the issuer probe, coverage, the outstanding-deficit freeze (`breakerDeficitMax`,
-  10,000 GHO per CDP Spoke) and the guardian's manual trip. A price drop of 3% in 2 hours, more than 20% of a
+  `poolShareMaxBpsOf(poolKey)`: default 10,000 bps, off; per-pool cap optional, Q-403), the pool-depth gate, the issuer probe, configuration drift, the outstanding-deficit
+  freeze (`breakerDeficitMax`, 10,000 GHO per CDP Spoke) and the guardian's manual trip; there is no coverage breaker. A price drop of 3% in 2 hours, more than 20% of a
   market seized in 1 hour and 3 swap-route failures in 1 hour are monitoring alerts with no on-chain trip, so
   no `breakerCooldown`, seizure or route-failure counter exists. The RiskModule reads the breakers only in
   `checkPledge` (non-rescue), `preBorrowCheck` and `preWithdrawCheck`; a tripped market breaker only makes the
@@ -14,7 +14,8 @@ How Avana works here:
   creation, liquidation calls, becoming a keeper). It never covers a protected address and checks no keeper floor
   (Q-400): a guardian can freeze every keeper, and while 0 active keepers remain new borrowing halts on the chain
   and liquidation stays open to `liquidatePermissionless`. `keeperFloor` = 1 bounds only `removeKeeper`. It allows
-  each caller at most 20 freezes in any rolling 24 hours, and is lifted only
+  each caller at most 20 freezes in the 24 one-hour buckets ending with the current hour (a window of 23 to 24
+  hours of wall-clock time), and is lifted only
   by a normal-delay `unfreezeAddress` that only the Aave DAO can cancel.
 - Repay, debt-free withdrawal and removal, `repayAllAndWithdraw`, fee collection, zero-credit release, pending
   settlement, `burnSeized` and liquidation of any wallet's positions read none of these controls.
@@ -121,22 +122,48 @@ exhaustive("FV-CTL-109", "Breakers are read only in checkPledge (non-rescue), pr
 # ----------------------------------------------------------------------------------------------
 # 2. Address freeze: protected set, no keeper floor on freeze, liquidation liveness, lifting.
 # ----------------------------------------------------------------------------------------------
-PROTECTED_KINDS = {  # REQ-MREG-020 (AMM-neutral design: debt assets and the IFlashSource, not GHO and its flash minter)
+PROTECTED_KINDS = {  # REQ-MREG-020 (AMM-neutral design: debt assets, the IFlashSource and its lender, the recorded AMM contracts)
     "AvanaTimelock", "AaveGovernanceExecutor", "AaveAdapter", "Collateralization", "LPVault", "LPVaultSwap",
     "ProxyManager", "MarketRegistry", "ParameterStore", "RiskModule", "PayoutEscrow", "Lock",
     "VaultTokenFactory", "VaultToken(live market)", "LPOracle(live market)", "DebtOracle", "Hub", "ApprovedSpoke",
-    "CoverageSpoke", "DebtAsset(listed)", "IFlashSource", "PublicFlashLiquidator", "IntegrationLPVault", "IntegrationPositionManager",
-    "IntegrationFactory", "RecordedRoute", "RegisteredProxy"}
-# Each kind must be named in REQ-MREG-020 as it reads now (phrases of the page).
+    "CoverageSpoke", "DebtAsset(listed)", "IFlashSource", "FlashSourceLender", "PublicFlashLiquidator",
+    "IntegrationLPVault", "IntegrationPricing", "RecordedIntegrationContract", "RecordedRoute", "RegisteredProxy"}
+# Each kind must be named in REQ-MREG-020 as it reads now (phrases of the page). The recorded AMM contracts are the
+# position managers and factories, or the singleton, an integration's LPVault pins (recordIntegrationContracts).
 _mreg020 = next(l_ for l_ in (HERE.parents[2] / "spec/02-contracts/08-market-registry.md").read_text().splitlines()
                 if l_.startswith("- `REQ-MREG-020`"))
 _PHRASE = {"DebtAsset(listed)": "every listed debt asset", "IFlashSource": "the IFlashSource",
+           "FlashSourceLender": "its `LENDER()` (the Aave V3 Pool behind the source, read live at the freeze",
            "PublicFlashLiquidator": "the public flash liquidation helper (`FLASH_LIQUIDATOR`",
-           "IntegrationLPVault": "every registered integration's LPVault", "IntegrationPositionManager": "position manager",
-           "IntegrationFactory": "and factory", "Hub": "every registered Hub", "ApprovedSpoke": "every approved Spoke",
+           "IntegrationLPVault": "every registered integration's LPVault",
+           "IntegrationPricing": "every registered integration's LPVault and pricing implementation",
+           "RecordedIntegrationContract": "every AMM protocol contract recorded for it with `recordIntegrationContracts(integrationId, contracts)`",
+           "Hub": "every registered Hub", "ApprovedSpoke": "every approved Spoke",
            "CoverageSpoke": "Coverage Spoke", "RecordedRoute": "every swap route ever recorded",
            "RegisteredProxy": "every registered proxy"}
 _unnamed = [k for k, ph in _PHRASE.items() if ph not in _mreg020]
+if "(its position managers and factories, or its singleton)" not in _mreg020:
+    _unnamed.append("RecordedIntegrationContract (position managers and factories, or singleton)")
+# The protected set the code enforces: each kind's condition in MarketRegistrySafetyLogic._isProtected.
+_safety = (HERE.parents[2] / "contracts/src/policy/market-registry/MarketRegistrySafetyLogic.sol").read_text()
+_isprot = _safety[_safety.index("function _isProtected("):]
+_isprot = _isprot[:_isprot.index("\n    }\n")]
+_CODE_COND = {
+    "AvanaTimelock": "a == _TIMELOCK", "AaveGovernanceExecutor": "a == _AAVE_GOVERNANCE_EXECUTOR",
+    "AaveAdapter": "a == _AAVE_ADAPTER", "Collateralization": "a == _COLLATERALIZATION",
+    "LPVault": "l.integrationIdOf[a] != 0", "LPVaultSwap": "a == _LP_VAULT_SWAP", "ProxyManager": "a == _PROXY_MANAGER",
+    "MarketRegistry": "a == address(this)", "ParameterStore": "a == _PARAMETER_STORE", "RiskModule": "a == _RISK_MODULE",
+    "PayoutEscrow": "a == _PAYOUT_ESCROW", "Lock": "a == _LOCK", "VaultTokenFactory": "a == _VAULT_TOKEN_FACTORY",
+    "VaultToken(live market)": "(mv != 0 && l.markets[mv].status != MarketStatus.Cancelled)",
+    "LPOracle(live market)": "(mo != 0 && l.markets[mo].status != MarketStatus.Cancelled)",
+    "DebtOracle": "l.knownPriceSource[a]", "Hub": "l.hubTier[a] != RiskTier.None", "ApprovedSpoke": "l.spokes[a].approved",
+    "CoverageSpoke": "l.knownCoverageSpoke[a]", "DebtAsset(listed)": "l.isDebtAsset[a]", "IFlashSource": "a == fs",
+    "FlashSourceLender": "a == _lenderOf(fs)", "PublicFlashLiquidator": "a == _FLASH_LIQUIDATOR",
+    "IntegrationLPVault": "l.integrationIdOf[a] != 0", "IntegrationPricing": "l.isPricing[a]",
+    "RecordedIntegrationContract": "l.knownIntegrationContract[a]", "RecordedRoute": "l.knownRoute[a]",
+    "RegisteredProxy": "walletOf(a) != address(0)",
+}
+CODE_PROTECTED = {k for k, cond in _CODE_COND.items() if cond in _isprot}
 KEEPER_FLOOR = 1  # 1.5 keeperFloor launch value (Q-400): Avana's own keeper
 
 
@@ -145,7 +172,7 @@ def freeze_check(target_kind, is_active_keeper, active_count, already, window_co
     are accepted and ignored, so freezing the last active keeper succeeds."""
     if already:
         return "AddressAlreadyFrozen"
-    if target_kind in PROTECTED_KINDS:
+    if target_kind in CODE_PROTECTED:
         return "ProtectedAddress"
     if window_count >= 20:
         return "FreezeLimitReached"
@@ -153,7 +180,7 @@ def freeze_check(target_kind, is_active_keeper, active_count, already, window_co
 
 
 # FV-CTL-93 verifies: REQ-MREG-020, REQ-ACCESS-157, INV-085, REQ-ACCESS-089, REQ-ACCESS-112
-exhaustive("FV-CTL-93", "freezeAddress reverts ProtectedAddress for every protected kind (timelock, Aave governance executor, every Avana contract, live vault tokens and oracles, DebtOracles, every Hub, Spoke and Coverage Spoke, every listed debt asset, the IFlashSource, the public flash liquidation helper, every integration's LPVault, position manager and factory, recorded swap routes, registered proxies), each named on 2.8",
+exhaustive("FV-CTL-93", "freezeAddress reverts ProtectedAddress for every protected kind (timelock, Aave governance executor, every Avana contract, live vault tokens and oracles, DebtOracles, every Hub, Spoke and Coverage Spoke, every listed debt asset, the IFlashSource and its LENDER(), the public flash liquidation helper, every integration's LPVault and pricing implementation and its recorded AMM contracts, recorded swap routes, registered proxies), each named on 2.8 and each a condition of MarketRegistrySafetyLogic._isProtected",
            [("page", "-")] + sorted(PROTECTED_KINDS),
            lambda k: (not _unnamed or {"not named on 2.8 REQ-MREG-020": _unnamed}) if k == ("page", "-")
            else freeze_check(k, False, 10, False, 0) == "ProtectedAddress",
@@ -239,7 +266,7 @@ halt_new_borrow = lambda active: active == 0  # noqa: E731
 expect("FV-CTL-105-EX", "keeperFloor 1 example: with 2 active keepers removing one passes and removing the last reverts KeeperFloor(0, 1); freezing the last active keeper succeeds and new borrowing then halts, since it halts only at 0 active keepers",
        ex_ok and halt_new_borrow(0) and not halt_new_borrow(1), verifies=["SPEC-GOV-008", "REQ-MREG-021"], targets=["T-53"])
 
-# Rolling 24-hour freeze limit (REQ-MREG-019): buckets b[h] per caller; a freeze at hour H requires
+# Freeze limit over 24 one-hour buckets (REQ-MREG-019): buckets b[h] per caller, h = floor(timestamp / 3,600); a freeze at hour H requires
 # sum(b[H-23..H]) < 20 and increments b[H]. Time only moves forward, so buckets after H are 0.
 NB = 48
 b = [z3.Int(f"bucket_{h}") for h in range(NB)]
@@ -253,7 +280,7 @@ def window(arr, end):
 b_after = b[:-1] + [b[H] + 1]
 pre_inv = [window(b, e) <= 20 for e in range(NB)]
 # FV-CTL-104 verifies: REQ-MREG-019, INV-085, REQ-ACCESS-157
-prove("FV-CTL-104", "No caller makes more than 20 freezes in any 24 consecutive hours: the rolling-window check keeps every window, past and future, at or below 20",
+prove("FV-CTL-104", "No caller makes more than 20 freezes in any 24 consecutive one-hour buckets: the bucket-window check keeps every window, past and future, at or below 20",
       z3.And(*[window(b_after, e) <= 20 for e in range(NB + 23)]),
       assumptions=[x >= 0 for x in b] + pre_inv + [window(b, H) < 20],
       verifies=["REQ-MREG-019", "INV-085", "REQ-ACCESS-157"], targets=["T-53"])

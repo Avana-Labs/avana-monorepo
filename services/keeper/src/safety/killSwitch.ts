@@ -53,7 +53,9 @@ export function startKillSwitch(opts: KillSwitchOptions, state: SafetyState, onC
     },
     (req, res) => {
       const peer = (req.socket as TLSSocket).getPeerCertificate();
-      const by = peer?.subject?.CN ?? "unknown";
+      // A subject may carry several CN attributes (Node returns them as an array); the audit record names them all.
+      const cn = peer?.subject?.CN;
+      const by = (Array.isArray(cn) ? cn.join("+") : cn) || "unknown";
       const route = `${req.method} ${req.url}`;
       if (route === "GET /state") {
         res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ halted: state.halted }));

@@ -42,13 +42,14 @@
  },
  {
   "id": "FV-CTL-55",
-  "title": "Pledge price-state rule of the RiskModule equals the LPOracle state-effects table (read from 2.10) for new accounts and top-ups",
+  "title": "Pledge price-state rule of the RiskModule equals the LPOracle state-effects table (read from 2.10) for new accounts and top-ups, including the token-decimals rows",
   "status": "Verified",
-  "method": "exhaustive enumeration (15 cases)",
+  "method": "exhaustive enumeration (19 cases)",
   "verifies": [
    "REQ-RISK-017",
    "INV-026",
-   "REQ-ORACLE-015"
+   "REQ-ORACLE-015",
+   "REQ-ORACLE-107"
   ],
   "targets": [
    "T-77"
@@ -267,7 +268,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_params"
  },
  {

@@ -109,6 +109,60 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         _expectDrift(0, DriftReason.PriceSource);
     }
 
+    // TEST-182 verifies: REQ-ADAPTER-063, REQ-RISK-088, REQ-CONFIG-074
+    function test_TEST_182_implementationBoundByCodeHash() public {
+        (address impl, bytes32 h, bool current) = registry.spokeImplementationStatus(address(spoke));
+        assertEq(impl, address(spokeImpl));
+        assertEq(h, address(spokeImpl).codehash);
+        assertTrue(current);
+        riskModule.checkAaveConfig(address(spoke), _ids());
+        // The slot still names the recorded implementation, but the code behind it changed: drift, Spoke-wide.
+        vm.etch(address(spokeImpl), hex"6001600055");
+        (,, current) = registry.spokeImplementationStatus(address(spoke));
+        assertFalse(current);
+        _expectDrift(0, DriftReason.SpokeImplementation);
+        vm.expectEmit(address(riskModule));
+        emit IRiskModuleChecks.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
+        riskModule.pokeConfig(address(spoke));
+    }
+
+    // TEST-182 verifies: REQ-ADAPTER-063, REQ-RISK-088, REQ-RISK-030
+    function test_TEST_182_unreadableImplementationIsDrift() public {
+        // An implementation slot the Spoke cannot serve reads as not current: drift, never a pass and never a revert of
+        // the drift view itself.
+        spoke.setRevertExtSload(true);
+        _expectDrift(0, DriftReason.SpokeImplementation);
+        assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.SpokeImplementation));
+        spoke.setRevertExtSload(false);
+        riskModule.checkAaveConfig(address(spoke), _ids());
+        // The slot holding zero (an uninitialised proxy) is not the recorded implementation either.
+        rSpoke.setImplSlot(bytes32(0));
+        _expectDrift(0, DriftReason.SpokeImplementation);
+    }
+
+    // TEST-182 verifies: REQ-ADAPTER-063, REQ-RISK-088
+    function test_TEST_182_implementationCheckedBeforeEveryOtherReason() public {
+        // With the oracle switched and the implementation replaced, the implementation is reported: it is first.
+        spoke.setOracle(makeAddr("otherOracle"));
+        rSpoke.setImplSlot(bytes32(uint256(uint160(makeAddr("upgraded")))));
+        _expectDrift(0, DriftReason.SpokeImplementation);
+        // An unknown Spoke has no implementation record.
+        uint256[] memory ids = _ids();
+        vm.expectRevert(
+            abi.encodeWithSelector(IRiskModuleErrors.ConfigDrift.selector, 0, DriftReason.SpokeImplementation)
+        );
+        riskModule.checkAaveConfig(makeAddr("unknownSpoke"), ids);
+    }
+
+    // TEST-182 verifies: REQ-ADAPTER-063, REQ-RISK-088
+    function testFuzz_TEST_182_anyOtherImplementationIsDrift(
+        address other
+    ) public {
+        vm.assume(other != address(spokeImpl));
+        rSpoke.setImplSlot(bytes32(uint256(uint160(other))));
+        _expectDrift(0, DriftReason.SpokeImplementation);
+    }
+
     // TEST-249 verifies: REQ-RISK-069, REQ-RISK-076, SPEC-CF-001, SPEC-CF-002
     // Sources: 2.7 REQ-RISK-069 example (CF 3,300 above 3,000; bonus 50 bps below 200; target 1.05e18)
     function test_TEST_249_riskConfiguration() public {

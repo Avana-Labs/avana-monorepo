@@ -6,7 +6,7 @@ The CVL rules and invariants in `contracts/certora/specs/`, one conf per contrac
 
 ## How to run
 
-From `contracts/` (certora-cli 8.20.3 in `.venv`, Java 21 in `tools/jdk-21/`, key in `CERTORAKEY`):
+From `contracts/`, with certora-cli 8.20.3 in `.venv`, Java 21, solc 0.8.28 on `PATH` as `solc-0.8.28`, and a Certora API key in the `CERTORAKEY` environment variable:
 
 ```bash
 python3 certora/check-methods.py --out out-security/build/src      # methods check (fast tier step `cvl`)
@@ -24,7 +24,7 @@ Rules, shared models and the property map: [`contracts/certora/README.md`](../..
 
 ## How often it runs
 
-The methods check runs in the fast tier on every push. The prover runs at the contract gate once `CERTORAKEY` is set (compile-only until then), in the `Certora` CI job, and `certoraMutate` runs at each layer gate on every contract whose rules verify ([mutation](../mutation/)).
+The methods check runs in the fast tier on every push. The prover runs at the contract gate and in the `certora` CI jobs of `contracts.yml`, one per conf and six at a time, when the repository's `CERTORAKEY` secret is set, and `certoraMutate` runs at each layer gate on every contract whose rules verify ([mutation](../mutation/)).
 
 ## Latest result
 

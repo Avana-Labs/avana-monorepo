@@ -1,5 +1,5 @@
 {
-  "_comment": "Layer-gate targets of security-slow.sh `mutate` (slither-mutate), `gambit` (Gambit) and `necessist`. Each entry names a src/ folder; every implementation file in it (a contract or a library with functions) is mutated, and its mutants are run against the Foundry tests matched by `tests` (a forge --match-path glob). `files` (optional) limits an entry to the implementation files whose name matches one of its globs, so one folder can map different files to different tests. Necessist removes statements from the same test files. A folder joins its layer when its first implementation lands. `gambit` sets the seed, operators and per-file mutant cap of each layer for security-gambit.sh (`script/mutation-targets.py gambit`).",
+  "_comment": "Layer-gate targets of security-slow.sh `mutate` (slither-mutate), `gambit` (Gambit) and `necessist`. Each entry names a src/ folder; every implementation file in it (a contract or a library with functions) is mutated, and its mutants are run against the Foundry tests matched by `tests` (a forge --match-path glob). `files` (optional) limits an entry to the implementation files whose name matches one of its globs, so one folder can map different files to different tests. Necessist removes statements from the same test files. A folder without an implementation file has no mutants. `gambit` sets the seed, operators and per-file mutant cap of each layer for security-gambit.sh (`script/mutation-targets.py gambit`).",
   "layers": {
     "2.1": [
       {"src": "src/governance/roles", "tests": "test/unit/AvanaRoles.*"},
@@ -29,7 +29,7 @@
       {"src": "src/proxy/proxy-manager", "tests": "test/unit/ProxyManager.*"}
     ],
     "2.5": [
-      {"src": "src/liquidation/settlement-routes", "tests": "test/{unit,fuzz}/{DexPathRoute,PegModuleRoute,WrapperThenDexRoute,RouteMath,SwapRoutes}*"},
+      {"src": "src/liquidation/settlement-routes", "tests": "test/{unit,fuzz}/{DexPathRoute,PegModuleRoute,WrapperThenDexRoute,RouteMath,RouteReads,DexHops,SwapRouteBase,SwapRoutes}*"},
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
       {"src": "src/coverage/coverage-spoke", "tests": "test/unit/CoverageSpoke*"}
     ],

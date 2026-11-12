@@ -18,8 +18,8 @@ Every file under `contracts/src/`.
 
 ## How often it runs
 
-Fast tier (decided 2026-11-10). First run at the layer 2.1 gate, as a fast-tier step from then on.
+Fast tier (decided 2026-11-10).
 
 ## Latest result
 
-Not run yet; the first run is at the layer 2.1 gate. `results/` is empty until then.
+No run is recorded in this folder; the accepted findings are in `contracts/security/semgrep-triage.json`.

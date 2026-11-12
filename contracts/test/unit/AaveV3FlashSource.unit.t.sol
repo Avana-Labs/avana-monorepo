@@ -80,7 +80,7 @@ contract AaveV3FlashSourceUnitTest is FlashSourceFixture {
     }
 
     /// @notice The source answers only its eight selectors: no owner, setter, sweep, fallback or `receive`.
-    // TEST-032 verifies: REQ-FLASH-001, INV-053
+    // TEST-032 verifies: REQ-FLASH-001, INV-053, REQ-ACCESS-066, REQ-ACCESS-022
     function testFuzz_TEST_032_onlyInterfaceSelectors(
         bytes4 selector,
         bytes calldata tail

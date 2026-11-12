@@ -19,8 +19,8 @@ enum DriftReason {
     // Standard-Spoke setting 1 of 3: a market's collateral reserve has receiveSharesEnabled true.
     ReceiveSharesOn,
     Borrowable,
-    // Standard-Spoke setting 2 of 3: a collateral reserve's liquidationFee is above 0 and not paid to Avana's fee
-    // receiver.
+    // Standard-Spoke setting 2 of 3: a collateral reserve's liquidationFee is above 0. It must be 0: a fee pays Hub
+    // shares with no token transfer.
     LiquidationFeeNonZero,
     ExtraSpoke,
     DrawCapNonZero,
@@ -30,6 +30,8 @@ enum DriftReason {
     ReinvestmentController,
     PriceSource,
     CollateralRiskAboveThreshold,
+    // The implementation behind the Spoke proxy is not the approved one, by address and code hash
+    // (MarketRegistry.spokeImplementationStatus reports current = false; REQ-ADAPTER-063).
     SpokeImplementation,
     // The CDP Spoke's Hub differs from its recorded home Hub (IMarketRegistryHubs.spokeSettingsDrift).
     HomeHubMismatch,
@@ -45,6 +47,7 @@ enum DriftReason {
     LiquidationConfigChanged,
     // The home Hub reports the CDP Spoke inactive or halted, or an Avana reserve of it is paused (REQ-RISK-088, Q-351).
     SpokeHalted,
-    // A proxy of the Spoke has an approved position manager (REQ-RISK-088, Q-352).
+    // Reserved: no drift view returns it. That no proxy has an approved position manager is shown by construction
+    // (REQ-RISK-088, Q-352); the value is removed once the AaveAdapter's tests and formal rule complete the proof.
     PositionManagerApproved
 }

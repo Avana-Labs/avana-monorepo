@@ -75,7 +75,7 @@ abstract contract ParameterStoreForwardAdmin is ParameterStoreRouter, IParameter
     function setMaxFlashFeeBps(
         uint16
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_RISK_LOGIC);
+        _forward(_ADMIN_ORACLE_LOGIC);
     }
 
     /// @inheritdoc IParameterStoreAdmin
@@ -194,7 +194,7 @@ abstract contract ParameterStoreForwardAdmin is ParameterStoreRouter, IParameter
         uint256,
         uint16
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_RISK_LOGIC);
+        _forward(_ADMIN_ORACLE_LOGIC);
     }
 
     /// @inheritdoc IParameterStoreAdmin

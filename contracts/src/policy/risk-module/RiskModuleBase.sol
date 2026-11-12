@@ -38,6 +38,8 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
     uint256 internal constant PRICE_USD_BAND = 1 << 3;
     /// @dev LPOracle token reason bits 4 SECOND_SOURCE_DISAGREE and 5 SECOND_SOURCE_UNAVAILABLE (`TokenPriceView`).
     uint32 internal constant TOKEN_SECOND_SOURCE_BITS = (1 << 4) | (1 << 5);
+    /// @dev LPOracle market reason bit 16: some token unconfirmed, evaluated while Live or Drifting (REQ-ORACLE-100).
+    uint256 internal constant PRICE_SECOND_SOURCE_BIT = 1 << 16;
     /// @dev A pool-share cap of 10,000 bps is no limit (SPEC-CAP-005, Q-403).
     uint256 internal constant NO_POOL_SHARE_CAP = 10_000;
 
@@ -142,13 +144,14 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         price8 = a > 0 ? uint256(a) : 1;
     }
 
-    /// @dev Sequencer gate of the chain (REQ-RISK-081): `Up` on a chain without a feed; `Down` while the feed reports 1
-    /// or cannot be read; `Grace` until `startedAt + gracePeriod`, returned as `graceEndsAt`.
+    /// @dev Sequencer gate of the chain (REQ-RISK-081): `Up` on a chain without a feed; `Down` while the feed reports 1,
+    /// cannot be read or answers other than exactly 160 bytes (the read copies at most 161 bytes, so a longer answer is
+    /// seen and refused); `Grace` until `startedAt + gracePeriod`, returned as `graceEndsAt`.
     function _sequencerState() internal view returns (uint8 state, uint256 graceEndsAt) {
         (address feed, uint32 gracePeriod) = _store().sequencer();
         if (feed == address(0)) return (SEQUENCER_UP, 0);
         (bool ok, bytes memory ret) = RiskModuleCalls.staticRead(
-            feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH
+            feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
         );
         ok = ok && ret.length == ROUND_LENGTH;
         (, uint256 answerWord) = RiskModuleCalls.wordAt(ret, 32);

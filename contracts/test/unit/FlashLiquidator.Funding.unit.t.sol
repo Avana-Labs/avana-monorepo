@@ -127,7 +127,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
     // TEST-174 verifies: REQ-HELPER-011, REQ-HELPER-016
     function test_TEST_174_operatorRefusesLoanAboveNeed() public {
         OperatorFlashLiquidator noTopUp = new OperatorFlashLiquidator(
-            address(aavePool), address(lvs), address(registry), address(store), address(0), signer, safe, 0
+            address(aavePool), address(lvs), address(registry), address(store), signer, safe, 0
         );
         _fund(safe, address(noTopUp), 10_000e6);
         uint256 x = 10_000_000e6;
@@ -206,7 +206,8 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         uint256 maxShortfall
     ) public {
         x = bound(x, 1e6, 1_000_000e6);
-        f = bound(f, 1, x);
+        // F = 0 included: the operator variant then takes no loan (REQ-HELPER-003) under the same bound.
+        f = bound(f, 0, x);
         d = bound(d, 1, x);
         rec = bound(rec, 0, 2 * d);
         maxShortfall = bound(maxShortfall, 0, 10_000e6);

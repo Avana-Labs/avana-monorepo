@@ -130,12 +130,20 @@ contract MarketRegistry is UUPSUpgradeable, MarketRegistryRouter, IMarketRegistr
     }
 
     /// @inheritdoc IMarketRegistryApprovals
-    /// @custom:spec REQ-MREG-020, REQ-CONFIG-040
+    /// @custom:spec REQ-MREG-020, REQ-MREG-035, REQ-CONFIG-040
     function recordIntegrationContracts(
         uint32,
         address[] calldata
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_HUBS_LOGIC);
+        _forward(_ROUTES_LOGIC);
+    }
+
+    /// @inheritdoc IMarketRegistryApprovals
+    /// @custom:spec REQ-MREG-035, REQ-CONFIG-040
+    function finalizeIntegrationContracts(
+        uint32
+    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+        _forward(_ROUTES_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistryListing

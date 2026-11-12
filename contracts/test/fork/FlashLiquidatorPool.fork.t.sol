@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IGhoFlashMinter} from "../../src/interfaces/external/gho/IGhoFlashMinter.sol";
+import {IAaveV3Pool} from "../../src/interfaces/external/aave/IAaveV3Pool.sol";
 import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
@@ -56,15 +56,14 @@ contract ForkLiquidationSwap is ILPVaultSwapLiquidation {
     }
 }
 
-/// @title FlashLiquidatorGhoForkTest
-/// @notice TEST-292 on an Ethereum fork: the public helper bound to the Ethereum Core Pool and the deployed GHO flash
-/// minter. GHO is lent by the minter (its live `maxFlashLoan` and `flashFee`, the ERC-3156 callback, the pull of
-/// `F + fee` and the burn), USDC by the Pool. LPVaultSwap, the MarketRegistry and the ParameterStore are stand-ins.
-/// Skipped without `RPC_MAINNET`; forks the latest block.
-/// @dev Run with `FOUNDRY_PROFILE=fork forge test --match-contract FlashLiquidatorGhoForkTest`.
-contract FlashLiquidatorGhoForkTest is AvanaTest {
+/// @title FlashLiquidatorPoolForkTest
+/// @notice TEST-292 on an Ethereum fork: the public helper bound to the Ethereum Core Pool, its only lender, borrows
+/// Ethereum GHO from the Pool's GHO reserve (2.11 `REQ-HELPER-015`, `REQ-FLASH-010`) with the Pool's live quote, and
+/// USDC from the same Pool. LPVaultSwap, the MarketRegistry and the ParameterStore are stand-ins. Skipped without
+/// `RPC_MAINNET`; forks the latest block.
+/// @dev Run with `FOUNDRY_PROFILE=fork forge test --match-contract FlashLiquidatorPoolForkTest`.
+contract FlashLiquidatorPoolForkTest is AvanaTest {
     address internal constant POOL = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
-    address internal constant GHO_FLASH_MINTER = 0xb639D208Bcf0589D54FaC24E655C79EC529762B8;
     address internal constant GHO = 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f;
     address internal constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address internal constant SPOKE = address(0x5B);
@@ -99,9 +98,9 @@ contract FlashLiquidatorGhoForkTest is AvanaTest {
         d.reserveId = GHO_RESERVE;
         d.asset = GHO;
         registry.setDebtReserve(SPOKE, d);
-        // Cap at the ParameterStore's upper bound, so the live fees are measured rather than refused.
+        // Cap at the ParameterStore's upper bound, so the live premium is measured rather than refused.
         MockFlashFeeCap cap = new MockFlashFeeCap(100);
-        helper = new FlashLiquidator(POOL, address(swap), address(registry), address(cap), GHO_FLASH_MINTER);
+        helper = new FlashLiquidator(POOL, address(swap), address(registry), address(cap));
     }
 
     function _request(
@@ -118,36 +117,31 @@ contract FlashLiquidatorGhoForkTest is AvanaTest {
         r.maxPremium = type(uint256).max;
     }
 
-    /// @notice The deployed minter lends GHO to the helper: quotes equal the minter's own for the helper, the loan is
-    /// minted and burned (GHO supply unchanged), the minter keeps exactly the fee, and the helper ends empty.
-    // TEST-292 verifies: REQ-HELPER-015, REQ-HELPER-009, REQ-HELPER-005, REQ-FLASH-010
-    function test_TEST_292_forkGhoLiquidationThroughFlashMinter() public {
-        assertEq(IGhoFlashMinter(GHO_FLASH_MINTER).GHO_TOKEN(), GHO, "minter mints Ethereum GHO");
-        uint256 available = helper.maxFlashLoan(GHO);
-        assertEq(available, IGhoFlashMinter(GHO_FLASH_MINTER).maxFlashLoan(GHO));
-        assertGt(available, 1000e18, "the minter's bucket has room");
+    /// @notice The Core Pool lends GHO to the helper: the quote is the Pool's idle GHO, the loan returns to the GHO
+    /// aToken with at most the quoted premium, and the helper ends empty.
+    // TEST-292 verifies: REQ-HELPER-015, REQ-FLASH-010, REQ-HELPER-009, REQ-HELPER-005
+    function test_TEST_292_forkGhoBorrowedFromCorePool() public {
         uint256 f = 1000e18;
-        vm.prank(address(helper));
-        uint256 fee = IGhoFlashMinter(GHO_FLASH_MINTER).flashFee(GHO, f);
-        assertEq(helper.flashPremium(GHO, f), fee, "the fee the helper is charged, read live");
-
+        uint256 available = helper.maxFlashLoan(GHO);
+        assertGt(available, f, "the Core Pool's GHO reserve lends");
+        address aGho = IAaveV3Pool(POOL).getReserveAToken(GHO);
+        uint256 premium = helper.flashPremium(GHO, f);
         swap.setOutcome(IERC20(GHO), f, 10e18);
         deal(GHO, address(swap), 10e18);
-        uint256 supplyBefore = IERC20(GHO).totalSupply();
-        uint256 minterBefore = IERC20(GHO).balanceOf(GHO_FLASH_MINTER);
+        uint256 aTokenBefore = IERC20(GHO).balanceOf(aGho);
         vm.prank(keeperAddr);
         uint256 payout = helper.flashLiquidate(_request(GHO_RESERVE, f));
-        assertEq(payout, 10e18 - fee);
+        uint256 charged = 10e18 - payout;
+        assertLe(charged, premium, "charged at most the quote");
+        assertEq(IERC20(GHO).balanceOf(aGho), aTokenBefore + charged, "the Pool's GHO reserve gets F + premium");
         assertEq(IERC20(GHO).balanceOf(keeperAddr), payout);
-        assertEq(IERC20(GHO).totalSupply(), supplyBefore, "minted and burned");
-        assertEq(IERC20(GHO).balanceOf(GHO_FLASH_MINTER), minterBefore + fee, "the minter keeps the fee");
         assertEq(IERC20(GHO).balanceOf(address(helper)), 0);
-        assertEq(IERC20(GHO).allowance(address(helper), GHO_FLASH_MINTER), 0);
+        assertEq(IERC20(GHO).allowance(address(helper), POOL), 0);
     }
 
-    /// @notice USDC keeps the Core Pool: its quote is the Pool's, and a loan through the helper settles.
+    /// @notice USDC is lent by the same Pool: its quote is the Pool's, and a loan through the helper settles.
     // TEST-292 verifies: REQ-HELPER-015, REQ-HELPER-009
-    function test_TEST_292_forkUsdcStaysOnThePool() public {
+    function test_TEST_292_forkUsdcFromTheSamePool() public {
         uint256 f = 1000e6;
         assertGt(helper.maxFlashLoan(USDC), f);
         uint256 premium = helper.flashPremium(USDC, f);

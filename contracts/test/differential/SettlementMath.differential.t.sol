@@ -232,6 +232,53 @@ contract SettlementMathDifferentialTest is DifferentialTest {
         }
     }
 
+    struct LiquidationCase {
+        uint256 value;
+        uint256 debt;
+        uint256 callerFunds;
+        uint256 minRec;
+        uint256 recovered;
+        uint256 share;
+        uint256 maxShortfall;
+    }
+
+    // TEST-198 verifies: SPEC-LIQ-011, SPEC-LIQ-017, SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-LIQ-022, Q-401
+    // A liquidation after its last route call, with no flash term: floor, waterfall, settlement gap, shortfall and
+    // keeperOut against the reference's single transcription of the spec, and the caller's take within G - A.
+    function testFuzz_TEST_198_differentialLiquidationCallerTake(
+        LiquidationCase memory c
+    ) public {
+        c.value = bound(c.value, 0, (1 << 121) - 1);
+        c.debt = bound(c.debt, 0, (1 << 120) - 1);
+        c.callerFunds = bound(c.callerFunds, c.debt, (1 << 121) - 1);
+        c.minRec = bound(c.minRec, 0, c.value);
+        c.recovered = bound(c.recovered, 0, (1 << 121) - 1);
+        c.share = bound(c.share, 0, 5000);
+        c.maxShortfall = bound(c.maxShortfall, 0, (1 << 122) - 1);
+        uint256[] memory a = new uint256[](7);
+        (a[0], a[1], a[2], a[3], a[4], a[5], a[6]) =
+        (c.value, c.debt, c.callerFunds, c.minRec, c.recovered, c.share, c.maxShortfall);
+        uint256[6] memory r = abi.decode(_reference("liquidationSettlement", a), (uint256[6]));
+        SettlementMath.Payouts memory p =
+            m.payouts(c.value, c.debt, 0, m.recoveryWithFloor(c.minRec, c.recovered), c.share);
+        uint256 gap = m.roundingGap(c.debt, 0, 0, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
+        try m.shortfallTopUp(c.minRec, c.recovered, gap, c.maxShortfall) returns (uint256 shortfall) {
+            assertEq(r[0], 0, "reference reverts, Solidity does not");
+            uint256 out =
+                m.keeperPayout(c.callerFunds, 0, c.recovered + shortfall, c.debt, 0, p.avanaFee, p.borrowerSurplus);
+            assertEq(shortfall, r[1], "shortfall");
+            assertEq(p.avanaFee, r[2], "A");
+            assertEq(p.keeperReward, r[3], "kr");
+            assertEq(p.borrowerSurplus, r[4], "B");
+            assertEq(out, r[5], "keeperOut");
+            assertLe(out, c.callerFunds + p.oracleGain - p.avanaFee, "caller take above G - A");
+        } catch (bytes memory err) {
+            // With Kf >= D the gap never exceeds the floor gap, so only RecoveryBelowFloor can fire.
+            assertEq(r[0], 1, "Solidity reverts, reference does not");
+            assertEq(bytes4(err), ILPVaultSwapErrors.RecoveryBelowFloor.selector, "revert reason");
+        }
+    }
+
     struct FlashCase {
         uint256 value;
         uint256 debt;

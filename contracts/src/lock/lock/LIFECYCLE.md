@@ -1,19 +1,48 @@
-Implementation pending: links point to interfaces; update to implementation functions once the hand-written contracts exist.
+Function links point to the interface that declares each function.
 
 # Lock lifecycle
 
 The Lock is the chain's single transient mutex with two members, the AaveAdapter and LPVaultSwap: every Avana state change runs inside one holder's call, and every inner contract (Collateralization, LPVault, VaultToken burn paths, swap routes, the payout escrow) accepts calls only while the right member holds it.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor C as Carol
+  actor K as Keeper
+  participant AD as AaveAdapter
+  participant SW as LPVaultSwap
+  participant LK as Lock
+  participant CO as Collateralization
+  participant V as LPVault
+  participant E as PayoutEscrow
+  C->>AD: pledge(3, (I, key1), now + 600)
+  AD->>LK: acquire()
+  Note right of LK: holder = AaveAdapter<br/>for the rest of the transaction
+  AD->>CO: pledge(Carol, P, VT, key1, false)
+  CO->>LK: holder() must be the AaveAdapter
+  CO->>V: receivePosition(3, Carol, key1)
+  V->>LK: holder() must be non-zero
+  AD->>LK: release()
+  K->>SW: liquidate(params)
+  SW->>LK: acquire()
+  Note right of LK: a second acquire from a route or<br/>token callback reverts LockHeld
+  SW->>CO: beginSeizure, settleSeizure
+  CO->>LK: holder() must be LPVaultSwap
+  SW->>E: deposit(token, account, amount) for a refused payout
+  E->>LK: holder() must be LPVaultSwap
+  SW->>LK: release()
+```
+
 ## Walkthrough
 
 Setup (Base market 3, Carol's pledge of 3.1 `DEP-029`, then Bob's liquidation of 3.5 `LIQ-069` on Ethereum).
 
-1. **AaveAdapter → [`acquire`](ILock.sol#L56)** as the first step of Carol's `pledge`. [`holder`](ILock.sol#L68) becomes the AaveAdapter; [`isLocked`](ILock.sol#L75) is true for the rest of the transaction. Errors: [`NotMember`](ILock.sol#L38) for any other caller, [`LockHeld`](ILock.sol#L43) if already held, [`DelegateCallNotAllowed`](ILock.sol#L33).
-2. **Inside the call**, Collateralization checks `holder() == ADAPTER` ([`LockNotHeld`](../../custody/collateralization/ICollateralizationErrors.sol#L23) otherwise), and the LPVault does the same before `receivePosition`. Lens and LPVault views revert `Locked` while the Lock is held, so no view reads a half-written state.
-3. **AaveAdapter → [`release`](ILock.sol#L62)** as the last step; the slot is transient, so it is also clear at the end of the transaction. Error: [`NotHolder`](ILock.sol#L48).
-4. **LPVaultSwap → [`acquire`](ILock.sol#L56)** at the start of `liquidate` (after the deadline check). Collateralization's `beginSeizure`, `settleSeizure` and `settlePending`, the AaveAdapter's `burnSeized`, the swap routes' `swap` and the escrow's `deposit` all require `holder() == LP_VAULT_SWAP`. A second liquidation entered from a route or a token callback reverts [`LockHeld`](ILock.sol#L43).
+1. **AaveAdapter → [`acquire`](ILock.sol#L64)** as the first step of Carol's `pledge`. [`holder`](ILock.sol#L76) becomes the AaveAdapter; [`isLocked`](ILock.sol#L84) is true for the rest of the transaction. Errors: [`NotMember`](ILock.sol#L46) for any other caller, [`LockHeld`](ILock.sol#L51) if already held, [`DelegateCallNotAllowed`](ILock.sol#L41).
+2. **Inside the call**, Collateralization checks `holder() == ADAPTER` ([`LockNotHeld`](../../custody/collateralization/ICollateralizationErrors.sol#L25) otherwise). The LPVault requires Collateralization as caller and a non-zero Lock holder (`ClLPVaultBase._onlyCustodyCaller`: `NotCollateralization`, `LockNotHeld`) before `receivePosition` and its other custody calls; only its `collectFees` requires the holder to be the AaveAdapter. Lens and LPVault views revert `Locked` while the Lock is held, so no view reads a half-written state.
+3. **AaveAdapter → [`release`](ILock.sol#L70)** as the last step; the slot is transient, so it is also clear at the end of the transaction. Error: [`NotHolder`](ILock.sol#L56).
+4. **LPVaultSwap → [`acquire`](ILock.sol#L64)** at the start of `liquidate` (after the deadline check). Collateralization's `beginSeizure`, `settleSeizure` and `settlePending`, the AaveAdapter's `burnSeized`, the swap routes' `swap` and the escrow's `deposit` all require `holder() == LP_VAULT_SWAP`. A second liquidation entered from a route or a token callback reverts [`LockHeld`](ILock.sol#L51).
 5. **Repay with collateral.** The AaveAdapter holds the Lock while LPVaultSwap's `deleverage` runs; swap routes accept the AaveAdapter as holder for that path.
-6. **LPVaultSwap → [`release`](ILock.sol#L62)** after the payouts. PayoutEscrow `claim` reverts `LockHeld` while `isLocked()` is true, so a claim never runs inside an Avana call.
+6. **LPVaultSwap → [`release`](ILock.sol#L70)** after the payouts. PayoutEscrow `claim` reverts `LockHeld` while `isLocked()` is true, so a claim never runs inside an Avana call.
 
 ## What the UI reads and calls
 

@@ -84,7 +84,7 @@ contract PositionProxyUnitTest is AvanaTest {
     }
 
     /// @notice No call to the proxy, by anyone, changes its binding or its code.
-    // TEST-025 verifies: REQ-PROXY-005, REQ-PROXY-086, INV-016, INV-065, ATTACK-123, ATTACK-168
+    // TEST-025 verifies: REQ-PROXY-005, REQ-PROXY-086, INV-016, INV-065, ATTACK-123, ATTACK-168, REQ-ACCESS-176
     function test_TEST_025_bindingAndCodeNeverChange() public {
         bytes32 codeHash = address(proxy).codehash;
         vm.startPrank(adapter);
@@ -100,7 +100,7 @@ contract PositionProxyUnitTest is AvanaTest {
 
     // ─── Access: Adapter only ───
 
-    // TEST-187 verifies: REQ-PROXY-007, REQ-PROXY-040, REQ-PROXY-091, INV-016, INV-063, ATTACK-030, Q-223, Q-306
+    // TEST-187 verifies: REQ-PROXY-007, REQ-PROXY-040, REQ-PROXY-091, INV-016, INV-063, ATTACK-030, Q-223, Q-306, REQ-ACCESS-147
     // Sources: 5.1 TEST-187, TEST-271 (proxy side)
     function testFuzz_TEST_187_executeOnlyFromAdapter(
         address caller,
@@ -287,7 +287,7 @@ contract PositionProxyUnitTest is AvanaTest {
     // ─── Code surface ───
 
     /// @notice Runtime selectors are exactly `execute` and the four views; no forbidden selector appears anywhere.
-    // TEST-172 verifies: REQ-PROXY-001, REQ-PROXY-007, REQ-PROXY-008, REQ-PROXY-101, REQ-PROXY-103, INV-016, ATTACK-022, ATTACK-030, ATTACK-156
+    // TEST-172 verifies: REQ-PROXY-001, REQ-PROXY-007, REQ-PROXY-008, REQ-PROXY-101, REQ-PROXY-103, INV-016, ATTACK-022, ATTACK-030, ATTACK-156, REQ-ACCESS-147, REQ-ACCESS-176, REQ-ACCESS-015, REQ-ACCESS-066
     // Sources: 5.1 TEST-172, TEST-026, TEST-031, TEST-206 (PositionProxy inventory)
     function test_TEST_172_selectorInventory() public view {
         bytes memory code = address(proxy).code;
@@ -325,7 +325,7 @@ contract PositionProxyUnitTest is AvanaTest {
 
     /// @notice No `delegatecall`, `callcode`, `selfdestruct`, `tx.origin`, contract creation or storage access exists
     /// in the runtime code.
-    // TEST-172 verifies: REQ-PROXY-001, REQ-PROXY-002, REQ-PROXY-006, REQ-PROXY-011, REQ-PROXY-014, INV-016, INV-065, ATTACK-123, ATTACK-156
+    // TEST-172 verifies: REQ-PROXY-001, REQ-PROXY-002, REQ-PROXY-006, REQ-PROXY-011, REQ-PROXY-014, INV-016, INV-065, ATTACK-123, ATTACK-156, REQ-ACCESS-176
     function test_TEST_172_noForbiddenOpcodes() public view {
         bytes memory code = address(proxy).code;
         uint8[10] memory ops = [0xf4, 0xf2, 0xff, 0x32, 0xf0, 0xf5, 0x54, 0x55, 0x5c, 0x5d];

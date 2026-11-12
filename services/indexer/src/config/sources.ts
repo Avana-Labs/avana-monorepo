@@ -5,8 +5,8 @@
 // Coverage Spokes) are followed through the event that announces them.
 
 import { factory } from "ponder";
-import { parseAbiItem } from "viem";
 import { ABI_HASH } from "@avana/protocol/abis";
+import { factoryEvents } from "./abis.ts";
 import {
   type ChainInfo,
   type NetworkSet,
@@ -64,9 +64,7 @@ export const vaultTokenSource = () =>
   perChain((m) => ({
     address: factory({
       address: m.avana.vaultTokenFactory.address,
-      event: parseAbiItem(
-        "event VaultTokenDeployed(bytes32 indexed marketKey, address indexed vaultToken, uint256 indexed marketId, uint32 integrationId, address hub, address spoke, address lpOracle, uint8 decimals)",
-      ),
+      event: factoryEvents.vaultTokenDeployed,
       parameter: "vaultToken",
     }),
     startBlock: m.avana.vaultTokenFactory.startBlock,
@@ -76,9 +74,7 @@ export const lpOracleSource = () =>
   perChain((m) => ({
     address: factory({
       address: m.avana.marketRegistry.address,
-      event: parseAbiItem(
-        "event MarketRegistered(uint256 indexed marketId, uint32 indexed integrationId, address pool, bytes32 poolId, address[] tokens, address vaultToken, address lpOracle, address indexed spoke)",
-      ),
+      event: factoryEvents.marketRegistered,
       parameter: "lpOracle",
     }),
     startBlock: registryStart(m),
@@ -89,9 +85,7 @@ export const debtOracleSource = () =>
   perChain((m) => ({
     address: factory({
       address: m.avana.marketRegistry.address,
-      event: parseAbiItem(
-        "event DebtReserveApproved(address indexed spoke, uint256 indexed reserveId, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address coverageSpoke)",
-      ),
+      event: factoryEvents.debtReserveApproved,
       parameter: "priceSource",
     }),
     startBlock: registryStart(m),
@@ -101,7 +95,7 @@ export const coverageSpokeSource = () =>
   perChain((m) => ({
     address: factory({
       address: m.avana.marketRegistry.address,
-      event: parseAbiItem("event CoverageSpokeSet(address indexed hub, address indexed asset, address coverageSpoke)"),
+      event: factoryEvents.coverageSpokeSet,
       parameter: "coverageSpoke",
     }),
     startBlock: registryStart(m),

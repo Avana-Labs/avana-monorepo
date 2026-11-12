@@ -52,7 +52,7 @@ contract MarketRegistryBreakersUnitTest is MarketRegistryFixture {
         registry.recordBreach(mKey, BreakerReasons.ISSUER);
     }
 
-    // TEST-228 verifies: REQ-MREG-025, Q-241
+    // TEST-228 verifies: REQ-MREG-025, Q-241, REQ-ACCESS-158, REQ-ACCESS-084, REQ-CONFIG-068
     function test_TEST_228_manualTripsAndUnknownKeys() public {
         vm.expectEmit(address(registry));
         emit IMarketRegistrySafetyEvents.BreakerLatched(BreakerScope.Market, mKey, BreakerReasons.MANUAL);
@@ -70,7 +70,7 @@ contract MarketRegistryBreakersUnitTest is MarketRegistryFixture {
         vm.stopPrank();
     }
 
-    // TEST-228 verifies: REQ-MREG-025, SPEC-BRK-008, Q-241, Q-399
+    // TEST-228 verifies: REQ-MREG-025, SPEC-BRK-008, Q-241, Q-399, REQ-ACCESS-158, REQ-ACCESS-170
     function test_TEST_228_resetNeedsALatchAndAClearCondition() public {
         vm.prank(aaveGuardian);
         vm.expectRevert(IMarketRegistryErrors.NothingToReset.selector);
@@ -98,7 +98,7 @@ contract MarketRegistryBreakersUnitTest is MarketRegistryFixture {
         assertEq(last, 5000, "a reset leaves the temporary-gate breach time");
     }
 
-    // TEST-228 verifies: REQ-MREG-025, REQ-MREG-026, Q-399
+    // TEST-228 verifies: REQ-MREG-025, REQ-MREG-026, Q-399, REQ-ACCESS-158, REQ-ACCESS-170
     function test_TEST_228_debtResetAfterDeficitCovered() public {
         // Nothing latched yet: a reset has nothing to clear.
         vm.prank(aaveGuardian);

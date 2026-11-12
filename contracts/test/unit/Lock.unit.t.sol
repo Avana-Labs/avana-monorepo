@@ -262,7 +262,7 @@ contract LockUnitTest is AvanaTest {
     }
 
     /// @notice The Lock has no function besides the seven of ILock: no owner, setter, pause, upgrade or fallback.
-    // TEST-270 verifies: REQ-LOCK-001, REQ-LOCK-015, REQ-LOCK-024
+    // TEST-270 verifies: REQ-LOCK-001, REQ-LOCK-015, REQ-LOCK-024, REQ-ACCESS-066
     function testFuzz_TEST_270_noOtherEntryPoint(
         bytes4 selector,
         bytes calldata tail,

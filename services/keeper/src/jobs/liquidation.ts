@@ -146,6 +146,6 @@ export function liquidationTargets(m: ServiceManifest, market: ManifestMarket, r
     up(spoke), up(market.lpOracle), ...(reserve.debtOracle ? [up(reserve.debtOracle)] : []),
     im(helperEntry), im(m.avana.proxyManager), im(lpVault), im(m.avana.collateralization), im(market.vaultToken), im(m.avana.payoutEscrow),
     im(m.avana.lock), im(m.avana.lens), ...market.routes.map(im),
-    up(m.aave.v3Pool), ...(m.aave.ghoFlashMinter ? [im(m.aave.ghoFlashMinter)] : []),
+    up(m.aave.v3Pool),
   ];
 }

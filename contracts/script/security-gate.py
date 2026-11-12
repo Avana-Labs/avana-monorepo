@@ -32,7 +32,7 @@ Triage file (JSON):
 
 A fingerprint entry accepts one finding. A `files` entry accepts every finding of `check` in matching files; with
 `while: no-implementation-in-folder` it applies only while the file's folder holds no implementation file (a contract,
-or a library with functions), so the acceptance ends by itself when the implementation lands. Every entry needs a
+or a library with functions), so the acceptance ends by itself once the folder holds one. Every entry needs a
 non-empty reason. For Slither, `excluded_detectors` must list exactly the detectors in slither.config.json's
 `detectors_to_exclude`, so every disabled detector carries a reason; for Semgrep and 4naly3er, findings of a check
 listed in `excluded_detectors` (Semgrep rule ID, 4naly3er issue title) are dropped before the gate.

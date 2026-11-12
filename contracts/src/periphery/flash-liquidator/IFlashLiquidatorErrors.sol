@@ -7,8 +7,7 @@ pragma solidity 0.8.28;
 /// @notice Errors of the flash liquidation helper. Every amount is in base units of the debt asset. Each one reverts the
 /// whole transaction, including the liquidation inside the callback.
 interface IFlashLiquidatorErrors {
-    /// @notice A constructor address is `address(0)` (the GHO flash minter may be `address(0)`, but a set minter must
-    /// name a GHO token).
+    /// @notice A constructor address is `address(0)`.
     /// @custom:spec REQ-HELPER-001
     error ZeroAddress();
 
@@ -17,8 +16,8 @@ interface IFlashLiquidatorErrors {
     /// @custom:spec REQ-HELPER-001
     error InvalidTopUpBps(uint256 bps);
 
-    /// @notice A lender (the Pool, or the GHO flash minter) is a Hub recorded on the chain (`MarketRegistry.isRecordedHub`),
-    /// at deployment or, for the lender of the call's asset, at a call.
+    /// @notice The Pool is a Hub recorded on the chain (`MarketRegistry.isRecordedHub`), at deployment or at a call that
+    /// takes a loan.
     /// @custom:spec REQ-HELPER-002, REQ-HELPER-013
     error FlashSourceIsHub();
 
@@ -30,7 +29,8 @@ interface IFlashLiquidatorErrors {
     /// @custom:spec REQ-HELPER-011, REQ-HELPER-013
     error NotSigner();
 
-    /// @notice The flash amount is 0 or above `params.debtToCover`, or `params.debtToCover` or `params.maxShortfall` is
+    /// @notice The flash amount is above `params.debtToCover`, or 0 on the public helper (the operator variant accepts
+    /// 0), or `params.debtToCover` or `params.maxShortfall` is
     /// above `2^128 - 1` (LPVaultSwap's own bound, REQ-SWAP-005).
     /// @custom:spec REQ-HELPER-003, REQ-HELPER-013
     error InvalidFlashAmount();
@@ -40,9 +40,9 @@ interface IFlashLiquidatorErrors {
     /// @custom:spec REQ-HELPER-003, REQ-HELPER-009
     error InsufficientFlashLiquidity(uint256 available);
 
-    /// @notice The callback came from an address other than the context's lender, through the other lender's callback,
-    /// with a foreign initiator, more than one asset, an asset, amount or data hash other than the context's, no active
-    /// context or a used context; or the lender returned without running it.
+    /// @notice The callback came from an address other than the Pool, for a context with no loan, with a foreign
+    /// initiator, more than one asset, an asset, amount or data hash other than the context's, no active context or a
+    /// used context; or the Pool returned without running it.
     /// @custom:spec REQ-HELPER-004, REQ-HELPER-005, REQ-HELPER-013
     error InvalidFlashCallback();
 

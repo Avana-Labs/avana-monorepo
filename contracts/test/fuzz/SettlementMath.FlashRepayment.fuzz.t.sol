@@ -165,13 +165,16 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
     ) public view {
         value = bound(value, 0, (1 << 200) - 1);
         slippage = bound(slippage, 0, BPS);
-        units = bound(units, 0, 1e30);
+        // U is at least 1 (SPEC-LIQ-005: one raw unit of each released token, at least 1 debt unit, n >= 1). The
+        // slippage term rounds up, so it is the subtracted U that keeps the floor at or below the net oracle value.
+        units = bound(units, 1, 1e30);
         allowance = bound(allowance, 0, 1e30);
         legs = bound(legs, 1, 4);
         uint256 exactNum = value * (BPS - slippage);
         uint256 floor = m.recoveryFloor(value, slippage, units, allowance);
         uint256 term = Math.ceilDiv(exactNum, BPS);
         assertGe(term * BPS, exactNum, "slippage term rounds down");
+        assertLt(term * BPS, exactNum + BPS, "slippage term above one unit of rounding");
         assertLe(floor * BPS, exactNum, "floor above the net oracle value");
         assertEq(floor, term > units + allowance ? term - units - allowance : 0, "floor formula");
         uint256 minOut = m.legMinOut(value, slippage, units, allowance, legs);

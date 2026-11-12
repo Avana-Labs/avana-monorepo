@@ -167,6 +167,47 @@ contract CoverageSpokePerAssetUnitTest is CoverageSpokeFixture {
         _cover(empty, aave.cdpSpoke, 1e18);
     }
 
+    // TEST-199 verifies: REQ-FLR-020, REQ-FLR-030, REQ-FLR-016, Q-071, Q-117, Q-127, Q-397
+    // Sources: 2.14 REQ-FLR-020
+    /// @notice The reserve covers only a deficit Aave has recorded on the Hub. With a funded reserve and no recorded
+    /// deficit (a liquidation that reverted on a shortfall, a keeper's swap loss and a flash repayment record none),
+    /// `coverDeficit` reverts `NothingToCover` for any `maxAmount`; LPVaultSwap, a keeper and a flash lender cannot
+    /// call any function that spends the reserve; a recorded deficit is eliminated on the Hub for exactly its amount
+    /// and no token leaves the Hub, so the reserve pays no party.
+    /// @dev Kills: an inverted `deficitRayBefore == 0` check in `coverDeficit`, and dropping
+    /// `ceilDiv(deficitRayBefore, RAY)` from the coverage minimum (the coverage would then exceed the deficit).
+    function test_TEST_199_coversOnlyRecordedDeficits() public {
+        uint256 shares = ghoCoverage.fundedShares();
+        uint256[3] memory asks = [uint256(1), 1000e18, type(uint256).max];
+        for (uint256 i = 0; i < asks.length; ++i) {
+            vm.expectRevert(abi.encodeWithSelector(ICoverageSpokeErrors.NothingToCover.selector, aave.cdpSpoke));
+            _cover(ghoCoverage, aave.cdpSpoke, asks[i]);
+        }
+        assertEq(ghoCoverage.fundedShares(), shares, "nothing spent without a recorded deficit");
+
+        address[3] memory others = [makeAddr("lpVaultSwap"), makeAddr("keeper"), makeAddr("flashLender")];
+        for (uint256 i = 0; i < others.length; ++i) {
+            vm.startPrank(others[i]);
+            vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, others[i]));
+            ghoCoverage.coverDeficit(aave.cdpSpoke, 1);
+            vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, others[i]));
+            ghoCoverage.requestWithdrawal(1, others[i]);
+            vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, others[i]));
+            ghoCoverage.executeWithdrawal(1);
+            vm.stopPrank();
+        }
+
+        uint256 deficitRay = _reportDeficit(ghoAssetId, aave.cdpSpoke, 400e18);
+        uint256 hubTokens = gho.balanceOf(aave.hub);
+        (, uint256 covered) = _cover(ghoCoverage, aave.cdpSpoke, type(uint256).max);
+        assertEq(covered, deficitRay / RAY, "exactly the recorded deficit");
+        assertEq(ghoCoverage.totalCovered(), deficitRay / RAY, "the reserve counts exactly the recorded deficit");
+        assertEq(hub.getSpokeDeficitRay(ghoAssetId, aave.cdpSpoke), 0, "deficit eliminated");
+        assertEq(gho.balanceOf(aave.hub), hubTokens, "no token leaves the Hub");
+        assertEq(gho.balanceOf(coverageCaller), 0, "the caller receives nothing");
+        assertEq(gho.balanceOf(address(ghoCoverage)), 0, "the Coverage Spoke receives nothing");
+    }
+
     // TEST-199 verifies: REQ-FLR-016, REQ-FLR-032, Q-101
     /// @notice Only `COVERAGE_ROLE` covers: the DAO executor, Avana Labs, the governance multisig and a stranger are
     /// refused with `AccessManagedUnauthorized`.

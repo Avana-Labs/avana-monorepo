@@ -51,20 +51,53 @@ computed('MATH-AR-54d', 'SPEC-BRK-002 example (liqHM 2e13, 1,000 bps)',
 
 # ---------------------------------------------------------------------------
 # MATH-AR-55  SPEC-BRK-003 issuer probe decision.
-kind = Int('probeKind')          # 0 None, 1 PausedFlag, 2 UsdtFeeRate
-reverted, word32 = Bools('reverted returnIsOneWord')
-val = Int('returnValue')
-trip3 = If(kind == 0, False,
-           Or(reverted, Not(word32),
-              If(kind == 1, val != 0, val > 0)))
-# MATH-AR-55 verifies: SPEC-BRK-003
-prove('MATH-AR-55a', 'probe None never trips; a revert, out-of-gas or malformed return always trips a recorded probe',
-      [Or(kind == 0, kind == 1, kind == 2), val >= 0],
-      And(Implies(kind == 0, Not(trip3)), Implies(And(kind != 0, Or(reverted, Not(word32))), trip3)))
+# Kinds: 0 None, 1 PausedFlag (reads paused()), 2 UsdtFeeRate (reads basisPointsRate()), 3 UsdtFeeRateAndPaused
+# (both reads). Each read is a static call with its own outcome: reverted (or out of gas), returned one word or not,
+# and the word's value.
+kind = Int('probeKind')
+p_rev, p_word = Bools('pausedReverted pausedIsOneWord')
+f_rev, f_word = Bools('feeReverted feeIsOneWord')
+p_val, f_val = Ints('pausedValue feeValue')
+
+
+def reads_paused(k):
+    return Or(k == 1, k == 3)
+
+
+def reads_fee(k):
+    return Or(k == 2, k == 3)
+
+
+paused_trips = Or(p_rev, Not(p_word), p_val != 0)
+fee_trips = Or(f_rev, Not(f_word), f_val > 0)
+
+
+def trips(k):
+    return Or(And(reads_paused(k), paused_trips), And(reads_fee(k), fee_trips))
+
+
+trip3 = trips(kind)
+b55 = [Or(kind == 0, kind == 1, kind == 2, kind == 3), p_val >= 0, f_val >= 0]
+# MATH-AR-55 verifies: SPEC-BRK-003, REQ-MREG-027
+prove('MATH-AR-55a', 'probe None never trips; a revert, out-of-gas or malformed return of any read the kind makes trips',
+      b55,
+      And(Implies(kind == 0, Not(trip3)),
+          Implies(And(reads_paused(kind), Or(p_rev, Not(p_word))), trip3),
+          Implies(And(reads_fee(kind), Or(f_rev, Not(f_word))), trip3)))
 prove('MATH-AR-55b', 'UsdtFeeRate: a well-formed answer trips  <=>  basisPointsRate() > 0',
-      [kind == 2, Not(reverted), word32, val >= 0], trip3 == (val > 0))
+      b55 + [kind == 2, Not(f_rev), f_word], trip3 == (f_val > 0))
 computed('MATH-AR-55c', 'SPEC-BRK-003 example (USDT basisPointsRate)',
          [('rate 0 at listing: clear', False, 0 > 0), ('rate 10: tripped', True, 10 > 0)])
+# The combined kind is exactly the two single kinds together, on the same two reads: a reader that handles each
+# single kind handles the combined one with no case of its own.
+prove('MATH-AR-55d', 'UsdtFeeRateAndPaused trips  <=>  PausedFlag would trip on its read  or  UsdtFeeRate would trip on its read',
+      b55, trips(3) == Or(trips(1), trips(2)))
+prove('MATH-AR-55e', 'UsdtFeeRateAndPaused with both answers well formed: trips  <=>  paused() is true or basisPointsRate() > 0',
+      b55 + [Not(p_rev), p_word, Not(f_rev), f_word], trips(3) == Or(p_val != 0, f_val > 0))
+computed('MATH-AR-55f', 'SPEC-BRK-003 combined example (Ethereum USDT: paused() and basisPointsRate())',
+         [('paused false, rate 0: clear', False, (0 != 0) or (0 > 0)),
+          ('paused true, rate 0: tripped', True, (1 != 0) or (0 > 0)),
+          ('paused false, rate 10: tripped', True, (0 != 0) or (10 > 0))])
 
 # ---------------------------------------------------------------------------
 # MATH-AR-56  SPEC-BRK-004 debt conditions.

@@ -65,7 +65,8 @@ contract WrapperThenDexRouteProperties {
                 tokenClassMask: 1 << 1,
                 uniswapV3Factory: address(v3Factory),
                 slipstreamFactory: address(0),
-                curveFactory: address(0)
+                curveFactory: address(0),
+                curveLegacyPools: new address[](0)
             }),
             WrapperStep({kind: WrapperKind.UsdsToDai, wrapper: address(CONVERTER), underlying: address(DAI)}),
             hops

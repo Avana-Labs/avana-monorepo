@@ -113,7 +113,7 @@ contract CollPriceSource {
 /// @title CollateralizationFixture
 /// @notice Collateralization on the real local Aave V4 (pinned release), with the real Lock, the real
 /// VaultTokenFactory and the real vault token of one USDC/USDT market (integration 1, market 4, 6 decimals). The
-/// LPVault, RiskModule and LPOracle are mocks (contracts 14, 19 and 8 are not written yet); the AaveAdapter and
+/// LPVault, RiskModule and LPOracle are mocks (stand-ins in these tests); the AaveAdapter and
 /// LPVaultSwap are pranked addresses, the two members of the Lock.
 /// @dev Suites set `isolate = false` so one test is one transaction: each helper takes the Lock as its member, runs one
 /// Avana call tree and releases the Lock, as the member's outer entry point would.

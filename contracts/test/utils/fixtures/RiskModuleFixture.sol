@@ -144,7 +144,8 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             lpVaultSwap: address(lpVaultSwap),
             payoutEscrow: payoutEscrow,
             flashLiquidator: flashLiquidator,
-            standardSpokeImplementation: address(spokeImpl)
+            standardSpokeImplementation: address(spokeImpl),
+            maxMarketCount: 64
         });
         logics = _deployLogics(im);
         MarketRegistry impl = new MarketRegistry(im, logics);
@@ -207,6 +208,9 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         vm.startPrank(address(timelock));
         registry.recordHub(address(hub), RiskTier.Stable);
         registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
+        vm.stopPrank();
+        _recordAmmContracts();
+        vm.startPrank(address(timelock));
         registry.deployCdpSpoke(_spokeDef());
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);

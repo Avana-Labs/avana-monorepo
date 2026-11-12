@@ -85,9 +85,9 @@
  },
  {
   "id": "FV-CTL-93",
-  "title": "freezeAddress reverts ProtectedAddress for every protected kind (timelock, Aave governance executor, every Avana contract, live vault tokens and oracles, DebtOracles, every Hub, Spoke and Coverage Spoke, every listed debt asset, the IFlashSource, the public flash liquidation helper, every integration's LPVault, position manager and factory, recorded swap routes, registered proxies), each named on 2.8",
+  "title": "freezeAddress reverts ProtectedAddress for every protected kind (timelock, Aave governance executor, every Avana contract, live vault tokens and oracles, DebtOracles, every Hub, Spoke and Coverage Spoke, every listed debt asset, the IFlashSource and its LENDER(), the public flash liquidation helper, every integration's LPVault and pricing implementation and its recorded AMM contracts, recorded swap routes, registered proxies), each named on 2.8 and each a condition of MarketRegistrySafetyLogic._isProtected",
   "status": "Verified",
-  "method": "exhaustive enumeration (28 cases)",
+  "method": "exhaustive enumeration (29 cases)",
   "verifies": [
    "REQ-MREG-020",
    "REQ-ACCESS-157",
@@ -159,7 +159,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.03,
+  "seconds": 0.01,
   "model": "fv_ctl_breakers"
  },
  {
@@ -181,7 +181,7 @@
  },
  {
   "id": "FV-CTL-104",
-  "title": "No caller makes more than 20 freezes in any 24 consecutive hours: the rolling-window check keeps every window, past and future, at or below 20",
+  "title": "No caller makes more than 20 freezes in any 24 consecutive one-hour buckets: the bucket-window check keeps every window, past and future, at or below 20",
   "status": "Verified",
   "method": "Z3 (unsat of negation)",
   "verifies": [
@@ -194,7 +194,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.01,
+  "seconds": 0.02,
   "model": "fv_ctl_breakers"
  },
  {

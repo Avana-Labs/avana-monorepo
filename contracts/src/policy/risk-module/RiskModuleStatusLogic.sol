@@ -10,6 +10,7 @@ import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {MarketGateStatus} from "../../types/MarketGateStatus.sol";
+import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
@@ -25,11 +26,12 @@ import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 /// @title RiskModuleStatusLogic
 /// @notice Body of `getAccountGateStatus`: every borrow-side gate outcome of an account on the stored oracle state,
 /// without poking (REQ-ADAPTER-038, REQ-RISK-060).
-/// @dev `borrowAllowed` and `withdrawWithDebtAllowed` run the borrow logic's `gate`, the same code as the pre-checks
-/// without the pokes, so a value read between pokes can differ from what the next call sees. Reserve fields hold
-/// `type(uint256).max` when no reserve matches (reserve 0 is a valid identifier). Reading the pause state of the
-/// market's Hub here is for the status only; no check reads it. The RiskModule turns a revert of this body into an
-/// empty status, so the view never reverts.
+/// @dev `borrowAllowed` and `withdrawWithDebtAllowed` are exactly the outcome of the borrow logic's `gate`, the same
+/// code as the pre-checks without the pokes, so a value read between pokes can differ from what the next call sees.
+/// Reserve fields hold `type(uint256).max` when no reserve matches (reserve 0 is a valid identifier). The body reads no
+/// pause state and no address freeze: the pause state of the market's Hub comes from `pauseOf`, which the RiskModule
+/// calls separately and copies into the two pause fields only (PROP-066). The RiskModule turns a revert of either into
+/// the unavailable status, so the view never reverts.
 /// @custom:spec REQ-ADAPTER-038, REQ-RISK-060
 // View calls in loops over the account's reserves and legs, bounded by listings.
 // forge-lint: disable-start(calls-loop)
@@ -81,8 +83,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         s.m = _market(marketId);
         s.borrowed = NO_RESERVE;
         _accountReserves(st, s);
-        st.pauseState = _registry().pauseState(s.m.hub);
-        st.pauseReason = _registry().pauseReason(s.m.hub);
         st.noApprovedKeeper = ILPVaultSwapViews(_LP_VAULT_SWAP).activeKeeperCount() == 0;
         st.hardHealthFloor = _store().hardHealthFloor(marketId);
         (st.healthFactor, st.healthFactorExcludingRescue) = IRiskModuleBorrowLogic(_BORROW).healthFactors(proxy);
@@ -92,8 +92,19 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         st.markets = new MarketGateStatus[](1);
         st.markets[0] = _marketStatus(s, st.noApprovedKeeper);
         _debtStatus(st, s);
-        st.borrowAllowed = st.pauseState == PauseState.None && _passes(proxy, true);
-        st.withdrawWithDebtAllowed = st.pauseState != PauseState.Paused && _passes(proxy, false);
+        st.borrowAllowed = _passes(proxy, true);
+        st.withdrawWithDebtAllowed = _passes(proxy, false);
+    }
+
+    /// @inheritdoc IRiskModuleStatusLogic
+    /// @custom:spec REQ-ADAPTER-038
+    function pauseOf(
+        address proxy
+    ) external view override returns (PauseState state, PauseReason reason) {
+        (, uint256 marketId) = _account(proxy);
+        address hub = _market(marketId).hub;
+        state = _registry().pauseState(hub);
+        reason = _registry().pauseReason(hub);
     }
 
     /// @dev Collateral reserves that map to no market of the account, and the debt reserves the Spoke reports.

@@ -198,6 +198,14 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
         uint256[] memory quotes
     ) internal view virtual returns (bool ok, uint256 value);
 
+    /// @dev Whether `poolRef` names the market's own pool: its address as `bytes32(uint160(pool))`, or its pool
+    /// identifier for an AMM protocol that keys pools by identifier. `checkConfig` refuses a `PoolTwap` second source
+    /// on it (`CHECK_SECOND_SOURCE`). Never reverts.
+    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100, REQ-ORACLE-103
+    function _isOwnPool(
+        bytes32 poolRef
+    ) internal view virtual returns (bool own);
+
     /// @dev The pricing module's listing checks on `config` at the current quotes; returned bits are shifted to
     /// `MODULE_CHECKS_SHIFT` and above by the caller.
     /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-048, REQ-ORACLE-055, REQ-ORACLE-105

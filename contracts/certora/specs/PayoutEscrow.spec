@@ -3,7 +3,7 @@
  * spec 2.18).
  *
  * The payout escrow, its only job (Q-401; there is no in-kind settlement). Conservation of undelivered payouts (the
- * Avana fee, keeper payouts, borrower surpluses, route residues and dust legs in debt assets or pool tokens, and
+ * Avana fee, borrower surpluses, route residues and dust legs in debt assets or pool tokens, and
  * `settlePending` residue, whose transfer failed, AMMN N2a): every credit comes from a deposit by LPVaultSwap while
  * LPVaultSwap holds the Lock and equals the tokens received, capped at the request; every claim is made by the
  * credited account (a borrower's wallet, `feeRecipient` or a liquidation's caller) while the Lock is free, pays exactly

@@ -10,18 +10,18 @@ From `contracts/`, Medusa 1.5.1 from `tools/bin/`:
 
 ```bash
 script/security-slow.sh build medusa
-MEDUSA_TIMEOUT=1800 script/security-slow.sh build medusa       # nightly budget
+MEDUSA_TIMEOUT=1800 script/security-slow.sh build medusa       # full budget
 ```
 
 Configuration: `contracts/medusa.json` (8 workers); `MEDUSA_TIMEOUT` 900 s per harness by default; corpus in `out-security/corpus/medusa/`.
 
 ## Scope
 
-The 19 harnesses listed in [echidna](../echidna/).
+The 27 harnesses listed in [echidna](../echidna/).
 
 ## How often it runs
 
-Slow tier at each layer gate and nightly in CI; a 24-hour campaign per layer before audit.
+Slow tier at each layer gate and on every push to `main` in CI (`security-slow.yml`), one job per harness at 1,800 seconds with the harness's corpus kept between runs. Before audit, a 24-hour campaign per layer: `security-slow.yml` started by hand with `campaign` set to the layer runs eight 3-hour jobs per harness (no call limit), each with a fresh seed, then merges their corpora into the stored corpus.
 
 ## Latest result
 

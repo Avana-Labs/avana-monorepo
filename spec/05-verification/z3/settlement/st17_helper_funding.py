@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-"""MATH-ST-124..128: how a flash liquidation helper call is funded (2.11 REQ-HELPER-004, -006, -007, -008, -011).
+"""MATH-ST-124..129: how a flash liquidation helper call is funded (2.11 REQ-HELPER-003, -004, -006, -007, -008, -011).
 
 The helper pulls the prefund X - F + mS from its payer (inventory and the SPEC-LIQ-019 shortfall budget), borrows F,
 approves LPVaultSwap for X + mS, which pulls X and then the floor shortfall sh <= mS, and pays keeperOut back:
@@ -10,7 +10,8 @@ approves LPVaultSwap for X + mS, which pulls X and then the floor shortfall sh <
   payout    = rise of the helper's balance over the call = held + topUp - owed REQ-HELPER-008
   outlay    = X - F + mS + topUp     (everything pulled from the payer)
 The operator variant also requires F <= need = ceil(D (1e4 + 500) / 1e4) and outlay - payout <= floor(D b / 1e4),
-b = MAX_TOP_UP_BPS (REQ-HELPER-011). Amounts in debt-asset base units.
+b = MAX_TOP_UP_BPS (REQ-HELPER-011). The operator variant also accepts F = 0 (REQ-HELPER-003): no loan is taken, so
+phi = 0 and owed = 0; every check below covers 0 <= F <= X. Amounts in debt-asset base units.
 """
 from z3 import Ints, If, And, Or, Not
 from _common import check, computed, done, BPS
@@ -23,7 +24,7 @@ X, F, mS, sh, D, A, B, R, phi, ko, u, held, owed, topUp, payout, outlay = Ints(
 minRec = Ints("minRec")[0]
 
 flow = [
-    X >= 1, X < 2**128, F >= 1, F <= X, mS >= 0, mS < 2**128, D >= 0, D <= X, A >= 0, B >= 0, R >= 0, phi >= 0,
+    X >= 1, X < 2**128, F >= 0, F <= X, Or(F > 0, phi == 0), mS >= 0, mS < 2**128, D >= 0, D <= X, A >= 0, B >= 0, R >= 0, phi >= 0,
     minRec >= 0,
     # SPEC-LIQ-019: shortfall = max(0, minRec - R) within the budget; the floor top-up makes R_f = minRec, and
     # A + B <= max(0, R_f - D) (SPEC-LIQ-008/009/022)
@@ -96,6 +97,20 @@ check("MATH-ST-127d",
               bound * BPS <= D * bps, bound * BPS > D * bps - BPS, outlay - payout > bound],
       "COUNTEREXAMPLE")
 
+# ---------- ST-129: the operator's zero loan ----------
+# MATH-ST-129 verifies: REQ-HELPER-003, REQ-HELPER-004, REQ-HELPER-008, REQ-HELPER-011
+check("MATH-ST-129a",
+      "F = 0: nothing is owed, so no top-up is pulled, the payout is keeperOut + u, and the Safe's net outlay is "
+      "D + A + B - R (the premium term vanishes, the shortfall still cancels)",
+      flow + [F == 0, Or(topUp != 0, payout != ko + u, outlay - payout != D + A + B - R)],
+      "PROVED")
+# MATH-ST-129 verifies: REQ-HELPER-011
+check("MATH-ST-129b",
+      "F = 0: a completed operator call leaves the Safe at most floor(D b / 1e4) poorer, and the loan bound F <= need "
+      "holds for every D >= 0",
+      op + [F == 0, outlay - payout <= bound, Or(after < before - bound, F > need)],
+      "PROVED")
+
 # ---------- ST-128: worked examples of 2.11 ----------
 E6, E18 = 10**6, 10**18
 
@@ -138,11 +153,26 @@ computed("MATH-ST-128", "2.11 helper examples (USDC 6 decimals, GHO 18)", [
     ("R = 1,940: Safe loss 10.975 USDC (settles)", 10_975_000, r1940[5] - r1940[4]),
     ("R = 1,940: payout 86.525 USDC", 86_525_000, r1940[4]),
     ("X = F = 2,047.5 against D = 1,950, R = 1,850: top-up 101.02375 USDC", 101_023_750, r1850[3]),
-    ("GHO at a 5 bps minter fee: fee 0.975 GHO", 975 * 10**15, (1_950 * E18 * 5 + 5_000) // BPS),
+    ("GHO from the Pool at its 5 bps premium (half up): 0.975 GHO", 975 * 10**15, (1_950 * E18 * 5 + 5_000) // BPS),
     ("GHO payout 69.825 GHO", 69_825 * 10**15, gho[4]),
     ("F < X example: payout 167.325 USDC", 167_325_000, inv[4]),
     ("net minimum of 69 USDC with F < X: minPayout 166.5 USDC", 166_500_000, 2_047_500_000 - 1_950 * E6 + 69 * E6),
     ("D = 9,800 at 100 bps: top-up bound 98 USDC", 98 * E6, 9_800 * E6 * 100 // BPS),
+])
+
+z_bob = run(1_950 * E6, 0, 0, 1_950 * E6, 2_040_300_000, 19_500_000, 0, 0)
+z1900 = run(1_950 * E6, 0, 0, 1_950 * E6, 1_900 * E6, 0, 0, 0)
+z1940 = run(1_950 * E6, 0, 0, 1_950 * E6, 1_940 * E6, 0, 0, 0)
+z_fl = run(12_000 * E6, 0, 200 * E6, 12_000 * E6, 12_174 * E6, 0, 12_297_373_998, 0)
+# MATH-ST-129 verifies: REQ-HELPER-004, REQ-HELPER-008, REQ-HELPER-011, SPEC-LIQ-019
+computed("MATH-ST-129c", "2.11 operator examples with F = 0 (USDC 6 decimals)", [
+    ("Bob with F = 0: payout = keeperOut = 2,020.8 USDC", 2_020_800_000, z_bob[4]),
+    ("Bob with F = 0: no top-up", 0, z_bob[3]),
+    ("Bob with F = 0: the Safe gains 70.8 USDC", 70_800_000, z_bob[4] - z_bob[5]),
+    ("R = 1,900, A = 0: Safe net outlay 50 USDC (refused at 19.5)", 50 * E6, z1900[5] - z1900[4]),
+    ("R = 1,940, A = 0: Safe net outlay 10 USDC (settles)", 10 * E6, z1940[5] - z1940[4]),
+    ("floor case with F = 0: payout 12,374 USDC", 12_374 * E6, z_fl[4]),
+    ("floor case with F = 0: the Safe nets 174 USDC", 174 * E6, z_fl[4] - z_fl[5]),
 ])
 
 done()

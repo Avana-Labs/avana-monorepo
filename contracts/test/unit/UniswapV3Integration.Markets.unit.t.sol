@@ -88,7 +88,7 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
         assertEq(vault.tokenIdOf(bytes32(uint256(42))), 42);
     }
 
-    // TEST-108 verifies: REQ-VAULT-001, REQ-VAULT-085, REQ-VAULT-097, REQ-VAULT-150
+    // TEST-108 verifies: REQ-VAULT-001, REQ-VAULT-085, REQ-VAULT-097, REQ-VAULT-150, REQ-ACCESS-010, REQ-ACCESS-022, REQ-ACCESS-113
     // Sources: no proxy, owner, pause, sweep, rescue, multicall, generic call or ERC-1271 entry point exists
     function test_TEST_108_noUpgradeOwnerPauseOrRescueSurface() public {
         bytes[10] memory probes = [

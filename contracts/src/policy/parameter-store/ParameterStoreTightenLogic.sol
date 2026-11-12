@@ -16,7 +16,7 @@ import {MarketParams} from "./types/MarketParams.sol";
 /// @notice Bodies of every tighten setter: each moves one value strictly in its safer direction, within its hard and liveness bounds; all are on the timelock's short-delay list (12 hours).
 /// @dev Predicate (SPEC-GOV-011): strictly safer than the stored value at execution, else `NotStricter`; within the 1.5 hard bounds, else `OutOfBounds`; within the liveness bound, else `LivenessBound`; checked in that order. No step or spacing limit applies to a tightening. A tightening that re-runs `checkConfig` reverts `OracleConfigRejected` only for a check its own write breaks (a check that already failed never blocks it). Callers: the timelock (short delay) or the `APPLICATION_RISK_STEWARD` holder (immediate). Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
 /// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-050, REQ-CONFIG-051, REQ-CONFIG-052, REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-002, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-024, REQ-PSTORE-030, SPEC-GOV-009, SPEC-GOV-011
+/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-050, REQ-CONFIG-051, REQ-CONFIG-052, REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-002, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-024, REQ-PSTORE-029, REQ-PSTORE-030, SPEC-GOV-009, SPEC-GOV-011
 // Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
 // itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
 // functions another contract serves.
@@ -96,7 +96,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-023, REQ-PSTORE-009, Q-182
+    /// @custom:spec REQ-CONFIG-023, REQ-PSTORE-009, REQ-PSTORE-029, Q-182
     function tightenBorrowPriceMaxAge(
         address feed,
         uint32 value
@@ -108,7 +108,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         // A lower borrow age cannot move a tolerance bound; only checks the write itself breaks can revert it.
         // The second value (a tolerance bound) is not computed here.
         // forge-lint: disable-next-line(unused-return)
-        (address[] memory oracles,) = _affected(SCOPE_FEED, feed, false);
+        (address[] memory oracles,,) = _affected(SCOPE_FEED, feed, false, false);
         uint256[] memory before = _failures(oracles);
         d.borrowPriceMaxAge = value;
         _requireNoNewFailures(oracles, before);
@@ -116,7 +116,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-052, REQ-PSTORE-009, SPEC-GOV-009
+    /// @custom:spec REQ-CONFIG-052, REQ-PSTORE-009, REQ-PSTORE-029, SPEC-GOV-009
     function tightenConsistencyToleranceBps(
         uint256 marketId,
         uint16 value
@@ -127,8 +127,9 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         uint16 old = p.consistencyToleranceBps;
         if (value >= old) revert NotStricter();
         if (value < CONSISTENCY_MIN_BPS) revert LivenessBound();
-        address[] memory oracles = new address[](1);
-        if (_configured(m.status)) oracles[0] = m.lpOracle;
+        // One slot per market identifier, as `_affected` lays them out; only this market's is set.
+        address[] memory oracles = new address[](marketId);
+        if (_configured(m.status)) oracles[marketId - 1] = m.lpOracle;
         uint256[] memory before = _failures(oracles);
         p.consistencyToleranceBps = value;
         _requireNoNewFailures(oracles, before);
@@ -136,7 +137,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-024, REQ-CONFIG-052, REQ-PSTORE-009, SPEC-GOV-009
+    /// @custom:spec REQ-CONFIG-024, REQ-CONFIG-052, REQ-PSTORE-009, REQ-PSTORE-029, SPEC-GOV-009
     function tightenFeedAgreementToleranceBps(
         address token,
         uint16 value
@@ -147,7 +148,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         if (value < _toleranceMin(token)) revert LivenessBound();
         // The second value (a tolerance bound) is not computed here; the line above checks the new value against it.
         // forge-lint: disable-next-line(unused-return)
-        (address[] memory oracles,) = _affected(SCOPE_TOKEN, token, false);
+        (address[] memory oracles,,) = _affected(SCOPE_TOKEN, token, false, false);
         uint256[] memory before = _failures(oracles);
         _s().feedAgreementToleranceBps[token] = value;
         _requireNoNewFailures(oracles, before);

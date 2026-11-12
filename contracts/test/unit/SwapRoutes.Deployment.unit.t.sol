@@ -120,7 +120,7 @@ contract SwapRoutesDeploymentUnitTest is SwapRouteFixture {
         MockVault4626 stataTether = new MockVault4626(tether, "stataUSDT");
         MockGsm gsmTether = new MockGsm(address(stataTether), address(gho));
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new PegModuleRoute(
+        this.deployPegModule(
             _config(address(tether), address(gho)),
             PegModuleStep({
                 kind: PegModuleKind.Gsm,
@@ -204,7 +204,7 @@ contract SwapRoutesDeploymentUnitTest is SwapRouteFixture {
         VerboseSlipstreamPool pool = new VerboseSlipstreamPool(address(usdt), address(usdc));
         slipFactory.registerSpacing(address(pool), address(usdt), address(usdc), 1);
         DexPathRoute route =
-            new DexPathRoute(_config(address(usdt), address(usdc)), _hops1(_clHop(address(pool), address(usdc))));
+            this.deployDexPath(_config(address(usdt), address(usdc)), _hops1(_clHop(address(pool), address(usdc))));
         assertEq(route.dependencies()[0], address(pool));
         RouteConfig memory v3Only = _config(address(usdt), address(usdc));
         v3Only.slipstreamFactory = address(0);
@@ -242,7 +242,7 @@ contract SwapRoutesDeploymentUnitTest is SwapRouteFixture {
         _expectBadPeg(_config(address(dai), address(usdc)), daiStep);
         MockLitePsm psm = new MockLitePsm(address(dai), address(usdc), 6);
         daiStep.module = address(psm);
-        new PegModuleRoute(_config(address(dai), address(usdc)), daiStep);
+        this.deployPegModule(_config(address(dai), address(usdc)), daiStep);
         // USDS input: the converter's tokens must be the input and the DAI the LitePSM takes.
         MockDaiUsds wrongConverter = new MockDaiUsds(address(usdt), address(dai));
         PegModuleStep memory usdsStep = PegModuleStep({
@@ -253,11 +253,11 @@ contract SwapRoutesDeploymentUnitTest is SwapRouteFixture {
         });
         _expectBadPeg(_config(address(usds), address(usdc)), usdsStep);
         usdsStep.wrapper = address(new MockDaiUsds(address(usds), address(dai)));
-        new PegModuleRoute(_config(address(usds), address(usdc)), usdsStep);
+        this.deployPegModule(_config(address(usds), address(usdc)), usdsStep);
         // The same converter check for a WrapperThenDex route.
         MockCLPool daiUsdc = _clPool(dai, usdc, 1, 1e12);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new WrapperThenDexRoute(
+        this.deployWrapperThenDex(
             _config(address(usds), address(usdc)),
             WrapperStep({kind: WrapperKind.UsdsToDai, wrapper: address(wrongConverter), underlying: address(dai)}),
             _hops1(_clHop(address(daiUsdc), address(usdc)))
@@ -303,7 +303,7 @@ contract SwapRoutesDeploymentUnitTest is SwapRouteFixture {
         DexHop[] memory hops
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(config, hops);
+        this.deployDexPath(config, hops);
     }
 
     function _expectBadPeg(
@@ -311,6 +311,6 @@ contract SwapRoutesDeploymentUnitTest is SwapRouteFixture {
         PegModuleStep memory step
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new PegModuleRoute(config, step);
+        this.deployPegModule(config, step);
     }
 }

@@ -35,6 +35,8 @@ The design, independent of the Solidity: every `SPEC-*` formula on the spec page
 
 Re-run on 2026-11-10 at 22:4x: `gv01_timelock_timing.py` 17 checks and `gv02_delay_floor_allowlist.py` 13 checks, 0 differ from the documented results, exit 0.
 
+Re-run of every script on 2026-11-11, one at a time: 52 scripts in five folders (`units-oracle/` 16, `aave-risk/` 13 with `ar12`, `settlement/` 17, `governance/` 3, `amm-pricing/` 3), 641 proved, 123 deliberate counterexamples, 131 computed, 0 mismatches, 0 timeouts, every script exits 0; per-folder counts in [`spec/05-verification/z3/README.md`](../../spec/05-verification/z3/README.md#results).
+
 ## Results folder
 
 - [`recorded-results-2026-11-10.md`](results/recorded-results-2026-11-10.md): the Results sections of every Z3 folder README.

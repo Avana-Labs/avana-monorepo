@@ -33,7 +33,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         registry.freezeAddress(a);
     }
 
-    // TEST-229 verifies: REQ-MREG-020, INV-085, Q-242
+    // TEST-229 verifies: REQ-MREG-020, INV-085, Q-242, REQ-ACCESS-169
     // Sources: 5.1 TEST-229
     function test_TEST_229_protectedSetIsRefused() public {
         address proxy = makeAddr("aliceProxy");
@@ -124,8 +124,9 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         address v3Factory = address(new RegistryTokenMock(0));
         address[] memory list = new address[](2);
         (list[0], list[1]) = (nfpm, v3Factory);
-        // Nothing is recorded for the integration yet.
-        assertEq(registry.integrationContracts(V3).length, 0);
+        // The world recorded the integration's position manager and factory and finalized the record; an addition
+        // appends to it.
+        assertEq(registry.integrationContracts(V3).length, 2);
         // Only the admin records, for a registered integration, a non-empty list of new contracts.
         vm.prank(alice);
         vm.expectRevert(
@@ -143,13 +144,13 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         (dup[0], dup[1]) = (nfpm, nfpm);
         _expectBadIntegration(V3, dup);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, list);
+        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, _recordKeyOf(V3), list);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, list);
         address[] memory got = registry.integrationContracts(V3);
-        assertEq(got.length, 2);
-        assertEq(got[0], nfpm);
-        assertEq(got[1], v3Factory);
+        assertEq(got.length, 4);
+        assertEq(got[2], nfpm);
+        assertEq(got[3], v3Factory);
         _expectProtected(nfpm);
         _expectProtected(v3Factory);
         // Already recorded for the integration.
@@ -238,7 +239,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         d.shape = _wideShape();
     }
 
-    // TEST-229 verifies: REQ-MREG-019, REQ-MREG-021, REQ-MREG-022, INV-085, Q-242, Q-263, Q-400
+    // TEST-229 verifies: REQ-MREG-019, REQ-MREG-021, REQ-MREG-022, INV-085, Q-242, Q-263, Q-400, REQ-ACCESS-169, REQ-ACCESS-078, REQ-ACCESS-091, REQ-ACCESS-088
     function test_TEST_229_freezeUnfreezeAndKeeperFloorNotChecked() public {
         vm.expectEmit(address(registry));
         emit IMarketRegistrySafetyEvents.AddressFrozen(keeper, emergencyGuardian);
@@ -265,7 +266,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         registry.unfreezeAddress(keeper);
     }
 
-    // TEST-229 verifies: REQ-MREG-019, Q-262
+    // TEST-229 verifies: REQ-MREG-019, Q-262, REQ-ACCESS-169
     function test_TEST_229_twentyFreezesPerCallerPer24HourBuckets() public {
         vm.warp(100 * 3600 + 5 * 60);
         uint256 h0 = block.timestamp / 3600;

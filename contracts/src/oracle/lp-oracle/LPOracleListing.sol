@@ -26,7 +26,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// the configured routes for the shock reference and the vault-token decimals, the pool's own token order and the
 /// tokens' `decimals()`; the pricing module adds its own bits from `MODULE_CHECKS_SHIFT` up. A failed read fails the
 /// check that needed it; the function never reverts except `InsufficientGas`.
-/// @custom:spec REQ-ORACLE-046, REQ-ORACLE-047, REQ-ORACLE-048, REQ-ORACLE-049, REQ-ORACLE-050, REQ-ORACLE-051, REQ-ORACLE-053, REQ-ORACLE-054, REQ-ORACLE-056, REQ-ORACLE-077, Q-091, Q-184, Q-191, Q-321
+/// @custom:spec REQ-ORACLE-046, REQ-ORACLE-047, REQ-ORACLE-048, REQ-ORACLE-049, REQ-ORACLE-050, REQ-ORACLE-051, REQ-ORACLE-053, REQ-ORACLE-054, REQ-ORACLE-056, REQ-ORACLE-077, REQ-ORACLE-100, Q-091, Q-184, Q-191, Q-321
 abstract contract LPOracleListing is LPOracleViews {
     /// @dev ABI length of a `getMarket` return holding at most `MAX_POOL_TOKENS` tokens.
     uint256 private constant MARKET_LENGTH = 1248;
@@ -216,12 +216,15 @@ abstract contract LPOracleListing is LPOracleViews {
     }
 
     /// @dev A second source is well formed and its own deviation threshold: an oracle network's feed definition
-    /// threshold, 0 for a pool TWAP (whose lag allowance the pricing module checks).
+    /// threshold, 0 for a pool TWAP (whose lag allowance the pricing module checks). A pool TWAP on the market's own
+    /// pool is not independent of the market and is refused (`REQ-ORACLE-100`), whatever the ParameterStore's record
+    /// says: the pool is the pricing module's, fixed at `initialize`.
+    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-053, REQ-ORACLE-100
     function _secondSourceDeviation(
         SecondSource calldata s
     ) private view returns (bool ok, uint256 deviation) {
         if (s.source == address(0)) return (false, 0);
-        if (s.kind == SecondSourceKind.PoolTwap) return (s.twapWindow != 0, 0);
+        if (s.kind == SecondSourceKind.PoolTwap) return (s.twapWindow != 0 && !_isOwnPool(s.poolRef), 0);
         if (s.kind != SecondSourceKind.OracleNetwork || s.maxAge == 0) return (false, 0);
         bytes memory ret;
         (ok, ret) = LPOracleCalls.staticRead(

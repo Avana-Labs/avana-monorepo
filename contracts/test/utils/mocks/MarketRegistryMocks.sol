@@ -569,6 +569,75 @@ contract RegistryRouteMock {
     ) external view returns (bool) {
         return classOk;
     }
+
+    /// @dev Route type the registry reads (REQ-ROUTE-002); `DexPath` (1) unless a test sets another.
+    uint256 internal _routeType = 1;
+    address[] internal _intermediates;
+    uint256 internal _pegKind;
+    uint256 internal _pegModule;
+    /// @dev Per view selector: 0 a normal answer, 1 revert, 2 one byte short, 3 one word too long.
+    mapping(bytes4 selector => uint8 mode) public answerMode;
+
+    function setRouteType(
+        uint256 t
+    ) external {
+        _routeType = t;
+    }
+
+    function setIntermediates(
+        address[] calldata tokens
+    ) external {
+        _intermediates = tokens;
+    }
+
+    function intermediates() external view returns (address[] memory) {
+        return _intermediates;
+    }
+
+    /// @dev Raw words of `IPegModuleRoute.pegModule()`: the `PegModuleKind` ordinal (0 Gsm, 1 LitePsm) and the module.
+    function setPegModule(
+        uint256 kind,
+        uint256 module
+    ) external {
+        (_pegKind, _pegModule) = (kind, module);
+    }
+
+    function setAnswerMode(
+        bytes4 selector,
+        uint8 mode
+    ) external {
+        answerMode[selector] = mode;
+    }
+
+    function routeType() external view returns (uint256) {
+        _odd(this.routeType.selector, _routeType, 0, 1);
+        return _routeType;
+    }
+
+    function pegModule() external view returns (uint256, uint256) {
+        _odd(this.pegModule.selector, _pegKind, _pegModule, 2);
+        return (_pegKind, _pegModule);
+    }
+
+    /// @dev Ends the call with a revert or an answer of the wrong length when the selector's mode asks for one.
+    function _odd(
+        bytes4 selector,
+        uint256 w0,
+        uint256 w1,
+        uint256 words
+    ) internal view {
+        uint8 mode = answerMode[selector];
+        if (mode == 0) return;
+        if (mode == 1) revert("route read");
+        uint256 size = mode == 2 ? words * 32 - 1 : words * 32 + 32;
+        assembly {
+            let p := mload(0x40)
+            mstore(p, w0)
+            mstore(add(p, 0x20), w1)
+            mstore(add(p, 0x40), 0)
+            return(p, size)
+        }
+    }
 }
 
 /// @title RegistryAdapterMock

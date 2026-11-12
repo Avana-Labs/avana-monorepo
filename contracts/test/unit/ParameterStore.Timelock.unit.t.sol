@@ -70,7 +70,7 @@ contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
         assertEq(store.marketUsdCap(M), 6_000_000e8);
     }
 
-    // TEST-063 verifies: REQ-PSTORE-017, REQ-CONFIG-071, SPEC-GOV-011
+    // TEST-063 verifies: REQ-PSTORE-017, REQ-CONFIG-071, SPEC-GOV-011, REQ-ACCESS-120
     function test_TEST_063_spacingEvaluatedAtExecution() public {
         // Two loosenings scheduled together still execute one normal delay apart.
         Call[] memory first =

@@ -33,7 +33,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         assertEq(c.rescueUnits, 0);
     }
 
-    // TEST-012 verifies: REQ-RISK-009, REQ-RISK-014, INV-026
+    // TEST-012 verifies: REQ-RISK-009, REQ-RISK-014, INV-026, REQ-ACCESS-036, REQ-VAULT-144
     function test_TEST_012_offboardingAndNotActive() public {
         vm.prank(address(timelock));
         registry.setMarketOffboarding(mid);
@@ -286,7 +286,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _pledge(4e11, k, false);
     }
 
-    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081
+    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081, REQ-ACCESS-166, REQ-ACCESS-084, REQ-ACCESS-081
     function test_TEST_228_marketBreakerOnPledge() public {
         vm.prank(emergencyGuardian);
         registry.tripMarketBreaker(mid);

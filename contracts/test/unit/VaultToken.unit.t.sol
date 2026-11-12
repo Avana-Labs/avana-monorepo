@@ -121,7 +121,7 @@ contract VaultTokenUnitTest is VaultTokenFixture {
         new VaultToken(b);
     }
 
-    // TEST-023 verifies: REQ-VTOKEN-001, REQ-VTOKEN-002, REQ-VTOKEN-029, Q-064, Q-068
+    // TEST-023 verifies: REQ-VTOKEN-001, REQ-VTOKEN-002, REQ-VTOKEN-029, Q-064, Q-068, REQ-ACCESS-066, REQ-ACCESS-113
     /// @notice No permit, owner, pause, upgrade, flash-mint or hook entry point exists: each selector reverts with no
     /// data (the token has no fallback), and ETH is refused.
     function test_TEST_023_noAdminPermitOrHookSurface() public {

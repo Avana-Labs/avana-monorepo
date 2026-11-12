@@ -1,9 +1,12 @@
 name: contracts
 
-# Foundry workspace in contracts/. Every push and pull request runs the light set: format, lint and build, the ci and
-# gas test profiles, branch coverage, traceability and the fast security tier. The long jobs run only on demand
-# (workflow_dispatch): suite `full` adds the invariant campaign, fork, differential, Halmos, SMTChecker and Certora;
-# suite `slow` runs the slow security tier; a `layer` input runs only that layer's mutation gate.
+# Foundry workspace in contracts/. Every pull request runs the short set: format, lint and build, the ci test profile in
+# 10 shards (invariant suites as a short check, 256 runs at depth 64; the full 10,000 runs at depth 100 on main), gas
+# snapshots, branch coverage, traceability and the fast security tier. Every push to main (and a manual run) adds the
+# long checks: the deep invariant campaign, fork tests, the FFI differential suite, Halmos, SMTChecker and Certora, one
+# target per job, each at most 4 hours: `plan` lists the invariant files, Halmos test contracts, SMTChecker contracts
+# and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. The slow security tier
+# (security-slow.yml) and the per-layer mutation gates (mutation-gate.yml) also run on every push to main.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -26,22 +29,12 @@ on:
       - "spec/05-verification/trace.py"
       - ".github/workflows/contracts.yml"
   workflow_dispatch:
-    inputs:
-      suite:
-        description: "full: the light set plus invariant, fork, differential, Halmos, SMTChecker and Certora; slow: the slow security tier only"
-        type: choice
-        options: [full, slow]
-        default: full
-      layer:
-        description: "Layer gate (2.1 ... 2.6): run only slither-mutate, Gambit and Necessist over that layer's contracts (suite is ignored)"
-        required: false
-        default: ""
 
 concurrency:
-  # Each manually dispatched suite and layer gate has its own group, so gates for different layers run side by side;
-  # a newer push or pull-request run cancels the older one on the same ref.
-  group: contracts-${{ github.ref }}-${{ github.event_name }}-${{ inputs.layer || inputs.suite || 'all' }}
-  cancel-in-progress: true
+  # A newer pull-request run cancels the older one on the same ref; runs on main finish, so the next merge never
+  # cancels a long check.
+  group: contracts-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -56,7 +49,6 @@ defaults:
 jobs:
   build:
     name: fmt, lint, build
-    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -141,14 +133,22 @@ jobs:
           path: |
             contracts/out
             contracts/out-aave
+            contracts/cache
           retention-days: 7
 
   test:
-    name: tests (ci profile)
-    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
+    # The suite is split into 10 shards that run side by side: every test file (fork and differential excluded) is
+    # assigned by its measured run time (script/test-shard.sh, script/test-shard.py, script/test-timings.json), so
+    # the shards take about equal time and each file runs in exactly one shard. Each shard reuses the build job's
+    # compiled output instead of compiling again.
+    name: tests (ci profile, shard ${{ matrix.shard }}/10)
     needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     env:
       FOUNDRY_PROFILE: ci
     steps:
@@ -170,12 +170,53 @@ jobs:
 
       - run: forge soldeer install
 
-      - name: Unit, fuzz, integration, hostile and invariant suites (10,000 runs, TEST-007)
-        # A fresh seed per run widens coverage over time; the seed is printed for reproduction.
+      - name: Reuse the build job's compiled output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} of 10 (fuzz 10,000 runs; invariants 10,000 x 100 on main, 256 x 64 on a pull request; TEST-007)
+        # A fresh seed per run widens coverage over time; the seed is printed for reproduction. A pull request runs the
+        # invariant suites as a short check; every push to main runs them at the full ci profile, and its gate requires
+        # every shard.
+        # test/hostile/ does not exist yet: contracts/test/README.md section 6 describes the hostile suite it will hold.
         run: |
-          SEED=$(printf '0x%x' "$(date +%s)")
+          SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
           echo "fuzz seed: $SEED"
-          forge test --fuzz-seed "$SEED" -vvv
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            export FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=64
+            echo "invariant suites: 256 runs at depth 64 (pull request)"
+          fi
+          script/test-shard.sh ${{ matrix.shard }} 10 --fuzz-seed "$SEED" -vvv
+
+  gas:
+    name: gas snapshots
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: forge soldeer install
+
+      - name: Build Aave V4 artifacts for the fixture
+        # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
+        run: FOUNDRY_PROFILE=aave forge build
 
       - name: Gas snapshots (test/gas against the committed snapshots/)
         # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
@@ -183,19 +224,45 @@ jobs:
         env:
           FOUNDRY_PROFILE: gas
           FORGE_SNAPSHOT_CHECK: "true"
+        run: forge test -vvv
+
+  plan:
+    name: plan the long jobs
+    # Long check: main and manual runs only.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      invariant: ${{ steps.plan.outputs.invariant }}
+      halmos: ${{ steps.plan.outputs.halmos }}
+      smt: ${{ steps.plan.outputs.smt }}
+      certora: ${{ steps.plan.outputs.certora }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: List every target (script/ci-shards.py)
+        id: plan
         run: |
-          if find test/gas -name '*.t.sol' 2>/dev/null | grep -q .; then
-            forge test -vvv
-          else
-            echo "test/gas has no suites"
-          fi
+          set -euo pipefail
+          for t in invariant halmos smt certora; do
+            legs=$(python3 script/ci-shards.py "$t")
+            echo "$t=$legs" | tee -a "$GITHUB_OUTPUT"
+          done
 
   invariant:
-    name: deep invariant campaign
-    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
-    needs: build
+    # One job per file of test/invariant/ (the invariant profile's match_path), each with the profile's 2,000 runs
+    # at depth 400 per invariant.
+    name: deep invariant campaign (${{ matrix.file }})
+    needs: [build, plan]
+    if: github.event_name != 'pull_request' && needs.plan.outputs.invariant != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.invariant) }}
     env:
       FOUNDRY_PROFILE: invariant
     steps:
@@ -217,14 +284,21 @@ jobs:
 
       - run: forge soldeer install
 
-      - name: Invariant suites (2,000 runs, depth 400)
-        run: forge test -vvv
+      - name: Build Aave V4 artifacts for the fixture
+        # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
+        run: FOUNDRY_PROFILE=aave forge build
+
+      - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
+        env:
+          FILE: ${{ matrix.file }}
+        run: forge test --match-path "$FILE" -vvv
 
   fork:
     name: Ethereum and Base fork tests
-    # Manual runs only (suite `full`): it needs the RPC_MAINNET and RPC_BASE secrets.
-    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
+    # Runs when the RPC_MAINNET and RPC_BASE secrets are set; without them it passes with a warning and runs nothing.
     needs: build
+    # Long check: main and manual runs only.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -236,46 +310,64 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Require fork configuration
+      - name: Skip without RPC endpoints
         # Fork blocks are pinned in test/utils/fixtures/ForkConstants.sol (TEST-003), never taken from CI variables.
+        # Without both secrets the job passes with a warning and runs no fork test, so a missing secret blocks no
+        # other check; with them, every fork test runs and any failure fails the job.
+        if: env.RPC_MAINNET == '' || env.RPC_BASE == ''
         run: |
-          test -n "$RPC_MAINNET" || { echo "secret RPC_MAINNET is not set"; exit 1; }
-          test -n "$RPC_BASE" || { echo "secret RPC_BASE is not set"; exit 1; }
+          echo "::warning title=fork tests not run::RPC_MAINNET or RPC_BASE is not set; the fork tests did not run."
+          echo "Fork tests not run: the RPC_MAINNET or RPC_BASE secret is not set." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Read the pinned Foundry version
+        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
 
       - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         with:
           version: ${{ env.FOUNDRY_VERSION }}
 
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         with:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
       - name: Cache fork RPC responses for the pinned blocks
+        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         # Keyed on the file that holds both pins, so a new Ethereum or Base block starts a fresh cache.
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.foundry/cache/rpc
           key: rpc-${{ hashFiles('contracts/test/utils/fixtures/ForkConstants.sol') }}
 
-      - run: forge soldeer install
+      - if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
+        run: forge soldeer install
 
       - name: Build Aave V4 artifacts for the fork fixture
+        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         run: FOUNDRY_PROFILE=aave forge build
 
-      - name: Fork tests (Uniswap v3, Chainlink, GHO FlashMinter, GSMs, Sky LitePSM)
+      - name: Fork tests (Uniswap v3, Chainlink, Aave V3 Pool, GSMs, Sky LitePSM)
+        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
         run: forge test -vvv
 
       - name: Hostile-component tests on the fork
-        run: AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' -vvv
+        # The hostile-component suite of contracts/test/README.md section 6, run when test/hostile/ holds tests.
+        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
+        run: |
+          if [ -d test/hostile ]; then
+            AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' -vvv
+          else
+            echo "No test/hostile/ folder; no hostile-component tests to run."
+          fi
 
   differential:
     name: FFI differential (LPOracle vs mpmath)
-    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
     needs: build
+    # Long check: main and manual runs only.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -314,11 +406,16 @@ jobs:
         run: forge test -vvv
 
   halmos:
-    name: Halmos
-    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
-    needs: build
+    # One job per Halmos test contract (each file of test/halmos/ holds one), every check_ function at loop 8.
+    name: Halmos ${{ matrix.contract }}
+    needs: [build, plan]
+    if: github.event_name != 'pull_request' && needs.plan.outputs.halmos != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.halmos) }}
     env:
       # Halmos has no deployCode cheatcode; dynamic test linking turns `new C(...)` in setUp into deployCode.
       FOUNDRY_DYNAMIC_TEST_LINKING: "false"
@@ -352,20 +449,24 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
 
-      - name: Symbolic tests (check_PROP_*)
-        run: |
-          if grep -rqs --include='*.sol' 'function check_' test/halmos; then
-            .venv/bin/halmos --root . --match-contract 'HalmosTest$' --loop 8 --solver-timeout-assertion 0
-          else
-            echo "test/halmos has no check_ functions"
-          fi
+      - name: Symbolic tests of ${{ matrix.contract }} (${{ matrix.file }})
+        env:
+          CONTRACT: ${{ matrix.contract }}
+        run: .venv/bin/halmos --root . --match-contract "^${CONTRACT}\$" --loop 8 --solver-timeout-assertion 0
 
   smtchecker:
-    name: SMTChecker
-    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
-    needs: build
+    # One job per contract of [profile.smt.model_checker] contracts: the job narrows that map to its contract in the
+    # runner's copy of foundry.toml, with every other setting (engine, targets, invariants, 100-second query timeout)
+    # unchanged.
+    name: SMTChecker ${{ matrix.contract }}
+    needs: [build, plan]
+    if: github.event_name != 'pull_request' && needs.plan.outputs.smt != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.smt) }}
     env:
       FOUNDRY_PROFILE: smt
     steps:
@@ -387,20 +488,32 @@ jobs:
 
       - run: forge soldeer install
 
-      - name: Model-check the contracts listed in [profile.smt.model_checker]
+      - name: Model-check ${{ matrix.contract }}
         # Unproved targets are reported as warnings; a counterexample is a compiler error.
-        run: forge build --force 2>&1 | tee smt.log
+        env:
+          CONTRACT: ${{ matrix.contract }}
+        run: |
+          python3 script/ci-shards.py smt-only "$CONTRACT" > foundry.toml.smt
+          mv foundry.toml.smt foundry.toml
+          forge build --force 2>&1 | tee smt.log
 
       - name: Fail on counterexamples
         # Counterexamples read "... happens here"; unproved targets read "... might happen here".
         run: "! grep -q 'happens here' smt.log"
 
   certora:
-    name: Certora
-    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'full'
-    needs: build
+    # One job per conf of certora/conf. At most six run at a time, the number of Certora jobs the account keeps open
+    # at once.
+    name: Certora ${{ matrix.conf }}
+    needs: [build, plan]
+    if: github.event_name != 'pull_request' && needs.plan.outputs.certora != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.certora) }}
     env:
       CERTORAKEY: ${{ secrets.CERTORAKEY }}
     steps:
@@ -410,12 +523,13 @@ jobs:
 
       - name: Skip without a Certora key
         if: env.CERTORAKEY == ''
-        run: echo "CERTORAKEY is not configured; Certora rules were not run."
+        run: |
+          echo "::warning title=Certora rules not run::The CERTORAKEY secret is not set; the rules of ${{ matrix.conf }} did not run."
+          echo "Certora rules of ${{ matrix.conf }} not run: the CERTORAKEY secret is not set." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Read the pinned Foundry version
-
+        if: env.CERTORAKEY != ''
         run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
-
 
       - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
         if: env.CERTORAKEY != ''
@@ -452,19 +566,14 @@ jobs:
           chmod +x "$HOME/.local/bin/solc-0.8.28"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run every configuration in certora/conf
+      - name: certoraRun certora/conf/${{ matrix.conf }}.conf
         if: env.CERTORAKEY != ''
-        run: |
-          status=0
-          for conf in certora/conf/*.conf; do
-            echo "=== $conf"
-            .venv/bin/certoraRun "$conf" --wait_for_results all || status=1
-          done
-          exit $status
+        env:
+          CONF: ${{ matrix.conf }}
+        run: .venv/bin/certoraRun "certora/conf/$CONF.conf" --wait_for_results all
 
   traceability:
     name: traceability
-    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -483,7 +592,7 @@ jobs:
         run: python3 trace.py
 
       - name: Coverage gaps (requirements without a test, property or Solidity link)
-        # Reported in the job summary; blocking per TEST-008 once implementations and tests exist.
+        # Reported in the job summary; this step does not fail the job (TEST-008 defines the strict check).
         continue-on-error: true
         run: |
           rc=0; python3 trace.py --strict > strict.txt || rc=$?
@@ -492,7 +601,6 @@ jobs:
 
   coverage:
     name: branch coverage (per-file minimums)
-    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -530,7 +638,6 @@ jobs:
 
   fast-security:
     name: security (fast tier)
-    if: github.event_name != 'workflow_dispatch' || (inputs.layer == '' && inputs.suite == 'full')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -626,155 +733,28 @@ jobs:
             !contracts/out-security/build
           retention-days: 14
 
-  slow-security:
-    name: security (slow tier, ${{ matrix.tool }})
-    if: github.event_name == 'workflow_dispatch' && inputs.layer == '' && inputs.suite == 'slow'
+  gate:
+    # The one check branch protection requires: it passes only when every job and every leg of each matrix above
+    # passed.
+    name: gate
+    if: always()
+    needs: [build, plan, test, gas, invariant, fork, differential, halmos, smtchecker, certora, traceability, coverage, fast-security]
     runs-on: ubuntu-24.04
-    # One leg per tool, so each has its own timeout and a stuck tool never starves the others.
-    timeout-minutes: ${{ matrix.timeout }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - tool: echidna
-            binaries: echidna
-            timeout: 300
-          - tool: medusa
-            binaries: medusa
-            timeout: 300
-          - tool: halmos
-            binaries: ""
-            timeout: 240
-          - tool: hevm
-            binaries: hevm
-            timeout: 180
-          - tool: mythril
-            binaries: ""
-            timeout: 240
-    env:
-      # Slow-tier budgets: per harness and mode for the fuzzers, per query for hevm. The fuzz seed is fresh every run.
-      ECHIDNA_TEST_LIMIT: "1000000"
-      ECHIDNA_TIMEOUT: "1800"
-      MEDUSA_TIMEOUT: "1800"
-      HEVM_SMT_TIMEOUT: "600"
-      HALMOS_LOOP: "16"
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-
-      - name: Read the pinned Foundry version
-        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
-
-      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
-        with:
-          version: ${{ env.FOUNDRY_VERSION }}
-
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with:
-          version: ${{ env.UV_VERSION }}
-
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: contracts/dependencies
-          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
-
-      - name: Cache pinned security binaries
-        if: matrix.binaries != ''
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: contracts/tools/bin
-          key: security-bin-${{ matrix.tool }}-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
-
-      - name: Install dependencies and pinned tools
+      - name: Require every job and shard to pass
+        # This job has no checkout, so contracts/ does not exist here. On a pull request the long checks are skipped
+        # by design; on main and in a manual run every job must succeed.
+        working-directory: .
         env:
-          BINARIES: ${{ matrix.binaries }}
+          RESULTS: ${{ toJSON(needs) }}
+          LONG_SKIP_OK: ${{ github.event_name == 'pull_request' }}
         run: |
-          forge soldeer install
-          script/install-security-tools.sh --binaries --python
-
-      - name: Restore the fuzzing corpus of earlier slow-tier runs
-        if: matrix.tool == 'echidna' || matrix.tool == 'medusa'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: contracts/out-security/corpus
-          key: security-corpus-${{ matrix.tool }}-${{ github.run_id }}
-          restore-keys: security-corpus-${{ matrix.tool }}-
-
-      - name: Build src/, test/ and script/ with build info
-        run: script/security-slow.sh build
-
-      - name: Run ${{ matrix.tool }} on every harness and contract
-        run: script/security-slow.sh ${{ matrix.tool }}
-
-      - name: Upload reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: security-slow-${{ matrix.tool }}
-          path: |
-            contracts/out-security
-            !contracts/out-security/build
-            !contracts/out-security/corpus
-          retention-days: 30
-
-  layer-gate:
-    name: layer gate ${{ inputs.layer }} (${{ matrix.tool }})
-    # Foundry-suite mutation testing (slither-mutate statement mutants, Gambit expression mutants) and Necessist over
-    # one layer's contracts (security/mutation-layers.json), run by hand at each layer gate: workflow_dispatch with the
-    # `layer` input. The gambit leg fails on any surviving mutant not accepted in security/gambit-triage.json.
-    if: github.event_name == 'workflow_dispatch' && inputs.layer != ''
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        tool: [mutate, gambit, necessist]
-    env:
-      MUTATE_LAYERS: ${{ inputs.layer }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-
-      - name: Read the pinned Foundry version
-        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
-
-      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
-        with:
-          version: ${{ env.FOUNDRY_VERSION }}
-
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with:
-          version: ${{ env.UV_VERSION }}
-
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: contracts/dependencies
-          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
-
-      - name: Install dependencies and pinned tools
-        # Necessist has no release binaries; the runner's preinstalled cargo builds the pinned crate into tools/bin.
-        run: |
-          forge soldeer install
-          FOUNDRY_PROFILE=aave forge build
-          script/install-security-tools.sh --python
-          if [ "${{ matrix.tool }}" = gambit ]; then script/install-security-tools.sh --gambit; fi
-          if [ "${{ matrix.tool }}" = necessist ]; then script/install-security-tools.sh --necessist; fi
-
-      - name: Run ${{ matrix.tool }} on layer ${{ inputs.layer }}
-        run: script/security-slow.sh ${{ matrix.tool }}
-
-      - name: Upload reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: layer-gate-${{ inputs.layer }}-${{ matrix.tool }}
-          path: |
-            contracts/out-security/mutation
-            contracts/out-security/gambit
-            contracts/out-security/necessist
-            !contracts/out-security/mutation/root
-            !contracts/out-security/gambit/root
-            !contracts/out-security/necessist/root
-          retention-days: 30
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad=$(echo "$RESULTS" | jq -r --argjson pr "$LONG_SKIP_OK" '
+            ["plan","invariant","fork","differential","halmos","smtchecker","certora"] as $long
+            | [to_entries[]
+               | select(.value.result != "success")
+               | select(($pr and (.key as $k | $long | index($k)) and .value.result == "skipped") | not)
+               | .key] | join(", ")')
+          if [ -n "$bad" ]; then echo "not passed: $bad"; exit 1; fi

@@ -6,7 +6,7 @@
 
 ## How to run
 
-4naly3er is added to `script/install-security-tools.sh` and run as a fast-tier step over `contracts/src/` when it lands.
+`script/install-security-tools.sh --4naly3er` installs 4naly3er in `tools/4naly3er`; `script/security-fast.sh` runs it over `contracts/src/` as a fast-tier step, with triage in `contracts/security/4naly3er-triage.json`.
 
 ## Scope
 
@@ -14,8 +14,8 @@ Every file under `contracts/src/`.
 
 ## How often it runs
 
-Fast tier (decided 2026-11-10). First run at the layer 2.1 gate.
+Fast tier (decided 2026-11-10).
 
 ## Latest result
 
-Not run yet; the first run is at the layer 2.1 gate. `results/` is empty until then.
+No run is recorded in this folder; the accepted findings are in `contracts/security/4naly3er-triage.json`.

@@ -160,7 +160,7 @@ contract ClPriceMathUnitTest is AvanaTest {
         assertFalse(m.isUsableRange(-50, 50, -10), "negative spacing");
     }
 
-    // TEST-279 verifies: REQ-AMM-V3-007
+    // TEST-279 verifies: REQ-AMM-V3-007, SPEC-UNIT-006
     // Sources: 2.20 REQ-AMM-V3-007 (MATH-AMM-V3-PRICE-05)
     function test_TEST_279_maxLiquidityPerTickBelowTheCreditBound() public view {
         uint128 s1 = m.maxLiquidityPerTick(1);

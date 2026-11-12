@@ -1,27 +1,45 @@
-# Review owners. With branch protection requiring code-owner review on main, a change to a path below needs
-# approval from its team. Teams are in the Avana-Labs GitHub organisation.
+# Review owners. The main branch ruleset requires code-owner review, so a change to a path below needs approval from its
+# team. Teams are in the Avana-Labs GitHub organisation and need write access for review requests to work.
+#
+# GitHub applies the LAST matching rule, so narrower paths come after broader ones. Several owners on one line are
+# alternatives: an approval from any one of them is enough. A change that needs two separate sign-offs is enforced by
+# the ruleset or a required check, not by listing two owners.
 
-*                               @Avana-Labs/core
+*                                                @Avana-Labs/core
 
 # Contract code, deployment scripts and the tests that check them.
-/contracts/                     @Avana-Labs/contracts
+/contracts/                                      @Avana-Labs/contracts
 # Triage files can silence an analyzer finding, so a security reviewer approves every change.
-/contracts/security/            @Avana-Labs/security
+/contracts/security/                             @Avana-Labs/security
+# The pinned fork blocks set the chain state every fork test sees.
 /contracts/test/utils/fixtures/ForkConstants.sol @Avana-Labs/contracts @Avana-Labs/security
 
 # Specification and its verification models.
-/spec/                          @Avana-Labs/contracts
+/spec/                                           @Avana-Labs/contracts
+# Review records, findings and verification evidence.
+/audit/                                          @Avana-Labs/security
 
 # Release manifests and generated address libraries: a verified manifest is approved by the deployment signers.
-/deployments/verified/          @Avana-Labs/deployers
-/packages/protocol/sol/         @Avana-Labs/deployers
+/deployments/verified/                           @Avana-Labs/deployers
+/packages/protocol/sol/                          @Avana-Labs/deployers
 
 # Governance operations and payloads.
-/governance/                    @Avana-Labs/governance
+/governance/                                     @Avana-Labs/governance
 
-# CI, dependency policy and these rules.
-/.github/                       @Avana-Labs/security
-/lefthook.yml                   @Avana-Labs/security
+# Off-chain services: the indexer, Convex backend and shared wire types fall under core.
+/services/                                       @Avana-Labs/core
+# The keeper sends liquidation and poke transactions, so a security reviewer approves every change.
+/services/keeper/                                @Avana-Labs/security
 
-/audit/                         @Avana-Labs/security
-/SECURITY.md                    @Avana-Labs/security
+# CI, dependency policy, secret scanning and these rules.
+/.github/                                        @Avana-Labs/security
+/.gitleaks.toml                                  @Avana-Labs/security
+/lefthook.yml                                    @Avana-Labs/security
+/SECURITY.md                                     @Avana-Labs/security
+
+# Licences and notices.
+/LICENSE                                         @Avana-Labs/security
+/LICENSING.md                                    @Avana-Labs/security
+/LICENSES/                                       @Avana-Labs/security
+/NOTICE                                          @Avana-Labs/security
+/THIRD_PARTY_LICENSES.md                         @Avana-Labs/security

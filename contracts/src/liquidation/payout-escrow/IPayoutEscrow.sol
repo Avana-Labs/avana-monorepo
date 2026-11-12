@@ -7,7 +7,7 @@ pragma solidity 0.8.28;
 /// @notice The payout escrow: holds a liquidation payout that LPVaultSwap cannot deliver to its recipient, which is
 /// its only job (Q-401; the contract keeps its `PayoutEscrow` name, though there is no in-kind settlement). LPVaultSwap
 /// sends each payout with a gas-limited call that cannot revert the liquidation: the borrower's surplus, Avana's fee to
-/// `feeRecipient`, the keeper payout and the `settlePending` route residue. If a transfer reverts,
+/// `feeRecipient` and the `settlePending` route residue. If a transfer reverts,
 /// returns `false` or runs out of its gas (for example a recipient blocklisted by the token's issuer), LPVaultSwap
 /// deposits the amount here, credited to that account and token, so a failed payout never reverts a liquidation
 /// (REQ-SWAP-076, AMMN N2a). The credited account later claims its whole credit to any recipient it names.

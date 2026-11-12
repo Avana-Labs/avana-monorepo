@@ -209,4 +209,53 @@ contract DebtOracleFreshnessUnitTest is DebtOracleFixture {
         assertFalse(v.borrowAllowed);
         assertFalse(v.liquidationPaused);
     }
+
+    /// @notice Base, restart at `T0 + 100` with a 3,600 s grace period: past the grace period, a served round from
+    /// before the restart, or from the restart second, never admits a borrow, while the state stays Live, the same
+    /// price is served and liquidation is not paused; a round newer than the restart reopens borrowing. Ethereum (no
+    /// sequencer feed) is unchanged: the same old rounds admit a borrow.
+    // TEST-276 verifies: REQ-ORACLE-099, REQ-ORACLE-092, REQ-ORACLE-100, SPEC-ORC-021, ATTACK-171
+    // Sources: SPEC-ORC-021 example (restart, grace, borrowing reopens on a round newer than the restart)
+    function test_TEST_276_sequencerRestartNeedsNewerRound() public {
+        uint256 restart = T0 + 100;
+        vm.warp(restart + 3600);
+        assertTrue(_view().borrowAllowed, "Ethereum: no feed, rounds from T0 - 100 admit a borrow");
+        MockAggregator seq = new MockAggregator(0, 0, restart);
+        store.setSequencer(address(seq), 3600);
+        DebtPriceView memory v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Live));
+        assertFalse(v.inGrace, "grace period over");
+        assertFalse(v.borrowAllowed, "served round from T0 - 100, before the restart");
+        assertFalse(v.liquidationPaused, "liquidation and repayment run on the same price");
+        int256 served = v.answer;
+        vm.warp(restart);
+        _refreshAll();
+        vm.warp(restart + 3600);
+        v = _view();
+        assertFalse(v.borrowAllowed, "a round at the restart second is not newer");
+        assertEq(v.answer, served);
+        _refreshAll();
+        assertTrue(_view().borrowAllowed, "a round newer than the restart");
+    }
+
+    /// @notice For every restart time, time past the grace period and round time: borrowing is allowed exactly when the
+    /// served round is newer than the restart; liquidation is never paused by the rule.
+    // TEST-276 verifies: REQ-ORACLE-099, REQ-ORACLE-092, SPEC-ORC-021
+    function testFuzz_TEST_276_borrowOnlyOnRoundsAfterRestart(
+        uint256 restartOffset,
+        uint256 extra,
+        uint256 roundAt
+    ) public {
+        uint256 restart = T0 + bound(restartOffset, 1, 7200);
+        uint256 nowTs = restart + 3600 + bound(extra, 0, 7200);
+        roundAt = bound(roundAt, T0, nowTs);
+        store.setSequencer(address(new MockAggregator(0, 0, restart)), 3600);
+        vm.warp(roundAt);
+        _refreshAll();
+        vm.warp(nowTs);
+        DebtPriceView memory v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Live));
+        assertEq(v.borrowAllowed, roundAt > restart, "borrow iff the served round is newer than the restart");
+        assertFalse(v.liquidationPaused);
+    }
 }

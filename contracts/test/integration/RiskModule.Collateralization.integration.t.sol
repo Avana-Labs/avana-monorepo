@@ -182,7 +182,8 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
             lpVaultSwap: address(lpVaultSwap),
             payoutEscrow: payoutEscrow,
             flashLiquidator: flashLiquidator,
-            standardSpokeImplementation: address(spokeImpl)
+            standardSpokeImplementation: address(spokeImpl),
+            maxMarketCount: 64
         });
         logics = _deployLogics(im);
         MarketRegistry impl = new MarketRegistry(im, logics);

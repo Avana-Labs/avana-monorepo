@@ -7,7 +7,7 @@ pragma solidity 0.8.28;
 /// @notice Stand-in Collateralization for the VaultTokenFactory: answers only the getters `registerIntegration`
 /// reads, `LOCK()` (compared with the LPVault's Lock) and `VAULT_TOKEN_FACTORY()`, `ADAPTER()` and `LP_VAULT_SWAP()`
 /// (compared with the factory and its bindings).
-/// @dev The Lock is fixed at construction; `setCore` sets the other three once the factory exists.
+/// @dev The Lock is fixed at construction; `setCore` sets the other three after the factory is deployed.
 contract CollateralizationLockMock {
     address public immutable LOCK;
     address public VAULT_TOKEN_FACTORY;

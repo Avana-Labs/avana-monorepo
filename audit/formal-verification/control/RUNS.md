@@ -157,3 +157,18 @@ Violated checks in this run: `FV-CTL-36`, `FV-CTL-112`, `FV-CTL-115`, `FV-CTL-13
 | Findings produced | None |
 | Spec state | Decision of 2026-11-11: the public flash liquidation helper is in the protected set (2.8 `REQ-MREG-020`, `REQ-CONFIG-005`; 2.15 `REQ-ACCESS-157`; `INV-085`; 3.6 `EMG-090`) |
 | Output | `results/fv_ctl_breakers.json` |
+
+## FV-CTL-R11 — 2026-11-11 — three models brought to the current spec and code
+
+| Item | Value |
+|---|---|
+| Date | 2026-11-11 (21:00) |
+| What ran | Every model, after three checks that failed on rules the spec no longer states were updated. `fv_ctl_params.py` (`FV-CTL-55`): the 2.10 state-effects table now has the token-decimals rows of `REQ-ORACLE-107`; "Live, token decimals last verified more than `DECIMALS_CHECK_MAX_AGE` ago (bit 19)" is checked as Live (pledges allowed), and "A token's decimals changed or unreadable" as both Cached and Expired (pledges blocked), against the RiskModule rule `RiskModulePledgeLogic` applies. `fv_ctl_upgrade_lens.py` (`FV-CTL-78`): the Lens `premiumWithinMax` flag no longer exists (`Q-404`: `liquidate` takes no flash loan); the check now covers the loans that remain. Seven rules (`REQ-PSTORE-024`, `SPEC-LIQ-015`, `REQ-FLASH-001`, `-002`, `-003`, `REQ-SWAP-013`, `REQ-HELPER-005`) must state the exact form `φ × 10⁴ ≤ maxFlashFeeBps × F`; `REQ-SWAP-012`, `REQ-LENS-029` and `REQ-RISK-062` must keep the loan out of liquidation, the preview and the borrow gate; `SettlementMath.flashPremiumWithinCap`, which `AaveV3FlashSource` and `FlashLiquidatorBase` both call, is modelled branch by branch and must equal the exact form for every input; a ceiling quote that passes before the loan must imply that the Pool's half-up charge passes in the callback. A mutant that rounds the code's first branch up is caught. `fv_ctl_breakers.py` (`FV-CTL-93`): the protected set adds the flash source's `LENDER()`, every integration's pricing implementation and every AMM contract recorded with `recordIntegrationContracts` (replacing "position manager and factory"); each kind must be named in 2.8 `REQ-MREG-020` and must be a condition of `MarketRegistrySafetyLogic._isProtected`, and `freeze_check` now uses the set the code protects. `FV-CTL-104` is restated over 24 one-hour buckets (`REQ-MREG-019`), and the module text no longer lists a coverage breaker |
+| Command | `audit/formal-verification/control/run.sh` |
+| Tools | Python 3.9.6 from `spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4; Node.js 22.18.0 |
+| Seeds and bounds | As in `FV-CTL-R5` |
+| Results | 175 Z3 or enumeration checks (169 Verified, 6 Verified under bounded model, 0 Violated, 0 Unknown, no open finding) and 6 Quint invariants with no violation in 10,000 samples; `check_ids.py` 423 cited spec IDs, 0 undefined |
+| Exit code | 0 |
+| Findings produced | None. The three violations before this run came from models that encoded removed rules; the spec and the code agree on each |
+| Spec state | Decisions through `Q-406`; 2.10 with `REQ-ORACLE-107` (`Q-405`); 2.8 `REQ-MREG-020` with the flash source's lender and `recordIntegrationContracts` (`REQ-MREG-035`); `Q-404` (no flash loan in a liquidation) |
+| Output | `results/run.log`, `results/<model>.json`, `results/quint.txt` |

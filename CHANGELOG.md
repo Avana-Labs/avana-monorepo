@@ -14,9 +14,12 @@ Each release section lists, under **Contracts**, every changed contract with the
 
 ### Added
 
-- Repository setup: fork blocks pinned in `contracts/test/utils/fixtures/ForkConstants.sol` (`TEST-003`), `contracts/.env.example`, dependency review, actions pinned by commit, gas snapshots, contract-size margins, `contracts/Makefile`, `SECURITY.md`, CODEOWNERS, pull-request and issue templates, governance operation folders, the external audit index, the generated address library and tool version files.
+- Secret scan: `.github/workflows/gitleaks.yml` runs Gitleaks 8.30.1 over the full git history on every pull request, every push to `main` and weekly, with the rules in `.gitleaks.toml`.
+- Repository setup: fork-block constants in `contracts/test/utils/fixtures/ForkConstants.sol` (`TEST-003`; both 0, so the fork suites skip until the blocks are pinned), `contracts/.env.example`, dependency review, actions pinned by commit, gas snapshots, contract-size margins, `contracts/Makefile`, `SECURITY.md`, CODEOWNERS, pull-request and issue templates, governance operation folders, the external audit index, the generated address library and tool version files.
 
 ### Changed
 
-- CI: pull requests and pushes to `main` run the light set (format, lint, build, the `ci` and `gas` test profiles, coverage, traceability, the fast security tier). The invariant campaign, fork, differential, Halmos, SMTChecker and Certora jobs run on manual dispatch (`suite: full`), the slow security tier on manual dispatch (`suite: slow`) instead of nightly, and a `layer` dispatch runs only that layer's mutation gate.
+- CI: every pull request runs the short set of `contracts.yml` (format, lint, build, the `ci` and `gas` test profiles, coverage, traceability, the fast security tier); every push to `main` adds the long checks (the deep invariant campaign, fork, differential, Halmos, SMTChecker, Certora). Every push to `main` also runs the slow security tier (`security-slow.yml`) and the mutation gates of all six layers (`mutation-gate.yml`); there is no nightly schedule.
+- CI: the test suite runs as 10 shards in parallel (`script/test-shard.sh`), balanced by measured run time (`script/test-timings.json`), reusing the build job's output; a pull request runs the invariant suites as a short check, `main` at the full ci profile; gas snapshots run in their own job; a `gate` job passes only when every job and shard passed, for branch protection.
+- CI: `ci-failure-report.yml` records every failed run: an issue labelled `ci-failure` for `main` (closed by the next success of that workflow) and a comment for a pull request, with the failed jobs, steps, annotations and log lines.
 - The Hub, Spoke, oracle, price-feed and storage-read interfaces in `contracts/src/interfaces/external/aave/` are written by Avana and declare only the members Avana code, tests and CVL specs use, with selectors, struct layouts and event signatures equal to the pinned lending-market release.

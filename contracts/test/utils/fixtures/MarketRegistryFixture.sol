@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAmmIntegration} from "../../../src/amm/IAmmIntegration.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
@@ -48,7 +49,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 /// @title MarketRegistryFixture
 /// @notice The real MarketRegistry (six logic contracts, implementation, ERC-1967 proxy) with the real
-/// VaultTokenFactory and VaultTokens, and settable mocks for the neighbours not written yet (ParameterStore views,
+/// VaultTokenFactory and VaultTokens, and settable mocks for the other neighbours (ParameterStore views,
 /// RiskModule, LPVault, LPOracle, routes, flash source, Coverage Spoke) and for the Aave reserve reads.
 /// @dev World after `_setUpWorld`: the Stable LP Hub recorded (Stable tier), integration 1 registered, the CDP Spoke
 /// recorded, the GHO Coverage Spoke funded, a 20,000,000 GHO credit line, the flash source set, GHO listed (issuer probe
@@ -89,6 +90,9 @@ abstract contract MarketRegistryFixture is TimelockFixture {
     address internal flashLiquidator = makeAddr("flashLiquidator");
     address internal aaveV3Pool = makeAddr("aaveV3Pool");
     address internal pool = makeAddr("usdcUsdtPool");
+    /// @dev The AMM protocol contracts recorded and finalized for integration V3 in `_setUpWorld` (REQ-MREG-035).
+    address internal ammPositionManager;
+    address internal ammFactory;
 
     function _deployRegistry() internal {
         _deployRegistryWith(address(0));
@@ -144,7 +148,8 @@ abstract contract MarketRegistryFixture is TimelockFixture {
             lpVaultSwap: address(lpVaultSwap),
             payoutEscrow: payoutEscrow,
             flashLiquidator: flashLiquidator,
-            standardSpokeImplementation: standardImpl
+            standardSpokeImplementation: standardImpl,
+            maxMarketCount: _maxMarketCount()
         });
         logics = _deployLogics(im);
         MarketRegistry impl = new MarketRegistry(im, logics);
@@ -193,6 +198,9 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         vm.startPrank(address(timelock));
         registry.recordHub(address(hub), RiskTier.Stable);
         registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
+        vm.stopPrank();
+        _recordAmmContracts();
+        vm.startPrank(address(timelock));
         registry.deployCdpSpoke(_spokeDef());
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
@@ -206,6 +214,36 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         registry.enableDebtReserve(address(spoke), _ghoDef());
         _listToken(address(usdc), "usdc");
         _listToken(address(usdt), "usdt");
+    }
+
+    /// @dev The registry's market-count limit (REQ-MREG-034); a suite that lists up to the limit lowers it.
+    function _maxMarketCount() internal view virtual returns (uint256) {
+        return 64;
+    }
+
+    /// @dev Records the integration's position manager and factory and finalizes the record, as the integration's
+    /// listing batch does (REQ-MREG-035); a suite that needs an unrecorded or unfinalized integration overrides it.
+    function _recordAmmContracts() internal virtual {
+        ammPositionManager = address(new RegistryTokenMock(18));
+        ammFactory = address(new RegistryTokenMock(18));
+        vm.label(ammPositionManager, "v3PositionManager");
+        vm.label(ammFactory, "v3Factory");
+        address[] memory amm = new address[](2);
+        (amm[0], amm[1]) = (ammPositionManager, ammFactory);
+        vm.startPrank(address(timelock));
+        registry.recordIntegrationContracts(V3, amm);
+        registry.finalizeIntegrationContracts(V3);
+        vm.stopPrank();
+    }
+
+    /// @dev The key of integration `id`'s AMM contract record: chain, LPVault address and code hash, AMM protocol tag
+    /// and pool keying (REQ-MREG-035).
+    function _recordKeyOf(
+        uint32 id
+    ) internal view returns (bytes32) {
+        (address v,) = registry.integrationOf(id);
+        IAmmIntegration a = IAmmIntegration(v);
+        return keccak256(abi.encode(block.chainid, v, v.codehash, a.AMM_PROTOCOL(), a.capabilities().poolKeying));
     }
 
     /// @dev Runs after the mock LPVault is configured and before the factory records its pool keying and shape kind,

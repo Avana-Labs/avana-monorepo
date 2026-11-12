@@ -88,6 +88,7 @@ contract LPOracleStressUnitTest is LPOracleFixture {
     }
 
     // TEST-219 verifies: REQ-ORACLE-103, REQ-AMM-CORE-014, INV-087, Q-321
+    // TEST-283 verifies: REQ-AMM-CORE-014
     function test_TEST_219_quoteChangeCapHoldsOneBlock() public {
         // In the block of the seed a 1.5 % move is refused and served as Cached at the accepted price.
         _pushAll(98_500_000, T0);

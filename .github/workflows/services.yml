@@ -1,0 +1,115 @@
+name: services
+
+# The off-chain TypeScript packages: services/common, services/indexer, services/keeper and packages/protocol (the ABIs
+# and ABI hash the services are built against). They form one npm workspace whose root is the repository's
+# package.json, with one package-lock.json beside it. Every pull request and push to main that changes one of them, the
+# workspace manifests or this file runs one job per package: refuse an `@avana/` dependency that would come from the
+# public registry, install the whole workspace with npm ci from the lock file (lifecycle scripts never run), then Ponder
+# codegen where the package defines it (the indexer), the package's typecheck script (tsc --noEmit) and its test
+# script (vitest run). The `@avana/` scope is not registered on the public registry, so each such dependency must be a
+# `file:` or `workspace:` link and the lock file must record it as a link; otherwise the job fails before installing.
+# The gate job passes only when every package job passed.
+# Tool versions are pinned: Node by .nvmrc, every action by commit SHA (the release tag in the trailing comment),
+# every direct dependency by exact version and every transitive one by the lock file.
+
+on:
+  pull_request:
+    paths:
+      - "services/**"
+      - "packages/protocol/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".nvmrc"
+      - ".github/workflows/services.yml"
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "packages/protocol/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".nvmrc"
+      - ".github/workflows/services.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: services-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [services/common, services/indexer, services/keeper, packages/protocol]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Refuse @avana/ dependencies that would come from the public registry
+        run: |
+          status=0
+          for manifest in package.json services/*/package.json packages/*/package.json; do
+            [ -f "$manifest" ] || continue
+            bad=$(jq -r '[(.dependencies // {}), (.devDependencies // {}), (.optionalDependencies // {}), (.peerDependencies // {})]
+              | add | to_entries[]
+              | select((.key | startswith("@avana/")) and ((.value | startswith("file:") or startswith("workspace:")) | not))
+              | "\(.key)@\(.value)"' "$manifest")
+            if [ -n "$bad" ]; then
+              echo "::error file=$manifest,title=unlinked @avana dependency::$bad would be fetched from the public npm registry; link it with file: or a workspace"
+              status=1
+            fi
+          done
+          unlinked=$(jq -r '.packages | to_entries[]
+            | select((.key | test("(^|/)node_modules/@avana/")) and (.value.link != true))
+            | .key' package-lock.json)
+          if [ -n "$unlinked" ]; then
+            echo "::error file=package-lock.json,title=unlinked @avana dependency::the lock file resolves $unlinked from a registry instead of linking the workspace package"
+            status=1
+          fi
+          exit $status
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Codegen (Ponder virtual modules for the indexer)
+        working-directory: ${{ matrix.package }}
+        run: npm run codegen --if-present
+
+      - name: Typecheck
+        working-directory: ${{ matrix.package }}
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: ${{ matrix.package }}
+        run: npm run test --if-present
+
+  gate:
+    # The one check branch protection requires: it passes only when every package job passed.
+    name: gate
+    if: always()
+    needs: [check]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to pass
+        working-directory: .
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [ -n "$bad" ]; then echo "::error::not passed: $bad"; exit 1; fi

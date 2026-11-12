@@ -39,7 +39,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         r[0] = a;
     }
 
-    // TEST-250 verifies: REQ-CONFIG-017, REQ-CONFIG-021, REQ-CONFIG-025, REQ-MREG-027, Q-248, Q-274
+    // TEST-250 verifies: REQ-CONFIG-017, REQ-CONFIG-021, REQ-CONFIG-025, REQ-MREG-027, Q-248, Q-274, REQ-ACCESS-133
     // Sources: 5.1 TEST-250, TEST-139
     function test_TEST_250_listTokenRouteChecks() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
@@ -84,7 +84,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         assertEq(registry.priceRouteVersion(address(dai)), 0);
     }
 
-    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-027, REQ-CONFIG-034, REQ-CONFIG-036, REQ-MREG-027, Q-248
+    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-027, REQ-CONFIG-034, REQ-CONFIG-036, REQ-MREG-027, Q-248, REQ-ACCESS-045
     // Sources: 5.1 TEST-231, TEST-139
     function test_TEST_231_setPriceSourceRechecksEveryMarket() public {
         (uint256 id,, RegistryLPOracleMock lpOracle) = _activeMarket();
@@ -125,7 +125,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Active));
     }
 
-    // TEST-138 verifies: REQ-CONFIG-078, REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-008, REQ-CONFIG-028, REQ-CONFIG-037, REQ-MREG-033, Q-312
+    // TEST-138 verifies: REQ-CONFIG-078, REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-008, REQ-CONFIG-028, REQ-CONFIG-037, REQ-MREG-033, Q-312, REQ-ACCESS-033
     // Sources: 5.1 TEST-138
     function test_TEST_138_listCollateralMarketRecordsTheMarket() public {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
@@ -154,7 +154,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         assertEq(registry.activeMarketCount(address(spoke)), 0, "Registered is not listed");
     }
 
-    // TEST-138 verifies: REQ-CONFIG-032, REQ-CONFIG-007, REQ-VTOKEN-022, Q-299
+    // TEST-138 verifies: REQ-CONFIG-032, REQ-CONFIG-007, REQ-VTOKEN-022, Q-299, REQ-ACCESS-061
     function test_TEST_138_vaultTokenMustBeTheMarketsOwn() public {
         // A token deployed for another shape cannot be paired with this market.
         PositionShape memory other = PositionShape(ShapeKind.TickRange, -100, 100);

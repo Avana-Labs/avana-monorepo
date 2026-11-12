@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
+import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 
@@ -71,6 +72,34 @@ contract LPOracleCheckConfigUnitTest is LPOracleFixture {
         c = _config();
         c.tokens[0].secondSource.kind = SecondSourceKind.None;
         assertTrue(_check(c) & LPOracleCodes.CHECK_SECOND_SOURCE != 0, "every token needs a second source");
+    }
+
+    function _twap(
+        bytes32 poolRef
+    ) internal view returns (SecondSource memory) {
+        return SecondSource(SecondSourceKind.PoolTwap, integrationAddr, poolRef, 0, 1800, 120);
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-046, REQ-ORACLE-100, SPEC-ORC-020
+    // Sources: 2026-11-11 decision (checkConfig refuses an own-pool TWAP second source, independently of the store)
+    function test_TEST_219_ownPoolTwapSecondSourceRefused() public {
+        bytes32 own = bytes32(uint256(uint160(makeAddr("ownPool"))));
+        bytes32 deep = bytes32(uint256(uint160(makeAddr("deepPool"))));
+        oracle.setOwnPool(own);
+        OracleConfig memory c = _config();
+        c.tokens[0].secondSource = _twap(own);
+        assertEq(_check(c), LPOracleCodes.CHECK_SECOND_SOURCE, "own pool as token 0's recorded second source");
+        // The configuration the ParameterStore serves while token 1's standby is in force (`REQ-PSTORE-029`).
+        c = _config();
+        c.tokens[1].secondSource = _twap(own);
+        assertEq(_check(c), LPOracleCodes.CHECK_SECOND_SOURCE, "own pool as token 1's standby in force");
+        c.tokens[0].secondSource = _twap(deep);
+        c.tokens[1].secondSource = _twap(deep);
+        assertEq(_check(c), 0, "a pool TWAP of another pool passes for both tokens");
+        // A market keyed by pool identifier: the identifier is the pool reference.
+        oracle.setOwnPool(keccak256("poolId"));
+        c.tokens[1].secondSource = _twap(keccak256("poolId"));
+        assertEq(_check(c), LPOracleCodes.CHECK_SECOND_SOURCE, "own pool identifier");
     }
 
     // TEST-219 verifies: REQ-ORACLE-056, REQ-ORACLE-099, REQ-ORACLE-103, REQ-ORACLE-047, REQ-ORACLE-050, Q-176, Q-324

@@ -141,8 +141,8 @@ contract GasDebtAsset is ERC20 {
 /// ETH/USD aggregator per token), a two-leg standby recorded for the primary slot and an oracle-network second source.
 /// The account (a pranked PositionProxy) holds 5,000 whole vault tokens ($10,000, CF 80 %) and borrows $1,000 of each
 /// of the 4 debt reserves, so every health-factor computation prices 1 collateral and 4 debt reserves. The AaveAdapter
-/// and LPVaultSwap are pranked addresses (`AaveAdapter` and `LPVaultSwap` are not written yet); `_avanaHook` is where
-/// their pre-flow calls (`poke`, `getPriceState`) go once they exist.
+/// and LPVaultSwap are pranked addresses (stand-ins in these tests); `_avanaHook` is where
+/// their pre-flow calls (`poke`, `getPriceState`) go.
 abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
     enum Scenario {
         Live,
@@ -403,7 +403,7 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
     }
 
     /// @dev Hook for the Avana layer's pre-flow reads (AaveAdapter / RiskModule / LPVaultSwap call `poke()` and
-    /// `getPriceState()` before the Aave call). Empty until those contracts exist.
+    /// `getPriceState()` before the Aave call). Empty in this fixture.
     function _avanaHook() internal virtual {}
 
     // ─── Helpers ───

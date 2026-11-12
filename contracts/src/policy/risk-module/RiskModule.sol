@@ -7,6 +7,8 @@ import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {DriftReason} from "../../types/DriftReason.sol";
 import {Market} from "../../types/Market.sol";
+import {PauseReason} from "../../types/PauseReason.sol";
+import {PauseState} from "../../types/PauseState.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
@@ -231,16 +233,36 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @dev Never reverts: a failure of the status body returns an empty status (nothing allowed, nothing approved).
+    /// @dev Never reverts. The status body reads no pause state; the pause state and reason of the market's Hub come
+    /// from `pauseOf` and are copied into `pauseState` and `pauseReason` only, so no other field depends on them. A
+    /// revert of either call returns the unavailable status (`_unavailable`).
     /// @custom:spec REQ-ADAPTER-038, REQ-RISK-060
     function getAccountGateStatus(
         address proxy
     ) external view override returns (AccountGateStatus memory status) {
-        try IRiskModuleStatusLogic(_STATUS_LOGIC).getAccountGateStatus(proxy) returns (AccountGateStatus memory s) {
+        IRiskModuleStatusLogic logic = IRiskModuleStatusLogic(_STATUS_LOGIC);
+        try logic.getAccountGateStatus(proxy) returns (AccountGateStatus memory s) {
             status = s;
         } catch {
-            status.unknownCollateralReserveId = type(uint256).max;
+            return _unavailable();
         }
+        try logic.pauseOf(proxy) returns (PauseState state, PauseReason reason) {
+            (status.pauseState, status.pauseReason) = (state, reason);
+        } catch {
+            return _unavailable();
+        }
+    }
+
+    /// @dev The status when it cannot be computed (REQ-ADAPTER-038): `statusUnavailable`, every reserve field at the
+    /// no-reserve value `type(uint256).max` (reserve 0 is a valid identifier), nothing allowed, every other field zero.
+    function _unavailable() internal pure returns (AccountGateStatus memory status) {
+        status.statusUnavailable = true;
+        status.unknownCollateralReserveId = type(uint256).max;
+        status.unapprovedDebtReserveId = type(uint256).max;
+        status.pausedDebtReserveId = type(uint256).max;
+        status.staleDebtReserveId = type(uint256).max;
+        status.haltedDebtReserveId = type(uint256).max;
+        status.breakerDebtReserveId = type(uint256).max;
     }
 
     /// @inheritdoc IRiskModuleViews

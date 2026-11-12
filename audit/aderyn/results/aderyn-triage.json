@@ -4,7 +4,7 @@
       "check": "unused-error",
       "files": "src/*/I*.sol",
       "while": "no-implementation-in-folder",
-      "reason": "Errors are declared in the interface next to the file of the implementation that reverts with them; until that implementation exists in the same folder no code can use them."
+      "reason": "Errors are declared in the interface next to the file of the implementation that reverts with them; while the folder holds no implementation, no code can use them."
     },
     {
       "fingerprint": "fe35c273d6589dfa",
@@ -59,7 +59,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NotApprovedKeeper",
-      "reason": "`NotApprovedKeeper` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NotApprovedKeeper` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -67,7 +67,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "LockHeld",
-      "reason": "`LockHeld` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`LockHeld` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -75,7 +75,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "UnknownProxy",
-      "reason": "`UnknownProxy` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`UnknownProxy` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -83,7 +83,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "UnknownMarket",
-      "reason": "`UnknownMarket` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`UnknownMarket` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -91,7 +91,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "UnknownDebtReserve",
-      "reason": "`UnknownDebtReserve` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`UnknownDebtReserve` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -99,7 +99,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidAmount",
-      "reason": "`InvalidAmount` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidAmount` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -107,7 +107,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NotLiquidatable",
-      "reason": "`NotLiquidatable` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NotLiquidatable` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -115,7 +115,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "SharesNotEqualAssets",
-      "reason": "`SharesNotEqualAssets` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`SharesNotEqualAssets` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -123,7 +123,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "StalePrice",
-      "reason": "`StalePrice` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`StalePrice` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -131,7 +131,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "DebtPriceStale",
-      "reason": "`DebtPriceStale` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`DebtPriceStale` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -139,7 +139,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "GraceHealthFactor",
-      "reason": "`GraceHealthFactor` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`GraceHealthFactor` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -147,7 +147,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FundingMismatch",
-      "reason": "`FundingMismatch` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FundingMismatch` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -155,7 +155,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashFeeTooHigh",
-      "reason": "`FlashFeeTooHigh` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashFeeTooHigh` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -163,7 +163,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashSourceIsHub",
-      "reason": "`FlashSourceIsHub` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashSourceIsHub` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -171,7 +171,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashRepayShort",
-      "reason": "`FlashRepayShort` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashRepayShort` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -179,7 +179,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidFlashCallback",
-      "reason": "`InvalidFlashCallback` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidFlashCallback` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -187,7 +187,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NothingSeized",
-      "reason": "`NothingSeized` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NothingSeized` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -195,7 +195,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NoRouteAvailable",
-      "reason": "`NoRouteAvailable` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NoRouteAvailable` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -203,7 +203,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashLiquidityShort",
-      "reason": "`FlashLiquidityShort` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashLiquidityShort` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -211,7 +211,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidFeeRecipient",
-      "reason": "`InvalidFeeRecipient` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidFeeRecipient` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -219,7 +219,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidKeeper",
-      "reason": "`InvalidKeeper` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidKeeper` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -227,7 +227,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "KeeperFloor",
-      "reason": "`KeeperFloor` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`KeeperFloor` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -235,7 +235,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "TooManyKeepers",
-      "reason": "`TooManyKeepers` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`TooManyKeepers` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -243,7 +243,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NothingPending",
-      "reason": "`NothingPending` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NothingPending` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -251,7 +251,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "DeadlineExpired",
-      "reason": "`DeadlineExpired` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`DeadlineExpired` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -259,7 +259,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "PayoutTooLow",
-      "reason": "`PayoutTooLow` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`PayoutTooLow` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -267,7 +267,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InsufficientGas",
-      "reason": "`InsufficientGas` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InsufficientGas` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -275,7 +275,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "AddressIsFrozen",
-      "reason": "`AddressIsFrozen` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`AddressIsFrozen` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -283,7 +283,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NotAdapter",
-      "reason": "`NotAdapter` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NotAdapter` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -291,49 +291,49 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "AdminRoleOnlyTimelock",
-      "reason": "`AdminRoleOnlyTimelock` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`AdminRoleOnlyTimelock` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "28413db3a14c6cd7",
       "check": "unused-error",
       "file": "src/oracle/lp-oracle/ILPOracleErrors.sol",
-      "reason": "ILPOracleErrors.InsufficientGas (line 13) is reverted by the LPOracle implementation (contract 8), which does not exist yet. The folder's temporary no-implementation acceptance stopped applying only because the internal library LPPriceMath.sol now lives in the same folder; LPPriceMath is pure arithmetic and defines no errors. Remove this entry when LPOracle.sol lands and uses the error.",
+      "reason": "ILPOracleErrors.InsufficientGas (line 13) is reverted by the LPOracle implementation, which was not in src/ on the date of this run. The folder's no-implementation acceptance did not apply only because the internal library LPPriceMath.sol lived in the same folder; LPPriceMath is pure arithmetic and defines no errors.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "a4732d9f5fc5962b",
       "check": "unused-error",
       "file": "src/oracle/lp-oracle/ILPOracleErrors.sol",
-      "reason": "ILPOracleErrors.ConfigCheckFailed (line 18) is reverted by the LPOracle implementation (contract 8), which does not exist yet. The folder's temporary no-implementation acceptance stopped applying only because the internal library LPPriceMath.sol now lives in the same folder; LPPriceMath is pure arithmetic and defines no errors. Remove this entry when LPOracle.sol lands and uses the error.",
+      "reason": "ILPOracleErrors.ConfigCheckFailed (line 18) is reverted by the LPOracle implementation, which was not in src/ on the date of this run. The folder's no-implementation acceptance did not apply only because the internal library LPPriceMath.sol lived in the same folder; LPPriceMath is pure arithmetic and defines no errors.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "73cd331eeeb8e594",
       "check": "unused-error",
       "file": "src/oracle/lp-oracle/ILPOracleErrors.sol",
-      "reason": "ILPOracleErrors.NotLive (line 24) is reverted by the LPOracle implementation (contract 8), which does not exist yet. The folder's temporary no-implementation acceptance stopped applying only because the internal library LPPriceMath.sol now lives in the same folder; LPPriceMath is pure arithmetic and defines no errors. Remove this entry when LPOracle.sol lands and uses the error.",
+      "reason": "ILPOracleErrors.NotLive (line 24) is reverted by the LPOracle implementation, which was not in src/ on the date of this run. The folder's no-implementation acceptance did not apply only because the internal library LPPriceMath.sol lived in the same folder; LPPriceMath is pure arithmetic and defines no errors.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "77f25fbbb3d57232",
       "check": "unused-error",
       "file": "src/oracle/lp-oracle/ILPOracleErrors.sol",
-      "reason": "ILPOracleErrors.PokeMinGasOutOfBounds (line 29) is reverted by the LPOracle implementation (contract 8), which does not exist yet. The folder's temporary no-implementation acceptance stopped applying only because the internal library LPPriceMath.sol now lives in the same folder; LPPriceMath is pure arithmetic and defines no errors. Remove this entry when LPOracle.sol lands and uses the error.",
+      "reason": "ILPOracleErrors.PokeMinGasOutOfBounds (line 29) is reverted by the LPOracle implementation, which was not in src/ on the date of this run. The folder's no-implementation acceptance did not apply only because the internal library LPPriceMath.sol lived in the same folder; LPPriceMath is pure arithmetic and defines no errors.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "af55b90f485767e5",
       "check": "unused-error",
       "file": "src/oracle/lp-oracle/ILPOracleErrors.sol",
-      "reason": "ILPOracleErrors.MarketMismatch (line 35) is reverted by the LPOracle implementation (contract 8), which does not exist yet. The folder's temporary no-implementation acceptance stopped applying only because the internal library LPPriceMath.sol now lives in the same folder; LPPriceMath is pure arithmetic and defines no errors. Remove this entry when LPOracle.sol lands and uses the error.",
+      "reason": "ILPOracleErrors.MarketMismatch (line 35) is reverted by the LPOracle implementation, which was not in src/ on the date of this run. The folder's no-implementation acceptance did not apply only because the internal library LPPriceMath.sol lived in the same folder; LPPriceMath is pure arithmetic and defines no errors.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "9f24f58a9104093e",
       "check": "unused-error",
       "file": "src/oracle/lp-oracle/ILPOracleErrors.sol",
-      "reason": "ILPOracleErrors.AdminRoleOnlyTimelock (line 41) is reverted by the LPOracle implementation (contract 8), which does not exist yet. The folder's temporary no-implementation acceptance stopped applying only because the internal library LPPriceMath.sol now lives in the same folder; LPPriceMath is pure arithmetic and defines no errors. Remove this entry when LPOracle.sol lands and uses the error.",
+      "reason": "ILPOracleErrors.AdminRoleOnlyTimelock (line 41) is reverted by the LPOracle implementation, which was not in src/ on the date of this run. The folder's no-implementation acceptance did not apply only because the internal library LPPriceMath.sol lived in the same folder; LPPriceMath is pure arithmetic and defines no errors.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -661,7 +661,7 @@
       "fingerprint": "6aa1b6b7e277dc23",
       "check": "unused-error",
       "file": "src/policy/market-registry/IMarketRegistryErrors.sol",
-      "reason": "KeeperFloorBreached is declared in IMarketRegistryErrors for LPVaultSwap.removeKeeper (REQ-MREG-021: freezeAddress checks no keeper floor); used by LPVaultSwap when it lands (contract 23).",
+      "reason": "KeeperFloorBreached is declared in IMarketRegistryErrors for LPVaultSwap.removeKeeper (REQ-MREG-021: freezeAddress checks no keeper floor); reverted by LPVaultSwap (2.11), whose implementation was not in src/ on the date of this run.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {

@@ -14,8 +14,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title MockLiquidationSwap
-/// @notice LPVaultSwap's `liquidate` as the flash liquidation helper sees it (LPVaultSwap, contract 23, is not written
-/// yet), following `ILPVaultSwapLiquidation` and the 2.11 settlement rules that bind a caller: `DeadlineExpired` first,
+/// @notice LPVaultSwap's `liquidate` as the flash liquidation helper sees it (a stand-in for LPVaultSwap in these
+/// tests), following `ILPVaultSwapLiquidation` and the 2.11 settlement rules that bind a caller: `DeadlineExpired` first,
 /// then `AddressIsFrozen(msg.sender)`; acquires the real Lock; pulls `X = debtToCover` from `msg.sender` with
 /// `transferFrom` and measures `Kf` (`FundingMismatch` unless `0 < Kf ≤ X`); lets the Spoke take `D ≤ Kf`; mints the
 /// recovery `R` of the debt asset (the unwind and the swap routes); applies the `SPEC-LIQ-019` floor top-up: with the

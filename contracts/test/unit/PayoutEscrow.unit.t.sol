@@ -120,7 +120,7 @@ contract PayoutEscrowUnitTest is AvanaTest {
     }
 
     /// @notice The escrow answers only its six selectors: no fallback, `receive`, sweep, rescue or admin entry.
-    // TEST-032 verifies: REQ-ESCROW-001, INV-053, Q-124, Q-214
+    // TEST-032 verifies: REQ-ESCROW-001, INV-053, Q-124, Q-214, REQ-ACCESS-066, REQ-ACCESS-022, REQ-ACCESS-113
     function testFuzz_TEST_032_onlyInterfaceSelectors(
         bytes4 selector,
         bytes calldata tail
@@ -584,7 +584,7 @@ contract PayoutEscrowUnitTest is AvanaTest {
 
     /// @notice A claim touches only the claimant, the escrow, the Lock (one view) and the token: no pause state,
     /// breaker, freeze list, market status or listing is read, so a frozen account claims in every application state.
-    // TEST-229 verifies: REQ-ESCROW-008, INV-081, Q-241, Q-242
+    // TEST-229 verifies: REQ-ESCROW-008, REQ-MREG-023, INV-081, Q-241, Q-242
     // Sources: 5.1 TEST-229 (escrow claim by a frozen account), PROP-066
     function test_TEST_229_claimTouchesOnlyTokenAndLock() public {
         _deposit(usdc, address(actor), 100);

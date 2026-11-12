@@ -187,7 +187,8 @@ contract MarketRegistryMarketsHalmosTest is Test {
             lpVaultSwap: LP_VAULT_SWAP,
             payoutEscrow: ESCROW,
             flashLiquidator: HELPER,
-            standardSpokeImplementation: address(spokeImpl)
+            standardSpokeImplementation: address(spokeImpl),
+            maxMarketCount: 1000
         });
         MarketRegistryLogics memory l;
         l.hubs = address(new MarketRegistryHubsLogic(im));
@@ -231,6 +232,11 @@ contract MarketRegistryMarketsHalmosTest is Test {
         factory.registerIntegration(V3, address(lpVault));
         registry.recordHub(address(hub), RiskTier.Stable);
         registry.registerIntegration(V3, address(lpVault), PRICING);
+        // The integration's position manager, recorded and finalized so its routes can be set (REQ-MREG-035).
+        address[] memory amm = new address[](1);
+        amm[0] = address(new RegistryTokenMock(18));
+        registry.recordIntegrationContracts(V3, amm);
+        registry.finalizeIntegrationContracts(V3);
         registry.deployCdpSpoke(
             SpokeDef(false, address(hub), V3, RiskTier.Stable, address(spokeImpl), address(aaveOracle))
         );

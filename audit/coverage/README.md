@@ -18,8 +18,8 @@ Every implementation under `contracts/src/`.
 
 ## How often it runs
 
-CI, per contract. First run at the layer 2.1 gate.
+CI, per contract.
 
 ## Latest result
 
-Not run yet; the first run is at the layer 2.1 gate. `results/` is empty until then.
+No run is recorded in this folder; the per-file branch minimums are in `contracts/security/coverage-thresholds.json`.

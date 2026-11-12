@@ -88,7 +88,7 @@ function erc20TransferFrom(address t, address spender, address from, address to,
 }
 
 // Credit without a modelled source: tokens paid out by an external contract whose own balance no property reads (the Hub paying
-// withdrawn or seized units, a route paying GHO, a flash mint).
+// withdrawn or seized units, a route paying GHO, a flash loan).
 function erc20Credit(address t, address to, uint256 amount) {
     erc20Bal[t][to] = erc20Bal[t][to] + amount;
 }

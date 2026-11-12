@@ -44,7 +44,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         _deployStore(false);
     }
 
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-153, Q-259
+    // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-153, Q-259, REQ-ACCESS-002, REQ-ACCESS-014, REQ-ACCESS-032
     function test_TEST_242_adminRolesOnlyTimelock() public {
         address tl = address(timelock);
         assertTrue(store.hasRole(bytes32(0), tl));
@@ -77,7 +77,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("grant"));
     }
 
-    // TEST-242 verifies: REQ-PSTORE-001, Q-259
+    // TEST-242 verifies: REQ-PSTORE-001, Q-259, REQ-ACCESS-150
     function test_TEST_242_initializeRefusesOtherTimelockAndRunsOnce() public {
         ParameterStore impl = new ParameterStore(address(timelock), address(registry), 12, false, logics);
         bytes memory bad = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, _launchGlobals(), 0, 10_000));
@@ -133,7 +133,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         );
     }
 
-    // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-CONFIG-058, REQ-PSTORE-029
+    // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-CONFIG-058, REQ-PSTORE-029, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-025, REQ-ACCESS-111
     function test_TEST_062_everySetterNeedsItsRole() public {
         bytes[] memory calls = _setterCalls();
         for (uint256 i = 0; i < calls.length; ++i) {
@@ -193,8 +193,8 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         new ParameterStoreTightenLogic(address(0), address(registry), 12, false);
     }
 
-    // TEST-206 verifies: REQ-PSTORE-010, Q-231
-    // TEST-278 verifies: REQ-PSTORE-025, Q-381
+    // TEST-206 verifies: REQ-PSTORE-010, Q-231, REQ-ACCESS-043
+    // TEST-278 verifies: REQ-PSTORE-025, Q-381, REQ-ACCESS-146
     function test_TEST_278_noMinimumDebtOrInterestFeeSelector() public view {
         bytes4[4] memory absent = [
             bytes4(keccak256("minDebtUsd()")),
@@ -232,7 +232,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         assertEq(store.feeRecipient(), bob);
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-010, REQ-ROLE-006, REQ-ROLE-027, REQ-ROLE-117
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-010, REQ-ROLE-006, REQ-ROLE-027, REQ-ROLE-117, REQ-ACCESS-185, REQ-ACCESS-044, REQ-ACCESS-049, REQ-ACCESS-165
     function test_TEST_062_riskStewardHoldsTightenSettersAndFeeShareOnly() public {
         assertEq(store.getRoleAdmin(STEWARD), ADMIN);
         vm.prank(address(timelock));
@@ -266,7 +266,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         store.grantRole(STEWARD, alice);
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-010, REQ-CONFIG-051, REQ-ROLE-117, SPEC-LIQ-009
+    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-010, REQ-CONFIG-051, REQ-ROLE-117, SPEC-LIQ-009, REQ-ACCESS-185, REQ-ACCESS-043
     function test_TEST_062_riskStewardActsAtOnceWithinBounds() public {
         _listMarket();
         vm.prank(address(timelock));

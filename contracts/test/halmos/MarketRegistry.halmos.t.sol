@@ -57,7 +57,8 @@ contract MarketRegistryHalmosTest is Test {
             lpVaultSwap: address(0x7207),
             payoutEscrow: address(0x7208),
             flashLiquidator: address(0x720A),
-            standardSpokeImplementation: address(0x7209)
+            standardSpokeImplementation: address(0x7209),
+            maxMarketCount: 1000
         });
         MarketRegistryLogics memory l;
         l.hubs = address(new MarketRegistryHubsLogic(im));
@@ -102,7 +103,7 @@ contract MarketRegistryHalmosTest is Test {
         return a == GUARDIAN || a == TIMELOCK;
     }
 
-    // PROP-041 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-017, REQ-MREG-024, REQ-CONFIG-082, INV-049, Q-227, Q-252
+    // PROP-041 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-017, REQ-MREG-024, REQ-CONFIG-082, INV-049, Q-227, Q-252, SPEC-GOV-004, REQ-ACCESS-124
     /// @notice After any two calls by any callers: the reason is `None` exactly when the state is not Paused; a
     /// successful call is one of the four transitions by a caller holding its role; the freeze-only holder never moves
     /// the state toward None; the other Hub never changes.

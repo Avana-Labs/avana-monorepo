@@ -11,8 +11,8 @@ import {Market} from "../../../src/types/Market.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 
 /// @title MockMarketRegistry
-/// @notice The MarketRegistry views the ParameterStore reads, backed by settable storage. The MarketRegistry
-/// (contract 7) is not written yet; this mock answers with the record shapes of `IMarketRegistry`.
+/// @notice The MarketRegistry views the ParameterStore reads, backed by settable storage: a stand-in for the
+/// MarketRegistry in these tests that answers with the record shapes of `IMarketRegistry`.
 contract MockMarketRegistry {
     mapping(uint256 => Market) internal _markets;
     mapping(address => TokenDef) internal _tokens;

@@ -334,8 +334,9 @@ eqm("SYM-169", "SPEC-ORC-020: S = 100, q = 100,020,000: s = 99,400,000 confirmed
    sp.Matrix([int(agr(100_020_000, 99_400_000, 100)), int(agr(100_020_000, 98_900_000, 100)), 620_000 * 10 ** 4, 100 * 99_400_000, 1_120_000 * 10 ** 4, 100 * 98_900_000]),
    sp.Matrix([1, 0, 6_200_000_000, 9_940_000_000, 11_200_000_000, 9_890_000_000]))
 # SYM-170 verifies: SPEC-ORC-021, REQ-ORACLE-099
-eqm("SYM-170", "SPEC-ORC-021: Base restart at 1,010,000 with grace 3,600: in grace until 1,013,599; borrowing from 1,013,600",
-   sp.Matrix([1_010_000 + 3_600 - 1, 1_010_000 + 3_600]), sp.Matrix([1_013_599, 1_013_600]))
+eqm("SYM-170", "SPEC-ORC-021: Base restart at 1,010,000 with grace 3,600: in grace until 1,013,599; borrowing from 1,013,600 on a round newer than the restart: a round of 1,009,000 or 1,010,000 keeps it closed, one of 1,013,000 opens it",
+   sp.Matrix([1_010_000 + 3_600 - 1, 1_010_000 + 3_600, int(1_009_000 > 1_010_000), int(1_010_000 > 1_010_000), int(1_013_000 > 1_010_000)]),
+   sp.Matrix([1_013_599, 1_013_600, 0, 0, 1]))
 # SYM-171 verifies: SPEC-ORC-022, REQ-ORACLE-055
 eqm("SYM-171", "SPEC-ORC-022: W = 1,800: Ethereum 151, Base 901 observations; the Ethereum value on Base spans 300 s",
    sp.Matrix([-(-1800 // 12) + 1, -(-1800 // 2) + 1, (151 - 1) * 2]), sp.Matrix([151, 901, 300]))

@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {IGsm} from "../../interfaces/external/gho/IGsm.sol";
 import {IDaiUsds} from "../../interfaces/external/sky/IDaiUsds.sol";
 import {ILitePsm} from "../../interfaces/external/sky/ILitePsm.sol";
+import {IPegModuleRoute} from "./IPegModuleRoute.sol";
 import {ISettlementRoute} from "./ISettlementRoute.sol";
 import {RouteMath} from "./RouteMath.sol";
 import {RouteReads} from "./RouteReads.sol";
@@ -28,7 +29,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 /// revert (the module reverts, or `gemAmt = 0` leaves no output and `MinOutNotMet` follows); LPVaultSwap then uses the
 /// other slot. The module pays LPVaultSwap directly; `minOut` is checked on LPVaultSwap's balance delta.
 /// @custom:spec REQ-ROUTE-002, REQ-ROUTE-003, REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-011, REQ-ROUTE-012, REQ-ROUTE-016, REQ-ROUTE-026, REQ-ROUTE-042, Q-062, Q-084, Q-250, Q-341
-contract PegModuleRoute is SwapRouteBase {
+contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
     /// @notice Route type of `PegModule`.
     uint8 internal constant ROUTE_TYPE = 0;
 
@@ -96,6 +97,12 @@ contract PegModuleRoute is SwapRouteBase {
     /// @custom:spec REQ-ROUTE-002, REQ-ROUTE-005
     function routeType() external pure override returns (uint8 typeId) {
         typeId = ROUTE_TYPE;
+    }
+
+    /// @inheritdoc IPegModuleRoute
+    /// @custom:spec REQ-ROUTE-002, REQ-ROUTE-005, Q-341
+    function pegModule() external view override returns (PegModuleKind kind, address module) {
+        (kind, module) = (_KIND, _MODULE);
     }
 
     /// @inheritdoc ISettlementRoute

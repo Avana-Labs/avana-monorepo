@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {PositionShape} from "./PositionShape.sol";
 
-/// @notice Input of `listCollateralMarket` (MarketRegistry `registerMarket`).
+/// @notice Input of the MarketRegistry's `listCollateralMarket`.
 /// @dev A market is one (chain, AMM protocol, pool, exact position shape). The tokens, their order and decimals are
 /// read on-chain through `IAmmIntegration.poolTokens`, never from the input. Pool-specific settings (fee tier, tick
 /// spacing, Slipstream factory generation, Curve rate providers) are read and stored by the AMM integration in its

@@ -26,7 +26,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         _deployRiskWorld();
     }
 
-    // TEST-242 verifies: REQ-RISK-072, REQ-RISK-002, REQ-ACCESS-153, INV-084
+    // TEST-242 verifies: REQ-RISK-072, REQ-RISK-002, REQ-ACCESS-153, INV-084, REQ-ACCESS-002, REQ-ACCESS-014, REQ-ACCESS-032
     function test_TEST_242_adminRolesOnlyTimelock() public {
         assertTrue(riskModule.hasRole(APP, address(timelock)));
         assertTrue(riskModule.hasRole(0x00, address(timelock)));
@@ -42,7 +42,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         riskModule.grantRole(APP, other);
     }
 
-    // TEST-242 verifies: REQ-RISK-002, REQ-RISK-054, PROP-034
+    // TEST-242 verifies: REQ-RISK-002, REQ-RISK-054, PROP-034, REQ-ACCESS-015, REQ-ACCESS-031
     function test_TEST_242_upgradeNeedsApplicationAdmin() public {
         RiskModule next = new RiskModule(rmIm, rmLogics);
         address other = makeAddr("other");
@@ -54,7 +54,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         assertEq(riskModule.TIMELOCK(), address(timelock));
     }
 
-    // TEST-242 verifies: REQ-RISK-002, Q-226
+    // TEST-242 verifies: REQ-RISK-002, Q-226, REQ-ACCESS-150
     function test_TEST_242_initializeOnce() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         riskModule.initialize(address(timelock));
@@ -63,7 +63,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         impl.initialize(address(timelock));
     }
 
-    // TEST-242 verifies: REQ-RISK-072, REQ-RISK-002, REQ-ACCESS-153, Q-226
+    // TEST-242 verifies: REQ-RISK-072, REQ-RISK-002, REQ-ACCESS-153, Q-226, REQ-ACCESS-150
     function test_TEST_242_initializeOnlyWithTimelock() public {
         RiskModule impl = new RiskModule(rmIm, rmLogics);
         address other = makeAddr("other");
@@ -119,7 +119,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         assertEq(riskModule.RESCUE_MIN_PLEDGE_USD(), 10e8);
     }
 
-    // TEST-035 verifies: REQ-RISK-003, REQ-RISK-039, REQ-RISK-054
+    // TEST-035 verifies: REQ-RISK-003, REQ-RISK-039, REQ-RISK-054, REQ-ACCESS-035, REQ-ACCESS-022, REQ-ACCESS-113
     function test_TEST_035_noFundsNoPauseNoSetter() public {
         (bool ok,) = address(riskModule).call{value: 1}("");
         assertFalse(ok);

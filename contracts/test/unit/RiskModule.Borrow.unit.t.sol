@@ -145,7 +145,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         _borrow(GHO_RESERVE);
     }
 
-    // TEST-158 verifies: REQ-ADAPTER-061, REQ-ADAPTER-062, REQ-RISK-061, INV-060
+    // TEST-158 verifies: REQ-ADAPTER-061, REQ-ADAPTER-062, REQ-RISK-061, INV-060, REQ-ACCESS-130
     function test_TEST_158_aavePauses() public {
         IAaveV4Spoke.ReserveConfig memory c;
         (c.borrowable, c.paused) = (true, true);
@@ -165,7 +165,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         riskModule.preWithdrawCheck(address(proxy));
     }
 
-    // TEST-155 verifies: REQ-ADAPTER-019, REQ-ADAPTER-025, REQ-ADAPTER-056, REQ-PROXY-079, INV-060
+    // TEST-155 verifies: REQ-ADAPTER-019, REQ-ADAPTER-025, REQ-ADAPTER-056, REQ-PROXY-079, INV-060, REQ-ACCESS-036
     function test_TEST_155_frozenAndOffboardingBlockBorrowOnly() public {
         IAaveV4Spoke.ReserveConfig memory v;
         v.frozen = true;
@@ -210,7 +210,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         _borrow(GHO_RESERVE);
     }
 
-    // TEST-068 verifies: REQ-ADAPTER-010, REQ-RISK-062, REQ-RISK-071, REQ-ADAPTER-054
+    // TEST-068 verifies: REQ-ADAPTER-010, REQ-RISK-062, REQ-RISK-071, REQ-ADAPTER-054, REQ-ACCESS-075, REQ-ROUTE-021
     // Sources: 2.7 REQ-RISK-071 example (freezing the last committed operator)
     function test_TEST_068_liquidationHalts() public {
         swap.setKeepers(0);
@@ -229,7 +229,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         _borrow(GHO_RESERVE);
     }
 
-    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081
+    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081, REQ-ACCESS-166, REQ-ACCESS-084
     function test_TEST_228_breakersOnBorrowAndWithdraw() public {
         vm.prank(emergencyGuardian);
         registry.tripDebtBreaker(address(spoke), USDC_RESERVE);

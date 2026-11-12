@@ -14,14 +14,18 @@ import {MockDebtAsset} from "../../utils/mocks/MockDebtAsset.sol";
 
 /// @title CoverageSpokeProperties
 /// @notice Echidna and Medusa properties of the Coverage Spoke (2.14). Between transactions: the reserve holds only
-/// donated tokens, its funded balance never exceeds what was funded minus what was covered and withdrawn (no yield in
-/// this model), only Spokes listed on the asset are allowlisted, every issued withdrawal ID has a status, and the
+/// donated tokens, its funded balance plus what it covered and withdrew never exceeds what was funded plus the yield
+/// accrued to it (`accrueYield` adds interest to every added share and to `ghostYield`), only Spokes listed on the
+/// asset are allowlisted, every issued withdrawal ID has a status, and the
 /// immutables never change. Inside each assertion entry point: `fund`, `coverDeficit`, the allowlist and the
 /// withdrawal calls succeed exactly when 2.14 allows and move exactly the stated amounts.
 /// @dev The harness is the Aave DAO: the authority (`MockAuthority`, the `canCall` interface of the DAO's
 /// AccessManager, which the unit tests use for real; the real one does not fit the harness's 49,152-byte initcode)
-/// lets it call `coverDeficit` and every DAO function; `OUTSIDER` may call none. The Hub is the one-asset model `MockCoverageHub` (the pinned Hub
-/// cannot be loaded here); deficits are recorded in whole asset units, as `draw` + `reportDeficit` of whole amounts
+/// lets it call `coverDeficit` and every DAO function; `OUTSIDER` may call none. The Hub is the one-asset model
+/// `MockCoverageHub`, whose `accrue` raises the value of every added share: the pinned Aave V4 Hub is deployed from its
+/// release artifacts with `deployCode` (`AaveV4Fixture`), which Echidna and Medusa cannot run, so yield on the real Hub
+/// is checked by `CoverageSpoke.unit.t.sol` (`test_TEST_293_yieldFillsFiniteCapButNotMax`,
+/// `test_TEST_293_totalsAreSignedUnderYield`, `test_TEST_293_dustFundBelowOneShareReverts`); deficits are recorded in whole asset units, as `draw` + `reportDeficit` of whole amounts
 /// record them. Actor indexes are taken modulo 3 with `if` branches, so hevm sees finite branching.
 contract CoverageSpokeProperties {
     uint256 internal constant ASSET_ID = 0;

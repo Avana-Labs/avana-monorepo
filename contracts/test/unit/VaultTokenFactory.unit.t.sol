@@ -54,7 +54,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
 
     // ─── Constructor (TEST-024) ───
 
-    // TEST-024 verifies: REQ-VTOKEN-023, Q-228
+    // TEST-024 verifies: REQ-VTOKEN-023, Q-228, REQ-ACCESS-010
     // Sources: 5.1 TEST-024, 2.4 Storage
     function test_TEST_024_constructorFixesBindings() public view {
         assertEq(factory.ADAPTER(), adapter, "adapter");
@@ -208,7 +208,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
 
     // ─── deployVaultToken: success (TEST-024) ───
 
-    // TEST-024 verifies: REQ-VTOKEN-019, REQ-VTOKEN-020, REQ-VTOKEN-021, REQ-VTOKEN-022, REQ-VTOKEN-024, REQ-VTOKEN-038, Q-068, Q-224, Q-299
+    // TEST-024 verifies: REQ-VTOKEN-019, REQ-VTOKEN-020, REQ-VTOKEN-021, REQ-VTOKEN-022, REQ-VTOKEN-024, REQ-VTOKEN-038, Q-068, Q-224, Q-299, REQ-ACCESS-061
     // Sources: 5.1 TEST-024, 2.4 REQ-VTOKEN-038 example
     function test_TEST_024_deployLandsAtPredictedAddressWithBindings() public {
         Listing memory l = _listing();
@@ -356,7 +356,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
 
     // ─── deployVaultToken: rejections (TEST-024) ───
 
-    // TEST-024 verifies: REQ-VTOKEN-019, REQ-VTOKEN-037, Q-228
+    // TEST-024 verifies: REQ-VTOKEN-019, REQ-VTOKEN-037, Q-228, REQ-ACCESS-061, REQ-ACCESS-010
     function testFuzz_TEST_024_deployOnlyByTimelock(
         address caller
     ) public {
@@ -366,7 +366,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
         _deployAs(caller, l);
     }
 
-    // TEST-024 verifies: REQ-VTOKEN-021, REQ-VTOKEN-028, REQ-VTOKEN-035, Q-068, Q-299
+    // TEST-024 verifies: REQ-VTOKEN-021, REQ-VTOKEN-028, REQ-VTOKEN-035, Q-068, Q-299, REQ-ACCESS-061
     function test_TEST_024_secondTokenForPairReverts() public {
         Listing memory l = _listing();
         address first = _deploy(l);

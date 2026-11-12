@@ -1,5 +1,5 @@
 /*
- * DebtOracle (planned src/oracle/debt-oracle/DebtOracle.sol, interface src/oracle/debt-oracle/IDebtOracle.sol,
+ * DebtOracle (src/oracle/debt-oracle/DebtOracle.sol, interface src/oracle/debt-oracle/IDebtOracle.sol,
  * spec 2.10 DebtOracle).
  *
  * The served debt price never reverts and is at least 1 once seeded, and is never below the accepted price unless

@@ -124,7 +124,7 @@ interface IParameterStoreAdmin {
     /// recorded routes. Reverts `OracleConfigRejected` unless `checkConfig` passes for every market whose tokens
     /// include `token`. The standby (may be empty, `kind == None`) passes the same checks and reverts `OutOfBounds`
     /// when it shares a feed or pool with `src` or with the token's price routes, so it fails independently of them
-    /// (AMMN-INT-01).
+    /// (AMMN-INT-01); two sources served through the same `source` address count as shared even for different pools.
     /// @param token Pool token or debt asset.
     /// @param src The second source.
     /// @param standby The standby either guardian can put in force with `useStandbySecondSource`.

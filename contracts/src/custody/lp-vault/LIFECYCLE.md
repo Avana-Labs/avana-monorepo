@@ -1,27 +1,46 @@
-Implementation pending: links point to interfaces; update to implementation functions once the hand-written contracts exist.
+Function links point to the interface that declares each function.
 
 # LPVault lifecycle
 
 The LPVault is the immutable custodian of one AMM protocol's positions on one chain: it binds each market to its pool and exact shape, holds pledged positions, removes exactly the units Collateralization names, and pays fees and principal only to the depositor of record or LPVaultSwap. `ILPVault` extends [`IAmmIntegration`](../../amm/IAmmIntegration.sol) and [`IAmmIntegrationHooks`](../../amm/IAmmIntegrationHooks.sol).
 
+```mermaid
+stateDiagram-v2
+  state "Held by its owner" as Wallet
+  state "In custody, depositor of record" as Custody
+  state "Stray, held outside a pledge" as Stray
+  [*] --> Wallet
+  Wallet --> Custody: receivePosition(marketId, owner, key) by Collateralization
+  Custody --> Custody: collectFees(key, depositor), fees to the depositor
+  Custody --> Custody: releaseToDepositor(key, units, minAmounts), principal to the depositor
+  Custody --> Custody: unwind(key, units, minAmounts, LPVaultSwap), principal to LPVaultSwap
+  Custody --> Wallet: returnPosition(key), position and its fees to the depositor
+  Wallet --> Stray: sent outside a pledge, onERC721Received records it
+  Stray --> Wallet: returnStray(key, recipient) by the AvanaTimelock
+  note right of Custody
+    every change of custody comes from Collateralization
+    while a Lock member holds the Lock
+  end note
+```
+
 ## Walkthrough
 
 Setup (Base market 3, Aerodrome Slipstream USDC/USDT, tick spacing 1, exact range `[−887,272, 887,272]`, from 3.1 `DEP-029`). Every state-changing call except `bindMarket` and `returnStray` comes from Collateralization while the Lock is held.
 
-1. **MarketRegistry → [`bindMarket`](../../amm/IAmmIntegration.sol#L58)** inside `listCollateralMarket`: stores pool, shape and tokens `[USDC, USDT]` for market 3, once. Event: [`MarketBound`](ILPVaultEvents.sol#L21). Errors: [`NotMarketRegistry`](ILPVaultErrors.sol#L20), [`MarketBinding`](ILPVaultErrors.sol#L25), [`InvalidPool`](ILPVaultErrors.sol#L30), [`InvalidShape`](ILPVaultErrors.sol#L35).
-2. **Lens / app → [`validatePosition`](../../amm/IAmmIntegration.sol#L134)** before Carol signs: checks owner, pool, exact ticks, gauge staking and returns 10,000,000,000 units without moving anything.
-3. **Collateralization → [`checkReadSafe`](../../amm/IAmmIntegrationHooks.sol#L17), then [`receivePosition`](../../amm/IAmmIntegration.sol#L88)`(3, Carol, key1)`.** Pulls the NFT from Carol (she approved the LPVault on the NFPM), re-reads units after custody and records Carol as depositor. Event: [`PositionReceived`](ILPVaultEvents.sol#L25). Errors: [`PoolLocked`](ILPVaultErrors.sol#L52), [`NotTokenOwner`](ILPVaultErrors.sol#L56), [`PoolMismatch`](ILPVaultErrors.sol#L39), [`RangeMismatch`](ILPVaultErrors.sol#L47) (a `[−10, 10]` range would be credited about 2,000 times its value), [`PositionEncumbered`](ILPVaultErrors.sol#L60).
-4. **LPOracle → [`composition`](../../amm/IAmmIntegration.sol#L159)** on every price evaluation: 1 whole vault token holds 1 USDC + 1 USDT at the oracle price vector, so $2.00. **RiskModule → [`riskStatus`](../../amm/IAmmIntegration.sol#L227)** for the pool-share and depth checks (Avana holds 2.05% of the pool after Carol's pledge).
-5. **Collateralization → [`collectFees`](../../amm/IAmmIntegration.sol#L207)`(key1, Carol)`.** Calls the NFPM's `collect` with Carol as recipient: 16.50 USDC and 15.95 USDT; liquidity unchanged. Event: [`FeesCollected`](ILPVaultEvents.sol#L43). Errors: [`NotDepositor`](ILPVaultErrors.sol#L72), [`FeesRolledIn`](ILPVaultErrors.sol#L105) for AMMs that compound fees.
-6. **Collateralization → [`releaseToDepositor`](../../amm/IAmmIntegration.sol#L191)`(key1, 2,000,000,000, [1,990e6, 1,990e6])`** for a partial removal: `decreaseLiquidity` then `collect` capped at that principal, about 2,000 USDC + 2,000 USDT to Carol. Event: [`UnitsReleased`](ILPVaultEvents.sol#L39). Errors: [`BelowMinimum`](ILPVaultErrors.sol#L101), [`ZeroUnits`](ILPVaultErrors.sol#L64).
-7. **Collateralization → [`unwind`](../../amm/IAmmIntegration.sol#L179)`(key, 1,020,000,000, [0, 0], LPVaultSwap)`** in Carol's liquidation (3.5 `LIQ-089`): reads Slipstream's own `slot0()` layout for the lock check, removes exactly 1,020 vault tokens of liquidity and sends about 1,020 USDC + 1,020 USDT to LPVaultSwap; owed fees stay with the position for Carol. Event: [`UnitsUnwound`](ILPVaultEvents.sol#L35). Error: [`NotInCustody`](ILPVaultErrors.sol#L68).
-8. **Collateralization → [`topUpPosition`](../../amm/IAmmIntegration.sol#L114)** for fungible-share AMMs only; NFT integrations revert [`TopUpNotSupported`](ILPVaultErrors.sol#L117) and take units through the NFPM's `increaseLiquidity` instead.
-9. **Collateralization → [`returnPosition`](../../amm/IAmmIntegration.sol#L100)`(keyB)`** when Carol withdraws: the NFT goes back to Carol with every fee it accrued. Event: [`PositionReturned`](ILPVaultEvents.sol#L31).
-10. **AvanaTimelock → [`returnStray`](ILPVault.sol#L39)** for an NFT sent to the LPVault outside a pledge (recorded by `onERC721Received` as [`StrayReceived`](ILPVaultEvents.sol#L47)); normal delay. Event: [`StrayReturned`](ILPVaultEvents.sol#L51). Errors: [`NotTimelock`](ILPVaultErrors.sol#L88), [`NotStray`](ILPVaultErrors.sol#L76).
+1. **MarketRegistry → [`bindMarket`](../../amm/IAmmIntegration.sol#L60)** inside `listCollateralMarket`: stores pool, shape and tokens `[USDC, USDT]` for market 3, once. Event: [`MarketBound`](ILPVaultEvents.sol#L23). Errors: [`NotMarketRegistry`](ILPVaultErrors.sol#L22), [`MarketBinding`](ILPVaultErrors.sol#L27), [`InvalidPool`](ILPVaultErrors.sol#L32), [`InvalidShape`](ILPVaultErrors.sol#L37).
+2. **RiskModule `previewPledge` (and the app directly) → [`validatePosition`](../../amm/IAmmIntegration.sol#L136)** before Carol signs: checks owner, pool, exact ticks, gauge staking and returns 10,000,000,000 units without moving anything.
+3. **Collateralization → [`checkReadSafe`](../../amm/IAmmIntegrationHooks.sol#L19), then [`receivePosition`](../../amm/IAmmIntegration.sol#L90)`(3, Carol, key1)`.** Pulls the NFT from Carol (she approved the LPVault on the NFPM), re-reads units after custody and records Carol as depositor. Event: [`PositionReceived`](ILPVaultEvents.sol#L27). Errors: [`PoolLocked`](ILPVaultErrors.sol#L54), [`NotTokenOwner`](ILPVaultErrors.sol#L58), [`PoolMismatch`](ILPVaultErrors.sol#L41), [`RangeMismatch`](ILPVaultErrors.sol#L49) (a `[−10, 10]` range would be credited about 2,000 times its value), [`PositionEncumbered`](ILPVaultErrors.sol#L62).
+4. **Pricing:** the LPOracle computes the composition with its own pricing module on every price evaluation, without calling the LPVault (its [`composition`](../../amm/IAmmIntegration.sol#L161) view is called by no Avana contract): 1 whole vault token holds 1 USDC + 1 USDT at the oracle price vector, so $2.00. **RiskModule → [`riskStatus`](../../amm/IAmmIntegration.sol#L229)** for the pool-share and depth checks (Avana holds 2.05% of the pool after Carol's pledge).
+5. **Collateralization → [`collectFees`](../../amm/IAmmIntegration.sol#L209)`(key1, Carol)`.** Calls the NFPM's `collect` with Carol as recipient: 16.50 USDC and 15.95 USDT; liquidity unchanged. Event: [`FeesCollected`](ILPVaultEvents.sol#L45). Errors: [`NotDepositor`](ILPVaultErrors.sol#L74), [`FeesRolledIn`](ILPVaultErrors.sol#L107) for AMMs that compound fees.
+6. **Collateralization → [`releaseToDepositor`](../../amm/IAmmIntegration.sol#L193)`(key1, 2,000,000,000, [1,990e6, 1,990e6])`** for a partial removal: `decreaseLiquidity` then `collect` capped at that principal, about 2,000 USDC + 2,000 USDT to Carol. Event: [`UnitsReleased`](ILPVaultEvents.sol#L41). Errors: [`BelowMinimum`](ILPVaultErrors.sol#L103), [`ZeroUnits`](ILPVaultErrors.sol#L66).
+7. **Collateralization → [`unwind`](../../amm/IAmmIntegration.sol#L181)`(key, 1,020,000,000, [0, 0], LPVaultSwap)`** in Carol's liquidation (3.5 `LIQ-089`): reads Slipstream's own `slot0()` layout for the lock check, removes exactly 1,020 vault tokens of liquidity and sends about 1,020 USDC + 1,020 USDT to LPVaultSwap; owed fees stay with the position for Carol. Event: [`UnitsUnwound`](ILPVaultEvents.sol#L37). Error: [`NotInCustody`](ILPVaultErrors.sol#L70).
+8. **Collateralization → [`topUpPosition`](../../amm/IAmmIntegration.sol#L116)** for fungible-share AMMs only; NFT integrations revert [`TopUpNotSupported`](ILPVaultErrors.sol#L119) and take units through the NFPM's `increaseLiquidity` instead.
+9. **Collateralization → [`returnPosition`](../../amm/IAmmIntegration.sol#L102)`(keyB)`** when Carol withdraws: the NFT goes back to Carol with every fee it accrued. Event: [`PositionReturned`](ILPVaultEvents.sol#L33).
+10. **AvanaTimelock → [`returnStray`](ILPVault.sol#L41)** for an NFT sent to the LPVault outside a pledge (recorded by `onERC721Received` as [`StrayReceived`](ILPVaultEvents.sol#L49)); normal delay. Event: [`StrayReturned`](ILPVaultEvents.sol#L53). Errors: [`NotTimelock`](ILPVaultErrors.sol#L90), [`NotStray`](ILPVaultErrors.sol#L78).
 
 ## What the UI reads and calls
 
-- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L45), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L31) (custody and live liquidity per record); direct views [`validatePosition`](../../amm/IAmmIntegration.sol#L134), [`isInCustody`](ILPVault.sol#L47), [`depositorOf`](../../amm/IAmmIntegration.sol#L235), [`unitsOf`](../../amm/IAmmIntegration.sol#L249) (all revert `Locked` while the Lock is held).
+- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L47), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L33) (custody and live liquidity per record); direct views [`validatePosition`](../../amm/IAmmIntegration.sol#L136), [`isInCustody`](ILPVault.sol#L49), [`depositorOf`](../../amm/IAmmIntegration.sol#L237), [`unitsOf`](../../amm/IAmmIntegration.sol#L251) (all revert `Locked` while the Lock is held).
 - Events to index: [ILPVaultEvents.sol](ILPVaultEvents.sol): `PositionReceived`, `PositionReturned`, `UnitsUnwound`, `UnitsReleased`, `FeesCollected`, `StrayReceived`, `StrayReturned`, `MarketBound`.
 - User calls: none; the depositor approves the LPVault on the NFPM before `AaveAdapter.pledge`.
 

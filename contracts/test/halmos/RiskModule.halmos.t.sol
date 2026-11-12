@@ -3,9 +3,34 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {RiskModuleDriftLogic} from "../../src/policy/risk-module/RiskModuleDriftLogic.sol";
 import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
+import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleImmutables.sol";
+import {DriftReason} from "../../src/types/DriftReason.sol";
 import {RiskModuleMathHarness} from "../utils/harness/RiskModuleMathHarness.sol";
 import {Test} from "forge-std/Test.sol";
+
+/// @notice The one MarketRegistry read the drift check makes first: the implementation status of a Spoke, set by the
+/// check; every other read reverts, so a check that does not stop at the implementation reverts.
+contract HalmosImplementationRegistry {
+    address public implementation;
+    bytes32 public codeHash;
+    bool public current;
+
+    function set(
+        address i,
+        bytes32 h,
+        bool c
+    ) external {
+        (implementation, codeHash, current) = (i, h, c);
+    }
+
+    function spokeImplementationStatus(
+        address
+    ) external view returns (address, bytes32, bool) {
+        return (implementation, codeHash, current);
+    }
+}
 
 /// @title RiskModuleHalmosTest
 /// @notice Symbolic checks of the RiskModule's formulas and decision steps, exactly the internal functions the pledge
@@ -15,12 +40,50 @@ import {Test} from "forge-std/Test.sol";
 /// `postHealthCheck` execute; the reads around them (accepted price, ParameterStore values, Spoke account data,
 /// Collateralization rescue units) are symbolic inputs, as the PROP rows allow. Inputs are bounded to the listing
 /// bounds (`L < 2^128`, `price8 < 2^64`, `d` 6 or 18, `minPledgeUsd <= 100,000e8`) so the nonlinear products stay
-/// tractable; the fuzz twins in `test/fuzz/RiskModule.fuzz.t.sol` cover the full ranges.
+/// tractable; the fuzz twins in `test/fuzz/RiskModule.fuzz.t.sol` cover the full ranges. The implementation binding of
+/// the drift check (PROP-078) runs the real `RiskModuleDriftLogic` against a registry whose implementation status is
+/// symbolic.
 contract RiskModuleHalmosTest is Test {
     RiskModuleMathHarness internal h;
+    HalmosImplementationRegistry internal reg;
+    RiskModuleDriftLogic internal drift;
 
     function setUp() public {
         h = new RiskModuleMathHarness();
+        reg = new HalmosImplementationRegistry();
+        drift = new RiskModuleDriftLogic(
+            RiskModuleImmutables(
+                address(reg), address(0x5701), address(0xC011), address(0xADA9), address(0x5A9), address(0x71E)
+            )
+        );
+    }
+
+    // PROP-078 verifies: REQ-ADAPTER-063, REQ-RISK-088, REQ-CONFIG-074
+    /// @notice For every Spoke, implementation address and code hash the registry reports, an implementation that is
+    /// not current makes the drift check report `SpokeImplementation` Spoke-wide (market 0), from both drift views,
+    /// without reverting and before any other read; a current one never reports it from this step.
+    function check_PROP_078_implementationNotCurrentIsDrift(
+        address spoke,
+        address impl,
+        bytes32 codeHash,
+        bool current,
+        address proxy
+    ) public {
+        reg.set(impl, codeHash, current);
+        uint256[] memory none = new uint256[](0);
+        try drift.spokeDrift(spoke) returns (uint256 m, DriftReason r) {
+            assert(!current);
+            assert(m == 0 && r == DriftReason.SpokeImplementation);
+        } catch {
+            // Only a current implementation reaches the next read, which this registry does not serve.
+            assert(current);
+        }
+        try drift.driftOf(spoke, none, proxy) returns (uint256 m, DriftReason r) {
+            assert(!current);
+            assert(m == 0 && r == DriftReason.SpokeImplementation);
+        } catch {
+            assert(current);
+        }
     }
 
     /// @dev The pledge path from the minimum test to the exemption step: `true` when the pledge is admitted and whether

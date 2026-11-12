@@ -4,6 +4,8 @@ One entry per simulation run. Each new run appends an entry; earlier entries are
 
 The simulation exits 0 whenever it completes. Its invariant checks are protocol-level assertions after every step; the gaps are found by reading the outputs (refusals, reverts, liquidation counts, gas), not by a failing check.
 
+The `models` CI workflow (`.github/workflows/models.yml`) runs the reported command (`run_simulation.py --extra-seeds 4`) and the deployment-topology grid at the script's default 8 seeds, one seed per job (`--topology --seed <s> --seeds 1`), on every pull request and push to `main`. A job fails when the script fails or when any run prints invariant violations other than `none`; the summaries and tables are kept as workflow artifacts for 14 days.
+
 ## SIM-R1 — 2026-11-09 — reported run
 
 | Item | Value |
@@ -191,7 +193,7 @@ The variants `mainnet-feeds` and `literal-repay-quote`, the extra base seeds and
 | Item | Value |
 |---|---|
 | Date | 2026-11-10 |
-| What ran | The `base` variant at the default seed after the owner's decision `Q-381`: Avana has no minimum debt on any chain, and Avana's own keepers liquidate every account and pay the gas. Two code changes: the `minDebtUsd` refusal is removed from `borrow_check` (`avana_sim/protocol.py`) and from the app's pre-check (`avana_sim/engine.py`), with `MIN_DEBT_USD` and the `below_min_debt` frustration removed (`avana_sim/params.py`, `avana_sim/metrics.py`); liquidation gas follows the `SPEC-CHAIN-001` gas units model `G(n) = 1,310,000 + 240,000 × n` for an account with `n` records (was 1,260,000 + 290,000 × min(n, 3); `G(1) = 1,550,000` in both) |
+| What ran | The `base` variant at the default seed after decision `Q-381`: Avana has no minimum debt on any chain, and Avana's own keepers liquidate every account and pay the gas. Two code changes: the `minDebtUsd` refusal is removed from `borrow_check` (`avana_sim/protocol.py`) and from the app's pre-check (`avana_sim/engine.py`), with `MIN_DEBT_USD` and the `below_min_debt` frustration removed (`avana_sim/params.py`, `avana_sim/metrics.py`); liquidation gas follows the `SPEC-CHAIN-001` gas units model `G(n) = 1,310,000 + 240,000 × n` for an account with `n` records (was 1,260,000 + 290,000 × min(n, 3); `G(1) = 1,550,000` in both) |
 | Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base` (from the repository root), then the same command with `--out <scratch directory>` to confirm determinism |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |

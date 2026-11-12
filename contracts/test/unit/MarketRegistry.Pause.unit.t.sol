@@ -28,7 +28,7 @@ contract MarketRegistryPauseUnitTest is MarketRegistryFixture {
         return registry.pauseState(h);
     }
 
-    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-017, REQ-MREG-024, INV-049, Q-227, Q-252
+    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-004, REQ-MREG-017, REQ-MREG-024, INV-049, Q-227, Q-252, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-085, REQ-ACCESS-086, REQ-ACCESS-123, REQ-ACCESS-162, SPEC-GOV-004, REQ-ACCESS-064, REQ-ACCESS-088
     // Sources: 5.1 TEST-065, QNT-T13
     function test_TEST_065_transitionsAndEvents() public {
         address h = address(hub);
@@ -80,7 +80,7 @@ contract MarketRegistryPauseUnitTest is MarketRegistryFixture {
         assertEq(uint8(_state(h)), uint8(PauseState.None));
     }
 
-    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-003, REQ-CONFIG-082, Q-308
+    // TEST-065 verifies: REQ-MREG-001, REQ-MREG-003, REQ-CONFIG-082, Q-308, REQ-ACCESS-090
     function test_TEST_065_perHubAndNoExpiry() public {
         vm.prank(emergencyGuardian);
         registry.pause(address(hub), PauseReason.General);
@@ -93,7 +93,7 @@ contract MarketRegistryPauseUnitTest is MarketRegistryFixture {
         assertEq(uint8(_state(alice)), uint8(PauseState.None));
     }
 
-    // TEST-065 verifies: REQ-CONFIG-082, REQ-MREG-001, REQ-MREG-024
+    // TEST-065 verifies: REQ-CONFIG-082, REQ-MREG-001, REQ-MREG-024, REQ-ACCESS-172
     function test_TEST_065_freezeAllAndPauseAll() public {
         vm.prank(emergencyGuardian);
         registry.freeze(address(hub));

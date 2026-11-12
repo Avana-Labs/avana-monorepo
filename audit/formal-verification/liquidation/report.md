@@ -18,7 +18,7 @@
 | Aave V4 liquidation sizing | `LiquidationLogic.sol`, `SharesMath.sol` at the pin | Target-HF debt, bonus curve, dust rule, all-collateral branch, `MustNotLeaveDust`, debt rounding |
 | Lens liquidation preview | 2.17 `REQ-LENS-016`, `017`, `028`, `029` | Preview formulas against Aave's sizing |
 
-Implementation code does not exist yet; every property is proved on the specified behaviour. Tools: Z3 4.13 (Python), Hypothesis 6.112, Quint 0.22 simulator.
+Implementation code did not exist on the run date; every property is proved on the specified behaviour. Tools: Z3 4.13 (Python), Hypothesis 6.112, Quint 0.22 simulator.
 
 ### Protocol overview of the area
 
@@ -471,7 +471,7 @@ The models now describe the design of 2.11 after `Q-333`…`Q-348`: the flash lo
 
 ## 11. Re-verification after the parameter decisions (FV-LIQ-R9, 2026-11-10)
 
-The owner removed the SettlementBudget (`Q-397`), removed in-kind settlement (`Q-401`), moved the price-drop, seizure-surge and route-failure breakers to monitoring alerts (`Q-399`) and set `keeperFloor = 1` with `MAX_KEEPERS = 32` (`Q-400`).
+The decisions of 2026-11-10 removed the SettlementBudget (`Q-397`), removed in-kind settlement (`Q-401`), moved the price-drop, seizure-surge and route-failure breakers to monitoring alerts (`Q-399`) and set `keeperFloor = 1` with `MAX_KEEPERS = 32` (`Q-400`).
 
 **Why the budget was removed.** The budget paid only the rounding gap `D + φD − K − R` left after a liquidation met its recovery floor. That gap is a few base units, and Aave V4's dust rule makes the repayment that finishes a liquidation predictable before the call. Avana's keeper therefore sizes `debtToCover` and its funding for that amount up front, using the exact flash principal and premium, and pays any gap left at settlement through the shortfall top-up it already had. Removing the budget removes a funded contract, its caps, windows, reserved floors and setters, and the rule that a draw is never paid to the caller (`FV-LIQ-F-01`, `F-02`, `F-03`, `F-07` all concerned the budget's bounds). The cost moves to the caller, bounded by `maxShortfall`.
 

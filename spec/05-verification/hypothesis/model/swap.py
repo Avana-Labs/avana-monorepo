@@ -44,11 +44,13 @@ def scaled(v_wad, dd):
 class SwapMixin:
     # ------------------------------------------------------------------ SettlementMath
     def leg_prices(self, mk):
-        """Capped 8-decimal leg prices the LPOracle uses (SPEC-LIQ-012); a GHO leg at Pgho."""
+        """Capped 8-decimal leg prices the LPOracle uses (SPEC-LIQ-012). A GHO leg is priced like any other
+        stable, from its GHO/USD feed capped at $1 (SPEC-ORC-004, REQ-ORACLE-052); Pgho is only GHO's price as
+        a debt asset."""
         lp = mk.oracle.leg_prices(self.now())
         if lp is None:
             lp = (min(self.prices[mk.t0], 10 ** 8), min(self.prices[mk.t1], 10 ** 8))
-        return {mk.t0: PGHO if mk.t0 == GHO else lp[0], mk.t1: PGHO if mk.t1 == GHO else lp[1]}
+        return {mk.t0: lp[0], mk.t1: lp[1]}
 
     @staticmethod
     def unit_debt(price, dec, p_debt, dd):

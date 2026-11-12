@@ -115,7 +115,7 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
             prev = ok ? last : seenAt;
         } else {
             bool ok;
-            (ok,,,, prev) = _readRound(leg.feed, abi.encodeCall(IAggregatorV3.getRoundData, (leg.roundId - 1)));
+            (ok,,,, prev,) = _readRound(leg.feed, abi.encodeCall(IAggregatorV3.getRoundData, (leg.roundId - 1)));
             if (!ok) return (false, 0);
         }
         usable = prev != 0 && prev < leg.updatedAt;
@@ -132,7 +132,7 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
         (bool okAgg, address aggregator) = _readPhaseAggregator(leg.feed, phaseId - 1);
         if (!okAgg || aggregator == address(0)) return (false, 0);
         bool okRound;
-        (okRound,,,, last) = _readLatest(aggregator);
+        (okRound,,,, last,) = _readLatest(aggregator);
         ok = okRound && last != 0 && last < leg.updatedAt;
     }
 }

@@ -42,6 +42,21 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         bool active;
     }
 
+    /// @dev One swap-route slot a market has had set, kept so a later integration-contract record can re-check it
+    /// (REQ-MREG-035).
+    struct RouteSlotRef {
+        address token;
+        address debtAsset;
+        uint8 kind;
+    }
+
+    /// @dev The key of an integration's record of AMM protocol contracts and whether governance finalized it
+    /// (REQ-MREG-035).
+    struct IntegrationRecord {
+        bytes32 key;
+        bool finalized;
+    }
+
     /// @dev A credit line of (funding Hub, asset): `line` in whole tokens, `drawCapSum` in whole tokens.
     struct CreditLine {
         uint256 line;
@@ -100,6 +115,10 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         mapping(address account => bool) knownIntegrationContract;
         mapping(address token => uint64) standbyCancelledAt;
         mapping(uint256 marketId => uint32) routeEpoch;
+        // Appended fields (integration-contract record, REQ-MREG-035); earlier fields keep their slots.
+        mapping(uint32 integrationId => IntegrationRecord) integrationRecords;
+        mapping(uint256 marketId => RouteSlotRef[]) routeSlots;
+        mapping(bytes32 slotId => bool) routeSlotListed;
     }
 
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.MarketRegistry")) - 1)) & ~bytes32(uint256(0xff))`.
@@ -137,14 +156,16 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
     address internal immutable _PAYOUT_ESCROW;
     address internal immutable _FLASH_LIQUIDATOR;
     address internal immutable _STANDARD_SPOKE_IMPLEMENTATION;
+    /// @dev The most markets the registry ever lists, closed and cancelled ones included (REQ-MREG-034).
+    uint256 internal immutable _MAX_MARKET_COUNT;
     /// @dev `keccak256(abi.encode(immutables))`, compared between the registry and each logic contract.
     bytes32 internal immutable _IMMUTABLES_HASH;
     /// @dev This contract's own address: a logic contract refuses every body unless delegatecalled.
     address internal immutable _SELF;
 
-    /// @notice Fixes the implementation immutables; every address must be non-zero.
-    /// @param im The per-chain Avana addresses.
-    /// @custom:spec REQ-CONFIG-005
+    /// @notice Fixes the implementation immutables; every address and the market-count limit must be non-zero.
+    /// @param im The per-chain Avana addresses and the market-count limit.
+    /// @custom:spec REQ-CONFIG-005, REQ-MREG-034
     constructor(
         MarketRegistryImmutables memory im
     ) {
@@ -153,7 +174,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
                 || im.aaveAdapter == address(0) || im.collateralization == address(0) || im.lock == address(0)
                 || im.proxyManager == address(0) || im.parameterStore == address(0) || im.riskModule == address(0)
                 || im.lpVaultSwap == address(0) || im.payoutEscrow == address(0) || im.flashLiquidator == address(0)
-                || im.standardSpokeImplementation == address(0)
+                || im.standardSpokeImplementation == address(0) || im.maxMarketCount == 0
         ) revert ListingCheckFailed("immutables");
         _TIMELOCK = im.timelock;
         _AAVE_GOVERNANCE_EXECUTOR = im.aaveGovernanceExecutor;
@@ -168,6 +189,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         _PAYOUT_ESCROW = im.payoutEscrow;
         _FLASH_LIQUIDATOR = im.flashLiquidator;
         _STANDARD_SPOKE_IMPLEMENTATION = im.standardSpokeImplementation;
+        _MAX_MARKET_COUNT = im.maxMarketCount;
         _IMMUTABLES_HASH = keccak256(abi.encode(im));
         _SELF = address(this);
     }

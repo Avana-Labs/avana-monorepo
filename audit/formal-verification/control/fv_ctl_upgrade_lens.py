@@ -20,9 +20,11 @@ How Avana works here, and what each check proves:
 - Lens paging. `checkRecordBacking` returns an empty page for `offset >= nextRecordId` and otherwise walks
   `offset .. offset + min(limit, n - offset) - 1`, which never overflows for any 256-bit input (FV-CTL-77). The
   paging rules of the Lens are compared for one outcome per input (FV-CTL-148).
-- Lens liquidation preview. `premiumWithinMax` is true exactly when LPVaultSwap's flash-premium checks accept the
-  same loan: the Lens, the ParameterStore, LPVaultSwap and the borrow gate all state the exact form
-  `phi x 10^4 <= maxFlashFeeBps x F`, read from the pages (FV-CTL-78; resolves FV-CTL-F-27).
+- Flash-premium ceiling. `liquidate` takes no flash loan, and the Lens preview and the borrow gate read no flash
+  source. Where a loan is taken (the core flash source for `deleverage`, LPVaultSwap's `deleverage` callback, the
+  flash liquidation helper), every page states the exact form `phi x 10^4 <= maxFlashFeeBps x F`, and
+  `SettlementMath.flashPremiumWithinCap`, which the flash source and the helper both call, equals it for every
+  input. A quote that passes before the loan implies the Pool's charge passes in the callback (FV-CTL-78).
 - Read-only reentrancy. Every view a third party can call during an Avana operation either reverts while the
   Lock is held or reads state the locked operation does not write before its last external call (FV-CTL-97).
 """
@@ -198,13 +200,17 @@ prove("FV-CTL-148", "The Lens paging rules give checkRecordBacking one outcome f
              z3.Not(z3.And(says_walk, says_revert)), z3.Or(says_empty, says_revert, says_walk)), verifies=["REQ-LENS-014", "REQ-LENS-020", "REQ-LENS-023", "REQ-LENS-024"],
       targets=["T-74"], show={"offset", "limit", "nextRecordId"})
 
-# Lens premiumWithinMax against LPVaultSwap's flash-premium checks (AMM-neutral design: no GHO buy leg; the flash
-# source lends the debt asset itself). Every page states one exact form, phi x 10^4 <= maxFlashFeeBps x F, with F
-# the flash amount and no division or rounding: the Lens flag (REQ-LENS-029), the ParameterStore ceiling
-# (REQ-PSTORE-024), LPVaultSwap's pre-loan and callback checks (REQ-FLASH-002, SPEC-LIQ-015) and the borrow gate's
-# probe (REQ-RISK-062, with F = 10^dec). The forms are read from the pages; a rounded ceiling such as
-# ceil(D x maxFlashFeeBps / 10^4) on any of them fails the check.
+# Flash-premium ceiling (Q-404): liquidate takes no flash loan (REQ-SWAP-012), the Lens preview quotes none
+# (REQ-LENS-029) and the borrow gate reads no flash source (REQ-RISK-062). Where a loan is taken, every page states
+# one exact form, phi x 10^4 <= maxFlashFeeBps x F, with F the flash amount and no division or rounding: the
+# ParameterStore rule (REQ-PSTORE-024), SPEC-LIQ-015 (pre-loan and callback), the core flash source's pre-loan and
+# callback checks (REQ-FLASH-001, REQ-FLASH-003), LPVaultSwap's deleverage checks (REQ-FLASH-002, REQ-SWAP-013)
+# and the helper's callback (REQ-HELPER-005). The forms are read from the pages; a rounded ceiling such as
+# ceil(F x maxFlashFeeBps / 10^4) on any of them fails the check. The code's comparison,
+# SettlementMath.flashPremiumWithinCap, is read from contracts/src and modelled branch by branch.
 import re as _re
+
+_SRC78 = HERE.parents[2] / "contracts" / "src"
 
 
 def _rule(rel, rid):
@@ -214,40 +220,81 @@ def _rule(rel, rid):
     return ""
 
 
+_LIQ = "02-contracts/11-lpvaultswap.md"
 _FORMS78 = {
-    "REQ-LENS-029": ("02-contracts/17-lens.md", "`premiumWithinMax` true exactly when `flashPremium × 10⁴ ≤ maxFlashFeeBps × F`"),
     "REQ-PSTORE-024": ("02-contracts/09-parameter-store.md", "`φ × 10⁴ ≤ maxFlashFeeBps × amount`"),
-    "SPEC-LIQ-015": ("02-contracts/11-lpvaultswap.md", "`φ × 10⁴ ≤ maxFlashFeeBps × F`"),
-    "REQ-FLASH-002": ("02-contracts/11-lpvaultswap.md", "`flashSource.flashPremium(T, F) × 10⁴ > maxFlashFeeBps × F`"),
-    "REQ-RISK-062": ("02-contracts/07-risk-module.md", "`FLASH_SOURCE.flashPremium(asset, 10^dec) × 10⁴ > maxFlashFeeBps × 10^dec`"),
+    "SPEC-LIQ-015": (_LIQ, "`φ × 10⁴ ≤ maxFlashFeeBps × F`"),
+    "REQ-FLASH-001": (_LIQ, "`flashPremium(asset, amount) × 10⁴ ≤ maxFlashFeeBps × amount`"),
+    "REQ-FLASH-002": (_LIQ, "`flashSource.flashPremium(T, F) × 10⁴ > maxFlashFeeBps × F`"),
+    "REQ-FLASH-003": (_LIQ, "`premiums[0] × 10⁴ ≤ maxFlashFeeBps × amounts[0]`"),
+    "REQ-SWAP-013": (_LIQ, "`premium × 10⁴ > maxFlashFeeBps × amount`"),
+    "REQ-HELPER-005": (_LIQ, "`φ × 10⁴ ≤ maxFlashFeeBps × F`"),
 }
-_texts78 = {rid: _rule(rel, rid) for rid, (rel, _) in _FORMS78.items()}
+# Rules that keep the flash loan out of liquidation and out of the borrow gate.
+_NOFLASH78 = {
+    "REQ-SWAP-012": (_LIQ, "`liquidate` MUST NOT call the flash source or any lender"),
+    "REQ-LENS-029": ("02-contracts/17-lens.md", "The preview reads no flash source and quotes no flash loan"),
+    "REQ-RISK-062": ("02-contracts/07-risk-module.md", "MUST NOT read the chain's `IFlashSource`"),
+}
+_texts78 = {rid: _rule(rel, rid) for rid, (rel, _) in {**_FORMS78, **_NOFLASH78}.items()}
 _rounded = _re.compile(r"⌈[^⌉`]*maxFlashFeeBps|maxFlashFeeBps\s*/\s*10⁴")
 _forms_ok = {rid: (form in _texts78[rid] and not _rounded.search(_texts78[rid])) for rid, (_, form) in _FORMS78.items()}
+_noflash_ok = {rid: text in _texts78[rid] for rid, (_, text) in _NOFLASH78.items()}
 _launch_ok = ("launch 10 on Ethereum and on Base" in _texts78["REQ-PSTORE-024"]
               and "`maxFlashFeeBps` launch 10" in _texts78["SPEC-LIQ-015"])
 _ex_ok = ("`975,000 × 10⁴ = 9,750,000,000 ≤ 10 × 1,950,000,000 = 19,500,000,000`" in _texts78["SPEC-LIQ-015"]
           and "`39,000,000,000 > 19,500,000,000`" in _texts78["SPEC-LIQ-015"])
 _ex78 = (975_000 * 10**4 <= 10 * 1_950_000_000) and not (3_900_000 * 10**4 <= 10 * 1_950_000_000) and _ex_ok
 
-# The flag and the checks, as the pages state them: phi is the flash source's quote, which is the premium the Pool
-# charges in the callback (same asset, same amount, same block); F is the flash amount the params carry.
-F_, mf, pp, phi = z3.Ints("flashAmount maxFlashFeeBps poolPremiumBps premium")
-dom78 = [F_ >= 1, F_ < 2**128, mf >= 0, mf <= 100, pp >= 0, pp <= 10**4, phi >= 0,
-         phi * 10**4 >= F_ * pp, (phi - 1) * 10**4 < F_ * pp]          # Aave V3 premium F x p / 10^4, rounded up
-lens_ok = phi * 10**4 <= mf * F_                                         # REQ-LENS-029
-pre_ok = z3.Not(phi * 10**4 > mf * F_)                                   # REQ-FLASH-002 (no FlashFeeTooHigh)
-cb_ok = phi * 10**4 <= mf * F_                                           # SPEC-LIQ-015 callback, REQ-PSTORE-024
-_page_ok = all(_forms_ok.values()) and _launch_ok and _ex78
-# FV-CTL-78 verifies: REQ-LENS-029, REQ-LENS-016, SPEC-LIQ-015, REQ-FLASH-002, REQ-PSTORE-024, REQ-RISK-062
-prove("FV-CTL-78", "previewLiquidation's premiumWithinMax is true exactly when LPVaultSwap's pre-loan and callback flash-premium checks accept the same loan: every page (2.17 REQ-LENS-029, 2.9 REQ-PSTORE-024, 2.11 SPEC-LIQ-015 and REQ-FLASH-002, 2.7 REQ-RISK-062) states the exact form phi x 10^4 <= maxFlashFeeBps x F, launch 10 bps (SPEC-LIQ-015 example: 5 bps on 1,950 USDC passes, 20 bps fails)",
-      z3.And(lens_ok == pre_ok, lens_ok == cb_ok, z3.BoolVal(_page_ok)), assumptions=dom78,
-      verifies=["REQ-LENS-029", "REQ-LENS-016", "SPEC-LIQ-015", "REQ-FLASH-002", "REQ-PSTORE-024", "REQ-RISK-062"],
-      targets=["T-74"], show={"flashAmount", "maxFlashFeeBps", "poolPremiumBps", "premium"},
-      detail="Changed for the AMM-neutral design: maxGhoSpend no longer exists. Resolves FV-CTL-F-27: the Lens flag "
-             "had rounded the ceiling up while LPVaultSwap compared exact products; every page now states the exact "
-             "form. Page forms: " + ", ".join(f"{k}={'ok' if v else 'MISSING'}" for k, v in _forms_ok.items())
-             + f", launch 10={'ok' if _launch_ok else 'MISSING'}, example={'ok' if _ex_ok else 'MISSING'}.")
+# Code: SettlementMath.flashPremiumWithinCap has the two branches modelled below, and both premium checks
+# (AaveV3FlashSource and FlashLiquidatorBase) call it; the Lens LiquidationPreview carries no flash field.
+_sm = (_SRC78 / "liquidation/lp-vault-swap/SettlementMath.sol").read_text()
+_code_forms = {
+    "SettlementMath branch m <= 10^4": "if (maxFlashFeeBps <= BPS) return premium <= Math.mulDiv(maxFlashFeeBps, amount, BPS);" in _sm,
+    "SettlementMath branch m > 10^4": "return Math.mulDiv(premium, BPS, maxFlashFeeBps, Math.Rounding.Ceil) <= amount;" in _sm,
+}
+for _f in ("flash/AaveV3FlashSource.sol", "periphery/flash-liquidator/FlashLiquidatorBase.sol"):
+    _code_forms[_f] = "SettlementMath.flashPremiumWithinCap(premium, amount, cap)" in (_SRC78 / _f).read_text()
+_prev = (_SRC78 / "lens/lens/types/LiquidationPreview.sol").read_text()
+_prev_body = _prev[_prev.index("struct LiquidationPreview"):]
+_prev_body = _prev_body[:_prev_body.index("}")]
+_code_forms["LiquidationPreview has no flash field"] = not _re.search(r"(?i)flash|premium\w*\s*;", _prev_body)
+_code_ok = all(_code_forms.values())
+
+# The checks as the pages and the code state them. phi_q is the quote (the flash source quotes the ceiling
+# ceil(F x p / 10^4), REQ-HELPER-009, MATH-ST-115) and phi_c the Pool's half-up charge in the callback, same asset,
+# amount and block. m ranges over every uint the code accepts, not only the [0, 100] the ParameterStore allows.
+F_, mf, pp, phq, phc = z3.Ints("flashAmount maxFlashFeeBps poolPremiumBps quotedPremium chargedPremium")
+dom78 = [F_ >= 1, F_ < 2**128, mf >= 0, mf < 2**64, pp >= 0, pp <= 10**4,
+         phq * 10**4 >= F_ * pp, (phq - 1) * 10**4 < F_ * pp,                     # quote: ceil(F x p / 10^4)
+         phc * 2 * 10**4 >= 2 * F_ * pp - 10**4, phc * 2 * 10**4 < 2 * F_ * pp + 10**4,  # charge: half up
+         phc >= 0]
+
+
+def _exact(phi):
+    return phi * 10**4 <= mf * F_                                           # every page's form
+
+
+def _code(phi):                                                             # SettlementMath.flashPremiumWithinCap
+    lo = phi <= (mf * F_) / 10**4                                           # mulDiv floor
+    hi = (phi * 10**4 + mf - 1) / mf <= F_                                  # mulDiv ceil
+    return z3.If(mf <= 10**4, lo, hi)
+
+
+_page_ok = all(_forms_ok.values()) and all(_noflash_ok.values()) and _launch_ok and _ex78
+# FV-CTL-78 verifies: SPEC-LIQ-015, REQ-PSTORE-024, REQ-FLASH-001, REQ-FLASH-002, REQ-FLASH-003, REQ-SWAP-013, REQ-HELPER-005, REQ-SWAP-012, REQ-LENS-029, REQ-RISK-062
+prove("FV-CTL-78", "Flash-premium ceiling: liquidate takes no flash loan and the Lens preview and the borrow gate read no flash source (REQ-SWAP-012, REQ-LENS-029, REQ-RISK-062); every page that takes a loan (2.9 REQ-PSTORE-024, 2.11 SPEC-LIQ-015, REQ-FLASH-001/002/003, REQ-SWAP-013, REQ-HELPER-005) states the exact form phi x 10^4 <= maxFlashFeeBps x F, launch 10 bps; SettlementMath.flashPremiumWithinCap, called by the flash source and the helper, equals it for every input, and a quote that passes before the loan implies the Pool's charge passes in the callback (SPEC-LIQ-015 example: 5 bps on 1,950 USDC passes, 20 bps fails)",
+      z3.And(_code(phq) == _exact(phq), _code(phc) == _exact(phc), z3.Implies(_exact(phq), _exact(phc)),
+             z3.BoolVal(_page_ok and _code_ok)), assumptions=dom78,
+      verifies=["SPEC-LIQ-015", "REQ-PSTORE-024", "REQ-FLASH-001", "REQ-FLASH-002", "REQ-FLASH-003", "REQ-SWAP-013",
+                "REQ-HELPER-005", "REQ-SWAP-012", "REQ-LENS-029", "REQ-RISK-062"],
+      targets=["T-74"], show={"flashAmount", "maxFlashFeeBps", "poolPremiumBps", "quotedPremium", "chargedPremium"},
+      detail="Changed for Q-404: liquidate takes no flash loan, so the Lens premiumWithinMax flag no longer exists; the "
+             "check now covers the loans that remain (deleverage, the flash liquidation helper) and the rules that "
+             "keep the loan out of liquidation. Page forms: "
+             + ", ".join(f"{k}={'ok' if v else 'MISSING'}" for k, v in {**_forms_ok, **_noflash_ok}.items())
+             + f", launch 10={'ok' if _launch_ok else 'MISSING'}, example={'ok' if _ex_ok else 'MISSING'}. Code: "
+             + ", ".join(f"{k}={'ok' if v else 'MISSING'}" for k, v in _code_forms.items()) + ".")
 
 # ---------------------------------------------------------------- read-only reentrancy (T-73)
 VIEWS = {

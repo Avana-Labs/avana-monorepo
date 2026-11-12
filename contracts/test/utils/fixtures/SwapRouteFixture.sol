@@ -5,18 +5,29 @@ pragma solidity 0.8.28;
 
 import {DexPathRoute} from "../../../src/liquidation/settlement-routes/DexPathRoute.sol";
 import {ISettlementRoute} from "../../../src/liquidation/settlement-routes/ISettlementRoute.sol";
+import {PegModuleRoute} from "../../../src/liquidation/settlement-routes/PegModuleRoute.sol";
+import {WrapperThenDexRoute} from "../../../src/liquidation/settlement-routes/WrapperThenDexRoute.sol";
 import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/DexHop.sol";
+import {PegModuleStep} from "../../../src/liquidation/settlement-routes/types/PegModuleStep.sol";
 import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {WrapperStep} from "../../../src/liquidation/settlement-routes/types/WrapperStep.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {AvanaTest} from "../AvanaTest.sol";
 import {LockMember} from "../mocks/LockMember.sol";
 import {PayoutToken} from "../mocks/PayoutToken.sol";
-import {FeeSwitchToken, MockCLPool, MockCurvePool, MockPoolFactory, MockRouteCaller} from "../mocks/SwapRouteMocks.sol";
+import {
+    FeeSwitchToken,
+    MockCLPool,
+    MockCurvePool,
+    MockLegacyCurvePool,
+    MockPoolFactory,
+    MockRouteCaller
+} from "../mocks/SwapRouteMocks.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title SwapRouteFixture
 /// @notice Shared setup of the swap-route suites (2.12): the real Lock with a mock LPVaultSwap (`MockRouteCaller`,
-/// contract 23 is not written yet) and a `LockMember` AaveAdapter, the tokens of the 2.12 examples as `PayoutToken`s,
+/// a stand-in in these tests) and a `LockMember` AaveAdapter, the tokens of the 2.12 examples as `PayoutToken`s,
 /// the chain's pinned pool factories (one `MockPoolFactory` per family; `_clPool` and `_curvePool` register their pools),
 /// and builders for route configurations and hops.
 /// @dev `usdt` answers no fee-switch probe, so the suites can route it through any pool; `tether` is the USDT stand-in
@@ -75,7 +86,8 @@ abstract contract SwapRouteFixture is AvanaTest {
             tokenClassMask: STABLE,
             uniswapV3Factory: address(v3Factory),
             slipstreamFactory: address(slipFactory),
-            curveFactory: address(curveFactory)
+            curveFactory: address(curveFactory),
+            curveLegacyPools: new address[](0)
         });
     }
 
@@ -124,6 +136,41 @@ abstract contract SwapRouteFixture is AvanaTest {
         curveFactory.registerCurve(address(pool), coins);
     }
 
+    /// @notice A funded two-coin legacy Curve pool `[a, b]` at `num / den`; not pinned until a configuration lists it.
+    function _legacyPool(
+        PayoutToken a,
+        PayoutToken b,
+        uint256 num,
+        uint256 den
+    ) internal returns (MockLegacyCurvePool pool) {
+        address[] memory coins = new address[](2);
+        coins[0] = address(a);
+        coins[1] = address(b);
+        pool = new MockLegacyCurvePool(coins);
+        pool.setRate(num, den);
+        a.mint(address(pool), 1e40);
+        b.mint(address(pool), 1e40);
+    }
+
+    /// @notice `_config(tokenIn, tokenOut)` with `pinned` as the chain's pinned legacy Curve pools.
+    function _configPinned(
+        address tokenIn,
+        address tokenOut,
+        address[] memory pinned
+    ) internal view returns (RouteConfig memory config) {
+        config = _config(tokenIn, tokenOut);
+        config.curveLegacyPools = pinned;
+    }
+
+    function _legacyHop(
+        address pool,
+        address tokenOut,
+        int128 i,
+        int128 j
+    ) internal pure returns (DexHop memory hop) {
+        hop = DexHop({kind: HopKind.CurveLegacy, pool: pool, tokenOut: tokenOut, i: i, j: j});
+    }
+
     function _clHop(
         address pool,
         address tokenOut
@@ -165,6 +212,34 @@ abstract contract SwapRouteFixture is AvanaTest {
         hops[0] = a;
         hops[1] = b;
         hops[2] = c;
+    }
+
+    /// @notice Deploys a `DexPathRoute` through an external call, so `vm.expectRevert` applies to this call. With
+    /// `dynamic_test_linking`, a `new` of a source contract runs as a `deployCode` cheatcode, which `expectRevert` does
+    /// not count as the next call: a refused `new` then reverts the whole test, which the pending `expectRevert` accepts,
+    /// and every statement after it is skipped.
+    function deployDexPath(
+        RouteConfig memory config,
+        DexHop[] memory hops
+    ) external returns (DexPathRoute) {
+        return new DexPathRoute(config, hops);
+    }
+
+    /// @notice Deploys a `WrapperThenDexRoute` through an external call (see `deployDexPath`).
+    function deployWrapperThenDex(
+        RouteConfig memory config,
+        WrapperStep memory step,
+        DexHop[] memory hops
+    ) external returns (WrapperThenDexRoute) {
+        return new WrapperThenDexRoute(config, step, hops);
+    }
+
+    /// @notice Deploys a `PegModuleRoute` through an external call (see `deployDexPath`).
+    function deployPegModule(
+        RouteConfig memory config,
+        PegModuleStep memory step
+    ) external returns (PegModuleRoute) {
+        return new PegModuleRoute(config, step);
     }
 
     /// @notice A one-hop USDT → USDC route over a fresh 1:1 concentrated-liquidity pool.

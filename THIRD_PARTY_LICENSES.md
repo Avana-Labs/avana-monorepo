@@ -37,7 +37,7 @@ Subsets of deployed contracts' interfaces, copied from the origin source with id
 | Sky `dss-lite-psm`, (C) 2023 Dai Foundation | `dbf0022225f645f5697e5517d0cf00810471bccf` | AGPL-3.0-or-later | `sky/ILitePsm.sol` | [`LICENSES/AGPL-3.0.txt`](LICENSES/AGPL-3.0.txt) |
 | Chainlink `chainlink-evm`, (c) 2018 SmartContract ChainLink Limited SEZC | `4d83db28afc6d54761ce324e633d89244a97907e` | MIT | `chainlink/IAggregatorV3.sol`, `chainlink/IAggregatorProxy.sol`, `chainlink/ISequencerUptimeFeed.sol` | [MIT](#mit-license) |
 | Chainlink `libocr` | `199a6f17c59863999480e990c7c0b6ba7796ec92` | MIT | `chainlink/IOffchainAggregator.sol` | [MIT](#mit-license) |
-| GHO `gho-core`, (c) 2023 Aave | `c6335a0bb9cba099960c5378b1ff0db190b8da8f` | MIT | `gho/IGhoFlashMinter.sol`, `gho/IGsm.sol` | [MIT](#mit-license) |
+| GHO `gho-core`, (c) 2023 Aave | `c6335a0bb9cba099960c5378b1ff0db190b8da8f` | MIT | `gho/IGsm.sol` | [MIT](#mit-license) |
 
 ## Solidity dependencies
 
@@ -61,12 +61,14 @@ Installed from the lock files, not committed. TypeScript packages are bundled in
 
 | Package | Version | Licence | Where |
 |---|---|---|---|
-| viem | 2.57.11 | MIT | `services/common`, `services/indexer` |
+| viem | 2.57.11 | MIT | `services/common`, `services/indexer`, `services/keeper`, `packages/protocol` |
 | ponder | 0.18.2 | MIT | `services/indexer` |
 | hono | 4.13.13 | MIT | `services/indexer` |
 | typescript | 6.0.3 | Apache-2.0 | `services/` (build) |
 | @types/node | 22.20.5 | MIT | `services/` (build) |
-| vitest | 4.1.12 | MIT | `services/indexer` (tests) |
+| vitest | 5.1.0 | MIT | `services/common`, `services/indexer`, `services/keeper`, `packages/protocol` (tests) |
+| @aws-sdk/client-kms | 3.1156.0 | Apache-2.0 | `services/keeper` (signer keys held in AWS KMS) |
+| tsx | 4.23.15 | MIT | `services/keeper` (runs the TypeScript entry point) |
 | solhint | 6.2.5 | MIT | `contracts/package.json` |
 | @openzeppelin/upgrades-core | 1.47.0 | MIT | `contracts/package.json` (storage-layout check) |
 | @informalsystems/quint | 0.22.4 | Apache-2.0 | `spec/05-verification/package.json` |
@@ -96,7 +98,7 @@ Downloaded by [`contracts/script/install-security-tools.sh`](contracts/script/in
 | Necessist | 4.1.0 | AGPL-3.0 | `contracts/tools/bin/` |
 | 4naly3er | commit `8a9d1ebb7d362bc94f036fa9123d0977c6cb7436` | GPL-3.0 | `contracts/tools/4naly3er/` |
 | heimdall-rs | 0.9.3 | MIT | `tools/heimdall/bin/` |
-| Eclipse Temurin JDK (for the Certora Prover) | 21.0.13 | GPL-2.0 with the Classpath Exception | `contracts/tools/jdk-21/` |
+| Eclipse Temurin JDK (for the Certora Prover) | 21.0.13 | GPL-2.0 with the Classpath Exception | installed separately; not part of the repository |
 | Foundry | 1.9.0 | MIT OR Apache-2.0 | installed with `foundryup` |
 | Solidity compiler | 0.8.28 | GPL-3.0 | installed by Foundry |
 

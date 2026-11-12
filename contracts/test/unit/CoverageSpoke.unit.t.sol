@@ -133,6 +133,37 @@ contract CoverageSpokeUnitTest is CoverageSpokeFixture {
         assertEq(ghoCoverage.totalFunded(), FIRST_LOSS_RESERVE_MINIMUM_GHO + r, "totalFunded");
     }
 
+    // TEST-293 verifies: REQ-FLR-001, REQ-FLR-005, SPEC-FLR-002, Q-070, Q-101
+    // Sources: 2.14 REQ-FLR-001
+    /// @notice The First-Loss Reserve of an asset is that asset held as its Coverage Spoke's added shares on the Hub,
+    /// and nothing else: `fundedBalance()` and `fundedShares()` are the Hub's added assets and shares of the instance
+    /// on `ASSET_ID`; tokens sent to the instance or to the Hub add nothing; neither instance holds shares of the
+    /// other asset; and a coverage is paid by burning the instance's own shares, never another supplier's.
+    /// @dev Kills: `fundedBalance` reading a token balance (of the Coverage Spoke or of the Hub), another asset ID or
+    /// another holder's shares instead of the Hub's added assets of `address(this)` on `ASSET_ID`.
+    function test_TEST_293_reserveIsTheInstanceAddedSharesOnItsHub() public {
+        _fund(ghoCoverage, gho, avanaLabs, 2500e18);
+        uint256 balance = ghoCoverage.fundedBalance();
+        assertEq(balance, hub.getSpokeAddedAssets(ghoAssetId, address(ghoCoverage)), "the Hub's added assets");
+        assertEq(balance, FIRST_LOSS_RESERVE_MINIMUM_GHO + 2500e18, "everything funded");
+        assertEq(ghoCoverage.fundedShares(), hub.getSpokeAddedShares(ghoAssetId, address(ghoCoverage)), "shares");
+        gho.mint(address(ghoCoverage), 777e18);
+        gho.mint(aave.hub, 333e18);
+        assertEq(ghoCoverage.fundedBalance(), balance, "tokens sent outside fund are not reserve");
+        assertEq(hub.getSpokeAddedShares(usdcAssetId, address(ghoCoverage)), 0, "no USDC shares in the GHO reserve");
+        assertEq(hub.getSpokeAddedShares(ghoAssetId, address(usdcCoverage)), 0, "no GHO shares in the USDC reserve");
+
+        _reportDeficit(ghoAssetId, aave.cdpSpoke, 1000e18);
+        uint256 shares = ghoCoverage.fundedShares();
+        uint256 lendShares = hub.getSpokeAddedShares(ghoAssetId, aave.lendSpoke);
+        vm.prank(coverageCaller);
+        (uint256 burned, uint256 covered) = ghoCoverage.coverDeficit(aave.cdpSpoke, type(uint256).max);
+        assertEq(covered, 1000e18, "covered");
+        assertEq(hub.getSpokeAddedShares(ghoAssetId, address(ghoCoverage)), shares - burned, "paid from its shares");
+        assertEq(hub.getSpokeAddedShares(ghoAssetId, aave.lendSpoke), lendShares, "no other supplier pays");
+        assertEq(gho.balanceOf(address(ghoCoverage)), 777e18, "the donation stays untouched");
+    }
+
     // TEST-293 verifies: REQ-FLR-010, REQ-FLR-015, SPEC-FLR-002, Q-142
     /// @notice With supply interest accrued (A > S), `fund(x)` raises `fundedBalance` by between `x − 2` and `x + 1`
     /// and the shares minted are `floor(x (S + 1e6) / (A + 1e6))`; the reserve's own shares earn the yield.

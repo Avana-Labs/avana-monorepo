@@ -98,7 +98,7 @@
   ],
   "detail": "Changed for the AMM-neutral design: the ProxyManager is immutable, so no upgrade can change the creation code; predictProxy has no registry input (REQ-PROXY-099).",
   "counterexample": null,
-  "seconds": 0.03,
+  "seconds": 0.01,
   "model": "fv_ctl_upgrade_lens"
  },
  {
@@ -136,7 +136,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 1.92,
+  "seconds": 1.51,
   "model": "fv_ctl_upgrade_lens"
  },
  {
@@ -160,23 +160,27 @@
  },
  {
   "id": "FV-CTL-78",
-  "title": "previewLiquidation's premiumWithinMax is true exactly when LPVaultSwap's pre-loan and callback flash-premium checks accept the same loan: every page (2.17 REQ-LENS-029, 2.9 REQ-PSTORE-024, 2.11 SPEC-LIQ-015 and REQ-FLASH-002, 2.7 REQ-RISK-062) states the exact form phi x 10^4 <= maxFlashFeeBps x F, launch 10 bps (SPEC-LIQ-015 example: 5 bps on 1,950 USDC passes, 20 bps fails)",
+  "title": "Flash-premium ceiling: liquidate takes no flash loan and the Lens preview and the borrow gate read no flash source (REQ-SWAP-012, REQ-LENS-029, REQ-RISK-062); every page that takes a loan (2.9 REQ-PSTORE-024, 2.11 SPEC-LIQ-015, REQ-FLASH-001/002/003, REQ-SWAP-013, REQ-HELPER-005) states the exact form phi x 10^4 <= maxFlashFeeBps x F, launch 10 bps; SettlementMath.flashPremiumWithinCap, called by the flash source and the helper, equals it for every input, and a quote that passes before the loan implies the Pool's charge passes in the callback (SPEC-LIQ-015 example: 5 bps on 1,950 USDC passes, 20 bps fails)",
   "status": "Verified",
   "method": "Z3 (unsat of negation)",
   "verifies": [
-   "REQ-LENS-029",
-   "REQ-LENS-016",
    "SPEC-LIQ-015",
-   "REQ-FLASH-002",
    "REQ-PSTORE-024",
+   "REQ-FLASH-001",
+   "REQ-FLASH-002",
+   "REQ-FLASH-003",
+   "REQ-SWAP-013",
+   "REQ-HELPER-005",
+   "REQ-SWAP-012",
+   "REQ-LENS-029",
    "REQ-RISK-062"
   ],
   "targets": [
    "T-74"
   ],
-  "detail": "Changed for the AMM-neutral design: maxGhoSpend no longer exists. Resolves FV-CTL-F-27: the Lens flag had rounded the ceiling up while LPVaultSwap compared exact products; every page now states the exact form. Page forms: REQ-LENS-029=ok, REQ-PSTORE-024=ok, SPEC-LIQ-015=ok, REQ-FLASH-002=ok, REQ-RISK-062=ok, launch 10=ok, example=ok.",
+  "detail": "Changed for Q-404: liquidate takes no flash loan, so the Lens premiumWithinMax flag no longer exists; the check now covers the loans that remain (deleverage, the flash liquidation helper) and the rules that keep the loan out of liquidation. Page forms: REQ-PSTORE-024=ok, SPEC-LIQ-015=ok, REQ-FLASH-001=ok, REQ-FLASH-002=ok, REQ-FLASH-003=ok, REQ-SWAP-013=ok, REQ-HELPER-005=ok, REQ-SWAP-012=ok, REQ-LENS-029=ok, REQ-RISK-062=ok, launch 10=ok, example=ok. Code: SettlementMath branch m <= 10^4=ok, SettlementMath branch m > 10^4=ok, flash/AaveV3FlashSource.sol=ok, periphery/flash-liquidator/FlashLiquidatorBase.sol=ok, LiquidationPreview has no flash field=ok.",
   "counterexample": null,
-  "seconds": 0.01,
+  "seconds": 0.02,
   "model": "fv_ctl_upgrade_lens"
  },
  {

@@ -131,36 +131,47 @@ prove("FV-CTL-54", "After a passing pledge: sliceUsd <= usdCharge and > 0 only f
       verifies=["SPEC-CAP-002", "SPEC-CAP-003", "REQ-RISK-025", "REQ-RISK-066", "INV-028"], targets=["T-77"])
 
 # Pledge price-state eligibility: REQ-RISK-017 against the LPOracle state-effects table, read from 2.10.
-# AMM-neutral 2.10: the table heading is "State or condition"; Live splits into "Live, borrowAllowed" and
-# "Live, a second source disagrees or is unavailable" (both are Live for a pledge), the TWAP row is now the
-# consistency row, and the two sequencer rows are modifiers ("As the state"), not price states.
+# The table heading is "State or condition"; Live has three rows ("Live, `borrowAllowed`", a second source that
+# disagrees or is unavailable, and token decimals verified more than DECIMALS_CHECK_MAX_AGE ago, bit 19), all of
+# them Live for a pledge (REQ-ORACLE-100, REQ-ORACLE-107). A token-decimals mismatch (bit 1) is a failed market,
+# Cached and then Expired, so its row is checked against both states. The two sequencer rows are modifiers
+# ("As the state"), not price states. Each row maps to the price states the RiskModule sees for it.
 _rows = table_after("02-contracts/10-lp-oracle.md", "| State or condition | New pledge | Top-up")
-_LABEL = {"Live, `borrowAllowed`": "Live", "Live, a second source disagrees or is unavailable": "LiveSecondSource",
-          "Drifting (USD band breach only)": "DriftingBandOnly",
-          "Drifting (consistency, clamp)": "DriftingOther", "Cached": "Cached", "Expired": "Expired"}
+_LABELS = (("Live, `borrowAllowed`", "Live", ("Live",)),
+           ("Live, a second source disagrees or is unavailable", "LiveSecondSource", ("Live",)),
+           ("Live, token decimals last verified more than", "LiveDecimalsUnverified", ("Live",)),
+           ("A token's decimals changed or unreadable", "DecimalsFailed", ("Cached", "Expired")),
+           ("Drifting (USD band breach only)", "DriftingBandOnly", ("DriftingBandOnly",)),
+           ("Drifting (consistency, clamp)", "DriftingOther", ("DriftingOther",)),
+           ("Drifting, routes disagree", "DriftingDisagreement", ("DriftingDisagreement",)),
+           ("Cached", "Cached", ("Cached",)), ("Expired", "Expired", ("Expired",)))
 TABLE_2_10 = {}
+ROW_STATES = {}
 for _r in _rows:
     if _r[0] == "State or condition" or _r[0].startswith("Sequencer"):
         continue
-    _st = _LABEL.get(_r[0], "DriftingDisagreement" if _r[0].startswith("Drifting, routes disagree") else _r[0])
+    _m = [(lab, sts) for pre, lab, sts in _LABELS if _r[0] == pre or _r[0].startswith(pre)]
+    _st, _sts = _m[0] if _m else (_r[0], ())
     TABLE_2_10[_st] = {"new": int(_r[1].startswith("Allowed")), "topup": int(_r[2].startswith("Allowed"))}
+    ROW_STATES[_st] = _sts
 
 
 def risk_017(cls, st):
+    # RiskModulePledgeLogic: Cached and Expired revert PriceNotAccepted; a new-account pledge also reverts on
+    # Drifting with any reason other than the USD band; Live is allowed whatever its borrow-only reason bits.
     if st in ("Cached", "Expired"):
         return 0
     if cls == "new":
-        return 1 if st in ("Live", "LiveSecondSource", "DriftingBandOnly") else 0
+        return 1 if st in ("Live", "DriftingBandOnly") else 0
     return 1
 
 
-# FV-CTL-55 verifies: REQ-RISK-017, INV-026, REQ-ORACLE-015
-exhaustive("FV-CTL-55", "Pledge price-state rule of the RiskModule equals the LPOracle state-effects table (read from 2.10) for new accounts and top-ups",
+# FV-CTL-55 verifies: REQ-RISK-017, INV-026, REQ-ORACLE-015, REQ-ORACLE-107
+exhaustive("FV-CTL-55", "Pledge price-state rule of the RiskModule equals the LPOracle state-effects table (read from 2.10) for new accounts and top-ups, including the token-decimals rows",
            [("table", "rows")] + list(itertools.product(("new", "topup"), sorted(TABLE_2_10))),
-           lambda x: (set(TABLE_2_10) == {"Live", "LiveSecondSource", "DriftingBandOnly", "DriftingOther", "DriftingDisagreement",
-                                          "Cached", "Expired"} or sorted(TABLE_2_10)) if x[0] == "table"
-           else risk_017(*x) == TABLE_2_10[x[1]][x[0]],
-           verifies=["REQ-RISK-017", "INV-026", "REQ-ORACLE-015"], targets=["T-77"])
+           lambda x: (set(TABLE_2_10) == {lab for _, lab, _ in _LABELS} or sorted(TABLE_2_10)) if x[0] == "table"
+           else all(risk_017(x[0], st) == TABLE_2_10[x[1]][x[0]] for st in ROW_STATES[x[1]]),
+           verifies=["REQ-RISK-017", "INV-026", "REQ-ORACLE-015", "REQ-ORACLE-107"], targets=["T-77"])
 
 # ---------------------------------------------------------------- tighten predicates and loosening steps
 # (name, safer direction, hard lo, hard hi, step kind). Bounds may name relational symbols (see REL below).

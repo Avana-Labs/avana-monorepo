@@ -7,7 +7,8 @@ Every formula of the specification is modelled here in exact integers (or Solidi
 | [`units-oracle/`](units-oracle/) | Vault-token units and decimals, full-range amounts, LPOracle and DebtOracle price math, price states (backup routes, standby switch, stale-at-Expired valuation, lower-route price on disagreement), backing ledger (partial removal and re-credit, rescue top-ups and rescue-unit exclusion, one-sided backing check), cap counters | `SPEC-UNIT-001`…`006`, `SPEC-ORC-001`…`018`, `SPEC-BACK-001`…`014` |
 | [`aave-risk/`](aave-risk/) | Collateral factor and health factor on Aave V4 `a3ef63ea`, opening gate with rescue-unit exclusion, liquidation sizing and bonus curve, repay and repay-all quote, risk premium, vault shares, caps and cap sizing, circuit breakers and pause reasons, address freeze, repay with collateral | `SPEC-HUB-001`…`008`, `SPEC-CF-001`…`005`, `SPEC-CAP-001`…`008`, `SPEC-BRK-001`…`006`, `SPEC-PROXY-001`…`009` |
 | [`settlement/`](settlement/) | Net bonus and effective slippage, recovery floor, per-leg minimums, caller shortfall top-up, buy leg and covered debt cost, sell-back floor, waterfall with the fee from oracle value, SettlementBudget per-call, rolling-window and per-market caps, in-kind settlement, debit equalities, repay with collateral, First-Loss coverage and reserve sizing | `SPEC-LIQ-001`…`020`, `SPEC-SET-001`…`006`, `SPEC-FLR-001`…`005` |
-| [`governance/`](governance/) | Timelock delay, execution window and expiry, delay changes, the delay floor and short-delay allowlist, exit window before an upgrade, cancel rights, pause state | `SPEC-GOV-001`…`015` |
+| [`governance/`](governance/) | Timelock delay, execution window and expiry, delay changes, the delay floor and short-delay allowlist, exit window before an upgrade, cancel rights, pause state, the market-count limit | `SPEC-GOV-001`…`015` |
+| [`amm-pricing/`](amm-pricing/) | Fair-composition LP pricing per AMM type (concentrated liquidity, constant product, stable and weighted pools): the pricing proofs each AMM integration carries before listing | `SPEC-AMM-CORE-001`, `SPEC-AMM-V3-001`, `SPEC-AMM-V2-001`, `SPEC-AMM-BAL-001`, `SPEC-AMM-CURVE-001` (`MATH-AMM-<P>-PRICE-NN`) |
 
 Each folder's `README.md` gives the formulas modelled with their rounding, one table per script (ID, statement, the IDs it verifies, bounds, result), the findings, and the run log. Every check carries a `# MATH-…-NN verifies: <IDs>` tag directly above it; [`../trace.py`](../trace.py) reads the tags and reports 0 errors for these folders.
 
@@ -22,15 +23,16 @@ All models run on the shared `spec/05-verification/.venv` (`z3-solver 4.13.0` fr
 
 ## Results
 
-Run on 2026-11-10 with Python 3.9.6 and z3-solver 4.13.0, 120 s per query, no timeouts.
+Run on 2026-11-11 with Python 3.9.6 and z3-solver 4.13.0, every script one at a time, 120 s per query, no timeouts.
 
 | Folder | Scripts | Proved | Counterexample | Computed | Mismatch | Scripts exiting 1 |
 |---|---|---|---|---|---|---|
-| `units-oracle/` | 11 | 149 | 22 (all deliberate) | 8 | 0 | none |
-| `aave-risk/` | 10 | 127 | 12 (all deliberate) | 41 | 0 | none (F-AR-1…F-AR-5 resolved in spec) |
-| `settlement/` | 14 | 206 | 46 (all deliberate) | 17 | 0 | none (findings MATH-ST-58, 75, 77, 84 resolved in spec) |
-| `governance/` | 2 | 27 | 3 (all deliberate) | — | 0 | none |
-| **Total** | **37** | **509** | **83** | **66** | **0** | **0** |
+| `units-oracle/` | 16 (`uo01`…`uo16`) | 212 | 40 (all deliberate) | 27 | 0 | none |
+| `aave-risk/` | 13 (`ar01`…`ar12`, `ch01`; `ar12` is `MATH-AR-70`) | 149 | 12 (all deliberate) | 55 | 0 | none (F-AR-1…F-AR-5 resolved in spec) |
+| `settlement/` | 17 (`st01`…`st17`) | 199 | 58 (all deliberate) | 33 | 0 | none (findings MATH-ST-58, 75, 77, 84 resolved in spec) |
+| `governance/` | 3 | 31 | 4 (all deliberate) | — | 0 | none |
+| `amm-pricing/` | 3 | 50 | 9 (all deliberate) | 16 | 0 | none |
+| **Total** | **52** | **641** | **123** | **131** | **0** | **0** |
 
 Findings against the final text, with counterexamples and the exact recommended changes, are listed in each folder's README:
 

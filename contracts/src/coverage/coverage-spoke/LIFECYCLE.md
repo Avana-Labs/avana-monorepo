@@ -2,11 +2,37 @@
 
 The Coverage Spoke holds the First-Loss Reserve of one `(Hub, debt asset)` as Hub added shares. Avana Labs funds it, the Aave DAO controls it through its AccessManager, and its shares leave only to eliminate a recorded deficit of an allowlisted CDP Spoke on its own asset, or through a DAO withdrawal after 14 days.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor L as Avana Labs
+  actor G as COVERAGE_ROLE holder
+  actor DAO as Aave DAO
+  participant SW as LPVaultSwap
+  participant CS as CoverageSpoke
+  participant T as GHO
+  participant H as Hub
+  L->>CS: fund(400,000e18)
+  CS->>T: transferFrom(Avana Labs, Hub, 400,000e18)
+  CS->>H: add(ghoAssetId, 400,000e18)
+  Note over CS,H: a liquidation leaves a 5,200 GHO deficit on the CDP Spoke
+  G->>CS: coverDeficit(uniswapV3Stable, 5,200e18)
+  CS->>H: getSpokeDeficitRay(ghoAssetId, uniswapV3Stable)
+  CS->>H: eliminateDeficit(ghoAssetId, 5,200e18, uniswapV3Stable)
+  Note right of CS: ReserveBelowMinimum while<br/>fundedBalance is below the minimum
+  SW->>CS: fund(83.8e18) in settlePending
+  DAO->>CS: requestWithdrawal(400,000e18, Avana Labs)
+  Note over DAO,CS: 14 days, cancelWithdrawal(1) stops it
+  DAO->>CS: executeWithdrawal(1)
+  Note right of CS: DeficitOutstanding while an allowlisted<br/>Spoke still has a GHO deficit
+  CS->>H: remove(ghoAssetId, min(400,000e18, fundedBalance), Avana Labs)
+```
+
 ## Walkthrough
 
 Ethereum GHO instance on the Stable LP Hub (illustrative 400,000 GHO minimum; the funding ARFC sets the real one).
 
-1. **Avana deploys [`CoverageSpoke`](CoverageSpoke.sol#L91)`(hub, GHO, ghoAssetId, aaveAccessManager, 1,209,600)`** after the Hub lists GHO. The constructor fixes [`HUB`](CoverageSpoke.sol#L268), [`ASSET`](CoverageSpoke.sol#L262), [`ASSET_ID`](CoverageSpoke.sol#L274) and [`RESERVE_WITHDRAWAL_DELAY`](CoverageSpoke.sol#L280). Errors: [`ZeroAddress`](ICoverageSpokeErrors.sol#L13), [`InvalidHubAsset`](ICoverageSpokeErrors.sol#L18) (the Hub does not list GHO with its 18 decimals under that ID), [`InvalidWithdrawalDelay`](ICoverageSpokeErrors.sol#L23).
+1. **Avana deploys [`CoverageSpoke`](CoverageSpoke.sol#L93)`(hub, GHO, ghoAssetId, aaveAccessManager, 1,209,600)`** after the Hub lists GHO. The constructor fixes [`HUB`](CoverageSpoke.sol#L268), [`ASSET`](CoverageSpoke.sol#L262), [`ASSET_ID`](CoverageSpoke.sol#L274) and [`RESERVE_WITHDRAWAL_DELAY`](CoverageSpoke.sol#L280). Errors: [`ZeroAddress`](ICoverageSpokeErrors.sol#L13), [`InvalidHubAsset`](ICoverageSpokeErrors.sol#L18) (the Hub does not list GHO with its 18 decimals under that ID), [`InvalidWithdrawalDelay`](ICoverageSpokeErrors.sol#L23).
 2. **The Aave DAO's payload** registers it on GHO with `drawCap = 0` and `addCap = MAX_ALLOWED_SPOKE_CAP` (so yield can never fill a cap and stop `fund`), grants it `HUB_DEFICIT_ELIMINATOR_ROLE`, maps `coverDeficit` to `COVERAGE_ROLE` (granted to Avana's Emergency Guardian and the Aave Protocol Guardian, either able to cover within 72 hours) and the DAO functions to `RESERVE_ADMIN_ROLE`, then calls [`setAllowedBorrowSpoke`](CoverageSpoke.sol#L159)`(uniswapV3Stable, true)` and [`setFirstLossReserveMinimum`](CoverageSpoke.sol#L174)`(400,000e18)`. Events: [`BorrowSpokeAllowlistUpdated`](ICoverageSpokeAdmin.sol#L16), [`FirstLossReserveMinimumUpdated`](ICoverageSpokeAdmin.sol#L22). Error: [`BorrowSpokeNotListed`](ICoverageSpokeErrors.sol#L48) for a Spoke the Hub does not list on GHO.
 3. **Avana Labs → [`fund`](CoverageSpoke.sol#L116)`(400,000e18)`** after approving it. The 400,000 GHO move straight to the Hub, `Hub.add` credits the shares to the Coverage Spoke, and the Hub's balance rise must equal the amount. Event: [`ReserveFunded`](ICoverageSpoke.sol#L31). Errors: [`ZeroAmount`](ICoverageSpokeErrors.sol#L27), [`TransferAmountMismatch`](ICoverageSpokeErrors.sol#L33); the Hub's `SpokeHalted`, `SpokeNotActive` and, for an amount below one share's value, `InvalidShares`. `enableDebtReserve` can now name the instance and the GHO `drawCap` can rise.
 4. **A liquidation leaves an account with no collateral**; the CDP Spoke reports a 5,200 GHO deficit to the Hub.

@@ -104,6 +104,13 @@ interface IMarketRegistryViews {
     /// @custom:spec REQ-CONFIG-006
     function marketCount() external view returns (uint256 count);
 
+    /// @notice The most markets the registry ever lists (implementation immutable): `listCollateralMarket` refuses a new
+    /// identifier above it with `MarketCountLimit`; Closed and Cancelled markets keep their identifiers and count.
+    /// @return limit The limit, sized on a fork so that the most expensive ParameterStore re-check over
+    /// `1..limit` fits a block with headroom.
+    /// @custom:spec REQ-MREG-034
+    function MAX_MARKET_COUNT() external view returns (uint256 limit);
+
     /// @notice Immutable Collateralization contract (implementation immutable).
     /// @return collateralization Address.
     /// @custom:spec REQ-CONFIG-005, REQ-CONFIG-032

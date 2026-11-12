@@ -19,7 +19,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         _listMarket();
     }
 
-    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-024, REQ-CONFIG-052, Q-261
+    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-024, REQ-CONFIG-052, Q-261, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-095
     function test_TEST_245_flashFeeRaiseRechecksLiveness() public {
         _activate();
         // minLB = 10,000 + ⌊500 × 4,000 / 10⁴⌋ = 10,200; floor 30: 10,200 × 9,970 = 101,694,000, which admits any
@@ -50,7 +50,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         store.setMaxFlashFeeBps(6);
     }
 
-    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-015, REQ-CONFIG-041, Q-261
+    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-015, REQ-CONFIG-041, Q-261, REQ-ACCESS-044, REQ-ACCESS-095
     function test_TEST_245_floorRaiseRechecksLiveness() public {
         _activate();
         // f = 10: 10,200 × (10⁴ − s) ≥ 100,100,000 holds up to s = 186 (10,200 × 9,814 = 100,102,800).
@@ -118,7 +118,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         );
     }
 
-    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-012, REQ-CONFIG-049, Q-246
+    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-012, REQ-CONFIG-049, Q-246, REQ-ACCESS-044, REQ-ACCESS-096
     function test_TEST_064_graceBounds() public {
         _tl();
         store.setGraceHealthFactor(0.9e18);
@@ -138,7 +138,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         assertEq(store.graceDuration(), 60);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-055, REQ-CONFIG-052, REQ-CONFIG-049, REQ-PSTORE-009
+    // TEST-064 verifies: REQ-CONFIG-055, REQ-CONFIG-052, REQ-CONFIG-049, REQ-PSTORE-009, REQ-ACCESS-099
     function test_TEST_064_bandAndTimers() public {
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
@@ -171,7 +171,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         assertEq(store.cachedWindow(), 1200);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-015, REQ-CONFIG-019, REQ-CONFIG-020, REQ-PSTORE-010, SPEC-CF-004
+    // TEST-064 verifies: REQ-CONFIG-015, REQ-CONFIG-019, REQ-CONFIG-020, REQ-PSTORE-010, SPEC-CF-004, REQ-ACCESS-138
     function test_TEST_064_riskStructural() public {
         _tl();
         store.setPoolRiskFactor(M, 1000);

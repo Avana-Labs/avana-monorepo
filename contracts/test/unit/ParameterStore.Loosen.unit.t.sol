@@ -22,7 +22,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         return keccak256(abi.encode(name, scope));
     }
 
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-031, SPEC-GOV-011, Q-246, Q-398
+    // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-031, SPEC-GOV-011, Q-246, Q-398, REQ-ACCESS-037, REQ-ACCESS-120
     function test_TEST_225_hardFloorStepAndSpacing() public {
         _tl();
         store.tightenHardHealthFloor(M, 1.1e18);
@@ -59,7 +59,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.loosenHardHealthFloor(M, 0);
     }
 
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-CONFIG-071, SPEC-GOV-011, Q-246
+    // TEST-225 verifies: REQ-PSTORE-017, REQ-CONFIG-071, SPEC-GOV-011, Q-246, REQ-ACCESS-041
     function test_TEST_225_slippageStep() public {
         bytes32 key = _key("slippageAllowanceBps", bytes32(M));
         _tl();
@@ -76,7 +76,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         assertEq(store.getMarketParams(M).slippageAllowanceBps, 150);
     }
 
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-RISK-043, REQ-RISK-044, SPEC-CAP-006, SPEC-GOV-011
+    // TEST-225 verifies: REQ-PSTORE-017, REQ-RISK-043, REQ-RISK-044, SPEC-CAP-006, SPEC-GOV-011, REQ-ACCESS-049
     function test_TEST_225_marketCapStepAndAddCap() public {
         bytes32 key = _key("marketUsdCap", bytes32(M));
         _tl();
@@ -117,7 +117,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.loosenTopUpSliceUsd(M, 600_000e8);
     }
 
-    // TEST-225 verifies: REQ-PSTORE-017, SPEC-GOV-011
+    // TEST-225 verifies: REQ-PSTORE-017, SPEC-GOV-011, REQ-ACCESS-049
     function test_TEST_225_sliceRestoredFromTenthOfCap() public {
         _tl();
         store.tightenTopUpSliceUsd(M, 0);
@@ -184,7 +184,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.loosenPoolShareMaxBps(10_001);
     }
 
-    // TEST-225 verifies: REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030, REQ-PSTORE-005, Q-399
+    // TEST-225 verifies: REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030, REQ-PSTORE-005, Q-399, REQ-ACCESS-165
     function test_TEST_225_breakerShortfallStressPledge() public {
         address h = address(hub);
         _tl();
@@ -223,7 +223,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.loosenMinPledgeUsd(M, 0);
     }
 
-    // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006, Q-380, Q-397
+    // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006, Q-380, Q-397, REQ-ACCESS-132
     function test_TEST_246_roundingAllowanceWorthOneDollar() public {
         _tl();
         store.setDebtAssetParams(gho, DebtReserveParams(5e17));

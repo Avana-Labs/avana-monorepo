@@ -4,11 +4,30 @@
 >
 > **Step prefix:** `FEE-NNN`
 
-The depositor of record collects the trading fees of a pledged position while the LPVault of its AMM protocol holds it. The flow exists only where the AMM protocol keeps fees apart from the position's liquidity (`capabilities().feeMode == FeeMode.Separate`): Uniswap v3 and Aerodrome Slipstream (unstaked NFTs), whose position contract records `tokensOwed` per token, and Uniswap v4. Where fees roll into the position (Uniswap v2, Curve, Balancer), the AMM integration reports `capabilities().feeMode == FeeMode.RolledIn`, `collectFees` reverts `FeesNotSeparable` before any state changes, and the fees stay in the position: its unit count is unchanged and each unit is worth more, which the LPOracle's composition values and the depositor receives on withdrawal.
+The depositor of record collects the trading fees of a pledged position while the LPVault of its AMM protocol holds it. The flow exists only where the AMM protocol keeps fees apart from the position's liquidity (`capabilities().feeMode == FeeMode.Separate`): Uniswap v3 and Aerodrome Slipstream (unstaked NFTs), whose position contract records `tokensOwed` per token, and Uniswap v4. Where fees roll into the position (Uniswap v2, Curve, Balancer), the AMM integration reports `capabilities().feeMode == FeeMode.RolledIn`, `collectFees` reverts `FeesRolledIn` before any state changes, and the fees stay in the position: its unit count is unchanged and each unit is worth more, which the LPOracle's composition values and the depositor receives on withdrawal.
 
 The call goes wallet → AaveAdapter → Collateralization → LPVault → position contract. The Lock has exactly two members, the AaveAdapter and LPVaultSwap, and every LPVault entry point that moves value is reachable only through them, so fee collection runs under the Adapter's lock. It never changes the position's liquidity, the vault-token supply, the record's credited units or the account's health factor, and it reads no pause state or reason, circuit breaker, address freeze, price state, sequencer gate, RiskModule, MarketRegistry, ParameterStore, LPOracle, PositionProxy or Aave state, so none of them can hold a depositor's fees (`Q-011`, `Q-030`, `Q-223`, `Q-241`, `Q-242`, `Q-357`).
 
 Fee collection belongs to [2.2 LP Vault][2.2] and the AMM integration interface page (`collectFees` and `capabilities().feeMode`); the entry point to [2.6 Aave Adapter][2.6]; the record it relates to to [2.3 Collateralization][2.3]; the lock to [2.16 Lock][2.16].
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor W as Depositor of record
+  participant AD as AaveAdapter
+  participant CO as Collateralization
+  participant LV as LPVault
+  participant NFPM as Position manager
+  W->>AD: collectFees(marketId, (integrationId, positionKey), deadline)
+  Note right of AD: Lock.acquire(), deadline. No pause state, breaker,<br/>address freeze, price, sequencer gate, RiskModule or Aave read
+  AD->>CO: collectFees(W, VT, positionKey)
+  Note right of CO: open record of VT, W is its depositor
+  CO->>LV: collectFees(positionKey, W)
+  LV->>NFPM: collect(tokenId, recipient W, max, max)
+  NFPM-->>W: every amount owed to the position, pool to W
+  CO-->>AD: amounts per market token
+  Note right of AD: liquidity, credited units and vault-token supply unchanged<br/>Lock.release()
+```
 
 ## Objective
 
@@ -55,7 +74,7 @@ In exact execution order. `W` is the calling wallet and must be the depositor of
 | Step | Action | Contract (msg.sender) | Notes |
 |---|---|---|---|
 | `FEE-001` | `W` calls `AD.collectFees(m, (integrationId, positionKey), deadline)` | AaveAdapter (`W`) | The outer entry point acquires the protocol lock; `Lock.acquire` reverts with `LockHeld(holder)` if it is held. `block.timestamp ≤ deadline` (`DeadlineExpired`). The Adapter's fee path reads no MarketRegistry pause state or reason, circuit breaker, address freeze, price state, sequencer gate, RiskModule, ParameterStore, LPOracle, PositionProxy or Aave state, so collection is open in None, Frozen and `Paused` with either reason, under every breaker, during a sequencer outage or grace window, and for a frozen wallet. Owned by [2.6], [2.16]. (Source: Q-030, Q-148, Q-223, Q-227, Q-241, Q-242, Q-252, Q-357) |
-| `FEE-002` | Check the market, custody and the caller | AaveAdapter → its own binding `accountOf(P)`, `VT.integrationId()`, `VT.integration()`; `CO.collectFees(W, VT, positionKey)` → `LV.depositorOf(positionKey)`, `LV.capabilities()` | The Adapter requires `VT` non-zero (`UnknownMarket(m)`) and `VT.integrationId() == integrationId` (`IntegrationMismatch`). `CO` requires `msg.sender == ADAPTER` and the lock held (`NotAdapter`, `LockNotHeld`), validates `VT` from its immutables as in [3.1] `DEP-006` (`InvalidVaultToken`), requires `LV.capabilities()` (`FeesNotSeparable`), an open record of `VT` for `(integrationId, positionKey)` with `depositorOf[positionKey] != address(0)` (`NotInCustody`; the record's credited units may be 0), and `W == depositorOf[positionKey]` (`NotDepositor`). Owned by [2.3], [2.6]. (Source: Q-030, Q-067, Q-134, Q-224) |
+| `FEE-002` | Check the market, custody and the caller | AaveAdapter → its own binding `accountOf(P)`, `VT.integrationId()`, `VT.integration()`; `CO.collectFees(W, VT, positionKey)` → `LV.depositorOf(positionKey)`, `LV.collectFees(positionKey, W)` | The Adapter requires `VT` non-zero (`UnknownMarket(m)`) and `VT.integrationId() == integrationId` (`IntegrationMismatch`). `CO` requires `msg.sender == ADAPTER` and the lock held (`NotAdapter`, `LockNotHeld`), validates `VT` from its immutables as in [3.1] `DEP-006` (`InvalidVaultToken`), an open record of `VT` for `(integrationId, positionKey)` with `depositorOf[positionKey] != address(0)` (`NotInCustody`; the record's credited units may be 0), and `W == depositorOf[positionKey]` (`NotDepositor`). The LPVault of an AMM protocol that rolls fees into the position (`capabilities().feeMode == FeeMode.RolledIn`) reverts `FeesRolledIn`. Owned by [2.3], [2.6]. (Source: Q-030, Q-067, Q-134, Q-224) |
 | `FEE-003` | Pool lock left to the pool | None | The LPVault reads no pool reentrancy lock for this call. If the pool is inside a swap or flash callback in the same transaction, its own reentrancy lock makes the position contract's pool calls in `FEE-004` revert, so a collection never runs inside a pool callback. (Source: Q-144, Q-224) |
 | `FEE-004` | Collect to the depositor | Collateralization → `LV.collectFees(positionKey, W)` → for v3 and Slipstream `NFPM.collect({tokenId, recipient: depositorOf[positionKey], amount0Max: type(uint128).max, amount1Max: type(uint128).max})` (LPVault) | `LV` requires `msg.sender == COLLATERALIZATION` and the lock held. For v3 and Slipstream, if the position's liquidity is above 0 the NFPM first calls `pool.burn(tickLower, tickUpper, 0)` to update fees owed; it then calls `pool.collect` with the depositor of record as recipient, so each token goes from the pool to `W` directly and never sits in the LPVault. For Slipstream, an unstaked position's fees are already net of the pool's `unstakedFee` share, which the pool sends to the gauge; Avana neither adds nor deducts anything. Only the LPVault calls the position contract's removal and collect functions, no per-position `approve` or `setApprovalForAll` is ever granted, and swap routes receive pool tokens only after the LPVault unwound units for LPVaultSwap in a liquidation or a repay with collateral. Listing excludes fee-on-transfer and rebasing tokens; if an issuer later switches on a transfer fee (USDT's `basisPointsRate`), `W` receives the returned amounts less that fee, nothing in Avana depends on the amount, and the issuer breaker stops new exposure to the token's markets ([2.7]); there is no ERC-20 rescue. Returns `amounts[]`, the amounts the pool sent, in the market's token order. (Source: Q-011, Q-030, Q-058, Q-061, Q-105, Q-119, Q-241, Q-271) |
 | `FEE-005` | Liquidity unchanged by construction | LPVault | No further call. The collect cannot change liquidity, and `collectFees` makes no other state-changing call on the position contract, mints nothing and burns nothing, so the position's units, the record's credited units and the vault-token supply are unchanged. Checked by HYP-21, HYP-28. (Source: Q-011, Q-061) |
@@ -67,7 +86,7 @@ The steps above give these outcomes.
 
 | State | Collect fees |
 |---|---|
-| AMM protocol with rolled-in fees (Uniswap v2, Curve, Balancer) | Refused (`FeesNotSeparable`); fees stay in the position and are paid with its units on withdrawal |
+| AMM protocol with rolled-in fees (Uniswap v2, Curve, Balancer) | Refused (`FeesRolledIn`); fees stay in the position and are paid with its units on withdrawal |
 | Application state None, Frozen, or `Paused` with reason `General` or `MintPathSuspect`, on any Hub | Allowed (`Q-227`, `Q-252`) |
 | Any circuit breaker tripped, latched or manual, on the position's market or any debt reserve, including `CONFIG_DRIFT` and `POOL_DEPTH` | Allowed (`Q-241`, `Q-350`, `Q-352`) |
 | Depositor `W` address-frozen | Allowed (`Q-242`) |
@@ -140,7 +159,7 @@ Every failure reverts the whole transaction; fees stay owed to the position. Ups
 | `FEE-F-005` | `FEE-004` | A pool token transfer to `W` reverts (pause, blocklist) | Token error passes through (Source: Q-119, Q-227) |
 | `FEE-F-006` | `FEE-004` | A callee tries to re-enter any Avana entry point during the collect | The inner call reverts with `LockHeld(holder)`, which reverts the collection; listed tokens have no transfer hooks (Source: Q-058, Q-148) |
 | `FEE-F-007` | `FEE-003`, `FEE-004` | The pool is inside its own swap or flash callback in the same transaction | The pool's reentrancy lock reverts `burn` or `collect`; the error passes through and fees stay owed (Source: Q-144, Q-224) |
-| `FEE-F-008` | `FEE-002` | The market's AMM integration rolls fees into the position (`capabilities().feeMode == FeeMode.RolledIn`) | Reverts with `FeesNotSeparable`; the fees stay in the position's units |
+| `FEE-F-008` | `FEE-002` | The market's AMM integration rolls fees into the position (`capabilities().feeMode == FeeMode.RolledIn`) | Reverts with `FeesRolledIn`; the fees stay in the position's units |
 | `FEE-F-009` | `FEE-002`, `FEE-004` | An inner call arrives from the wrong caller or without the expected lock holder (a faulty Adapter implementation) | Collateralization reverts with `NotAdapter` or `LockNotHeld`, the LPVault with `NotCollateralization` or `LockNotHeld` (Source: Q-148, Q-224) |
 
 ## Worked Example
@@ -159,7 +178,7 @@ The $81.12 collected over 30 days on $50,000 is `81.12 / 50,000 × 365 / 30 ≈ 
 
 **Base, Aerodrome Slipstream.** An unstaked position in a Slipstream stable pool on Base accrues fees net of the pool's `unstakedFee` share. Four hours after a sequencer outage began, while the gate is still `Down`, `W` submits `collectFees` through the L1 forced-inclusion path; it executes when included, because the fee path reads no sequencer gate, and pays the owed amount of each token to `W`. A borrow in the same transaction batch would revert `SequencerDown`.
 
-**Rolled-in fees.** For a Uniswap v2 market, `collectFees` reverts `FeesNotSeparable`. A v2 position of 1,000 LP tokens priced at $2.000 each at pledge is worth $2,010 thirty days later at unchanged token prices, because the reserves behind each LP token grew by the fees; the record still credits 1,000 units, the LPOracle's composition values each at $2.010, and the depositor receives the fees with the units on withdrawal.
+**Rolled-in fees.** For a Uniswap v2 market, `collectFees` reverts `FeesRolledIn`. A v2 position of 1,000 LP tokens priced at $2.000 each at pledge is worth $2,010 thirty days later at unchanged token prices, because the reserves behind each LP token grew by the fees; the record still credits 1,000 units, the LPOracle's composition values each at $2.010, and the depositor receives the fees with the units on withdrawal.
 
 **Walkthrough.**
 

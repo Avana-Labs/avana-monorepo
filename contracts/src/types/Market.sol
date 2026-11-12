@@ -8,7 +8,7 @@ import {PositionShape} from "./PositionShape.sol";
 
 /// @notice Stored market definition.
 /// @dev Every field except `hubAssetId`, `reserveId`, `status` and `activatedAt` is immutable after
-/// `registerMarket`; `hubAssetId` and `reserveId` are fixed by `activateMarket`. `chainId` equals `block.chainid`
+/// `listCollateralMarket`; `hubAssetId` and `reserveId` are fixed by `activateMarket`. `chainId` equals `block.chainid`
 /// at registration. `tokens` is the pool's own token order (for example `token0`, `token1` for a concentrated
 /// liquidity pool); every n-token array in Avana (amounts, prices, minimums, counters, routes) uses this order and has
 /// length `tokens.length`, between 2 and `MAX_POOL_TOKENS` = 8. Fee tier and tick spacing are not market fields: the

@@ -2,11 +2,43 @@
 
 Collateralization is the immutable backing ledger: it holds one record per pledged position, books the RiskModule's cap charge, decides which records a seizure debits, and keeps every market's vault-token supply at or below credited plus pending units.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant AD as AaveAdapter
+  participant SW as LPVaultSwap
+  participant CO as Collateralization
+  participant V as LPVault
+  participant O as LPOracle
+  participant RM as RiskModule
+  AD->>CO: pledge(Carol, P, VT, key1, false)
+  CO->>V: checkReadSafe(3)
+  CO->>V: receivePosition(3, Carol, key1)
+  CO->>O: poke()
+  CO->>RM: checkPledge(Carol, P, 3, integrationId, key1, units, counters, false)
+  CO-->>AD: credited = 10,000,000,000
+  AD->>CO: release(P, VT, keyB, 2,500,000,000)
+  CO->>V: returnPosition(keyB)
+  AD->>CO: releasePartial(P, VT, key1, 2,000,000,000, [1,990e6, 1,990e6])
+  CO->>V: releaseToDepositor(key1, 2,000,000,000, [1,990e6, 1,990e6])
+  AD->>CO: collectFees(Carol, VT, key1)
+  CO->>V: collectFees(key1, Carol)
+  Note over SW,V: liquidation, Lock held by LPVaultSwap
+  SW->>CO: beginSeizure(Q, VT)
+  Note right of SW: Spoke.liquidationCall, then<br/>AaveAdapter.burnSeized
+  SW->>CO: settleSeizure(Q, VT, 975e18, minAmounts)
+  loop each debited record, largest first
+    CO->>V: unwind(key, units, minAmounts, LPVaultSwap)
+  end
+  SW->>CO: settlePending(VT, units)
+  CO-->>SW: pending pool tokens, no LPVault call
+```
+
 ## Walkthrough
 
 Setup (Base market 3, from 3.1 `DEP-029` and 3.4 `WDR-045`): one whole vault token (10^6 units) is worth $2.00; `marketUsdCap = $5,000,000` with $1,000,000 booked in `Regular`; at most 16 open records per account and market. Every call below comes from the AaveAdapter or LPVaultSwap while it holds the Lock.
 
-1. **AaveAdapter → [`pledge`](CollateralizationPledge.sol#L40)`(Carol, P, VT, key1, false)`.** Checks the vault token, `isValidProxy(P)`, no open record for the key, fewer than 16 records, the pool lock (`checkReadSafe`); calls LPVault [`receivePosition`](../../amm/IAmmIntegration.sol#L90) (units 10,000,000,000), LPOracle [`poke`](../../oracle/lp-oracle/ILPOracle.sol#L158) and RiskModule [`checkPledge`](../../policy/risk-module/IRiskModuleChecks.sol#L58), which returns a $20,000 charge with `sliceUsd = 0`. Writes record 1, inserts it largest-first, adds $20,000 to `Regular` and the USDC, USDT and depositor counters, and returns `credited = 10,000,000,000`. Event: [`CollateralPledged`](ICollateralizationEvents.sol#L29). Errors: [`InvalidDepositor`](ICollateralizationErrors.sol#L133), [`InvalidVaultToken`](ICollateralizationErrors.sol#L30), [`UnknownProxy`](ICollateralizationErrors.sol#L35), [`AlreadyPledged`](ICollateralizationErrors.sol#L58), [`TooManyRecords`](ICollateralizationErrors.sol#L41), [`InvalidCharge`](ICollateralizationErrors.sol#L69); RiskModule errors pass through unchanged.
+1. **AaveAdapter → [`pledge`](CollateralizationPledge.sol#L40)`(Carol, P, VT, key1, false)`.** Checks the vault token, `isValidProxy(P)`, no open record for the key, fewer than 16 records, the pool lock (`checkReadSafe`); calls LPVault [`receivePosition`](../../amm/IAmmIntegration.sol#L90) (units 10,000,000,000), LPOracle [`poke`](../../oracle/lp-oracle/ILPOracle.sol#L162) and RiskModule [`checkPledge`](../../policy/risk-module/IRiskModuleChecks.sol#L58), which returns a $20,000 charge with `sliceUsd = 0`. Writes record 1, inserts it largest-first, adds $20,000 to `Regular` and the USDC, USDT and depositor counters, and returns `credited = 10,000,000,000`. Event: [`CollateralPledged`](ICollateralizationEvents.sol#L29). Errors: [`InvalidDepositor`](ICollateralizationErrors.sol#L133), [`InvalidVaultToken`](ICollateralizationErrors.sol#L30), [`UnknownProxy`](ICollateralizationErrors.sol#L35), [`AlreadyPledged`](ICollateralizationErrors.sol#L58), [`TooManyRecords`](ICollateralizationErrors.sol#L41), [`InvalidCharge`](ICollateralizationErrors.sol#L69); RiskModule errors pass through unchanged.
 2. **AaveAdapter → [`pledge`](CollateralizationPledge.sol#L40) of `keyB` (2,500,000,000 units, $5,000).** Record 2 of 16; the account's credited units are 12,500,000,000. A borrow in between only set the indebted mark through [`markIndebted`](CollateralizationDebtMark.sol#L22); it booked no charge.
 3. **AaveAdapter → [`recredit`](CollateralizationPledge.sol#L111)** (Ethereum example of 3.1): after `increaseLiquidity`, `added = live − credited = 27,500,000,000 − 25,000,000,000 = 2,500,000,000`; charge $5,000; the record's basis becomes 27,500,000,000 units and $55,000 and it keeps its list position. Event: [`RecordRecredited`](ICollateralizationEvents.sol#L135). Errors: [`NothingToRecredit`](ICollateralizationErrors.sol#L152), [`NotDepositor`](ICollateralizationErrors.sol#L87).
 4. **AaveAdapter → [`release`](CollateralizationRelease.sol#L33)`(P, VT, keyB, 2,500,000,000)`** after the Adapter burned the units. Reconciles first against the proxy's supplied shares, requires `units == credited`, releases the $5,000 charge, closes the record, then calls LPVault [`returnPosition`](../../amm/IAmmIntegration.sol#L102). Event: [`CollateralReleased`](ICollateralizationEvents.sol#L51). Errors: [`RecordNotFound`](ICollateralizationErrors.sol#L73), [`NotRecordProxy`](ICollateralizationErrors.sol#L78), [`UnitsMismatch`](ICollateralizationErrors.sol#L83).

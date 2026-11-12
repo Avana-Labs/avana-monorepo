@@ -241,7 +241,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-046
+    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100
     function checkConfig(
         OracleConfig calldata
     ) external view override returns (uint256 failedChecks) {

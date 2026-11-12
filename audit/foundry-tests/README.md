@@ -43,7 +43,7 @@ Recorded at each contract's gate (progress log of the build):
 | 2026-11-10 | LPPriceMath, SettlementMath, VaultToken | Tests, differential and fuzz at 10,000 runs pass |
 | 2026-11-10 | ParameterStore | 258 tests pass across the repository |
 
-The contracts merged after the ParameterStore (MarketRegistry, VaultTokenFactory, Collateralization, the flash source, the proxies, the routes, the PayoutEscrow and the CoverageSpoke) passed the same contract gate before their independent review ([reviews](../reviews/)). The full suite runs again at the layer 2.1 gate.
+The contracts merged after the ParameterStore (MarketRegistry, VaultTokenFactory, Collateralization, the flash source, the proxies, the routes, the PayoutEscrow and the CoverageSpoke) passed the same contract gate before their independent review ([reviews](../reviews/)).
 
 ## Results folder
 

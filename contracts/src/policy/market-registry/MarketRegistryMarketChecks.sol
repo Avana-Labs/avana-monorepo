@@ -26,7 +26,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @notice The registration checks of `listCollateralMarket` (REQ-CONFIG-029 to REQ-CONFIG-037, REQ-MREG-030) that
 /// do not need the market's own storage record.
 /// @dev Every call made here is a view.
-/// @custom:spec REQ-CONFIG-029, REQ-CONFIG-030, REQ-CONFIG-031, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-035, REQ-CONFIG-037, REQ-MREG-030
+/// @custom:spec REQ-CONFIG-021, REQ-CONFIG-029, REQ-CONFIG-030, REQ-CONFIG-031, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-035, REQ-CONFIG-037, REQ-MREG-030
 // Chainlink and ParameterStore views over a primary route's one or two legs.
 // forge-lint: disable-start(calls-loop)
 abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
@@ -92,8 +92,10 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         ) revert VaultTokenMismatch();
     }
 
-    /// @dev REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-031, REQ-CONFIG-033: between 2 and 8 pool tokens, each listed,
-    /// each a USD stablecoin on a Stable-tier Spoke, and the vault-token decimals inside the home Hub's range.
+    /// @dev REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-031, REQ-CONFIG-033: between 2 and 8 pool tokens,
+    /// each listed with its three price routes (a monitoring-only listing, which has no alternate route, is refused
+    /// with `ListingCheckFailed("routeLength")`), each a USD stablecoin on a Stable-tier Spoke, and the vault-token
+    /// decimals inside the home Hub's range.
     function _checkTokens(
         address[] memory tokens,
         RiskTier tier,
@@ -105,13 +107,16 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         decs = new uint8[](n);
         address unlisted = address(0);
         bool classOk = true;
+        bool routesOk = true;
         for (uint256 i = 0; i < n; ++i) {
             TokenDef storage t = _s().tokens[tokens[i]];
             if (!t.listed && unlisted == address(0)) unlisted = tokens[i];
             if (tier == RiskTier.Stable && !t.isUsdStable) classOk = false;
+            if (t.alternateRoute.length == 0) routesOk = false;
             decs[i] = t.decimals;
         }
         if (unlisted != address(0)) revert TokenNotListed(unlisted);
+        if (!routesOk) revert ListingCheckFailed("routeLength");
         if (!classOk) revert ListingCheckFailed("tokenClass");
         IAaveV4Hub h = IAaveV4Hub(hub);
         if (unitDecimals < h.MIN_ALLOWED_UNDERLYING_DECIMALS() || unitDecimals > h.MAX_ALLOWED_UNDERLYING_DECIMALS()) {

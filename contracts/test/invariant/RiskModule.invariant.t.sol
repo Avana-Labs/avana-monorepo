@@ -12,7 +12,7 @@ import {RiskModuleHandler} from "./handlers/RiskModuleHandler.sol";
 /// borrow and withdraw-with-debt pre-checks in between. After every call: no pre-check passed while a gate of 2.7 was
 /// closed (an independent reading of the gates); no borrow pre-check passed with 0 active keepers; no poke cleared a
 /// latch.
-/// @dev The Adapter-side half (Aave HF after the Spoke call, nonce, receiver) joins when the AaveAdapter lands.
+/// @dev The Adapter-side half (Aave HF after the Spoke call, nonce, receiver) is outside this suite.
 contract RiskModuleInvariantTest is RiskModuleFixture {
     RiskModuleHandler internal handler;
 

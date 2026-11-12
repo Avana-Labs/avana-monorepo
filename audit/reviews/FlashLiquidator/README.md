@@ -5,7 +5,7 @@
 | Date | 2026-11-11 |
 | Contracts | `src/periphery/flash-liquidator/`: `FlashLiquidatorBase`, `FlashLiquidator` (public instance), `OperatorFlashLiquidator` (operator variant), their interfaces and `FlashLiquidationRequest` |
 | Spec | [2.11 Flash liquidation helper](../../../spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper) (`REQ-HELPER-001` to `-014`), the rules it relies on: `REQ-SWAP-005`, `-011`, `-012`, `-026`, `-076`, `-105`, `SPEC-LIQ-010`, `-015`, `-019`; 3.5 `LIQ-036` to `-040`, `LIQ-062`, `-083`, `-084`; `INV-030` |
-| Method | Independent adversarial review from the spec and the code only; one PoC test per demonstrable finding, run against the code as reviewed. LPVaultSwap is not written yet: the PoCs use the fixture's `MockLiquidationSwap` and, for FL-01, a minimal mock that pulls the funding and the `SPEC-LIQ-019` shortfall exactly as the spec states |
+| Method | Independent adversarial review from the spec and the code only; one PoC test per demonstrable finding, run against the code as reviewed. LPVaultSwap had no implementation at review time: the PoCs use the fixture's `MockLiquidationSwap` and, for FL-01, a minimal mock that pulls the funding and the `SPEC-LIQ-019` shortfall exactly as the spec states |
 | Result | No Critical or High. 2 Medium, 1 Low, 5 spec points; all fixed 2026-11-11 (see Resolution). Callback binding, single-use context, reentrancy, premium bounds, approvals and the payout accounting held under every attack tried |
 
 ## Findings
@@ -55,6 +55,6 @@ Every recommended fix was approved and is applied (code in `src/periphery/flash-
 ## Not settled
 
 - GHO debt through the helper on Ethereum: the helper borrows only from the Aave V3 Core Pool, and GHO there is minted by its facilitator rather than supplied, so `maxFlashLoan(GHO)` may be 0 (no aToken balance, virtual accounting off). If so, GHO-debt liquidations cannot use the helper on Ethereum, and the `REQ-FLASH-008` sizing rule reads 0 for GHO. This depends on the deployed Pool's GHO configuration, which this review could not check offline.
-- The PoCs model LPVaultSwap from its spec; FL-01 and FL-02 should be re-run against LPVaultSwap once it is written.
+- The PoCs model LPVaultSwap from its spec; FL-01 and FL-02 have not been run against an LPVaultSwap implementation.
 
 PoC files are copied from the review workspace into [`poc/`](poc/), with imports at their review-time paths (`contracts/test/review/`). Run with `forge test -j 2 --match-path 'test/review/*'`.

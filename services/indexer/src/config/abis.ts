@@ -6,7 +6,7 @@
 // range decodes with the events that version emitted.
 
 import { mergeAbis } from "ponder";
-import { parseAbi } from "viem";
+import { getAbiItem, parseAbi } from "viem";
 import {
   aaveAdapterAbi,
   aaveV4HubAbi,
@@ -55,4 +55,20 @@ export const abis = {
   FlashLiquidator: flashLiquidatorAbi,
   AaveSpoke: mergeAbis([aaveV4SpokeAbi, upgradeAndRoleEvents]),
   AaveHub: mergeAbis([aaveV4HubAbi, upgradeAndRoleEvents]),
+} as const;
+
+/**
+ * Events that announce contracts created after deployment; sources.ts follows each child address through them. They are
+ * taken from the generated ABIs rather than written by hand, so a changed event signature (a different topic0) is a
+ * type error here instead of a factory source that silently matches no log.
+ */
+export const factoryEvents = {
+  /** VaultTokenFactory: a market's vault token; child address in `vaultToken`. */
+  vaultTokenDeployed: getAbiItem({ abi: vaultTokenFactoryAbi, name: "VaultTokenDeployed" }),
+  /** MarketRegistry: a listed market and its LPOracle; child address in `lpOracle`. */
+  marketRegistered: getAbiItem({ abi: marketRegistryAbi, name: "MarketRegistered" }),
+  /** MarketRegistry: an approved debt reserve and its DebtOracle; child address in `priceSource`. */
+  debtReserveApproved: getAbiItem({ abi: marketRegistryAbi, name: "DebtReserveApproved" }),
+  /** MarketRegistry: the Coverage Spoke of a Hub asset; child address in `coverageSpoke`. */
+  coverageSpokeSet: getAbiItem({ abi: marketRegistryAbi, name: "CoverageSpokeSet" }),
 } as const;

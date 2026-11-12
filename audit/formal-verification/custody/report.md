@@ -8,7 +8,7 @@ Sections 1â€“8 report the first run (`FV-CUS-R1`, 2026-11-09, decisions `Q-001`â
 
 ### Scope
 
-The specification text is the object verified; implementation code is not yet written. The pages below were read as final for this run. Hub math was taken from Aave V4 at `a3ef63ea6415d25237a9775bf66e76e9993561c2`.
+The specification text is the object verified; implementation code did not exist on the run date. The pages below were read as final for this run. Hub math was taken from Aave V4 at `a3ef63ea6415d25237a9775bf66e76e9993561c2`.
 
 | Contract (spec page) | Rules and math in scope | Model files |
 |---|---|---|

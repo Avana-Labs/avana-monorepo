@@ -8,7 +8,7 @@ Avana's internal formal verification of the liquidation area: LPVaultSwap and it
 audit/formal-verification/liquidation/run.sh
 ```
 
-It runs every check and exits non-zero on any violation that is not an expected finding counterexample, on any solver timeout, on any vacuous premise and on any Quint result that differs from its expectation. A full run takes several minutes. `QNT_SAMPLES` and `QNT_STEPS` set the Quint simulation size (defaults 10,000 traces of 25 steps).
+It runs every check and exits non-zero on any violation that is not an expected finding counterexample, on any solver timeout, on any vacuous premise and on any Quint result that differs from its expectation. A full run takes several minutes. `QNT_SAMPLES` and `QNT_STEPS` set the Quint simulation size (defaults 10,000 traces of 25 steps). The `models` CI workflow (`.github/workflows/models.yml`) runs `run.sh` at the defaults on every pull request and push to `main`, and the job fails when `run.sh` exits non-zero.
 
 Requirements: the Python environment in `spec/05-verification/.venv` (z3-solver 4.13, Hypothesis) and Quint in `spec/05-verification/node_modules`.
 

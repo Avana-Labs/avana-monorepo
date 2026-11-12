@@ -8,10 +8,31 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads. [EVENTS.md](indexer/EVENTS.md) lists every event and every live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
 | `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
-| `convex/` | [Design of the Convex import](convex/README.md): scheduled pull, checkpoints, duplicate protection, block-hash checks, atomic pages, reorg rebuild; the code lives in `apps/backend/convex/ingest/` |
+| `convex/` | [Design of the Convex import](convex/README.md): scheduled pull, checkpoints, duplicate protection, block-hash checks, atomic pages, reorg rebuild; the Convex project itself lives in the same folder, with the import under `convex/ingest/` |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys and the export wire types |
 
-The indexer, the keeper and the monitoring service read addresses, start blocks and ABIs from the verified release manifest in [`packages/protocol`](../packages/), check the manifest's ABI hash at startup and refuse to run on a mismatch (`TEST-149`).
+The indexer, the keeper and the monitoring service read addresses and start blocks from the verified release manifest named in their configuration and ABIs from [`packages/protocol`](../packages/protocol/), check the manifest's ABI hash against the hash of those ABIs at startup and refuse to run on a mismatch (`TEST-149`).
+
+## Build and test
+
+`services/common`, `services/indexer`, `services/keeper` and `packages/protocol` form one npm workspace. Its root is the repository's [`package.json`](../package.json), with a single `package-lock.json` beside it; `@avana/services-common` and `@avana/protocol` are linked from the workspace with `file:` and never fetched from a registry. Node is the version in [`.nvmrc`](../.nvmrc) (22.18.0) and every direct dependency is pinned to an exact version.
+
+```bash
+npm ci --ignore-scripts                        # at the repository root: installs every package, runs no install scripts
+(cd services/indexer && npm run codegen)       # writes ponder-env.d.ts, the types of Ponder's virtual modules
+npm run typecheck                              # tsc --noEmit in each package
+npm run test                                   # vitest run in each package
+npm run test -w services/keeper                # one package
+```
+
+| Package | Unit tests |
+|---|---|
+| `services/common` | Manifest loading (ABI-hash refusal, exact bigint IDs), environment reads, chain lookup, provenance keys and ordering |
+| `services/indexer` | Factory events match the generated ABIs and decode the child address; every log-only event exists in its contract's ABI; export authentication (signature, key rotation, clock skew) |
+| `services/keeper` | Liquidation decision and sizing rules at their boundaries; the pipeline sends only after a successful simulation with every guard passing, pages `M-26` on a code mismatch and logs observe-only calls |
+| `packages/protocol` | `ABI_HASH` matches the committed ABIs; no selector collision inside an ABI |
+
+The [`services`](../.github/workflows/services.yml) workflow runs the same steps for each package on every pull request and push to `main` that touches these packages, the workspace manifests or `.nvmrc`. Before installing it fails if any `@avana/` dependency is not a `file:` or `workspace:` link or the lock file resolves one from a registry; the `gate` job passes only when every package passed.
 
 ## Indexer (`indexer/`)
 
@@ -43,7 +64,7 @@ Rules:
 
 Each consumer has a named finality setting in its service configuration: the indexer and the keeper follow the chain head; Convex ingests exports at `finalized`. When a reorg removes a block, the indexer rolls back to the common ancestor and replays, and an intent that Convex had marked `included` returns to `pending`.
 
-A CI job replays a fork run and compares the indexer's state with RPC reads at the same block, including injected Anvil reorgs and duplicate or out-of-order export pages; every case must leave the same state (`TEST-143`, `TEST-144`).
+The reorg replay of `TEST-143` and `TEST-144` replays a fork run and compares the indexer's state with RPC reads at the same block, including injected Anvil reorgs and duplicate or out-of-order export pages; every case must leave the same state. It runs against the shared fork environment and needs a deployment manifest from it, so no workflow runs it yet: CI checks the services with the typecheck and unit tests above.
 
 ## Keeper (`keeper/`)
 
@@ -54,7 +75,7 @@ Avana's keeper liquidates every Avana account whose health factor falls below 1,
 `LPVaultSwap.liquidate`, the one liquidation entry point, is caller-funded: it pulls `debtToCover` of the debt asset from `msg.sender`, measured by balance delta, and takes no flash loan. Flash funding sits in a periphery contract, the flash liquidation helper ([2.11](../spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper)):
 
 - It is immutable and holds no funds or allowances between transactions.
-- It flash-borrows GHO from the chain's GHO flash minter where it has one (Ethereum) and every other debt asset from the chain's Aave V3 Pool (`flashLoan`, one asset, mode 0). Its callback accepts only that Pool as caller and itself as initiator, and only the asset, amount and calldata hash recorded in a single-use context before the loan, with a premium no higher than the caller's maximum and `maxFlashFeeBps`.
+- It flash-borrows every debt asset, GHO included, from the chain's Aave V3 Pool, its only lender (`flashLoan`, one asset, mode 0). Its callback accepts only that Pool as caller and itself as initiator, and only the asset, amount and calldata hash recorded in a single-use context before the loan, with a premium no higher than the caller's maximum and `maxFlashFeeBps`.
 - It calls LPVaultSwap, receives `keeperOut`, repays the flash principal and premium from it (pulling at most the top-up bound from its payer when `keeperOut` falls short), reverts unless the net payout meets the request's `minPayout`, and only after `flashLoan` returns sends the rest to its recipient.
 - It has no swap step. The unwind and the swap routes stay in LPVaultSwap, so the keeper never builds swap calldata.
 
@@ -65,7 +86,7 @@ One public helper instance serves any address. Each keeper instance has its own 
 1. **Liquidate.** Liquidate every account with HF < 1 through the instance's helper and `LPVaultSwap.liquidate`, with either route mode, one debt reserve per call, with successive calls until the account is at HF ≥ 1, has no debt, or has its deficit recorded. Accounts with zero collateral are skipped: the Spoke has already reported their deficit.
 2. **Registry and freeze.** A helper that is not, or not yet, registered (after a removal or during a rotation) keeps liquidating: the registry gates no call (`Q-404`). A frozen helper is a guardian decision: the keeper stops submitting from it and pages, and does not route around the freeze through the public helper, although LPVaultSwap would accept that (`REQ-SWAP-105`).
 3. **Pending settlement.** When Collateralization reports pending units for a market (`SeizureReconciled`, `getPending`), call `LPVaultSwap.settlePending(marketId, settlementReserve(marketId))` once the market's price passes the liquidation gates. It pays the caller nothing; the proceeds fund the market's Coverage Spoke.
-4. **Oracle and breaker pokes.** Call `poke()` on every LPOracle and DebtOracle on each feed update and at least once per feed heartbeat, so cached prices, first disagreement observations, the hourly checkpoint and the grace latch are stored (`Q-199`, `Q-248`). Call `pokeBreakers(marketId)` in every block in which a breaker condition is true, so the breach time is recorded.
+4. **Oracle and breaker pokes.** Call `poke()` on every LPOracle and DebtOracle on each feed update and at least once per feed heartbeat, so cached prices, first disagreement observations, the hourly checkpoint and the grace latch are stored (`Q-199`, `Q-248`). Every block, simulate `RiskModule.pokeConfig(spoke)` for every CDP Spoke and `RiskModule.pokeBreakers(marketId)` for every market, and send a transaction only when the simulated call changes state: `pokeConfig` finds a drift (so `ConfigDriftDetected` is emitted on-chain and `M-20` pages), or `pokeBreakers` finds a reason holding (so `recordBreach` stores the breach time or latches a security freeze). A block with nothing to record sends nothing (`Q-382`).
 5. **Deleverage is not a keeper duty.** A borrower starts a repay with collateral through the AaveAdapter's `repayWithCollateral`, which calls `LPVaultSwap.deleverage` with the core flash source. The keeper never calls it.
 6. **Public failure log.** Reverted transactions emit no events, so the keeper publishes every failed, replaced and cancelled attempt with its block, parameters and revert reason.
 
@@ -207,7 +228,7 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-10 | Liquidation reverts by reason (`RecoveryBelowFloor`, `InsufficientProceeds`, `NoRouteAvailable`, `StalePrice`, `DebtPriceStale`) in keeper simulation or on-chain; `RouteFailed` events; share of a market's collateral seized | 1 revert or `RouteFailed` per market per hour; 10 % seized in 1 hour | 3 per market per hour; 20 % seized in 1 hour | governance (routes), guardians | P-04 (`EMG-078`) |
 | M-11 | Route depth at stress size against `routeDepthThresholdGho` and `buyRouteDepthThresholdGho` (daily fork simulation) | below 120 % | below 100 % | governance | P-04 (`EMG-078`) |
 | M-12 | GSM exposure headroom per token | below 2× the market's stress size | below 1× | risk service providers | P-04 (`EMG-078`) |
-| M-13 | Coverage Spoke balance | below 150 % of `firstLossReserveMinimum` | below 100 % (COVERAGE breaker trips) | Avana Labs top-up | P-09 (`EMG-083`) |
+| M-13 | Coverage Spoke balance | below 150 % of `firstLossReserveMinimum` | below 100 % (monitoring alert only; no breaker reads it, `Q-399`) | Avana Labs top-up | P-09 (`EMG-083`) |
 | M-14 | Tail coverage ratio (`getTailCoverage`, and the live variant from current debt) | below 150 % | below 100 % | risk service providers, Aave DAO | P-09 (`EMG-083`) |
 | M-15 | Hub deficit per asset | any | uncovered after 24 hours (coverage window 72 hours) | `COVERAGE_ROLE` holder | P-09 (`EMG-083`) |
 | M-16 | Keeper debt-asset float per chain and asset (free inventory after reservations), which funds inventory calls, helper top-ups and shortfall top-ups | below 150 % of the largest single `debtToCover` the caps allow | below 100 % | Avana Labs | P-09 (`EMG-083`) |
@@ -216,12 +237,13 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-19 | Hub utilization and Lend Spoke withdrawals | utilization 90 % | utilization 98 %, or a withdrawal above 10 % of supply within 1 hour | Aave DAO, guardians | P-10 (`EMG-084`) |
 | M-20 | Aave configuration against recorded values (collateral factor, bonus, target HF, caps, Spoke implementation) | any change | `ConfigDrift` live | Emergency Guardian | P-12 (`EMG-086`) |
 | M-21 | Backing-check simulation failure, `CounterSaturated`, `BreakerRecordFailed` | — | every | engineering | P-05 (`EMG-079`) |
-| M-22 | Timelock `CallScheduled` | every | role change, upgrade, beacon change, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` | every canceller | P-06 (`EMG-080`) |
+| M-22 | Timelock `CallScheduled` | every | role change, upgrade, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` | every canceller | P-06 (`EMG-080`) |
 | M-23 | Safe owner, threshold, guard or module change; signer liveness | every | every; liveness answers below threshold + 1 | every signer | P-07 (`EMG-081`) |
 | M-24 | Pause state and reason, address freeze, standby switch, manual breaker | every | — | every signer | per reason |
 | M-25 | Token issuer: `paused()`, `basisPointsRate()`, blocklist events naming Avana contracts | probe change | blocklist of LPVaultSwap, the LPVault, Collateralization or the AaveAdapter | guardians | P-11 (`EMG-085`) |
 | M-26 | Keeper code-check mismatch (implementation slot or code hash) | — | every | keeper on-call | P-08 (`EMG-082`) |
 | M-27 | Frontend bundle hash, DNS and hosting change | any | hash mismatch | engineering | P-13 (`EMG-087`) |
+| M-28 | Liquidity leaving a listed pool: the pool's total liquidity (and its liquidity around the current price) per listed market, independent of Avana's share | −20 % in 1 hour | −40 % in 1 hour | risk service providers, guardians | P-04 (`EMG-078`) |
 
 Rules:
 

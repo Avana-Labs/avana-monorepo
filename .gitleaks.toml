@@ -1,0 +1,9 @@
+# Gitleaks configuration: the upstream default rules, plus narrowly scoped allowlists for confirmed false positives.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "SHA-256 hashes of reviewed source files recorded with a triage approval (reviewedFiles), not credentials."
+regexTarget = "line"
+regexes = ['''^\s*"(src|test|script)/[A-Za-z0-9_./-]+\.sol": "[0-9a-f]{64}",?\s*$''']

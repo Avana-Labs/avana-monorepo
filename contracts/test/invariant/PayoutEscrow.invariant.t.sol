@@ -17,8 +17,8 @@ import {EscrowHandler} from "./handlers/EscrowHandler.sol";
 /// donations. After every call, for every token and account: credited = claimed + held; `totalClaimable` is the sum
 /// of the credits; the escrow's balance is `totalClaimable` plus the donations; no claim paid other than the whole
 /// credit to the named recipient; nothing but LPVaultSwap under the Lock deposited.
-/// @dev The liquidation side (LPVaultSwap's routed payouts failing for reverting and blocklisted recipients) joins this
-/// row when LPVaultSwap lands; the handler's `deposit` stands in for it.
+/// @dev The liquidation side (LPVaultSwap's routed payouts failing for reverting and blocklisted recipients) is outside
+/// this suite; the handler's `deposit` stands in for LPVaultSwap's deposits.
 contract PayoutEscrowInvariantTest is AvanaTest {
     EscrowHandler internal handler;
     PayoutEscrow internal escrow;

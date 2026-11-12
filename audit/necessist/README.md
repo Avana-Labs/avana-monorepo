@@ -14,8 +14,8 @@ Every test file of the layer's contracts.
 
 ## How often it runs
 
-Layer gate (decided 2026-11-10). First run at the layer 2.1 gate.
+Layer gate (decided 2026-11-10).
 
 ## Latest result
 
-Not run yet; the first run is at the layer 2.1 gate. `results/` is empty until then.
+No run is recorded in this folder; `results/` is empty.

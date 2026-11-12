@@ -259,9 +259,10 @@ abstract contract LPOracleEval is LPOracleConfig {
     // ─── State ───
 
     /// @dev State, failure start, disagreement windows, served price and timestamp, age limits, grace and gates.
-    /// `borrowAllowed` also requires every token confirmed (`REQ-ORACLE-100`) and the token decimals verified within
+    /// `borrowAllowed` also requires, on an L2, a served timestamp newer than the sequencer's restart (`SPEC-ORC-021`),
+    /// every token confirmed (`REQ-ORACLE-100`) and the token decimals verified within
     /// `DECIMALS_CHECK_MAX_AGE` (reason bit 19, `REQ-ORACLE-107`); neither changes the state, the served price or a timer.
-    /// @custom:spec REQ-ORACLE-016, REQ-ORACLE-017, REQ-ORACLE-018, REQ-ORACLE-020, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-084, REQ-ORACLE-090, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-103, REQ-ORACLE-107, SPEC-ORC-013, SPEC-ORC-016, SPEC-ORC-017
+    /// @custom:spec REQ-ORACLE-016, REQ-ORACLE-017, REQ-ORACLE-018, REQ-ORACLE-020, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-084, REQ-ORACLE-090, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-103, REQ-ORACLE-107, SPEC-ORC-013, SPEC-ORC-016, SPEC-ORC-017, SPEC-ORC-021
     function _decide(
         Evaluation memory e
     ) internal view {
@@ -279,9 +280,11 @@ abstract contract LPOracleEval is LPOracleConfig {
         if (block.timestamp - e.decimalsCheckedAt > DECIMALS_CHECK_MAX_AGE) {
             e.reasons |= LPOracleCodes.DECIMALS_UNVERIFIED;
         }
+        // On an L2 the served price must also come from rounds newer than the sequencer's restart (`SPEC-ORC-021`):
+        // `servedUpdatedAt` is the oldest leg in use, and `seq.startedAt` is 0 without a feed or while not up.
         e.borrowAllowed = e.state == PriceState.Live && e.seq.ready
             && (e.reasons & (LPOracleCodes.SECOND_SOURCE_DISAGREE | LPOracleCodes.DECIMALS_UNVERIFIED)) == 0
-            && block.timestamp - e.servedUpdatedAt <= e.borrowMaxAge;
+            && block.timestamp - e.servedUpdatedAt <= e.borrowMaxAge && e.servedUpdatedAt > e.seq.startedAt;
     }
 
     /// @dev A failed market: `failureStart = min(S_ts, failedSince, now)`, Cached before `failureStart +

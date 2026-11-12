@@ -7,7 +7,8 @@ pragma solidity 0.8.28;
 /// @notice Identity of one of the five logic contracts the ParameterStore delegatecalls for its setters.
 /// @dev The ParameterStore implementation exceeds the 24,576-byte code limit as one contract, so its setter bodies
 /// live in five immutable logic contracts that share the ERC-7201 layout `avana.storage.ParameterStore`: tighten,
-/// loosen, listing (with the chain and Spoke setters), oracle structural and risk structural. The ParameterStore
+/// loosen, listing (with the chain and Spoke setters), oracle structural (with the liquidation-liveness setters and the
+/// views `getOracleConfig` and `liquidationLivenessHolds`) and risk structural. The ParameterStore
 /// checks the caller's role in each setter and then delegatecalls the logic contract with the same calldata, so a
 /// setter's state, events and `msg.sender` are the proxy's. Its constructor refuses a logic contract whose
 /// `logicConfig()` names another kind, timelock, MarketRegistry, block time or sequencer flag. A logic contract holds

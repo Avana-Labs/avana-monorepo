@@ -18,11 +18,11 @@ Runtime code of AmmConstants, AvanaRoles, BreakerReasons, LensConstants, Lock, L
 
 ## How often it runs
 
-Slow tier at each layer gate and nightly in CI.
+Slow tier at each layer gate and on every push to `main` in CI (`security-slow.yml`), one job per group of eight `src/` contracts (`MYTHRIL_CONTRACTS`).
 
 ## Latest result
 
-2026-11-10 16:02: **0 findings, 0 blocking, 0 accepted**; every contract analysed with `success: true`. The contracts merged later are analysed first at the layer 2.1 gate.
+2026-11-10 16:02: **0 findings, 0 blocking, 0 accepted**; every contract analysed with `success: true`. Contracts merged after that run are not in this result.
 
 ## Results folder
 

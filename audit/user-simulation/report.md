@@ -34,7 +34,7 @@ spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --
 |---|---|
 | `base` | Every primary Chainlink leg has a 1-hour heartbeat, as REQ-ORACLE-054 requires for listing. The app quotes repay-all at the deadline. |
 | `mainnet-feeds` | USDC, USDT, GHO and USDe primaries have a 24-hour heartbeat. Several mainnet stablecoin/USD feeds publish that heartbeat at the time of writing; confirm at listing. |
-| `literal-repay-quote` | The app approves exactly the quoted debt and uses it as the repay-all cap, which is the literal reading of `apps/README.md`. |
+| `literal-repay-quote` | The app approves exactly the quoted debt and uses it as the repay-all cap, which is the literal reading of `web/README.md`. |
 
 Code: `avana_sim/params.py` (spec values and assumptions), `world.py` (prices, Chainlink rounds, pools, LPOracle states), `protocol.py` (pledge, borrow, repay, withdraw, collect and liquidation gates), `engine.py` (agents, keepers, governance, probes), `metrics.py` (frustration catalogue), `report.py` (tables).
 
@@ -358,7 +358,7 @@ Each probe ran at the given time against a probe account with USDC debt and two 
 **Rule.**
 
 - REP-005: repay-all reverts if the live debt at inclusion exceeds `maxRepaySpend`.
-- `apps/README.md`: the app approves "exactly the repay amount".
+- `web/README.md`: the app approves "exactly the repay amount".
 - INV-022: no standing approval larger than needed.
 
 **What happened.** Debt accrues every second. With the cap and the approval equal to the quoted debt, 100% of first repay-all attempts revert (226 reverts across 113 users, $3,764 of gas) until users add a buffer by hand. Quoting the debt at the deadline (the base run) gives zero failures.
@@ -467,7 +467,7 @@ The base count comes first, then the range over 5 seeds.
 | 12 | "DeadlineExpired." | 24 (24–38) | Deadline on every call; slow signing on mobile | Longer mobile deadlines, automatic re-prepare | App |
 | 13 | "I pressed max and it failed." | 18 (5–18) | Gap 12 | Margin on "max" | App, spec note |
 | 14 | "My transaction never confirmed." | 15 (10–17) | Network or fees | Fee bumping, pending status | App |
-| 15 | "Nobody warned me." | 11 (4–14) | No notification service in `apps/README.md` | Opt-in HF alerts by email, push or Telegram from the indexer | App, services |
+| 15 | "Nobody warned me." | 11 (4–14) | No notification service in `web/README.md` | Opt-in HF alerts by email, push or Telegram from the indexer | App, services |
 | 16 | "One market blocked borrowing in all my markets." | 7 (1–7) | One proxy per wallet per Spoke, worst-state rule (Q-225, Q-234) | Several accounts per wallet | Contracts, app |
 | 17 | "My rescue top-up was refused: pool share." | 7 (1–7) | Gap 3 | Exempt eligible top-ups | Spec |
 | 18 | "BadNonce on my second borrow." | 4 (4–9) | One nonce per proxy (Q-106) | A single pending borrow across devices; a clear message | App |
@@ -518,7 +518,7 @@ The simulation was brought up to the final spec, decisions `Q-001`…`Q-278`, an
 
 Users act on the new paths: active LPs remove part of an NFT instead of withdrawing it, and re-credit liquidity they add to a pledged NFT; users who lack outside funds repay with collateral, to rescue or to exit; the app sizes a refused rescue to `usdToRestore`. The scenario gains one episode: from day 52.0 every DAI route, the standby included, stops for 30 hours, so the Cached, Expired and grace states and the stress valuation of `Q-247` are exercised (the standby switch now ends the USDT and USDC stalls of section 2.2 within about 1.5 hours).
 
-The `mainnet-feeds` variant keeps 24-hour primaries on USDC, USDT, GHO and USDe. The listing check of `Q-274` refuses those tokens, so this variant measures what the listing rule prevents. In `literal-repay-quote` the app approves exactly `Lens.quoteRepayAll` and the payer holds exactly that amount, the literal reading of `apps/README.md`.
+The `mainnet-feeds` variant keeps 24-hour primaries on USDC, USDT, GHO and USDe. The listing check of `Q-274` refuses those tokens, so this variant measures what the listing rule prevents. In `literal-repay-quote` the app approves exactly `Lens.quoteRepayAll` and the payer holds exactly that amount, the literal reading of `web/README.md`.
 
 ### 7.2 Runs
 

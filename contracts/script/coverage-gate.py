@@ -14,8 +14,8 @@ Config (JSON):
 
 Every file under src/ that has at least one branch in the lcov report needs an entry in `files`, its minimum branch
 coverage in whole percent. A file fails when its measured branch coverage (branches hit / branches found, in percent)
-is below its minimum; a file with branches but no entry fails too, so a new contract gets a minimum when it lands. An
-entry naming a file without branches in the report fails, so a stale entry is removed with its file. Minimums never
+is below its minimum; a file with branches but no entry fails too, so every file with branches has a minimum. An
+entry naming a file without branches in the report fails, so no entry outlives its file. Minimums never
 exceed 100 and are whole numbers. The gate prints each file with its measured value, its minimum, and whether the
 minimum is below `target`.
 

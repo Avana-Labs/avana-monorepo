@@ -11,7 +11,7 @@ import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
 /// reverting, so that every failed deployment check reverts with the route's own `InvalidRouteConfig` (REQ-ROUTE-045).
 /// @dev A revert and a return shorter than the words read count as a failed read; a static call to an address without
 /// code succeeds with no return data, so it fails the length check the same way. Each read copies at most the words it
-/// decodes, so a contract returning a huge buffer cannot make the deployment pay for it. Used only in constructors.
+/// decodes, so a contract returning a huge buffer cannot make the deployment pay for it. `_staticRead` is shared.
 /// @custom:spec REQ-ROUTE-008, REQ-ROUTE-045
 library RouteReads {
     /// @notice Gas of the fee-switch probe: USDT's getter is one storage read.
@@ -86,7 +86,7 @@ library RouteReads {
         uint256 callGas,
         bytes memory data,
         uint256 maxLength
-    ) private view returns (bool ok, bytes memory ret) {
+    ) internal view returns (bool ok, bytes memory ret) {
         ret = new bytes(maxLength);
         // A bounded static call: Solidity's own call syntax copies the whole return buffer.
         // solhint-disable-next-line no-inline-assembly

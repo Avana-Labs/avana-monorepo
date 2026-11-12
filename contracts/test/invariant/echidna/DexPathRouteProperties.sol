@@ -71,7 +71,8 @@ contract DexPathRouteProperties {
                 tokenClassMask: 1 << 2,
                 uniswapV3Factory: address(v3Factory),
                 slipstreamFactory: address(0),
-                curveFactory: address(curveFactory)
+                curveFactory: address(curveFactory),
+                curveLegacyPools: new address[](0)
             }),
             hops
         );

@@ -34,7 +34,8 @@ import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 /// priced by one; (5) collateral price state, per-feed ages and second sources; (6) debt-reserve pauses, sources and
 /// prices; (7) collateral reserve pause; (8) borrow only: Offboarding and the frozen reserve; (9) drift; (10) Hub shares
 /// == assets; (11) liquidation halts; (12) the market breaker and the debt breakers; (13) borrow only: the cross-Hub
-/// credit line. The pokes are the only state-changing calls (REQ-RISK-003); their reverts propagate (REQ-RISK-056).
+/// credit line and its coverage. The pokes are the only state-changing calls (REQ-RISK-003); their reverts propagate
+/// (REQ-RISK-056).
 /// @custom:spec REQ-ADAPTER-009, REQ-ADAPTER-010, REQ-ADAPTER-011, REQ-ADAPTER-012, REQ-ADAPTER-013, REQ-ADAPTER-014, REQ-ADAPTER-015, REQ-ADAPTER-016, REQ-ADAPTER-018, REQ-ADAPTER-019, REQ-ADAPTER-020, REQ-ADAPTER-021, REQ-ADAPTER-022, REQ-ADAPTER-023, REQ-ADAPTER-024, REQ-ADAPTER-025, REQ-ADAPTER-026, REQ-ADAPTER-027, REQ-ADAPTER-061, REQ-RISK-056, REQ-RISK-059, REQ-RISK-061, REQ-RISK-062, REQ-RISK-065, REQ-RISK-068, REQ-RISK-071, REQ-RISK-077, REQ-RISK-081, REQ-RISK-082, SPEC-CF-005, SPEC-CAP-009
 // View calls in loops over the account's reserves and the market's tokens, bounded by listings.
 // forge-lint: disable-start(calls-loop)
@@ -162,7 +163,8 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
     }
 
     /// @dev Step (5): Live, every leg of every token within `borrowPriceMaxAge(feed)` and not in the future, every
-    /// second source agreeing, and the LPOracle's own borrow gate (sequencer ready, served age).
+    /// token's second source confirmed and the market's second-source flag clear, and the LPOracle's own borrow gate
+    /// (sequencer ready, served age).
     function _collateralPrice(
         Scope memory s
     ) internal view {
@@ -181,9 +183,26 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
                 if (age > _store().borrowPriceMaxAge(feed)) revert PriceTooOld(feed, age);
             }
             // forge-lint: disable-next-line(require-revert-in-loop)
-            if (t.reasons & TOKEN_SECOND_SOURCE_BITS != 0) revert SecondSourceDisagrees(t.token);
+            if (!_tokenSecondSourceConfirmed(t)) revert SecondSourceDisagrees(t.token);
         }
+        if (!_marketSecondSourcesConfirmed(pv)) revert SecondSourceDisagrees(address(0));
         if (!pv.borrowAllowed) revert PriceNotLive(s.marketId, pv.state);
+    }
+
+    /// @dev The LPOracle's second-source confirmation of one token (REQ-ORACLE-100): neither SECOND_SOURCE_DISAGREE
+    /// (token bit 4) nor SECOND_SOURCE_UNAVAILABLE (token bit 5, an out-of-range configuration word included). The
+    /// RiskModule enforces it itself on every borrow and withdraw-with-debt, whatever the oracle's `borrowAllowed`.
+    function _tokenSecondSourceConfirmed(
+        TokenPriceView memory t
+    ) internal pure returns (bool) {
+        return t.reasons & TOKEN_SECOND_SOURCE_BITS == 0;
+    }
+
+    /// @dev The LPOracle's market-level second-source flag (market bit 16) clear (REQ-ORACLE-100).
+    function _marketSecondSourcesConfirmed(
+        PriceStateView memory pv
+    ) internal pure returns (bool) {
+        return pv.reasons & PRICE_SECOND_SOURCE_BIT == 0;
     }
 
     /// @dev Step (6) for every debt reserve in scope (REQ-RISK-061).
@@ -231,8 +250,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         }
     }
 
-    /// @dev Step (13), REQ-RISK-082: a reserve funded by another Hub than the market's needs cross-Hub lines on and the
-    /// registry's draw-cap sum within the funding Hub's line.
+    /// @dev Step (13), REQ-RISK-082: a reserve funded by another Hub than the market's needs cross-Hub lines on, the
+    /// registry's draw-cap sum within the funding Hub's line, and the line covered by its Coverage Spoke
+    /// (`creditLineCoverage`: `required <= funded`).
     function _creditLine(
         Scope memory s
     ) internal view {
@@ -248,6 +268,12 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             // A full credit line refuses the whole borrow (REQ-RISK-082).
             // forge-lint: disable-next-line(require-revert-in-loop)
             if (sum > line) revert IMarketRegistryCreditLines.CreditLineExceeded(fundingHub, asset, sum, line);
+            (uint256 required, uint256 funded) = _registry().creditLineCoverage(fundingHub, asset);
+            // An uncovered credit line refuses the whole borrow (REQ-RISK-082).
+            if (required > funded) {
+                // forge-lint: disable-next-line(require-revert-in-loop)
+                revert IMarketRegistryCreditLines.CoverageBelowRatio(fundingHub, asset, required, funded);
+            }
             return;
         }
     }

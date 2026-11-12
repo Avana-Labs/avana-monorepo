@@ -52,7 +52,7 @@ contract DebtOracleUnitTest is DebtOracleFixture {
         assertEq(uint8(_state()), uint8(PriceState.Live));
     }
 
-    // TEST-062 verifies: REQ-ORACLE-091, REQ-ORACLE-097, REQ-ORACLE-080
+    // TEST-062 verifies: REQ-ORACLE-091, REQ-ORACLE-097, REQ-ORACLE-080, REQ-ACCESS-150
     function test_TEST_062_initializeEmitsSeedAndRunsOnce() public {
         vm.expectEmit(true, true, true, true);
         emit IDebtOracleEvents.DebtPriceSeeded(99_990_000, uint64(T0 - 100));
@@ -65,7 +65,7 @@ contract DebtOracleUnitTest is DebtOracleFixture {
         impl.initialize(p);
     }
 
-    // TEST-242 verifies: REQ-ORACLE-097, REQ-ORACLE-091, Q-259
+    // TEST-242 verifies: REQ-ORACLE-097, REQ-ORACLE-091, Q-259, REQ-ACCESS-150
     function test_TEST_242_initializeRejectsAnotherTimelock() public {
         DebtOracleInitParams memory p = _params();
         p.timelock = alice;
@@ -250,7 +250,7 @@ contract DebtOracleUnitTest is DebtOracleFixture {
 
     // ─── Access control ───
 
-    // TEST-242 verifies: REQ-ORACLE-097, REQ-ORACLE-091, Q-259
+    // TEST-242 verifies: REQ-ORACLE-097, REQ-ORACLE-091, Q-259, REQ-ACCESS-002, REQ-ACCESS-014, REQ-ACCESS-032
     // Sources: 5.1 TEST-242
     function test_TEST_242_adminRolesOnlyForTheTimelock() public {
         bytes32 admin = bytes32(0);
@@ -275,7 +275,7 @@ contract DebtOracleUnitTest is DebtOracleFixture {
         _execute(attacker, calls, bytes32("grant"));
     }
 
-    // TEST-062 verifies: REQ-ORACLE-098, REQ-ORACLE-038, REQ-ORACLE-091, Q-226, Q-228
+    // TEST-062 verifies: REQ-ORACLE-098, REQ-ORACLE-038, REQ-ORACLE-091, Q-226, Q-228, REQ-ACCESS-051
     // Sources: 5.1 TEST-062 (the DebtOracle's restricted selectors)
     function test_TEST_062_setPokeMinGasOnlyApplicationAdmin() public {
         vm.expectRevert(
@@ -302,7 +302,7 @@ contract DebtOracleUnitTest is DebtOracleFixture {
         assertEq(oracle.pokeMinGas(), 800_000);
     }
 
-    // TEST-062 verifies: REQ-ORACLE-091, REQ-ORACLE-078, REQ-ORACLE-080, REQ-ORACLE-081, Q-226
+    // TEST-062 verifies: REQ-ORACLE-091, REQ-ORACLE-078, REQ-ORACLE-080, REQ-ORACLE-081, Q-226, REQ-ACCESS-015, REQ-ACCESS-031
     function test_TEST_062_upgradeOnlyApplicationAdmin() public {
         IDebtOracle next = _newImplementation(address(timelock));
         vm.expectRevert(

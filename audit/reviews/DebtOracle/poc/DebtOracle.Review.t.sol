@@ -8,7 +8,7 @@ import {PriceState} from "../../src/types/PriceState.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";
 
-/// @notice Review PoCs for the DebtOracle (contract 9).
+/// @notice Review PoCs for the DebtOracle.
 contract DebtOracleReviewTest is DebtOracleFixture {
     function setUp() public {
         _deployDebtOracle();

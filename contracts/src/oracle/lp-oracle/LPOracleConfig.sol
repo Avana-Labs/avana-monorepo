@@ -324,7 +324,8 @@ abstract contract LPOracleConfig is LPOracleReads {
 
     // ─── Sequencer ───
 
-    /// @dev Reads the chain's sequencer-uptime feed when the configuration names one (`SPEC-ORC-021`).
+    /// @dev Reads the chain's sequencer-uptime feed when the configuration names one (`SPEC-ORC-021`): an answer other
+    /// than exactly 160 bytes is `sequencerUnknown` (the read copies at most 161 bytes, so a longer one is seen).
     /// @custom:spec SPEC-ORC-021, REQ-ORACLE-099
     function _readSequencer(
         Evaluation memory e
@@ -336,9 +337,9 @@ abstract contract LPOracleConfig is LPOracleReads {
         if (feed != address(0)) {
             bytes memory ret;
             (readOk, ret) = LPOracleCalls.staticRead(
-                feed, FEED_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH
+                feed, FEED_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
             );
-            (readOk,, answer, startedAt,) = _decodeRound(readOk, ret);
+            (readOk,, answer, startedAt,) = _decodeRound(readOk && ret.length == ROUND_LENGTH, ret);
         }
         (e.seq.up, e.seq.down, e.seq.unknown, e.seq.inGrace, e.seq.ready) = LPPriceMath.sequencerStatus(
             feed != address(0), readOk, answer, startedAt, block.timestamp, e.cfg.sequencerGracePeriod

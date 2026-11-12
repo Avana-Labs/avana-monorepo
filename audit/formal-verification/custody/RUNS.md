@@ -101,3 +101,12 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 | Command | `bash audit/formal-verification/custody/run.sh` |
 | Result | Exit 0; every check Verified; 0 open findings |
 | Change | `fv_solvency.py` (`FV-CUS-29`): the withdrawal guard is `max(1.00, the market's optional hard floor, minHealthFactor) >= 1.00`; `minOpeningHealthFactor` and `PROXY_HEALTH_FACTOR_FLOOR` are removed (`Q-398`). `report.md` no longer lists a settlement budget among the controls outside this area (`Q-397`) |
+
+## FV-CUS-R8 (2026-11-11)
+
+| Field | Value |
+|---|---|
+| Spec state | Decisions `Q-001`…`Q-406` |
+| Command | `bash audit/formal-verification/custody/run.sh` |
+| Result | Exit 0; 538 Z3 and enumeration checks Verified; `FV-CUS-QNT-01` and `FV-CUS-QNT-02` with no violation in 10,000 randomized runs of 20 steps; `check_ids.py` 201 cited spec IDs, 0 undefined; 0 open findings |
+| Change | None in this area's models; full re-run alongside the control-area model updates of `FV-CTL-R11` |

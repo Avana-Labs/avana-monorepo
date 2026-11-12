@@ -261,7 +261,7 @@ Figures written with fewer digits ("about", "≈", health factors to four decima
 
 ### `st17_helper_funding.py`: how a flash liquidation helper call is funded
 
-The helper pulls the prefund `X − F + maxShortfall`, approves LPVaultSwap for `X + maxShortfall`, keeps the unused budget `u = maxShortfall − shortfall`, tops up `max(0, F + φ − keeperOut − u)` and pays the rise of its balance; the operator variant bounds `F` by `⌈D × 1.05⌉` and the Safe's net outlay by `⌊D × MAX_TOP_UP_BPS / 10⁴⌋` (2.11 `REQ-HELPER-004`, `-006`, `-007`, `-008`, `-011`).
+The helper pulls the prefund `X − F + maxShortfall`, approves LPVaultSwap for `X + maxShortfall`, keeps the unused budget `u = maxShortfall − shortfall`, tops up `max(0, F + φ − keeperOut − u)` and pays the rise of its balance; the operator variant bounds `F` by `⌈D × 1.05⌉` and the Safe's net outlay by `⌊D × MAX_TOP_UP_BPS / 10⁴⌋`, and accepts `F = 0`, a call with no loan and no premium (2.11 `REQ-HELPER-003`, `-004`, `-006`, `-007`, `-008`, `-011`).
 
 | ID | Statement | Verifies | Result |
 |---|---|---|---|
@@ -269,7 +269,8 @@ The helper pulls the prefund `X − F + maxShortfall`, approves LPVaultSwap for 
 | MATH-ST-125 | `payout = max(0, keeperOut + u − F − φ) ≥ 0`; a top-up and a payout are never both positive. | `REQ-HELPER-007`, `REQ-HELPER-008`, `SPEC-LIQ-019` | PROVED |
 | MATH-ST-126 | The payer's net outlay is `outlay − payout = D + A + B − R + φ`; the shortfall pulled cancels. | `REQ-HELPER-011`, `REQ-HELPER-008`, `SPEC-LIQ-010`, `SPEC-LIQ-019` | PROVED |
 | MATH-ST-127 | a: a completed operator call costs the Safe at most `⌊D × b / 10⁴⌋`, whatever `X`, `F`, `maxShortfall`, `maxTopUp`; b: a call that gains for the Safe is never refused by the outlay bound; c: a loan within `need` pays at most `⌈need × p / 10⁴⌉` premium; d (wrong reading, review FL-02): a top-up bound on the signer's `X` with no loan or outlay bound lets an oversized loan's 5 bps premium cost the Safe more than `⌊D × b / 10⁴⌋` even when the routes recover above the debt. | `REQ-HELPER-011`, `REQ-HELPER-007`, `SPEC-LIQ-015` | PROVED (3) / COUNTEREXAMPLE (deliberate) |
-| MATH-ST-128 | 2.11 examples: the `SPEC-LIQ-019` floor case through the helper (shortfall 123.373998, `keeperOut` 12,297.373998, `u` 76.626002, payout 368 USDC; with `F = 1` USDC 12,372.9995); `need` 2,047.5 USDC; the review PoC loss 4,926.7 USDC; outlay bound 19.5 USDC; losses 50.975 and 10.975 USDC; top-up 101.02375 USDC; the GHO example (fee 0.975, payout 69.825 GHO); `F < X` payout 167.325 and `minPayout` 166.5 USDC; the 98 USDC bound at `D = 9,800`. | `REQ-HELPER-006`, `REQ-HELPER-008`, `REQ-HELPER-011`, `REQ-HELPER-015`, `SPEC-LIQ-019` | COMPUTED (17) |
+| MATH-ST-128 | 2.11 examples: the `SPEC-LIQ-019` floor case through the helper (shortfall 123.373998, `keeperOut` 12,297.373998, `u` 76.626002, payout 368 USDC; with `F = 1` USDC 12,372.9995); `need` 2,047.5 USDC; the review PoC loss 4,926.7 USDC; outlay bound 19.5 USDC; losses 50.975 and 10.975 USDC; top-up 101.02375 USDC; the GHO example from the Pool (premium 0.975, payout 69.825 GHO); `F < X` payout 167.325 and `minPayout` 166.5 USDC; the 98 USDC bound at `D = 9,800`. | `REQ-HELPER-006`, `REQ-HELPER-008`, `REQ-HELPER-011`, `REQ-HELPER-015`, `SPEC-LIQ-019` | COMPUTED (17) |
+| MATH-ST-129 | The operator's zero loan (`F = 0`, no premium): a: no top-up, payout `keeperOut + u`, net outlay `D + A + B − R`; b: a completed call costs the Safe at most `⌊D × b / 10⁴⌋` and `F ≤ need` holds; c: examples (Bob: payout 2,020.8 USDC, Safe gains 70.8; `R = 1,900`: net outlay 50 USDC, refused; `R = 1,940`: 10 USDC, settles; floor case: payout 12,374 USDC, net 174). MATH-ST-124 to -127 cover `0 ≤ F ≤ X`. | `REQ-HELPER-003`, `REQ-HELPER-004`, `REQ-HELPER-008`, `REQ-HELPER-011`, `SPEC-LIQ-019` | PROVED (2) / COMPUTED (7) |
 
 ## Findings
 
@@ -287,27 +288,28 @@ Two results describe the final text without changing it: the decrement in `SPEC-
 
 ## Results
 
-**315 checks after the removal of the settlement budget and of in-kind settlement, the flash-source cap rule, the LitePSM gem amount and the V3.4 half-up premium check (2026-11-10), 323 with the helper funding checks of st17 (2026-11-11): every script exits 0, 0 mismatches, 0 timeouts.**
+**315 checks after the removal of the settlement budget and of in-kind settlement, the flash-source cap rule, the LitePSM gem amount and the V3.4 half-up premium check (2026-11-10), 323 with the helper funding checks of st17 (2026-11-11), 326 with the operator's zero loan (MATH-ST-129, 2026-11-11): every script exits 0, 0 mismatches, 0 timeouts.** The table gives the re-run of every script on 2026-11-11 (one at a time, from `spec/05-verification`): 290 checks, because st02 now reports 73 checks (49 proved, 24 deliberate counterexamples) plus 20 `[MAX]` searches after the option C rewrite removed the premium terms, and st03, st09 and st12 carry the checks added since (st09 `MATH-ST-114`).
 
 | Script | Checks | Proved | Counterexample | Computed | Mismatch | Exit |
 |---|---|---|---|---|---|---|
 | st01 | 4 | 2 | 2 | — | — | 0 |
-| st02 | 117 | 94 | 23 | — | — | 0 |
-| st03 | 14 | 12 | 2 | — | — | 0 |
-| st04 | 19 | 14 | 4 | 1 | — | 0 |
+| st02 | 73 | 49 | 24 | — | — | 0 |
+| st03 | 17 | 14 | 3 | — | — | 0 |
+| st04 | 19 | 16 | 2 | 1 | — | 0 |
 | st05 | 6 | 4 | 2 | — | — | 0 |
 | st06 | 5 | 4 | 1 | — | — | 0 |
 | st07 | 6 | 3 | 3 | — | — | 0 |
 | st08 | 11 | 10 | 1 | — | — | 0 |
-| st09 | 7 | 6 | 1 | — | — | 0 |
+| st09 | 8 | 7 | 1 | — | — | 0 |
 | st10 | 26 | 22 | 4 | — | — | 0 |
 | st11 | 11 | 8 | 2 | 1 | — | 0 |
-| st12 | 15 | 14 | 1 | — | — | 0 |
+| st12 | 19 | 17 | 2 | — | — | 0 |
 | st13 | 4 | 3 | 1 | — | — | 0 |
 | st14 | 16 | — | — | 16 | — | 0 |
 | st15 | 8 | 3 | 1 | 4 | — | 0 |
 | st16 | 46 | 29 | 8 | 9 | — | 0 |
-| st17 | 8 | 6 | 1 | 1 | — | 0 |
+| st17 | 11 | 8 | 1 | 2 | — | 0 |
+| **Total** | **290** | **199** | **58** | **33** | **0** | **0** |
 
 ### Run log
 
@@ -321,9 +323,11 @@ Two results describe the final text without changing it: the decrement in `SPEC-
 | 2026-11-10 | `../../.venv/bin/python <script>.py` for st01…st16, from `spec/05-verification/z3/settlement`, after the no-minimum-debt decision (`Q-381`) and the budget reserve, flash-source Hub and transfer-fee rules (`Q-387`, `Q-388`, `Q-390`): MATH-ST-108 rewritten to the record-cap gas fit, MATH-ST-109/110 extended, MATH-ST-111/112 added | Python 3.9.6, z3-solver 4.13.0 | as above | 322 checks (st16: 51); 0 differ from documented results | 0 |
 | 2026-11-10 | `../../.venv/bin/python <script>.py` for st01…st16, from `spec/05-verification/z3/settlement`, after the removal of the settlement budget and in-kind settlement (`Q-397`, `Q-401`): st04 and st05 rewritten under their IDs to the caller's rounding gap and the payout escrow; st03, st11, st14, st15, st16 updated | Python 3.9.6, z3-solver 4.13.0 | as above | 303 checks; 0 differ from documented results | 0 |
 | 2026-11-10 | `../../.venv/bin/python st11_buy_leg.py`, from `spec/05-verification/z3/settlement`, after the flash-source cap rule (SettlementMath review S3): MATH-ST-115 added | Python 3.9.6, z3-solver 4.13.0 | as above | st11: 10 checks (7 proved, 2 counterexamples, 1 computed) and one `[MAX]` of 999; 0 differ from documented results | 0 |
-| 2026-11-10 | `.venv/bin/python z3/settlement/st15_debt_asset_settlement.py`, from `spec/05-verification`, after the swap-route build (contract 21): MATH-ST-120 added (LitePSM gem amount, `REQ-ROUTE-012`) | Python 3.9.6, z3-solver 4.13.0 | as above; `D < 2¹²⁸`, `tout < 10³⁶`, `c ≤ 10¹⁸` | st15: 8 checks (3 proved, 1 counterexample, 4 computed); 0 differ from documented results | 0 |
+| 2026-11-10 | `.venv/bin/python z3/settlement/st15_debt_asset_settlement.py`, from `spec/05-verification`: MATH-ST-120 added (LitePSM gem amount, `REQ-ROUTE-012`) | Python 3.9.6, z3-solver 4.13.0 | as above; `D < 2¹²⁸`, `tout < 10³⁶`, `c ≤ 10¹⁸` | st15: 8 checks (3 proved, 1 counterexample, 4 computed); 0 differ from documented results | 0 |
 | 2026-11-10 | `../../.venv/bin/python <script>.py` for st03, st04, st12, st14, st15, st16, from `spec/05-verification/z3/settlement`, after the SettlementMath review fixes (S2 settlement gap on the whole flash obligation, S4 `ε` in `Vnet`): MATH-ST-121, `-122`, `-123` added; MATH-ST-17, `-18`, `-26`, `-53`, `-60` restated (a binding gap now settles with `keeperOut = 0`; MATH-ST-53 and `-60` were PROVED for `keeperOut < 0` before) | Python 3.9.6, z3-solver 4.13.0 | as above | st03 18 checks, st04 19, st12 19, st14 16, st15 8, st16 46; 0 differ from documented results | 0 |
 | 2026-11-10 | `../../.venv/bin/python st11_buy_leg.py`, from `spec/05-verification/z3/settlement`, after the flash-source review (V3.4 charges half-up; the source's ceiling quote is the binding gate): MATH-ST-115 gains the half-up ≤ quote check | Python 3.9.6, z3-solver 4.13.0 | as above | st11: 11 checks (8 proved, 2 counterexamples, 1 computed) and one `[MAX]` of 999; 0 differ from documented results | 0 |
 | 2026-11-10 | `../../.venv/bin/python <script>.py` for st01, st02, st03, st04, st14, st15, st16, from `spec/05-verification/z3/settlement`, after the option C rewrite of 2.11 (`Q-404`: caller-funded liquidation, one entry point, no flash term in any liquidation formula): st02 drops the premium from `s` and proves the listing check implies the `10⁸` bound (MATH-ST-13); st03 and st04 restated on `Kf ≥ D` (the gap never exceeds the floor gap, `keeperOut ≥ 0`, MATH-ST-14…26, -51…60, -96…100, -121, -122); st15 and st16 recompute the 2.11 examples without `φ` (MATH-ST-101, -104, -105, -109, -110, -112); st14 MATH-ST-88 restated | Python 3.9.6, z3-solver 4.13.0 | as above | st01: 4 checks; st02: 73 checks; st03: 17 checks (14 proved, 3 counterexamples); st04: 19 checks; st14: 16 checks; st15: 8 checks; st16: 46 checks; 0 differ from documented results in every script | 0 |
 | 2026-11-11 | `../../.venv/bin/python <script>.py` for st15, st14 and st12, one at a time, from `spec/05-verification/z3/settlement`, after the 2026-11-11 decisions: st15 MATH-ST-101 states the `SPEC-LIQ-020` premium the Pool charges (half up, `φ = 1,037,962`, `assetOut = 19,237,965`) beside the ceiling quote 1,037,963, and the 9 bps line under both roundings (2,077,792,405); st14 MATH-ST-83 uses LPVaultSwap's `POST_CALL_GAS = 10,000` (`required = 111,588`, 2.11 `REQ-SWAP-076`); st12 unchanged, re-run for the restated `SPEC-LIQ-020` | Python 3.9.6, z3-solver 4.13.0 | as above | st15: 8 checks; st14: 16 checks; st12: 19 checks; 0 differ from documented results in every script | 0 |
 | 2026-11-11 | `../../.venv/bin/python st17_helper_funding.py`, from `spec/05-verification/z3/settlement`, after the helper review fixes (FL-01 shortfall budget through the helper, FL-02 operator bounds on the debt repaid, GHO from the flash minter): st17 added with MATH-ST-124 to MATH-ST-128 | Python 3.9.6, z3-solver 4.13.0 | integers, `X`, `maxShortfall` below 2¹²⁸, `MAX_TOP_UP_BPS ≤ 10⁴`, premium rate ≤ 100 bps | st17: 8 checks (6 proved, 1 counterexample, deliberate, 1 computed); 0 differ from documented results; 1 s | 0 |
+| 2026-11-11 | `../../.venv/bin/python st17_helper_funding.py`, from `spec/05-verification/z3/settlement`, after the operator helper accepted `F = 0` (2.11 `REQ-HELPER-003`, `-004`, `-011`): the flow allows `0 ≤ F ≤ X` with no premium at `F = 0`, MATH-ST-129 added | Python 3.9.6, z3-solver 4.13.0 | as above | st17: 11 checks (8 proved, 1 counterexample, deliberate, 2 computed); 0 differ from documented results; 1 s | 0 |
+| 2026-11-11 | `../../.venv/bin/python st17_helper_funding.py`, from `spec/05-verification/z3/settlement`, after the helper moved GHO to the Aave V3 Pool, its only lender (2.11 `REQ-HELPER-015`, `REQ-FLASH-010`): the MATH-ST-128 GHO example is the Pool's 5 bps premium, half up (0.975 GHO), with the same payout of 69.825 GHO | Python 3.9.6, z3-solver 4.13.0 | as above | st17: 11 checks (8 proved, 1 counterexample, deliberate, 2 computed); 0 differ from documented results; 1 s | 0 |

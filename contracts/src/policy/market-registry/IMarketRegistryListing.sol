@@ -62,9 +62,11 @@ interface IMarketRegistryListing {
     /// is `coverageSpokeOf(def.fundingHub, def.asset)` and reports the same asset, Hub and Hub asset ID, the chain's IFlashSource can lend
     /// the asset (`maxFlashLoan > 0`, premium `phi` on amount `F` with `phi × 1e4 ≤ maxFlashFeeBps × F`) from a
     /// `LENDER()` that is no recorded Hub, and it is not already enabled; reverts `TransferFeeActive(asset)` unless the
-    /// asset's transfer fee is 0 at listing (its issuer probe reads a fee of 0, or the asset has no fee switch; AMMN
-    /// N2b); every asset, a fixed-price one included, must be a listed token, so its issuer probe is recorded
-    /// (`TokenNotListed`), and an asset without a fixed price also needs `debtStressRiseBps(asset) >= 100`. `def.crossHub` must equal `def.fundingHub != hubOf(spoke)`; a cross-Hub reserve also requires an open
+    /// asset's transfer fee is 0 at listing (a probe that reads `basisPointsRate()`, `UsdtFeeRate` or
+    /// `UsdtFeeRateAndPaused`, reads exactly one zero word, or the asset has no fee switch; AMMN N2b); every asset, a fixed-price
+    /// one included, must be a listed token, so its issuer probe is recorded (`TokenNotListed`), and an asset without a
+    /// fixed price also needs its three price routes (`InvalidDebtReserve("routes")` for a monitoring-only listing) and
+    /// `debtStressRiseBps(asset) >= 100`. `def.crossHub` must equal `def.fundingHub != hubOf(spoke)`; a cross-Hub reserve also requires an open
     /// credit line (`CrossHubLineClosed`). Then reverts `LivenessBound` unless every Active or Offboarding market of the
     /// Spoke has a usable swap route (or the asset among its pool tokens) for this asset. Marks the Coverage Spoke as
     /// protected from the address freeze. Emits `DebtReserveApproved`.
@@ -87,12 +89,15 @@ interface IMarketRegistryListing {
         uint256 reserveId
     ) external;
 
-    /// @notice Lists a pool token or a debt asset without a fixed-price source with its primary, alternate and standby
-    /// Chainlink routes and its issuer probe.
+    /// @notice Lists a pool token or a debt asset with its primary, alternate and standby Chainlink routes and its
+    /// issuer probe, or a fixed-price debt asset with its monitoring feed only.
     /// @dev Normal delay (a new price source). Token decimals are read on-chain. Reverts `ListingCheckFailed` unless
     /// the three routes each hold one or two feeds, share no feed with each other, every feed has a ParameterStore feed
     /// definition whose heartbeat is the feed's own configured heartbeat (Chainlink stablecoin feeds run 82,800 to
-    /// 86,400 s, so no fixed 3,600 s bound applies, AMMN-INT-01), and `def.replacedSlot == None`. Emits
+    /// 86,400 s, so no fixed 3,600 s bound applies, AMMN-INT-01), and `def.replacedSlot == None`. A definition with an
+    /// empty alternate and standby route is a monitoring-only listing (REQ-CONFIG-021): only the primary route's leg
+    /// checks run; the token can then serve only a fixed-price debt reserve (`enableDebtReserve` refuses it otherwise)
+    /// and `listCollateralMarket` refuses it as a pool token until `setPriceSource` gives it three routes. Emits
     /// `TokenListed`.
     /// @param token Pool token or debt asset.
     /// @param def Token definition.
@@ -136,8 +141,8 @@ interface IMarketRegistryListing {
     /// integration's `validateMarket` (pool from the integration's canonical factory, keyed by address or by
     /// identifier; the copied configuration matches that integration's position manager and factory, AMMN-RT-15;
     /// for concentrated liquidity an exact `[tickLower, tickUpper]` aligned to the pool's tick spacing with signed
-    /// arithmetic, AMMN-RT-01; the integration's listing guards for its pricing model); every pool token listed; the
-    /// decimals rule; the common-mode guard; the raw-price bound; and the LPOracle seed (`decimals() == 8`,
+    /// arithmetic, AMMN-RT-01; the integration's listing guards for its pricing model); every pool token listed, with
+    /// its three price routes (`ListingCheckFailed("routeLength")` for a monitoring-only listing); the decimals rule; the common-mode guard; the raw-price bound; and the LPOracle seed (`decimals() == 8`,
     /// `latestAnswer() > 0`, this market and integration). `DuplicateMarketKey` when the market key, the vault token or
     /// the LPOracle is held by a market that is neither Cancelled nor Closed. Records the Spoke's first enabled debt
     /// reserve as the settlement reserve (`ListingCheckFailed("settlementReserve")` when it has none) and runs

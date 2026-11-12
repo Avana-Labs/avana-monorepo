@@ -15,7 +15,7 @@ contract LPOraclePriceUnitTest is LPOracleFixture {
         _deployMarket();
     }
 
-    // TEST-036 verifies: SPEC-ORC-008, SPEC-ORC-005, REQ-ORACLE-011, REQ-ORACLE-012, REQ-ORACLE-047, REQ-ORACLE-059, Q-028, Q-066, Q-191, INV-055
+    // TEST-036 verifies: SPEC-ORC-008, SPEC-ORC-005, SPEC-UNIT-003, REQ-ORACLE-011, REQ-ORACLE-012, REQ-ORACLE-047, REQ-ORACLE-059, Q-028, Q-066, Q-191, INV-055
     // Sources: 5.1 TEST-036
     function test_TEST_036_formula() public {
         assertEq(oracle.vaultDecimals(), 6, "d");

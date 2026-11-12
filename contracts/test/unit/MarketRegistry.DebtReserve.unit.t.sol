@@ -309,7 +309,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.enableDebtReserve(address(spoke), d);
     }
 
-    // TEST-245 verifies: REQ-MREG-032, REQ-CONFIG-039, Q-261
+    // TEST-245 verifies: REQ-MREG-032, REQ-CONFIG-039, Q-261, REQ-ACCESS-145, REQ-ACCESS-095
     // Sources: 5.1 TEST-245, MATH-ST-13
     function test_TEST_245_livenessAgainstLiveMarkets() public {
         // The Active market has no USDT -> USDC route yet.
@@ -330,7 +330,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         _enable(_usdcDef());
     }
 
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010, ATTACK-163, Q-353, Q-391
+    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010, ATTACK-163, Q-353, Q-391, REQ-ACCESS-145
     // Sources: 5.1 TEST-273, MATH-CAP-10
     function test_TEST_273_creditLineSumAndCoverage() public {
         _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
@@ -425,7 +425,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.recordCreditLine(alice, address(gho), 1);
     }
 
-    // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, Q-378
+    // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, Q-378, REQ-ACCESS-145
     function test_TEST_273_crossHubReserveNeedsLineAndConsent() public {
         RegistryHubMock hub2 = new RegistryHubMock();
         RegistrySpokeMock spoke2 = new RegistrySpokeMock();
@@ -459,7 +459,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.enableDebtReserve(address(spoke2), d);
     }
 
-    // TEST-213 verifies: REQ-MREG-010, REQ-MREG-033, ATTACK-136, Q-233, Q-397
+    // TEST-213 verifies: REQ-MREG-010, REQ-MREG-033, ATTACK-136, Q-233, Q-397, REQ-ACCESS-145
     // Sources: 5.1 TEST-213, TEST-185
     function test_TEST_213_removeOnlyWithNothingOwed() public {
         _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");

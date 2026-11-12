@@ -14,7 +14,7 @@ import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {IssuerProbe} from "../market-registry/types/IssuerProbe.sol";
+import {IssuerProbe, IssuerProbes} from "../market-registry/types/IssuerProbe.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
@@ -32,10 +32,10 @@ import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 /// SPEC-BRK-003) and `CONFIG_DRIFT` (any drift of the market's Spoke, REQ-RISK-078). Debt conditions: `DEFICIT`
 /// (SPEC-BRK-004) and `ISSUER` of the asset. A breaker is tripped by its live reasons, its latched reasons and, while
 /// `block.timestamp < lastBreachAt + gateRecoverySeconds`, every temporary reason: the MarketRegistry keeps one breach
-/// time per key, not the reason it recorded. Every issuer probe runs with `ISSUER_PROBE_GAS` behind the gas floor of
-/// REQ-RISK-089.
+/// time per key, not the reason it recorded. Every issuer probe read runs with `ISSUER_PROBE_GAS` behind the gas floor
+/// of REQ-RISK-089; the combined kind makes two reads.
 /// @custom:spec REQ-RISK-065, REQ-RISK-078, REQ-RISK-089, REQ-RISK-091, SPEC-BRK-002, SPEC-BRK-003, SPEC-BRK-004, SPEC-BRK-007, SPEC-BRK-008, Q-241, Q-399
-// View calls and gas-limited probes in loops over at most 8 pool tokens.
+// View calls and gas-limited probes in loops over at most 8 pool tokens (at most two probe reads each).
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     /// @dev `paused()` and `basisPointsRate()`.
@@ -190,19 +190,27 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         if (_issuerTripped(d.asset)) live |= BreakerReasons.ISSUER;
     }
 
-    /// @dev SPEC-BRK-003: `PausedFlag` trips on `paused() == true`, `UsdtFeeRate` on `basisPointsRate() > 0`; a revert,
-    /// an out-of-gas or a return that is not one word trips; `None` never trips.
+    /// @dev SPEC-BRK-003: `PausedFlag` trips on `paused() == true`, `UsdtFeeRate` on `basisPointsRate() > 0`, and
+    /// `UsdtFeeRateAndPaused` when either of its two reads trips, each read exactly as the single kind reads it; `None`
+    /// never trips.
     function _issuerTripped(
         address token
     ) internal view returns (bool tripped) {
         IssuerProbe probe = _registry().getToken(token).issuerProbe;
-        if (probe == IssuerProbe.None) return false;
-        bytes4 sel = probe == IssuerProbe.PausedFlag ? PAUSED_SELECTOR : FEE_RATE_SELECTOR;
-        (bool ok, bytes memory ret) =
-            RiskModuleCalls.staticRead(token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodePacked(sel), 32);
-        if (!ok || ret.length != 32) return true;
-        (, uint256 word) = RiskModuleCalls.wordAt(ret, 0);
-        tripped = word != 0;
+        if (IssuerProbes.readsPaused(probe) && _readTrips(token, PAUSED_SELECTOR)) return true;
+        if (IssuerProbes.readsFeeRate(probe)) tripped = _readTrips(token, FEE_RATE_SELECTOR);
+    }
+
+    /// @dev One probe read: a static call to `sel` with `ISSUER_PROBE_GAS` behind the gas floor, copying at most one
+    /// word. A revert, an out-of-gas or return data that is not exactly 32 bytes trips (a longer answer too, whatever
+    /// its first word), and so does a non-zero word.
+    function _readTrips(
+        address token,
+        bytes4 sel
+    ) private view returns (bool) {
+        (bool ok, uint256 word) =
+            RiskModuleCalls.staticReadWord(token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodePacked(sel));
+        return !ok || word != 0;
     }
 }
 // forge-lint: disable-end(calls-loop)

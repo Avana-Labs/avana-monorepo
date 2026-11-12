@@ -6,7 +6,7 @@
 | Contract | `src/oracle/lp-oracle/LPPriceMath.sol` (library) |
 | Spec | [2.10 LPOracle, LPPriceMath and DebtOracle](../../../spec/02-contracts/10-lp-oracle.md#lppricemath) |
 | Method | Independent adversarial review: the reviewer receives only the spec page and the code, writes a PoC test for every finding it can demonstrate, and reports findings by severity |
-| Result | 2 Medium, 5 Low; code fixes merged after the gate |
+| Result | 2 Medium, 5 Low, 1 Informational; code fixes merged after the gate |
 
 ## Findings
 
@@ -19,11 +19,11 @@
 | 5 | Low | The USD band check depended on token order | `usdLevel = max{L : L^⊗n ≤ ⊗q}` by binary search (answers the `SPEC-ORC-011` question) | fixed |
 | 6 | Low | `servedTimestamp([])` returned a value for an empty input | Fails closed | fixed |
 | 7 | Low | Saturation in `_fixedMul` was not sticky across a chain of multiplications | Sticky saturation | fixed |
-| 8 | Not rated | `pokeMinGasFloor` differed from the Z3 model `MATH-UO-57c` | Matched to `MATH-UO-57c` | fixed |
+| 8 | Informational | `pokeMinGasFloor` differed from the Z3 model `MATH-UO-57c` | Matched to `MATH-UO-57c`. Rated Informational: no deployed code calls the function (only the unit and differential tests and the off-chain sizing of `POKE_MIN_GAS_FLOOR` use it), so the difference could not move value or starve a read | fixed |
 
-## Spec-text follow-ups
+## Spec-text changes
 
-`INV-055` formula and `min(lower, fresh, A)`; `INV-087`, `PROP-074`, `TEST-230` with `min(lower, fresh, A)`; `PROP-026` bounds; `TEST-037` reference wording; 1.5 `POKE_MIN_GAS_FLOOR` and `POST_CALL_GAS` rows; `PriceStateView.usdLevel` docs; ParameterStore `FeedDef.maxAnswerCap` (`REQ-ORACLE-049`) and `heartbeatMargin` as `uint16`. Status: fix queued (spec batch). Contracts 8 and 9 use the new signatures.
+`INV-055` formula and `min(lower, fresh, A)`; `INV-087`, `PROP-074`, `TEST-230` with `min(lower, fresh, A)`; `PROP-026` bounds; `TEST-037` reference wording; 1.5 `POKE_MIN_GAS_FLOOR` and `POST_CALL_GAS` rows; `PriceStateView.usdLevel` docs; ParameterStore `FeedDef.maxAnswerCap` (`REQ-ORACLE-049`) and `heartbeatMargin` as `uint16`. Status: decided. The LPOracle and the DebtOracle use the new signatures.
 
 ## Evidence after the fixes
 
@@ -33,4 +33,4 @@ Unit, fuzz (10,000 runs) and differential tests pass; Z3 `uo13` and SymPy `sym08
 
 - `PoC.t.sol` with `LPPriceMathHarness.sol`: `test_lpPriceLengthMismatch`, `test_negativeCastNormalize`, `test_negativeCastRoute`, `test_servedAboveFresh`, `test_deviationBpsReverts`, `test_deviationBpsRevertsAtRouteScale`, `test_bandOrderDependent`, `test_servedTimestampEmpty`, `test_saturationNotSticky`, `test_minObsZeroBlockTime`, `test_agreeOverflow`
 
-The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; after a fix lands, the regression test in `contracts/test/` asserts the fixed behavior.
+The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; for each fixed finding, a regression test in `contracts/test/` asserts the fixed behavior.
