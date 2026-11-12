@@ -57,6 +57,7 @@
     "src/policy/market-registry/MarketRegistryListingLogic.sol": 100,
     "src/policy/market-registry/MarketRegistryMarketChecks.sol": 100,
     "src/policy/market-registry/MarketRegistryOracleChecks.sol": 100,
+    "src/policy/market-registry/MarketRegistryRouteChecks.sol": 100,
     "src/policy/market-registry/MarketRegistryRouter.sol": 100,
     "src/policy/market-registry/MarketRegistryRoutesLogic.sol": 100,
     "src/policy/market-registry/MarketRegistrySafetyLogic.sol": 100,

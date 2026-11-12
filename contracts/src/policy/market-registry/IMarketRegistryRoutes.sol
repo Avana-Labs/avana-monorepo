@@ -28,13 +28,18 @@ interface IMarketRegistryRoutes {
     /// dependency, a backup avoids every peg module (GSM or PSM) of the pair, `route.supportsTokenClass(token)`
     /// covers the token's class (stable, correlated or volatile, AMMN-FLOW-14), and no token of
     /// `route.exactAmountInputs()` is a listed token whose issuer probe reads `basisPointsRate()` (`UsdtFeeRate` or
-    /// `UsdtFeeRateAndPaused`, REQ-ROUTE-008). Emits `RouteSet`.
+    /// `UsdtFeeRateAndPaused`, REQ-ROUTE-008). Also `InvalidRoute` unless `route.routeType()` is 0, 1 or 2 and, for a
+    /// `PegModule` route (0), `pegModule()` names a module listed in `dependencies()` that is a LitePSM, or a GSM in the
+    /// backup slot that answers `getIsSeized() == false`, `getIsFrozen() == false` and `getExposureCap() > 0`
+    /// (REQ-ROUTE-002, Q-341), and unless no token among `token`, `debtAsset` and `route.intermediates()` has an
+    /// ERC-1820 `ERC777Token` implementer (Q-342). Each of these reads must return exactly the expected length; a
+    /// revert or a shorter or longer answer refuses the route. Emits `RouteSet`.
     /// @param marketId Market identifier.
     /// @param token Pool token sold.
     /// @param debtAsset Debt asset bought.
     /// @param kind 0 primary, 1 backup.
     /// @param route Swap route contract (`ISettlementRoute`).
-    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-MREG-035, Q-379
+    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-MREG-035, REQ-ROUTE-002, REQ-ROUTE-005, Q-341, Q-342, Q-379
     function setRoute(
         uint256 marketId,
         address token,
@@ -59,13 +64,15 @@ interface IMarketRegistryRoutes {
 
     /// @notice Re-enables a previously approved swap route for a slot.
     /// @dev Short delay. Reverts `NotPreviouslyApproved` unless the address was set for the slot by `setRoute`, and
-    /// `InvalidRoute` when the route checks fail. Emits `RouteRestored`.
+    /// `InvalidRoute` when the route checks of `setRoute` fail at the restoring block, the GSM health check and the
+    /// ERC-777 check included: a GSM frozen since the route was set keeps it disabled (REQ-ROUTE-019). Emits
+    /// `RouteRestored`.
     /// @param marketId Market identifier.
     /// @param token Pool token.
     /// @param debtAsset Debt asset.
     /// @param kind 0 primary, 1 backup.
     /// @param route Previously approved route contract.
-    /// @custom:spec REQ-CONFIG-062
+    /// @custom:spec REQ-CONFIG-062, REQ-ROUTE-019, Q-341
     function restoreRoute(
         uint256 marketId,
         address token,

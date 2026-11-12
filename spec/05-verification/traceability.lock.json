@@ -19885,12 +19885,16 @@
     ]
   },
   "REQ-ROUTE-005": {
-    "hash": "895670ab753d2adf",
+    "hash": "f731f9527e6156d7",
     "checks": [
       "DexHops",
       "DexPathRoute",
+      "IMarketRegistryRoutes",
       "IMarketRegistryViews",
+      "IPegModuleRoute",
       "ISettlementRoute",
+      "MarketRegistryRouteChecks",
+      "MarketRegistryRoutesLogic",
       "PegModuleRoute",
       "RouteConfig",
       "SwapRouteBase",

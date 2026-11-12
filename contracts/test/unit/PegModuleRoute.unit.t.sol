@@ -192,7 +192,7 @@ contract PegModuleRouteUnitTest is SwapRouteFixture {
 
     // ─── Views (TEST-054) ───
 
-    // TEST-054 verifies: REQ-ROUTE-002, REQ-ROUTE-003, REQ-ROUTE-005, Q-379
+    // TEST-054 verifies: REQ-ROUTE-002, REQ-ROUTE-003, REQ-ROUTE-005, Q-379, Q-341
     function test_TEST_054_views() public {
         PegModuleRoute gsmRoute = _gsmRoute();
         assertEq(gsmRoute.routeType(), 0);
@@ -209,12 +209,19 @@ contract PegModuleRouteUnitTest is SwapRouteFixture {
         assertEq(gsmRoute.AAVE_ADAPTER(), address(adapter));
         assertTrue(gsmRoute.supportsTokenClass(1));
         assertFalse(gsmRoute.supportsTokenClass(3));
+        // The MarketRegistry reads the peg module's kind and address (REQ-ROUTE-002, Q-341).
+        (PegModuleKind kind, address module) = gsmRoute.pegModule();
+        assertEq(uint8(kind), uint8(PegModuleKind.Gsm));
+        assertEq(module, address(gsm));
 
         PegModuleRoute daiRoute = _daiRoute();
         deps = daiRoute.dependencies();
         assertEq(deps.length, 1);
         assertEq(deps[0], address(psm));
         assertEq(daiRoute.intermediates().length, 0);
+        (kind, module) = daiRoute.pegModule();
+        assertEq(uint8(kind), uint8(PegModuleKind.LitePsm));
+        assertEq(module, address(psm));
     }
 
     // ─── Deployment checks (TEST-054) ───

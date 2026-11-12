@@ -11,6 +11,7 @@ import {IMarketRegistryApprovals} from "./IMarketRegistryApprovals.sol";
 import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
+import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {IssuerProbes} from "./types/IssuerProbe.sol";
 import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
@@ -24,7 +25,7 @@ import {TokenDef} from "./types/TokenDef.sol";
 /// @dev Reached only by delegatecall from the MarketRegistry, which checks the caller first; see
 /// `IMarketRegistryLogic`. Every external call is a view. A standby switch changes only the registry's record and
 /// `priceRouteVersion`; each oracle sees the new routes on its next read (REQ-CONFIG-003).
-/// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-011, REQ-MREG-012, REQ-MREG-013, REQ-MREG-020, REQ-MREG-028, REQ-MREG-035, Q-248, Q-379
+/// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-011, REQ-MREG-012, REQ-MREG-013, REQ-MREG-020, REQ-MREG-028, REQ-MREG-035, REQ-ROUTE-002, REQ-ROUTE-005, REQ-ROUTE-019, Q-248, Q-341, Q-342, Q-379
 // Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
 // implements; this contract inherits only `IMarketRegistryRoutes`, the one piece it serves in full.
 // solhint-disable comprehensive-interface
@@ -34,7 +35,7 @@ import {TokenDef} from "./types/TokenDef.sol";
 // markets: bounded by MAX_MARKET_COUNT markets and the slots governance set, views only, and a reverting route is
 // disabled rather than reverting the governance call.
 // forge-lint: disable-start(calls-loop)
-contract MarketRegistryRoutesLogic is MarketRegistryStorage, IMarketRegistryRoutes, IMarketRegistryLogic {
+contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistryRoutes, IMarketRegistryLogic {
     /// @dev Most AMM contracts one `recordIntegrationContracts` call records (Slipstream's four generations need 8).
     uint256 internal constant _MAX_INTEGRATION_CONTRACTS = 16;
 
@@ -53,7 +54,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryStorage, IMarketRegistryRout
 
     /// @inheritdoc IMarketRegistryRoutes
     /// @dev Body of `setRoute`.
-    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, Q-379
+    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-ROUTE-002, REQ-ROUTE-005, Q-341, Q-342, Q-379
     function setRoute(
         uint256 marketId,
         address token,
@@ -142,7 +143,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryStorage, IMarketRegistryRout
 
     /// @inheritdoc IMarketRegistryRoutes
     /// @dev Body of `restoreRoute`.
-    /// @custom:spec REQ-CONFIG-062, REQ-MREG-012, Q-151
+    /// @custom:spec REQ-CONFIG-062, REQ-MREG-012, REQ-ROUTE-019, Q-151, Q-341, Q-342
     function restoreRoute(
         uint256 marketId,
         address token,
@@ -216,8 +217,9 @@ contract MarketRegistryRoutesLogic is MarketRegistryStorage, IMarketRegistryRout
         ++l.priceRouteVersion[token];
     }
 
-    /// @dev The route checks of REQ-CONFIG-039, REQ-CONFIG-040 and REQ-CONFIG-060 for one slot, and REQ-ROUTE-008's
-    /// listing check: no token the route pays into a contract requiring the exact amount (`exactAmountInputs`) is a
+    /// @dev The route checks of REQ-CONFIG-039, REQ-CONFIG-040 and REQ-CONFIG-060 for one slot, the route-type and
+    /// GSM checks of REQ-ROUTE-002 and Q-341 and the ERC-777 check of Q-342 (`MarketRegistryRouteChecks`, run by
+    /// `setRoute` and again by `restoreRoute`, REQ-ROUTE-019), and REQ-ROUTE-008's listing check: no token the route pays into a contract requiring the exact amount (`exactAmountInputs`) is a
     /// listed token whose issuer can switch on a transfer fee (a probe that reads `basisPointsRate()`: `UsdtFeeRate` or
     /// `UsdtFeeRateAndPaused`).
     function _checkRoute(
@@ -235,6 +237,10 @@ contract MarketRegistryRoutesLogic is MarketRegistryStorage, IMarketRegistryRout
         ) revert InvalidRoute();
         address[] memory deps = r.dependencies();
         if (_touchesMarketAmm(m, deps)) revert InvalidRoute();
+        // REQ-ROUTE-002: the route type is admitted in the slot; a GSM route only as a live backup (Q-341).
+        if (!_routeTypeAdmitted(route, kind, deps)) revert InvalidRoute();
+        // Q-342: no token the route holds is an ERC-777 token.
+        if (!_noErc777(token, debtAsset, r.intermediates())) revert InvalidRoute();
         if (kind == _BACKUP && _touchesPegModule(m.tokens, deps)) revert InvalidRoute();
         address[] memory exact = r.exactAmountInputs();
         bool feeSwitch = false;

@@ -8,7 +8,7 @@ Requirements: `REQ-*`, `INV-*`, `SPEC-*` (formulas), `ATTACK-*`, flow steps (`DE
 
 Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` rule names the row and the prover has not passed it; marked †), **Verified** (spec-stage checks plus a Foundry test or a prover-passed property), **Changed — re-verify**.
 
-**3497 requirements · 1440 with checks · 0 errors · 3612 warnings**
+**3497 requirements · 1440 with checks · 0 errors · 3610 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1270,8 +1270,8 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `Q-338` | Pending-settlement destination | Each market records a pending-settlement debt reserve (at… | — | — | — | `TEST-198` | `IMarketRegistryWindDown`, `MarketRegistryWindDownLogic` | Unverified |
 | `Q-339` | Swap routes for every token class | Each listed pool token has a primary and an independen… | — | — | — | — | `DexPathRoute`, `WrapperThenDexRoute` | Unverified |
 | `Q-340` | One-sided route stress | Listing and the route-depth monitor stress each token's routes at… | `MATH-ST-103` | — | — | — | — | Modelled |
-| `Q-341` | GSM routes | The GSM is never a primary route. A `GsmStatic` route may fill a backup slot … | — | — | — | `TEST-054` | `PegModuleRoute` | Unverified |
-| `Q-342` | Route token failure isolation | The primary and backup routes of one slot share no interme… | — | — | — | — | — | Unverified |
+| `Q-341` | GSM routes | The GSM is never a primary route. A `GsmStatic` route may fill a backup slot … | — | — | — | `TEST-054` | `IMarketRegistryRoutes`, `IPegModuleRoute`, `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic`, `PegModuleRoute` | Unverified |
+| `Q-342` | Route token failure isolation | The primary and backup routes of one slot share no interme… | — | — | — | `TEST-054` | `IMarketRegistryRoutes`, `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic` | Unverified |
 | `Q-343` | SettlementBudget per market | The SettlementBudget keeps one balance per asset and a rolli… | — | — | — | — | — | Unverified |
 | `Q-344` | Liquidation throughput | The Lock does not serialize liquidations. Throughput is bounded b… | `MATH-ST-102` | — | — | — | — | Modelled |
 | `Q-345` | Front-run tolerance | Keepers size `debtToCover` as a full close or at least `LENS_DUST_MA… | — | — | — | `TEST-174`, `TEST-176` | `FlashLiquidationRequest`, `FlashLiquidatorBase`, `IFlashLiquidatorErrors`, `IFlashLiquidator`, `ILPVaultSwapErrors`, `LiquidationPreview` | Unverified |
@@ -2880,10 +2880,10 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ROLE-116` | Every signer key of the governance multisig, the Emergency Guardian and the Avana treasury… | — | — | — | — | — | Unverified |
 | `REQ-ROLE-117` | The Joint Configuration Safe of each chain (2-of-3: one Avana Labs, one Aave Labs and one … | — | — | — | `TEST-062` | `AvanaRoles` | Unverified |
 | `REQ-ROUTE-001` | A market can be activated only if, for every token of the market and every debt asset appr… | — | — | — | `TEST-054`, `TEST-245` | — | Unverified |
-| `REQ-ROUTE-002` | Route classes per token class (`Q-339`). For each (token, debt asset) pair the primary rou… | — | — | — | `TEST-054` | `DexHop`, `DexHops`, `DexPathRoute`, `ISettlementRoute`, `PegModuleRoute`, `PegModuleStep`, `WrapperStep`, `WrapperThenDexRoute` | Unverified |
+| `REQ-ROUTE-002` | Route classes per token class (`Q-339`). For each (token, debt asset) pair the primary rou… | — | — | — | `TEST-054` | `DexHop`, `DexHops`, `DexPathRoute`, `IMarketRegistryRoutes`, `IPegModuleRoute`, `ISettlementRoute`, `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic`, `PegModuleRoute`, `PegModuleStep`, `WrapperStep`, `WrapperThenDexRoute` | Unverified |
 | `REQ-ROUTE-003` | The backup route of a slot MUST share no entry of `dependencies()` with the primary of the… | — | — | `SIM-01C` | `TEST-054`, `TEST-221` | `DexHops`, `DexPathRoute`, `ISettlementRoute`, `PegModuleRoute`, `PegModuleStep`, `SwapRouteBase`, `WrapperStep`, `WrapperThenDexRoute` | Verified |
 | `REQ-ROUTE-004` | A route of a market MUST NOT call that market's own pool on any hop. The liquidation is re… | — | — | — | `TEST-054` | `DexPathRoute`, `ISettlementRoute`, `WrapperThenDexRoute` | Unverified |
-| `REQ-ROUTE-005` | `setRoute` and `restoreRoute` MUST revert with `InvalidRoute` unless `route.tokenIn() == t… | — | — | — | `TEST-054`, `TEST-221` | `DexHops`, `DexPathRoute`, `IMarketRegistryViews`, `ISettlementRoute`, `PegModuleRoute`, `RouteConfig`, `SwapRouteBase`, `WrapperThenDexRoute` | Unverified |
+| `REQ-ROUTE-005` | `setRoute` and `restoreRoute` MUST revert with `InvalidRoute` unless `route.tokenIn() == t… | — | — | — | `TEST-054`, `TEST-221` | `DexHops`, `DexPathRoute`, `IMarketRegistryRoutes`, `IMarketRegistryViews`, `IPegModuleRoute`, `ISettlementRoute`, `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic`, `PegModuleRoute`, `RouteConfig`, `SwapRouteBase`, `WrapperThenDexRoute` | Unverified |
 | `REQ-ROUTE-006` | Each route slot has a published `routeDepthThreshold(marketId, token, debtAsset, kind)`, s… | `MATH-ST-103`, `MATH-ST-85` | — | — | `TEST-061`, `TEST-064` | — | Verified |
 | `REQ-ROUTE-007` | `swap` MUST revert with `NotLPVaultSwap` unless `msg.sender == LP_VAULT_SWAP`, and with `N… | — | — | — | `PROP-037`†, `TEST-046`, `TEST-054`, `TEST-060` | `ISettlementRoute`, `RouteConfig`, `SwapRouteBase` | Planned (prover) |
 | `REQ-ROUTE-008` | `swap` MUST request `amountIn` with `TOKEN_IN.transferFrom(LP_VAULT_SWAP, route, amountIn)… | `MATH-ST-86` | — | — | `TEST-046`, `TEST-054`, `TEST-177`, `TEST-221`, `TEST-232` | `DexHops`, `DexPathRoute`, `ISettlementRoute`, `IssuerProbe`, `PegModuleRoute`, `RouteReads`, `SwapRouteBase`, `WrapperThenDexRoute` | Verified |
@@ -2897,7 +2897,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ROUTE-016` | A route MUST end every call with no change in its balance of any token and no allowance ou… | — | — | — | `PROP-068`†, `TEST-046`, `TEST-054`, `TEST-080`, `TEST-221` | `DexPathRoute`, `ISettlementRoute`, `PegModuleRoute`, `RouteConfig`, `SwapRouteBase`, `WrapperThenDexRoute` | Planned (prover) |
 | `REQ-ROUTE-017` | Adding or changing a route record MUST go through `MarketRegistry.setRoute` (normal delay)… | — | — | — | `TEST-054`, `TEST-063` | — | Unverified |
 | `REQ-ROUTE-018` | `disableRoute` (short delay) MUST set the slot Disabled until `restoreRoute` or a new `set… | — | — | — | `TEST-054`, `TEST-063`, `TEST-168` | — | Unverified |
-| `REQ-ROUTE-019` | `restoreRoute` (short delay, DAO-only cancel) MUST revert with `NotPreviouslyApproved` unl… | — | — | — | `TEST-054`, `TEST-063`, `TEST-067` | — | Unverified |
+| `REQ-ROUTE-019` | `restoreRoute` (short delay, DAO-only cancel) MUST revert with `NotPreviouslyApproved` unl… | — | — | — | `TEST-054`, `TEST-063`, `TEST-067` | `IMarketRegistryRoutes`, `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic` | Unverified |
 | `REQ-ROUTE-020` | Route quarantine does not exist (`Q-227`); a suspect route is disabled at the short delay … | — | — | — | `TEST-063`, `TEST-168` | — | Unverified |
 | `REQ-ROUTE-021` | A route is usable only if `getRoute` returns `usable = true` (status Active). (Source: Q-0… | — | — | — | `TEST-054`, `TEST-068` | — | Unverified |
 | `REQ-ROUTE-022` | When both routes of a token into the debt asset are unusable or failing, `liquidate` rever… | — | — | — | — | — | Unverified |
@@ -2908,7 +2908,7 @@ Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` 
 | `REQ-ROUTE-027` | Both routes of a token into the debt asset unusable or reverting | LPVaultSwap reverts wit… | — | — | — | — | — | Unverified |
 | `REQ-ROUTE-028` | Each route meets its `minOut`, but the total recovered is below the aggregate floor | LPVa… | — | — | — | — | — | Unverified |
 | `REQ-ROUTE-029` | Swap callback from an unexpected address or outside a hop | reverts with `InvalidCallback`… | — | — | — | `PROP-036`†, `TEST-046` | `DexHops`, `ISettlementRoute`, `SwapRouteBase` | Verified |
-| `REQ-ROUTE-030` | `setRoute` or `restoreRoute` with a wrong token or debt asset, the market's own pool, a co… | — | — | — | `TEST-054` | — | Unverified |
+| `REQ-ROUTE-030` | `setRoute` or `restoreRoute` with a wrong token or debt asset, the market's own pool, a co… | — | — | — | `TEST-054` | `MarketRegistryRouteChecks` | Unverified |
 | `REQ-ROUTE-031` | No route buys the debt asset. The liquidation caller funds the repayment with the debt ass… | — | — | — | `TEST-054` | — | Verified |
 | `REQ-ROUTE-032` | No route takes a maximum-input limit; every route takes only `minOut`. (Source: Q-333) | — | — | — | `TEST-054` | `SwapRouteBase` | Unverified |
 | `REQ-ROUTE-033` | The callback rules of `REQ-ROUTE-013` apply to every pool hop of every route. (Source: Q-0… | — | — | — | `TEST-046`, `TEST-054` | `DexHops`, `SwapRouteBase` | Unverified |
