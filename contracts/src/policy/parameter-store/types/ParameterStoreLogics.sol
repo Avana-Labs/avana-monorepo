@@ -13,7 +13,8 @@ struct ParameterStoreLogics {
     address loosen;
     // Listing setters, the Spoke liquidation expectations, the sequencer check and the coverage ratio.
     address listing;
-    // Structural setters of the oracle configuration.
+    // Structural setters of the oracle configuration, the slippage floor and the flash-fee ceiling (both checked
+    // against liquidation liveness), and the views getOracleConfig and liquidationLivenessHolds.
     address adminOracle;
     // Structural setters of the risk configuration, the second sources and the initial parameter write.
     address adminRisk;

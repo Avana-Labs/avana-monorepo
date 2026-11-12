@@ -21,10 +21,10 @@ import {MarketParams} from "./types/MarketParams.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title ParameterStoreAdminRiskLogic
-/// @notice Bodies of the structural setters of the risk configuration (pool risk factor, Avana's surplus share and recipient, the flash-fee ceiling, second sources and their standby, the slippage floor, token collateral factors, the stress floor) and of the initial parameter write.
+/// @notice Bodies of the structural setters of the risk configuration (pool risk factor, Avana's surplus share and recipient, second sources and their standby, token collateral factors, the stress floor) and of the initial parameter write.
 /// @dev Normal delay; `useStandbySecondSource` is the one ParameterStore function a guardian (`APPLICATION_PAUSE_GUARDIAN`) calls directly, and the ParameterStore checks that role before delegating. Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
 /// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-054, REQ-CONFIG-056, REQ-PSTORE-010, REQ-PSTORE-021, REQ-PSTORE-024, REQ-PSTORE-028, REQ-PSTORE-029, REQ-PSTORE-034, REQ-RISK-045
+/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-054, REQ-CONFIG-056, REQ-PSTORE-010, REQ-PSTORE-028, REQ-PSTORE-029, REQ-PSTORE-034, REQ-RISK-045
 // Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
 // itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
 // functions another contract serves.
@@ -134,19 +134,6 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         emit ParameterSet("feeRecipient", bytes32(0), uint160(old), uint160(recipient));
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setMaxFlashFeeBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-021, REQ-PSTORE-024, REQ-CONFIG-052, Q-335
-    function setMaxFlashFeeBps(
-        uint16 value
-    ) external {
-        _onlyDelegated();
-        if (value > FLASH_FEE_MAX_BPS) revert OutOfBounds();
-        uint16 old = _s().g.maxFlashFeeBps;
-        if (value > old) _requireLivenessEverywhere(value);
-        _s().g.maxFlashFeeBps = value;
-        emit ParameterSet("maxFlashFeeBps", bytes32(0), old, value);
-    }
-
     /// @notice Body of `IParameterStoreAdmin.setSecondSource`; the ParameterStore checks the caller's role first.
     /// @dev Every word `getOracleInputs(..., true)` serves for either source is checked here, so the store never
     /// serves a second-source word an LPOracle or DebtOracle reads as out of range (`_wellFormed`); an empty standby
@@ -218,22 +205,6 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         _s().onStandby[token] = false;
         _recheck(SCOPE_TOKEN, token, false, false);
         emit SecondSourceSwitched(token, false, msg.sender);
-    }
-
-    /// @notice Body of `IParameterStoreAdmin.setSlippageAllowanceMinBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-041, REQ-PSTORE-015, REQ-PSTORE-021, Q-261
-    function setSlippageAllowanceMinBps(
-        uint256 marketId,
-        uint16 value
-    ) external {
-        _onlyDelegated();
-        Market memory m = _market(marketId);
-        MarketParams storage p = _s().market[marketId];
-        uint16 old = p.slippageAllowanceMinBps;
-        if (p.slippageAllowanceBps < value) revert LivenessBound();
-        if (value > old && _live(m.status)) _requireLiveness(m, value, _s().g.maxFlashFeeBps);
-        p.slippageAllowanceMinBps = value;
-        emit ParameterSet("slippageAllowanceMinBps", bytes32(marketId), old, value);
     }
 
     /// @notice Body of `IParameterStoreAdmin.setTokenCollateralFactorBps`; the ParameterStore checks the caller's role first.

@@ -4,8 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {Market} from "../../types/Market.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreAdmin} from "./IParameterStoreAdmin.sol";
 import {IParameterStoreBreakers} from "./IParameterStoreBreakers.sol";
@@ -26,9 +24,10 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 /// Configuration Safe's `APPLICATION_RISK_STEWARD`) and read by the RiskModule, MarketRegistry, LPOracle,
 /// DebtOracle, LPVaultSwap, the IFlashSource, the Lens and monitoring.
 /// @dev UUPS implementation behind one fixed ERC-1967 proxy; `_authorizeUpgrade` requires `APPLICATION_ADMIN`. It
-/// serves every view itself and checks every setter's role itself; each setter body runs in one of five immutable
-/// logic contracts by delegatecall (`ParameterStoreRouter`, `IParameterStoreLogic`), because the whole surface does
-/// not fit the 24,576-byte code limit in one contract. All state is in the ERC-7201 namespace
+/// checks every setter's role itself and serves every view itself but `getOracleConfig` and `liquidationLivenessHolds`;
+/// each setter body and those two views run in one of five immutable logic contracts by delegatecall
+/// (`ParameterStoreRouter`, `IParameterStoreLogic`), because the whole surface does not fit the 24,576-byte code limit
+/// in one contract. All state is in the ERC-7201 namespace
 /// `avana.storage.ParameterStore`. The store holds no token and makes only view calls besides those delegatecalls.
 /// @custom:spec REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-003, REQ-PSTORE-011, REQ-PSTORE-014, REQ-PSTORE-019, REQ-PSTORE-025, REQ-CONFIG-057, REQ-CONFIG-058, REQ-CONFIG-071, Q-226, Q-259, Q-381
 contract ParameterStore is
@@ -75,16 +74,16 @@ contract ParameterStore is
     }
 
     /// @inheritdoc IParameterStoreLiquidation
+    /// @dev Evaluated in the oracle-admin logic (`ParameterStoreAdminOracleLogic.liquidationLivenessHolds`), which this
+    /// view runs by delegatecall and whose return data ends the call unchanged; the `return` below is not reached.
     /// @custom:spec REQ-PSTORE-021, Q-261
     function liquidationLivenessHolds(
-        address spoke,
-        uint256 marketId,
-        uint256 debtReserveId
+        address,
+        uint256,
+        uint256
     ) external view override returns (bool holds) {
-        Market memory m = _REGISTRY.getMarket(marketId);
-        if (m.status == MarketStatus.None || spoke == address(0) || m.spoke != spoke) return false;
-        if (!_REGISTRY.isApprovedDebtReserve(spoke, debtReserveId)) return false;
-        holds = _inequality(_minLb(m), _s().market[marketId].slippageAllowanceMinBps, _s().g.maxFlashFeeBps);
+        _forwardView(_ADMIN_ORACLE_LOGIC);
+        return holds;
     }
 
     /// @inheritdoc IParameterStoreLiquidation

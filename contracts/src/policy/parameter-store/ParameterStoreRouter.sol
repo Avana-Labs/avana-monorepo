@@ -32,7 +32,8 @@ abstract contract ParameterStoreRouter is AccessControlUpgradeable, ParameterSto
     /// @dev Listing setters, Spoke expectations, the sequencer check and the coverage ratio.
     address internal immutable _LISTING_LOGIC;
 
-    /// @dev Oracle structural setters.
+    /// @dev Oracle structural setters, the liquidation-liveness setters (slippage floor, flash-fee ceiling) and the
+    /// views `getOracleConfig` and `liquidationLivenessHolds`.
     address internal immutable _ADMIN_ORACLE_LOGIC;
 
     /// @dev Risk structural setters, second sources and the initial parameter write.

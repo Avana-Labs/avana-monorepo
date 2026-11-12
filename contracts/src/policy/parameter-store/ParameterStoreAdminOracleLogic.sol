@@ -8,6 +8,7 @@ import {OracleConfig} from "../../types/OracleConfig.sol";
 import {OracleLeg} from "../../types/OracleLeg.sol";
 import {OracleRoute} from "../../types/OracleRoute.sol";
 import {TokenOracleConfig} from "../../types/TokenOracleConfig.sol";
+import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
@@ -15,10 +16,10 @@ import {FeedDef} from "./types/FeedDef.sol";
 import {MarketParams} from "./types/MarketParams.sol";
 
 /// @title ParameterStoreAdminOracleLogic
-/// @notice Bodies of the structural setters of the oracle configuration: feed age limits, tolerances, the consistency window, the USD band, the Cached and disagreement timers, grace and the feed-agreement margin. Normal delay, either direction.
-/// @dev Each setter writes, then re-runs `checkConfig` of every LPOracle whose configuration it changes (`OracleConfigRejected`), so no LPOracle is left with a configuration it refuses. Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
+/// @notice Bodies of the structural setters of the oracle configuration: feed age limits, tolerances, the consistency window, the USD band, the Cached and disagreement timers, grace and the feed-agreement margin; of the two setters checked against liquidation liveness, the slippage floor and the flash-fee ceiling; and of the views `getOracleConfig` and `liquidationLivenessHolds`. Normal delay, either direction.
+/// @dev Each setter writes, then re-runs `checkConfig` of every LPOracle whose configuration it changes (`OracleConfigRejected`), so no LPOracle is left with a configuration it refuses; the slippage floor and the flash-fee ceiling are in no LPOracle's configuration, and a raise of either re-checks the liquidation-liveness inequality instead (`LivenessBound`). Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
 /// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-052, REQ-CONFIG-054, REQ-CONFIG-055, REQ-PSTORE-009, REQ-PSTORE-034, SPEC-GOV-012
+/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-052, REQ-CONFIG-054, REQ-CONFIG-055, REQ-PSTORE-009, REQ-PSTORE-021, REQ-PSTORE-024, REQ-PSTORE-034, SPEC-GOV-012
 // Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
 // itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
 // functions another contract serves.
@@ -228,6 +229,35 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("feedAgreementMarginBps", bytes32(0), old, value);
     }
 
+    /// @notice Body of `IParameterStoreAdmin.setMaxFlashFeeBps`; the ParameterStore checks the caller's role first.
+    /// @custom:spec REQ-PSTORE-021, REQ-PSTORE-024, REQ-CONFIG-052, Q-335
+    function setMaxFlashFeeBps(
+        uint16 value
+    ) external {
+        _onlyDelegated();
+        if (value > FLASH_FEE_MAX_BPS) revert OutOfBounds();
+        uint16 old = _s().g.maxFlashFeeBps;
+        if (value > old) _requireLivenessEverywhere(value);
+        _s().g.maxFlashFeeBps = value;
+        emit ParameterSet("maxFlashFeeBps", bytes32(0), old, value);
+    }
+
+    /// @notice Body of `IParameterStoreAdmin.setSlippageAllowanceMinBps`; the ParameterStore checks the caller's role first.
+    /// @custom:spec REQ-CONFIG-041, REQ-PSTORE-015, REQ-PSTORE-021, Q-261
+    function setSlippageAllowanceMinBps(
+        uint256 marketId,
+        uint16 value
+    ) external {
+        _onlyDelegated();
+        Market memory m = _market(marketId);
+        MarketParams storage p = _s().market[marketId];
+        uint16 old = p.slippageAllowanceMinBps;
+        if (p.slippageAllowanceBps < value) revert LivenessBound();
+        if (value > old && _live(m.status)) _requireLiveness(m, value, _s().g.maxFlashFeeBps);
+        p.slippageAllowanceMinBps = value;
+        emit ParameterSet("slippageAllowanceMinBps", bytes32(marketId), old, value);
+    }
+
     // The loop below reads each token's routes in force from the MarketRegistry with view calls; its length is the
     // market's token count, at most MAX_POOL_TOKENS (8).
     // forge-lint: disable-start(calls-loop)
@@ -240,6 +270,21 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         uint256 marketId = _REGISTRY.marketOfLpOracle(lpOracle);
         if (marketId == 0) return config;
         config = _buildConfig(marketId, _REGISTRY.getMarket(marketId));
+    }
+
+    /// @notice Body of `IParameterStoreLiquidation.liquidationLivenessHolds`, run by delegatecall from the
+    /// ParameterStore's view.
+    /// @custom:spec REQ-PSTORE-021, Q-261
+    function liquidationLivenessHolds(
+        address spoke,
+        uint256 marketId,
+        uint256 debtReserveId
+    ) external view returns (bool holds) {
+        _onlyDelegated();
+        Market memory m = _REGISTRY.getMarket(marketId);
+        if (m.status == MarketStatus.None || spoke == address(0) || m.spoke != spoke) return false;
+        if (!_REGISTRY.isApprovedDebtReserve(spoke, debtReserveId)) return false;
+        holds = _inequality(_minLb(m), _s().market[marketId].slippageAllowanceMinBps, _s().g.maxFlashFeeBps);
     }
 
     /// @dev Builds the configuration of market `marketId` from storage: routes in force, legs from the feed
