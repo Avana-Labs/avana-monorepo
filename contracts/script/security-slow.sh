@@ -204,8 +204,11 @@ step_echidna() {
       echo "=== echidna $name ($source), $mode mode"
       mkdir -p "$CORPUS/echidna/$name-$mode"
       log="$OUT/echidna/$name-$mode.log"
+      # --disable-slither: Echidna's own Slither pass analyses the whole project before fuzzing, takes about 45
+      # minutes here and then fails ("Running slither failed"), so it adds nothing but time; the project's Slither run
+      # is in the fast tier.
       if ! echidna . --config echidna.yaml --contract "$name" --test-mode "$mode" --timeout "$ECHIDNA_TIMEOUT" \
-        ${limit[@]+"${limit[@]}"} --corpus-dir "$CORPUS/echidna/$name-$mode" --format text >"$log" 2>&1; then
+        --disable-slither ${limit[@]+"${limit[@]}"} --corpus-dir "$CORPUS/echidna/$name-$mode" --format text >"$log" 2>&1; then
         status=1
         echo "echidna: $name failed in $mode mode"
       fi

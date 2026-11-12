@@ -9,9 +9,9 @@ name: spec
 #   regenerates.
 # - `model` runs one job per other part (`run_all.sh --list`: each z3/ folder, sympy, simulation, hypothesis,
 #   quint), each bounded at 4 hours; a part fails when any check differs from its recorded result. These jobs run
-#   on every push to main and every manual run, never on a pull request.
-# - `spec-gate` passes only when `plan` and `trace` passed and, on a push or manual run, every model part passed;
-#   on a pull request the model parts are skipped and the gate accepts that.
+#   every night at 06:00 UTC, on every release tag (`v*`) and by hand, never on a pull request or a push to main.
+# - `spec-gate` passes only when `plan` and `trace` passed and, in a nightly, release or manual run, every model part
+#   passed; elsewhere the model parts are skipped and the gate accepts that.
 
 on:
   pull_request:
@@ -23,12 +23,16 @@ on:
       - ".github/workflows/spec.yml"
   push:
     branches: [main]
+    tags: ["v*"]
     paths:
       - "spec/**"
       - "contracts/src/**"
       - "contracts/test/**"
       - "contracts/certora/**"
       - ".github/workflows/spec.yml"
+  schedule:
+    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -63,7 +67,7 @@ jobs:
   model:
     name: run_all.sh ${{ matrix.part }}
     needs: plan
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -144,7 +148,7 @@ jobs:
     steps:
       - name: Every part passed
         env:
-          EVENT: ${{ github.event_name }}
+          LONG: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
           PLAN: ${{ needs.plan.result }}
           MODEL: ${{ needs.model.result }}
           TRACE: ${{ needs.trace.result }}
@@ -152,14 +156,12 @@ jobs:
           fail=0
           [ "$PLAN" = success ] || { echo "plan: $PLAN"; fail=1; }
           [ "$TRACE" = success ] || { echo "trace: $TRACE"; fail=1; }
-          if [ "$EVENT" = pull_request ]; then
-            if [ "$MODEL" = skipped ]; then
-              echo "model parts: skipped, they run on every push to main and every manual run"
-            else
-              echo "model parts: $MODEL on a pull request, expected skipped"
-              fail=1
-            fi
-          else
+          if [ "$LONG" = true ]; then
             [ "$MODEL" = success ] || { echo "model parts: $MODEL"; fail=1; }
+          elif [ "$MODEL" = skipped ]; then
+            echo "model parts: skipped, they run nightly, on every release tag and by hand"
+          else
+            echo "model parts: $MODEL outside a nightly, release or manual run, expected skipped"
+            fail=1
           fi
           exit $fail

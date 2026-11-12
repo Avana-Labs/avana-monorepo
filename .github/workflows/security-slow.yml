@@ -1,7 +1,6 @@
 name: security-slow
 
-# Slow security tier on every push to main (each merged pull request), by hand (workflow_dispatch) and before every
-# release: Echidna, Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Pull requests run contracts.yml only.
+# Slow security tier every night on main (06:00 UTC), on every release tag (`v*`), by hand (workflow_dispatch): Echidna, Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Pull requests run contracts.yml only.
 # The `build` job compiles once (script/security-slow.sh build, and the build Halmos runs); `plan` lists the targets
 # from that build with script/ci-shards.py; every target then runs in its own job of at most 4 hours, reusing the
 # build: one per Echidna harness (both modes), one per Medusa harness, one per Halmos test contract, one per hevm
@@ -20,13 +19,11 @@ name: security-slow
 # pinned certora-cli wheel.
 
 on:
+  schedule:
+    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
+    - cron: "0 6 * * *"
   push:
-    branches: [main]
-    paths:
-      - "contracts/**"
-      - "audit/**/*.sol"
-      - "spec/05-verification/trace.py"
-      - ".github/workflows/security-slow.yml"
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       campaign:
@@ -37,7 +34,7 @@ on:
         options: [none, "2.1", "2.2", "2.3", "2.4", "2.5", "2.6", other]
 
 concurrency:
-  # A newer push to main waits for the running slow tier instead of cancelling it; a campaign has its own group.
+  # A newer run waits for the running slow tier instead of cancelling it; a campaign has its own group.
   group: security-slow-${{ github.ref }}-${{ inputs.campaign || 'none' }}
   cancel-in-progress: false
 

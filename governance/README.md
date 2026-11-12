@@ -184,6 +184,12 @@ The full steps are in [3.6 Emergency Operations](../spec/03-operations/06-emerge
 - **Guardian quorum:** the Aave Protocol Guardian unpauses and resets breakers; governance revokes the compromised roles at the normal delay.
 - **Keeper key:** `removeKeeper` at the short delay, or a guardian freezes the keeper address at once while the active keepers stay at or above `keeperFloor`; permissionless liquidation stays open throughout.
 
+## Releases and emergency fixes
+
+- Every upgrade is scheduled from a release tag (`vX.Y.Z`). The tag starts every long check in CI: Certora, Halmos, SMTChecker, the deep invariant campaign, fork and differential tests, the slow security tier, the mutation gates and the spec models. They also run every night on `main`.
+- The upgrade executes only when every long check of its release passed; a failure is a reason to cancel the operation. The timelock delay (12 hours at the shortest) is longer than the long checks take, so they never delay an upgrade.
+- An emergency fix (playbook P-05) is a pull request labelled `hotfix`: it runs the short check set plus the touched contracts' invariants at full depth, about 10 minutes, and merges when they pass. The guardians' pause and address freezes protect funds before any fix exists; the fix then follows the release path above.
+
 ## Fork checks
 
 - During each payload's delay, reviewers simulate it on a fork of its chain.

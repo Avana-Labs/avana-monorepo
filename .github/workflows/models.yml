@@ -4,8 +4,8 @@ name: models
 # formal-verification areas of audit/formal-verification/ (each area's run.sh: every Z3, enumeration and Quint model,
 # then check_ids.py where the area has one), the user simulation of audit/user-simulation/ (the reported run with
 # --extra-seeds 4, and the deployment-topology grid one seed per job) and contract_checklist.py --check for every
-# contract with a checklist in audit/traceability/results/contract-checklists/. Every push to main and every manual
-# run also runs the topology simulator checks of spec/05-verification/quint/topology_run.sh, the part that
+# contract with a checklist in audit/traceability/results/contract-checklists/. The nightly run (06:00 UTC), every
+# release tag (`v*`) and every manual run also run the topology simulator checks of spec/05-verification/quint/topology_run.sh, the part that
 # run_all.sh --nightly adds to the quick path; spec.yml runs the quick path. A simulation job also fails when a run
 # reports an invariant violation, since run_simulation.py exits 0 whenever it completes.
 # Tool versions are pinned: Python packages by spec/05-verification/requirements.txt, Quint by
@@ -26,6 +26,7 @@ on:
       - ".github/workflows/models.yml"
   push:
     branches: [main]
+    tags: ["v*"]
     paths:
       - "audit/formal-verification/**"
       - "audit/user-simulation/**"
@@ -36,6 +37,9 @@ on:
       - "contracts/test/**"
       - "contracts/certora/**"
       - ".github/workflows/models.yml"
+  schedule:
+    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -194,7 +198,7 @@ jobs:
     # The topology simulator runs of quint/topology_run.sh (1,000 traces x 25 steps per check), which
     # run_all.sh --nightly adds to the quick path.
     name: quint topology simulator (topology_run.sh)
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     defaults:
@@ -227,8 +231,8 @@ jobs:
           retention-days: 14
 
   gate:
-    # Passes only when every job above passed, or was skipped on a pull request because it runs on main only.
-    name: gate
+    # Passes only when every job above passed, or a long job was skipped outside a nightly, release or manual run.
+    name: models-gate
     if: always()
     needs: [formal-verification, user-simulation, contract-checklists, quint-topology]
     runs-on: ubuntu-24.04
@@ -238,13 +242,13 @@ jobs:
         working-directory: ${{ runner.temp }}
         env:
           RESULTS: ${{ toJSON(needs) }}
-          EVENT: ${{ github.event_name }}
+          LONG: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
           MAIN_ONLY: '["quint-topology"]'
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          bad=$(echo "$RESULTS" | jq -r --arg ev "$EVENT" --argjson main_only "$MAIN_ONLY" '
+          bad=$(echo "$RESULTS" | jq -r --argjson long "$LONG" --argjson main_only "$MAIN_ONLY" '
             [to_entries[]
              | select(.value.result != "success")
-             | select((.value.result == "skipped" and $ev == "pull_request" and (.key as $k | $main_only | any(.[]; . == $k))) | not)
+             | select((.value.result == "skipped" and ($long | not) and (.key as $k | $main_only | any(.[]; . == $k))) | not)
              | .key] | join(", ")')
           if [ -n "$bad" ]; then echo "not passed: $bad"; exit 1; fi

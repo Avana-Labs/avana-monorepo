@@ -1,12 +1,17 @@
 name: contracts
 
-# Foundry workspace in contracts/. Every pull request runs the short set: format, lint and build, the ci test profile in
-# 10 shards (invariant suites as a short check, 256 runs at depth 64; the full 10,000 runs at depth 100 on main), gas
-# snapshots, branch coverage, traceability and the fast security tier. Every push to main (and a manual run) adds the
-# long checks: the deep invariant campaign, fork tests, the FFI differential suite, Halmos, SMTChecker and Certora, one
-# target per job, each at most 4 hours: `plan` lists the invariant files, Halmos test contracts, SMTChecker contracts
-# and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. The slow security tier
-# (security-slow.yml) and the per-layer mutation gates (mutation-gate.yml) also run on every push to main.
+# Foundry workspace in contracts/. Every pull request runs the short set in about 10 minutes: format, lint and build,
+# the ci test profile in 10 shards (invariant suites as a short check, 256 runs at depth 64), gas snapshots, branch
+# coverage, traceability and the fast security tier. A pull request labelled `hotfix` (playbook P-05) also runs the
+# touched contracts' invariants at full depth, one per job. Every push to main runs the same set with the ci profile at
+# full depth (10,000 runs at depth 100) in 20 shards, each invariant of test/invariant/ a unit of its own, in about 10
+# to 15 minutes. The long checks run every night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep
+# invariant campaign, fork tests, the FFI differential suite, Halmos, SMTChecker and Certora, one target per job, each
+# at most 4 hours: `plan` lists the invariant files, Halmos test contracts, SMTChecker contracts and Certora confs with
+# script/ci-shards.py, so a new one gets its own job on the next run. The slow security tier (security-slow.yml), the
+# per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) run on the same nightly, release and
+# manual schedule. An upgrade is scheduled from a release tag, so every long check has run before the timelock delay
+# ends; a failure is a reason to cancel the operation.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -16,18 +21,26 @@ name: contracts
 
 on:
   pull_request:
+    # `labeled` and `unlabeled` rerun the checks when the `hotfix` label is added or removed.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - "contracts/**"
       - "audit/**/*.sol"
       - "spec/05-verification/trace.py"
+      - "packages/protocol/**"
       - ".github/workflows/contracts.yml"
   push:
     branches: [main]
+    tags: ["v*"]
     paths:
       - "contracts/**"
       - "audit/**/*.sol"
       - "spec/05-verification/trace.py"
+      - "packages/protocol/**"
       - ".github/workflows/contracts.yml"
+  schedule:
+    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -137,18 +150,95 @@ jobs:
           retention-days: 7
 
   test:
-    # The suite is split into 10 shards that run side by side: every test file (fork and differential excluded) is
-    # assigned by its measured run time (script/test-shard.sh, script/test-shard.py, script/test-timings.json), so
-    # the shards take about equal time and each file runs in exactly one shard. Each shard reuses the build job's
-    # compiled output instead of compiling again.
-    name: tests (ci profile, shard ${{ matrix.shard }}/10)
+    # The suite is split into shards that run side by side (10 on a pull request, 20 elsewhere): every test file
+    # (fork and differential excluded) and every invariant of test/invariant/ on its own is assigned by its measured
+    # run time (script/test-shard.sh, script/test-shard.py, script/test-timings.json), so the shards take about equal
+    # time and each unit runs in exactly one shard. Each shard reuses the build job's compiled output.
+    name: tests (ci profile, shard ${{ matrix.shard }}/${{ github.event_name == 'pull_request' && 10 || 20 }})
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        shard: ${{ fromJSON(github.event_name == 'pull_request' && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]') }}
+    env:
+      FOUNDRY_PROFILE: ci
+      SHARDS: ${{ github.event_name == 'pull_request' && 10 || 20 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: forge soldeer install
+
+      - name: Reuse the build job's compiled output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} (fuzz 10,000 runs; invariants 10,000 x 100 on main, 256 x 64 on a pull request; TEST-007)
+        # A fresh seed per run widens coverage over time; the seed is printed for reproduction. A pull request runs the
+        # invariant suites as a short check; every push to main runs them at the full ci profile, and its gate requires
+        # every shard.
+        # test/hostile/ does not exist yet: contracts/test/README.md section 6 describes the hostile suite it will hold.
+        run: |
+          SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
+          echo "fuzz seed: $SEED"
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            export FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=64
+            echo "invariant suites: 256 runs at depth 64 (pull request)"
+          fi
+          script/test-shard.sh ${{ matrix.shard }} "$SHARDS" --fuzz-seed "$SEED" -vvv
+
+  hotfix-plan:
+    # A pull request labelled `hotfix` (an emergency fix, playbook P-05) also runs the touched contracts' invariant
+    # campaigns at the full ci profile, one invariant per job, so the fix merges after about 10 minutes with the same
+    # depth main runs. The rest of the long checks run on the release tag of the upgrade, during the timelock delay.
+    name: hotfix plan
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      units: ${{ steps.plan.outputs.units }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: List the touched contracts' invariants (script/hotfix-units.py)
+        id: plan
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          units=$(git diff --name-only "$BASE"...HEAD | python3 script/hotfix-units.py)
+          echo "units=$units" | tee -a "$GITHUB_OUTPUT"
+
+  hotfix:
+    name: hotfix depth ${{ matrix.unit.file }} ${{ matrix.unit.invariant }}
+    needs: [build, hotfix-plan]
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') && needs.hotfix-plan.outputs.units != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJSON(needs.hotfix-plan.outputs.units) }}
     env:
       FOUNDRY_PROFILE: ci
     steps:
@@ -176,19 +266,11 @@ jobs:
           name: forge-out
           path: contracts
 
-      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} of 10 (fuzz 10,000 runs; invariants 10,000 x 100 on main, 256 x 64 on a pull request; TEST-007)
-        # A fresh seed per run widens coverage over time; the seed is printed for reproduction. A pull request runs the
-        # invariant suites as a short check; every push to main runs them at the full ci profile, and its gate requires
-        # every shard.
-        # test/hostile/ does not exist yet: contracts/test/README.md section 6 describes the hostile suite it will hold.
-        run: |
-          SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
-          echo "fuzz seed: $SEED"
-          if [ "${{ github.event_name }}" = pull_request ]; then
-            export FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=64
-            echo "invariant suites: 256 runs at depth 64 (pull request)"
-          fi
-          script/test-shard.sh ${{ matrix.shard }} 10 --fuzz-seed "$SEED" -vvv
+      - name: One invariant at the full ci profile (10,000 runs at depth 100)
+        env:
+          FILE: ${{ matrix.unit.file }}
+          INVARIANT: ${{ matrix.unit.invariant }}
+        run: forge test --match-path "$FILE" --match-test "^${INVARIANT}\\(" -vvv
 
   gas:
     name: gas snapshots
@@ -226,10 +308,59 @@ jobs:
           FORGE_SNAPSHOT_CHECK: "true"
         run: forge test -vvv
 
+  abis:
+    # The ABIs that packages/protocol publishes to the services and the app are generated from these builds; a contract
+    # change that alters an ABI must commit the regenerated files (`npm run generate -w packages/protocol`).
+    name: generated ABIs (packages/protocol)
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: forge soldeer install
+
+      - name: Reuse the build job's compiled output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: Build Aave V4 artifacts (the Spoke and Hub ABIs come from out-aave/)
+        run: FOUNDRY_PROFILE=aave forge build
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install the workspace's npm dependencies (viem computes ABI_HASH)
+        working-directory: .
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Committed ABIs equal the ones generated from this build
+        working-directory: .
+        run: node packages/protocol/scripts/generate-abis.mjs --check
+
   plan:
     name: plan the long jobs
-    # Long check: main and manual runs only.
-    if: github.event_name != 'pull_request'
+    # Long check: nightly, release tags and manual runs only.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -256,7 +387,7 @@ jobs:
     # at depth 400 per invariant.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
-    if: github.event_name != 'pull_request' && needs.plan.outputs.invariant != '[]'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.invariant != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     strategy:
@@ -297,8 +428,8 @@ jobs:
     name: Ethereum and Base fork tests
     # Runs when the RPC_MAINNET and RPC_BASE secrets are set; without them it passes with a warning and runs nothing.
     needs: build
-    # Long check: main and manual runs only.
-    if: github.event_name != 'pull_request'
+    # Long check: nightly, release tags and manual runs only.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -366,8 +497,8 @@ jobs:
   differential:
     name: FFI differential (LPOracle vs mpmath)
     needs: build
-    # Long check: main and manual runs only.
-    if: github.event_name != 'pull_request'
+    # Long check: nightly, release tags and manual runs only.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -409,7 +540,7 @@ jobs:
     # One job per Halmos test contract (each file of test/halmos/ holds one), every check_ function at loop 8.
     name: Halmos ${{ matrix.contract }}
     needs: [build, plan]
-    if: github.event_name != 'pull_request' && needs.plan.outputs.halmos != '[]'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.halmos != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -460,7 +591,7 @@ jobs:
     # unchanged.
     name: SMTChecker ${{ matrix.contract }}
     needs: [build, plan]
-    if: github.event_name != 'pull_request' && needs.plan.outputs.smt != '[]'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.smt != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -506,7 +637,7 @@ jobs:
     # at once.
     name: Certora ${{ matrix.conf }}
     needs: [build, plan]
-    if: github.event_name != 'pull_request' && needs.plan.outputs.certora != '[]'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -738,23 +869,27 @@ jobs:
     # passed.
     name: gate
     if: always()
-    needs: [build, plan, test, gas, invariant, fork, differential, halmos, smtchecker, certora, traceability, coverage, fast-security]
+    needs: [build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, halmos, smtchecker, certora, traceability, coverage, fast-security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require every job and shard to pass
-        # This job has no checkout, so contracts/ does not exist here. On a pull request the long checks are skipped
-        # by design; on main and in a manual run every job must succeed.
+        # This job has no checkout, so contracts/ does not exist here. The long checks run nightly, on release tags
+        # and by hand, and are skipped by design elsewhere; in those runs every job must succeed. The hotfix jobs run
+        # only on a pull request labelled `hotfix` (and `hotfix` only when a touched contract has invariants).
         working-directory: .
         env:
           RESULTS: ${{ toJSON(needs) }}
-          LONG_SKIP_OK: ${{ github.event_name == 'pull_request' }}
+          LONG_SKIP_OK: ${{ !(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) }}
+          github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix')FIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          bad=$(echo "$RESULTS" | jq -r --argjson pr "$LONG_SKIP_OK" '
+          bad=$(echo "$RESULTS" | jq -r --argjson skipok "$LONG_SKIP_OK" --argjson hotfix "$github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix')FIX" '
             ["plan","invariant","fork","differential","halmos","smtchecker","certora"] as $long
             | [to_entries[]
                | select(.value.result != "success")
-               | select(($pr and (.key as $k | $long | index($k)) and .value.result == "skipped") | not)
+               | select(($skipok and (.key as $k | $long | index($k)) and .value.result == "skipped") | not)
+               | select((.key == "hotfix" and .value.result == "skipped") | not)
+               | select(((.key == "hotfix-plan") and ($hotfix | not) and .value.result == "skipped") | not)
                | .key] | join(", ")')
           if [ -n "$bad" ]; then echo "not passed: $bad"; exit 1; fi

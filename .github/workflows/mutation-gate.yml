@@ -1,6 +1,6 @@
 name: mutation-gate
 
-# Mutation gates on every push to main (each merged pull request) over each layer's contracts
+# Mutation gates every night on main (06:00 UTC) and on every release tag (`v*`) over each layer's contracts
 # (security/mutation-layers.json). By hand (workflow_dispatch): one layer or all six. Pull requests run contracts.yml
 # only. `plan` lists the targets with script/ci-shards.py, so a new contract or test file gets its own job on the next
 # run; every target then runs in its own job of at most 4 hours:
@@ -19,13 +19,11 @@ name: mutation-gate
 # pinned certora-cli wheel.
 
 on:
+  schedule:
+    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
+    - cron: "0 6 * * *"
   push:
-    branches: [main]
-    paths:
-      - "contracts/**"
-      - "audit/**/*.sol"
-      - "spec/05-verification/trace.py"
-      - ".github/workflows/mutation-gate.yml"
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       layer:
@@ -36,7 +34,7 @@ on:
         options: [all, "2.1", "2.2", "2.3", "2.4", "2.5", "2.6"]
 
 concurrency:
-  # A newer push to main waits for the running gates instead of cancelling them.
+  # A newer run waits for the running gates instead of cancelling them.
   group: mutation-gate-${{ github.ref }}-${{ inputs.layer || 'all' }}
   cancel-in-progress: false
 
