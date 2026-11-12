@@ -15,7 +15,12 @@ Usage, from the repository root:
     spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py Lock [--out FILE] [--check]
 
 --check exits 1 when a REQ-/SPEC- ID of the page, a TEST row or a PROP row has no link from contracts/test or
-contracts/certora. It is the "every ID linked" step of the per-contract gate.
+contracts/certora. It is the "every ID linked" step of the per-contract gate. Rows owned by a contract not written
+yet (PENDING) are shown as deferred to it and are not part of another contract's --check. A contract specified in
+one section of a shared page takes that section only ("page.md#Heading"); a row of that section another contract
+decides is shown as owned by it (OWNED_ELSEWHERE) and stays on the owner's checklist. Table rows of a shared page that
+only a pending contract decides are deferred by name (DEFERRED_ROWS); rows about a deployed chain's configuration are
+shown as checked outside contracts/ (OUTSIDE_CONTRACTS), with the reason, and are not part of --check.
 """
 from __future__ import annotations
 
@@ -37,12 +42,15 @@ ATTACKS = SPEC / "04-security" / "02-attack-scenarios.md"
 CERTORA_README = ROOT / "contracts" / "certora" / "README.md"
 
 # key: (spec pages, names used for the contract in 5.1 / 4.1 / 4.2 / 5.2, CVL spec files)
+# A page written "page.md#Heading" contributes only the IDs under that "## Heading" of the page (its "###"
+# sub-sections included): a library or adapter specified in one section of a page it shares with the contract that
+# uses it. The page's main contract keeps the whole page, so every ID on it stays on at least one checklist.
 CONTRACTS: dict[str, tuple[list[str], list[str], list[str]]] = {
     "AvanaRoles": (["15-governance-and-timelock.md"], ["AvanaRoles"], []),
     "Lock": (["16-lock.md"], ["Lock"], ["Lock.spec"]),
     "AvanaTimelock": (["15-governance-and-timelock.md"], ["AvanaTimelock", "Timelock"], ["AvanaTimelock.spec"]),
-    "LPPriceMath": (["10-lp-oracle.md"], ["LPPriceMath"], []),
-    "SettlementMath": (["11-lpvaultswap.md"], ["SettlementMath"], []),
+    "LPPriceMath": (["10-lp-oracle.md#LPPriceMath"], ["LPPriceMath"], []),
+    "SettlementMath": (["11-lpvaultswap.md#Settlement math"], ["SettlementMath"], []),
     "ParameterStore": (["09-parameter-store.md"], ["ParameterStore"], ["ParameterStore.spec"]),
     "MarketRegistry": (["08-market-registry.md"], ["MarketRegistry"], ["MarketRegistry.spec"]),
     "LPOracle": (["10-lp-oracle.md"], ["LPOracle"], ["LPOracle.spec"]),
@@ -61,7 +69,9 @@ CONTRACTS: dict[str, tuple[list[str], list[str], list[str]]] = {
         ["SlipstreamIntegration", "Slipstream integration", "LPVault", "LPVaults", "AMM integrations"],
         ["SlipstreamIntegration.spec", "LPVault.spec"],
     ),
-    "AaveV3FlashSource": (["11-lpvaultswap.md"], ["AaveV3FlashSource", "IFlashSource", "flash source"], ["FlashSource.spec"]),
+    "AaveV3FlashSource": (
+        ["11-lpvaultswap.md#Flash source"], ["AaveV3FlashSource", "IFlashSource", "flash source"], ["FlashSource.spec"]
+    ),
     "PositionProxy": (["05-position-proxy-and-proxy-manager.md"], ["PositionProxy"], ["PositionProxy.spec"]),
     "ProxyManager": (
         ["05-position-proxy-and-proxy-manager.md"], ["ProxyManager"], ["ProxyManager.spec", "ProxyManagerIsolation.spec"]
@@ -87,17 +97,167 @@ CROSS = re.compile(r"(?i)\b(?:all (?:avana )?contracts|every (?:avana )?contract
 ID_IN_TEXT = re.compile(rf"\b({tr.REQ_ID})\b")
 PAGE_REQ = re.compile(r"^(?:REQ|SPEC)-")
 
+# Contracts whose code has not landed in contracts/src yet. A row that only they can satisfy is shown as deferred
+# to them and left out of --check for every other contract: a TEST row whose "Contract / flow" column names one
+# of them (the test drives that contract), and a page REQ/SPEC row in which every contract named by its deciding
+# part is one of them (see deferred_to). Such a row returns to scope when the contract lands; --check fails once
+# a listed contract has a `contract <Name>` definition in contracts/src, so this tuple cannot go stale.
+PENDING = ("AaveAdapter", "LPVaultSwap", "Lens")
+MODAL = re.compile(r"\b(?:MUST|MAY|SHALL)\b")
+
+# Rows inside a "page.md#Heading" section that the section's library or adapter does not decide: ID -> (the contract
+# whose checklist keeps the row, the reason). Shown as owned there and left out of every other contract's --check;
+# --check fails if the owner's own pages do not define the row, so no row drops off every checklist.
+OWNED_ELSEWHERE: dict[str, tuple[str, str]] = {
+    "SPEC-LIQ-006": ("LPVaultSwap", "R is LPVaultSwap's balance delta around the burn, the release and the route "
+                     "calls; SettlementMath takes R as an input"),
+    "SPEC-LIQ-012": ("LPVaultSwap", "which prices value the released tokens (LPOracle's leg prices, never pool spot) "
+                     "is LPVaultSwap's read; SettlementMath values the prices it is given"),
+    "SPEC-LIQ-013": ("LPVaultSwap", "the NoRouteAvailable revert when both routes of a token are unusable is "
+                     "LPVaultSwap's route loop"),
+    "SPEC-LIQ-021": ("LPVaultSwap", "the drain-time bound is a listing check (listCollateralMarket, marketUsdCap "
+                     "raises) and the spec-stage throughput model; no SettlementMath function computes it"),
+    "REQ-FLASH-008": ("LPVaultSwap", "drawCap sizing at enableDebtReserve and its monitoring alert are listing-payload "
+                      "and operations rules; AaveV3FlashSource only reports maxFlashLoan"),
+}
+
+# Rows of a shared page (a role table, a restricted-function matrix, or a list item that names written contracts only
+# as context) whose rule only a PENDING contract can satisfy, which deferred_to cannot see because it never reads
+# those tables: ID -> (the pending contracts, comma-separated, and the reason). Deferred exactly like deferred_to's
+# rows, on every checklist that lists the page; --check fails on an entry naming a contract that is not pending, so
+# each row returns to scope when its contract lands and the entry cannot go stale.
+DEFERRED_ROWS: dict[str, tuple[str, str]] = {
+    "REQ-ACCESS-011": ("LPVaultSwap", "the committed-operator registry (addKeeper, removeKeeper, activeKeeperCount) "
+                       "is LPVaultSwap's keeper list"),
+    "REQ-ACCESS-052": ("LPVaultSwap", "liquidate and settlePending and their frozen-caller check are LPVaultSwap "
+                       "entry points"),
+    "REQ-ACCESS-139": ("LPVaultSwap", "the absence of a second liquidation selector is a property of LPVaultSwap"),
+    "REQ-ACCESS-053": ("LPVaultSwap", "addKeeper's role guard and its frozen-address and MAX_KEEPERS reverts; the "
+                       "timelock half (normal delay, DAO-only cancel) is tested in AvanaTimelock.Matrix"),
+    "REQ-ACCESS-054": ("LPVaultSwap", "removeKeeper's role guard and KeeperFloor revert; the timelock half (short "
+                       "delay, any canceller) is tested in AvanaTimelock.Matrix"),
+    "REQ-ACCESS-092": ("LPVaultSwap", "what a registered operator can do is LPVaultSwap.liquidate's caller rule"),
+    "REQ-ACCESS-100": ("LPVaultSwap", "activeKeeperCount() >= keeperFloor after every removal is LPVaultSwap's check"),
+    "SPEC-GOV-008": ("LPVaultSwap", "the keeper-floor arithmetic of removeKeeper and addKeeper"),
+    "REQ-ACCESS-121": ("LPVaultSwap", "the KeeperFloor revert of removeKeeper"),
+    "REQ-ACCESS-178": ("LPVaultSwap", "how a liquidation is funded is LPVaultSwap.liquidate's rule"),
+    "REQ-ACCESS-068": ("AaveAdapter, LPVaultSwap", "repay, fee collection, debt-free exits, zero-credit release, "
+                       "liquidation, settlePending and burnSeized are AaveAdapter and LPVaultSwap entry points"),
+    "REQ-ACCESS-069": ("AaveAdapter", "the pause, freeze and RiskModule gating of pledge, recredit, borrow and the "
+                       "with-debt exits is done by the AaveAdapter"),
+    "REQ-ACCESS-072": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
+    "REQ-ACCESS-073": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
+    "REQ-ACCESS-074": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
+    "REQ-ACCESS-164": ("AaveAdapter", "what each pause state allows is read and enforced by the AaveAdapter"),
+    "REQ-ACCESS-079": ("AaveAdapter", "the pledge stops that replace the pledge pause are the AaveAdapter's reads"),
+    "REQ-ACCESS-080": ("AaveAdapter", "the borrow stops that replace the borrow pause are the AaveAdapter's reads"),
+}
+
+# Rows that state a property of a deployed chain (release manifest, Safe owners and thresholds, Aave-side roles) or
+# of a contract that does not exist, which no test under contracts/ can check: ID -> reason. Listed as checked
+# outside contracts/ and left out of --check; the deployment checks (TEST-135, TEST-214, TEST-224) and the
+# live-config check own them.
+OUTSIDE_CONTRACTS: dict[str, str] = {
+    "REQ-ACCESS-023": "the live-config check reads hasRole for every release-manifest pair on a deployed chain",
+    "REQ-ACCESS-070": "the Aave Protocol Guardian's permissions on the Aave SpokeConfigurator are Aave's AccessManager",
+    "REQ-ACCESS-071": "who holds SPOKE_USER_POSITION_UPDATER_ROLE and Aave-side authority is Aave's configuration",
+    "REQ-ACCESS-102": "Safe owners and threshold of each chain's governance multisig (getOwners, getThreshold)",
+    "REQ-ACCESS-103": "Safe owners and threshold of each chain's Emergency Guardian",
+    "REQ-ACCESS-104": "pairwise-disjoint signer sets of the four Safes of each chain",
+    "REQ-ACCESS-173": "one AvanaTimelock, governance Safe and Emergency Guardian per chain, set by deployment",
+    "REQ-ACCESS-115": "names the fork tests on the deployed configuration (TEST-067, TEST-214, TEST-224)",
+    "REQ-ACCESS-058": "no SettlementBudget contract exists, so there is no selector signature to test; the deployed "
+                      "selector inventory of REQ-ACCESS-025 fails on any unlisted selector",
+    "REQ-ACCESS-059": "no SettlementBudget contract exists, so there is no withdraw selector to test; the deployed "
+                      "selector inventory of REQ-ACCESS-025 fails on any unlisted selector",
+    "TEST-129": "quarterly guardian rehearsal with the real Safe payloads on a fork of the deployed chain",
+    "TEST-214": "role snapshot against the release manifest and the deployed Safes",
+}
+
+
+CONTRACT_IDENT = re.compile(r"^[A-Z][A-Za-z0-9]*$")
+
+
+def named_contracts(text: str) -> set[str]:
+    """Contracts the text names by an identifier (`AaveAdapter`, `LPVault`, `Collateralization`); the generic aliases
+    of CONTRACTS ("vault token", "routes", "flash source") are ordinary nouns in prose and name no contract here."""
+    return {k for k, (_, names, _) in CONTRACTS.items()
+            if any(CONTRACT_IDENT.match(n) for n in names)
+            and word_re([n for n in names if CONTRACT_IDENT.match(n)]).search(text)}
+
+
+def deferred_to(text: str, key: str) -> str:
+    """The pending contracts a row is deferred to, or "" when the row stays in scope for `key`.
+
+    The deciding part is the subject before the first MUST/MAY/SHALL of a list item or heading (the whole item when
+    that names no contract), and the behaviour column of a failure table row. A row is deferred only when that part
+    names at least one contract and every contract it names is pending and is not `key`."""
+    found = named_contracts(text)
+    if not found or any(k not in PENDING or k == key for k in found):
+        return ""
+    return ", ".join(sorted(found))
+
+
+def implemented_pending() -> list[str]:
+    srcs = [p.read_text(errors="ignore") for p in (ROOT / "contracts" / "src").rglob("*.sol")]
+    return [k for k in PENDING if any(re.search(rf"^\s*(?:abstract\s+)?contract\s+{k}\b", s, re.M) for s in srcs)]
+
+
+def deferred_page_rows(pages: list[str], key: str) -> dict[str, str]:
+    """REQ-/SPEC- ID -> pending contracts, for page rows deferred under deferred_to. Tables other than the failure
+    tables (`| ID | Condition | Behavior ...`) are never deferred: their rows name contracts in lists and scopes."""
+    out: dict[str, str] = {}
+    for entry in pages:
+        header = ""
+        for line in (CONTRACT_PAGES / entry.partition("#")[0]).read_text().splitlines():
+            if line.startswith("| ID |"):
+                header = line
+            m = tr.DEF_LINE.match(line)
+            if not m or not PAGE_REQ.match(m.group(1)) or m.group(1) in out:
+                continue
+            if line.lstrip().startswith("|"):
+                if not re.match(r"^\| ID \| Condition \|", header):
+                    continue
+                part = line.strip().strip("|").split("|")[-1]
+            else:
+                modal = MODAL.search(line)
+                part = line[:modal.start()] if modal and named_contracts(line[:modal.start()]) else line
+            owner = deferred_to(part, key)
+            if owner:
+                out[m.group(1)] = owner
+    return out
+
+
+def deferred_test_rows(key: str) -> dict[str, str]:
+    """TEST ID -> pending contracts named in its "Contract / flow" column (other than `key`)."""
+    out = {}
+    for cols in table_rows(TESTS, "TEST"):
+        if len(cols) >= 4:
+            later = sorted(k for k in named_contracts(cols[3]) if k in PENDING and k != key)
+            if later:
+                out[cols[0].strip("`")] = ", ".join(later)
+    return out
+
 
 def word_re(names: list[str]) -> re.Pattern:
     return re.compile(r"(?<![A-Za-z0-9])(?:" + "|".join(re.escape(n) for n in names) + r")(?![A-Za-z0-9])")
 
 
 def page_ids(pages: list[str]) -> tuple[list[tuple[str, str, str]], set[str]]:
-    """REQ-/SPEC- IDs defined on the pages, and every INV- cited on them."""
+    """REQ-/SPEC- IDs defined on the pages (or on the named "## " section of a "page.md#Heading" entry), and every
+    INV- cited there."""
     defined, cited_inv = [], set()
-    for page in pages:
+    for entry in pages:
+        page, _, section = entry.partition("#")
         path = CONTRACT_PAGES / page
+        if section and not any(h.strip().strip("`") == section for h in re.findall(r"(?m)^## (.*)$", path.read_text())):
+            raise SystemExit(f"{entry}: no '## {section}' heading on {page}")
+        current = ""
         for n, line in enumerate(path.read_text().splitlines(), 1):
+            if line.startswith("## "):
+                current = line[3:].strip().strip("`")
+            if section and current != section:
+                continue
             m = tr.DEF_LINE.match(line)
             if m and PAGE_REQ.match(m.group(1)):
                 defined.append((m.group(1), tr.norm(m.group(2))[:110], f"{page}:{n}"))
@@ -208,17 +368,35 @@ def main() -> int:
     tests, props = tests_for(rx), props_for(rx, cvl)
     invs, attacks = invs_for(rx, cited), attacks_for(rx)
     links, done = linked_ids(), implemented_tests()
+    req_later, test_later = deferred_page_rows(pages, args.contract), deferred_test_rows(args.contract)
+    req_ids = {r for r, _, _ in reqs}
+    req_later.update({r: owner for r, (owner, _) in DEFERRED_ROWS.items() if r in req_ids and r not in req_later})
+    stale = sorted(r for r, (owner, _) in DEFERRED_ROWS.items()
+                   if any(k not in PENDING for k in owner.split(", ")))
+    outside = {i: why for i, why in OUTSIDE_CONTRACTS.items()
+               if i in req_ids or i in {t for t, _, _ in tests}}
+    owned = {r: OWNED_ELSEWHERE[r] for r, _, _ in reqs if OWNED_ELSEWHERE.get(r, (args.contract,))[0] != args.contract}
+    orphaned = [r for r, (owner, _) in owned.items() if r not in {i for i, _, _ in page_ids(CONTRACTS[owner][0])[0]}]
 
     def box(ok: bool) -> str:
         return "[x]" if ok else "[ ]"
+
+    def later(rid: str, deferred: dict[str, str], ok: bool) -> str:
+        return f" — deferred to {deferred[rid]} (not written yet)" if rid in deferred and not ok else ""
+
+    def offchain(rid: str, ok: bool) -> str:
+        return f" — checked outside contracts/: {outside[rid]}" if rid in outside and not ok else ""
 
     lines = [f"# Checklist: {args.contract}", "",
              f"Spec pages: {', '.join(pages)}. CVL specs: {', '.join(cvl) or 'none'}.", "",
              f"## REQ / SPEC on the page ({len(reqs)})", ""]
     lines += [f"- {box(r in links)} `{r}` ({where}) {text}" + (f" — {', '.join(links[r])}" if r in links else "")
+              + later(r, req_later, r in links) + offchain(r, r in links)
+              + (f" — owned by {owned[r][0]}: {owned[r][1]}" if r in owned and r not in links else "")
               for r, text, where in reqs]
     lines += ["", f"## TEST rows ({len(tests)})", ""]
-    lines += [f"- {box(t in done)} `{t}` [{kind}] {text}" for t, kind, text in tests]
+    lines += [f"- {box(t in done)} `{t}` [{kind}] {text}" + later(t, test_later, t in done) + offchain(t, t in done)
+              for t, kind, text in tests]
     cross = cross_tests()
     lines += ["", f"## Cross-cutting TEST rows, every contract ({len(cross)})", ""]
     lines += [f"- {box(t in done)} `{t}` [{kind}] {text}" for t, kind, text in cross]
@@ -234,8 +412,20 @@ def main() -> int:
     else:
         sys.stdout.write(text)
 
-    missing = ([r for r, _, _ in reqs if r not in links] + [t for t, _, _ in tests if t not in done]
+    missing = ([r for r, _, _ in reqs if r not in links and r not in req_later and r not in owned and r not in outside]
+               + [t for t, _, _ in tests if t not in done and t not in test_later and t not in outside]
                + [p for p, _, _ in props if p not in done])
+    if args.check and stale:
+        print(f"DEFERRED_ROWS names a contract that is not in PENDING for: {', '.join(stale)}", file=sys.stderr)
+        return 1
+    landed = implemented_pending()
+    if args.check and landed:
+        print(f"PENDING lists contracts that now have code in contracts/src: {', '.join(landed)}; remove them",
+              file=sys.stderr)
+        return 1
+    if args.check and orphaned:
+        print(f"OWNED_ELSEWHERE names an owner whose pages do not define: {', '.join(orphaned)}", file=sys.stderr)
+        return 1
     if args.check and missing:
         print(f"{len(missing)} IDs without a link from contracts/: {', '.join(missing[:20])}"
               + (" …" if len(missing) > 20 else ""), file=sys.stderr)
