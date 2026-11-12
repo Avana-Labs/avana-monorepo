@@ -13759,9 +13759,12 @@
     ]
   },
   "REQ-CONFIG-025": {
-    "hash": "fde0dee113b95d72",
+    "hash": "60473fbe779a30f9",
     "checks": [
       "IMarketRegistryListing",
+      "MarketRegistryListingLogic",
+      "TEST-054",
+      "TEST-250",
       "TokenDef"
     ]
   },
