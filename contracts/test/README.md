@@ -152,6 +152,8 @@ PositionProxies are not deployed by the fixture: the AaveAdapter has the ProxyMa
 | `ReentryHandler` | swaps a market leg or a route venue to a hook-calling token or `ReentrantPool` that re-enters every Avana entry point at every external call site | safety |
 | `LivenessHandler` | runs any of the actions above inside `try`/`catch` to move state, then probes repay, fee collection, debt-free withdrawal and exact-size liquidation from a `vm.snapshotState()`; when Aave's own preconditions hold, a failed probe reverts the handler call | liveness |
 | `HostileUpgradeHandler` (hostile suite) | upgrades the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap to `hostile/impl/` contracts through the AvanaTimelock (schedule, `vm.warp` past the 5-day normal delay, execute); drives their attack calls (debit of another proxy, NFT release, seize-and-keep, mispriced gates, a pause switch that reports Paused); restores the reviewed LPVaultSwap the same way. The AaveAdapter stays reviewed in this suite and the ProxyManager is immutable; the hostile Adapter runs in `TEST-130` and `TEST-210` | safety |
+| `LPVaultSwapHandler` | LPVaultSwap alone on the local Aave V4: `liquidate` by registered and unregistered callers in both route modes with shortfall budgets, pause-state, price and route moves, donations, direct `liquidationCall` by an attacker, `settlePending`; ghosts for conservation, floors, `INV-076` and named refusals | safety |
+| `LPVaultSwapKeeperHandler` | the committed-operator registry on the real LPVaultSwap: timelock `addKeeper` and `removeKeeper` of 40 candidates against a spec model of every outcome, MarketRegistry freezes, outsider calls | safety |
 
 Safety handlers bound inputs but may hit reverting paths; the suites keep `fail_on_revert = false` (`TEST-007`) and assert through ghost variables. The liveness suite (`Liveness.invariant.t.sol`) targets only `LivenessHandler` and sets `fail-on-revert` on through inline config on each invariant function, so any failed probe fails the run:
 
@@ -197,6 +199,8 @@ Inputs are bounded with `bound()` rather than `vm.assume`: liquidity 1 to 10^30 
 | `Governance.invariant.t.sol` | Governance, Guardian, Time, Borrower, Keeper, Reentry | `TEST-101`, `TEST-108` |
 | `PauseState.invariant.t.sol` | Guardian, Borrower, Payer, Keeper, AnyCaller, Oracle, Time | `TEST-193` |
 | `Accounts.invariant.t.sol` | Borrower, Payer, Keeper, Attacker, Governance (Adapter upgrade), Oracle, Time | `TEST-211` |
+| `LPVaultSwap.invariant.t.sol` | LPVaultSwap (liquidations, pause moves, prices, routes, donations, attacker, pending) | `TEST-090`, `TEST-092`, `TEST-093`, `TEST-098`, `TEST-100`, `TEST-104`, `TEST-193`, `TEST-215`, `TEST-216` |
+| `LPVaultSwap.Keepers.invariant.t.sol` | LPVaultSwapKeeper (registry, freezes, outsiders) | `TEST-062`, `TEST-098` |
 | `Timelock.invariant.t.sol` | Governance, Guardian, Time | `TEST-212` |
 | `Liveness.invariant.t.sol` | Liveness | `TEST-099`, `TEST-100` |
 | `Reconcile.invariant.t.sol` | Borrower, Keeper, HostileUpgrade (seize-and-keep LPVaultSwap, then the reviewed one restored), Oracle, Time | `TEST-153` |

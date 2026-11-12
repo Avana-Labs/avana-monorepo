@@ -8,7 +8,7 @@
       {"src": "src/oracle/lp-oracle", "files": ["LPPriceMath"], "tests": "test/{unit,fuzz}/LPPriceMath.*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz}/LPOracle.*"},
       {"src": "src/oracle/debt-oracle", "tests": "test/{unit,fuzz,integration}/DebtOracle.*"},
-      {"src": "src/liquidation/lp-vault-swap", "tests": "test/{unit,fuzz}/SettlementMath*"},
+      {"src": "src/liquidation/lp-vault-swap", "tests": "test/{unit,fuzz,integration}/{SettlementMath,LPVaultSwap}*"},
       {"src": "src/policy/parameter-store", "tests": "test/unit/ParameterStore*"},
       {"src": "src/policy/market-registry", "tests": "test/unit/MarketRegistry*"},
       {"src": "src/vault-token/vault-token", "tests": "test/{unit,integration}/VaultToken.*"},

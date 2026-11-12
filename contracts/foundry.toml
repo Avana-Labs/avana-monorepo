@@ -60,6 +60,9 @@ additional_compiler_profiles = [
 # runs and 24.5 KB at 200 runs, too close to EIP-170; the IR pipeline at 200 runs brings it to about 23.3 KB. The
 # restriction covers its abstract parts (DebtOracleStorage, Reads, Evaluation, Recovery) too, so they are compiled
 # only with the contract that uses them. certora/conf/DebtOracle.conf compiles with the same two settings.
+# LPVaultSwap is its implementation (roles, the committed-operator registry, views and dispatch, at the default runs)
+# plus three logic contracts (liquidate, settlePending, deleverage with its flash callback), each carrying the shared
+# settlement steps; at 10,000 runs the liquidation and deleverage logic exceed EIP-170, at 200 runs they fit with margin.
 compilation_restrictions = [
   { paths = "src/custody/collateralization/Collateralization.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true, optimizer_runs = 200 },
@@ -67,6 +70,7 @@ compilation_restrictions = [
   { paths = "test/invariant/echidna/LPOracleProperties.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 1_000 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 1_000 },
+  { paths = "src/liquidation/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
 ]
 
 [profile.default.fuzz]
@@ -220,9 +224,9 @@ show_unproved = true
 show_unsupported = true
 # PROP-043: the immutable contracts (LPVault, Collateralization, vault token, VaultTokenFactory, ProxyManager,
 # PositionProxy, Lock, PayoutEscrow, the Coverage Spoke, the AvanaTimelock extension), plus the MarketRegistry, which holds the pause
-# state. PROP-044: LPOracle, DebtOracle, LPVaultSwap, the RiskModule, the ParameterStore and one contract per swap
-# route type (PegModule, DexPath, WrapperThenDex).
-contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integration"], "src/custody/collateralization/Collateralization.sol" = ["Collateralization"], "src/vault-token/vault-token/VaultToken.sol" = ["VaultToken"], "src/vault-token/vault-token-factory/VaultTokenFactory.sol" = ["VaultTokenFactory"], "src/proxy/proxy-manager/ProxyManager.sol" = ["ProxyManager"], "src/proxy/position-proxy/PositionProxy.sol" = ["PositionProxy"], "src/lock/lock/Lock.sol" = ["Lock"], "src/governance/timelock/AvanaTimelock.sol" = ["AvanaTimelock"], "src/liquidation/payout-escrow/PayoutEscrow.sol" = ["PayoutEscrow"], "src/coverage/coverage-spoke/CoverageSpoke.sol" = ["CoverageSpoke"], "src/policy/market-registry/MarketRegistry.sol" = ["MarketRegistry"], "src/policy/parameter-store/ParameterStore.sol" = ["ParameterStore"], "src/policy/risk-module/RiskModule.sol" = ["RiskModule"], "src/oracle/lp-oracle/LPOracle.sol" = ["LPOracle"], "src/oracle/debt-oracle/DebtOracle.sol" = ["DebtOracle"], "src/liquidation/lp-vault-swap/LPVaultSwap.sol" = ["LPVaultSwap"], "src/liquidation/settlement-routes/PegModuleRoute.sol" = ["PegModuleRoute"], "src/liquidation/settlement-routes/DexPathRoute.sol" = ["DexPathRoute"], "src/liquidation/settlement-routes/WrapperThenDexRoute.sol" = ["WrapperThenDexRoute"] }
+# state. PROP-044: LPOracle, DebtOracle, LPVaultSwap (its implementation and three logic contracts), the RiskModule,
+# the ParameterStore and one contract per swap route type (PegModule, DexPath, WrapperThenDex).
+contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integration"], "src/custody/collateralization/Collateralization.sol" = ["Collateralization"], "src/vault-token/vault-token/VaultToken.sol" = ["VaultToken"], "src/vault-token/vault-token-factory/VaultTokenFactory.sol" = ["VaultTokenFactory"], "src/proxy/proxy-manager/ProxyManager.sol" = ["ProxyManager"], "src/proxy/position-proxy/PositionProxy.sol" = ["PositionProxy"], "src/lock/lock/Lock.sol" = ["Lock"], "src/governance/timelock/AvanaTimelock.sol" = ["AvanaTimelock"], "src/liquidation/payout-escrow/PayoutEscrow.sol" = ["PayoutEscrow"], "src/coverage/coverage-spoke/CoverageSpoke.sol" = ["CoverageSpoke"], "src/policy/market-registry/MarketRegistry.sol" = ["MarketRegistry"], "src/policy/parameter-store/ParameterStore.sol" = ["ParameterStore"], "src/policy/risk-module/RiskModule.sol" = ["RiskModule"], "src/oracle/lp-oracle/LPOracle.sol" = ["LPOracle"], "src/oracle/debt-oracle/DebtOracle.sol" = ["DebtOracle"], "src/liquidation/lp-vault-swap/LPVaultSwap.sol" = ["LPVaultSwap"], "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol" = ["LPVaultSwapLiquidationLogic"], "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol" = ["LPVaultSwapPendingLogic"], "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol" = ["LPVaultSwapDeleverageLogic"], "src/liquidation/settlement-routes/PegModuleRoute.sol" = ["PegModuleRoute"], "src/liquidation/settlement-routes/DexPathRoute.sol" = ["DexPathRoute"], "src/liquidation/settlement-routes/WrapperThenDexRoute.sol" = ["WrapperThenDexRoute"] }
 
 [profile.coverage]
 # Coverage builds without the optimizer and without via-IR so source maps stay exact. Fork,

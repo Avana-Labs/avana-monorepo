@@ -11,10 +11,11 @@ import {Test} from "forge-std/Test.sol";
 /// @title SettlementMathHalmosTest
 /// @notice Symbolic checks of the settlement arithmetic for every input inside the bounds of 5.2: the waterfall
 /// identity and its split (PROP-015), the effective slippage inequality (PROP-017), the rounding of the recovery floor
-/// (PROP-018) and the floor covering the debt plus its flash premium, its rounding terms (PROP-048), the caller's
+/// (PROP-018) and the floor covering the debt, its rounding terms (PROP-048), the caller's
 /// top-up closing the floor and the settlement gap (PROP-019, restated arithmetic of CVL `callerTopUpClosesTheGap`),
 /// a call within its `maxShortfall` always settling (PROP-015), the leg slippage, unit and pending values, and the
-/// Avana fee (PROP-069). Every amount is in base units of the repaid debt asset.
+/// Avana fee (PROP-069). Every amount is in base units of the repaid debt asset; no liquidation term carries a flash
+/// principal, premium or transfer fee (Q-404).
 /// @dev Functions are called directly as internal library code, except where a check reads a revert: those go through
 /// `SettlementMathHarness` with a low-level call.
 contract SettlementMathHalmosTest is Test {
@@ -27,13 +28,10 @@ contract SettlementMathHalmosTest is Test {
     }
 
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-022, INV-035, INV-036, Q-097, Q-127, Q-256, Q-337, Q-397
-    /// @notice With inputs below 2^128, `φD ≤ φ`, `avanaFeeShareBps ≤ 10⁴` and a completed call (`keeperOut ≥ 0`):
-    /// `K + F + R + shortfall == D + (F + φ) + A + B + keeperOut`, `A ≤ S`, `A + kr + B == S`, `B == max(0, S − G)`;
-    /// and `keeperPayout` reverts with `InsufficientProceeds` exactly when `keeperOut` would be negative.
+    /// @notice With inputs below 2^128, `avanaFeeShareBps ≤ 10⁴` and a completed call (`keeperOut ≥ 0`):
+    /// `Kf + R + shortfall == D + A + B + keeperOut`, `A ≤ S`, `A + kr + B == S`, `B == max(0, S − G)`; and
+    /// `keeperPayout` reverts with `InsufficientProceeds` exactly when `keeperOut` would be negative.
     function check_PROP_015_settlementIdentity(
-        uint256 flash,
-        uint256 phi,
-        uint256 phiD,
         uint256 callerFunds,
         uint256 recovered,
         uint256 shortfall,
@@ -41,35 +39,33 @@ contract SettlementMathHalmosTest is Test {
         uint256 value,
         uint256 share
     ) public {
-        vm.assume(flash < 2 ** 128 && phi < 2 ** 128 && callerFunds < 2 ** 128 && recovered < 2 ** 128);
+        vm.assume(callerFunds < 2 ** 128 && recovered < 2 ** 128);
         vm.assume(shortfall < 2 ** 128 && debt < 2 ** 128 && value < 2 ** 128);
-        vm.assume(phiD <= phi && share <= BPS);
-        SettlementMath.Payouts memory p = SettlementMath.payouts(value, debt, phiD, recovered + shortfall, share);
+        vm.assume(share <= BPS);
+        SettlementMath.Payouts memory p = SettlementMath.payouts(value, debt, recovered + shortfall, share);
         assert(p.avanaFee <= p.surplus);
         assert(p.avanaFee + p.keeperReward + p.borrowerSurplus == p.surplus);
         assert(p.borrowerSurplus == (p.surplus > p.oracleGain ? p.surplus - p.oracleGain : 0));
-        _checkIdentity(Flows(callerFunds, flash, recovered, shortfall, debt, flash + phi), p);
+        _checkIdentity(Flows(callerFunds, recovered, shortfall, debt), p);
     }
 
-    /// @dev The debt-asset flows of one call: `K`, `F`, `R`, `shortfall`, `D` and the flash repayment `F + φ`.
+    /// @dev The debt-asset flows of one call: `Kf`, `R`, `shortfall` and `D`.
     struct Flows {
         uint256 callerFunds;
-        uint256 flash;
         uint256 recovered;
         uint256 shortfall;
         uint256 debt;
-        uint256 flashRepaid;
     }
 
     function _checkIdentity(
         Flows memory c,
         SettlementMath.Payouts memory p
     ) internal {
-        uint256 inflow = c.callerFunds + c.flash + c.recovered + c.shortfall;
-        uint256 outflow = c.debt + c.flashRepaid + p.avanaFee + p.borrowerSurplus;
+        uint256 inflow = c.callerFunds + c.recovered + c.shortfall;
+        uint256 outflow = c.debt + p.avanaFee + p.borrowerSurplus;
         bytes memory data = abi.encodeCall(
             SettlementMathHarness.keeperPayout,
-            (c.callerFunds, c.flash, c.recovered + c.shortfall, c.debt, c.flashRepaid, p.avanaFee, p.borrowerSurplus)
+            (c.callerFunds, c.recovered + c.shortfall, c.debt, p.avanaFee, p.borrowerSurplus)
         );
         (bool ok, bytes memory ret) = address(h).call(data);
         if (inflow >= outflow) {
@@ -81,35 +77,31 @@ contract SettlementMathHalmosTest is Test {
     }
 
     // PROP-015 verifies: SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-022, INV-035, INV-036, Q-256
-    /// @notice The 2.11 example in USDC base units: `D = F = 1,950`, `φ = φD = 0.975`, `V = 2,047.5`, `R = 2,040.3`,
-    /// `K = 0` give `S = 89.325`, `G = 96.525`, `A = 19.305`, `kr = keeperOut = 70.02`, `B = 0`.
+    /// @notice The 2.11 example in USDC base units: `Kf = D = 1,950`, `V = 2,047.5`, `R = 2,040.3` give `S = 90.3`,
+    /// `G = 97.5`, `A = 19.5`, `kr = 70.8`, `B = 0` and `keeperOut = Kf + kr = 2,020.8`.
     function check_PROP_015_waterfallExample() public pure {
-        SettlementMath.Payouts memory p =
-            SettlementMath.payouts(2_047_500_000, 1_950_000_000, 975_000, 2_040_300_000, 2000);
-        assert(p.surplus == 89_325_000 && p.oracleGain == 96_525_000 && p.avanaFee == 19_305_000);
-        assert(p.keeperReward == 70_020_000 && p.borrowerSurplus == 0);
-        uint256 out =
-            SettlementMath.keeperPayout(0, 1_950_000_000, 2_040_300_000, 1_950_000_000, 1_950_975_000, p.avanaFee, 0);
-        assert(out == 70_020_000);
+        SettlementMath.Payouts memory p = SettlementMath.payouts(2_047_500_000, 1_950_000_000, 2_040_300_000, 2000);
+        assert(p.surplus == 90_300_000 && p.oracleGain == 97_500_000 && p.avanaFee == 19_500_000);
+        assert(p.keeperReward == 70_800_000 && p.borrowerSurplus == 0);
+        uint256 out = SettlementMath.keeperPayout(1_950_000_000, 2_040_300_000, 1_950_000_000, p.avanaFee, 0);
+        assert(out == 2_020_800_000);
     }
 
-    // PROP-017 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003, INV-034, Q-159, Q-190, Q-235
-    /// @notice For `b ∈ [10⁴, 2·10⁴]`, costs `f ≤ 100` and any allowance ≤ 10⁴: `s ≤ allowance`; if `b ≥ 10⁴ + f`
-    /// then `b × (10⁴ − s) ≥ 10⁴ × (10⁴ + f)`; if `b > 10⁴ + f` the cap equals `10⁴ − ⌈10⁴ × (10⁴ + f) / b⌉`; at
-    /// `lf = 0` the net bonus is `b`.
-    function check_PROP_017_effectiveSlippageCoversCosts(
+    // PROP-017 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003, INV-034, Q-159, Q-190, Q-235, Q-404
+    /// @notice For `b ∈ [10⁴, 2·10⁴]` and any allowance ≤ 10⁴: `s ≤ allowance`; `b × (10⁴ − s) ≥ 10⁸`; if `b > 10⁴`
+    /// the cap equals `10⁴ − ⌈10⁸ / b⌉`, else `s = 0`; at `lf = 0` the net bonus is `b`. A liquidation has no cost term.
+    function check_PROP_017_effectiveSlippageCoversDebt(
         uint256 b,
-        uint256 f,
         uint256 allowance
     ) public pure {
-        vm.assume(b >= BPS && b <= 2 * BPS && f <= 100 && allowance <= BPS);
+        vm.assume(b >= BPS && b <= 2 * BPS && allowance <= BPS);
         assert(SettlementMath.netBonus(b, 0) == b);
-        uint256 s = SettlementMath.effectiveSlippage(b, f, allowance);
+        uint256 s = SettlementMath.effectiveSlippage(b, allowance);
         assert(s <= allowance);
-        if (b >= BPS + f) assert(b * (BPS - s) >= BPS * (BPS + f));
-        if (b > BPS + f) {
-            uint256 cap = SettlementMath.effectiveSlippage(b, f, BPS);
-            assert(cap == BPS - (BPS * (BPS + f) + b - 1) / b);
+        assert(b * (BPS - s) >= BPS * BPS);
+        if (b > BPS) {
+            uint256 cap = SettlementMath.effectiveSlippage(b, BPS);
+            assert(cap == BPS - (BPS * BPS + b - 1) / b);
         } else {
             assert(s == 0);
         }
@@ -151,24 +143,22 @@ contract SettlementMathHalmosTest is Test {
     }
 
     // PROP-019 verifies: SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-029, INV-034, INV-038, Q-190, Q-397
-    /// @notice The caller's top-up: the gap is `max(0, D + φ + τ + A + B − Kr − R)`; `shortfallTopUp` reverts with
+    /// @notice The caller's top-up: the gap is `max(0, D + A + B − Kf − R)`; `shortfallTopUp` reverts with
     /// `RecoveryBelowFloor` iff `minRec − R > maxShortfall`, else with `InsufficientProceeds` iff `g > maxShortfall`,
     /// and otherwise returns `max(0, minRec − R, g) ≤ maxShortfall` with `R + shortfall ≥ minRec` and
-    /// `Kr + R + shortfall ≥ D + φ + τ + A + B`: no Avana funds close a settlement.
+    /// `Kf + R + shortfall ≥ D + A + B`: no Avana funds close a settlement.
     function check_PROP_019_callerTopUpClosesGap(
         uint256 minRec,
         uint256 recovered,
         uint256 debt,
-        uint256 phi,
-        uint256 tau,
         uint256 due,
         uint256 callerFunds,
         uint256 maxShortfall
     ) public {
-        vm.assume(minRec < 2 ** 128 && recovered < 2 ** 128 && debt < 2 ** 128 && phi < 2 ** 128);
-        vm.assume(tau < 2 ** 128 && due < 2 ** 128 && callerFunds < 2 ** 128 && maxShortfall < 2 ** 130);
-        uint256 owed = debt + phi + tau + due;
-        uint256 gap = SettlementMath.roundingGap(debt, phi, tau, due, 0, callerFunds, recovered);
+        vm.assume(minRec < 2 ** 128 && recovered < 2 ** 128 && debt < 2 ** 128);
+        vm.assume(due < 2 ** 128 && callerFunds < 2 ** 128 && maxShortfall < 2 ** 130);
+        uint256 owed = debt + due;
+        uint256 gap = SettlementMath.roundingGap(debt, due, 0, callerFunds, recovered);
         assert(gap == (owed > callerFunds + recovered ? owed - callerFunds - recovered : 0));
         (bool ok, bytes memory ret) = address(h)
             .call(abi.encodeCall(SettlementMathHarness.shortfallTopUp, (minRec, recovered, gap, maxShortfall)));
@@ -186,64 +176,55 @@ contract SettlementMathHalmosTest is Test {
         }
     }
 
-    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-062, Q-397
-    /// @notice A call whose shortfall closes its settlement gap always settles: with `F ≥ D`, `φ ≥ φD`, a transfer
-    /// fee `τ = F − Fr` on the flash principal and the repayment sending exactly `F + φ`, `keeperPayout` never reverts,
-    /// and a gap above the floor gap leaves `keeperOut = 0`. The waterfall reads `R_f = max(R, minRec)`, so the top-up
-    /// above the floor never counts as surplus. The fee share is the launch 2,000 bps (a symbolic share makes the fee
-    /// product nonlinear; the 10,000-run fuzz twin `testFuzz_TEST_198_settlementGapNeverStrandsTheCall` covers it).
+    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
+    /// @notice A caller-funded call always settles: with `Kf ≥ D` (Aave pulls `D` out of `Kf`), the gap never exceeds
+    /// the floor gap, the top-up is `max(0, minRec − R)` and `keeperPayout` never reverts; the waterfall reads
+    /// `R_f = max(R, minRec)`, so the top-up never counts as surplus beyond the floor. The fee share is the launch
+    /// 2,000 bps (a symbolic share makes the fee product nonlinear; the 10,000-run fuzz twin
+    /// `testFuzz_TEST_198_callerFundingAlwaysSettles` covers it).
     function check_PROP_015_gapSettlesWithoutRevert(
         uint256 value,
         uint256 debt,
-        uint256 phiD,
-        uint256 extra,
-        uint256 tau,
-        uint256 callerFunds,
+        uint256 extraFunding,
         uint256 minRec,
         uint256 recovered
     ) public {
-        vm.assume(value < 2 ** 120 && debt < 2 ** 120 && phiD < 2 ** 100 && extra < 2 ** 100 && tau < 2 ** 100);
-        vm.assume(callerFunds < 2 ** 120 && minRec <= value && recovered < 2 ** 120);
-        // F = D + tau >= D, so the flash principal received is Fr = F - tau = D; phi = phiD + extra >= phiD.
-        Flows memory c = Flows(callerFunds, debt, recovered, 0, debt, debt + tau + phiD + extra);
+        vm.assume(value < 2 ** 120 && debt < 2 ** 120 && extraFunding < 2 ** 120);
+        vm.assume(minRec <= value && recovered < 2 ** 120);
+        uint256 callerFunds = debt + extraFunding;
+        Flows memory c = Flows(callerFunds, recovered, 0, debt);
         SettlementMath.Payouts memory p =
-            SettlementMath.payouts(value, debt, phiD, SettlementMath.recoveryWithFloor(minRec, recovered), 2000);
-        uint256 gap =
-            SettlementMath.roundingGap(debt, phiD + extra, tau, p.avanaFee, p.borrowerSurplus, callerFunds, recovered);
+            SettlementMath.payouts(value, debt, SettlementMath.recoveryWithFloor(minRec, recovered), 2000);
+        uint256 gap = SettlementMath.roundingGap(debt, p.avanaFee, p.borrowerSurplus, callerFunds, recovered);
         uint256 floorGap = minRec > recovered ? minRec - recovered : 0;
-        c.shortfall = floorGap > gap ? floorGap : gap;
-        _checkSettles(c, p, gap > floorGap);
+        assert(gap <= floorGap);
+        c.shortfall = floorGap;
+        _checkSettles(c, p);
     }
 
     function _checkSettles(
         Flows memory c,
-        SettlementMath.Payouts memory p,
-        bool gapBinds
+        SettlementMath.Payouts memory p
     ) internal {
         (bool ok, bytes memory ret) = address(h)
             .call(
                 abi.encodeCall(
                     SettlementMathHarness.keeperPayout,
-                    (
-                        c.callerFunds,
-                        c.flash,
-                        c.recovered + c.shortfall,
-                        c.debt,
-                        c.flashRepaid,
-                        p.avanaFee,
-                        p.borrowerSurplus
-                    )
+                    (c.callerFunds, c.recovered + c.shortfall, c.debt, p.avanaFee, p.borrowerSurplus)
                 )
             );
         assert(ok);
-        if (gapBinds) assert(abi.decode(ret, (uint256)) == 0);
+        assert(
+            abi.decode(ret, (uint256)) + c.debt + p.avanaFee + p.borrowerSurplus
+                == c.callerFunds + c.recovered + c.shortfall
+        );
     }
 
     // PROP-018 verifies: SPEC-LIQ-003, SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-007, INV-034, Q-159, Q-198
     /// @notice Main claim of PROP-018 on concrete markets of 2.11 (USDC debt, vault token of 18 decimals at $2.10;
-    /// GHO debt, vault token of 6 decimals at $2.00), every debt `D < 2^64` base units, F = D at 5 bps and the bonuses
-    /// 10,500 and 10,200: with Aave's seizure `c = ⌊D Pdebt 10^dv b / (10^dd Pc 10⁴)⌋`, `minRec` plus one vault-token
-    /// unit, 1 debt unit, `U` and `ε` covers `D + φD`.
+    /// GHO debt, vault token of 6 decimals at $2.00), every debt `D < 2^64` base units and the bonuses 10,500 and
+    /// 10,200: with Aave's seizure `c = ⌊D Pdebt 10^dv b / (10^dd Pc 10⁴)⌋`, `minRec` plus one vault-token unit, 1 debt
+    /// unit, `U` and `ε` covers `D`.
     function check_PROP_018_floorCoversDebtUsdc(
         uint256 debt
     ) public pure {
@@ -265,14 +246,13 @@ contract SettlementMathHalmosTest is Test {
         uint256 pc
     ) internal pure {
         vm.assume(debt >= 1 && debt < 2 ** 64);
-        uint256 phiD = (debt * 5 + BPS - 1) / BPS;
-        uint256 s = SettlementMath.effectiveSlippage(bonus, SettlementMath.costsBps(phiD, debt), 100);
+        uint256 s = SettlementMath.effectiveSlippage(bonus, 100);
         uint256 c = debt * 1e8 * 10 ** dv * bonus / (10 ** dd * pc * BPS);
         uint256 v = SettlementMath.seizedValue(c, pc, dv, dd, 1e8);
         uint256 vaultUnit = SettlementMath.unitValue(pc, dv, dd, 1e8);
         uint256 eps = 10 ** dd;
         uint256 minRec = SettlementMath.recoveryFloor(v, s, 2, eps);
-        assert(debt + phiD <= minRec + vaultUnit + 1 + 2 + eps);
+        assert(debt <= minRec + vaultUnit + 1 + 2 + eps);
     }
 
     // PROP-019 verifies: SPEC-LIQ-019
@@ -313,18 +293,17 @@ contract SettlementMathHalmosTest is Test {
     }
 
     // PROP-069 verifies: SPEC-LIQ-008, SPEC-LIQ-009, INV-036, INV-086, Q-256, Q-333
-    /// @notice `A ≤ S = max(0, R' − D − φD)` for every input in range, and `A = 0` when `R' ≤ D + φD`.
+    /// @notice `A ≤ S = max(0, R' − D)` for every input in range, and `A = 0` when `R' ≤ D`.
     function check_PROP_069_feeAtMostSurplus(
         uint256 value,
         uint256 rp,
         uint256 debt,
-        uint256 phiD,
         uint256 share
     ) public pure {
-        vm.assume(value < 2 ** 128 && rp < 2 ** 128 && debt < 2 ** 128 && phiD < 2 ** 128 && share <= BPS);
-        SettlementMath.Payouts memory p = SettlementMath.payouts(value, debt, phiD, rp, share);
+        vm.assume(value < 2 ** 128 && rp < 2 ** 128 && debt < 2 ** 128 && share <= BPS);
+        SettlementMath.Payouts memory p = SettlementMath.payouts(value, debt, rp, share);
         assert(p.avanaFee <= p.surplus);
-        if (rp <= debt + phiD) assert(p.avanaFee == 0);
+        if (rp <= debt) assert(p.avanaFee == 0);
     }
 
     // PROP-069 verifies: SPEC-LIQ-009, INV-036, INV-086, Q-256
@@ -334,13 +313,11 @@ contract SettlementMathHalmosTest is Test {
         uint256 v2,
         uint256 rp,
         uint256 debt,
-        uint256 phiD,
         uint256 share
     ) public pure {
-        vm.assume(v1 <= v2 && v2 < 2 ** 128 && rp < 2 ** 128 && debt < 2 ** 128 && phiD < 2 ** 128 && share <= BPS);
+        vm.assume(v1 <= v2 && v2 < 2 ** 128 && rp < 2 ** 128 && debt < 2 ** 128 && share <= BPS);
         assert(
-            SettlementMath.payouts(v1, debt, phiD, rp, share).avanaFee
-                <= SettlementMath.payouts(v2, debt, phiD, rp, share).avanaFee
+            SettlementMath.payouts(v1, debt, rp, share).avanaFee <= SettlementMath.payouts(v2, debt, rp, share).avanaFee
         );
     }
 
@@ -352,13 +329,12 @@ contract SettlementMathHalmosTest is Test {
         uint256 rp1,
         uint256 rp2,
         uint256 debt,
-        uint256 phiD,
         uint256 share
     ) public pure {
-        vm.assume(value < 2 ** 128 && rp1 < 2 ** 128 && rp2 < 2 ** 128 && debt < 2 ** 128 && phiD < 2 ** 128);
+        vm.assume(value < 2 ** 128 && rp1 < 2 ** 128 && rp2 < 2 ** 128 && debt < 2 ** 128);
         vm.assume(share <= BPS);
-        SettlementMath.Payouts memory p1 = SettlementMath.payouts(value, debt, phiD, rp1, share);
-        SettlementMath.Payouts memory p2 = SettlementMath.payouts(value, debt, phiD, rp2, share);
+        SettlementMath.Payouts memory p1 = SettlementMath.payouts(value, debt, rp1, share);
+        SettlementMath.Payouts memory p2 = SettlementMath.payouts(value, debt, rp2, share);
         uint256 feeOnGain = p1.oracleGain * share / BPS;
         if (p1.surplus >= feeOnGain && p2.surplus >= feeOnGain) assert(p1.avanaFee == p2.avanaFee);
     }

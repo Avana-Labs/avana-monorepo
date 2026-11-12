@@ -48,11 +48,11 @@ contract SettlementMathCallerTakeFuzzTest is AvanaTest {
     function _settle(
         Case memory c
     ) internal view returns (Settled memory o) {
-        o.p = m.payouts(c.value, c.debt, 0, m.recoveryWithFloor(c.minRec, c.recovered), c.share);
-        uint256 gap = m.roundingGap(c.debt, 0, 0, o.p.avanaFee, o.p.borrowerSurplus, c.callerFunds, c.recovered);
+        o.p = m.payouts(c.value, c.debt, m.recoveryWithFloor(c.minRec, c.recovered), c.share);
+        uint256 gap = m.roundingGap(c.debt, o.p.avanaFee, o.p.borrowerSurplus, c.callerFunds, c.recovered);
         o.shortfall = m.shortfallTopUp(c.minRec, c.recovered, gap, type(uint128).max);
         o.keeperOut =
-            m.keeperPayout(c.callerFunds, 0, c.recovered + o.shortfall, c.debt, 0, o.p.avanaFee, o.p.borrowerSurplus);
+            m.keeperPayout(c.callerFunds, c.recovered + o.shortfall, c.debt, o.p.avanaFee, o.p.borrowerSurplus);
     }
 
     // TEST-198 verifies: SPEC-LIQ-011, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-LIQ-022, INV-035, Q-401

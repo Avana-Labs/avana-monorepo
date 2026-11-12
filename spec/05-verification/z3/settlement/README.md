@@ -22,12 +22,12 @@ Amounts are base units of the debt asset repaid (`Q-333`: every liquidation sett
 | Spec ID | Formula (final text) | Rounding | Script |
 |---|---|---|---|
 | `SPEC-LIQ-001` | `bNet = 10⁴ + ⌊(b − 10⁴)(10⁴ − lf)/10⁴⌋` | down | st02 |
-| `SPEC-LIQ-002` | `costsBps = ⌈φ·10⁴/F⌉`, 0 when `F = 0` | up | st02 |
-| `SPEC-LIQ-003`, `-016` | `s = min(allowance, ⌊10⁴(bNet − 10⁴ − costs)/bNet⌋)` when `bNet > 10⁴ + costs`, else 0; liveness `minLB(10⁴ − smin) ≥ 10⁴(10⁴ + maxFlashFeeBps)` (st02 also checks the general `cBuy` form, of which this is `cBuy = 0`) | down | st02, st16 |
+| `SPEC-LIQ-002` | no cost term in a liquidation: the former `costsBps` is 0 on every call (the models keep it as a parameter fixed at 0; `⌈φ·10⁴/F⌉` survives only as the deleverage and helper pre-loan quote of `SPEC-LIQ-015`) | — | st02, st11 |
+| `SPEC-LIQ-003`, `-016` | `s = min(allowance, ⌊10⁴(bNet − 10⁴)/bNet⌋)` when `bNet > 10⁴`, else 0, so `bNet(10⁴ − s) ≥ 10⁸`; liveness `minLB(10⁴ − smin) ≥ 10⁴(10⁴ + maxFlashFeeBps)` (st02 also checks the general `cBuy` form, of which this is `cBuy = 0`) | down | st02, st16 |
 | `SPEC-LIQ-004` | `V = mulDiv(c·Pc, 10^dd, 10^dv·Pdebt)` | down | st02, st14 |
 | `SPEC-LIQ-005` | `U = Σᵢ ⌈pᵢ·10^dd/(10^dᵢ·Pdebt)⌉`; `minRec = max(0, ⌈V(10⁴ − s)/10⁴⌉ − U − floorRoundingAllowance)`, tested on `R' = R + shortfall` | slippage term up, `U` up | st01, st02, st04 |
 | `SPEC-LIQ-006` | `R` = debt-asset balance change from just before `burnSeized` to after the last route call | exact | st01 |
-| `SPEC-LIQ-007` | `φD = flashFee(T, min(F, D))`; quote `fee(x) = ⌈x·p/10⁴⌉` (V3.4 rounds half-up; the source's ceiling quote is the binding gate) | up | st03, st11 |
+| `SPEC-LIQ-007` | no `φD` term: `G`, `S`, `A`, `kr`, `B` from `D` alone; a helper's or deleverage loan quote is `fee(x) = ⌈x·p/10⁴⌉` (V3.4 rounds half-up; the source's ceiling quote is the binding gate) | up | st03, st11 |
 | `SPEC-LIQ-008` | `S = max(0, R_f − D − φD)`, `R_f = max(R, minRec)` | exact | st03, st16 |
 | `SPEC-LIQ-009` | `A = min(⌊max(0, V − D − φD)·avanaFeeShareBps/10⁴⌋, S)` | down | st01, st03 |
 | `SPEC-LIQ-010` | `keeperOut = (K + F + R') − (D + F + φ + A + B)`, `InsufficientProceeds` if negative; with a transfer fee `K`, `F`, `F + φ` are the measured `Kr`, `Fr`, `P` and `τ = (F − Fr) + (P − F − φ)` falls on `keeperOut` | checked | st03, st16 |

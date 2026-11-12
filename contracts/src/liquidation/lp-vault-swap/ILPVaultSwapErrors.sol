@@ -205,4 +205,18 @@ interface ILPVaultSwapErrors {
     /// @param feeShareBps The rejected share, bps.
     /// @custom:spec SPEC-LIQ-009
     error InvalidFeeShare(uint256 feeShareBps);
+
+    /// @notice A constructor argument of the implementation or a logic contract is the zero address, or `initialize`
+    /// was given a zero timelock.
+    /// @custom:spec REQ-SWAP-040
+    error ZeroAddress();
+
+    /// @notice A logic contract passed to the implementation's constructor reports another kind or other immutables.
+    /// @custom:spec REQ-SWAP-040
+    error InvalidLogic();
+
+    /// @notice A body of `liquidate`, `settlePending`, `deleverage` or `onFlashLoan` was called on the implementation or
+    /// on its logic contract directly instead of through the LPVaultSwap proxy.
+    /// @custom:spec REQ-SWAP-040, REQ-SWAP-043
+    error NotDelegated();
 }

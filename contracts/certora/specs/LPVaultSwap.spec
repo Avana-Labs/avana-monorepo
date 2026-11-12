@@ -483,6 +483,20 @@ function breakerRecord() {
     registryBreakerWrite();
 }
 
+// PROP-097: a transfer-fee token model. Off in every scene except `setupFeeScene`; when on, the fee of a pull into
+// LPVaultSwap goes to `feeSink`, so LPVaultSwap receives `amount - fee`.
+ghost bool feeTokens;
+ghost address feeSink;
+ghost transferFee(address, uint256) returns uint256 {
+    axiom forall address t. forall uint256 a. transferFee(t, a) <= a;
+}
+
+// PROP-063, PROP-084: set by any persistent storage write of LPVaultSwap (transient writes are TransientModel's).
+ghost bool lvsStorageWritten;
+hook ALL_SSTORE(uint256 loc, uint256 v) {
+    lvsStorageWritten = true;
+}
+
 function swapTransfer(address t, address from, address to, uint256 amount) returns bool {
     if (tokenRefuses(t, to)) {
         return false;
@@ -496,6 +510,10 @@ function swapTransfer(address t, address from, address to, uint256 amount) retur
 
 function swapTransferFrom(address t, address spender, address from, address to, uint256 amount) returns bool {
     bool ok = erc20TransferFrom(t, spender, from, to, amount);
+    // PROP-097: with `feeTokens` on, a pull into LPVaultSwap delivers `amount - transferFee(t, amount)`.
+    if (ok && feeTokens && to == currentContract && from != currentContract) {
+        erc20Move(t, currentContract, feeSink, transferFee(t, amount));
+    }
     if (from == currentContract) {
         paidOut[t][to] = true;
     }
@@ -552,6 +570,15 @@ function escrowDeposit(address escrow, address caller, address token, address b,
 function setupSwapScene(env e) {
     setupSwapCall(e);
     require lockHolder == 0;
+    require !feeTokens;
+}
+
+// PROP-097: the same scene with a debt token whose transfer into LPVaultSwap keeps any fee 0 <= fee(a) <= a.
+function setupFeeScene(env e) {
+    setupSwapCall(e);
+    require lockHolder == 0;
+    require feeTokens;
+    require feeSink != currentContract && feeSink != e.msg.sender;
 }
 
 // `deleverage` runs inside the AaveAdapter's repayWithCollateral, which holds the Lock.
@@ -1369,3 +1396,39 @@ rule settlementMathFitsIn256Bits(mathint c, mathint pc, mathint dd, mathint V, m
     assert V * (10000 - s) < 2^256, "SPEC-LIQ-005 product overflows";
     assert a * p * 10^dd < 2^256, "SPEC-LIQ-012 numerator overflows";
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Per-market isolation (PROP-063, PROP-084) and the balance-delta funding path (PROP-097)
+// ---------------------------------------------------------------------------------------------------------------------
+
+// PROP-063 verifies: INV-097, Q-167, Q-228, Q-236, Q-343, Q-397
+// PROP-084 verifies: INV-097, Q-362, Q-397
+// A liquidation writes no persistent storage of LPVaultSwap: no settlement allowance, reserve, window, counter or
+// clock exists to be shared with another market, so what a liquidation in m' reads from LPVaultSwap is the same
+// whatever liquidations in m ran before it (the Lock and the deleverage context are transient and end with the call).
+rule liquidationWritesNoLPVaultSwapStorage(LiquidationParams p) {
+    env e;
+    setupSwapScene(e);
+    uint256 countBefore = approvedKeeperCount();
+    require !lvsStorageWritten;
+    liquidate(e, p);
+    assert !lvsStorageWritten, "a liquidation wrote LPVaultSwap storage another market could read";
+    assert approvedKeeperCount() == countBefore, "a liquidation changed the committed-operator registry";
+}
+
+// PROP-097 verifies: INV-095, Q-390, Q-404
+// Balance-delta funding: with a debt token that keeps any fee 0 <= fee(a) <= a on the pull into LPVaultSwap, the
+// caller funding Kf LPVaultSwap books is its measured balance increase, debtToCover - fee(debtToCover), and the
+// amount passed to liquidationCall is that Kf (never debtToCover).
+rule callerFundingIsTheMeasuredIncrease(LiquidationParams p) {
+    env e;
+    setupFeeScene(e);
+    address T = drAsset(mkSpoke(p.marketId), p.debtReserveId);
+    mathint fee = transferFee(T, p.debtToCover);
+    LiquidationResult r = liquidate(e, p);
+    assert to_mathint(r.callerFunds) == to_mathint(p.debtToCover) - fee,
+        "the booked caller funding differs from LPVaultSwap's measured balance increase";
+    assert liquidationAmountPassed == to_mathint(r.callerFunds), "liquidationCall was passed other than the measured Kf";
+    assert to_mathint(r.debtRepaid) <= to_mathint(r.callerFunds), "Aave repaid more than LPVaultSwap received";
+}
+

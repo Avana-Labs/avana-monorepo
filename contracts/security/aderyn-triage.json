@@ -1492,6 +1492,262 @@
       "reason": "Writes onStandby for at most MAX_POOL_TOKENS (8) tokens of one market to put each standby in force for one checkConfig, then writes the same slots back (REQ-PSTORE-029, REQ-PSTORE-009); bounded by the market's token count, net state change zero. Covered by TEST-250 (tightenBorrowAgeChecksTheStandby asserts onStandby is false after the call).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (2026-11-10 list), at most 8 iterations."
+    },
+    {
+      "fingerprint": "218d961d831e8d54",
+      "check": "contract-locks-ether",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock never sends ETH with an upgrade, and LPVaultSwap has no receive, fallback or other payable function, so no ETH can arrive by an Avana call.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "afb5d2f3034eb7e9",
+      "check": "reentrancy-state-change",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.removeKeeper",
+      "reason": "Aderyn form of the reentrancy finding on removeKeeper: the only call before the registry write is MarketRegistry.isFrozenAddress (through activeKeeperCount), a view compiled to STATICCALL that cannot re-enter; the setter is timelock-only (APPLICATION_ADMIN).",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "411e367abceecc8c",
+      "check": "yul-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap._delegate",
+      "reason": "Router dispatch (LPVaultSwap._delegate): return(0, returndatasize()) ends the external call with the delegated logic contract's return data, the standard proxy pattern; it is reached only from liquidate, settlePending, deleverage and onFlashLoan, each of which has no code after the dispatch. Covered by every liquidate, settlePending and deleverage test.",
+      "approval": "pending (lead review)"
+    },
+    {
+      "fingerprint": "db2e608cb9ecc1e3",
+      "check": "costly-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Bounded loop over the launch keeper list (at most MAX_KEEPERS = 32), run once in initialize.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "dc745726962449a0",
+      "check": "empty-block",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap._authorizeUpgrade",
+      "reason": "_authorizeUpgrade has no body because its onlyRole(APPLICATION_ADMIN) modifier is the whole check (OpenZeppelin UUPS pattern).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "eada974443f6ef4c",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "60e00768bd111996",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._settleLoan",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "dd5cfa8c06f15d9e",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._repaySource",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "a640d572f97e0878",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._waterfall",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "883a50e97b2621f2",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "0782834196ad441d",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._releaseAndSwap",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b00bab5c3eb5e0ee",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._unitSum",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "89e74c680609ca58",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "f49ae2af6f1b7e2f",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b1654e0280e02db1",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._runFlash",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "477fb0b29045b54e",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._prepare",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "830a9282070e11b4",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b27c6c1bfe51fe70",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8353a0b6970cb630",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._unwindAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8dc48498c727e4c0",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._waterfall",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "7a2372507dc9655f",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "128be9f28eee0f6a",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "f4dbe49b8f477c77",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._releaseAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "60dc526aba6eff43",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._fundCoverage",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "756950ce084dd2ed",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkCollateralPrice",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "95999a6a5900c364",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkDebtPrice",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "17e66bd621894e97",
+      "check": "unsafe-erc20-operation",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._deliver",
+      "reason": "The gas-limited payout transfer of REQ-SWAP-076 (LPVaultSwapSettlement._deliver): encoded transfer(address,uint256) sent with a 100,000-gas low-level call, return data not copied; what left LPVaultSwap is measured as its own balance fall and the rest escrowed, so a token returning false, nothing or reverting is handled. Covered by LPVaultSwap.PayoutEscrow and LPVaultSwap.Delivery.fuzz.",
+      "approval": "pending (lead review)"
+    },
+    {
+      "fingerprint": "9311844e2d1b3046",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "28ada90340ccf7c8",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "25a0eb34cfa9344f",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "83d98e24bec06036",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "87900517e379d73b",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
     }
   ]
 }

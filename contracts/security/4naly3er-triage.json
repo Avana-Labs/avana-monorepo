@@ -1108,6 +1108,110 @@
       "reason": "Division by zero not possible: _BPS is a constant (10,000).",
       "approval": "approved by pattern",
       "review": "group G (division by a constant)."
+    },
+    {
+      "fingerprint": "9d51847c7eacbde9",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "reason": "Zero transfers are skipped before this call (REQ-SWAP-077: every transfer, transferFrom, route call and escrow deposit with amount 0 is skipped); the funding pull is refused InvalidAmount for debtToCover = 0. Covered by LPVaultSwap.ZeroSeizure and LPVaultSwap.Funding.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "7c5fc64685d5d1ce",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "reason": "Zero transfers are skipped before this call (REQ-SWAP-077: every transfer, transferFrom, route call and escrow deposit with amount 0 is skipped); the funding pull is refused InvalidAmount for debtToCover = 0. Covered by LPVaultSwap.ZeroSeizure and LPVaultSwap.Funding.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "f19dcae5c7494c21",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "reason": "Zero transfers are skipped before this call (REQ-SWAP-077: every transfer, transferFrom, route call and escrow deposit with amount 0 is skipped); the funding pull is refused InvalidAmount for debtToCover = 0. Covered by LPVaultSwap.ZeroSeizure and LPVaultSwap.Funding.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "31f405f19111d324",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "reason": "Zero transfers are skipped before this call (REQ-SWAP-077: every transfer, transferFrom, route call and escrow deposit with amount 0 is skipped); the funding pull is refused InvalidAmount for debtToCover = 0. Covered by LPVaultSwap.ZeroSeizure and LPVaultSwap.Funding.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b34d438eb19c6816",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "reason": "Zero transfers are skipped before this call (REQ-SWAP-077: every transfer, transferFrom, route call and escrow deposit with amount 0 is skipped); the funding pull is refused InvalidAmount for debtToCover = 0. Covered by LPVaultSwap.ZeroSeizure and LPVaultSwap.Funding.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "4f44950b7caf2b8b",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "reason": "Zero transfers are skipped before this call (REQ-SWAP-077: every transfer, transferFrom, route call and escrow deposit with amount 0 is skipped); the funding pull is refused InvalidAmount for debtToCover = 0. Covered by LPVaultSwap.ZeroSeizure and LPVaultSwap.Funding.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "4dd14cd1943b1f8e",
+      "check": "Division by zero not prevented",
+      "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+      "reason": "bNet > 10^4 is checked on the line above (s = 0 otherwise), so the divisor is never 0 (SPEC-LIQ-003). Covered by SettlementMath.Properties.fuzz testFuzz_effectiveSlippage.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8db0909d4dc2b529",
+      "check": "External call recipient may consume all transaction gas",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "reason": "The caller's keeperOut is a plain safeTransfer to msg.sender itself (REQ-SWAP-064): a recipient that burns gas only fails its own call; the fee and borrower payouts that go to third parties use the 100,000-gas limited transfer of REQ-SWAP-076.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "5d2754bf23471eeb",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "reason": "Returns measured by balance delta: the caller funding Kf and the shortfall pull are measured as LPVaultSwap's balance rise (REQ-SWAP-011, REQ-SWAP-108), and every later step uses the measured amount. Covered by LPVaultSwap.Funding (transferFeeMeasuredByDelta) and Certora PROP-097.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "07775f9d7de85ced",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "reason": "Returns measured by balance delta: the caller funding Kf and the shortfall pull are measured as LPVaultSwap's balance rise (REQ-SWAP-011, REQ-SWAP-108), and every later step uses the measured amount. Covered by LPVaultSwap.Funding (transferFeeMeasuredByDelta) and Certora PROP-097.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "67ecee650c79b33d",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "reason": "LPOracle and DebtOracle are Avana oracles whose latestAnswer() is the served price after their own state machine (2.10); LPVaultSwap reads freshness and state through getPriceState() right before (REQ-SWAP-008, REQ-SWAP-091), so the deprecated Chainlink round fields are not needed.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; not in an approved pattern.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "18e9697f252faf4a",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "reason": "LPOracle and DebtOracle are Avana oracles whose latestAnswer() is the served price after their own state machine (2.10); LPVaultSwap reads freshness and state through getPriceState() right before (REQ-SWAP-008, REQ-SWAP-091), so the deprecated Chainlink round fields are not needed.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; not in an approved pattern.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "b833cfa79e6176b3",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+      "reason": "keccak256(abi.encode(immutables)) is the implementation-immutables hash compared with each logic contract's logicConfig() at construction (InvalidLogic), not a signed message; EIP-712 does not apply.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
+      "approval": "pending review (approved pattern)"
     }
   ]
 }

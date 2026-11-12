@@ -224,6 +224,33 @@
       "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): `marketId - 1` indexes the one-slot-per-market array `_affected` lays out; `_market(marketId)` above reverts UnknownMarket for an identifier the MarketRegistry never assigned, 0 included (REQ-PSTORE-011), so marketId >= 1 here and the subtraction cannot underflow (it would only revert). Covered by TEST-250 (tightenConsistencyChecksTheStandby) and the UnknownMarket tests of TEST-062.",
       "approval": "approved by pattern",
       "review": "Reviewed per call site, group B (checked subtraction with an enforced precondition)."
+    },
+    {
+      "fingerprint": "c9aa05e3b480d6d5",
+      "check": "exact-balance-check",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._checkCallback",
+      "reason": "Zero-amount test of a value LPVaultSwap measured, not an exact match on a balance an outsider controls: c == 0 reverts NothingSeized (REQ-SWAP-077), a zero pending balance NothingPending, and Fr == 0 or Fr > F InvalidFlashCallback (REQ-SWAP-013). A donation cannot make these fail: the measured amounts are deltas from snapshots taken in the same call. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.SettlePending and LPVaultSwap.Callbacks.fuzz.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; not in an approved pattern.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "1b04de125ba2ca89",
+      "check": "exact-balance-check",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._seize",
+      "reason": "Zero-amount test of a value LPVaultSwap measured, not an exact match on a balance an outsider controls: c == 0 reverts NothingSeized (REQ-SWAP-077), a zero pending balance NothingPending, and Fr == 0 or Fr > F InvalidFlashCallback (REQ-SWAP-013). A donation cannot make these fail: the measured amounts are deltas from snapshots taken in the same call. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.SettlePending and LPVaultSwap.Callbacks.fuzz.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; not in an approved pattern.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "22852ef372190d72",
+      "check": "exact-balance-check",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._preLock",
+      "reason": "Zero-amount test of a value LPVaultSwap measured, not an exact match on a balance an outsider controls: c == 0 reverts NothingSeized (REQ-SWAP-077), a zero pending balance NothingPending, and Fr == 0 or Fr > F InvalidFlashCallback (REQ-SWAP-013). A donation cannot make these fail: the measured amounts are deltas from snapshots taken in the same call. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.SettlePending and LPVaultSwap.Callbacks.fuzz.",
+      "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; not in an approved pattern.",
+      "approval": "pending (Josue)"
     }
   ]
 }

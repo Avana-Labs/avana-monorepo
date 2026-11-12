@@ -183,8 +183,8 @@ phi, tau, Kr = Ints("phi tau Kr")
 gap_sm = pos(D + phi + tau + A + B - Kr - R)
 # MATH-ST-122 verifies: SPEC-SET-001, SPEC-LIQ-019, Q-397, Q-404
 check("MATH-ST-122",
-      "the SettlementMath gap max(0, D + phi + tau + A + B - Kr - R) with phi = tau = 0 and Kr = Kf is the gap of "
-      "SPEC-SET-001, so SettlementMath serves the liquidation path with those terms at 0",
+      "the earlier gap max(0, D + phi + tau + A + B - Kr - R) with phi = tau = 0 and Kr = Kf is the gap of "
+      "SPEC-SET-001, max(0, D + A + B - Kf - R), which SettlementMath.roundingGap computes with no phi or tau term",
       reach + [phi == 0, tau == 0, Kr == K, gap_sm != gap],
       "PROVED")
 ko_ext = (0 + Rp) - (D + A + B)

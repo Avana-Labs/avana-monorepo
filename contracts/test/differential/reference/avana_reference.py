@@ -80,16 +80,11 @@ def net_bonus(b: int, lf: int) -> list[int]:
     return [BPS + _floor(Fraction((b - BPS) * (BPS - lf), BPS))]
 
 
-def costs_bps(phi: int, f: int) -> list[int]:
-    """SPEC-LIQ-002: ceil(phi * 1e4 / F) when F > 0, else 0."""
-    return [0 if f == 0 else _ceil(Fraction(phi * BPS, f))]
-
-
-def effective_slippage(bnet: int, costs: int, allowance: int) -> list[int]:
-    """SPEC-LIQ-003: min(allowance, floor(1e4 (bNet - 1e4 - costs) / bNet)) if bNet > 1e4 + costs, else 0."""
-    if bnet <= BPS + costs:
+def effective_slippage(bnet: int, allowance: int) -> list[int]:
+    """SPEC-LIQ-003: min(allowance, floor(1e4 (bNet - 1e4) / bNet)) if bNet > 1e4, else 0 (no cost term, SPEC-LIQ-002)."""
+    if bnet <= BPS:
         return [0]
-    return [min(allowance, _floor(Fraction(BPS * (bnet - BPS - costs), bnet)))]
+    return [min(allowance, _floor(Fraction(BPS * (bnet - BPS), bnet)))]
 
 
 def leg_slippage(s: int, max_shortfall: int, v: int, max_shortfall_bps: int) -> list[int]:
@@ -138,9 +133,9 @@ def recovery_with_floor(min_rec: int, r: int) -> list[int]:
     return [r + max(0, min_rec - r)]
 
 
-def rounding_gap(d: int, phi: int, tau: int, a: int, b: int, kr: int, r: int) -> list[int]:
-    """SPEC-SET-001: g = max(0, D + phi + tau + A + B - Kr - R)."""
-    return [max(0, d + phi + tau + a + b - kr - r)]
+def rounding_gap(d: int, a: int, b: int, kf: int, r: int) -> list[int]:
+    """SPEC-SET-001: g = max(0, D + A + B - Kf - R)."""
+    return [max(0, d + a + b - kf - r)]
 
 
 def shortfall_top_up(min_rec: int, r: int, gap: int, max_shortfall: int) -> list[int]:
@@ -153,20 +148,20 @@ def shortfall_top_up(min_rec: int, r: int, gap: int, max_shortfall: int) -> list
     return [0, max(0, min_rec - r, gap)]
 
 
-def payouts(v: int, d: int, phid: int, rf: int, share: int) -> list[int]:
+def payouts(v: int, d: int, rf: int, share: int) -> list[int]:
     """SPEC-LIQ-008, -009, -022: [status, S, G, A, kr, B]; status 1 = InvalidFeeShare (share above 1e4).
     kr = min(S, G) - A and B = max(0, S - G) are taken as the spec states them, unclamped."""
     if share > BPS:
         return [1, 0, 0, 0, 0, 0]
-    s = max(0, rf - d - phid)
-    g = max(0, v - d - phid)
+    s = max(0, rf - d)
+    g = max(0, v - d)
     a = min(_floor(Fraction(g * share, BPS)), s)
     return [0, s, g, a, min(s, g) - a, max(0, s - g)]
 
 
-def keeper_payout(k: int, f: int, rp: int, d: int, repaid: int, a: int, b: int) -> list[int]:
-    """SPEC-LIQ-010: [status, keeperOut]; status 1 = InsufficientProceeds."""
-    out = (k + f + rp) - (d + repaid + a + b)
+def keeper_payout(kf: int, rp: int, d: int, a: int, b: int) -> list[int]:
+    """SPEC-LIQ-010: [status, keeperOut = (Kf + R') - (D + A + B)]; status 1 = InsufficientProceeds."""
+    out = (kf + rp) - (d + a + b)
     return [1, 0] if out < 0 else [0, out]
 
 
@@ -560,8 +555,7 @@ def cl_unit_decimals(p0: int, p1: int, d0: int, d1: int, tl_off: int, tu_off: in
 FUNCTIONS = {
     "mulDiv": (mul_div, 4),
     "netBonus": (net_bonus, 2),
-    "costsBps": (costs_bps, 2),
-    "effectiveSlippage": (effective_slippage, 3),
+    "effectiveSlippage": (effective_slippage, 2),
     "legSlippage": (leg_slippage, 4),
     "pendingSlippage": (pending_slippage, 1),
     "seizedValue": (seized_value, 5),
@@ -571,10 +565,10 @@ FUNCTIONS = {
     "recoveryFloor": (recovery_floor, 4),
     "legMinOut": (leg_min_out, 5),
     "recoveryWithFloor": (recovery_with_floor, 2),
-    "roundingGap": (rounding_gap, 7),
+    "roundingGap": (rounding_gap, 5),
     "shortfallTopUp": (shortfall_top_up, 4),
-    "payouts": (payouts, 5),
-    "keeperPayout": (keeper_payout, 7),
+    "payouts": (payouts, 4),
+    "keeperPayout": (keeper_payout, 5),
     "liquidationSettlement": (liquidation_settlement, 7),
     "flashPremiumWithinCap": (flash_premium_within_cap, 3),
     "deleverageCap": (deleverage_cap, 5),

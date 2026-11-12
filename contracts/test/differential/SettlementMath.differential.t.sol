@@ -21,26 +21,18 @@ contract SettlementMathDifferentialTest is DifferentialTest {
     }
 
     // TEST-198 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003
-    function testFuzz_TEST_198_differentialBonusCostsSlippage(
+    function testFuzz_TEST_198_differentialBonusSlippage(
         uint256 bonus,
         uint256 lf,
-        uint256 premium,
-        uint256 flash,
         uint256 allowance
     ) public {
         bonus = bound(bonus, 0, type(uint32).max);
         lf = bound(lf, 0, 2 * BPS);
-        flash = bound(flash, 0, 1e32);
-        premium = bound(premium, 0, 1e30);
         allowance = bound(allowance, 0, BPS);
         uint256 bNet = m.netBonus(bonus, lf);
         assertEq(bNet, _one("netBonus", _a2(bonus, lf)), "netBonus");
-        uint256 costs = m.costsBps(premium, flash);
-        assertEq(costs, _one("costsBps", _a2(premium, flash)), "costsBps");
         assertEq(
-            m.effectiveSlippage(bNet, costs, allowance),
-            _one("effectiveSlippage", _a3(bNet, costs, allowance)),
-            "effectiveSlippage"
+            m.effectiveSlippage(bNet, allowance), _one("effectiveSlippage", _a2(bNet, allowance)), "effectiveSlippage"
         );
     }
 
@@ -152,8 +144,6 @@ contract SettlementMathDifferentialTest is DifferentialTest {
         uint256 minRec;
         uint256 recovered;
         uint256 debt;
-        uint256 phi;
-        uint256 tau;
         uint256 avanaFee;
         uint256 borrowerSurplus;
         uint256 callerFunds;
@@ -167,8 +157,6 @@ contract SettlementMathDifferentialTest is DifferentialTest {
         c.minRec = bound(c.minRec, 0, 1 << 128);
         c.recovered = bound(c.recovered, 0, 1 << 128);
         c.debt = bound(c.debt, 0, 1 << 128);
-        c.phi = bound(c.phi, 0, 1 << 128);
-        c.tau = bound(c.tau, 0, 1 << 128);
         c.avanaFee = bound(c.avanaFee, 0, 1 << 128);
         c.borrowerSurplus = bound(c.borrowerSurplus, 0, 1 << 128);
         c.callerFunds = bound(c.callerFunds, 0, 1 << 128);
@@ -178,10 +166,8 @@ contract SettlementMathDifferentialTest is DifferentialTest {
             _one("recoveryWithFloor", _a2(c.minRec, c.recovered)),
             "recoveryWithFloor"
         );
-        uint256[] memory g = new uint256[](7);
-        (g[0], g[1], g[2], g[3], g[4], g[5], g[6]) =
-        (c.debt, c.phi, c.tau, c.avanaFee, c.borrowerSurplus, c.callerFunds, c.recovered);
-        uint256 gap = m.roundingGap(g[0], g[1], g[2], g[3], g[4], g[5], g[6]);
+        uint256[] memory g = _a5(c.debt, c.avanaFee, c.borrowerSurplus, c.callerFunds, c.recovered);
+        uint256 gap = m.roundingGap(g[0], g[1], g[2], g[3], g[4]);
         assertEq(gap, _one("roundingGap", g), "roundingGap");
         uint256[2] memory ref =
             abi.decode(_reference("shortfallTopUp", _args(c.minRec, c.recovered, gap, c.maxShortfall)), (uint256[2]));
@@ -201,27 +187,25 @@ contract SettlementMathDifferentialTest is DifferentialTest {
     function testFuzz_TEST_198_differentialWaterfall(
         uint256 value,
         uint256 debt,
-        uint256 premiumOnDebt,
         uint256 recoveredWithFloor,
         uint256 share,
         uint256 callerFunds
     ) public {
         value = bound(value, 0, (1 << 128) - 1);
         debt = bound(debt, 0, (1 << 128) - 1);
-        premiumOnDebt = bound(premiumOnDebt, 0, (1 << 64) - 1);
         recoveredWithFloor = bound(recoveredWithFloor, 0, (1 << 128) - 1);
         share = bound(share, 0, 2 * BPS); // shares above 1e4 must revert in both
         callerFunds = bound(callerFunds, 0, (1 << 128) - 1);
         uint256[6] memory r =
-            abi.decode(_reference("payouts", _a5(value, debt, premiumOnDebt, recoveredWithFloor, share)), (uint256[6]));
-        try m.payouts(value, debt, premiumOnDebt, recoveredWithFloor, share) returns (SettlementMath.Payouts memory p) {
+            abi.decode(_reference("payouts", _args(value, debt, recoveredWithFloor, share)), (uint256[6]));
+        try m.payouts(value, debt, recoveredWithFloor, share) returns (SettlementMath.Payouts memory p) {
             assertEq(r[0], 0, "reference reverts, Solidity does not");
             assertEq(p.surplus, r[1], "S");
             assertEq(p.oracleGain, r[2], "G");
             assertEq(p.avanaFee, r[3], "A");
             assertEq(p.keeperReward, r[4], "kr");
             assertEq(p.borrowerSurplus, r[5], "B");
-            _compareKeeperPayout(callerFunds, debt, debt, recoveredWithFloor, debt + premiumOnDebt, p);
+            _compareKeeperPayout(callerFunds, debt, recoveredWithFloor, p);
         } catch (bytes memory err) {
             assertEq(r[0], 1, "Solidity reverts, reference does not");
             assertEq(
@@ -260,12 +244,11 @@ contract SettlementMathDifferentialTest is DifferentialTest {
         (c.value, c.debt, c.callerFunds, c.minRec, c.recovered, c.share, c.maxShortfall);
         uint256[6] memory r = abi.decode(_reference("liquidationSettlement", a), (uint256[6]));
         SettlementMath.Payouts memory p =
-            m.payouts(c.value, c.debt, 0, m.recoveryWithFloor(c.minRec, c.recovered), c.share);
-        uint256 gap = m.roundingGap(c.debt, 0, 0, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
+            m.payouts(c.value, c.debt, m.recoveryWithFloor(c.minRec, c.recovered), c.share);
+        uint256 gap = m.roundingGap(c.debt, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
         try m.shortfallTopUp(c.minRec, c.recovered, gap, c.maxShortfall) returns (uint256 shortfall) {
             assertEq(r[0], 0, "reference reverts, Solidity does not");
-            uint256 out =
-                m.keeperPayout(c.callerFunds, 0, c.recovered + shortfall, c.debt, 0, p.avanaFee, p.borrowerSurplus);
+            uint256 out = m.keeperPayout(c.callerFunds, c.recovered + shortfall, c.debt, p.avanaFee, p.borrowerSurplus);
             assertEq(shortfall, r[1], "shortfall");
             assertEq(p.avanaFee, r[2], "A");
             assertEq(p.keeperReward, r[3], "kr");
@@ -279,73 +262,51 @@ contract SettlementMathDifferentialTest is DifferentialTest {
         }
     }
 
-    struct FlashCase {
+    struct FeeCase {
         uint256 value;
         uint256 debt;
-        uint256 flash;
-        uint256 premiumBps;
-        uint256 inFee;
-        uint256 outFee;
-        uint256 callerFunds;
+        uint256 debtToCover;
+        uint256 feeBps;
         uint256 minRec;
         uint256 recovered;
     }
 
-    // TEST-198 verifies: SPEC-LIQ-007, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-108
-    // An oversized flash loan (F >= D, phi >= phiD) and a transfer fee on T both ways (Fr < F, P > F + phi): each step
-    // of the settlement against the reference.
-    function testFuzz_TEST_198_differentialOversizedFlashAndTransferFee(
-        FlashCase memory c
+    // TEST-198 verifies: SPEC-LIQ-010, SPEC-LIQ-017, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-108, REQ-SWAP-089
+    // An oversized debtToCover (X >= D, the unused X - D returned in keeperOut) and a transfer fee on the caller's
+    // funding (Kf < X, still Kf >= D): each step of the settlement against the reference, and the fee falling on
+    // keeperOut alone.
+    function testFuzz_TEST_198_differentialOversizedFundingAndTransferFee(
+        FeeCase memory c
     ) public {
         c.debt = bound(c.debt, 0, (1 << 120) - 1);
-        c.flash = bound(c.flash, c.debt, (1 << 121) - 1);
-        c.premiumBps = bound(c.premiumBps, 0, 9);
-        c.inFee = bound(c.inFee, 0, c.flash / 100);
-        c.outFee = bound(c.outFee, 0, (1 << 100) - 1);
-        c.callerFunds = bound(c.callerFunds, 0, (1 << 120) - 1);
+        c.feeBps = bound(c.feeBps, 0, 20);
+        c.debtToCover = bound(c.debtToCover, c.debt + c.debt * c.feeBps / BPS + 1, (1 << 121) - 1);
+        uint256 kf = c.debtToCover - c.debtToCover * c.feeBps / BPS;
+        vm.assume(kf >= c.debt);
         c.value = bound(c.value, 0, (1 << 121) - 1);
         c.minRec = bound(c.minRec, 0, c.value);
         c.recovered = bound(c.recovered, 0, (1 << 121) - 1);
-        uint256 phi = (c.flash * c.premiumBps + BPS - 1) / BPS;
-        uint256 phiD = (c.debt * c.premiumBps + BPS - 1) / BPS;
         uint256 rf = m.recoveryWithFloor(c.minRec, c.recovered);
-        SettlementMath.Payouts memory p = m.payouts(c.value, c.debt, phiD, rf, AVANA_FEE_SHARE_BPS);
-        uint256[] memory g = new uint256[](7);
-        (g[0], g[1], g[2], g[3], g[4], g[5], g[6]) =
-        (c.debt, phi, c.inFee, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
-        uint256 gap = m.roundingGap(g[0], g[1], g[2], g[3], g[4], g[5], g[6]);
+        SettlementMath.Payouts memory p = m.payouts(c.value, c.debt, rf, AVANA_FEE_SHARE_BPS);
+        uint256[] memory g = _a5(c.debt, p.avanaFee, p.borrowerSurplus, kf, c.recovered);
+        uint256 gap = m.roundingGap(g[0], g[1], g[2], g[3], g[4]);
         assertEq(gap, _one("roundingGap", g), "roundingGap");
         uint256 shortfall = m.shortfallTopUp(c.minRec, c.recovered, gap, type(uint128).max);
-        _compareKeeperPayout(
-            c.callerFunds, c.flash - c.inFee, c.debt, c.recovered + shortfall, c.flash + phi + c.outFee, p
-        );
-        if (c.outFee == 0) {
-            // With no fee on the repayment transfer the shortfall always leaves keeperOut >= 0.
-            m.keeperPayout(
-                c.callerFunds,
-                c.flash - c.inFee,
-                c.recovered + shortfall,
-                c.debt,
-                c.flash + phi,
-                p.avanaFee,
-                p.borrowerSurplus
-            );
-        }
+        _compareKeeperPayout(kf, c.debt, c.recovered + shortfall, p);
+        uint256 outFull = m.keeperPayout(c.debtToCover, c.recovered + shortfall, c.debt, p.avanaFee, p.borrowerSurplus);
+        uint256 outFee = m.keeperPayout(kf, c.recovered + shortfall, c.debt, p.avanaFee, p.borrowerSurplus);
+        assertEq(outFull - outFee, c.debtToCover - kf, "the funding fee falls on keeperOut alone");
     }
 
     function _compareKeeperPayout(
         uint256 callerFunds,
-        uint256 flashReceived,
         uint256 debt,
         uint256 recoveredWithTopUp,
-        uint256 flashRepaid,
         SettlementMath.Payouts memory p
     ) internal {
-        uint256[] memory k = new uint256[](7);
-        (k[0], k[1], k[2], k[3], k[4], k[5], k[6]) =
-        (callerFunds, flashReceived, recoveredWithTopUp, debt, flashRepaid, p.avanaFee, p.borrowerSurplus);
+        uint256[] memory k = _a5(callerFunds, recoveredWithTopUp, debt, p.avanaFee, p.borrowerSurplus);
         uint256[2] memory ref = abi.decode(_reference("keeperPayout", k), (uint256[2]));
-        try m.keeperPayout(k[0], k[1], k[2], k[3], k[4], k[5], k[6]) returns (uint256 out) {
+        try m.keeperPayout(k[0], k[1], k[2], k[3], k[4]) returns (uint256 out) {
             assertEq(ref[0], 0, "reference reverts, Solidity does not");
             assertEq(out, ref[1], "keeperOut");
         } catch (bytes memory err) {

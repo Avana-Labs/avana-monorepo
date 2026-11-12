@@ -16,19 +16,11 @@ contract SettlementMathHarness {
         return SettlementMath.netBonus(bonus, liquidationFee);
     }
 
-    function costsBps(
-        uint256 premium,
-        uint256 flashAmount
-    ) external pure returns (uint256) {
-        return SettlementMath.costsBps(premium, flashAmount);
-    }
-
     function effectiveSlippage(
         uint256 bNet,
-        uint256 costs,
         uint256 allowanceBps
     ) external pure returns (uint256) {
-        return SettlementMath.effectiveSlippage(bNet, costs, allowanceBps);
+        return SettlementMath.effectiveSlippage(bNet, allowanceBps);
     }
 
     function legSlippage(
@@ -120,16 +112,12 @@ contract SettlementMathHarness {
 
     function roundingGap(
         uint256 debtRepaid,
-        uint256 flashPremium,
-        uint256 transferCost,
         uint256 avanaFee,
         uint256 borrowerSurplus,
         uint256 callerFunds,
         uint256 recovered
     ) external pure returns (uint256) {
-        return SettlementMath.roundingGap(
-            debtRepaid, flashPremium, transferCost, avanaFee, borrowerSurplus, callerFunds, recovered
-        );
+        return SettlementMath.roundingGap(debtRepaid, avanaFee, borrowerSurplus, callerFunds, recovered);
     }
 
     function shortfallTopUp(
@@ -144,25 +132,20 @@ contract SettlementMathHarness {
     function payouts(
         uint256 value,
         uint256 debtRepaid,
-        uint256 premiumOnDebt,
         uint256 recoveredWithTopUp,
         uint256 feeShareBps
     ) external pure returns (SettlementMath.Payouts memory) {
-        return SettlementMath.payouts(value, debtRepaid, premiumOnDebt, recoveredWithTopUp, feeShareBps);
+        return SettlementMath.payouts(value, debtRepaid, recoveredWithTopUp, feeShareBps);
     }
 
     function keeperPayout(
         uint256 callerFunds,
-        uint256 flashReceived,
         uint256 recoveredWithTopUp,
         uint256 debtRepaid,
-        uint256 flashRepaid,
         uint256 avanaFee,
         uint256 borrowerSurplus
     ) external pure returns (uint256) {
-        return SettlementMath.keeperPayout(
-            callerFunds, flashReceived, recoveredWithTopUp, debtRepaid, flashRepaid, avanaFee, borrowerSurplus
-        );
+        return SettlementMath.keeperPayout(callerFunds, recoveredWithTopUp, debtRepaid, avanaFee, borrowerSurplus);
     }
 
     function flashPremiumWithinCap(

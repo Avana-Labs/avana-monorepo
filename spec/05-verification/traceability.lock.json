@@ -20394,13 +20394,19 @@
     ]
   },
   "REQ-SWAP-022": {
-    "hash": "0de7631c0831d816",
+    "hash": "76e52d0ff9e9b2e8",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-03",
       "ILPVaultSwapErrors",
-      "ILPVaultSwapKeeper",
-      "RouteMode"
+      "ILPVaultSwapLiquidation",
+      "LPVaultSwapSettlement",
+      "PROP-059",
+      "RouteMode",
+      "TEST-119",
+      "TEST-174",
+      "TEST-232",
+      "TEST-239"
     ]
   },
   "REQ-SWAP-023": {
@@ -20411,11 +20417,17 @@
     ]
   },
   "REQ-SWAP-024": {
-    "hash": "2f673c5b6c249ceb",
+    "hash": "8862f8fc51def538",
     "checks": [
       "FV-LIQ-03",
       "ILPVaultSwapEvents",
-      "ILPVaultSwapLiquidation"
+      "ILPVaultSwapLiquidation",
+      "LPVaultSwapSettlement",
+      "TEST-053",
+      "TEST-179",
+      "TEST-232",
+      "TEST-239",
+      "TEST-289"
     ]
   },
   "REQ-SWAP-025": {
@@ -20750,17 +20762,22 @@
     ]
   },
   "REQ-SWAP-066": {
-    "hash": "884433c80375a360",
+    "hash": "61dd141a8dbf8538",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-03",
       "FV-LIQ-06",
       "ILPVaultSwapErrors",
       "ILPVaultSwapEvents",
-      "ILPVaultSwapPermissionless",
+      "ILPVaultSwapLiquidation",
+      "LPVaultSwap",
+      "LPVaultSwapPendingLogic",
       "QNT-03",
       "QNT-37",
-      "QNT-T09"
+      "QNT-T09",
+      "TEST-060",
+      "TEST-170",
+      "TEST-280"
     ]
   },
   "REQ-SWAP-067": {
@@ -20849,7 +20866,7 @@
     ]
   },
   "REQ-SWAP-076": {
-    "hash": "4d1dc4848873c889",
+    "hash": "f9c4d143c3bb24a4",
     "checks": [
       "FV-LIQ-03",
       "FV-LIQ-05",
@@ -20860,22 +20877,39 @@
       "ILPVaultSwapLiquidation",
       "ILPVaultSwapViews",
       "IPayoutEscrow",
+      "LPVaultSwap",
+      "LPVaultSwapSettlement",
       "MATH-ST-28",
       "MATH-ST-83",
       "PayoutEscrow",
+      "TEST-060",
+      "TEST-098",
+      "TEST-170",
       "TEST-174",
       "TEST-179",
+      "TEST-242",
+      "TEST-286",
       "TEST-289"
     ]
   },
   "REQ-SWAP-077": {
-    "hash": "d556e19236a2ea4b",
+    "hash": "1c3fc7bb138b2648",
     "checks": [
       "FV-LIQ-03",
       "HYP-69",
       "ILPVaultSwap",
       "ILPVaultSwapEvents",
-      "ILPVaultSwapLiquidation"
+      "ILPVaultSwapLiquidation",
+      "LPVaultSwapPendingLogic",
+      "LPVaultSwapSettlement",
+      "TEST-053",
+      "TEST-055",
+      "TEST-160",
+      "TEST-174",
+      "TEST-179",
+      "TEST-216",
+      "TEST-232",
+      "TEST-239"
     ]
   },
   "REQ-SWAP-078": {
@@ -21135,7 +21169,7 @@
     ]
   },
   "REQ-SWAP-106": {
-    "hash": "381ce63002934d78",
+    "hash": "498eaacd0c30e263",
     "checks": [
       "DeleverageRequest",
       "FV-LIQ-01",
@@ -21144,10 +21178,17 @@
       "ILPVaultSwapDeleverage",
       "ILPVaultSwapErrors",
       "ILPVaultSwapEvents",
+      "LPVaultSwap",
+      "LPVaultSwapDeleverageLogic",
       "MATH-ST-123",
       "MATH-ST-72",
       "SettlementMath",
-      "TEST-198"
+      "TEST-046",
+      "TEST-060",
+      "TEST-118",
+      "TEST-198",
+      "TEST-239",
+      "TEST-242"
     ]
   },
   "REQ-SWAP-107": {
@@ -21250,15 +21291,20 @@
     ]
   },
   "REQ-SWAP-122": {
-    "hash": "b263dd388ac4fe1b",
+    "hash": "183a830c25622bb3",
     "checks": [
       "AaveV3FlashSource",
       "IFlashSource",
       "ILPVaultSwapErrors",
       "ILPVaultSwapViews",
+      "LPVaultSwap",
+      "LPVaultSwapDeleverageLogic",
       "MATH-ST-111",
       "TEST-052",
       "TEST-080",
+      "TEST-098",
+      "TEST-239",
+      "TEST-242",
       "TEST-287"
     ]
   },
@@ -24172,7 +24218,7 @@
     ]
   },
   "SPEC-LIQ-005": {
-    "hash": "8f9aea4549e49f5c",
+    "hash": "c859e2b6f6963bee",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-06",
@@ -24181,6 +24227,8 @@
       "ILPVaultSwapErrors",
       "ILPVaultSwapLiquidation",
       "IParameterStoreViews",
+      "LPVaultSwapLiquidationLogic",
+      "LPVaultSwapSettlement",
       "LiquidationResult",
       "MATH-ST-01",
       "MATH-ST-06",
@@ -24199,6 +24247,7 @@
       "MATH-ST-94",
       "PROP-018",
       "PROP-048",
+      "PROP-059",
       "ParameterStoreViews",
       "QNT-27",
       "SIM-01B",
@@ -24208,7 +24257,17 @@
       "SYM-48",
       "SettlementMath",
       "SettlementReport",
-      "TEST-198"
+      "TEST-048",
+      "TEST-051",
+      "TEST-072",
+      "TEST-078",
+      "TEST-081",
+      "TEST-161",
+      "TEST-198",
+      "TEST-216",
+      "TEST-232",
+      "TEST-246",
+      "TEST-281"
     ]
   },
   "SPEC-LIQ-006": {
@@ -24558,7 +24617,7 @@
     ]
   },
   "SPEC-LIQ-020": {
-    "hash": "21443a9bafeeda6f",
+    "hash": "00bf7d2a457922b4",
     "checks": [
       "DeleverageRequest",
       "FV-LIQ-01",
@@ -24569,6 +24628,7 @@
       "ILPVaultSwapErrors",
       "ILPVaultSwapEvents",
       "ILensPreview",
+      "LPVaultSwapDeleverageLogic",
       "MATH-ST-101",
       "MATH-ST-123",
       "MATH-ST-71",
@@ -24578,7 +24638,8 @@
       "MATH-ST-75",
       "MATH-ST-87",
       "SettlementMath",
-      "TEST-198"
+      "TEST-198",
+      "TEST-239"
     ]
   },
   "SPEC-LIQ-021": {

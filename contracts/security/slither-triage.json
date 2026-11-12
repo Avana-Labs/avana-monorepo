@@ -2007,6 +2007,574 @@
       "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record: for each route slot ever set on the integration's markets (not Cancelled or Closed), one try/catch call to the governance-approved route's `dependencies()`. A revert goes to `catch` and disables the route (fail closed). Return data that does not decode as `address[]` is not caught by Solidity's try/catch: it reverts the whole timelock call, so governance disables that route first (fail closed). The answer is only compared, never stored. The loop is bounded by MAX_MARKET_COUNT markets times the slots governance set and runs only inside a timelock call. Tests: unreadableRouteIsDisabledByARecheck, additionAfterFinalizeDisablesRoutesThroughIt.",
       "approval": "approved (reviewed per call site, 2026-11-11; calls-loop in a timelock-only path, bounded)",
       "review": "New view call site in a loop; reviewed per call site."
+    },
+    {
+      "fingerprint": "91bd6ec5b34279ad",
+      "check": "reentrancy-balance",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._fundCoverage(LPVaultSwapPendingLogic.Pend)",
+      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the Coverage Spoke cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the Coverage Spoke funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "79b43e3c5ee0acd5",
+      "check": "reentrancy-balance",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending(uint256,uint256)",
+      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the Coverage Spoke cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the Coverage Spoke funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "f3b1bd793342b088",
+      "check": "reentrancy-balance",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._seize(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
+      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the Coverage Spoke cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the Coverage Spoke funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "d034c1d54586b688",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._seize(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "d856bf8653150704",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._swapLegs(LPVaultSwapSettlement.LegArgs,LPVaultSwapSettlement.Tracked)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "1acce985c8b9f8ed",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._checkCallback(address,uint256,bytes)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "c4a18374a1f41f38",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "86165b8ddfd49c01",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._swapLeg(LPVaultSwapSettlement.LegArgs,uint256,uint256,LPVaultSwapSettlement.Tracked)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "c8b9a8eb40cd5abe",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._track(LPVaultSwapSettlement.Tracked,address)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "3deb47455775f5df",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._preLock(uint256,uint256)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "7ac1c9a6bc6f8efa",
+      "check": "incorrect-equality",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._deliver(address,address,uint256)",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "83959b32c462e6c0",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._tryRoute(LPVaultSwapSettlement.LegArgs,uint256,address,uint256,LPVaultSwapSettlement.Tracked,bool)",
+      "reason": "Return measured by balance delta (REQ-SWAP-108): the amounts this call delivers are measured as LPVaultSwap's own balance changes (or, for flashLoan, the premium the callback checked and stored), never read from the callee's return value. Covered by LPVaultSwap.Funding, LPVaultSwap.Residues and LPVaultSwap.Callbacks.fuzz.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "3a5f45773ef84366",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
+      "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "0333e6ca889eebee",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkDebtPrice(DebtReserveDef,uint256)",
+      "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "7a64ffb8744ec543",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._releaseAndSwap(LPVaultSwapPendingLogic.Pend,uint256,uint256)",
+      "reason": "Return measured by balance delta (REQ-SWAP-108): the amounts this call delivers are measured as LPVaultSwap's own balance changes (or, for flashLoan, the premium the callback checked and stored), never read from the callee's return value. Covered by LPVaultSwap.Funding, LPVaultSwap.Residues and LPVaultSwap.Callbacks.fuzz.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "e50975465a1d87a9",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._fundCoverage(LPVaultSwapPendingLogic.Pend)",
+      "reason": "Return measured by balance delta (REQ-SWAP-108): the amounts this call delivers are measured as LPVaultSwap's own balance changes (or, for flashLoan, the premium the callback checked and stored), never read from the callee's return value. Covered by LPVaultSwap.Funding, LPVaultSwap.Residues and LPVaultSwap.Callbacks.fuzz.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "2b73a8e59c8a5c35",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._runFlash(LPVaultSwapDeleverageLogic.FlashContext)",
+      "reason": "Return measured by balance delta (REQ-SWAP-108): the amounts this call delivers are measured as LPVaultSwap's own balance changes (or, for flashLoan, the premium the callback checked and stored), never read from the callee's return value. Covered by LPVaultSwap.Funding, LPVaultSwap.Residues and LPVaultSwap.Callbacks.fuzz.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "6c7e355c49f6ce68",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._releaseAndSwap(LPVaultSwapDeleverageLogic.FlashContext)",
+      "reason": "Return measured by balance delta (REQ-SWAP-108): the amounts this call delivers are measured as LPVaultSwap's own balance changes (or, for flashLoan, the premium the callback checked and stored), never read from the callee's return value. Covered by LPVaultSwap.Funding, LPVaultSwap.Residues and LPVaultSwap.Callbacks.fuzz.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "95fd4ed11a541080",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._legArgs(LPVaultSwapPendingLogic.Pend,uint256,uint256)",
+      "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "7172227c07308d49",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._unwindAndSwap(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
+      "reason": "Return measured by balance delta (REQ-SWAP-108): the amounts this call delivers are measured as LPVaultSwap's own balance changes (or, for flashLoan, the premium the callback checked and stored), never read from the callee's return value. Covered by LPVaultSwap.Funding, LPVaultSwap.Residues and LPVaultSwap.Callbacks.fuzz.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "d0a75ae92f6a8d21",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._prepare(DeleverageRequest)",
+      "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "75897c32ae003149",
+      "check": "unused-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._legArgs(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
+      "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "1afef8b66bd0bf94",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.activeKeeperCount()",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "af43e88749208fca",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._tryRoute(LPVaultSwapSettlement.LegArgs,uint256,address,uint256,LPVaultSwapSettlement.Tracked,bool)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "1bf2c846a785fcd4",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._swapLeg(LPVaultSwapSettlement.LegArgs,uint256,uint256,LPVaultSwapSettlement.Tracked)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "c719890e0f9ebe34",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._legStale(address,uint64)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "c0e60d42a2e37928",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._released(LPVaultSwapSettlement.Tracked,uint256)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "73efda2702526c59",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._track(LPVaultSwapSettlement.Tracked,address)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "bfc0077b67411033",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._deliver(address,address,uint256)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "215e1558bd4e7be9",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._repaySource(IERC20,uint256)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "409eca7b285cf303",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._residues(LPVaultSwapSettlement.Tracked)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8888da910a2da2a4",
+      "check": "calls-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._snapshot(address[],address)",
+      "reason": "Bounded loop: it runs over the market's pool tokens (2 to 4, MarketRegistry listing bound), the intermediates a registry-listed route names, at most 4 payouts or residues, at most MAX_KEEPERS (32) keepers, or at most MAX_REPAY_TRANSFERS (4) repayment transfers; every callee is a token, route, registry, store, oracle or escrow fixed by the registry or the immutables, and a revert reverts the whole call (fail closed). Covered by LPVaultSwap.Legs, LPVaultSwap.Routes.fuzz and LPVaultSwap.Keepers.invariant.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "51bb3ac1b01091bb",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._tryRoute(LPVaultSwapSettlement.LegArgs,uint256,address,uint256,LPVaultSwapSettlement.Tracked,bool)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "3782064e5cdca394",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._settleLoan(LPVaultSwapDeleverageLogic.FlashContext,uint256,uint256)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "b4155a5d5e33d6e1",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._runFlash(LPVaultSwapDeleverageLogic.FlashContext)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "a972ea768678f909",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._unwindAndSwap(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "a6c84151493f9f93",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending(uint256,uint256)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "5a85941a1ac118df",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic.onFlashLoan(address,uint256,uint256,bytes)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "e53a290da66d886f",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._waterfall(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "402ba69ee3a53b13",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic.liquidate(LiquidationParams)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "5a4afd87dcb74dc4",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._releaseAndSwap(LPVaultSwapPendingLogic.Pend,uint256,uint256)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "0ccfdd0e7a6822a9",
+      "check": "reentrancy-events",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._releaseAndSwap(LPVaultSwapDeleverageLogic.FlashContext)",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "d0641a99eac4dc2b",
+      "check": "timestamp",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._legStale(address,uint64)",
+      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b6966bf07827a17d",
+      "check": "timestamp",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
+      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "669ff2be6b33cd00",
+      "check": "timestamp",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkDebtPrice(DebtReserveDef,uint256)",
+      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "5a0ebb103c3aa872",
+      "check": "timestamp",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic.liquidate(LiquidationParams)",
+      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "45f93f2772f13cde",
+      "check": "assembly",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+      "function": "LPVaultSwapStorage._s()",
+      "reason": "ERC-7201 namespaced storage pointer (avana.storage.LPVaultSwap): one assembly line assigning the fixed slot to the Layout pointer; memory-safe. Covered by LPVaultSwap.Admin (an upgrade keeps the registry and the carry) and the storage-layout snapshot.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "a7275e30762d2f14",
+      "check": "assembly",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap._delegate(address)",
+      "reason": "Delegatecall dispatch of the router (call site LPVaultSwap._delegate): the target is one of the three immutable logic contracts checked at construction (logicConfig kind and immutables hash, InvalidLogic); selector and arguments are the caller's calldata copied unchanged; on failure the revert data is bubbled unchanged, on success the return data is returned unchanged whatever its length (short, long or oversized responses pass through as the logic contract produced them). Each logic body reverts NotDelegated unless reached through the proxy. Covered by LPVaultSwap.Admin, LPVaultSwap.Admin.fuzz (testFuzz_TEST_242_logicBodiesNeedTheProxy) and every liquidate, settlePending and deleverage test.",
+      "approval": "pending (lead review)"
+    },
+    {
+      "fingerprint": "02afa66c78246fa1",
+      "check": "assembly",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._deliver(address,address,uint256)",
+      "reason": "Gas-limited payout transfer (call site LPVaultSwapSettlement._deliver, REQ-SWAP-076): the target is the debt asset or a pool token of the settlement, selector transfer(address,uint256), 100,000 gas after a check that 111,588 gas remain, no return data copied (out size 0), so a short, long or oversized response costs no gas and cannot revert; the success flag and return data are ignored by design: the amount that left LPVaultSwap is measured as its own balance fall and amount - sent is escrowed for the recipient in PayoutEscrow. Covered by LPVaultSwap.PayoutEscrow (blocklisted, gas burner, under-delivery, insufficient gas) and LPVaultSwap.Delivery.fuzz.",
+      "approval": "pending (lead review)"
+    },
+    {
+      "fingerprint": "80089df8093b5147",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._deliver(address,address,uint256)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "1abaf69281c5af73",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._unitSum(LPVaultSwapSettlement.LegArgs)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "7ba3fcd2d6544f11",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._track(LPVaultSwapSettlement.Tracked,address)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "86b960ba9dab1cea",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._loadDebtReserve(address,uint256)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "ad57a7b24dcebac9",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "d52b1221d12c8cb3",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._tryRoute(LPVaultSwapSettlement.LegArgs,uint256,address,uint256,LPVaultSwapSettlement.Tracked,bool)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "67f56cab27d15261",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkDebtPrice(DebtReserveDef,uint256)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "59200adc862999da",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._swapLeg(LPVaultSwapSettlement.LegArgs,uint256,uint256,LPVaultSwapSettlement.Tracked)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "9a1f8d2f24da25a7",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._loadMarket(uint256)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8f0cfe1f9a330dd2",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._requireSharesEqualAssets(address,uint256)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "a849c3a5328ded7c",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._selector(bytes)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "29d5dc17742cb8d8",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._residues(LPVaultSwapSettlement.Tracked)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "c6cc7ac66ae25149",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._legStale(address,uint64)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "9decead1602270c4",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._released(LPVaultSwapSettlement.Tracked,uint256)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "7f975f8b0c4e9bdc",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._swapLegs(LPVaultSwapSettlement.LegArgs,LPVaultSwapSettlement.Tracked)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "6b5c12ea631bee5d",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._snapshot(address[],address)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "a56408c4a733fa1f",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._debtPrice(address,uint256,DebtReserveDef)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "3689c8016066a15f",
+      "check": "dead-code",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._collateralPrice(Market)",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "4ab3daa7b02db30d",
+      "check": "unused-state",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+      "function": "LPVaultSwapStorage._HF_ONE",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "ee3f25efeacbd16b",
+      "check": "unused-state",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+      "function": "LPVaultSwapStorage._POST_CALL_GAS",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8587574a8869e609",
+      "check": "unused-state",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+      "function": "LPVaultSwapStorage._PAYOUT_GAS_REQUIRED",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "3c897c60f1a6d9c0",
+      "check": "unused-state",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+      "function": "LPVaultSwapStorage._MAX_REPAY_TRANSFERS",
+      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
+      "approval": "pending review (approved pattern)"
     }
   ]
 }
