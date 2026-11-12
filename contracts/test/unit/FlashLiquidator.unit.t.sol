@@ -469,20 +469,18 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
     }
 
     /// @notice A transfer fee on the debt asset: the helper receives less than `X` from the caller and the Pool, so
-    /// LPVaultSwap's pull of `X` fails and the call reverts; the caller then funds `liquidate` itself.
+    /// LPVaultSwap's pull of `X` fails and the whole call reverts, owing no loan or premium. A caller-funded
+    /// `liquidate` meets Aave V4's `InsufficientTransferred` instead (TEST-048).
     // TEST-174 verifies: REQ-HELPER-007, REQ-SWAP-108, REQ-SWAP-123
     function test_TEST_174_transferFeeOnDebtAssetReverts() public {
         usdcToken.setFeeBps(10);
         vm.expectPartialRevert(IERC20Errors.ERC20InsufficientBalance.selector);
         _liquidate(_exampleRequest());
-        _fund(caller, address(lvs), 1950e6);
-        vm.prank(caller);
-        lvs.liquidate(_params(1950e6));
-        assertEq(lvs.lastKf(), 1948.05e6, "LPVaultSwap measures Kf when the caller funds directly");
+        assertEq(lvs.calls(), 0, "nothing reached LPVaultSwap");
     }
 
-    /// @notice A balance the helper held before the call never pays for it: a fee that would leave the helper below
-    /// its start reverts `PayoutTooLow(0, minPayout)`; a fee the payout covers is paid from the payout.
+    /// @notice A balance the helper held before the call never pays for it: a payout that arrives short and would leave
+    /// the helper below its start reverts `PayoutTooLow(0, minPayout)`; a shortfall the payout covers is paid from it.
     // TEST-174 verifies: REQ-HELPER-001, REQ-HELPER-007, REQ-HELPER-008, REQ-SWAP-108
     function test_TEST_174_transferFeePaidFromPayoutNeverFromHelperBalance() public {
         usdcToken.mint(address(helper), 1e6);

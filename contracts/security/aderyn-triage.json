@@ -1748,6 +1748,296 @@
       "function": "",
       "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
       "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "5421581a600ee4b9",
+      "check": "contract-locks-ether",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock sends no value with Adapter operations and no other function accepts ETH.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the ParameterStore and MarketRegistry entries."
+    },
+    {
+      "fingerprint": "374e3fa1d74d901b",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "19b9eda521070586",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "e1cec072da843537",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "f37fc92ec6e4d6b1",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "d002a5494af9495d",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "82dcdce3b6eea3ca",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "a1c1fbcd5b6bafc2",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "78ac4763ef9e880c",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "2c4fcba2eef53969",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "4b14c70523277f59",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "1e22ee45798a2c8c",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "137327e83ae6d5dc",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "372b3985ae4f3fa1",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "5fa93b054053b147",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "e64abc174bf15b08",
+      "check": "empty-block",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "The UUPS authorization hook: onlyRole(APPLICATION_ADMIN) is the whole check (REQ-ADAPTER-003), as OpenZeppelin documents.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the ParameterStore and MarketRegistry entries."
+    },
+    {
+      "fingerprint": "7e2103b44bb93411",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "The DebtRemaining scan finds the first borrowed reserve in a loop and reverts after it, on the failure path only, bounded by the Spoke's reserve count (REQ-ADAPTER-051, REQ-PROXY-071). Covered by test_TEST_203_debtRemainingNamesFirstBorrowed.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "b27ccfce55db2b84",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "76ae8101303662d0",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "bb993715baa381c5",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "a3d4d777eb000277",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "9690f2fc1ce83c1b",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "59c406e34c26aa96",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "0e2660e0154552f7",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "b7a43bdbc7340fe4",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "1a433bb92a2af4c2",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "c87fef43df496bd0",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "d694c984a2182fca",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "20cc522e5d4cb848",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "ceab37968726357a",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "729d73f3b2808ec4",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "e6e914ac551ec6ec",
+      "check": "unused-error",
+      "file": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+      "reason": "`LockHeld` is raised by the Lock's acquire and propagates through every entry point; it is declared on the Adapter so the app decodes it from the Adapter's ABI (REQ-PROXY-076). Covered by the LockHeld tests of AaveAdapter.Lock.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: errors declared for the ABI (as the ILPVaultSwapErrors LockHeld entry)."
+    },
+    {
+      "fingerprint": "9b415feb1b9b988c",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "0f78952aaae18f66",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "705c1edbc478e093",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "d15140b4a08ef23b",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "fa4294a21723f957",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
     }
   ]
 }

@@ -52,12 +52,35 @@ contract CollPoolToken is ERC20 {
         revertOnZero = on;
     }
 
+    /// @dev Transfer hook (ERC-777 style), off by default: the next transfer between two non-zero addresses first
+    /// calls `hookTarget` with `hookData` once and keeps the outcome, standing in for a token that calls back.
+    address public hookTarget;
+    bytes public hookData;
+    bool public hookFired;
+    bool public hookSucceeded;
+    bytes public hookReturn;
+
+    function armHook(
+        address target,
+        bytes calldata data
+    ) external {
+        hookTarget = target;
+        hookData = data;
+        hookFired = false;
+    }
+
     function _update(
         address from,
         address to,
         uint256 value
     ) internal override {
         if (value == 0 && revertOnZero) revert ZeroTransfer();
+        address hook = hookTarget;
+        if (hook != address(0) && from != address(0) && to != address(0)) {
+            hookTarget = address(0);
+            hookFired = true;
+            (hookSucceeded, hookReturn) = hook.call(hookData);
+        }
         if (from != address(0) && to != address(0) && feeBps != 0) {
             uint256 fee = value * feeBps / 10_000;
             super._update(from, address(0xFEE), fee);
@@ -229,12 +252,32 @@ contract CollLPVaultMock is ILPVaultErrors {
         if (poolLocked) revert PoolLocked();
     }
 
+    /// @dev ERC-721 receive-callback stand-in, off by default: the next `receivePosition` calls `receiveHookTarget`
+    /// with `receiveHookData` once and keeps the outcome.
+    address public receiveHookTarget;
+    bytes public receiveHookData;
+    bool public receiveHookSucceeded;
+    bytes public receiveHookReturn;
+
+    function armReceiveHook(
+        address target,
+        bytes calldata data
+    ) external {
+        receiveHookTarget = target;
+        receiveHookData = data;
+    }
+
     function receivePosition(
         uint256 marketId,
         address owner,
         bytes32 key
     ) external returns (uint128 units) {
         _custodyCaller();
+        address hook = receiveHookTarget;
+        if (hook != address(0)) {
+            receiveHookTarget = address(0);
+            (receiveHookSucceeded, receiveHookReturn) = hook.call(receiveHookData);
+        }
         if (poolLocked) revert PoolLocked();
         Position storage p = positions[key];
         if (owner == address(this) || p.owner != owner) revert NotTokenOwner();
@@ -379,6 +422,16 @@ contract CollLPVaultMock is ILPVaultErrors {
 /// `Refused(units)`.
 contract CollRiskModuleMock {
     error Refused(uint128 units);
+    /// @dev Stands in for the RiskModule's `NotRescueTopUp` when `enforceRescue` is on and the pledge must be a rescue.
+    error RescueRequired();
+
+    bool public enforceRescue;
+
+    function setEnforceRescue(
+        bool on
+    ) external {
+        enforceRescue = on;
+    }
 
     uint256 public price8 = 2e8;
     uint256 public sliceUsd;
@@ -430,9 +483,10 @@ contract CollRiskModuleMock {
         bytes32,
         uint128 units,
         PledgeCounters calldata,
-        bool
+        bool requireRescue
     ) external view returns (PledgeCharge memory charge) {
         if (refuse) revert Refused(units);
+        if (enforceRescue && requireRescue) revert RescueRequired();
         if (useOverride) return _override;
         charge.usdCharge = (uint256(units) * price8 + 1e6 - 1) / 1e6;
         charge.sliceUsd = sliceUsd > charge.usdCharge ? charge.usdCharge : sliceUsd;

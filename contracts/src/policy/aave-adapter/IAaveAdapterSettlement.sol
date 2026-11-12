@@ -12,8 +12,8 @@ import {PositionRef} from "../../types/PositionRef.sol";
 interface IAaveAdapterSettlement {
     /// @notice Burns `units` of a market's vault token from LPVaultSwap's balance.
     /// @dev The call reverts with `NotLPVaultSwap` unless `msg.sender == LP_VAULT_SWAP` and `LOCK.holder() ==
-    /// LP_VAULT_SWAP`, `UnknownMarket` unless `vaultToken` is the vault token the Adapter bound for `marketId` (or the
-    /// VaultTokenFactory's token of that market), `ZeroAmount` if `units == 0`. Calls `vaultToken.burn(LP_VAULT_SWAP,
+    /// LP_VAULT_SWAP`, `UnknownMarket` unless `vaultToken` is a VaultTokenFactory token whose own `marketId()` is
+    /// `marketId`, `ZeroAmount` if `units == 0`. Calls `vaultToken.burn(LP_VAULT_SWAP,
     /// units)` and emits `SeizedUnitsBurned`. Takes no lock, reads no MarketRegistry state and calls no RiskModule
     /// function: liquidation runs in every pause state. LPVaultSwap calls it between `Collateralization.beginSeizure`
     /// and `settleSeizure`, and before `Collateralization.settlePending`; Collateralization then checks the supply drop.
@@ -44,7 +44,8 @@ interface IAaveAdapterSettlement {
     ) external returns (uint256 repaid);
 
     /// @notice Withdraws and burns the session's units and has Collateralization release them to LPVaultSwap.
-    /// @dev `NotLPVaultSwap` and `NoDeleverageSession` as in `deleverageRepay`; runs only after it. Withdraws `units`
+    /// @dev `NotLPVaultSwap` and `NoDeleverageSession` as in `deleverageRepay`; runs only after it, and only for the
+    /// session's position, units and the hash of the borrower's `minAmounts`. Withdraws `units`
     /// through `proxy.execute`, calls `vaultToken.burn(proxy, units)` and `Collateralization.releaseForDeleverage(proxy,
     /// vaultToken, position.positionKey, units, minAmounts)` (reconcile, debit, counters, rescue units, the LPVault unwinds exactly
     /// `units` and sends each token to LPVaultSwap, position returned to the depositor when credited reaches 0) and

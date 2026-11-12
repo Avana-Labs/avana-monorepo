@@ -152,4 +152,19 @@ interface IAaveAdapterErrors {
     /// @param reserveId The vault-token reserve.
     /// @custom:spec REQ-PROXY-043, REQ-PROXY-095
     error CollateralNotEnabled(uint256 reserveId);
+
+    /// @notice A proxy created by this pledge already has debt or collateral on its Spoke account.
+    /// @dev Reachable only through the address collision that REQ-PROXY-055 assumes infeasible.
+    /// @param proxy The new proxy.
+    /// @custom:spec REQ-ADAPTER-103, REQ-PROXY-055
+    error AccountNotEmpty(address proxy);
+
+    /// @notice A logic contract of the Adapter was called directly instead of by the Adapter's `delegatecall`.
+    /// @custom:spec REQ-ADAPTER-004
+    error NotDelegated();
+
+    /// @notice An implementation was built with a logic contract of another kind or built with other immutables.
+    /// @param logic The refused logic contract.
+    /// @custom:spec REQ-ADAPTER-004
+    error InvalidLogic(address logic);
 }

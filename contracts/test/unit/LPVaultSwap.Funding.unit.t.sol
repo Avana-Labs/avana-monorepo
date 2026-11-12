@@ -158,7 +158,7 @@ contract LPVaultSwapFundingUnitTest is LPVaultSwapUnitBase {
 
     /// @notice A transfer fee that stays on for the repayment is refused by Aave V4's Hub inside `liquidationCall`
     /// (`InsufficientTransferred`); the Aave error passes through unchanged and nothing settles.
-    // TEST-048 verifies: REQ-SWAP-055
+    // TEST-048 verifies: REQ-SWAP-055, REQ-SWAP-123
     function test_TEST_048_aaveRefusesFeeOnRepayment() public {
         _fund(usdc, keeper, 1950e6);
         usdc.setFeeBps(10);

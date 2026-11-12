@@ -31,6 +31,7 @@
     "2.5": [
       {"src": "src/liquidation/settlement-routes", "tests": "test/{unit,fuzz}/{DexPathRoute,PegModuleRoute,WrapperThenDexRoute,RouteMath,RouteReads,DexHops,SwapRouteBase,SwapRoutes}*"},
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
+      {"src": "src/policy/aave-adapter", "tests": "test/unit/AaveAdapter*"},
       {"src": "src/coverage/coverage-spoke", "tests": "test/unit/CoverageSpoke*"}
     ],
     "2.6": [

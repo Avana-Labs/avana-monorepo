@@ -160,6 +160,12 @@ interface IAaveV4Hub {
         address spoke
     ) external view returns (bool);
 
+    /// @notice Whether `underlying` is listed as an asset of the Hub.
+    /// @dev Read by the AaveAdapter's receiver rule: a borrow may not be sent to a token listed on the funding Hub.
+    function isUnderlyingListed(
+        address underlying
+    ) external view returns (bool);
+
     /// @notice Spoke at position `index` in asset `assetId`'s Spoke list.
     /// @dev Read by the RiskModule drift check.
     function getSpokeAddress(

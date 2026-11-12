@@ -1212,6 +1212,43 @@
       "reason": "keccak256(abi.encode(immutables)) is the implementation-immutables hash compared with each logic contract's logicConfig() at construction (InvalidLogic), not a signed message; EIP-712 does not apply.",
       "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
       "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "1a834f54c0252ec2",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "No zero amount reaches a transfer: `_pull` runs only with a positive pull (a zero-debt repay returns before it, a partial repay with cap 0 reverts ZeroAmount, `deleverageRepay` refuses amount 0), and the refund of the repay step is skipped at 0 (REQ-PROXY-084). Covered by TEST-165 and TEST-177 (zeroRefundSkipped with a token that reverts on zero).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: zero-amount transfers skipped (TEST-177)."
+    },
+    {
+      "fingerprint": "ee61e40c0f7f151e",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Not a burn: `IVaultToken(vaultToken).mint(proxy, added)` mints to the account's proxy, never address(0); the vault token itself refuses a zero recipient and only a registered proxy may hold units (REQ-VTOKEN). Covered by TEST-238.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: mint to a checked recipient."
+    },
+    {
+      "fingerprint": "b5c61af7c7e986aa",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Not a signed message: keccak256(abi.encode(minAmounts)) binds the borrower's per-token minimums in the transient repay-with-collateral session so the callback must present the same array (REQ-ADAPTER-081), and keccak256(abi.encode(im)) is the logic contracts' immutables hash compared at construction (REQ-ADAPTER-004); no signature or EIP-712 domain is involved. Covered by test_TEST_239_sessionMisuseReverts (WeakMinimums) and test_TEST_062_constructorChecks.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "acdb187104e30bad",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/aave-adapter/AaveAdapterSettlementLogic.sol",
+      "reason": "Not a signed message: keccak256(abi.encode(minAmounts)) binds the borrower's per-token minimums in the transient repay-with-collateral session so the callback must present the same array (REQ-ADAPTER-081), and keccak256(abi.encode(im)) is the logic contracts' immutables hash compared at construction (REQ-ADAPTER-004); no signature or EIP-712 domain is involved. Covered by test_TEST_239_sessionMisuseReverts (WeakMinimums) and test_TEST_062_constructorChecks.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b2b8ea07cd6029f9",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "Not a signed message: keccak256(abi.encode(minAmounts)) binds the borrower's per-token minimums in the transient repay-with-collateral session so the callback must present the same array (REQ-ADAPTER-081), and keccak256(abi.encode(im)) is the logic contracts' immutables hash compared at construction (REQ-ADAPTER-004); no signature or EIP-712 domain is involved. Covered by test_TEST_239_sessionMisuseReverts (WeakMinimums) and test_TEST_062_constructorChecks.",
+      "approval": "pending review (approved pattern)"
     }
   ]
 }

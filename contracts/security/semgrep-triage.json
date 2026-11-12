@@ -251,6 +251,13 @@
       "reason": "Zero-amount test of a value LPVaultSwap measured, not an exact match on a balance an outsider controls: c == 0 reverts NothingSeized (REQ-SWAP-077), a zero pending balance NothingPending, and Fr == 0 or Fr > F InvalidFlashCallback (REQ-SWAP-013). A donation cannot make these fail: the measured amounts are deltas from snapshots taken in the same call. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.SettlePending and LPVaultSwap.Callbacks.fuzz.",
       "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; not in an approved pattern.",
       "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "cccc81d37d554762",
+      "check": "exact-balance-check",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not an absolute balance check: `received` is the proxy's balance delta across the payer's transfer, and `received == 0 || received > amount` refuses a pull that delivered nothing or more than was pulled (REQ-PROXY-029, REQ-PROXY-013); a donation to the proxy before the pull changes neither balance read's difference. Covered by test_TEST_029_pullDeliveringNothingReverts, test_TEST_029_donationIgnored and TEST-221.",
+      "approval": "pending (Josue)"
     }
   ]
 }

@@ -318,8 +318,8 @@ library SettlementMath {
     }
 
     /// @notice Caller payout `keeperOut = (Kf + R') − (D + A + B)`; reverts with `InsufficientProceeds` if the first
-    /// sum is smaller (defensive: `D ≤ Kf` and `A + B ≤ max(0, R' − D)` keep it non-negative). With a transfer fee on
-    /// `T` the caller passes the measured `Kf`.
+    /// sum is smaller (defensive: `D ≤ Kf` and `A + B ≤ max(0, R' − D)` keep it non-negative). `Kf` is the measured
+    /// funding; a transfer fee on `T` itself reverts in Aave V4's Hub before this runs (REQ-SWAP-123).
     /// @param callerFunds `Kf`.
     /// @param recoveredWithTopUp `R' = R + shortfall`.
     /// @param debtRepaid `D`.

@@ -1,6 +1,8 @@
 /*
- * AaveAdapter (src/policy/aave-adapter/AaveAdapter.sol, interface src/policy/aave-adapter/IAaveAdapter.sol, spec 2.6),
- * with Collateralization (src/custody/collateralization/Collateralization.sol) linked as real code.
+ * AaveAdapter (src/policy/aave-adapter/AaveAdapter.sol, the router, with the bodies of its entry points in
+ * AaveAdapterUserLogic, AaveAdapterExitLogic, AaveAdapterCollateralLogic and AaveAdapterSettlementLogic, reached by
+ * delegatecall and linked in the conf; interface src/policy/aave-adapter/IAaveAdapter.sol, spec 2.6), with
+ * Collateralization (src/custody/collateralization/Collateralization.sol) linked as real code.
  *
  * Backing across the Adapter and Collateralization: every mint equals the units Collateralization credited in the
  * same call and goes to the caller's own proxy for the named market; every burn equals the units Collateralization
@@ -34,16 +36,21 @@
  * dispatched to the real logic-free PositionProxy, so every Spoke and token call the Adapter makes through a proxy
  * reaches those summaries with the proxy as caller; the ProxyManager's `deployProxy(wallet, spoke, marketId)` returns
  * its `predictProxy(wallet, spoke, marketId)` address, an uninterpreted function; the MarketRegistry by the registry
- * model with a pause state and reason per Hub and uninterpreted listing views; the RiskModule checks are NONDET (any
- * RiskModule: the backing rules must hold whatever it approves); LPVaultSwap is havocked except that `deleverage` calls
- * back the Adapter's `deleverageRepay` and `deleverageRelease` once each with the session's arguments; the Lock by its
- * model.
+ * model with a pause state and reason per Hub and uninterpreted listing views (the receiver rule's LPVault, Hub,
+ * PayoutEscrow and flash-source views and the Hub's listing views are NONDET: a refusal only strengthens a success
+ * premise); the RiskModule checks are NONDET (any RiskModule: the backing rules must hold whatever it approves);
+ * LPVaultSwap is havocked except that `deleverage` calls back the Adapter's `deleverageRepay` and `deleverageRelease`
+ * once each with the session's arguments and, as 2.11 specifies (`DeleverageTooSmall`, REQ-SWAP-106), returns only
+ * when the debt it repaid is at least the request's `minDebtRepaid`; the ParameterStore's `sequencer()` and the
+ * sequencer feed's `latestRoundData()` are NONDET (the sequencer gate only refuses a repay with collateral); the Lock by
+ * its model. Transient storage starts empty in every rule (TransientModel), as at the start of a transaction.
  */
 
 import "setup/Erc20Model.spec";
 import "setup/LockModel.spec";
 import "setup/AaveModel.spec";
-import "setup/RegistryModel.spec";
+import "setup/RegistryReadsModel.spec";
+import "setup/TransientModel.spec";
 
 using Collateralization as coll;
 
@@ -61,16 +68,19 @@ methods {
     function predictProxy(address, uint256) external returns (address) envfree;
     function borrowNonce(address) external returns (uint256) envfree;
     function hasRole(bytes32, address) external returns (bool) envfree;
-    function pledge(uint256, PositionRef, uint256) external returns (address, uint256, uint128);
-    function recredit(uint256, PositionRef, bytes, uint256) external returns (uint128);
-    function withdraw(uint256, PositionRef, uint256, uint256, uint256) external;
-    function removeLiquidity(uint256, PositionRef, uint128, uint256[], uint256, uint256) external returns (uint256[]);
+    function pledge(uint256, AaveAdapter.PositionRef, uint256) external returns (address, uint256, uint128);
+    function recredit(uint256, AaveAdapter.PositionRef, bytes, uint256) external returns (uint128);
+    function withdraw(uint256, AaveAdapter.PositionRef, uint256, uint256, uint256) external;
+    function removeLiquidity(uint256, AaveAdapter.PositionRef, uint128, uint256[], uint256, uint256) external returns (uint256[]);
     function repay(address, uint256, uint256, uint256, bool, uint256) external returns (uint256);
-    function repayAllAndWithdraw(uint256, PositionRef, uint256, uint256[], uint256[], uint256) external;
-    function repayWithCollateral(RepayWithCollateralParams) external returns (uint256, uint256);
+    function repayAllAndWithdraw(uint256, AaveAdapter.PositionRef, uint256, uint256[], uint256[], uint256) external;
+    function repayWithCollateral(AaveAdapter.RepayWithCollateralParams) external returns (uint256, uint256);
     function burnSeized(uint256, address, uint256) external;
     function deleverageRepay(address, uint256, uint256) external returns (uint256);
-    function deleverageRelease(address, PositionRef, uint128, uint256[]) external returns (uint256[], bool);
+    function deleverageRelease(address, AaveAdapter.PositionRef, uint128, uint256[]) external returns (uint256[], bool);
+    function collectFees(uint256, AaveAdapter.PositionRef, uint256) external returns (uint256[]);
+    function releaseZeroCredit(uint256, AaveAdapter.PositionRef, uint256) external;
+    function refreshDebtMark(address) external;
 
     // Collateralization (linked)
     function coll.ADAPTER() external returns (address) envfree;
@@ -128,6 +138,11 @@ methods {
     function _.getAssetId(address t) external => hubAssetIdWired(calledContract, t) expect uint256;
     function _.getAddedAssets(uint256 a) external => hubGetAddedAssets(calledContract, a) expect uint256;
     function _.getAddedShares(uint256 a) external => hubGetAddedShares(calledContract, a) expect uint256;
+    function _.getReserve(uint256 rid) external => spokeReserveOf(calledContract, rid) expect IAaveV4Spoke.Reserve;
+    function _.getReserveConfig(uint256 rid) external => spokeGetReserveConfig(calledContract, rid) expect IAaveV4Spoke.ReserveConfig;
+    // Receiver rule (REQ-PROXY-017): a listing on the funding Hub only refuses a borrow.
+    function _.isSpokeListed(uint256, address) external => NONDET;
+    function _.isUnderlyingListed(address) external => NONDET;
 
     // PositionProxy: logic-free forwarder, dispatched to the real PositionProxy
     function _.execute(address target, bytes data) external => DISPATCHER(true);
@@ -137,17 +152,21 @@ methods {
     function _.predictProxy(address w, address s, uint256 m) external => pmPredict(w, s, m) expect address;
 
     // MarketRegistry
-    function _.pauseState(address hub) external => registryHubPauseState(hub) expect PauseState;
-    function _.pauseReason(address hub) external => registryHubPauseReason(hub) expect PauseReason;
+    function _.pauseState(address hub) external => registryHubPauseState(hub) expect AaveAdapterUserLogic.PauseState;
+    function _.pauseReason(address hub) external => registryHubPauseReason(hub) expect AaveAdapterUserLogic.PauseReason;
     function _.isFrozenAddress(address a) external => registryIsFrozenAddress(a) expect bool;
     function _.isApprovedDebtReserve(address s, uint256 r) external => registryApprovedDebtReserve(s, r) expect bool;
     function _.getSpoke(address s) external => NONDET;
     function _.marketOfVaultToken(address vt) external => NONDET;
     function _.getMarket(uint256 m) external => NONDET;
     function _.getDebtReserve(address s, uint256 r) external => NONDET;
+    function _.integrationIdOf(address) external => NONDET;
+    function _.isRecordedHub(address) external => NONDET;
+    function _.PAYOUT_ESCROW() external => NONDET;
+    function _.flashSource() external => NONDET;
 
     // Policy (any RiskModule) and the LPOracle poke
-    function _.checkPledge(address d, address p, uint256 m, uint32 i, bytes32 k, uint128 u, PledgeCounters c, bool rr) external => NONDET;
+    function _.checkPledge(address d, address p, uint256 m, uint32 i, bytes32 k, uint128 u, Collateralization.PledgeCounters c, bool rr) external => NONDET;
     function _.preBorrowCheck(address p, uint256 r, uint256 a) external => NONDET;
     function _.preWithdrawCheck(address p) external => NONDET;
     function _.postHealthCheck(address p, uint256 minHf) external => NONDET;
@@ -155,7 +174,11 @@ methods {
     function _.poke() external => NONDET;
 
     // LPVaultSwap repay with collateral
-    function _.deleverage(DeleverageRequest r) external => swapDeleverage(r) expect (uint256, uint256);
+    function _.deleverage(AaveAdapterCollateralLogic.DeleverageRequest r) external => swapDeleverage(r) expect (uint256, uint256);
+
+    // ParameterStore sequencer read and the sequencer-uptime feed (bounded STATICCALL)
+    function _.sequencer() external => NONDET;
+    function _.latestRoundData() external => NONDET;
 
     // Lock
     function _.acquire() external with (env e) => lockAcquire(e.msg.sender) expect void;
@@ -189,8 +212,8 @@ persistent ghost address lastRegisteredProxy;
 persistent ghost mapping(address => mapping(address => mathint)) acctBorrowCount;
 
 // Pause state and reason per Hub (the MarketRegistry keys every pause by Hub).
-persistent ghost mapping(address => PauseState) hubPause;
-persistent ghost mapping(address => PauseReason) hubPauseReason;
+persistent ghost mapping(address => AaveAdapterUserLogic.PauseState) hubPause;
+persistent ghost mapping(address => AaveAdapterUserLogic.PauseReason) hubPauseReason;
 
 // LPVault custody model, keyed by (LPVault, positionKey): the depositor of a custodied position (0 when not in
 // custody) and its units.
@@ -201,18 +224,18 @@ persistent ghost mapping(address => mapping(bytes32 => mathint)) lvUnits;
 persistent ghost address swapAddr;
 persistent ghost mathint deleverageCalls;
 
-function registryHubPauseState(address hub) returns PauseState {
+function registryHubPauseState(address hub) returns AaveAdapterUserLogic.PauseState {
     regPauseStateReads = regPauseStateReads + 1;
     regAnyReads = regAnyReads + 1;
     // pauseReason(hub) == None exactly when the Hub is not Paused (PROP-041).
-    require (hubPause[hub] == PauseState.Paused) == (hubPauseReason[hub] != PauseReason.None);
+    require (hubPause[hub] == AaveAdapterUserLogic.PauseState.Paused) == (hubPauseReason[hub] != AaveAdapterUserLogic.PauseReason.None);
     return hubPause[hub];
 }
 
-function registryHubPauseReason(address hub) returns PauseReason {
+function registryHubPauseReason(address hub) returns AaveAdapterUserLogic.PauseReason {
     regPauseReasonReads = regPauseReasonReads + 1;
     regAnyReads = regAnyReads + 1;
-    require (hubPause[hub] == PauseState.Paused) == (hubPauseReason[hub] != PauseReason.None);
+    require (hubPause[hub] == AaveAdapterUserLogic.PauseState.Paused) == (hubPauseReason[hub] != AaveAdapterUserLogic.PauseReason.None);
     return hubPauseReason[hub];
 }
 
@@ -262,7 +285,7 @@ function pmDeployProxy(address wallet, address spoke, uint256 marketId) returns 
 
 // LPVaultSwap.deleverage: flash-borrows the debt asset through the chain's IFlashSource and swaps the released tokens
 // (not modelled), then calls back the session's repay and release steps once each, in that order, as LPVaultSwap.
-function swapDeleverage(DeleverageRequest r) returns (uint256, uint256) {
+function swapDeleverage(AaveAdapterCollateralLogic.DeleverageRequest r) returns (uint256, uint256) {
     deleverageCalls = deleverageCalls + 1;
     env eSwap;
     require eSwap.msg.sender == swapAddr;
@@ -272,6 +295,8 @@ function swapDeleverage(DeleverageRequest r) returns (uint256, uint256) {
     uint256[] released;
     bool closed;
     released, closed = currentContract.deleverageRelease(eSwap, r.proxy, r.position, r.units, r.minAmounts);
+    // LPVaultSwap reverts `DeleverageTooSmall` below the borrower's minimum (2.11 REQ-SWAP-106).
+    require repaid >= r.minDebtRepaid;
     uint256 debtAssetOut;
     return (repaid, debtAssetOut);
 }
@@ -304,6 +329,12 @@ function lpvUnitsOf(address lpv, bytes32 key) returns uint128 {
     return require_uint128(lvUnits[lpv][key]);
 }
 
+function spokeReserveOf(address spoke, uint256 rid) returns IAaveV4Spoke.Reserve {
+    IAaveV4Spoke.Reserve r;
+    require r.underlying == spokeUnderlyingOf(spoke, rid) && r.hub == spokeHubOf(spoke);
+    return r;
+}
+
 function lpvCollectFees(address lpv, bytes32 key) returns uint256[] {
     require lvDepositor[lpv][key] != 0;
     uint256[] fees;
@@ -315,6 +346,8 @@ function setup() {
     require coll.ADAPTER() == currentContract && COLLATERALIZATION() == coll;
     // Outer calls start with the Lock free (an Adapter entry point is an outer call, REQ-LOCK of 2.16).
     require lockHolder == 0;
+    // A rule is one transaction: transient storage (the repay-with-collateral session) starts empty.
+    transientStorageEmpty();
 }
 
 function resetCall(address vt) {
@@ -356,31 +389,31 @@ function boundReserve(address proxy) returns uint256 {
     return r;
 }
 
-function recordOf(PositionRef position) returns uint256 {
+function recordOf(AaveAdapter.PositionRef position) returns uint256 {
     return coll.recordIdOf(position.integrationId, position.positionKey);
 }
 
 definition backingCall(method f) returns bool =
-    f.selector == sig:pledge(uint256, PositionRef, uint256).selector
-    || f.selector == sig:recredit(uint256, PositionRef, bytes, uint256).selector
-    || f.selector == sig:withdraw(uint256, PositionRef, uint256, uint256, uint256).selector
-    || f.selector == sig:removeLiquidity(uint256, PositionRef, uint128, uint256[], uint256, uint256).selector
-    || f.selector == sig:repayAllAndWithdraw(uint256, PositionRef, uint256, uint256[], uint256[], uint256).selector
-    || f.selector == sig:repayWithCollateral(RepayWithCollateralParams).selector;
+    f.selector == sig:pledge(uint256, AaveAdapter.PositionRef, uint256).selector
+    || f.selector == sig:recredit(uint256, AaveAdapter.PositionRef, bytes, uint256).selector
+    || f.selector == sig:withdraw(uint256, AaveAdapter.PositionRef, uint256, uint256, uint256).selector
+    || f.selector == sig:removeLiquidity(uint256, AaveAdapter.PositionRef, uint128, uint256[], uint256, uint256).selector
+    || f.selector == sig:repayAllAndWithdraw(uint256, AaveAdapter.PositionRef, uint256, uint256[], uint256[], uint256).selector
+    || f.selector == sig:repayWithCollateral(AaveAdapter.RepayWithCollateralParams).selector;
 
 definition burnsFromProxy(method f) returns bool =
-    f.selector == sig:withdraw(uint256, PositionRef, uint256, uint256, uint256).selector
-    || f.selector == sig:removeLiquidity(uint256, PositionRef, uint128, uint256[], uint256, uint256).selector
-    || f.selector == sig:repayAllAndWithdraw(uint256, PositionRef, uint256, uint256[], uint256[], uint256).selector
-    || f.selector == sig:repayWithCollateral(RepayWithCollateralParams).selector;
+    f.selector == sig:withdraw(uint256, AaveAdapter.PositionRef, uint256, uint256, uint256).selector
+    || f.selector == sig:removeLiquidity(uint256, AaveAdapter.PositionRef, uint128, uint256[], uint256, uint256).selector
+    || f.selector == sig:repayAllAndWithdraw(uint256, AaveAdapter.PositionRef, uint256, uint256[], uint256[], uint256).selector
+    || f.selector == sig:repayWithCollateral(AaveAdapter.RepayWithCollateralParams).selector;
 
 definition walletEntry(method f) returns bool =
-    f.selector == sig:pledge(uint256, PositionRef, uint256).selector
-    || f.selector == sig:recredit(uint256, PositionRef, bytes, uint256).selector
-    || f.selector == sig:withdraw(uint256, PositionRef, uint256, uint256, uint256).selector
-    || f.selector == sig:removeLiquidity(uint256, PositionRef, uint128, uint256[], uint256, uint256).selector
-    || f.selector == sig:repayAllAndWithdraw(uint256, PositionRef, uint256, uint256[], uint256[], uint256).selector
-    || f.selector == sig:repayWithCollateral(RepayWithCollateralParams).selector
+    f.selector == sig:pledge(uint256, AaveAdapter.PositionRef, uint256).selector
+    || f.selector == sig:recredit(uint256, AaveAdapter.PositionRef, bytes, uint256).selector
+    || f.selector == sig:withdraw(uint256, AaveAdapter.PositionRef, uint256, uint256, uint256).selector
+    || f.selector == sig:removeLiquidity(uint256, AaveAdapter.PositionRef, uint128, uint256[], uint256, uint256).selector
+    || f.selector == sig:repayAllAndWithdraw(uint256, AaveAdapter.PositionRef, uint256, uint256[], uint256[], uint256).selector
+    || f.selector == sig:repayWithCollateral(AaveAdapter.RepayWithCollateralParams).selector
     || f.selector == sig:borrow(uint256, uint256, uint256, address, uint256, uint256, uint256).selector;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -467,15 +500,15 @@ rule mintOnlyInPledgeAndRecredit(method f, address vt) filtered { f -> !f.isView
 
     f(e, args);
 
-    assert vtMintCalls > 0 => (f.selector == sig:pledge(uint256, PositionRef, uint256).selector
-        || f.selector == sig:recredit(uint256, PositionRef, bytes, uint256).selector),
+    assert vtMintCalls > 0 => (f.selector == sig:pledge(uint256, AaveAdapter.PositionRef, uint256).selector
+        || f.selector == sig:recredit(uint256, AaveAdapter.PositionRef, bytes, uint256).selector),
         "a vault token was minted outside pledge and recredit";
     assert vtMintCalls <= 1, "one call minted more than once";
 }
 
 // PROP-006 verifies: INV-009, Q-092, Q-094, Q-123, Q-223, Q-224
 // PROP-054 verifies: INV-066, Q-224, Q-240
-rule pledgeMintsCreditedToCallerProxy(uint256 marketId, address vt, PositionRef position, uint256 deadline) {
+rule pledgeMintsCreditedToCallerProxy(uint256 marketId, address vt, AaveAdapter.PositionRef position, uint256 deadline) {
     env e;
     setup();
     resetCall(vt);
@@ -501,7 +534,7 @@ rule pledgeMintsCreditedToCallerProxy(uint256 marketId, address vt, PositionRef 
 
 // PROP-006 verifies: INV-009, Q-224, Q-254
 // PROP-054 verifies: INV-066, Q-254
-rule recreditMintsAddedToCallerProxy(uint256 marketId, address vt, PositionRef position, bytes topUp, uint256 deadline) {
+rule recreditMintsAddedToCallerProxy(uint256 marketId, address vt, AaveAdapter.PositionRef position, bytes topUp, uint256 deadline) {
     env e;
     setup();
     resetCall(vt);
@@ -533,13 +566,13 @@ rule burnsOnlyFromOwnProxyOrSwap(method f, address vt, address holder) filtered 
     assert burned => (
         (f.selector == sig:burnSeized(uint256, address, uint256).selector && holder == swapAddr)
         || (burnsFromProxy(f) && walletOf(holder) == e.msg.sender)
-        || (f.selector == sig:deleverageRelease(address, PositionRef, uint128, uint256[]).selector && e.msg.sender == swapAddr)),
+        || (f.selector == sig:deleverageRelease(address, AaveAdapter.PositionRef, uint128, uint256[]).selector && e.msg.sender == swapAddr)),
         "the Adapter burned from a holder other than the caller's proxy or LPVaultSwap";
 }
 
 // PROP-007 verifies: INV-010, Q-069, Q-165, Q-224
 // PROP-054 verifies: INV-066, Q-224
-rule withdrawBurnsTheRecordCredit(uint256 marketId, address vt, PositionRef position, uint256 units, uint256 deadline,
+rule withdrawBurnsTheRecordCredit(uint256 marketId, address vt, AaveAdapter.PositionRef position, uint256 units, uint256 deadline,
                                   uint256 minHf) {
     env e;
     setup();
@@ -560,7 +593,7 @@ rule withdrawBurnsTheRecordCredit(uint256 marketId, address vt, PositionRef posi
 
 // PROP-007 verifies: INV-010, Q-224, Q-254
 // PROP-054 verifies: INV-066, INV-088, Q-254
-rule removeLiquidityBurnsTheDebitedUnits(uint256 marketId, address vt, PositionRef position, uint128 units,
+rule removeLiquidityBurnsTheDebitedUnits(uint256 marketId, address vt, AaveAdapter.PositionRef position, uint128 units,
                                          uint256[] minAmounts, uint256 deadline, uint256 minHf) {
     env e;
     setup();
@@ -603,7 +636,7 @@ rule bindingIsWrittenOnce(method f, address w, uint256 m) filtered { f -> !f.isV
         && boundVaultToken(p) == vtBefore && boundReserve(p) == reserveBefore),
         "a bound proxy's wallet, market, Spoke, vault token or reserve changed";
     assert (p == 0 && q != 0) => (
-        f.selector == sig:pledge(uint256, PositionRef, uint256).selector && e.msg.sender == w
+        f.selector == sig:pledge(uint256, AaveAdapter.PositionRef, uint256).selector && e.msg.sender == w
         && walletOf(q) == w && boundMarket(q) == m && q == pmPredict(w, boundSpoke(q), m)),
         "a binding was created outside the wallet's own pledge to the market or at an address other than the ProxyManager's";
 }
@@ -617,7 +650,7 @@ rule registersOnlyTheCallerProxy(method f, address vt) filtered { f -> !f.isView
 
     f(e, args);
 
-    assert registryAddsInCall > 0 => (f.selector == sig:pledge(uint256, PositionRef, uint256).selector
+    assert registryAddsInCall > 0 => (f.selector == sig:pledge(uint256, AaveAdapter.PositionRef, uint256).selector
         && walletOf(lastRegisteredProxy) == e.msg.sender
         && lastRegisteredProxy == pmPredict(e.msg.sender, boundSpoke(lastRegisteredProxy), boundMarket(lastRegisteredProxy))),
         "a proxy was registered outside its wallet's pledge or at an address the ProxyManager did not predict";
@@ -682,7 +715,7 @@ rule thirdPartyRepayIsReachable(address borrower, uint256 marketId, uint256 r, u
 // revert, whoever calls them.
 rule deleverageStepsOnlyInsideASession(method f) filtered {
     f -> f.selector == sig:deleverageRepay(address, uint256, uint256).selector
-        || f.selector == sig:deleverageRelease(address, PositionRef, uint128, uint256[]).selector
+        || f.selector == sig:deleverageRelease(address, AaveAdapter.PositionRef, uint128, uint256[]).selector
 } {
     env e;
     calldataarg args;
@@ -694,7 +727,7 @@ rule deleverageStepsOnlyInsideASession(method f) filtered {
 }
 
 // PROP-072 verifies: INV-089, Q-255
-rule repayWithCollateralNeverRaisesDebtAndRepaysFirst(RepayWithCollateralParams p, uint256 rOther) {
+rule repayWithCollateralNeverRaisesDebtAndRepaysFirst(AaveAdapter.RepayWithCollateralParams p, uint256 rOther) {
     env e;
     setup();
     address proxy = proxyOf(e.msg.sender, p.marketId);

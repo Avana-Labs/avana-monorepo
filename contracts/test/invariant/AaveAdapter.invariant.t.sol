@@ -1,0 +1,190 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.28;
+
+// Copyright (c) 2026 Avana Labs
+
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
+import {AaveAdapterHandler, AdapterWorld} from "./handlers/AaveAdapterHandler.sol";
+
+/// @title AaveAdapterInvariantTest
+/// @notice AaveAdapter invariants on the real local Aave V4, Collateralization, vault tokens, ProxyManager and
+/// PositionProxies under random sequences of pledges, borrows, repays (own and third-party), withdrawals, partial
+/// removals, re-credits, repays with collateral, fee collection, price moves, pause-state and freeze changes, honest
+/// liquidations and time. After every call: vault-token supply equals the units the Adapter minted minus those burned
+/// and equals Collateralization's credited plus pending units, each call moving both by the same amount; each proxy's
+/// stored nonce equals its completed borrows; repay, debt-free withdrawal and fee collection never failed; every
+/// completed borrow forwarded exactly its amount to an allowed receiver within the Spoke's draw cap; each wallet has at
+/// most one proxy per market, at the ProxyManager's prediction, with its binding and code unchanged.
+/// @dev Each handler call is one transaction.
+/// forge-config: default.isolate = false
+contract AaveAdapterInvariantTest is AaveAdapterFixture {
+    AaveAdapterHandler internal handler;
+
+    function setUp() public override {
+        super.setUp();
+        AdapterWorld memory world = AdapterWorld({
+            adapter: adapterC,
+            coll: coll,
+            proxyManager: proxyManager,
+            registry: registry,
+            swap: swap,
+            lpVault: lpVault,
+            spoke: IAaveV4Spoke(aave.cdpSpoke),
+            hub: aave.hub,
+            tokenA: token,
+            tokenB: tokenB,
+            marketA: MARKET_ID,
+            marketB: MARKET_B,
+            reserveA: vtReserveId,
+            reserveB: vtReserveIdB,
+            gho: debt,
+            usdc: usdcDebt,
+            ghoReserve: debtReserveId,
+            usdcReserve: usdcReserveId,
+            ghoAssetId: ghoAssetId,
+            usdcAssetId: usdcAssetId,
+            vtPrice: vtPrice,
+            integrationId: INTEGRATION
+        });
+        handler = new AaveAdapterHandler(world, [alice, bob, carol], makeAddr("thirdPartyPayer"));
+        targetContract(address(handler));
+        bytes4[] memory actions = new bytes4[](13);
+        actions[0] = AaveAdapterHandler.pledge.selector;
+        actions[1] = AaveAdapterHandler.borrow.selector;
+        actions[2] = AaveAdapterHandler.repay.selector;
+        actions[3] = AaveAdapterHandler.withdraw.selector;
+        actions[4] = AaveAdapterHandler.removeLiquidity.selector;
+        actions[5] = AaveAdapterHandler.recredit.selector;
+        actions[6] = AaveAdapterHandler.repayWithCollateral.selector;
+        actions[7] = AaveAdapterHandler.collectFees.selector;
+        actions[8] = AaveAdapterHandler.setPrice.selector;
+        actions[9] = AaveAdapterHandler.setPause.selector;
+        actions[10] = AaveAdapterHandler.liquidate.selector;
+        actions[11] = AaveAdapterHandler.warp.selector;
+        actions[12] = AaveAdapterHandler.pledge.selector;
+        targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-088 verifies: REQ-ADAPTER-005, REQ-ADAPTER-068, REQ-ADAPTER-069, REQ-ADAPTER-070, INV-009, INV-010, INV-066
+    // Sources: 5.1 TEST-088, QNT-03, QNT-13, HYP-24
+    /// @notice Supply is exactly what the Adapter minted (credited and added units) minus what it burned (withdrawn,
+    /// removed, released to LPVaultSwap and seized), and every call moved supply and Collateralization's backing by
+    /// the same amount.
+    function invariant_TEST_088_mintBurnAuthority() public view {
+        assertEq(
+            token.totalSupply() + tokenB.totalSupply(), handler.minted() - handler.burned(), "supply = mints - burns"
+        );
+        assertEq(handler.backingViolations(), 0, "a call moved supply and backing apart");
+    }
+
+    // TEST-083 verifies: INV-001, INV-080, SPEC-PROXY-008
+    /// @notice With no orphan burn in the model the backing gap stays 0 in both markets.
+    function invariant_TEST_083_backingGapZero() public view {
+        assertEq(token.totalSupply(), coll.getTotalCredited(vt) + coll.getPending(vt).units, "market A backed");
+        assertEq(tokenB.totalSupply(), coll.getTotalCredited(vtB) + coll.getPending(vtB).units, "market B backed");
+    }
+
+    // TEST-096 verifies: REQ-PROXY-015, REQ-PROXY-059, INV-019, ATTACK-036
+    // Sources: QNT-21, HYP-15
+    /// @notice Each proxy's stored nonce equals its completed borrows: no nonce value admitted two borrows and none
+    /// moved without one.
+    function invariant_TEST_096_nonceSingleUse() public view {
+        uint256 n = handler.proxyCount();
+        for (uint256 i = 0; i < n; ++i) {
+            address p = handler.proxies(i);
+            assertEq(adapterC.borrowNonce(p), handler.borrowsCompleted(p), "nonce = completed borrows");
+        }
+    }
+
+    // TEST-099 verifies: REQ-PROXY-032, REQ-PROXY-035, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ADAPTER-096, INV-043, INV-044, INV-045, INV-067
+    // Sources: QNT-14, QNT-15, QNT-16, QNT-17, HYP-16, HYP-18
+    /// @notice Repay (by the borrower or a third party, partial or all), debt-free withdrawal and fee collection never
+    /// failed in any pause state or freeze, and a repay-all always left the reserve at zero.
+    function invariant_TEST_099_exitLiveness() public view {
+        assertEq(handler.livenessViolations(), 0, "an exit failed");
+        assertEq(handler.exitsAttempted(), handler.exitsSucceeded(), "attempted = succeeded");
+    }
+
+    // TEST-106 verifies: REQ-PROXY-017, REQ-PROXY-021, REQ-PROXY-023, SPEC-PROXY-004, INV-020
+    /// @notice Every completed borrow forwarded exactly its amount from the proxy to the receiver, left the proxy's
+    /// balance where it was, used the current nonce, and no borrow to a refused receiver (a registered proxy) completed.
+    function invariant_TEST_106_borrowPath() public view {
+        assertEq(handler.borrowViolations(), 0, "borrow forwarding");
+        assertEq(handler.refusedReceiverAccepted(), 0, "refused receiver accepted");
+    }
+
+    // TEST-211 verifies: REQ-ADAPTER-066, REQ-PROXY-049, REQ-PROXY-053, INV-063, INV-064
+    // Sources: QNT-08
+    /// @notice Each wallet has at most one proxy per market, at the ProxyManager's prediction, bound to that wallet and
+    /// market's vault token, with the binding and the code unchanged since creation.
+    function invariant_TEST_211_bindingsFixed() public view {
+        uint256[2] memory markets = [MARKET_ID, MARKET_B];
+        address[2] memory tokens = [vt, vtB];
+        for (uint256 i = 0; i < 3; ++i) {
+            address wallet = handler.walletAt(i);
+            for (uint256 m = 0; m < 2; ++m) {
+                address p = adapterC.proxyOf(wallet, markets[m]);
+                assertEq(p, handler.firstProxy(wallet, markets[m]), "binding unchanged");
+                if (p == address(0)) continue;
+                assertEq(p, proxyManager.predictProxy(wallet, aave.cdpSpoke, markets[m]), "at the prediction");
+                assertEq(adapterC.walletOf(p), wallet, "wallet");
+                (address spoke, uint256 marketId, address vaultToken,) = adapterC.accountOf(p);
+                assertEq(spoke, aave.cdpSpoke, "spoke");
+                assertEq(marketId, markets[m], "market");
+                assertEq(vaultToken, tokens[m], "vault token");
+                assertEq(p.codehash, handler.proxyCodeHash(p), "code unchanged");
+            }
+        }
+    }
+
+    // TEST-274 verifies: INV-057
+    // Sources: TOPO-04
+    /// @notice No borrow completed that left the CDP Spoke's owed amount of the borrowed asset above its draw cap.
+    function invariant_TEST_274_drawCapRespected() public view {
+        assertEq(handler.drawCapViolations(), 0, "draw cap exceeded by a borrow");
+    }
+
+    /// @notice Nothing stays in the Adapter.
+    // TEST-099 verifies: REQ-ADAPTER-007
+    function invariant_TEST_099_adapterHoldsNothing() public view {
+        assertEq(token.balanceOf(adapter) + tokenB.balanceOf(adapter), 0, "vault tokens");
+        assertEq(debt.balanceOf(adapter) + usdcDebt.balanceOf(adapter), 0, "debt assets");
+        assertFalse(lock.isLocked(), "lock free between transactions");
+    }
+
+    // TEST-099 verifies: REQ-PROXY-032, REQ-PROXY-035, REQ-ADAPTER-080, REQ-ADAPTER-070
+    /// @notice Every handler action reaches its Adapter entry point and completes in a plain sequence (so the random
+    /// campaign exercises real calls, not only early returns): pledge, borrow, third-party repay, partial removal,
+    /// re-credit, repay with collateral, fee collection, a liquidation after a price fall, and a debt-free withdrawal.
+    function test_TEST_099_handlerActionsComplete() public {
+        handler.pledge(0, 0, 4_000_000_000);
+        handler.pledge(0, 0, 3_000_000_000);
+        handler.borrow(0, 0, 0, 2500, 0);
+        handler.borrow(0, 0, 1, 500, 1);
+        handler.repay(0, 0, 0, 100e18, 2);
+        handler.removeLiquidity(0, 0, 0, 10_000_000);
+        handler.recredit(0, 0, 0, 5_000_000);
+        handler.repayWithCollateral(0, 0, 1, 100_000_000);
+        handler.collectFees(0, 0, 0, 1000);
+        handler.borrow(0, 0, 0, 3000, 0);
+        handler.borrow(0, 0, 0, 3000, 0);
+        handler.setPrice(0);
+        handler.liquidate(0, 0, 2000e18);
+        handler.pledge(1, 1, 1_000_000_000);
+        handler.withdraw(1, 1, 0);
+        assertEq(handler.pledges(), 3, "pledges");
+        assertEq(handler.borrows(), 4, "borrows");
+        assertEq(handler.removals(), 1, "removal");
+        assertEq(handler.recredits(), 1, "recredit");
+        assertEq(handler.deleverages(), 1, "repay with collateral");
+        assertEq(handler.liquidations(), 1, "liquidation");
+        assertEq(handler.withdrawals(), 1, "debt-free withdrawal");
+        assertEq(handler.exitsAttempted(), handler.exitsSucceeded(), "exits");
+        invariant_TEST_088_mintBurnAuthority();
+        invariant_TEST_083_backingGapZero();
+        invariant_TEST_096_nonceSingleUse();
+        invariant_TEST_106_borrowPath();
+        invariant_TEST_211_bindingsFixed();
+    }
+}

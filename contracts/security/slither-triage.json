@@ -2575,6 +2575,417 @@
       "function": "LPVaultSwapStorage._MAX_REPAY_TRANSFERS",
       "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
       "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "1cdfbfe0f72f1721",
+      "check": "arbitrary-send-erc20",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "`payer` is never chosen by a caller: `repay` and `repayAllAndWithdraw` pass `msg.sender` (the payer approves the Adapter itself, REQ-PROXY-029) and `deleverageRepay` passes the immutable LP_VAULT_SWAP after checking msg.sender == LP_VAULT_SWAP and that the Adapter holds the Lock (REQ-ADAPTER-081). Covered by TEST-175 (thirdPartyRepay pulls only from the caller), TEST-239 and TEST-060 (callbacksOutsideSession).",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "a95cc5705b52eae9",
+      "check": "reentrancy-balance",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "907a1fde6a9568d8",
+      "check": "reentrancy-balance",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "44eadaba9e94e876",
+      "check": "reentrancy-balance",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "333045b60e80c4f6",
+      "check": "reentrancy-balance",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "83d5e4902f77c795",
+      "check": "incorrect-equality",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Exact comparisons the spec states, not a balance a donation can set: `debt == 0` returns with nothing moved (REQ-PROXY-028) and `debtAfter == 0` calls Collateralization.markDebtFree, which re-reads borrowCount itself (REQ-PROXY-032). Covered by TEST-165 and TEST-029 (debtMarkOnLastReserve, noDebtMarkWhileDebtRemains).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified exact comparisons."
+    },
+    {
+      "fingerprint": "142b3c6a51b7b85d",
+      "check": "incorrect-equality",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Exact comparisons the spec states, not a balance a donation can set: `debt == 0` returns with nothing moved (REQ-PROXY-028) and `debtAfter == 0` calls Collateralization.markDebtFree, which re-reads borrowCount itself (REQ-PROXY-032). Covered by TEST-165 and TEST-029 (debtMarkOnLastReserve, noDebtMarkWhileDebtRemains).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified exact comparisons."
+    },
+    {
+      "fingerprint": "4594f95490e340ad",
+      "check": "unused-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Only part of a tuple is needed: the collateral flag of getUserReserveStatus (supply step, cleanup), the borrow flag in the DebtRemaining scan, the feed of ParameterStore.sequencer() (the grace period does not stop a repay with collateral) and the words of RiskModuleCalls.wordAt, whose bounds flag the exact-length check already covers. Covered by TEST-010, TEST-018, TEST-203 and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: partial tuple reads (as the RiskModule entries)."
+    },
+    {
+      "fingerprint": "169e275d4bee4ac1",
+      "check": "unused-return",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Only part of a tuple is needed: the collateral flag of getUserReserveStatus (supply step, cleanup), the borrow flag in the DebtRemaining scan, the feed of ParameterStore.sequencer() (the grace period does not stop a repay with collateral) and the words of RiskModuleCalls.wordAt, whose bounds flag the exact-length check already covers. Covered by TEST-010, TEST-018, TEST-203 and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: partial tuple reads (as the RiskModule entries)."
+    },
+    {
+      "fingerprint": "1f91115fc15136b6",
+      "check": "unused-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Only part of a tuple is needed: the collateral flag of getUserReserveStatus (supply step, cleanup), the borrow flag in the DebtRemaining scan, the feed of ParameterStore.sequencer() (the grace period does not stop a repay with collateral) and the words of RiskModuleCalls.wordAt, whose bounds flag the exact-length check already covers. Covered by TEST-010, TEST-018, TEST-203 and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: partial tuple reads (as the RiskModule entries)."
+    },
+    {
+      "fingerprint": "b0bedc8c40641c26",
+      "check": "unused-return",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "Only part of a tuple is needed: the collateral flag of getUserReserveStatus (supply step, cleanup), the borrow flag in the DebtRemaining scan, the feed of ParameterStore.sequencer() (the grace period does not stop a repay with collateral) and the words of RiskModuleCalls.wordAt, whose bounds flag the exact-length check already covers. Covered by TEST-010, TEST-018, TEST-203 and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: partial tuple reads (as the RiskModule entries)."
+    },
+    {
+      "fingerprint": "fbdc0cdc3c021179",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Bounded loops: the repay steps run once per debt reserve the caller names in repayAllAndWithdraw (a reserve with debt is bounded by the Spoke's per-account reserve limit; one without debt costs one view and returns), and the DebtRemaining scan runs over the Spoke's reserve count on the failure path only (REQ-ADAPTER-051). A reverting callee reverts the whole exit, the specified outcome. Covered by TEST-203, TEST-165 and the TEST-269 gas test.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "f0708f65a68f29ba",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Bounded loops: the repay steps run once per debt reserve the caller names in repayAllAndWithdraw (a reserve with debt is bounded by the Spoke's per-account reserve limit; one without debt costs one view and returns), and the DebtRemaining scan runs over the Spoke's reserve count on the failure path only (REQ-ADAPTER-051). A reverting callee reverts the whole exit, the specified outcome. Covered by TEST-203, TEST-165 and the TEST-269 gas test.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "8ed6a383433a4b8b",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Bounded loops: the repay steps run once per debt reserve the caller names in repayAllAndWithdraw (a reserve with debt is bounded by the Spoke's per-account reserve limit; one without debt costs one view and returns), and the DebtRemaining scan runs over the Spoke's reserve count on the failure path only (REQ-ADAPTER-051). A reverting callee reverts the whole exit, the specified outcome. Covered by TEST-203, TEST-165 and the TEST-269 gas test.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "ca71952feb03b74a",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Bounded loops: the repay steps run once per debt reserve the caller names in repayAllAndWithdraw (a reserve with debt is bounded by the Spoke's per-account reserve limit; one without debt costs one view and returns), and the DebtRemaining scan runs over the Spoke's reserve count on the failure path only (REQ-ADAPTER-051). A reverting callee reverts the whole exit, the specified outcome. Covered by TEST-203, TEST-165 and the TEST-269 gas test.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "de116cac7b003b6b",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Bounded loops: the repay steps run once per debt reserve the caller names in repayAllAndWithdraw (a reserve with debt is bounded by the Spoke's per-account reserve limit; one without debt costs one view and returns), and the DebtRemaining scan runs over the Spoke's reserve count on the failure path only (REQ-ADAPTER-051). A reverting callee reverts the whole exit, the specified outcome. Covered by TEST-203, TEST-165 and the TEST-269 gas test.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "731ddc139e50fd35",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "Bounded loops: the repay steps run once per debt reserve the caller names in repayAllAndWithdraw (a reserve with debt is bounded by the Spoke's per-account reserve limit; one without debt costs one view and returns), and the DebtRemaining scan runs over the Spoke's reserve count on the failure path only (REQ-ADAPTER-051). A reverting callee reverts the whole exit, the specified outcome. Covered by TEST-203, TEST-165 and the TEST-269 gas test.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "885862cd0399dfa7",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Bounded loops: the repay steps run once per debt reserve the caller names in repayAllAndWithdraw (a reserve with debt is bounded by the Spoke's per-account reserve limit; one without debt costs one view and returns), and the DebtRemaining scan runs over the Spoke's reserve count on the failure path only (REQ-ADAPTER-051). A reverting callee reverts the whole exit, the specified outcome. Covered by TEST-203, TEST-165 and the TEST-269 gas test.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "d49a9cb8d5d69744",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "b9e29900e6a9e84b",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterSettlementLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "34d0a5e50198a903",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "983f7cb4e66674e7",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "ed91301c12a01f6d",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "8e0546bf1b7faa72",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "030026d098265a2a",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "942cbfe2c69c3941",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "2e6babc6fbe7e51b",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "6055924ffb70785f",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "76afc1d8a10f7e11",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "b761035df6dc40b8",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "b814fa9c251bbfb2",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "f5745b231b334e61",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "4f502af731b9d1b3",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "38a6be1245baa8d5",
+      "check": "reentrancy-events",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Events after external calls under the Adapter's Lock. Every user entry point acquires the Lock before any other external call and releases it last (REQ-PROXY-048, REQ-LOCK-007); every Avana callee checks the holder, so no call can re-enter the Adapter or reorder its events. Covered by AaveAdapter.Lock (TEST-060, TEST-270).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: events after calls under the Lock (as the Collateralization and MarketRegistry entries)."
+    },
+    {
+      "fingerprint": "f768b7e6cb0d9023",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "66b61385033eba6e",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "54efd56377cfe027",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "3bf337d74df644fe",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "5dfb77e8f33c8037",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "4bf394203c759871",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "3d1ad19b57b30db7",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "396a4c26c2172631",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "af9d985968763983",
+      "check": "timestamp",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "`block.timestamp > deadline` is the specified bound of every entry point (REQ-PROXY-058); drift of a few seconds only moves the last valid second of the caller's own deadline, and the sequencer status uses the RiskModule's rule (SPEC-ORC-021). Covered by the DeadlineExpired and deadlineInclusive tests of every AaveAdapter suite and TEST-275.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: specified timestamps."
+    },
+    {
+      "fingerprint": "dfa737da758fbbfb",
+      "check": "assembly",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "ERC-7201 slot binding (one `.slot` assignment; the constant equals erc7201(\"avana.storage.AaveAdapter\"), test_TEST_062_storageSlot) or EIP-1153 TLOAD/TSTORE of the repay-with-collateral session slots (REQ-ADAPTER-081), memory-safe, one word per access. Covered by TEST-239 and TEST-062.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: assembly for ERC-7201/transient slots."
+    },
+    {
+      "fingerprint": "e88eb614ee51a7df",
+      "check": "assembly",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "ERC-7201 slot binding (one `.slot` assignment; the constant equals erc7201(\"avana.storage.AaveAdapter\"), test_TEST_062_storageSlot) or EIP-1153 TLOAD/TSTORE of the repay-with-collateral session slots (REQ-ADAPTER-081), memory-safe, one word per access. Covered by TEST-239 and TEST-062.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: assembly for ERC-7201/transient slots."
+    },
+    {
+      "fingerprint": "83640cb1b410bf11",
+      "check": "assembly",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "ERC-7201 slot binding (one `.slot` assignment; the constant equals erc7201(\"avana.storage.AaveAdapter\"), test_TEST_062_storageSlot) or EIP-1153 TLOAD/TSTORE of the repay-with-collateral session slots (REQ-ADAPTER-081), memory-safe, one word per access. Covered by TEST-239 and TEST-062.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: assembly for ERC-7201/transient slots."
+    },
+    {
+      "fingerprint": "13ee92a9597fe37d",
+      "check": "assembly",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "ERC-7201 slot binding (one `.slot` assignment; the constant equals erc7201(\"avana.storage.AaveAdapter\"), test_TEST_062_storageSlot) or EIP-1153 TLOAD/TSTORE of the repay-with-collateral session slots (REQ-ADAPTER-081), memory-safe, one word per access. Covered by TEST-239 and TEST-062.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: assembly for ERC-7201/transient slots."
+    },
+    {
+      "fingerprint": "0242c21f13cc0566",
+      "check": "assembly",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "ERC-7201 slot binding (one `.slot` assignment; the constant equals erc7201(\"avana.storage.AaveAdapter\"), test_TEST_062_storageSlot) or EIP-1153 TLOAD/TSTORE of the repay-with-collateral session slots (REQ-ADAPTER-081), memory-safe, one word per access. Covered by TEST-239 and TEST-062.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: assembly for ERC-7201/transient slots."
+    },
+    {
+      "fingerprint": "98e56f10e9d01a3f",
+      "check": "missing-inheritance",
+      "file": "src/policy/aave-adapter/AaveAdapterSettlementLogic.sol",
+      "reason": "The router implements the interface piece; the logic contract carries the bodies only and runs by the router's delegatecall (REQ-ADAPTER-004), as the MarketRegistry, ParameterStore and LPOracle logic contracts do.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: analysis artefacts of logic contracts."
+    },
+    {
+      "fingerprint": "cc64c1ab7c268ce1",
+      "check": "missing-inheritance",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "The router implements the interface piece; the logic contract carries the bodies only and runs by the router's delegatecall (REQ-ADAPTER-004), as the MarketRegistry, ParameterStore and LPOracle logic contracts do.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: analysis artefacts of logic contracts."
+    },
+    {
+      "fingerprint": "98180267afda1fac",
+      "check": "unused-state",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "Implementation immutables of the shared AaveAdapterStorage: each logic contract uses only the ones its bodies need; immutables occupy no storage, and the router checks that every logic contract was built with the same values (REQ-ADAPTER-004).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: analysis artefacts of shared bases (as the RiskModuleBase entry)."
+    },
+    {
+      "fingerprint": "7876a8d413297da7",
+      "check": "unused-state",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "reason": "Implementation immutables of the shared AaveAdapterStorage: each logic contract uses only the ones its bodies need; immutables occupy no storage, and the router checks that every logic contract was built with the same values (REQ-ADAPTER-004).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: analysis artefacts of shared bases (as the RiskModuleBase entry)."
     }
   ]
 }

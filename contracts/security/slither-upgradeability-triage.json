@@ -39,6 +39,14 @@
       "function": "LPVaultSwap.initialize(address,address[])",
       "reason": "Informational reminder that the proxy must be initialized: initialize(timelock, initialKeepers) runs atomically in the ERC1967Proxy constructor (REQ-SWAP-040, REQ-ACCESS-153), and the implementation's constructor calls _disableInitializers, so neither the proxy nor the implementation can be initialized by anyone else. Covered by LPVaultSwap.Admin and LPVaultSwap.Admin.fuzz (initialKeeperList).",
       "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "457ae7e5b660d5f5",
+      "check": "initialize-target",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (or the upgradeToAndCall that installs the first implementation), and the implementation's constructor calls _disableInitializers (REQ-ADAPTER-074). Covered by TEST-242 (test_TEST_242_initializeRules).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the ParameterStore and MarketRegistry initialize-target entries."
     }
   ]
 }
