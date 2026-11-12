@@ -323,8 +323,10 @@ step_halmos() {
 #                   Each must reach QED.
 #   src:<Name>      the contract's runtime code is placed on the chain (`anvil_setCode`) at HEVM_SRC_ADDRESS with its
 #                   address immutables filled as a constructor fills them (script/security-targets.py runtime-code)
-#                   and its own-address immutables set to that address; the addresses it calls hold no code there, so
-#                   a call to them returns no data and the caller reverts with empty data. A Panic(1) can then come only
+#                   and its own-address immutables set to that address; every filled address holds the code
+#                   `PUSH0 PUSH0 REVERT`, so a call to it reverts with empty data and the caller passes that on or
+#                   handles it; an address the caller passes resolves only to accounts on the chain (`--only-deployed`),
+#                   so a caller-chosen contract cannot hand back free revert data either. A Panic(1) can then come only
 #                   from an `assert` of the contract itself. Paths after a successful call to another contract are
 #                   explored by the harness targets, where that contract is deployed.
 HEVM_PORT=${HEVM_PORT:-18545}
@@ -334,15 +336,19 @@ HEVM_DEPLOYER=0x0000000000000000000000000000000000030000
 HEVM_ANVIL_PID=""
 
 hevm_chain_start() {
-  anvil --port "$HEVM_PORT" --silent --code-size-limit 1000000 --gas-limit 30000000000 --disable-block-gas-limit \
-    --auto-impersonate --chain-id 31337 >"$OUT/hevm/anvil.log" 2>&1 &
+  anvil --port "$HEVM_PORT" --silent --code-size-limit 1000000 --disable-block-gas-limit --auto-impersonate \
+    --chain-id 31337 >"$OUT/hevm/anvil.log" 2>&1 &
   HEVM_ANVIL_PID=$!
   local i
   for i in $(seq 1 100); do
     cast block-number --rpc-url "$HEVM_RPC" >/dev/null 2>&1 && break
     sleep 0.2
   done
-  cast rpc --rpc-url "$HEVM_RPC" anvil_setBalance "$HEVM_DEPLOYER" 0xffffffffffffffffffffffff >/dev/null
+  if ! cast rpc --rpc-url "$HEVM_RPC" anvil_setBalance "$HEVM_DEPLOYER" 0xffffffffffffffffffffffff >/dev/null; then
+    cat "$OUT/hevm/anvil.log" >&2
+    echo "hevm: the local anvil chain did not start" >&2
+    return 1
+  fi
 }
 
 hevm_chain_stop() { [ -n "$HEVM_ANVIL_PID" ] && kill "$HEVM_ANVIL_PID" 2>/dev/null; HEVM_ANVIL_PID=""; }
@@ -356,7 +362,7 @@ hevm_symbolic() {
   hevm symbolic --solver z3 --smt-timeout "$HEVM_SMT_TIMEOUT" --rpc "$HEVM_RPC" --block "$block" "$@" >"$log" 2>&1
   local rc=$?
   if grep -q 'QED' "$log" && ! grep -qi 'partially explore' "$log"; then return 0; fi
-  if [ $rc -ne 0 ] || grep -qiE 'counterexample|discovered the following' "$log"; then return 1; fi
+  if grep -qiE 'counterexample|discovered the following|internal error' "$log"; then return 1; fi
   if grep -qi 'partially explore' "$log"; then return 2; fi
   return 1
 }
@@ -375,7 +381,7 @@ step_hevm() {
   require hevm z3 anvil cast || return 1
   ensure_build || return 1
   mkdir -p "$OUT/hevm"
-  hevm_chain_start
+  hevm_chain_start || { hevm_chain_stop; return 1; }
   hevm_targets
   local rc=$?
   hevm_chain_stop
@@ -414,6 +420,15 @@ hevm_targets() {
   done <<<"$list"
 
   list=$("$PY" script/security-targets.py runtime-code "$BUILD" "$OUT/hevm/code" "$HEVM_SRC_ADDRESS") || return 1
+  # Each filled immutable address (FILL_BASE + k in security-targets.py) and address 0 (an address read from the empty
+  # storage) get the code `PUSH0 PUSH0 REVERT`: every call to them reverts with empty data, as a call to an account
+  # without code ends in an empty revert of the caller. hevm cannot use an account without code fetched from the chain
+  # (an internal error, or free return data at address 0), and empty revert data can never read as Panic(1).
+  local k
+  for k in $(seq 0 128); do
+    cast rpc --rpc-url "$HEVM_RPC" anvil_setCode "$( [ "$k" = 0 ] && printf '0x%040x' 0 || printf '0xa7a4%036x' "$k")" \
+      0x5f5ffd >/dev/null || return 1
+  done
   if [ -z "$list" ]; then
     echo "hevm src: skipped, no contract or library under src/ compiles to runtime code"
   fi
@@ -423,7 +438,7 @@ hevm_targets() {
     seen+=" src:$name"
     cast rpc --rpc-url "$HEVM_RPC" anvil_setCode "$HEVM_SRC_ADDRESS" "0x$(cat "$hex")" >/dev/null &&
       cast rpc --rpc-url "$HEVM_RPC" anvil_mine >/dev/null || return 1
-    hevm_symbolic "$OUT/hevm/src-$name.log" --address "$HEVM_SRC_ADDRESS"
+    hevm_symbolic "$OUT/hevm/src-$name.log" --address "$HEVM_SRC_ADDRESS" --only-deployed
     rc=$?
     case $rc in
       0) echo "hevm src $name: QED" ;;

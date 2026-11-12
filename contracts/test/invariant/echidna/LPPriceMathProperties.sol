@@ -143,7 +143,10 @@ contract LPPriceMathProperties {
         assert(agree == LPPriceMath.routesAgree(b, p, t));
         uint256 diff = p > b ? p - b : b - p;
         uint256 lo = p < b ? p : b;
-        assert(agree == (diff * 10_000 <= uint256(t) * lo));
+        // Inputs reach 2^128, past MAX_ROUTE, so both sides of the listing bound are fuzzed: a value of 0 or above
+        // MAX_ROUTE_ANSWER never agrees (SPEC-ORC-003).
+        bool inBounds = p != 0 && p <= MAX_ROUTE && b != 0 && b <= MAX_ROUTE;
+        assert(agree == (inBounds && diff * 10_000 <= uint256(t) * lo));
         assert(LPPriceMath.secondSourceAgrees(valid, p, b, t) == (valid && agree));
         ++checks;
     }

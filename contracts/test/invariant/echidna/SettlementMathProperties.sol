@@ -87,8 +87,10 @@ contract SettlementMathProperties {
         ++checks;
     }
 
-    /// @notice The floor is at most the net oracle value, its slippage term at least it; a leg minimum is in
-    /// `[max(1, floor), max(1, Vleg)]`.
+    /// @notice The slippage term is the net oracle value rounded up (at least it, less than it plus 1); the floor is
+    /// that term less `U + ε`, so with at least one rounding unit (`U` is one raw unit per released token in every
+    /// liquidation, as in `check_PROP_048_floorWithRoundingTerms`) it is at most the net oracle value; a leg minimum
+    /// is in `[max(1, floor), max(1, Vleg)]`.
     function floors(
         uint256 value,
         uint256 s,
@@ -104,7 +106,9 @@ contract SettlementMathProperties {
         uint256 exact = value * (BPS - s);
         uint256 gross = SettlementMath.recoveryFloor(value, s, 0, 0);
         uint256 minRec = SettlementMath.recoveryFloor(value, s, units, allowance);
-        assert(gross * BPS >= exact && minRec * BPS <= exact && minRec + units + allowance >= gross);
+        assert(gross * BPS >= exact && gross * BPS < exact + BPS);
+        assert(minRec <= gross && minRec + units + allowance >= gross);
+        if (units + allowance != 0) assert(minRec * BPS <= exact);
         uint256 minOut = SettlementMath.legMinOut(value, s, units, allowance, legs);
         assert(minOut >= 1 && minOut >= minRec && minOut <= (value > 1 ? value : 1));
         ++checks;

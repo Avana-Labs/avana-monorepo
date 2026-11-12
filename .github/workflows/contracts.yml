@@ -5,13 +5,14 @@ name: contracts
 # coverage, traceability and the fast security tier. A pull request labelled `hotfix` (playbook P-05) also runs the
 # touched contracts' invariant campaigns at full depth, one per job. Every push to main runs the same set with the ci
 # profile at full depth (10,000 runs at depth 100) in 20 shards: each file of test/invariant/ is one campaign, and a
-# campaign over 30 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep
-# invariant campaign, fork tests, the FFI differential suite, Halmos, SMTChecker and Certora, one target per job, each
-# at most 4 hours (a Halmos check at most 6): `plan` lists the invariant files, Halmos test functions, SMTChecker
-# contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. The slow
-# security tier (security-slow.yml), the per-layer mutation gates (mutation-gate.yml) and the spec model parts
-# (spec.yml) run on the same nightly, release and manual schedule. An upgrade is scheduled from a release tag, so every
-# long check has run before the timelock delay ends; a failure is a reason to cancel the operation.
+# campaign over 30 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every
+# night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep invariant campaign, fork tests, the FFI
+# differential suite, Halmos, SMTChecker and Certora, one target per job, each at most 4 hours (a Halmos check or a deep
+# invariant file at most 6): `plan` lists the invariant files, Halmos test functions, SMTChecker contracts and Certora
+# confs with script/ci-shards.py, so a new one gets its own job on the next run. The slow security tier
+# (security-slow.yml), the per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) run on the
+# same nightly, release and manual schedule. An upgrade is scheduled from a release tag, so every long check has run
+# before the timelock delay ends; a failure is a reason to cancel the operation.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -154,7 +155,7 @@ jobs:
     # (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
     # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
     # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
-    # campaign, so running them one by one would repeat the campaign per invariant. A campaign over 30 minutes runs as
+    # campaign, so running them one by one would repeat the campaign's calls per invariant. A campaign over 30 minutes runs as
     # segments of ceil(runs / m) runs each, at the same depth and with a seed of their own. Each shard reuses the build
     # job's compiled output.
     name: tests (ci profile, shard ${{ matrix.shard }}/${{ github.event_name == 'pull_request' && 10 || 20 }})
@@ -390,12 +391,14 @@ jobs:
 
   invariant:
     # One job per file of test/invariant/ (the invariant profile's match_path), each with the profile's 2,000 runs
-    # at depth 400 per invariant.
+    # at depth 400 per invariant. 0.8 million handler calls, 80% of the ci profile's campaign: the ProxyManager
+    # campaign (about 3.9 hours at the ci profile, measured 2026-11-12) needs about 3.1 hours, so the job has
+    # GitHub's maximum of 6 hours.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.invariant != '[]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:

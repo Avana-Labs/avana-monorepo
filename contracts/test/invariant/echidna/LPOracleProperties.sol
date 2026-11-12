@@ -4,22 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {Evaluation} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../../src/types/OracleLeg.sol";
+import {OracleInputsLayout} from "../../../src/policy/parameter-store/types/OracleInputsLayout.sol";
 import {PriceState} from "../../../src/types/PriceState.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
 import {LPOracleHarnessPokeLogic} from "../../utils/harness/LPOracleHarness.sol";
-import {
-    OracleFeedMock,
-    OracleRegistryMock,
-    OracleStoreMock,
-    OracleTokenMock,
-    ReadMode
-} from "../../utils/mocks/LPOracleMocks.sol";
+import {OracleFeedMock, OracleTokenMock, ReadMode} from "../../utils/mocks/LPOracleMocks.sol";
 
 /// @notice The LPOracle base's evaluation and writing call in one contract with the harness module, for the fuzzers:
 /// the full implementation with its two logic contracts exceeds the 49,152-byte initcode limit of one harness, so this
@@ -67,9 +58,138 @@ contract LPOracleEchidnaTarget is LPOracleHarnessPokeLogic {
     }
 }
 
+/// @notice The ParameterStore and MarketRegistry reads of the oracle's `poke` path in one contract: the routes in force
+/// and route versions (`OracleRegistryMock.activePriceRoutes`, `priceRouteVersion`) and the evaluation inputs built
+/// from them word for word as `OracleStoreMock.getOracleInputs` builds them (`OracleInputsLayout`). Every feed of the
+/// harness has the same definition (`FEED_*` below, the values `_feed` gave the shared store mock). The shared mocks
+/// also carry the listing, configuration-struct and misbehaviour paths the unit suites need; with them the harness's
+/// initcode was 49,374 bytes, above the 49,152-byte limit (EIP-3860) Medusa enforces on the harness deployment.
+contract LPOracleFuzzConfig {
+    struct Routes {
+        address[] primary;
+        address[] alternate;
+        RouteSlot replaced;
+        uint64 version;
+    }
+
+    uint8 internal constant FEED_DECIMALS = 8;
+    uint256 internal constant FEED_MIN = 1;
+    uint256 internal constant FEED_MAX = 1e12;
+    uint256 internal constant FEED_HEARTBEAT = 86_400;
+    uint256 internal constant FEED_MARGIN = 1800;
+    uint256 internal constant FEED_MAX_AGE = 88_200;
+
+    uint256[10] internal head;
+    uint16[] internal tolerances;
+    SecondSource[] internal secondList;
+    mapping(address token => Routes) internal routes;
+    mapping(address feed => bool) public known;
+
+    function setHead(
+        uint256[10] calldata words
+    ) external {
+        head = words;
+    }
+
+    /// @notice Appends the next token's agreement tolerance and second source, in the order of the market's tokens.
+    function addToken(
+        uint16 toleranceBps,
+        SecondSource calldata second
+    ) external {
+        tolerances.push(toleranceBps);
+        secondList.push(second);
+    }
+
+    function setFeed(
+        address feed
+    ) external {
+        known[feed] = true;
+    }
+
+    function setRoutes(
+        address token,
+        address[] calldata primary,
+        address[] calldata alternate,
+        RouteSlot replaced
+    ) external {
+        Routes storage r = routes[token];
+        (r.primary, r.alternate, r.replaced) = (primary, alternate, replaced);
+    }
+
+    function bumpVersion(
+        address token
+    ) external {
+        routes[token].version += 1;
+    }
+
+    function activePriceRoutes(
+        address token
+    ) external view returns (address[] memory, address[] memory, RouteSlot) {
+        Routes storage r = routes[token];
+        return (r.primary, r.alternate, r.replaced);
+    }
+
+    function priceRouteVersion(
+        address token
+    ) external view returns (uint64) {
+        return routes[token].version;
+    }
+
+    function getOracleInputs(
+        address,
+        address[] calldata tokens,
+        bool withSecondSources
+    ) external view returns (uint256[] memory w) {
+        uint256 stride = OracleInputsLayout.TOKEN_WORDS + (withSecondSources ? OracleInputsLayout.SECOND_WORDS : 0);
+        w = new uint256[](OracleInputsLayout.HEAD_WORDS + tokens.length * stride);
+        for (uint256 i = 0; i < 10; ++i) {
+            w[i] = head[i];
+        }
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            uint256 k = OracleInputsLayout.HEAD_WORDS + i * stride;
+            Routes storage r = routes[tokens[i]];
+            w[k] = i < tolerances.length ? tolerances[i] : 0;
+            (w[k + 1], w[k + 2]) = (r.version, uint8(r.replaced));
+            (w[k + 3], w[k + 4]) = (r.primary.length, r.alternate.length);
+            _legs(w, k + 5, r.primary);
+            _legs(w, k + 5 + 2 * OracleInputsLayout.LEG_WORDS, r.alternate);
+            if (withSecondSources && i < secondList.length) _second(w, k + OracleInputsLayout.TOKEN_WORDS, i);
+        }
+    }
+
+    function _second(
+        uint256[] memory w,
+        uint256 k,
+        uint256 i
+    ) internal view {
+        SecondSource memory s = secondList[i];
+        (w[k], w[k + 1], w[k + 2]) = (uint8(s.kind), uint160(s.source), uint256(s.poolRef));
+        (w[k + 3], w[k + 4], w[k + 5]) = (s.maxAge, s.twapWindow, s.toleranceBps);
+        if (s.kind != SecondSourceKind.OracleNetwork || !known[s.source]) return;
+        (w[k + 6], w[k + 7], w[k + 8]) = (FEED_DECIMALS, FEED_MIN, FEED_MAX);
+    }
+
+    function _legs(
+        uint256[] memory w,
+        uint256 k,
+        address[] storage route
+    ) internal view {
+        if (route.length > 2) return;
+        for (uint256 l = 0; l < route.length; ++l) {
+            uint256 at = k + l * OracleInputsLayout.LEG_WORDS;
+            address feed = route[l];
+            w[at] = uint160(feed);
+            if (!known[feed]) continue;
+            (w[at + 1], w[at + 2], w[at + 3]) = (FEED_DECIMALS, FEED_MIN, FEED_MAX);
+            (w[at + 4], w[at + 5]) = (FEED_HEARTBEAT, FEED_MARGIN);
+            (w[at + 6], w[at + 7]) = (FEED_MAX_AGE, FEED_MAX_AGE);
+        }
+    }
+}
+
 /// @title LPOracleProperties
-/// @notice Echidna and Medusa properties of the LPOracle base (2.10) over `LPOracleHarness` and mocked feeds,
-/// registry and store. Between transactions: `latestAnswer()` never reverts and is at least 1; a state other than
+/// @notice Echidna and Medusa properties of the LPOracle base (2.10) over `LPOracleHarness`, mocked feeds and
+/// `LPOracleFuzzConfig` as the registry and store. Between transactions: `latestAnswer()` never reverts and is at least 1; a state other than
 /// Live serves at most the accepted price, Expired serves 1 and Cached the accepted price; the accepted price stays
 /// positive and its timestamp never decreases. Inside one transaction: `poke()` moves the stored disagreement start
 /// only to `now` (new episode or route-version change) or to 0, never refreshes the accepted timestamp without a newer
@@ -78,8 +198,7 @@ contract LPOracleEchidnaTarget is LPOracleHarnessPokeLogic {
 /// assertion mode, each selecting among concrete cases with `if` branches. Feeds publish at `block.timestamp`, so the
 /// fuzzers' time jumps make them stale.
 contract LPOracleProperties {
-    OracleRegistryMock internal immutable REGISTRY;
-    OracleStoreMock internal immutable STORE;
+    LPOracleFuzzConfig internal immutable CONFIG;
     OracleTokenMock internal immutable TOKEN_A;
     OracleTokenMock internal immutable TOKEN_B;
     OracleFeedMock internal immutable PA;
@@ -92,9 +211,7 @@ contract LPOracleProperties {
     uint64 internal lastAcceptedAt;
 
     constructor() {
-        REGISTRY = new OracleRegistryMock();
-        STORE = new OracleStoreMock();
-        STORE.setRegistry(REGISTRY);
+        CONFIG = new LPOracleFuzzConfig();
         TOKEN_A = new OracleTokenMock(6);
         TOKEN_B = new OracleTokenMock(6);
         PA = _feed();
@@ -104,63 +221,26 @@ contract LPOracleProperties {
         STANDBY = _feed();
         OracleFeedMock sa = _feed();
         OracleFeedMock sb = _feed();
-        REGISTRY.setRoutes(address(TOKEN_A), _one(address(PA)), _one(address(AA)), RouteSlot.None);
-        REGISTRY.setRoutes(address(TOKEN_B), _one(address(PB)), _one(address(AB)), RouteSlot.None);
-        OracleConfig memory c;
-        c.marketId = 1;
-        c.twapWindow = 1800;
-        c.maxQuoteChangeBps = 100;
-        c.usdBandLow = 0.9e8;
-        c.usdBandHigh = 1.02e8;
-        c.cachedWindow = 3600;
-        c.disagreementPauseMax = 3600;
-        c.graceDuration = 1800;
-        c.tokens = new TokenOracleConfig[](2);
-        c.tokens[0] = _token(address(TOKEN_A), address(PA), address(AA), address(sa));
-        c.tokens[1] = _token(address(TOKEN_B), address(PB), address(AB), address(sb));
-        STORE.setConfig(c);
+        CONFIG.setRoutes(address(TOKEN_A), _one(address(PA)), _one(address(AA)), RouteSlot.None);
+        CONFIG.setRoutes(address(TOKEN_B), _one(address(PB)), _one(address(AB)), RouteSlot.None);
+        // marketId, twapWindow, consistencyToleranceBps, usdBandLow, usdBandHigh, cachedWindow, disagreementPauseMax,
+        // graceDuration, sequencer feed (none), sequencer grace period.
+        CONFIG.setHead([uint256(1), 1800, 0, 0.9e8, 1.02e8, 3600, 3600, 1800, 0, 0]);
+        CONFIG.addToken(150, SecondSource(SecondSourceKind.OracleNetwork, address(sa), bytes32(0), 88_200, 0, 100));
+        CONFIG.addToken(150, SecondSource(SecondSourceKind.OracleNetwork, address(sb), bytes32(0), 88_200, 0, 100));
         ORACLE = new LPOracleEchidnaTarget();
         address[] memory list = new address[](2);
         (list[0], list[1]) = (address(TOKEN_A), address(TOKEN_B));
         uint256[] memory k = new uint256[](2);
         (k[0], k[1]) = (1e18, 1e18);
-        ORACLE.seed(address(STORE), address(REGISTRY), list, k);
+        ORACLE.seed(address(CONFIG), address(CONFIG), list, k);
         (,, lastAcceptedAt) = ORACLE.timers();
     }
 
     function _feed() internal returns (OracleFeedMock f) {
         f = new OracleFeedMock(8, 1, 1e12);
         f.push(1e8, block.timestamp);
-        FeedDef memory d;
-        d.decimals = 8;
-        d.minAnswer = 1;
-        d.maxAnswer = 1e12;
-        d.feedHeartbeat = 86_400;
-        d.heartbeatMargin = 1800;
-        d.feedMaxAge = 88_200;
-        d.feedDeviationThresholdBps = 25;
-        d.borrowPriceMaxAge = 88_200;
-        d.liquidationPriceMaxAge = 88_200;
-        STORE.setFeed(address(f), d);
-    }
-
-    function _token(
-        address token,
-        address primary,
-        address alternate,
-        address second
-    ) internal pure returns (TokenOracleConfig memory t) {
-        t.token = token;
-        (t.routes[0].legCount, t.routes[0].legs[0]) = (1, _leg(primary));
-        (t.routes[1].legCount, t.routes[1].legs[0]) = (1, _leg(alternate));
-        t.feedAgreementToleranceBps = 150;
-        t.secondSource = SecondSource(SecondSourceKind.OracleNetwork, second, bytes32(0), 88_200, 0, 100);
-    }
-
-    function _leg(
-        address feed
-    ) internal pure returns (OracleLeg memory) {
-        return OracleLeg(feed, 8, 86_400, 1800, 25, 1, 1e12, 88_200, 88_200);
+        CONFIG.setFeed(address(f));
     }
 
     function _one(
@@ -230,10 +310,10 @@ contract LPOracleProperties {
         bool toStandby
     ) external {
         address primary = toStandby ? address(STANDBY) : address(PB);
-        REGISTRY.setRoutes(
+        CONFIG.setRoutes(
             address(TOKEN_B), _one(primary), _one(address(AB)), toStandby ? RouteSlot.Primary : RouteSlot.None
         );
-        REGISTRY.bumpVersion(address(TOKEN_B));
+        CONFIG.bumpVersion(address(TOKEN_B));
     }
 
     /// @notice `poke()` and its timer rules (`REQ-ORACLE-027`, `REQ-ORACLE-028`, `REQ-ORACLE-029`, `REQ-ORACLE-095`).

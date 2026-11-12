@@ -1,3 +1,60 @@
 {
-  "accepted": []
+ "accepted": [
+  {
+   "fingerprint": "9a5ac225c97bc6f9",
+   "check": "SWC-113",
+   "file": "RiskModule",
+   "function": "_function_0x0fbc5bac",
+   "reason": "RiskModule.pokeConfig(address) (src/policy/risk-module/RiskModule.sol): the permissionless poke reads the Spoke's approval from the MarketRegistry, asks the drift logic (RiskModuleDriftLogic.spokeDrift) for a drift reason and records CONFIG_DRIFT on each Active or Offboarding market of the Spoke (bounded by the Spoke's markets, REQ-RISK-090). Every callee is fixed at deployment (the MarketRegistry proxy and the drift logic named by immutables); none is caller-supplied. The drift logic reads the Aave Spoke inside try/catch, so a failing Aave read reports drift instead of reverting the poke (REQ-CONFIG-076).",
+   "approval": "pending (Josue)"
+  },
+  {
+   "fingerprint": "f8e1efaa1c78d685",
+   "check": "SWC-113",
+   "file": "RiskModuleBorrowLogic",
+   "function": "_function_0x8327e67d",
+   "reason": "RiskModuleBorrowLogic.debtValueUsd(address) (src/policy/risk-module/RiskModuleBorrowLogic.sol): a view that reads the account's market from the MarketRegistry and its debt from the account's approved Aave Spoke (getUserAccountData). Both callees are fixed by deployment and listing; a callee that reverts makes the view revert, which is the fail-closed rule for risk reads (SPEC-CAP-009, REQ-RISK-077): no caller can name another callee.",
+   "approval": "pending (Josue)"
+  },
+  {
+   "fingerprint": "ce2abf51ff2438a5",
+   "check": "SWC-113",
+   "file": "RiskModulePledgeLogic",
+   "function": "_function_0xe9dc875a",
+   "reason": "RiskModulePledgeLogic.usdToRestore(address) (src/policy/risk-module/RiskModulePledgeLogic.sol): a view that reads the account's market from the MarketRegistry, its health data from the approved Aave Spoke and the latest collateral factor from that Spoke. Every callee is fixed by deployment and listing; a revert of any makes the view revert, the fail-closed rule for risk reads (SPEC-CAP-003).",
+   "approval": "pending (Josue)"
+  },
+  {
+   "fingerprint": "f470487a0075cd5c",
+   "check": "SWC-113",
+   "file": "MarketRegistryActivationLogic",
+   "function": "_function_0xf4e6759d",
+   "reason": "MarketRegistryActivationLogic.marketDrift(address,address,address,uint256,uint256) (src/policy/market-registry/MarketRegistryActivationLogic.sol): a view that reads the reserve, reserve config and dynamic config of the market's Aave Spoke. Every read is a try/catch whose failure returns DriftReason.ReserveIdentity, so a callee that fails cannot block the caller: it reports drift and the market fails closed (REQ-CONFIG-076, REQ-ADAPTER-028..030).",
+   "approval": "pending (Josue)"
+  },
+  {
+   "fingerprint": "86f1e686c28b0502",
+   "check": "SWC-113",
+   "file": "MarketRegistryActivationLogic.clvault",
+   "function": "_function_0xf4e6759d",
+   "reason": "MarketRegistryActivationLogic.marketDrift(address,address,address,uint256,uint256) (src/policy/market-registry/MarketRegistryActivationLogic.sol): a view that reads the reserve, reserve config and dynamic config of the market's Aave Spoke. Every read is a try/catch whose failure returns DriftReason.ReserveIdentity, so a callee that fails cannot block the caller: it reports drift and the market fails closed (REQ-CONFIG-076, REQ-ADAPTER-028..030).",
+   "approval": "pending (Josue)"
+  },
+  {
+   "fingerprint": "85884285ffbf2944",
+   "check": "SWC-116",
+   "file": "MarketRegistry",
+   "function": "_function_0xa4266aa9",
+   "reason": "MarketRegistry.freezesInWindow(address) (src/policy/market-registry/MarketRegistryViews.sol): counts a guardian's address freezes in the hour buckets of the last day (REQ-MREG-019, at most MAX_ADDRESS_FREEZES_PER_DAY). block.timestamp is the specified clock of that rate limit; a validator's few seconds of timestamp drift moves a bucket boundary by those seconds and puts no funds at stake.",
+   "approval": "pending (Josue)"
+  },
+  {
+   "fingerprint": "0017ffec676e97ec",
+   "check": "SWC-116",
+   "file": "MarketRegistry.clvault",
+   "function": "_function_0xa4266aa9",
+   "reason": "MarketRegistry.freezesInWindow(address) (src/policy/market-registry/MarketRegistryViews.sol): counts a guardian's address freezes in the hour buckets of the last day (REQ-MREG-019, at most MAX_ADDRESS_FREEZES_PER_DAY). block.timestamp is the specified clock of that rate limit; a validator's few seconds of timestamp drift moves a bucket boundary by those seconds and puts no funds at stake.",
+   "approval": "pending (Josue)"
+  }
+ ]
 }
