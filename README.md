@@ -161,7 +161,7 @@ To run one row of 5.1: `forge test --match-test 'TEST_057_'`. Because the fork b
 
 ### Symbolic execution
 
-Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input, with loops unrolled to 8: 144 checks in 25 files. In CI each check runs in a job of its own, every night, on every release tag and by hand, with up to 6 hours (GitHub's maximum job time): Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
+Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input: 144 checks in 25 files. In CI each check runs in a job of its own in the slow security tier, with loops unrolled to 16, every night, on every release tag and by hand, with up to 6 hours (GitHub's maximum job time): Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
 
 ```bash
 FOUNDRY_DYNAMIC_TEST_LINKING=false .venv/bin/halmos --root . --match-contract 'HalmosTest$' --loop 8 --solver-timeout-assertion 0
@@ -472,7 +472,7 @@ The fork tests need `RPC_MAINNET` and `RPC_BASE`, and the Certora loop needs `CE
 
 ## Continuous integration
 
-[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs on every pull request and every push to `main` that touches `contracts/**`, `audit/**/*.sol`, `spec/05-verification/trace.py` or the workflow, and can be started by hand. A pull request runs the short set in about 10 minutes (`build`, `test`, `gas`, `abis`, `traceability`, `coverage`, `fast-security`); a pull request labelled `hotfix` adds `hotfix-plan` and `hotfix`. A push to `main` runs the same set with the tests at full depth in about 10 to 15 minutes. The long checks (`plan`, `invariant`, `fork`, `differential`, `halmos`, `smtchecker`, `certora`) run every night at 06:00 UTC on `main`, on every release tag (`v*`) and by hand; a run on `main` is never cancelled by the next push. `gate` accepts the long checks as skipped outside those runs and requires every job in them. It uses the Foundry release in `contracts/.foundry-version` and the dependencies in `soldeer.lock`.
+[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs on every pull request and every push to `main` that touches `contracts/**`, `audit/**/*.sol`, `spec/05-verification/trace.py` or the workflow, and can be started by hand. A pull request runs the short set in about 10 minutes (`build`, `test`, `gas`, `abis`, `traceability`, `coverage`, `fast-security`); a pull request labelled `hotfix` adds `hotfix-plan` and `hotfix`. A push to `main` runs the same set with the tests at full depth in 20 shards of about 30 minutes each. The long checks (`plan`, `invariant`, `fork`, `differential`, `smtchecker`, `certora`) run every night at 06:00 UTC on `main`, on every release tag (`v*`) and by hand; a run on `main` is never cancelled by the next push. `gate` accepts the long checks as skipped outside those runs and requires every job in them. It uses the Foundry release in `contracts/.foundry-version` and the dependencies in `soldeer.lock`.
 
 | Job | Runs |
 |---|---|
@@ -485,7 +485,6 @@ The fork tests need `RPC_MAINNET` and `RPC_BASE`, and the Certora loop needs `CE
 | `invariant` | `invariant` profile, 2,000 runs × depth 400; one job per file of `test/invariant/`, each with up to 6 hours |
 | `fork` | `fork` profile at the pinned blocks, plus the hostile-component tests on the fork; reads the `RPC_MAINNET` and `RPC_BASE` secrets and runs when both are set; without them it passes with a "fork tests not run" warning, so a missing secret blocks no other check; RPC cache keyed on the pinned blocks |
 | `differential` | `differential` profile against the Python reference on Python 3.12 |
-| `halmos` | every `check_` in `test/halmos/` at loop 8 on Python 3.12; one job per check (`--match-contract '^<Contract>$' --match-test '^<check>\('`), each with up to 6 hours, GitHub's maximum; a check that has not finished by then fails the job |
 | `smtchecker` | `smt` profile; fails on any counterexample; one job per contract of `[profile.smt.model_checker]` |
 | `certora` | one job per conf in `certora/conf/` (six at a time) with `--wait_for_results all`, on Java 21 and the static solc 0.8.28; runs when the `CERTORAKEY` secret is set; without it each job passes with a "Certora rules not run" warning |
 | `traceability` | `trace.py`; the `--strict` gap list goes to the job summary |
