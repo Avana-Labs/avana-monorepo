@@ -20,8 +20,9 @@ import {TokenPriceView} from "./TokenPriceView.sol";
 /// changes the state, the served price or a timer. `liquidationPaused = state in {Cached, Expired} or
 /// disagreementPauseActive or disagreementExpired or alternatePastBorrowAge or sequencerDown` (SPEC-ORC-016,
 /// REQ-ORACLE-090, REQ-ORACLE-099) gates the seizure of this market only (SPEC-ORC-017). `borrowAllowed = state == Live
-/// and sequencerReady and every token's second source confirmed and now - servedUpdatedAt <= borrowPriceMaxAge() and
-/// the token decimals verified within DECIMALS_CHECK_MAX_AGE` (REQ-ORACLE-100, REQ-ORACLE-107). `usdLevel = max{L : L^(x)n <= q_0 (x) q_1 (x) ... (x) q_(n-1)}`, the largest 8-decimal level whose
+/// and sequencerReady and (on an L2) servedUpdatedAt newer than the sequencer's restart and every token's second source
+/// confirmed and now - servedUpdatedAt <= borrowPriceMaxAge() and the token decimals verified within
+/// DECIMALS_CHECK_MAX_AGE` (REQ-ORACLE-100, REQ-ORACLE-107, SPEC-ORC-021). `usdLevel = max{L : L^(x)n <= q_0 (x) q_1 (x) ... (x) q_(n-1)}`, the largest 8-decimal level whose
 /// fixed-point power does not exceed the product of the quotes, with `x (x) y = floor(x * y / 1e8)` taken left to right
 /// in pool order (SPEC-ORC-011); `usdBandLow <= usdLevel` holds exactly when the lower band test passes. Example:
 /// quotes (99,987,000, 100,010,000) give 99,998,499. Bit 18 QUOTE_CHANGE_CAPPED holds the market Cached for one block

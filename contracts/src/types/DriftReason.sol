@@ -19,8 +19,8 @@ enum DriftReason {
     // Standard-Spoke setting 1 of 3: a market's collateral reserve has receiveSharesEnabled true.
     ReceiveSharesOn,
     Borrowable,
-    // Standard-Spoke setting 2 of 3: a collateral reserve's liquidationFee is above 0 and not paid to Avana's fee
-    // receiver.
+    // Standard-Spoke setting 2 of 3: a collateral reserve's liquidationFee is above 0. It must be 0: a fee pays Hub
+    // shares with no token transfer.
     LiquidationFeeNonZero,
     ExtraSpoke,
     DrawCapNonZero,

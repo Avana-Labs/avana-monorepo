@@ -113,6 +113,7 @@ struct DebtEvaluation {
     bool sequencerDown;
     bool sequencerUnknown;
     bool sequencerGrace;
+    // SPEC-ORC-021 ready and, on an L2, the served round newer than the restart: the sequencer term of borrowAllowed.
     bool sequencerReady;
     uint64 sequencerGraceEndsAt;
     // Grace window (REQ-ORACLE-034).

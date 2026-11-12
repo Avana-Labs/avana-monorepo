@@ -34,6 +34,14 @@ contract FlashLiquidator is FlashLiquidatorBase {
         address ghoFlashMinter
     ) FlashLiquidatorBase(pool, lpVaultSwap, marketRegistry, parameterStore, ghoFlashMinter) {}
 
+    /// @notice The public helper always takes a loan: `F = 0` reverts `InvalidFlashAmount`, since a caller funding the
+    /// whole repayment calls `LPVaultSwap.liquidate` itself.
+    /// @return allowed Always false.
+    /// @custom:spec REQ-HELPER-003, REQ-HELPER-013
+    function _zeroLoanAllowed() internal pure override returns (bool allowed) {
+        allowed = false;
+    }
+
     /// @notice Any caller may use the public helper.
     /// @return allowed Always true.
     /// @custom:spec REQ-HELPER-010

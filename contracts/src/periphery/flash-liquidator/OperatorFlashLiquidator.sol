@@ -13,7 +13,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// Safe: only `SIGNER` may call; the inventory `X − F`, the shortfall budget and every top-up come only from
 /// `FUNDING_SAFE`, and the payout, every market token and every claimed credit go only to it. With `D` the debt
 /// LPVaultSwap repaid in the call, the loan is at most `⌈D × (10⁴ + LENS_DUST_MARGIN_BPS) / 10⁴⌉`, and the Safe's net
-/// outlay (what left it less the payout) and each top-up are at most `⌊D × MAX_TOP_UP_BPS / 10⁴⌋`.
+/// outlay (what left it less the payout) and each top-up are at most `⌊D × MAX_TOP_UP_BPS / 10⁴⌋`. A request with
+/// `F = 0` takes no loan: the Safe funds `X + maxShortfall`, `liquidate` runs directly, nothing is owed, and the same
+/// `minPayout` and outlay bounds apply to the result.
 /// @dev A compromised signer key can only start liquidations that pay the Safe, and loses at most `MAX_TOP_UP_BPS` of
 /// the debt each call actually repaid, whatever `debtToCover`, `F`, `maxShortfall` or `maxTopUp` it sends: the bound is
 /// on the measured outcome, not on a signer-chosen input. Example: `MAX_TOP_UP_BPS = 100` and a liquidation repaying
@@ -57,6 +59,15 @@ contract OperatorFlashLiquidator is FlashLiquidatorBase, IOperatorFlashLiquidato
         SIGNER = signer;
         FUNDING_SAFE = fundingSafe;
         MAX_TOP_UP_BPS = maxTopUpBps;
+    }
+
+    /// @notice The operator helper accepts `F = 0` (REQ-HELPER-003): no loan is taken and `FUNDING_SAFE` funds `X` and the
+    /// shortfall budget, so a liquidation with no flash liquidity (a paused or empty reserve, an exhausted minter
+    /// bucket, a changed Pool) stays on the committed-operator path under the same outlay bound.
+    /// @return allowed Always true.
+    /// @custom:spec REQ-HELPER-003, REQ-HELPER-011
+    function _zeroLoanAllowed() internal pure override returns (bool allowed) {
+        allowed = true;
     }
 
     /// @notice Only `SIGNER` may call.

@@ -30,11 +30,15 @@ import {FlashLiquidationRequest} from "./types/FlashLiquidationRequest.sol";
 interface IFlashLiquidator is IFlashLiquidatorErrors, IFlashLiquidatorEvents {
     /// @notice Liquidates through `LPVaultSwap.liquidate`, funded by a flash loan of the debt asset.
     /// @dev In order: reverts `ContextActive` while a context is open; in the operator variant `NotSigner` unless
-    /// `msg.sender == SIGNER`; `InvalidFlashAmount` unless `0 < F <= params.debtToCover` and both `params.debtToCover`
-    /// and `params.maxShortfall` are at most `2^128 - 1`; reads the debt asset `T` of `params.debtReserveId` from the
-    /// MarketRegistry and its lender (the GHO flash minter for GHO where one is set, else the Pool, REQ-HELPER-015);
-    /// `FlashSourceIsHub` if that lender is a recorded Hub; `InsufficientFlashLiquidity` if `F > maxFlashLoan(T)`;
-    /// `FlashFeeTooHigh` unless `flashPremium(T, F) * 1e4 <= maxFlashFeeBps * F` (SPEC-LIQ-015, before the loan).
+    /// `msg.sender == SIGNER`; `InvalidFlashAmount` unless `0 < F <= params.debtToCover` (public helper) or
+    /// `0 <= F <= params.debtToCover` (operator variant) and both `params.debtToCover` and `params.maxShortfall` are at
+    /// most `2^128 - 1`; reads the debt asset `T` of `params.debtReserveId` from the MarketRegistry; when `F > 0`, takes
+    /// its lender (the GHO flash minter for GHO where one is set, else the Pool, REQ-HELPER-015) and reverts
+    /// `FlashSourceIsHub` if that lender is a recorded Hub, `InsufficientFlashLiquidity` if `F > maxFlashLoan(T)` and
+    /// `FlashFeeTooHigh` unless `flashPremium(T, F) * 1e4 <= maxFlashFeeBps * F` (SPEC-LIQ-015, before the loan). With
+    /// `F = 0` (operator variant only) no lender is read or called: the context is recorded with lender `address(0)`
+    /// and marked used, the Safe's `debtToCover + maxShortfall` funds `liquidate` directly, nothing is owed and no
+    /// top-up is pulled; the payout, `minPayout` and outlay checks below are unchanged.
     /// Records the single-use transient context (lender, initiator, `T`, `F`, `maxPremium`, `maxTopUp`, the hash of
     /// `abi.encode(params)`, payer, recipient), pulls `debtToCover - F + params.maxShortfall` from the payer when
     /// positive, borrows `F` (`POOL.flashLoan(this, [T], [F], [0], this, abi.encode(params), 0)` or

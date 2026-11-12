@@ -14,8 +14,8 @@ import {RouteSlot} from "../../../types/RouteSlot.sol";
 /// 16 ON_STANDBY, 17 SEQUENCER_DOWN, 18 SEQUENCER_GRACE, 19 SECOND_SOURCE_DISAGREE; bits 3, 14, 15 and 19 are 0 when
 /// failed. `liquidationPaused = state != Live or alternatePastBorrowAge or sequencerDown`: LPVaultSwap repays this
 /// asset's reserve only while it is false and the served price is within `liquidationPriceMaxAge`. `borrowAllowed =
-/// state == Live and sequencerReady and the second source confirmed and now - servedUpdatedAt <= borrowPriceMaxAge`
-/// (REQ-ORACLE-100); the RiskModule allows borrowing this asset only while it is true.
+/// state == Live and sequencerReady and (on an L2) servedUpdatedAt newer than the sequencer's restart and the second
+/// source confirmed and now - servedUpdatedAt <= borrowPriceMaxAge` (REQ-ORACLE-100, SPEC-ORC-021); the RiskModule allows borrowing this asset only while it is true.
 /// @custom:spec REQ-ORACLE-093, REQ-ORACLE-092, REQ-ORACLE-090, REQ-ORACLE-099, REQ-ORACLE-100, SPEC-ORC-015, SPEC-ORC-018, SPEC-ORC-020, SPEC-ORC-021, Q-247, Q-248, Q-274, Q-323, Q-324
 struct DebtPriceView {
     // Current price state.

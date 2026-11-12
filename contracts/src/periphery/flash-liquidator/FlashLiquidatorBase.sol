@@ -108,20 +108,26 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         if (!_callerAllowed()) revert NotSigner();
         uint256 flashAmount = request.flashAmount;
         // X and maxShortfall within LPVaultSwap's own bound (REQ-SWAP-005), so X - F + maxShortfall cannot overflow.
+        // F = 0 only in the operator variant (REQ-HELPER-003): no loan, the Safe funds the whole repayment.
         if (
-            flashAmount == 0 || flashAmount > request.params.debtToCover
+            (flashAmount == 0 && !_zeroLoanAllowed()) || flashAmount > request.params.debtToCover
                 || request.params.debtToCover > type(uint128).max || request.params.maxShortfall > type(uint128).max
         ) revert InvalidFlashAmount();
         Market memory market = IMarketRegistryViews(MARKET_REGISTRY).getMarket(request.params.marketId);
         IERC20 asset = IERC20(
             IMarketRegistryRouteViews(MARKET_REGISTRY).getDebtReserve(market.spoke, request.params.debtReserveId).asset
         );
-        address lender = _lenderOf(address(asset));
-        if (IMarketRegistryHubs(MARKET_REGISTRY).isRecordedHub(lender)) revert FlashSourceIsHub();
-        uint256 available = maxFlashLoan(address(asset));
-        if (flashAmount > available) revert InsufficientFlashLiquidity(available);
-        // SPEC-LIQ-015 pre-loan bound on the quote; the callback re-checks the charged premium.
-        _checkPremium(flashPremium(address(asset), flashAmount), flashAmount);
+        // With F = 0 no lender is read or called: the context records `address(0)` as lender, so neither callback
+        // can bind to it.
+        address lender;
+        if (flashAmount != 0) {
+            lender = _lenderOf(address(asset));
+            if (IMarketRegistryHubs(MARKET_REGISTRY).isRecordedHub(lender)) revert FlashSourceIsHub();
+            uint256 available = maxFlashLoan(address(asset));
+            if (flashAmount > available) revert InsufficientFlashLiquidity(available);
+            // SPEC-LIQ-015 pre-loan bound on the quote; the callback re-checks the charged premium.
+            _checkPremium(flashPremium(address(asset), flashAmount), flashAmount);
+        }
 
         // Balances before anything moves: the payout and the forwarded market tokens are rises over these.
         uint256 assetBefore = asset.balanceOf(address(this));
@@ -133,8 +139,15 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         // `FUNDING_SAFE` (operator), REQ-HELPER-010, REQ-HELPER-011.
         // forge-lint: disable-next-line(arbitrary-send-erc20)
         if (prefund != 0) asset.safeTransferFrom(payer, address(this), prefund);
-        _borrow(lender, address(asset), flashAmount, abi.encode(request.params));
-        if (STATE_SLOT.asUint256().tload() != STATE_USED) revert InvalidFlashCallback();
+        if (flashAmount == 0) {
+            // No loan: the context is used before LPVaultSwap is called, so no callback can run in this call; the
+            // prefund `X + maxShortfall` funds `liquidate` and nothing is owed afterwards, so no top-up is pulled.
+            STATE_SLOT.asUint256().tstore(STATE_USED);
+            _liquidate(asset, request.params);
+        } else {
+            _borrow(lender, address(asset), flashAmount, abi.encode(request.params));
+            if (STATE_SLOT.asUint256().tload() != STATE_USED) revert InvalidFlashCallback();
+        }
 
         payout = _payOut(asset, assetBefore, request.minPayout, prefund, market.tokens, tokensBefore);
         // The context stays open through the payout, so a reentrant `flashLiquidate` from a token transfer reverts
@@ -191,6 +204,11 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         address escrow = ILPVaultSwapViews(LP_VAULT_SWAP).PAYOUT_ESCROW();
         amount = IPayoutEscrow(escrow).claim(token, recipient);
     }
+
+    /// @notice Whether a request may name `F = 0`, a liquidation funded wholly by the payer with no loan.
+    /// @return allowed False for the public helper; true for the operator variant (REQ-HELPER-011).
+    /// @custom:spec REQ-HELPER-003, REQ-HELPER-011
+    function _zeroLoanAllowed() internal pure virtual returns (bool allowed);
 
     /// @notice Whether `msg.sender` may call `flashLiquidate`; `flashLiquidate` reverts `NotSigner` otherwise.
     /// @return allowed True for every caller of the public helper and for `SIGNER` of the operator variant.
@@ -375,7 +393,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         _checkOutlay(prefund + TOP_UP_SLOT.asUint256().tload(), payout, DEBT_REPAID_SLOT.asUint256().tload());
         // The lender pulls exactly `owed`; an allowance left by a short pull is withdrawn.
         address lender = LENDER_SLOT.asAddress().tload();
-        if (asset.allowance(address(this), lender) != 0) asset.forceApprove(lender, 0);
+        if (lender != address(0) && asset.allowance(address(this), lender) != 0) asset.forceApprove(lender, 0);
 
         address recipient = RECIPIENT_SLOT.asAddress().tload();
         // The caller's payout is sent directly; a recipient the asset refuses reverts the whole call (never escrowed).

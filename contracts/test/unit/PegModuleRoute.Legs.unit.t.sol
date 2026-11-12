@@ -58,10 +58,10 @@ contract PegModuleRouteLegsUnitTest is SwapRouteFixture {
             kind: PegModuleKind.Gsm, module: address(gsmT), wrapper: address(stataT), intermediate: address(stataT)
         });
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new PegModuleRoute(_config(address(tether), address(gho)), stepT);
+        this.deployPegModule(_config(address(tether), address(gho)), stepT);
         tether.setFeeBps(5);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new PegModuleRoute(_config(address(tether), address(gho)), stepT);
+        this.deployPegModule(_config(address(tether), address(gho)), stepT);
         MockVault4626 stataU = new MockVault4626(IERC20(address(usdc)), "stataUSDC");
         MockGsm gsmU = new MockGsm(address(stataU), address(gho));
         PegModuleRoute ok = new PegModuleRoute(
@@ -133,7 +133,7 @@ contract PegModuleRouteLegsUnitTest is SwapRouteFixture {
         MockPsmAndConverter both = new MockPsmAndConverter(address(dai), address(usdc), address(usds), 6);
         _expectBad(address(usds), address(usdc), _usdsStep(address(both), address(both)));
         PegModuleRoute ok =
-            new PegModuleRoute(_config(address(usds), address(usdc)), _usdsStep(address(psm), address(converter)));
+            this.deployPegModule(_config(address(usds), address(usdc)), _usdsStep(address(psm), address(converter)));
         address[] memory deps = ok.dependencies();
         assertEq(deps.length, 2);
         assertEq(deps[0], address(converter));
@@ -203,7 +203,7 @@ contract PegModuleRouteLegsUnitTest is SwapRouteFixture {
     function test_TEST_054_usdsRouteBuysWithConvertedDai() public {
         psm.setTout(1e15);
         PegModuleRoute route =
-            new PegModuleRoute(_config(address(usds), address(usdc)), _usdsStep(address(psm), address(converter)));
+            this.deployPegModule(_config(address(usds), address(usdc)), _usdsStep(address(psm), address(converter)));
         uint256 d = 12_345_678_901_234_567_890_123;
         uint256 g = d * 1e18 / ((1e18 + 1e15) * C);
         if (_cost(g + 1, 1e15) <= d) g += 1;
@@ -288,6 +288,6 @@ contract PegModuleRouteLegsUnitTest is SwapRouteFixture {
         PegModuleStep memory step
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new PegModuleRoute(_config(tokenIn, tokenOut), step);
+        this.deployPegModule(_config(tokenIn, tokenOut), step);
     }
 }

@@ -183,7 +183,7 @@ contract FlashLiquidatorGhoUnitTest is FlashLiquidatorFixture {
     function test_TEST_292_minterRecordedAsHubRefusedAtDeployment() public {
         registry.setHub(address(ghoMinter), true);
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
-        new FlashLiquidator(address(aavePool), address(lvs), address(registry), address(store), address(ghoMinter));
+        this.deployHelper(address(aavePool), address(lvs), address(registry), address(store), address(ghoMinter));
     }
 
     /// @notice A minter whose `flashLoan` returns false fails the call with `InvalidFlashCallback`: nothing settles,
@@ -209,11 +209,11 @@ contract FlashLiquidatorGhoUnitTest is FlashLiquidatorFixture {
     function test_TEST_292_minterHubRuleAndZeroGho() public {
         MockGhoFlashMinter noGho = new MockGhoFlashMinter(PayoutToken(address(0)), acl, 5, GHO_BUCKET);
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        new FlashLiquidator(address(aavePool), address(lvs), address(registry), address(store), address(noGho));
+        this.deployHelper(address(aavePool), address(lvs), address(registry), address(store), address(noGho));
 
         registry.setHub(address(ghoMinter), true);
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
-        new FlashLiquidator(address(aavePool), address(lvs), address(registry), address(store), address(ghoMinter));
+        this.deployHelper(address(aavePool), address(lvs), address(registry), address(store), address(ghoMinter));
         vm.prank(caller);
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
         helper.flashLiquidate(_example());
@@ -230,7 +230,7 @@ contract FlashLiquidatorGhoUnitTest is FlashLiquidatorFixture {
     // TEST-292 verifies: REQ-HELPER-015, REQ-HELPER-003, REQ-HELPER-009, REQ-FLASH-010
     function test_TEST_292_noMinterLendsGhoFromPool() public {
         FlashLiquidator noMinter =
-            new FlashLiquidator(address(aavePool), address(lvs), address(registry), address(store), address(0));
+            this.deployHelper(address(aavePool), address(lvs), address(registry), address(store), address(0));
         assertEq(noMinter.maxFlashLoan(address(ghoToken)), 0);
         vm.prank(caller);
         vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InsufficientFlashLiquidity.selector, 0));

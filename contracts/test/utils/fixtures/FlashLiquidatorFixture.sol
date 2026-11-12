@@ -155,6 +155,30 @@ abstract contract FlashLiquidatorFixture is ParameterStoreFixture {
         return _request(1950e6, 1950e6, 975_000, 0, 69e6);
     }
 
+    /// @notice Deploys a public helper through an external call, so `vm.expectRevert` applies to this call. With
+    /// `dynamic_test_linking`, a `new` of a source contract runs as a `deployCode` cheatcode, which `expectRevert` does
+    /// not count as the next call: a refused `new` then reverts the whole test, which the pending `expectRevert` accepts,
+    /// and every statement after it is skipped.
+    function deployHelper(
+        address pool,
+        address lpVaultSwap,
+        address marketRegistry,
+        address parameterStore,
+        address ghoFlashMinter
+    ) external returns (FlashLiquidator) {
+        return new FlashLiquidator(pool, lpVaultSwap, marketRegistry, parameterStore, ghoFlashMinter);
+    }
+
+    /// @notice Deploys an operator helper through an external call (see `deployHelper`).
+    function deployOperatorHelper(
+        address[5] memory core,
+        address signer_,
+        address safe_,
+        uint256 maxTopUpBps
+    ) external returns (OperatorFlashLiquidator) {
+        return new OperatorFlashLiquidator(core[0], core[1], core[2], core[3], core[4], signer_, safe_, maxTopUpBps);
+    }
+
     /// @dev Funds `who` with `amount` USDC and approves `spender` for it.
     function _fund(
         address who,

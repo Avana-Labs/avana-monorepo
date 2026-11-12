@@ -230,6 +230,6 @@ contract SwapRouteBaseUnitTest is SwapRouteFixture {
         RouteConfig memory c
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(c, oneHop);
+        this.deployDexPath(c, oneHop);
     }
 }

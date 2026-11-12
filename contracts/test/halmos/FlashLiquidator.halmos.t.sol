@@ -30,8 +30,8 @@ import {Test} from "forge-std/Test.sol";
 /// within the caller's `maxPremium` and the exact `maxFlashFeeBps` cap, repaid the Pool `F + premium`, paid the caller
 /// the rest and left the helper with no balance or allowance; a Pool or GHO flash minter recorded as a Hub is refused at
 /// deployment and on every call; the minter's `onFlashLoan` outside an open context reverts for every caller and
-/// argument; the operator variant's Safe loses at most `MAX_TOP_UP_BPS` of the debt repaid and never funds a loan above
-/// the need.
+/// argument; the operator variant's Safe loses at most `MAX_TOP_UP_BPS` of the debt repaid, with or without a loan, and
+/// never funds a loan above the need.
 /// @dev The Pool, ACLManager and PoolAddressesProvider are the unit suite's mocks; `maxFlashFeeBps` is
 /// `MockFlashFeeCap` (10, the launch value); LPVaultSwap is `MockLiquidationSwap` over the real Lock and PayoutEscrow,
 /// settling the 2.11 example (`keeperOut = 2,020.8` USDC for `X = F = 1,950` USDC). Premiums are bounded to uint64.
@@ -265,6 +265,32 @@ contract FlashLiquidatorHalmosTest is Test {
             assert(after_ + 19.5e6 >= before);
             assert(usdc.balanceOf(address(op)) == 0);
         }
+    }
+
+    /// @notice Operator variant with `F = 0` (no loan, REQ-HELPER-004), for every recovery and Avana fee: the Pool is never
+    /// called, a completed call left the Safe at most `floor(D x MAX_TOP_UP_BPS / 1e4)` = 19.5 USDC poorer and the
+    /// helper empty, and a refused call left the Safe whole.
+    // PROP-036 verifies: REQ-HELPER-008, REQ-HELPER-011
+    function check_PROP_036_operatorZeroLoanSafeLossBounded(
+        uint40 recovered,
+        uint32 avanaFee
+    ) public {
+        vm.assume(avanaFee <= recovered);
+        lvs.setOutcome(X, recovered, avanaFee);
+        FlashLiquidationRequest memory r = _request(0);
+        r.flashAmount = 0;
+        uint256 before = usdc.balanceOf(SAFE);
+        vm.prank(SIGNER);
+        (bool ok,) = address(op).call(abi.encodeCall(IFlashLiquidator.flashLiquidate, (r)));
+        uint256 after_ = usdc.balanceOf(SAFE);
+        if (ok) {
+            assert(after_ + 19.5e6 >= before);
+            assert(usdc.balanceOf(address(op)) == 0);
+            assert(usdc.allowance(address(op), address(lvs)) == 0);
+        } else {
+            assert(after_ == before);
+        }
+        assert(pool.flashLoanCalls() == 0);
     }
 
     /// @notice Operator variant, for every loan size up to `X = 1,000,000` USDC against a 1,950 USDC debt: a completed

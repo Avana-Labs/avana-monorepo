@@ -40,7 +40,7 @@ contract WrapperThenDexRouteStepsUnitTest is SwapRouteFixture {
         vault.set(abi.encode(uint256(uint160(address(usds))) | (uint256(1) << 200)));
         _expectBad(address(vault), WrapperStep(WrapperKind.Erc4626Redeem, address(vault), address(usds)), fromUsds);
         vault.set(abi.encode(address(usds)));
-        new WrapperThenDexRoute(
+        this.deployWrapperThenDex(
             _config(address(vault), address(usdc)),
             WrapperStep(WrapperKind.Erc4626Redeem, address(vault), address(usds)),
             fromUsds
@@ -85,7 +85,7 @@ contract WrapperThenDexRouteStepsUnitTest is SwapRouteFixture {
         (four[0], four[1], four[2]) = (three[0], three[1], three[2]);
         four[3] = _curveHop(address(p4), address(gho), 0, 1);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new WrapperThenDexRoute(
+        this.deployWrapperThenDex(
             _config(address(usds), address(gho)),
             WrapperStep(WrapperKind.UsdsToDai, address(converter), address(dai)),
             four
@@ -135,6 +135,6 @@ contract WrapperThenDexRouteStepsUnitTest is SwapRouteFixture {
         DexHop[] memory hops
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new WrapperThenDexRoute(_config(tokenIn, address(usdc)), step, hops);
+        this.deployWrapperThenDex(_config(tokenIn, address(usdc)), step, hops);
     }
 }

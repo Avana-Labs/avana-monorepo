@@ -206,7 +206,8 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         uint256 maxShortfall
     ) public {
         x = bound(x, 1e6, 1_000_000e6);
-        f = bound(f, 1, x);
+        // F = 0 included: the operator variant then takes no loan (REQ-HELPER-003) under the same bound.
+        f = bound(f, 0, x);
         d = bound(d, 1, x);
         rec = bound(rec, 0, 2 * d);
         maxShortfall = bound(maxShortfall, 0, 10_000e6);

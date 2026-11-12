@@ -434,23 +434,23 @@ contract DexPathRouteUnitTest is SwapRouteFixture {
             if (f == 4) var_.tokenOut = address(0);
             if (f == 5) var_.aaveAdapter = address(swapper);
             vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-            new DexPathRoute(var_, hops);
+            this.deployDexPath(var_, hops);
         }
         // A Lock whose members are other addresses.
         var_ = _config(address(usdt), address(usdc));
         var_.lock = address(new LockStub(address(adapter), address(0xBAD)));
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(var_, hops);
+        this.deployDexPath(var_, hops);
         var_.lock = address(new LockStub(address(0xBAD), address(swapper)));
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(var_, hops);
+        this.deployDexPath(var_, hops);
         // Token-class masks: none, bit 0, bit 4.
         uint8[3] memory masks = [uint8(0), uint8(1), uint8(1 << 4)];
         for (uint256 m = 0; m < 3; ++m) {
             var_ = _config(address(usdt), address(usdc));
             var_.tokenClassMask = masks[m];
             vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-            new DexPathRoute(var_, hops);
+            this.deployDexPath(var_, hops);
         }
         var_ = _config(address(usdt), address(usdc));
         var_.tokenClassMask = STABLE | CORRELATED | VOLATILE;
@@ -462,7 +462,7 @@ contract DexPathRouteUnitTest is SwapRouteFixture {
     function test_TEST_054_constructorRejectsEqualTokens() public {
         MockCurvePool pool = _curvePool(usdt, usdc, 1, 1);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(_config(address(usdt), address(usdt)), _hops1(_curveHop(address(pool), address(usdt), 1, 0)));
+        this.deployDexPath(_config(address(usdt), address(usdt)), _hops1(_curveHop(address(pool), address(usdt), 1, 0)));
     }
 
     // TEST-054 verifies: REQ-ROUTE-043, REQ-ROUTE-045
@@ -527,7 +527,7 @@ contract DexPathRouteUnitTest is SwapRouteFixture {
         DexHop[] memory hops
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(_config(address(usdt), address(usdc)), hops);
+        this.deployDexPath(_config(address(usdt), address(usdc)), hops);
     }
 
     function _curveHopAsCl(

@@ -11,8 +11,8 @@ pragma solidity 0.8.28;
 /// no guardian suspension or quarantine exists.
 /// @dev Route types (`routeType()`): 0 `PegModule` (a peg module of the pair, such as a GSM or PSM, where its live
 /// capacity covers the leg; never the only route of a token, because a GSM's capacity can fall to near 0), 1 `DexPath`
-/// (fixed hops over Uniswap v3, Aerodrome Slipstream or Curve StableSwap-NG pools ending in the debt asset), 2
-/// `WrapperThenDex` (an unwrap or redeem step such as a static aToken or a rate token, then `DexPath` hops). Each route
+/// (fixed hops over Uniswap v3, Aerodrome Slipstream, Curve StableSwap-NG or pinned legacy Curve pools ending in the
+/// debt asset), 2 `WrapperThenDex` (an unwrap or redeem step such as a static aToken or a rate token, then `DexPath` hops). Each route
 /// declares the token classes it covers (`supportsTokenClass`: stable, correlated or volatile), and the route test
 /// stresses a fully one-sided unwind of a concentrated range (AMMN-FLOW-14, AMMN-RT-09). Constructor arguments, all
 /// immutable: `LP_VAULT_SWAP` (the only allowed caller), `LOCK`, `AAVE_ADAPTER` (the second accepted lock holder),
@@ -75,7 +75,8 @@ interface ISettlementRoute {
     /// received; `minOut` is not reduced for a transfer fee. A token whose issuer can switch on a transfer fee (USDT)
     /// is never paid into a leg that requires the exact amount it was sent (a concentrated-liquidity pool, a GSM's
     /// static aToken): the constructor and the listing refuse such a route, so with the fee on such a token reaches a
-    /// pool only through a Curve StableSwap-NG hop, which measures what it received. Checks `minOut` against LPVaultSwap's balance delta of the debt asset after the last leg and
+    /// pool only through a Curve hop (StableSwap-NG or a pinned legacy pool), whose output the route measures. Checks
+    /// `minOut` against LPVaultSwap's balance delta of the debt asset after the last leg and
     /// reverts `MinOutNotMet(out, minOut)` below it. Example: a 6,211.3 USDC leg into USDT with `minOut` ≈ 6,148.69e6 passes on a pool returning
     /// 6,209.8e6 and reverts on a sandwiched pool returning 6,100e6. Approves each step for exactly the leg input and
     /// resets the allowance to 0 after the leg. Transfers every non-zero unconsumed input or intermediate token to

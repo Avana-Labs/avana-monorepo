@@ -30,7 +30,8 @@ interface IFlashLiquidatorErrors {
     /// @custom:spec REQ-HELPER-011, REQ-HELPER-013
     error NotSigner();
 
-    /// @notice The flash amount is 0 or above `params.debtToCover`, or `params.debtToCover` or `params.maxShortfall` is
+    /// @notice The flash amount is above `params.debtToCover`, or 0 on the public helper (the operator variant accepts
+    /// 0), or `params.debtToCover` or `params.maxShortfall` is
     /// above `2^128 - 1` (LPVaultSwap's own bound, REQ-SWAP-005).
     /// @custom:spec REQ-HELPER-003, REQ-HELPER-013
     error InvalidFlashAmount();

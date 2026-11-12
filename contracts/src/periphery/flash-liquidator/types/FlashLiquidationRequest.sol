@@ -14,7 +14,8 @@ import {LiquidationParams} from "../../../liquidation/lp-vault-swap/types/Liquid
 struct FlashLiquidationRequest {
     // Passed unchanged to LPVaultSwap.liquidate; the helper funds params.debtToCover.
     LiquidationParams params;
-    // F, debt asset borrowed from the Aave V3 Pool; 0 < F <= params.debtToCover. The helper pulls the rest from its payer.
+    // F, debt asset borrowed from the lender; 0 < F <= params.debtToCover (public helper), 0 <= F <= params.debtToCover
+    // (operator variant, where 0 takes no loan). The helper pulls the rest from its payer.
     uint256 flashAmount;
     // Most premium accepted on F.
     uint256 maxPremium;

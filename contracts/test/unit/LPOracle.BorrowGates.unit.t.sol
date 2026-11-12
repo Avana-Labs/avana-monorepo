@@ -115,12 +115,80 @@ contract LPOracleBorrowGatesUnitTest is LPOracleFixture {
         vm.warp(T0 + 3700);
         v = _state();
         assertTrue(v.sequencerReady);
-        assertTrue(v.borrowAllowed);
+        assertFalse(v.borrowAllowed, "every leg's round is from before the restart");
+        _pushAll(int256(ONE), T0 + 3700);
+        assertTrue(_state().borrowAllowed, "rounds newer than the restart");
         // Unreadable: borrowing blocked, liquidation not paused.
         seqFeed.setMode(seqFeed.latestRoundData.selector, ReadMode.Revert);
         v = _state();
         assertFalse(v.borrowAllowed);
         assertFalse(v.liquidationPaused);
         assertTrue(_has(v.reasons, 14));
+    }
+
+    /// @notice Base, restart at `T0 + 100` with a 3,600 s grace period: past the grace period, a served price whose
+    /// oldest leg round is from before the restart, or from the restart second itself, never admits a borrow, while
+    /// the state stays Live and liquidation is not paused; once every leg in use has a round newer than the restart,
+    /// borrowing reopens. One token's stale leg is enough to refuse: `servedUpdatedAt` is the oldest leg in use.
+    // TEST-276 verifies: REQ-ORACLE-099, REQ-ORACLE-100, SPEC-ORC-021, ATTACK-171
+    // Sources: SPEC-ORC-021 example (restart, grace, borrowing reopens on a round newer than the restart)
+    function test_TEST_276_sequencerRestartNeedsNewerRound() public {
+        uint256 restart = T0 + 100;
+        vm.warp(restart);
+        _sequencerUp(restart);
+        vm.warp(restart + 3600);
+        PriceStateView memory v = _state();
+        assertTrue(v.sequencerReady, "grace period over");
+        assertFalse(v.inGrace);
+        assertEq(uint8(v.state), uint8(PriceState.Live));
+        assertFalse(v.borrowAllowed, "rounds from T0, before the restart");
+        assertFalse(v.liquidationPaused, "liquidation runs on the same price");
+        _pushAll(int256(ONE), restart);
+        assertFalse(_state().borrowAllowed, "a round at the restart second is not newer");
+        _pushAll(int256(ONE), restart + 1);
+        pB.push(int256(ONE), restart - 1);
+        v = _state();
+        assertFalse(v.borrowAllowed, "token B's primary is from before the restart");
+        assertFalse(v.liquidationPaused);
+        pB.push(int256(ONE), restart + 1);
+        assertTrue(_state().borrowAllowed, "every leg newer than the restart");
+    }
+
+    /// @notice For every restart time, time past the grace period and leg round time: borrowing is allowed exactly when
+    /// the rounds are newer than the restart, and liquidation is never paused by the rule.
+    // TEST-276 verifies: REQ-ORACLE-099, SPEC-ORC-021
+    function testFuzz_TEST_276_borrowOnlyOnRoundsAfterRestart(
+        uint256 restartOffset,
+        uint256 extra,
+        uint256 legAt
+    ) public {
+        // Within the 7,200 s token-decimals verification of initialize, so no other borrow gate closes.
+        uint256 restart = T0 + bound(restartOffset, 1, 1800);
+        uint256 nowTs = restart + 3600 + bound(extra, 0, 1700);
+        legAt = bound(legAt, T0 + 1, nowTs);
+        vm.warp(restart);
+        _sequencerUp(restart);
+        vm.warp(nowTs);
+        _pushAll(int256(ONE), legAt);
+        PriceStateView memory v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Live));
+        assertEq(v.borrowAllowed, legAt > restart, "borrow iff rounds newer than the restart");
+        assertFalse(v.liquidationPaused);
+    }
+}
+
+/// @notice Ethereum has no sequencer feed: the restart rule does not exist and a round of any age within the borrow
+/// limit admits a borrow, as before.
+contract LPOracleBorrowGatesEthereumUnitTest is LPOracleFixture {
+    function setUp() public {
+        _deployMarket(false);
+    }
+
+    // TEST-276 verifies: REQ-ORACLE-099, SPEC-ORC-021
+    function test_TEST_276_noSequencerNoRestartRule() public {
+        vm.warp(T0 + 3700);
+        PriceStateView memory v = _state();
+        assertTrue(v.sequencerReady, "no feed: ready");
+        assertTrue(v.borrowAllowed, "rounds from T0 admit a borrow");
     }
 }

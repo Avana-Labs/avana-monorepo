@@ -276,6 +276,6 @@ contract PegModuleRouteUnitTest is SwapRouteFixture {
         PegModuleStep memory step
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new PegModuleRoute(_config(tokenIn, tokenOut), step);
+        this.deployPegModule(_config(tokenIn, tokenOut), step);
     }
 }

@@ -10,7 +10,7 @@ import {RouteConfig} from "./types/RouteConfig.sol";
 
 /// @title DexPathRoute
 /// @notice Swap route type 1 (`DexPath`, 2.12): any listed token into an enabled debt asset through one to three fixed
-/// hops over Uniswap v3, Aerodrome Slipstream or Curve StableSwap-NG pools.
+/// hops over Uniswap v3, Aerodrome Slipstream, Curve StableSwap-NG or pinned legacy Curve pools (REQ-ROUTE-046).
 /// @dev Legs: the hops of `DexHops`, the first on the input received, each on the whole output of the one before.
 /// `dependencies()` lists every hop pool; `intermediates()` lists every hop output but the last. Example: a cbETH →
 /// USDC route on Base hops through the cbETH/WETH and WETH/USDC pools, holds WETH between them, and returns any cbETH a

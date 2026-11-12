@@ -102,6 +102,13 @@ contract CollLPVaultMock is ILPVaultErrors {
     uint256 public marketOfPositionOverride;
     uint256 public unwindCalls;
     address public lastRecipient;
+    /// @dev Checks-effects-interactions probe (REQ-LOCK-017): when set, every position or unit move first staticcalls
+    /// `observeTarget` with `observeData` and keeps the result, so a test sees Collateralization's state at the moment
+    /// of the interaction.
+    address public observeTarget;
+    bytes public observeData;
+    bytes public observed;
+    uint256 public observations;
 
     constructor(
         uint32 integrationId,
@@ -114,6 +121,22 @@ contract CollLPVaultMock is ILPVaultErrors {
     }
 
     // ─── Test controls ───
+
+    function setObserver(
+        address target,
+        bytes calldata data
+    ) external {
+        observeTarget = target;
+        observeData = data;
+    }
+
+    function _observe() internal {
+        if (observeTarget == address(0)) return;
+        (bool ok, bytes memory ret) = observeTarget.staticcall(observeData);
+        require(ok, "observe failed");
+        observed = ret;
+        ++observations;
+    }
 
     function setCore(
         address timelock,
@@ -226,6 +249,7 @@ contract CollLPVaultMock is ILPVaultErrors {
         bytes32 key
     ) external returns (address depositor) {
         _custodyCaller();
+        _observe();
         Position storage p = positions[key];
         depositor = p.depositor;
         if (depositor == address(0)) revert NotInCustody();
@@ -253,6 +277,7 @@ contract CollLPVaultMock is ILPVaultErrors {
         address recipient
     ) external returns (uint256[] memory amounts) {
         _custodyCaller();
+        _observe();
         if (recipient == address(0) || recipient == address(this)) revert InvalidRecipient();
         amounts = _remove(key, units, minAmounts, recipient);
     }
@@ -263,6 +288,7 @@ contract CollLPVaultMock is ILPVaultErrors {
         uint256[] calldata minAmounts
     ) external returns (uint256[] memory amounts) {
         _custodyCaller();
+        _observe();
         amounts = _remove(key, units, minAmounts, positions[key].depositor);
     }
 

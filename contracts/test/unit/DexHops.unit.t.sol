@@ -118,8 +118,9 @@ contract DexHopsUnitTest is SwapRouteFixture {
         assertEq(out, 999_000, "the leg swaps the 999,000 units the route received");
         // As a concentrated-liquidity output.
         MockCLPool clOut = _clPool(usdc, t, 1, 1);
-        DexPathRoute toTether =
-            new DexPathRoute(_config(address(usdc), address(tether)), _hops1(_clHop(address(clOut), address(tether))));
+        DexPathRoute toTether = this.deployDexPath(
+            _config(address(usdc), address(tether)), _hops1(_clHop(address(clOut), address(tether)))
+        );
         assertEq(toTether.exactAmountInputs()[0], address(usdc));
     }
 
@@ -133,18 +134,18 @@ contract DexHopsUnitTest is SwapRouteFixture {
         MockCLPool lookAlike = new MockCLPool(address(usdt), address(usdc));
         _expectBad(address(usdt), _hops1(_clHop(address(lookAlike), address(usdc))));
         MockCLPool slip = _slipPool(usdt, usdc, 1, 1);
-        new DexPathRoute(_config(address(usdt), address(usdc)), _hops1(_clHop(address(slip), address(usdc))));
+        this.deployDexPath(_config(address(usdt), address(usdc)), _hops1(_clHop(address(slip), address(usdc))));
         RouteConfig memory c = _config(address(usdt), address(usdc));
         c.uniswapV3Factory = address(0);
-        new DexPathRoute(c, _hops1(_clHop(address(slip), address(usdc))));
+        this.deployDexPath(c, _hops1(_clHop(address(slip), address(usdc))));
         c.slipstreamFactory = address(0);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(c, _hops1(_clHop(address(slip), address(usdc))));
+        this.deployDexPath(c, _hops1(_clHop(address(slip), address(usdc))));
         MockCLPool uni = _clPool(usdt, usdc, 1, 1);
         c = _config(address(usdt), address(usdc));
         c.uniswapV3Factory = address(0);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(c, _hops1(_clHop(address(uni), address(usdc))));
+        this.deployDexPath(c, _hops1(_clHop(address(uni), address(usdc))));
     }
 
     // TEST-054 verifies: REQ-ROUTE-045
@@ -153,7 +154,7 @@ contract DexHopsUnitTest is SwapRouteFixture {
     function test_TEST_054_wideFeeAndTickSpacingNotTruncated() public {
         WidePool pool = new WidePool(address(usdt), address(usdc));
         slipFactory.registerSpacing(address(pool), address(usdt), address(usdc), 1);
-        new DexPathRoute(_config(address(usdt), address(usdc)), _hops1(_clHop(address(pool), address(usdc))));
+        this.deployDexPath(_config(address(usdt), address(usdc)), _hops1(_clHop(address(pool), address(usdc))));
         pool.setTickSpacing(int256(type(int24).max) + 1);
         _expectBad(address(usdt), _hops1(_clHop(address(pool), address(usdc))));
         pool.setTickSpacing(int256(type(int24).min) - 1);
@@ -173,7 +174,7 @@ contract DexHopsUnitTest is SwapRouteFixture {
         RouteConfig memory c = _config(address(usdt), address(usdc));
         c.curveFactory = address(0);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(c, hops);
+        this.deployDexPath(c, hops);
 
         address[] memory coins = new address[](2);
         (coins[0], coins[1]) = (address(usdt), address(usdc));
@@ -185,13 +186,13 @@ contract DexHopsUnitTest is SwapRouteFixture {
         c.curveFactory = address(setFactory);
         setFactory.set(0, 1, true);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(c, hops);
+        this.deployDexPath(c, hops);
         setFactory.set(1, 0, false);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(c, hops);
+        this.deployDexPath(c, hops);
         setFactory.set(0, 2, false);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(c, hops);
+        this.deployDexPath(c, hops);
         setFactory.set(0, 1, false);
         DexPathRoute ok = new DexPathRoute(c, hops);
         assertEq(ok.dependencies()[0], address(pool));
@@ -241,7 +242,7 @@ contract DexHopsUnitTest is SwapRouteFixture {
         MockCurvePool daiUsds = _curvePool(dai, usds, 1, 1);
         MockCLPool usdsUsdc = _clPool(usds, usdc, 1, 1e12);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new WrapperThenDexRoute(
+        this.deployWrapperThenDex(
             _config(address(usds), address(usdc)),
             WrapperStep(WrapperKind.UsdsToDai, address(conv), address(dai)),
             _hops2(_curveHop(address(daiUsds), address(usds), 0, 1), _clHop(address(usdsUsdc), address(usdc)))
@@ -284,7 +285,7 @@ contract DexHopsUnitTest is SwapRouteFixture {
     function test_TEST_054_slipstreamOnlyPoolSwaps() public {
         MockCLPool slip = _slipPool(weth, usdc, 3000e6, 1e18);
         DexPathRoute route =
-            new DexPathRoute(_config(address(weth), address(usdc)), _hops1(_clHop(address(slip), address(usdc))));
+            this.deployDexPath(_config(address(weth), address(usdc)), _hops1(_clHop(address(slip), address(usdc))));
         uint256 poolWeth = weth.balanceOf(address(slip));
         assertEq(_swap(route, 2e18, 6000e6), 6000e6);
         assertEq(weth.balanceOf(address(slip)) - poolWeth, 2e18, "paid exactly the hop's input");
@@ -359,7 +360,7 @@ contract DexHopsUnitTest is SwapRouteFixture {
         num = bound(num, 1, 1e6);
         MockCLPool pool = _clPool(weth, usdc, num, 1);
         DexPathRoute route =
-            new DexPathRoute(_config(address(weth), address(usdc)), _hops1(_clHop(address(pool), address(usdc))));
+            this.deployDexPath(_config(address(weth), address(usdc)), _hops1(_clHop(address(pool), address(usdc))));
         uint256 poolWeth = weth.balanceOf(address(pool));
         uint256 out = _swap(route, amountIn, 1);
         assertEq(out, amountIn * num, "output at the pool's rate");
@@ -375,7 +376,7 @@ contract DexHopsUnitTest is SwapRouteFixture {
         DexHop[] memory hops
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(_config(tokenIn, address(usdc)), hops);
+        this.deployDexPath(_config(tokenIn, address(usdc)), hops);
     }
 
     function _expectBadPath(
@@ -384,7 +385,7 @@ contract DexHopsUnitTest is SwapRouteFixture {
         DexHop[] memory hops
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new DexPathRoute(_config(tokenIn, tokenOut), hops);
+        this.deployDexPath(_config(tokenIn, tokenOut), hops);
     }
 
     /// @notice A funded three-coin Curve pool `[a, b, c]` at 1:1.

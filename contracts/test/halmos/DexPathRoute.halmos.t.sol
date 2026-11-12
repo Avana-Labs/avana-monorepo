@@ -8,6 +8,7 @@ import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlem
 import {DexHop, HopKind} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
 import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
+import {HalmosLegacyCurvePool} from "../utils/mocks/HalmosLegacyCurvePool.sol";
 import {HalmosRoutePool} from "../utils/mocks/HalmosRoutePool.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {MockPoolFactory} from "../utils/mocks/SwapRouteMocks.sol";
@@ -30,6 +31,8 @@ contract DexPathRouteHalmosTest is Test {
     HalmosRoutePool internal pool;
     MockPoolFactory internal factory;
     DexPathRoute internal route;
+    HalmosLegacyCurvePool internal legacyPool;
+    DexPathRoute internal legacyRoute;
 
     function setUp() public {
         lock = new Lock(ADAPTER, SWAP);
@@ -51,7 +54,28 @@ contract DexPathRouteHalmosTest is Test {
                 tokenClassMask: 2,
                 uniswapV3Factory: address(factory),
                 slipstreamFactory: address(0),
-                curveFactory: address(0)
+                curveFactory: address(0),
+                curveLegacyPools: new address[](0)
+            }),
+            hops
+        );
+        // A USDT -> USDC route over a pinned legacy Curve pool [USDC, USDT] that returns no data (REQ-ROUTE-046).
+        legacyPool = new HalmosLegacyCurvePool(address(usdc), address(usdt));
+        address[] memory pinned = new address[](1);
+        pinned[0] = address(legacyPool);
+        hops[0] = DexHop({kind: HopKind.CurveLegacy, pool: address(legacyPool), tokenOut: address(usdc), i: 1, j: 0});
+        legacyRoute = new DexPathRoute(
+            RouteConfig({
+                lpVaultSwap: SWAP,
+                lock: address(lock),
+                aaveAdapter: ADAPTER,
+                tokenIn: address(usdt),
+                tokenOut: address(usdc),
+                tokenClassMask: 2,
+                uniswapV3Factory: address(0),
+                slipstreamFactory: address(0),
+                curveFactory: address(0),
+                curveLegacyPools: pinned
             }),
             hops
         );
@@ -161,6 +185,47 @@ contract DexPathRouteHalmosTest is Test {
             assert(usdt.balanceOf(SWAP) == 0);
             assert(usdt.balanceOf(address(route)) == 0 && usdc.balanceOf(address(route)) == 0);
             assert(usdt.allowance(address(route), address(pool)) == 0);
+        } catch (bytes memory reason) {
+            if (amountIn == 0) {
+                assert(bytes4(reason) == ISettlementRoute.TransferMismatch.selector);
+            } else if (minOut == 0) {
+                assert(bytes4(reason) == ISettlementRoute.ZeroMinOut.selector);
+            } else {
+                assert(poolOut < minOut);
+                assert(
+                    keccak256(reason)
+                        == keccak256(abi.encodeWithSelector(ISettlementRoute.MinOutNotMet.selector, poolOut, minOut))
+                );
+            }
+        }
+    }
+
+    /// @notice The legacy Curve hop (REQ-ROUTE-046) for every amount, minimum and pool outcome: the pool receives
+    /// `min_dy = 0`; a completed swap delivers at least `minOut` to LPVaultSwap, measured as its balance rise (the pool
+    /// returns no data), takes at most `amountIn` and leaves the route with no balance or allowance; below `minOut` it
+    /// reverts `MinOutNotMet(poolOut, minOut)`.
+    // PROP-068 verifies: REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-015, REQ-ROUTE-042, REQ-ROUTE-046
+    function check_PROP_068_legacyHopDeliversAtLeastMinOut(
+        uint128 amountIn,
+        uint128 minOut,
+        uint128 poolOut
+    ) public {
+        _setLock(1);
+        legacyPool.setPayOut(poolOut);
+        usdc.mint(address(legacyPool), poolOut);
+        usdt.mint(SWAP, amountIn);
+        vm.prank(SWAP);
+        usdt.approve(address(legacyRoute), amountIn);
+        uint256 outBefore = usdc.balanceOf(SWAP);
+        vm.prank(SWAP);
+        try legacyRoute.swap(amountIn, minOut) returns (uint256 out) {
+            assert(out >= minOut);
+            assert(out == poolOut);
+            assert(usdc.balanceOf(SWAP) - outBefore == out);
+            assert(legacyPool.lastMinDy() == 0);
+            assert(usdt.balanceOf(SWAP) == 0);
+            assert(usdt.balanceOf(address(legacyRoute)) == 0 && usdc.balanceOf(address(legacyRoute)) == 0);
+            assert(usdt.allowance(address(legacyRoute), address(legacyPool)) == 0);
         } catch (bytes memory reason) {
             if (amountIn == 0) {
                 assert(bytes4(reason) == ISettlementRoute.TransferMismatch.selector);

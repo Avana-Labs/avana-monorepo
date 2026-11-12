@@ -534,3 +534,76 @@ contract VerboseSlipstreamPool {
         revert("fee module");
     }
 }
+
+/// @title MockLegacyCurvePool
+/// @notice A legacy (pre-NG) Curve plain pool stand-in: `coins(uint256)` and `exchange(int128, int128, uint256,
+/// uint256)`. In `ReturnMode.Nothing` `exchange` returns no data, as the Ethereum 3pool does; in `ReturnMode.Amount` it
+/// returns the amount sent; in `ReturnMode.Lie` it returns ten times that amount. Like the 3pool for its fee coin, it
+/// credits the input it measured as its own balance rise, so a transfer fee on the input lowers the output.
+contract MockLegacyCurvePool {
+    enum ReturnMode {
+        Nothing,
+        Amount,
+        Lie
+    }
+
+    address[] internal _coins;
+    uint256 public num = 1;
+    uint256 public den = 1;
+    uint256 public lastMinDy;
+    uint256 public lastDx;
+    uint256 public exchangeCalls;
+    ReturnMode public returnMode;
+
+    constructor(
+        address[] memory coins_
+    ) {
+        _coins = coins_;
+    }
+
+    function coins(
+        uint256 i
+    ) external view returns (address) {
+        return _coins[i];
+    }
+
+    function setRate(
+        uint256 num_,
+        uint256 den_
+    ) external {
+        (num, den) = (num_, den_);
+    }
+
+    function setReturnMode(
+        ReturnMode mode
+    ) external {
+        returnMode = mode;
+    }
+
+    function exchange(
+        int128 i,
+        int128 j,
+        uint256 dx,
+        uint256 minDy
+    ) external {
+        lastMinDy = minDy;
+        lastDx = dx;
+        ++exchangeCalls;
+        IERC20 input = IERC20(_coins[uint256(int256(i))]);
+        uint256 before = input.balanceOf(address(this));
+        input.transferFrom(msg.sender, address(this), dx);
+        uint256 received = input.balanceOf(address(this)) - before;
+        uint256 dy = received * num / den;
+        require(dy >= minDy, "Exchange resulted in fewer coins than expected");
+        if (dy != 0) IERC20(_coins[uint256(int256(j))]).transfer(msg.sender, dy);
+        ReturnMode mode = returnMode;
+        if (mode == ReturnMode.Nothing) return;
+        uint256 reported = mode == ReturnMode.Amount ? dy : dy * 10;
+        // A Vyper `-> uint256` return: one word.
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            mstore(0, reported)
+            return(0, 32)
+        }
+    }
+}

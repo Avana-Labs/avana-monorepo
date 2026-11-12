@@ -65,21 +65,22 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         address m = address(ghoMinter);
         address[4] memory core = [address(aavePool), address(lvs), address(registry), address(store)];
         for (uint256 i = 0; i < 4; ++i) {
-            address[4] memory args = core;
+            // A fresh copy: `address[4] memory args = core` would alias `core` and zero it for the checks below.
+            address[4] memory args = [core[0], core[1], core[2], core[3]];
             args[i] = address(0);
             vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-            new FlashLiquidator(args[0], args[1], args[2], args[3], m);
+            this.deployHelper(args[0], args[1], args[2], args[3], m);
             vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-            new OperatorFlashLiquidator(args[0], args[1], args[2], args[3], m, signer, safe, 100);
+            this.deployOperatorHelper([args[0], args[1], args[2], args[3], m], signer, safe, 100);
         }
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        new OperatorFlashLiquidator(core[0], core[1], core[2], core[3], m, address(0), safe, 100);
+        this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], address(0), safe, 100);
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        new OperatorFlashLiquidator(core[0], core[1], core[2], core[3], m, signer, address(0), 100);
+        this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], signer, address(0), 100);
         vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InvalidTopUpBps.selector, 10_001));
-        new OperatorFlashLiquidator(core[0], core[1], core[2], core[3], m, signer, safe, 10_001);
+        this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], signer, safe, 10_001);
         OperatorFlashLiquidator full =
-            new OperatorFlashLiquidator(core[0], core[1], core[2], core[3], m, signer, safe, 10_000);
+            this.deployOperatorHelper([core[0], core[1], core[2], core[3], m], signer, safe, 10_000);
         assertEq(full.MAX_TOP_UP_BPS(), 10_000);
         // A chain whose GHO has no flash minter: address(0) is allowed and GHO falls back to the Pool.
         FlashLiquidator noMinter = new FlashLiquidator(core[0], core[1], core[2], core[3], address(0));
@@ -90,13 +91,13 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
     // TEST-288 verifies: REQ-HELPER-001
     function test_TEST_288_constructorRefusesZeroLpVaultSwap() public {
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        new FlashLiquidator(address(aavePool), address(0), address(registry), address(store), address(ghoMinter));
+        this.deployHelper(address(aavePool), address(0), address(registry), address(store), address(ghoMinter));
     }
 
     // TEST-288 verifies: REQ-HELPER-001
     function test_TEST_288_constructorRefusesZeroParameterStore() public {
         vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
-        new FlashLiquidator(address(aavePool), address(lvs), address(registry), address(0), address(ghoMinter));
+        this.deployHelper(address(aavePool), address(lvs), address(registry), address(0), address(ghoMinter));
     }
 
     /// @notice No delegatecall, callcode, selfdestruct or create in either variant's runtime code.
@@ -512,10 +513,10 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
     function test_TEST_285_hubPoolRefusedAtDeploymentAndEveryCall() public {
         registry.setHub(address(aavePool), true);
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
-        new FlashLiquidator(address(aavePool), address(lvs), address(registry), address(store), address(0));
+        this.deployHelper(address(aavePool), address(lvs), address(registry), address(store), address(0));
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
-        new OperatorFlashLiquidator(
-            address(aavePool), address(lvs), address(registry), address(store), address(0), signer, safe, 1
+        this.deployOperatorHelper(
+            [address(aavePool), address(lvs), address(registry), address(store), address(0)], signer, safe, 1
         );
         vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
         _liquidate(_exampleRequest());

@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICLFactory} from "../../interfaces/external/aerodrome/ICLFactory.sol";
 import {ICLPool} from "../../interfaces/external/aerodrome/ICLPool.sol";
+import {ICurveLegacyPool} from "../../interfaces/external/curve/ICurveLegacyPool.sol";
 import {ICurveStableSwapNG} from "../../interfaces/external/curve/ICurveStableSwapNG.sol";
 import {ICurveStableSwapNGFactory} from "../../interfaces/external/curve/ICurveStableSwapNGFactory.sol";
 import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Factory.sol";
@@ -21,13 +22,14 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title DexHops
 /// @notice The fixed DEX hops of a `DexPath` route and of the DEX part of a `WrapperThenDex` route (2.12): up to three
-/// hops over Uniswap v3, Aerodrome Slipstream or Curve StableSwap-NG pools, each on the whole output of the one before.
+/// hops over Uniswap v3, Aerodrome Slipstream, Curve StableSwap-NG or pinned legacy Curve pools, each on the whole output
+/// of the one before.
 /// @dev Every hop runs with a zero minimum and the extreme price limit; the route's single minimum-output check after
 /// the last leg (`SwapRouteBase.swap`) catches value lost on any hop (REQ-ROUTE-009). A concentrated-liquidity hop keeps
 /// its context (pool, input token, amount, direction) in transient storage under the ERC-7201 base `HOP_SLOT`; the
 /// callback pays only that pool, only once, at most the hop's amount, in the hop's input token, and the context is
 /// cleared after the hop. Hop legs are immutables (`_POOL0`…`_POOL2` and the rest), so the path cannot change.
-/// @custom:spec REQ-ROUTE-002, REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-013, REQ-ROUTE-033, REQ-ROUTE-043, REQ-ROUTE-045, INV-040, Q-045, Q-148
+/// @custom:spec REQ-ROUTE-002, REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-013, REQ-ROUTE-033, REQ-ROUTE-043, REQ-ROUTE-045, REQ-ROUTE-046, INV-040, Q-045, Q-148
 abstract contract DexHops is SwapRouteBase {
     using SafeERC20 for IERC20;
     using TransientSlot for bytes32;
@@ -37,6 +39,9 @@ abstract contract DexHops is SwapRouteBase {
 
     /// @notice Largest number of hops; the Certora confs unroll the hop loop three times.
     uint256 internal constant MAX_HOPS = 3;
+
+    /// @notice Largest pinned list of legacy Curve pools a route accepts, so the constructor's search is bounded.
+    uint256 internal constant MAX_CURVE_LEGACY_POOLS = 8;
 
     /// @dev Uniswap v3 `TickMath.MIN_SQRT_RATIO + 1` and `MAX_SQRT_RATIO - 1`, the extreme price limits (Slipstream uses
     /// the same bounds).
@@ -86,18 +91,22 @@ abstract contract DexHops is SwapRouteBase {
     /// factory's `getPool(token0, token1, fee)` or the pinned Slipstream factory's `getPool(token0, token1,
     /// tickSpacing)`, and the hop's input has no transfer-fee switch; a Curve pool's `coins(i)` and `coins(j)` are the
     /// hop's input and output, with `i ≠ j` and both non-negative, and the pinned Curve StableSwap-NG factory reports the
-    /// same indices for the pool. A contract that does not answer a read fails the check.
+    /// same indices for the pool; a legacy Curve pool is on `config.curveLegacyPools` (at most 8 entries) and its
+    /// `coins(i)` and `coins(j)` are the hop's input and output, with `i ≠ j` and both non-negative. A contract that does
+    /// not answer a read fails the check.
     /// @param config Shared constructor arguments.
     /// @param pathStart First hop's input token.
     /// @param hops The hops, in order.
-    /// @custom:spec REQ-ROUTE-043, REQ-ROUTE-045
+    /// @custom:spec REQ-ROUTE-043, REQ-ROUTE-045, REQ-ROUTE-046
     constructor(
         RouteConfig memory config,
         address pathStart,
         DexHop[] memory hops
     ) SwapRouteBase(config) {
         uint256 n = hops.length;
-        if (n > MAX_HOPS || pathStart == address(0)) revert InvalidRouteConfig();
+        if (n > MAX_HOPS || pathStart == address(0) || config.curveLegacyPools.length > MAX_CURVE_LEGACY_POOLS) {
+            revert InvalidRouteConfig();
+        }
         if ((n == 0 ? pathStart : hops[n - 1].tokenOut) != config.tokenOut) revert InvalidRouteConfig();
         bool[3] memory zfo = [false, false, false];
         bool valid = true;
@@ -158,10 +167,17 @@ abstract contract DexHops is SwapRouteBase {
                 _concentratedHop(hop.pool, input, amount, _zeroForOne(k));
             } else {
                 _approve(input, hop.pool, amount);
-                // The hop's output is measured as the route's balance rise below, never taken from the pool's return
-                // value (REQ-ROUTE-009, REQ-ROUTE-015); the pool is one of the at most three fixed hops.
-                // forge-lint: disable-next-line(unused-return, calls-loop)
-                ICurveStableSwapNG(hop.pool).exchange(hop.i, hop.j, amount, 0);
+                if (hop.kind == HopKind.CurveStableSwap) {
+                    // The hop's output is measured as the route's balance rise below, never taken from the pool's
+                    // return value (REQ-ROUTE-009, REQ-ROUTE-015); the pool is one of the at most three fixed hops.
+                    // forge-lint: disable-next-line(unused-return, calls-loop)
+                    ICurveStableSwapNG(hop.pool).exchange(hop.i, hop.j, amount, 0);
+                } else {
+                    // A pinned legacy pool (REQ-ROUTE-046): declared with no return value, so a pool that returns
+                    // nothing and one that returns the amount both succeed; the output is the balance rise below.
+                    // forge-lint: disable-next-line(calls-loop)
+                    ICurveLegacyPool(hop.pool).exchange(hop.i, hop.j, amount, 0);
+                }
                 _approve(input, hop.pool, 0);
             }
             amount = _rise(hop.tokenOut, before);
@@ -270,20 +286,51 @@ abstract contract DexHops is SwapRouteBase {
             ok = (zeroForOne ? token1 == hop.tokenOut : (token1 == input && token0 == hop.tokenOut))
                 && _fromPinnedFactory(config, hop.pool, token0, token1);
         } else {
-            if (hop.i < 0 || hop.j < 0 || hop.i == hop.j || config.curveFactory == address(0)) return (false, false);
-            uint256 i = SafeCast.toUint256(hop.i);
-            uint256 j = SafeCast.toUint256(hop.j);
-            (bool okIn, address coinIn) = RouteReads.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (i)));
-            (bool okOut, address coinOut) =
-                RouteReads.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (j)));
-            if (!okIn || !okOut || coinIn != input || coinOut != hop.tokenOut) return (false, false);
-            (bool okIdx, uint256[3] memory w) = RouteReads.words(
-                config.curveFactory,
-                abi.encodeCall(ICurveStableSwapNGFactory.get_coin_indices, (hop.pool, input, hop.tokenOut)),
-                true
-            );
-            ok = okIdx && w[0] == i && w[1] == j && w[2] == 0;
+            ok = _checkCurveHop(config, hop, input);
         }
+    }
+
+    /// @notice Checks a Curve hop (StableSwap-NG or legacy): non-negative distinct indices; provenance first, so a pool
+    /// of unknown provenance is never called (the NG factory set, or the pool on the pinned legacy list, REQ-ROUTE-045,
+    /// REQ-ROUTE-046); the pool's `coins(i)` and `coins(j)` are the hop's input and output; and, for an NG pool, the
+    /// factory's `get_coin_indices` reports the same indices with no underlying coin.
+    function _checkCurveHop(
+        RouteConfig memory config,
+        DexHop memory hop,
+        address input
+    ) private view returns (bool) {
+        if (hop.i < 0 || hop.j < 0 || hop.i == hop.j) return false;
+        bool legacy = hop.kind == HopKind.CurveLegacy;
+        if (legacy ? !_pinnedLegacy(config.curveLegacyPools, hop.pool) : config.curveFactory == address(0)) {
+            return false;
+        }
+        uint256 i = SafeCast.toUint256(hop.i);
+        uint256 j = SafeCast.toUint256(hop.j);
+        // `coins(uint256)` has the same selector on StableSwap-NG and legacy pools.
+        (bool okIn, address coinIn) = RouteReads.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (i)));
+        (bool okOut, address coinOut) = RouteReads.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (j)));
+        if (!okIn || !okOut || coinIn != input || coinOut != hop.tokenOut) return false;
+        if (legacy) return true;
+        (bool okIdx, uint256[3] memory w) = RouteReads.words(
+            config.curveFactory,
+            abi.encodeCall(ICurveStableSwapNGFactory.get_coin_indices, (hop.pool, input, hop.tokenOut)),
+            true
+        );
+        return okIdx && w[0] == i && w[1] == j && w[2] == 0;
+    }
+
+    /// @notice Whether `pool` is on the chain's pinned list of legacy Curve pools (REQ-ROUTE-046).
+    /// @param pinned The pinned list from the route's configuration (at most `MAX_CURVE_LEGACY_POOLS` entries, checked
+    /// before any hop).
+    /// @param pool The hop's pool, non-zero.
+    function _pinnedLegacy(
+        address[] memory pinned,
+        address pool
+    ) private pure returns (bool) {
+        for (uint256 k = 0; k < pinned.length; ++k) {
+            if (pinned[k] == pool) return true;
+        }
+        return false;
     }
 
     /// @notice Whether `pool` is the pinned Uniswap v3 factory's pool for its tokens and fee, or the pinned Slipstream

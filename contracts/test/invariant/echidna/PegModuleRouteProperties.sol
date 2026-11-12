@@ -79,7 +79,8 @@ contract PegModuleRouteProperties {
             tokenClassMask: 1 << 1,
             uniswapV3Factory: address(0),
             slipstreamFactory: address(0),
-            curveFactory: address(0)
+            curveFactory: address(0),
+            curveLegacyPools: new address[](0)
         });
     }
 

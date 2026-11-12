@@ -54,7 +54,8 @@ contract WrapperThenDexRouteHalmosTest is Test {
                 tokenClassMask: 2,
                 uniswapV3Factory: address(factory),
                 slipstreamFactory: address(0),
-                curveFactory: address(0)
+                curveFactory: address(0),
+                curveLegacyPools: new address[](0)
             }),
             WrapperStep({kind: WrapperKind.UsdsToDai, wrapper: address(converter), underlying: address(dai)}),
             hops

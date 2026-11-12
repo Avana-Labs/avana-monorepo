@@ -47,7 +47,8 @@ contract PegModuleRouteHalmosTest is Test {
                 tokenClassMask: 2,
                 uniswapV3Factory: address(0),
                 slipstreamFactory: address(0),
-                curveFactory: address(0)
+                curveFactory: address(0),
+                curveLegacyPools: new address[](0)
             }),
             PegModuleStep({
                 kind: PegModuleKind.LitePsm, module: address(psm), wrapper: address(0), intermediate: address(0)

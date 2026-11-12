@@ -117,7 +117,7 @@ contract WrapperThenDexRouteUnitTest is SwapRouteFixture {
     // TEST-054 verifies: REQ-ROUTE-002, REQ-ROUTE-003
     function test_TEST_054_redeemIntoTheDebtAssetNeedsNoHop() public {
         WrapperThenDexRoute route =
-            new WrapperThenDexRoute(_config(address(susds), address(usds)), _redeemStep(), new DexHop[](0));
+            this.deployWrapperThenDex(_config(address(susds), address(usds)), _redeemStep(), new DexHop[](0));
         assertEq(route.dependencies().length, 1);
         assertEq(route.intermediates().length, 0);
         _mintShares(20e18);
@@ -224,7 +224,7 @@ contract WrapperThenDexRouteUnitTest is SwapRouteFixture {
         // A step yielding the debt asset with hops after it.
         MockCurvePool loop = _curvePool(dai, usdc, 1, 1);
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new WrapperThenDexRoute(
+        this.deployWrapperThenDex(
             _config(address(usds), address(dai)),
             _converterStep(),
             _hops1(_curveHop(address(loop), address(usdc), 0, 1))
@@ -241,7 +241,7 @@ contract WrapperThenDexRouteUnitTest is SwapRouteFixture {
         DexHop[] memory hops
     ) internal {
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
-        new WrapperThenDexRoute(_config(tokenIn, address(usdc)), step, hops);
+        this.deployWrapperThenDex(_config(tokenIn, address(usdc)), step, hops);
     }
 }
 
