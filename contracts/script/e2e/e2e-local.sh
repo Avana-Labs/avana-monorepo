@@ -59,7 +59,9 @@ ANVIL_PID=""
 cleanup() { [ -n "$ANVIL_PID" ] && kill -INT "$ANVIL_PID" 2>/dev/null && wait "$ANVIL_PID" 2>/dev/null; [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null; true; }
 trap cleanup EXIT
 # The chain state is saved to anvil-state.json when the node stops; a run without the deploy step reloads it, so the
-# manifest, services and scenario steps can be rerun on the same deployment (E2E_STEPS="manifest services scenarios").
+# manifest and scenario steps can be rerun on the same deployment (E2E_STEPS="manifest scenarios"). A reloaded node
+# holds only the latest state while the indexer reads contracts at past blocks (BlockOutOfRangeError), and anvil's
+# --preserve-historical-states writes a 7 GB file for this world, so the services step runs only with the deploy step.
 STATE="$OUT/anvil-state.json"
 [[ " $STEPS " == *" deploy "* ]] && rm -f "$STATE"
 anvil --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
@@ -125,7 +127,9 @@ if [[ " $STEPS " == *" manifest "* ]]; then
 fi
 
 if [[ " $STEPS " == *" services "* ]]; then
-  if [ -f "$OUT/manifest.json" ]; then
+  if [[ " $STEPS " != *" deploy "* ]]; then
+    record services not-run "the indexer reads past blocks, which a node reloaded from anvil-state.json does not hold: run it with the deploy step"
+  elif [ -f "$OUT/manifest.json" ]; then
     script/e2e/services-smoke.sh "$OUT/manifest.json" > "$LOG/services.log" 2>&1
     rc=$?
     case $rc in
