@@ -4,7 +4,8 @@
 # Mythril on the runtime bytecode of every contract and library compiled from src/ (settings in
 # security/mythril.conf). Interfaces have no code and are not analyzed. Writes out-security/mythril/<Name>.json per
 # contract and out-security/mythril.json ({"<Name>": <report>}), then gates the combined report with
-# security/mythril-triage.json at low and above.
+# security/mythril-triage.json at low and above. MYTHRIL_CONTRACTS (space-separated names; empty: all) limits the run to
+# those contracts; a name with no runtime code under src/ fails the run.
 #
 # Usage, from contracts/:  script/security-mythril.sh <forge-out-dir with build-info>
 
@@ -26,6 +27,18 @@ fi
 rm -rf "$OUT" && mkdir -p "$OUT"
 # Name and runtime code of every src/ artifact with code, one "name<TAB>hexfile" line each.
 targets=$("$PY" script/security-targets.py runtime-code "$BUILD" "$OUT") || exit 1
+
+if [ -n "${MYTHRIL_CONTRACTS:-}" ]; then
+  missing=""
+  for n in $MYTHRIL_CONTRACTS; do
+    cut -f1 <<<"$targets" | grep -qxF "$n" || missing="$missing $n"
+  done
+  if [ -n "$missing" ]; then
+    echo "mythril: no such target:$missing" >&2
+    exit 1
+  fi
+  targets=$(awk -F'\t' -v sel=" $MYTHRIL_CONTRACTS " 'index(sel, " " $1 " ")' <<<"$targets")
+fi
 
 if [ -z "$targets" ]; then
   echo "mythril: skipped, no contract or library under src/ compiles to runtime code"

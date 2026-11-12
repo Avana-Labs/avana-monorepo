@@ -1,0 +1,848 @@
+name: security-slow
+
+# Slow security tier on every push to main (each merged pull request), by hand (workflow_dispatch) and before every
+# release: Echidna, Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Pull requests run contracts.yml only.
+# The `build` job compiles once (script/security-slow.sh build, and the build Halmos runs); `plan` lists the targets
+# from that build with script/ci-shards.py; every target then runs in its own job of at most 4 hours, reusing the
+# build: one per Echidna harness (both modes), one per Medusa harness, one per Halmos test contract, one per hevm
+# target (each harness's assertion entry points, each src/ contract), and one per group of eight src/ contracts for
+# Mythril. A new harness, Halmos contract or src/ contract gets its own job on the next run. `slow-gate` passes only
+# when every job passed.
+# By hand, `campaign` runs the pre-audit fuzzing campaign of one layer instead: every harness of the layer gets 24
+# hours of Echidna per mode and 24 hours of Medusa, as eight parallel 3-hour jobs per harness and mode, each with a
+# fresh seed and starting from the stored corpus; `campaign-merge` then joins the eight corpora of each harness and
+# stores the result as that harness's corpus, which every later slow-tier run replays.
+# Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
+# release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
+# by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
+# contracts/package-lock.json, Echidna, Medusa, Aderyn and hevm by version and sha256, the Semgrep rules and 4naly3er
+# by commit and Necessist by crate version in contracts/script/install-security-tools.sh; Gambit is the binary in the
+# pinned certora-cli wheel.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - "audit/**/*.sol"
+      - "spec/05-verification/trace.py"
+      - ".github/workflows/security-slow.yml"
+  workflow_dispatch:
+    inputs:
+      campaign:
+        description: "Pre-audit 24-hour Echidna and Medusa campaign of one layer (none: the slow tier)"
+        required: true
+        type: choice
+        default: none
+        options: [none, "2.1", "2.2", "2.3", "2.4", "2.5", "2.6", other]
+
+concurrency:
+  # A newer push to main waits for the running slow tier instead of cancelling it; a campaign has its own group.
+  group: security-slow-${{ github.ref }}-${{ inputs.campaign || 'none' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.13.1"
+  # Slow-tier budgets: per harness and mode for the fuzzers, per query for hevm. The fuzz seed is fresh every run.
+  ECHIDNA_TEST_LIMIT: "1000000"
+  ECHIDNA_TIMEOUT: "1800"
+  MEDUSA_TIMEOUT: "1800"
+  HEVM_SMT_TIMEOUT: "600"
+  HALMOS_LOOP: "16"
+  # A campaign job fuzzes one harness in one mode for 3 hours (ECHIDNA_TIMEOUT and MEDUSA_TIMEOUT 10,800 in the
+  # campaign jobs); eight of them make the 24 hours.
+  CAMPAIGN_SEGMENTS: "8"
+  CAMPAIGN: ${{ inputs.campaign || 'none' }}
+
+defaults:
+  run:
+    working-directory: contracts
+
+jobs:
+  build:
+    name: slow-tier build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: forge soldeer install
+
+      - name: Build src/, test/ and script/ with build info
+        run: |
+          script/security-slow.sh build
+          test -d out-security/build/all/build-info
+
+      - name: Build for Halmos (the command Halmos runs, so each Halmos job finds it compiled)
+        if: env.CAMPAIGN == 'none'
+        env:
+          FOUNDRY_DYNAMIC_TEST_LINKING: "false"
+        run: forge build --ast --root . --extra-output storageLayout metadata
+
+      - name: Upload the build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: slow-build
+          path: |
+            contracts/out-security/build
+            contracts/out-security/build-all.txt
+            contracts/out
+            contracts/cache
+          if-no-files-found: error
+          retention-days: 7
+
+  plan:
+    name: plan the jobs
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      echidna: ${{ steps.plan.outputs.echidna }}
+      medusa: ${{ steps.plan.outputs.medusa }}
+      halmos: ${{ steps.plan.outputs.halmos }}
+      hevm: ${{ steps.plan.outputs.hevm }}
+      mythril: ${{ steps.plan.outputs.mythril }}
+      campaign-harnesses: ${{ steps.plan.outputs.campaign-harnesses }}
+      campaign-echidna: ${{ steps.plan.outputs.campaign-echidna }}
+      campaign-medusa: ${{ steps.plan.outputs.campaign-medusa }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: List every target (script/ci-shards.py)
+        id: plan
+        run: |
+          set -euo pipefail
+          B=out-security/build/all
+          # Each list is computed before it is written, so a failing listing fails this job.
+          out() { echo "$1=$2" | tee -a "$GITHUB_OUTPUT"; }
+          if [ "$CAMPAIGN" = none ]; then
+            for t in echidna medusa hevm mythril; do legs=$(python3 script/ci-shards.py "$t" "$B"); out "$t" "$legs"; done
+            legs=$(python3 script/ci-shards.py halmos); out halmos "$legs"
+            for t in campaign-harnesses campaign-echidna campaign-medusa; do out "$t" '[]'; done
+          else
+            for t in echidna medusa halmos hevm mythril; do out "$t" '[]'; done
+            legs=$(python3 script/ci-shards.py campaign-harnesses "$B" "$CAMPAIGN"); out campaign-harnesses "$legs"
+            legs=$(python3 script/ci-shards.py campaign "$B" "$CAMPAIGN" echidna); out campaign-echidna "$legs"
+            legs=$(python3 script/ci-shards.py campaign "$B" "$CAMPAIGN" medusa); out campaign-medusa "$legs"
+          fi
+
+  echidna:
+    name: echidna ${{ matrix.harness }}
+    needs: plan
+    if: needs.plan.outputs.echidna != '[]'
+    runs-on: ubuntu-24.04
+    # Property and assertion mode at ECHIDNA_TIMEOUT (30 minutes) each: about 1 hour 10 minutes with set-up.
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.echidna) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache pinned security binaries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/tools/bin
+          key: security-bin-echidna-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
+
+      - name: Install dependencies and pinned tools
+        env:
+          BINARIES: echidna
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --binaries --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: Restore the harness's corpus of earlier runs
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/corpus
+          key: security-corpus-echidna-${{ matrix.harness }}-${{ github.run_id }}
+          restore-keys: security-corpus-echidna-${{ matrix.harness }}-
+
+      - name: Echidna on ${{ matrix.harness }}, property and assertion mode
+        env:
+          ECHIDNA_HARNESSES: ${{ matrix.harness }}
+        run: script/security-slow.sh echidna
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-slow-echidna-${{ matrix.harness }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  medusa:
+    name: medusa ${{ matrix.harness }}
+    needs: plan
+    if: needs.plan.outputs.medusa != '[]'
+    runs-on: ubuntu-24.04
+    # One campaign at MEDUSA_TIMEOUT (30 minutes) plus Medusa's Slither pass: under 1 hour with set-up.
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.medusa) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache pinned security binaries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/tools/bin
+          key: security-bin-medusa-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
+
+      - name: Install dependencies and pinned tools
+        env:
+          BINARIES: medusa
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --binaries --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: Restore the harness's corpus of earlier runs
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/corpus
+          key: security-corpus-medusa-${{ matrix.harness }}-${{ github.run_id }}
+          restore-keys: security-corpus-medusa-${{ matrix.harness }}-
+
+      - name: Medusa on ${{ matrix.harness }}
+        env:
+          MEDUSA_HARNESSES: ${{ matrix.harness }}
+        run: script/security-slow.sh medusa
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-slow-medusa-${{ matrix.harness }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  halmos:
+    name: halmos ${{ matrix.contract }}
+    needs: plan
+    if: needs.plan.outputs.halmos != '[]'
+    runs-on: ubuntu-24.04
+    # Every check_ function of one test contract at loop 16. Halmos has no wall-clock bound of its own
+    # (--solver-timeout-assertion 0); the job timeout is the bound.
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.halmos) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Install dependencies and pinned tools
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: Halmos on ${{ matrix.contract }} (${{ matrix.file }})
+        env:
+          HALMOS_CONTRACTS: ${{ matrix.contract }}
+        run: script/security-slow.sh halmos
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-slow-halmos-${{ matrix.contract }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  hevm:
+    name: hevm ${{ matrix.target }}
+    needs: plan
+    if: needs.plan.outputs.hevm != '[]'
+    runs-on: ubuntu-24.04
+    # One harness's assertion entry points, or one src/ contract's runtime code, at HEVM_SMT_TIMEOUT per query. hevm
+    # has no wall-clock bound of its own; the job timeout is the bound.
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.hevm) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache pinned security binaries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/tools/bin
+          key: security-bin-hevm-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
+
+      - name: Install dependencies and pinned tools
+        env:
+          BINARIES: hevm
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --binaries --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: hevm on ${{ matrix.target }}
+        env:
+          HEVM_TARGETS: ${{ matrix.target }}
+        run: script/security-slow.sh hevm
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-slow-hevm-${{ matrix.id }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  mythril:
+    name: mythril group ${{ matrix.group }}
+    needs: plan
+    if: needs.plan.outputs.mythril != '[]'
+    runs-on: ubuntu-24.04
+    # Up to eight contracts at MYTHRIL_EXECUTION_TIMEOUT (15 minutes) each, plus the issue checks: about 2 hours.
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.mythril) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Install dependencies and pinned tools
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: Mythril on ${{ matrix.contracts }}
+        env:
+          MYTHRIL_CONTRACTS: ${{ matrix.contracts }}
+        run: script/security-slow.sh mythril
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-slow-mythril-${{ matrix.group }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  campaign-echidna-property:
+    name: campaign echidna ${{ matrix.harness }} property ${{ matrix.segment }}/8
+    needs: plan
+    if: needs.plan.outputs.campaign-echidna != '[]'
+    runs-on: ubuntu-24.04
+    # 3 hours of fuzzing plus set-up and the crytic export.
+    timeout-minutes: 230
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.campaign-echidna) }}
+    env:
+      ECHIDNA_MODES: property
+      ECHIDNA_TIMEOUT: "10800"
+      # The time bound ends the campaign; the call limit is set above anything 3 hours reaches.
+      ECHIDNA_TEST_LIMIT: "1000000000000"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache pinned security binaries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/tools/bin
+          key: security-bin-echidna-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
+
+      - name: Install dependencies and pinned tools
+        env:
+          BINARIES: echidna
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --binaries --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: Restore the harness's stored corpus
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/corpus
+          key: security-corpus-echidna-${{ matrix.harness }}-
+          restore-keys: security-corpus-echidna-${{ matrix.harness }}-
+
+      - name: Echidna on ${{ matrix.harness }}, property mode, segment ${{ matrix.segment }}
+        env:
+          ECHIDNA_HARNESSES: ${{ matrix.harness }}
+        run: script/security-slow.sh echidna
+
+      - name: Upload this segment's corpus
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-corpus-echidna-${{ matrix.harness }}-property-${{ matrix.segment }}
+          path: contracts/out-security/corpus/echidna/${{ matrix.harness }}-property
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-echidna-${{ matrix.harness }}-property-${{ matrix.segment }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  campaign-echidna-assertion:
+    name: campaign echidna ${{ matrix.harness }} assertion ${{ matrix.segment }}/8
+    needs: plan
+    if: needs.plan.outputs.campaign-echidna != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 230
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.campaign-echidna) }}
+    env:
+      ECHIDNA_MODES: assertion
+      ECHIDNA_TIMEOUT: "10800"
+      ECHIDNA_TEST_LIMIT: "1000000000000"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache pinned security binaries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/tools/bin
+          key: security-bin-echidna-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
+
+      - name: Install dependencies and pinned tools
+        env:
+          BINARIES: echidna
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --binaries --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: Restore the harness's stored corpus
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/corpus
+          key: security-corpus-echidna-${{ matrix.harness }}-
+          restore-keys: security-corpus-echidna-${{ matrix.harness }}-
+
+      - name: Echidna on ${{ matrix.harness }}, assertion mode, segment ${{ matrix.segment }}
+        env:
+          ECHIDNA_HARNESSES: ${{ matrix.harness }}
+        run: script/security-slow.sh echidna
+
+      - name: Upload this segment's corpus
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-corpus-echidna-${{ matrix.harness }}-assertion-${{ matrix.segment }}
+          path: contracts/out-security/corpus/echidna/${{ matrix.harness }}-assertion
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-echidna-${{ matrix.harness }}-assertion-${{ matrix.segment }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  campaign-medusa:
+    name: campaign medusa ${{ matrix.harness }} ${{ matrix.segment }}/8
+    needs: plan
+    if: needs.plan.outputs.campaign-medusa != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 230
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.campaign-medusa) }}
+    env:
+      MEDUSA_TIMEOUT: "10800"
+      # 0: no call limit, so the time bound ends the campaign.
+      MEDUSA_TEST_LIMIT: "0"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache pinned security binaries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/tools/bin
+          key: security-bin-medusa-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
+
+      - name: Install dependencies and pinned tools
+        env:
+          BINARIES: medusa
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --binaries --python
+
+      - name: Reuse the build job's output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: slow-build
+          path: contracts
+
+      - name: Restore the harness's stored corpus
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/corpus
+          key: security-corpus-medusa-${{ matrix.harness }}-
+          restore-keys: security-corpus-medusa-${{ matrix.harness }}-
+
+      - name: Medusa on ${{ matrix.harness }}, segment ${{ matrix.segment }}
+        env:
+          MEDUSA_HARNESSES: ${{ matrix.harness }}
+        run: script/security-slow.sh medusa
+
+      - name: Upload this segment's corpus
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-corpus-medusa-${{ matrix.harness }}-${{ matrix.segment }}
+          path: contracts/out-security/corpus/medusa/${{ matrix.harness }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-medusa-${{ matrix.harness }}-${{ matrix.segment }}
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+            !contracts/out-security/corpus
+          retention-days: 30
+
+  campaign-merge:
+    name: campaign corpus ${{ matrix.harness }}
+    # Joins the eight segment corpora of each harness and mode (corpus files are named by content, so the union is a
+    # plain copy) and stores them as the harness's corpus, which the next slow-tier run and campaign restore. Runs
+    # after every segment ended, also when one failed, so the corpus of a campaign that found a failure is kept.
+    needs: [plan, campaign-echidna-property, campaign-echidna-assertion, campaign-medusa]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.campaign-harnesses != '[]' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.campaign-harnesses) }}
+    steps:
+      - name: Echidna corpus, property mode
+        if: matrix.echidna
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: campaign-corpus-echidna-${{ matrix.harness }}-property-*
+          path: contracts/out-security/corpus/echidna/${{ matrix.harness }}-property
+          merge-multiple: true
+
+      - name: Echidna corpus, assertion mode
+        if: matrix.echidna
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: campaign-corpus-echidna-${{ matrix.harness }}-assertion-*
+          path: contracts/out-security/corpus/echidna/${{ matrix.harness }}-assertion
+          merge-multiple: true
+
+      - name: Store the merged Echidna corpus
+        if: matrix.echidna
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/corpus
+          key: security-corpus-echidna-${{ matrix.harness }}-${{ github.run_id }}
+
+      - name: Set the Echidna corpus aside
+        working-directory: .
+        run: mkdir -p merged && mv contracts/out-security/corpus merged/ 2>/dev/null || true
+
+      - name: Medusa corpus
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: campaign-corpus-medusa-${{ matrix.harness }}-*
+          path: contracts/out-security/corpus/medusa/${{ matrix.harness }}
+          merge-multiple: true
+
+      - name: Store the merged Medusa corpus
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/corpus
+          key: security-corpus-medusa-${{ matrix.harness }}-${{ github.run_id }}
+
+      - name: Count the merged corpus
+        working-directory: .
+        run: |
+          [ -d merged/corpus ] && cp -R merged/corpus/. contracts/out-security/corpus/
+          find contracts/out-security/corpus -mindepth 2 -maxdepth 2 -type d | while read -r d; do
+            echo "$d: $(find "$d" -type f | wc -l | tr -d ' ') files"
+          done
+
+      - name: Upload the merged corpus
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: campaign-corpus-${{ matrix.harness }}
+          path: contracts/out-security/corpus
+          retention-days: 90
+
+  slow-gate:
+    # The one check of this workflow: it passes only when the build, the plan and every job passed. A job with no
+    # leg is skipped by its `if` (no target of that kind, or a campaign run, which skips the slow-tier jobs, or the
+    # slow tier, which skips the campaign jobs); with the build and the plan passed, skipped can mean nothing else.
+    name: slow-gate
+    if: always()
+    needs:
+      - build
+      - plan
+      - echidna
+      - medusa
+      - halmos
+      - hevm
+      - mythril
+      - campaign-echidna-property
+      - campaign-echidna-assertion
+      - campaign-medusa
+      - campaign-merge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to pass
+        working-directory: .
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad=$(echo "$RESULTS" | jq -r '[to_entries[]
+            | select(.value.result != "success")
+            | select(.value.result != "skipped" or .key == "build" or .key == "plan")
+            | .key] | join(", ")')
+          if [ -n "$bad" ]; then echo "not passed: $bad"; exit 1; fi

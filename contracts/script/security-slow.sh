@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-# Slow security tier: nightly and before a release.
+# Slow security tier: on every push to main (.github/workflows/security-slow.yml), by hand (workflow_dispatch) and
+# before a release; the layer gate runs its mutate, gambit and necessist steps.
 #
 #   build    forge build --force --build-info of src/, test/ and script/ into out-security/build/all, warnings denied;
 #            Echidna, Medusa, hevm and Mythril read this build, so out/ and cache/ are never cleaned or overwritten
@@ -37,6 +38,10 @@
 # security/mutation-layers.json), MUTATE_TIMEOUT=300 seconds per mutant test run, MUTATE_FUZZ_RUNS=256,
 # MUTATE_MUTATORS (comma-separated slither-mutate mutators; empty: all), NECESSIST_TIMEOUT=300 seconds per removal.
 # GAMBIT_TIMEOUT=300 seconds per Gambit mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS).
+# Selectors (environment, space-separated; empty: every target, as above), used by CI to run one target per job:
+# ECHIDNA_HARNESSES and ECHIDNA_MODES (default "property assertion"), MEDUSA_HARNESSES, HALMOS_CONTRACTS (exact
+# contract names, run as --match-contract '^(A|B)$'), HEVM_TARGETS (`harness:<Name>`, `src:<Name>`, `test`),
+# MYTHRIL_CONTRACTS (src/ contract names), MUTATE_LAYERS and MUTATE_CONTRACTS, NECESSIST_TESTS (test file paths).
 # Survivors of `mutate` and `necessist` are a report for the layer gate review, not a failure; a tool error fails.
 # Survivors of `gambit` fail until a test kills them or the layer gate review accepts them in the triage file.
 #
@@ -87,6 +92,19 @@ step_build() {
 
 ensure_build() { [ -d "$BUILD/build-info" ] || step_build >/dev/null; }
 
+# selected <selector> <name>: true when the selector (space-separated names) is empty or holds <name>.
+selected() { [ -z "$1" ] || [[ " $1 " == *" $2 "* ]]; }
+
+# unmatched <step> <selector> <seen>: fails, naming them, when the selector holds a name the step did not find, so a
+# CI job given a target that no longer exists fails instead of passing with nothing run.
+unmatched() {
+  local n missing=()
+  for n in $2; do [[ " $3 " == *" $n "* ]] || missing+=("$n"); done
+  [ ${#missing[@]} -eq 0 ] && return 0
+  echo "$1: no such target: ${missing[*]}" >&2
+  return 1
+}
+
 # harness_list <dir>...: "<Name><TAB><source>" per harness found in the build.
 harness_list() { "$PY" script/security-targets.py harnesses "$BUILD" "$@"; }
 
@@ -104,7 +122,7 @@ echidna_ran() {
 step_echidna() {
   require echidna || return 1
   ensure_build || return 1
-  local list status=0 name source mode log limit=()
+  local list status=0 name source mode log limit=() seen=""
   list=$(harness_list "$ECHIDNA_DIR") || return 1
   if [ -z "$list" ]; then
     echo "echidna: skipped, $ECHIDNA_DIR/ holds no contract named *Properties"
@@ -113,8 +131,9 @@ step_echidna() {
   [ -n "${ECHIDNA_TEST_LIMIT:-}" ] && limit=(--test-limit "$ECHIDNA_TEST_LIMIT")
   mkdir -p "$OUT/echidna"
   while IFS=$'\t' read -r name source; do
-    if [ -n "${ECHIDNA_HARNESSES:-}" ] && [[ " $ECHIDNA_HARNESSES " != *" $name "* ]]; then continue; fi
-    for mode in property assertion; do
+    selected "${ECHIDNA_HARNESSES:-}" "$name" || continue
+    seen+=" $name"
+    for mode in ${ECHIDNA_MODES:-property assertion}; do
       echo "=== echidna $name ($source), $mode mode"
       mkdir -p "$CORPUS/echidna/$name-$mode"
       log="$OUT/echidna/$name-$mode.log"
@@ -132,13 +151,14 @@ step_echidna() {
       fi
     done
   done <<<"$list"
+  unmatched echidna "${ECHIDNA_HARNESSES:-}" "$seen" || status=1
   return $status
 }
 
 step_medusa() {
   require medusa || return 1
   ensure_build || return 1
-  local list status=0 name source limit=()
+  local list status=0 name source limit=() seen=""
   list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
   if [ -z "$list" ]; then
     echo "medusa: skipped, $ECHIDNA_DIR/ and $MEDUSA_DIR/ hold no contract named *Properties"
@@ -148,6 +168,8 @@ step_medusa() {
   # Medusa caches Slither's results for a build; a fresh build needs a fresh cache. The corpus is kept.
   rm -rf "$OUT/medusa" && mkdir -p "$OUT/medusa" "$CORPUS/medusa"
   while IFS=$'\t' read -r name source; do
+    selected "${MEDUSA_HARNESSES:-}" "$name" || continue
+    seen+=" $name"
     echo "=== medusa $name ($source)"
     if ! medusa fuzz --config medusa.json --target-contracts "$name" --timeout "$MEDUSA_TIMEOUT" ${limit[@]+"${limit[@]}"} \
       --corpus-dir "$CORPUS/medusa/$name" --no-color >"$OUT/medusa/$name.log" 2>&1; then
@@ -156,6 +178,7 @@ step_medusa() {
     fi
     grep -E '\[(PASSED|FAILED)\]|Test summary|[Ee]rror' "$OUT/medusa/$name.log" || true
   done <<<"$list"
+  unmatched medusa "${MEDUSA_HARNESSES:-}" "$seen" || status=1
   return $status
 }
 
@@ -165,8 +188,11 @@ step_halmos() {
     echo "halmos: skipped, test/halmos/ holds no check_ function"
     return 0
   fi
+  # HALMOS_CONTRACTS selects exact contract names; halmos fails with "No tests with" when one has no check_ test.
+  local match='HalmosTest$'
+  [ -n "${HALMOS_CONTRACTS:-}" ] && match="^($(echo $HALMOS_CONTRACTS | tr ' ' '|'))\$"
   # Halmos has no deployCode cheatcode, which dynamic test linking turns `new C(...)` into.
-  FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract 'HalmosTest$' --loop "$HALMOS_LOOP" \
+  FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract "$match" --loop "$HALMOS_LOOP" \
     --solver-timeout-assertion 0 2>&1 |
     tee "$OUT/halmos.txt"
   local rc=${PIPESTATUS[0]}
@@ -197,7 +223,7 @@ hevm_symbolic() {
 step_hevm() {
   require hevm z3 || return 1
   ensure_build || return 1
-  local status=0 list name source sig hex rc
+  local status=0 list name source sig hex rc seen=""
   mkdir -p "$OUT/hevm"
 
   list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
@@ -206,6 +232,8 @@ step_hevm() {
   fi
   while IFS=$'\t' read -r name source; do
     [ -n "$name" ] || continue
+    selected "${HEVM_TARGETS:-}" "harness:$name" || continue
+    seen+=" harness:$name"
     hex="$OUT/hevm/$name.hex"
     "$PY" script/security-targets.py code "$BUILD" "$name" "$hex" || return 1
     while IFS= read -r sig; do
@@ -226,6 +254,8 @@ step_hevm() {
   fi
   while IFS=$'\t' read -r name hex; do
     [ -n "$name" ] || continue
+    selected "${HEVM_TARGETS:-}" "src:$name" || continue
+    seen+=" src:$name"
     hevm_symbolic "$OUT/hevm/src-$name.log" --code-file "$hex"
     rc=$?
     case $rc in
@@ -235,9 +265,12 @@ step_hevm() {
     esac
   done <<<"$list"
 
-  if ! grep -rqs --include='*.sol' 'function prove_' test/symbolic; then
+  if ! selected "${HEVM_TARGETS:-}" test; then
+    :
+  elif ! grep -rqs --include='*.sol' 'function prove_' test/symbolic; then
     echo "hevm test: skipped, test/symbolic/ holds no prove_ function"
   else
+    seen+=" test"
     # hevm test reads <root>/out; an isolated root keeps that build out of the workspace's out/.
     local root="$OUT/hevm/root" f
     rm -rf "$root" && mkdir -p "$root"
@@ -250,12 +283,13 @@ step_hevm() {
       status=1
     fi
   fi
+  unmatched hevm "${HEVM_TARGETS:-}" "$seen" || status=1
   return $status
 }
 
 step_mythril() {
   ensure_build || return 1
-  script/security-mythril.sh "$BUILD"
+  MYTHRIL_CONTRACTS="${MYTHRIL_CONTRACTS:-}" script/security-mythril.sh "$BUILD"
 }
 
 MUTATE_TIMEOUT=${MUTATE_TIMEOUT:-300}
@@ -342,6 +376,10 @@ step_necessist() {
   fi
   local list status=0 layer files root="$OUT/necessist/root"
   list=$("$PY" script/mutation-targets.py tests --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}") || return 1
+  if [ -n "${NECESSIST_TESTS:-}" ]; then
+    unmatched necessist "$NECESSIST_TESTS" "$(cut -f2 <<<"$list" | tr '\n' ' ')" || return 1
+    list=$(awk -F'\t' -v sel=" $NECESSIST_TESTS " 'index(sel, " " $2 " ")' <<<"$list")
+  fi
   if [ -z "$list" ]; then
     echo "necessist: skipped, no test file in the selected layers of security/mutation-layers.json"
     return 0
