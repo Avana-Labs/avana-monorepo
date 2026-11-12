@@ -12,6 +12,7 @@ import {CollPriceSource} from "../../utils/fixtures/CollateralizationFixture.sol
 import {CollLPVaultMock, CollPoolToken} from "../../utils/mocks/CollateralizationMocks.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 
 /// @notice The contracts and identities the handler drives.
 struct CollWorld {
@@ -65,11 +66,19 @@ contract CollateralizationHandler is CommonBase, StdUtils {
         depositors = depositors_;
     }
 
+    /// @dev A handler call that reverted inside a `startPrank` leaves that prank active (cheatcode state is not rolled
+    /// back with the call); end it so the next call starts with no prank, as in VaultTokenAttackerHandler.
+    modifier endsStalePrank() {
+        (VmSafe.CallerMode mode,,) = vm.readCallers();
+        if (mode == VmSafe.CallerMode.RecurrentPrank) vm.stopPrank();
+        _;
+    }
+
     /// @notice A borrower pledges a new position of 10^6 to 3 × 10^9 units into its proxy and supplies the units.
     function pledge(
         uint256 who,
         uint256 units
-    ) external {
+    ) external endsStalePrank {
         uint256 i = who % 2;
         address proxy = proxies[i];
         units = bound(units, 1e6, 3e9);
@@ -96,7 +105,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
     function withdraw(
         uint256 who,
         uint256 index
-    ) external {
+    ) external endsStalePrank {
         address proxy = proxies[who % 2];
         (, BackingRecord[] memory page) = w.coll.getAccountRecords(proxy, address(w.token), 0, 16);
         if (page.length == 0) return;
@@ -122,7 +131,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
     function borrow(
         uint256 who,
         uint256 pct
-    ) external {
+    ) external endsStalePrank {
         address proxy = proxies[who % 2];
         uint256 credited = w.coll.getAccountCredited(proxy, address(w.token));
         // Collateral value in 18-decimal USD: units have 6 decimals, the price 8.
@@ -136,7 +145,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
     /// @notice A borrower repays all its debt.
     function repay(
         uint256 who
-    ) external {
+    ) external endsStalePrank {
         address proxy = proxies[who % 2];
         w.debt.mint(proxy, 1_000_000e18);
         vm.startPrank(proxy);
@@ -148,7 +157,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
     /// @notice The vault token's price moves between $0.80 and $2.50.
     function setPrice(
         uint256 price
-    ) external {
+    ) external endsStalePrank {
         // Bounded to $0.80 … $2.50 in 8 decimals.
         // forge-lint: disable-next-line(unsafe-typecast)
         w.vtPrice.set(int256(bound(price, 0.8e8, 2.5e8)));
@@ -160,7 +169,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
         uint256 who,
         uint256 debtToCover,
         uint256 drop
-    ) external {
+    ) external endsStalePrank {
         address proxy = proxies[who % 2];
         debtToCover = bound(debtToCover, 1e18, 20_000e18);
         _drop(drop);
@@ -185,7 +194,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
         uint256 who,
         uint256 debtToCover,
         uint256 drop
-    ) external {
+    ) external endsStalePrank {
         address proxy = proxies[who % 2];
         debtToCover = bound(debtToCover, 1e18, 20_000e18);
         _drop(drop);
@@ -198,7 +207,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
     /// @notice LPVaultSwap has the Adapter burn kept units it holds and settles that many pending units.
     function settlePending(
         uint256 units
-    ) external {
+    ) external endsStalePrank {
         uint256 pendingUnits = w.coll.getPending(address(w.token)).units;
         uint256 most = pendingUnits < keptHeld ? pendingUnits : keptHeld;
         if (most == 0) return;
@@ -221,7 +230,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
         uint256 who,
         uint256 index,
         uint256 pct
-    ) external {
+    ) external endsStalePrank {
         address proxy = proxies[who % 2];
         (bytes32 key, uint256 units) = _exitUnits(proxy, index, pct, false);
         if (units == 0) return;
@@ -235,7 +244,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
         uint256 who,
         uint256 index,
         uint256 pct
-    ) external {
+    ) external endsStalePrank {
         address proxy = proxies[who % 2];
         (bytes32 key, uint256 units) = _exitUnits(proxy, index, pct, true);
         if (units == 0) return;
@@ -249,7 +258,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
         uint256 who,
         uint256 index,
         uint256 extra
-    ) external {
+    ) external endsStalePrank {
         uint256 i = who % 2;
         address proxy = proxies[i];
         (, BackingRecord[] memory page) = w.coll.getAccountRecords(proxy, address(w.token), 0, 16);
@@ -278,7 +287,7 @@ contract CollateralizationHandler is CommonBase, StdUtils {
     function releaseZero(
         uint256 who,
         uint256 index
-    ) external {
+    ) external endsStalePrank {
         uint256 i = who % 2;
         address proxy = proxies[i];
         (, BackingRecord[] memory page) = w.coll.getAccountRecords(proxy, address(w.token), 0, 16);
