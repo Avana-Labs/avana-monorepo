@@ -58,7 +58,7 @@
     "src/policy/market-registry/MarketRegistryMarketChecks.sol": 100,
     "src/policy/market-registry/MarketRegistryOracleChecks.sol": 100,
     "src/policy/market-registry/MarketRegistryRouter.sol": 100,
-    "src/policy/market-registry/MarketRegistryRoutesLogic.sol": 96,
+    "src/policy/market-registry/MarketRegistryRoutesLogic.sol": 100,
     "src/policy/market-registry/MarketRegistrySafetyLogic.sol": 100,
     "src/policy/market-registry/MarketRegistryStorage.sol": 100,
     "src/policy/market-registry/MarketRegistryViews.sol": 100,
@@ -121,14 +121,6 @@
         "branch": "at == n returns without removing",
         "reason": "removeDebtReserve calls _removeId only for an approved reserve, and enableDebtReserve pushes the id into debtReserveIds in the same write that approves it, so the id is always present when _removeId runs.",
         "tests": "TEST-213 test_TEST_213_removeFirstKeepsTheOrder, test_TEST_213_removeMiddleKeepsTheOrder, test_TEST_213_removeLastKeepsTheOrder, test_TEST_213_removalRefusals (UnknownDebtReserve before any removal)"
-      }
-    ],
-    "src/policy/market-registry/MarketRegistryRoutesLogic.sol": [
-      {
-        "function": "useStandbyRoute",
-        "branch": "t.standbyRoute.length == 0 reverts NoStandbyRoute",
-        "reason": "listToken and setPriceSource run _routeLegsCheck on the standby route and refuse 0 feeds (\"routeLength\"), and nothing else writes it, so every listed token has a standby route of 1 or 2 feeds; an unlisted token is refused earlier with TokenNotListed.",
-        "tests": "TEST-250 test_TEST_250_routeLengthInEverySlot (empty standby refused at listing), TEST-231 test_TEST_231_standbySwitch (TokenNotListed for an unlisted token)"
       }
     ]
   }

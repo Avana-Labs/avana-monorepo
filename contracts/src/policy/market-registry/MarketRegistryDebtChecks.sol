@@ -16,7 +16,7 @@ import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
 import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {DebtReserveDef} from "./types/DebtReserveDef.sol";
-import {IssuerProbe} from "./types/IssuerProbe.sol";
+import {IssuerProbes} from "./types/IssuerProbe.sol";
 import {RiskTier} from "./types/RiskTier.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -67,9 +67,10 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
     }
 
     /// @dev REQ-MREG-006, REQ-MREG-008: the asset is a listed token (so its issuer probe is recorded, a fixed-price
-    /// asset included); the AaveOracle source is `def.priceSource`, an 8-decimal source; without a fixed price it is the
-    /// asset's DebtOracle bound to this registry and the ParameterStore and the asset's `debtStressRiseBps` is at least
-    /// 100.
+    /// asset included); the AaveOracle source is `def.priceSource`, an 8-decimal source; without a fixed price the asset
+    /// has its three price routes (a monitoring-only listing, REQ-CONFIG-021, serves only a fixed-price reserve), the
+    /// source is the asset's DebtOracle bound to this registry and the ParameterStore and the asset's
+    /// `debtStressRiseBps` is at least 100.
     function _checkPriceSource(
         address spoke,
         DebtReserveDef calldata def
@@ -84,6 +85,8 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
             if (IAaveV4PriceFeed(src).latestAnswer() <= 0) revert InvalidDebtReserve("priceSource");
             return;
         }
+        // A listed token without an alternate route is a monitoring-only listing (REQ-CONFIG-021).
+        if (_s().tokens[def.asset].alternateRoute.length == 0) revert InvalidDebtReserve("routes");
         IDebtOracle o = IDebtOracle(src);
         if (o.ASSET() != def.asset || o.MARKET_REGISTRY() != address(this) || o.PARAMETER_STORE() != _PARAMETER_STORE) {
             revert InvalidDebtReserve("debtOracle");
@@ -111,7 +114,8 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
 
     /// @dev The chain's IFlashSource lends the asset from a lender that is no recorded Hub, at a premium within
     /// `maxFlashFeeBps` (`phi × 10^4 ≤ maxFlashFeeBps × F` on `F = maxFlashLoan(asset)`), and the asset's transfer
-    /// fee reads 0 (REQ-MREG-006, Q-386, Q-388, Q-390).
+    /// fee reads 0 when its probe reads `basisPointsRate()` (`UsdtFeeRate` or `UsdtFeeRateAndPaused`; the pause read
+    /// is not part of enablement for either kind, REQ-MREG-006, Q-386, Q-388, Q-390).
     function _checkFlashAndFee(
         DebtReserveDef calldata def
     ) internal view {
@@ -126,7 +130,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         if (premium > type(uint128).max || available > type(uint128).max || premium * _BPS > maxFee * available) {
             revert InvalidDebtReserve("flash");
         }
-        if (l.tokens[def.asset].issuerProbe == IssuerProbe.UsdtFeeRate) {
+        if (IssuerProbes.readsFeeRate(l.tokens[def.asset].issuerProbe)) {
             try ITetherFee(def.asset).basisPointsRate() returns (uint256 rate) {
                 if (rate != 0) revert TransferFeeActive(def.asset);
             } catch {

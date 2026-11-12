@@ -1720,12 +1720,12 @@
       "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, spokeDrift's market id is not needed: any drift of the Spoke trips CONFIG_DRIFT; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
     },
     {
-      "fingerprint": "3f1afd254e3e1a83",
+      "fingerprint": "81f6923a210535d8",
       "check": "unused-return",
       "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
-      "function": "RiskModuleBreakerLogic._issuerTripped(address)",
-      "reason": "wordAt returns (ok, word); the probe's return is checked to be exactly 32 bytes on the line before, so the read at offset 0 is in bounds (SPEC-BRK-003). Covered by TEST-228 (issuerLatchesUntilReset, transferFeeTripsDebtBreaker), TEST-221.",
-      "approval": "approved (Josue, 2026-11-11)",
+      "function": "RiskModuleBreakerLogic._readTrips(address,bytes4)",
+      "reason": "wordAt returns (ok, word); the probe's return is checked to be exactly 32 bytes on the line before, so the read at offset 0 is in bounds (SPEC-BRK-003). The same read, moved from _issuerTripped (former entry 3f1afd254e3e1a83) into _readTrips when the combined USDT probe made two reads per token (REQ-MREG-027). Covered by TEST-228 (issuerLatchesUntilReset, transferFeeTripsDebtBreaker, combinedProbeTripsOnPause, combinedProbeTripsOnFee, combinedProbeFailsClosedOnEitherRead), TEST-221.",
+      "approval": "approved by pattern",
       "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, wordAt's ok is implied by the 32-byte length check above; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
     },
     {

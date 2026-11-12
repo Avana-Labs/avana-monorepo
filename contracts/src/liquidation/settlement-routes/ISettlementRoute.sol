@@ -148,8 +148,9 @@ interface ISettlementRoute {
     /// of each concentrated-liquidity hop (Uniswap v3 and Slipstream check their balance after the callback) and the
     /// input of a GSM route (the static aToken supplies the amount it pulled to the Aave Pool).
     /// @dev The constructor refuses a route that would pay such a contract a token answering the USDT fee-switch probe
-    /// `basisPointsRate()`, and the MarketRegistry refuses one whose listed token has the `UsdtFeeRate` issuer probe, so
-    /// a transfer fee switched on can stop neither route of a slot (REQ-ROUTE-003, REQ-ROUTE-008).
+    /// `basisPointsRate()`, and the MarketRegistry refuses one whose listed token has an issuer probe reading it
+    /// (`UsdtFeeRate` or `UsdtFeeRateAndPaused`), so a transfer fee switched on can stop neither route of a slot
+    /// (REQ-ROUTE-003, REQ-ROUTE-008).
     /// @return tokens The tokens, in leg order.
     /// @custom:spec REQ-ROUTE-003, REQ-ROUTE-005, REQ-ROUTE-008
     function exactAmountInputs() external view returns (address[] memory tokens);

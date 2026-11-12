@@ -12,7 +12,7 @@ import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {IssuerProbe} from "./types/IssuerProbe.sol";
+import {IssuerProbes} from "./types/IssuerProbe.sol";
 import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
 import {MarketStatus} from "./types/MarketStatus.sol";
 import {TokenDef} from "./types/TokenDef.sol";
@@ -218,7 +218,8 @@ contract MarketRegistryRoutesLogic is MarketRegistryStorage, IMarketRegistryRout
 
     /// @dev The route checks of REQ-CONFIG-039, REQ-CONFIG-040 and REQ-CONFIG-060 for one slot, and REQ-ROUTE-008's
     /// listing check: no token the route pays into a contract requiring the exact amount (`exactAmountInputs`) is a
-    /// listed token whose issuer can switch on a transfer fee (`IssuerProbe.UsdtFeeRate`).
+    /// listed token whose issuer can switch on a transfer fee (a probe that reads `basisPointsRate()`: `UsdtFeeRate` or
+    /// `UsdtFeeRateAndPaused`).
     function _checkRoute(
         uint256 marketId,
         address token,
@@ -238,7 +239,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryStorage, IMarketRegistryRout
         address[] memory exact = r.exactAmountInputs();
         bool feeSwitch = false;
         for (uint256 i = 0; i < exact.length && !feeSwitch; ++i) {
-            feeSwitch = _s().tokens[exact[i]].issuerProbe == IssuerProbe.UsdtFeeRate;
+            feeSwitch = IssuerProbes.readsFeeRate(_s().tokens[exact[i]].issuerProbe);
         }
         // A transfer fee switched on would revert that leg, possibly in both slots at once (REQ-ROUTE-003, REQ-ROUTE-008).
         if (feeSwitch) revert InvalidRoute();

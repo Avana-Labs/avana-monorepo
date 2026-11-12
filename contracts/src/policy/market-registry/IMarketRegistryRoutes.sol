@@ -27,8 +27,8 @@ interface IMarketRegistryRoutes {
     /// slots are distinct and share no
     /// dependency, a backup avoids every peg module (GSM or PSM) of the pair, `route.supportsTokenClass(token)`
     /// covers the token's class (stable, correlated or volatile, AMMN-FLOW-14), and no token of
-    /// `route.exactAmountInputs()` is a listed token with the `UsdtFeeRate` issuer probe (REQ-ROUTE-008). Emits
-    /// `RouteSet`.
+    /// `route.exactAmountInputs()` is a listed token whose issuer probe reads `basisPointsRate()` (`UsdtFeeRate` or
+    /// `UsdtFeeRateAndPaused`, REQ-ROUTE-008). Emits `RouteSet`.
     /// @param marketId Market identifier.
     /// @param token Pool token sold.
     /// @param debtAsset Debt asset bought.

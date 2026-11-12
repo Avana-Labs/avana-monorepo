@@ -60,7 +60,15 @@ contract MarketRegistryListingLogic is MarketRegistryMarketChecks, MarketRegistr
         TokenDef storage t = _s().tokens[token];
         if (token == address(0) || t.listed) revert ListingCheckFailed("listed");
         if (def.replacedSlot != RouteSlot.None) revert ListingCheckFailed("replacedSlot");
-        _checkThreeRoutes(def.primaryRoute, def.alternateRoute, def.standbyRoute);
+        if (def.alternateRoute.length == 0 && def.standbyRoute.length == 0) {
+            // REQ-CONFIG-021: a monitoring-only listing (a fixed-price debt asset such as GHO) records its one route
+            // after the leg checks; it can serve only a fixed-price debt reserve and is never a pool token until
+            // `setPriceSource` gives it three routes.
+            bytes32 bad = _routeLegsCheck(def.primaryRoute);
+            if (bad != 0) revert ListingCheckFailed(bad);
+        } else {
+            _checkThreeRoutes(def.primaryRoute, def.alternateRoute, def.standbyRoute);
+        }
         uint8 dec = IERC20Metadata(token).decimals();
         t.listed = true;
         t.decimals = dec;

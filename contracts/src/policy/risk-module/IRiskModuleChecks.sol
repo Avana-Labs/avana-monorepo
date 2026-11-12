@@ -161,7 +161,7 @@ interface IRiskModuleChecks {
     /// set `lastBreachAt`, SPEC-BRK-007; security reasons latch, SPEC-BRK-008) and emits `BreakersPoked`. Never clears
     /// a latch or shortens a recovery and never reverts because a condition holds; it reads the same values the gated
     /// calls read, so it cannot record a breach the gates would not see. A reverting borrow cannot write state, which
-    /// is why a poke writes the breach times. Gas is bounded by the market's token count (at most 8 issuer probes).
+    /// is why a poke writes the breach times. Gas is bounded by the market's token count (at most 16 probe reads).
     /// @param marketId The market.
     /// @return reasons OR of every reason observed holding.
     /// @custom:spec REQ-RISK-091, SPEC-BRK-007, SPEC-BRK-008, Q-399
