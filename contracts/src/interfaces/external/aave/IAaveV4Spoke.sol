@@ -8,8 +8,8 @@ import {IAaveV4ExtSload} from "./IAaveV4ExtSload.sol";
 /// @title IAaveV4Spoke
 /// @notice Calls Avana makes on a CDP Spoke, a standard, unmodified Aave V4 Spoke. LPVaultSwap is the only caller whose
 /// `liquidationCall` completes: the seized vault token accepts only LPVaultSwap as recipient, and the listing settings
-/// the drift check enforces (`receiveSharesEnabled = false`, `liquidationFee = 0` or paid to Avana's fee receiver, no
-/// reinvestment controller) leave no other path.
+/// the drift check enforces (`receiveSharesEnabled = false`, `liquidationFee = 0`, no reinvestment controller) leave
+/// no other path.
 /// @dev ABI checked against `src/spoke/interfaces/ISpoke.sol` of the pinned Aave V4 dependency (`a3ef63e`); every
 /// selector and struct layout here equals the Spoke's. `extSload` comes from `IAaveV4ExtSload`, which the Spoke also
 /// implements.

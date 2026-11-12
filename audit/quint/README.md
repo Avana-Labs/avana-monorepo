@@ -21,7 +21,7 @@ quint/topology_run.sh         # topology simulator, nightly
 
 ## How often it runs
 
-`run_all.sh` (quick mode), `--nightly` for topology, the `spec` CI workflow, and each layer gate.
+`run_all.sh` (quick mode), `--nightly` for topology, the `spec` CI workflow (quick mode), the `models` CI workflow (the topology simulator checks of `quint/topology_run.sh`, on every push to `main`), and each layer gate.
 
 ## Latest result
 

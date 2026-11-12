@@ -11,8 +11,8 @@ pragma solidity 0.8.28;
 /// `stranded` (`hubBalance - hubLiquidity`, never backing), `addedAssets`, `addedShares`, `drawnShares`. Flags:
 /// `supplyEqualsCredited` (`totalSupply == totalCredited + pendingUnits`), `hubHoldsSupplied`,
 /// `sharesEqualAssets`, `noDrawnShares`, `noDrawCap` (every Spoke on the asset), `singleBorrowSpoke` (Spokes are
-/// exactly the market's CDP Spoke and the fee receiver with `addCap == 0`), `noLiquidityFee` (`liquidationFee == 0`
-/// or paid to Avana's fee receiver), `noReinvestment` (no reinvestment controller), `reserveFlags`
+/// exactly the market's CDP Spoke and the fee receiver with `addCap == 0`), `noLiquidityFee` (`liquidationFee == 0`),
+/// `noReinvestment` (no reinvestment controller), `reserveFlags`
 /// (`borrowable == false` and `receiveSharesEnabled == false`). The last three are the standard Spoke settings the
 /// drift check enforces. Hub values are the market's home Hub's.
 /// @custom:spec REQ-LENS-012, Q-378

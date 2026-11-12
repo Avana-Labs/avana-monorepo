@@ -12,6 +12,7 @@ From `contracts/`, Halmos 0.3.3 in `contracts/.venv`:
 FOUNDRY_DYNAMIC_TEST_LINKING=false .venv/bin/halmos --root . --match-contract 'HalmosTest$' --loop 8 --solver-timeout-assertion 0   # what security-slow.sh runs
 FOUNDRY_DYNAMIC_TEST_LINKING=false .venv/bin/halmos --root . --match-contract 'VaultTokenHalmosTest$' --loop 8                    # one harness
 script/security-slow.sh halmos
+HALMOS_CONTRACTS=VaultTokenHalmosTest HALMOS_LOOP=16 script/security-slow.sh halmos            # one test contract, as each CI job runs it
 ```
 
 `FOUNDRY_DYNAMIC_TEST_LINKING=false` is required: dynamic test linking turns `new C(...)` into `deployCode`, which Halmos does not support. Budget: `HALMOS_LOOP` (default 8, nightly 16).
@@ -22,7 +23,7 @@ script/security-slow.sh halmos
 
 ## How often it runs
 
-Contract gate (every `check_` of the contract passes), the slow tier at each layer gate, and the `Halmos` CI job.
+Contract gate (every `check_` of the contract passes) and the slow tier at each layer gate. In CI, every pull request and push to `main` runs the `Halmos` jobs of `contracts.yml` (loop 8) and every push to `main` the `halmos` jobs of `security-slow.yml` (loop 16), one job per test contract in both, each bounded at 4 hours.
 
 ## Latest result
 
@@ -38,7 +39,7 @@ Contract gate (every `check_` of the contract passes), the slow tier at each lay
 | SettlementMath | 2026-11-10 20:51 | 2 / 14 pass under machine load; `PROP-015` gap and three `PROP-018` checks hit the 240 s wall clock; fuzz twins pass at 10,000 runs |
 | CoverageSpoke | 2026-11-10 | The two `PROP-039` checks time out on the RAY division; fuzz twins carry them |
 
-The slow-tier Halmos step of 2026-11-10 16:01 failed to build (`TimelockFixture.sol` imported `AvanaTimelock.sol` while the timelock was being merged); its output is kept as is. Every harness runs again, on a quiet machine and at full budget, at the layer 2.1 gate.
+The slow-tier Halmos step of 2026-11-10 16:01 failed to build (`TimelockFixture.sol` imported `AvanaTimelock.sol` while the timelock was being merged); its output is kept as is.
 
 ## Results folder
 

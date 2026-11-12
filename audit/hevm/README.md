@@ -21,11 +21,11 @@ Harness entry points of AvanaRoles, Lock and LockSlot; runtime code of AmmConsta
 
 ## How often it runs
 
-Slow tier at each layer gate and nightly in CI.
+Slow tier at each layer gate and on every push to `main` in CI (`security-slow.yml`), one job per target: each harness's assertion entry points and each `src/` contract (`HEVM_TARGETS`).
 
 ## Latest result
 
-2026-11-10 16:01: 7 harness entry points QED (`AvanaRolesProperties.checkRolePair`, `LockProperties.acquireWithoutRelease`, `memberCycle`, `outsiderAcquire`, `revertedOuterCall`, `LockSlotProperties.enter`, `enterAndRelease`); 7 runtime codes QED. The contracts merged later are covered first at the layer 2.1 gate.
+2026-11-10 16:01: 7 harness entry points QED (`AvanaRolesProperties.checkRolePair`, `LockProperties.acquireWithoutRelease`, `memberCycle`, `outsiderAcquire`, `revertedOuterCall`, `LockSlotProperties.enter`, `enterAndRelease`); 7 runtime codes QED. Contracts merged after that run are not in this result.
 
 ## Results folder
 

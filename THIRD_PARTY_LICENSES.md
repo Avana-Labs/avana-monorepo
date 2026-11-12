@@ -96,7 +96,7 @@ Downloaded by [`contracts/script/install-security-tools.sh`](contracts/script/in
 | Necessist | 4.1.0 | AGPL-3.0 | `contracts/tools/bin/` |
 | 4naly3er | commit `8a9d1ebb7d362bc94f036fa9123d0977c6cb7436` | GPL-3.0 | `contracts/tools/4naly3er/` |
 | heimdall-rs | 0.9.3 | MIT | `tools/heimdall/bin/` |
-| Eclipse Temurin JDK (for the Certora Prover) | 21.0.13 | GPL-2.0 with the Classpath Exception | `contracts/tools/jdk-21/` |
+| Eclipse Temurin JDK (for the Certora Prover) | 21.0.13 | GPL-2.0 with the Classpath Exception | installed separately; not part of the repository |
 | Foundry | 1.9.0 | MIT OR Apache-2.0 | installed with `foundryup` |
 | Solidity compiler | 0.8.28 | GPL-3.0 | installed by Foundry |
 

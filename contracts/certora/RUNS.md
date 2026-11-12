@@ -12,14 +12,14 @@ Every run of this folder's checks, newest last.
 - **Tools**: Python 3.9.6 (standard library only), Foundry `forge` 1.9.0, solc 0.8.28.
 - **Counts**: 735 methods entries checked, 0 errors, in each of the first two runs; every one of `PROP-001` … `PROP-074` has at least one tagged rule or invariant (299 rules and invariants in all).
 - **Exit codes**: 0, 0, 0.
-- **Prover**: not run. `contracts/src/` holds interfaces only, so no conf compiles; the machine has no Java runtime and no `CERTORAKEY`. certora-cli 8.20.3 is installed in `contracts/.venv`.
+- **Prover**: not run. `contracts/src/` holds interfaces only, so no conf compiles. certora-cli 8.20.3 is installed in `contracts/.venv`.
 - **Traceability**: `spec/05-verification/trace.py` reports no error from `contracts/certora/`.
 
 ## 2026-11-10 — methods check after the alignment with the final 5.2 text
 
 - **Scope**: the rules of `PROP-045`, `PROP-046`, `PROP-058`, `PROP-062`, `PROP-071` and `PROP-072` rewritten to the final 5.2 text (findings `CVL-F-01` … `CVL-F-07`), and the interface additions `IGhoFlashMinter` (`contracts/src/interfaces/external/gho/`), `ILPVaultSwap.TIMELOCK()`, `ISettlementRoute.AAVE_ADAPTER()` and `IDebtBuyRoute.AAVE_ADAPTER()`.
 - **Rules changed**: `RiskModule.spec` `minimumPledgeUsesAcceptedPrice` (accepted price; `min(minPledgeUsd, RESCUE_MIN_PLEDGE_USD)` for a rescue top-up) and `borrowRefusesFrozenCollateral` (supplied shares > 0); `MarketRegistry.spec` `noCallFreezesAProtectedAddress` (protected at call time); `AvanaTimelock.spec` `expiredOperationOnlyCleanedUp` (or a permitted `cancel`); `LPVaultSwap.spec` `deleverageMakesNoDrawFeeOrBonusPayment` (the buy route of a non-GHO debt is a GHO recipient), the new invariant `adminRolesHeldOnlyByTimelock` and the `flashFee` summary; `SettlementRoute.spec` and `DebtBuyRoute.spec` lock rules (holder is LPVaultSwap or `AAVE_ADAPTER()`).
-- **Commands** (from `contracts/`): `PATH=$HOME/.foundry/bin:$PATH forge build`; `python3 certora/check-methods.py`.
+- **Commands** (from `contracts/`): `forge build`; `python3 certora/check-methods.py`.
 - **Counts**: 739 methods entries checked, 0 errors.
 - **Exit codes**: 0, 0.
 - **Prover**: not run, for the reasons of the previous entry.
@@ -61,8 +61,8 @@ Every run of this folder's checks, newest last.
 ## 2026-11-10/11 — first prover runs of the confs with merged implementations
 
 - **Scope**: the 16 confs whose implementation is merged: Lock, AvanaTimelock, ParameterStore, MarketRegistry, VaultToken, VaultTokenFactory, PositionProxy, ProxyManager, ProxyManagerIsolation, PayoutEscrow, CoverageSpoke, FlashSource, Collateralization, DexPathRoute, WrapperThenDexRoute, PegModuleRoute. No conf exists for AvanaRoles (a constants library). The confs of unwritten contracts (LPOracle, DebtOracle, LPVault and AMM integrations, RiskModule, RiskModuleDrift, AaveAdapter, AaveAdapterGates, LPVaultSwap, Hub) were not run.
-- **Tools**: certora-cli 8.20.3 (prover 8.20.3, cloud), Java 21 (Temurin, local type checking), solc 0.8.28 (`tools/bin/solc-0.8.28`). Every conf runs with `rule_sanity: basic`; a vacuous rule or a tautological invariant is reported as SANITY_FAIL.
-- **Commands** (from `contracts/`, with `JAVA_HOME` set to `tools/jdk-21` and `CERTORAKEY` loaded from `.env`):
+- **Tools**: certora-cli 8.20.3 (prover 8.20.3, cloud), Java 21 (Temurin, local type checking), solc 0.8.28. Every conf runs with `rule_sanity: basic`; a vacuous rule or a tautological invariant is reported as SANITY_FAIL.
+- **Commands** (from `contracts/`):
   - `.venv/bin/certoraRun certora/conf/<X>.conf --compilation_steps_only` for each conf: exit 0 for all 16 after the fixes below.
   - `.venv/bin/certoraRun certora/conf/<X>.conf --global_timeout 2400` (submit, then poll the job), with `--rule <names>` for the re-runs of single rules. A job that reaches the global timeout is halted and writes no `output.json`; its rules without a result in the job log are counted as TIMEOUT.
   - `python3 certora/check-methods.py`, `script/security-fast.sh cvl`: 0 errors.
@@ -117,7 +117,7 @@ Every change keeps the rule's meaning; where a rule was wrong against the spec i
 ## 2026-11-11 — closing the halted and partial confs (one job per rule)
 
 - **Why the earlier jobs halted**: the first round passed `--global_timeout 2400`; a job that reaches it is halted with no `output.json`. Jobs now run without it, one rule per job (`--rule`), up to six at a time, and wait with `--wait_for_results all`.
-- **Scene fault found**: in ParameterStore.conf and MarketRegistry.conf the parametric rules and invariants also ranged over the logic contracts' own functions, called directly (they ran on the logic contracts' own storage, and `settersNeedApplicationAdmin` reported every direct logic call as a violation). Every parametric filter now has `routerEntry(f)` (`f.contract == currentContract`). In the deployment, the MarketRegistry logic contracts refuse direct calls (`_onlyDelegated`); the ParameterStore logic contracts do not, but a direct call writes only the logic contract's own storage.
+- **Scene fault found**: in ParameterStore.conf and MarketRegistry.conf the parametric rules and invariants also ranged over the logic contracts' own functions, called directly (they ran on the logic contracts' own storage, and `settersNeedApplicationAdmin` reported every direct logic call as a violation). Every parametric filter now has `routerEntry(f)` (`f.contract == currentContract`). In the deployment, the MarketRegistry logic contracts refuse direct calls (`_onlyDelegated`); the ParameterStore logic contracts did not at this run (a direct call wrote only the logic contract's own storage) and gained the same `_onlyDelegated` guard in the ParameterStore fix batch.
 - **Commands**: `.venv/bin/certoraRun certora/conf/<X>.conf --rule <rule> --wait_for_results all`; extra options per job are listed below.
 
 ### Rules changed in this round

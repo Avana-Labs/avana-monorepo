@@ -35,7 +35,7 @@ forge test --match-test 'test_TEST_027_'    # one TEST-NNN
 FOUNDRY_PROFILE=ci forge test               # CI depth (10,000 fuzz runs)
 FOUNDRY_PROFILE=invariant forge test        # deep invariant campaign
 FOUNDRY_PROFILE=differential forge test     # against the Python reference
-FOUNDRY_PROFILE=fork forge test             # needs RPC_MAINNET and RPC_BASE in contracts/.env
+FOUNDRY_PROFILE=fork forge test             # reads the archive endpoints RPC_MAINNET and RPC_BASE
 forge fmt                                   # format
 forge lint src                              # lints on src/
 script/check-file-size.sh                   # 500 code lines per implementation file, 300 lines per interface

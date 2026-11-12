@@ -14,11 +14,11 @@ cd contracts && script/security-fast.sh build upgradeability
 
 ## Scope
 
-On 2026-11-10: MarketRegistry and ParameterStore (the upgradeable contracts written so far). The AaveAdapter, RiskModule, LPVaultSwap, LPOracle and DebtOracle join when written.
+Every upgradeable contract in the build. On 2026-11-10 these were the MarketRegistry and the ParameterStore; the AaveAdapter, RiskModule, LPVaultSwap, LPOracle and DebtOracle had no implementation on that date.
 
 ## How often it runs
 
-Fast tier on every push; the OpenZeppelin validation and layout diff run in CI, first at the layer 2.1 gate, with the layout of the first release as the baseline.
+Fast tier on every push; the OpenZeppelin validation and layout diff run in CI, with the layout of the first release as the baseline.
 
 ## Latest result
 

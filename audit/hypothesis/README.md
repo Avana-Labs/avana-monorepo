@@ -15,7 +15,7 @@ AVANA_HYP_SCALE=5 .venv/bin/python -m pytest -q hypothesis/test_hyp_state_machin
 
 ## Scope
 
-71 tests in 5 files; budgets per file in the results.
+80 test functions and the state machine `TestAvanaStateMachine` in 5 files (`test_hyp_numeric.py` 23, `test_hyp_scenarios.py` 38, `test_hyp_amm_pricing.py` 11, `test_hyp_timelock.py` 8, `test_hyp_state_machine.py`); budgets per file in the results. The recorded run of 2026-11-10 below predates the AMM-pricing and later scenario tests.
 
 ## How often it runs
 

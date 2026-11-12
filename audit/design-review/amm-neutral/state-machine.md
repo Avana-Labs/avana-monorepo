@@ -44,7 +44,7 @@ Migration follows Aave V4: a position cannot move between users, so the Adapter 
 | `capScope` | the home Hub's registry checks a Spoke's draw caps over the home Hub's Spokes (the proposal scopes risk settings to the Hub) | the funding Hub's registry owns every draw cap on its assets and checks them against its credit line and cross-Hub cap |
 | `pauseScope` | a borrow reads its home Hub's pause state | a borrow also reads the funding Hub's pause state |
 | `proxySupport` | an Adapter upgrade may stop serving older proxy versions (nothing in the proposal requires otherwise) | an Adapter upgrade reverts while a proxy of an older version holds collateral or debt; migration reads no Avana stop |
-| `liqVariant` | standard Spoke: public `liquidationCall`, vault token accepts only its Hub's LPVaultSwap (the owner's suggestion) | liquidation-manager Spoke: only the home Hub's LPVaultSwap may call `liquidationCall` |
+| `liqVariant` | standard Spoke: public `liquidationCall`, vault token accepts only its Hub's LPVaultSwap (the proposal under review) | liquidation-manager Spoke: only the home Hub's LPVaultSwap may call `liquidationCall` |
 | `tokenCapScope` | a Hub's token caps count its own (home) Spokes | a Hub's token caps count every Spoke that draws from it |
 
 ### Bounds and abstractions
@@ -147,7 +147,7 @@ Verified by `ammnSm03FixedTest` (under `Paused`, with M2 offboarded and S1's cap
 
 Severity: Medium. Properties: TOPO-03, TOPO-02b. Spec: `INV-011`, `INV-013`, `INV-008`, `INV-041`, `INV-058`, `INV-029`, `REQ-ADAPTER-029`, `REQ-HUB-003`, `REQ-HUB-060`.
 
-The owner proposes a standard Spoke with public `liquidationCall` and relies on the vault token's recipient rule so that only LPVaultSwap can take seized collateral. Aave V4's `receiveShares = true` path credits the liquidator with Spoke supply shares and moves no token, so the recipient rule never runs. It needs only the reserve's `receiveSharesEnabled` flag (an Aave Spoke configuration, not an Avana one) and an unfrozen reserve. Avana's drift check (`INV-029`) detects the flag but only stops new borrowing; it cannot stop the seizure.
+The proposal under review uses a standard Spoke with public `liquidationCall` and relies on the vault token's recipient rule so that only LPVaultSwap can take seized collateral. Aave V4's `receiveShares = true` path credits the liquidator with Spoke supply shares and moves no token, so the recipient rule never runs. It needs only the reserve's `receiveSharesEnabled` flag (an Aave Spoke configuration, not an Avana one) and an unfrozen reserve. Avana's drift check (`INV-029`) detects the flag but only stops new borrowing; it cannot stop the seizure.
 
 Counterexample (`ammnSm04ReceiveSharesTest`):
 

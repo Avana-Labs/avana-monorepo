@@ -8,12 +8,12 @@ Fork tests run Avana against the real deployed code at a pinned block: Uniswap v
 
 ```bash
 cd contracts
-RPC_MAINNET=<archive RPC> MAINNET_FORK_BLOCK=<pinned block> FOUNDRY_PROFILE=fork forge test
-AVANA_FIXTURE=fork RPC_MAINNET=… MAINNET_FORK_BLOCK=… FOUNDRY_PROFILE=fork forge test --match-path 'test/hostile/**'
-AVANA_MANIFEST=<manifest under ../deployments/> RPC_MAINNET=… MAINNET_FORK_BLOCK=… FOUNDRY_PROFILE=fork forge test --match-path 'test/fork/deployment/**'
+FOUNDRY_PROFILE=fork forge test
+AVANA_FIXTURE=fork FOUNDRY_PROFILE=fork forge test --match-path 'test/hostile/**'
+AVANA_MANIFEST=<manifest under ../deployments/> FOUNDRY_PROFILE=fork forge test --match-path 'test/fork/deployment/**'
 ```
 
-Configuration: `contracts/foundry.toml` `[profile.fork]`; Base runs use `RPC_BASE` and `BASE_FORK_BLOCK` (`fork-base` CI job).
+Fork tests read the archive RPC endpoints `RPC_MAINNET` (Ethereum) and `RPC_BASE` (Base). The fork blocks are pinned in `contracts/test/utils/fixtures/ForkConstants.sol`, so every run sees the same chain state. Configuration: `contracts/foundry.toml` `[profile.fork]`.
 
 ## Scope
 
@@ -21,8 +21,8 @@ Configuration: `contracts/foundry.toml` `[profile.fork]`; Base runs use `RPC_BAS
 
 ## How often it runs
 
-CI (`mainnet fork tests` and `fork-base` jobs) and the layer gates from 2.2 on. First run when the Ethereum and Base archive RPC endpoints are configured; the layer 2.2 gate (AMM integrations) needs them.
+CI (the `fork` job of `.github/workflows/contracts.yml`, on every pull request and push to `main` once the `RPC_MAINNET` and `RPC_BASE` secrets are set; without them the job passes with a warning) and the layer gates from 2.2 (AMM integrations) on.
 
 ## Latest result
 
-Not run yet; no archive RPC endpoint is configured. `results/` is empty until the first run.
+`results/` holds no recorded run.

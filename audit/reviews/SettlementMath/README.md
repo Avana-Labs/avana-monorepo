@@ -21,10 +21,10 @@
 
 ## Evidence after the fixes
 
-Unit, fuzz (10,000 runs) and differential tests pass; Z3 `settlement/` 315 checks exit 0. Halmos ran under machine load (2 / 14 pass, the rest timed out) and runs again at the layer 2.1 gate on a quiet machine. Remaining text follow-ups (`INV-034`…`INV-038`, 3.5 notation, `REQ-LENS-029`, `fv_liq_01`/`03`/`04`/`06`, the Hypothesis gap model) are folded into the 2.11 rewrite.
+Unit, fuzz (10,000 runs) and differential tests pass; Z3 `settlement/` 315 checks exit 0. Halmos ran under machine load (2 / 14 pass, the rest timed out). The remaining text points (`INV-034`…`INV-038`, 3.5 notation, `REQ-LENS-029`, `fv_liq_01`/`03`/`04`/`06`, the Hypothesis gap model) are part of the 2.11 rewrite.
 
 ## PoC tests
 
 - `PoC.t.sol`: `test_feeEvasionAtCappedSlippage` (S1), `test_premiumAtCapFails` (S3), `test_deleverageLegsAtMinimumShort` (S4), `testFuzz_legSlippageSpec`, `test_zeroDebtPricePanics`, `test_decimalsAbove36Accepted` (A1–A4)
 
-The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; after a fix lands, the regression test in `contracts/test/` asserts the fixed behavior.
+The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; for each fixed finding, a regression test in `contracts/test/` asserts the fixed behavior.

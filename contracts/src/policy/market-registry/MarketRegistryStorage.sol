@@ -115,7 +115,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         mapping(address account => bool) knownIntegrationContract;
         mapping(address token => uint64) standbyCancelledAt;
         mapping(uint256 marketId => uint32) routeEpoch;
-        // Appended 2026-11-11 (wave 3: integration-contract record, REQ-MREG-035); earlier fields keep their slots.
+        // Appended fields (integration-contract record, REQ-MREG-035); earlier fields keep their slots.
         mapping(uint32 integrationId => IntegrationRecord) integrationRecords;
         mapping(uint256 marketId => RouteSlotRef[]) routeSlots;
         mapping(bytes32 slotId => bool) routeSlotListed;

@@ -18,8 +18,8 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// @dev One ERC-1967 proxy (UUPS) per debt asset per chain, for every debt asset whose AaveOracle source is not fixed; `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only
 /// by `TIMELOCK` (normal delay), and `_grantRole` reverts `AdminRoleOnlyTimelock` for an admin role and any account other
 /// than `TIMELOCK`. A debt asset with a fixed Aave source (such as GHO) has no DebtOracle. Each leg is fresh while its age is at
-/// most its own heartbeat plus margin; on an L2 the chain's sequencer-uptime check and grace period gate borrow-side
-/// reads, never liquidation. ERC-7201 namespace `avana.storage.DebtOracle`; the implementation
+/// most its own heartbeat plus margin; on an L2 a down sequencer pauses liquidation (reason `SEQUENCER_DOWN`), the grace
+/// after a restart narrows liquidation through `inGrace`, and an unknown sequencer state blocks borrowing only. ERC-7201 namespace `avana.storage.DebtOracle`; the implementation
 /// constructor calls `_disableInitializers()`. Every evaluation reads `MarketRegistry.activePriceRoutes(ASSET)`,
 /// `priceRouteVersion(ASSET)` and `getToken(ASSET)`, and from the ParameterStore `getFeed` per leg,
 /// `feedAgreementToleranceBps(ASSET)`, `cachedWindow`, `disagreementPauseMax`, `graceDuration` and
@@ -102,7 +102,7 @@ interface IDebtOracle is IAaveV4PriceFeed, IAccessControl, IDebtOracleEvents, ID
 
     /// @notice Liquidation age limit of the served price.
     /// @dev SPEC-ORC-015 for the served route, with `min(liquidationPriceMaxAge, borrowPriceMaxAge)` for a leg of a
-    /// serving alternate; 0 when the accepted price is served. LPVaultSwap repays this reserve only while `liquidationPaused` is false and `now - servedUpdatedAt` is
+    /// serving alternate; 0 when the accepted price is served. LPVaultSwap repays this reserve only while `liquidationPaused` is false (true while not Live, while the alternate is past its borrow age, and while the sequencer is down) and `now - servedUpdatedAt` is
     /// within it.
     /// @return age Seconds.
     /// @custom:spec REQ-ORACLE-093, REQ-ORACLE-090, SPEC-ORC-015

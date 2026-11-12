@@ -28,4 +28,4 @@ Storage of public execution and clean-up written as implemented; check order (`R
 
 - `test_revokeOpenExecutorIsDaoOnly`, `test_selfAdminRevocable`, `test_expiredViewOverflow`, `test_executeCleansOther`, `test_fourBytes` in `Poc.t.sol`
 
-The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; after a fix lands, the regression test in `contracts/test/` asserts the fixed behavior.
+The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; for each fixed finding, a regression test in `contracts/test/` asserts the fixed behavior.

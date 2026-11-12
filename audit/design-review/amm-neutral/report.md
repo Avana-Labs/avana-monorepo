@@ -82,9 +82,9 @@ Method: the formula of the score above, applied to the spec-stage residuals, plu
 
 When the 19 proving checks pass, the score is 88.5 at spec stage. Above 90 still needs the implementation, Foundry and prover runs, and external audits. `FV-CUS-F-10` and `FV-CTL-F-25`…`F-29` (`FINDING-286`…`FINDING-291`), found after this review, are Low or Informational and deduct nothing. The [final re-check](final-recheck.md) re-scores every finding against the rewritten pages, and its fix pass maps each remaining WEAK item and the three attacks it found (`FINDING-293`…`FINDING-295`) to its resolving rule.
 
-## Owner parameter decisions (2026-11-10)
+## Parameter decisions (2026-11-10)
 
-After the final re-check the owner removed five mechanisms (`Q-391`…`Q-402`):
+After the final re-check, decisions `Q-391`…`Q-402` removed five mechanisms:
 
 - **SettlementBudget** (`Q-397`), with all its parameters and every draw. It closed rounding gaps of about one debt unit per liquidation, but needed its own contract, funding in every debt asset, and windows and reserves that produced AMMN-RT-13 and AMMN-GAS-10. The caller (Avana's keeper) sizes `debtToCover` and its funding up front, including any increase from Aave V4's dust rule and the exact flash premium, and pays any rounding gap through the existing shortfall top-up.
 - **In-kind settlement** (`Q-401`). It priced pool-token payouts from the oracle during route outages, and its trigger, probe and expiry added attack surface. The PayoutEscrow stays only as the escrow for refused payouts.

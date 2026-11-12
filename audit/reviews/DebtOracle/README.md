@@ -3,7 +3,7 @@
 | Item | Value |
 |---|---|
 | Date | 2026-11-11 |
-| Contract | `src/oracle/debt-oracle/` (contract 9): `DebtOracle`, `DebtOracleRecovery`, `DebtOracleEvaluation`, `DebtOracleReads`, `DebtOracleStorage`, the types and interfaces; the `LPPriceMath` functions it calls |
+| Contract | `src/oracle/debt-oracle/`: `DebtOracle`, `DebtOracleRecovery`, `DebtOracleEvaluation`, `DebtOracleReads`, `DebtOracleStorage`, the types and interfaces; the `LPPriceMath` functions it calls |
 | Spec | [2.10 DebtOracle](../../../spec/02-contracts/10-lp-oracle.md#debtoracle) (`REQ-ORACLE-091` to `-093`, `-096`, `-098`, `SPEC-ORC-018`) and the shared LPOracle rules it applies (`REQ-ORACLE-001` to `-008`, `-017`, `-022` to `-034`, `-089` to `-102`, `SPEC-ORC-001` to `-003`, `-013` to `-016`, `-019` to `-023`); `INV-030`, `INV-059`, `INV-072`, `INV-087`, `INV-098`; `ATTACK-140`, `-145`, `-150`, `-171` |
 | Method | Independent adversarial review from the spec and the code only; one PoC test per demonstrable finding, run against the code as reviewed (mocked feeds, registry and store from the unit fixtures; the real MarketRegistry for the read-gas measurement) |
 | Result | No Critical, High, Medium or Low. 3 Informational, 7 spec points; all fixed 2026-11-11 (see Resolution). The decoding, gas guard, failover, agreement, timers, latch, recovery evidence with the phase rule, served price and roles held under every attack tried |

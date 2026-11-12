@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | 1 | High | A 1-wei donation to the source made every loan forward `amount + 1`, which LPVaultSwap must refuse (`REQ-SWAP-013`), blocking flash-funded liquidation and deleverage of that asset for good | The source forwards only what the Pool delivered, measured against a balance snapshot taken before the Pool call; a donation is never forwarded. `REQ-FLASH-001`/`003` drop "transfers its whole balance" and "ends every call with no balance" | fixed |
 | 2 | Medium | `maxFlashLoan` overstated capacity under Aave V3.1+ virtual accounting | Returns `min(balanceOf(aToken), getVirtualUnderlyingBalance)` | fixed |
-| 3 | Spec | Aave V3.4 rounds the premium half-up; the source's ceiling quote stays the binding gate | Stated in `SPEC-LIQ-007`/`015` and the Z3 `st11` text; `REQ-SWAP-106` step 7 repays by balance delta; the Pool mock gets virtual accounting, half-up rounding and real zero-amount behaviour | fix queued (spec text) |
+| 3 | Spec | Aave V3.4 rounds the premium half-up; the source's ceiling quote stays the binding gate | Stated in `SPEC-LIQ-007`/`015` and the Z3 `st11` text; `REQ-SWAP-106` step 7 repays by balance delta; the Pool mock gets virtual accounting, half-up rounding and real zero-amount behaviour | decided (spec text) |
 
 ## Related decision
 
@@ -28,4 +28,4 @@ Halmos 8 / 8 (`PROP-036`, `PROP-080`, including `donationNeverForwarded`); unit 
 
 - `FlashReview.t.sol`: `test_REVIEW_donationBricksFlashPathUnderReqSwap013`, `test_REVIEW_maxFlashLoanOverstatesUnderVirtualAccounting`, `test_REVIEW_ceilQuoteRefusesLoanThatHalfUpChargeAdmits`
 
-The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; after a fix lands, the regression test in `contracts/test/` asserts the fixed behavior.
+The PoC files are copied from the review workspace into [`poc/`](poc/). Each one demonstrates its finding against the code as reviewed, with imports at their review-time paths; for each fixed finding, a regression test in `contracts/test/` asserts the fixed behavior.

@@ -17,7 +17,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @notice The legacy Curve hop (2.12 `REQ-ROUTE-046`) on an Ethereum fork, against the 3pool (DAI, USDC, USDT), whose
 /// `exchange` returns no data: the constructor's `coins(uint256)` checks pass at the 3pool's indices, a USDT -> USDC
 /// swap delivers the measured output to LPVaultSwap with `min_dy = 0`, and wrong indices are refused. The 3pool checks
-/// the hop code against a deployed legacy pool; no legacy pool is named for launch yet (see the skipped test below).
+/// the hop code against a deployed legacy pool; the launch list names no legacy pool (see the skipped test below).
 /// Skipped without `RPC_MAINNET`; forks the latest block. LPVaultSwap is the suites' `MockRouteCaller`.
 /// @dev Run with `FOUNDRY_PROFILE=fork forge test --match-contract CurveLegacyRouteForkTest`.
 contract CurveLegacyRouteForkTest is AvanaTest {

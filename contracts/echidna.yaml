@@ -5,7 +5,7 @@
 testMode: property
 prefix: "property_"
 # Sequences per run. 50,000 sequences of up to 100 calls reach the long histories the invariant handlers need
-# (timelock delays, grace windows) once implementations exist; the nightly job raises it with ECHIDNA_TEST_LIMIT.
+# (timelock delays, grace windows); the nightly job raises it with ECHIDNA_TEST_LIMIT.
 testLimit: 50000
 seqLen: 100
 shrinkLimit: 5000

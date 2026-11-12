@@ -3,16 +3,16 @@
 | Item | Value |
 |---|---|
 | Date | 2026-11-10 |
-| Scope | The owner's AMM-neutral proposal (instance scope, liquidation, pricing, launch chains) tested against `spec/01-architecture/*`, `spec/02-contracts/*`, [4.4 Design Decisions](../../../spec/04-security/04-design-decisions.md) (`Q-001`…`Q-278`), [8 Market lifecycle](../../../spec/03-operations/08-market-lifecycle.md) `MKT-018`…`MKT-026` and the interface tree in `contracts/src` |
+| Scope | The proposed AMM-neutral design (instance scope, liquidation, pricing, launch chains) tested against `spec/01-architecture/*`, `spec/02-contracts/*`, [4.4 Design Decisions](../../../spec/04-security/04-design-decisions.md) (`Q-001`…`Q-278`), [8 Market lifecycle](../../../spec/03-operations/08-market-lifecycle.md) `MKT-018`…`MKT-026` and the interface tree in `contracts/src` |
 | Method | Each assumption is compared with at least two alternatives. Counts come from the spec and the interfaces; where a fact could not be checked on-chain or in source it is marked **[UNVERIFIED]** with the check that settles it. |
 | Findings | `AMMN-ARCH-01`…`AMMN-ARCH-10`: 1 High, 5 Medium, 2 Low, 2 Informational |
-| Inputs added during the review | Owner decision on flash liquidity (one Aave flash source on every chain); [integration-assumptions.md](integration-assumptions.md) `AMMN-INT-01`, `AMMN-INT-04`, `AMMN-INT-05`, `AMMN-INT-06`, `AMMN-INT-07` |
+| Inputs added during the review | Decision on flash liquidity (one Aave flash source on every chain); [integration-assumptions.md](integration-assumptions.md) `AMMN-INT-01`, `AMMN-INT-04`, `AMMN-INT-05`, `AMMN-INT-06`, `AMMN-INT-07` |
 
 ## 0. Baseline measurements
 
 ### What the spec builds today
 
-The current spec is not the owner's proposal. It has one Hub, **one** Borrow Spoke holding one vault-token reserve per market (`REQ-ARCH-027`, `Q-239`), **one** LPVault and **one** Collateralization for every market (`REQ-ARCH-031`, `REQ-ARCH-171`), one AaveAdapter, one LPVaultSwap, one Lock with four fixed members (`REQ-LOCK-001`), and one VaultToken plus one LPOracle UUPS proxy per market (`REQ-ARCH-032`, `REQ-ARCH-039`). Everything below compares against that baseline as well as against the proposal.
+On the review date the spec did not yet follow the proposal. It had one Hub, **one** Borrow Spoke holding one vault-token reserve per market (`REQ-ARCH-027`, `Q-239`), **one** LPVault and **one** Collateralization for every market (`REQ-ARCH-031`, `REQ-ARCH-171`), one AaveAdapter, one LPVaultSwap, one Lock with four fixed members (`REQ-LOCK-001`), and one VaultToken plus one LPOracle UUPS proxy per market (`REQ-ARCH-032`, `REQ-ARCH-039`). Everything below compares against that baseline as well as against the proposal.
 
 ### Avana-authored contract types and interface size
 
@@ -61,7 +61,7 @@ The first market on a **new** Borrow Spoke adds, on the Aave side, an Aave-deplo
 
 **Assumption:** one market per CDP Spoke, for isolation.
 
-| Measure | A. One market per Spoke (owner's lean) | B. One Spoke per (Hub, AMM protocol), several markets (owner's diagram) | C. One Spoke per Hub, all markets (current spec) |
+| Measure | A. One market per Spoke (the proposal's preference) | B. One Spoke per (Hub, AMM protocol), several markets (the proposal's diagram) | C. One Spoke per Hub, all markets (current spec) |
 |---|---|---|---|
 | Spokes for M markets, P AMM protocols, H Hubs | M | H × P | H |
 | Aave DAO calls per new market of a known AMM protocol | ≈ 12 + 3 Aave deployments | 4 | 4 |
@@ -85,11 +85,11 @@ Notes on the measurements:
 
 **Recommendation:** B. Use one Spoke per (Hub, AMM protocol), with markets as reserves on it. A new AMM integration is the most likely place for a bug. B gives it its own `drawCap` at the DAO cost of one Spoke, not one Spoke per market. Use A only for a market the risk service providers want capped on its own; it remains possible case by case.
 
-**Risk if the owner keeps A:** about 3× the DAO work per listing; M Aave-deployed Spoke implementations to bytecode-check (`REQ-HUB-005`); the GHO line split into many small `drawCap`s that are each easier to exhaust in a liquidation wave; one PositionProxy and health factor per market per wallet, which users will see as worse capital efficiency; and the Lock conflict in `AMMN-ARCH-01`.
+**Risk of A:** about 3× the DAO work per listing; M Aave-deployed Spoke implementations to bytecode-check (`REQ-HUB-005`); the GHO line split into many small `drawCap`s that are each easier to exhaust in a liquidation wave; one PositionProxy and health factor per market per wallet, which users will see as worse capital efficiency; and the Lock conflict in `AMMN-ARCH-01`.
 
 **Dependency on §5:** the only liquidation-manager Spoke that exists in Aave's code allows one collateral reserve per Spoke (`AMMN-INT-04`). Choosing it forces option A. Option B needs the standard Spoke (§5 option C) or a variant Aave Labs has not written.
 
-**Question for the owner:** do Aave's risk service providers require a separate borrow cap for each LP market, or is a cap per (Hub, AMM protocol) plus Avana's per-market USD caps enough?
+**Open question at review time:** whether Aave's risk service providers require a separate borrow cap for each LP market, or accept a cap per (Hub, AMM protocol) plus Avana's per-market USD caps. Decision: several markets per CDP Spoke with per-market USD caps (`Q-280`), caps set with the risk service providers (`Q-197`).
 
 ### `AMMN-ARCH-02` — Medium — One market per Spoke multiplies DAO work without isolating shared code
 
@@ -103,7 +103,7 @@ One Spoke per market raises the per-listing Aave DAO work from 4 calls to about 
 
 Long-run reference: 1 chain, 3 Hubs, 5 AMM protocols, so S = 15 Spokes under option B of §1.
 
-| Measure | A. Per chain | B. Per Hub (owner) | C. Per Spoke |
+| Measure | A. Per chain | B. Per Hub (proposal) | C. Per Spoke |
 |---|---|---|---|
 | Adapter + LPVaultSwap instances | 2 | 6 | 30 |
 | Policy contracts (Registry, Store, RiskModule) | 3 | 9 | 45 |
@@ -120,9 +120,9 @@ Long-run reference: 1 chain, 3 Hubs, 5 AMM protocols, so S = 15 Spokes under opt
 
 **Recommendation:** A, one instance per chain for the Adapter, LPVaultSwap, RiskModule, MarketRegistry, ParameterStore, SettlementBudget, PayoutEscrow, Lock and Lens. Keep the Hub and Spoke boundaries as data, keyed by Spoke and debt reserve, as the spec already does. Per-Hub instances add contracts, Lock members and upgrade calls but do not shrink the blast radius, because the implementation, the timelock and the Guardian are shared.
 
-**Risk if the owner keeps B:** three times the deployments and upgrade calls, three Locks or a larger Lock membership, and a false sense of isolation in the threat model. The real single point of failure is the same in every option: LPVaultSwap is the only `LIQUIDATION_MANAGER`, and its fix waits the normal delay.
+**Risk of B:** three times the deployments and upgrade calls, three Locks or a larger Lock membership, and a false sense of isolation in the threat model. The real single point of failure is the same in every option: LPVaultSwap is the only `LIQUIDATION_MANAGER`, and its fix waits the normal delay.
 
-**Question for the owner:** what fix path do you want for a bug that blocks liquidation in LPVaultSwap: the normal-delay upgrade only, or a pre-approved immutable fallback liquidator? The second option means asking Aave Labs whether the variant can hold two managers.
+**Open question at review time:** the fix path for a bug that blocks liquidation in LPVaultSwap: the normal-delay upgrade only, or a pre-approved immutable fallback liquidator. The second option depends on whether the Aave variant can hold two managers. Current rule: LPVaultSwap is upgraded through the timelock at the normal delay (`Q-226`, `Q-228`); no fallback liquidator is recorded.
 
 ### `AMMN-ARCH-03` — Low — Per-Hub copies of shared contracts add work without reducing blast radius
 
@@ -134,7 +134,7 @@ Every per-Hub instance runs the same implementation under the same timelock and 
 
 **Assumption:** a separate immutable LPVault and a separate immutable Collateralization ledger per CDP Spoke.
 
-| Measure | A. LPVault + ledger per Spoke (owner) | B. One LPVault + one ledger per chain (current spec, v3 only) | C. One LPVault per AMM protocol per chain + one AMM-neutral ledger per chain | D. Merged vault + ledger per AMM protocol |
+| Measure | A. LPVault + ledger per Spoke (proposal) | B. One LPVault + one ledger per chain (current spec, v3 only) | C. One LPVault per AMM protocol per chain + one AMM-neutral ledger per chain | D. Merged vault + ledger per AMM protocol |
 |---|---|---|---|---|
 | Contracts to audit | 2 types; 2 deploys per Spoke | 2 | 1 ledger + 1 vault per AMM protocol | 1 per AMM protocol; the ledger code is copied into each |
 | Fits the 500-line limit (`Q-240`) | Yes | Yes | Yes | Unlikely: the Collateralization interface alone is 830 lines (246 code) |
@@ -148,9 +148,9 @@ Every per-Hub instance runs the same implementation under the same timelock and 
 
 **Recommendation:** C. Use one AMM-neutral, immutable ledger per chain and one immutable vault per AMM protocol per chain. Each VaultToken names its vault as an immutable. Vaults never acquire the Lock: every outer entry point goes through the Adapter or LPVaultSwap, so the Lock's members are only those two fixed proxy addresses and never change. A ledger bug then has the same reach as in B, but the ledger contains no AMM-specific code, which is what changes when an integration is added.
 
-**Risk if the owner keeps A:** the immutable Lock cannot admit contracts deployed later. Every new Spoke would require either redeploying the Lock and every immutable that binds `LOCK`, or replacing the fixed member list with a list governance can extend, which weakens `REQ-LOCK-001`.
+**Risk of A:** the immutable Lock cannot admit contracts deployed later. Every new Spoke would require either redeploying the Lock and every immutable that binds `LOCK`, or replacing the fixed member list with a list governance can extend, which weakens `REQ-LOCK-001`.
 
-**Question for the owner:** can every outer entry point of the vault, including fee collection and stray-NFT return, move behind the AaveAdapter, so that the Lock's members shrink to {AaveAdapter, LPVaultSwap}?
+**Open question at review time:** whether every outer entry point of the vault, including fee collection and stray-NFT return, can move behind the AaveAdapter, so that the Lock's members shrink to {AaveAdapter, LPVaultSwap}. Decision: yes; the Lock has exactly those two members (`Q-318`), and stray-position return is a timelock-only LPVault call (`Q-296`).
 
 ### `AMMN-ARCH-01` — Medium — A vault and ledger per Spoke conflicts with the immutable Lock
 
@@ -177,11 +177,11 @@ Every per-Hub instance runs the same implementation under the same timelock and 
 | Extra gas per Aave price read | 0 | ≈ 2.6k (one extra call) | ≈ 2.6k + integration call |
 | Liquidation path | Unchanged | Unchanged | Liquidation depends on integration views |
 
-**Recommendation:** A, the owner's current plan, with one LPOracle implementation per AMM protocol. The AMM-neutral price-state logic goes in a shared base contract, and the AMM-specific composition math goes in an internal library that the vault also uses for minimum-recovery checks. B saves deploy operations but costs an interface rewrite and loses staged upgrades. Not a finding.
+**Recommendation:** A, the proposed plan, with one LPOracle implementation per AMM protocol. The AMM-neutral price-state logic goes in a shared base contract, and the AMM-specific composition math goes in an internal library that the vault also uses for minimum-recovery checks. B saves deploy operations but costs an interface rewrite and loses staged upgrades. Not a finding.
 
-**Risk if the owner keeps the plan:** low. It needs N upgrade calls per fix, which one batch handles. Separately, `AMMN-INT-01` (23–24 h stablecoin heartbeats) means the shared price-state base must read each feed's heartbeat and deviation threshold from configuration. A fixed ≤ 1 h freshness rule makes no stablecoin market listable.
+**Risk of A:** low. It needs N upgrade calls per fix, which one batch handles. Separately, `AMMN-INT-01` (23–24 h stablecoin heartbeats) means the shared price-state base must read each feed's heartbeat and deviation threshold from configuration. A fixed ≤ 1 h freshness rule makes no stablecoin market listable.
 
-**Question for the owner:** do you want staged oracle upgrades, one market first? If not, B is acceptable and lowers per-market deploy work.
+**Open question at review time:** whether staged oracle upgrades (one market first) are needed; without them, B is acceptable and lowers per-market deploy work. Decision: one LPOracle instance per market (`Q-279`).
 
 ---
 
@@ -219,11 +219,11 @@ Two points apply to every option:
 - The Aave DAO can upgrade the Spoke proxy, so "enforced in code" protects against a mistaken configuration payload, not against the DAO.
 - `AMMN-INT-01`: live USDC, USDT and GHO Chainlink feeds have 23–24 h heartbeats. Under the spec's "stale collateral counts as 0" rule with `borrowPriceMaxAge` ≤ 4,200 s, collateral would read as stale for most of each day. In options B and C, Aave's health factor would then call for liquidation of every account. In option A, with no dust rule and Avana-side sizing, a wrong price leads straight into seizures. The freshness rule must be rebuilt around deviation-triggered feeds before any Spoke choice is safe.
 
-**Recommendation:** C, the standard Spoke, for launch. It is the only option that exists, keeps Aave's audited sizing and deficit reporting, and allows several markets per Spoke (§1 option B). Exclusivity rests on three settings: `receiveSharesEnabled = false` and `liquidationFee = 0` on every vault reserve key, and no reinvestment controller on the vault asset. Make them required AIP settings, check them in the RiskModule drift check (which freezes new borrowing), and ask the Aave DAO to restrict who can change them on Avana reserves (for example, the Risk Steward cannot touch them). Ask Aave Labs for option B as a later upgrade of the same Spoke, not as a launch dependency. Choose A only if the owner accepts one market per Spoke, one debt asset per account and Avana-written liquidation sizing.
+**Recommendation:** C, the standard Spoke, for launch. It is the only option that exists, keeps Aave's audited sizing and deficit reporting, and allows several markets per Spoke (§1 option B). Exclusivity rests on three settings: `receiveSharesEnabled = false` and `liquidationFee = 0` on every vault reserve key, and no reinvestment controller on the vault asset. The recommendation makes them required AIP settings, checks them in the RiskModule drift check (which freezes new borrowing), and asks the Aave DAO to restrict who can change them on Avana reserves (for example, the Risk Steward cannot touch them). Option B fits as a later upgrade of the same Spoke, not as a launch dependency. A fits only with one market per Spoke, one debt asset per account and Avana-written liquidation sizing.
 
-**Risk if the owner keeps B (current spec):** launch waits on Aave Labs code that does not exist. **Risk if the owner picks A:** the work in §1 option A, plus Avana owns liquidation sizing that Aave's audited code does today. **Risk of C:** one DAO configuration payload can expose Avana collateral to third parties until the drift check freezes the market. This is the `Q-221` accepted risk, now with bad debt as a stated consequence.
+**Risk of B (the spec at review time):** launch waits on Aave Labs code that did not exist on the review date. **Risk of A:** the work in §1 option A, plus Avana owns liquidation sizing that Aave's audited code does today. **Risk of C:** one DAO configuration payload can expose Avana collateral to third parties until the drift check freezes the market. This is the `Q-221` accepted risk, now with bad debt as a stated consequence.
 
-**Question for the owner:** do you accept C's residual risk (one DAO configuration error, detected after the fact)? Or will you ask Aave Labs for the multi-reserve variant (B) and wait for it?
+**Open question at review time:** accept C's residual risk (one DAO configuration error, detected after the fact), or wait for a multi-reserve variant (B) from Aave Labs. Decision: C, the standard Spoke with three required settings and the drift check (`Q-281`, `Q-352`), with the exposure window of `Q-382`.
 
 ### `AMMN-ARCH-07` — Medium — The decided Borrow Spoke does not exist; the safest option that exists is the standard Spoke with three required settings
 
@@ -233,7 +233,7 @@ Two points apply to every option:
 
 ## 6. Flash liquidity and the settlement asset
 
-**Owner's decision (2026-11-10):** Base has no GhoFlashMinter and no GSM; GHO there is CCIP-bridged only. Liquidations on every chain use **one** flash-loan source, and it must be an Aave flash loan. This section therefore does not compare settlement assets. It records the risks of a single Aave flash source and answers whether GHO stays the settlement asset on Base.
+**Decision of 2026-11-10 (`Q-334`):** Base has no GhoFlashMinter and no GSM; GHO there is CCIP-bridged only. Liquidations on every chain use **one** flash-loan source, and it must be an Aave flash loan. This section therefore does not compare settlement assets. It records the risks of a single Aave flash source and answers whether GHO stays the settlement asset on Base.
 
 Sources: the internal liquidation research (mainnet GhoFlashMinter capacity 2,000,000 GHO and fee 0, GSM capacity, GHO DEX depth of about $1.3M on Curve, $93k on Balancer and $47k on Uniswap v3, all on mainnet). The separate verification of Aave V3 and V4 flash facts (`~/Documents/avana-internal-references/research/flash-source.md`) did not exist when this review was written. Every Aave flash fact below is therefore **[UNVERIFIED]** until that file confirms it.
 
@@ -260,9 +260,9 @@ The GHO `drawCap` of each Base Borrow Spoke must therefore be no more than the s
 
 **Recommendation:** accept the single Aave source only with the controls in the table: on-chain ceiling check, `FLASH_BORROWER` on every chain, a maximum fee, a replaceable source adapter, never the same V4 Hub, an authenticated callback, and caller-funded GHO as the fallback. Before writing the spec, confirm the mainnet case: if the V3 Pool cannot flash-lend GHO there, "one Aave source" either requires V4 flash loans or gives up the GhoFlashMinter that works today.
 
-**Risk if the owner proceeds without the controls:** one Aave pause, fee change or V3 wind-down stops every Avana liquidation on a chain, and on Base the GHO cap has no measured link to flash or conversion depth.
+**Risk without the controls:** one Aave pause, fee change or V3 wind-down stops every Avana liquidation on a chain, and on Base the GHO cap has no measured link to flash or conversion depth.
 
-**Question for the owner:** on mainnet, if the Aave V3 Pool cannot flash-lend GHO, do you keep the GhoFlashMinter there (two sources) or require V4 flash loans?
+**Open question at review time:** on mainnet, if the Aave V3 Pool cannot flash-lend GHO, keep the GhoFlashMinter there (two sources) or require V4 flash loans. Decision: GHO's flash minter is not used on any chain; the source is the chain's Aave V3 Pool (`Q-334`), and a liquidation is funded by its caller (`Q-404`).
 
 ### `AMMN-ARCH-04` — High — A single Aave flash source makes liquidation depend on one external reserve
 
@@ -377,20 +377,20 @@ The VaultTokenFactory, VaultToken and ledger are immutable, and they key markets
 | Measure | A. Mainnet and Base together | B. Mainnet first, Base after |
 |---|---|---|
 | AMM integrations to audit before launch | 2 (Uniswap v3, Slipstream) | 1 |
-| Flash source | Aave flash loan on both chains (owner's decision); Base ceiling and GHO conversion depth unmeasured (`AMMN-ARCH-04`) | One chain to measure |
+| Flash source | Aave flash loan on both chains (`Q-334`); Base ceiling and GHO conversion depth unmeasured (`AMMN-ARCH-04`) | One chain to measure |
 | Avana governance | Two timelocks, two Guardian and governance Safe sets, two deployment manifests | One |
 | Aave DAO | Two listing AIPs. The Base AIP executes cross-chain, adding bridge delay to every Base payload, including an emergency one **[UNVERIFIED]** for V4 on Base | One |
 | Aave V4 | Mainnet live. A Base address-book file exists; which Hubs and Spokes exist on Base, and whether the liquidation-manager variant is deployable there, is **[UNVERIFIED]** | Mainnet live |
 | Oracles | Base needs an L2 sequencer-uptime check and a grace period after restart; **the spec has none** (no "sequencer" in `spec/`). Chainlink coverage on Base for USDT and other pool tokens needs checking | Not needed |
-| GHO | Base: CCIP-bridged only, no FlashMinter or GSM (owner-confirmed), thin depth | GSM for conversion |
+| GHO | Base: CCIP-bridged only, no FlashMinter or GSM (confirmed 2026-11-10), thin depth | GSM for conversion |
 | Funds at risk at launch | Two sets of caps | One |
 | Work | About 2× audit and operations | About 1× now, then a smaller increment |
 
 **Recommendation:** B. Launch on mainnet with Uniswap v3 first. Add Base when Slipstream, a Base settlement path, a sequencer check and the Aave V4 Base deployment are verified, and the Base flash ceiling and GHO depth are measured. The AMM-neutral refactor (§3, §7) is what makes the second chain cheap, and it does not need Base live to be tested.
 
-**Risk if the owner keeps A:** the launch depends on four unverified Base facts. The protocol would also launch without sequencer handling, so after a Base sequencer outage Aave liquidations could run on prices that are stale or just restored, and borrowers would have no time to repay.
+**Risk of A:** the launch depends on four unverified Base facts. The protocol would also launch without sequencer handling, so after a Base sequencer outage Aave liquidations could run on prices that are stale or just restored, and borrowers would have no time to repay.
 
-**Question for the owner:** what on Base is a launch requirement, rather than a preference? If it is Aerodrome volume, would listing Slipstream as the second integration on mainnet's schedule be enough?
+**Open question at review time:** which Base need is a launch requirement rather than a preference, and whether listing Slipstream as the second integration on mainnet's schedule would meet it. Decision: Ethereum and Base launch together (`Q-279`).
 
 ### `AMMN-ARCH-05` — Medium — A Base launch has no sequencer-uptime handling and depends on unverified Base facts
 
@@ -435,19 +435,19 @@ Under `Q-222` the Spoke rejects a non-zero liquidation fee and a borrowable vaul
 | 3 | Vault + ledger per Spoke | One AMM-neutral ledger per chain; one vault per AMM protocol per chain; Lock members {Adapter, LPVaultSwap} | `AMMN-ARCH-01` Medium |
 | 4 | VaultToken + LPOracle per market | Keep both per market; one LPOracle implementation per AMM protocol | — |
 | 5 | Standard Spoke | Standard Spoke for launch, with `receiveSharesEnabled = false`, `liquidationFee = 0` and no reinvestment controller as required settings plus the drift check; the `Q-222` Spoke does not exist | `AMMN-ARCH-07` Medium |
-| 6 | Flash liquidity (owner decided: one Aave flash source) | Accept with controls: ceiling check, `FLASH_BORROWER`, maximum fee, replaceable source, never the same V4 Hub, authenticated callback, caller-GHO fallback; Base GHO `drawCap` ≤ min(flash ceiling, conversion depth) | `AMMN-ARCH-04` High |
+| 6 | Flash liquidity (decided: one Aave flash source, `Q-334`) | Accept with controls: ceiling check, `FLASH_BORROWER`, maximum fee, replaceable source, never the same V4 Hub, authenticated callback, caller-GHO fallback; Base GHO `drawCap` ≤ min(flash ceiling, conversion depth) | `AMMN-ARCH-04` High |
 | 7 | Pricing library per market | Library per AMM protocol behind a fixed `IAmmIntegration`-style interface the vault implements; `bytes32` keys, n-token arrays | `AMMN-ARCH-06` Medium |
 | 8 | Two chains at once | Mainnet first | `AMMN-ARCH-05` Medium |
 | 9 | Contract set | Move the Lens out of the core; resolve the beacon conflict; keep the drift checks (standard Spoke); keep the rest | `AMMN-ARCH-08` Low, `AMMN-ARCH-09` Info, `AMMN-ARCH-10` Info |
 
-## Open questions for the owner
+## Questions open at review time and their decisions
 
-1. Do the risk service providers require a separate borrow cap per LP market, or is a cap per (Hub, AMM protocol) enough?
-2. What is the fix path for a liquidation-blocking LPVaultSwap bug: a normal-delay upgrade only, or a second manager?
-3. Can every vault entry point, fee collection included, move behind the AaveAdapter so that the Lock's members are {Adapter, LPVaultSwap}?
-4. Do you need staged (one market first) oracle upgrades?
-5. Do you accept the standard Spoke's residual risk (one DAO configuration error, detected after the fact)? Or will you wait for Aave Labs to write a multi-reserve liquidation-manager variant?
-6. On mainnet, if the Aave V3 Pool cannot flash-lend GHO, do you keep the GhoFlashMinter or require V4 flash loans? On Base, what GHO `drawCap` do the flash ceiling and conversion depth support?
-7. Which Base requirement drives launching on two chains at once?
-8. Keep the SettlementBudget, or rely on the caller top-up and in-kind settlement?
-9. Beacon or pinned PositionProxy implementation?
+1. Borrow caps: one CDP Spoke per (chain, Hub, AMM protocol, risk tier) lists several markets, each with Avana's per-market USD caps (`Q-280`); the caps and risk factors are set with the Aave V4 risk service providers in each listing payload (`Q-197`).
+2. Fix path for a liquidation-blocking LPVaultSwap bug: LPVaultSwap is a UUPS proxy upgraded through the timelock at the normal delay (`Q-226`, `Q-228`); 4.4 records no second liquidation manager.
+3. Lock members: exactly the AaveAdapter and LPVaultSwap; fee collection and zero-credit release are AaveAdapter entry points, and stray-position return is a timelock-only LPVault call (`Q-318`, `Q-296`).
+4. Oracle upgrades: one LPOracle instance per market (`Q-279`), so an upgrade can reach one market first.
+5. Standard Spoke: every CDP Spoke is a standard Aave V4 Spoke with three required settings and Avana's drift check; the residual risk of a DAO configuration change is accepted with the exposure window of `Q-382` (`Q-281`, `Q-352`).
+6. Flash liquidity: GHO's flash minter is not used on any chain; the flash source is the chain's Aave V3 Pool (`Q-334`), and a liquidation is funded by its caller (`Q-404`).
+7. Launch chains: Ethereum and Base launch together, each with its own Hub, timelock and Guardian (`Q-279`).
+8. SettlementBudget and in-kind settlement: both removed; the caller shortfall top-up stays (`Q-397`, `Q-401`).
+9. PositionProxy: a logic-free immutable account with no beacon or implementation slot (`Q-306`).

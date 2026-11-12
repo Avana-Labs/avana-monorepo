@@ -24,7 +24,7 @@ python3 contract_checklist.py Collateralization --check
 
 ## How often it runs
 
-Every contract gate (0 errors, every ID of the contract linked), the `traceability` CI job, and with every spec change.
+Every contract gate (0 errors, every ID of the contract linked), the `traceability` CI job, and with every spec change. The `models` CI workflow runs `contract_checklist.py <Contract> --check` for every contract with a file in `results/contract-checklists/` on every pull request and push to `main`.
 
 ## Latest result
 
@@ -60,7 +60,7 @@ Per-contract checklists (`contract_checklist.py <C> --check`, 2026-11-10), rows 
 | PayoutEscrow | 18/18 | 4/7 | 3/3 | 7/9 | 1/1 |
 | CoverageSpoke | 39/49 | 1/8 | 2/2 | 7/12 | 3/4 |
 
-A shared page lists the rules of every contract on it, so most unlinked rows of the 2.10, 2.11 and 2.15 contracts belong to contracts not written yet (LPOracle, DebtOracle, LPVaultSwap). Cross-cutting TEST rows: 9 of 17 linked for every contract; the rest need the AaveAdapter, LPVaultSwap or the deployment script. Unlinked rows of written contracts are the test gaps listed in each [review](../reviews/) and are closed by the fix batches.
+A shared page lists the rules of every contract on it, so most unlinked rows of the 2.10, 2.11 and 2.15 contracts belong to contracts that had no implementation on that date (LPOracle, DebtOracle, LPVaultSwap). Cross-cutting TEST rows: 9 of 17 linked for every contract; the other 8 involve the AaveAdapter, LPVaultSwap or the deployment script and were not yet linked. Unlinked rows of implemented contracts are the test gaps listed in each [review](../reviews/).
 
 ## Results folder
 

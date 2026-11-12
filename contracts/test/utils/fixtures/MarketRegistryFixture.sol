@@ -49,7 +49,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 /// @title MarketRegistryFixture
 /// @notice The real MarketRegistry (six logic contracts, implementation, ERC-1967 proxy) with the real
-/// VaultTokenFactory and VaultTokens, and settable mocks for the neighbours not written yet (ParameterStore views,
+/// VaultTokenFactory and VaultTokens, and settable mocks for the other neighbours (ParameterStore views,
 /// RiskModule, LPVault, LPOracle, routes, flash source, Coverage Spoke) and for the Aave reserve reads.
 /// @dev World after `_setUpWorld`: the Stable LP Hub recorded (Stable tier), integration 1 registered, the CDP Spoke
 /// recorded, the GHO Coverage Spoke funded, a 20,000,000 GHO credit line, the flash source set, GHO listed (issuer probe

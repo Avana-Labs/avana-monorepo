@@ -27,7 +27,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title SwapRouteFixture
 /// @notice Shared setup of the swap-route suites (2.12): the real Lock with a mock LPVaultSwap (`MockRouteCaller`,
-/// contract 23 is not written yet) and a `LockMember` AaveAdapter, the tokens of the 2.12 examples as `PayoutToken`s,
+/// a stand-in in these tests) and a `LockMember` AaveAdapter, the tokens of the 2.12 examples as `PayoutToken`s,
 /// the chain's pinned pool factories (one `MockPoolFactory` per family; `_clPool` and `_curvePool` register their pools),
 /// and builders for route configurations and hops.
 /// @dev `usdt` answers no fee-switch probe, so the suites can route it through any pool; `tether` is the USDT stand-in

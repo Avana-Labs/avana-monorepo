@@ -15,7 +15,7 @@ Configuration: `contracts/foundry.toml` `[profile.smt]` (`engine = "chc"`, `time
 
 ## Scope
 
-The profile names 19 contracts. A file not yet written is reported as a missing source and checked once it lands.
+The profile names 19 contracts. A listed file absent from `src/` is reported as a missing source.
 
 ## How often it runs
 
@@ -23,7 +23,7 @@ Slow tier at each layer gate (2026-11-10 decision) and the `SMTChecker` CI job.
 
 ## Latest result
 
-2026-11-10 15:29, Lock gate: no counterexample (`happens here` absent); the checker reports unsupported constructs (`Assertion checker does not yet implement type error` on custom-error reverts) and missing sources for the contracts not yet written. Two later runs during the timelock gate were stopped (exit 143). The next full run is at the layer 2.1 gate.
+2026-11-10 15:29, Lock gate: no counterexample (`happens here` absent); the checker reports unsupported constructs (`Assertion checker does not yet implement type error` on custom-error reverts) and missing sources for the contracts absent from `src/` on that date. Two later runs during the timelock gate were stopped (exit 143).
 
 ## Results folder
 

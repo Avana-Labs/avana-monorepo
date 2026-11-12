@@ -13,7 +13,7 @@ import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.so
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title MockRouteCaller
-/// @notice Stand-in for LPVaultSwap (contract 23 is not written yet): it is the Lock's LPVaultSwap member and calls a
+/// @notice Stand-in for LPVaultSwap in these tests: it is the Lock's LPVaultSwap member and calls a
 /// route the way 2.11 does, with an exact allowance of `amountIn` that it resets after the call (REQ-ROUTE-035), and
 /// measures its own balance delta of the debt asset.
 contract MockRouteCaller {
