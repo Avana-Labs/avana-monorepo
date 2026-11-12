@@ -2025,6 +2025,15 @@
       "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record: for each route slot ever set on the integration's markets (not Cancelled or Closed), one try/catch call to the governance-approved route's `dependencies()` (a view, so STATICCALL). Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the slots governance set, and runs only inside a normal-delay timelock call. A reverting, short or undecodable response lands in the catch and disables the route (fail closed); a well-formed response is only compared, never stored. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt, unreadableRouteIsDisabledByARecheck, recheckSkipsCancelledMarkets).",
       "approval": "pending (lead review)",
       "review": "New view call site in a loop (wave 3, w3mreg); reviewed per call site in the agent report."
+    },
+    {
+      "fingerprint": "2ca3ac22bb54ee99",
+      "check": "incorrect-equality",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._readSequencer(address,DebtEvaluation)",
+      "reason": "size == 160 compares the sequencer-uptime feed's full returndatasize() with the ABI length of latestRoundData() (five words): an answer that is not exactly 160 bytes is sequencerUnknown (SPEC-ORC-021, REQ-ORACLE-099, decision of 2026-11-11). Not a balance; Slither flags it because the same call passes block.timestamp. A feed cannot push past it: any other length only blocks borrowing and never pauses liquidation. Covered by TEST-275 (DebtOracle.SequencerAnswer: sequencerRequiresExactRound, oversizedSequencerAnswerBoundedCost).",
+      "approval": "pending (lead review)",
+      "review": "Matches group K (strict equality on an ABI-decoded length or word, flagged through block.timestamp taint); left for the lead's per-call-site review of the changed sequencer read."
     }
   ]
 }

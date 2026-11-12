@@ -130,23 +130,33 @@ abstract contract DebtOracleReads is DebtOracleStorage {
     }
 
     /// @dev A `latestRoundData()` or `getRoundData()` return (five words): round identifiers within `uint80`, an
-    /// `updatedAt` below `2^64`; `startedAt` is returned unchecked.
-    /// @custom:spec REQ-ORACLE-001, SPEC-ORC-014
+    /// `updatedAt` below `2^64`; `startedAt` is returned unchecked. `size` is the full `returndatasize()`: a price read
+    /// decodes the first five words of a longer answer, the sequencer read (`SPEC-ORC-021`) requires exactly 160 bytes.
+    /// @custom:spec REQ-ORACLE-001, SPEC-ORC-014, SPEC-ORC-021
     function _readRound(
         address feed,
         bytes memory data
-    ) internal view returns (bool ok, uint80 roundId, int256 answer, uint256 startedAt, uint64 updatedAt) {
-        (bool s,, uint256[] memory w) = _call(feed, FEED_CALL_GAS, data, 5);
-        if (!s || w.length < 5 || w[0] > type(uint80).max || w[4] > type(uint80).max || w[3] > type(uint64).max) {
-            return (false, 0, 0, 0, 0);
+    )
+        internal
+        view
+        returns (bool ok, uint80 roundId, int256 answer, uint256 startedAt, uint64 updatedAt, uint256 size)
+    {
+        uint256[] memory w;
+        (ok, size, w) = _call(feed, FEED_CALL_GAS, data, 5);
+        if (!ok || w.length < 5 || w[0] > type(uint80).max || w[4] > type(uint80).max || w[3] > type(uint64).max) {
+            return (false, 0, 0, 0, 0, size);
         }
-        return (true, SafeCast.toUint80(w[0]), _signed(w[1]), w[2], SafeCast.toUint64(w[3]));
+        return (true, SafeCast.toUint80(w[0]), _signed(w[1]), w[2], SafeCast.toUint64(w[3]), size);
     }
 
-    /// @dev `latestRoundData()` of a feed.
+    /// @dev `latestRoundData()` of a feed, with the full return size (`_readRound`).
     function _readLatest(
         address feed
-    ) internal view returns (bool ok, uint80 roundId, int256 answer, uint256 startedAt, uint64 updatedAt) {
+    )
+        internal
+        view
+        returns (bool ok, uint80 roundId, int256 answer, uint256 startedAt, uint64 updatedAt, uint256 size)
+    {
         return _readRound(feed, abi.encodeCall(IAggregatorV3.latestRoundData, ()));
     }
 
@@ -170,7 +180,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         bool oneLeg
     ) internal view {
         (bool okDec, uint8 dec) = _readDecimals(leg.feed);
-        (bool okRound, uint80 roundId, int256 answer,, uint64 updatedAt) = _readLatest(leg.feed);
+        (bool okRound, uint80 roundId, int256 answer,, uint64 updatedAt,) = _readLatest(leg.feed);
         if (!okDec || !okRound) {
             leg.status = ReadStatus.Error;
             return;

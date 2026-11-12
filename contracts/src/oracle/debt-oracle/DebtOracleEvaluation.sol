@@ -301,7 +301,8 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         return b > p ? RouteSlot.Alternate : RouteSlot.Primary;
     }
 
-    /// @dev Sequencer gate (`SPEC-ORC-021`, `REQ-ORACLE-099`); a failed `sequencer()` read is `sequencerUnknown`.
+    /// @dev Sequencer gate (`SPEC-ORC-021`, `REQ-ORACLE-099`); a failed `sequencer()` read, or an uptime answer that is
+    /// not exactly 160 bytes, is `sequencerUnknown`.
     /// @custom:spec SPEC-ORC-021, REQ-ORACLE-099, REQ-ORACLE-092
     function _readSequencer(
         address store,
@@ -321,9 +322,11 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
             bool readOk = false;
             int256 answer = 0;
             uint256 startedAt = 0;
-            if (feed != address(0)) (readOk,, answer, startedAt,) = _readLatest(feed);
-            (up, down, unknown, inGrace, ready) =
-                LPPriceMath.sequencerStatus(feed != address(0), readOk, answer, startedAt, block.timestamp, w[1]);
+            uint256 size = 0;
+            if (feed != address(0)) (readOk,, answer, startedAt,, size) = _readLatest(feed);
+            (up, down, unknown, inGrace, ready) = LPPriceMath.sequencerStatus(
+                feed != address(0), readOk && size == 160, answer, startedAt, block.timestamp, w[1]
+            );
             // In grace, startedAt <= now < 2^64 and the period fits 32 bits.
             if (inGrace) e.sequencerGraceEndsAt = SafeCast.toUint64(startedAt + w[1]);
             // A borrow also needs the served round newer than the restart (`_serve` ran first): a price from rounds
