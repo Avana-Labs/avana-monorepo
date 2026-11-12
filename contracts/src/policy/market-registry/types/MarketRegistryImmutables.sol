@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 /// @notice Implementation immutables of the MarketRegistry and of each of its logic contracts, all per chain.
 /// @dev One struct keeps the constructors within the EVM stack. Every field is non-zero; a change is an upgrade to an
 /// implementation built with new values, at the normal delay (REQ-CONFIG-005).
-/// @custom:spec REQ-CONFIG-005, REQ-MREG-020, Q-226, Q-313
+/// @custom:spec REQ-CONFIG-005, REQ-MREG-020, REQ-MREG-034, Q-226, Q-313
 struct MarketRegistryImmutables {
     // The chain's AvanaTimelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
     address timelock;
@@ -35,4 +35,7 @@ struct MarketRegistryImmutables {
     address flashLiquidator;
     // The audited standard Aave V4 Spoke implementation whose code hash every CDP Spoke's implementation must match.
     address standardSpokeImplementation;
+    // The most markets the registry ever lists (REQ-MREG-034): every ParameterStore re-check walks market IDs
+    // 1..marketCount, so this bounds that walk. Sized on a fork for the deployed code and re-stated by every upgrade.
+    uint256 maxMarketCount;
 }

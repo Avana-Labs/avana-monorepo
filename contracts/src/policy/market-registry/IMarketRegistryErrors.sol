@@ -178,4 +178,10 @@ interface IMarketRegistryErrors {
     /// @param account The grantee.
     /// @custom:spec REQ-MREG-005, Q-259
     error AdminRoleOnlyTimelock(bytes32 role, address account);
+
+    /// @notice A new market would take the registry past `MAX_MARKET_COUNT` listings; a relisting reuses its
+    /// identifier and is not counted again.
+    /// @param limit The registry's `MAX_MARKET_COUNT`.
+    /// @custom:spec REQ-MREG-034
+    error MarketCountLimit(uint256 limit);
 }

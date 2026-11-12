@@ -28,7 +28,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 /// @dev Reached only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first; see
 /// `IMarketRegistryLogic`. The one state-changing external call is the integration's `bindMarket` (REQ-VTOKEN-022),
 /// made to the registered, immutable LPVault of the market's AMM protocol; every other call is a view.
-/// @custom:spec REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-008, REQ-CONFIG-011, REQ-CONFIG-017, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-CONFIG-027, REQ-CONFIG-028, REQ-CONFIG-029, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-034, REQ-CONFIG-065, REQ-CONFIG-076, REQ-CONFIG-078, REQ-MREG-027, REQ-MREG-030, REQ-MREG-033
+/// @custom:spec REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-008, REQ-CONFIG-011, REQ-CONFIG-017, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-CONFIG-027, REQ-CONFIG-028, REQ-CONFIG-029, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-034, REQ-CONFIG-065, REQ-CONFIG-076, REQ-CONFIG-078, REQ-MREG-027, REQ-MREG-030, REQ-MREG-033, REQ-MREG-034
 // Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
 // implements; this contract inherits no piece, since each piece also declares functions another contract serves.
 // solhint-disable comprehensive-interface
@@ -112,7 +112,7 @@ contract MarketRegistryListingLogic is MarketRegistryMarketChecks, MarketRegistr
     }
 
     /// @notice Body of `listCollateralMarket`.
-    /// @custom:spec REQ-CONFIG-078, REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-011, REQ-CONFIG-028, REQ-CONFIG-029, REQ-CONFIG-030, REQ-CONFIG-031, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-034, REQ-CONFIG-035, REQ-CONFIG-037, REQ-CONFIG-076, REQ-MREG-030, REQ-MREG-033
+    /// @custom:spec REQ-MREG-034, REQ-CONFIG-078, REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-011, REQ-CONFIG-028, REQ-CONFIG-029, REQ-CONFIG-030, REQ-CONFIG-031, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-034, REQ-CONFIG-035, REQ-CONFIG-037, REQ-CONFIG-076, REQ-MREG-030, REQ-MREG-033
     function listCollateralMarket(
         MarketDef calldata def
     ) external returns (uint256 marketId) {
@@ -145,8 +145,9 @@ contract MarketRegistryListingLogic is MarketRegistryMarketChecks, MarketRegistr
         );
     }
 
-    /// @dev REQ-CONFIG-033, REQ-CONFIG-007, REQ-MREG-030: the Spoke, Hub and integration, the canonical pool keying
-    /// and shape, no live market on the key, token or LPOracle, the market identifier, and a debt reserve to settle in.
+    /// @dev REQ-CONFIG-033, REQ-CONFIG-007, REQ-MREG-030, REQ-MREG-034: the Spoke, Hub and integration, the canonical
+    /// pool keying and shape, no live market on the key, token or LPOracle, the market identifier within
+    /// `MAX_MARKET_COUNT`, and a debt reserve to settle in.
     function _preflight(
         MarketDef calldata def
     ) private view returns (address lpVault, bytes32 key, bool relisting, uint256 marketId) {
@@ -164,6 +165,9 @@ contract MarketRegistryListingLogic is MarketRegistryMarketChecks, MarketRegistr
                 || !_keyFree(l.marketOfLpOracle[def.lpOracle])
         ) revert DuplicateMarketKey();
         (marketId, relisting) = _resolveMarketId(def, key);
+        // REQ-MREG-034: a new identifier is `marketCount + 1`, so this bounds every walk over 1..marketCount; a
+        // relisting reuses an identifier at or below `marketCount` and adds nothing.
+        if (!relisting && marketId > _MAX_MARKET_COUNT) revert MarketCountLimit(_MAX_MARKET_COUNT);
         if (l.debtReserveIds[def.spoke].length == 0) revert ListingCheckFailed("settlementReserve");
     }
 

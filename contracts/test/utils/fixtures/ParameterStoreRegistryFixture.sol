@@ -63,6 +63,8 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
     uint32 internal constant BLOCK_TIME = 12;
     uint256 internal constant GHO_RESERVE = 0;
     uint256 internal constant GHO_ASSET = 0;
+    /// @dev The registry's market-count limit (REQ-MREG-034).
+    uint256 internal constant MAX_MARKETS = 64;
 
     MarketRegistry internal registry;
     IParameterStore internal store;
@@ -140,7 +142,8 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
             lpVaultSwap: address(lpVaultSwap),
             payoutEscrow: payoutEscrow,
             flashLiquidator: flashLiquidator,
-            standardSpokeImplementation: address(spokeImpl)
+            standardSpokeImplementation: address(spokeImpl),
+            maxMarketCount: MAX_MARKETS
         });
         MarketRegistryLogics memory l;
         l.hubs = address(new MarketRegistryHubsLogic(im));
@@ -212,6 +215,11 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         vm.startPrank(address(timelock));
         registry.recordHub(address(hub), RiskTier.Stable);
         registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
+        // The integration's position manager and factory, recorded and finalized (REQ-MREG-035).
+        address[] memory amm = new address[](2);
+        (amm[0], amm[1]) = (address(new RegistryTokenMock(18)), address(new RegistryTokenMock(18)));
+        registry.recordIntegrationContracts(V3, amm);
+        registry.finalizeIntegrationContracts(V3);
         registry.deployCdpSpoke(
             SpokeDef({
                 approved: false,

@@ -19,6 +19,9 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     RegistryHubMock internal hub2;
     address[3] internal spokes;
 
+    /// @dev This suite sets no route and checks the integration record from empty, so the world records nothing.
+    function _recordAmmContracts() internal override {}
+
     function setUp() public {
         _setUpWorld();
         hub2 = new RegistryHubMock();
@@ -83,7 +86,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
             sixteen[i] = seventeen[i];
         }
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, sixteen);
+        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, _recordKeyOf(V3), sixteen);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, sixteen);
         assertEq(registry.integrationContracts(V3).length, 16);

@@ -57,7 +57,8 @@ contract MarketRegistryHalmosTest is Test {
             lpVaultSwap: address(0x7207),
             payoutEscrow: address(0x7208),
             flashLiquidator: address(0x720A),
-            standardSpokeImplementation: address(0x7209)
+            standardSpokeImplementation: address(0x7209),
+            maxMarketCount: 1000
         });
         MarketRegistryLogics memory l;
         l.hubs = address(new MarketRegistryHubsLogic(im));

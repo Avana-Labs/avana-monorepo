@@ -1442,13 +1442,13 @@
       "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
     },
     {
-      "fingerprint": "d38f53c157ba2d8c",
+      "fingerprint": "06481a72f9bd8dc3",
       "check": "costly-loop",
-      "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
-      "function": "MarketRegistryHubsLogic.recordIntegrationContracts",
-      "reason": "Each recorded AMM contract is appended to the integration's list and marked protected (REQ-MREG-020); the loop runs over the call's list, at most _MAX_INTEGRATION_CONTRACTS = 16 entries (refused above), and only in a normal-delay timelock operation. Covered by TEST-229 (integrationContractsAreProtected).",
+      "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
+      "function": "MarketRegistryRoutesLogic.recordIntegrationContracts",
+      "reason": "Each recorded AMM contract is appended to the integration's list and marked protected (REQ-MREG-020, REQ-MREG-035); the loop runs over the call's list, at most _MAX_INTEGRATION_CONTRACTS = 16 entries (refused above), and only in a normal-delay timelock operation. Covered by TEST-229 (integrationContractsAreProtected).",
       "approval": "approved by pattern",
-      "review": "Pattern: bounded loops (at most 16 entries per timelock call)."
+      "review": "Pattern: bounded loops (at most 16 entries per timelock call). The body moved unchanged from MarketRegistryHubsLogic (former fingerprint d38f53c157ba2d8c) in wave 3."
     },
     {
       "fingerprint": "bca49a3b832de416",
@@ -1457,6 +1457,24 @@
       "reason": "IMarketRegistryApprovals is used by @inheritdoc NatSpec on approveSpokeCodeHash and recordIntegrationContracts, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "approved by pattern",
       "review": "Pattern: unused import for @inheritdoc (same as the approved MarketRegistry entries 6f57d59ad2766f2c and 5824c7d246ea2773)."
+    },
+    {
+      "fingerprint": "609d912f16a88302",
+      "check": "costly-loop",
+      "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
+      "function": "MarketRegistryRoutesLogic._recheckRoutes",
+      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record (outer loop over market identifiers 1..marketCount): storage reads per iteration and one write (`active = false`) per route it disables. Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the route slots governance set, and runs only inside a normal-delay timelock call. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt).",
+      "approval": "approved by pattern",
+      "review": "Pattern: bounded loops (bounded by MAX_MARKET_COUNT and timelock-set route slots)."
+    },
+    {
+      "fingerprint": "10283cd6cb3c7259",
+      "check": "costly-loop",
+      "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
+      "function": "MarketRegistryRoutesLogic._recheckRoutes",
+      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record (inner loop over the market's listed route slots): storage reads per iteration and one write (`active = false`) per route it disables. Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the route slots governance set, and runs only inside a normal-delay timelock call. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt).",
+      "approval": "approved by pattern",
+      "review": "Pattern: bounded loops (bounded by MAX_MARKET_COUNT and timelock-set route slots)."
     }
   ]
 }

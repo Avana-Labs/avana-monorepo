@@ -16,7 +16,7 @@ pragma solidity 0.8.28;
 /// the Spoke changes that slot, so `spokeImplementationStatus` reports it until `deployCdpSpoke` re-approves the
 /// Spoke with an approved hash. The read trusts the approved implementation's `extSload`; a replacement written to
 /// hide itself would be an Aave governance compromise, which monitoring of the proxy's `Upgraded` event covers.
-/// @custom:spec REQ-CONFIG-074, REQ-CONFIG-016, REQ-MREG-020, REQ-CONFIG-040, REQ-RISK-088, Q-309
+/// @custom:spec REQ-CONFIG-074, REQ-CONFIG-016, REQ-MREG-020, REQ-MREG-035, REQ-CONFIG-040, REQ-RISK-088, Q-309
 interface IMarketRegistryApprovals {
     /// @notice A Spoke implementation code hash was approved.
     /// @param codeHash The approved hash.
@@ -25,9 +25,18 @@ interface IMarketRegistryApprovals {
 
     /// @notice AMM protocol contracts of an integration were recorded.
     /// @param integrationId The integration.
+    /// @param recordKey The record's key: `keccak256(abi.encode(chainid, lpVault, lpVault.codehash, AMM_PROTOCOL(),
+    /// poolKeying))` (REQ-MREG-035).
     /// @param contracts The contracts added.
-    /// @custom:spec REQ-MREG-020, REQ-CONFIG-040
-    event IntegrationContractsRecorded(uint32 indexed integrationId, address[] contracts);
+    /// @custom:spec REQ-MREG-020, REQ-MREG-035, REQ-CONFIG-040
+    event IntegrationContractsRecorded(uint32 indexed integrationId, bytes32 indexed recordKey, address[] contracts);
+
+    /// @notice The AMM protocol contracts of an integration were declared complete; its settlement routes can be set.
+    /// @param integrationId The integration.
+    /// @param recordKey The record's key (REQ-MREG-035).
+    /// @param count How many contracts the record holds.
+    /// @custom:spec REQ-MREG-035, REQ-CONFIG-040
+    event IntegrationContractsFinalized(uint32 indexed integrationId, bytes32 indexed recordKey, uint256 count);
 
     /// @notice The hash is 0, the hash of empty code, or already approved.
     /// @param codeHash The refused hash.
@@ -78,18 +87,32 @@ interface IMarketRegistryApprovals {
     /// singleton of a protocol keyed by pool identifier.
     /// @dev `APPLICATION_ADMIN`, normal delay. Reverts `InvalidIntegration(integrationId)` for an unregistered
     /// integration, an empty list or one of more than 16 addresses, an address that is 0, has no code or is already
-    /// recorded for the integration.
-    /// Adds each address to the protected set of the address freeze (REQ-MREG-020); for a market keyed by pool
-    /// identifier, a route depending on any of them is refused, because a dependency list of addresses cannot show
-    /// that the route avoids the market's own pool inside the singleton (REQ-CONFIG-040). Records are never removed.
-    /// Emits `IntegrationContractsRecorded`. Example: Uniswap v3 records its NonfungiblePositionManager and factory;
-    /// Slipstream records the four NPM and factory generations.
+    /// recorded for the integration, and when the integration's record key (chain, LPVault address, LPVault code hash,
+    /// AMM protocol tag and pool keying) differs from the key written by the first call (REQ-MREG-035).
+    /// Adds each address to the protected set of the address freeze at once (REQ-MREG-020); no route depending on any
+    /// of them is accepted (REQ-CONFIG-040). Once the record is finalized, an addition also re-checks every route slot
+    /// set for the integration's markets that are not Cancelled or Closed: an active route whose `dependencies()` names
+    /// an added address, or cannot be read, is disabled and emits `RouteDisabled`, so a newly protected address leaves
+    /// no approved unsafe route usable. Records are never removed. Emits `IntegrationContractsRecorded`. Example:
+    /// Uniswap v3 records its NonfungiblePositionManager and factory; Slipstream records the four NPM and factory
+    /// generations.
     /// @param integrationId The registered integration.
     /// @param contracts The contracts to add.
-    /// @custom:spec REQ-MREG-020, REQ-CONFIG-040
+    /// @custom:spec REQ-MREG-020, REQ-MREG-035, REQ-CONFIG-040
     function recordIntegrationContracts(
         uint32 integrationId,
         address[] calldata contracts
+    ) external;
+
+    /// @notice Declares an integration's record of AMM protocol contracts complete; until then no settlement route of
+    /// any of the integration's markets is accepted.
+    /// @dev `APPLICATION_ADMIN`, normal delay. Reverts `InvalidIntegration(integrationId)` for an unregistered
+    /// integration, an empty record, a record already finalized, or a record whose key no longer matches the
+    /// integration (another chain, or another LPVault code). Emits `IntegrationContractsFinalized` (REQ-MREG-035).
+    /// @param integrationId The registered integration.
+    /// @custom:spec REQ-MREG-035, REQ-CONFIG-040
+    function finalizeIntegrationContracts(
+        uint32 integrationId
     ) external;
 
     /// @notice The AMM protocol contracts recorded for an integration, in recording order.

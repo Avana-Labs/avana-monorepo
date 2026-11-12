@@ -25,7 +25,7 @@ import {RiskTier} from "./types/RiskTier.sol";
 import {SpokeDef} from "./types/SpokeDef.sol";
 
 /// @title MarketRegistryHubsLogic
-/// @notice Bodies of the Hub, AMM-integration, Coverage Spoke, cross-Hub line, flash source, CDP Spoke and debt
+/// @notice Bodies of the Hub, AMM-integration registration, Coverage Spoke, cross-Hub line, flash source, CDP Spoke and debt
 /// reserve writes of the MarketRegistry. Normal delay.
 /// @dev Reached only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first; see
 /// `IMarketRegistryLogic`. Every external call is a view: these bodies read Aave, the integration, the factory, the
@@ -37,9 +37,6 @@ import {SpokeDef} from "./types/SpokeDef.sol";
 // Every external call made here is a view (STATICCALL), so none can re-enter the registry or reorder its events.
 // forge-lint: disable-start(reentrancy-events)
 contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLogic {
-    /// @dev Most AMM contracts one `recordIntegrationContracts` call records (Slipstream's four generations need 8).
-    uint256 internal constant _MAX_INTEGRATION_CONTRACTS = 16;
-
     /// @notice Fixes the implementation immutables; they must equal the MarketRegistry's.
     /// @param im The per-chain Avana addresses.
     /// @custom:spec REQ-CONFIG-005
@@ -179,32 +176,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         }
         _s().approvedSpokeCodeHash[codeHash] = true;
         emit IMarketRegistryApprovals.SpokeCodeHashApproved(codeHash);
-    }
-
-    /// @notice Body of `recordIntegrationContracts`.
-    /// @custom:spec REQ-MREG-020, REQ-CONFIG-040
-    function recordIntegrationContracts(
-        uint32 integrationId,
-        address[] calldata contracts
-    ) external {
-        _onlyDelegated();
-        Layout storage l = _s();
-        address[] storage list = l.integrationContracts[integrationId];
-        uint256 n = contracts.length;
-        uint256 bad =
-            n == 0 || n > _MAX_INTEGRATION_CONTRACTS || l.integrationLpVault[integrationId] == address(0) ? 1 : 0;
-        // A bad entry ends the loop and reverts the whole call after it, so no partial record survives.
-        for (uint256 i = 0; i < n && bad == 0; ++i) {
-            address c = contracts[i];
-            if (c == address(0) || c.code.length == 0 || _listed(list, c)) {
-                bad = 1;
-            } else {
-                list.push(c);
-                l.knownIntegrationContract[c] = true;
-            }
-        }
-        if (bad != 0) revert IMarketRegistryHubs.InvalidIntegration(integrationId);
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(integrationId, contracts);
     }
 
     /// @notice Body of `deployCdpSpoke`: records the standard Aave V4 Spoke that the Aave payload deployed with
@@ -359,17 +330,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
                 || address(uint160(uint256(IAaveV4ExtSload(spoke).extSload(_IMPLEMENTATION_SLOT)))) != impl
                 || !_spokeHashApproved(impl.codehash)
         ) revert InvalidSpoke(spoke);
-    }
-
-    /// @dev True when `list` holds `a`.
-    function _listed(
-        address[] storage list,
-        address a
-    ) private view returns (bool) {
-        for (uint256 i = 0; i < list.length; ++i) {
-            if (list[i] == a) return true;
-        }
-        return false;
     }
 
     /// @dev Removes `id` from `ids`, keeping the order of the others.

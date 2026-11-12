@@ -313,18 +313,26 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         registry.useStandbyRoute(t, RouteSlot.Primary);
     }
 
-    // TEST-054 verifies: REQ-CONFIG-040, REQ-CONFIG-060
-    // Sources: MarketRegistry review 2026-11-10 finding 5 (a market keyed by pool address is checked against its own pool)
-    function test_TEST_054_addressKeyedMarketIgnoresRecordedSingleton() public {
+    // TEST-054 verifies: REQ-CONFIG-040, REQ-CONFIG-060, REQ-MREG-035
+    // Sources: decisions of 2026-11-11 (a recorded AMM contract is never a route dependency, whatever the keying)
+    // A market keyed by pool address refuses a route through any AMM contract recorded for its integration, as an
+    // identifier-keyed market does; the world's record holds the position manager and factory.
+    function test_TEST_054_addressKeyedMarketRefusesRecordedContract() public {
         address singleton = address(new RegistryTokenMock(0));
         address[] memory amm = new address[](1);
         amm[0] = singleton;
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, amm);
         RegistryRouteMock viaSingleton = _routeWithDeps(address(usdc), address(gho), singleton, makeAddr("wrapper"));
-        _set(address(usdc), address(gho), 0, address(viaSingleton));
+        _expectInvalidRoute(address(usdc), address(gho), 0, address(viaSingleton));
+        RegistryRouteMock viaNpm = _routeWithDeps(address(usdc), address(gho), makeAddr("uni"), ammPositionManager);
+        _expectInvalidRoute(address(usdc), address(gho), 0, address(viaNpm));
+        RegistryRouteMock viaFactory = _routeWithDeps(address(usdc), address(gho), ammFactory, makeAddr("uni"));
+        _expectInvalidRoute(address(usdc), address(gho), 1, address(viaFactory));
+        RegistryRouteMock elsewhere = _routeWithDeps(address(usdc), address(gho), makeAddr("curve"), makeAddr("uni"));
+        _set(address(usdc), address(gho), 0, address(elsewhere));
         (address r,) = registry.getRoute(id, address(usdc), address(gho), 0);
-        assertEq(r, address(viaSingleton));
+        assertEq(r, address(elsewhere));
     }
 
     // TEST-231 verifies: REQ-MREG-028, REQ-CONFIG-021, ATTACK-140
@@ -353,6 +361,9 @@ contract MarketRegistryRoutesIdKeyedUnitTest is MarketRegistryFixture {
         _setUpWorld();
     }
 
+    /// @dev The test records the singleton itself, so the world records nothing.
+    function _recordAmmContracts() internal override {}
+
     function _beforeIntegrationRegistered() internal override {
         lpVault.setKeying(PoolKeying.Id, ShapeKind.FullPool);
     }
@@ -368,7 +379,7 @@ contract MarketRegistryRoutesIdKeyedUnitTest is MarketRegistryFixture {
         return new RegistryRouteMock(tokenIn, tokenOut, address(lpVaultSwap), deps);
     }
 
-    // TEST-054 verifies: REQ-CONFIG-040, REQ-CONFIG-060, REQ-MREG-020
+    // TEST-054 verifies: REQ-CONFIG-040, REQ-CONFIG-060, REQ-MREG-020, REQ-MREG-035
     // Sources: MarketRegistry review 2026-11-10 finding 5 (own-pool check of a market keyed by pool id)
     function test_TEST_054_idKeyedMarketRefusesItsSingleton() public {
         uint256 idm = registry.marketCount() + 1;
@@ -394,6 +405,12 @@ contract MarketRegistryRoutesIdKeyedUnitTest is MarketRegistryFixture {
         amm[0] = singleton;
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, amm);
+        // Recorded but not finalized: still refused (REQ-MREG-035).
+        vm.prank(address(timelock));
+        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        registry.setRoute(idm, address(usdc), address(gho), 0, address(elsewhere));
+        vm.prank(address(timelock));
+        registry.finalizeIntegrationContracts(V3);
         // A route through the singleton cannot show it avoids the market's own pool id.
         vm.prank(address(timelock));
         vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);

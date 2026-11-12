@@ -2085,6 +2085,15 @@
       "reason": "spokeImplementationStatus returns (implementation, codeHash, current); the drift check needs only `current`, which the MarketRegistry computes from the same implementation address and code hash (REQ-ADAPTER-063, REQ-RISK-088); the address and hash are for monitoring. Covered by TEST-182 (implementationBoundByCodeHash, unreadableImplementationIsDrift, realSpokeUpgradeIsDrift) and PROP-078 (check_PROP_078_implementationNotCurrentIsDrift).",
       "approval": "approved by pattern",
       "review": "M"
+    },
+    {
+      "fingerprint": "376011523c1bc847",
+      "check": "calls-loop",
+      "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
+      "function": "MarketRegistryRoutesLogic._routeNamesAny(address,address[])",
+      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record: for each route slot ever set on the integration's markets (not Cancelled or Closed), one try/catch call to the governance-approved route's `dependencies()` (a view, so STATICCALL). Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the slots governance set, and runs only inside a normal-delay timelock call. A reverting, short or undecodable response lands in the catch and disables the route (fail closed); a well-formed response is only compared, never stored. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt, unreadableRouteIsDisabledByARecheck, recheckSkipsCancelledMarkets).",
+      "approval": "pending (lead review)",
+      "review": "New view call site in a loop (wave 3, w3mreg); reviewed per call site in the agent report."
     }
   ]
 }

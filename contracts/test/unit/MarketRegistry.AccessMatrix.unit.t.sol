@@ -55,7 +55,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         address[] memory one = new address[](1);
         one[0] = address(this);
         MarketDef memory def = _marketDef(vt, address(0));
-        w = new Write[](40);
+        w = new Write[](41);
         w[0] = Write("recordHub", abi.encodeCall(registry.recordHub, (alice, RiskTier.Stable)), ADMIN);
         w[1] = Write("registerIntegration", abi.encodeCall(registry.registerIntegration, (2, alice, bob)), ADMIN);
         w[2] = Write("setCoverageSpoke", abi.encodeCall(registry.setCoverageSpoke, (h, alice, bob)), ADMIN);
@@ -115,6 +115,8 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         w[37] = Write("cancelStandbySwitch", abi.encodeCall(registry.cancelStandbySwitch, (address(usdc))), EXECUTOR);
         w[38] = Write("recordBreach", abi.encodeCall(registry.recordBreach, (bytes32(marketId), 8)), RISK);
         w[39] = Write("syncDrawCap", abi.encodeCall(registry.syncDrawCap, (sp, 0)), ANYONE);
+        w[40] =
+            Write("finalizeIntegrationContracts", abi.encodeCall(registry.finalizeIntegrationContracts, (V3)), ADMIN);
     }
 
     function _holdsAdmin(

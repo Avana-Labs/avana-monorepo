@@ -106,7 +106,8 @@ contract MarketRegistryProperties {
             lpVaultSwap: address(0xB008),
             payoutEscrow: address(0xB009),
             flashLiquidator: address(0xB00B),
-            standardSpokeImplementation: address(0xB00A)
+            standardSpokeImplementation: address(0xB00A),
+            maxMarketCount: 1000
         });
         // Only the safety logic is exercised in full. The hubs logic is a harness copy of `recordHub` on the same storage
         // layout and the other four are identity stubs, which keeps the harness's initcode within the EIP-3860 limit;

@@ -10,10 +10,10 @@
  * Storage: ERC-7201 namespace `avana.storage.MarketRegistry` (2.8 Storage); the rules read it only through the
  * contract's views (`pauseState(hub)`, `pauseReason(hub)`, `isFrozenAddress`, `freezesInWindow`, `hasRole`, `getMarket`,
  * `getSpoke`, `getDebtReserve`, `marketOfVaultToken`, `marketOfLpOracle`, `hubTier`, `integrationIdOf`,
- * `flashSource`), so no storage extension is needed.
+ * `flashSource`, `integrationContracts`), so no storage extension is needed.
  *
- * Summaries: LPVaultSwap's keeper views (`isApprovedKeeper`, `activeKeeperCount`, `KEEPER_FLOOR`) and the AaveAdapter's
- * `walletOf` are uninterpreted functions, fixed for the call; the Hub's per-Spoke owed and deficit reads are
+ * Summaries: LPVaultSwap's keeper views (`isApprovedKeeper`, `activeKeeperCount`, `KEEPER_FLOOR`), the AaveAdapter's
+ * `walletOf` and the flash source's `LENDER()` are uninterpreted functions, fixed for the call; the Hub's per-Spoke owed and deficit reads are
  * uninterpreted functions of (hub, assetId, spoke); the RiskModule's `checkAaveConfig` is recorded (its own rule, that
  * it returns only when the Spoke's Aave configuration matches the registry, is proved in RiskModule.spec, PROP-061);
  * every other external read made while listing or activating is NONDET. OpenZeppelin
@@ -52,6 +52,7 @@ methods {
     function hubTier(address) external returns (MarketRegistry.RiskTier) envfree;
     function integrationIdOf(address) external returns (uint32) envfree;
     function flashSource() external returns (address) envfree;
+    function integrationContracts(uint32) external returns (address[]) envfree;
     function marketOfVaultToken(address) external returns (uint256) envfree;
     function marketOfLpOracle(address) external returns (uint256) envfree;
     function initialize(address) external;
@@ -91,6 +92,9 @@ methods {
     function _.activeKeeperCount() external => activeKeepers() expect uint256;
     function _.KEEPER_FLOOR() external => keeperFloor() expect uint256;
     function _.walletOf(address p) external => adapterWalletOf(p) expect address;
+    // The flash source's lender: an immutable of the source (AaveV3FlashSource), so a function of the source alone,
+    // fixed for the rule. The registry reads it at a freeze (protected set), at recordHub and at setFlashSource.
+    function _.LENDER() external => flashLender(calledContract) expect address;
 
     // Hub and Spoke reads of the debt-reserve set
     function _.getSpokeTotalOwed(uint256 a, address s) external => hubSpokeOwed(calledContract, a, s) expect uint256;
@@ -117,6 +121,7 @@ ghost keeperApproved(address) returns bool;
 ghost activeKeepers() returns uint256;
 ghost keeperFloor() returns uint256;
 ghost adapterWalletOf(address) returns address;
+ghost flashLender(address) returns address;
 ghost hubSpokeOwed(address, uint256, address) returns uint256;
 ghost hubSpokeDeficit(address, uint256, address) returns uint256;
 
@@ -132,19 +137,30 @@ definition isPauseGuardOrAdmin(address a) returns bool = hasRole(PAUSE_GUARDIAN(
 definition isFreezeGuardOrAdmin(address a) returns bool = hasRole(FREEZE_GUARDIAN(), a) || hasRole(APP_ADMIN(), a);
 
 // The fixed part of the protected set of REQ-MREG-020 (with the public flash liquidation helper) together with the parts
-// the registry's views expose: recorded Hubs, registered LPVaults, the flash source, live vault tokens and LPOracles
-// (market not Cancelled), approved Spokes and registered proxies.
-function isProtected(address a) returns bool {
+// the registry's views expose: recorded Hubs, registered LPVaults, the flash source and its `LENDER()` (read live; a
+// registry with no source protects no lender), live vault tokens and LPOracles (market not Cancelled), approved Spokes,
+// registered proxies, and every AMM contract recorded for an integration. A rule names the recorded contract through an
+// arbitrary (integration, index) pair, so its assertion covers every entry of every integration's list.
+function isProtected(address a, uint32 iid, uint256 idx) returns bool {
     uint256 mv = marketOfVaultToken(a);
     uint256 mo = marketOfLpOracle(a);
     bool liveVaultToken = mv != 0 && getMarket(mv).status != MarketRegistry.MarketStatus.Cancelled;
     bool liveOracle = mo != 0 && getMarket(mo).status != MarketRegistry.MarketStatus.Cancelled;
+    address fs = flashSource();
+    bool lender = fs != 0 && a == flashLender(fs);
     return a == TIMELOCK() || a == AAVE_GOVERNANCE_EXECUTOR() || a == AAVE_ADAPTER() || a == COLLATERALIZATION()
         || a == LP_VAULT_SWAP() || a == PROXY_MANAGER() || a == currentContract
         || a == PARAMETER_STORE() || a == RISK_MODULE() || a == PAYOUT_ESCROW()
-        || a == LOCK() || a == VAULT_TOKEN_FACTORY() || a == FLASH_LIQUIDATOR() || a == flashSource()
+        || a == LOCK() || a == VAULT_TOKEN_FACTORY() || a == FLASH_LIQUIDATOR() || a == fs || lender
         || hubTier(a) != MarketRegistry.RiskTier.None || integrationIdOf(a) != 0
-        || liveVaultToken || liveOracle || getSpoke(a).approved || adapterWalletOf(a) != 0;
+        || liveVaultToken || liveOracle || getSpoke(a).approved || adapterWalletOf(a) != 0
+        || isRecordedIntegrationContract(a, iid, idx);
+}
+
+// True when `a` is entry `idx` of the AMM contracts recorded for integration `iid`.
+function isRecordedIntegrationContract(address a, uint32 iid, uint256 idx) returns bool {
+    address[] recorded = integrationContracts(iid);
+    return idx < recorded.length && recorded[idx] == a;
 }
 
 definition isUpgrade(method f) returns bool = f.selector == sig:upgradeToAndCall(address, bytes).selector;
@@ -317,11 +333,11 @@ rule freezeAllCanFreezeAHub(address hub) {
 // ---------------------------------------------------------------------------------------------------------------------
 
 // PROP-071 verifies: INV-085, Q-242
-rule freezeAddressGates(address a) {
+rule freezeAddressGates(address a, uint32 iid, uint256 idx) {
     env e;
     safetyLogicSharesImmutables();
     bool frozenBefore = isFrozenAddress(a);
-    bool protectedBefore = isProtected(a);
+    bool protectedBefore = isProtected(a, iid, idx);
     mathint used = freezesInWindow(e, e.msg.sender);
 
     freezeAddress(e, a);
@@ -368,12 +384,12 @@ rule freezeLimitIsTwenty() {
 // frozen before the proxy is deployed) stays frozen until `unfreezeAddress`, so the rule constrains
 // the call, not the state.
 // PROP-071 verifies: INV-085, Q-242
-rule noCallFreezesAProtectedAddress(method f, address a) filtered { f -> !f.isView && !isUpgrade(f) && resolvedEntry(f) } {
+rule noCallFreezesAProtectedAddress(method f, address a, uint32 iid, uint256 idx) filtered { f -> !f.isView && !isUpgrade(f) && resolvedEntry(f) } {
     env e;
     safetyLogicSharesImmutables();
     calldataarg args;
     require !isFrozenAddress(a);
-    bool protectedBefore = isProtected(a);
+    bool protectedBefore = isProtected(a, iid, idx);
 
     f(e, args);
 

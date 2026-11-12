@@ -30,7 +30,7 @@ abstract contract MarketRegistryRouter is AccessControlUpgradeable, MarketRegist
     address internal immutable _LISTING_LOGIC;
     /// @dev Market activation, cancellation and offboarding.
     address internal immutable _ACTIVATION_LOGIC;
-    /// @dev Swap routes and the standby switch.
+    /// @dev Swap routes, the AMM integration contract records and the standby switch.
     address internal immutable _ROUTES_LOGIC;
     /// @dev Pause state and reason, address freeze and breakers.
     address internal immutable _SAFETY_LOGIC;
@@ -143,6 +143,12 @@ abstract contract MarketRegistryRouter is AccessControlUpgradeable, MarketRegist
     /// @custom:spec REQ-CONFIG-005, REQ-CONFIG-074
     function STANDARD_SPOKE_IMPLEMENTATION() external view override returns (address implementation) {
         implementation = _STANDARD_SPOKE_IMPLEMENTATION;
+    }
+
+    /// @inheritdoc IMarketRegistryViews
+    /// @custom:spec REQ-MREG-034
+    function MAX_MARKET_COUNT() external view override returns (uint256 limit) {
+        limit = _MAX_MARKET_COUNT;
     }
 
     /// @dev The activation logic serves the per-market reads of `spokeSettingsDrift`.

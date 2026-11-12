@@ -39,7 +39,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     function _bodies() internal view returns (Body[] memory b) {
         address[] memory one = new address[](1);
         one[0] = address(gho);
-        b = new Body[](38);
+        b = new Body[](39);
         uint256 k = 0;
         // Hubs logic.
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordHub, (alice, RiskTier.Stable)));
@@ -50,7 +50,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setCrossHubLinesEnabled, (true)));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setFlashSource, (address(flash))));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.approveSpokeCodeHash, (keccak256("h"))));
-        b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordIntegrationContracts, (V3, one)));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.deployCdpSpoke, (_spokeDef())));
         b[k++] =
             Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.enableDebtReserve, (address(spoke), _ghoDef())));
@@ -85,6 +84,8 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         );
         b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.cancelStandbySwitch, (address(usdc))));
         b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.restorePriceRoute, (address(usdc))));
+        b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.recordIntegrationContracts, (V3, one)));
+        b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.finalizeIntegrationContracts, (V3)));
         // Safety logic.
         b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.freeze, (address(hub))));
         b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.freezeAll, ()));
@@ -227,15 +228,16 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         if (i == 10) x.payoutEscrow = address(0);
         if (i == 11) x.flashLiquidator = address(0);
         if (i == 12) x.standardSpokeImplementation = address(0);
+        if (i == 13) x.maxMarketCount = 0;
     }
 
-    // TEST-168 verifies: REQ-CONFIG-005
-    // Fail closed at construction: each of the 13 per-chain addresses at zero is refused by every logic contract and
-    // by the registry implementation.
+    // TEST-168 verifies: REQ-CONFIG-005, REQ-MREG-034
+    // Fail closed at construction: each of the 13 per-chain addresses at zero, and a market-count limit of 0, is refused
+    // by every logic contract and by the registry implementation.
     function test_TEST_168_everyZeroImmutableRefused() public {
         bytes memory err =
             abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("immutables"));
-        for (uint256 i = 0; i < 13; ++i) {
+        for (uint256 i = 0; i < 14; ++i) {
             MarketRegistryImmutables memory x = _zeroField(i);
             vm.expectRevert(err);
             new MarketRegistryHubsLogic(x);

@@ -124,8 +124,9 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         address v3Factory = address(new RegistryTokenMock(0));
         address[] memory list = new address[](2);
         (list[0], list[1]) = (nfpm, v3Factory);
-        // Nothing is recorded for the integration yet.
-        assertEq(registry.integrationContracts(V3).length, 0);
+        // The world recorded the integration's position manager and factory and finalized the record; an addition
+        // appends to it.
+        assertEq(registry.integrationContracts(V3).length, 2);
         // Only the admin records, for a registered integration, a non-empty list of new contracts.
         vm.prank(alice);
         vm.expectRevert(
@@ -143,13 +144,13 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         (dup[0], dup[1]) = (nfpm, nfpm);
         _expectBadIntegration(V3, dup);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, list);
+        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, _recordKeyOf(V3), list);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, list);
         address[] memory got = registry.integrationContracts(V3);
-        assertEq(got.length, 2);
-        assertEq(got[0], nfpm);
-        assertEq(got[1], v3Factory);
+        assertEq(got.length, 4);
+        assertEq(got[2], nfpm);
+        assertEq(got[3], v3Factory);
         _expectProtected(nfpm);
         _expectProtected(v3Factory);
         // Already recorded for the integration.
