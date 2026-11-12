@@ -60,12 +60,10 @@ contract LPOracleEchidnaTarget is LPOracleHarnessPokeLogic {
         return (e.state, e.served, uint256(_s().accepted.answer));
     }
 
-    function acceptedAt() external view returns (uint64) {
-        return _s().accepted.updatedAt;
-    }
-
-    function timers() external view returns (uint64 failedSince, uint64 disagreeSince) {
-        return (_s().failedSince, _s().disagreeSince);
+    /// @notice The failure and disagreement timers and the accepted price's timestamp, read in one call.
+    function timers() external view returns (uint64 failedSince, uint64 disagreeSince, uint64 acceptedAt) {
+        Layout storage $ = _s();
+        return ($.failedSince, $.disagreeSince, $.accepted.updatedAt);
     }
 }
 
@@ -127,7 +125,7 @@ contract LPOracleProperties {
         uint256[] memory k = new uint256[](2);
         (k[0], k[1]) = (1e18, 1e18);
         ORACLE.seed(address(STORE), address(REGISTRY), list, k);
-        lastAcceptedAt = ORACLE.acceptedAt();
+        (,, lastAcceptedAt) = ORACLE.timers();
     }
 
     function _feed() internal returns (OracleFeedMock f) {
@@ -153,12 +151,16 @@ contract LPOracleProperties {
         address second
     ) internal pure returns (TokenOracleConfig memory t) {
         t.token = token;
-        t.routes[0].legCount = 1;
-        t.routes[0].legs[0] = OracleLeg(primary, 8, 86_400, 1800, 25, 1, 1e12, 88_200, 88_200);
-        t.routes[1].legCount = 1;
-        t.routes[1].legs[0] = OracleLeg(alternate, 8, 86_400, 1800, 25, 1, 1e12, 88_200, 88_200);
+        (t.routes[0].legCount, t.routes[0].legs[0]) = (1, _leg(primary));
+        (t.routes[1].legCount, t.routes[1].legs[0]) = (1, _leg(alternate));
         t.feedAgreementToleranceBps = 150;
         t.secondSource = SecondSource(SecondSourceKind.OracleNetwork, second, bytes32(0), 88_200, 0, 100);
+    }
+
+    function _leg(
+        address feed
+    ) internal pure returns (OracleLeg memory) {
+        return OracleLeg(feed, 8, 86_400, 1800, 25, 1, 1e12, 88_200, 88_200);
     }
 
     function _one(
@@ -199,7 +201,8 @@ contract LPOracleProperties {
     }
 
     function property_acceptedTimestampNeverDecreases() external view returns (bool) {
-        return ORACLE.acceptedAt() >= lastAcceptedAt;
+        (,, uint64 acceptedAt) = ORACLE.timers();
+        return acceptedAt >= lastAcceptedAt;
     }
 
     // ─── Assertion entry points ───
@@ -235,11 +238,9 @@ contract LPOracleProperties {
 
     /// @notice `poke()` and its timer rules (`REQ-ORACLE-027`, `REQ-ORACLE-028`, `REQ-ORACLE-029`, `REQ-ORACLE-095`).
     function pokeAndCheck() external {
-        (uint64 failedBefore, uint64 disagreeBefore) = ORACLE.timers();
-        uint64 acceptedBefore = ORACLE.acceptedAt();
+        (uint64 failedBefore, uint64 disagreeBefore, uint64 acceptedBefore) = ORACLE.timers();
         PriceState state = ORACLE.pokeNow();
-        (uint64 failedAfter, uint64 disagreeAfter) = ORACLE.timers();
-        uint64 acceptedAfter = ORACLE.acceptedAt();
+        (uint64 failedAfter, uint64 disagreeAfter, uint64 acceptedAfter) = ORACLE.timers();
         assert(disagreeAfter == disagreeBefore || disagreeAfter == 0 || disagreeAfter == block.timestamp);
         assert(acceptedAfter >= acceptedBefore);
         if (acceptedAfter != acceptedBefore) assert(state == PriceState.Live);
