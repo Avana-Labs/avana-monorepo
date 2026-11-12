@@ -151,6 +151,7 @@ Each test name carries its row of 5.1 (`test_TEST_NNN_…`, `testFuzz_TEST_NNN_�
 |---|---|---|
 | `default` | everything except fork and differential; fuzz 1,000 runs with a fixed seed, invariant 64 runs × depth 64 | `forge test` |
 | `ci` | as default; fuzz 10,000 runs, invariant 10,000 runs × depth 100 (`TEST-007`) | `FOUNDRY_PROFILE=ci forge test` |
+| `lite` | as default, for the edit-and-rerun loop: optimizer off outside the via-IR files, no size limit, own `out-lite/` and `cache-lite/`; a full build in about 1.5 minutes, a rebuild after an edit in seconds. Gas, sizes and every gate use `default` | `FOUNDRY_PROFILE=lite forge test --match-path <suite>` |
 | `invariant` | `test/invariant/**` only, 2,000 runs × depth 400 for long histories (delays, grace periods, the oracle latch) | `FOUNDRY_PROFILE=invariant forge test` |
 | `differential` | `test/differential/**`, FFI on, 2,000 runs | `FOUNDRY_PROFILE=differential forge test` |
 | `fork` | `test/fork/**` at the blocks pinned in `test/utils/fixtures/ForkConstants.sol`, fuzz 256 runs, RPC responses cached per block in `~/.foundry/cache/rpc`; reads `RPC_MAINNET` and `RPC_BASE` | `FOUNDRY_PROFILE=fork forge test` |

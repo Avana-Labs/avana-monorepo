@@ -95,6 +95,16 @@ include_push_bytes = true
 shrink_run_limit = 5_000
 show_metrics = true
 
+[profile.lite]
+# Local iteration only (FOUNDRY_PROFILE=lite): the optimizer is off outside the via-IR compilation restrictions, so a
+# rebuild takes a fraction of the default time. Its own out/ and cache/ keep the default build warm when switching back.
+# No contract size limit here: unoptimized code is larger, and script/check-sizes.sh judges sizes on the default build.
+# Gas figures differ without the optimizer; gas tests, the gate, coverage, CI and every release build use the default.
+optimizer = false
+out = "out-lite"
+cache_path = "cache-lite"
+disable_code_size_limit = true
+
 [profile.ci]
 # Fresh seed per CI run (taken from the environment by the workflow) so coverage grows over time.
 [profile.ci.fuzz]

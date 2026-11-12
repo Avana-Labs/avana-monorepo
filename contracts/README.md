@@ -189,6 +189,7 @@ Size limits (`Q-240`): an implementation file holds at most 500 lines of code (l
 |---|---|---|---|
 | `default` | everything except `test/fork/**` and `test/differential/**` | fuzz 1,000 runs, fixed seed; invariant 64 runs × depth 64, `fail_on_revert = false` | `forge test` |
 | `ci` | as default | fuzz 10,000 runs; invariant 10,000 runs × depth 100 (`TEST-007`) | `FOUNDRY_PROFILE=ci forge test` |
+| `lite` | as default | for the edit-and-rerun loop: optimizer off outside the via-IR compilation restrictions, no contract size limit, its own `out-lite/` and `cache-lite/` so the default build stays warm; gas figures and sizes differ, so gas tests, `script/check-sizes.sh`, coverage and the gate use `default` | `FOUNDRY_PROFILE=lite forge test --match-path <suite>` |
 | `invariant` | `test/invariant/**` | 2,000 runs × depth 400 for long histories (timelock delays and the 14-day grace period, the LPOracle grace latch) | `FOUNDRY_PROFILE=invariant forge test` |
 | `fork` | `test/fork/**` | Ethereum and Base forks from `RPC_MAINNET` and `RPC_BASE` at the blocks pinned in `test/utils/fixtures/ForkConstants.sol`; fuzz 256 runs; RPC responses cached per block | `FOUNDRY_PROFILE=fork forge test` |
 | `differential` | `test/differential/**` | FFI on, 2,000 runs against the exact `fractions.Fraction` reference in `test/differential/reference/` (`TEST-037`) | `FOUNDRY_PROFILE=differential forge test` |
