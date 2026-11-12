@@ -1,12 +1,13 @@
 name: e2e-local
 
 # Local deployment rehearsal (deployments/README.md, stage 1): a fresh anvil node with Avana's own Aave V4, Uniswap v3,
-# Aerodrome Slipstream, test tokens, movable feeds and dozens of pools; then every Avana deploy step, the first two
-# timelock operations through the real AvanaTimelock, the release manifest produced and verified against the chain, the
-# keeper and the indexer started on it, and the scenario runner. contracts/script/e2e/e2e-local.sh records each step as
-# pass, fail or not-run; a not-run step (a missing tool, build or contract such as the concentrated-liquidity LPOracle)
-# is reported as a warning annotation and in the job summary, never as a pass, and fails the job only when
-# E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job. Runs nightly, on release tags and by hand.
+# Aerodrome Slipstream, an Aave V3 market, Multicall3, test tokens, Chainlink OCR2 feeds and dozens of pools; then every
+# Avana deploy step, the first two timelock operations through the real AvanaTimelock, the release manifest produced and
+# verified against the chain, the keeper and the indexer started on it, and the scenario runner.
+# contracts/script/e2e/e2e-local.sh records each step as pass, fail or not-run; a not-run step (a missing tool, build or
+# contract such as the concentrated-liquidity LPOracle) is reported as a warning annotation and in the job summary,
+# never as a pass, and fails the job only when E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job.
+# Runs nightly, on release tags and by hand.
 
 on:
   schedule:
@@ -61,7 +62,7 @@ jobs:
           forge soldeer install
           (cd .. && npm ci --ignore-scripts)
 
-      - name: Build (default, aave, univ3, slipstream-v1, slipstream-main)
+      - name: Build (default, aave and the test-network world)
         run: |
           forge build
           FOUNDRY_PROFILE=aave forge build
@@ -71,6 +72,8 @@ jobs:
           FOUNDRY_PROFILE=slipstream-main forge build
           FOUNDRY_PROFILE=aerodrome forge build
           FOUNDRY_PROFILE=aave-v3 forge build
+          FOUNDRY_PROFILE=chainlink-ocr2 forge build
+          FOUNDRY_PROFILE=chainlink-proxy forge build
 
       - name: Rehearsal
         id: e2e

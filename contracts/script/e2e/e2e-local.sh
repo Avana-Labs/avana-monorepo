@@ -11,8 +11,8 @@
 # Usage, from contracts/:   script/e2e/e2e-local.sh            (all steps)
 #                           E2E_STEPS="deploy manifest" script/e2e/e2e-local.sh
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
-# `forge build` (default profile), `FOUNDRY_PROFILE=aave forge build`, `FOUNDRY_PROFILE=univ3 forge build`,
-# `FOUNDRY_PROFILE=slipstream-v1 forge build` and `FOUNDRY_PROFILE=slipstream-main forge build`.
+# `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
+# the Chainlink OCR2 aggregator and proxy).
 # No key or RPC secret is used: anvil runs with --auto-impersonate and every script broadcasts with --unlocked.
 
 set -uo pipefail
@@ -44,7 +44,10 @@ for t in anvil forge cast node; do need_tool "$t" || MISSING="$MISSING tool:$t";
 need_file "$REPO/node_modules/viem" || MISSING="$MISSING npm-workspace(npm ci)"
 for a in out/AvanaTimelock.sol/AvanaTimelock.json out-aave/HubInstance.sol/HubInstance.json \
   out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json out-univ3-periphery/NonfungiblePositionManager.sol/NonfungiblePositionManager.json \
-  out-slipstream-v1/CLFactory.sol/CLFactory.json out-aerodrome/Voter.sol/Voter.json; do
+  out-slipstream-v1/CLFactory.sol/CLFactory.json out-aerodrome/Voter.sol/Voter.json \
+  out-aave-v3/AaveV3PoolBatch.sol/AaveV3PoolBatch.json \
+  out-chainlink-ocr2/AccessControlledOCR2Aggregator.sol/AccessControlledOCR2Aggregator.json \
+  out-chainlink-proxy/EACAggregatorProxy.sol/EACAggregatorProxy.json; do
   need_file "$a" || MISSING="$MISSING build:$a"
 done
 if [ -n "$MISSING" ]; then

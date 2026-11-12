@@ -25,7 +25,8 @@ build:
 build-aave:
 	FOUNDRY_PROFILE=aave forge build
 
-# Uniswap v3 and Aerodrome Slipstream (Solidity 0.7.6) for the test-network world of script/deploy/02_DeployWorld.
+# The test-network world of script/deploy/02_DeployWorld: Uniswap v3, Aerodrome Slipstream and Aerodrome, Aave V3, and
+# the Chainlink OCR2 aggregator and its EACAggregatorProxy (contracts/external/README.md).
 build-external:
 	FOUNDRY_PROFILE=univ3 forge build
 	FOUNDRY_PROFILE=univ3-periphery forge build
@@ -33,6 +34,8 @@ build-external:
 	FOUNDRY_PROFILE=slipstream-main forge build
 	FOUNDRY_PROFILE=aerodrome forge build
 	FOUNDRY_PROFILE=aave-v3 forge build
+	FOUNDRY_PROFILE=chainlink-ocr2 forge build
+	FOUNDRY_PROFILE=chainlink-proxy forge build
 
 # Local deployment rehearsal on a fresh anvil node (deployments/README.md); needs build, build-aave, build-external
 # and `npm ci` at the repository root. Prints and writes deployments-local/anvil/e2e-status.json.
