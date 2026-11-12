@@ -32,8 +32,17 @@ no_match_path = "test/{fork,differential}/**"
 fs_permissions = [
   { access = "read", path = "./out" },
   { access = "read", path = "./out-aave" },
+  { access = "read", path = "./out-univ3" },
+  { access = "read", path = "./out-univ3-periphery" },
+  { access = "read", path = "./out-aave-v3" },
+  { access = "read", path = "./out-aerodrome" },
+  { access = "read", path = "./out-chainlink-ocr2" },
+  { access = "read", path = "./out-chainlink-proxy" },
+  { access = "read", path = "./out-slipstream-v1" },
+  { access = "read", path = "./out-slipstream-main" },
   { access = "read", path = "../deployments" },
   { access = "read-write", path = "./deployments-local" },
+  { access = "read", path = "./script/deploy/config" },
 ]
 gas_reports = ["*"]
 # Collateralization is immutable and may not delegatecall (REQ-COLL-001), so it cannot be split into logic contracts
@@ -153,6 +162,149 @@ compilation_restrictions = [
   { paths = "dependencies/aave-v4-a3ef63e/src/hub/instances/HubInstance.sol", via_ir = true, optimizer_runs = 22_300 },
   { paths = "dependencies/aave-v4-a3ef63e/src/spoke/instances/SpokeInstance.sol", via_ir = true, optimizer_runs = 750 },
 ]
+
+[profile.univ3]
+# The pinned Uniswap v3 core release (5ea68a7: factory and pool) for local and test-network deployments
+# (deployments/README.md), built alone with Uniswap's settings (Solidity 0.7.6, istanbul, 800 runs, no metadata hash)
+# into out-univ3/. Built alone, the pool's creation code hashes to Uniswap's canonical POOL_INIT_CODE_HASH
+# 0xe34f199b…8b54, which the position manager and Avana's UniswapV3Integration use to derive pool addresses; compiled
+# in one job with other sources it does not (the hash moved to 0x664ea9b6…2c20 when the periphery shared the job).
+src = "dependencies/uniswap-v3-core-5ea68a7/contracts"
+test = "dependencies/uniswap-v3-core-5ea68a7/contracts/test"
+script = "dependencies/uniswap-v3-core-5ea68a7/contracts/test"
+out = "out-univ3"
+cache_path = "cache-univ3"
+solc_version = "0.7.6"
+evm_version = "istanbul"
+optimizer = true
+optimizer_runs = 800
+via_ir = false
+bytecode_hash = "none"
+cbor_metadata = true
+no_match_path = ""
+
+[profile.univ3-periphery]
+# The pinned Uniswap v3 periphery (24ccf01): NonfungiblePositionManager at Uniswap's 2,000 runs and SwapRouter, with
+# OpenZeppelin 3.4.2-solc-0.7 through a remapping scoped to the periphery folder (remappings.txt), into
+# out-univ3-periphery/. Scripts deploy from the artifacts with vm.getCode; nothing in src/ or test/ imports them.
+src = "external/univ3"
+test = "external/univ3"
+script = "external/univ3"
+out = "out-univ3-periphery"
+cache_path = "cache-univ3-periphery"
+solc_version = "0.7.6"
+evm_version = "istanbul"
+optimizer = true
+optimizer_runs = 1_000_000
+via_ir = false
+bytecode_hash = "none"
+cbor_metadata = true
+no_match_path = ""
+additional_compiler_profiles = [{ name = "npm", optimizer = true, via_ir = false, optimizer_runs = 2_000 }]
+compilation_restrictions = [
+  { paths = "dependencies/uniswap-v3-periphery-24ccf01/contracts/NonfungiblePositionManager.sol", optimizer_runs = 2_000 },
+]
+
+[profile.slipstream-v1]
+# Aerodrome Slipstream at tag v1.0.0 (37eead2), for local and test-network deployments only (deployments/README.md):
+# CLFactory, CLPool, NonfungiblePositionManager, SwapRouter and the gauge factory with Slipstream's settings (Solidity
+# 0.7.6, 200 runs, no metadata hash) into out-slipstream-v1/. OpenZeppelin 3.4 and ExcessivelySafeCall come through
+# remappings scoped to the Slipstream folder.
+src = "external/slipstream-v1"
+test = "external/slipstream-v1"
+script = "external/slipstream-v1"
+out = "out-slipstream-v1"
+cache_path = "cache-slipstream-v1"
+solc_version = "0.7.6"
+evm_version = "istanbul"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+bytecode_hash = "none"
+cbor_metadata = true
+no_match_path = ""
+
+[profile.slipstream-main]
+# Aerodrome Slipstream at main f8717fa (2026-04-10), built like slipstream-v1 into out-slipstream-main/.
+src = "external/slipstream-main"
+test = "external/slipstream-main"
+script = "external/slipstream-main"
+out = "out-slipstream-main"
+cache_path = "cache-slipstream-main"
+solc_version = "0.7.6"
+evm_version = "istanbul"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+bytecode_hash = "none"
+cbor_metadata = true
+no_match_path = ""
+
+[profile.aave-v3]
+# Aave V3 origin v3.7.0 (cff15de) for the test-network world's flash-loan lender (deployments/README.md), with its own
+# settings (Solidity 0.8.27, shanghai, 200 runs, no metadata hash) into out-aave-v3/. Its imports reach solidity-utils
+# (fdc69f9), OpenZeppelin upgradeable 5.1.0 (fa52531) and OpenZeppelin 5.1.0 through remappings scoped to those
+# folders (remappings.txt). Libraries are linked at deployment, as Aave's own scripts do.
+src = "dependencies/aave-v3-origin-3.7.0/src"
+test = "dependencies/aave-v3-origin-3.7.0/src/deployments"
+script = "dependencies/aave-v3-origin-3.7.0/src/deployments"
+out = "out-aave-v3"
+cache_path = "cache-aave-v3"
+solc_version = "0.8.27"
+evm_version = "shanghai"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+bytecode_hash = "none"
+cbor_metadata = true
+no_match_path = ""
+
+[profile.aerodrome]
+# Aerodrome contracts v1.0 (1e08fb9: Voter, VotingEscrow, FactoryRegistry, gauge and rewards factories, Minter, AERO)
+# for the test-network world, with Aerodrome's settings (Solidity 0.8.19, 200 runs) into out-aerodrome/; OpenZeppelin
+# 4.8.0 (7b3e7b7) through a remapping scoped to the Aerodrome folder.
+src = "external/aerodrome"
+test = "external/aerodrome"
+script = "external/aerodrome"
+out = "out-aerodrome"
+cache_path = "cache-aerodrome"
+solc_version = "0.8.19"
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+no_match_path = ""
+
+[profile.chainlink-ocr2]
+# Chainlink's OCR2 data-feed aggregator from libocr (199a6f1, contract2/: AccessControlledOCR2Aggregator,
+# SimpleWriteAccessController) for the test-network world's price feeds, Solidity 0.8.19 at 1,000 runs (at 1,000,000
+# runs AccessControlledOCR2Aggregator is 24,903 bytes, over EIP-170), into out-chainlink-ocr2/.
+src = "dependencies/libocr-199a6f1/contract2"
+test = "dependencies/libocr-199a6f1/contract2"
+script = "dependencies/libocr-199a6f1/contract2"
+out = "out-chainlink-ocr2"
+cache_path = "cache-chainlink-ocr2"
+solc_version = "0.8.19"
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 1_000
+via_ir = false
+no_match_path = ""
+
+[profile.chainlink-proxy]
+# Chainlink's EACAggregatorProxy from smartcontractkit/chainlink tag v2.10.0 (0fe6514, contracts/src/v0.6, vendored
+# file by file under external/chainlink-v2.10.0/ with its imports), Solidity 0.6.6, into out-chainlink-proxy/.
+src = "external/chainlink-v2.10.0/src/v0.6"
+test = "external/chainlink-v2.10.0/src/v0.6"
+script = "external/chainlink-v2.10.0/src/v0.6"
+out = "out-chainlink-proxy"
+cache_path = "cache-chainlink-proxy"
+solc_version = "0.6.6"
+evm_version = "istanbul"
+optimizer = true
+optimizer_runs = 1_000_000
+via_ir = false
+no_match_path = ""
 
 [profile.differential]
 # FFI differential fuzzing of the LPOracle against the `fractions.Fraction` reference in
@@ -336,3 +488,15 @@ aave-v4 = { version = "a3ef63e", git = "https://github.com/aave/aave-v4.git", re
 uniswap-v3-core = { version = "5ea68a7", git = "https://github.com/Uniswap/v3-core.git", rev = "5ea68a77cb541c6b3812df783be71ba8c081e25f" }
 uniswap-v3-periphery = { version = "24ccf01", git = "https://github.com/Uniswap/v3-periphery.git", rev = "24ccf014fe7f81d74a14c1689d6fdf123f280e45" }
 gho-core = { version = "c6335a0", git = "https://github.com/aave/gho-core.git", rev = "c6335a0bb9cba099960c5378b1ff0db190b8da8f" }
+# OpenZeppelin 3.4 for Solidity 0.7, used only by the univ3 and slipstream profiles (Uniswap v3 NonfungiblePositionManager
+# and Aerodrome Slipstream for local and test-network deployments); Avana's own build stays on OpenZeppelin 5.1.
+"openzeppelin-contracts-solc-0.7" = { version = "3.4.2", url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/3_4_2-solc-0_7_22-01-2024_13:13:06_contracts.zip" }
+slipstream = { version = "1.0.0", git = "https://github.com/aerodrome-finance/slipstream.git", rev = "37eead2c7e5302a204dec78bfa0775bbb8ff48a2" }
+slipstream-main = { version = "f8717fa", git = "https://github.com/aerodrome-finance/slipstream.git", rev = "f8717faaae6e6717db3c8e3850149c01a79c0603" }
+excessively-safe-call = { version = "81cd99c", git = "https://github.com/nomad-xyz/ExcessivelySafeCall.git", rev = "81cd99ce3e69117d665d7601c330ea03b97acce0" }
+aave-v3-origin = { version = "3.7.0", git = "https://github.com/aave-dao/aave-v3-origin.git", rev = "cff15de6d1271b0c800fc001f4aea4c263e8a597" }
+aerodrome-contracts = { version = "1.0", git = "https://github.com/aerodrome-finance/contracts.git", rev = "1e08fb9765ec7ccf5946cd4eb041bd25f76e872d" }
+aave-solidity-utils = { version = "fdc69f9", git = "https://github.com/aave-dao/solidity-utils.git", rev = "fdc69f984036585d508889147734902dc0c64bf3" }
+openzeppelin-contracts-aerodrome = { version = "7b3e7b7", git = "https://github.com/OpenZeppelin/openzeppelin-contracts.git", rev = "7b3e7b7055d6e1226d4920ca7d7c446c0c0bfff5" }
+openzeppelin-contracts-upgradeable-aave = { version = "fa52531", git = "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git", rev = "fa525310e45f91eb20a6d3baa2644be8e0adba31" }
+libocr = { version = "199a6f1", git = "https://github.com/smartcontractkit/libocr.git", rev = "199a6f17c59863999480e990c7c0b6ba7796ec92" }

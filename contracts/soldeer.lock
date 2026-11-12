@@ -15,10 +15,34 @@ checksum = "87854223d14941d6fda3d78d900217e79e25755ea5bc48beca035766fa6a4e7e"
 integrity = "826fb621339dcee4261f848b283ec86364743d3c289d61f621747d95e315215a"
 
 [[dependencies]]
+name = "aave-solidity-utils"
+version = "fdc69f9"
+git = "https://github.com/aave-dao/solidity-utils.git"
+rev = "fdc69f984036585d508889147734902dc0c64bf3"
+
+[[dependencies]]
+name = "aave-v3-origin"
+version = "3.7.0"
+git = "https://github.com/aave-dao/aave-v3-origin.git"
+rev = "cff15de6d1271b0c800fc001f4aea4c263e8a597"
+
+[[dependencies]]
 name = "aave-v4"
 version = "a3ef63e"
 git = "https://github.com/aave/aave-v4.git"
 rev = "a3ef63ea6415d25237a9775bf66e76e9993561c2"
+
+[[dependencies]]
+name = "aerodrome-contracts"
+version = "1.0"
+git = "https://github.com/aerodrome-finance/contracts.git"
+rev = "1e08fb9765ec7ccf5946cd4eb041bd25f76e872d"
+
+[[dependencies]]
+name = "excessively-safe-call"
+version = "81cd99c"
+git = "https://github.com/nomad-xyz/ExcessivelySafeCall.git"
+rev = "81cd99ce3e69117d665d7601c330ea03b97acce0"
 
 [[dependencies]]
 name = "forge-std"
@@ -38,6 +62,43 @@ name = "halmos-cheatcodes"
 version = "6da4e69"
 git = "https://github.com/a16z/halmos-cheatcodes.git"
 rev = "6da4e692c357ba6d641a2e677a28298cac9f76ab"
+
+[[dependencies]]
+name = "libocr"
+version = "199a6f1"
+git = "https://github.com/smartcontractkit/libocr.git"
+rev = "199a6f17c59863999480e990c7c0b6ba7796ec92"
+
+[[dependencies]]
+name = "openzeppelin-contracts-aerodrome"
+version = "7b3e7b7"
+git = "https://github.com/OpenZeppelin/openzeppelin-contracts.git"
+rev = "7b3e7b7055d6e1226d4920ca7d7c446c0c0bfff5"
+
+[[dependencies]]
+name = "openzeppelin-contracts-solc-0.7"
+version = "3.4.2"
+url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/3_4_2-solc-0_7_22-01-2024_13:13:06_contracts.zip"
+checksum = "81842c01d5b80f937a0b5594f8f2c0e6f5b6e3826cae80851f6df237ba07d0e9"
+integrity = "21282c5f3e54deec657bc38147d420a62de5327ec0918600eb05551e5a7b40a9"
+
+[[dependencies]]
+name = "openzeppelin-contracts-upgradeable-aave"
+version = "fa52531"
+git = "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git"
+rev = "fa525310e45f91eb20a6d3baa2644be8e0adba31"
+
+[[dependencies]]
+name = "slipstream"
+version = "1.0.0"
+git = "https://github.com/aerodrome-finance/slipstream.git"
+rev = "37eead2c7e5302a204dec78bfa0775bbb8ff48a2"
+
+[[dependencies]]
+name = "slipstream-main"
+version = "f8717fa"
+git = "https://github.com/aerodrome-finance/slipstream.git"
+rev = "f8717faaae6e6717db3c8e3850149c01a79c0603"
 
 [[dependencies]]
 name = "solady"
