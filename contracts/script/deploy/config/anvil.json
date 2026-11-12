@@ -142,6 +142,7 @@
   ],
   "world": {
     "observationCardinality": 151,
+    "aaveV3SupplyUsd": 50000000,
     "tokens": [
       {
         "symbol": "USDC",

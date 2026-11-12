@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {WorldAaveV3} from "./lib/WorldAaveV3.sol";
 import {WorldAerodrome} from "./lib/WorldAerodrome.sol";
 import {WorldFeeds} from "./lib/WorldFeeds.sol";
 import {TestToken} from "./local/TestToken.sol";
@@ -83,30 +84,19 @@ interface ISlipNpm {
     ) external payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
 }
 
-interface IFlashPoolSetup {
-    function listReserve(
-        address asset
-    ) external returns (address aToken);
-    function recordSupply(
-        address asset,
-        uint256 amount
-    ) external;
-}
-
 /// @title DeployWorld
 /// @notice Step 2 on test networks: the third-party world Avana runs against, built from pinned sources or local
 /// stand-ins: test tokens of 6, 8 and 18 decimals, three movable USD feeds per token (primary, alternate, independent
 /// second source), Uniswap v3 (core 5ea68a7 built alone so its pool init code hash is the canonical one, periphery 24ccf01:
 /// factory, NonfungiblePositionManager, SwapRouter),
 /// Aerodrome Slipstream (four position-manager generations: v1.0.0 for generations 0–2, main f8717fa for 3, each with its
-/// factory and pool implementation), an Aave V3 Pool stand-in that lends every token for flash loans, and every pool of
-/// the network's `world.uniswapPools` and `world.slipstreamPools`, created at the feeds' price with full-range liquidity
-/// of `usd` dollars from the deployer.
-/// @dev Stand-ins (marked `standIn` in the output, listed in deployments/README.md): `TestToken` and the Aave V3 Pool of
-/// `test/utils/mocks/AaveV3PoolMocks.sol` (Aave V3 is not vendored; its test switches are open to anyone, so this world
-/// is for anvil and private Tenderly networks; on Sepolia the flash source is the stand-in too until an Aave V3 Pool
-/// with these tokens exists). Output: `deployments-local/<network>/world.json`.
-contract DeployWorld is WorldAerodrome, WorldFeeds {
+/// factory and pool implementation), an Aave V3 market (origin v3.7.0, `WorldAaveV3`) listing every token with its
+/// primary feed, flash loans enabled and `world.aaveV3SupplyUsd` dollars supplied, and every pool of the network's
+/// `world.uniswapPools` and `world.slipstreamPools`, created at the feeds' price with full-range liquidity of `usd`
+/// dollars from the deployer.
+/// @dev Stand-ins (marked `standIn` in the output, listed in deployments/README.md): `TestToken` (and LINK, the OCR2
+/// payment token). Output: `deployments-local/<network>/world.json`.
+contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
     uint160 internal constant Q96 = 2 ** 96;
     int24 internal constant MAX_TICK = 887_272;
 
@@ -117,6 +107,8 @@ contract DeployWorld is WorldAerodrome, WorldFeeds {
     }
 
     mapping(bytes32 => TokenInfo) internal tokens;
+    /// @notice The primary feed (`EACAggregatorProxy`) of each token, keyed by symbol hash.
+    mapping(bytes32 => address) internal primaryFeed;
     string internal cfg;
     address internal me;
     address internal uniFactory;
@@ -134,7 +126,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds {
         require(weth != address(0), "world.tokens needs WETH");
         _deployUniswap(weth);
         _deploySlipstream(weth);
-        address flashPool = _deployFlashPool();
+        address flashPool = _deployAaveV3();
         _uniswapPools();
         _slipstreamPools();
         vm.stopBroadcast();
@@ -147,6 +139,10 @@ contract DeployWorld is WorldAerodrome, WorldFeeds {
         vm.serializeAddress("world", "aerodromeFactoryRegistry", factoryRegistry);
         vm.serializeAddress("world", "slipstreamGaugeFactories", _arr(slipGaugeFactories));
         vm.serializeAddress("world", "aaveV3Pool", flashPool);
+        vm.serializeAddress("world", "aaveV3ACLManager", aaveV3.aclManager);
+        vm.serializeAddress("world", "aaveV3PoolAddressesProvider", aaveV3.poolAddressesProvider);
+        vm.serializeAddress("world", "aaveV3PoolConfigurator", aaveV3.poolConfiguratorProxy);
+        vm.serializeAddress("world", "aaveV3Oracle", aaveV3.aaveOracle);
         string memory json = vm.serializeString("world", "external", _externalJson(flashPool));
         vm.createDir(string.concat(vm.projectRoot(), "/", OUTPUT_DIR, "/", network), true);
         vm.writeJson(json, _outputPath("world"));
@@ -175,6 +171,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds {
             for (uint256 j = 0; j < 3; ++j) {
                 (address proxy, address aggregator) =
                     _deployFeed(string.concat(sym, " / USD ", roles[j]), int256(price), 1, int192(int256(1e18)));
+                if (j == 0) primaryFeed[keccak256(bytes(sym))] = proxy;
                 vm.serializeAddress(fk, string.concat(roles[j], "Aggregator"), aggregator);
                 one = vm.serializeAddress(fk, roles[j], proxy);
             }
@@ -224,27 +221,22 @@ contract DeployWorld is WorldAerodrome, WorldFeeds {
         vm.serializeAddress("world", "slipstreamSwapRouter", router);
     }
 
-    function _deployFlashPool() private returns (address pool) {
-        address acl = _deploy("AaveV3ACLManager", _artifact("AaveV3PoolMocks.sol", "MockAaveV3ACLManager"));
-        address provider = _deploy(
-            "AaveV3AddressesProvider",
-            bytes.concat(_artifact("AaveV3PoolMocks.sol", "MockAaveV3AddressesProvider"), abi.encode(acl))
-        );
-        pool = _deploy(
-            "AaveV3Pool",
-            bytes.concat(_artifact("AaveV3PoolMocks.sol", "MockAaveV3Pool"), abi.encode(provider, uint128(5)))
-        );
-        vm.serializeAddress("world", "aaveV3ACLManager", acl);
+    /// @notice The Aave V3 market, every token listed and supplied with `world.aaveV3SupplyUsd` dollars.
+    function _deployAaveV3() private returns (address pool) {
+        _aaveV3Market(me, primaryFeed[keccak256("WETH")]);
+        pool = aaveV3.poolProxy;
+        uint256 usd = vm.parseJsonUint(cfg, ".world.aaveV3SupplyUsd");
         uint256 n = _count(cfg, ".world.tokens");
         for (uint256 i = 0; i < n; ++i) {
             string memory sym = vm.parseJsonString(cfg, string.concat(".world.tokens[", vm.toString(i), "].symbol"));
             TokenInfo memory t = tokens[keccak256(bytes(sym))];
-            address aToken = IFlashPoolSetup(pool).listReserve(t.token);
-            // Idle flash liquidity worth $50,000,000 per token.
-            uint256 amount = _amountForUsd(t, 50_000_000);
-            TestToken(t.token).mint(aToken, amount);
-            IFlashPoolSetup(pool).recordSupply(t.token, amount);
+            _aaveV3List(t.token, sym, primaryFeed[keccak256(bytes(sym))]);
+            uint256 amount = _amountForUsd(t, usd);
+            TestToken(t.token).mint(me, amount);
+            TestToken(t.token).approve(pool, amount);
+            _aaveV3Supply(t.token, amount, me);
         }
+        _aaveV3HandOver(me, vm.parseJsonAddress(cfg, ".aaveLocal.aaveDao"));
     }
 
     function _uniswapPools() private {
@@ -400,7 +392,11 @@ contract DeployWorld is WorldAerodrome, WorldFeeds {
                 "slipstream", string.concat("CLGaugeFactory generation ", vm.toString(g)), slipGaugeFactories[g], false
             );
         }
-        string memory aave3 = _ext("aave-v3", "Pool (flash loans)", flashPool, true);
+        _ext("aave-v3", "PoolAddressesProvider", aaveV3.poolAddressesProvider, false);
+        _ext("aave-v3", "PoolConfigurator", aaveV3.poolConfiguratorProxy, false);
+        _ext("aave-v3", "ACLManager", aaveV3.aclManager, false);
+        _ext("aave-v3", "AaveOracle", aaveV3.aaveOracle, false);
+        string memory aave3 = _ext("aave-v3", "Pool (flash loans)", flashPool, false);
         string memory toks;
         uint256 n = _count(cfg, ".world.tokens");
         for (uint256 i = 0; i < n; ++i) {
