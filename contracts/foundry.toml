@@ -500,3 +500,6 @@ aave-solidity-utils = { version = "fdc69f9", git = "https://github.com/aave-dao/
 openzeppelin-contracts-aerodrome = { version = "7b3e7b7", git = "https://github.com/OpenZeppelin/openzeppelin-contracts.git", rev = "7b3e7b7055d6e1226d4920ca7d7c446c0c0bfff5" }
 openzeppelin-contracts-upgradeable-aave = { version = "fa52531", git = "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git", rev = "fa525310e45f91eb20a6d3baa2644be8e0adba31" }
 libocr = { version = "199a6f1", git = "https://github.com/smartcontractkit/libocr.git", rev = "199a6f17c59863999480e990c7c0b6ba7796ec92" }
+# Multicall3 v3.1.0 (a1fa064), the source of the contract at 0xcA11bde05977b3631167028862bE2a173976CA11 that the services
+# batch reads through; on anvil the e2e rehearsal places Multicall3's deployed runtime there (external/multicall3/).
+multicall = { version = "3.1.0", git = "https://github.com/mds1/multicall.git", rev = "a1fa0644fa412cd3237ef7081458ecb2ffad7dbe" }

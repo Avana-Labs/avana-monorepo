@@ -70,6 +70,12 @@ git = "https://github.com/smartcontractkit/libocr.git"
 rev = "199a6f17c59863999480e990c7c0b6ba7796ec92"
 
 [[dependencies]]
+name = "multicall"
+version = "3.1.0"
+git = "https://github.com/mds1/multicall.git"
+rev = "a1fa0644fa412cd3237ef7081458ecb2ffad7dbe"
+
+[[dependencies]]
 name = "openzeppelin-contracts-aerodrome"
 version = "7b3e7b7"
 git = "https://github.com/OpenZeppelin/openzeppelin-contracts.git"

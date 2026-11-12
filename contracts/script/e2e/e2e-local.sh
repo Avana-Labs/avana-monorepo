@@ -47,7 +47,7 @@ for a in out/AvanaTimelock.sol/AvanaTimelock.json out-aave/HubInstance.sol/HubIn
   out-slipstream-v1/CLFactory.sol/CLFactory.json out-aerodrome/Voter.sol/Voter.json \
   out-aave-v3/AaveV3PoolBatch.sol/AaveV3PoolBatch.json \
   out-chainlink-ocr2/AccessControlledOCR2Aggregator.sol/AccessControlledOCR2Aggregator.json \
-  out-chainlink-proxy/EACAggregatorProxy.sol/EACAggregatorProxy.json; do
+  out-chainlink-proxy/EACAggregatorProxy.sol/EACAggregatorProxy.json external/multicall3/Multicall3.runtime.hex; do
   need_file "$a" || MISSING="$MISSING build:$a"
 done
 if [ -n "$MISSING" ]; then
@@ -80,11 +80,29 @@ run_script() { # step script sender [env...]
   return 1
 }
 
+# Multicall3 at its canonical address, as on every public network (external/multicall3/README.md); the code hash must
+# be the one recorded there.
+MULTICALL3=0xcA11bde05977b3631167028862bE2a173976CA11
+MULTICALL3_CODEHASH=0x5a29a1eb2f59e45e4249b938c8192cac0d2bd32398e1afa03f302a867db692ea
+place_multicall3() {
+  cast rpc anvil_setCode "$MULTICALL3" "$(tr -d '\n' < external/multicall3/Multicall3.runtime.hex)" --rpc-url "$RPC_ANVIL" >/dev/null ||
+    { record multicall3 fail "anvil_setCode refused"; return 1; }
+  local h
+  h="$(cast keccak "$(cast code "$MULTICALL3" --rpc-url "$RPC_ANVIL")")"
+  if [ "$h" = "$MULTICALL3_CODEHASH" ]; then
+    record multicall3 pass "code hash $h at $MULTICALL3"
+  else
+    record multicall3 fail "code hash $h at $MULTICALL3, expected $MULTICALL3_CODEHASH"
+    return 1
+  fi
+}
+
 if [[ " $STEPS " == *" deploy "* ]]; then
   # A fresh deployment: no output of an earlier run may stand in for this one's.
   rm -f "$OUT"/{aave,world,avana,coverage,manifest,aave-payload,scenarios}.json "$OUT"/operation-*.json
   rm -rf broadcast/*/31337 cache/*.s.sol/31337
-  run_script 00-factories 00_Factories.s.sol "$DEPLOYER" &&
+  place_multicall3 &&
+    run_script 00-factories 00_Factories.s.sol "$DEPLOYER" &&
     run_script 01-aave-v4 01_DeployAaveV4.s.sol "$DEPLOYER" &&
     run_script 02-world 02_DeployWorld.s.sol "$DEPLOYER" &&
     run_script 03-avana 03_DeployAvana.s.sol "$DEPLOYER" &&
