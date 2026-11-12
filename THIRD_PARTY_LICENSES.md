@@ -61,12 +61,14 @@ Installed from the lock files, not committed. TypeScript packages are bundled in
 
 | Package | Version | Licence | Where |
 |---|---|---|---|
-| viem | 2.57.11 | MIT | `services/common`, `services/indexer` |
+| viem | 2.57.11 | MIT | `services/common`, `services/indexer`, `services/keeper`, `packages/protocol` |
 | ponder | 0.18.2 | MIT | `services/indexer` |
 | hono | 4.13.13 | MIT | `services/indexer` |
 | typescript | 6.0.3 | Apache-2.0 | `services/` (build) |
 | @types/node | 22.20.5 | MIT | `services/` (build) |
-| vitest | 4.1.12 | MIT | `services/indexer` (tests) |
+| vitest | 5.1.0 | MIT | `services/common`, `services/indexer`, `services/keeper`, `packages/protocol` (tests) |
+| @aws-sdk/client-kms | 3.1156.0 | Apache-2.0 | `services/keeper` (signer keys held in AWS KMS) |
+| tsx | 4.23.15 | MIT | `services/keeper` (runs the TypeScript entry point) |
 | solhint | 6.2.5 | MIT | `contracts/package.json` |
 | @openzeppelin/upgrades-core | 1.47.0 | MIT | `contracts/package.json` (storage-layout check) |
 | @informalsystems/quint | 0.22.4 | Apache-2.0 | `spec/05-verification/package.json` |

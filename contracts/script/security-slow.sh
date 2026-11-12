@@ -63,7 +63,7 @@ OUT=out-security
 BUILD="$OUT/build/all"
 export PATH="$ROOT/tools/bin:$ROOT/.venv/bin:$HOME/.foundry/bin:$PATH"
 PY="$ROOT/.venv/bin/python"
-# Fuzzing corpora persist across runs (and across nightly CI runs through the cache), so each campaign starts from
+# Fuzzing corpora persist across runs (and across CI runs on main through the cache), so each campaign starts from
 # every sequence that reached new coverage before.
 CORPUS="$OUT/corpus"
 ECHIDNA_DIR=test/invariant/echidna

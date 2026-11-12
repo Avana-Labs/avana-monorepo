@@ -1,5 +1,5 @@
 /*
- * MarketRegistry (planned src/policy/market-registry/MarketRegistry.sol, interface
+ * MarketRegistry (src/policy/market-registry/MarketRegistry.sol, interface
  * src/policy/market-registry/IMarketRegistry.sol, spec 2.8).
  *
  * The per-Hub pause state and its reason (PROP-041; a call changes only the Hub it names), the address freeze with its protected set, per-caller daily

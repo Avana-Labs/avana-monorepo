@@ -1,5 +1,5 @@
 /*
- * AvanaTimelock (planned src/governance/timelock/AvanaTimelock.sol, interface
+ * AvanaTimelock (src/governance/timelock/AvanaTimelock.sol, interface
  * src/governance/timelock/IAvanaTimelock.sol, spec 2.15).
  *
  * Scheduling needs the required delay, execution only inside [readyAt, readyAt + GRACE_PERIOD), after which only

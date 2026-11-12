@@ -1,5 +1,5 @@
 /*
- * ParameterStore (planned src/policy/parameter-store/ParameterStore.sol, interface
+ * ParameterStore (src/policy/parameter-store/ParameterStore.sol, interface
  * src/policy/parameter-store/IParameterStore.sol, spec 2.9).
  *
  * Every tighten setter moves its parameter only in the safer direction, inside its hard bounds and inside the

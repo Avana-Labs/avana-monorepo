@@ -1,5 +1,5 @@
 /*
- * RiskModule (planned src/policy/risk-module/RiskModule.sol, interface src/policy/risk-module/IRiskModule.sol,
+ * RiskModule (src/policy/risk-module/RiskModule.sol, interface src/policy/risk-module/IRiskModule.sol,
  * spec 2.7).
  *
  * The borrow-side gates over the account scope the Spoke reports (PROP-031 RiskModule half, PROP-046, PROP-050), the
