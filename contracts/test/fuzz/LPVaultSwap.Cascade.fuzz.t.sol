@@ -135,7 +135,8 @@ contract LPVaultSwapCascadeFuzzTest is LPVaultSwapUnitBase {
                 uint256 i = (start + k * 5) % n; // 5 is coprime with 12: a full permutation per round
                 if (_hf(proxies[i]) >= 1e18 || _suppliedOf(i) == 0) continue;
                 bool backupOnly = uint256(keccak256(abi.encode(callerSeed, round, k))) % 2 == 1;
-                if (_liquidateOnce(i, shareBps, callerSeed + k, backupOnly)) ++settledCount;
+                uint256 seed = uint256(keccak256(abi.encode(callerSeed, k)));
+                if (_liquidateOnce(i, shareBps, seed, backupOnly)) ++settledCount;
             }
         }
         for (uint256 i = 0; i < n; ++i) {
