@@ -138,7 +138,7 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
   // 2. Each oracle's decimals; each lend reserve's Hub asset, flags and price.
   const lendKeys = lendMeta.flatMap((m) => Array.from({ length: m.count }, (_, i) => ({ spoke: m.spoke, oracle: m.oracle, reserveId: BigInt(i) })));
   const lendReads = await all(client, [
-    ...oracles.map((o): ContractCall => ({ address: o, abi: aaveOracleAbi, functionName: "DECIMALS" })),
+    ...oracles.map((o): ContractCall => ({ address: o, abi: aaveOracleAbi, functionName: "decimals" })),
     ...lendKeys.flatMap((k) => [
       spokeCall(k.spoke, "getReserve", [k.reserveId]),
       spokeCall(k.spoke, "getReserveConfig", [k.reserveId]),

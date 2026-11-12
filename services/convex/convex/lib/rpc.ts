@@ -4,7 +4,7 @@
 // the Convex environment variables `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK`, the names every service uses.
 
 import { createPublicClient, fallback, http, type PublicClient } from "viem";
-import { chainById } from "@avana/services-common/chains";
+import { MULTICALL3_ADDRESS, chainById } from "@avana/services-common/chains";
 import { optionalEnv, requireEnv, rpcEnvName } from "@avana/services-common/env";
 import type { CallResult, ContractCall, ViewClient } from "@avana/services-common/views";
 
@@ -18,6 +18,6 @@ export function rpcClient(chainId: number): PublicClient {
 export function pinnedViews(client: PublicClient, blockNumber: bigint): ViewClient {
   return {
     multicall: async (calls: readonly ContractCall[]) =>
-      (await client.multicall({ contracts: calls as never, allowFailure: true, blockNumber })) as unknown as readonly CallResult[],
+      (await client.multicall({ contracts: calls as never, allowFailure: true, blockNumber, multicallAddress: MULTICALL3_ADDRESS })) as unknown as readonly CallResult[],
   };
 }

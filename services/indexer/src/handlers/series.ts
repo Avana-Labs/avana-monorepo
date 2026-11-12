@@ -6,7 +6,7 @@
 // carries the same block, so the Spoke slices of a bucket add up to the Hub totals of the same bucket. Reads go through Ponder's client pinned to the sample block, so a reindex reads the
 // same values from the archive node and a replay changes nothing.
 
-import { type DecimalString, scopeKey } from "@avana/services-common";
+import { type DecimalString, MULTICALL3_ADDRESS, scopeKey } from "@avana/services-common";
 import { type CallResult, type ContractCall, type ViewClient, clPoolAbi, readChainSnapshot, spokeViewsAbi } from "@avana/services-common/views";
 import { ponder, type Context } from "ponder:registry";
 import schema from "ponder:schema";
@@ -19,7 +19,7 @@ const s = (x: bigint | number): DecimalString => x.toString(10);
 function viewClient(context: Context): ViewClient {
   return {
     multicall: async (calls: readonly ContractCall[]) =>
-      (await context.client.multicall({ contracts: calls as never, allowFailure: true })) as unknown as readonly CallResult[],
+      (await context.client.multicall({ contracts: calls as never, allowFailure: true, multicallAddress: MULTICALL3_ADDRESS })) as unknown as readonly CallResult[],
   };
 }
 

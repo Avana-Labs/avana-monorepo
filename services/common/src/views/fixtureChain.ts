@@ -165,7 +165,7 @@ function answer(c: FakeChain, call: ContractCall): unknown {
   }
   const oracle = c.lendSpokes.find((l) => l.oracle === at);
   if (oracle) {
-    if (fn === "DECIMALS") return oracle.oracleDecimals;
+    if (fn === "decimals") return oracle.oracleDecimals;
     if (fn === "getReservePrice") return oracle.reserves[Number(args[0])]!.price;
   }
   const cdp = c.cdpSpokes.find((s) => s.spoke === at);

@@ -79,7 +79,7 @@ export const rateStrategyAbi = parseAbi([
 
 /** The Lend Spoke's AaveOracle: the one USD price of every Hub asset on every page. */
 export const aaveOracleAbi = parseAbi([
-  "function DECIMALS() view returns (uint8)",
+  "function decimals() view returns (uint8)",
   "function getReservePrice(uint256 reserveId) view returns (uint256)",
 ]);
 

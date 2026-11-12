@@ -148,7 +148,7 @@ describe("snapshot reader", () => {
     [`ORACLE:${LEND}`]: ORACLE,
     [`getDebtReserves:${LENS}:${FIXTURE_U}`]: [{ spoke: FIXTURE_U, reserveId: 1n, asset: fixtureHubAsset.underlying, decimals: 6, price: 100_000_000n, fixedPrice: false, hub: HUB, hubAssetId: 1n, paused: false, frozen: false, borrowable: true, breakerReasons: 0, pauseState: 0 }],
     [`getLiquidationConfig:${FIXTURE_U}`]: { targetHealthFactor: 11n * 10n ** 17n, healthFactorForMaxBonus: 95n * 10n ** 16n, liquidationBonusFactor: 5_000 },
-    [`DECIMALS:${ORACLE}`]: 8,
+    [`decimals:${ORACLE}`]: 8,
     [`getReserve:${LEND}:0`]: { underlying: fixtureHubAsset.underlying, hub: HUB, assetId: 1, decimals: 6, collateralRisk: 0 },
     [`getReserveConfig:${LEND}:0`]: { paused: false, frozen: true },
     [`getReservePrice:${ORACLE}:0`]: 99_990_000n,

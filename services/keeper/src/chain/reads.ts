@@ -12,6 +12,7 @@ import {
   lpVaultSwapAbi,
   marketRegistryAbi,
 } from "@avana/protocol/abis";
+import { MULTICALL3_ADDRESS } from "@avana/services-common/chains";
 
 /** ERC-1967 implementation slot: bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1). */
 export const IMPLEMENTATION_SLOT: Hex = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -47,6 +48,7 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
         const results = await client.multicall({
           ...at,
           allowFailure: true,
+          multicallAddress: MULTICALL3_ADDRESS,
           contracts: batch.map((a) => ({ address: a.spoke, abi: aaveV4SpokeAbi, functionName: "getUserAccountData", args: [a.proxy] }) as const),
         });
         results.forEach((r, j) => {
