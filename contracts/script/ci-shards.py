@@ -8,8 +8,11 @@ JSON object on one line; the whole array is printed on one line. A list longer t
 fails, so no target is ever dropped.
 
     ci-shards.py certora                      {"conf": "<Name>"} per certora/conf/<Name>.conf
-    ci-shards.py halmos                       {"contract": "<Name>", "file": "<path>"} per non-abstract contract named
-                                              *HalmosTest in a src/, test/ or script/ file that holds a check_ function
+    ci-shards.py halmos                       {"contract": "<Name>", "check": "<function>", "file": "<path>"} per check_
+                                              and invariant_ function (Halmos's default test prefixes) of each
+                                              non-abstract contract named *HalmosTest in a src/, test/ or script/ file;
+                                              a test function in any other contract fails the listing, since no job
+                                              would run it
     ci-shards.py invariant                    {"file": "<path>"} per test/invariant/**/*.t.sol (the invariant profile)
     ci-shards.py smt                          {"contract": "<Name>"} per entry of [profile.smt.model_checker] contracts
     ci-shards.py smt-only <Name>              prints foundry.toml with that contracts map reduced to <Name>
@@ -93,16 +96,30 @@ def mutation(what: str, layers: str) -> list[list[str]]:
     return [line.split("\t") for line in out.splitlines() if line.strip()]
 
 
+HALMOS_TEST = re.compile(r"^\s*function\s+((?:check|invariant)_\w*)\s*\(", re.M)
+
+
 def halmos() -> list[dict]:
+    """One leg per Halmos test function, so each runs in its own job with the job's whole time budget. A test function
+    belongs to the contract declared last above it in its file; one in a contract that is abstract or not named
+    *HalmosTest would never run in a job of its own, so the listing fails instead of dropping it."""
     legs = []
+    stray = []
     for top in ("src", "test", "script"):
         for sol in sorted((ROOT / top).rglob("*.sol")):
             text = sol.read_text(encoding="utf8")
-            if not re.search(r"function\s+check_", text):
+            if not HALMOS_TEST.search(text):
                 continue
-            for m in CONTRACT.finditer(text):
-                if not m.group(1) and m.group(2).endswith("HalmosTest"):
-                    legs.append({"contract": m.group(2), "file": str(sol.relative_to(ROOT))})
+            decls = list(CONTRACT.finditer(text))
+            for t in HALMOS_TEST.finditer(text):
+                owner = [m for m in decls if m.start() < t.start()]
+                path = str(sol.relative_to(ROOT))
+                if owner and not owner[-1].group(1) and owner[-1].group(2).endswith("HalmosTest"):
+                    legs.append({"contract": owner[-1].group(2), "check": t.group(1), "file": path})
+                elif top == "test" and "halmos" in sol.parts:
+                    stray.append(f"{path}: {t.group(1)}")
+    if stray:
+        raise SystemExit("ci-shards: Halmos test functions outside a non-abstract *HalmosTest contract: " + ", ".join(stray))
     return legs
 
 

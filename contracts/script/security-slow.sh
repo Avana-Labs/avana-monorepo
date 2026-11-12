@@ -13,14 +13,16 @@
 #            forge build --force --build-info of src/, test/ and script/ into out-security/build/all, without
 #            -D warnings since the strict pass found none; Echidna, Medusa, hevm and Mythril read this build, so
 #            out/ and cache/ are never cleaned or overwritten. Strict-pass logs go to out-security/build-strict/
-#   echidna  every `*Properties` harness in test/invariant/echidna/, in property mode and in assertion mode; corpora
-#            in out-security/corpus/ persist between runs
+#   echidna  every `*Properties` harness in test/invariant/echidna/, in property mode and in assertion mode, each on
+#            a build of its own file and imports (out-security/build/echidna/<Name>, slow-tier settings) with its heap
+#            bounded by ECHIDNA_MAX_HEAP; corpora in out-security/corpus/ persist between runs
 #   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
 #            assertion tests in one campaign)
 #   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest)
-#   hevm     `hevm symbolic` on each assertion entry point of every harness (each must reach QED), on the runtime
-#            code of every src/ contract and library (no assertion violation), and `hevm test` on every `prove_`
-#            function in test/symbolic/
+#   hevm     against a local anvil chain (see hevm_targets below): `hevm symbolic` on each assertion entry point of
+#            every harness, deployed so its constructor has run (each must reach QED), on the runtime code of every
+#            src/ contract and library with its address immutables filled (no assertion violation), and `hevm test`
+#            on every `prove_` function in test/symbolic/
 #   mythril  script/security-mythril.sh on the runtime code of every src/ contract and library
 #   mutate   slither-mutate on every implementation file of the layers in security/mutation-layers.json, each mutant
 #            run against its Foundry tests (`forge test -j 2 --match-path <tests>`) in an isolated copy of src/ and
@@ -39,7 +41,8 @@
 # after an earlier one fails; the script exits 1 when any step fails. Reports go to out-security/.
 #
 # Budgets (environment, with defaults): ECHIDNA_TEST_LIMIT (echidna.yaml), ECHIDNA_TIMEOUT=900 and MEDUSA_TIMEOUT=900
-# seconds per harness and mode, ECHIDNA_HARNESSES (space-separated harness names; empty: all), MEDUSA_TEST_LIMIT
+# seconds per harness and mode, ECHIDNA_MAX_HEAP=8g (GHC heap limit), ECHIDNA_HARNESSES (space-separated harness
+# names; empty: all), MEDUSA_TEST_LIMIT
 # (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query,
 # HALMOS_LOOP=8; BUILD_CHUNK=60 files per strict build group;
 # MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
@@ -48,7 +51,8 @@
 # GAMBIT_TIMEOUT=300 seconds per Gambit mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS).
 # Selectors (environment, space-separated; empty: every target, as above), used by CI to run one target per job:
 # ECHIDNA_HARNESSES and ECHIDNA_MODES (default "property assertion"), MEDUSA_HARNESSES, HALMOS_CONTRACTS (exact
-# contract names, run as --match-contract '^(A|B)$'), HEVM_TARGETS (`harness:<Name>`, `src:<Name>`, `test`),
+# contract names, run as --match-contract '^(A|B)$'), HALMOS_TESTS (exact test function names, run as
+# --match-test '^(a|b)\('), HEVM_TARGETS (`harness:<Name>`, `src:<Name>`, `test`),
 # MYTHRIL_CONTRACTS (src/ contract names), MUTATE_LAYERS and MUTATE_CONTRACTS, NECESSIST_TESTS (test file paths).
 # Survivors of `mutate` and `necessist` are a report for the layer gate review, not a failure; a tool error fails.
 # Survivors of `gambit` fail until a test kills them or the layer gate review accepts them in the triage file.
@@ -70,6 +74,7 @@ ECHIDNA_DIR=test/invariant/echidna
 MEDUSA_DIR=test/invariant/medusa
 
 ECHIDNA_TIMEOUT=${ECHIDNA_TIMEOUT:-900}
+ECHIDNA_MAX_HEAP=${ECHIDNA_MAX_HEAP:-8g}
 MEDUSA_TIMEOUT=${MEDUSA_TIMEOUT:-900}
 HEVM_SMT_TIMEOUT=${HEVM_SMT_TIMEOUT:-300}
 HALMOS_LOOP=${HALMOS_LOOP:-8}
@@ -197,22 +202,47 @@ step_echidna() {
   fi
   [ -n "${ECHIDNA_TEST_LIMIT:-}" ] && limit=(--test-limit "$ECHIDNA_TEST_LIMIT")
   mkdir -p "$OUT/echidna"
+  local hbuild config
   while IFS=$'\t' read -r name source; do
     selected "${ECHIDNA_HARNESSES:-}" "$name" || continue
     seen+=" $name"
+    # Echidna loads every contract of the build it is given, with its source maps and coverage maps. On the build of
+    # all of src/, test/ and script/ (about 470 MB of build info) a harness held 2.2 GB of live heap and 4.8 GB in all
+    # before its first call, and every CI job died 8 to 13 minutes in with the runner shut down and no log; on a build
+    # of the harness's own sources alone the same harness holds 28 MB (604 MB in all). So each harness gets that build,
+    # with the slow-tier settings, and a copy of echidna.yaml that points crytic-compile at it.
+    hbuild="$OUT/build/echidna/$name"
+    config="$OUT/echidna/$name.yaml"
+    echo "=== echidna $name: build of $source and its imports"
+    if ! slow_env forge build "$source" --build-info --out "$hbuild" --cache-path "$hbuild-cache" \
+      >"$OUT/echidna/$name-build.log" 2>&1; then
+      cat "$OUT/echidna/$name-build.log"
+      echo "echidna: the build of $name failed"
+      status=1
+      continue
+    fi
+    sed "s|\"out-security/build/all\"|\"$hbuild\"|" echidna.yaml >"$config"
+    if ! grep -qF "\"$hbuild\"" "$config"; then
+      echo "echidna: echidna.yaml has no cryticArgs build path to replace" >&2
+      return 1
+    fi
     for mode in ${ECHIDNA_MODES:-property assertion}; do
       echo "=== echidna $name ($source), $mode mode"
       mkdir -p "$CORPUS/echidna/$name-$mode"
       log="$OUT/echidna/$name-$mode.log"
-      # --disable-slither: Echidna's own Slither pass analyses the whole project before fuzzing, takes about 45
-      # minutes here and then fails ("Running slither failed"), so it adds nothing but time; the project's Slither run
-      # is in the fast tier.
-      if ! echidna . --config echidna.yaml --contract "$name" --test-mode "$mode" --timeout "$ECHIDNA_TIMEOUT" \
-        --disable-slither ${limit[@]+"${limit[@]}"} --corpus-dir "$CORPUS/echidna/$name-$mode" --format text >"$log" 2>&1; then
+      # --disable-slither: Echidna's own Slither pass analyses the whole project before fuzzing and fails ("Running
+      # slither failed"), so it adds nothing but time; the project's Slither run is in the fast tier.
+      # +RTS -M: a heap above ECHIDNA_MAX_HEAP ends Echidna with "Heap exhausted" and a failed step with its log,
+      # instead of exhausting the machine. The log is also streamed, so a run that dies still shows how far it got.
+      echidna . --config "$config" --contract "$name" --test-mode "$mode" --timeout "$ECHIDNA_TIMEOUT" \
+        --disable-slither ${limit[@]+"${limit[@]}"} --corpus-dir "$CORPUS/echidna/$name-$mode" --format text \
+        +RTS -M"$ECHIDNA_MAX_HEAP" -RTS 2>&1 | tee "$log" |
+        grep --line-buffered -vE '^\[[^]]*\] +(\[Worker [0-9]+\] New coverage|Saved reproducer)'
+      if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         status=1
         echo "echidna: $name failed in $mode mode"
       fi
-      grep -E ': (passing|failed|FAILED|falsified|error)|Error|ERROR|Crashed|^Total calls' "$log" | grep -v '^\[' || true
+      grep -E ': (passing|failed|FAILED|falsified|error)|Error|ERROR|Crashed|Heap exhausted|^Total calls' "$log" | grep -v '^\[' || true
       # Echidna exits 0 even when its workers crash, and then still prints every test as passing; a run counts only
       # when it executed calls and printed its summary.
       if ! echidna_ran "$log"; then
@@ -258,12 +288,15 @@ step_halmos() {
     echo "halmos: skipped, test/halmos/ holds no check_ function"
     return 0
   fi
-  # HALMOS_CONTRACTS selects exact contract names; halmos fails with "No tests with" when one has no check_ test.
-  local match='HalmosTest$'
+  # HALMOS_CONTRACTS selects exact contract names and HALMOS_TESTS exact test function names (CI runs one of each per
+  # job); halmos fails with "No tests with" when the selection matches no test.
+  local match='HalmosTest$' tests=()
   [ -n "${HALMOS_CONTRACTS:-}" ] && match="^($(echo $HALMOS_CONTRACTS | tr ' ' '|'))\$"
-  # Halmos has no deployCode cheatcode, which dynamic test linking turns `new C(...)` into.
-  FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract "$match" --loop "$HALMOS_LOOP" \
-    --solver-timeout-assertion 0 2>&1 |
+  [ -n "${HALMOS_TESTS:-}" ] && tests=(--match-test "^($(echo $HALMOS_TESTS | tr ' ' '|'))\\(")
+  # Halmos has no deployCode cheatcode, which dynamic test linking turns `new C(...)` into. PYTHONUNBUFFERED: each
+  # result line reaches the log when the check ends, so a run stopped by a time limit still shows which checks passed.
+  PYTHONUNBUFFERED=1 FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract "$match" \
+    ${tests[@]+"${tests[@]}"} --loop "$HALMOS_LOOP" --solver-timeout-assertion 0 2>&1 |
     tee "$OUT/halmos.txt"
   local rc=${PIPESTATUS[0]}
   # A build failure, or a run that never reached a result line, fails the step whatever the exit code says.
@@ -278,11 +311,49 @@ step_halmos() {
   return "$rc"
 }
 
-# hevm_symbolic <log> <args...>: 0 on QED, 1 on a counterexample or error, 2 on a partial exploration.
+# hevm_targets runs every target against a local anvil chain (`--rpc`), never on bare runtime code: on bare code the
+# immutables are zero, the storage is empty and every called contract is unknown code, whose revert data hevm leaves
+# free, so each call whose failure the contract passes on (a bubbled revert) became an "assertion violation" with
+# Panic(1) as that data. The run on main of 2026-11-12 reported such counterexamples on 41 targets, for example 18 on
+# Collateralization, one per function that first calls the Lock (`nextRecordId()` included); none was an assertion of
+# Avana's code.
+#   harness:<Name>  the harness is deployed on the chain, so its constructor runs and deploys and configures the
+#                   contracts it tests, as for Echidna and Medusa; each assertion entry point is then run symbolically
+#                   from that state, with every contract the call reaches executed from its deployed code and storage.
+#                   Each must reach QED.
+#   src:<Name>      the contract's runtime code is placed on the chain (`anvil_setCode`) at HEVM_SRC_ADDRESS with its
+#                   address immutables filled as a constructor fills them (script/security-targets.py runtime-code)
+#                   and its own-address immutables set to that address; the addresses it calls hold no code there, so
+#                   a call to them returns no data and the caller reverts with empty data. A Panic(1) can then come only
+#                   from an `assert` of the contract itself. Paths after a successful call to another contract are
+#                   explored by the harness targets, where that contract is deployed.
+HEVM_PORT=${HEVM_PORT:-18545}
+HEVM_RPC="http://127.0.0.1:$HEVM_PORT"
+HEVM_SRC_ADDRESS=0x000000000000000000000000000000000000a7a5
+HEVM_DEPLOYER=0x0000000000000000000000000000000000030000
+HEVM_ANVIL_PID=""
+
+hevm_chain_start() {
+  anvil --port "$HEVM_PORT" --silent --code-size-limit 1000000 --gas-limit 30000000000 --disable-block-gas-limit \
+    --auto-impersonate --chain-id 31337 >"$OUT/hevm/anvil.log" 2>&1 &
+  HEVM_ANVIL_PID=$!
+  local i
+  for i in $(seq 1 100); do
+    cast block-number --rpc-url "$HEVM_RPC" >/dev/null 2>&1 && break
+    sleep 0.2
+  done
+  cast rpc --rpc-url "$HEVM_RPC" anvil_setBalance "$HEVM_DEPLOYER" 0xffffffffffffffffffffffff >/dev/null
+}
+
+hevm_chain_stop() { [ -n "$HEVM_ANVIL_PID" ] && kill "$HEVM_ANVIL_PID" 2>/dev/null; HEVM_ANVIL_PID=""; }
+
+# hevm_symbolic <log> <args...>: hevm against the chain's latest block; 0 on QED, 1 on a counterexample or error, 2 on
+# a partial exploration.
 hevm_symbolic() {
-  local log=$1
+  local log=$1 block
   shift
-  hevm symbolic --solver z3 --smt-timeout "$HEVM_SMT_TIMEOUT" "$@" >"$log" 2>&1
+  block=$(cast block-number --rpc-url "$HEVM_RPC")
+  hevm symbolic --solver z3 --smt-timeout "$HEVM_SMT_TIMEOUT" --rpc "$HEVM_RPC" --block "$block" "$@" >"$log" 2>&1
   local rc=$?
   if grep -q 'QED' "$log" && ! grep -qi 'partially explore' "$log"; then return 0; fi
   if [ $rc -ne 0 ] || grep -qiE 'counterexample|discovered the following' "$log"; then return 1; fi
@@ -290,11 +361,29 @@ hevm_symbolic() {
   return 1
 }
 
+# hevm_deploy <creation-code file>: deploys it from HEVM_DEPLOYER and prints the new address; fails when the
+# constructor reverts.
+hevm_deploy() {
+  local receipt
+  receipt=$(cast send --rpc-url "$HEVM_RPC" --unlocked --from "$HEVM_DEPLOYER" --gas-limit 29000000000 \
+    --create "0x$(cat "$1")" --json) || return 1
+  "$PY" -c 'import json,sys; r=json.loads(sys.argv[1]); assert int(r["status"], 16) == 1; print(r["contractAddress"])' \
+    "$receipt"
+}
+
 step_hevm() {
-  require hevm z3 || return 1
+  require hevm z3 anvil cast || return 1
   ensure_build || return 1
-  local status=0 list name source sig hex rc seen=""
   mkdir -p "$OUT/hevm"
+  hevm_chain_start
+  hevm_targets
+  local rc=$?
+  hevm_chain_stop
+  return $rc
+}
+
+hevm_targets() {
+  local status=0 list name source sig hex rc addr seen=""
 
   list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
   if [ -z "$list" ]; then
@@ -304,11 +393,17 @@ step_hevm() {
     [ -n "$name" ] || continue
     selected "${HEVM_TARGETS:-}" "harness:$name" || continue
     seen+=" harness:$name"
-    hex="$OUT/hevm/$name.hex"
-    "$PY" script/security-targets.py code "$BUILD" "$name" "$hex" || return 1
+    hex="$OUT/hevm/$name.init.hex"
+    "$PY" script/security-targets.py creation-code "$BUILD" "$name" "$hex" || return 1
+    if ! addr=$(hevm_deploy "$hex"); then
+      echo "hevm $name: FAIL, the harness constructor reverted on the local chain"
+      status=1
+      continue
+    fi
+    echo "hevm $name: deployed at $addr"
     while IFS= read -r sig; do
       [ -n "$sig" ] || continue
-      hevm_symbolic "$OUT/hevm/$name.${sig%%(*}.log" --code-file "$hex" --sig "$sig" --initial-storage Empty
+      hevm_symbolic "$OUT/hevm/$name.${sig%%(*}.log" --address "$addr" --sig "$sig"
       rc=$?
       case $rc in
         0) echo "hevm $name.$sig: QED" ;;
@@ -318,7 +413,7 @@ step_hevm() {
     done < <("$PY" script/security-targets.py assertion-sigs "$BUILD" "$name")
   done <<<"$list"
 
-  list=$("$PY" script/security-targets.py runtime-code "$BUILD" "$OUT/hevm/code") || return 1
+  list=$("$PY" script/security-targets.py runtime-code "$BUILD" "$OUT/hevm/code" "$HEVM_SRC_ADDRESS") || return 1
   if [ -z "$list" ]; then
     echo "hevm src: skipped, no contract or library under src/ compiles to runtime code"
   fi
@@ -326,7 +421,9 @@ step_hevm() {
     [ -n "$name" ] || continue
     selected "${HEVM_TARGETS:-}" "src:$name" || continue
     seen+=" src:$name"
-    hevm_symbolic "$OUT/hevm/src-$name.log" --code-file "$hex"
+    cast rpc --rpc-url "$HEVM_RPC" anvil_setCode "$HEVM_SRC_ADDRESS" "0x$(cat "$hex")" >/dev/null &&
+      cast rpc --rpc-url "$HEVM_RPC" anvil_mine >/dev/null || return 1
+    hevm_symbolic "$OUT/hevm/src-$name.log" --address "$HEVM_SRC_ADDRESS"
     rc=$?
     case $rc in
       0) echo "hevm src $name: QED" ;;

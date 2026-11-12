@@ -3,15 +3,15 @@ name: contracts
 # Foundry workspace in contracts/. Every pull request runs the short set in about 10 minutes: format, lint and build,
 # the ci test profile in 10 shards (invariant suites as a short check, 256 runs at depth 64), gas snapshots, branch
 # coverage, traceability and the fast security tier. A pull request labelled `hotfix` (playbook P-05) also runs the
-# touched contracts' invariants at full depth, one per job. Every push to main runs the same set with the ci profile at
-# full depth (10,000 runs at depth 100) in 20 shards, each invariant of test/invariant/ a unit of its own, in about 10
-# to 15 minutes. The long checks run every night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep
+# touched contracts' invariant campaigns at full depth, one per job. Every push to main runs the same set with the ci
+# profile at full depth (10,000 runs at depth 100) in 20 shards: each file of test/invariant/ is one campaign, and a
+# campaign over 30 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep
 # invariant campaign, fork tests, the FFI differential suite, Halmos, SMTChecker and Certora, one target per job, each
-# at most 4 hours: `plan` lists the invariant files, Halmos test contracts, SMTChecker contracts and Certora confs with
-# script/ci-shards.py, so a new one gets its own job on the next run. The slow security tier (security-slow.yml), the
-# per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) run on the same nightly, release and
-# manual schedule. An upgrade is scheduled from a release tag, so every long check has run before the timelock delay
-# ends; a failure is a reason to cancel the operation.
+# at most 4 hours (a Halmos check at most 6): `plan` lists the invariant files, Halmos test functions, SMTChecker
+# contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. The slow
+# security tier (security-slow.yml), the per-layer mutation gates (mutation-gate.yml) and the spec model parts
+# (spec.yml) run on the same nightly, release and manual schedule. An upgrade is scheduled from a release tag, so every
+# long check has run before the timelock delay ends; a failure is a reason to cancel the operation.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -151,9 +151,12 @@ jobs:
 
   test:
     # The suite is split into shards that run side by side (10 on a pull request, 20 elsewhere): every test file
-    # (fork and differential excluded) and every invariant of test/invariant/ on its own is assigned by its measured
-    # run time (script/test-shard.sh, script/test-shard.py, script/test-timings.json), so the shards take about equal
-    # time and each unit runs in exactly one shard. Each shard reuses the build job's compiled output.
+    # (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
+    # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
+    # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
+    # campaign, so running them one by one would repeat the campaign per invariant. A campaign over 30 minutes runs as
+    # segments of ceil(runs / m) runs each, at the same depth and with a seed of their own. Each shard reuses the build
+    # job's compiled output.
     name: tests (ci profile, shard ${{ matrix.shard }}/${{ github.event_name == 'pull_request' && 10 || 20 }})
     needs: build
     runs-on: ubuntu-24.04
@@ -206,8 +209,8 @@ jobs:
 
   hotfix-plan:
     # A pull request labelled `hotfix` (an emergency fix, playbook P-05) also runs the touched contracts' invariant
-    # campaigns at the full ci profile, one invariant per job, so the fix merges after about 10 minutes with the same
-    # depth main runs. The rest of the long checks run on the release tag of the upgrade, during the timelock delay.
+    # campaigns at the full ci profile, one campaign (or one segment of a long campaign) per job, with the same depth
+    # main runs. The rest of the long checks run on the release tag of the upgrade, during the timelock delay.
     name: hotfix plan
     if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix')
     runs-on: ubuntu-24.04
@@ -220,17 +223,18 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: List the touched contracts' invariants (script/hotfix-units.py)
+      - name: List the touched contracts' invariant campaigns (script/hotfix-units.py)
         id: plan
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
+          FOUNDRY_PROFILE: ci
         run: |
           set -euo pipefail
           units=$(git diff --name-only "$BASE"...HEAD | python3 script/hotfix-units.py)
           echo "units=$units" | tee -a "$GITHUB_OUTPUT"
 
   hotfix:
-    name: hotfix depth ${{ matrix.unit.file }} ${{ matrix.unit.invariant }}
+    name: hotfix depth ${{ matrix.unit.unit }}
     needs: [build, hotfix-plan]
     if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') && needs.hotfix-plan.outputs.units != '[]'
     runs-on: ubuntu-24.04
@@ -266,11 +270,13 @@ jobs:
           name: forge-out
           path: contracts
 
-      - name: One invariant at the full ci profile (10,000 runs at depth 100)
+      - name: One invariant campaign or segment at the full ci profile (10,000 runs at depth 100)
         env:
-          FILE: ${{ matrix.unit.file }}
-          INVARIANT: ${{ matrix.unit.invariant }}
-        run: forge test --match-path "$FILE" --match-test "^${INVARIANT}\\(" -vvv
+          UNIT: ${{ matrix.unit.unit }}
+        run: |
+          SEED=$(printf '0x%x' "$(date +%s)")
+          echo "fuzz seed: $SEED"
+          script/test-shard.sh --unit "$UNIT" --fuzz-seed "$SEED" -vvv
 
   gas:
     name: gas snapshots
@@ -537,12 +543,17 @@ jobs:
         run: forge test -vvv
 
   halmos:
-    # One job per Halmos test contract (each file of test/halmos/ holds one), every check_ function at loop 8.
-    name: Halmos ${{ matrix.contract }}
+    # One job per Halmos test function (check_ or invariant_ of a *HalmosTest contract in test/halmos/), at loop 8.
+    # Halmos runs a contract's tests one after another and has no wall-clock bound of its own
+    # (--solver-timeout-assertion 0), so with one job per contract the slowest check held up every later one and
+    # seven contracts ran out of time; on its own each check has the whole of GitHub's 6-hour job limit. A check that
+    # does not finish in 6 hours fails the job, so the gate fails. Every property also has a 10,000-run fuzz twin in
+    # the pull-request suite.
+    name: Halmos ${{ matrix.contract }}.${{ matrix.check }}
     needs: [build, plan]
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.halmos != '[]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -550,6 +561,8 @@ jobs:
     env:
       # Halmos has no deployCode cheatcode; dynamic test linking turns `new C(...)` in setUp into deployCode.
       FOUNDRY_DYNAMIC_TEST_LINKING: "false"
+      # Without it Python buffers Halmos's output in the pipe, and a job stopped by its time limit shows nothing.
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -580,10 +593,17 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
 
-      - name: Symbolic tests of ${{ matrix.contract }} (${{ matrix.file }})
+      - name: Symbolic test ${{ matrix.contract }}.${{ matrix.check }} (${{ matrix.file }})
         env:
           CONTRACT: ${{ matrix.contract }}
-        run: .venv/bin/halmos --root . --match-contract "^${CONTRACT}\$" --loop 8 --solver-timeout-assertion 0
+          CHECK: ${{ matrix.check }}
+        # --match-test is matched against the signature, so `^name\(` selects exactly this function. The job fails
+        # unless Halmos ran it and it passed.
+        run: |
+          set -o pipefail
+          .venv/bin/halmos --root . --match-contract "^${CONTRACT}\$" --match-test "^${CHECK}\\(" --loop 8 \
+            --solver-timeout-assertion 0 2>&1 | tee halmos.txt
+          grep -qE 'Symbolic test result: 1 passed; 0 failed' halmos.txt
 
   smtchecker:
     # One job per contract of [profile.smt.model_checker] contracts: the job narrows that map to its contract in the
@@ -881,10 +901,10 @@ jobs:
         env:
           RESULTS: ${{ toJSON(needs) }}
           LONG_SKIP_OK: ${{ !(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) }}
-          github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix')FIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
+          HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          bad=$(echo "$RESULTS" | jq -r --argjson skipok "$LONG_SKIP_OK" --argjson hotfix "$github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix')FIX" '
+          bad=$(echo "$RESULTS" | jq -r --argjson skipok "$LONG_SKIP_OK" --argjson hotfix "$HOTFIX" '
             ["plan","invariant","fork","differential","halmos","smtchecker","certora"] as $long
             | [to_entries[]
                | select(.value.result != "success")

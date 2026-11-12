@@ -2,11 +2,11 @@ name: security-slow
 
 # Slow security tier every night on main (06:00 UTC), on every release tag (`v*`), by hand (workflow_dispatch): Echidna, Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Pull requests run contracts.yml only.
 # The `build` job compiles once (script/security-slow.sh build, and the build Halmos runs); `plan` lists the targets
-# from that build with script/ci-shards.py; every target then runs in its own job of at most 4 hours, reusing the
-# build: one per Echidna harness (both modes), one per Medusa harness, one per Halmos test contract, one per hevm
-# target (each harness's assertion entry points, each src/ contract), and one per group of eight src/ contracts for
-# Mythril. A new harness, Halmos contract or src/ contract gets its own job on the next run. `slow-gate` passes only
-# when every job passed.
+# from that build with script/ci-shards.py; every target then runs in its own job, reusing the build: one per Echidna
+# harness (both modes), one per Medusa harness, one per Halmos test function (up to 6 hours each), one per hevm target
+# (each harness's assertion entry points, each src/ contract), and one per group of eight src/ contracts for Mythril;
+# every other job has at most 4 hours. A new harness, Halmos test or src/ contract gets its own job on the next run.
+# `slow-gate` passes only when every job passed.
 # By hand, `campaign` runs the pre-audit fuzzing campaign of one layer instead: every harness of the layer gets 24
 # hours of Echidna per mode and 24 hours of Medusa, as eight parallel 3-hour jobs per harness and mode, each with a
 # fresh seed and starting from the stored corpus; `campaign-merge` then joins the eight corpora of each harness and
@@ -296,13 +296,14 @@ jobs:
           retention-days: 30
 
   halmos:
-    name: halmos ${{ matrix.contract }}
+    name: halmos ${{ matrix.contract }}.${{ matrix.check }}
     needs: plan
     if: needs.plan.outputs.halmos != '[]'
     runs-on: ubuntu-24.04
-    # Every check_ function of one test contract at loop 16. Halmos has no wall-clock bound of its own
-    # (--solver-timeout-assertion 0); the job timeout is the bound.
-    timeout-minutes: 240
+    # One Halmos test function at loop 16. Halmos runs a contract's tests one after another and has no wall-clock
+    # bound of its own (--solver-timeout-assertion 0), so each check runs alone with GitHub's maximum job time of
+    # 6 hours as its bound; a check that does not finish fails the job and the gate.
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -339,16 +340,20 @@ jobs:
           name: slow-build
           path: contracts
 
-      - name: Halmos on ${{ matrix.contract }} (${{ matrix.file }})
+      - name: Halmos on ${{ matrix.contract }}.${{ matrix.check }} (${{ matrix.file }})
         env:
           HALMOS_CONTRACTS: ${{ matrix.contract }}
-        run: script/security-slow.sh halmos
+          HALMOS_TESTS: ${{ matrix.check }}
+        run: |
+          set -o pipefail
+          script/security-slow.sh halmos
+          grep -qE 'Symbolic test result: 1 passed; 0 failed' out-security/halmos.txt
 
       - name: Upload reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: security-slow-halmos-${{ matrix.contract }}
+          name: security-slow-halmos-${{ matrix.contract }}-${{ matrix.check }}
           path: |
             contracts/out-security
             !contracts/out-security/build
