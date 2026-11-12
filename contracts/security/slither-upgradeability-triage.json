@@ -22,7 +22,7 @@
       "function": "DebtOracle.initialize(DebtOracleInitParams)",
       "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-091), and the implementation's constructor calls _disableInitializers. Covered by TEST-062 (initializeEmitsSeedAndRunsOnce) and TEST-242 (initializeRejectsAnotherTimelock).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern. initialize runs in the ERC1967Proxy constructor and rejects any timelock other than the immutable TIMELOCK."
+      "review": "Reviewed per call site, group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. initialize runs in the ERC1967Proxy constructor and rejects any timelock other than the immutable TIMELOCK."
     },
     {
       "fingerprint": "d5db8888ac8cc58f",

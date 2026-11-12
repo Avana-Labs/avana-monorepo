@@ -3,7 +3,7 @@
   "contracts": {
     "SlipstreamIntegration": {
       "margin": 128,
-      "reason": "24,436 bytes on 2026-11-11 (140 bytes under EIP-170). The Slipstream integration carries the four NPM and factory generations as immutables; a change that grows it must split code out, not lower this margin."
+      "reason": "Compiled at 1,000 optimizer runs (its own compilation_restrictions entry in foundry.toml), because at 10,000 runs it was 24,436 bytes (140 under EIP-170) and the CL-01 to CL-03 fixes would have put it 22 bytes over; at 1,000 runs the code before those fixes measured 22,510 bytes (audit/reviews/cl-lpvaults, CL-05). The Slipstream integration carries the four NPM and factory generations as immutables; a change that grows it must split code out, not lower this margin."
     }
   }
 }

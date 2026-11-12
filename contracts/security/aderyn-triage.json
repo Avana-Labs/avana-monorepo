@@ -4,7 +4,7 @@
       "check": "unused-error",
       "files": "src/*/I*.sol",
       "while": "no-implementation-in-folder",
-      "reason": "Errors are declared in the interface next to the file of the implementation that reverts with them; until that implementation exists in the same folder no code can use them."
+      "reason": "Errors are declared in the interface next to the file of the implementation that reverts with them; while the folder holds no implementation, no code can use them."
     },
     {
       "fingerprint": "fe35c273d6589dfa",
@@ -59,7 +59,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "LockHeld",
-      "reason": "`LockHeld` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`LockHeld` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -67,7 +67,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "UnknownProxy",
-      "reason": "`UnknownProxy` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`UnknownProxy` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -75,7 +75,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "UnknownMarket",
-      "reason": "`UnknownMarket` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`UnknownMarket` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -83,7 +83,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "UnknownDebtReserve",
-      "reason": "`UnknownDebtReserve` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`UnknownDebtReserve` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -91,7 +91,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidAmount",
-      "reason": "`InvalidAmount` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidAmount` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -99,7 +99,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NotLiquidatable",
-      "reason": "`NotLiquidatable` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NotLiquidatable` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -107,7 +107,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "SharesNotEqualAssets",
-      "reason": "`SharesNotEqualAssets` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`SharesNotEqualAssets` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -115,7 +115,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "StalePrice",
-      "reason": "`StalePrice` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`StalePrice` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -123,7 +123,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "DebtPriceStale",
-      "reason": "`DebtPriceStale` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`DebtPriceStale` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -131,7 +131,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "GraceHealthFactor",
-      "reason": "`GraceHealthFactor` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`GraceHealthFactor` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -139,7 +139,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FundingMismatch",
-      "reason": "`FundingMismatch` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FundingMismatch` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -147,7 +147,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashFeeTooHigh",
-      "reason": "`FlashFeeTooHigh` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashFeeTooHigh` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -155,7 +155,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashSourceIsHub",
-      "reason": "`FlashSourceIsHub` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashSourceIsHub` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -163,7 +163,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashRepayShort",
-      "reason": "`FlashRepayShort` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashRepayShort` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -171,7 +171,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidFlashCallback",
-      "reason": "`InvalidFlashCallback` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidFlashCallback` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -179,7 +179,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NothingSeized",
-      "reason": "`NothingSeized` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NothingSeized` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -187,7 +187,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NoRouteAvailable",
-      "reason": "`NoRouteAvailable` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NoRouteAvailable` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -195,7 +195,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "FlashLiquidityShort",
-      "reason": "`FlashLiquidityShort` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`FlashLiquidityShort` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -203,7 +203,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidFeeRecipient",
-      "reason": "`InvalidFeeRecipient` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidFeeRecipient` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -211,7 +211,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InvalidKeeper",
-      "reason": "`InvalidKeeper` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InvalidKeeper` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -219,7 +219,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "KeeperFloor",
-      "reason": "`KeeperFloor` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`KeeperFloor` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -227,7 +227,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "TooManyKeepers",
-      "reason": "`TooManyKeepers` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`TooManyKeepers` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -235,7 +235,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NothingPending",
-      "reason": "`NothingPending` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NothingPending` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -243,7 +243,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "DeadlineExpired",
-      "reason": "`DeadlineExpired` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`DeadlineExpired` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -251,7 +251,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "PayoutTooLow",
-      "reason": "`PayoutTooLow` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`PayoutTooLow` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -259,7 +259,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "InsufficientGas",
-      "reason": "`InsufficientGas` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`InsufficientGas` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -267,7 +267,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "AddressIsFrozen",
-      "reason": "`AddressIsFrozen` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`AddressIsFrozen` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -275,7 +275,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "NotAdapter",
-      "reason": "`NotAdapter` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`NotAdapter` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -283,7 +283,7 @@
       "check": "unused-error",
       "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
       "error": "AdminRoleOnlyTimelock",
-      "reason": "`AdminRoleOnlyTimelock` is reverted with by LPVaultSwap (2.11), which is written later in this folder. SettlementMath, the folder's only implementation so far, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry is removed when LPVaultSwap.sol lands.",
+      "reason": "`AdminRoleOnlyTimelock` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -1036,7 +1036,7 @@
       "function": "DebtOracle",
       "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock sends no value with DebtOracle operations, and the DebtOracle has no receive or other payable function (REQ-ORACLE-098). Covered by TEST-062 (noEtherAndNoPriceSetter).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group Q (higher severity: contract-locks-ether): checked 2026-11-11, DebtOracle has no receive, fallback or payable function of its own; the only payable entry is OpenZeppelin upgradeToAndCall (APPLICATION_ADMIN = TIMELOCK only), and ERC1967Utils rejects value without calldata (ERC1967NonPayable). Identical to the Josue-approved ParameterStore and MarketRegistry entries. Recommend approve."
+      "review": "Reviewed per call site, group Q (higher severity: contract-locks-ether): checked 2026-11-11, DebtOracle has no receive, fallback or payable function of its own; the only payable entry is OpenZeppelin upgradeToAndCall (APPLICATION_ADMIN = TIMELOCK only), and ERC1967Utils rejects value without calldata (ERC1967NonPayable). Identical to the Josue-approved ParameterStore and MarketRegistry entries."
     },
     {
       "fingerprint": "2c8083faaef7e454",
@@ -1045,7 +1045,7 @@
       "function": "DebtOracle._authorizeUpgrade",
       "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-ORACLE-091, REQ-ORACLE-078), as OpenZeppelin documents. Covered by TEST-062 (upgradeOnlyApplicationAdmin).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern."
+      "review": "Reviewed per call site, group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11."
     },
     {
       "fingerprint": "b27d930973ab3212",
@@ -1081,7 +1081,7 @@
       "function": "DebtOracle.initialize",
       "reason": "_grantRole returns false only when the account already holds the role; initialize runs once on a fresh proxy, so both grants to TIMELOCK return true and there is nothing to act on. Covered by TEST-062 (initializeSeedsAndGrantsOnlyTimelock).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern."
+      "review": "Reviewed per call site, group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11."
     },
     {
       "fingerprint": "495f5bade58d3095",
@@ -1090,7 +1090,7 @@
       "function": "DebtOracle.initialize",
       "reason": "Same as the DEFAULT_ADMIN_ROLE grant: the APPLICATION_ADMIN grant to TIMELOCK on a fresh proxy always returns true.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. Recommend approve and name this a pattern."
+      "review": "Reviewed per call site, group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11."
     },
     {
       "fingerprint": "9a67876a90d34f21",
@@ -1168,7 +1168,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase.flashLiquidate (F = 0 branch)",
       "reason": "The internal _liquidate(asset, request.params) of the operator helper's no-loan path returns (keeperOut, unused, debtRepaid), which only the loan path's _runLoan needs, to size the repayment owed to a lender (_checkLoanNeed and _repay). With F = 0 nothing is owed and there is no lender: _liquidate itself stores keeperOut and debtRepaid in the transient context (KEEPER_OUT_SLOT, DEBT_REPAID_SLOT), _payOut reads them for the operator's outlay bound and the FlashLiquidated event, and the payout is the rise of the helper's T balance over the whole call, which already holds the unused shortfall budget (REQ-HELPER-006, REQ-HELPER-008, REQ-HELPER-011). No value is lost by not binding the returns. Replaces stale entry f64a71575f3db858 (an unused LiquidationResult inside _liquidate, which now reads result.debtRepaid). Covered by TEST-174 (FlashLiquidator.ZeroLoan: operatorZeroLoanFundedBySafe, operatorZeroLoanOutlayBound, operatorZeroLoanShortfall, operatorZeroLoanMinPayout, testFuzz operatorZeroLoanBounded).",
-      "approval": "pending (lead review)"
+      "approval": "approved (Josue, 2026-11-11; reviewed per call site: with F = 0, _liquidate stores keeperOut and debtRepaid in transient slots that _payOut reads; the payout is the measured balance rise)"
     },
     {
       "fingerprint": "ac0d473439addc9e",
@@ -1177,7 +1177,7 @@
       "function": "RiskModule",
       "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the RiskModule holds no funds (REQ-RISK-005) and has no receive or fallback, and ERC1967Utils.upgradeToAndCall reverts ERC1967NonPayable for value without calldata. Same as the ParameterStore and MarketRegistry entries. Covered by TEST-035 (noFundsNoPauseNoSetter), TEST-242 (upgradeNeedsApplicationAdmin).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group Q (higher severity: contract-locks-ether): checked 2026-11-11, RiskModule has no receive, fallback or payable function of its own; the only payable entry is OpenZeppelin upgradeToAndCall (APPLICATION_ADMIN = TIMELOCK only), and ERC1967Utils rejects value without calldata (ERC1967NonPayable). Same as the Josue-approved ParameterStore and MarketRegistry entries. Recommend approve."
+      "review": "Reviewed per call site, group Q (higher severity: contract-locks-ether): checked 2026-11-11, RiskModule has no receive, fallback or payable function of its own; the only payable entry is OpenZeppelin upgradeToAndCall (APPLICATION_ADMIN = TIMELOCK only), and ERC1967Utils rejects value without calldata (ERC1967NonPayable). Same as the Josue-approved ParameterStore and MarketRegistry entries."
     },
     {
       "fingerprint": "14539534e56f1eb6",
@@ -1195,7 +1195,7 @@
       "function": "FlashLiquidator._checkLoanNeed",
       "reason": "The public helper has no loan-size bound: anyone may borrow what the liquidation needs and pays its own premium (REQ-HELPER-007, REQ-HELPER-010); the operator variant bounds it in OperatorFlashLiquidator._checkLoanNeed. forge-lint suppression above the function with the same reason. Covered by TEST-174, TEST-289.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check. Recommend approve."
+      "review": "Reviewed per call site, group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check."
     },
     {
       "fingerprint": "ed6c1761dd4c584c",
@@ -1204,7 +1204,7 @@
       "function": "FlashLiquidator._checkOutlay",
       "reason": "The public helper has no outlay bound beyond maxTopUp and minPayout: the caller funds and keeps the result (REQ-HELPER-008, REQ-HELPER-010); the operator variant bounds it in OperatorFlashLiquidator._checkOutlay. forge-lint suppression above the function with the same reason. Covered by TEST-174, TEST-289.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check. Recommend approve."
+      "review": "Reviewed per call site, group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check."
     },
     {
       "fingerprint": "e2e0eb20ced28780",
@@ -1240,7 +1240,7 @@
       "function": "ShapeMismatch",
       "reason": "Declared so the RiskModule ABI decodes the reason previewPledge reports: REQ-RISK-012 has the integration enforce the shape in validatePosition, checkPledge relies on that, and previewPledge returns the integration's ShapeMismatch selector (RiskModulePreview._position). No RiskModule code path raises it by specification. Covered by TEST-034 (previewPledge reports ShapeMismatch from validatePosition).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group P (error declared for selector parity, specified never raised): checked 2026-11-11, REQ-RISK-012 says the integration enforces the shape in validatePosition, checkPledge relies on that and previewPledge reports it; the RiskModule reports the integration's ShapeMismatch selector (RiskModulePreview._position) and declares the same error so its ABI decodes the preview reason. Recommend approve, or move the declaration into an interface the RiskModule does not implement if Aderyn must stay clean."
+      "review": "Reviewed per call site, group P (error declared for selector parity, specified never raised): checked 2026-11-11, REQ-RISK-012 says the integration enforces the shape in validatePosition, checkPledge relies on that and previewPledge reports it; the RiskModule reports the integration's ShapeMismatch selector (RiskModulePreview._position) and declares the same error so its ABI decodes the preview reason. Moving the declaration into an interface the RiskModule does not implement would also clear the finding."
     },
     {
       "fingerprint": "a2e7add59e680cf7",
@@ -1249,7 +1249,7 @@
       "function": "LPOracleConfig._setLeg",
       "reason": "(leg.feed, leg.pinnedDecimals) = (address(uint160(feed)), uint8(dec)): the assembly block above checks every leg word against its type before these casts (aggregator non-zero and below 2^160, decimals non-zero and below 2^8, heartbeat, margin and both age limits below 2^32) and returns false otherwise, failing the market with reason bit 1 (REQ-ORACLE-017). Nothing truncates. Covered by TEST-040 (legWordBeyondItsTypeFailsTheMarket).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+      "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
     },
     {
       "fingerprint": "c95cd4ddd858a79a",
@@ -1258,7 +1258,7 @@
       "function": "LPOracleConfig._setLeg",
       "reason": "uint32(heartbeat), uint32(margin): the assembly block above checks every leg word against its type before these casts (aggregator non-zero and below 2^160, decimals non-zero and below 2^8, heartbeat, margin and both age limits below 2^32) and returns false otherwise, failing the market with reason bit 1 (REQ-ORACLE-017). Nothing truncates. Covered by TEST-040 (legWordBeyondItsTypeFailsTheMarket).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+      "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
     },
     {
       "fingerprint": "cb221bc917c893f0",
@@ -1267,7 +1267,7 @@
       "function": "LPOracleConfig._setLeg",
       "reason": "uint32(borrowAge), uint32(liquidationAge): the assembly block above checks every leg word against its type before these casts (aggregator non-zero and below 2^160, decimals non-zero and below 2^8, heartbeat, margin and both age limits below 2^32) and returns false otherwise, failing the market with reason bit 1 (REQ-ORACLE-017). Nothing truncates. Covered by TEST-040 (legWordBeyondItsTypeFailsTheMarket).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if. Recommend approve."
+      "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
     },
     {
       "fingerprint": "e7f04f6386e47b75",
@@ -1276,7 +1276,7 @@
       "function": "LPOracle._delegateAndReturn",
       "reason": "The assembly return ends the external view with the view logic's raw return data (REQ-ORACLE-106, REQ-ORACLE-061); every caller (_forward) is an external view with no modifier whose only statement after the call names the return values, so no code that must run is skipped. Covered by TEST-219 (viewRevertsOnlyInsufficientGas), TEST-062 (logicContractsRunOnlyInTheProxy), testFuzz_TEST_219_servedViewsIndependentOfSecondSources.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "fbc164a11814aa70",
@@ -1285,7 +1285,7 @@
       "function": "ParameterStoreRouter._delegateAndReturn",
       "reason": "The assembly return ends ParameterStoreViews.getOracleConfig, an external view with no modifier and no code after the call, with the admin-oracle logic's raw return data (REQ-PSTORE-011, REQ-CONFIG-072). Covered by TEST-250 (oracleConfigEndsWithTheLogicResult).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "e854b55a3807e77b",
@@ -1447,7 +1447,7 @@
       "function": "MarketRegistryRoutesLogic.recordIntegrationContracts",
       "reason": "Each recorded AMM contract is appended to the integration's list and marked protected (REQ-MREG-020, REQ-MREG-035); the loop runs over the call's list, at most _MAX_INTEGRATION_CONTRACTS = 16 entries (refused above), and only in a normal-delay timelock operation. Covered by TEST-229 (integrationContractsAreProtected).",
       "approval": "approved by pattern",
-      "review": "Pattern: bounded loops (at most 16 entries per timelock call). The body moved unchanged from MarketRegistryHubsLogic (former fingerprint d38f53c157ba2d8c) in wave 3."
+      "review": "Pattern: bounded loops (at most 16 entries per timelock call). The body moved unchanged from MarketRegistryHubsLogic (former fingerprint d38f53c157ba2d8c)."
     },
     {
       "fingerprint": "bca49a3b832de416",

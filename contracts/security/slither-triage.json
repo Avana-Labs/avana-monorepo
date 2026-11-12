@@ -754,7 +754,7 @@
       "function": "SlipstreamIntegration._readPosition(bytes32)",
       "reason": "Fixed external layouts read for some fields only: the Slipstream NPM.positions (12 fields, REQ-AMM-SLIP-003) for the pair, the signed tick spacing, the ticks and the liquidity; the Slipstream slot0 (6 fields, REQ-AMM-SLIP-004) for the tick, the observation cardinality and the lock flag. Each call reverts on failure. Same pattern as the Uniswap v3 LPVault entries abc13743c8929d37 and f59e16a0123c6fba. Covered by TEST-011, TEST-265, PROP-083 (Halmos).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, same class as the Josue-approved Uniswap v3 entries abc13743c8929d37 and f59e16a0123c6fba; not one of the eight approved patterns (amounts are not measured by balance delta here). Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, same class as the Josue-approved Uniswap v3 entries abc13743c8929d37 and f59e16a0123c6fba; not one of the eight approved patterns (amounts are not measured by balance delta here)."
     },
     {
       "fingerprint": "4e01867896cbaeb5",
@@ -763,7 +763,7 @@
       "function": "SlipstreamIntegration._slot0(address)",
       "reason": "Fixed external layouts read for some fields only: the Slipstream NPM.positions (12 fields, REQ-AMM-SLIP-003) for the pair, the signed tick spacing, the ticks and the liquidity; the Slipstream slot0 (6 fields, REQ-AMM-SLIP-004) for the tick, the observation cardinality and the lock flag. Each call reverts on failure. Same pattern as the Uniswap v3 LPVault entries abc13743c8929d37 and f59e16a0123c6fba. Covered by TEST-011, TEST-265, PROP-083 (Halmos).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, same class as the Josue-approved Uniswap v3 entries abc13743c8929d37 and f59e16a0123c6fba; not one of the eight approved patterns (amounts are not measured by balance delta here). Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, same class as the Josue-approved Uniswap v3 entries abc13743c8929d37 and f59e16a0123c6fba; not one of the eight approved patterns (amounts are not measured by balance delta here)."
     },
     {
       "fingerprint": "13b24d27730d7464",
@@ -772,7 +772,7 @@
       "function": "DebtOracleReads._readLeg(LegRead,bool)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "471c0223a425287e",
@@ -781,7 +781,16 @@
       "function": "DebtOracleEvaluation._readSecondSource(DebtOracleStorage.DebtOracleLayout,DebtEvaluation)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+    },
+    {
+      "fingerprint": "2ca3ac22bb54ee99",
+      "check": "incorrect-equality",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._readSequencer(address,DebtEvaluation)",
+      "reason": "size == 160 compares the sequencer-uptime feed's full returndatasize() with the ABI length of latestRoundData() (five words): an answer that is not exactly 160 bytes is sequencerUnknown (SPEC-ORC-021, REQ-ORACLE-099, decision of 2026-11-11). Not a balance; Slither flags it because the same call passes block.timestamp. A feed cannot push past it: any other length only blocks borrowing and never pauses liquidation. Covered by TEST-275 (DebtOracle.SequencerAnswer: sequencerRequiresExactRound, oversizedSequencerAnswerBoundedCost).",
+      "approval": "approved (Josue, 2026-11-11; call site reviewed: DebtOracleEvaluation._readSequencer compares returndatasize with 160 to require the exact latestRoundData() length, SPEC-ORC-021; not a balance or price equality)",
+      "review": "Matches group K (strict equality on an ABI-decoded length or word, flagged through block.timestamp taint); left for the lead's per-call-site review of the changed sequencer read."
     },
     {
       "fingerprint": "932e262bda0e054f",
@@ -790,7 +799,7 @@
       "function": "DebtOracleReads._readFeedDef(address,LegRead)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "6cf5d88fe7527fa3",
@@ -799,7 +808,7 @@
       "function": "DebtOracle._recordLeg(DebtOracleStorage.Seen,RouteRead,uint256)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "960bcc4dbdea4b96",
@@ -808,7 +817,7 @@
       "function": "DebtOracleRecovery._routeSpan(RouteRead,uint256)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "2e0c31894a17cb5e",
@@ -817,7 +826,7 @@
       "function": "DebtOracle._routeValueAge(RouteRead)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "beeff55190ba3ccb",
@@ -826,7 +835,7 @@
       "function": "DebtOracleRecovery._legGap(LegRead,uint256,uint256)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "7eab765f3b1f153a",
@@ -835,7 +844,7 @@
       "function": "DebtOracleRecovery._previousRound(LegRead,uint64)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "0929e605538c2616",
@@ -844,7 +853,7 @@
       "function": "DebtOracle._reportLegs(DebtPriceView,DebtEvaluation)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "b01881f218ff2050",
@@ -853,7 +862,7 @@
       "function": "DebtOracle.poke()",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "cfe02475719b6d94",
@@ -862,7 +871,7 @@
       "function": "DebtOracleEvaluation._readListed(address,address)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "0e747e146bd96404",
@@ -871,7 +880,7 @@
       "function": "DebtOracle._startGrace(DebtOracleStorage.DebtOracleLayout,DebtEvaluation,bool,bool,uint64)",
       "reason": "Strict equalities on decoded ABI words, enum states, leg counts and round identifiers (an exact ABI layout, Chainlink's phase rule uint64(roundId) == 1, ReadStatus and PriceState comparisons), not on balances; Slither flags them because the evaluation struct also carries block.timestamp-derived fields. None can be pushed past by a caller: the values come from gas-guarded static reads of the registry, store and feeds. Covered by TEST-219, TEST-220, TEST-231, PROP-074.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
+      "review": "Reviewed per call site, group K (strict equality on enums, ABI-decoded words, leg counts and round ids): checked 2026-11-11, each comparison is an exact spec rule (ABI layout of getToken/getFeed/secondSource, Chainlink phase rule uint64(roundId) == 1, ReadStatus/PriceState/RouteSlot), none on a balance; Slither flags them through block.timestamp taint. Not in an approved pattern."
     },
     {
       "fingerprint": "654cc5c53f7fb132",
@@ -1031,9 +1040,9 @@
       "check": "assembly",
       "file": "src/oracle/debt-oracle/DebtOracleReads.sol",
       "function": "DebtOracleReads._call(address,uint256,bytes,uint256)",
-      "reason": "Gas-guarded static read (REQ-ORACLE-001, SPEC-ORC-023): one staticcall that copies no return data, then a bounded returndatacopy of at most the ABI length the caller names into an array allocated just before, whose length is only lowered. Solidity's high-level call copies the whole return data, which a hostile feed could inflate (REQ-ORACLE-001 requires copying at most the ABI length), and its decoder reverts on malformed words, which would break REQ-ORACLE-061. Memory-safe. Covered by TEST-219 (hostileFeedReadsFailOverWithBoundedGas, registry and store read failures).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group L (bounded-returndata STATICCALL in assembly): checked 2026-11-11, memory-safe (copies at most maxWords words into the array allocated just before and only lowers its length); the gas guard ceil(64G/63) + 5,000 covers the cold-account charge (2,600) and the allocation between guard and call, so the callee gets its full G; a failed call's revert data is copied but every caller rejects !ok first. Same pattern as the LPOracleCalls entries. Recommend approve."
+      "reason": "Gas-guarded static read (REQ-ORACLE-001, SPEC-ORC-023): one staticcall that copies no return data, then a bounded returndatacopy of at most the ABI length the caller names into an array allocated just before, whose length is only lowered. Solidity's high-level call copies the whole return data, which a hostile feed could inflate (REQ-ORACLE-001 requires copying at most the ABI length), and its decoder reverts on malformed words, which would break REQ-ORACLE-061. Memory-safe. Covered by TEST-219 (hostileFeedReadsFailOverWithBoundedGas, registry and store read failures). Changed call site (decision of 2026-11-11): DebtOracleEvaluation._readSequencer reads the sequencer-uptime feed's latestRoundData() (0xfeaf968c) through _readLatest/_readRound with FEED_CALL_GAS = 50,000 behind the 55,794-gas floor, maxWords = 5 (at most 160 bytes copied), and requires the full returndatasize() == 160: a revert, a 159-byte, 161-byte, 192-byte or 1 MB answer is sequencerUnknown (borrowing blocked, liquidation not paused). The price-feed call sites keep decoding the first five words of a longer answer. Covered by TEST-275 (DebtOracle.SequencerAnswer: sequencerRequiresExactRound, oversizedSequencerAnswerBoundedCost, priceFeedLongerAnswerUnchanged).",
+      "approval": "approved (Josue, 2026-11-11; call site reviewed: the sequencer read through _readLatest copies at most 5 words and reports the full returndatasize, which must equal 160; price-leg reads unchanged)",
+      "review": "Reviewed per call site, group L (bounded-returndata STATICCALL in assembly): checked 2026-11-11, memory-safe (copies at most maxWords words into the array allocated just before and only lowers its length); the gas guard ceil(64G/63) + 5,000 covers the cold-account charge (2,600) and the allocation between guard and call, so the callee gets its full G; a failed call's revert data is copied but every caller rejects !ok first. Same pattern as the LPOracleCalls entries. Helper previously approved (Josue, 2026-11-11); the changed sequencer call site awaits the lead's per-call-site review."
     },
     {
       "fingerprint": "8db7583d7d905e12",
@@ -1207,8 +1216,9 @@
       "fingerprint": "c1bc1fda60b7cb8f",
       "check": "assembly",
       "file": "src/oracle/lp-oracle/LPOracleCalls.sol",
-      "reason": "Bounded static read (SPEC-ORC-023, REQ-ORACLE-001): Solidity's call syntax copies the whole return buffer, so a source returning a huge buffer could make the oracle pay for it; the assembly copies at most the ABI length and the bounds-checked word reader decodes without abi.decode, which reverts on malformed data that no view may revert on (REQ-ORACLE-061). Memory-safe, one staticcall or one mload. Covered by TEST-038 (malformed and oversized returns), TEST-219.",
-      "approval": "approved (Josue, 2026-11-11)"
+      "reason": "Bounded static read (SPEC-ORC-023, REQ-ORACLE-001): Solidity's call syntax copies the whole return buffer, so a source returning a huge buffer could make the oracle pay for it; the assembly copies at most the ABI length and the bounds-checked word reader decodes without abi.decode, which reverts on malformed data that no view may revert on (REQ-ORACLE-061). Memory-safe, one staticcall or one mload. Covered by TEST-038 (malformed and oversized returns), TEST-219. Changed call site (decision of 2026-11-11): LPOracleConfig._readSequencer reads the sequencer-uptime feed's latestRoundData() (0xfeaf968c) with FEED_CALL_GAS = 50,000 behind the 55,794-gas floor and maxLength = ROUND_LENGTH + 1 = 161, and decodes only when ret.length == 160: a revert, a 159-byte, 161-byte, 192-byte or 1 MB answer is sequencerUnknown (borrowing blocked, liquidation not paused), and at most 161 bytes are copied. The price-feed call sites (_latestRound, LPOracleRecovery) keep maxLength = 160. Covered by TEST-275 (LPOracle.SequencerAnswer: sequencerRequiresExactRound, oversizedSequencerAnswerBoundedCost, priceFeedLongerAnswerUnchanged).",
+      "approval": "approved (Josue, 2026-11-11; call site reviewed: LPOracleConfig._readSequencer copies at most 161 bytes and requires exactly 160; price reads keep maxLength 160)",
+      "review": "Helper previously approved (Josue, 2026-11-11); the changed sequencer call site awaits the lead's per-call-site review."
     },
     {
       "fingerprint": "6edc064a50236361",
@@ -1235,28 +1245,28 @@
       "fingerprint": "21e64676cdd13bb1",
       "check": "unimplemented-functions",
       "file": "src/oracle/lp-oracle/LPOracle.sol",
-      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); contract 13 (LPOracleCL) supplies them.",
+      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); the concentrated-liquidity LPOracle (LPOracleCL) supplies them.",
       "approval": "pending review (approved pattern)"
     },
     {
       "fingerprint": "49e7d37d46f77eac",
       "check": "unimplemented-functions",
       "file": "src/oracle/lp-oracle/LPOracleListingLogic.sol",
-      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); contract 13 (LPOracleCL) supplies them.",
+      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); the concentrated-liquidity LPOracle (LPOracleCL) supplies them.",
       "approval": "pending review (approved pattern)"
     },
     {
       "fingerprint": "b7fc002013648217",
       "check": "unimplemented-functions",
       "file": "src/oracle/lp-oracle/LPOracleViewLogic.sol",
-      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); contract 13 (LPOracleCL) supplies them.",
+      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); the concentrated-liquidity LPOracle (LPOracleCL) supplies them.",
       "approval": "pending review (approved pattern)"
     },
     {
       "fingerprint": "eb11650d2c983c8e",
       "check": "unimplemented-functions",
       "file": "src/oracle/lp-oracle/LPOraclePokeLogic.sol",
-      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); contract 13 (LPOracleCL) supplies them.",
+      "reason": "Abstract by design: the LPOracle base and its logic contracts leave the pricing-module hooks (_initMarket, _composition, _poolLocked, _consistency, _poolTwapPrice, _listingChecks) to each AMM protocol's implementation (REQ-ORACLE-103); the concentrated-liquidity LPOracle (LPOracleCL) supplies them.",
       "approval": "pending review (approved pattern)"
     },
     {
@@ -1266,7 +1276,7 @@
       "function": "FlashLiquidatorBase.flashLiquidate(FlashLiquidationRequest)",
       "reason": "The inventory pull X - F comes from `_payer()`, which the variant fixes and the request cannot set: `msg.sender` in the public FlashLiquidator, the immutable FUNDING_SAFE in OperatorFlashLiquidator, whose flashLiquidate only SIGNER may call (REQ-HELPER-004, REQ-HELPER-010, REQ-HELPER-011). Slither cannot see through the virtual hook. forge-lint suppression on the line with the reason above it. Covered by TEST-289 (test_TEST_289_publicHelperPullsFromAndPaysOnlyCaller: a third party's allowance is never used) and test_TEST_174_operatorHelperSignerSafe.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group N (arbitrary-send-erc20, higher severity): checked 2026-11-11, the `from` is `_payer()`: msg.sender in FlashLiquidator, the immutable FUNDING_SAFE in OperatorFlashLiquidator, whose flashLiquidate only SIGNER may call; nothing in the request names it. Recommend approve."
+      "review": "Reviewed per call site, group N (arbitrary-send-erc20, higher severity): checked 2026-11-11, the `from` is `_payer()`: msg.sender in FlashLiquidator, the immutable FUNDING_SAFE in OperatorFlashLiquidator, whose flashLiquidate only SIGNER may call; nothing in the request names it."
     },
     {
       "fingerprint": "fa009373ee0d263e",
@@ -1275,7 +1285,7 @@
       "function": "FlashLiquidatorBase._repay(IERC20,uint256,uint256,uint256)",
       "reason": "The top-up is pulled from the payer that flashLiquidate recorded in the transient context (msg.sender for the public helper, FUNDING_SAFE for the operator variant), never from calldata; the callback reaches this line only from the context's Pool, with the helper as initiator and an open, unused context whose asset, amount and params hash match (REQ-HELPER-005, REQ-HELPER-007), and the amount is bounded by maxTopUp (and MAX_TOP_UP_BPS). A forged executeOperation reverts InvalidFlashCallback before any transfer. Covered by TEST-046 (forged and third-party-loan callbacks), PROP-036 (Halmos), TEST-289.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group N: checked 2026-11-11, the payer comes from the transient context written in flashLiquidate; executeOperation reaches the pull only with msg.sender == recorded Pool, initiator == this helper, an OPEN context (set USED before any external call) and matching asset/amount/params hash, so a third-party flashLoan (initiator != helper), flashLoanSimple (different selector) or a direct call reverts first; the amount is bounded by maxTopUp (and MAX_TOP_UP_BPS). Recommend approve."
+      "review": "Reviewed per call site, group N: checked 2026-11-11, the payer comes from the transient context written in flashLiquidate; executeOperation reaches the pull only with msg.sender == recorded Pool, initiator == this helper, an OPEN context (set USED before any external call) and matching asset/amount/params hash, so a third-party flashLoan (initiator != helper), flashLoanSimple (different selector) or a direct call reverts first; the amount is bounded by maxTopUp (and MAX_TOP_UP_BPS)."
     },
     {
       "fingerprint": "ae6148ed7c68603c",
@@ -1302,7 +1312,7 @@
       "function": "FlashLiquidatorBase.flashLiquidate(FlashLiquidationRequest)",
       "reason": "FlashLiquidated reports the premium, keeperOut and top-up the Pool's callback measured, known only after flashLoan returns, and is emitted after the payout as IFlashLiquidatorEvents specifies. The transient context stays open until after the event, so any reentrant flashLiquidate reverts ContextActive and any replayed callback InvalidFlashCallback; no log can be reordered or fabricated. Same pattern as AaveV3FlashSource.flashLoan (427a9680b053d9f7). Covered by TEST-174 (test_TEST_174_helperReentryDuringPayoutReverts).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group O (event after external calls, reentry blocked): checked 2026-11-11, the transient context stays open until after the event, so reentrant flashLiquidate reverts ContextActive; same class as 15 Josue-approved reentrancy-events entries, but not one of the eight approved patterns. Recommend approve."
+      "review": "Reviewed per call site, group O (event after external calls, reentry blocked): checked 2026-11-11, the transient context stays open until after the event, so reentrant flashLiquidate reverts ContextActive; same class as 15 Josue-approved reentrancy-events entries, but not one of the eight approved patterns."
     },
     {
       "fingerprint": "aa08521a4de1ca38",
@@ -1595,7 +1605,7 @@
       "function": "RiskModule.pokeConfig(address)",
       "reason": "spokeDrift returns (marketId, reason); pokeConfig records the breach on every market of the Spoke (REQ-RISK-090), so the market the reason was found on is not needed. Covered by TEST-268 (pokeConfigEmitsAndLatches, pokeConfigSpokeWideDrift).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, spokeDrift's first value is the market id of the drift, unused because the breach goes to every market of the Spoke; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, spokeDrift's first value is the market id of the drift, unused because the breach goes to every market of the Spoke; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "2b4329107cea6840",
@@ -1604,7 +1614,7 @@
       "function": "RiskModuleBase._accepted(address)",
       "reason": "lastAcceptedPrice returns (price8, updatedAt); the cap charge and minimum use the accepted price, and its time is not part of the check (REQ-RISK-026). Covered by TEST-010, TEST-196 (minimumPledgeValue).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, the accepted price's time is not part of REQ-RISK-026; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, the accepted price's time is not part of REQ-RISK-026; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "bd517d36512bccc4",
@@ -1613,7 +1623,7 @@
       "function": "RiskModuleBase._sequencerState()",
       "reason": "wordAt returns (ok, word); the buffer is checked to be exactly ROUND_LENGTH (160) bytes on the line before, so the reads at offsets 32 and 64 are in bounds and their ok is true whenever ok is used. LPPriceMath.sequencerStatus returns five flags; the gate needs up and inGrace (REQ-RISK-081). Covered by TEST-275 (sequencerGate, unreadableSequencerFeedIsDown).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, wordAt's ok is implied by the length check above, and sequencerStatus is read for up and inGrace only; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, wordAt's ok is implied by the length check above, and sequencerStatus is read for up and inGrace only; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "53651fc621d8dd1e",
@@ -1631,7 +1641,7 @@
       "function": "RiskModuleBorrowLogic._breakers(RiskModuleBorrowScope.Scope,bool)",
       "reason": "marketBreaker and debtBreaker return (reasons, reopensAt); any reason blocks the borrow or withdrawal, so the reopening time is not used (REQ-RISK-065). Covered by TEST-228 (breakersOnBorrowAndWithdraw).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, the reopening time is reported by the views only; any reason blocks; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, the reopening time is reported by the views only; any reason blocks; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "3eb7d3dc6d90104a",
@@ -1640,7 +1650,7 @@
       "function": "RiskModuleBorrowScope._routeHalt(RiskModuleBorrowScope.Scope)",
       "reason": "getRoute returns (route, usable); the halt rule of REQ-RISK-062 depends only on whether a primary or backup route is usable. Covered by TEST-068 (liquidationHalts).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, only the usable flag of getRoute is part of REQ-RISK-062; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, only the usable flag of getRoute is part of REQ-RISK-062; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "b0a83be5fe650df2",
@@ -1649,7 +1659,7 @@
       "function": "RiskModuleBreakerLogic._marketLive(uint256,bool,uint256)",
       "reason": "spokeDrift returns (marketId, reason); drift on any market of the Spoke trips this market's CONFIG_DRIFT (REQ-RISK-078), so the market it was found on is not needed. Covered by TEST-228 (depthAndOracleGates), TEST-268.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, spokeDrift's market id is not needed: any drift of the Spoke trips CONFIG_DRIFT; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, spokeDrift's market id is not needed: any drift of the Spoke trips CONFIG_DRIFT; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "1862f51059c46f27",
@@ -1658,7 +1668,7 @@
       "function": "RiskModulePledgeLogic._hubRoom(RiskModulePreview.Ctx)",
       "reason": "getUserReserveStatus returns (collateral, borrowing); the per-account collateral reserve limit of REQ-RISK-020 counts collateral flags only. Covered by TEST-012 (reserveLimitOnlyForNewCollateral).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, the Aave V4 Spoke's fixed (collateral, borrowing) tuple; the limit counts collateral only; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, the Aave V4 Spoke's fixed (collateral, borrowing) tuple; the limit counts collateral only; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "bd7dc193e80cf3a0",
@@ -1667,7 +1677,7 @@
       "function": "RiskModulePledgeLogic._exemption(RiskModulePreview.Ctx,PledgeCounters,bool)",
       "reason": "marketBreaker returns (reasons, reopensAt); only the reasons decide the pledge (REQ-RISK-066). Covered by TEST-228 (marketBreakerOnPledge).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, the reopening time is reported by the views only; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, the reopening time is reported by the views only; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "b911c6382acab9bf",
@@ -1676,7 +1686,7 @@
       "function": "RiskModuleStatusLogic._debtStatus(AccountGateStatus,RiskModuleBorrowScope.Scope)",
       "reason": "debtBreaker returns (reasons, reopensAt); the account status reports the reasons per debt reserve (AccountGateStatus has no per-reserve reopening time, REQ-RISK-060). Covered by TEST-228 (statusBreakers).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group M (partial read of a fixed external return tuple): checked 2026-11-11, AccountGateStatus carries the debt breaker reasons only; the callee is an Avana contract or a library whose other return values are not needed. Recommend approve."
+      "review": "Reviewed per call site, group M (partial read of a fixed external return tuple): checked 2026-11-11, AccountGateStatus carries the debt breaker reasons only; the callee is an Avana contract or a library whose other return values are not needed."
     },
     {
       "fingerprint": "3360da48a8cc8d81",
@@ -1694,7 +1704,7 @@
       "function": "LPOracleConfig._loadInputs(Evaluation,bool).w",
       "reason": "w is assigned by wordArray when the read succeeded and read only behind `!ok ||`, which short-circuits on a failed read; an empty w is never indexed (REQ-ORACLE-017, REQ-ORACLE-094). Covered by TEST-040 (headWordBeyondItsTypeFailsTheMarket, tokenWordBeyondItsTypeFailsTheMarket, legWordBeyondItsTypeFailsTheMarket), TEST-219.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, w is filled by wordArray on a successful read and never indexed otherwise; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0. Recommend approve."
+      "review": "Reviewed per call site, group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, w is filled by wordArray on a successful read and never indexed otherwise; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0."
     },
     {
       "fingerprint": "a268444cdd3f2c8e",
@@ -1703,7 +1713,7 @@
       "function": "RiskModuleDriftLogic.spokeDrift(address).s and driftOf(address,uint256[],address).s",
       "reason": "SpokeCtx s is passed to _spokeWide, which writes every field the per-market checks read (spoke, hub, oracle, liquidationBonusFactor, minBonus, minThreshold) before returning None; on any other reason the function returns before reading s. Covered by TEST-181, TEST-204, TEST-268.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, _spokeWide fills the context before any per-market check reads it; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0. Recommend approve."
+      "review": "Reviewed per call site, group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, _spokeWide fills the context before any per-market check reads it; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0."
     },
     {
       "fingerprint": "779c3fbc807f298a",
@@ -1712,7 +1722,7 @@
       "function": "RiskModulePledgeLogic.checkPledge(...).c",
       "reason": "Ctx c is filled field by field on the lines after the declaration (marketId, m, proxy, units) and by _eligibility and _value (topUp, hf, debtRay, minPledge, pledgeUsd, charge, eligible, restore) before _caps and _exemption read it; restore is 0 unless the top-up is eligible, by design (SPEC-CAP-003). Covered by TEST-010, TEST-013, TEST-235.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, the pledge context is written by the next statements and the eligibility and value steps; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0. Recommend approve."
+      "review": "Reviewed per call site, group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, the pledge context is written by the next statements and the eligibility and value steps; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0."
     },
     {
       "fingerprint": "ebb2cd2794e27f1b",
@@ -1721,7 +1731,7 @@
       "function": "RiskModulePledgeLogic._exemption(...).x",
       "reason": "Exemption x is filled field by field before RiskModuleMath.exemption reads it; depthUnavailable and capFail stay false when the pool has no share cap (cap >= 10,000 bps is no limit, SPEC-CAP-005). Covered by TEST-034 (poolShareCap), TEST-235 (requireRescue), TEST-228 (marketBreakerOnPledge).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, the exemption inputs are written before the pure function reads them; the two pool-share flags are false without a cap by design; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0. Recommend approve."
+      "review": "Reviewed per call site, group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, the exemption inputs are written before the pure function reads them; the two pool-share flags are false without a cap by design; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0."
     },
     {
       "fingerprint": "a56f5e36d5b6f945",
@@ -1730,7 +1740,7 @@
       "function": "RiskModuleStatusLogic.getAccountGateStatus(address).s",
       "reason": "Scope s is filled on the following lines (proxy, spoke, marketId, m, borrowed) and by _accountReserves (debt, defs) before _marketStatus and _debtStatus read it. Covered by TEST-028 (statusOfAnOpenAccount, statusCollateralScope).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, the status scope is written by the next statements and _accountReserves; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0. Recommend approve."
+      "review": "Reviewed per call site, group U (uninitialized-local on a zero-initialised memory struct or array): checked 2026-11-11, the status scope is written by the next statements and _accountReserves; Solidity zero-initialises memory locals, so no field is read before it is written or is meant to be 0."
     },
     {
       "check": "unused-state",
@@ -1791,7 +1801,7 @@
       "function": "LPOracle._delegateAndReturn(address)",
       "reason": "View forwarding of REQ-ORACLE-106: copies the calldata, delegatecalls the immutable view or listing logic, and ends the call with its raw return or revert data (an empty failure becomes InsufficientGas, the only revert a view may produce, REQ-ORACLE-061). Not memory-safe by design: it overwrites scratch memory and never returns to Solidity code. Every caller (_forward) is an external view with no modifier whose only statement after the call names the return values. Covered by TEST-219 (viewRevertsOnlyInsufficientGas), TEST-062 (logicContractsRunOnlyInTheProxy), testFuzz_TEST_219_servedViewsIndependentOfSecondSources.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "ba5d3eba956eabfe",
@@ -1800,7 +1810,7 @@
       "function": "LPOracle._asView(function(address))",
       "reason": "One assignment that retypes the internal function pointer of _delegateAndReturn as a view, so the external views can call it (REQ-ORACLE-106); the code it points to is unchanged and only view selectors reach it. Memory-safe.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "d0a4789b46a19a7c",
@@ -1809,7 +1819,7 @@
       "function": "LPOracle._delegateAndReturn(address)",
       "reason": "Used through an internal function pointer: _forward calls _asView(_delegateAndReturn)(logic) for every forwarded view; Slither does not follow function-pointer uses. Same as the dead-code entry 3a5a1b40a6362c51 (a function used through a pointer).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "702e45ec66adb962",
@@ -1818,7 +1828,7 @@
       "function": "ParameterStoreRouter._delegateAndReturn(address)",
       "reason": "View forwarding of getOracleConfig (REQ-PSTORE-011, REQ-CONFIG-072): copies the calldata, delegatecalls the immutable admin-oracle logic and ends the call with its raw return or revert data. Not memory-safe by design: it never returns to Solidity code. Its only caller (_forwardView in ParameterStoreViews.getOracleConfig) is an external view with no modifier. Covered by TEST-250 (oracleConfigEndsWithTheLogicResult).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "bfc9f3f5514c93d2",
@@ -1827,7 +1837,7 @@
       "function": "ParameterStoreRouter._asView(function(address))",
       "reason": "One assignment that retypes the internal function pointer of _delegateAndReturn as a view (REQ-PSTORE-011); the code it points to is unchanged. Memory-safe.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "4a5f2d4482a70b34",
@@ -1836,7 +1846,7 @@
       "function": "ParameterStoreRouter._delegateAndReturn(address)",
       "reason": "Used through an internal function pointer: _forwardView calls _asView(_delegateAndReturn)(logic); Slither does not follow function-pointer uses.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. Recommend approve; this is the delegatecall view-forwarding question from the LPOracle gas refactor."
+      "review": "Reviewed per call site, group S (view forwarding by delegatecall ending in an assembly return): checked 2026-11-11, every caller of the forward helper is an external view with no modifier and no code after the call, so the assembly return skips nothing that must run; only view selectors are forwarded to Avana's immutable logic contracts. This is the delegatecall view forwarding of the LPOracle gas refactor."
     },
     {
       "fingerprint": "ea244fa212d711b9",
@@ -1845,7 +1855,7 @@
       "function": "LPOracleCalls.wordArray(bytes,uint256)",
       "reason": "Reads the offset and length words of a buffer whose length was checked to be exactly 64 + 32 x count bytes, and points the uint256[] at the length word (no copy) only when both match (REQ-ORACLE-001, REQ-ORACLE-061). Memory-safe. Covered by TEST-040 (head, token and leg word beyond its type), TEST-219.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views. Recommend approve."
+      "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
       "fingerprint": "a40fab576dfd5945",
@@ -1854,7 +1864,7 @@
       "function": "LPOracleConfig._setLeg(LegEval,uint256[],uint256)",
       "reason": "Eight mloads of one leg from the word array at index k (k + 7 < count by OracleInputsLayout: TOKEN_WORDS = 5 + 4 x LEG_WORDS), and one range check over them (aggregator non-zero and 160 bits, decimals non-zero and 8 bits, four 32-bit words), REQ-ORACLE-017. Memory-safe. Covered by TEST-040 (legWordBeyondItsTypeFailsTheMarket).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views. Recommend approve."
+      "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
       "fingerprint": "2acf1401f5edbe9c",
@@ -1863,7 +1873,7 @@
       "function": "LPOracleConfig._at(uint256[],uint256)",
       "reason": "One mload of word i of an array that wordArray checked to hold exactly count words; every index the decoders read is below count by OracleInputsLayout. Memory-safe. Covered by TEST-040, TEST-250.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views. Recommend approve."
+      "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
       "fingerprint": "e989e436bb525fb7",
@@ -1872,7 +1882,7 @@
       "function": "LPOracleReads._decodeRound(bool,bytes)",
       "reason": "Five mloads of the latestRoundData words of a buffer checked to be at least ROUND_LENGTH (160) bytes on the line before; roundId and answeredInRound are then range-checked to 80 bits (REQ-ORACLE-001, SPEC-ORC-001). Memory-safe. Covered by TEST-038 (malformedAndOversizedReturns), TEST-219.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views. Recommend approve."
+      "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
       "fingerprint": "d58178f403177584",
@@ -1881,16 +1891,16 @@
       "function": "RiskModuleCalls.wordAt(bytes,uint256)",
       "reason": "One mload of the word at a byte offset checked to satisfy offset + 32 <= length (SPEC-BRK-003, REQ-RISK-081); same as LPOracleCalls.wordAt. Memory-safe. Covered by TEST-228, TEST-275.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views. Recommend approve."
+      "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
       "fingerprint": "511a336050dfd45d",
       "check": "assembly",
       "file": "src/policy/risk-module/RiskModuleCalls.sol",
       "function": "RiskModuleCalls.staticRead(address,uint256,bytes,uint256)",
-      "reason": "Bounded static read of the issuer probes and the sequencer feed (REQ-RISK-089, SPEC-BRK-003, REQ-RISK-081): one staticcall with explicit gas after the ceil(64G/63) + POST_CALL_GAS floor, copying at most maxLength bytes into the buffer allocated just before, whose length is only lowered. Same construct as LPOracleCalls.staticRead (c1bc1fda60b7cb8f). Covered by TEST-221 (probeGasFloor), TEST-228, TEST-275.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group L (bounded-returndata STATICCALL in assembly): checked 2026-11-11, same construct as LPOracleCalls.staticRead and DebtOracleReads._call: memory-safe, copies at most maxLength bytes into the buffer allocated just before and only lowers its length; the gas floor ceil(64G/63) + POST_CALL_GAS precedes the call. Recommend approve."
+      "reason": "Bounded static read of the sequencer feed (REQ-RISK-081; the issuer probes use the exact-one-word RiskModuleCalls.staticReadWord, a23c2db960165c54): one staticcall with explicit gas after the ceil(64G/63) + POST_CALL_GAS floor, copying at most maxLength bytes into the buffer allocated just before, whose length is only lowered. Same construct as LPOracleCalls.staticRead (c1bc1fda60b7cb8f). Covered by TEST-221 (probeGasFloor), TEST-275 (sequencerRequiresExactRound, oversizedSequencerAnswerBoundedCost). The sequencer call site reads maxLength = ROUND_LENGTH + 1 = 161 and requires ret.length == 160 (decision of 2026-11-11): an answer that is not exactly 160 bytes is down, and at most 161 bytes are copied.",
+      "approval": "approved (Josue, 2026-11-11; call site reviewed: RiskModuleBase._sequencerState, latestRoundData() at SEQUENCER_CALL_GAS behind the gas floor, at most 161 bytes copied, exactly 160 required, otherwise down)",
+      "review": "Reviewed per call site, group L (bounded-returndata STATICCALL in assembly): checked 2026-11-11, same construct as LPOracleCalls.staticRead and DebtOracleReads._call: memory-safe, copies at most maxLength bytes into the buffer allocated just before and only lowers its length; the gas floor ceil(64G/63) + POST_CALL_GAS precedes the call."
     },
     {
       "fingerprint": "a23c2db960165c54",
@@ -1898,7 +1908,7 @@
       "file": "src/policy/risk-module/RiskModuleCalls.sol",
       "function": "RiskModuleCalls.staticReadWord(address,uint256,bytes)",
       "reason": "Exact-length static read of each issuer probe (SPEC-BRK-003, REQ-RISK-089), called only by RiskModuleBreakerLogic._readTrips for paused() and basisPointsRate() (each read of UsdtFeeRateAndPaused too). One staticcall with ISSUER_PROBE_GAS after the ceil(64G/63) + POST_CALL_GAS floor, its output area the 32-byte scratch space 0x00-0x1f, so at most 32 bytes are copied whatever the answer's length; ok = success and returndatasize() == 32, checked after the call (a longer answer is refused even when its first word is 0); word = mload(0x00) only when ok, else 0. No free-memory allocation and no returndatacopy. Memory-safe (scratch space only). Solidity's high-level call copies the whole return data and its decoder accepts a longer answer, which SPEC-BRK-003 must trip. Covered by TEST-228 (RiskModule.ProbeAnswer: oneWordZeroAnswerIsClear, answerNotOneWordTrips, oversizedAnswerTripsAtBoundedCost, realAnswerLengths, for PausedFlag, UsdtFeeRate and UsdtFeeRateAndPaused), TEST-221 (probeWordReadsExactlyOneWord, testFuzz probeWordOkOnlyAtThirtyTwoBytes).",
-      "approval": "pending (lead review)"
+      "approval": "approved (Josue, 2026-11-11; call site reviewed: RiskModuleCalls.staticReadWord, issuer probes paused() and basisPointsRate() at ISSUER_PROBE_GAS behind the REQ-RISK-089 gas floor; at most 32 bytes copied into scratch space, the word read only when exactly 32 bytes arrived)"
     },
     {
       "fingerprint": "5c0185a2a3a32039",
@@ -1907,7 +1917,7 @@
       "function": "RiskModuleBreakerLogic.constructor(RiskModuleImmutables,address).drift",
       "reason": "_requireLogic(drift, kind) calls drift.logicConfig() before the assignment; address(0) has no code, so the call returns no data and the decode reverts (REQ-RISK-002). Covered by TEST-062 (test_TEST_062_logicConstructorsCheckDependencies deploys new RiskModuleBreakerLogic(im, address(0)) and expects the revert).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+      "review": "Reviewed per call site, group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert)."
     },
     {
       "fingerprint": "78e24a744a23a1ca",
@@ -1916,7 +1926,7 @@
       "function": "RiskModuleStatusLogic.constructor(...).borrowLogic",
       "reason": "_requireLogic(borrowLogic, kind) calls borrowLogic.logicConfig() before the assignment; address(0) has no code, so the decode reverts (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies; a wrong-kind dependency reverts InvalidLogic).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert). Recommend approve."
+      "review": "Reviewed per call site, group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert)."
     },
     {
       "fingerprint": "27e984fb7b3eb622",
@@ -1925,7 +1935,7 @@
       "function": "RiskModule.pokeBreakers(uint256)",
       "reason": "BreakersPoked(marketId, reasons) reports the reasons the poke evaluated, known only after the breaker-logic views and the recordBreach calls, as REQ-RISK-091 orders. The calls go to the RiskModule's immutable breaker logic (views) and to the MarketRegistry, whose recordBreach accepts only the RiskModule and makes no external call, so no call can re-enter and reorder the event. Covered by TEST-228.",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Josue group O (event after external calls, reentry blocked): checked 2026-11-11, the only calls before the event are views of the breaker logic and MarketRegistry.recordBreach, an Avana contract callable only by the RiskModule that makes no external call; same class as the Josue-approved MarketRegistryListingLogic entry. Recommend approve."
+      "review": "Reviewed per call site, group O (event after external calls, reentry blocked): checked 2026-11-11, the only calls before the event are views of the breaker logic and MarketRegistry.recordBreach, an Avana contract callable only by the RiskModule that makes no external call; same class as the Josue-approved MarketRegistryListingLogic entry."
     },
     {
       "fingerprint": "2f3b4f3eefd8901b",
@@ -1935,24 +1945,6 @@
       "reason": "MarketRegistry getSpokes, getDebtReserveIds and getDebtReserve views over every CDP Spoke's debt reserves when setFeeRecipient or initialize checks the recipient against each reserve's Coverage Spoke and price source (REQ-CONFIG-056). STATICCALL to the Avana registry only, at execution of a governance setter; the loop length is the registry's size, which only timelock operations grow, and a reverting callee makes the setter revert (fail closed). Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract).",
       "approval": "approved by pattern",
       "review": "Pattern: bounded loops (view calls only; lists that only timelock listings grow), as the ParameterStoreRisk._scanReserves entries."
-    },
-    {
-      "fingerprint": "8d8edc33708b1612",
-      "check": "low-level-calls",
-      "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
-      "function": "ParameterStoreAdminRiskLogic._reportsAvana(address)",
-      "reason": "A STATICCALL of logicConfig() on the fee-recipient candidate, whose success and return length alone mark it as an Avana logic contract (REQ-CONFIG-056); a typed call would revert setFeeRecipient for a candidate that has no such function or returns a short buffer. No state, no value, and a failed call reads as not Avana. Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract, feeRecipientRefusesAvanaAddresses).",
-      "approval": "pending (lead review)",
-      "review": "The call site is gone: _reportsAvana now probes logicConfig() with RouteReads._staticRead(r, PROBE_GAS = 30,000, data, 32) (bounded STATICCALL, at most 32 bytes copied), so Slither reports no low-level call here; the only assembly is RouteReads._staticRead (entry 96b57e4c1e66f7b8). Kept for the lead's per-call-site review of the wave 3 change (approval to be recorded against the reviewed file hash), then removable as stale."
-    },
-    {
-      "fingerprint": "6ad16bee58e4f4b8",
-      "check": "low-level-calls",
-      "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
-      "function": "ParameterStoreAdminRiskLogic._word(address,bytes)",
-      "reason": "One-word STATICCALL of a fee-recipient candidate (TIMELOCK(), MARKET_REGISTRY(), ADAPTER(), WALLET(), SPOKE(), MARKET_ID()) and of ProxyManager.predictProxy; the value is used only when the call succeeds and returns exactly 32 bytes, else 0, which matches no Avana address (REQ-CONFIG-056). A typed call or try/catch would revert setFeeRecipient on a short return, which Solidity cannot catch. Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract).",
-      "approval": "pending (lead review)",
-      "review": "The call site is gone: _word(target, data) now reads with RouteReads._staticRead(target, PROBE_GAS = 30,000, data, 64) and accepts exactly 32 bytes, so Slither reports no low-level call here; the only assembly is RouteReads._staticRead (entry 96b57e4c1e66f7b8). Kept for the lead's per-call-site review of the wave 3 change, then removable as stale."
     },
     {
       "fingerprint": "f03807028208b769",
@@ -1977,9 +1969,16 @@
       "check": "assembly",
       "file": "src/liquidation/settlement-routes/RouteReads.sol",
       "function": "RouteReads._staticRead(address,uint256,bytes,uint256)",
-      "reason": "Bounded static read of a swap route's constructor checks (REQ-ROUTE-045, REQ-ROUTE-008): one staticcall with explicit gas, copying at most maxLength (32, 64 or 96) bytes into the buffer allocated just before, whose length is only lowered. Solidity's own call syntax copies the whole return buffer, and its decoder reverts on short data, which would make a deployment fail with something other than InvalidRouteConfig. The fee-switch probe runs with FEE_SWITCH_PROBE_GAS after a ceil(64G/63) + POST_CALL_GAS check (a starved probe counts as a switch, fail closed); the other reads forward all gas and a failed read fails the deployment check. Memory-safe. Same construct as RiskModuleCalls.staticRead (511a336050dfd45d) and LPOracleCalls.staticRead. Covered by TEST-054 (unansweredReadsRevertInvalidRouteConfig, hopPoolsMustComeFromPinnedFactories), TEST-221 (feeSwitchTokenRefusedOnConcentratedHop, starvedFeeSwitchProbeNeverAcceptsTheToken). Since wave 3 also the bounded read of the ParameterStore's fee-recipient identity probes (ParameterStoreAdminRiskLogic._reportsAvana and _word, 30,000 gas, 32 or 64 bytes copied), of the aggregator bounds in ParameterStoreListingLogic._pin (RouteReads.words, one word) and of the VaultTokenFactory's getter reads (_read, 30,000 gas, size + 32 bytes copied); each caller requires an exact length and range-checks the words.",
-      "approval": "pending (lead review)",
-      "review": "Josue group L (bounded-returndata STATICCALL in assembly): same construct as RiskModuleCalls.staticRead and DebtOracleReads._call; memory-safe, copies at most maxLength bytes and only lowers the length; the gas-limited probe has its ceil(64G/63) + POST_CALL_GAS check before the call. Constructor-only. Approved before wave 3 as \"approved by pattern\" for the route reads; the new callers (ParameterStore, VaultTokenFactory) need the lead's per-call-site review."
+      "reason": "Bounded static read of a swap route's constructor checks (REQ-ROUTE-045, REQ-ROUTE-008): one staticcall with explicit gas, copying at most maxLength (32, 64 or 96) bytes into the buffer allocated just before, whose length is only lowered. Solidity's own call syntax copies the whole return buffer, and its decoder reverts on short data, which would make a deployment fail with something other than InvalidRouteConfig. The fee-switch probe runs with FEE_SWITCH_PROBE_GAS after a ceil(64G/63) + POST_CALL_GAS check (a starved probe counts as a switch, fail closed); the other reads forward all gas and a failed read fails the deployment check. Memory-safe. Same construct as RiskModuleCalls.staticRead (511a336050dfd45d) and LPOracleCalls.staticRead. Covered by TEST-054 (unansweredReadsRevertInvalidRouteConfig, hopPoolsMustComeFromPinnedFactories), TEST-221 (feeSwitchTokenRefusedOnConcentratedHop, starvedFeeSwitchProbeNeverAcceptsTheToken). Also the bounded read of the ParameterStore's fee-recipient identity probes (ParameterStoreAdminRiskLogic._reportsAvana and _word, 30,000 gas, 32 or 64 bytes copied), of the aggregator bounds in ParameterStoreListingLogic._pin (RouteReads.words, one word) and of the VaultTokenFactory's getter reads (_read, 30,000 gas, size + 32 bytes copied); each caller requires an exact length and range-checks the words. Also the MarketRegistry's transfer-fee read at enableDebtReserve (MarketRegistryDebtChecks._feeRateZero, REQ-MREG-006, decision of 2026-11-11): basisPointsRate() with ISSUER_PROBE_GAS (30,000) after RiskModuleMath.gasFloor (35,477; below it the asset is refused), at most 33 bytes copied, and only ok && length == 32 && word == 0 passes; covered by TEST-287 (enablementFeeReadIsExactlyOneWord, enablementFeeReadWithoutCodeRefused, oversizedFeeAnswerBoundedCost, enablementFeeReadNeedsTheGasFloor).",
+      "approval": "approved (Josue, 2026-11-11; each call site reviewed: ParameterStoreAdminRiskLogic _word and _reportsAvana, ParameterStoreListingLogic _pin, VaultTokenFactory _read, MarketRegistryDebtChecks _feeRateZero)",
+      "review": "Reviewed per call site, group L (bounded-returndata STATICCALL in assembly): same construct as RiskModuleCalls.staticRead and DebtOracleReads._call; memory-safe, copies at most maxLength bytes and only lowers the length; the gas-limited probe has its ceil(64G/63) + POST_CALL_GAS check before the call. Constructor-only. Approved earlier as \"approved by pattern\" for the route reads; the ParameterStore and VaultTokenFactory callers are reviewed per call site (approval of 2026-11-11).",
+      "reviewedFiles": {
+        "src/liquidation/settlement-routes/RouteReads.sol": "07d55b14984a321b82f744f099c96dbcb79aea8830ae1a031a0b28cada49f17a",
+        "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol": "6a2d62b20f2822a7d3568c827d0c9b673ae150b33d6466ebb114bb26f343549a",
+        "src/policy/parameter-store/ParameterStoreListingLogic.sol": "a8ff62fd9a2d9ea27a463f57c334d08d78c08dd048331a7aa7649559dc58e253",
+        "src/policy/market-registry/MarketRegistryDebtChecks.sol": "e1e8d2a42f5e9c77229dae7156069d7bd868eb58ee4de6eebd992a79f9670dab",
+        "src/vault-token/vault-token-factory/VaultTokenFactory.sol": "8026bf6ba0b1fc1b1882234fbce0761ecbf62fffe431f65b9c7ab88ea5e333b9"
+      }
     },
     {
       "fingerprint": "c4f5145c3cf468f2",
@@ -1989,24 +1988,6 @@
       "reason": "View calls of the instance's own immutable Hub (getSpokeAddress, getSpokeDeficitRay) per Spoke listed on the asset, stopping at the first allowlisted Spoke with a deficit; bounded by the Spokes the Aave DAO lists on the asset, STATICCALL only, and a reverting Hub only blocks the withdrawal, which stays Pending (REQ-FLR-026, REQ-FLR-045). Covered by TEST-293 (withdrawalWaitsForCoverage, allowlistRemovalLiftsTheBlock) and the CoverageSpoke Echidna execute assertion.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (view calls only)."
-    },
-    {
-      "fingerprint": "250a89330c14ea04",
-      "check": "low-level-calls",
-      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
-      "function": "VaultTokenFactory._readWord(address,bytes)",
-      "reason": "STATICCALL of one identity getter of a candidate LPVault or of Collateralization in registerIntegration; the answer is used only if the call succeeded with exactly 32 bytes, and any other answer (revert, short or long data, no code, a getter that writes state) makes the registration revert InvalidIntegration, so it fails closed (REQ-VTOKEN-044). Same reasoning as the Josue-approved ParameterStore staticcall entries. Covered by TEST-024 (registerIntegrationRefusesCodelessOrHostileGetters, registerIntegrationRefusesForeignCore, registerIntegrationRefusesMiswiredCollateralization) and PROP-099 (Halmos).",
-      "approval": "pending (lead review)",
-      "review": "The call site is gone: _readWord now goes through _read(target, data, 32) = RouteReads._staticRead(target, READ_GAS = 30,000, data, 64) and requires exactly 32 bytes; Slither reports no low-level call here. Kept for the lead's per-call-site review of the wave 3 change, then removable as stale."
-    },
-    {
-      "fingerprint": "f193056336ee06ef",
-      "check": "low-level-calls",
-      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
-      "function": "VaultTokenFactory._readCapabilities(address)",
-      "reason": "STATICCALL of the candidate LPVault's capabilities() in registerIntegration; the answer is used only if the call succeeded with exactly 256 bytes and a pool keying and shape kind inside their enums (shape kind not None); anything else reverts InvalidIntegration, so it fails closed (REQ-VTOKEN-049). Covered by TEST-024 (registerIntegrationRefusesForeignCore: reverting, short and out-of-range answers).",
-      "approval": "pending (lead review)",
-      "review": "The call site is gone: _readCapabilities now goes through _read(lpVault, capabilities(), 256) = RouteReads._staticRead(lpVault, READ_GAS = 30,000, data, 288) and requires exactly 256 bytes; Slither reports no low-level call here. Kept for the lead's per-call-site review of the wave 3 change, then removable as stale."
     },
     {
       "fingerprint": "be2406ba1457c863",
@@ -2022,18 +2003,9 @@
       "check": "calls-loop",
       "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
       "function": "MarketRegistryRoutesLogic._routeNamesAny(address,address[])",
-      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record: for each route slot ever set on the integration's markets (not Cancelled or Closed), one try/catch call to the governance-approved route's `dependencies()` (a view, so STATICCALL). Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the slots governance set, and runs only inside a normal-delay timelock call. A reverting, short or undecodable response lands in the catch and disables the route (fail closed); a well-formed response is only compared, never stored. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt, unreadableRouteIsDisabledByARecheck, recheckSkipsCancelledMarkets).",
-      "approval": "pending (lead review)",
-      "review": "New view call site in a loop (wave 3, w3mreg); reviewed per call site in the agent report."
-    },
-    {
-      "fingerprint": "2ca3ac22bb54ee99",
-      "check": "incorrect-equality",
-      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
-      "function": "DebtOracleEvaluation._readSequencer(address,DebtEvaluation)",
-      "reason": "size == 160 compares the sequencer-uptime feed's full returndatasize() with the ABI length of latestRoundData() (five words): an answer that is not exactly 160 bytes is sequencerUnknown (SPEC-ORC-021, REQ-ORACLE-099, decision of 2026-11-11). Not a balance; Slither flags it because the same call passes block.timestamp. A feed cannot push past it: any other length only blocks borrowing and never pauses liquidation. Covered by TEST-275 (DebtOracle.SequencerAnswer: sequencerRequiresExactRound, oversizedSequencerAnswerBoundedCost).",
-      "approval": "pending (lead review)",
-      "review": "Matches group K (strict equality on an ABI-decoded length or word, flagged through block.timestamp taint); left for the lead's per-call-site review of the changed sequencer read."
+      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record: for each route slot ever set on the integration's markets (not Cancelled or Closed), one try/catch call to the governance-approved route's `dependencies()`. A revert goes to `catch` and disables the route (fail closed). Return data that does not decode as `address[]` is not caught by Solidity's try/catch: it reverts the whole timelock call, so governance disables that route first (fail closed). The answer is only compared, never stored. The loop is bounded by MAX_MARKET_COUNT markets times the slots governance set and runs only inside a timelock call. Tests: unreadableRouteIsDisabledByARecheck, additionAfterFinalizeDisablesRoutesThroughIt.",
+      "approval": "approved (reviewed per call site, 2026-11-11; calls-loop in a timelock-only path, bounded)",
+      "review": "New view call site in a loop; reviewed per call site."
     }
   ]
 }
