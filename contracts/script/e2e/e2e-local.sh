@@ -85,7 +85,7 @@ run_script() { # step script sender [env...]
 # Multicall3 at its canonical address, as on every public network (external/multicall3/README.md); the code hash must
 # be the one recorded there.
 MULTICALL3=0xcA11bde05977b3631167028862bE2a173976CA11
-MULTICALL3_CODEHASH=0x5a29a1eb2f59e45e4249b938c8192cac0d2bd32398e1afa03f302a867db692ea
+MULTICALL3_CODEHASH=0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891
 place_multicall3() {
   cast rpc anvil_setCode "$MULTICALL3" "$(tr -d '\n' < external/multicall3/Multicall3.runtime.hex)" --rpc-url "$RPC_ANVIL" >/dev/null ||
     { record multicall3 fail "anvil_setCode refused"; return 1; }
