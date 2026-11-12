@@ -102,6 +102,7 @@ contract SlipstreamIntegrationForkTest is AvanaTest {
     }
 
     // TEST-265 verifies: REQ-AMM-SLIP-006, REQ-AMM-SLIP-007, REQ-AMM-SLIP-008, SPEC-AMM-SLIP-001, REQ-AMM-SLIP-015, REQ-AMM-SLIP-016, INV-017
+    // TEST-116 verifies: REQ-AMM-SLIP-007, INV-017
     // Sources: 2.21 generation allowlist (each pair read on Base); the Aero generation's ABI fork check
     function test_TEST_265_everyGenerationListsOnlyItsOwnPools() public {
         for (uint256 g = 0; g < 4; ++g) {
@@ -132,6 +133,7 @@ contract SlipstreamIntegrationForkTest is AvanaTest {
     }
 
     // TEST-265 verifies: REQ-AMM-SLIP-001, REQ-AMM-SLIP-002, REQ-AMM-SLIP-003, REQ-AMM-SLIP-004, REQ-AMM-SLIP-011, REQ-VAULT-147, REQ-VAULT-149, SPEC-BACK-008, INV-002
+    // TEST-116 verifies: REQ-VAULT-147, REQ-VAULT-149, SPEC-BACK-008
     // Sources: 5.1 TEST-264/TEST-265 (custody of a live NFT, unwind at the live price, fees only)
     function test_TEST_265_custodyOfAFreshPositionOnGenerations0And3() public {
         uint256[2] memory gens = [uint256(0), 3];

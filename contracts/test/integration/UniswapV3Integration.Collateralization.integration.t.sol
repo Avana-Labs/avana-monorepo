@@ -293,4 +293,56 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         assertEq(added, 2e9);
         assertEq(coll.getRecord(coll.recordIdOf(V3_INTEGRATION, key)).credited, 7e9);
     }
+
+    /// @notice A position on another pool of the same pair, which the LPVault derives through its pinned factory from
+    /// the position's own fields, is refused by the LPVault with `PoolMismatch`; the error reaches the Adapter
+    /// unchanged and the pledge moves nothing: no record, no custody, no counter.
+    /// @dev Kills: Collateralization catching or re-wrapping the LPVault's error, or recording before custody.
+    // TEST-011 verifies: REQ-VAULT-103, REQ-VAULT-092
+    function test_TEST_011_positionOnAnotherPoolRevertsPoolMismatch() public {
+        MockV3Pool other = MockV3Pool(v3Factory.createPool(address(tUsdc), address(tUsdt), 500, 10));
+        uint256 id = nfpm.mint(alice, other.token0(), other.token1(), 500, -FULL, FULL, 5e9);
+        vm.prank(alice);
+        nfpm.approve(address(v3Vault), id);
+        PledgeCounters memory before = coll.getCounters(vt2, alice);
+        vm.startPrank(adapter);
+        lock.acquire();
+        token2.addValidProxy(aliceProxy);
+        vm.expectRevert(ILPVaultErrors.PoolMismatch.selector);
+        coll.pledge(alice, aliceProxy, vt2, bytes32(id), false);
+        lock.release();
+        vm.stopPrank();
+        assertEq(nfpm.ownerOf(id), alice, "the position stays with its owner");
+        assertEq(coll.recordIdOf(V3_INTEGRATION, bytes32(id)), 0, "no record");
+        assertEq(coll.getTotalCredited(vt2), 0, "no credit");
+        assertEq(coll.getCounters(vt2, alice).depositorUsed, before.depositorUsed, "no counter moved");
+    }
+
+    /// @notice One Collateralization serves two markets of two AMM integrations on the same Hub: records, credited
+    /// totals and pending balances are keyed by vault token, so each market sees only its own; the depositor's
+    /// Hub-wide counter is keyed by Hub and carries both markets' charges.
+    /// @dev Kills: a ledger keyed by integration or by Spoke alone, or a depositor counter keyed by market.
+    // TEST-010 verifies: REQ-COLL-030, REQ-COLL-026
+    function test_TEST_010_oneCollateralizationServesEveryMarketKeyedByVaultToken() public {
+        _pledge(alice, aliceProxy, bytes32(uint256(42)), 3e9);
+        bytes32 key2 = _pledgeV3(alice, bobProxy, 5e9);
+        assertEq(coll.getTotalCredited(vt), 3e9, "market 4 total");
+        assertEq(coll.getTotalCredited(vt2), 5e9, "market 5 total");
+        assertEq(coll.getAccountCredited(aliceProxy, vt), 3e9);
+        assertEq(coll.getAccountCredited(bobProxy, vt2), 5e9);
+        assertEq(coll.getAccountCredited(aliceProxy, vt2), 0, "no cross-market credit");
+        assertEq(coll.getRecord(coll.recordIdOf(V3_INTEGRATION, key2)).credited, 5e9);
+        assertEq(coll.getRecord(coll.recordIdOf(INTEGRATION, bytes32(uint256(42)))).credited, 3e9);
+        PledgeCounters memory c1 = coll.getCounters(vt, alice);
+        PledgeCounters memory c2 = coll.getCounters(vt2, alice);
+        uint64 charge1 = coll.getRecord(coll.recordIdOf(INTEGRATION, bytes32(uint256(42)))).currentUsdCharge;
+        uint64 charge2 = coll.getRecord(coll.recordIdOf(V3_INTEGRATION, key2)).currentUsdCharge;
+        assertGt(charge1, 0);
+        assertGt(charge2, 0);
+        assertEq(c1.hub, aave.hub);
+        assertEq(c2.hub, aave.hub);
+        assertEq(c1.depositorUsed, uint256(charge1) + charge2, "the Hub-wide depositor counter holds both charges");
+        assertEq(c2.depositorUsed, c1.depositorUsed, "one counter per (Hub, depositor)");
+        assertEq(coll.getPending(vt).units + coll.getPending(vt2).units, 0);
+    }
 }

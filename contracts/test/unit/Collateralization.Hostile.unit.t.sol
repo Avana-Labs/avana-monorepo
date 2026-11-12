@@ -68,7 +68,7 @@ contract CollateralizationHostileUnitTest is CollateralizationLedgerModel {
         assertEq(usdc.balanceOf(lpVaultSwap), p.amounts[0], "the reconciled principal reached LPVaultSwap");
     }
 
-    // TEST-131 verifies: REQ-VAULT-049, REQ-VAULT-050, REQ-VAULT-051, REQ-VAULT-140, SPEC-BACK-007, ATTACK-025, ATTACK-079
+    // TEST-131 verifies: REQ-VAULT-049, REQ-VAULT-050, REQ-VAULT-051, REQ-VAULT-140, REQ-VAULT-043, SPEC-BACK-007, ATTACK-025, ATTACK-079
     // Sources: 5.1 TEST-131 (cannot debit another account's records)
     /// @notice With a snapshot of alice, a hostile LPVaultSwap seizes bob instead: settling bob reverts
     /// `SeizureMismatch`, settling alice for bob's units reverts `DebitMismatch` (alice's shares did not drop), and

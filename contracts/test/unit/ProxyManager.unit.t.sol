@@ -130,7 +130,7 @@ contract ProxyManagerUnitTest is AvanaTest {
         assertEq(IPositionProxy(predicted).MARKET_ID(), marketId);
     }
 
-    // TEST-190 verifies: REQ-PROXY-051, REQ-PROXY-097, INV-064, ATTACK-134, ATTACK-186, Q-225
+    // TEST-190 verifies: REQ-PROXY-051, REQ-PROXY-097, INV-064, ATTACK-134, ATTACK-186, Q-225, REQ-ACCESS-147
     function testFuzz_TEST_190_onlyAdapterDeploys(
         address caller
     ) public {
@@ -202,7 +202,7 @@ contract ProxyManagerUnitTest is AvanaTest {
 
     // ─── Freeze ───
 
-    // TEST-229 verifies: REQ-PROXY-099, REQ-PROXY-102, Q-242
+    // TEST-229 verifies: REQ-PROXY-099, REQ-PROXY-102, Q-242, REQ-ACCESS-147, REQ-MREG-023
     // Sources: 5.1 TEST-229 (ProxyManager side)
     function test_TEST_229_frozenWalletGetsNoProxy() public {
         registry.setFrozen(carol, true);
@@ -217,7 +217,7 @@ contract ProxyManagerUnitTest is AvanaTest {
     }
 
     /// @notice The freeze is read for the wallet only, and only on deployment.
-    // TEST-229 verifies: REQ-PROXY-099
+    // TEST-229 verifies: REQ-PROXY-099, REQ-MREG-023
     function test_TEST_229_freezeReadForWalletOnly() public {
         registry.setFrozen(spokeHub1, true);
         registry.setFrozen(adapter, true);
@@ -227,7 +227,7 @@ contract ProxyManagerUnitTest is AvanaTest {
     }
 
     /// @notice A registry that reverts stops new proxies only; its error propagates.
-    // TEST-229 verifies: REQ-PROXY-099
+    // TEST-229 verifies: REQ-PROXY-099, REQ-CONFIG-069
     function test_TEST_229_registryRevertPropagates() public {
         registry.setDown(true);
         vm.prank(adapter);
@@ -309,7 +309,7 @@ contract ProxyManagerUnitTest is AvanaTest {
     /// @notice Own selectors (the embedded PositionProxy creation code excluded) are exactly `deployProxy`,
     /// `predictProxy` and the three views; no role, owner, pause, upgrade or proxy-code-changing selector exists, and
     /// the code has no storage access, `delegatecall`, `selfdestruct` or `tx.origin`.
-    // TEST-191 verifies: REQ-PROXY-050, REQ-PROXY-054, REQ-PROXY-086, REQ-PROXY-101, REQ-PROXY-103, INV-065, ATTACK-123, ATTACK-156
+    // TEST-191 verifies: REQ-PROXY-050, REQ-PROXY-054, REQ-PROXY-086, REQ-PROXY-101, REQ-PROXY-103, INV-065, ATTACK-123, ATTACK-156, REQ-ACCESS-147, REQ-ACCESS-176, REQ-ACCESS-015, REQ-ACCESS-066, REQ-ACCESS-113
     // Sources: 5.1 TEST-191, TEST-168, TEST-242, TEST-032 (ProxyManager inventory)
     function test_TEST_191_selectorInventoryAndOpcodes() public view {
         bytes memory code = address(manager).code;

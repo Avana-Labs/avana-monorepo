@@ -9,6 +9,12 @@ import {MarketRegistryHubsLogic} from "../../src/policy/market-registry/MarketRe
 import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
 import {MarketRegistryLogics} from "../../src/policy/market-registry/types/MarketRegistryLogics.sol";
 import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
+import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
+import {IParameterStoreCoverage} from "../../src/policy/parameter-store/IParameterStoreCoverage.sol";
+import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
+import {IParameterStoreRiskViews} from "../../src/policy/parameter-store/IParameterStoreRiskViews.sol";
+import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
@@ -22,7 +28,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         _setUpWorld();
     }
 
-    // TEST-242 verifies: REQ-MREG-005, REQ-ACCESS-153, INV-084, Q-259
+    // TEST-242 verifies: REQ-MREG-005, REQ-ACCESS-153, INV-084, Q-259, REQ-ACCESS-149, REQ-ACCESS-002, REQ-ACCESS-014, REQ-ACCESS-032
     // Sources: 5.1 TEST-242
     function test_TEST_242_adminRolesOnlyForTimelock() public {
         bytes32 defaultAdmin = registry.DEFAULT_ADMIN_ROLE();
@@ -43,7 +49,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         assertEq(registry.getRoleAdmin(APP_ADMIN), defaultAdmin);
     }
 
-    // TEST-242 verifies: REQ-MREG-005, REQ-CONFIG-002
+    // TEST-242 verifies: REQ-MREG-005, REQ-CONFIG-002, REQ-ACCESS-150
     function test_TEST_242_initializeOnlyWithTimelockAndOnce() public {
         MarketRegistry impl = new MarketRegistry(im, logics);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
@@ -54,7 +60,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         impl.initialize(address(timelock));
     }
 
-    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-022, REQ-MREG-028, Q-262, Q-263
+    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-022, REQ-MREG-028, Q-262, Q-263, REQ-ACCESS-089, REQ-ACCESS-094, REQ-ACCESS-112, REQ-ACCESS-128
     // Sources: 5.1 TEST-066
     function test_TEST_066_guardianPowersAreStopsOnly() public {
         bytes[] memory adminOnly = new bytes[](8);
@@ -85,7 +91,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.cancelStandbySwitch(address(usdc));
     }
 
-    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-017
+    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-017, REQ-ACCESS-086, REQ-ACCESS-124
     function test_TEST_066_freezeRoleAloneCannotLift() public {
         address freezer = makeAddr("freezeOnly");
         vm.prank(address(timelock));
@@ -133,7 +139,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.listToken(address(gho), _tokenDef(new address[](0), new address[](0), new address[](0)));
     }
 
-    // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002, REQ-MREG-003
+    // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002, REQ-MREG-003, REQ-ACCESS-015, REQ-ACCESS-031
     // Sources: 5.1 TEST-168
     function test_TEST_168_upgradeKeepsStateAndNeedsAdmin() public {
         vm.prank(emergencyGuardian);
@@ -198,7 +204,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         assertEq(registry.MAX_ADDRESS_FREEZES_PER_DAY(), 20);
     }
 
-    // TEST-053 verifies: REQ-MREG-016, REQ-MREG-029, REQ-MREG-011, REQ-MREG-013, Q-401
+    // TEST-053 verifies: REQ-MREG-016, REQ-MREG-029, REQ-MREG-011, REQ-MREG-013, Q-401, REQ-ACCESS-055, REQ-ACCESS-056, REQ-ACCESS-163, REQ-ACCESS-137, REQ-ACCESS-151, SPEC-GOV-010, REQ-CONFIG-068
     // Sources: 5.1 TEST-053, TEST-035
     function test_TEST_053_noInKindNoBuyNoSellBackSelectors() public {
         string[8] memory absent = [
@@ -219,7 +225,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         }
     }
 
-    // TEST-035 verifies: REQ-MREG-003, REQ-CONFIG-082
+    // TEST-035 verifies: REQ-MREG-003, REQ-CONFIG-082, REQ-ACCESS-035, REQ-ACCESS-081
     // Sources: 5.1 TEST-035
     function test_TEST_035_noPerMarketPauseSelector() public {
         string[4] memory absent =
@@ -229,5 +235,91 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             assertFalse(ok);
             assertEq(ret.length, 0);
         }
+    }
+
+    /// @notice The registry stores no risk parameter, settlement mode, allowlist or markets-per-wallet cap: none of
+    /// the ParameterStore's risk-parameter views and setters, and no settlement-mode, allowlist or markets-per-wallet
+    /// selector, exists on it (the call reaches no function and reverts with empty data).
+    /// @dev Kills: a risk-parameter getter or setter, a settlement-mode switch, an allowlist or a per-wallet market cap
+    /// added to the MarketRegistry or one of its logic contracts.
+    // TEST-032 verifies: REQ-CONFIG-014
+    function test_TEST_032_noRiskParameterModeAllowlistOrWalletCapSelectors() public {
+        bytes4[49] memory params = [
+            IParameterStoreRiskViews.marketUsdCap.selector,
+            IParameterStoreRiskViews.topUpSliceUsd.selector,
+            IParameterStoreRiskViews.stressFloorUsd.selector,
+            IParameterStoreRiskViews.tokenUsdCap.selector,
+            IParameterStoreRiskViews.depositorUsdCap.selector,
+            IParameterStoreRiskViews.poolShareMaxBps.selector,
+            IParameterStoreRiskViews.minPledgeUsd.selector,
+            IParameterStoreRiskViews.debtAssetParams.selector,
+            IParameterStoreRiskViews.routeDepthThreshold.selector,
+            IParameterStoreRiskViews.poolShareMaxBpsOf.selector,
+            IParameterStoreTighten.tightenHardHealthFloor.selector,
+            IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
+            IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
+            IParameterStoreTighten.tightenBorrowPriceMaxAge.selector,
+            IParameterStoreTighten.tightenConsistencyToleranceBps.selector,
+            IParameterStoreTighten.tightenFeedAgreementToleranceBps.selector,
+            IParameterStoreTighten.tightenPoolRiskFactor.selector,
+            IParameterStoreTighten.tightenRouteDepthThreshold.selector,
+            IParameterStoreTighten.tightenMarketUsdCap.selector,
+            IParameterStoreTighten.tightenTopUpSliceUsd.selector,
+            IParameterStoreTighten.tightenTokenUsdCap.selector,
+            IParameterStoreTighten.tightenDepositorUsdCap.selector,
+            IParameterStoreTighten.tightenPoolShareMaxBps.selector,
+            IParameterStoreTighten.tightenMinPledgeUsd.selector,
+            IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
+            IParameterStoreLoosen.loosenHardHealthFloor.selector,
+            IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
+            IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
+            IParameterStoreLoosen.loosenRouteDepthThreshold.selector,
+            IParameterStoreLoosen.loosenMarketUsdCap.selector,
+            IParameterStoreLoosen.loosenTopUpSliceUsd.selector,
+            IParameterStoreLoosen.loosenTokenUsdCap.selector,
+            IParameterStoreLoosen.loosenDepositorUsdCap.selector,
+            IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
+            IParameterStoreLoosen.loosenMinPledgeUsd.selector,
+            IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,
+            IParameterStoreLiquidation.maxShortfallBps.selector,
+            IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
+            IParameterStoreLiquidation.loosenMaxShortfallBps.selector,
+            IParameterStoreLiquidation.debtStressRiseBps.selector,
+            IParameterStoreLiquidation.setLiquidationExpectations.selector,
+            IParameterStoreBreakers.breakerDeficitMax.selector,
+            IParameterStoreBreakers.gateRecoverySeconds.selector,
+            IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
+            IParameterStoreBreakers.loosenGateRecoverySeconds.selector,
+            IParameterStoreBreakers.tightenBreakerDeficitMax.selector,
+            IParameterStoreBreakers.loosenBreakerDeficitMax.selector,
+            IParameterStoreCoverage.coverageRatioBps.selector,
+            IParameterStoreCoverage.setCoverageRatioBps.selector
+        ];
+        for (uint256 i = 0; i < params.length; ++i) {
+            _assertNoFunction(params[i]);
+        }
+        string[10] memory absent = [
+            "settlementMode(uint256)",
+            "setSettlementMode(uint256,uint8)",
+            "isAllowlisted(address)",
+            "setAllowlist(address,bool)",
+            "allowlist(address)",
+            "maxMarketsPerWallet()",
+            "setMaxMarketsPerWallet(uint256)",
+            "marketsPerWalletCap()",
+            "collateralFactor(uint256)",
+            "setMinPledgeUsd(uint256,uint256)"
+        ];
+        for (uint256 i = 0; i < absent.length; ++i) {
+            _assertNoFunction(bytes4(keccak256(bytes(absent[i]))));
+        }
+    }
+
+    function _assertNoFunction(
+        bytes4 selector
+    ) private {
+        (bool ok, bytes memory ret) = address(registry).call(abi.encodePacked(selector, new bytes(32 * 6)));
+        assertFalse(ok, "selector present");
+        assertEq(ret.length, 0, "selector reached a function");
     }
 }
