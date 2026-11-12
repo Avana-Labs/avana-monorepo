@@ -34,7 +34,7 @@ export const timelockOperation = onchainTable(
   "timelock_operation",
   (t) => ({
     chainId: t.integer().notNull(),
-    operationId: t.hex().notNull(),
+    timelockOperationId: t.hex().notNull(),
     /** Scheduled, Executed, Cancelled or Cleaned (ExpiredOperationCleaned). */
     status: t.text().notNull(),
     /** One entry per call of a batch: target, value (decimal string), data. */
@@ -45,7 +45,7 @@ export const timelockOperation = onchainTable(
     lastBlock: t.bigint().notNull(),
   }),
   (table) => ({
-    pk: primaryKey({ columns: [table.chainId, table.operationId] }),
+    pk: primaryKey({ columns: [table.chainId, table.timelockOperationId] }),
     statusIdx: index().on(table.chainId, table.status),
   }),
 );

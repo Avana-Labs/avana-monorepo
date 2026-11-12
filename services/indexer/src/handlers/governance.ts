@@ -20,7 +20,7 @@ ponder.on("AvanaTimelock:CallScheduled", async ({ event, context }) => {
     .insert(schema.timelockOperation)
     .values({
       chainId: p.chainId,
-      operationId: id,
+      timelockOperationId: id,
       status: "Scheduled",
       calls: [call],
       readyAt,
@@ -39,7 +39,7 @@ for (const [name, status] of [
   ponder.on(`AvanaTimelock:${name}`, async ({ event, context }) => {
     const p = await recordLog(event, context, `AvanaTimelock.${name}`);
     await context.db
-      .update(schema.timelockOperation, { chainId: p.chainId, operationId: event.args.id })
+      .update(schema.timelockOperation, { chainId: p.chainId, timelockOperationId: event.args.id })
       .set({ status, lastBlock: p.blockNumber });
   });
 }
