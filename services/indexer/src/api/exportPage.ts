@@ -20,9 +20,16 @@ import {
 
 type Row = typeof schema.eventLog.$inferSelect;
 
+/** The chain's RPC client; a chain the indexer has no client for is refused rather than served from another. */
+function clientFor(chainId: number) {
+  const client = publicClients[chainById(chainId).key];
+  if (!client) throw new Error(`chain ${chainId} is not indexed`);
+  return client;
+}
+
 /** Highest block the export may serve: finalized on the chain and fully handled by the indexer. */
 async function servableThrough(chainId: number): Promise<{ through: bigint; finalized: bigint }> {
-  const client = publicClients[chainById(chainId).key as keyof typeof publicClients];
+  const client = clientFor(chainId);
   const finalized = (await client.getBlock({ blockTag: "finalized" })).number;
   const [progress] = await db.select().from(schema.chainProgress).where(eq(schema.chainProgress.chainId, chainId));
   // The Progress row of block N may be written before N's logs are handled, so N itself is not served.
@@ -69,7 +76,7 @@ export async function buildExportPage(chainId: number, after: ExportCursor | nul
   if (through < fromBlock) return null;
   const raw = await rowsIn(chainId, fromBlock, through, limit);
   const { rows, toBlock } = await closeAtBlock(chainId, raw, through, limit);
-  const client = publicClients[chainById(chainId).key as keyof typeof publicClients];
+  const client = clientFor(chainId);
   const tip = await client.getBlock({ blockNumber: toBlock });
   const blocks = new Map<string, ExportBlock>();
   for (const r of rows) {

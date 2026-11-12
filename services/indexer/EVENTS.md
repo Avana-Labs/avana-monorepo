@@ -72,8 +72,8 @@ The position managers' own events (`IncreaseLiquidity`, `DecreaseLiquidity`, `Co
 
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
-| VaultTokenFactory | `IntegrationRegistered(uint32 integrationId idx, address lpVault idx, bytes32 ammProtocol)` | log | C |
-| VaultTokenFactory | `VaultTokenDeployed(bytes32 marketKey idx, address vaultToken idx, uint256 marketId idx, uint32 integrationId, address hub, address spoke, address lpOracle, uint8 decimals)` | log; starts the VaultToken source | C |
+| VaultTokenFactory | `IntegrationRegistered(uint32 integrationId idx, address lpVault idx, bytes32 ammProtocol, PoolKeying poolKeying, ShapeKind shapeKind)` | log | C |
+| VaultTokenFactory | `VaultTokenDeployed(address vaultToken idx, uint256 marketId idx, address spoke idx, VaultTokenBindings bindings, address pool, bytes32 poolId, PositionShape shape)` | log; starts the VaultToken source (child address in `vaultToken`) | C |
 | VaultToken | `Transfer(address from idx, address to idx, uint256 value)` | log | C M |
 
 ## LPVaultSwap and liquidation

@@ -50,10 +50,12 @@ spec/05-verification/tools/
 # EVM decompiler binary (downloaded, not committed)
 tools/heimdall/bin/
 
-# Not started yet: pushed when work on them begins
+# Folders outside this repository's tracked tree
 apps/
 deployments/
-packages/
+# Only packages/protocol (the ABIs the services import) is tracked under packages/.
+packages/*
+!packages/protocol/
 .github/workflows/protocol.yml
 
 # Python test cache
@@ -62,6 +64,6 @@ packages/
 # Empty placeholder folders (tools create them when they first write results)
 **/.gitkeep
 
-# Internal working to-do lists (kept locally, never committed)
+# Local working files
 spec/contracts-build-todo.md
 spec/services-build-todo.md

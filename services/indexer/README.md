@@ -8,7 +8,8 @@ Ponder indexer with a PostgreSQL store for Avana and Aave V4 events on Ethereum 
 | `ponder.schema.ts`, `src/schema/` | Tables, split by concern |
 | `src/handlers/` | One file per area; every handler writes the `event_log` row first |
 | `src/lib/` | Provenance, the log writer and log-only registration |
-| `src/config/` | ABIs from `packages/protocol` and manifest-driven sources |
+| `src/config/` | ABIs from `packages/protocol`, the factory events taken from them, and manifest-driven sources |
+| `test/` | Unit tests (vitest): factory events and log-only subscriptions against the ABIs, export authentication |
 | `src/api/` | The authenticated export, the only HTTP route besides Ponder's `/health` and `/ready` |
 
 ## Configuration
@@ -26,12 +27,18 @@ Every row that an event writes or changes stores the chain ID, block number, blo
 - **Crash recovery.** A restart with the same `DATABASE_SCHEMA` resumes from Ponder's last checkpoint. A restart with a changed schema or handler code starts a new schema and reindexes from the manifest start blocks; the export switches to the new schema only after `/ready`, so Convex never reads a half-built index.
 - **Full reindex** completes within one hour from the start blocks (services/README.md); the `Progress` block source starts at `latest`, so it adds no historical blocks.
 - **Upgrades.** A contract's ABI is the union of every version deployed since its start block, so each block range decodes with the events its implementation emitted; `Upgraded` rows record when each implementation took over.
-- **Replay test.** `TEST-143` replays a fork run, injects Anvil reorgs and compares the tables with RPC reads at the same block.
+- **Replay test.** `TEST-143` replays a fork run, injects Anvil reorgs and compares the tables with RPC reads at the same block. It needs the shared fork environment's manifest, and no workflow runs it yet.
 
 ## Running
 
+Install once from the repository root (`npm ci --ignore-scripts`, see [services/README.md](../README.md#build-and-test)), then from this folder:
+
 ```bash
-npm run codegen   # writes ponder-env.d.ts
-npm run dev       # local, against Anvil or a fork
+npm run codegen     # writes ponder-env.d.ts, the types of Ponder's virtual modules
+npm run typecheck   # tsc --noEmit
+npm run test        # vitest run
+npm run dev         # local, against Anvil or a fork
 npm run start -- --schema avana_<release>
 ```
+
+Factory sources (vault tokens, LPOracles, DebtOracles, Coverage Spokes) take their announcing event from the generated ABIs (`factoryEvents` in `src/config/abis.ts`), so a changed event signature fails the typecheck or the tests instead of leaving a source that matches no log.
