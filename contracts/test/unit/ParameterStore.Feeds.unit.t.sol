@@ -200,6 +200,27 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
         assertEq(store.getFeed(address(f)).minAnswer, 10);
     }
 
+    /// @notice The smallest accepted `minAnswer` is `10^(decimals − 8)` above 8 decimals and 1 at 8 or fewer (the
+    /// normalised minimum ⌊minAnswer × 10⁸ / 10^decimals⌋ is then 1): one unit below is refused by name, the
+    /// threshold itself is pinned. Kills `<` → `<=` and a dropped or shifted decimals branch.
+    // TEST-250 verifies: REQ-CONFIG-022
+    function test_TEST_250_minAnswerThresholdAtEachDecimals() public {
+        uint8[4] memory decs = [uint8(6), 8, 9, 18];
+        // 10^(decimals − 8) above 8 decimals; 1 at 8 decimals or fewer.
+        int192[4] memory threshold = [int192(1), 1, 10, 1e10];
+        for (uint256 i = 0; i < decs.length; ++i) {
+            f.setBounds(decs[i], threshold[i] - 1, 1e30);
+            (bool ok, bytes memory ret) = _set(address(f), _feedDef(3600, 600));
+            assertFalse(ok, "one below the threshold refused");
+            assertEq(ret, _invalid(address(f), "minAnswer"));
+            f.setBounds(decs[i], threshold[i], 1e30);
+            (ok,) = _set(address(f), _feedDef(3600, 600));
+            assertTrue(ok, "threshold accepted");
+            assertEq(store.getFeed(address(f)).decimals, decs[i]);
+            assertEq(store.getFeed(address(f)).minAnswer, threshold[i]);
+        }
+    }
+
     // TEST-250 verifies: REQ-CONFIG-022, REQ-ORACLE-049
     function test_TEST_250_maxAnswerPinnedBelowTheCap() public {
         // Aggregator bound below the cap: the aggregator bound is pinned.

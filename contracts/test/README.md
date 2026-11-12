@@ -53,7 +53,7 @@ Uniswap v3-core and v3-periphery are pinned at `=0.7.6` / `<0.8.0` and the works
 
 **Transactions in a test.** Foundry 1.9 runs each top-level call of a test as its own transaction (`isolate = true` is the default), so transient storage, such as the Lock holder, is cleared between the calls of a test. A suite that must keep several calls in one transaction, as one Avana call tree does, sets `/// forge-config: default.isolate = false` on the contract, as `LockUnitTest` does; the cross-transaction behaviour is tested with isolation on.
 
-**Dynamic test linking and symbolic tools.** `dynamic_test_linking = true` turns `new C(...)` in tests into `deployCode`, which Halmos does not support and whose `foundry-pp/` helper sources crytic-compile cannot resolve. The security builds and the Halmos step run with `FOUNDRY_DYNAMIC_TEST_LINKING=false`.
+**No dynamic test linking.** `dynamic_test_linking` is off in `foundry.toml`. With it on, `new C(...)` in a test became `deployCode`, and a `vm.expectRevert()` before a reverting `new` ended the test there: every later statement, assertions included, was skipped and the test passed. Off, every statement runs, and the same build serves Halmos and crytic-compile, which do not support `deployCode` or resolve its `foundry-pp/` helper sources.
 
 ## 2. Naming and traceability tags
 

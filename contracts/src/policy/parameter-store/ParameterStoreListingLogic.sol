@@ -225,8 +225,9 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         // forge-lint: disable-next-line(unsafe-typecast)
         (minAnswer, maxAnswer) = (int256(lo[0]), int256(hi[0]));
         if (cap < maxAnswer) maxAnswer = cap;
-        // Normalised minimum ⌊minAnswer × 10⁸ / 10^decimals⌋ (or × 10^(8 − decimals)) must be at least 1.
-        if (_normalised(lo[0], decimals) == 0) revert InvalidFeed(feed, "minAnswer");
+        // The normalised minimum ⌊minAnswer × 10⁸ / 10^decimals⌋ is 0 exactly when decimals > 8 and
+        // minAnswer < 10^(decimals − 8); at 8 decimals or fewer it is minAnswer × 10^(8 − decimals) ≥ 1.
+        if (decimals > 8 && lo[0] < 10 ** (decimals - 8)) revert InvalidFeed(feed, "minAnswer");
         if (maxAnswer <= minAnswer) revert InvalidFeed(feed, "maxAnswer");
     }
 
@@ -242,14 +243,6 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         _s().floorRoundingAllowance[asset] = p.floorRoundingAllowance;
         emit ParameterSet("floorRoundingAllowance", _a(asset), old, p.floorRoundingAllowance);
         emit DebtAssetParamsSet(asset, p.floorRoundingAllowance);
-    }
-
-    /// @dev `minAnswer` in 8-decimal units, rounded down.
-    function _normalised(
-        uint256 minAnswer,
-        uint8 decimals
-    ) private pure returns (uint256) {
-        return decimals >= 8 ? (minAnswer * ONE_USD) / 10 ** decimals : minAnswer * 10 ** (8 - decimals);
     }
 
     /// @notice Body of `IParameterStoreLiquidation.setLiquidationExpectations`; the ParameterStore checks the caller's role first.

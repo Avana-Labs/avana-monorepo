@@ -68,10 +68,10 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         registry.finalizeIntegrationContracts(integrationId);
     }
 
-    // TEST-054 verifies: REQ-MREG-035, REQ-CONFIG-040, REQ-CONFIG-060
+    // TEST-296 verifies: REQ-MREG-035, REQ-CONFIG-040, REQ-CONFIG-060
     // Sources: decisions of 2026-11-11 (no settlement route until the record is recorded and finalized)
     // Kills: removing `!rec.finalized` from `_touchesMarketAmm` lets the second `setRoute` through.
-    function test_TEST_054_noRouteUntilTheRecordIsFinalized() public {
+    function test_TEST_296_noRouteUntilTheRecordIsFinalized() public {
         address route = address(_newRoute(address(usdc), address(gho), "dexA"));
         // Nothing recorded: refused.
         _expectRouteRefused(0, route);
@@ -97,9 +97,9 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         assertTrue(usable);
     }
 
-    // TEST-054 verifies: REQ-MREG-035
+    // TEST-296 verifies: REQ-MREG-035
     // Finalizing needs a registered integration, a non-empty record and a record not yet finalized.
-    function test_TEST_054_finalizeChecks() public {
+    function test_TEST_296_finalizeChecks() public {
         _expectBadFinalize(9);
         _expectBadFinalize(V3);
         _record(V3, _pair());
@@ -113,11 +113,11 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         assertEq(registry.integrationContracts(V3).length, 3);
     }
 
-    // TEST-054 verifies: REQ-MREG-035, REQ-CONFIG-040
+    // TEST-296 verifies: REQ-MREG-035, REQ-CONFIG-040
     // The record is bound to the chain: on another chain ID (a fork of the chain) its key no longer matches, so routes,
     // additions and finalizing are refused until the chain ID is the recorded one again.
     // Kills: dropping `rec.key != _integrationRecordKey(iid)` lets `setRoute` through on the other chain.
-    function test_TEST_054_recordKeyedToTheChain() public {
+    function test_TEST_296_recordKeyedToTheChain() public {
         _record(V3, _pair());
         address route = address(_newRoute(address(usdc), address(gho), "dexA"));
         uint256 chain = block.chainid;
@@ -139,10 +139,10 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         registry.setRoute(id, address(usdc), address(gho), 0, route);
     }
 
-    // TEST-054 verifies: REQ-MREG-035, REQ-CONFIG-040
+    // TEST-296 verifies: REQ-MREG-035, REQ-CONFIG-040
     // The record is bound to the LPVault's code (its version): other code at the same address makes the key differ, so
     // no route is accepted and nothing more is recorded under the old key.
-    function test_TEST_054_recordKeyedToTheIntegrationCode() public {
+    function test_TEST_296_recordKeyedToTheIntegrationCode() public {
         _record(V3, _pair());
         _finalize(V3);
         bytes32 before = _recordKeyOf(V3);
@@ -158,10 +158,10 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         registry.recordIntegrationContracts(V3, one);
     }
 
-    // TEST-054 verifies: REQ-MREG-035, REQ-CONFIG-075
+    // TEST-296 verifies: REQ-MREG-035, REQ-CONFIG-075
     // A replacement integration is a new identifier with a new LPVault: its key differs and its record starts empty, so
     // it is recorded, checked and finalized afresh; the old integration's record is unchanged.
-    function test_TEST_054_replacementIntegrationStartsEmpty() public {
+    function test_TEST_296_replacementIntegrationStartsEmpty() public {
         _record(V3, _pair());
         _finalize(V3);
         RegistryLPVaultMock lp2 = new RegistryLPVaultMock(2, address(collat), lockAddr);
@@ -184,12 +184,12 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         assertEq(registry.integrationContracts(V3).length, 2);
     }
 
-    // TEST-054 verifies: REQ-MREG-035, REQ-MREG-020, REQ-CONFIG-040, REQ-CONFIG-061, REQ-CONFIG-062
+    // TEST-296 verifies: REQ-MREG-035, REQ-MREG-020, REQ-CONFIG-040, REQ-CONFIG-061, REQ-CONFIG-062
     // Sources: decisions of 2026-11-11 (an addition applies at once and re-checks existing routes)
     // An addition after finalizing disables, in the same call, every active route of the integration's markets that
     // names an added contract; the others stay usable, and the disabled route cannot be restored.
     // Kills: removing the `_recheckRoutes` call leaves the backup usable.
-    function test_TEST_054_additionAfterFinalizeDisablesRoutesThroughIt() public {
+    function test_TEST_296_additionAfterFinalizeDisablesRoutesThroughIt() public {
         _record(V3, _pair());
         _finalize(V3);
         address later = address(new RegistryTokenMock(0));
@@ -219,10 +219,10 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         registry.restoreRoute(id, address(usdc), address(gho), 1, unsafe);
     }
 
-    // TEST-054 verifies: REQ-MREG-035, REQ-CONFIG-040
+    // TEST-296 verifies: REQ-MREG-035, REQ-CONFIG-040
     // A route whose dependency list cannot be read when an addition re-checks it is disabled (fail closed); an addition
     // that names nothing a route depends on disables nothing.
-    function test_TEST_054_unreadableRouteIsDisabledByARecheck() public {
+    function test_TEST_296_unreadableRouteIsDisabledByARecheck() public {
         _record(V3, _pair());
         _finalize(V3);
         address primary = _setRoute(id, address(usdc), address(gho), 0, "dexA");
@@ -245,9 +245,9 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         assertTrue(r == backup && ok);
     }
 
-    // TEST-054 verifies: REQ-MREG-035, REQ-MREG-030
+    // TEST-296 verifies: REQ-MREG-035, REQ-MREG-030
     // The re-check reads the slots of the market's current registration only, and leaves a Cancelled market alone.
-    function test_TEST_054_recheckSkipsCancelledMarkets() public {
+    function test_TEST_296_recheckSkipsCancelledMarkets() public {
         _record(V3, _pair());
         _finalize(V3);
         address later = address(new RegistryTokenMock(0));

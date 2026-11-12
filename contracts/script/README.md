@@ -155,7 +155,7 @@ Each deploy script derives from a base contract with `_expectedChainId()` and re
 
 | Script | Does |
 |---|---|
-| `check-sizes.sh` | Writes `out-security/sizes.json` from `out/` and fails when a deployable `src/` contract's runtime code is larger than 24,576 bytes minus its margin in [`security/size-margins.json`](../security/size-margins.json); with `--base <sizes.json>` prints each change in size. CI compares every pull request with the sizes saved from the last `main` build and writes the table to the job summary. |
+| `check-sizes.sh` | Writes `out-security/sizes.json` from `out/` and fails when a deployable `src/` contract's runtime code is larger than 24,576 bytes minus its margin in [`security/size-margins.json`](../security/size-margins.json). Each contract is measured on the artifact of the profile it is deployed with: the restricted profile's artifact for a file named in a `compilation_restrictions` entry of `foundry.toml`, the default profile's artifact for every other file, even when a restricted file also compiles it; a contract with no artifact for its deployment profile fails. `check-sizes.test.sh` checks this rule on fixture artifacts (`make sizes` runs both); with `--base <sizes.json>` prints each change in size. CI compares every pull request with the sizes saved from the last `main` build and writes the table to the job summary. |
 | `governance-diff.py` | Writes a governance operation folder's `diff.md` from its `before.json` and `after.json` ([`governance/README.md`](../../governance/README.md#operation-folders)). |
 
 ## Mutation testing at the layer gate

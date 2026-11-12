@@ -65,10 +65,10 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         registry.listCollateralMarket(d);
     }
 
-    // TEST-138 verifies: REQ-MREG-034, REQ-CONFIG-078, REQ-CONFIG-005
+    // TEST-295 verifies: REQ-MREG-034, REQ-CONFIG-078, REQ-CONFIG-005
     // Sources: decisions of 2026-11-11 (market-count bound, enforced at registration)
     // Kills: removing the `MarketCountLimit` check in `_preflight` lets market 4 in.
-    function test_TEST_138_listsUpToTheLimitAndRefusesTheNext() public {
+    function test_TEST_295_listsUpToTheLimitAndRefusesTheNext() public {
         assertEq(registry.MAX_MARKET_COUNT(), CAP);
         _fill();
         assertEq(registry.marketCount(), CAP);
@@ -76,10 +76,10 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         assertEq(registry.marketCount(), CAP);
     }
 
-    // TEST-138 verifies: REQ-MREG-034, REQ-CONFIG-048, REQ-CONFIG-080
+    // TEST-295 verifies: REQ-MREG-034, REQ-CONFIG-048, REQ-CONFIG-080
     // Cancelled and Closed markets keep their identifiers inside 1..marketCount, which the ParameterStore walks, so
     // they still count: with market 1 Closed and market 2 Cancelled a new pair is still refused.
-    function test_TEST_138_closedAndCancelledMarketsStillCount() public {
+    function test_TEST_295_closedAndCancelledMarketsStillCount() public {
         _fill();
         _prepareActivation(1, registry.getMarket(1).vaultToken);
         vm.startPrank(address(timelock));
@@ -94,9 +94,9 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         _expectCapped(_defFor(CAP + 1, CAP + 1));
     }
 
-    // TEST-252 verifies: REQ-MREG-034, REQ-MREG-030
+    // TEST-295 verifies: REQ-MREG-034, REQ-MREG-030
     // A relisting at the limit reuses its reserved identifier and adds nothing to the count, so it is accepted.
-    function test_TEST_252_relistingAtTheLimitIsNotCounted() public {
+    function test_TEST_295_relistingAtTheLimitIsNotCounted() public {
         _fill();
         MarketDef memory d3 = _marketDef(registry.getMarket(3).vaultToken, registry.getMarket(3).lpOracle);
         d3.shape = _shapeOf(3);
@@ -107,11 +107,11 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         assertTrue(registry.getMarket(3).status == MarketStatus.Registered);
     }
 
-    // TEST-138 verifies: REQ-MREG-034, REQ-MREG-030, REQ-CONFIG-032
+    // TEST-295 verifies: REQ-MREG-034, REQ-MREG-030, REQ-CONFIG-032
     // No path assigns an identifier past the limit: a new market takes `marketCount + 1` (refused above the limit), a
     // relisting needs a Cancelled market at or below `marketCount`, and a token carrying any other identifier is
     // refused before the limit is read.
-    function test_TEST_138_noListingPathPassesTheLimit() public {
+    function test_TEST_295_noListingPathPassesTheLimit() public {
         _fill();
         // A token carrying marketCount + 2: neither the next identifier nor a cancelled one.
         _expectMismatch(_defFor(CAP + 2, CAP + 2));

@@ -1463,7 +1463,7 @@
       "check": "costly-loop",
       "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
       "function": "MarketRegistryRoutesLogic._recheckRoutes",
-      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record (outer loop over market identifiers 1..marketCount): storage reads per iteration and one write (`active = false`) per route it disables. Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the route slots governance set, and runs only inside a normal-delay timelock call. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt).",
+      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record (outer loop over market identifiers 1..marketCount): storage reads per iteration and one write (`active = false`) per route it disables. Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the route slots governance set, and runs only inside a normal-delay timelock call. Covered by TEST-296 (additionAfterFinalizeDisablesRoutesThroughIt).",
       "approval": "approved by pattern",
       "review": "Pattern: bounded loops (bounded by MAX_MARKET_COUNT and timelock-set route slots)."
     },
@@ -1472,7 +1472,7 @@
       "check": "costly-loop",
       "file": "src/policy/market-registry/MarketRegistryRoutesLogic.sol",
       "function": "MarketRegistryRoutesLogic._recheckRoutes",
-      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record (inner loop over the market's listed route slots): storage reads per iteration and one write (`active = false`) per route it disables. Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the route slots governance set, and runs only inside a normal-delay timelock call. Covered by TEST-054 (additionAfterFinalizeDisablesRoutesThroughIt).",
+      "reason": "REQ-MREG-035 re-check after an addition to a finalized integration record (inner loop over the market's listed route slots): storage reads per iteration and one write (`active = false`) per route it disables. Bounded by MAX_MARKET_COUNT markets (REQ-MREG-034) times the route slots governance set, and runs only inside a normal-delay timelock call. Covered by TEST-296 (additionAfterFinalizeDisablesRoutesThroughIt).",
       "approval": "approved by pattern",
       "review": "Pattern: bounded loops (bounded by MAX_MARKET_COUNT and timelock-set route slots)."
     },

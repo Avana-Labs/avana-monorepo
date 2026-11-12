@@ -62,9 +62,9 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
         used = before - gasleft();
     }
 
-    // TEST-138 verifies: REQ-MREG-034, REQ-PSTORE-009
+    // TEST-295 verifies: REQ-MREG-034, REQ-PSTORE-009
     // Sources: decisions of 2026-11-11 (market-count bound; gas of the re-check at the limit informs the fork sizing)
-    function test_TEST_138_recheckGasAtTheMarketCountLimit() public {
+    function test_TEST_295_recheckGasAtTheMarketCountLimit() public {
         assertEq(registry.MAX_MARKET_COUNT(), MAX_MARKETS);
         _listNext();
         uint256 one = _recheckGas(40);

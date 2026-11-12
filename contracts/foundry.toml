@@ -24,8 +24,8 @@ auto_detect_solc = false
 offline = false
 # Only the remappings in remappings.txt; no guessing from dependency folders.
 auto_detect_remappings = false
-# Libraries used only by test helpers are linked at test time.
-dynamic_test_linking = true
+# Off: with dynamic test linking on, `vm.expectRevert()` before a reverting `new` skipped every later statement of the test.
+dynamic_test_linking = false
 # Fork tests run in their own profile and differential tests in theirs (FFI); Halmos `check_`
 # functions are ignored by forge test.
 no_match_path = "test/{fork,differential}/**"
