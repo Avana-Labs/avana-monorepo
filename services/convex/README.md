@@ -63,15 +63,28 @@ A 404 marks the operation as carrying no metadata; a refused file is recorded wi
 
 ## Frontend fee
 
-No contract charges a fee (Q-231). The app adds one ERC-20 transfer to the action's batch (`wallet_sendCalls`, EIP-5792, or a smart account's multicall), so fee and action succeed or revert together. `feeConfig` holds the rules: on or off, a default rate, a rate per action, exempt actions and a USD cap per action; until a row is written, no fee is charged, and repay, repay with collateral and collateral withdrawal are exempt. `frontendFee.setConfig` is internal (dashboard or CLI only).
+The app charges 10 bps on every app action: supply, withdraw, pledge, withdraw collateral, borrow, repay, repay with collateral, deleverage, and swap if it ships (Q-409). A keeper's liquidation is not an app action and pays none. No contract charges, computes or enforces the fee (Q-231), so a direct contract caller pays none.
 
-`frontendFee.quote(chainId, action, token, amount, gasUnits, l1FeeWei?)` returns the fee in token base units and USD, the gas cost and the total:
+- **Collection.** The app adds one ERC-20 transfer to the action's batch (`wallet_sendCalls`, EIP-5792, or a smart account's multicall), so fee and action succeed or revert together.
+- **Recipient.** The ParameterStore's `feeRecipient`, the same address that receives the 20 % liquidation fee share; it changes only through the timelock. The app reads it on chain before it builds the batch; Convex holds no recipient. Frontend fees are transfers from user accounts, and liquidation fees come from LPVaultSwap or PayoutEscrow with their own events, so the two are told apart by source.
+- **A fee leg that would revert.** The app simulates the batch; if the fee transfer would revert (a token that blocklists `feeRecipient`, for example), it drops the fee leg and sends the action alone.
+- **Rules.** `feeConfig` holds on or off, a default rate, a rate per action, exempt actions and a USD cap per action. Until a row is written the default applies: on, 10 bps, no exempt action, no cap. Every rate must be an integer from 0 to `MAX_FEE_BPS` = 25, the ceiling the listing ARFC commits to; `setConfig` rejects a higher rate, and a stored rule above it makes `quote` throw rather than charge it. `frontendFee.setConfig` is internal (dashboard or CLI only); Avana operations set the rate within the ceiling.
 
-- fee `⌊amount × bps / 10⁴⌋`, then cut to the USD cap (rounded down), so the user never pays above the stated rate;
+`frontendFee.quote(chainId, action, token, amount?, positionValueUsd8?, gasUnits, l1FeeWei?)` returns the fee in the fee token's base units and USD, the gas cost and the total. `token` is the token the fee is paid in: the action token, or for pledge and withdraw collateral the market's debt stablecoin.
+
+- fee, amount basis: `⌊amount × bps / 10⁴⌋` in the action token;
+- fee, LP-value basis (pledge, withdraw collateral): `⌊valueUsd8 × bps × 10^d / (10⁴ × priceUsd8)⌋` in the debt stablecoin, where `valueUsd8` is the position's LPOracle value as Lens reports it, and `d` and `priceUsd8` are the stablecoin's decimals and price;
+- either fee is then cut to the USD cap (rounded down), so the user never pays above the stated rate;
 - gas `gasUnits × (baseFee + priorityFee) + l1Fee`, where `gasUnits` is the wallet's simulation of the whole batch, fee transfer included, and `l1Fee` the OP Stack data fee on Base;
-- total: amount + fee + gas for supply, pledge and repay; amount − fee − gas for withdraw and borrow.
+- total: amount + fee + gas for supply, pledge, repay, repay with collateral, deleverage and swap; amount − fee − gas for withdraw, borrow and withdraw collateral.
 
-Example: supplying 10,000 USDC at 10 bps with 200,000 gas at 20 gwei + 1 gwei and ETH at $3,000: fee 10 USDC, gas 0.0042 ETH = $12.60, total $10,022.60. The app builds the transfer with the same function (`lib/fees.ts`), so the amount shown is the amount sent.
+Examples, with 200,000 gas at 20 gwei + 1 gwei and ETH at $3,000:
+
+- Supplying 10,000 USDC: fee 10 USDC, gas 0.0042 ETH = $12.60, total $10,022.60.
+- Pledging a position worth $200,000 in a GHO market: fee 200 GHO, paid from the wallet.
+- Withdrawing a position worth $10,000 with the fee paid in USDC at $0.9999: fee `⌊10¹² × 10 × 10⁶ / (10⁴ × 99,990,000)⌋` = 10,001,000 units, 10.001 USDC.
+
+The app builds the transfer with the same function (`lib/fees.ts`), so the amount shown is the amount sent.
 
 ## Screens
 

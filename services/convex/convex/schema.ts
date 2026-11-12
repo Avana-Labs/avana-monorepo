@@ -330,7 +330,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_pool", ["chainId", "pool"]),
 
-  /** Frontend fee rules (one row, `key` "default"). */
+  /** Frontend fee rules (one row, `key` "default"); every rate within 0..MAX_FEE_BPS (25). No recipient: the app reads `feeRecipient` on chain. */
   feeConfig: defineTable({
     key: v.string(),
     enabled: v.boolean(),
