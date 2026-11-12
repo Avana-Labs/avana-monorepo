@@ -34,6 +34,20 @@ npm run test -w services/keeper                # one package
 
 The [`services`](../.github/workflows/services.yml) workflow runs the same steps for each package on every pull request and push to `main` that touches these packages, the workspace manifests or `.nvmrc`. Before installing it fails if any `@avana/` dependency is not a `file:` or `workspace:` link or the lock file resolves one from a registry; the `gate` job passes only when every package passed.
 
+## Running against a manifest
+
+Both services take every address from the release manifests listed in `AVANA_MANIFEST` (comma-separated, one per chain) and the network set from `INDEXER_NETWORK_SET` / `KEEPER_NETWORK_SET`: `production` (Ethereum, Base) and `testnet` (Sepolia, Base Sepolia) load manifests from `deployments/verified/`; `local` (anvil, chain 31337, and a Tenderly Virtual TestNet created with chain ID 73571) loads a rehearsal manifest from `contracts/deployments-local/<network>/manifest.json` and is never used for a published deployment. A manifest for a chain outside the set is ignored, and a set with no manifest stops startup.
+
+```bash
+# Rehearsal on a local anvil node, after contracts/script/e2e/e2e-local.sh (or its deploy and manifest steps):
+export AVANA_MANIFEST=$PWD/contracts/deployments-local/anvil/manifest.json
+export RPC_ANVIL=http://127.0.0.1:8545 RPC_ANVIL_FALLBACK=http://127.0.0.1:8545 RPC_ANVIL_WS=ws://127.0.0.1:8545
+(cd services/indexer && INDEXER_NETWORK_SET=local npx ponder start)       # PGlite store; production uses DATABASE_URL
+(cd services/keeper && KEEPER_NETWORK_SET=local KEEPER_MODE=observe ... npx tsx src/main.ts)
+```
+
+`contracts/script/e2e/services-smoke.sh <manifest>` runs both on a manifest with throwaway kill-switch certificates and checks that the indexer reaches `/ready` and the keeper serves its metrics in observe mode. The manifest is produced and verified with `npm run manifest` in `packages/protocol` ([`deployments/README.md`](../deployments/README.md)); the services check its ABI hash against `@avana/protocol` and refuse a mismatch.
+
 ## Indexer (`indexer/`)
 
 ### Events

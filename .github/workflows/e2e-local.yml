@@ -1,0 +1,103 @@
+name: e2e-local
+
+# Local deployment rehearsal (deployments/README.md, stage 1): a fresh anvil node with Avana's own Aave V4, Uniswap v3,
+# Aerodrome Slipstream, test tokens, movable feeds and dozens of pools; then every Avana deploy step, the first two
+# timelock operations through the real AvanaTimelock, the release manifest produced and verified against the chain, the
+# keeper and the indexer started on it, and the scenario runner. contracts/script/e2e/e2e-local.sh records each step as
+# pass, fail or not-run; a not-run step (a missing tool, build or contract such as the concentrated-liquidity LPOracle)
+# is reported as a warning annotation and in the job summary, never as a pass, and fails the job only when
+# E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job. Runs nightly, on release tags and by hand.
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      require_all:
+        description: "Fail the job when any step is not run"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: contracts
+
+jobs:
+  e2e:
+    name: anvil rehearsal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Cache Soldeer dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Install dependencies (soldeer.lock, npm workspace)
+        run: |
+          forge soldeer install
+          (cd .. && npm ci --ignore-scripts)
+
+      - name: Build (default, aave, univ3, slipstream-v1, slipstream-main)
+        run: |
+          forge build
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
+          FOUNDRY_PROFILE=slipstream-v1 forge build
+          FOUNDRY_PROFILE=slipstream-main forge build
+          FOUNDRY_PROFILE=aerodrome forge build
+          FOUNDRY_PROFILE=aave-v3 forge build
+
+      - name: Rehearsal
+        id: e2e
+        run: script/e2e/e2e-local.sh
+
+      - name: Summary
+        if: always()
+        env:
+          REQUIRE_ALL: ${{ inputs.require_all || false }}
+        run: |
+          s=deployments-local/anvil/e2e-status.json
+          if [ ! -f "$s" ]; then echo "::error::no e2e-status.json"; exit 1; fi
+          node -e '
+            const j = require(process.argv[1]);
+            const rows = Object.entries(j).map(([k, v]) => `| ${k} | ${v.outcome} | ${String(v.detail).replace(/\|/g, "/")} |`);
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, ["| Step | Outcome | Detail |", "|---|---|---|", ...rows].join("\n") + "\n");
+            for (const [k, v] of Object.entries(j)) if (v.outcome === "not-run") console.log(`::warning title=e2e step not run::${k}: ${v.detail}`);
+            const notRun = Object.values(j).some((v) => v.outcome === "not-run");
+            process.exit(process.env.REQUIRE_ALL === "true" && notRun ? 1 : 0);
+          ' "$PWD/$s"
+
+      - name: Upload outputs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-local
+          path: |
+            contracts/deployments-local/anvil
+            contracts/broadcast
+          retention-days: 14
