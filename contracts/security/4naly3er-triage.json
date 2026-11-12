@@ -1249,6 +1249,198 @@
       "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
       "reason": "Not a signed message: keccak256(abi.encode(minAmounts)) binds the borrower's per-token minimums in the transient repay-with-collateral session so the callback must present the same array (REQ-ADAPTER-081), and keccak256(abi.encode(im)) is the logic contracts' immutables hash compared at construction (REQ-ADAPTER-004); no signature or EIP-712 domain is involved. Covered by test_TEST_239_sessionMisuseReverts (WeakMinimums) and test_TEST_062_constructorChecks.",
       "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "88912ec098b35cea",
+      "check": "`decimals()` should be of type `uint8`",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "The Hub's getAssetUnderlyingAndDecimals already returns uint8. Test: hubAssetExposureBoundAndPrice.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "70e5954afe4eae54",
+      "check": "Division by zero not prevented",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "The divisor is checked on the line before (unitValue == 0 returns) or is a non-zero constant or price checked above. Tests: Lens.Preview, Lens.States (a zero answer).",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2be6bee5d509a011",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "No signature: the deadline is the caller's transaction deadline used only to size the interest growth; a deadline at or before now counts no time (REQ-LENS-035, REQ-LENS-036). Test: repayAllDeadlineInPast.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "b80ce58173f9e15d",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "The loop index runs from 0 to the reserve's latest dynamic configuration key, itself a uint32, so uint32(key) never truncates. Test: checkBackingLiquidationFeeOnAnyKey.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f0b3243169ececd1",
+      "check": "A year is not always 365 days",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Aave V4's own convention: its drawn rate is per 365-day year (MathUtils.SECONDS_PER_YEAR), so the growth until the deadline uses the same year (REQ-LENS-035, REQ-LENS-036). Tests: repayAllCoversDebtAtDeadline, repayAllUsdcExample.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2c9ede58b3cc3085",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "9fa4fc2288b7724b",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "66ef9f028ee98b8d",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "83d870d4a56528f8",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "cf744b5d6f1048d5",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f46da66703efd1c6",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c1314c9d2e275e8a",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "eddc354f9817e0d2",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensPrice.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "04414faa51f5414c",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensPrice.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "bd69d92503419857",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "dbe71d45cbf2c50b",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "0bf882c837aed024",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "40a35363154deac1",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "0fc173a659deb356",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1bd5e633799bcf58",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ad165d59bda38105",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "627bda1182b8f3af",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensPositions.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ee8306734398bd25",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/lens/lens/LensPositions.sol",
+      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "30311fccb661c2cd",
+      "check": "`symbol()` is not a part of the ERC-20 standard",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "The vault token is Avana's own IERC20Metadata token (VaultToken), which implements name() and symbol(); the Lens reads them only for display (REQ-LENS-045). Test: marketIdentity.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
     }
   ]
 }

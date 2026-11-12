@@ -22,6 +22,14 @@
       "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
       "reason": "Equivalent mutant: the loop only computes `listed` over the market's pool tokens in _checkOracleAndRoutes (REQ-CONFIG-047 'registration'). Skipping it leaves listed = true, which is always the value: listCollateralMarket refuses an unlisted pool token (TokenNotListed, REQ-CONFIG-017) and the registry has no function that unlists a token, so a Registered market's tokens are always listed. The common-mode half of the same check cannot fail either, since setPriceSource re-checks every Registered market (test_TEST_231_priceSourceChangeGuardsARegisteredMarket).",
       "approval": "approved (Josue, 2026-11-11)"
+    },
+    {
+      "fingerprint": "ae055e8c39d60707",
+      "check": "BinaryOpMutation",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Equivalent: BreakerReasons.ORACLE (1 << 0) and CONFIG_DRIFT (1 << 10) are disjoint bits, so ORACLE + CONFIG_DRIFT equals ORACLE | CONFIG_DRIFT (1,025) and the mask is unchanged. The rule itself is covered by test_TEST_238_recreditRescueOnlyCases (ORACLE and CONFIG_DRIFT never force a rescue, POOL_SHARE does).",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), equivalent mutant"
     }
   ]
 }

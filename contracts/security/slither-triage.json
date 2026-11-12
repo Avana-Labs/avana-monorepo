@@ -2986,6 +2986,990 @@
       "reason": "Implementation immutables of the shared AaveAdapterStorage: each logic contract uses only the ones its bodies need; immutables occupy no storage, and the router checks that every logic contract was built with the same values (REQ-ADAPTER-004).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: analysis artefacts of shared bases (as the RiskModuleBase entry)."
+    },
+    {
+      "fingerprint": "6c8cb1c3d2e5fac6",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c3e6f81c921328c6",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2a8cb0c2e7c163ae",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d17ed4ed48afd0ad",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "6636d2ac08706cf4",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "93a3f7e6e7ee4fca",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "fc3431eb6fc2c9b6",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "391237e9326aed84",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "dfe802c34a0cbc90",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "08513952dd62e0e9",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e29a649d39106673",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "46125bc4ba2e0422",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "b39e396017441c0b",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "62bac88d0ce27287",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "6fd3afbfa5562ef8",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "a91350493f247230",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "317f241bf4241b68",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7ae2ee8b763332df",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "6b9ea6bf8a04eb31",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "98ab09f5c413a265",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7123bde27fba65d0",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "3a1e5c20d096d4ec",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "03a034d7d91e57e5",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7b54610ca27de861",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "270dc44805c398bf",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "77fc07dbbd50f669",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "Exact comparisons by design: Hub added shares == added assets (REQ-LENS-012, REQ-LENS-016), the listed Spoke equal to the CDP Spoke or the fee receiver (REQ-LENS-012), drawn shares == 0. Tests: checkBackingHealthyFlags, checkBackingExtraSpokeFails, sharesNotEqualAssetsReported.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "963d952ccd22f696",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Exact comparisons by design: Hub added shares == added assets (REQ-LENS-012, REQ-LENS-016), the listed Spoke equal to the CDP Spoke or the fee receiver (REQ-LENS-012), drawn shares == 0. Tests: checkBackingHealthyFlags, checkBackingExtraSpokeFails, sharesNotEqualAssetsReported.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "6275ab8984a0a58c",
+      "check": "uninitialized-local",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "A memory struct (Borrow b, Repay r) declared and filled field by field on the next lines; Solidity zero-initialises memory. Tests: Lens.Preview.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2e0e9d211bf0ef81",
+      "check": "uninitialized-local",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "A memory struct (Borrow b, Repay r) declared and filled field by field on the next lines; Solidity zero-initialises memory. Tests: Lens.Preview.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "960bf8e642a02cb5",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "bd02b80f1abc9a1a",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "389741b2fee5df1a",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ead97040b80baef9",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "deec7e712f5f7ecf",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "072f3f808c0b858d",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "a4a8c1c5a9dc9bbb",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f3cf28580e824931",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "4d4db22abe9656af",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "33cde533f67c7b37",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensLiquidationSizing.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "34e8ba59dea00592",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "a7089f6553c80f83",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "bc95ba34754a5993",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "44fdcf3fc3bf6505",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ea8c1f22e5cacc85",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2d9cf819582955cd",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d419929b263e90f5",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "080f91d3d4ea61c0",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1075ef059891bc4b",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "26cc14e8bc234095",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d282530d9bbb9c22",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "b82974b92fa95e32",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ec4fd080e0ea3de4",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "45a9907df465071a",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7f6da610e6644a93",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "65693254d4b90926",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "5ee134be1fd14d7e",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2dc719255618f443",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "24965db86b642b12",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ff1203d6bb0298d4",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "249570390ee207fb",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "9c4409400786d195",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "90a010d297f51faa",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d1e675d9423560e8",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "31d0242c3c304803",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1c4feae1b7271a54",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "a511fa97f83f03a8",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "57fc67e0a20b08e6",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c9b34a96d1ac8e64",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensRisk.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "a721a1053333f4e5",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f98b08fe345a6231",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "5ebe6c5499075968",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "59a2517dc1359c7d",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d229143c2dc2ac5e",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "fb331e39fb904ec4",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPreview.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d29bb1217638c558",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "84abc2797015a941",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "cd309fdde74b5278",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "79848a8b773b3267",
+      "check": "assembly",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "The one low-level call site of the Lens: Lens._forward STATICCALLs an immutable module with the caller's calldata. Failed: the module's revert data is re-thrown unchanged. Short, long or oversized: the bytes are returned unchanged and the caller decodes them (the module is Avana code returning the same function's ABI encoding); returndatacopy copies at most what the module returned. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, unknownSelectorReverts, testFuzz_TEST_247_entryPointRouting.",
+      "approval": "pending (lead review)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "0ec448ce47a55fb8",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "9d47ff2c3b1b55c6",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c7b555ef4ef5af7a",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c8fd154adb93a246",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "8dff6168d335393b",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c12cb0875b253c73",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "89b8a77b7cc59988",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "5140bd9a517419c9",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "0039ff1df591fab6",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "0cde0e2a9085838a",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7c505b0bb9c9d51b",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "cd5ba6115b5e3af9",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "eecad43380838b9e",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "0a9f850afefcff99",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f6acc4e088e034ec",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "aa116a40f24ea443",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "8d6bd65905b6cffb",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ccf706cf87e9f417",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "4f203824829094df",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d1d2e302fdfc5cea",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2d2e8fc96fa52e7b",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "b6e5d500733a7cb3",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "62ce7af9d80cddd8",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "82e44b3d70d75208",
+      "check": "incorrect-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "03014b6b72ff2b15",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensPositions.sol",
+      "reason": "Exact comparisons by design: Hub added shares == added assets (REQ-LENS-012, REQ-LENS-016), the listed Spoke equal to the CDP Spoke or the fee receiver (REQ-LENS-012), drawn shares == 0. Tests: checkBackingHealthyFlags, checkBackingExtraSpokeFails, sharesNotEqualAssetsReported.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f6c617c96508e865",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "aabdde97f9da3c57",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e84c2418ada66716",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1fdcf1ee8898aadd",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c201ca759d72c6be",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "5cfdc9ebf835fb6a",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "28813f6c09813d78",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "caa8cc324815c182",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensPositions.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "66d266708ed0af65",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensBase.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "ea0eeb1f61713192",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "378216c08acc2671",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensMarkets.sol",
+      "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e0c2f83f04dbc789",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPositions.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "642a3db6f4a2d5bf",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPositions.sol",
+      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "dd98c78b691866fc",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "10cfc7a776d293a8",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e98d3a9275da64d5",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7e84f3878a2b3f22",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "3b4af290397a46ca",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "64bb51819ac17e95",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "009dc5bd9df0a831",
+      "check": "redundant-statements",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
     }
   ]
 }

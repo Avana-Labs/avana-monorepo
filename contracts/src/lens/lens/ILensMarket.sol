@@ -21,13 +21,14 @@ interface ILensMarket {
         address vaultToken
     ) external view returns (BackingView memory backing);
 
-    /// @notice Returns NFT custody and live liquidity against credited units for one page of record IDs.
-    /// @dev With `n = Collateralization.nextRecordId()`: returns an empty array when `offset >= n`; otherwise walks record IDs
-    /// `offset` to `offset + min(limit, n - offset) - 1`, so no input overflows, skipping closed records and records of other
-    /// markets. Same `limit` rules as `getRecords`.
+    /// @notice Returns position custody and live liquidity against credited units for one page of the market's open
+    /// records.
+    /// @dev With `n = Collateralization.getMarketRecordCount(vaultToken)`: returns an empty array when `offset >= n`;
+    /// otherwise walks index positions `offset` to `offset + min(limit, n - offset) - 1` of the market's open-record
+    /// index, so no input overflows. Same `limit` rules as `getRecords`.
     /// @param vaultToken The market.
-    /// @param offset First record ID of the page.
-    /// @param limit Number of record IDs walked.
+    /// @param offset First index position of the page.
+    /// @param limit Largest number of records returned.
     /// @return records Open records of the market in the page.
     /// @custom:spec REQ-LENS-014, REQ-LENS-023, REQ-LENS-024, INV-002, Q-268
     function checkRecordBacking(

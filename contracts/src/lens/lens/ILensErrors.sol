@@ -31,4 +31,9 @@ interface ILensErrors {
     /// @param debtAsset The asset passed.
     /// @custom:spec REQ-LENS-034, REQ-LENS-039
     error UnknownDebtAsset(address debtAsset);
+
+    /// @notice The eight Lens modules passed to the Lens constructor do not report the same core addresses, or the
+    /// liquidation module was given no Aave sizing contract.
+    /// @custom:spec REQ-LENS-001, REQ-LENS-002
+    error InvalidModules();
 }

@@ -41,13 +41,17 @@ interface ILensRisk {
         address account
     ) external view returns (bool frozen);
 
-    /// @notice Returns the funded First-Loss Reserve of a debt asset against its largest one-token tail exposure.
+    /// @notice Returns the funded First-Loss Reserve of a (funding Hub, debt asset) pair against its largest one-token
+    /// tail exposure.
     /// @dev Loops over the MarketRegistry's Spokes, their approved debt reserves and its markets. Reverts with
-    /// `UnknownDebtAsset(debtAsset)` when no approved debt reserve lends the asset. Rounding never overstates coverage.
+    /// `UnknownDebtAsset(debtAsset)` when no approved debt reserve of any CDP Spoke draws the asset from `hub`. Rounding
+    /// never overstates coverage.
+    /// @param hub The funding Hub.
     /// @param debtAsset The debt asset.
     /// @return coverage Funded balance, minimum, worst token, tail exposure and coverage ratio.
     /// @custom:spec REQ-LENS-034, REQ-LENS-039, SPEC-CAP-008, Q-249
     function getTailCoverage(
+        address hub,
         address debtAsset
     ) external view returns (TailCoverageView memory coverage);
 

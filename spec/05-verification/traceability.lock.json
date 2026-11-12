@@ -15580,9 +15580,22 @@
     ]
   },
   "REQ-LENS-001": {
-    "hash": "4ae46c45c553cc69",
+    "hash": "0e81de9bea86da64",
     "checks": [
-      "ILens"
+      "ILens",
+      "ILensErrors",
+      "Lens",
+      "LensAccountModule",
+      "LensBase",
+      "LensLiquidationModule",
+      "LensMarketModule",
+      "LensMarketsModule",
+      "LensPositionsModule",
+      "LensPreviewModule",
+      "LensPriceModule",
+      "LensRiskModule",
+      "TEST-247",
+      "TEST-270"
     ]
   },
   "REQ-LENS-002": {
@@ -15653,19 +15666,29 @@
     ]
   },
   "REQ-LENS-011": {
-    "hash": "25dce7796fca0494",
+    "hash": "e9f6dae9c2542275",
     "checks": [
       "ILens",
       "ILensAccount",
-      "RecordView"
+      "Lens",
+      "LensAccount",
+      "LensAccountModule",
+      "RecordView",
+      "TEST-223",
+      "TEST-247"
     ]
   },
   "REQ-LENS-012": {
-    "hash": "e44a9fb439b68dc1",
+    "hash": "b2be58eb6435a2bf",
     "checks": [
       "BackingView",
       "ILens",
-      "ILensMarket"
+      "ILensMarket",
+      "Lens",
+      "LensMarket",
+      "LensMarketModule",
+      "TEST-223",
+      "TEST-247"
     ]
   },
   "REQ-LENS-013": {
@@ -15675,52 +15698,82 @@
     ]
   },
   "REQ-LENS-014": {
-    "hash": "dc1363bc3d23d910",
+    "hash": "75d4e45947708125",
     "checks": [
       "FV-CTL-148",
       "FV-CTL-77",
       "ILensMarket",
+      "Lens",
+      "LensAccount",
+      "LensMarket",
+      "LensMarketModule",
       "RecordBackingView",
-      "SYM-140"
+      "SYM-140",
+      "TEST-247"
     ]
   },
   "REQ-LENS-015": {
-    "hash": "b5f360b01768059e",
+    "hash": "e95f14bb7d473930",
     "checks": [
       "ILensLiquidation",
+      "Lens",
+      "LensBase",
+      "LensPrice",
+      "LensPriceModule",
       "PriceInput",
-      "PriceView"
+      "PriceView",
+      "TEST-247"
     ]
   },
   "REQ-LENS-016": {
-    "hash": "510d2b8e260723d1",
+    "hash": "bf7c658c83e27b2d",
     "checks": [
-      "FV-CTL-78",
       "FV-LIQ-06",
       "ILens",
       "ILensErrors",
       "ILensLiquidation",
+      "Lens",
+      "LensBase",
+      "LensLiquidation",
+      "LensLiquidationModule",
       "LiquidationPreview",
       "RouteStatus",
-      "SYM-140"
+      "SYM-140",
+      "TEST-069",
+      "TEST-162",
+      "TEST-223",
+      "TEST-247"
     ]
   },
   "REQ-LENS-017": {
-    "hash": "ad449a1d6ed05963",
+    "hash": "582d5bebec4f0e31",
     "checks": [
       "FV-LIQ-02",
       "FV-LIQ-06",
+      "ILensAaveSizing",
+      "ILensHubReads",
       "ILensLiquidation",
+      "ILensSpokeReads",
+      "Lens",
+      "LensLiquidation",
+      "LensLiquidationModule",
+      "LensLiquidationSizing",
       "LiquidationPreview",
-      "SYM-140"
+      "SYM-140",
+      "TEST-069",
+      "TEST-205"
     ]
   },
   "REQ-LENS-018": {
-    "hash": "5ce05ecc5f6f6122",
+    "hash": "afe80091309dd174",
     "checks": [
       "CapView",
       "ILensMarket",
-      "SYM-140"
+      "Lens",
+      "LensMarket",
+      "LensMarketModule",
+      "SYM-140",
+      "TEST-247"
     ]
   },
   "REQ-LENS-019": {
@@ -15749,9 +15802,13 @@
     ]
   },
   "REQ-LENS-022": {
-    "hash": "b81ee23681d21bda",
+    "hash": "3901a5c47cc76d49",
     "checks": [
-      "ILens"
+      "ILens",
+      "ILensMarkets",
+      "LensBase",
+      "LensMarkets",
+      "TEST-247"
     ]
   },
   "REQ-LENS-023": {
@@ -15781,21 +15838,32 @@
     ]
   },
   "REQ-LENS-026": {
-    "hash": "295d12d5790b3393",
+    "hash": "11bf65a27a9d3b2e",
     "checks": [
       "FV-LIQ-06",
       "ILensMarket",
+      "Lens",
+      "LensBase",
+      "LensMarket",
+      "LensMarketModule",
       "PendingView",
-      "SYM-140"
+      "SYM-140",
+      "TEST-069",
+      "TEST-223",
+      "TEST-247"
     ]
   },
   "REQ-LENS-027": {
-    "hash": "4e1a122e99d8351e",
+    "hash": "8facbcbfa061822a",
     "checks": [
       "FV-LIQ-06",
       "ILens",
       "ILensAccount",
-      "IPayoutEscrow"
+      "IPayoutEscrow",
+      "Lens",
+      "LensAccount",
+      "LensAccountModule",
+      "TEST-247"
     ]
   },
   "REQ-LENS-028": {
@@ -15811,31 +15879,51 @@
     ]
   },
   "REQ-LENS-029": {
-    "hash": "81885d0129d213c7",
+    "hash": "b8f6b2e94dbc9fc7",
     "checks": [
       "FV-CTL-78",
       "FV-LIQ-02",
       "FV-LIQ-06",
+      "ILensAaveSizing",
       "ILensLiquidation",
+      "Lens",
+      "LensLiquidation",
+      "LensLiquidationModule",
+      "LensLiquidationSizing",
       "LiquidationPreview",
-      "SYM-140"
+      "SYM-140",
+      "TEST-069",
+      "TEST-205"
     ]
   },
   "REQ-LENS-030": {
-    "hash": "ee6937035eb3745b",
+    "hash": "09e822ae58b6a4a9",
     "checks": [
       "DebtPosition",
       "DebtPriceView",
       "ILensErrors",
-      "ILensLiquidation"
+      "ILensLiquidation",
+      "Lens",
+      "LensBase",
+      "LensLiquidation",
+      "LensPrice",
+      "LensPriceModule",
+      "TEST-069",
+      "TEST-247"
     ]
   },
   "REQ-LENS-031": {
-    "hash": "b8d9b6592bdd47f7",
+    "hash": "b9e653af5f4b462f",
     "checks": [
       "FV-CTL-33",
       "ILens",
-      "ILensLiquidation"
+      "ILensLiquidation",
+      "Lens",
+      "LensPrice",
+      "LensPriceModule",
+      "TEST-162",
+      "TEST-223",
+      "TEST-247"
     ]
   },
   "REQ-LENS-032": {
@@ -15853,22 +15941,33 @@
     ]
   },
   "REQ-LENS-034": {
-    "hash": "42a17b24013ef6b4",
+    "hash": "4bc20050d54a3f76",
     "checks": [
       "FV-LIQ-05",
       "FV-LIQ-06",
       "ILensErrors",
       "ILensRisk",
+      "Lens",
+      "LensRisk",
+      "LensRiskModule",
       "SYM-140",
+      "TEST-247",
       "TailCoverageView"
     ]
   },
   "REQ-LENS-035": {
-    "hash": "a41d1c67c74a685c",
+    "hash": "24d4de76422fab23",
     "checks": [
+      "ILensHubReads",
       "ILensPreview",
+      "Lens",
+      "LensBase",
       "LensConstants",
-      "SYM-140"
+      "LensPreview",
+      "LensPreviewModule",
+      "SYM-140",
+      "TEST-223",
+      "TEST-247"
     ]
   },
   "REQ-LENS-036": {
@@ -15890,10 +15989,16 @@
     ]
   },
   "REQ-LENS-038": {
-    "hash": "deafc1b73df6d599",
+    "hash": "83daf5697a77a7ce",
     "checks": [
       "ILensPreview",
-      "SYM-140"
+      "Lens",
+      "LensPreview",
+      "LensPreviewModule",
+      "SYM-140",
+      "TEST-223",
+      "TEST-238",
+      "TEST-239"
     ]
   },
   "REQ-LENS-039": {
@@ -15908,22 +16013,34 @@
     "checks": []
   },
   "REQ-LENS-041": {
-    "hash": "b07ce1cde7a50445",
+    "hash": "29c6f6ab2428bdbd",
     "checks": [
-      "ILensPreview"
+      "ILensPreview",
+      "Lens",
+      "LensPreview",
+      "LensPreviewModule",
+      "TEST-247"
     ]
   },
   "REQ-LENS-042": {
-    "hash": "e822c5ec3124a55a",
+    "hash": "a487a84f5d83e6fa",
     "checks": [
-      "ILensRisk"
+      "ILensRisk",
+      "Lens",
+      "LensRisk",
+      "LensRiskModule",
+      "TEST-247"
     ]
   },
   "REQ-LENS-043": {
-    "hash": "eb9feafbf91d6c95",
+    "hash": "091ff2c9d7146bf4",
     "checks": [
       "HubAssetExposureView",
-      "ILensRisk"
+      "ILensRisk",
+      "Lens",
+      "LensRisk",
+      "LensRiskModule",
+      "TEST-247"
     ]
   },
   "REQ-LENS-044": {

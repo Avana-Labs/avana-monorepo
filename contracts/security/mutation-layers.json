@@ -35,7 +35,8 @@
       {"src": "src/coverage/coverage-spoke", "tests": "test/unit/CoverageSpoke*"}
     ],
     "2.6": [
-      {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz}/FlashLiquidator.*"}
+      {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz}/FlashLiquidator.*"},
+      {"src": "src/lens/lens", "tests": "test/{unit,fuzz,integration}/Lens.*"}
     ]
   },
   "gambit": {

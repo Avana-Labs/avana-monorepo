@@ -2038,6 +2038,286 @@
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "ced72c813be7d191",
+      "check": "reentrancy-state-change",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Constructor only: reads the six modules' core getters (STATICCALL to contracts the deployer passes) before writing immutables; there is no state to re-enter and no later state change. Test: constructorRejectsMismatchedModules.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "df86f4a852f65be4",
+      "check": "reentrancy-state-change",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Constructor only: reads the six modules' core getters (STATICCALL to contracts the deployer passes) before writing immutables; there is no state to re-enter and no later state change. Test: constructorRejectsMismatchedModules.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2bb8ae4d3f3ba378",
+      "check": "yul-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e57fac3aabcb1d45",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "032d13c5afd43710",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "158e40e7cc092a37",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "a30b72ec826dd4e1",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "742edef1ccbab1f5",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "56f5c64e721a40f4",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "090d493000fcf2ea",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "8922832beb654b8f",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "8cfbb775f2519d25",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e8aef9a69c3ccbb6",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c7b5f2aba11dc9ff",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1da62f903fb15535",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "240f2caa9c397e10",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "724d78b90f80d307",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "087cdadf26fddca3",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "55351e381e27a5cc",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c4979ea58e29c155",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "4d7b8b1e8e561347",
+      "check": "require-revert-in-loop",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "getAccounts loops over the caller's own market list and an unlisted market ends the whole call with UnknownMarket (REQ-LENS-022, REQ-LENS-040); no partial answer is meaningful. Test: getAccountsUnknownMarketReverts.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7f37f4c4c66317fa",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "98db742bba8267eb",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "97163492152c544f",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1ae39cc32df12e71",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "93d7adfe36fc769b",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2df3936c04af754e",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7de31de13bfeb70c",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f163ce31bc9103fa",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "bfb3a1ce08be009e",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "58c4922ebb3211d7",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1c9cc441ae21bc12",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "47ac6272fe6a57f4",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e10194e48f472495",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "3b0bbe59afb65324",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
     }
   ]
 }

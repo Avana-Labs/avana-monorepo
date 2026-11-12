@@ -58,7 +58,8 @@ interface ILensLiquidation {
     /// @notice Returns every liquidation gate, Aave's sizing and ready-to-send `LiquidationParams` for one account,
     /// collateral market and debt reserve, with the expected seizure, recovery floor, gross and net payout and the loss
     /// the caller may bear, all in the debt asset.
-    /// @dev The call reverts with `UnknownProxy(proxy)` unless the proxy's market vault token reports
+    /// @dev The proxy's market is the AaveAdapter's binding `accountOf(proxy)`. The call reverts with
+    /// `UnknownProxy(proxy)` unless the Adapter created the proxy and the market's vault token reports
     /// `isValidProxy(proxy)` and with `UnknownDebtReserve(spoke, debtReserveId)` unless the reserve is enabled for the
     /// proxy's Spoke. Gates read fresh
     /// prices only for the seized market and the repaid reserve; other reserves count at their served prices.
@@ -76,7 +77,7 @@ interface ILensLiquidation {
     /// reward beyond the returned funding and `expectedCallerLoss` the amount the payout can fall below the funding.
     /// `pauseState` is informational.
     /// Advisory only: LPVaultSwap recomputes and enforces every check.
-    /// @param proxy The account's proxy; its market is the proxy's `MARKET_ID()`.
+    /// @param proxy The account's proxy; its market is the AaveAdapter's binding `accountOf(proxy)`.
     /// @param debtReserveId The debt reserve to repay.
     /// @param deadline The deadline copied into `params`.
     /// @return preview Gates, sizing, parameters and expected amounts.

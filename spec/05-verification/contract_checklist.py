@@ -103,7 +103,7 @@ PAGE_REQ = re.compile(r"^(?:REQ|SPEC)-")
 # of them (the test drives that contract), and a page REQ/SPEC row in which every contract named by its deciding
 # part is one of them (see deferred_to). Such a row returns to scope when the contract lands; --check fails once
 # a listed contract has a `contract <Name>` definition in contracts/src, so this tuple cannot go stale.
-PENDING: tuple[str, ...] = ("Lens",)
+PENDING: tuple[str, ...] = ()
 MODAL = re.compile(r"\b(?:MUST|MAY|SHALL)\b")
 
 # Rows inside a "page.md#Heading" section that the section's library or adapter does not decide: ID -> (the contract

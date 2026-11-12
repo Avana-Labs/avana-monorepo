@@ -71,6 +71,7 @@ compilation_restrictions = [
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 1_000 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 1_000 },
   { paths = "src/liquidation/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
+  { paths = "src/lens/lens/Lens*Module.sol", via_ir = true, optimizer_runs = 200 },
 ]
 
 [profile.default.fuzz]
