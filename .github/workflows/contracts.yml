@@ -138,8 +138,9 @@ jobs:
 
   test:
     # The suite is split into 10 shards that run side by side: every test file (fork and differential excluded) is
-    # dealt round-robin by path (script/test-shard.sh), so each file runs in exactly one shard. Each shard reuses the
-    # build job's compiled output instead of compiling again.
+    # assigned by its measured run time (script/test-shard.sh, script/test-shard.py, script/test-timings.json), so
+    # the shards take about equal time and each file runs in exactly one shard. Each shard reuses the build job's
+    # compiled output instead of compiling again.
     name: tests (ci profile, shard ${{ matrix.shard }}/10)
     needs: build
     runs-on: ubuntu-24.04
