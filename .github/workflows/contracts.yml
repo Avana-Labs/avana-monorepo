@@ -205,6 +205,10 @@ jobs:
 
       - run: forge soldeer install
 
+      - name: Build Aave V4 artifacts for the fixture
+        # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
+        run: FOUNDRY_PROFILE=aave forge build
+
       - name: Gas snapshots (test/gas against the committed snapshots/)
         # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
         # step. `make gas` rewrites the snapshots; a PR that changes gas commits them.
@@ -268,6 +272,10 @@ jobs:
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
       - run: forge soldeer install
+
+      - name: Build Aave V4 artifacts for the fixture
+        # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
+        run: FOUNDRY_PROFILE=aave forge build
 
       - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
         env:
