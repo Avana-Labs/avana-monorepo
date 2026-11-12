@@ -1,25 +1,33 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The rows of one chain snapshot, by scope. Each number has one owner: Hub totals live only in `HubAssetRow`, a
-// Spoke's draw on an asset only in `HubAssetSpokeRow`, a CDP reserve's own flags only in `SpokeReserveRow`, a
-// collateral market's figures only in `MarketRow`. Every row of one snapshot is read at the same block, so the
-// identities of the scope model hold exactly between them. Integers are decimal strings in base units; rates are RAY
-// per year; prices are USD with 8 decimals.
+// The rows of one chain snapshot, by scope. A chain has several Hubs, each with its Lend and CDP Spokes, and every row
+// names its Hub. Each number has one owner: Hub totals live only in `HubAssetRow`, a Spoke's draw on an asset only in
+// `HubAssetSpokeRow`, a CDP reserve's own flags only in `SpokeReserveRow`, a collateral market's figures only in
+// `MarketRow`, a Hub-to-Hub line's cap only in `CreditLineRow`. Every row of one snapshot is read at the same block,
+// so the identities of the scope model hold exactly between them. Integers are decimal strings in base units; rates
+// are RAY per year; prices are USD with 8 decimals.
 
 import type { DecimalString } from "../export.ts";
 
 export type Address = `0x${string}`;
 
-/** The addresses one chain's snapshot reads, taken from the verified release manifest. */
+/**
+ * The addresses one chain's snapshot starts from, taken from the verified release manifest. The reader adds every Hub
+ * the MarketRegistry has recorded and every CDP Spoke it has approved since, so a Hub or CDP Spoke listed after
+ * start-up is read without changing this.
+ */
 export interface ChainDeployment {
   readonly chainId: number;
   readonly lens: Address;
-  /** The Lend Spoke: Aave standard Spoke, supply only; its reserves are the lend assets. */
-  readonly lendSpoke: Address;
-  /** Every CDP Spoke, one per AMM protocol. */
+  readonly marketRegistry: Address;
+  /** The manifest's Hubs with the label the app shows. */
+  readonly hubs: readonly { readonly address: Address; readonly label: string }[];
+  /** The manifest's Lend Spokes: Aave standard Spokes, supply only; their reserves are the lend assets. */
+  readonly lendSpokes: readonly Address[];
+  /** The manifest's CDP Spokes. */
   readonly cdpSpokes: readonly Address[];
-  /** Every Coverage Spoke with the asset it covers. */
-  readonly coverageSpokes: readonly { readonly address: Address; readonly asset: Address }[];
+  /** Every Coverage Spoke with the asset it covers and, when the manifest names it, its Hub. */
+  readonly coverageSpokes: readonly { readonly address: Address; readonly asset: Address; readonly hub?: Address }[];
 }
 
 /** What a Spoke is to one Hub asset. Only CDP Spokes draw; the others have `drawCap = 0` (REQ-HUB-015). */
@@ -30,6 +38,14 @@ export interface RateCurve {
   readonly baseDrawnRateBps: number;
   readonly rateGrowthBeforeOptimalBps: number;
   readonly rateGrowthAfterOptimalBps: number;
+}
+
+/** One Lend Spoke's reserve of a Hub asset. */
+export interface LendReserve {
+  readonly spoke: Address;
+  readonly reserveId: DecimalString;
+  readonly paused: boolean;
+  readonly frozen: boolean;
 }
 
 /** One asset of one Hub, the scope of the Lend page and of the Hub block of every Borrow asset page. */
@@ -59,12 +75,10 @@ export interface HubAssetRow {
   readonly liquidityFeeBps: number;
   readonly feeReceiver: Address;
   readonly rateCurve: RateCurve | null;
-  readonly lend: {
-    readonly spoke: Address;
-    readonly reserveId: DecimalString;
-    readonly paused: boolean;
-    readonly frozen: boolean;
-  };
+  /** The Lend Spoke reserve whose oracle prices the asset: the first of `lendReserves`. */
+  readonly lend: LendReserve;
+  /** Every Lend Spoke reserve on this Hub asset, the manifest's Lend Spokes first. */
+  readonly lendReserves: readonly LendReserve[];
   /** From `Lens.getHubAssetExposure`; null when the Lens refuses the asset. */
   readonly exposure: {
     readonly coverageSpoke: Address;
@@ -182,10 +196,56 @@ export interface MarketReserveDebtRow {
   readonly blockNumber: DecimalString;
 }
 
+/**
+ * One Aave V4 Hub: its label, tier and the Spokes and lend assets it has at the block. Hub totals are not copied here;
+ * they are the sum of the Hub's `HubAssetRow`s.
+ */
+export interface HubRow {
+  readonly chainId: number;
+  readonly hub: Address;
+  /** The manifest's label; null for a Hub recorded after the manifest was written. */
+  readonly label: string | null;
+  /** `MarketRegistry.hubTier`, 0 when the registry has not recorded the Hub. */
+  readonly tier: number;
+  readonly recorded: boolean;
+  /** `Lens.getApplicationState(hub)`: None, Frozen or Paused; null when the Lens refuses the Hub. */
+  readonly applicationState: number | null;
+  /** Every Hub asset, lend assets and vault tokens alike. */
+  readonly assetCount: number;
+  /** Hub assets some Lend Spoke supplies: the Hub's rows of the Lend page. */
+  readonly lendAssetIds: readonly DecimalString[];
+  readonly lendSpokes: readonly Address[];
+  /** CDP Spokes whose home Hub (`MarketRegistry.hubOf`) is this one. */
+  readonly cdpSpokes: readonly Address[];
+  readonly blockNumber: DecimalString;
+}
+
+/**
+ * A Hub-to-Hub credit line: a CDP Spoke whose home Hub is another one draws on this funding Hub's asset. The cap and
+ * the funding Hub's total of caps are the MarketRegistry's; the Spoke's draw is its `HubAssetSpokeRow`, joined.
+ */
+export interface CreditLineRow {
+  readonly chainId: number;
+  readonly fundingHub: Address;
+  readonly assetId: DecimalString;
+  readonly asset: Address;
+  readonly spoke: Address;
+  readonly homeHub: Address;
+  /** `crossHubLineCap(fundingHub, asset, spoke)`, base units. */
+  readonly cap: DecimalString;
+  /** `crossHubLineTotal(fundingHub, asset)`: Σ caps of every cross-Hub line on this asset. */
+  readonly total: DecimalString;
+  /** `crossHubLinesEnabled()` of the chain. */
+  readonly enabled: boolean;
+  readonly blockNumber: DecimalString;
+}
+
 export interface ChainSnapshot {
   readonly chainId: number;
   readonly blockNumber: DecimalString;
   readonly timestamp: number;
+  readonly hubs: readonly HubRow[];
+  readonly creditLines: readonly CreditLineRow[];
   readonly hubAssets: readonly HubAssetRow[];
   readonly slices: readonly HubAssetSpokeRow[];
   readonly spokeReserves: readonly SpokeReserveRow[];

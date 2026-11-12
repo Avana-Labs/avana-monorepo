@@ -1,60 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Reads one chain's Hub assets, their Spoke slices, the CDP debt reserves and the collateral markets at one block.
+// Reads one chain's Hubs, their assets and Spoke slices, the Hub-to-Hub credit lines, the CDP debt reserves and the
+// collateral markets at one block, for every Hub and Spoke discovery.ts finds.
 // The indexer runs it at each hourly sample block (chart history) and Convex at the head (current values); both
 // get the same rows from the same calls. Round-1 Lens views plus the Aave V4 Hub and Spoke views the Lens itself
 // reads; round2.ts lists the Lens views planned to replace the direct Hub reads.
 
-import type { DecimalString } from "../export.ts";
-import { aaveOracleAbi, hubViewsAbi, lensViewsAbi, rateStrategyAbi, spokeViewsAbi } from "./abi.ts";
+import { aaveOracleAbi, hubViewsAbi, lensViewsAbi, rateStrategyAbi, registryViewsAbi, spokeViewsAbi } from "./abi.ts";
+import { type ContractCall, type ViewClient, ZERO, all, lower, s, some, uniq } from "./client.ts";
+import { type HubAssetInfo, discover } from "./discovery.ts";
 import { deficitFromRay, supplyRateRay, utilizationBps } from "./math.ts";
 import type {
   Address,
   ChainDeployment,
   ChainSnapshot,
+  CreditLineRow,
   HubAssetRow,
   HubAssetSpokeRow,
+  HubRow,
+  LendReserve,
   MarketRow,
   SpokeKind,
   SpokeReserveRow,
 } from "./types.ts";
 
-export interface ContractCall {
-  readonly address: Address;
-  readonly abi: readonly unknown[];
-  readonly functionName: string;
-  readonly args?: readonly unknown[];
-}
-
-export type CallResult = { readonly status: "success"; readonly result: unknown } | { readonly status: "failure"; readonly error: unknown };
-
-/**
- * A multicall pinned to one block. The indexer wraps Ponder's `context.client` (pinned to the sample block), Convex
- * a viem client with `blockNumber`.
- */
-export interface ViewClient {
-  multicall(calls: readonly ContractCall[]): Promise<readonly CallResult[]>;
-}
-
-const ZERO: Address = "0x0000000000000000000000000000000000000000";
-const s = (x: bigint | number): DecimalString => x.toString(10);
-const lower = (a: string): Address => a.toLowerCase() as Address;
-
-/** Runs calls that must all succeed; one failure fails the snapshot (no partial pages of numbers). */
-async function all(client: ViewClient, calls: readonly ContractCall[]): Promise<unknown[]> {
-  if (calls.length === 0) return [];
-  const out = await client.multicall(calls);
-  return out.map((r, i) => {
-    if (r.status !== "success") throw new Error(`${calls[i]!.functionName} on ${calls[i]!.address} reverted: ${String(r.error)}`);
-    return r.result;
-  });
-}
-
-/** Runs calls that may revert (a Lens view that refuses an asset); a failure is null. */
-async function some(client: ViewClient, calls: readonly ContractCall[]): Promise<unknown[]> {
-  if (calls.length === 0) return [];
-  return (await client.multicall(calls)).map((r) => (r.status === "success" ? r.result : null));
-}
+export type { CallResult, ContractCall, ViewClient } from "./client.ts";
 
 interface DecodedReserve {
   underlying: Address;
@@ -66,16 +36,6 @@ interface DecodedReserve {
 interface DecodedReserveConfig {
   paused: boolean;
   frozen: boolean;
-}
-interface DecodedSpokeData {
-  drawnShares: bigint;
-  premiumShares: bigint;
-  addedShares: bigint;
-  addCap: number | bigint;
-  drawCap: number | bigint;
-  active: boolean;
-  halted: boolean;
-  deficitRay: bigint;
 }
 interface DecodedExposure {
   coverageSpoke: Address;
@@ -134,6 +94,7 @@ interface DecodedDebtReserve {
   pauseState: number;
 }
 
+const reg = (registry: Address, functionName: string, args: readonly unknown[]): ContractCall => ({ address: registry, abi: registryViewsAbi, functionName, args });
 const hubCall = (hub: Address, functionName: string, args: readonly unknown[]): ContractCall => ({ address: hub, abi: hubViewsAbi, functionName, args });
 const spokeCall = (spoke: Address, functionName: string, args: readonly unknown[] = []): ContractCall => ({ address: spoke, abi: spokeViewsAbi, functionName, args });
 
@@ -155,43 +116,57 @@ async function readMarkets(client: ViewClient, lens: Address): Promise<DecodedMa
 export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment, at: { blockNumber: bigint; timestamp: number }): Promise<ChainSnapshot> {
   const block = s(at.blockNumber);
   const lens = lower(dep.lens);
-  const lendSpoke = lower(dep.lendSpoke);
-  const cdpSpokes = dep.cdpSpokes.map(lower);
+  const registry = lower(dep.marketRegistry);
+  const topo = await discover(client, dep);
+  const { cdpSpokes, lendSpokes } = topo;
+  const L = lendSpokes.length;
+  const C = cdpSpokes.length;
 
-  // 1. Lend reserves, the Lend Spoke's oracle, every CDP Spoke's debt reserves and liquidation config.
-  const [reserveCount, oracle, ...rest] = await all(client, [
-    spokeCall(lendSpoke, "getReserveCount"),
-    spokeCall(lendSpoke, "ORACLE"),
-    ...cdpSpokes.map((sp) => ({ address: lens, abi: lensViewsAbi, functionName: "getDebtReserves", args: [sp] })),
+  // 1. Each Lend Spoke's reserve count and oracle, every CDP Spoke's debt reserves and liquidation config.
+  const first = await all(client, [
+    ...lendSpokes.flatMap((sp) => [spokeCall(sp, "getReserveCount"), spokeCall(sp, "ORACLE")]),
+    ...cdpSpokes.map((sp): ContractCall => ({ address: lens, abi: lensViewsAbi, functionName: "getDebtReserves", args: [sp] })),
     ...cdpSpokes.map((sp) => spokeCall(sp, "getLiquidationConfig")),
   ]);
-  const debtReserves = (rest.slice(0, cdpSpokes.length) as DecodedDebtReserve[][]).flat();
+  const lendMeta = lendSpokes.map((spoke, i) => ({ spoke, count: Number(first[2 * i] as bigint), oracle: lower(first[2 * i + 1] as string) }));
+  const debtReserves = (first.slice(2 * L, 2 * L + C) as DecodedDebtReserve[][]).flat();
   const liqConfigs = new Map(
-    cdpSpokes.map((sp, i) => [sp, rest[cdpSpokes.length + i] as { targetHealthFactor: bigint; healthFactorForMaxBonus: bigint; liquidationBonusFactor: number }]),
+    cdpSpokes.map((sp, i) => [sp, first[2 * L + C + i] as { targetHealthFactor: bigint; healthFactorForMaxBonus: bigint; liquidationBonusFactor: number }]),
   );
-  const lendIds = Array.from({ length: Number(reserveCount as bigint) }, (_, i) => BigInt(i));
+  const oracles = uniq(lendMeta.map((m) => m.oracle));
 
-  // 2. Each lend reserve's Hub asset, flags and oracle price.
+  // 2. Each oracle's decimals; each lend reserve's Hub asset, flags and price.
+  const lendKeys = lendMeta.flatMap((m) => Array.from({ length: m.count }, (_, i) => ({ spoke: m.spoke, oracle: m.oracle, reserveId: BigInt(i) })));
   const lendReads = await all(client, [
-    { address: lower(oracle as string), abi: aaveOracleAbi, functionName: "DECIMALS" },
-    ...lendIds.flatMap((id) => [
-      spokeCall(lendSpoke, "getReserve", [id]),
-      spokeCall(lendSpoke, "getReserveConfig", [id]),
-      { address: lower(oracle as string), abi: aaveOracleAbi, functionName: "getReservePrice", args: [id] },
+    ...oracles.map((o): ContractCall => ({ address: o, abi: aaveOracleAbi, functionName: "DECIMALS" })),
+    ...lendKeys.flatMap((k) => [
+      spokeCall(k.spoke, "getReserve", [k.reserveId]),
+      spokeCall(k.spoke, "getReserveConfig", [k.reserveId]),
+      { address: k.oracle, abi: aaveOracleAbi, functionName: "getReservePrice", args: [k.reserveId] },
     ]),
   ]);
-  const oracleDecimals = Number(lendReads[0] as number);
-  const toUsd8 = (p: bigint): bigint => (oracleDecimals >= 8 ? p / 10n ** BigInt(oracleDecimals - 8) : p * 10n ** BigInt(8 - oracleDecimals));
-  const lendAssets = lendIds.map((id, i) => {
-    const reserve = lendReads[1 + i * 3] as DecodedReserve;
-    const config = lendReads[2 + i * 3] as DecodedReserveConfig;
-    return { reserveId: id, hub: lower(reserve.hub), assetId: BigInt(reserve.assetId), underlying: lower(reserve.underlying), decimals: reserve.decimals, config, priceUsd8: toUsd8(lendReads[3 + i * 3] as bigint) };
+  const O = oracles.length;
+  const oracleDecimals = new Map(oracles.map((o, i) => [o, Number(lendReads[i] as number)]));
+  const toUsd8 = (p: bigint, d: number): bigint => (d >= 8 ? p / 10n ** BigInt(d - 8) : p * 10n ** BigInt(8 - d));
+  const infoOf = new Map(topo.assets.map((a) => [`${a.hub}:${a.assetId}`, a]));
+  const grouped = new Map<string, { info: HubAssetInfo; reserves: LendReserve[]; priceUsd8: bigint }>();
+  lendKeys.forEach((k, i) => {
+    const reserve = lendReads[O + i * 3] as DecodedReserve;
+    const config = lendReads[O + i * 3 + 1] as DecodedReserveConfig;
+    const key = `${lower(reserve.hub)}:${BigInt(reserve.assetId)}`;
+    const info = infoOf.get(key);
+    if (!info) throw new Error(`Lend Spoke ${k.spoke} reserve ${k.reserveId} is on Hub ${lower(reserve.hub)}, which is neither in the manifest nor recorded by the MarketRegistry`);
+    const entry = { spoke: k.spoke, reserveId: s(k.reserveId), paused: config.paused, frozen: config.frozen };
+    const found = grouped.get(key);
+    if (found) found.reserves.push(entry);
+    else grouped.set(key, { info, reserves: [entry], priceUsd8: toUsd8(lendReads[O + i * 3 + 2] as bigint, oracleDecimals.get(k.oracle)!) });
   });
+  const lendAssets = [...grouped.values()];
 
-  // 3. Hub totals of each lend asset and the list of its Spokes.
+  // 3. Hub totals of each lend asset.
   const hubReads = await all(
     client,
-    lendAssets.flatMap((a) => [
+    lendAssets.flatMap(({ info: a }) => [
       hubCall(a.hub, "getAddedAssets", [a.assetId]),
       hubCall(a.hub, "getAddedShares", [a.assetId]),
       hubCall(a.hub, "getAssetOwed", [a.assetId]),
@@ -200,17 +175,14 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       hubCall(a.hub, "getAssetAccruedFees", [a.assetId]),
       hubCall(a.hub, "getAssetDrawnRate", [a.assetId]),
       hubCall(a.hub, "getAssetDrawnIndex", [a.assetId]),
-      hubCall(a.hub, "getAssetConfig", [a.assetId]),
-      hubCall(a.hub, "getSpokeCount", [a.assetId]),
     ]),
   );
-  const PER_ASSET = 10;
-  const totals = lendAssets.map((a, i) => {
+  const PER_ASSET = 8;
+  const totals = lendAssets.map((la, i) => {
     const r = hubReads.slice(i * PER_ASSET, (i + 1) * PER_ASSET);
     const [drawn, premium] = r[2] as [bigint, bigint];
-    const config = r[8] as { feeReceiver: Address; liquidityFee: number; irStrategy: Address };
     return {
-      ...a,
+      ...la,
       added: r[0] as bigint,
       addedShares: r[1] as bigint,
       drawn,
@@ -220,76 +192,83 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       accruedFees: r[5] as bigint,
       drawnRate: r[6] as bigint,
       drawnIndex: r[7] as bigint,
-      feeReceiver: lower(config.feeReceiver),
-      liquidityFeeBps: Number(config.liquidityFee),
-      irStrategy: lower(config.irStrategy),
-      spokeCount: Number(r[9] as bigint),
     };
   });
 
-  // 4. Spoke addresses, rate curves and the Lens exposure of each asset.
-  const addrCalls = totals.flatMap((t) => Array.from({ length: t.spokeCount }, (_, j) => hubCall(t.hub, "getSpokeAddress", [t.assetId, BigInt(j)])));
-  const spokeAddrs = (await all(client, addrCalls)).map((a) => lower(a as string));
-  const curves = await some(client, totals.map((t) => ({ address: t.irStrategy, abi: rateStrategyAbi, functionName: "getInterestRateData", args: [t.assetId] })));
-  const exposures = (await some(client, totals.map((t) => ({ address: lens, abi: lensViewsAbi, functionName: "getHubAssetExposure", args: [t.hub, t.underlying] })))) as (DecodedExposure | null)[];
+  // 4. Rate curves and the Lens exposure of each lend asset.
+  const curves = await some(client, totals.map(({ info: a }) => ({ address: a.irStrategy, abi: rateStrategyAbi, functionName: "getInterestRateData", args: [a.assetId] })));
+  const exposures = (await some(client, totals.map(({ info: a }) => ({ address: lens, abi: lensViewsAbi, functionName: "getHubAssetExposure", args: [a.hub, a.underlying] })))) as (DecodedExposure | null)[];
 
-  // 5. Each slice.
-  let cursor = 0;
-  const sliceKeys = totals.flatMap((t) => spokeAddrs.slice(cursor, (cursor += t.spokeCount)).map((spoke) => ({ t, spoke })));
-  const sliceReads = await all(
-    client,
-    sliceKeys.flatMap(({ t, spoke }) => [
-      hubCall(t.hub, "getSpoke", [t.assetId, spoke]),
-      hubCall(t.hub, "getSpokeAddedAssets", [t.assetId, spoke]),
-      hubCall(t.hub, "getSpokeTotalOwed", [t.assetId, spoke]),
-    ]),
-  );
-  const coverage = new Set(dep.coverageSpokes.map((c) => lower(c.address)));
-  const slices: HubAssetSpokeRow[] = sliceKeys.map(({ t, spoke }, i) => {
-    const data = sliceReads[i * 3] as DecodedSpokeData;
-    const exposure = exposures[totals.indexOf(t)];
-    const homeHub = exposure?.spokes.find((x) => lower(x.spoke) === spoke)?.homeHub ?? ZERO;
-    const kind: SpokeKind =
-      spoke === lendSpoke
+  // 5. Each slice's added and owed amounts; the registry cap of each Hub-to-Hub line.
+  const lendSet = new Set(lendSpokes);
+  const cdpSet = new Set(cdpSpokes);
+  const sliceKeys = totals.flatMap((t, ti) =>
+    t.info.spokes.map(({ spoke, data }) => {
+      const exposure = exposures[ti];
+      const homeHub = topo.homeHubOf.get(spoke) ?? lower(exposure?.spokes.find((x) => lower(x.spoke) === spoke)?.homeHub ?? ZERO);
+      const kind: SpokeKind = lendSet.has(spoke)
         ? "lend"
-        : cdpSpokes.includes(spoke) || homeHub !== ZERO
+        : cdpSet.has(spoke) || homeHub !== ZERO
           ? "cdp"
-          : coverage.has(spoke) || (exposure !== null && exposure !== undefined && lower(exposure.coverageSpoke) === spoke)
+          : topo.coverage.has(spoke) || (exposure != null && lower(exposure.coverageSpoke) === spoke)
             ? "coverage"
-            : spoke === t.feeReceiver
+            : spoke === t.info.feeReceiver
               ? "feeReceiver"
               : "other";
-    return {
-      chainId: dep.chainId,
-      hub: t.hub,
-      assetId: s(t.assetId),
-      spoke,
-      kind,
-      homeHub: lower(homeHub),
-      added: s(sliceReads[i * 3 + 1] as bigint),
-      addedShares: s(data.addedShares),
-      owed: s(sliceReads[i * 3 + 2] as bigint),
-      drawnShares: s(data.drawnShares),
-      premiumShares: s(data.premiumShares),
-      deficit: s(deficitFromRay(data.deficitRay)),
-      addCap: s(BigInt(data.addCap)),
-      drawCap: s(BigInt(data.drawCap)),
-      active: data.active,
-      halted: data.halted,
-      blockNumber: block,
-    };
-  });
+      return { t, spoke, data, homeHub, kind, crossHub: kind === "cdp" && homeHub !== ZERO && homeHub !== t.info.hub };
+    }),
+  );
+  const lines = sliceKeys.filter((k) => k.crossHub);
+  const lineAssets = uniq(lines.map((k) => k.t));
+  const sliceReads = await all(client, [
+    ...sliceKeys.flatMap(({ t, spoke }) => [hubCall(t.info.hub, "getSpokeAddedAssets", [t.info.assetId, spoke]), hubCall(t.info.hub, "getSpokeTotalOwed", [t.info.assetId, spoke])]),
+    ...lines.map(({ t, spoke }) => reg(registry, "crossHubLineCap", [t.info.hub, t.info.underlying, spoke])),
+    ...lineAssets.map((t) => reg(registry, "crossHubLineTotal", [t.info.hub, t.info.underlying])),
+  ]);
+  const slices: HubAssetSpokeRow[] = sliceKeys.map(({ t, spoke, data, homeHub, kind }, i) => ({
+    chainId: dep.chainId,
+    hub: t.info.hub,
+    assetId: s(t.info.assetId),
+    spoke,
+    kind,
+    homeHub,
+    added: s(sliceReads[i * 2] as bigint),
+    addedShares: s(data.addedShares),
+    owed: s(sliceReads[i * 2 + 1] as bigint),
+    drawnShares: s(data.drawnShares),
+    premiumShares: s(data.premiumShares),
+    deficit: s(deficitFromRay(data.deficitRay)),
+    addCap: s(BigInt(data.addCap)),
+    drawCap: s(BigInt(data.drawCap)),
+    active: data.active,
+    halted: data.halted,
+    blockNumber: block,
+  }));
+  const S2 = sliceKeys.length * 2;
+  const creditLines: CreditLineRow[] = lines.map(({ t, spoke, homeHub }, i) => ({
+    chainId: dep.chainId,
+    fundingHub: t.info.hub,
+    assetId: s(t.info.assetId),
+    asset: t.info.underlying,
+    spoke,
+    homeHub,
+    cap: s(sliceReads[S2 + i] as bigint),
+    total: s(sliceReads[S2 + lines.length + lineAssets.indexOf(t)] as bigint),
+    enabled: topo.crossHubLinesEnabled,
+    blockNumber: block,
+  }));
 
   const hubAssets: HubAssetRow[] = totals.map((t, i) => {
+    const a = t.info;
     const owed = t.drawn + t.premium;
     const curve = curves[i] as { optimalUsageRatio: number; baseDrawnRate: number; rateGrowthBeforeOptimal: number; rateGrowthAfterOptimal: number } | null;
     const exposure = exposures[i];
     return {
       chainId: dep.chainId,
-      hub: t.hub,
-      assetId: s(t.assetId),
-      underlying: t.underlying,
-      decimals: t.decimals,
+      hub: a.hub,
+      assetId: s(a.assetId),
+      underlying: a.underlying,
+      decimals: a.decimals,
       priceUsd8: s(t.priceUsd8),
       added: s(t.added),
       addedShares: s(t.addedShares),
@@ -301,10 +280,10 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       accruedFees: s(t.accruedFees),
       drawnIndexRay: s(t.drawnIndex),
       drawnRateRay: s(t.drawnRate),
-      supplyRateRay: s(supplyRateRay(t.drawnRate, owed, t.added, t.liquidityFeeBps)),
+      supplyRateRay: s(supplyRateRay(t.drawnRate, owed, t.added, a.liquidityFeeBps)),
       utilizationBps: utilizationBps(owed, t.added),
-      liquidityFeeBps: t.liquidityFeeBps,
-      feeReceiver: t.feeReceiver,
+      liquidityFeeBps: a.liquidityFeeBps,
+      feeReceiver: a.feeReceiver,
       rateCurve: curve
         ? {
             optimalUsageBps: Number(curve.optimalUsageRatio),
@@ -313,7 +292,8 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
             rateGrowthAfterOptimalBps: Number(curve.rateGrowthAfterOptimal),
           }
         : null,
-      lend: { spoke: lendSpoke, reserveId: s(t.reserveId), paused: t.config.paused, frozen: t.config.frozen },
+      lend: t.reserves[0]!,
+      lendReserves: t.reserves,
       exposure: exposure
         ? {
             coverageSpoke: lower(exposure.coverageSpoke),
@@ -326,6 +306,23 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
         : null,
       blockNumber: block,
       timestamp: at.timestamp,
+    };
+  });
+
+  const hubs: HubRow[] = topo.hubs.map((h) => {
+    const mine = hubAssets.filter((a) => a.hub === h.hub);
+    return {
+      chainId: dep.chainId,
+      hub: h.hub,
+      label: h.label,
+      tier: h.tier,
+      recorded: h.recorded,
+      applicationState: h.applicationState,
+      assetCount: h.assetCount,
+      lendAssetIds: mine.map((a) => a.assetId),
+      lendSpokes: uniq(mine.flatMap((a) => a.lendReserves.map((r) => r.spoke))),
+      cdpSpokes: cdpSpokes.filter((sp) => topo.homeHubOf.get(sp) === h.hub),
+      blockNumber: block,
     };
   });
 
@@ -400,6 +397,6 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     };
   });
 
-  return { chainId: dep.chainId, blockNumber: block, timestamp: at.timestamp, hubAssets, slices, spokeReserves, markets };
+  return { chainId: dep.chainId, blockNumber: block, timestamp: at.timestamp, hubs, creditLines, hubAssets, slices, spokeReserves, markets };
 }
 

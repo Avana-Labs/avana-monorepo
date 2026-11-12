@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The view functions the snapshot reader calls, as human-readable ABI fragments that mirror the Solidity
-// declarations field for field: the Lens market and exposure views (contracts/src/lens/lens/), the Aave V4 Hub
-// and Spoke views at the pinned release, the asset rate strategy and the Spoke's AaveOracle. Struct fields are
-// decoded by position, so a field added in the middle of a struct must be added here in the same place.
+// declarations field for field: the Lens market and exposure views (contracts/src/lens/lens/), the MarketRegistry
+// Hub, Spoke and credit-line views, the Aave V4 Hub and Spoke views at the pinned release, the asset rate strategy and
+// the Spoke's AaveOracle. Struct fields are decoded by position, so a field added in the middle of a struct must be
+// added here in the same place.
 // services/indexer/test/views-abi.test.ts checks every selector against the ABIs generated in packages/protocol.
 
 import { parseAbi } from "viem";
@@ -17,11 +18,29 @@ export const lensViewsAbi = parseAbi([
   "function getMarkets(uint256 offset, uint256 limit) view returns (MarketView[] markets)",
   "function getDebtReserves(address spoke) view returns (DebtReserveView[] reserves)",
   "function getHubAssetExposure(address hub, address asset) view returns (HubAssetExposureView view_)",
+  "function getApplicationState(address hub) view returns (uint8 state)",
+]);
+
+/**
+ * MarketRegistry views that name every recorded Hub, every approved CDP Spoke and the Hub-to-Hub credit lines, so a
+ * Hub or CDP Spoke listed after start-up is read at the next snapshot without a deployment change.
+ */
+export const registryViewsAbi = parseAbi([
+  "function getHubs() view returns (address[] hubs)",
+  "function getSpokes() view returns (address[] spokes)",
+  "function hubOf(address spoke) view returns (address hub)",
+  "function hubTier(address hub) view returns (uint8 tier)",
+  "function isRecordedHub(address account) view returns (bool recorded)",
+  "function coverageSpokeOf(address hub, address asset) view returns (address coverageSpoke)",
+  "function crossHubLineCap(address fundingHub, address asset, address spoke) view returns (uint256 cap)",
+  "function crossHubLineTotal(address fundingHub, address asset) view returns (uint256 total)",
+  "function crossHubLinesEnabled() view returns (bool enabled)",
 ]);
 
 export const hubViewsAbi = parseAbi([
   "struct AssetConfig { address feeReceiver; uint16 liquidityFee; address irStrategy; address reinvestmentController; }",
   "struct SpokeData { uint120 drawnShares; uint120 premiumShares; int200 premiumOffsetRay; uint120 addedShares; uint40 addCap; uint40 drawCap; uint24 riskPremiumThreshold; bool active; bool halted; uint200 deficitRay; }",
+  "function getAssetCount() view returns (uint256)",
   "function getAddedAssets(uint256 assetId) view returns (uint256)",
   "function getAddedShares(uint256 assetId) view returns (uint256)",
   "function getAssetOwed(uint256 assetId) view returns (uint256, uint256)",

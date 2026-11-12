@@ -171,7 +171,7 @@ export async function readAddresses(ctx: QueryCtx, w: World, scope: PageScope, s
   const rows: [string, string][] = [];
   if (scope === "lend") {
     const a = row as HubAssetDoc;
-    rows.push(["Token", a.underlying], ["Hub", a.hub], ["Lend Spoke", a.lend.spoke]);
+    rows.push(["Token", a.underlying], ["Hub", a.hub], ...a.lendReserves.map((r): [string, string] => ["Lend Spoke", r.spoke]));
     if (a.exposure) rows.push(["Coverage Spoke", a.exposure.coverageSpoke]);
   } else if (scope === "asset") {
     const r = row as SpokeReserveDoc;

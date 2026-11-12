@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The list, header, quick-stat, chart and activity queries of the Lend and Borrow screens, under the names and
-// shapes the web app calls. Scopes: "lend" = a Hub asset (Lend page), "asset" = one CDP Spoke's debt reserve
+// shapes the web app calls. A chain has several Hubs: list rows name their Hub, totals add every Hub. Scopes: "lend" =
+// a Hub asset (Lend page), "asset" = one CDP Spoke's debt reserve
 // (Borrow asset page), "pool" = one collateral market (Borrow pool page). Multiply is not part of v1, so its list is
 // empty and no Multiply row exists.
 
@@ -12,7 +13,8 @@ import { type RangeId, type Values, combineSources, daySeries, filledBuckets, qu
 import { feedRow, type IngestedLog, type Pricing } from "./lib/activity.ts";
 import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
 import type { DaySeries, DetailTxRow, MarketSnapshotRow, PageScope } from "./lib/uiTypes.ts";
-import { type World, bySlug, loadWorld, reserveKey, scopePoints, sliceOf, snapshotRows, symbolOf } from "./model.ts";
+import { lendTotals } from "./lib/hubViews.ts";
+import { type World, bySlug, hubLabelOf, loadWorld, priceAsset, reserveKey, scopePoints, sliceOf, snapshotRows, symbolOf } from "./model.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
 
 const scopeArg = v.union(v.literal("asset"), v.literal("pool"), v.literal("lend"), v.literal("multiply"));
@@ -27,6 +29,19 @@ export const listBorrowMarketSnapshots = query({
 });
 
 export const listLendMarketSnapshots = query({ args: {}, handler: async (ctx) => snapshotRows(ctx, await loadWorld(ctx), nowSeconds(), "lend") });
+
+/**
+ * The Lend screen's totals: supplied, borrowed, available and utilization over every Hub asset of every Hub, split by
+ * Hub and by token (each token's total over its Hubs, one row per Hub). A Hub listed later is included at once.
+ */
+export const getLendTotals = query({
+  args: { chainId: v.optional(v.number()) },
+  handler: async (ctx, { chainId }) => {
+    const w = await loadWorld(ctx);
+    const keep = <T extends { chainId: number }>(x: T) => chainId === undefined || x.chainId === chainId;
+    return lendTotals(w.hubs.filter(keep), w.hubAssets.filter(keep), (h) => hubLabelOf(w, h.chainId, h.hub), (c, t) => symbolOf(w, c, t));
+  },
+});
 
 /** Multiply is not in v1. */
 export const listMultiplyMarketSnapshots = query({ args: {}, handler: async (): Promise<MarketSnapshotRow[]> => [] });
@@ -160,8 +175,8 @@ export const getPoolHeroSeries = query({
     const id = `${slug}:hero:${metric}:${range}`;
     if (metric === "volume" || metric === "fees") {
       const pool = await days(ctx, "pool", `${m.chainId}:${m.pool}`);
-      const idx = m.tokens.findIndex((t) => w.hubAssets.some((a) => a.chainId === m.chainId && a.underlying === t));
-      const asset = w.hubAssets.find((a) => a.chainId === m.chainId && a.underlying === m.tokens[idx]);
+      const idx = m.tokens.findIndex((t) => priceAsset(w, m.chainId, t, m.hub) !== undefined);
+      const asset = idx >= 0 ? priceAsset(w, m.chainId, m.tokens[idx]!, m.hub) : undefined;
       const fn = (x: Values) => (asset ? usdOf(x[`${metric === "volume" ? "volume" : "fees"}${idx}`], asset.decimals, asset.priceUsd8) : 0);
       return daySeries(id, metric, list(pool), fn, range, nowSeconds(), null);
     }

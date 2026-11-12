@@ -37,20 +37,22 @@ The [`services`](../.github/workflows/services.yml) workflow runs the same steps
 
 ## Scopes
 
-Each chain has one Aave V4 Hub with a supply-only Lend Spoke, one CDP Spoke per AMM protocol and one Coverage Spoke per (Hub, debt asset). The services keep every number at the scope that owns it:
+A chain has several Aave V4 Hubs (on the local deployment three: GHO, USDC and USDT on each). Each Hub has one or more supply-only Lend Spokes and its CDP Spokes (one per AMM protocol), each (Hub, debt asset) its Coverage Spoke, and a CDP Spoke may draw on another Hub's asset through a Hub-to-Hub credit line. The services start from the Hubs and Spokes of the release manifest and add, at every read, each Hub the MarketRegistry has recorded and each CDP Spoke it has approved since; on a Hub that no manifest Lend Spoke supplies, a Spoke shaped like a Lend Spoke (not CDP, not Coverage, not the fee receiver, with an add cap and no draw cap) is read as its Lend Spoke. A Hub, Spoke or market listed on chain therefore shows up, with its data and series, without a code or configuration change. The services keep every number at the scope that owns it:
 
 | Scope | Key | Owns |
 |---|---|---|
-| Hub asset | chain, Hub, assetId | Added, owed (drawn + premium), liquidity, deficit, rates, rate curve, reserve factor, the Lend Spoke's oracle price |
+| Hub | chain, Hub | Label (from the manifest), tier, recorded flag, application state, its Lend and CDP Spokes; its totals are the sum of its Hub assets |
+| Hub asset | chain, Hub, assetId | Added, owed (drawn + premium), liquidity, deficit, rates, rate curve, reserve factor, every Lend Spoke reserve on it and the price of the first one's oracle |
 | Spoke slice | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit and caps on that asset |
+| Hub-to-Hub credit line | chain, funding Hub, assetId, Spoke | The registry's cap for a CDP Spoke whose home Hub is another one, and the funding Hub's total of such caps; the draw is the Spoke slice |
 | CDP debt reserve | chain, Spoke, reserveId | The reserve's flags, debt price and breaker; its Hub asset is joined, never copied |
 | Collateral market | chain, marketId | Pool, range, vault token, accepted price, collateral value, collateral factor, collateral risk, cap headroom |
 | Market debt | chain, marketId, Spoke, reserveId | Debt the market's accounts owe in that reserve |
 | Account | chain, Spoke, proxy | One wallet's position in one market |
 
-The Lend page is one Hub asset; a Borrow asset page is one CDP Spoke's slice of the same Hub asset, read from the same row; a pool page is one market. The identities that tie them, checked on fixture data by the tests:
+A Lend page is one Hub asset; the same token on two Hubs is two Hub assets with two pages, and the Lend totals add the Hub assets of every Hub while the per-Hub breakdown keeps them apart. A Borrow asset page is one CDP Spoke's slice of the same Hub asset, read from the same row; a pool page is one market. The identities that tie them, checked on fixture data by the tests:
 
-- Σ CDP slices' owed = the Hub's owed, up to one base unit per Spoke (each Spoke rounds up); only CDP Spokes draw.
+- Per Hub asset, Σ CDP slices' owed = the Hub's owed, up to one base unit per Spoke (each Spoke rounds up); only CDP Spokes draw, a CDP Spoke of another Hub on a credit line included.
 - Σ slices' added = the Hub's added (Lend Spoke + Coverage Spoke + fee receiver), each rounding down.
 - added + accrued fees = liquidity + owed + deficit: "available" is the Hub's liquidity, never added − owed.
 - What a Spoke can draw is `min(drawCap − owed − deficit, liquidity)`, and all CDP Spokes together `min(Σ cap room, liquidity)`.
@@ -174,7 +176,7 @@ Example (dust account): an account owes 0.78 USDC and its seizure recovers about
 
 ### Submission
 
-- **Simulation.** Every transaction, replacement and cancellation is simulated with `eth_call` against the latest block on the primary RPC provider, and the candidate's health factor is confirmed on the second provider, before it is signed. A failing simulation is never sent. The gas limit is `⌈1.25 × estimateGas⌉`; LPVaultSwap's payout headroom check reverts an under-gassed call, so the limit is never cut below the estimate. One liquidation of the largest account (16 records) is modelled at 5,150,000 gas (`REQ-SWAP-032`).
+- **Simulation.** Every transaction, replacement and cancellation is simulated with `eth_call` against the latest block on the primary RPC provider, and the candidate's health factor is confirmed on the second provider, before it is signed. A failing simulation is never sent. The gas limit is `⌈1.3 × estimateGas⌉ + 25,000` (`@avana/services-common/gas`, the one rule for every service and the app): the estimate runs at the latest block's timestamp, so a call touching a Hub asset already accrued in that second skips the accrual it pays when mined a second later (a Lend Spoke withdraw: 31,185 gas in the same second, 35,837 one second later). LPVaultSwap's payout headroom check reverts an under-gassed call, so the limit is never cut below the estimate. One liquidation of the largest account (16 records) is modelled at 5,150,000 gas (`REQ-SWAP-032`).
 - **Private order flow.** On Ethereum every liquidation, replacement and cancellation goes only to private builder endpoints, never to the public mempool (`Q-345`). Base has no public mempool; transactions go to the sequencer endpoint through two independent RPC providers.
 - **Nonces.** Each instance has one signer, and one mutex guards nonce allocation, so two concurrent liquidations never take the same nonce. The local nonce is set from the provider's pending count at startup, after every reorg and after any `nonce too low` error.
 - **Retries.** While a transaction is pending and before its deadline, the keeper re-simulates it in every block. If it still succeeds and was not included, it is replaced at the same nonce, through the same private channel, with both fee fields raised by 15 %. Once the deadline has passed the transaction can no longer execute. If the account is still liquidatable, the keeper builds a fresh preview and sends it at the same nonce; otherwise, if the nonce was not consumed within 2 blocks, it sends a zero-value transfer to itself at that nonce.

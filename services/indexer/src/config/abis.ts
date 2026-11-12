@@ -71,4 +71,10 @@ export const factoryEvents = {
   debtReserveApproved: getAbiItem({ abi: marketRegistryAbi, name: "DebtReserveApproved" }),
   /** MarketRegistry: the Coverage Spoke of a Hub asset; child address in `coverageSpoke`. */
   coverageSpokeSet: getAbiItem({ abi: marketRegistryAbi, name: "CoverageSpokeSet" }),
+  /** MarketRegistry: a recorded Hub; child address in `hub`. */
+  hubRecorded: getAbiItem({ abi: marketRegistryAbi, name: "HubRecorded" }),
+  /** MarketRegistry: an approved CDP Spoke; child address in `spoke`. */
+  spokeApproved: getAbiItem({ abi: marketRegistryAbi, name: "SpokeApproved" }),
+  /** Aave V4 Hub: a Spoke added to one of its assets; child address in `spoke`. */
+  addSpoke: getAbiItem({ abi: aaveV4HubAbi, name: "AddSpoke" }),
 } as const;

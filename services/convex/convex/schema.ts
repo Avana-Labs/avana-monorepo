@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Convex tables. Chain numbers are stored once, at the narrowest scope that owns them, keyed as the indexer keys
-// them: a Hub asset's totals only in `hubAssets`, a Spoke's draw on it only in `hubAssetSpokes`, a CDP reserve's
+// Convex tables. A chain has several Hubs; every row names its Hub (or, for a market, its CDP Spoke and Hub). Chain
+// numbers are stored once, at the narrowest scope that owns them, keyed as the indexer keys them: a Hub asset's
+// totals only in `hubAssets`, a Spoke's draw on it only in `hubAssetSpokes`, a CDP reserve's
 // flags only in `spokeReserves`, a market's figures only in `markets`. Every page that shows one of them reads that
 // row, so the Lend page and the Borrow pages cannot disagree. Integers are decimal strings (base units, RAY rates,
 // 8-decimal USD), exactly as read on chain; the queries convert them for display.
@@ -18,14 +19,18 @@ const dec = v.string();
 const read = { blockNumber: dec, updatedAt: v.number() };
 
 export default defineSchema({
-  /** Per chain: the addresses the sampler reads and the RPC/explorer settings, from the verified release manifest. */
+  /**
+   * Per chain: the addresses the sampler starts from and the RPC/explorer settings, from the verified release
+   * manifest. Hubs the MarketRegistry records and CDP Spokes it approves later are found on chain at each refresh.
+   */
   deployments: defineTable({
     chainId: v.number(),
     chainSlug: v.string(),
     lens: address,
-    lendSpoke: address,
+    hubs: v.array(v.object({ address, label: v.string(), tier: v.number() })),
+    lendSpokes: v.array(address),
     cdpSpokes: v.array(address),
-    coverageSpokes: v.array(v.object({ address, asset: address })),
+    coverageSpokes: v.array(v.object({ address, asset: address, hub: v.optional(address) })),
     marketRegistry: address,
     timelock: address,
     explorerUrl: v.string(),
@@ -33,6 +38,41 @@ export default defineSchema({
     nativeUsdFeed: address,
     release: v.string(),
   }).index("by_chain", ["chainId"]),
+
+  /** One row per (chain, Hub): label, tier, its Lend and CDP Spokes and lend assets. Its totals are its `hubAssets`. */
+  hubs: defineTable({
+    chainId: v.number(),
+    hub: address,
+    slug: v.string(),
+    label: v.union(v.null(), v.string()),
+    tier: v.number(),
+    recorded: v.boolean(),
+    applicationState: v.union(v.null(), v.number()),
+    assetCount: v.number(),
+    lendAssetIds: v.array(dec),
+    lendSpokes: v.array(address),
+    cdpSpokes: v.array(address),
+    ...read,
+  })
+    .index("by_key", ["chainId", "hub"])
+    .index("by_slug", ["slug"]),
+
+  /** A Hub-to-Hub credit line: the registry's cap; the Spoke's draw on it is its `hubAssetSpokes` row. */
+  creditLines: defineTable({
+    chainId: v.number(),
+    fundingHub: address,
+    assetId: dec,
+    asset: address,
+    spoke: address,
+    homeHub: address,
+    cap: dec,
+    total: dec,
+    enabled: v.boolean(),
+    ...read,
+  })
+    .index("by_key", ["chainId", "fundingHub", "assetId", "spoke"])
+    .index("by_funding", ["chainId", "fundingHub"])
+    .index("by_home", ["chainId", "homeHub"]),
 
   hubAssets: defineTable({
     chainId: v.number(),
@@ -61,6 +101,7 @@ export default defineSchema({
       v.object({ optimalUsageBps: v.number(), baseDrawnRateBps: v.number(), rateGrowthBeforeOptimalBps: v.number(), rateGrowthAfterOptimalBps: v.number() }),
     ),
     lend: v.object({ spoke: address, reserveId: dec, paused: v.boolean(), frozen: v.boolean() }),
+    lendReserves: v.array(v.object({ spoke: address, reserveId: dec, paused: v.boolean(), frozen: v.boolean() })),
     exposure: v.union(
       v.null(),
       v.object({ coverageSpoke: address, fundedBalance: dec, line: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec }),
@@ -69,6 +110,7 @@ export default defineSchema({
     ...read,
   })
     .index("by_key", ["chainId", "hub", "assetId"])
+    .index("by_hub", ["chainId", "hub"])
     .index("by_slug", ["slug"])
     .index("by_chain_underlying", ["chainId", "underlying"]),
 
@@ -208,12 +250,12 @@ export default defineSchema({
 
   /**
    * Editorial content of one page, loaded from the listing metadata file whose hash the governance operation commits
-   * to. `scope` is the page kind: lend (Hub asset), asset (CDP debt reserve), pool (market), spoke or token.
+   * to. `scope` is the page kind: lend (Hub asset), asset (CDP debt reserve), pool (market), spoke, token or hub.
    */
   marketContent: defineTable({
-    scope: v.union(v.literal("lend"), v.literal("asset"), v.literal("pool"), v.literal("spoke"), v.literal("token")),
+    scope: v.union(v.literal("lend"), v.literal("asset"), v.literal("pool"), v.literal("spoke"), v.literal("token"), v.literal("hub")),
     chainId: v.number(),
-    /** The scope's on-chain key: `hub:assetId`, `spoke:reserveId`, `marketId`, a Spoke or a token address. */
+    /** The scope's on-chain key: `hub:assetId`, `spoke:reserveId`, `marketId`, a Spoke, token or Hub address. */
     key: v.string(),
     slug: v.string(),
     name: v.string(),

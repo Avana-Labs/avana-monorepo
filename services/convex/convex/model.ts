@@ -3,12 +3,14 @@
 // Reads shared by the queries: the scope rows, their content and the joins between them. A Borrow asset page and
 // the Lend page join the same `hubAssets` document; nothing here copies a Hub figure into another row.
 
-import type { HubAssetRow, HubAssetSpokeRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "@avana/services-common/views";
+import type { CreditLineRow, HubAssetRow, HubAssetSpokeRow, HubRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "@avana/services-common/views";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { combineSources, sumOver, type StoredPoint } from "./lib/charts.ts";
+import { hubLabel } from "./lib/format.ts";
+import { creditLineView } from "./lib/hubViews.ts";
 import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
-import type { MarketSnapshotRow, PageContent, PageScope } from "./lib/uiTypes.ts";
+import type { CreditLineView, MarketSnapshotRow, PageContent, PageScope } from "./lib/uiTypes.ts";
 
 export type ContentScope = Doc<"marketContent">["scope"];
 
@@ -17,8 +19,12 @@ type Stored<Row> = Row & { readonly slug: string; readonly updatedAt: number };
 export type HubAssetDoc = Stored<HubAssetRow>;
 export type SpokeReserveDoc = Stored<SpokeReserveRow>;
 export type MarketDoc = Stored<MarketRow>;
+export type HubDoc = Stored<HubRow>;
+export type CreditLineDoc = CreditLineRow & { readonly updatedAt: number };
 
 export interface World {
+  readonly hubs: HubDoc[];
+  readonly creditLines: CreditLineDoc[];
   readonly hubAssets: HubAssetDoc[];
   readonly slices: (HubAssetSpokeRow & { updatedAt: number })[];
   readonly reserves: SpokeReserveDoc[];
@@ -26,10 +32,14 @@ export interface World {
   readonly debts: MarketReserveDebtRow[];
   readonly content: Doc<"marketContent">[];
   readonly assetsByKey: Map<string, HubAssetDoc>;
+  /** `chainId:hub` → Hub. */
+  readonly hubsByKey: Map<string, HubDoc>;
 }
 
 /** The typed view of stored rows; the schema stores exactly these fields. */
 export const asRows = {
+  hubs: (d: Doc<"hubs">[]) => d as unknown as HubDoc[],
+  creditLines: (d: Doc<"creditLines">[]) => d as unknown as CreditLineDoc[],
   hubAssets: (d: Doc<"hubAssets">[]) => d as unknown as HubAssetDoc[],
   slices: (d: Doc<"hubAssetSpokes">[]) => d as unknown as (HubAssetSpokeRow & { updatedAt: number })[],
   reserves: (d: Doc<"spokeReserves">[]) => d as unknown as SpokeReserveDoc[],
@@ -37,9 +47,11 @@ export const asRows = {
   debts: (d: Doc<"marketReserveDebt">[]) => d as unknown as MarketReserveDebtRow[],
 };
 
-/** Every scope row. The tables hold one row per Hub asset, Spoke slice, reserve and market: tens of rows. */
+/** Every scope row. The tables hold one row per Hub, Hub asset, Spoke slice, line, reserve and market: hundreds of rows. */
 export async function loadWorld(ctx: QueryCtx): Promise<World> {
-  const [hubAssets, slices, reserves, markets, debts, content] = await Promise.all([
+  const [hubs, creditLines, hubAssets, slices, reserves, markets, debts, content] = await Promise.all([
+    ctx.db.query("hubs").collect(),
+    ctx.db.query("creditLines").collect(),
     ctx.db.query("hubAssets").collect(),
     ctx.db.query("hubAssetSpokes").collect(),
     ctx.db.query("spokeReserves").collect(),
@@ -48,7 +60,10 @@ export async function loadWorld(ctx: QueryCtx): Promise<World> {
     ctx.db.query("marketContent").collect(),
   ]);
   const assets = asRows.hubAssets(hubAssets);
+  const hubRows = asRows.hubs(hubs);
   return {
+    hubs: hubRows,
+    creditLines: asRows.creditLines(creditLines),
     hubAssets: assets,
     slices: asRows.slices(slices),
     reserves: asRows.reserves(reserves),
@@ -56,7 +71,33 @@ export async function loadWorld(ctx: QueryCtx): Promise<World> {
     debts: asRows.debts(debts),
     content,
     assetsByKey: new Map(assets.map((a) => [hubAssetKey(a), a])),
+    hubsByKey: new Map(hubRows.map((h) => [`${h.chainId}:${h.hub}`, h])),
   };
+}
+
+/** A Hub's label: its listing content name, else the manifest's label, else its short address. */
+export function hubLabelOf(w: World, chainId: number, hub: string): string {
+  return contentOf(w, "hub", chainId, hub)?.name ?? hubLabel(w.hubsByKey.get(`${chainId}:${hub}`)?.label, hub);
+}
+
+/** Hub-to-Hub credit lines that pass `keep`, each joined with its draw (the Spoke's slice) and its asset's price. */
+export function creditLineViews(w: World, keep: (l: CreditLineDoc) => boolean): CreditLineView[] {
+  return w.creditLines.filter(keep).map((l) => {
+    const slice = w.slices.find((s) => s.chainId === l.chainId && s.hub === l.fundingHub && s.assetId === l.assetId && s.spoke === l.spoke);
+    const asset = w.assetsByKey.get(hubAssetKey({ chainId: l.chainId, hub: l.fundingHub, assetId: l.assetId }));
+    return creditLineView(l, slice, asset, (h) => hubLabelOf(w, h.chainId, h.hub), symbolOf(w, l.chainId, l.asset));
+  });
+}
+
+/**
+ * The Hub asset whose price values a token on a chain: on `preferHub` when that Hub lists it, else on the Hub of the
+ * lowest tier, then the lowest address. A token on several Hubs has one price per Lend Spoke oracle; this picks one
+ * deterministically for figures that are not tied to a Hub (pool volume, the price list).
+ */
+export function priceAsset(w: World, chainId: number, token: string, preferHub?: string): HubAssetDoc | undefined {
+  const all = w.hubAssets.filter((a) => a.chainId === chainId && a.underlying === token);
+  const tier = (a: HubAssetDoc) => w.hubsByKey.get(`${chainId}:${a.hub}`)?.tier || Number.MAX_SAFE_INTEGER;
+  return all.find((a) => a.hub === preferHub) ?? [...all].sort((x, y) => tier(x) - tier(y) || x.hub.localeCompare(y.hub))[0];
 }
 
 export function contentOf(w: World, scope: ContentScope, chainId: number, key: string): PageContent | null {
@@ -79,7 +120,7 @@ export function sliceOf(w: World, r: SpokeReserveRow): (HubAssetSpokeRow & { upd
   return w.slices.find((s) => s.chainId === r.chainId && s.hub === r.hub && s.assetId === r.assetId && s.spoke === r.spoke);
 }
 
-/** Pool volume and fees over the last 24 hourly buckets, valued at the Lend Spoke price of each token. */
+/** Pool volume and fees over the last 24 hourly buckets, valued at the Lend Spoke price of each token (`priceAsset`). */
 export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number): Promise<{ volumeUsd: number; feesUsd: number }> {
   const key = `${m.chainId}:${m.pool}`;
   const from = Math.floor(now / 3_600) * 3_600 - 24 * 3_600;
@@ -88,7 +129,7 @@ export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number
     .withIndex("by_scope", (q) => q.eq("scopeKind", "pool").eq("scopeKey", key).eq("resolution", "hour").gte("bucketStart", from))
     .collect();
   const buckets = combineSources("pool", rows as StoredPoint[]);
-  const priced = m.tokens.map((t, i) => ({ i, asset: w.hubAssets.find((a) => a.chainId === m.chainId && a.underlying === t) }));
+  const priced = m.tokens.map((t, i) => ({ i, asset: priceAsset(w, m.chainId, t, m.hub) }));
   const side = priced.find((p) => p.asset !== undefined);
   if (!side?.asset) return { volumeUsd: 0, feesUsd: 0 };
   const price = Number(BigInt(side.asset.priceUsd8)) / 1e8;
@@ -103,14 +144,16 @@ export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number
 export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: PageScope): Promise<MarketSnapshotRow[]> {
   const rows: MarketSnapshotRow[] = [];
   if (!only || only === "lend") {
-    for (const a of w.hubAssets) rows.push(lendSnapshot(a, contentOf(w, "lend", a.chainId, lendKey(a)), symbolOf(w, a.chainId, a.underlying)));
+    for (const a of w.hubAssets) rows.push(lendSnapshot(a, contentOf(w, "lend", a.chainId, lendKey(a)), symbolOf(w, a.chainId, a.underlying), hubLabelOf(w, a.chainId, a.hub)));
   }
   if (!only || only === "asset") {
     for (const r of w.reserves) {
       const asset = w.assetsByKey.get(hubAssetKey(r));
       const slice = sliceOf(w, r);
       if (!asset || !slice) continue;
-      rows.push(assetSnapshot(r, slice, asset, contentOf(w, "asset", r.chainId, reserveKey(r)), symbolOf(w, r.chainId, r.asset), spokeSlug(w, r.chainId, r.spoke)));
+      rows.push(
+        assetSnapshot(r, slice, asset, contentOf(w, "asset", r.chainId, reserveKey(r)), symbolOf(w, r.chainId, r.asset), spokeSlug(w, r.chainId, r.spoke), hubLabelOf(w, r.chainId, r.hub)),
+      );
     }
   }
   if (!only || only === "pool") {

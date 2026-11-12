@@ -50,22 +50,35 @@ export interface ServiceManifest {
     readonly operatorHelpers: readonly (Immutable & { readonly signer: Address; readonly fundingSafe: Address })[];
     /** One LPVault per AMM integration on this chain. */
     readonly lpVaults: readonly (Immutable & { readonly integrationId: number })[];
-    /** One Coverage Spoke per covered debt asset. */
-    readonly coverageSpokes: readonly (Immutable & { readonly asset: Address })[];
+    /** One Coverage Spoke per (Hub, covered debt asset). */
+    readonly coverageSpokes: readonly (Immutable & { readonly asset: Address; readonly hub: Address })[];
     /** `PROXY_CREATION_CODE_HASH` of the ProxyManager; proxies are attributed only if their CREATE2 address matches. */
     readonly proxyCreationCodeHash: Hex;
   };
   readonly markets: readonly ManifestMarket[];
   readonly debtReserves: readonly ManifestDebtReserve[];
   readonly aave: {
-    readonly hub: Upgradeable;
+    /** Every Aave V4 Hub of the deployment, with its label and risk tier (1 to 3). */
+    readonly hubs: readonly ManifestHub[];
+    /** Every CDP Spoke (Borrow Spoke), whichever Hub it draws from. */
     readonly borrowSpokes: readonly Upgradeable[];
-    readonly lendSpoke: Upgradeable;
+    /** Every Lend Spoke: an Aave standard Spoke, supply only, on one Hub. */
+    readonly lendSpokes: readonly ManifestLendSpoke[];
     /** The Aave V3 Pool the helper flash-borrows every debt asset from, GHO included; its only lender. */
     readonly v3Pool: Upgradeable;
   };
   /** Chainlink sequencer-uptime feed on an L2, null on Ethereum. */
   readonly sequencerFeed: Address | null;
+}
+
+/** An Aave V4 Hub with the label the app shows and its risk tier (`MarketRegistry.hubTier`). */
+export interface ManifestHub extends Upgradeable {
+  readonly label: string;
+  readonly tier: number;
+}
+
+export interface ManifestLendSpoke extends Upgradeable {
+  readonly label: string;
 }
 
 export interface ManifestMarket {
@@ -106,6 +119,30 @@ export function loadManifest(path: string, expectedAbiHash: Hex): ServiceManifes
     throw new Error(`manifest ${path} has ABI hash ${manifest.abiHash}, the service was built for ${expectedAbiHash}`);
   }
   return manifest;
+}
+
+/** The Hubs and Spokes of one manifest, lower-case, checked to be present and distinct. */
+export interface AaveTopology {
+  readonly hubs: readonly { readonly address: Address; readonly label: string; readonly tier: number; readonly startBlock: number }[];
+  readonly lendSpokes: readonly { readonly address: Address; readonly label: string; readonly startBlock: number }[];
+  readonly borrowSpokes: readonly { readonly address: Address; readonly startBlock: number }[];
+}
+
+/**
+ * Reads `aave.hubs`, `aave.lendSpokes` and `aave.borrowSpokes`. A manifest without a Hub or a Lend Spoke, or naming
+ * one address twice, is refused: the services would otherwise show a chain with no Lend page or count one Hub twice.
+ */
+export function aaveTopology(m: Pick<ServiceManifest, "chainId" | "aave">): AaveTopology {
+  const lower = (a: string) => a.toLowerCase() as Address;
+  const hubs = (m.aave.hubs ?? []).map((h) => ({ address: lower(h.address), label: h.label, tier: h.tier, startBlock: h.startBlock }));
+  const lendSpokes = (m.aave.lendSpokes ?? []).map((s) => ({ address: lower(s.address), label: s.label, startBlock: s.startBlock }));
+  const borrowSpokes = (m.aave.borrowSpokes ?? []).map((s) => ({ address: lower(s.address), startBlock: s.startBlock }));
+  if (hubs.length === 0) throw new Error(`manifest of chain ${m.chainId} lists no Hub in aave.hubs`);
+  if (lendSpokes.length === 0) throw new Error(`manifest of chain ${m.chainId} lists no Lend Spoke in aave.lendSpokes`);
+  const all = [...hubs, ...lendSpokes, ...borrowSpokes].map((x) => x.address);
+  const twice = all.find((a, i) => all.indexOf(a) !== i);
+  if (twice) throw new Error(`manifest of chain ${m.chainId} names ${twice} twice among its Hubs and Spokes`);
+  return { hubs, lendSpokes, borrowSpokes };
 }
 
 /** Manifests store uint256 values as decimal strings; IDs named *Id parse to bigint. */

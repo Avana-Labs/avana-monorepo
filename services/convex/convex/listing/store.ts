@@ -55,6 +55,9 @@ export const store = internalMutation({
       } else if (e.scope === "pool") {
         const m = await ctx.db.query("markets").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("marketId", e.key)).unique();
         if (m) await ctx.db.patch(m._id, { slug: e.slug });
+      } else if (e.scope === "hub") {
+        const h = await ctx.db.query("hubs").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("hub", e.key)).unique();
+        if (h) await ctx.db.patch(h._id, { slug: e.slug });
       }
     }
     const op = await ctx.db.query("listingOperations").withIndex("by_op", (q) => q.eq("chainId", chainId).eq("operationId", operationId)).unique();

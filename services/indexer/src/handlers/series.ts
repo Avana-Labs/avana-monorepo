@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The hourly sampler: at one block an hour it reads the chain snapshot (every Hub asset, Spoke slice, CDP debt
-// reserve and market), the debt each market backs and each account's collateral and debt, and writes them as
-// series points. Every point of one sample carries the same block, so the Spoke slices of a bucket add up to the Hub
-// totals of the same bucket. Reads go through Ponder's client pinned to the sample block, so a reindex reads the
+// The hourly sampler: at one block an hour it reads the chain snapshot (every Hub asset of every Hub, Spoke slice,
+// Hub-to-Hub credit line, CDP debt reserve and market, Hubs and Spokes listed after start-up included), the debt each
+// market backs and each account's collateral and debt, and writes them as series points. Every point of one sample
+// carries the same block, so the Spoke slices of a bucket add up to the Hub totals of the same bucket. Reads go through Ponder's client pinned to the sample block, so a reindex reads the
 // same values from the archive node and a replay changes nothing.
 
 import { type DecimalString, scopeKey } from "@avana/services-common";
@@ -59,6 +59,15 @@ ponder.on("SeriesSampler:block", async ({ event, context }) => {
       kind: "hubAssetSpoke",
       key: scopeKey(chainId, sl.hub, sl.assetId, sl.spoke),
       values: { added: sl.added, addedShares: sl.addedShares, owed: sl.owed, drawnShares: sl.drawnShares, premiumShares: sl.premiumShares, deficit: sl.deficit, addCap: sl.addCap, drawCap: sl.drawCap },
+    });
+  }
+  // Hub-to-Hub lines: the registry's cap; the Spoke's draw on the line is the hubAssetSpoke series above.
+  for (const l of snap.creditLines) {
+    await writeObservation(context, {
+      ...at,
+      kind: "creditLine",
+      key: scopeKey(chainId, l.fundingHub, l.assetId, l.spoke),
+      values: { cap: l.cap, total: l.total, enabled: l.enabled ? "1" : "0" },
     });
   }
 

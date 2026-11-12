@@ -15,21 +15,26 @@ const PRICE = ["Live", "Drifting", "Cached", "Expired"] as const;
 const cap = (whole: string) => (BigInt(whole) === MAX_SPOKE_CAP ? "Unlimited" : Number(whole).toLocaleString("en-US"));
 
 export function lendRiskParameters(slug: string, asset: HubAssetRow, slices: readonly HubAssetSpokeRow[], symbol: string): RiskParameters {
-  const lend = slices.find((s) => s.kind === "lend");
+  // A Hub asset may have several Lend Spokes: the supply cap is theirs together, unlimited if any one is.
+  const lends = slices.filter((s) => s.kind === "lend");
+  const supplyCap = lends.some((s) => BigInt(s.addCap) === MAX_SPOKE_CAP) ? MAX_SPOKE_CAP.toString() : lends.reduce((acc, s) => acc + BigInt(s.addCap), 0n).toString();
   const drawCaps = slices.filter((s) => s.kind === "cdp").reduce((acc, s) => acc + BigInt(s.drawCap), 0n);
+  const otherHubs = slices.filter((s) => s.kind === "cdp" && s.homeHub !== asset.hub && !/^0x0{40}$/.test(s.homeHub)).reduce((acc, s) => acc + BigInt(s.owed), 0n);
+  const status = (r: { paused: boolean; frozen: boolean }) => (r.paused ? "Paused" : r.frozen ? "Frozen" : "Active");
   const ex = asset.exposure;
   const p = (id: string, label: string, value: string, description?: string) => ({ id, label, value, ...(description ? { description } : {}) });
   return {
     slug,
     kind: "lend",
     parameters: [
-      p("supplyCap", "Supply cap", lend ? `${cap(lend.addCap)} ${symbol}` : "—", "Most the Lend Spoke accepts on this Hub asset."),
+      p("supplyCap", "Supply cap", lends.length > 0 ? `${cap(supplyCap)} ${symbol}` : "—", "Most the Lend Spokes accept together on this Hub asset."),
       p("reserveFactor", "Reserve factor", pct(bpsToPct(asset.liquidityFeeBps)), "Share of interest kept by the Hub as fees."),
       p("creditLine", "Credit line", ex ? `${tokens(ex.line, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Most the CDP Spokes may draw together."),
       p("drawCaps", "Draw caps (all CDP Spokes)", `${drawCaps.toLocaleString("en-US")} ${symbol}`),
+      p("otherHubDraws", "Drawn by other Hubs", `${tokens(otherHubs, asset.decimals).toLocaleString("en-US")} ${symbol}`, "Owed by CDP Spokes of other Hubs on their credit lines."),
       p("firstLoss", "First-loss reserve", ex ? `${tokens(ex.fundedBalance, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Funded balance of the Coverage Spoke, used before lenders."),
       p("coverageBound", "Coverage bound", ex ? (ex.coverageBoundHolds ? "Holds" : "Breached") : "—"),
-      p("status", "Lend reserve", asset.lend.paused ? "Paused" : asset.lend.frozen ? "Frozen" : "Active"),
+      p("status", asset.lendReserves.length > 1 ? "Lend reserves" : "Lend reserve", asset.lendReserves.map(status).join(", ")),
     ],
     updatedAt: asset.timestamp * 1000,
     source: "chain",

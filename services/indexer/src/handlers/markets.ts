@@ -129,10 +129,10 @@ ponder.on("MarketRegistry:BreakerReset", async ({ event, context }) => {
     .set({ latchedReasons: 0n, lastBlock: p.blockNumber });
 });
 
-// GateBreached carries no scope; the breach time per key is read live with MarketRegistry.lastBreachAt(key).
+// GateBreached carries no scope; the breach time per key is read live with MarketRegistry.lastBreachAt(key). Hub,
+// CDP Spoke and credit-line events are handled in hubs.ts.
 logOnly("MarketRegistry", [
   "GateBreached",
-  "SpokeApproved",
   "TokenListed",
   "PriceSourceSet",
   "RouteSet",
@@ -142,14 +142,9 @@ logOnly("MarketRegistry", [
   "StandbySwitchCancelled",
   "PriceRouteRestored",
   "WindDownStepped",
-  "HubRecorded",
   "IntegrationRegistered",
   "CoverageSpokeSet",
-  "CrossHubLineSet",
-  "CrossHubLinesEnabledSet",
   "FlashSourceSet",
-  "CreditLineRecorded",
-  "CreditLineSet",
   "SpokeCodeHashApproved",
   "IntegrationContractsRecorded",
 ]);

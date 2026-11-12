@@ -5,6 +5,7 @@
 
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
+import { AAVE_HUB_SOURCES, AAVE_SPOKE_SOURCES } from "../config/aaveSources.ts";
 import { logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
 
@@ -46,12 +47,19 @@ for (const [name, status] of [
 
 logOnly("AvanaTimelock", ["CallSalt", "MinDelayChange", "NormalDelayChanged", "ShortDelaySelectorSet", "PublicExecutionToggled"]);
 
-/** Contracts whose ABI carries ERC-1967 `Upgraded` and AccessControl role events (src/config/abis.ts). */
-const UPGRADEABLE = ["AaveAdapter", "LPVaultSwap", "MarketRegistry", "ParameterStore", "RiskModule", "LPOracle", "DebtOracle", "AaveSpoke", "AaveHub"] as const;
+/**
+ * Contracts whose ABI carries ERC-1967 `Upgraded` and AccessControl role events (src/config/abis.ts), each with the
+ * kind its logs are recorded under: every Aave Hub or Spoke source records under the Aave contract's name.
+ */
+const UPGRADEABLE = [
+  ...(["AaveAdapter", "LPVaultSwap", "MarketRegistry", "ParameterStore", "RiskModule", "LPOracle", "DebtOracle"] as const).map((c) => [c, c] as const),
+  ...AAVE_SPOKE_SOURCES.map((c) => [c, "AaveSpoke"] as const),
+  ...AAVE_HUB_SOURCES.map((c) => [c, "AaveHub"] as const),
+];
 
-for (const contract of UPGRADEABLE) {
+for (const [contract, kind] of UPGRADEABLE) {
   ponder.on(`${contract}:Upgraded`, async ({ event, context }) => {
-    const p = await recordLog(event, context, `${contract}.Upgraded`);
+    const p = await recordLog(event, context, `${kind}.Upgraded`);
     const row = { implementation: event.args.implementation, changedBlock: p.blockNumber };
     await context.db
       .insert(schema.implementation)
@@ -60,7 +68,7 @@ for (const contract of UPGRADEABLE) {
   });
   for (const [name, granted] of [["RoleGranted", true], ["RoleRevoked", false]] as const) {
     ponder.on(`${contract}:${name}`, async ({ event, context }) => {
-      const p = await recordLog(event, context, `${contract}.${name}`);
+      const p = await recordLog(event, context, `${kind}.${name}`);
       await context.db
         .insert(schema.roleMember)
         .values({ chainId: p.chainId, contract: event.log.address, role: event.args.role, account: event.args.account, granted, lastBlock: p.blockNumber })

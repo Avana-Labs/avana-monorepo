@@ -44,9 +44,17 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** A Hub's label: the manifest's, else `hub-` and the first six hex digits of its address. */
+export function hubLabel(label: string | null | undefined, hub: string): string {
+  return label ?? `hub-${hub.slice(2, 8)}`;
+}
+
 /** Default slugs until the listing metadata names the page: unique per scope and stable across refreshes. */
 export const defaultSlug = {
-  lend: (chainId: number, symbolOrAsset: string) => `${chainSlug(chainId)}-${slugify(symbolOrAsset)}`,
+  /** A Hub: its manifest label, or its short address for a Hub recorded after the manifest. */
+  hub: (chainId: number, hubLabel: string) => `${chainSlug(chainId)}-${slugify(hubLabel)}`,
+  /** A Hub asset: the same token on two Hubs has two pages, told apart by the Hub. */
+  lend: (chainId: number, hubLabel: string, symbolOrAsset: string) => `${chainSlug(chainId)}-${slugify(hubLabel)}-${slugify(symbolOrAsset)}`,
   asset: (chainId: number, spokeLabel: string, symbolOrAsset: string) => `${chainSlug(chainId)}-${slugify(spokeLabel)}-${slugify(symbolOrAsset)}`,
   pool: (chainId: number, marketId: string) => `${chainSlug(chainId)}-market-${marketId}`,
 };

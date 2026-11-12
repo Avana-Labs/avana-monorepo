@@ -10,12 +10,12 @@ import type { Category, PageContent } from "./uiTypes.ts";
 
 export const METADATA_VERSION = 1;
 
-export type MetadataScope = "lend" | "asset" | "pool" | "spoke" | "token";
+export type MetadataScope = "lend" | "asset" | "pool" | "spoke" | "token" | "hub";
 
 /** One page's content and its on-chain key. */
 export interface MetadataEntry extends PageContent {
   readonly scope: MetadataScope;
-  /** lend: `hub:assetId`; asset: `spoke:reserveId`; pool: `marketId`; spoke and token: the address. */
+  /** lend: `hub:assetId`; asset: `spoke:reserveId`; pool: `marketId`; spoke, token and hub: the address. */
   readonly key: string;
 }
 
@@ -27,7 +27,7 @@ export interface MetadataFile {
 
 export class MetadataRejected extends Error {}
 
-const SCOPES: readonly MetadataScope[] = ["lend", "asset", "pool", "spoke", "token"];
+const SCOPES: readonly MetadataScope[] = ["lend", "asset", "pool", "spoke", "token", "hub"];
 const CATEGORIES: readonly Category[] = ["stable", "crypto", "stock"];
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;

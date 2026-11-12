@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Test data only: one Ethereum Hub asset (USDC, 6 decimals) with a Lend Spoke, a Coverage Spoke, a fee receiver
-// and two CDP Spokes, U and X, at one block; two markets on U; and the debt each market backs. The numbers are the
-// worked example of services/README.md ("Scopes"): 10,000,000 added, 3,000,000 owed (U 1,000,000 and X 2,000,000),
-// 7,000,000 liquidity. U's slice rounds its owed amount up by one base unit, as the Hub does per Spoke.
+// Test data only. The rows below: one Ethereum Hub asset (USDC, 6 decimals) with a Lend Spoke, a Coverage Spoke, a fee
+// receiver and two CDP Spokes, U and X, at one block; two markets on U; and the debt each market backs. The numbers
+// are the worked example of services/README.md ("Scopes"): 10,000,000 added, 3,000,000 owed (U 1,000,000 and X
+// 2,000,000), 7,000,000 liquidity. U's slice rounds its owed amount up by one base unit, as the Hub does per Spoke.
+// The chain with several Hubs that the reader runs on is in fixtureHubs.ts.
 
 import type { HubAssetRow, HubAssetSpokeRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "./types.ts";
+
+export * from "./fixtureChain.ts";
+export * from "./fixtureHubs.ts";
 
 const USDC = (whole: number, extra = 0n): string => (BigInt(whole) * 1_000_000n + extra).toString(10);
 const BLOCK = "21400000";
@@ -41,6 +45,7 @@ export const fixtureHubAsset: HubAssetRow = {
   feeReceiver: FIXTURE_FEES,
   rateCurve: { optimalUsageBps: 8_000, baseDrawnRateBps: 0, rateGrowthBeforeOptimalBps: 400, rateGrowthAfterOptimalBps: 6_000 },
   lend: { spoke: FIXTURE_LEND, reserveId: "0", paused: false, frozen: false },
+  lendReserves: [{ spoke: FIXTURE_LEND, reserveId: "0", paused: false, frozen: false }],
   exposure: {
     coverageSpoke: FIXTURE_COVERAGE,
     fundedBalance: USDC(200_000),

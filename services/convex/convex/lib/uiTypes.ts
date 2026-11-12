@@ -45,6 +45,9 @@ export interface MarketSnapshotRow {
   readonly description?: string;
   readonly iconUrl?: string;
   readonly spokeId?: string;
+  /** The Hub of a Lend or Borrow asset row (its address) and the Hub's label: the same token on two Hubs is two rows. */
+  readonly hubId?: string;
+  readonly hubLabel?: string;
   readonly feeTier?: string;
   readonly maxLtvPct?: number;
   readonly reserveFactorPct?: number;
@@ -189,4 +192,78 @@ export interface ChangelogRow {
   readonly executor: string;
   readonly category: string;
   readonly href?: string;
+}
+
+/** USD totals over some Hub assets; utilization is borrowed / supplied of those totals. */
+export interface HubTotals {
+  readonly suppliedUsd: number;
+  readonly borrowedUsd: number;
+  readonly availableUsd: number;
+  readonly utilizationPct: number;
+}
+
+/** One Hub's share of the Lend totals. */
+export interface HubBreakdownRow extends HubTotals {
+  readonly chainId: number;
+  readonly hub: string;
+  readonly slug: string;
+  readonly label: string;
+  /** 1 to 3; 0 for a Hub the registry has not recorded. */
+  readonly tier: number;
+  readonly lendAssets: number;
+}
+
+/** One token's Lend totals over every Hub that lists it, with one row per Hub. */
+export interface LendTokenTotals extends HubTotals {
+  readonly chainId: number;
+  readonly underlying: string;
+  readonly symbol: string;
+  /** Supply-weighted over its Hubs. */
+  readonly supplyApyPct: number;
+  readonly hubs: readonly (HubTotals & { readonly hub: string; readonly label: string; readonly slug: string; readonly supplyApyPct: number; readonly borrowAprPct: number })[];
+}
+
+/** `markets.getLendTotals`: every Hub asset of every Hub added up, by Hub and by token. */
+export interface LendTotals extends HubTotals {
+  readonly hubCount: number;
+  readonly byHub: readonly HubBreakdownRow[];
+  readonly byToken: readonly LendTokenTotals[];
+}
+
+/** A Hub-to-Hub credit line: a CDP Spoke of `homeHub` drawing `asset` from `fundingHub`. Base units as decimal strings. */
+export interface CreditLineView {
+  readonly chainId: number;
+  readonly fundingHub: string;
+  readonly fundingHubLabel: string;
+  readonly homeHub: string;
+  readonly homeHubLabel: string;
+  readonly spoke: string;
+  readonly assetId: string;
+  readonly asset: string;
+  readonly symbol: string;
+  readonly enabled: boolean;
+  readonly cap: string;
+  readonly owed: string;
+  readonly capUsd: number;
+  readonly owedUsd: number;
+  /** What the Spoke can still draw on the line: min(cap − owed, its draw-cap room, the Hub's liquidity). */
+  readonly headroomUsd: number;
+  readonly usedPct: number;
+  /** Σ caps of every cross-Hub line on the funding Hub's asset. */
+  readonly fundingHubTotalCapUsd: number;
+  readonly blockNumber: string;
+}
+
+/** `hubs.get`: one Hub with its totals, Spokes and credit lines. */
+export interface HubSummary extends HubBreakdownRow {
+  readonly recorded: boolean;
+  readonly applicationState: number | null;
+  readonly assetCount: number;
+  readonly lendSpokes: readonly string[];
+  readonly cdpSpokes: readonly string[];
+  /** Lines this Hub funds: CDP Spokes of other Hubs drawing on its assets. */
+  readonly fundsLines: readonly CreditLineView[];
+  /** Lines this Hub's CDP Spokes draw on at other Hubs. */
+  readonly drawsOnLines: readonly CreditLineView[];
+  readonly blockNumber: string;
 }

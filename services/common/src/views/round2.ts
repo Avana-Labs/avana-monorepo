@@ -152,7 +152,7 @@ const s = (x: bigint): DecimalString => x.toString(10);
 export function hubAssetRowsFromRound2(
   chainId: number,
   v: HubAssetViewPlanned,
-  extra: Pick<HubAssetRow, "priceUsd8" | "feeReceiver" | "lend" | "exposure">,
+  extra: Pick<HubAssetRow, "priceUsd8" | "feeReceiver" | "lend" | "lendReserves" | "exposure">,
   kindOf: (spoke: Address, homeHub: Address) => HubAssetSpokeRow["kind"],
 ): { asset: HubAssetRow; slices: HubAssetSpokeRow[] } {
   const block = s(v.blockNumber);

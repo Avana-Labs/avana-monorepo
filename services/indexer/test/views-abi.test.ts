@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The snapshot reader's ABI fragments (@avana/services-common/views) against the ABIs generated from the release
-// build: same selector and same output layout, struct fields included, so a field added to a Lens, Hub or Spoke
-// struct fails here instead of shifting every decoded field. Lens views the committed ABI does not hold yet, or holds
-// in an older layout than contracts/src/lens/lens/, are listed by name; regenerating the ABI from a build that has
-// them fails this test until the list is emptied.
+// build: same selector and same output layout, struct fields included, so a field added to a Lens, registry, Hub or
+// Spoke struct fails here instead of shifting every decoded field. Lens views the committed ABI does not hold yet, or
+// holds in an older layout than contracts/src/lens/lens/, are listed by name; regenerating the ABI from a build that
+// has them fails this test until the list is emptied.
 
 import { describe, expect, it } from "vitest";
 import { type Abi, type AbiFunction, type AbiParameter, toFunctionSelector } from "viem";
-import { aaveV4HubAbi, aaveV4SpokeAbi, lensAbi } from "@avana/protocol/abis";
-import { hubViewsAbi, lensViewsAbi, spokeViewsAbi } from "@avana/services-common/views";
+import { aaveV4HubAbi, aaveV4SpokeAbi, lensAbi, marketRegistryAbi } from "@avana/protocol/abis";
+import { hubViewsAbi, lensViewsAbi, registryViewsAbi, spokeViewsAbi } from "@avana/services-common/views";
 
 /**
  * Round-1 Lens views whose committed ABI predates the source: `getMarkets` and `getDebtReserves` (ILensMarkets.sol)
@@ -39,4 +39,5 @@ describe("snapshot ABI fragments", () => {
   it("match the Aave V4 Hub views", () => compare(hubViewsAbi, aaveV4HubAbi));
   it("match the Aave V4 Spoke views", () => compare(spokeViewsAbi, aaveV4SpokeAbi));
   it("match the Lens views, apart from those listed as not yet generated", () => compare(lensViewsAbi, lensAbi, NOT_YET_GENERATED));
+  it("match the MarketRegistry Hub, Spoke and credit-line views", () => compare(registryViewsAbi, marketRegistryAbi));
 });

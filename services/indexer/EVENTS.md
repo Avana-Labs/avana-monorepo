@@ -124,7 +124,12 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | `WindDownStepped(uint256 marketId idx, uint16 liquidationThresholdBps)` | log | C M |
 | `DebtReserveApproved(address spoke idx, uint256 reserveId idx, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address coverageSpoke)` | `debt_reserve`; starts the DebtOracle source | K C M |
 | `DebtReserveRemoved(address spoke idx, uint256 reserveId idx)` | `debt_reserve.approved` | K C M |
-| `SpokeApproved(address spoke idx, address hub idx, uint32 integrationId idx, address implementation, address aaveOracle)` | log | M (`M-20`) |
+| `SpokeApproved(address spoke idx, address hub idx, uint32 integrationId idx, address implementation, address aaveOracle)` | `cdp_spoke`; starts the `AaveSpokeApproved` source | C M (`M-20`) |
+| `HubRecorded(address hub idx, uint8 tier)` | `hub`; starts the `AaveHubRecorded` source | C M |
+| `CrossHubLineSet(address fundingHub idx, address asset idx, address spoke idx, uint256 cap, uint256 total)` | `cross_hub_line` | C M |
+| `CrossHubLinesEnabledSet(bool enabled)` | `cross_hub_config` | C M |
+| `CreditLineSet(address hub idx, address asset idx, uint256 line, uint256 sum)` | `credit_line` | C M |
+| `CreditLineRecorded(address hub idx, address asset idx, address spoke idx, uint256 drawCap, uint256 sum)` | `credit_line_spoke`, `credit_line.sum` | C M |
 | `TokenListed(address token, uint8 decimals, address[] primaryRoute, address[] alternateRoute, address pegModule)`, `PriceSourceSet(address token, address[] primaryRoute, address[] alternateRoute, address[] standbyRoute)` | log | K (feed list) M |
 | `RouteSet`, `RouteDisabled`, `RouteRestored` (`uint256 marketId idx, address token, address debtAsset, uint8 kind, address route[/caller]`) | log | K (code check list) M (`M-10`, `M-11`) |
 | `PauseStateChanged(address hub idx, PauseState previous idx, PauseState current idx, address caller)` | `pause_state.state` | K C M (`M-24`) |
@@ -134,7 +139,7 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | `BreakerReset(BreakerScope scope idx, bytes32 key idx, address caller idx)` | `breaker` cleared | K C M |
 | `GateBreached(bytes32 key idx, uint32 reasons, uint64 at)` | log | M (`M-08`) |
 | `StandbyRouteActivated(address token idx, RouteSlot slot, address caller idx)`, `StandbySwitchCancelled(address token idx, address caller idx)`, `PriceRouteRestored(address token idx)` | log | K M (`M-24`) |
-| `HubRecorded`, `IntegrationRegistered`, `CoverageSpokeSet` (starts the Coverage Spoke source), `CrossHubLineSet`, `CrossHubLinesEnabledSet`, `FlashSourceSet`, `CreditLineRecorded`, `CreditLineSet`, `SpokeCodeHashApproved`, `IntegrationContractsRecorded` | log | M |
+| `IntegrationRegistered`, `CoverageSpokeSet` (starts the Coverage Spoke source), `FlashSourceSet`, `SpokeCodeHashApproved`, `IntegrationContractsRecorded` | log | M |
 
 ## ParameterStore and RiskModule
 
@@ -184,7 +189,10 @@ Avana's `IAaveV4Spoke` declares none of the Spoke's events, so the indexer decod
 | Spoke | `SetUsingAsCollateral(uint256 reserveId idx, address caller idx, address user idx, bool usingAsCollateral)` | `account.usingAsCollateral` | K C |
 | Spoke | `UpdateUserRiskPremium(address user idx, uint256 riskPremium)`, `RefreshPremiumDebt`, `RefreshAllUserDynamicConfig`, `RefreshSingleUserDynamicConfig` | log | C (`Q-145`) |
 | Spoke | `AddReserve`, `UpdateReserveConfig`, `AddDynamicReserveConfig`, `UpdateDynamicReserveConfig`, `UpdateLiquidationConfig`, `UpdateReservePriceSource`, `UpdatePositionManager`, `SetUserPositionManager`, `SetSpokeImmutables`, `AuthorityUpdated` | log | M (`M-20`) |
-| Hub | `Add`, `Remove`, `Draw`, `Restore`, `ReportDeficit`, `EliminateDeficit`, `RefreshPremium`, `TransferShares`, `MintFeeShares`, `UpdateAsset`, `UpdateAssetConfig`, `UpdateSpokeConfig`, `AddAsset`, `AddSpoke`, `Reclaim`, `Sweep`, `AuthorityUpdated` | log | M (`M-15`, `M-18`, `M-19`, `M-20`) |
+| Hub | `AddSpoke(uint256 assetId idx, address spoke idx)` | `hub_spoke`; starts the `AaveSpokeAdded` source | C M (`M-20`) |
+| Hub | `Add`, `Remove`, `Draw`, `Restore`, `ReportDeficit`, `EliminateDeficit`, `RefreshPremium`, `TransferShares`, `MintFeeShares`, `UpdateAsset`, `UpdateAssetConfig`, `UpdateSpokeConfig`, `AddAsset`, `Reclaim`, `Sweep`, `AuthorityUpdated` | log | M (`M-15`, `M-18`, `M-19`, `M-20`) |
+
+A chain has several Hubs, each with its Lend and CDP Spokes. Hubs and Spokes are followed under several sources ([`src/config/aaveSources.ts`](src/config/aaveSources.ts)): `AaveHub` and `AaveSpoke` hold the manifest's Hubs and Lend and CDP Spokes from their deployment blocks; `AaveHubRecorded` every Hub the MarketRegistry records (`HubRecorded`); `AaveSpokeApproved` every CDP Spoke it approves (`SpokeApproved`); `AaveSpokeAdded` every Spoke a manifest Hub adds (`AddSpoke`). A Hub, CDP Spoke or Lend Spoke on a manifest Hub listed after start-up is therefore indexed with no restart. A log matched by two sources is recorded once under the Aave contract's kind (`AaveSpoke.Borrow`, `AaveHub.AddSpoke`), and `account_debt` moves on its first delivery only. A Lend Spoke on a Hub recorded after start-up is read by the sampler at once; its own events are indexed once the manifest names it.
 
 Every `LiquidationCall` on a CDP Spoke has `liquidator == LPVaultSwap` (`Q-222`); attribution uses `user`, never `liquidator` (`LIQ-056`). The Spoke events of a user that is not an attributed account are logged and attributed to nobody.
 
@@ -199,12 +207,13 @@ The pool of every listed market is followed from its `MarketRegistered` (`AmmPoo
 | Pool | `Mint(address sender, address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `mints`, `liquidityAdded` | C |
 | Pool | `Burn(address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `burns`, `liquidityRemoved` | C |
 
-The `SeriesSampler` block source runs once an hour of block time (300 blocks on Ethereum, 1,800 on Base) from the Lens deployment on, so a full reindex rebuilds the history from archive reads. At each sample block it reads, through Ponder's client pinned to that block:
+The `SeriesSampler` block source runs once an hour of block time (300 blocks on Ethereum, 1,800 on Base) from the later of the Lens and the first Lend Spoke deployment on, so a full reindex rebuilds the history from archive reads. At each sample block it reads, through Ponder's client pinned to that block, every Hub of the manifest and every Hub the MarketRegistry has recorded, with all their assets and Spokes (`@avana/services-common/views`, `discovery.ts`):
 
 | Scope (`series_point.scopeKind`) | Key | Reads | Metrics |
 |---|---|---|---|
-| `hubAsset` | `chainId:hub:assetId` | Lend Spoke `getReserveCount`, `getReserve`, `getReserveConfig`, its `ORACLE().getReservePrice`; Hub `getAddedAssets`, `getAddedShares`, `getAssetOwed`, `getAssetLiquidity`, `getAssetDeficitRay`, `getAssetAccruedFees`, `getAssetDrawnRate`, `getAssetDrawnIndex`, `getAssetConfig`; the rate strategy's `getInterestRateData`; `Lens.getHubAssetExposure` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
+| `hubAsset` | `chainId:hub:assetId` | MarketRegistry `getHubs`, `getSpokes`, `hubOf`, `isRecordedHub`, `hubTier`, `coverageSpokeOf`; Hub `getAssetCount`, `getAssetUnderlyingAndDecimals`, `getAssetConfig`, `getSpokeCount`, `getSpokeAddress`, `getSpoke` (discovery of every Hub, Hub asset and Spoke); every Lend Spoke's `getReserveCount`, `getReserve`, `getReserveConfig`, its `ORACLE().getReservePrice`; Hub `getAddedAssets`, `getAddedShares`, `getAssetOwed`, `getAssetLiquidity`, `getAssetDeficitRay`, `getAssetAccruedFees`, `getAssetDrawnRate`, `getAssetDrawnIndex`, `getAssetConfig`; the rate strategy's `getInterestRateData`; `Lens.getHubAssetExposure` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
 | `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getSpokeAddedAssets`, `getSpokeTotalOwed` | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
+| `creditLine` | `chainId:fundingHub:assetId:spoke` | MarketRegistry `crossHubLineCap`, `crossHubLineTotal`, `crossHubLinesEnabled`, for every CDP Spoke drawing on a Hub other than its home Hub | `cap`, `total`, `enabled` (1 or 0); the draw is the `hubAssetSpoke` series of the same Spoke |
 | `market` | `chainId:marketId` | `Lens.getMarkets`, Spoke `getReserve` (collateral risk), Hub `getAssetUnderlyingAndDecimals` (vault-token decimals) | `suppliedUnits`, `acceptedPrice`, `suppliedUsd8`, `marketHeadroomUsd8`, `debtUsd8`, `borrowers` |
 | `marketReserve` | `chainId:marketId:spoke:reserveId` | `Spoke.getUserDebt(reserveId, proxy)` of every attributed account of the market | `debt`, `borrowers` |
 | `position` (daily) | `chainId:spoke:proxy` | `Spoke.getUserSuppliedAssets(collateralReserveId, proxy)`, `getUserDebt` per debt reserve | `marketId`, `collateralUnits`, `collateralUsd8`, `debtUsd8` |

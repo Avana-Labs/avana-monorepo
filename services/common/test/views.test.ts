@@ -121,11 +121,29 @@ describe("snapshot reader", () => {
     marketId: 1n, status: 1, pool: "0xAAAA000000000000000000000000000000000001", poolId: `0x${"00".repeat(32)}`, tokens: [fixtureHubAsset.underlying],
     tokenDecimals: [6], feeTier: 100, tickLower: -10, tickUpper: 10, integrationId: 1, ammProtocol: `0x${"00".repeat(31)}01`,
     vaultToken: "0xBBBB000000000000000000000000000000000001", name: "USDC/USDT", symbol: "av-1", lpOracle: "0xCCCC000000000000000000000000000000000001",
-    hub: HUB, spoke: FIXTURE_U, reserveId: 3n, hubAssetId: 9n, acceptedPrice: 200_000_000n, priceState: 0, suppliedUnits: 10n ** 22n,
+    hub: HUB, spoke: FIXTURE_U, reserveId: 3n, hubAssetId: 0n, acceptedPrice: 200_000_000n, priceState: 0, suppliedUnits: 10n ** 22n,
     suppliedUsd: 2n * 10n ** 12n, collateralFactorBps: 8_000n, liquidationThresholdBps: 8_000n, maxLiquidationBonusBps: 500n, marketHeadroomUsd: 0n,
     sliceHeadroomUsd: 0n, addHeadroom: 0n, pauseState: 0, breakerReasons: 0,
   };
+  const REGISTRY = "0x8000000000000000000000000000000000000001";
+  const VT = "0xbbbb000000000000000000000000000000000001";
   const answers: Record<string, unknown> = {
+    [`getHubs:${REGISTRY}`]: [HUB],
+    [`getSpokes:${REGISTRY}`]: [FIXTURE_U],
+    [`crossHubLinesEnabled:${REGISTRY}`]: false,
+    [`isRecordedHub:${REGISTRY}:${HUB}`]: true,
+    [`hubTier:${REGISTRY}:${HUB}`]: 1,
+    [`hubOf:${REGISTRY}:${FIXTURE_U}`]: HUB,
+    [`getApplicationState:${LENS}:${HUB}`]: 0,
+    [`getAssetCount:${HUB}`]: 2n,
+    [`getAssetUnderlyingAndDecimals:${HUB}:0`]: [VT, 18],
+    [`getAssetUnderlyingAndDecimals:${HUB}:1`]: [fixtureHubAsset.underlying, 6],
+    [`getAssetConfig:${HUB}:0`]: { feeReceiver: "0x4444444444444444444444444444444444444444", liquidityFee: 0, irStrategy: IRS },
+    [`getSpokeCount:${HUB}:0`]: 1n,
+    [`getSpokeAddress:${HUB}:0:0`]: FIXTURE_U,
+    [`getSpoke:${HUB}:0:${FIXTURE_U}`]: { drawnShares: 0n, premiumShares: 0n, addedShares: 10n ** 22n, addCap: 100, drawCap: 0, active: true, halted: false, deficitRay: 0n },
+    [`coverageSpokeOf:${REGISTRY}:${HUB}:${fixtureHubAsset.underlying}`]: COV,
+    [`coverageSpokeOf:${REGISTRY}:${HUB}:${VT}`]: "0x0000000000000000000000000000000000000000",
     [`getReserveCount:${LEND}`]: 1n,
     [`ORACLE:${LEND}`]: ORACLE,
     [`getDebtReserves:${LENS}:${FIXTURE_U}`]: [{ spoke: FIXTURE_U, reserveId: 1n, asset: fixtureHubAsset.underlying, decimals: 6, price: 100_000_000n, fixedPrice: false, hub: HUB, hubAssetId: 1n, paused: false, frozen: false, borrowable: true, breakerReasons: 0, pauseState: 0 }],
@@ -152,7 +170,6 @@ describe("snapshot reader", () => {
     [`LENS_MAX_PAGE:${LENS}`]: 200n,
     [`getMarkets:${LENS}:0:200`]: [market],
     [`getReserve:${FIXTURE_U}:3`]: { collateralRisk: 500 },
-    [`getAssetUnderlyingAndDecimals:${HUB}:9`]: ["0xbbbb000000000000000000000000000000000001", 18],
   };
   for (const [spoke, added, owed] of [[LEND, u(9_800_000), 0n], [COV, u(200_000), 0n], [FIXTURE_U, 0n, u(3_000_000)]] as const) {
     answers[`getSpoke:${HUB}:1:${spoke}`] = { drawnShares: owed, premiumShares: 0n, addedShares: added, addCap: 0, drawCap: spoke === FIXTURE_U ? 4_000_000 : 0, active: true, halted: false, deficitRay: 0n };
@@ -171,7 +188,7 @@ describe("snapshot reader", () => {
 
   it("reads one Hub asset, its slices, the CDP reserve and the market at one block", async () => {
     const { readChainSnapshot } = await import("../src/views/snapshot.ts");
-    const snap = await readChainSnapshot(client, { chainId: 1, lens: LENS, lendSpoke: LEND, cdpSpokes: [FIXTURE_U], coverageSpokes: [] }, { blockNumber: 77n, timestamp: 1_000 });
+    const snap = await readChainSnapshot(client, { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs: [{ address: HUB, label: "Stable" }], lendSpokes: [LEND], cdpSpokes: [FIXTURE_U], coverageSpokes: [] }, { blockNumber: 77n, timestamp: 1_000 });
     const asset = snap.hubAssets[0]!;
     expect(asset.priceUsd8).toBe("99990000");
     expect(asset.owed).toBe(u(3_000_000).toString());
@@ -187,12 +204,16 @@ describe("snapshot reader", () => {
     ]);
     expect(snap.spokeReserves[0]).toMatchObject({ spoke: FIXTURE_U, reserveId: "1", assetId: "1", borrowable: true });
     expect(snap.markets[0]).toMatchObject({ marketId: "1", collateralRiskBps: 500, suppliedUsd8: "2000000000000", liquidation: { liquidationBonusFactorBps: 5_000 } });
-    expect(new Set([asset.blockNumber, ...snap.slices.map((s) => s.blockNumber), snap.markets[0]!.blockNumber])).toEqual(new Set(["77"]));
+    expect(new Set([asset.blockNumber, ...snap.slices.map((s) => s.blockNumber), snap.markets[0]!.blockNumber, snap.hubs[0]!.blockNumber])).toEqual(new Set(["77"]));
+    expect(snap.hubs).toEqual([
+      { chainId: 1, hub: HUB, label: "Stable", tier: 1, recorded: true, applicationState: 0, assetCount: 2, lendAssetIds: ["1"], lendSpokes: [LEND], cdpSpokes: [FIXTURE_U], blockNumber: "77" },
+    ]);
+    expect(snap.creditLines).toEqual([]);
   });
 
   it("fails the whole snapshot when a required view reverts", async () => {
     const { readChainSnapshot } = await import("../src/views/snapshot.ts");
     const broken = { multicall: async (calls: readonly unknown[]) => calls.map(() => ({ status: "failure" as const, error: new Error("revert") })) };
-    await expect(readChainSnapshot(broken, { chainId: 1, lens: LENS, lendSpoke: LEND, cdpSpokes: [], coverageSpokes: [] }, { blockNumber: 1n, timestamp: 0 })).rejects.toThrow(/reverted/);
+    await expect(readChainSnapshot(broken, { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs: [], lendSpokes: [LEND], cdpSpokes: [], coverageSpokes: [] }, { blockNumber: 1n, timestamp: 0 })).rejects.toThrow(/reverted/);
   });
 });

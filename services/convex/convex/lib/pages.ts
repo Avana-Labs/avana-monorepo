@@ -3,7 +3,8 @@
 // Builds each screen's numbers from the scope rows. The Lend row and the Hub block of a Borrow asset row read the
 // same Hub asset row; a Borrow asset row adds only its own Spoke slice; a pool row reads its market and the debt
 // the market backs. "Borrowed" is owed (drawn + premium) everywhere and "available" is the Hub's liquidity bounded
-// by the Spoke's cap room, never supplied − borrowed. Every USD figure of an asset uses the Lend Spoke's price.
+// by the Spoke's cap room, never supplied − borrowed. Every USD figure of an asset uses its Lend Spoke's price. A
+// Lend or Borrow asset row names its Hub, so the same token on two Hubs gives two rows.
 
 import {
   type HubAssetRow,
@@ -38,7 +39,7 @@ const identity = (content: PageContent | null, fallback: { name: string; symbol:
 });
 
 /** Lend list row and Lend page header: one Hub asset. */
-export function lendSnapshot(asset: WithSlug<HubAssetRow>, content: PageContent | null, symbol: string): MarketSnapshotRow {
+export function lendSnapshot(asset: WithSlug<HubAssetRow>, content: PageContent | null, symbol: string, hubLabel?: string): MarketSnapshotRow {
   const price = asset.priceUsd8;
   const suppliedUsd = usd(asset.added, asset.decimals, price);
   return {
@@ -46,6 +47,8 @@ export function lendSnapshot(asset: WithSlug<HubAssetRow>, content: PageContent 
     scope: "lend",
     chainId: asset.chainId,
     ...identity(content, { name: symbol, symbol }),
+    hubId: asset.hub,
+    ...(hubLabel ? { hubLabel } : {}),
     reserveFactorPct: bpsToPct(asset.liquidityFeeBps),
     suppliedUsd,
     borrowedUsd: usd(asset.owed, asset.decimals, price),
@@ -71,6 +74,7 @@ export function assetSnapshot(
   content: PageContent | null,
   symbol: string,
   spokeSlug: string,
+  hubLabel?: string,
 ): MarketSnapshotRow {
   const price = asset.priceUsd8;
   const suppliedUsd = usd(asset.added, asset.decimals, price);
@@ -80,6 +84,8 @@ export function assetSnapshot(
     chainId: reserve.chainId,
     ...identity(content, { name: symbol, symbol }),
     spokeId: spokeSlug,
+    hubId: asset.hub,
+    ...(hubLabel ? { hubLabel } : {}),
     reserveFactorPct: bpsToPct(asset.liquidityFeeBps),
     suppliedUsd,
     borrowedUsd: usd(slice.owed, asset.decimals, price),

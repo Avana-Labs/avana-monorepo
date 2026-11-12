@@ -12,7 +12,7 @@ import type { Doc } from "../_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "../_generated/server";
 import { type Resolver, decodeRecord } from "../lib/activity.ts";
 import { blockTimes } from "../lib/exportPage.ts";
-import { defaultSlug } from "../lib/format.ts";
+import { defaultSlug, hubLabel } from "../lib/format.ts";
 
 /** A row of the history table every 1,000 blocks: the rebuild's starting points. */
 const HISTORY_EVERY = 1_000n;
@@ -25,20 +25,41 @@ export const state = internalQuery({
   }),
 });
 
-async function contentSlug(ctx: MutationCtx, scope: "lend" | "asset" | "pool" | "spoke" | "token", chainId: number, key: string): Promise<string | null> {
+async function contentSlug(ctx: MutationCtx, scope: "lend" | "asset" | "pool" | "spoke" | "token" | "hub", chainId: number, key: string): Promise<string | null> {
   return (await ctx.db.query("marketContent").withIndex("by_key", (q) => q.eq("scope", scope).eq("chainId", chainId).eq("key", key)).unique())?.slug ?? null;
 }
 
-/** Writes the current rows of one snapshot; rows of reserves and slices that left the chain's views are removed. */
+/**
+ * Writes the current rows of one snapshot: Hubs (a Hub recorded since the last run is inserted), Hub-to-Hub credit
+ * lines, Hub assets, slices, reserves and markets. Rows of credit lines, reserves and slices that left the chain's
+ * views are removed.
+ */
 export const applySnapshot = internalMutation({
   args: { snapshot: v.any() },
   handler: async (ctx, { snapshot }) => {
     const s = snapshot as ChainSnapshot;
     const now = Date.now();
     const symbol = async (token: string) => (await ctx.db.query("marketContent").withIndex("by_key", (q) => q.eq("scope", "token").eq("chainId", s.chainId).eq("key", token)).unique())?.symbol ?? token.slice(2, 8);
+    const labels = new Map(s.hubs.map((h) => [h.hub, hubLabel(h.label, h.hub)]));
+    const labelOf = (hub: string) => labels.get(hub as `0x${string}`) ?? hubLabel(null, hub);
+    for (const h of s.hubs) {
+      const slug = (await contentSlug(ctx, "hub", s.chainId, h.hub)) ?? defaultSlug.hub(s.chainId, labelOf(h.hub));
+      const row = { ...h, lendAssetIds: [...h.lendAssetIds], lendSpokes: [...h.lendSpokes], cdpSpokes: [...h.cdpSpokes], slug, updatedAt: now };
+      const existing = await ctx.db.query("hubs").withIndex("by_key", (q) => q.eq("chainId", h.chainId).eq("hub", h.hub)).unique();
+      if (existing) await ctx.db.replace(existing._id, row);
+      else await ctx.db.insert("hubs", row);
+    }
+    const keepLines = new Set(s.creditLines.map((l) => `${l.fundingHub}:${l.assetId}:${l.spoke}`));
+    for (const old of (await ctx.db.query("creditLines").collect()).filter((l) => l.chainId === s.chainId && !keepLines.has(`${l.fundingHub}:${l.assetId}:${l.spoke}`))) await ctx.db.delete(old._id);
+    for (const l of s.creditLines) {
+      const row = { ...l, updatedAt: now };
+      const existing = await ctx.db.query("creditLines").withIndex("by_key", (q) => q.eq("chainId", l.chainId).eq("fundingHub", l.fundingHub).eq("assetId", l.assetId).eq("spoke", l.spoke)).unique();
+      if (existing) await ctx.db.replace(existing._id, row);
+      else await ctx.db.insert("creditLines", row);
+    }
     for (const a of s.hubAssets) {
-      const slug = (await contentSlug(ctx, "lend", s.chainId, `${a.hub}:${a.assetId}`)) ?? defaultSlug.lend(s.chainId, await symbol(a.underlying));
-      const row = { ...a, slug, updatedAt: now };
+      const slug = (await contentSlug(ctx, "lend", s.chainId, `${a.hub}:${a.assetId}`)) ?? defaultSlug.lend(s.chainId, labelOf(a.hub), await symbol(a.underlying));
+      const row = { ...a, lendReserves: [...a.lendReserves], slug, updatedAt: now };
       const existing = await ctx.db.query("hubAssets").withIndex("by_key", (q) => q.eq("chainId", a.chainId).eq("hub", a.hub).eq("assetId", a.assetId)).unique();
       if (existing) await ctx.db.replace(existing._id, row);
       else await ctx.db.insert("hubAssets", row);
@@ -71,14 +92,20 @@ export const applySnapshot = internalMutation({
   },
 });
 
-function resolver(ctx: MutationCtx, dep: Doc<"deployments">): Resolver {
+/** Every Lend Spoke of a chain: the deployment's and those the sampler found on Hubs recorded later. */
+async function lendSpokesOf(ctx: MutationCtx, dep: Doc<"deployments">): Promise<Set<string>> {
+  const hubs = (await ctx.db.query("hubs").collect()).filter((h) => h.chainId === dep.chainId);
+  return new Set([...dep.lendSpokes, ...hubs.flatMap((h) => h.lendSpokes)]);
+}
+
+function resolver(ctx: MutationCtx, dep: Doc<"deployments">, lendSpokes: ReadonlySet<string>): Resolver {
   const chainId = dep.chainId;
   return {
     chainId,
-    isLendSpoke: (spoke) => spoke === dep.lendSpoke,
+    isLendSpoke: (spoke) => lendSpokes.has(spoke),
     async hubAssetOfReserve(spoke, reserveId) {
-      if (spoke === dep.lendSpoke) {
-        const a = (await ctx.db.query("hubAssets").collect()).find((x) => x.chainId === chainId && x.lend.reserveId === reserveId);
+      if (lendSpokes.has(spoke)) {
+        const a = (await ctx.db.query("hubAssets").collect()).find((x) => x.chainId === chainId && x.lendReserves.some((r) => r.spoke === spoke && r.reserveId === reserveId));
         return a ? `${chainId}:${a.hub}:${a.assetId}` : null;
       }
       const r = await ctx.db.query("spokeReserves").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("spoke", spoke).eq("reserveId", reserveId)).unique();
@@ -129,7 +156,7 @@ export const applyPage = internalMutation({
     const cp = await ctx.db.query("ingestCheckpoints").withIndex("by_chain", (q) => q.eq("chainId", chainId)).unique();
     if ((cp?.throughBlock ?? null) !== (page.after?.throughBlock ?? null)) return { applied: false };
     const times = blockTimes(page);
-    const res = resolver(ctx, dep);
+    const res = resolver(ctx, dep, await lendSpokesOf(ctx, dep));
     for (const r of page.records) {
       const existing = await ctx.db.query("ingestedLogs").withIndex("by_key", (q) => q.eq("key", r.key)).unique();
       if (existing) {
