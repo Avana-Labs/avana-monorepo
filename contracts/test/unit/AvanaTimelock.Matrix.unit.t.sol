@@ -94,6 +94,9 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         rows.push(Row(mr, IMarketRegistryHubs.setFlashSource.selector, false, false));
         rows.push(Row(mr, IMarketRegistryPause.unpause.selector, false, false));
         rows.push(Row(mr, IMarketRegistryPause.unfreeze.selector, false, false));
+        // The chain-wide stops wait the normal delay from the admin: the guardians already stop every Hub at once.
+        rows.push(Row(mr, IMarketRegistryPause.freezeAll.selector, false, false));
+        rows.push(Row(mr, IMarketRegistryPause.pauseAll.selector, false, false));
         rows.push(Row(mr, IMarketRegistryBreakers.resetMarketBreaker.selector, false, false));
         rows.push(Row(mr, IMarketRegistryBreakers.resetDebtBreaker.selector, false, false));
         rows.push(Row(mr, IMarketRegistryStandby.restorePriceRoute.selector, false, false));
@@ -204,7 +207,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     /// @notice Each matrix selector, alone in an operation, needs exactly its matrix delay: 43,200 s for the short
     /// list, the normal delay (432,000 s) for every other call; scheduling one second below reverts
     /// `DelayBelowRequired`; a batch of every short selector stays short and one normal call makes it normal.
-    // TEST-063 verifies: SPEC-GOV-001, REQ-ACCESS-141, REQ-ACCESS-031, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-184, REQ-ACCESS-133, REQ-ACCESS-134, REQ-ACCESS-036, REQ-ACCESS-145, REQ-ACCESS-175, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-158, REQ-ACCESS-159, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-051, REQ-ACCESS-174, REQ-ACCESS-060, REQ-ACCESS-061, REQ-ACCESS-064, REQ-ACCESS-088, REQ-ACCESS-091, REQ-ACCESS-148
+    // TEST-063 verifies: SPEC-GOV-001, REQ-ACCESS-141, REQ-ACCESS-031, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-184, REQ-ACCESS-133, REQ-ACCESS-134, REQ-ACCESS-036, REQ-ACCESS-145, REQ-ACCESS-175, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-158, REQ-ACCESS-159, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-051, REQ-ACCESS-174, REQ-ACCESS-060, REQ-ACCESS-061, REQ-ACCESS-064, REQ-ACCESS-088, REQ-ACCESS-091, REQ-ACCESS-148, REQ-ROUTE-017, REQ-ROUTE-018, REQ-ROUTE-019, REQ-ROUTE-020, REQ-ACCESS-172, REQ-ACCESS-128
     // Sources: 2.15 "Restricted-function matrix", "Delay classes and timing"; MATH-GOV-01
     function test_TEST_063_everyMatrixSelectorNeedsItsDelayClass() public {
         uint256 shortCount;
@@ -260,7 +263,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     /// @notice A queued call of each matrix selector: the Emergency Guardian cancels it unless the row is restoring
     /// (`RestoringCancelRestricted`) or a role change (`RoleChangeCancelRestricted`); the Aave governance executor
     /// cancels every one; a cancelled operation never executes.
-    // TEST-067 verifies: SPEC-GOV-005, REQ-ACCESS-156, REQ-ACCESS-032, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-184, REQ-ACCESS-133, REQ-ACCESS-134, REQ-ACCESS-036, REQ-ACCESS-145, REQ-ACCESS-175, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-158, REQ-ACCESS-159, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-051, REQ-ACCESS-174, REQ-ACCESS-060, REQ-ACCESS-061, REQ-ACCESS-064, REQ-ACCESS-088
+    // TEST-067 verifies: SPEC-GOV-005, REQ-ACCESS-156, REQ-ACCESS-032, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-184, REQ-ACCESS-133, REQ-ACCESS-134, REQ-ACCESS-036, REQ-ACCESS-145, REQ-ACCESS-175, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-158, REQ-ACCESS-159, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-051, REQ-ACCESS-174, REQ-ACCESS-060, REQ-ACCESS-061, REQ-ACCESS-064, REQ-ACCESS-088, REQ-ROUTE-019, REQ-ACCESS-172
     // Sources: 2.15 "Restricted-function matrix" (canceller column), 5.1 TEST-067
     function test_TEST_067_everyMatrixSelectorHasItsCancelClass() public {
         for (uint256 i; i < rows.length; ++i) {
