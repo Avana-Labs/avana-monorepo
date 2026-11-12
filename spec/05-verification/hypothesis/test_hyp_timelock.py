@@ -145,6 +145,8 @@ class Shadow:
                             return "AdminRoleOnlyTimelock"
                         s.roles[a[0]].add(a[1])
                     else:
+                        if a[0] == DEFAULT_ADMIN_ROLE and a[1] == TIMELOCK:    # REQ-ACCESS-182
+                            return "TimelockAdminRequired"
                         s.roles[a[0]].discard(a[1])
             elif t in UPGRADEABLE and sel in ("grantRole", "revokeRole") and a[0] in (DEFAULT_ADMIN_ROLE,
                                                                                         APPLICATION_ADMIN):
