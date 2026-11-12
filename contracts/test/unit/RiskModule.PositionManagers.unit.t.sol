@@ -173,7 +173,10 @@ contract RiskModulePositionManagersUnitTest is MarketRegistryFixture, AaveV4Fixt
     function testFuzz_TEST_172_directApprovalBindsTheCaller(
         address caller
     ) public {
-        vm.assume(caller != address(proxy) && caller != address(0));
+        // The Spoke sits behind a transparent proxy, which refuses every call from its ProxyAdmin
+        // (`ProxyDeniedAdminAccess`); that address is never a position owner.
+        address spokeAdmin = address(uint160(uint256(vm.load(address(sp), ADMIN_SLOT))));
+        vm.assume(caller != address(proxy) && caller != address(0) && caller != spokeAdmin);
         vm.prank(caller);
         sp.setUserPositionManager(manager, true);
         _assertUnapproved(address(proxy));
