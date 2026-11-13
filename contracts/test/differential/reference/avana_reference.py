@@ -309,12 +309,15 @@ def in_usd_band(n_q: int, n_v: int, low: int, high: int, *rest: int) -> list[int
 
 
 def usd_level(n: int, *q: int) -> list[int]:
-    """SPEC-ORC-011: max{L : L^(x)n <= (x) q}; 0 for malformed quotes. Found from the real root of the product (an
-    independent start point) and corrected one unit at a time, not by the contract's binary search."""
+    """SPEC-ORC-011: max{L : L^(x)n <= (x) q}; 0 for malformed quotes; 2^256 - 1 when the product saturates (every
+    power is at most the saturated product). Found from the real root of the product (an independent start point) and
+    corrected one unit at a time, not by the contract's binary search."""
     q = list(q[:n])
     if not MIN_TOKENS <= n <= MAX_TOKENS or not all(_route_value_ok(x) for x in q):
         return [0]
     prod = _fx(q)
+    if prod == UINT256_MAX:
+        return [UINT256_MAX]
     level = _iroot(prod * PRICE_UNIT ** (n - 1), n)
     while _fx([level + 1] * n) <= prod:
         level += 1

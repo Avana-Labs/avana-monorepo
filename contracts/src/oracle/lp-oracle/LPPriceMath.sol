@@ -205,7 +205,8 @@ library LPPriceMath {
     /// rounds down, so the price never exceeds the value of the holdings at the oracle prices, and it is at least 1.
     /// `valid` is false, with `price8 = 0`, unless the three vectors have one length `n` in `[2, MAX_POOL_TOKENS]`,
     /// every `a_i < 2^128`, every `d_i <= 77` and every `v_i` in `[1, MAX_ROUTE_ANSWER]`: a malformed module read
-    /// (`REQ-ORACLE-103`), never a revert or a dropped token. Inside the bounds every term is below `2^168`.
+    /// (`REQ-ORACLE-103`), never a revert or a dropped token. Inside the bounds every term is below `2^188` and the
+    /// sum of at most eight terms below `2^191` (MATH-UO-75a).
     /// @param amounts Composition `a_i` in raw token units, floored by the pricing module.
     /// @param prices Valuation prices `v_i`, 8 decimals.
     /// @param tokenDecimals Token decimals `d_i`.

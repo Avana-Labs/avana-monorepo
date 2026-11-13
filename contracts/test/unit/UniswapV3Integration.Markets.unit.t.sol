@@ -192,7 +192,7 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
     function test_TEST_264_bindMarketRefusesBadListingData() public {
         PositionShape memory sh = PositionShape(ShapeKind.TickRange, -60, 60);
         bytes[5] memory datas = [
-            bytes(""), abi.encode(uint256(1e8)), abi.encode(0, 1e8), abi.encode(1e8, 1e12 + 1), abi.encode(1e8, 1e8, 1)
+            bytes(""), abi.encode(uint256(1e8)), abi.encode(0, 1e8), abi.encode(1e8, 1e18 + 1), abi.encode(1e8, 1e8, 1)
         ];
         for (uint256 i = 0; i < datas.length; ++i) {
             vm.prank(registry);
@@ -288,7 +288,12 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
         vm.expectRevert(InvalidPrices.selector);
         vault.composition(M1, 1, _vec(0, 1e8));
         vm.expectRevert(InvalidPrices.selector);
-        vault.composition(M1, 1, _vec(1e8, 1e12 + 1));
+        vault.composition(M1, 1, _vec(1e8, 1e18 + 1));
+        vm.expectRevert(InvalidPrices.selector);
+        vault.composition(M1, 1, _vec(1e18 + 1, 1e8));
+        // MAX_ROUTE_ANSWER = 10^18 itself is a valid price (ORACLE-04: an ETH above $10,000 stays a route value).
+        vault.composition(M1, 1, _vec(1e8, 1e18));
+        vault.composition(M1, 1, _vec(1e18, 1e8));
         vm.expectRevert(abi.encodeWithSelector(MarketBinding.selector, uint256(77)));
         vault.composition(77, 1, _vec(1e8, 1e8));
         (uint256[] memory a,) = vault.composition(M1, 0, _vec(1e8, 1e8));

@@ -224,10 +224,10 @@ function compositionPrice8(mathint a0, mathint a1, mathint v0, mathint v1, mathi
 }
 
 // PROP-023 verifies: Q-191 (primary tool per 5.2: Halmos)
-// Bounds of SPEC-ORC-008: amounts of 10^d <= 10^18 units below 2^128, prices at most MAX_ROUTE_ANSWER = 1e12.
+// Bounds of SPEC-ORC-008: amounts of 10^d <= 10^18 units below 2^128, prices at most MAX_ROUTE_ANSWER = 1e18.
 rule price8IsPositiveAndBelowExact(mathint a0, mathint a1, mathint v0, mathint v1, mathint q0, mathint q1) {
     require a0 >= 0 && a1 >= 0 && a0 < 2^128 && a1 < 2^128;
-    require v0 >= 0 && v1 >= 0 && v0 <= 10^12 && v1 <= 10^12;
+    require v0 >= 0 && v1 >= 0 && v0 <= 10^18 && v1 <= 10^18;
     require q0 >= 1 && q1 >= 1;
     mathint price8 = compositionPrice8(a0, a1, v0, v1, q0, q1);
     // q0 * q1 times the exact value a0 * v0 / q0 + a1 * v1 / q1 of the composition

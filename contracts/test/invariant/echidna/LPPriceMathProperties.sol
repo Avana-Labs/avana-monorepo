@@ -9,12 +9,13 @@ import {PriceState} from "../../../src/types/PriceState.sol";
 /// @title LPPriceMathProperties
 /// @notice Echidna and Medusa properties of the internal library LPPriceMath (2.10). Assertion entry points check each
 /// formula at concrete decimals, tolerances, block times and stress rises with the amounts and prices symbolic
-/// (answers below `2^128`, prices up to `2^40`, just above `MAX_ROUTE_ANSWER`): normalisation and route values are the
+/// (answers below `2^128`, prices up to `2^60`, just above `MAX_ROUTE_ANSWER`): normalisation and route values are the
 /// exact floors of the spec, the agreement and second-source tests are the exact spec inequality in either argument
 /// order, the stable ceiling never raises a price and is monotone, the vault-token price is at least 1, never above the
-/// holdings and independent of token order, the served collateral price is at least 1 and at most the accepted price
-/// unless Live, the served debt price at least the accepted price unless Live and the exact stress price when
-/// Expired, the sequencer states partition, and the observation buffer and gas guard are the exact smallest values.
+/// holdings and independent of token order, the served collateral price is at least 1, the accepted price exactly
+/// when Cached and otherwise independent of it and at most the fresh price, the served debt price at least the
+/// accepted price unless Live and the exact stress price when Expired, the sequencer states partition, and the
+/// observation buffer and gas guard are the exact smallest values.
 /// Each entry point records its last served prices, which the `property_` functions check after every transaction.
 /// @dev hevm proves each assertion entry point: no symbolic exponent, no product of two symbolic values, every case
 /// parameter a literal. The `fuzz` entry points only record their inputs over the whole range of the earlier single
@@ -22,11 +23,11 @@ import {PriceState} from "../../../src/types/PriceState.sol";
 /// the matching `property_` functions check the rounding bounds, symmetry and minimality on them after every
 /// transaction, in Echidna's property mode and in Medusa.
 contract LPPriceMathProperties {
-    uint256 internal constant MAX_ROUTE = 1e12;
+    uint256 internal constant MAX_ROUTE = 1e18;
     uint256 internal constant AMOUNT_BOUND = 2 ** 128;
-    /// @dev Price inputs are masked to 40 bits: `[0, 2^40)` holds every listed price (`MAX_ROUTE_ANSWER = 10^12`),
+    /// @dev Price inputs are masked to 60 bits: `[0, 2^60)` holds every listed price (`MAX_ROUTE_ANSWER = 10^18`),
     /// and a mask, unlike `%` by a non-power of two, adds no division for the solver.
-    uint256 internal constant PRICE_MASK = 2 ** 40 - 1;
+    uint256 internal constant PRICE_MASK = 2 ** 60 - 1;
 
     /// @notice Number of assertion calls; written so each call is a transaction.
     uint256 public checks;
@@ -34,6 +35,10 @@ contract LPPriceMathProperties {
     uint256 public lastServed = 1;
     uint256 public lastAccepted = 1;
     PriceState public lastState;
+    /// @notice Fresh and lower prices and the disagreement flag of the last served collateral price.
+    uint256 public lastFresh = 1;
+    uint256 public lastLower = 1;
+    bool public lastDisagreeing;
     /// @notice Last served debt price, its accepted price and state.
     uint256 public lastDebtServed = 1;
     uint256 public lastDebtAccepted = 1;
@@ -54,7 +59,7 @@ contract LPPriceMathProperties {
 
     function property_constantsMatchTheSpec() external pure returns (bool) {
         return LPPriceMath.DECIMALS == 8 && LPPriceMath.STABLE_CEILING_USD == 1e8
-            && LPPriceMath.MAX_ROUTE_ANSWER == 1e12 && LPPriceMath.POST_CALL_GAS == 5000
+            && LPPriceMath.MAX_ROUTE_ANSWER == 1e18 && LPPriceMath.POST_CALL_GAS == 5000
             && LPPriceMath.MIN_VAULT_DECIMALS == 6 && LPPriceMath.MAX_VAULT_DECIMALS == 18;
     }
 
@@ -69,8 +74,13 @@ contract LPPriceMathProperties {
         return lastServed >= 1;
     }
 
-    function property_servedCollateralAtMostAcceptedUnlessLive() external view returns (bool) {
-        return lastState == PriceState.Live || lastServed <= lastAccepted;
+    /// @notice `SPEC-ORC-017`: the accepted price is served exactly when Cached and enters no other state; Live and
+    /// Drifting serve the fresh price, or `min(lower, fresh)` (at least 1) while some token disagrees.
+    function property_servedCollateralByState() external view returns (bool) {
+        if (lastState == PriceState.Expired) return lastServed == 1;
+        if (lastState == PriceState.Cached) return lastServed == lastAccepted;
+        uint256 expected = lastDisagreeing ? (lastLower < lastFresh ? lastLower : lastFresh) : lastFresh;
+        return lastServed == (expected == 0 ? 1 : expected) && lastServed <= lastFresh;
     }
 
     function property_servedDebtAtLeastAcceptedUnlessLive() external view returns (bool) {
@@ -507,10 +517,17 @@ contract LPPriceMathProperties {
         accepted = 1 + (accepted & PRICE_MASK);
         uint256 served = LPPriceMath.servedPrice(state, disagreeing, fresh, lower, accepted);
         assert(served >= 1);
-        if (state != PriceState.Live) assert(served <= accepted);
+        if (state == PriceState.Cached) assert(served == accepted);
         if (state == PriceState.Expired) assert(served == 1);
-        if (state != PriceState.Cached && state != PriceState.Expired) assert(served <= fresh);
+        if (state != PriceState.Cached && state != PriceState.Expired) {
+            assert(served <= fresh);
+            // The accepted price bounds borrowing only: no state but Cached serves it.
+            assert(served == LPPriceMath.servedPrice(state, disagreeing, fresh, lower, 1));
+            if (!disagreeing) assert(served == fresh);
+            else assert(served == (lower == 0 ? 1 : (lower < fresh ? lower : fresh)));
+        }
         (lastServed, lastAccepted, lastState) = (served, accepted, state);
+        (lastFresh, lastLower, lastDisagreeing) = (fresh, lower, disagreeing);
         ++checks;
     }
 
@@ -537,7 +554,7 @@ contract LPPriceMathProperties {
 
     /// @notice `SPEC-ORC-018` when Expired: the stress price `⌈accepted × (10^4 + rise) / 10^4⌉`, above the accepted
     /// price and at most 1.5 times it plus one unit; recorded for the properties. `rise` picks 100 (the minimum), 2,500
-    /// or 5,000 bps and `price` the accepted price among 1, 0.99987 USD, `MAX_ROUTE_ANSWER` and `2^40 − 1`; the
+    /// or 5,000 bps and `price` the accepted price among 1, 0.99987 USD, `MAX_ROUTE_ANSWER` and `2^60 − 1`; the
     /// solver cannot bound the library's 256-bit ceiling division with the accepted price symbolic, so these are
     /// concrete cases, and `property_debtServedBounded` checks every rise and accepted price.
     function checkStressPrice(

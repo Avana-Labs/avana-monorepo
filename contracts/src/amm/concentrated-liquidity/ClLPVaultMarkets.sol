@@ -381,9 +381,10 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     }
 
     /// @dev The pool's reference range: the one tick spacing `[t, t + s]` holding the tick of the listing price
-    /// (`SPEC-ORC-005`). It always lies inside the usable ticks: listing prices lie in `[1, MAX_ROUTE_ANSWER = 10^12]`
-    /// and token decimals in `[0, 18]`, so the raw price ratio lies in `[10^-30, 10^30]` and `|t| <= 690,776`, while the
-    /// usable ticks reach at least `±880,237` for every spacing up to Slipstream's largest, 6,931.
+    /// (`SPEC-ORC-005`). It always lies inside the usable ticks: listing prices lie in `[1, MAX_ROUTE_ANSWER = 10^18]`
+    /// and token decimals in `[0, 18]`, so the raw price ratio lies in `[10^-36, 10^36]` and `|t| <= 828,973`, so the
+    /// range reaches at most `828,973 + 6,931 = 835,904`, while the usable ticks reach at least `±880,237` for every
+    /// spacing up to Slipstream's largest, 6,931.
     function _referenceRange(
         uint160 sO,
         int24 spacing

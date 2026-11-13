@@ -16,7 +16,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// and the state properties of the served prices, including a disagreement priced from real full-range compositions.
 /// @dev Calls go through `LPPriceMathHarness`, so a revert inside the library fails the test.
 contract LPPriceMathFuzzTest is AvanaTest {
-    uint256 internal constant MAX_ROUTE = 1e12;
+    uint256 internal constant MAX_ROUTE = 1e18;
     uint256 internal constant MAX_TOKENS = 8;
     uint256 internal constant SAT = type(uint256).max;
     uint256 internal constant MIN_SQRT_RATIO = 4_295_128_739;
@@ -165,7 +165,7 @@ contract LPPriceMathFuzzTest is AvanaTest {
     // ─── SPEC-ORC-008 ───
 
     // TEST-217 verifies: SPEC-ORC-008, REQ-ORACLE-012, REQ-ORACLE-103, INV-055, INV-078
-    // Sources: MATH-UO-51a, AMM-A3f, MATH-UO-14d, MATH-UO-64
+    // Sources: MATH-UO-51a, AMM-A3f, MATH-UO-14d, MATH-UO-64, MATH-UO-75a (sum below 2^191 at MAX_ROUTE_ANSWER = 10^18)
     /// forge-config: default.fuzz.runs = 10000
     function testFuzz_TEST_217_lpPriceNeverAboveHoldingsAndBoundedError(
         uint256 seed,
@@ -182,7 +182,7 @@ contract LPPriceMathFuzzTest is AvanaTest {
             slackScaled += v[i] * 10 ** (18 - d[i]) + 1e18;
         }
         assertGe(price8, 1, "at least 1");
-        assertLt(price8, 2 ** 171, "below 2^171");
+        assertLt(price8, 2 ** 191, "below 2^191");
         if (exactScaled >= 1e18) assertLe(price8 * 1e18, exactScaled, "never above the holdings at the oracle prices");
         else assertEq(price8, 1, "worth less than one unit: 1");
         assertGe(price8 * 1e18 + slackScaled, exactScaled, "below by at most sum(v_i / 10^d_i + 1)");
@@ -248,7 +248,8 @@ contract LPPriceMathFuzzTest is AvanaTest {
     // ─── SPEC-ORC-011 ───
 
     // TEST-251 verifies: SPEC-ORC-011, REQ-ORACLE-009, REQ-ORACLE-015
-    // Sources: MATH-UO-53a, MATH-UO-53b, MATH-UO-53c, MATH-UO-62a
+    // Sources: MATH-UO-53a, MATH-UO-53b, MATH-UO-53c, MATH-UO-62a, MATH-UO-75i (exact up to six factors of 10^18,
+    // saturating beyond)
     function testFuzz_TEST_251_usdBandIsTheFixedPointTest(
         uint256 seed,
         uint256 n,
@@ -266,10 +267,10 @@ contract LPPriceMathFuzzTest is AvanaTest {
         uint256 pq = q[0];
         uint256 pv = v[0];
         for (uint256 i = 1; i < n; ++i) {
-            pq = pq * q[i] / 1e8;
+            pq = _saturatingFixedMul(pq, q[i]);
             pv = pv * v[i] / 1e8;
         }
-        assertLt(pq, SAT, "valid quotes never saturate");
+        if (n <= 6) assertLt(pq, SAT, "up to six valid quotes never saturate");
         assertEq(m.fixedPointProduct(q), pq, "left-to-right fixed-point product");
         uint256 pl = m.fixedPointPower(low, n);
         (bool valid, bool inBand) = m.inUsdBand(q, v, low, high);
@@ -280,7 +281,8 @@ contract LPPriceMathFuzzTest is AvanaTest {
     }
 
     // TEST-251 verifies: SPEC-ORC-011, REQ-ORACLE-042
-    // Sources: MATH-UO-61a … MATH-UO-61e (usdLevel = max{L : L^(x)n <= (x)q} and its agreement with the band)
+    // Sources: MATH-UO-61a … MATH-UO-61e (usdLevel = max{L : L^(x)n <= (x)q} and its agreement with the band),
+    // MATH-UO-75j (a saturated product reports type(uint256).max and still agrees with the band)
     /// forge-config: default.fuzz.runs = 10000
     function testFuzz_TEST_251_usdLevelIsTheLargestPassingLevel(
         uint256 seed,
@@ -296,8 +298,12 @@ contract LPPriceMathFuzzTest is AvanaTest {
         }
         uint256 product = m.fixedPointProduct(q);
         uint256 level = m.usdLevel(q);
-        assertLe(m.fixedPointPower(level, n), product, "the level passes");
-        assertGt(m.fixedPointPower(level + 1, n), product, "one more fails");
+        if (product == SAT) {
+            assertEq(level, SAT, "a saturated product reports the saturated level");
+        } else {
+            assertLe(m.fixedPointPower(level, n), product, "the level passes");
+            assertGt(m.fixedPointPower(level + 1, n), product, "one more fails");
+        }
         low = bound(low, 0, 2 * MAX_ROUTE);
         (, bool inBand) = m.inUsdBand(q, q, low, SAT);
         assertEq(low <= level, inBand, "usdBandLow <= usdLevel exactly when the lower band test passes");
@@ -405,23 +411,40 @@ contract LPPriceMathFuzzTest is AvanaTest {
 
     // ─── SPEC-ORC-017, SPEC-ORC-018 ───
 
-    // TEST-219 verifies: SPEC-ORC-017, REQ-ORACLE-020, REQ-ORACLE-060, REQ-ORACLE-086, INV-087
-    // Sources: MATH-UO-42d, MATH-UO-52, MATH-UO-59a (lower is unconstrained: it may exceed fresh)
+    // TEST-219 verifies: SPEC-ORC-017, REQ-ORACLE-020, REQ-ORACLE-060, REQ-ORACLE-086, REQ-ORACLE-087, INV-087
+    // Sources: MATH-UO-42d, MATH-UO-42g, MATH-UO-42h, MATH-UO-52, MATH-UO-59a (lower is unconstrained: it may exceed
+    // fresh)
     function testFuzz_TEST_219_servedPriceBounds(
         uint8 stateRaw,
         bool disagreeing,
         uint256 fresh,
         uint256 lower,
-        uint256 accepted
+        uint256 accepted,
+        uint256 otherAccepted,
+        uint256 rally,
+        bool laterDrifting
     ) public view {
         PriceState state = PriceState(bound(stateRaw, 0, 3));
         fresh = bound(fresh, 1, SAT);
         accepted = bound(accepted, 1, SAT);
         uint256 served = m.servedPrice(state, disagreeing, fresh, lower, accepted);
         assertGe(served, 1, "at least 1");
-        if (state != PriceState.Live) assertLe(served, accepted, "at most A unless Live");
-        if (state != PriceState.Cached && state != PriceState.Expired) assertLe(served, fresh, "at most fresh");
         if (state == PriceState.Expired) assertEq(served, 1, "Expired: 1");
+        if (state == PriceState.Cached) assertEq(served, accepted, "Cached: A");
+        if (state != PriceState.Cached && state != PriceState.Expired) {
+            assertLe(served, fresh, "at most fresh");
+            uint256 expected = disagreeing ? Math.max(1, Math.min(lower, fresh)) : fresh;
+            assertEq(served, expected, "min(lower, fresh) while disagreeing, else fresh");
+            assertEq(
+                m.servedPrice(state, disagreeing, fresh, lower, otherAccepted), served, "A enters only the Cached value"
+            );
+        }
+        if ((state == PriceState.Live || state == PriceState.Drifting) && !disagreeing) {
+            // A rally never lowers the served price, including a move from Live to Drifting.
+            uint256 freshNew = bound(rally, fresh, SAT);
+            PriceState later = laterDrifting ? PriceState.Drifting : PriceState.Live;
+            assertGe(m.servedPrice(later, false, freshNew, lower, otherAccepted), served, "a rally never lowers it");
+        }
     }
 
     // TEST-219 verifies: SPEC-ORC-017, SPEC-ORC-008, REQ-ORACLE-086, INV-087
@@ -443,8 +466,10 @@ contract LPPriceMathFuzzTest is AvanaTest {
         (, uint256 lower) = m.lpPrice(_fullRange(w0, w1), _pair(w0, w1), _six());
         uint256 served = m.servedPrice(PriceState.Drifting, true, fresh, lower, accepted);
         assertLe(served, fresh, "never above the fresh price, even when the floored lower price is");
-        assertLe(served, accepted, "never above A");
         assertLe(served, lower, "never above the lower-route price");
+        assertEq(served, Math.min(lower, fresh), "exactly min(lower, fresh)");
+        assertEq(m.servedPrice(PriceState.Drifting, true, fresh, lower, 1), served, "A does not enter: lowest A");
+        assertEq(m.servedPrice(PriceState.Drifting, true, fresh, lower, SAT), served, "A does not enter: highest A");
     }
 
     // TEST-219 verifies: SPEC-ORC-018, REQ-ORACLE-093, INV-087
@@ -570,6 +595,16 @@ contract LPPriceMathFuzzTest is AvanaTest {
         amounts = new uint256[](2);
         amounts[0] = Math.mulDiv(u << 96, MAX_SQRT_RATIO - s, MAX_SQRT_RATIO) / s;
         amounts[1] = Math.mulDiv(u, s - MIN_SQRT_RATIO, 1 << 96);
+    }
+
+    /// @dev `x ⊗ y` of `SPEC-ORC-011`: `floor(x * y / 10^8)`, sticky `type(uint256).max` once `x * y` needs 257 bits.
+    function _saturatingFixedMul(
+        uint256 x,
+        uint256 y
+    ) internal pure returns (uint256) {
+        if (x == SAT || y == SAT) return SAT;
+        (bool ok, uint256 p) = Math.tryMul(x, y);
+        return ok ? p / 1e8 : SAT;
     }
 
     function _pair(
