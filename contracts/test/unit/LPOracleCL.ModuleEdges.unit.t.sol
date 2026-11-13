@@ -251,6 +251,21 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
     }
 
     // TEST-306 verifies: REQ-ORACLE-080, REQ-ORACLE-103, REQ-ORACLE-106
+    // TEST-306 verifies: SPEC-ORC-006, SPEC-ORC-005
+    /// @notice With unit exponent `k = 3`, a unit count below `2^128` whose liquidity `units * 10^3` reaches `2^128` is
+    /// refused, and the largest count whose liquidity stays below it composes.
+    function test_TEST_306_compositionRefusesLiquidityAtTheBound() public {
+        ClModuleProbe h = new ClModuleProbe();
+        h.setMarket(6, 6, -10, 10);
+        h.setUnitExp(3);
+        // 2^128 has no factor 5, so edge * 10^3 < 2^128 < (edge + 1) * 10^3.
+        uint256 edge = (uint256(1) << 128) / 1e3;
+        (bool ok,,) = h.composition(edge + 1, 1e8, 1e8);
+        assertFalse(ok, "liquidity at 2^128 refused");
+        (ok,,) = h.composition(edge, 1e8, 1e8);
+        assertTrue(ok, "liquidity below 2^128 composes");
+    }
+
     /// @notice A logic contract's hook caller, delegating to the real module: a composition the module refuses (a zero
     /// price) comes back as `(false, [])`, a valid one as the module's amounts; a quote vector of other than two
     /// entries fails every listing check without reaching the module, while two entries reach it.
