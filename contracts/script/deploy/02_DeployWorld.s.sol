@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {WorldAaveV3} from "./lib/WorldAaveV3.sol";
 import {WorldAerodrome} from "./lib/WorldAerodrome.sol";
 import {WorldFeeds} from "./lib/WorldFeeds.sol";
+import {FeeOnTransferToken, FeeSwitchToken, NoDecimalsToken, RebasingToken} from "./local/HostileTokens.sol";
 import {TestToken} from "./local/TestToken.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {console2} from "forge-std/console2.sol";
@@ -129,6 +130,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         address flashPool = _deployAaveV3();
         _uniswapPools();
         _slipstreamPools();
+        _switchOnHostile();
         vm.stopBroadcast();
         vm.serializeAddress("world", "deployer", me);
         vm.serializeAddress("world", "uniswapV3Factory", uniFactory);
@@ -162,9 +164,9 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
             string memory sym = vm.parseJsonString(cfg, string.concat(k, ".symbol"));
             uint8 dec = uint8(vm.parseJsonUint(cfg, string.concat(k, ".decimals")));
             uint256 price = vm.parseJsonUint(cfg, string.concat(k, ".price8"));
-            TestToken t = new TestToken(string.concat("Test ", sym), sym, dec, me);
-            tokens[keccak256(bytes(sym))] = TokenInfo(address(t), dec, price);
-            vm.serializeString("world", "tokens", vm.serializeAddress("tokens", sym, address(t)));
+            address t = _newToken(k, sym, dec);
+            tokens[keccak256(bytes(sym))] = TokenInfo(t, dec, price);
+            vm.serializeString("world", "tokens", vm.serializeAddress("tokens", sym, t));
             // Primary, alternate and standby price routes, and the oracle-network second source, each its own feed:
             // the MarketRegistry refuses routes that share a feed and a second source inside a route.
             string[4] memory roles = ["primary", "alternate", "standby", "second"];
@@ -179,6 +181,38 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
             }
             string memory all = vm.serializeString("feeds", sym, one);
             vm.serializeString("world", "feeds", all);
+        }
+    }
+
+    /// @notice A test token of `world.tokens` entry `k`: a TestToken, or with `kind` one of the hostile stand-ins
+    /// (local/HostileTokens.sol) that listing must refuse: `feeOnTransfer`, `rebasing`, `noDecimals`, `feeSwitch`.
+    function _newToken(
+        string memory k,
+        string memory sym,
+        uint8 dec
+    ) private returns (address) {
+        string memory kk = string.concat(k, ".kind");
+        if (!vm.keyExistsJson(cfg, kk)) return address(new TestToken(string.concat("Test ", sym), sym, dec, me));
+        bytes32 kind = keccak256(bytes(vm.parseJsonString(cfg, kk)));
+        if (kind == keccak256("feeOnTransfer")) return address(new FeeOnTransferToken(sym, me));
+        if (kind == keccak256("rebasing")) return address(new RebasingToken(sym, me));
+        if (kind == keccak256("noDecimals")) return address(new NoDecimalsToken(sym, me));
+        if (kind == keccak256("feeSwitch")) return address(new FeeSwitchToken(sym, me));
+        revert(string.concat("unknown token kind for ", sym));
+    }
+
+    /// @notice After the pools are funded: a 1 % transfer fee, a 10 % rebase and a 0.1 % issuer fee on the hostile
+    /// tokens, the behaviour listing must meet.
+    function _switchOnHostile() private {
+        uint256 n = _count(cfg, ".world.tokens");
+        for (uint256 i = 0; i < n; ++i) {
+            string memory k = string.concat(".world.tokens[", vm.toString(i), "]");
+            if (!vm.keyExistsJson(cfg, string.concat(k, ".kind"))) continue;
+            address t = tokens[keccak256(bytes(vm.parseJsonString(cfg, string.concat(k, ".symbol"))))].token;
+            bytes32 kind = keccak256(bytes(vm.parseJsonString(cfg, string.concat(k, ".kind"))));
+            if (kind == keccak256("feeOnTransfer")) FeeOnTransferToken(t).setFeeBps(100);
+            else if (kind == keccak256("rebasing")) RebasingToken(t).rebase(1.1e18);
+            else if (kind == keccak256("feeSwitch")) FeeSwitchToken(t).setBasisPointsRate(10);
         }
     }
 
@@ -230,6 +264,8 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         uint256 usd = vm.parseJsonUint(cfg, ".world.aaveV3SupplyUsd");
         uint256 n = _count(cfg, ".world.tokens");
         for (uint256 i = 0; i < n; ++i) {
+            // A hostile token (`kind`) is not a flash source: Aave V3 lists only standard ERC-20s.
+            if (vm.keyExistsJson(cfg, string.concat(".world.tokens[", vm.toString(i), "].kind"))) continue;
             string memory sym = vm.parseJsonString(cfg, string.concat(".world.tokens[", vm.toString(i), "].symbol"));
             TokenInfo memory t = tokens[keccak256(bytes(sym))];
             _aaveV3List(t.token, sym, primaryFeed[keccak256(bytes(sym))]);
@@ -323,14 +359,17 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         if (a.token > b.token) (a, b) = (b, a);
     }
 
-    /// @notice `sqrt(price1per0 raw) × 2^96` from the feed prices: `raw1 / raw0 = (p0 / p1) × 10^(d1 − d0)`.
+    /// @notice `sqrt(price1per0 raw) × 2^96` from the feed prices: `raw1 / raw0 = (p0 / p1) × 10^(d1 − d0)`. A ratio
+    /// of 2^63 or more (an 8-decimals $95,000 token0 against an 18-decimals $0.00001 token1) would overflow
+    /// `ratio × 2^192`: its root is taken at 2^96 and shifted by 2^48, exact to far below a tick.
     function _sqrtPrice(
         TokenInfo memory t0,
         TokenInfo memory t1
     ) private pure returns (uint160) {
         uint256 num = t0.price8 * 10 ** t1.decimals;
         uint256 den = t1.price8 * 10 ** t0.decimals;
-        return uint160(Math.sqrt(Math.mulDiv(num, uint256(1) << 192, den)));
+        if (num / den < uint256(1) << 63) return uint160(Math.sqrt(Math.mulDiv(num, uint256(1) << 192, den)));
+        return uint160(Math.sqrt(Math.mulDiv(num, uint256(1) << 96, den)) << 48);
     }
 
     function _amountForUsd(

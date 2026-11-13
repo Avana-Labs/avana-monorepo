@@ -260,6 +260,30 @@
         "symbol": "PEPE",
         "decimals": 18,
         "price8": 1000
+      },
+      {
+        "symbol": "FOT",
+        "decimals": 18,
+        "price8": 200000000,
+        "kind": "feeOnTransfer"
+      },
+      {
+        "symbol": "REBASE",
+        "decimals": 18,
+        "price8": 100000000,
+        "kind": "rebasing"
+      },
+      {
+        "symbol": "NODEC",
+        "decimals": 18,
+        "price8": 100000000,
+        "kind": "noDecimals"
+      },
+      {
+        "symbol": "FSUSD",
+        "decimals": 6,
+        "price8": 100000000,
+        "kind": "feeSwitch"
       }
     ],
     "uniswapPools": [
@@ -444,6 +468,174 @@
         "b": "WETH",
         "fee": 3000,
         "usd": 500000
+      },
+      {
+        "name": "PEPE-USDC-10000",
+        "a": "PEPE",
+        "b": "USDC",
+        "fee": 10000,
+        "usd": 3000000
+      },
+      {
+        "name": "PEPE-USDT-10000",
+        "a": "PEPE",
+        "b": "USDT",
+        "fee": 10000,
+        "usd": 2000000
+      },
+      {
+        "name": "WBTC-PEPE-10000",
+        "a": "WBTC",
+        "b": "PEPE",
+        "fee": 10000,
+        "usd": 2000000
+      },
+      {
+        "name": "AAVE-USDC-3000",
+        "a": "AAVE",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 3000000
+      },
+      {
+        "name": "UNI-USDC-3000",
+        "a": "UNI",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 2000000
+      },
+      {
+        "name": "AAVE-UNI-3000",
+        "a": "AAVE",
+        "b": "UNI",
+        "fee": 3000,
+        "usd": 1500000
+      },
+      {
+        "name": "WBTC-USDT-3000",
+        "a": "WBTC",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 4000000
+      },
+      {
+        "name": "THIN-WETH-10000",
+        "a": "THIN",
+        "b": "WETH",
+        "fee": 10000,
+        "usd": 200000
+      },
+      {
+        "name": "THIN-USDT-10000",
+        "a": "THIN",
+        "b": "USDT",
+        "fee": 10000,
+        "usd": 200000
+      },
+      {
+        "name": "AERO-WETH-3000",
+        "a": "AERO",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 2000000
+      },
+      {
+        "name": "AERO-USDC-3000",
+        "a": "AERO",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 2000000
+      },
+      {
+        "name": "cbBTC-USDC-500",
+        "a": "cbBTC",
+        "b": "USDC",
+        "fee": 500,
+        "usd": 5000000
+      },
+      {
+        "name": "FOT-USDC-3000",
+        "a": "FOT",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "REBASE-USDC-3000",
+        "a": "REBASE",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "NODEC-USDC-3000",
+        "a": "NODEC",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "FSUSD-USDC-100",
+        "a": "FSUSD",
+        "b": "USDC",
+        "fee": 100,
+        "usd": 1000000
+      },
+      {
+        "name": "FOT-WETH-3000",
+        "a": "FOT",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "FOT-USDT-3000",
+        "a": "FOT",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "REBASE-WETH-3000",
+        "a": "REBASE",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "REBASE-USDT-3000",
+        "a": "REBASE",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "NODEC-WETH-3000",
+        "a": "NODEC",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "NODEC-USDT-3000",
+        "a": "NODEC",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "FSUSD-USDT-100",
+        "a": "FSUSD",
+        "b": "USDT",
+        "fee": 100,
+        "usd": 1000000
+      },
+      {
+        "name": "FSUSD-WETH-3000",
+        "a": "FSUSD",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
       }
     ],
     "slipstreamPools": [
