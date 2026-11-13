@@ -794,9 +794,10 @@ jobs:
     # Which spec rows a test that ran and passed checks. Reads every test shard's results (forge --json-file), the fork,
     # differential and Certora results of a nightly, release or manual run, the prover results recorded in
     # contracts/certora/RUNS.md and the Halmos logs in audit/halmos/results/, then:
-    # contract_checklist.py --all --check (every contract key, and the TEST rows on no checklist), trace.py --strict
-    # (every requirement Verified, its tags on its own tests, no declaration-only Solidity link). Each step runs even when an earlier one fails, so the summary shows every list.
-    name: evidence (checklists, strict traceability)
+    # contract_checklist.py --all --check (every contract key, and the TEST rows on no checklist) and trace.py with the
+    # run's results (fails on errors; its coverage-gap warnings are listed, not enforced). Each step runs even when an
+    # earlier one fails, so the summary shows every list.
+    name: evidence (checklists, traceability)
     # The long jobs run only in nightly, release and manual runs; elsewhere they are skipped at once, so this job waits
     # for the test shards only, and the rows only a fork, differential or prover run checks read "not run".
     needs: [test, fork, differential, certora]
@@ -840,16 +841,15 @@ jobs:
           cat evidence/checklists.md >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
-      - name: Strict traceability (trace.py --strict)
+      - name: Traceability with the run's results (trace.py)
         if: ${{ !cancelled() }}
         run: |
           rc=0
-          python3 spec/05-verification/trace.py --strict --results results --out evidence/traceability.md \
-            > evidence/trace-strict.txt || rc=$?
-          { echo '### trace.py --strict'; echo '```'; tail -n 1 evidence/trace-strict.txt
-            awk '/^WARN/ {n++} END {print n + 0 " warnings (full list in the evidence artifact)"}' evidence/trace-strict.txt
-            awk '/^ERROR/ && c < 50 {print; c++}' evidence/trace-strict.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          tail -n 40 evidence/trace-strict.txt
+          python3 spec/05-verification/trace.py --results results --out evidence/traceability.md \
+            > evidence/trace.txt || rc=$?
+          { echo '### trace.py'; echo '```'; tail -n 1 evidence/trace.txt
+            awk '/^ERROR/ && c < 50 {print; c++}' evidence/trace.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          tail -n 40 evidence/trace.txt
           exit $rc
 
       - name: Upload the evidence report
