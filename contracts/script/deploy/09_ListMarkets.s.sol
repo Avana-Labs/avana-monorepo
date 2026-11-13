@@ -60,7 +60,8 @@ interface ISpokeImplementationRead {
 /// - `activate` (short delay): every LPOracle poked Live, then `activateMarket` for each market.
 /// @dev Speed limits fail closed (Q-411): a market or a (Hub, asset) without a written value refuses every pledge or
 /// borrow, so the listing batch writes the launch values (τ 6 h; borrow 25 %, $250k–$2.5M; pledge 25 %, $1M–$10M;
-/// (Hub, asset) 25 %, 500k–5M tokens). Outputs: `listing-oracles.json` and `listing-markets.json` in
+/// (Hub, asset) 25 %, 500k–5M tokens). The `markets` operation's salt is keccak256 of the listing metadata file
+/// (`09-market-metadata`), so the operation commits to the pages it adds. Outputs: `listing-oracles.json` and `listing-markets.json` in
 /// `deployments-local/<network>/`, read by the manifest producer and the scenarios.
 contract ListMarkets is ListingBase {
     uint32 internal constant LP_ORACLE_POKE_MIN_GAS = 1_000_000;
@@ -352,9 +353,10 @@ contract ListMarkets is ListingBase {
 
     function _markets() private returns (Operation memory op) {
         op = _newOperation("listing-markets", release, 200);
+        uint256 first = registry.marketCount() + 1;
+        op.salt = _listingMetadataHash(first);
         _enableDebtReserves(op);
         uint256 n = _count(cfg, ".listing.markets");
-        uint256 first = registry.marketCount() + 1;
         string memory out = "markets";
         string memory json;
         for (uint256 i = 0; i < n; ++i) {
@@ -366,6 +368,26 @@ contract ListMarkets is ListingBase {
             json = vm.serializeString(out, string.concat("market", vm.toString(m.marketId)), _marketJson(m, routes));
         }
         vm.writeJson(json, _outputPath("listing-markets"));
+    }
+
+    /// @notice The listing's timelock salt: keccak256 of the listing metadata file `09-market-metadata` wrote
+    /// (`script/deploy/market-metadata.ts`), the pages this listing adds. Convex loads the file by that hash once the
+    /// operation executes and refuses one whose bytes hash otherwise. The file must be for this chain and for the market
+    /// IDs this listing gives, the ones after `marketCount()`.
+    function _listingMetadataHash(
+        uint256 firstMarketId
+    ) private view returns (bytes32 hash) {
+        string memory pointer = vm.readFile(_outputPath("listing-metadata"));
+        hash = vm.parseJsonBytes32(pointer, ".hash");
+        require(vm.parseJsonUint(pointer, ".chainId") == block.chainid, "listing metadata is for another chain");
+        require(
+            vm.parseJsonUint(pointer, ".firstMarketId") == firstMarketId,
+            "listing metadata names other market IDs: rerun 09-market-metadata"
+        );
+        string memory file = string.concat(
+            vm.projectRoot(), "/", OUTPUT_DIR, "/", _network(), "/", vm.parseJsonString(pointer, ".file")
+        );
+        require(keccak256(vm.readFileBinary(file)) == hash, "listing metadata file does not hash to its name");
     }
 
     function _market(

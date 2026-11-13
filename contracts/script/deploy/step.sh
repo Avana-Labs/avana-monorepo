@@ -24,6 +24,7 @@
 #   09-execute-listing-setup
 #   09-debt-oracles               GHO's fixed source and the DebtOracle of every other debt asset
 #   10-aave-debt-reserves-aip     AAVE  debt-reserve price sources, borrowable
+#   09-market-metadata            the listing metadata file (market and debt-reserve pages); its hash is the next salt
 #   09-listing-markets            LPOracles, swap routes, the listing batch (timelock, normal delay)
 #   09-execute-listing-markets
 #   10-aave-markets-aip           AAVE  vault-token assets and collateral reserves
@@ -42,6 +43,11 @@ step="${1:?usage: script/deploy/step.sh <step>; the steps are listed at the top 
 : "${AVANA_RPC_URL:?set AVANA_RPC_URL}"
 CONFIG="script/deploy/config/$AVANA_NETWORK.json"
 config() { node -e 'const c=require(process.argv[1]);console.log(process.argv[2].split(".").reduce((o,k)=>o[k],c))' "./$CONFIG" "$1"; }
+
+# Not a forge script: the listing metadata file, written from the config's page text and the chain's IDs.
+if [ "$step" = 09-market-metadata ]; then
+  exec env AVANA_NETWORK="$AVANA_NETWORK" AVANA_RPC_URL="$AVANA_RPC_URL" node script/deploy/market-metadata.ts
+fi
 
 deployer="${AVANA_DEPLOYER:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}"
 schedule=0

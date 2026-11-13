@@ -745,19 +745,87 @@
     "debtReserves": [
       {
         "spoke": "uniV3Stable",
-        "symbol": "GHO"
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v3-stable",
+          "name": "GHO on Uniswap v3 (stable Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's stable Hub against Uniswap v3 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the stable Hub of Aave V4, through the Uniswap v3 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v3 markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
       },
       {
         "spoke": "uniV3Volatile",
-        "symbol": "GHO"
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v3-volatile",
+          "name": "GHO on Uniswap v3 (volatile Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's volatile Hub against Uniswap v3 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the volatile Hub of Aave V4, through the Uniswap v3 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v3 markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
       },
       {
         "spoke": "slipStable",
-        "symbol": "USDC"
+        "symbol": "USDC",
+        "content": {
+          "slug": "usdc-slipstream-stable",
+          "name": "USDC on Slipstream (stable Hub)",
+          "symbol": "USDC",
+          "category": "stable",
+          "description": "Borrow USDC from Aave V4's stable Hub against Slipstream liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the USDC come from?",
+              "answer": "From the stable Hub of Aave V4, through the Slipstream CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Slipstream markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
       },
       {
         "spoke": "slipVolatile",
-        "symbol": "USDC"
+        "symbol": "USDC",
+        "content": {
+          "slug": "usdc-slipstream-volatile",
+          "name": "USDC on Slipstream (volatile Hub)",
+          "symbol": "USDC",
+          "category": "stable",
+          "description": "Borrow USDC from Aave V4's volatile Hub against Slipstream liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the USDC come from?",
+              "answer": "From the volatile Hub of Aave V4, through the Slipstream CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Slipstream markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
       }
     ],
     "speedLimits": {
@@ -815,7 +883,29 @@
               "GHO-USDC-100"
             ]
           }
-        ]
+        ],
+        "content": {
+          "slug": "uniswap-v3-usdc-usdt-0-01",
+          "name": "USDC/USDT Uniswap v3",
+          "category": "stable",
+          "venueLabel": "Uniswap v3",
+          "description": "Borrow GHO against a USDC/USDT liquidity position in the Uniswap v3 pool with 0.01% fee tier.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v3 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v3 CDP Spoke of the stable Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v3 liquidity position in the USDC/USDT pool with 0.01% fee tier. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the stable Hub, up to 35% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
       },
       {
         "name": "uni-WETH-USDC-500",
@@ -859,7 +949,29 @@
               "GHO-USDT-100"
             ]
           }
-        ]
+        ],
+        "content": {
+          "slug": "uniswap-v3-weth-usdc-0-05",
+          "name": "WETH/USDC Uniswap v3",
+          "category": "crypto",
+          "venueLabel": "Uniswap v3",
+          "description": "Borrow GHO against a WETH/USDC liquidity position in the Uniswap v3 pool with 0.05% fee tier.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v3 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v3 CDP Spoke of the volatile Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 1%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v3 liquidity position in the WETH/USDC pool with 0.05% fee tier. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the volatile Hub, up to 30% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 1%."
+            }
+          ]
+        }
       },
       {
         "name": "slip-USDC-USDT-cl1",
@@ -891,7 +1003,29 @@
               "USDC-USDT-500"
             ]
           }
-        ]
+        ],
+        "content": {
+          "slug": "slipstream-usdc-usdt-cl1",
+          "name": "USDC/USDT Slipstream",
+          "category": "stable",
+          "venueLabel": "Slipstream",
+          "description": "Borrow USDC against a USDC/USDT liquidity position in the Slipstream pool with tick spacing 1.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Slipstream integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Slipstream CDP Spoke of the stable Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Slipstream liquidity position in the USDC/USDT pool with tick spacing 1. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "USDC from the stable Hub, up to 35% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
       },
       {
         "name": "slip-WETH-USDC-cl100",
@@ -924,7 +1058,29 @@
               "USDC-USDT-100"
             ]
           }
-        ]
+        ],
+        "content": {
+          "slug": "slipstream-weth-usdc-cl100",
+          "name": "WETH/USDC Slipstream",
+          "category": "crypto",
+          "venueLabel": "Slipstream",
+          "description": "Borrow USDC against a WETH/USDC liquidity position in the Slipstream pool with tick spacing 100.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Slipstream integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Slipstream CDP Spoke of the volatile Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 1%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Slipstream liquidity position in the WETH/USDC pool with tick spacing 100. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "USDC from the volatile Hub, up to 30% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 1%."
+            }
+          ]
+        }
       }
     ],
     "pools": {

@@ -141,9 +141,9 @@ place_executor() {
 
 if [[ " $STEPS " == *" deploy "* ]]; then
   # A fresh deployment: no output of an earlier run may stand in for this one's.
-  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets}.json \
+  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets,listing-metadata}.json \
     "$OUT"/operation-*.json "$OUT"/aip-*.json
-  [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337
+  [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337 "$OUT/listing-content"
   place_multicall3 &&
     run_script 00-factories &&
     run_script 01-aave-v4 &&
@@ -162,6 +162,7 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     run_script 09-execute-listing-setup &&
     run_script 09-debt-oracles &&
     run_script 10-aave-debt-reserves-aip &&
+    run_script 09-market-metadata &&
     run_script 09-listing-markets &&
     advance 432001 wait-listing-markets &&
     run_script 09-execute-listing-markets &&
