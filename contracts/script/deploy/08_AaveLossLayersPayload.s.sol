@@ -5,7 +5,17 @@ pragma solidity 0.8.28;
 
 import {ICoverageSpoke} from "../../src/coverage/coverage-spoke/ICoverageSpoke.sol";
 import {ICoverageSpokeAdmin} from "../../src/coverage/coverage-spoke/ICoverageSpokeAdmin.sol";
-import {AFlags, ARoleMembership, ARoleUpdate, ASpokeAssetConfig, ASpokeConfig, ASpokeToAssetsAddition, ATargetFunctionRoleUpdate, IAaveHubLimits, AavePayloads} from "./lib/AavePayloads.sol";
+import {
+    AFlags,
+    ARoleMembership,
+    ARoleUpdate,
+    ASpokeAssetConfig,
+    ASpokeConfig,
+    ASpokeToAssetsAddition,
+    ATargetFunctionRoleUpdate,
+    AavePayloads,
+    IAaveHubLimits
+} from "./lib/AavePayloads.sol";
 import {console2} from "forge-std/console2.sol";
 
 interface ILayerFunding {
@@ -60,8 +70,7 @@ contract AaveLossLayersPayload is AavePayloads {
         deployer = controller;
         Builder memory b = _newBuilder();
         _roles(b);
-        (uint256 nHubs, uint256 nAssets) =
-            (_count(cfg, ".aavePayload.hubs"), _count(cfg, ".aavePayload.debtAssets"));
+        (uint256 nHubs, uint256 nAssets) = (_count(cfg, ".aavePayload.hubs"), _count(cfg, ".aavePayload.debtAssets"));
         string memory coverage = vm.readFile(_outputPath("coverage"));
         for (uint256 h = 0; h < nHubs; ++h) {
             for (uint256 i = 0; i < nAssets; ++i) {
@@ -174,7 +183,13 @@ contract AaveLossLayersPayload is AavePayloads {
         add.assets = new ASpokeAssetConfig[](1);
         add.assets[0] = ASpokeAssetConfig(
             c.ASSET(),
-            ASpokeConfig(IAaveHubLimits(hub).MAX_ALLOWED_SPOKE_CAP(), 0, IAaveHubLimits(hub).MAX_RISK_PREMIUM_THRESHOLD(), true, false)
+            ASpokeConfig(
+                IAaveHubLimits(hub).MAX_ALLOWED_SPOKE_CAP(),
+                0,
+                IAaveHubLimits(hub).MAX_RISK_PREMIUM_THRESHOLD(),
+                true,
+                false
+            )
         );
         _spokeToAssets(b, add);
         for (uint256 s = 0; s < cdps.length; ++s) {

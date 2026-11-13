@@ -56,8 +56,9 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         for (uint256 i = 0; i < n; ++i) {
             uint8 words = _eq(c.integrations[i].kind, "slipstream") ? 6 : 7;
             string memory tag = string.concat(".", vm.toString(c.integrations[i].integrationId));
-            bytes memory args =
-                abi.encode(p.timelock, c.blockTime, CL_POKE_MIN_GAS_FLOOR, CL_POKE_MIN_GAS_CEILING, c.hasSequencer, words);
+            bytes memory args = abi.encode(
+                p.timelock, c.blockTime, CL_POKE_MIN_GAS_FLOOR, CL_POKE_MIN_GAS_CEILING, c.hasSequencer, words
+            );
             address moduleLogic = _deploy(
                 string.concat("LPOracleCLModuleLogic", tag),
                 bytes.concat(_artifact("LPOracleCLModuleLogic.sol", "LPOracleCLModuleLogic"), args)
@@ -72,7 +73,10 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
             }
             // LPOracleLogicSet{poke, init, listing, view}.
             bytes memory set = abi.encode(
-                d.clOracleLogics[4 * i], d.clOracleLogics[4 * i + 1], d.clOracleLogics[4 * i + 2], d.clOracleLogics[4 * i + 3]
+                d.clOracleLogics[4 * i],
+                d.clOracleLogics[4 * i + 1],
+                d.clOracleLogics[4 * i + 2],
+                d.clOracleLogics[4 * i + 3]
             );
             d.clOraclePricing[i] = _deploy(
                 string.concat("LPOracleCLImplementation", tag),

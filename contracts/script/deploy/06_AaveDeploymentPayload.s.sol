@@ -3,7 +3,19 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AAssetListing, ADynamicReserveConfig, AInterestRateData, ALiquidationConfigUpdate, AReserveConfig, AReserveListing, ASpokeAssetConfig, ASpokeConfig, ASpokeToAssetsAddition, IAaveHubLimits, AavePayloads} from "./lib/AavePayloads.sol";
+import {
+    AAssetListing,
+    ADynamicReserveConfig,
+    AInterestRateData,
+    ALiquidationConfigUpdate,
+    AReserveConfig,
+    AReserveListing,
+    ASpokeAssetConfig,
+    ASpokeConfig,
+    ASpokeToAssetsAddition,
+    AavePayloads,
+    IAaveHubLimits
+} from "./lib/AavePayloads.sol";
 
 interface IFlashAcl {
     function addFlashBorrower(
@@ -75,7 +87,9 @@ contract AaveDeploymentPayload is AavePayloads {
         uint256 n = _count(cfg, ".aave.hubs");
         for (uint256 i = 0; i < n; ++i) {
             string memory k = string.concat(".aave.hubs[", vm.toString(i), "]");
-            if (_eq(vm.parseJsonString(cfg, string.concat(k, ".label")), label)) return _addr(cfg, string.concat(k, ".hub"));
+            if (_eq(vm.parseJsonString(cfg, string.concat(k, ".label")), label)) {
+                return _addr(cfg, string.concat(k, ".hub"));
+            }
         }
         revert(string.concat("no aave.hubs entry ", label));
     }
@@ -168,8 +182,7 @@ contract AaveDeploymentPayload is AavePayloads {
         for (uint256 i = 0; i < nAssets; ++i) {
             address token = _addr(cfg, string.concat(_ak(i), ".token"));
             uint40 drawCap = cdp ? uint40(vm.parseJsonUint(cfg, string.concat(_ak(i), ".drawCap"))) : 0;
-            add.assets[i] =
-                ASpokeAssetConfig(token, ASpokeConfig(addCap, drawCap, maxRp, true, false));
+            add.assets[i] = ASpokeAssetConfig(token, ASpokeConfig(addCap, drawCap, maxRp, true, false));
             AReserveListing memory r;
             r.spokeConfigurator = _addr(cfg, ".aave.spokeConfigurator");
             r.spoke = spoke;

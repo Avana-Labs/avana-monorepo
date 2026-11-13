@@ -3,7 +3,20 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AAssetListing, ADynamicReserveConfig, AInterestRateData, AReserveConfig, AReserveConfigUpdate, AReserveListing, ASpokeAssetConfig, ASpokeConfig, ASpokeConfigUpdate, ASpokeToAssetsAddition, IAaveHubLimits, AavePayloads} from "./lib/AavePayloads.sol";
+import {
+    AAssetListing,
+    ADynamicReserveConfig,
+    AInterestRateData,
+    AReserveConfig,
+    AReserveConfigUpdate,
+    AReserveListing,
+    ASpokeAssetConfig,
+    ASpokeConfig,
+    ASpokeConfigUpdate,
+    ASpokeToAssetsAddition,
+    AavePayloads,
+    IAaveHubLimits
+} from "./lib/AavePayloads.sol";
 import {ListingBase} from "./lib/ListingBase.sol";
 
 /// @title AaveListingPayload
@@ -90,14 +103,21 @@ contract AaveListingPayload is ListingBase, AavePayloads {
         _assetListing(b, l);
         ASpokeConfigUpdate memory fee = _keepSpokeConfig();
         (fee.hubConfigurator, fee.hub, fee.underlying, fee.spoke, fee.addCap) =
-            (hubCfg, hub, vaultToken, l.feeReceiver, 0);
+        (hubCfg, hub, vaultToken, l.feeReceiver, 0);
         _spokeConfigUpdate(b, fee);
         ASpokeToAssetsAddition memory add;
-        (add.hubConfigurator, add.hub, add.spoke) = (hubCfg, hub, vm.parseJsonAddress(markets, string.concat(k, ".spoke")));
+        (add.hubConfigurator, add.hub, add.spoke) =
+        (hubCfg, hub, vm.parseJsonAddress(markets, string.concat(k, ".spoke")));
         add.assets = new ASpokeAssetConfig[](1);
         add.assets[0] = ASpokeAssetConfig(
             vaultToken,
-            ASpokeConfig(IAaveHubLimits(hub).MAX_ALLOWED_SPOKE_CAP(), 0, IAaveHubLimits(hub).MAX_RISK_PREMIUM_THRESHOLD(), true, false)
+            ASpokeConfig(
+                IAaveHubLimits(hub).MAX_ALLOWED_SPOKE_CAP(),
+                0,
+                IAaveHubLimits(hub).MAX_RISK_PREMIUM_THRESHOLD(),
+                true,
+                false
+            )
         );
         _spokeToAssets(b, add);
     }
@@ -115,8 +135,9 @@ contract AaveListingPayload is ListingBase, AavePayloads {
         r.hub = vm.parseJsonAddress(markets, string.concat(k, ".hub"));
         r.underlying = vaultToken;
         r.priceSource = vm.parseJsonAddress(markets, string.concat(k, ".lpOracle"));
-        r.config =
-            AReserveConfig(uint24(vm.parseJsonUint(markets, string.concat(k, ".collateralRisk"))), false, false, false, false);
+        r.config = AReserveConfig(
+            uint24(vm.parseJsonUint(markets, string.concat(k, ".collateralRisk"))), false, false, false, false
+        );
         r.dynamicConfig = ADynamicReserveConfig(
             uint16(vm.parseJsonUint(markets, string.concat(k, ".collateralFactorBps"))),
             uint32(vm.parseJsonUint(markets, string.concat(k, ".maxLiquidationBonus"))),

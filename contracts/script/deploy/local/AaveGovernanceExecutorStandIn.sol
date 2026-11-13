@@ -20,7 +20,12 @@ contract AaveGovernanceExecutorStandIn {
     error ExecutionFailed(bytes reason);
 
     event ExecutedAction(
-        address indexed target, uint256 value, string signature, bytes data, uint256 executionTime, bool withDelegatecall
+        address indexed target,
+        uint256 value,
+        string signature,
+        bytes data,
+        uint256 executionTime,
+        bool withDelegatecall
     );
 
     /// @notice Runs `signature(data)` on `target`, by `delegatecall` when `withDelegatecall` (a payload's `execute()`).

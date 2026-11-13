@@ -256,7 +256,8 @@ interface IAaveV3PoolSupply {
 /// network reads them.
 abstract contract WorldAaveV3 is DeployBase {
     string internal constant AAVE_V3_OUT = "out-aave-v3";
-    string internal constant AAVE_V3_LOGIC = "dependencies/aave-v3-origin-3.7.0/src/contracts/protocol/libraries/logic/";
+    string internal constant AAVE_V3_LOGIC =
+        "dependencies/aave-v3-origin-3.7.0/src/contracts/protocol/libraries/logic/";
     /// @notice Aave V3's flash-loan premium on Ethereum: 5 bps.
     uint128 internal constant AAVE_V3_FLASH_PREMIUM_BPS = 5;
 
@@ -330,7 +331,9 @@ abstract contract WorldAaveV3 is DeployBase {
         AaveV3MarketReport memory none;
         setup = _deploy(
             "AaveV3SetupBatch",
-            bytes.concat(_aaveV3Code("AaveV3SetupBatch.sol", "AaveV3SetupBatch"), abi.encode(owner, roles, config, none))
+            bytes.concat(
+                _aaveV3Code("AaveV3SetupBatch.sol", "AaveV3SetupBatch"), abi.encode(owner, roles, config, none)
+            )
         );
         AaveV3InitialReport memory initial = IAaveV3SetupBatch(setup).getInitialReport();
         aaveV3.poolAddressesProvider = initial.poolAddressesProvider;
@@ -382,7 +385,7 @@ abstract contract WorldAaveV3 is DeployBase {
             variableDebtTokenName: string.concat("Aave Test Variable Debt ", symbol),
             variableDebtTokenSymbol: string.concat("variableDebtTest", symbol),
             params: "",
-            interestRateData: abi.encode(AaveV3InterestRateData(80_00, 0, 4_00, 60_00))
+            interestRateData: abi.encode(AaveV3InterestRateData(8000, 0, 400, 6000))
         });
         IAaveV3Configurator(aaveV3.poolConfiguratorProxy).initReserves(input);
         address[] memory assets = new address[](1);

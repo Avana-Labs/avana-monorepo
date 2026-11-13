@@ -55,7 +55,9 @@ contract DeployCoverageSpokes is DeployBase {
         uint256 n = _count(cfg, ".aave.hubs");
         for (uint256 i = 0; i < n; ++i) {
             string memory k = string.concat(".aave.hubs[", vm.toString(i), "]");
-            if (_eq(vm.parseJsonString(cfg, string.concat(k, ".label")), label)) return _addr(cfg, string.concat(k, ".hub"));
+            if (_eq(vm.parseJsonString(cfg, string.concat(k, ".label")), label)) {
+                return _addr(cfg, string.concat(k, ".hub"));
+            }
         }
         revert(string.concat("no aave.hubs entry ", label));
     }
@@ -90,8 +92,9 @@ contract DeployCoverageSpokes is DeployBase {
     ) private returns (string memory json) {
         (string memory label, string memory symbol, address hub, address token) = _name(h, i);
         string memory name = string.concat("CoverageSpoke.", label, ".", symbol);
-        bytes memory args =
-            abi.encode(hub, token, IHubAssets(hub).getAssetId(token), _addr(cfg, ".aave.accessManager"), uint256(1_209_600));
+        bytes memory args = abi.encode(
+            hub, token, IHubAssets(hub).getAssetId(token), _addr(cfg, ".aave.accessManager"), uint256(1_209_600)
+        );
         address cs = _deploy(name, bytes.concat(_artifact("CoverageSpoke.sol", "CoverageSpoke"), args));
         json = vm.serializeAddress("coverage", name, cs);
         console2.log(name, cs);
@@ -105,8 +108,9 @@ contract DeployCoverageSpokes is DeployBase {
         for (uint256 h = 0; h < nHubs; ++h) {
             for (uint256 i = 0; i < nAssets; ++i) {
                 (string memory label, string memory symbol,, address token) = _name(h, i);
-                ICoverageSpoke cs =
-                    ICoverageSpoke(vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", label, ".", symbol, "']")));
+                ICoverageSpoke cs = ICoverageSpoke(
+                    vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", label, ".", symbol, "']"))
+                );
                 uint256 minimum = cs.firstLossReserveMinimum();
                 uint256 balance = cs.fundedBalance();
                 if (minimum <= balance) continue;

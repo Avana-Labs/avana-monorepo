@@ -71,12 +71,7 @@ contract AvanaAaveV4Payload is AaveV4Payload {
         a = abi.decode(data, (AvanaAaveActions));
     }
 
-    function accessManagerRoleMemberships()
-        public
-        view
-        override
-        returns (IAaveV4ConfigEngine.RoleMembership[] memory)
-    {
+    function accessManagerRoleMemberships() public view override returns (IAaveV4ConfigEngine.RoleMembership[] memory) {
         return actions().roleMemberships;
     }
 

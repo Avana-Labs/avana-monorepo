@@ -123,14 +123,29 @@ contract ListMarkets is ListingBase {
             address[] memory contracts = new address[](2 * n);
             for (uint256 j = 0; j < n; ++j) {
                 (contracts[2 * j], contracts[2 * j + 1]) =
-                    (c.integrations[i].positionManagers[j], c.integrations[i].factories[j]);
+                (c.integrations[i].positionManagers[j], c.integrations[i].factories[j]);
             }
-            _add(op, address(registry), abi.encodeCall(registry.recordIntegrationContracts, (id, contracts)), "MR.recordIntegrationContracts");
-            _add(op, address(registry), abi.encodeCall(registry.finalizeIntegrationContracts, (id)), "MR.finalizeIntegrationContracts");
+            _add(
+                op,
+                address(registry),
+                abi.encodeCall(registry.recordIntegrationContracts, (id, contracts)),
+                "MR.recordIntegrationContracts"
+            );
+            _add(
+                op,
+                address(registry),
+                abi.encodeCall(registry.finalizeIntegrationContracts, (id)),
+                "MR.finalizeIntegrationContracts"
+            );
         }
         for (uint256 h = 0; h < c.aave.hubs.length; ++h) {
             uint256 cap = vm.parseUint(_str(".listing.hubDepositorUsdCap")) * 1e8;
-            _add(op, address(store), abi.encodeCall(store.setInitialHubCaps, (c.aave.hubs[h].hub, cap)), "PS.setInitialHubCaps");
+            _add(
+                op,
+                address(store),
+                abi.encodeCall(store.setInitialHubCaps, (c.aave.hubs[h].hub, cap)),
+                "PS.setInitialHubCaps"
+            );
         }
         _listTokens(op);
         _listDebtAssets(op);
@@ -149,7 +164,12 @@ contract ListMarkets is ListingBase {
             string memory sym = _str(string.concat(k, ".symbol"));
             uint16 dev = uint16(_uint(string.concat(k, ".deviationBps")));
             for (uint256 r = 0; r < 4; ++r) {
-                _add(op, address(store), abi.encodeCall(store.setFeed, (_feed(sym, roles[r]), _feedDef(dev))), "PS.setFeed");
+                _add(
+                    op,
+                    address(store),
+                    abi.encodeCall(store.setFeed, (_feed(sym, roles[r]), _feedDef(dev))),
+                    "PS.setFeed"
+                );
             }
             TokenDef memory d;
             d.listed = true;
@@ -160,7 +180,12 @@ contract ListMarkets is ListingBase {
             d.standbyRoute = _one(_feed(sym, "standby"));
             d.replacedSlot = RouteSlot.None;
             d.issuerProbe = IssuerProbe.None;
-            _add(op, address(registry), abi.encodeCall(registry.listToken, (_token(sym), d)), string.concat("MR.listToken ", sym));
+            _add(
+                op,
+                address(registry),
+                abi.encodeCall(registry.listToken, (_token(sym), d)),
+                string.concat("MR.listToken ", sym)
+            );
         }
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("tokens", i);
@@ -168,13 +193,33 @@ contract ListMarkets is ListingBase {
             uint16 cf = uint16(_uint(string.concat(k, ".collateralFactorBps")));
             uint16 tol = uint16(_uint(string.concat(k, ".agreementToleranceBps")));
             SecondSource memory none;
-            _add(op, address(store), abi.encodeCall(store.setTokenCollateralFactorBps, (t, cf)), "PS.setTokenCollateralFactorBps");
-            _add(op, address(store), abi.encodeCall(store.setFeedAgreementToleranceBps, (t, tol)), "PS.setFeedAgreementToleranceBps");
-            _add(op, address(store), abi.encodeCall(store.setSecondSource, (t, _secondSource(k), none)), "PS.setSecondSource");
+            _add(
+                op,
+                address(store),
+                abi.encodeCall(store.setTokenCollateralFactorBps, (t, cf)),
+                "PS.setTokenCollateralFactorBps"
+            );
+            _add(
+                op,
+                address(store),
+                abi.encodeCall(store.setFeedAgreementToleranceBps, (t, tol)),
+                "PS.setFeedAgreementToleranceBps"
+            );
+            _add(
+                op,
+                address(store),
+                abi.encodeCall(store.setSecondSource, (t, _secondSource(k), none)),
+                "PS.setSecondSource"
+            );
             string[] memory hubs = vm.parseJsonStringArray(cfg, string.concat(k, ".hubs"));
             uint256 cap = vm.parseUint(_str(string.concat(k, ".tokenCapUsd"))) * 1e8;
             for (uint256 h = 0; h < hubs.length; ++h) {
-                _add(op, address(store), abi.encodeCall(store.setInitialTokenCap, (_hub(hubs[h]), t, cap)), "PS.setInitialTokenCap");
+                _add(
+                    op,
+                    address(store),
+                    abi.encodeCall(store.setInitialTokenCap, (_hub(hubs[h]), t, cap)),
+                    "PS.setInitialTokenCap"
+                );
             }
         }
     }
@@ -192,7 +237,12 @@ contract ListMarkets is ListingBase {
             bool fixedPrice = _bool(string.concat(k, ".fixedPrice"));
             if (bytes(_tokenKey(asset)).length == 0) {
                 uint16 dev = uint16(_uint(string.concat(k, ".deviationBps")));
-                _add(op, address(store), abi.encodeCall(store.setFeed, (_feed(sym, "primary"), _feedDef(dev))), "PS.setFeed");
+                _add(
+                    op,
+                    address(store),
+                    abi.encodeCall(store.setFeed, (_feed(sym, "primary"), _feedDef(dev))),
+                    "PS.setFeed"
+                );
                 require(fixedPrice, "a debt asset that is no pool token must be fixed-price here");
                 TokenDef memory d;
                 d.listed = true;
@@ -200,11 +250,21 @@ contract ListMarkets is ListingBase {
                 d.primaryRoute = _one(_feed(sym, "primary"));
                 d.alternateRoute = new address[](0);
                 d.standbyRoute = new address[](0);
-                _add(op, address(registry), abi.encodeCall(registry.listToken, (asset, d)), string.concat("MR.listToken ", sym));
+                _add(
+                    op,
+                    address(registry),
+                    abi.encodeCall(registry.listToken, (asset, d)),
+                    string.concat("MR.listToken ", sym)
+                );
             }
             if (!fixedPrice) {
                 uint16 rise = uint16(_uint(string.concat(k, ".stressRiseBps")));
-                _add(op, address(store), abi.encodeCall(store.tightenDebtStressRiseBps, (asset, rise)), "PS.tightenDebtStressRiseBps");
+                _add(
+                    op,
+                    address(store),
+                    abi.encodeCall(store.tightenDebtStressRiseBps, (asset, rise)),
+                    "PS.tightenDebtStressRiseBps"
+                );
             }
         }
     }
@@ -227,7 +287,9 @@ contract ListMarkets is ListingBase {
             }
             seen[i] = h;
             if (!approved) {
-                _add(op, address(registry), abi.encodeCall(registry.approveSpokeCodeHash, (h)), "MR.approveSpokeCodeHash");
+                _add(
+                    op, address(registry), abi.encodeCall(registry.approveSpokeCodeHash, (h)), "MR.approveSpokeCodeHash"
+                );
             }
             SpokeDef memory d;
             d.hub = _hub(_str(string.concat(k, ".hub")));
@@ -235,7 +297,12 @@ contract ListMarkets is ListingBase {
             d.riskTier = RiskTier(uint8(_uint(string.concat(k, ".tier"))));
             d.implementation = impl;
             d.aaveOracle = ISpokeImplementationRead(_spokeAddr(label)).ORACLE();
-            _add(op, address(registry), abi.encodeCall(registry.deployCdpSpoke, (d)), string.concat("MR.deployCdpSpoke ", label));
+            _add(
+                op,
+                address(registry),
+                abi.encodeCall(registry.deployCdpSpoke, (d)),
+                string.concat("MR.deployCdpSpoke ", label)
+            );
             _add(
                 op,
                 address(store),
@@ -259,7 +326,12 @@ contract ListMarkets is ListingBase {
             string memory hubLabel = _hubOfSpoke(_str(string.concat(k, ".spoke")));
             address hub = _hub(hubLabel);
             address cs = vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", hubLabel, ".", sym, "']"));
-            _add(op, address(registry), abi.encodeCall(registry.setCoverageSpoke, (hub, _token(sym), cs)), "MR.setCoverageSpoke");
+            _add(
+                op,
+                address(registry),
+                abi.encodeCall(registry.setCoverageSpoke, (hub, _token(sym), cs)),
+                "MR.setCoverageSpoke"
+            );
             _add(
                 op,
                 address(registry),
@@ -297,8 +369,7 @@ contract ListMarkets is ListingBase {
             address source;
             if (_bool(string.concat(k, ".fixedPrice"))) {
                 source = _deploy(
-                    string.concat("FixedPriceSource.", sym),
-                    _artifact("FixedPriceSource.sol", "FixedPriceSource")
+                    string.concat("FixedPriceSource.", sym), _artifact("FixedPriceSource.sol", "FixedPriceSource")
                 );
             } else {
                 DebtOracleInitParams memory p = DebtOracleInitParams({
@@ -313,8 +384,7 @@ contract ListMarkets is ListingBase {
                 source = _deploy(
                     string.concat("DebtOracle.", sym),
                     bytes.concat(
-                        type(ERC1967Proxy).creationCode,
-                        abi.encode(impl, abi.encodeCall(IDebtOracle.initialize, (p)))
+                        type(ERC1967Proxy).creationCode, abi.encode(impl, abi.encodeCall(IDebtOracle.initialize, (p)))
                     )
                 );
             }
@@ -420,7 +490,8 @@ contract ListMarkets is ListingBase {
         // simulated binding that is reverted: `deployVaultToken` earlier in the batch must name the same `d`.
         uint256 snap = vm.snapshotState();
         vm.prank(address(registry));
-        (, m.decimals) = IAmmIntegration(m.lpVault).bindMarket(m.marketId, m.pool, bytes32(0), m.shape, m.integrationData);
+        (, m.decimals) =
+            IAmmIntegration(m.lpVault).bindMarket(m.marketId, m.pool, bytes32(0), m.shape, m.integrationData);
         vm.revertToState(snap);
         m.debtAsset = _debtAssetOf(m.spokeLabel);
     }
@@ -524,8 +595,9 @@ contract ListMarkets is ListingBase {
             d.decimals = IDecimals(d.asset).decimals();
             d.priceSource = vm.parseJsonAddress(sources, string.concat(".", sym));
             d.fixedPrice = _debtAssetFixed(sym);
-            d.coverageSpoke =
-                vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", _hubOfSpoke(spokeLabel), ".", sym, "']"));
+            d.coverageSpoke = vm.parseJsonAddress(
+                coverage, string.concat("$['CoverageSpoke.", _hubOfSpoke(spokeLabel), ".", sym, "']")
+            );
             d.approved = true;
             _add(
                 op,
@@ -541,13 +613,19 @@ contract ListMarkets is ListingBase {
                 min: uint96(_uint(".listing.speedLimits.debtMinWhole") * unit),
                 max: uint96(_uint(".listing.speedLimits.debtMaxWhole") * unit)
             });
-            _add(op, address(store), abi.encodeCall(store.loosenDebtSpeedLimit, (d.fundingHub, d.asset, s)), "PS.loosenDebtSpeedLimit");
+            _add(
+                op,
+                address(store),
+                abi.encodeCall(store.loosenDebtSpeedLimit, (d.fundingHub, d.asset, s)),
+                "PS.loosenDebtSpeedLimit"
+            );
         }
         uint256 a = _count(cfg, ".listing.debtAssets");
         for (uint256 i = 0; i < a; ++i) {
             string memory k = _at("debtAssets", i);
-            DebtReserveParams memory p =
-                DebtReserveParams({floorRoundingAllowance: vm.parseUint(_str(string.concat(k, ".floorRoundingAllowance")))});
+            DebtReserveParams memory p = DebtReserveParams({
+                floorRoundingAllowance: vm.parseUint(_str(string.concat(k, ".floorRoundingAllowance")))
+            });
             _add(
                 op,
                 address(store),
@@ -594,7 +672,12 @@ contract ListMarkets is ListingBase {
             integrationData: m.integrationData
         });
         _add(op, address(registry), abi.encodeCall(registry.listCollateralMarket, (d)), "MR.listCollateralMarket");
-        _add(op, address(store), abi.encodeCall(store.setInitialMarketParams, (m.marketId, _marketParams(m.key))), "PS.setInitialMarketParams");
+        _add(
+            op,
+            address(store),
+            abi.encodeCall(store.setInitialMarketParams, (m.marketId, _marketParams(m.key))),
+            "PS.setInitialMarketParams"
+        );
         _add(
             op,
             address(store),
@@ -609,7 +692,12 @@ contract ListMarkets is ListingBase {
             ),
             "PS.setInitialMarketCaps"
         );
-        _add(op, address(store), abi.encodeCall(store.loosenMarketSpeedLimits, (m.marketId, _speedLimits())), "PS.loosenMarketSpeedLimits");
+        _add(
+            op,
+            address(store),
+            abi.encodeCall(store.loosenMarketSpeedLimits, (m.marketId, _speedLimits())),
+            "PS.loosenMarketSpeedLimits"
+        );
         routes = _routes(op, m);
     }
 
@@ -672,10 +760,16 @@ contract ListMarkets is ListingBase {
             address tokenIn = _token(_str(string.concat(rk, ".token")));
             address asset = _token(_str(string.concat(rk, ".asset")));
             for (uint8 kind = 0; kind < 2; ++kind) {
-                string[] memory pools = vm.parseJsonStringArray(cfg, string.concat(rk, kind == 0 ? ".primary" : ".backup"));
+                string[] memory pools =
+                    vm.parseJsonStringArray(cfg, string.concat(rk, kind == 0 ? ".primary" : ".backup"));
                 address route = _deployRoute(m, tokenIn, asset, pools);
                 routes[2 * i + kind] = route;
-                _add(op, address(registry), abi.encodeCall(registry.setRoute, (m.marketId, tokenIn, asset, kind, route)), "MR.setRoute");
+                _add(
+                    op,
+                    address(registry),
+                    abi.encodeCall(registry.setRoute, (m.marketId, tokenIn, asset, kind, route)),
+                    "MR.setRoute"
+                );
             }
         }
     }
@@ -706,7 +800,8 @@ contract ListMarkets is ListingBase {
         rc.uniswapV3Factory = _addr(cfg, ".listing.uniswapV3Factory");
         rc.curveLegacyPools = new address[](0);
         vm.broadcast(deployerOf());
-        return _deploy("DexPathRoute", bytes.concat(_artifact("DexPathRoute.sol", "DexPathRoute"), abi.encode(rc, hops)));
+        return
+            _deploy("DexPathRoute", bytes.concat(_artifact("DexPathRoute.sol", "DexPathRoute"), abi.encode(rc, hops)));
     }
 
     function _marketJson(
@@ -749,9 +844,8 @@ contract ListMarkets is ListingBase {
             uint256 id = first + i;
             // `poke` refuses less than `pokeMinGas` at entry (1,000,000 here); a gas estimate is the gas it uses, so the
             // limit is set explicitly.
-            ILPOracle(vm.parseJsonAddress(markets, string.concat(".market", vm.toString(id), ".lpOracle"))).poke{
-                gas: LP_ORACLE_POKE_GAS
-            }();
+            ILPOracle(vm.parseJsonAddress(markets, string.concat(".market", vm.toString(id), ".lpOracle")))
+            .poke{gas: LP_ORACLE_POKE_GAS}();
         }
         vm.stopBroadcast();
         for (uint256 i = 0; i < n; ++i) {

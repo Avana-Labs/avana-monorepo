@@ -138,8 +138,10 @@ contract DeployAaveV4 is DeployBase {
     /// deployer linked into the Hub engine, and `AaveV4ConfigEngine` linked to the four.
     function _configEngine() private returns (address engine) {
         string memory dir = "dependencies/aave-v4-a3ef63e/src/config-engine/libraries/";
-        address tokenization =
-            _deploy("TokenizationSpokeDeployer", _artifactIn("out-aave", "TokenizationSpokeDeployer.sol", "TokenizationSpokeDeployer"));
+        address tokenization = _deploy(
+            "TokenizationSpokeDeployer",
+            _artifactIn("out-aave", "TokenizationSpokeDeployer.sol", "TokenizationSpokeDeployer")
+        );
         string[] memory fqn = new string[](1);
         address[] memory lib = new address[](1);
         (fqn[0], lib[0]) = (string.concat(dir, "TokenizationSpokeDeployer.sol:TokenizationSpokeDeployer"), tokenization);
@@ -153,7 +155,8 @@ contract DeployAaveV4 is DeployBase {
             (fqns[i], libs[i]) = (string.concat(dir, names[i], ".sol:", names[i]), _deploy(names[i], code));
         }
         engine = _deploy(
-            "AaveV4ConfigEngine", _artifactLinked("out-aave", "AaveV4ConfigEngine.sol", "AaveV4ConfigEngine", fqns, libs)
+            "AaveV4ConfigEngine",
+            _artifactLinked("out-aave", "AaveV4ConfigEngine.sol", "AaveV4ConfigEngine", fqns, libs)
         );
     }
 

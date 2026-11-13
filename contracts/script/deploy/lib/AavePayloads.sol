@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {DeployBase} from "./DeployBase.sol";
-import {SSTORE2} from "solady/utils/SSTORE2.sol";
 import {console2} from "forge-std/console2.sol";
-
+import {SSTORE2} from "solady/utils/SSTORE2.sol";
 
 // ABI mirrors of Aave's config-engine structs (`IAaveV4ConfigEngine`, a3ef63e), field for field with contract types as
 // addresses: the scripts build these, `abi.encode` them as `AvanaAaveActions`, and `AvanaAaveV4Payload` decodes the

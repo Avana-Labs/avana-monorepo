@@ -204,8 +204,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
             "RiskModuleSpeedLogic", bytes.concat(_artifact("RiskModuleSpeedLogic.sol", "RiskModuleSpeedLogic"), im)
         );
         // RiskModuleLogics{drift, breaker, pledge, borrow, status, speed}.
-        bytes memory logics =
-            abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
+        bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
         d.implementation =
             _deploy("RiskModuleImplementation", bytes.concat(_artifact("RiskModule.sol", "RiskModule"), im, logics));
         d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModuleAdmin.initialize, (p.timelock)));

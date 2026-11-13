@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {
     CollHubSpokeConfig,
     CollInterestRateData,
@@ -14,7 +15,6 @@ import {
     ICollHubConfigurator,
     ICollSpokeConfigurator
 } from "../utils/fixtures/CollateralizationFixture.sol";
-import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 
 /// @title AaveV4LendSpokeWithdrawGasIntegrationTest
@@ -37,23 +37,34 @@ contract AaveV4LendSpokeWithdrawGasIntegrationTest is AaveV4Fixture {
         CollPriceSource price = new CollPriceSource(1e8);
         IAaveV4Hub hubView = IAaveV4Hub(aave.hub);
         vm.startPrank(aaveDao);
-        assetId = ICollHubConfigurator(aave.hubConfigurator).addAssetWithDecimals(
-            aave.hub, address(usdc), 6, aave.treasurySpoke, 0, aave.irStrategy, abi.encode(CollInterestRateData(9000, 0, 400, 6000))
-        );
-        ICollHubConfigurator(aave.hubConfigurator).addSpoke(
-            aave.hub,
-            aave.lendSpoke,
-            assetId,
-            CollHubSpokeConfig(hubView.MAX_ALLOWED_SPOKE_CAP(), 0, hubView.MAX_RISK_PREMIUM_THRESHOLD(), true, false)
-        );
-        reserveId = ICollSpokeConfigurator(aave.spokeConfigurator).addReserve(
-            aave.lendSpoke,
-            aave.hub,
-            assetId,
-            address(price),
-            CollSpokeReserveConfig(0, false, false, true, false),
-            CollSpokeDynamicReserveConfig(0, 10_000, 0)
-        );
+        assetId = ICollHubConfigurator(aave.hubConfigurator)
+            .addAssetWithDecimals(
+                aave.hub,
+                address(usdc),
+                6,
+                aave.treasurySpoke,
+                0,
+                aave.irStrategy,
+                abi.encode(CollInterestRateData(9000, 0, 400, 6000))
+            );
+        ICollHubConfigurator(aave.hubConfigurator)
+            .addSpoke(
+                aave.hub,
+                aave.lendSpoke,
+                assetId,
+                CollHubSpokeConfig(
+                    hubView.MAX_ALLOWED_SPOKE_CAP(), 0, hubView.MAX_RISK_PREMIUM_THRESHOLD(), true, false
+                )
+            );
+        reserveId = ICollSpokeConfigurator(aave.spokeConfigurator)
+            .addReserve(
+                aave.lendSpoke,
+                aave.hub,
+                assetId,
+                address(price),
+                CollSpokeReserveConfig(0, false, false, true, false),
+                CollSpokeDynamicReserveConfig(0, 10_000, 0)
+            );
         vm.stopPrank();
         usdc.mint(lender, 2 * AMOUNT);
         vm.prank(lender);
@@ -98,9 +109,8 @@ contract AaveV4LendSpokeWithdrawGasIntegrationTest is AaveV4Fixture {
 
         vm.warp(block.timestamp + 1);
         vm.prank(lender);
-        (bool ok,) = aave.lendSpoke.call{gas: sameSecond}(
-            abi.encodeCall(IAaveV4Spoke.withdraw, (reserveId, AMOUNT, lender))
-        );
+        (bool ok,) =
+            aave.lendSpoke.call{gas: sameSecond}(abi.encodeCall(IAaveV4Spoke.withdraw, (reserveId, AMOUNT, lender)));
         assertFalse(ok, "the same-second gas limit runs out after time has passed");
     }
 }
