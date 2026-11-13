@@ -11,6 +11,10 @@
  * `poke()` counts the call and returns the same state. The oracles' own storage rules (when the disagreement start is
  * set and cleared, what each state serves) are proved on the real contracts in LPOracle.spec and DebtOracle.spec
  * (PROP-027, PROP-049, PROP-074).
+ *
+ * PriceState, PriceStateView and DebtPriceView are file-level Solidity types, which CVL names through any contract of
+ * the scene; they are qualified by AccessControlUpgradeable, the one contract in both scenes that import this model
+ * (LPVaultSwap.conf and RiskModule.conf).
  */
 
 persistent ghost mapping(address => bool) pvCached;
@@ -43,12 +47,12 @@ function pvIsLive(address o) returns bool {
     return !pvCached[o] && !pvExpired[o] && !pvDrifting[o] && !pvDisagreementPause[o] && !pvDisagreementExpired[o];
 }
 
-function priceStateOf(address o) returns PriceState {
-    PriceState s;
-    require pvExpired[o] => s == PriceState.Expired;
-    require (pvCached[o] && !pvExpired[o]) => s == PriceState.Cached;
-    require (!pvCached[o] && !pvExpired[o] && pvDrifting[o]) => s == PriceState.Drifting;
-    require (!pvCached[o] && !pvExpired[o] && !pvDrifting[o]) => s == PriceState.Live;
+function priceStateOf(address o) returns AccessControlUpgradeable.PriceState {
+    AccessControlUpgradeable.PriceState s;
+    require pvExpired[o] => s == AccessControlUpgradeable.PriceState.Expired;
+    require (pvCached[o] && !pvExpired[o]) => s == AccessControlUpgradeable.PriceState.Cached;
+    require (!pvCached[o] && !pvExpired[o] && pvDrifting[o]) => s == AccessControlUpgradeable.PriceState.Drifting;
+    require (!pvCached[o] && !pvExpired[o] && !pvDrifting[o]) => s == AccessControlUpgradeable.PriceState.Live;
     return s;
 }
 
@@ -70,8 +74,8 @@ function debtServedAnswer(address o) returns int256 {
     return require_int256(pvServed[o]);
 }
 
-function priceStateViewOf(address o) returns PriceStateView {
-    PriceStateView v;
+function priceStateViewOf(address o) returns AccessControlUpgradeable.PriceStateView {
+    AccessControlUpgradeable.PriceStateView v;
     require v.state == priceStateOf(o);
     require v.answer == lpServedAnswer(o);
     require to_mathint(v.acceptedAnswer) == pvAccepted[o];
@@ -87,8 +91,8 @@ function priceStateViewOf(address o) returns PriceStateView {
     return v;
 }
 
-function debtPriceViewOf(address o) returns DebtPriceView {
-    DebtPriceView v;
+function debtPriceViewOf(address o) returns AccessControlUpgradeable.DebtPriceView {
+    AccessControlUpgradeable.DebtPriceView v;
     require v.state == priceStateOf(o);
     require v.answer == debtServedAnswer(o);
     require to_mathint(v.acceptedAnswer) == pvAccepted[o];
@@ -104,13 +108,13 @@ function debtPriceViewOf(address o) returns DebtPriceView {
     return v;
 }
 
-function oraclePoke(address o) returns PriceState {
+function oraclePoke(address o) returns AccessControlUpgradeable.PriceState {
     pokeCount[o] = pokeCount[o] + 1;
     totalPokes = totalPokes + 1;
     return priceStateOf(o);
 }
 
-function oracleTokenPrices(address o) returns (uint256, uint256, uint64, PriceState) {
+function oracleTokenPrices(address o) returns (uint256, uint256, uint64, AccessControlUpgradeable.PriceState) {
     uint256 v0;
     uint256 v1;
     require v0 >= 1 && v1 >= 1;

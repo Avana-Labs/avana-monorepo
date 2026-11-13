@@ -6,10 +6,14 @@
  *
  * The state is arbitrary ghost state, havocked between calls; the MarketRegistry's own transition rules are proved on
  * the real MarketRegistry in MarketRegistry.spec (PROP-041, PROP-061, PROP-071).
+ *
+ * PauseState and PauseReason are file-level Solidity types (src/types/), which CVL names through any contract of the
+ * scene; they are qualified by AccessControlUpgradeable, the one contract in both scenes that import this model
+ * (LPVaultSwap.conf and RiskModule.conf).
  */
 
-persistent ghost MarketRegistry.PauseState regPauseState;
-persistent ghost MarketRegistry.PauseReason regPauseReason;
+persistent ghost AccessControlUpgradeable.PauseState regPauseState;
+persistent ghost AccessControlUpgradeable.PauseReason regPauseReason;
 persistent ghost mapping(address => bool) regFrozen;
 persistent ghost mapping(uint256 => uint32) regMarketBreakerReasons;
 persistent ghost mapping(address => mapping(uint256 => uint32)) regDebtBreakerReasons;
@@ -37,18 +41,18 @@ function resetRegistryReads() {
     require forall address a. regFreezeReadsOf[a] == 0;
 }
 
-function registryPauseState() returns MarketRegistry.PauseState {
+function registryPauseState() returns AccessControlUpgradeable.PauseState {
     regPauseStateReads = regPauseStateReads + 1;
     regAnyReads = regAnyReads + 1;
     // pauseReason() == None exactly when the state is not Paused (PROP-041).
-    require (regPauseState == MarketRegistry.PauseState.Paused) == (regPauseReason != MarketRegistry.PauseReason.None);
+    require (regPauseState == AccessControlUpgradeable.PauseState.Paused) == (regPauseReason != AccessControlUpgradeable.PauseReason.None);
     return regPauseState;
 }
 
-function registryPauseReason() returns MarketRegistry.PauseReason {
+function registryPauseReason() returns AccessControlUpgradeable.PauseReason {
     regPauseReasonReads = regPauseReasonReads + 1;
     regAnyReads = regAnyReads + 1;
-    require (regPauseState == MarketRegistry.PauseState.Paused) == (regPauseReason != MarketRegistry.PauseReason.None);
+    require (regPauseState == AccessControlUpgradeable.PauseState.Paused) == (regPauseReason != AccessControlUpgradeable.PauseReason.None);
     return regPauseReason;
 }
 

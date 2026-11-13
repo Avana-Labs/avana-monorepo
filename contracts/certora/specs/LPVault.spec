@@ -8,7 +8,8 @@
  * Position custody: a position comes only from its owner and is recorded against that owner (`receivePosition`); it
  * leaves only to its depositor of record (`returnPosition`, called by Collateralization under the Lock) or, as a stray
  * with no depositor of record, to the address the timelock names (`returnStray`); `unwind` and `releaseToDepositor`
- * lower the position's units by exactly the amount asked and collect exactly the removed principal, so every accrued
+ * lower the position's liquidity by exactly the liquidity of the units asked (`units * 10^k`, `k` the market's unit
+ * exponent, SPEC-UNIT-002) and collect exactly the removed principal, so every accrued
  * fee stays owed to the position; `releaseToDepositor` pays only the depositor of record; `collectFees` pays only the
  * depositor of record and runs only while the AaveAdapter holds the Lock. The LPVault keeps no record, total or counter;
  * Collateralization.spec proves the ledger.
@@ -352,11 +353,13 @@ rule unwindTakesExactlyAndCollectsPrincipal(bytes32 key, uint128 l, uint256[] mi
     mathint liquidityBefore = nfpmLiquidity[m][id];
     mathint owed0Before = nfpmOwed0[m][id];
     mathint owed1Before = nfpmOwed1[m][id];
+    // One unit is 10^k liquidity, k the unit exponent of the position's market (SPEC-UNIT-002).
+    mathint unitExp = currentContract._markets[currentContract._marketOfPosition[key]].unitExp;
     resetCall(recipient, m, id);
 
     unwind(e, key, l, minAmounts, recipient);
 
-    assert nfpmLiquidity[m][id] == liquidityBefore - l, "units not lowered by exactly the amount asked";
+    assert nfpmLiquidity[m][id] == liquidityBefore - l * 10^unitExp, "units not lowered by exactly the amount asked";
     assert collected0 == principalRemoved0 && collected1 == principalRemoved1,
         "collect took other than the removed principal";
     assert nfpmOwed0[m][id] == owed0Before && nfpmOwed1[m][id] == owed1Before, "an unwind collected owed fees";
@@ -377,12 +380,14 @@ rule releaseToDepositorPaysOnlyTheDepositor(bytes32 key, uint128 l, uint256[] mi
     mathint liquidityBefore = nfpmLiquidity[m][id];
     mathint owed0Before = nfpmOwed0[m][id];
     mathint owed1Before = nfpmOwed1[m][id];
+    // One unit is 10^k liquidity, k the unit exponent of the position's market (SPEC-UNIT-002).
+    mathint unitExp = currentContract._markets[currentContract._marketOfPosition[key]].unitExp;
     resetCall(depositor, m, id);
 
     releaseToDepositor(e, key, l, minAmounts);
 
     assert depositor != 0, "released units of a position not in custody";
-    assert nfpmLiquidity[m][id] == liquidityBefore - l, "units not lowered by exactly the amount asked";
+    assert nfpmLiquidity[m][id] == liquidityBefore - l * 10^unitExp, "units not lowered by exactly the amount asked";
     assert collected0 == principalRemoved0 && collected1 == principalRemoved1,
         "collect took other than the removed principal";
     assert nfpmOwed0[m][id] == owed0Before && nfpmOwed1[m][id] == owed1Before, "a partial removal collected owed fees";

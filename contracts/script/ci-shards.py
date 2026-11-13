@@ -33,7 +33,8 @@ fails, so no target is ever dropped.
     ci-shards.py certora-mutate [--layers L]  {"conf": "<Name>"} per Certora conf with a `mutations` section whose
                                               verified contract's file is in a folder of the selected layers (every
                                               such conf when no layer is given)
-    ci-shards.py necessist [--layers L]       {"layer": "<l>", "test": "<path>"} per test file of each layer
+    ci-shards.py necessist [--layers L]       {"layer": "<l>", "test": "<path> [<path> ...]"} per test file of each
+                                              layer; above 256 legs, k files of one layer per leg (necessist_legs)
     ci-shards.py campaign <build> <layer> <echidna|medusa>
                                               {"harness": "<Name>", "segment": <k>} for every harness of the layer
                                               (or of no layer: `other`) and every segment 1..CAMPAIGN_SEGMENTS (8)
@@ -68,6 +69,22 @@ def emit(legs: list[dict], what: str) -> int:
         return 1
     print(json.dumps(legs, separators=(",", ":")))
     return 0
+
+
+def necessist_legs(rows: list[list[str]]) -> list[dict]:
+    """One leg per test file; above MAX_LEGS, each layer's files are run k to a leg (space-separated, as
+    NECESSIST_TESTS takes them), with the smallest k that fits, so no file is dropped and a leg stays in one layer."""
+    by_layer: dict[str, list[str]] = {}
+    for layer, test in rows:
+        by_layer.setdefault(layer, []).append(test)
+    k = 1
+    while sum(-(-len(t) // k) for t in by_layer.values()) > MAX_LEGS:
+        k += 1
+    return [
+        {"layer": layer, "test": " ".join(tests[i : i + k])}
+        for layer, tests in by_layer.items()
+        for i in range(0, len(tests), k)
+    ]
 
 
 def targets(*args: str) -> list[list[str]]:
@@ -272,7 +289,7 @@ def main(argv: list[str]) -> int:
     if what == "certora-mutate":
         return emit(certora_confs(layers), what)
     if what == "necessist":
-        return emit([{"layer": r[0], "test": r[1]} for r in mutation("tests", layers)], what)
+        return emit(necessist_legs(mutation("tests", layers)), what)
     if what == "campaign-harnesses" and len(rest) == 2:
         return emit(campaign_harnesses(rest[0], rest[1]), what)
     if what == "campaign" and len(rest) == 3:

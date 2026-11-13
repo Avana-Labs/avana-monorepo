@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Oracle pokes: `poke()` on every LPOracle and DebtOracle on each new round of any of its feeds and at least once
-// per feed heartbeat, so cached prices, first disagreement observations, the hourly checkpoint and the grace latch
-// are stored (Q-199, Q-248, EMG-035). `poke()` is permissionless and pays nothing.
+// Oracle pokes (3.6 REQ-ORACLE-037): `poke()` on every LPOracle and DebtOracle on each new round of any of its feeds,
+// and at least once per CHECKPOINT_INTERVAL (3,600 s) or per heartbeat of its fastest leg, whichever is shorter, so
+// cached prices, first disagreement observations, the hourly checkpoint and the grace latch are stored (Q-199, Q-248,
+// EMG-035). A poke is sent POKE_LEAD_SECONDS before the interval ends, so the transaction lands inside it.
+// `poke()` is permissionless and pays nothing.
 
 import { type Address, encodeFunctionData, parseAbi } from "viem";
 import type { BlockContext, Job } from "../types.ts";
 
 const pokeAbi = parseAbi(["function poke() returns (uint8 state)"]);
 
-interface OracleTarget {
+export interface OracleTarget {
   readonly oracle: Address;
   readonly implementation: Address;
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
@@ -21,10 +23,26 @@ export class PokeBook {
   readonly lastRound = new Map<Address, bigint>();
 }
 
-/** Due when any feed has a new round since the last poke, or a heartbeat has passed since it. */
-export function pokeDue(now: bigint, lastPoke: bigint | undefined, minHeartbeat: number, newRound: boolean): boolean {
+/** The oracles' CHECKPOINT_INTERVAL: the longest gap REQ-ORACLE-037 allows between two pokes of one oracle. */
+export const CHECKPOINT_INTERVAL_SECONDS = 3_600;
+
+/** How long before the interval ends a poke is sent, so it is mined inside it (5 Ethereum, 30 Base blocks). */
+export const POKE_LEAD_SECONDS = 60;
+
+/**
+ * The longest gap allowed between two pokes of one oracle: CHECKPOINT_INTERVAL, or the heartbeat of its fastest leg
+ * when that is shorter. A heartbeat that is not a positive finite number never lengthens the interval.
+ */
+export function pokeIntervalSeconds(heartbeats: readonly number[]): number {
+  const valid = heartbeats.filter((h) => Number.isFinite(h) && h > 0);
+  return Math.min(CHECKPOINT_INTERVAL_SECONDS, ...valid);
+}
+
+/** Due on the first sight, when any feed has a new round since the last poke, or when the interval less the lead has passed. */
+export function pokeDue(now: bigint, lastPoke: bigint | undefined, intervalSeconds: number, newRound: boolean): boolean {
   if (lastPoke === undefined || newRound) return true;
-  return now - lastPoke >= BigInt(minHeartbeat);
+  const wait = Math.max(0, Math.floor(intervalSeconds) - POKE_LEAD_SECONDS);
+  return now - lastPoke >= BigInt(wait);
 }
 
 export function oraclePokeJob(book: PokeBook): Job<OracleTarget, OracleTarget> {
@@ -47,9 +65,9 @@ export function oraclePokeJob(book: PokeBook): Job<OracleTarget, OracleTarget> {
           book.lastRound.set(f.feed, roundId);
         }
       }
-      if (t.feeds.length === 0) throw new Error(`oracle ${t.oracle} has no feed legs in the manifest`);
-      const heartbeat = Math.min(...t.feeds.map((f) => f.heartbeatSeconds));
-      if (!pokeDue(ctx.blockTimestamp, book.lastPokeAt.get(t.oracle), heartbeat, newRound)) return { act: false, reason: "notDue" };
+      // An oracle with no feed legs in the manifest is still poked every CHECKPOINT_INTERVAL.
+      const interval = pokeIntervalSeconds(t.feeds.map((f) => f.heartbeatSeconds));
+      if (!pokeDue(ctx.blockTimestamp, book.lastPokeAt.get(t.oracle), interval, newRound)) return { act: false, reason: "notDue" };
       return { act: true, decision: t };
     },
 
