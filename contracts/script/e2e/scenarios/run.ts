@@ -236,7 +236,7 @@ const scenarios: Scenario[] = [
 ];
 
 async function main() {
-  // Every scripted actor gets 1,000 ETH for gas (anvil and Tenderly accept the balance RPC; nothing else changes state).
+  // Every scripted actor gets 1,000 ETH for gas (anvil's balance RPC; nothing else changes state).
   for (const a of Object.values(ACTORS)) {
     await client.request({ method: "anvil_setBalance" as any, params: [a, "0x3635C9ADC5DEA00000"] as any }).catch(() => undefined);
   }

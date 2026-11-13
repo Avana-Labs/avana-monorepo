@@ -44,7 +44,7 @@ interface IFactoryRegistration {
 
 /// @title ConfigureAccess
 /// @notice Step 13 and the chain wiring: the first two AvanaTimelock operations, both at the normal delay, written for
-/// the governance Safe and, on anvil and Tenderly networks, scheduled as the Safe.
+/// the governance Safe and, on anvil, scheduled as the Safe.
 /// @dev `guardian-roles` is the role-change operation of `REQ-ACCESS-027`: `APPLICATION_PAUSE_GUARDIAN` and
 /// `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry for the Emergency Guardian, the Aave Protocol Guardian and the
 /// Joint Configuration Safe; `APPLICATION_PAUSE_GUARDIAN` on the ParameterStore for the Emergency Guardian and the Aave
@@ -53,7 +53,7 @@ interface IFactoryRegistration {
 /// the VaultTokenFactory and, when the concentrated-liquidity LPOracle implementation exists, in the MarketRegistry
 /// with it as pricing, and the sequencer feed on an L2. It is kept apart so a cancel of one never drops the other.
 /// Scheduling as the Safe needs `AVANA_SCHEDULE=1` and a node that accepts the Safe as an unlocked sender
-/// (`anvil --auto-impersonate`, or a Tenderly Virtual TestNet), run with `--unlocked --sender <safe>`.
+/// (`anvil --auto-impersonate`), run with `--unlocked --sender <safe>`.
 contract ConfigureAccess is TimelockOperations {
     function run() external {
         ChainInputs memory c = _loadInputs(_network());

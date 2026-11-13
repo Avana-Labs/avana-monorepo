@@ -16,7 +16,7 @@ import {DeployInputs} from "./DeployInputs.sol";
 /// in a test.
 abstract contract DeployBase is DeployInputs {
     /// @notice Safe Singleton Factory (CREATE2 with `salt ‖ initcode` calldata), present on Ethereum, Base, Sepolia and
-    /// Base Sepolia; `00_Factories` installs it on anvil and Tenderly networks that lack it.
+    /// Base Sepolia; `00_Factories` installs it on anvil.
     address internal constant SAFE_SINGLETON_FACTORY = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
 
     /// @notice Runtime code of the Safe Singleton Factory.

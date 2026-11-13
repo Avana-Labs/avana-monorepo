@@ -13,14 +13,13 @@ A release manifest names every contract of one deployment: each Avana contract w
 | `verified/<network>-<release>.json` | A manifest that passed every deployment check and was approved by the governance Safe's signers; the only manifests the services and the web app load in production. |
 | `<network>/README.md` | The public contract table of the network's final deployment: every contract with its address, proxy and implementation, runtime code hash and explorer link. |
 
-Rehearsals (anvil, Tenderly Virtual TestNets) write their outputs and manifests to `contracts/deployments-local/<network>/`, which git ignores. They are learning deployments and are never published: `publish` refuses a manifest of anvil or of a release tagged `-local`, `-test` or `-learn`.
+Local rehearsals (anvil) write their outputs and manifests to `contracts/deployments-local/<network>/`, which git ignores. They are learning deployments and are never published: `publish` refuses a manifest of anvil or of a release tagged `-local`, `-test` or `-learn`.
 
 ## Stages
 
 1. **Local (anvil).** `contracts/script/e2e/e2e-local.sh` deploys the whole world on a fresh anvil node: Avana's own Aave V4 (three Hubs, CDP Spokes per AMM protocol and risk tier, Lend Spokes), Uniswap v3, Aerodrome Slipstream, test tokens and movable feeds, dozens of pools, then Avana, its first two timelock operations, the manifest and its verification, the keeper and the indexer, and the scenarios. Each step is recorded as pass, fail or not-run in `contracts/deployments-local/anvil/e2e-status.json`.
-2. **Tenderly Virtual TestNet.** The same scripts with `AVANA_NETWORK=tenderly-<name>` and `--rpc-url "$RPC_TENDERLY"`: a Virtual TestNet created with chain ID 73571 accepts the Safe as an unlocked sender, so timelock operations run as on anvil, and its explorer link goes into the contract table with `--explorer`.
-3. **Sepolia.** Avana redeploys its own Aave V4, Uniswap v3 and Aerodrome Slipstream with `AVANA_NETWORK=sepolia`; the deployer signs with a keystore account or a Ledger, and the governance Safe signs the timelock operations from the JSON files the scripts write.
-4. **Ethereum and Base.** Aave V4 is the Aave DAO's: steps 01, 02 and the execution of 06 do not run; `03_DeployAvana` reads the DAO's addresses from `contracts/script/deploy/config/<network>.json`, and `06_AaveDeploymentPayload` writes the AIP draft only.
+2. **Sepolia.** Avana redeploys its own Aave V4, Uniswap v3 and Aerodrome Slipstream with `AVANA_NETWORK=sepolia`; the deployer signs with a keystore account or a Ledger, and the governance Safe signs the timelock operations from the JSON files the scripts write.
+3. **Ethereum and Base.** Aave V4 is the Aave DAO's: steps 01, 02 and the execution of 06 do not run; `03_DeployAvana` reads the DAO's addresses from `contracts/script/deploy/config/<network>.json`, and `06_AaveDeploymentPayload` writes the AIP draft only.
 
 Every stage uses the same scripts and differs only in `contracts/script/deploy/config/<network>.json` and the environment (`contracts/.env.example`): RPC URLs and keys are never written in a file.
 
@@ -43,7 +42,7 @@ A check is pending, not passed, while the operation that completes it has not ex
 
 ## Test-network stand-ins
 
-On anvil, Tenderly and Sepolia the world Avana runs against is built from pinned sources where they are vendored and from stand-ins where they are not. Every stand-in is marked `standIn: true` in the manifest and "(test-network stand-in)" in the contract table. Pinned commits of every vendored third-party source are in [`contracts/external/README.md`](../contracts/external/README.md).
+On anvil and Sepolia the world Avana runs against is built from pinned sources where they are vendored and from stand-ins where they are not. Every stand-in is marked `standIn: true` in the manifest and "(test-network stand-in)" in the contract table. Pinned commits of every vendored third-party source are in [`contracts/external/README.md`](../contracts/external/README.md).
 
 | Contract | Source |
 |---|---|
@@ -52,14 +51,14 @@ On anvil, Tenderly and Sepolia the world Avana runs against is built from pinned
 | Aerodrome Slipstream CLFactory, CLPool, NonfungiblePositionManager, SwapRouter | Tag v1.0.0 (37eead2) for position-manager generations 0–2 and main f8717fa for generation 3, built by the `slipstream-v1` and `slipstream-main` profiles; real code, four separate instances standing for the four Base generations of 2.21 |
 | Aerodrome AERO, VotingEscrow, Voter, FactoryRegistry, Minter, RewardsDistributor, v2 PoolFactory, gauge and rewards factories; Slipstream CLGauge and CLGaugeFactory per generation | Aerodrome contracts v1.0 (1e08fb9, `aerodrome` profile) and the Slipstream gauges of each generation; every Slipstream pool gets its gauge from `Voter.createGauge`, as on Base; real |
 | Aave V3 market: PoolAddressesProvider and registry, Pool and PoolConfigurator proxies, ACLManager, AaveOracle, `DefaultReserveInterestRateStrategyV2`, aToken and variable-debt-token implementations, Collector, RewardsController | Aave V3 origin v3.7.0 (cff15de), `aave-v3` profile, deployed by `02_DeployWorld` (`script/deploy/lib/WorldAaveV3.sol`) through Aave's own setup, pool, periphery, getters and tokens batches, with BorrowLogic, FlashLoanLogic, LiquidationLogic, PoolLogic and SupplyLogic deployed first and linked into the pool batch; every token listed with its primary feed as oracle source, flash loans enabled (premium 5 bps) and $50,000,000 supplied per token, then every market role handed to the network's Aave DAO account, which grants `FLASH_BORROWER` in step 06; real |
-| Multicall3 at `0xcA11bde05977b3631167028862bE2a173976CA11` | mds1/multicall v3.1.0 (a1fa064) pinned as source; on anvil the runtime of [`contracts/external/multicall3/`](../contracts/external/multicall3/README.md) is placed with `anvil_setCode` and its code hash checked; the public networks and their Tenderly forks have the deployed contract. The runtime is Ethereum's deployed code at that address, code hash `0xd5c1…0891` |
+| Multicall3 at `0xcA11bde05977b3631167028862bE2a173976CA11` | mds1/multicall v3.1.0 (a1fa064) pinned as source; on anvil the runtime of [`contracts/external/multicall3/`](../contracts/external/multicall3/README.md) is placed with `anvil_setCode` and its code hash checked; the public networks have the deployed contract. The runtime is Ethereum's deployed code at that address, code hash `0xd5c1…0891` |
 | Tokens (USDC, USDT, DAI, GHO, WETH, WBTC, …) | `TestToken` stand-ins with the real decimals; the deployer mints |
-| Chainlink feeds | Chainlink's `AccessControlledOCR2Aggregator` (libocr 199a6f1) behind `EACAggregatorProxy` (chainlink v2.10.0), three per token (primary, alternate, second source), four local oracles (f = 1) whose keys come from `AVANA_OCR_MNEMONIC` (the public anvil test mnemonic on anvil and Tenderly); prices move only by signed OCR2 reports (`contracts/script/e2e/scenarios/ocr2.ts`); real |
+| Chainlink feeds | Chainlink's `AccessControlledOCR2Aggregator` (libocr 199a6f1) behind `EACAggregatorProxy` (chainlink v2.10.0), three per token (primary, alternate, second source), four local oracles (f = 1) whose keys come from `AVANA_OCR_MNEMONIC` (the public anvil test mnemonic on anvil); prices move only by signed OCR2 reports (`contracts/script/e2e/scenarios/ocr2.ts`); real |
 | LINK (OCR2 payment token) | `TestToken` stand-in: the aggregators only book payments, nothing is withdrawn on a test network |
 
 ### Licence of the vendored Aerodrome Slipstream
 
-Slipstream's `LICENSE.md` is the Business Source License 1.1 (Licensor Perpetual Cyclist Services LLC, Licensed Work "Velodrome Smart Contracts"), with a change date of the earlier of 2026-01-01 or a date the licensor specifies, and GNU GPL v2.0 or later as the change licence. Avana uses the vendored source only to build local and test-network deployments (anvil, Tenderly, Sepolia), never for production contracts; on Base, Avana's LPVault reads the Aerodrome deployment itself.
+Slipstream's `LICENSE.md` is the Business Source License 1.1 (Licensor Perpetual Cyclist Services LLC, Licensed Work "Velodrome Smart Contracts"), with a change date of the earlier of 2026-01-01 or a date the licensor specifies, and GNU GPL v2.0 or later as the change licence. Avana uses the vendored source only to build local and test-network deployments (anvil, Sepolia), never for production contracts; on Base, Avana's LPVault reads the Aerodrome deployment itself.
 
 ## Manifest fields the services read
 

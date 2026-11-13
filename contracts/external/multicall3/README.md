@@ -1,6 +1,6 @@
 # multicall3
 
-Multicall3 at its canonical address `0xcA11bde05977b3631167028862bE2a173976CA11`, which the keeper and the indexer use to batch their reads. Ethereum, Base, Sepolia and Tenderly Virtual TestNets forked from them already have it there; a fresh anvil node does not, so `script/e2e/e2e-local.sh` places it with `anvil_setCode` before the first deploy step and checks its code hash.
+Multicall3 at its canonical address `0xcA11bde05977b3631167028862bE2a173976CA11`, which the keeper and the indexer use to batch their reads. Ethereum, Base and Sepolia already have it there; a fresh anvil node does not, so `script/e2e/e2e-local.sh` places it with `anvil_setCode` before the first deploy step and checks its code hash.
 
 | Item | Value |
 |---|---|

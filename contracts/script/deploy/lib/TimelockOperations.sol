@@ -58,7 +58,7 @@ interface ITimelockOps {
 /// @notice Builds AvanaTimelock batches, writes them as JSON for the governance Safe (each call decoded, the
 /// operation id, the required delay and the exact `scheduleBatch` and `executeBatch` calldata), and reads them back.
 /// @dev The file `deployments-local/<network>/operations-<name>.json` is what Safe signers check against the manifest
-/// (governance README, signing procedure step 1: decode from the raw calldata). On anvil and Tenderly networks the
+/// (governance README, signing procedure step 1: decode from the raw calldata). On anvil the
 /// scripts also schedule as the Safe (an unlocked account) and execute once the delay has passed.
 abstract contract TimelockOperations is DeployInputs {
     struct Operation {

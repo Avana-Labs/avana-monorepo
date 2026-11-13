@@ -6,7 +6,7 @@
 
 import type { External, Immutable, ReleaseManifest, Upgradeable } from "./types.ts";
 
-/** Explorer base URL per network; a Tenderly Virtual TestNet passes its own with `--explorer`. */
+/** Explorer base URL per network; `--explorer` overrides it. */
 export const EXPLORERS: Readonly<Record<string, string>> = {
   ethereum: "https://etherscan.io",
   base: "https://basescan.org",

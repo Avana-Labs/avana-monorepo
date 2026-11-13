@@ -32,7 +32,7 @@ interface IOCR2Admin {
 /// (libocr 199a6f1, contract2/) behind an `EACAggregatorProxy` (chainlink v2.10.0, contracts/src/v0.6), one per feed,
 /// each configured with four local oracles (f = 1) and seeded with a first report the oracles sign. Prices move only by
 /// signed OCR2 reports (`transmit`), so round IDs, `updatedAt` and staleness behave as on a live feed.
-/// @dev The oracle keys are derived from `AVANA_OCR_MNEMONIC` at indices 10–13; on anvil and Tenderly networks it
+/// @dev The oracle keys are derived from `AVANA_OCR_MNEMONIC` at indices 10–13; on anvil it
 /// defaults to the public anvil test mnemonic, elsewhere it must be set. Each oracle is its own signer and transmitter.
 /// The aggregator's read access is granted to its proxy only, as on a live feed. `script/e2e/scenarios/ocr2.ts` transmits later
 /// reports with the same keys. The transmission is signed with oracle 0's key, so no network needs it unlocked.
@@ -48,12 +48,12 @@ abstract contract WorldFeeds is DeployBase {
     address internal linkToken;
     uint40 internal epochAndRound;
 
-    /// @notice Oracle keys and addresses; funds the transmitters with gas on anvil and Tenderly.
+    /// @notice Oracle keys and addresses; funds the transmitters with gas on anvil.
     function _ocrSetup(
         string memory network,
         address link
     ) internal {
-        bool local = _eq(network, "anvil") || _startsWith(network, "tenderly");
+        bool local = _eq(network, "anvil");
         string memory mnemonic =
             local ? vm.envOr("AVANA_OCR_MNEMONIC", string(ANVIL_MNEMONIC)) : vm.envString("AVANA_OCR_MNEMONIC");
         ocrOracles = new address[](OCR_ORACLES);
@@ -61,7 +61,7 @@ abstract contract WorldFeeds is DeployBase {
             ocrKeys[i] = vm.deriveKey(mnemonic, uint32(10 + i));
             ocrOracles[i] = vm.addr(ocrKeys[i]);
             if (local) {
-                string memory method = _eq(network, "anvil") ? "anvil_setBalance" : "tenderly_setBalance";
+                string memory method = "anvil_setBalance";
                 vm.rpc(method, string.concat('["', vm.toString(ocrOracles[i]), '","0x3635C9ADC5DEA00000"]'));
             }
         }

@@ -65,7 +65,7 @@ interface IAaveV4Roles {
 }
 
 /// @title DeployAaveV4
-/// @notice Step 1 on test networks (anvil, Tenderly, Sepolia): Avana's own Aave V4 from the pinned release a3ef63e,
+/// @notice Step 1 on test networks (anvil, Sepolia): Avana's own Aave V4 from the pinned release a3ef63e,
 /// following Aave's deploy orchestration step for step with the batch contracts of `out-aave/`: the AccessManager, the
 /// HubConfigurator and SpokeConfigurator, the TreasurySpoke, every Hub of the network's `aaveLocal.hubs` with its
 /// interest-rate strategy, and every Spoke of `aaveLocal.spokes` (CDP Spokes per AMM protocol and risk tier, Lend

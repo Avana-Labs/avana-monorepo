@@ -1,6 +1,6 @@
 # external
 
-Third-party protocols Avana runs against on test networks (anvil, Tenderly, Sepolia), built from pinned sources with their own compiler settings, each in its own Foundry profile and output folder so none of them mixes with Avana's 0.8.28 build. Scripts deploy them from the artifacts with `vm.getCode` (`script/deploy/02_DeployWorld.s.sol`); nothing in `src/` or `test/` imports them. Every source is installed by Soldeer from `soldeer.lock` into `dependencies/` and reached through remappings scoped to its own folder (`remappings.txt`). On Ethereum and Base, Avana reads the deployed protocols themselves and none of this is built.
+Third-party protocols Avana runs against on test networks (anvil, Sepolia), built from pinned sources with their own compiler settings, each in its own Foundry profile and output folder so none of them mixes with Avana's 0.8.28 build. Scripts deploy them from the artifacts with `vm.getCode` (`script/deploy/02_DeployWorld.s.sol`); nothing in `src/` or `test/` imports them. Every source is installed by Soldeer from `soldeer.lock` into `dependencies/` and reached through remappings scoped to its own folder (`remappings.txt`). On Ethereum and Base, Avana reads the deployed protocols themselves and none of this is built.
 
 | Source | Repository | Pinned commit | Profile → output | Settings | Licence |
 |---|---|---|---|---|---|

@@ -70,7 +70,7 @@ export const releaseManifestSchema: Schema = {
   ...obj({
     schemaVersion: { const: 1 },
     chainId: { type: "integer", minimum: 1 },
-    network: { type: "string", pattern: "^(anvil|tenderly-[a-z0-9-]+|sepolia|base-sepolia|ethereum|base)$" },
+    network: { type: "string", pattern: "^(anvil|sepolia|base-sepolia|ethereum|base)$" },
     release: { type: "string", pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+(-[a-z0-9.]+)?$" },
     commit: { type: "string", pattern: "^[0-9a-f]{7,40}$" },
     abiHash: hash,

@@ -18,7 +18,7 @@ import {Script} from "forge-std/Script.sol";
 /// @notice Reads a network's deployment inputs from `script/deploy/config/<network>.json`.
 /// @dev Addresses are JSON strings. A string `"$<file>:<path>"` is a reference to an earlier step's output on the same
 /// network, `deployments-local/<network>/<file>.json` at JSON path `<path>`: for example
-/// `"$aave:.accessManager"` is the AccessManager `01_DeployAaveV4` deployed. Test networks (anvil, Tenderly, Sepolia)
+/// `"$aave:.accessManager"` is the AccessManager `01_DeployAaveV4` deployed. Test networks (anvil, Sepolia)
 /// use references; Ethereum and Base name every address literally. No key, RPC URL or secret is ever read from a file.
 abstract contract DeployInputs is Script {
     /// @notice Directory of every script output, relative to `contracts/`.

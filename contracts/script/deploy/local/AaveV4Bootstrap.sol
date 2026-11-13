@@ -7,7 +7,7 @@ pragma solidity 0.8.28;
 /// @notice Temporary AccessManager admin of a test-network Aave V4 deployment: it runs Aave's own role procedures
 /// (`aave-deploy/AvanaAaveV4Roles.sol`, compiled with Aave's settings) by `delegatecall`, exactly as the deployer does in
 /// Aave's deploy orchestration, and then hands the admin role to the Aave DAO account of the network.
-/// @dev Used only by `01_DeployAaveV4` on anvil, Tenderly and Sepolia, where Avana deploys its own Aave V4; on Ethereum
+/// @dev Used only by `01_DeployAaveV4` on anvil and Sepolia, where Avana deploys its own Aave V4; on Ethereum
 /// and Base the Aave DAO's deployment is used. Only the deployer that created it can call it, and after the handover
 /// it holds no role.
 contract AaveV4Bootstrap {

@@ -8,10 +8,10 @@ import {console2} from "forge-std/console2.sol";
 
 /// @title Factories
 /// @notice Step 0: the Safe Singleton Factory (CREATE2) and Avana's namespaced CREATE3 factory.
-/// @dev The Safe Singleton Factory exists on Ethereum, Base, Sepolia and Base Sepolia; on a local anvil node or a
-/// Tenderly Virtual TestNet without it, its runtime code is installed with the node's `setCode` RPC (`AVANA_NETWORK`
-/// `anvil` or `tenderly-*`). `AvanaCreate3Factory` is then CREATE2-deployed through it with salt 0, so it has the same
-/// address on every chain; the step is skipped where it already exists.
+/// @dev The Safe Singleton Factory exists on Ethereum, Base, Sepolia and Base Sepolia; on a local anvil node, its
+/// runtime code is installed with `anvil_setCode` (`AVANA_NETWORK=anvil`). `AvanaCreate3Factory` is then
+/// CREATE2-deployed through it with salt 0, so it has the same address on every chain; the step is skipped where it
+/// already exists.
 /// Run: `AVANA_NETWORK=anvil forge script script/deploy/00_Factories.s.sol --rpc-url anvil --broadcast --account <a>`.
 contract Factories is DeployBase {
     function run() external {
@@ -19,7 +19,6 @@ contract Factories is DeployBase {
         if (SAFE_SINGLETON_FACTORY.code.length == 0) {
             string memory method;
             if (_eq(network, "anvil")) method = "anvil_setCode";
-            else if (_startsWith(network, "tenderly")) method = "tenderly_setCode";
             else revert("Safe Singleton Factory missing on a network where it cannot be installed");
             vm.rpc(
                 method,

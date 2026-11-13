@@ -117,7 +117,7 @@ export interface RoleTable {
 export interface ReleaseManifest {
   readonly schemaVersion: 1;
   readonly chainId: number;
-  /** anvil | tenderly-<name> | sepolia | ethereum | base. */
+  /** anvil | sepolia | ethereum | base. */
   readonly network: string;
   /** Release tag vX.Y.Z (a `-local` or `-test` suffix marks a learning deployment that is never published). */
   readonly release: string;

@@ -5,7 +5,7 @@
 //
 //   produce --network <n> --rpc-env <VAR> [--release vX.Y.Z] [--commit <sha>] [--out <file>]
 //       Writes the manifest of the deployment the scripts made on <n>. Default output: deployments/<n>/<release>.json
-//       for ethereum, base and sepolia; contracts/deployments-local/<n>/manifest.json for anvil and tenderly-*.
+//       for ethereum, base and sepolia; contracts/deployments-local/<n>/manifest.json for anvil.
 //   verify --manifest <file> --rpc-env <VAR>
 //       Checks the manifest against the chain; exits 1 on any failed check, prints pending ones.
 //   table --manifest <file> [--explorer <url>] [--out <file>]
@@ -22,7 +22,7 @@
 //       AccessManager, TreasurySpoke and LiquidationLogic, immutables and linked library addresses masked.
 //
 // The RPC URL is read from the environment variable named by --rpc-env (RPC_MAINNET, RPC_BASE, RPC_SEPOLIA,
-// RPC_BASE_SEPOLIA, RPC_TENDERLY, RPC_ANVIL); --rpc <url> is accepted for a local node. URLs are never printed.
+// RPC_BASE_SEPOLIA, RPC_ANVIL); --rpc <url> is accepted for a local node. URLs are never printed.
 
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -83,7 +83,7 @@ async function main() {
         commit: opt("commit") ?? readGitCommit(REPO),
         ...(opt("release") ? { release: opt("release")! } : {}),
       });
-      const local = network === "anvil" || network.startsWith("tenderly");
+      const local = network === "anvil";
       const out = opt("out") ?? (local ? join(CONTRACTS, "deployments-local", network, "manifest.json") : join(REPO, "deployments", network, `${manifest.release}.json`));
       write(out, `${JSON.stringify(manifest, null, 2)}\n`);
       break;

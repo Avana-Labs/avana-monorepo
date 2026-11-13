@@ -4,7 +4,7 @@
 // OCR2 aggregator (libocr 199a6f1, contract2/OCR2Aggregator.sol) decodes it, has f + 1 of the four local oracles sign
 // keccak256(abi.encode(keccak256(report), reportContext)) and sends `transmit` from oracle 0. Prices move only this
 // way, so round IDs, `updatedAt` and staleness are the aggregator's own. Oracle keys: AVANA_OCR_MNEMONIC at indices
-// 10–13 (the public anvil test mnemonic on anvil and Tenderly).
+// 10–13 (the public anvil test mnemonic on anvil).
 
 import {
   type Address,

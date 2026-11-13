@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title TestToken
-/// @notice ERC-20 with chosen decimals for test networks (anvil, Tenderly, Sepolia): the stand-in for USDC, USDT, GHO,
+/// @notice ERC-20 with chosen decimals for test networks (anvil, Sepolia): the stand-in for USDC, USDT, GHO,
 /// WETH, WBTC and the other pool and debt assets of the local world. Only the minter (the world deployer, who funds the
 /// scenario actors) can mint. Never deployed on Ethereum or Base.
 contract TestToken is ERC20 {

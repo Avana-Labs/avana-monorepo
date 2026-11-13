@@ -408,7 +408,7 @@
     },
     "network": {
       "type": "string",
-      "pattern": "^(anvil|tenderly-[a-z0-9-]+|sepolia|base-sepolia|ethereum|base)$"
+      "pattern": "^(anvil|sepolia|base-sepolia|ethereum|base)$"
     },
     "release": {
       "type": "string",
