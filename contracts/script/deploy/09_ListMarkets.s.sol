@@ -32,7 +32,10 @@ import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVau
 import {ChainInputs} from "./lib/DeployTypes.sol";
 import {IPoolTokens, ListingBase} from "./lib/ListingBase.sol";
 import {ITimelockOps} from "./lib/TimelockOperations.sol";
+import {TokenProbe} from "./lib/TokenProbe.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 import {console2} from "forge-std/console2.sol";
 
 interface ISpokeImplementationRead {
@@ -123,7 +126,7 @@ contract ListMarkets is ListingBase {
 
     function _setup(
         ChainInputs memory c
-    ) private view returns (Operation memory op) {
+    ) private returns (Operation memory op) {
         op = _newOperation("listing-setup", release, 200);
         for (uint256 i = 0; i < c.integrations.length; ++i) {
             uint32 id = c.integrations[i].integrationId;
@@ -167,13 +170,14 @@ contract ListMarkets is ListingBase {
     /// @notice The pool tokens: feeds, `listToken`, then the settings that need a listed token.
     function _listTokens(
         Operation memory op
-    ) private view {
+    ) private {
         uint256 n = _count(cfg, ".listing.tokens");
         string[4] memory roles = ["primary", "alternate", "standby", "second"];
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("tokens", i);
             string memory sym = _str(string.concat(k, ".symbol"));
             if (registry.getToken(_token(sym)).listed) continue;
+            _checkTokenBehaviour(_token(sym), sym);
             uint16 dev = uint16(_uint(string.concat(k, ".deviationBps")));
             for (uint256 r = 0; r < 4; ++r) {
                 _add(
@@ -191,7 +195,7 @@ contract ListMarkets is ListingBase {
             d.alternateRoute = _one(_feed(sym, "alternate"));
             d.standbyRoute = _one(_feed(sym, "standby"));
             d.replacedSlot = RouteSlot.None;
-            d.issuerProbe = IssuerProbe.None;
+            d.issuerProbe = _issuerProbe(k);
             _add(
                 op,
                 address(registry),
@@ -371,6 +375,43 @@ contract ListMarkets is ListingBase {
             ) return false;
         }
         return true;
+    }
+
+    /// @notice `listing.tokens[k].issuerProbe`: how the RiskModule watches the issuer (`PausedFlag` for a pausable token
+    /// such as USDC, `UsdtFeeRate` or `UsdtFeeRateAndPaused` for USDT's fee switch); `None` when absent.
+    function _issuerProbe(
+        string memory k
+    ) private view returns (IssuerProbe) {
+        string memory kk = string.concat(k, ".issuerProbe");
+        if (!vm.keyExistsJson(cfg, kk)) return IssuerProbe.None;
+        bytes32 p = keccak256(bytes(_str(kk)));
+        if (p == keccak256("None")) return IssuerProbe.None;
+        if (p == keccak256("PausedFlag")) return IssuerProbe.PausedFlag;
+        if (p == keccak256("UsdtFeeRate")) return IssuerProbe.UsdtFeeRate;
+        if (p == keccak256("UsdtFeeRateAndPaused")) return IssuerProbe.UsdtFeeRateAndPaused;
+        revert(string.concat(k, ".issuerProbe: unknown probe ", _str(kk)));
+    }
+
+    /// @notice `REQ-ARCH-014` before a token is listed: it answers `decimals()`, a transfer delivers exactly the amount
+    /// sent, and a balance does not change without a transfer. A fee-on-transfer, rebasing or decimals-less token
+    /// stops the step before anything is scheduled. Runs on a snapshot of the chain, reverted afterwards.
+    function _checkTokenBehaviour(
+        address t,
+        string memory sym
+    ) private {
+        uint256 snap = vm.snapshotState();
+        string memory why;
+        try new TokenProbe().check(t) {}
+        catch Error(string memory reason) {
+            // forge's storage cheat fails when the balance is not the stored value (rebasing or share-based).
+            why = vm.contains(reason, "stdStorage")
+                ? "a balance does not follow its storage (a rebasing or share-based token)"
+                : reason;
+        } catch {
+            why = "the transfer probe reverted";
+        }
+        vm.revertToState(snap);
+        if (bytes(why).length != 0) revert(string.concat(sym, " cannot be listed (REQ-ARCH-014): ", why));
     }
 
     // ─── oracles ───
