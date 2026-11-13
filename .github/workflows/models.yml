@@ -6,7 +6,8 @@ name: models
 # --extra-seeds 4, and the deployment-topology grid one seed per job) and contract_checklist.py --all --check
 # --links-only: every contract key of contract_checklist.py, and the TEST rows on no contract's checklist, must be
 # linked by a tag on a test of their own (a row is "not run" here, since this workflow runs no test; contracts.yml's
-# evidence job checks that the linked tests ran and passed). The nightly run (06:00 UTC), every
+# evidence job checks that the linked tests ran and passed), and check-mock-counterparts.py: every mocked external has a
+# fork test on its chain (TEST-005). The nightly run (06:00 UTC), every
 # release tag (`v*`) and every manual run also run the topology simulator checks of spec/05-verification/quint/topology_run.sh, the part that
 # run_all.sh --nightly adds to the quick path; spec.yml runs the quick path. A simulation job also fails when a run
 # reports an invariant violation, since run_simulation.py exits 0 whenever it completes.
@@ -25,6 +26,8 @@ on:
       - "contracts/src/**"
       - "contracts/test/**"
       - "contracts/certora/**"
+      - "contracts/script/check-mock-counterparts.py"
+      - "contracts/script/mock-counterparts.json"
       - ".github/workflows/models.yml"
   push:
     branches: [main]
@@ -38,6 +41,8 @@ on:
       - "contracts/src/**"
       - "contracts/test/**"
       - "contracts/certora/**"
+      - "contracts/script/check-mock-counterparts.py"
+      - "contracts/script/mock-counterparts.json"
       - ".github/workflows/models.yml"
   schedule:
     # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
@@ -185,6 +190,16 @@ jobs:
           spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --all --check --links-only \
             --summary checklists.md || rc=$?
           cat checklists.md >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Every mocked external has a fork test on its chain (check-mock-counterparts.py, TEST-005)
+        # contracts/script/mock-counterparts.json lists each external a unit test may mock, its mocks and the fork
+        # tests that cover it; fails on an unlisted mock of an external and on an external with mocks and no fork test.
+        if: ${{ !cancelled() }}
+        run: |
+          rc=0
+          python3 contracts/script/check-mock-counterparts.py --markdown > mock-counterparts.md || rc=$?
+          { echo '### Mock counterparts (TEST-005)'; cat mock-counterparts.md; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
   quint-topology:

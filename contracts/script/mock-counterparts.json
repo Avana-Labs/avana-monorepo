@@ -1,0 +1,114 @@
+{
+  "chains": {
+    "ethereum": "RPC_MAINNET",
+    "base": "RPC_BASE"
+  },
+  "externals": {
+    "chainlink-aggregator": {
+      "external": "Chainlink price aggregators and their EACAggregatorProxy",
+      "functions": ["latestRoundData", "getRoundData"],
+      "fork_tests": {"ethereum": ["TEST-117", "TEST-220"], "base": ["TEST-117"]},
+      "mocks": [
+        "utils/mocks/MockAggregator.sol:MockAggregator",
+        "utils/mocks/ParameterStoreMocks.sol:MockAggregator",
+        "utils/mocks/ChainlinkCostMocks.sol:EacProxyMock",
+        "utils/mocks/ChainlinkCostMocks.sol:OcrAggregatorMock",
+        "utils/mocks/LPOracleMocks.sol:OracleFeedMock",
+        "utils/mocks/MarketRegistryMocks.sol:RegistryFeedMock",
+        "unit/ParameterStore.Feeds.unit.t.sol:RevertingRoundFeed"
+      ]
+    },
+    "sequencer-uptime-feed": {
+      "external": "Chainlink L2 sequencer-uptime feed on Base",
+      "functions": [],
+      "fork_tests": {"base": ["TEST-275"]},
+      "mocks": [
+        "utils/mocks/AaveAdapterMocks.sol:AdapterSequencerFeed",
+        "utils/mocks/RiskModuleMocks.sol:RiskSequencerFeed"
+      ]
+    },
+    "uniswap-v3": {
+      "external": "Uniswap v3 NonfungiblePositionManager, factory and pools (the Uniswap v3 integration)",
+      "functions": ["positions", "decreaseLiquidity", "createPool", "slot0"],
+      "fork_tests": {"ethereum": ["TEST-116"]},
+      "mocks": [
+        "utils/mocks/UniswapV3Mocks.sol:MockNFPM",
+        "utils/mocks/UniswapV3Mocks.sol:MockV3Factory",
+        "utils/mocks/UniswapV3Mocks.sol:MockV3Pool",
+        "utils/mocks/ParameterStoreMocks.sol:MockPool",
+        "unit/LPOracle.SpotReads.unit.t.sol:SpotLiarPool",
+        "invariant/echidna/UniswapV3IntegrationProperties.sol:EchidnaNfpm"
+      ]
+    },
+    "aerodrome-slipstream": {
+      "external": "Aerodrome Slipstream NonfungiblePositionManagers, factories, pools, gauges and leaf voter (the Slipstream integration)",
+      "functions": [],
+      "fork_tests": {"base": ["TEST-116"]},
+      "mocks": [
+        "utils/mocks/SlipstreamMocks.sol:MockSlipstreamNPM",
+        "utils/mocks/SlipstreamMocks.sol:MockCLFactory",
+        "utils/mocks/SlipstreamMocks.sol:MockCLPool",
+        "utils/mocks/SlipstreamMocks.sol:MockCLGauge",
+        "utils/mocks/SlipstreamMocks.sol:MockLeafVoter",
+        "unit/LPOracleCL.Module.unit.t.sol:SixWordSlot0Pool",
+        "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaSlipNpm",
+        "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaCLFactory",
+        "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaCLPool"
+      ]
+    },
+    "aave-v3-pool": {
+      "external": "Aave V3 Pool, ACLManager and addresses provider behind the core flash source and the flash liquidation helper",
+      "functions": ["flashLoan", "flashLoanSimple"],
+      "fork_tests": {"ethereum": ["TEST-118"], "base": ["TEST-118"]},
+      "mocks": [
+        "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3Pool",
+        "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3ACLManager",
+        "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3AddressesProvider"
+      ]
+    },
+    "gho-gsm": {
+      "external": "GHO Stability Modules on Ethereum",
+      "functions": ["getIsSeized"],
+      "fork_tests": {"ethereum": ["TEST-119"]},
+      "mocks": [
+        "utils/mocks/SwapRouteMocks.sol:MockGsm",
+        "utils/mocks/MarketRegistryRouteMocks.sol:RegistryGsmMock"
+      ]
+    },
+    "sky-psm": {
+      "external": "Sky LitePSM and the DAI/USDS converter on Ethereum",
+      "functions": ["buyGem", "sellGem", "daiToUsds", "usdsToDai"],
+      "fork_tests": {"ethereum": ["TEST-120"]},
+      "mocks": [
+        "utils/mocks/SwapRouteMocks.sol:MockLitePsm",
+        "utils/mocks/SwapRouteMocks.sol:MockDaiUsds",
+        "utils/mocks/SwapRouteMocks.sol:MockPsmAndConverter"
+      ]
+    },
+    "route-dex-ethereum": {
+      "external": "Swap-route DEX pools, pool factories and ERC-4626 wrappers on Ethereum (Curve, Uniswap v3)",
+      "functions": ["exchange", "getPool"],
+      "fork_tests": {"ethereum": ["TEST-120", "TEST-054"]},
+      "mocks": [
+        "utils/mocks/SwapRouteMocks.sol:MockCurvePool",
+        "utils/mocks/SwapRouteMocks.sol:MockLegacyCurvePool",
+        "utils/mocks/SwapRouteMocks.sol:MockPoolFactory",
+        "utils/mocks/SwapRouteMocks.sol:MockVault4626",
+        "utils/mocks/HalmosLegacyCurvePool.sol:HalmosLegacyCurvePool",
+        "utils/mocks/HalmosRoutePool.sol:HalmosRoutePool"
+      ]
+    },
+    "route-dex-base": {
+      "external": "Swap-route Slipstream and other pools and their factories on Base",
+      "functions": [],
+      "fork_tests": {"base": ["TEST-120"]},
+      "mocks": [
+        "utils/mocks/SwapRouteMocks.sol:MockCLPool",
+        "utils/mocks/SwapRouteMocks.sol:MockPoolFactory"
+      ]
+    }
+  },
+  "not_external": {
+    "utils/mocks/LPVaultSwapMocks.sol:LVSFlashSourceMock": "stands in for Avana's own IFlashSource (evidence.STAND_INS), not the Aave V3 Pool"
+  }
+}
