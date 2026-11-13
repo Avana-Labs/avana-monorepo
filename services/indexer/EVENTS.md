@@ -146,6 +146,7 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
 | ParameterStore | `ParameterTightened`, `ParameterLoosened` (`bytes32 name, bytes32 scope, uint256 oldValue, uint256 newValue, address caller`), `ParameterSet(bytes32 name, bytes32 scope, uint256 oldValue, uint256 newValue)` | log | K (reloads cached parameters) M |
+| ParameterStore | `MarketSpeedLimitsSet(uint256 marketId idx, MarketSpeedLimits oldLimits, MarketSpeedLimits newLimits, bool tightened)`, `DebtSpeedLimitSet(address hub idx, address asset idx, SpeedLimit oldLimit, SpeedLimit newLimit, bool tightened)` | log | M |
 | ParameterStore | `CapTightened`, `CapLoosened` (`bytes32 capKind, bytes32 scope, uint256 oldValue, uint256 newValue, address caller`), `StressFloorSet`, `MinPledgeUsdSet`, `RouteDepthThresholdSet`, `DebtAssetParamsSet` | log | C M |
 | ParameterStore | `FeedConfigured(address feed, uint8 decimals, int256 minAnswer, int256 maxAnswer, uint32 feedHeartbeat, uint16 heartbeatMargin, uint32 feedMaxAge, uint16 feedDeviationThresholdBps, uint16 heartbeatDriftBps, uint32 borrowPriceMaxAge, uint32 liquidationPriceMaxAge)` | log | K (poke cadence) M (`M-03`, `M-04`) |
 | ParameterStore | `SequencerSet(address feed, uint32 gracePeriod)`, `SecondSourceSwitched(address token idx, bool standby, address by)` | log | K M |

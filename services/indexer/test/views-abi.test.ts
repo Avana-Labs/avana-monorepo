@@ -19,19 +19,8 @@ import { hubViewsAbi, lensAppViewsAbi, lensViewsAbi, registryViewsAbi, spokeView
  * fee views (ILensFees.sol), the after-action previews (ILensActions.sol), the sizing views (ILensSizing.sol) and
  * `getHubAsset` (ILensHubAssets.sol) are absent.
  */
-const NOT_YET_GENERATED = new Set(["getMarkets", "getDebtReserves", "getHubAssetExposure", "getBorrowSpeed", "getPledgeSpeed"]);
-const APP_NOT_YET_GENERATED = new Set([
-  "getPositionFees",
-  "getAccountFees",
-  "previewBorrowAfter",
-  "previewRepayAfter",
-  "previewPledgeAfter",
-  "previewWithdrawAfter",
-  "previewMaxWithdraw",
-  "previewDeleverageTo",
-  "previewCloseAccount",
-  "getHubAsset",
-]);
+const NOT_YET_GENERATED = new Set<string>([]);
+const APP_NOT_YET_GENERATED = new Set<string>([]);
 
 function layout(p: AbiParameter): string {
   if (!p.type.startsWith("tuple")) return p.type;

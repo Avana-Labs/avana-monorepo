@@ -90,6 +90,8 @@ for (const [name, granted] of [["RoleGranted", true], ["RoleRevoked", false]] as
 
 logOnly("ParameterStore", [
   "SequencerSet",
+  "MarketSpeedLimitsSet",
+  "DebtSpeedLimitSet",
   "SecondSourceSwitched",
   "ParameterTightened",
   "ParameterLoosened",
