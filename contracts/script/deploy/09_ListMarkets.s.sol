@@ -647,6 +647,22 @@ contract ListMarkets is ListingBase {
         revert(string.concat("not a debt asset ", sym));
     }
 
+    /// @notice `ParameterStore.setInitialMarketCaps` for one market, from its USD caps in the config. Its own function:
+    /// the unoptimized coverage build runs out of stack slots when `_listMarket` encodes it inline.
+    function _marketCapsCall(
+        Mkt memory m
+    ) private view returns (bytes memory) {
+        return abi.encodeCall(
+            store.setInitialMarketCaps,
+            (
+                m.marketId,
+                vm.parseUint(_str(string.concat(m.key, ".marketUsdCap"))) * 1e8,
+                vm.parseUint(_str(string.concat(m.key, ".topUpSliceUsd"))) * 1e8,
+                vm.parseUint(_str(string.concat(m.key, ".stressFloorUsd"))) * 1e8
+            )
+        );
+    }
+
     /// @notice The listing calls of one market (`MKT-018`, `MKT-020`, `MKT-021`) and its swap routes.
     function _listMarket(
         Operation memory op,
@@ -681,15 +697,7 @@ contract ListMarkets is ListingBase {
         _add(
             op,
             address(store),
-            abi.encodeCall(
-                store.setInitialMarketCaps,
-                (
-                    m.marketId,
-                    vm.parseUint(_str(string.concat(m.key, ".marketUsdCap"))) * 1e8,
-                    vm.parseUint(_str(string.concat(m.key, ".topUpSliceUsd"))) * 1e8,
-                    vm.parseUint(_str(string.concat(m.key, ".stressFloorUsd"))) * 1e8
-                )
-            ),
+            _marketCapsCall(m),
             "PS.setInitialMarketCaps"
         );
         _add(
