@@ -24,7 +24,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// @notice SPEC-LIQ-001: `bNet = 10⁴ + ⌊(b − 10⁴)(10⁴ − lf)/10⁴⌋`, never above `b`, non-decreasing in `b`,
     /// non-increasing in `lf`, and 10⁴ when `b ≤ 10⁴` or `lf ≥ 10⁴`.
     // TEST-198 verifies: SPEC-LIQ-001
-    function testFuzz_netBonus(
+    function testFuzz_TEST_198_netBonus(
         uint256 b,
         uint256 lf,
         uint256 db,
@@ -48,7 +48,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// @notice SPEC-LIQ-003: `s = min(allow, ⌊10⁴(bNet − 10⁴)/bNet⌋)`; `bNet (10⁴ − s) ≥ 10⁸`; the next larger `s`
     /// breaks that bound unless the allowance binds (the rounding is down, not to nearest).
     // TEST-198 verifies: SPEC-LIQ-003, SPEC-LIQ-016, PROP-017
-    function testFuzz_effectiveSlippage(
+    function testFuzz_TEST_198_effectiveSlippage(
         uint256 bNet,
         uint256 allow
     ) public pure {
@@ -68,7 +68,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// @notice SPEC-LIQ-019: `sLeg = min(9,999, s + min(maxShortfallBps, ⌊maxShortfall × 10⁴ / V⌋))`, at least `s`,
     /// non-decreasing in `maxShortfall`, `s` itself when the budget or `V` is 0.
     // TEST-233 verifies: SPEC-LIQ-019, REQ-SWAP-111
-    function testFuzz_legSlippage(
+    function testFuzz_TEST_233_legSlippage(
         uint256 s,
         uint256 budget,
         uint256 value,
@@ -92,7 +92,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
 
     /// @notice `s_P = min(allowance, 30)`.
     // TEST-232 verifies: SPEC-LIQ-014
-    function testFuzz_pendingSlippage(
+    function testFuzz_TEST_232_pendingSlippage(
         uint256 allow
     ) public pure {
         allow = bound(allow, 0, 9999);
@@ -102,7 +102,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// @notice SPEC-LIQ-004: `V = ⌊c Pc 10^dd / (10^dv Pdebt)⌋` exactly, linear up to rounding in `c`, and the unit
     /// value `U` is the ceiling of one raw unit's value (never below the floor value of one unit).
     // TEST-198 verifies: SPEC-LIQ-004, SPEC-LIQ-005
-    function testFuzz_valuesAndUnits(
+    function testFuzz_TEST_198_valuesAndUnits(
         uint256 c,
         uint256 pc,
         uint256 pd,
@@ -126,7 +126,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// @notice SPEC-LIQ-005: `minRec = max(0, ⌈V(10⁴ − s)/10⁴⌉ − U − ε)`, rounding the slippage term up, never above
     /// `V`, non-decreasing in `V` and non-increasing in `s`, `U` and `ε`.
     // TEST-198 verifies: SPEC-LIQ-005, PROP-018, PROP-048
-    function testFuzz_recoveryFloor(
+    function testFuzz_TEST_198_recoveryFloor(
         uint256 v,
         uint256 s,
         uint256 u,
@@ -150,7 +150,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// @notice SPEC-LIQ-018: a leg is dust exactly when `Vleg ≤ Uleg`; a non-dust leg's minimum is
     /// `max(1, ⌈Vleg(10⁴ − sLeg)/10⁴⌉ − Uleg − ⌊ε/n'⌋)`, at least 1 and at most `Vleg`.
     // TEST-232 verifies: SPEC-LIQ-018, REQ-SWAP-100, INV-083
-    function testFuzz_legMinimum(
+    function testFuzz_TEST_232_legMinimum(
         uint256 vLeg,
         uint256 sLeg,
         uint256 uLeg,
@@ -175,7 +175,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// `g = max(0, D + A + B − Kf − R)`; `g` never exceeds the floor gap while `D ≤ Kf`; the waterfall splits
     /// `S = A + kr + B` exactly; and `keeperOut = Kf + R + shortfall − D − A − B` conserves the debt asset.
     // TEST-198 verifies: SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-LIQ-022, INV-035, INV-036, PROP-069
-    function testFuzz_waterfallIdentities(
+    function testFuzz_TEST_198_waterfallIdentities(
         uint256 v,
         uint256 d,
         uint256 extra,
@@ -232,7 +232,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
 
     /// @notice SPEC-LIQ-015: the exact cap `φ × 10⁴ ≤ maxFlashFeeBps × F`, for caps below and above 10⁴.
     // TEST-198 verifies: SPEC-LIQ-015, REQ-FLASH-002
-    function testFuzz_flashPremiumWithinCap(
+    function testFuzz_TEST_198_flashPremiumWithinCap(
         uint256 premium,
         uint256 amount,
         uint256 cap
@@ -246,7 +246,7 @@ contract SettlementMathPropertiesFuzzTest is Test {
     /// @notice SPEC-LIQ-020: `cap = ⌊max(0, ⌊V(10⁴ − s)/10⁴⌋ − U − ε) × 10⁴ / (10⁴ + m)⌋`, its premium at the cap
     /// rate fits in `Vnet`, `x = min(debt, cap)` and `assetOut = R − x − φ`.
     // TEST-198 verifies: SPEC-LIQ-020, INV-089
-    function testFuzz_deleverageSizing(
+    function testFuzz_TEST_198_deleverageSizing(
         uint256 v,
         uint256 s,
         uint256 u,

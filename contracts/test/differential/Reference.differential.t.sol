@@ -11,7 +11,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// every floor and ceiling, so a later mismatch in an Avana library points at the library.
 contract ReferenceDifferentialTest is DifferentialTest {
     /// forge-config: differential.fuzz.runs = 256
-    function testFuzz_harness_mulDivMatchesReference(
+    function testFuzz_TEST_037_harnessMulDivMatchesReference(
         uint256 a,
         uint256 b,
         uint256 d,

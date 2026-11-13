@@ -100,6 +100,33 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         assertEq(v.tokens[1].legFeeds[0], address(aB), "the lower route's legs serve");
     }
 
+    // TEST-044 verifies: REQ-ORACLE-022, REQ-ORACLE-086, REQ-ORACLE-103, SPEC-ORC-017
+    /// @notice Token B's primary reads $1.00 and its alternate 97.5 cents, so the market is valued at the lower routes.
+    /// When the pricing module cannot value the vault token at a token B price below 98 cents, the lower-route price
+    /// fails: the read is a malformed module read (bit 1) and the market is Cached instead of Drifting. At 97 cents the
+    /// market is Drifting at the lower routes again; and with the 98-cent threshold kept but the alternate back at
+    /// $1.00, nothing is valued below 98 cents and the market is Live, so only the lower-route price failed.
+    function test_TEST_044_failedLowerRoutePriceFailsTheRead() public {
+        oracle.setCompositionFailsBelow(1, 98_000_000);
+        PriceStateView memory v = _state();
+        assertTrue(_has(v.reasons, 1), "the lower-route price is a malformed module read");
+        assertEq(uint8(v.state), uint8(PriceState.Cached), "a failed read fails the market");
+        assertFalse(v.borrowAllowed, "borrowing blocked");
+
+        oracle.setCompositionFailsBelow(1, 97_000_000);
+        v = _state();
+        assertFalse(_has(v.reasons, 1), "the lower price is valued again");
+        assertEq(uint8(v.state), uint8(PriceState.Drifting), "Drifting at the lower routes");
+        assertEq(v.answer, int256(99_999_900 + 97_499_902), "served at the lower routes");
+
+        oracle.setCompositionFailsBelow(1, 98_000_000);
+        aB.push(int256(ONE), T1);
+        v = _state();
+        assertFalse(_has(v.reasons, 1), "the fresh price at $1.00 is valued");
+        assertEq(uint8(v.state), uint8(PriceState.Live), "agreeing routes: Live");
+        oracle.setCompositionFailsBelow(0, 0);
+    }
+
     // TEST-157 verifies: REQ-ORACLE-084, REQ-ORACLE-022, SPEC-ORC-016, INV-059, ATTACK-111, Q-199, Q-208, Q-248
     // Sources: 5.1 TEST-157
     function test_TEST_157_pauseThenExpiredForLiquidation() public {

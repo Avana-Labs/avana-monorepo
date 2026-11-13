@@ -11,21 +11,23 @@
 # through the config's `unreachable` list, with its function, branch, reason and tests. Reports in
 # out-security/coverage/ (lcov.info, summary.txt, run.log).
 #
-# Exact-gas assertions (`*exactCycleCost*`) are skipped here: their expected values hold for the optimized build, and
-# coverage compiles without the optimizer. They run in every other test profile.
+# Tests whose assertions hold only for the optimized build are skipped here: the exact-gas assertions
+# (`*exactCycleCost*`), the gas budgets of the oracle flows and the worst-case poke (`*WithinBudget*`,
+# `*worstCasePoke*`), and the Lens bytecode scan (`*noStateChangingOpcode*`, which scans the unoptimized modules out of
+# gas). Coverage compiles without the optimizer. They run in every other test profile.
 #
-# forge coverage writes no build artifacts. TEST-247 reads the Lens ABIs from out/, so a default `forge build` must be in
-# out/ first (CI downloads the build job's output).
-#
-# The via-IR compilation restriction on Collateralization.sol does not apply: forge coverage disables via-IR and the
-# optimizer for every file, and EIP-170 is not enforced in coverage runs.
+# The coverage profile clears the default profile's compilation_restrictions (Collateralization.sol, the Lens modules,
+# the LPVaultSwap logic and the concentrated-liquidity LPOracle are built without via-IR or the optimizer; EIP-170 is not
+# enforced in coverage runs). Only the DebtOracle files (via-IR, no optimizer) and the two AMM integrations (optimizer,
+# no via-IR) keep a restriction, because they do not compile otherwise; see [profile.coverage] in foundry.toml.
 #
 # Usage, from contracts/:
 #   script/check-coverage.sh                 run coverage, then the gate
 #   script/check-coverage.sh --lcov <file>   gate an existing lcov report
 #   script/check-coverage.sh --update        run coverage, raise minimums to the measured values (never lowers them,
 #                                            never writes one below the floor)
-# Environment: COVERAGE_JOBS (default 2), COVERAGE_NO_MATCH_TEST (default 'exactCycleCost').
+# Environment: COVERAGE_JOBS (default 2), COVERAGE_NO_MATCH_TEST (default
+# 'exactCycleCost|WithinBudget|worstCasePoke|noStateChangingOpcode').
 
 set -uo pipefail
 
@@ -52,7 +54,7 @@ if [ -z "$lcov" ]; then
   lcov="$OUT/lcov.info"
   rm -f "$lcov"
   FOUNDRY_PROFILE=coverage forge coverage --report lcov --report summary --report-file "$lcov" \
-    -j "${COVERAGE_JOBS:-2}" --no-match-test "${COVERAGE_NO_MATCH_TEST:-exactCycleCost}" \
+    -j "${COVERAGE_JOBS:-2}" --no-match-test "${COVERAGE_NO_MATCH_TEST:-exactCycleCost|WithinBudget|worstCasePoke|noStateChangingOpcode}" \
     --no-match-coverage '^(test|script|dependencies)/' >"$OUT/run.log" 2>&1
   rc=$?
   grep -E '^Ran [0-9]+ test suites|^\[FAIL|Encountered' "$OUT/run.log" || true

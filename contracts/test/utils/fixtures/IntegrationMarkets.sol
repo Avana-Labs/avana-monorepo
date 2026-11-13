@@ -178,7 +178,7 @@ abstract contract IntegrationMarkets is CollateralizationFixture {
         uint256 assetId,
         address source,
         uint40 drawCap
-    ) private returns (uint256 reserveId) {
+    ) internal returns (uint256 reserveId) {
         uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
         ICollHubConfigurator(aave.hubConfigurator)
             .addSpoke(aave.hub, spoke, assetId, CollHubSpokeConfig(0, drawCap, maxRp, true, false));

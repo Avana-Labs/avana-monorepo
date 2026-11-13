@@ -46,8 +46,8 @@ contract LPOracleCLSurfaceTest is LPOracleCLFixture {
         return oracle.checkConfig(c);
     }
 
-    /// @dev Every view and the poke a caller of the LPOracle uses, encoded, in one block.
-    function _views() internal returns (bytes memory) {
+    /// @dev Every view a caller of the LPOracle uses, encoded, in one block.
+    function _views() internal view returns (bytes memory) {
         (uint256[] memory prices, uint64 at, PriceState s) = oracle.getTokenPrices();
         (uint80 r, int256 a, uint256 st, uint256 up, uint80 ans) = oracle.latestRoundData();
         (uint256 accepted, uint64 acceptedAt) = oracle.lastAcceptedPrice();

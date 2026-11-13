@@ -33,6 +33,9 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         uint256 listingFailures;
         mapping(uint256 index => uint256 value) twapValue;
         bytes32 ownPool;
+        // A composition at a price of token `failIndex` below `failBelow` fails (0: never).
+        uint256 failIndex;
+        uint256 failBelow;
     }
 
     bytes32 private constant MODULE_SLOT = keccak256("avana.test.LPOracleHarnessModule");
@@ -56,10 +59,13 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
 
     function _composition(
         uint256 units,
-        uint256[] memory
+        uint256[] memory prices
     ) internal view override returns (bool ok, uint256[] memory amounts) {
         ModuleState storage m = _m();
         if (m.compositionFails) return (false, amounts);
+        if (m.failBelow != 0 && m.failIndex < prices.length && prices[m.failIndex] < m.failBelow) {
+            return (false, amounts);
+        }
         uint256 n = m.coefficients.length;
         amounts = new uint256[](n);
         for (uint256 i = 0; i < n; ++i) {
@@ -172,6 +178,14 @@ contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
         bool v
     ) external {
         _m().compositionFails = v;
+    }
+
+    /// @notice Fails every composition whose price of token `index` is below `price` (`price` 0: never).
+    function setCompositionFailsBelow(
+        uint256 index,
+        uint256 price
+    ) external {
+        (_m().failIndex, _m().failBelow) = (index, price);
     }
 
     function setLock(

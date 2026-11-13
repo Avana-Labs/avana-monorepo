@@ -7,6 +7,7 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -214,29 +215,78 @@ contract AaveAdapterAaveStatesIntegrationTest is IntegrationFlows {
         assertLt(t.ratioBps * usdcTail, t.fundedUsd * 1e4, "strictly down here: never overstates coverage");
     }
 
-    // TEST-202 verifies: Q-238, Q-233
-    // Sources: 5.1 TEST-202 (debt-asset price rally; the non-GHO debt reserve here is USDC)
-    /// @notice An account with stable-LP collateral and USDC debt opened at HF about 1.15 sees the USDC price rise 25 %
-    /// with every collateral price unchanged: its HF falls below 1 (1.15 / 1.25 = 0.92), the RiskModule refuses a new
-    /// borrow, and LPVaultSwap liquidates it with USDC funded by the caller, sized by the keeper preview and paid out
-    /// in USDC.
-    function test_TEST_202_debtPriceRallyBlocksBorrowAndLiquidates() public {
-        (address p,) = _openAccount(carol, MARKET_ID, 10_000e6, 14_600e6, P_VAULT);
-        assertApproxEqRel(_hf(p), 1.15e18, 0.002e18, "opened at HF 1.15");
-        usdcOracle.setAnswer(1.25e8);
-        assertApproxEqRel(_hf(p), 0.92e18, 0.002e18, "HF 1.15 / 1.25");
-        uint256 nonce = adapterC.borrowNonce(p);
+    // TEST-202 verifies: Q-238, Q-233, Q-234, Q-235
+    // Sources: 5.1 TEST-202 (debt-asset price rally, WETH debt)
+    /// @notice Two accounts with stable-LP collateral and WETH debt opened at HF about 1.15 see the WETH feed rise 25 %
+    /// with every collateral price unchanged: each HF falls to about 0.92 (1.15 / 1.25), the RiskModule refuses a new
+    /// borrow, and LPVaultSwap liquidates one with WETH the caller funds and the other with WETH the public flash
+    /// liquidation helper borrows, each sized by the keeper preview, swapping the unwound USDC and USDT into WETH over
+    /// the routes and paying out in WETH; no WETH deficit is left, so summed losses stay within the WETH Coverage
+    /// Spoke's funded reserve.
+    function test_TEST_202_wethPriceRallyBlocksBorrowAndLiquidates() public {
+        _addWethDebtReserve();
+        address[2] memory wallets = [carol, alice];
+        address[2] memory proxies;
+        // 10,000 units at $2.10 with CF 80 % carry $16,800; HF 1.15 is $14,608.70 of WETH at $3,000.
+        for (uint256 i = 0; i < 2; ++i) {
+            (, proxies[i]) = _pledgeVia(wallets[i], MARKET_ID, 10_000e6);
+            _borrowVia(wallets[i], MARKET_ID, wethReserveId, 4.8696e18);
+            assertApproxEqRel(_hf(proxies[i]), 1.15e18, 0.002e18, "opened at HF 1.15");
+        }
+        weth.mint(address(this), 10e18);
+        weth.approve(address(wethCoverage), 10e18);
+        wethCoverage.fund(10e18);
+
+        wethOracle.setAnswer(3750e8);
+        _moveTokenPrice(address(weth), 3750e8);
+        for (uint256 i = 0; i < 2; ++i) {
+            assertApproxEqRel(_hf(proxies[i]), 0.92e18, 0.002e18, "HF 1.15 / 1.25");
+        }
+        uint256 nonce = adapterC.borrowNonce(proxies[0]);
         uint256 d = _deadline();
         vm.expectRevert();
         vm.prank(carol);
-        adapterC.borrow(MARKET_ID, debtReserveId, 1e18, carol, d, 0, nonce);
-        LiquidationPreview memory pv = lens.previewLiquidation(p, usdcReserveId, block.timestamp + 60);
+        adapterC.borrow(MARKET_ID, usdcReserveId, 1e6, carol, d, 0, nonce);
+
+        uint256 swaps = routePools[address(usdt)][address(weth)][0].swaps();
+        LiquidationPreview memory pv = lens.previewLiquidation(proxies[0], wethReserveId, block.timestamp + 60);
         assertTrue(pv.aaveLiquidatable, "liquidatable");
         pv.params.maxShortfall = pv.params.debtToCover / 20;
         LiquidationResult memory r = _liquidateAs(keeper, pv.params);
-        assertEq(r.debtAsset, address(usdc), "settled in USDC");
+        assertEq(r.debtAsset, address(weth), "settled in WETH");
         assertEq(r.debtRepaid, pv.expectedDebtRepaid, "sized by the preview");
-        assertGt(_hf(p), 0.92e18, "health rose");
-        assertEq(usdc.balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no USDC");
+        assertGt(routePools[address(usdt)][address(weth)][0].swaps(), swaps, "USDT swapped into WETH");
+        assertGt(r.keeperOut, 0, "keeperOut paid in WETH");
+        assertEq(weth.balanceOf(lpVaultSwap), 0, "everything paid out in WETH");
+        assertGt(_hf(proxies[0]), 0.92e18, "health rose");
+
+        LiquidationPreview memory pv2 = lens.previewLiquidation(proxies[1], wethReserveId, block.timestamp + 60);
+        FlashLiquidationRequest memory q;
+        q.params = pv2.params;
+        q.flashAmount = pv2.params.debtToCover;
+        q.maxPremium = type(uint128).max;
+        q.maxTopUp = pv2.params.debtToCover / 20;
+        q.params.maxShortfall = q.maxTopUp;
+        weth.mint(stranger2, q.maxTopUp);
+        vm.startPrank(stranger2);
+        weth.approve(address(helper), q.maxTopUp);
+        helper.flashLiquidate(q);
+        vm.stopPrank();
+        assertGt(_hf(proxies[1]), 0.92e18, "the helper's liquidation raised health");
+        assertEq(weth.balanceOf(address(helper)), 0, "the helper keeps no WETH");
+        assertEq(weth.balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no WETH");
+
+        uint256 deficit = IWethDeficitView(aave.hub).getSpokeDeficitRay(wethAssetId, aave.cdpSpoke) / 1e27;
+        assertLe(deficit, wethCoverage.fundedBalance(), "losses within the WETH Coverage Spoke");
     }
+
+    address internal stranger2 = makeAddr("flash caller");
 }
+
+interface IWethDeficitView {
+    function getSpokeDeficitRay(
+        uint256 assetId,
+        address spoke
+    ) external view returns (uint256);
+}
+

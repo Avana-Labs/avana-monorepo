@@ -145,6 +145,44 @@ contract MarketRegistryHalmosTest is Test {
         }
     }
 
+    // PROP-096 verifies: REQ-FLASH-006, INV-095, Q-386, Q-388
+    /// @notice For any caller, lender, LPVaultSwap and new Hub: `setFlashSource` succeeds only for the timelock with a
+    /// source naming this chain's LPVaultSwap whose `LENDER()` is no recorded Hub, and the timelock's refusal is
+    /// `InvalidRoute`; once a source is in force, `recordHub` of its lender reverts `InvalidRoute`; so the recorded
+    /// flash source never lends from a recorded Hub.
+    function check_PROP_096_flashSourceNeverAHub(
+        address caller,
+        address lender,
+        address swapOf,
+        address newHub
+    ) public {
+        address source = address(new RegistryFlashSourceMock(lender, swapOf));
+        address before = registry.flashSource();
+        vm.prank(caller);
+        (bool ok, bytes memory ret) = address(registry).call(abi.encodeCall(registry.setFlashSource, (source)));
+        bool lenderIsHub = registry.isRecordedHub(lender);
+        if (ok) {
+            assert(caller == TIMELOCK && swapOf == im.lpVaultSwap && !lenderIsHub);
+            assert(registry.flashSource() == source);
+        } else {
+            assert(registry.flashSource() == before);
+            if (caller == TIMELOCK) {
+                assert(swapOf != im.lpVaultSwap || lenderIsHub);
+                assert(keccak256(ret) == keccak256(abi.encodeWithSelector(IMarketRegistryErrors.InvalidRoute.selector)));
+            }
+        }
+        address inForceLender = RegistryFlashSourceMock(registry.flashSource()).LENDER();
+        assert(!registry.isRecordedHub(inForceLender));
+        vm.prank(TIMELOCK);
+        (bool recorded, bytes memory err) =
+            address(registry).call(abi.encodeCall(registry.recordHub, (newHub, RiskTier.Volatile)));
+        if (newHub == inForceLender && newHub != address(0)) {
+            assert(!recorded);
+            assert(keccak256(err) == keccak256(abi.encodeWithSelector(IMarketRegistryErrors.InvalidRoute.selector)));
+        }
+        assert(!registry.isRecordedHub(RegistryFlashSourceMock(registry.flashSource()).LENDER()));
+    }
+
     // PROP-071 verifies: REQ-MREG-019, REQ-MREG-020, REQ-MREG-021, INV-085, Q-242
     /// @notice `freezeAddress(a)` succeeds only for a freeze-role holder or the timelock, an address outside the
     /// fixed protected set (the flash source and its lender included) and not a registered proxy, not yet frozen; a success sets the flag and counts one freeze

@@ -157,12 +157,12 @@ contract LPVaultSwapSettlementFuzzTest is LPVaultSwapUnitBase {
         assertEq(usdt.balanceOf(address(lvs)), usdtDust, "USDT donation untouched");
     }
 
-    /// @notice PROP-059 floor statement, USDC debt: vault token of 6 decimals at $2.10, bonus 10,500, no flash term;
+    /// @notice The PROP-059 floor statement as a fuzz twin of its Halmos check, USDC debt: vault token of 6 decimals at $2.10, bonus 10,500, no flash term;
     /// for every repayment `D < 2^64`, Aave's seizure `c = ⌊D × 10,500 × 10⁸ / (10⁴ × 2.1·10⁸)⌋` values to a floor that,
     /// with one vault unit, one debt unit, `U` and `ε`, covers `D`.
-    // PROP-059 verifies: SPEC-LIQ-003, SPEC-LIQ-005, SPEC-LIQ-007, REQ-SWAP-012, INV-034, Q-235, Q-404
+    // TEST-198 verifies: SPEC-LIQ-003, SPEC-LIQ-005, SPEC-LIQ-007, INV-034, Q-235, Q-404
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_PROP_059_floorCoversDebtUsdc(
+    function testFuzz_TEST_198_floorCoversDebtUsdc(
         uint64 debt
     ) public pure {
         _floorCovers(debt, 10_500, 6, 6, 210_000_000);
@@ -170,9 +170,9 @@ contract LPVaultSwapSettlementFuzzTest is LPVaultSwapUnitBase {
 
     /// @notice The same for GHO debt (18 decimals, Aave's fixed $1.00 source), vault token of 6 decimals at $2.00,
     /// bonus 10,200.
-    // PROP-059 verifies: SPEC-LIQ-003, SPEC-LIQ-005, SPEC-LIQ-007, REQ-SWAP-012, INV-034, Q-235, Q-404
+    // TEST-198 verifies: SPEC-LIQ-003, SPEC-LIQ-005, SPEC-LIQ-007, INV-034, Q-235, Q-404
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_PROP_059_floorCoversDebtGho(
+    function testFuzz_TEST_198_floorCoversDebtGho(
         uint64 debt
     ) public pure {
         _floorCovers(debt, 10_200, 18, 6, 200_000_000);

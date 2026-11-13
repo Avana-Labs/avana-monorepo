@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
@@ -138,5 +139,51 @@ contract LPVaultSwapLiquidationGasTest is LPVaultSwapUnitBase {
         emit log_named_uint("small call gas, 16 records held", usedMany);
         emit log_named_uint("small call gas, 1 record held", usedOne);
         assertLe(usedMany, usedOne + HELD_RECORDS_SLACK, "cost follows records debited, not held");
+    }
+
+    /// @dev 16 records of `units` each, opened at $2.50, with `debt` of the reserve borrowed.
+    function _sixteenSmall(
+        address wallet,
+        uint256 units,
+        uint256 debt,
+        bool ghoDebt
+    ) internal returns (address proxy) {
+        (proxy,) = _openAccount(wallet, uint128(units), 0, 250_000_000);
+        lpOracle.setAnswer(250_000_000);
+        for (uint256 i = 0; i < 15; ++i) {
+            _addRecord(proxy, wallet, uint128(units));
+        }
+        if (ghoDebt) adapter.borrow(proxy, ghoReserveId, address(gho), debt, wallet);
+        else adapter.borrow(proxy, usdcReserveId, address(usdc), debt, wallet);
+        assertEq(coll.getOpenRecordCount(proxy, address(vt)), 16, "the record bound");
+    }
+
+    /// @notice Record bound: an account-market of 16 records at `minPledgeUsd` ($10 each at the pledge price) owing 1
+    /// raw unit of USDC, and another owing 5 GHO, is liquidated whole by a committed operator in one call, through the
+    /// dust-rule branch that takes the whole reserve, within the 16,777,216 per-transaction gas limit and within
+    /// `G(16) = 5.15M`; a 17th pledge into the same account-market reverts `TooManyRecords`.
+    // TEST-269 verifies: SPEC-BACK-016, INV-096
+    function test_TEST_269_sixteenRecordsLiquidatedInOneCall() public {
+        uint256 units = 4_000_000; // $10 at $2.50
+        address one = _sixteenSmall(carol, units, 1, false);
+        address five = _sixteenSmall(alice, units, 5e18, true);
+        bytes32 extra = bytes32(nextKey++);
+        lpVault.mintPosition(extra, carol, MARKET_ID, uint128(units));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, uint256(16)));
+        adapter.pledge(one, carol, extra);
+        // A collapse to $0.00000001 a vault token: both accounts are liquidatable and Aave's seizure exceeds the
+        // collateral, so the dust rule takes the whole reserve.
+        lpOracle.setAnswer(1);
+        address[2] memory proxies = [one, five];
+        uint256[2] memory debts = [uint256(1), 5e18];
+        bool[2] memory gho_ = [false, true];
+        for (uint256 i = 0; i < 2; ++i) {
+            assertLt(_hf(proxies[i]), 1e18, "liquidatable");
+            (bool ok, uint256 used,) = _call(proxies[i], debts[i], gho_[i]);
+            assertTrue(ok, "one call");
+            assertLt(used, 16_777_216, "within the per-transaction gas limit");
+            assertLe(used, CALL_BUDGET, "within G(16)");
+            assertEq(_suppliedUnits(proxies[i]), 0, "the whole reserve taken");
+        }
     }
 }

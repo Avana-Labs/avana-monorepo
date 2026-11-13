@@ -281,7 +281,10 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     function _hasNonStableToken(
         address[] memory tokens
     ) internal view returns (bool) {
+        // One registry view per market token (at most 8, REQ-COLL-028), at listing only; a reverting registry
+        // reverts the listing (fail closed).
         for (uint256 i = 0; i < tokens.length; ++i) {
+            // forge-lint: disable-next-line(calls-loop)
             if (!_REGISTRY.getToken(tokens[i]).isUsdStable) return true;
         }
         return false;

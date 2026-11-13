@@ -16,7 +16,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     /// @notice The bindings are the construction immutables; the timelock is the initialised one.
     // TEST-242 verifies: REQ-SWAP-040, REQ-SWAP-069
-    function test_bindings() public view {
+    function test_TEST_242_bindings() public view {
         assertEq(lvs.LOCK(), address(lock), "LOCK");
         assertEq(lvs.AAVE_ADAPTER(), address(adapter), "AAVE_ADAPTER");
         assertEq(lvs.COLLATERALIZATION(), address(coll), "COLLATERALIZATION");
@@ -29,7 +29,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     /// @notice The spec's constants: `keeperFloor` 1, `MAX_KEEPERS` 32, `MAX_REPAY_TRANSFERS` 4, the payout transfer's
     /// 100,000 gas, and `APPLICATION_ADMIN` the shared role identifier.
     // TEST-098 verifies: REQ-SWAP-034, REQ-SWAP-076, REQ-SWAP-122
-    function test_constants() public view {
+    function test_TEST_098_constants() public view {
         assertEq(lvs.KEEPER_FLOOR(), 1, "keeperFloor");
         assertEq(lvs.MAX_KEEPERS(), 32, "MAX_KEEPERS");
         assertEq(lvs.MAX_REPAY_TRANSFERS(), 4, "MAX_REPAY_TRANSFERS");
@@ -39,7 +39,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
 
     /// @notice The list keeps registration order; a removal moves the last entry into the removed slot.
     // TEST-098 verifies: REQ-SWAP-032, REQ-SWAP-035
-    function test_listOrderAndSwapAndPop() public {
+    function test_TEST_098_listOrderAndSwapAndPop() public {
         address[4] memory k = [makeAddr("k1"), makeAddr("k2"), makeAddr("k3"), makeAddr("k4")];
         for (uint256 i = 0; i < 4; ++i) {
             vm.prank(timelock);
@@ -63,7 +63,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     /// @notice `activeKeeperCount` counts the registered keepers the MarketRegistry has not frozen; `isApprovedKeeper`
     /// and `approvedKeeperCount` ignore the freeze.
     // TEST-098 verifies: REQ-SWAP-034, REQ-SWAP-036, REQ-ACCESS-100
-    function testFuzz_activeCountIgnoresFrozen(
+    function testFuzz_TEST_098_activeCountIgnoresFrozen(
         uint8 n,
         uint256 frozenMask
     ) public {
@@ -87,7 +87,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
 
     /// @notice Removing a frozen keeper leaves the active count unchanged, so it is allowed even at the floor.
     // TEST-098 verifies: REQ-SWAP-035, REQ-ACCESS-121, SPEC-GOV-008
-    function test_removeFrozenAtTheFloor() public {
+    function test_TEST_098_removeFrozenAtTheFloor() public {
         address k = makeAddr("frozenKeeper");
         vm.prank(timelock);
         lvs.addKeeper(k);
@@ -102,7 +102,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     /// @notice The cap is exactly 32: the 32nd registration succeeds, the 33rd reverts `TooManyKeepers(32)`; a removal
     /// makes room again.
     // TEST-098 verifies: REQ-SWAP-033, REQ-ACCESS-053
-    function test_capIsExactly32() public {
+    function test_TEST_098_capIsExactly32() public {
         for (uint256 i = 0; i < 31; ++i) {
             vm.prank(timelock);
             lvs.addKeeper(address(uint160(0xA100 + i)));
@@ -121,7 +121,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     /// @notice `addKeeper(0)`, a second `addKeeper` of the same address and `removeKeeper` of an unregistered address
     /// revert `InvalidKeeper`; each success emits its event.
     // TEST-098 verifies: REQ-SWAP-033, REQ-SWAP-035, REQ-ACCESS-053, REQ-ACCESS-054
-    function test_invalidKeeperAndEvents() public {
+    function test_TEST_098_invalidKeeperAndEvents() public {
         address k = makeAddr("newKeeper");
         vm.prank(timelock);
         vm.expectRevert(ILPVaultSwapErrors.InvalidKeeper.selector);
@@ -144,7 +144,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
 
     /// @notice Any account without `APPLICATION_ADMIN` is refused both registry calls with the missing role.
     // TEST-062 verifies: REQ-SWAP-033, REQ-SWAP-035, REQ-ACCESS-053, REQ-ACCESS-054
-    function testFuzz_registryNeedsApplicationAdmin(
+    function testFuzz_TEST_062_registryNeedsApplicationAdmin(
         address caller
     ) public {
         vm.assume(caller != timelock);
@@ -162,7 +162,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     /// @notice Registration is the only way onto the list: any other address reads as not approved, and a frozen
     /// stranger changes no count.
     // TEST-098 verifies: REQ-SWAP-032, REQ-SWAP-036
-    function testFuzz_strangersNeverApproved(
+    function testFuzz_TEST_098_strangersNeverApproved(
         address stranger,
         bool frozen
     ) public {

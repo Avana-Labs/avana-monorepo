@@ -15,7 +15,7 @@ script/security-slow.sh halmos
 HALMOS_CONTRACTS=VaultTokenHalmosTest HALMOS_LOOP=16 script/security-slow.sh halmos            # one test contract, as each CI job runs it
 ```
 
-`FOUNDRY_DYNAMIC_TEST_LINKING=false` is required: dynamic test linking turns `new C(...)` into `deployCode`, which Halmos does not support. Budget: `HALMOS_LOOP` (default 8, nightly 16).
+`FOUNDRY_DYNAMIC_TEST_LINKING=false` is required: dynamic test linking turns `new C(...)` into `deployCode`, which Halmos does not support. Budget: `HALMOS_LOOP` (default 8, nightly 16). `script/security-slow.sh` runs one solver thread (`--solver-threads 1`; Halmos's default is one per CPU). In CI, it runs Halmos and its solver in a systemd scope capped at `SECURITY_MEMORY_MAX` (14 GB of the runner's 16 GB, no swap), so a check that needs more ends with "OUT OF MEMORY" in its log instead of the runner shutting down. In run 43387180884 the runner shut down 30 s into `check_PROP_019_legSlippage`, with no log.
 
 ## Scope
 

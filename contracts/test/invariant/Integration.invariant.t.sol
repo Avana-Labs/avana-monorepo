@@ -116,7 +116,8 @@ contract IntegrationInvariantTest is IntegrationFlows {
 
     /// @notice A fixed sequence: a price fall, liquidations by the keeper (direct, GHO) and through the helper (USDC),
     /// the borrower's repay and debt-free exit under Paused(MintPathSuspect).
-    function test_handlerSequenceSettles() public {
+    // TEST-215 verifies: INV-001, INV-021, INV-080
+    function test_TEST_215_handlerSequenceSettles() public {
         handler.movePrice(150_000_000);
         handler.liquidate(1, 0, true, false, false);
         handler.liquidate(0, 1, false, true, true);
