@@ -13,6 +13,7 @@ import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
 import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {MarketSpeedLimits} from "../parameter-store/types/MarketSpeedLimits.sol";
 import {IRiskModule} from "./IRiskModule.sol";
 import {IRiskModuleAdmin} from "./IRiskModuleAdmin.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
@@ -20,29 +21,36 @@ import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleChecks} from "./IRiskModuleChecks.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModulePledgeLogic} from "./IRiskModulePledgeLogic.sol";
+import {IRiskModuleSpeedLogic} from "./IRiskModuleSpeedLogic.sol";
 import {IRiskModuleStatusLogic} from "./IRiskModuleStatusLogic.sol";
 import {IRiskModuleViews} from "./IRiskModuleViews.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleConstants} from "./RiskModuleConstants.sol";
+import {RiskModuleSpeed} from "./RiskModuleSpeed.sol";
+import {BorrowSpeedInputs} from "./types/BorrowSpeedInputs.sol";
 import {PledgeCharge} from "./types/PledgeCharge.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 import {RiskModuleLogics} from "./types/RiskModuleLogics.sol";
+import {SpeedView} from "./types/SpeedView.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title RiskModule
 /// @notice Avana's risk checks on one chain, holding no funds: the pledge check, the borrow-side pre- and post-checks,
-/// the Aave configuration drift check, the breaker pokes and their non-reverting status views.
+/// the borrow-speed and pledge-speed limits, the Aave configuration drift check, the breaker pokes and their
+/// non-reverting status views.
 /// @dev UUPS implementation behind one fixed ERC-1967 proxy; `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only
-/// by the timelock. Its only state is the OpenZeppelin `AccessControl` roles in their ERC-7201 namespace. The check
-/// bodies run in five immutable, stateless logic contracts by plain calls, because the whole surface does not fit the
+/// by the timelock. Its state is the speed windows in the ERC-7201 namespace `avana.storage.RiskModule.speed`, written
+/// only by the AaveAdapter's `preBorrowCheck` and Collateralization's `checkPledge` (REQ-RISK-095), and the OpenZeppelin
+/// `AccessControl` roles in their ERC-7201 namespace. The check bodies run in six immutable, stateless logic contracts
+/// by plain calls, because the whole surface does not fit the
 /// 24,576-byte code limit; the logic addresses are implementation immutables whose `logicConfig()` the constructor
 /// checks, so a new logic contract is part of a new implementation and waits the normal delay. The RiskModule itself
-/// writes nothing but its roles and makes one state-changing call, `MarketRegistry.recordBreach` from `pokeBreakers`
+/// writes nothing but its roles and the speed windows and makes one state-changing call, `MarketRegistry.recordBreach` from `pokeBreakers`
 /// and `pokeConfig`; the logic contracts' only state-changing calls are LPOracle and DebtOracle `poke()`. No token, NFT
 /// or debt asset moves through it, and no exit or liquidation path calls it (REQ-RISK-005).
-/// @custom:spec REQ-RISK-001, REQ-RISK-002, REQ-RISK-003, REQ-RISK-004, REQ-RISK-005, REQ-RISK-007, REQ-RISK-008, REQ-RISK-039, REQ-RISK-040, REQ-RISK-053, REQ-RISK-054, REQ-RISK-055, REQ-RISK-072, Q-226, Q-229, Q-240, Q-259
-contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase, IRiskModule {
+/// @custom:spec REQ-RISK-001, REQ-RISK-002, REQ-RISK-003, REQ-RISK-004, REQ-RISK-005, REQ-RISK-007, REQ-RISK-008, REQ-RISK-039, REQ-RISK-040, REQ-RISK-053, REQ-RISK-054, REQ-RISK-055, REQ-RISK-072, REQ-RISK-095, Q-226, Q-229, Q-240, Q-259, Q-411
+contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpeed, IRiskModule {
     /// @dev Drift, Hub shares and the expected collateral factor.
     address internal immutable _DRIFT_LOGIC;
     /// @dev Breaker conditions and states.
@@ -53,11 +61,13 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     address internal immutable _BORROW_LOGIC;
     /// @dev The account status.
     address internal immutable _STATUS_LOGIC;
+    /// @dev The speed-limit reads.
+    address internal immutable _SPEED_LOGIC;
 
     /// @notice Fixes the implementation immutables, checks each logic contract and disables initializers on the
     /// implementation itself.
     /// @param im The per-chain Avana addresses.
-    /// @param logics The five logic contracts, each built with `im`.
+    /// @param logics The six logic contracts, each built with `im`.
     /// @custom:spec REQ-RISK-002
     constructor(
         RiskModuleImmutables memory im,
@@ -68,11 +78,13 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         _requireLogic(logics.pledge, keccak256("RiskModulePledgeLogic"));
         _requireLogic(logics.borrow, keccak256("RiskModuleBorrowLogic"));
         _requireLogic(logics.status, keccak256("RiskModuleStatusLogic"));
+        _requireLogic(logics.speed, keccak256("RiskModuleSpeedLogic"));
         _DRIFT_LOGIC = logics.drift;
         _BREAKER_LOGIC = logics.breaker;
         _PLEDGE_LOGIC = logics.pledge;
         _BORROW_LOGIC = logics.borrow;
         _STATUS_LOGIC = logics.status;
+        _SPEED_LOGIC = logics.speed;
         _disableInitializers();
     }
 
@@ -93,7 +105,10 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     // ---------------------------------------------------------------------------------------------------------------
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-RISK-006, REQ-RISK-009, REQ-RISK-025, REQ-RISK-057, REQ-RISK-058, REQ-RISK-065, REQ-RISK-066, REQ-RISK-067
+    /// @dev After the pledge logic approves, a pledge that is not a rescue top-up is tested against the market's pledge
+    /// window on its booked value before the pledge, `regularUsed + sliceUsed`; only Collateralization's call adds the
+    /// charge (REQ-RISK-093, REQ-RISK-095).
+    /// @custom:spec REQ-RISK-006, REQ-RISK-009, REQ-RISK-025, REQ-RISK-057, REQ-RISK-058, REQ-RISK-065, REQ-RISK-066, REQ-RISK-067, REQ-RISK-093, REQ-RISK-095, REQ-RISK-099
     function checkPledge(
         address depositor,
         address proxy,
@@ -103,19 +118,27 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         uint128 units,
         PledgeCounters calldata counters,
         bool requireRescue
-    ) external view override returns (PledgeCharge memory charge) {
+    ) external override returns (PledgeCharge memory charge) {
         charge = IRiskModulePledgeLogic(_PLEDGE_LOGIC)
             .checkPledge(depositor, proxy, marketId, integrationId, positionKey, units, counters, requireRescue);
+        if (!charge.rescue) {
+            uint256 booked = uint256(counters.regularUsed) + counters.sliceUsed;
+            _chargePledge(marketId, booked, charge.usdCharge, msg.sender == _COLLATERALIZATION);
+        }
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-ADAPTER-009, REQ-ADAPTER-024, REQ-RISK-056, REQ-RISK-061, REQ-RISK-062, REQ-RISK-065, REQ-RISK-071, REQ-RISK-077, REQ-RISK-081, REQ-RISK-082
+    /// @dev Every gate of the borrow logic first, then the two borrow-speed windows; only the AaveAdapter's call adds
+    /// the charges (REQ-RISK-092, REQ-RISK-095).
+    /// @custom:spec REQ-ADAPTER-009, REQ-ADAPTER-024, REQ-RISK-056, REQ-RISK-061, REQ-RISK-062, REQ-RISK-065, REQ-RISK-071, REQ-RISK-077, REQ-RISK-081, REQ-RISK-082, REQ-RISK-092, REQ-RISK-095, REQ-RISK-098
     function preBorrowCheck(
         address proxy,
         uint256 debtReserveId,
-        uint256
+        uint256 amount
     ) external override {
         IRiskModuleBorrowLogic(_BORROW_LOGIC).preCheck(proxy, debtReserveId, true);
+        BorrowSpeedInputs memory s = IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowInputs(proxy, debtReserveId, amount);
+        _chargeBorrow(s, amount, msg.sender == _ADAPTER);
     }
 
     /// @inheritdoc IRiskModuleChecks
@@ -341,6 +364,35 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         address proxy
     ) external view override returns (uint256 usd) {
         usd = IRiskModuleBorrowLogic(_BORROW_LOGIC).debtValueUsd(proxy);
+    }
+
+    /// @inheritdoc IRiskModuleViews
+    /// @custom:spec REQ-RISK-097, SPEC-CAP-011, Q-411
+    function getBorrowSpeed(
+        uint256 marketId,
+        uint256 debtReserveId
+    ) external view override returns (SpeedView memory market, SpeedView memory debt) {
+        try IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowInputsOf(marketId, debtReserveId) returns (
+            BorrowSpeedInputs memory s
+        ) {
+            (market, debt) = _borrowViews(s);
+        } catch {
+            (market.unavailable, debt.unavailable) = (true, true);
+        }
+    }
+
+    /// @inheritdoc IRiskModuleViews
+    /// @custom:spec REQ-RISK-097, SPEC-CAP-011, Q-411
+    function getPledgeSpeed(
+        uint256 marketId
+    ) external view override returns (SpeedView memory pledge) {
+        try IRiskModuleSpeedLogic(_SPEED_LOGIC).pledgeInputsOf(marketId) returns (
+            MarketSpeedLimits memory p, uint256 booked
+        ) {
+            pledge = _pledgeView(marketId, p, booked);
+        } catch {
+            pledge.unavailable = true;
+        }
     }
 
     /// @inheritdoc IRiskModuleViews

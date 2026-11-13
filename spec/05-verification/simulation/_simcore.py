@@ -161,7 +161,7 @@ class Params:
     small_range: tuple = (100.0, 1500.0)
     drifted_share: float = 0.10
     multi_share: float = 0.20         # accounts holding two markets
-    usdc_debt_share: float = 0.0      # accounts with half their debt in USDC (GHO is the only reserve at launch)
+    usdc_debt_share: float = 0.0      # accounts with half their debt in USDC (0: GHO debt only, one example of the approved set)
     # --- incident controls ---
     pause: object = None              # (start, end, reason) with reason 'General' or 'MintPathSuspect' (Q-252)
     breaker_trip: object = None       # (start, end) manual market breaker trip on every market (Q-241)

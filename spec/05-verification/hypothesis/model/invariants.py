@@ -3,9 +3,9 @@
 """Global invariants of the Avana model, checked after every state-machine step.
 Each check names the property ID recorded in ../README.md."""
 from .const import (GHO, USDC_DEBT, HUB, LPVAULT, COLL, ADAPTER, SWAP, ESCROW, COV, GHO_RID, DEBT_RIDS)
-from .aave import premium_ray
+from .aave import premium_ray, curve_rate, BPS_TO_RAY
 from .uniswap import position_amounts
-from .mathlib import BPS, RAY, cdiv
+from .mathlib import BPS, RAY, cdiv, ray_mul_up
 from .tokens import DECIMALS
 
 
@@ -151,6 +151,13 @@ def check_all(s, solvency_check=False):
         for c in COV.values():
             if c in a.spokes:
                 check(a.spokes[c].deficit_ray == 0 and a.spokes[c].drawn_shares == 0, "HYP-08", "Coverage Spoke drew")
+        # HYP-98 verifies: SPEC-HUB-007, REQ-HUB-008, Q-408
+        if a.ir is not None:
+            base, before, after, _ = a.ir
+            check(a.drawn_rate == curve_rate(a.ir, a.liquidity, ray_mul_up(a.drawn_shares, a.rate_index)), "HYP-98",
+                  f"{asset} drawn rate is not the curve's rate at the utilization of its last Hub action")
+            check(base * BPS_TO_RAY <= a.drawn_rate <= (base + before + after) * BPS_TO_RAY, "HYP-98",
+                  f"{asset} drawn rate outside [base, base + before + after]")
     # HYP-09 verifies: Q-061
     for mk in s.markets:
         pool = mk.pool
@@ -197,8 +204,10 @@ def check_all(s, solvency_check=False):
     for mk in s.markets:
         e = mk.oracle.evaluate(now)
         check(e["served"] >= 1, "HYP-11", "LPOracle served 0")
-        if e["state"] != "Live":
-            check(e["served"] <= mk.oracle.accepted, "HYP-11", "a non-Live market served above its accepted price")
+        if e["state"] == "Cached":
+            check(e["served"] == mk.oracle.accepted, "HYP-11", "a Cached market not served at its accepted price")
+        if e["fresh"] is not None:
+            check(e["served"] <= e["fresh"], "HYP-11", "a market that is not failed served above its fresh price")
     de = s.debt_oracle.evaluate(now)
     check(de["served"] >= 1, "HYP-11", "DebtOracle served 0")
     if de["state"] != "Live":

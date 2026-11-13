@@ -224,35 +224,19 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     }
 
     // TEST-213 verifies: REQ-CONFIG-080, REQ-MREG-015, Q-355
-    function test_TEST_213_windDownRampAndClose() public {
+    function test_TEST_213_offboardingNoticeAndClose() public {
         _activate();
         vm.warp(1_000_000);
         vm.prank(address(timelock));
         registry.setMarketOffboarding(id);
         uint256 t0 = block.timestamp;
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, 42));
-        registry.stepWindDown(42);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.WindDownStepTooEarly.selector, t0 + 5 days));
-        registry.stepWindDown(id);
-        // Day 5: first step at the start of the ramp (7,500 bps listed).
-        vm.warp(t0 + 5 days);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryWindDown.WindDownStepped(id, 7500);
-        vm.prank(keeper);
-        registry.stepWindDown(id);
-        vm.warp(t0 + 5 days + 23 hours);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.WindDownStepTooEarly.selector, t0 + 6 days));
-        registry.stepWindDown(id);
-        // Day 20: halfway, 7,500 - 2,500 x 15/30 = 6,250.
-        vm.warp(t0 + 20 days);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryWindDown.WindDownStepped(id, 6250);
-        registry.stepWindDown(id);
-        // Day 40: past the ramp end, the final 5,000.
+        registry.closeMarket(42);
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
+        registry.closeMarket(id);
+        // The published target of a 7,500 bps reserve: the Aave DAO lowers it once, to 3,750, after day 5.
+        assertEq(registry.windDownState(id).targetLtBps, 3750);
         vm.warp(t0 + 40 days);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryWindDown.WindDownStepped(id, 5000);
-        registry.stepWindDown(id);
         collat.setHasDebt(vt, true);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketHasDebt.selector, id));
         registry.closeMarket(id);
@@ -266,8 +250,6 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfVaultToken(vt), id, "the old token stays bound to the closed market");
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, id));
         registry.closeMarket(id);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, id));
-        registry.stepWindDown(id);
     }
 
     // TEST-213 verifies: REQ-CONFIG-080, Q-355
@@ -283,29 +265,24 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         uint256 t0 = block.timestamp;
         w = registry.windDownState(id);
         assertEq(w.offboardedAt, t0);
-        assertEq(w.lastStepAt, 0);
+        assertEq(w.unusedLastStepAt, 0);
         assertEq(w.startLtBps, 7500);
-        assertEq(w.currentLtBps, 7500);
+        assertEq(w.targetLtBps, 3750);
         // Debt-free, but the notice has not run: no close in the offboarding block or before the notice ends.
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.WindDownStepTooEarly.selector, t0 + 5 days));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
         registry.closeMarket(id);
         vm.warp(t0 + 5 days - 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.WindDownStepTooEarly.selector, t0 + 5 days));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
         registry.closeMarket(id);
-        vm.warp(t0 + 20 days);
-        registry.stepWindDown(id);
-        w = registry.windDownState(id);
-        assertEq(w.lastStepAt, t0 + 20 days);
-        assertEq(w.currentLtBps, 6250);
+        vm.warp(t0 + 5 days);
         vm.prank(alice);
         registry.closeMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Closed));
     }
 
     // TEST-213 verifies: REQ-CONFIG-080
-    function testFuzz_TEST_213_rampStaysBetweenFinalAndStart(
-        uint16 cf,
-        uint32 elapsed
+    function testFuzz_TEST_213_targetStaysBetweenFloorAndStart(
+        uint16 cf
     ) public {
         cf = uint16(bound(cf, 1, 8000));
         _dynamic(cf, 10_500, 0);
@@ -315,14 +292,9 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         _activate();
         vm.prank(address(timelock));
         registry.setMarketOffboarding(id);
-        vm.warp(block.timestamp + 5 days + uint256(elapsed));
-        vm.recordLogs();
-        registry.stepWindDown(id);
-        uint16 lt = abi.decode(vm.getRecordedLogs()[0].data, (uint16));
-        uint16 lowest = cf < 5000 ? cf : 5000;
-        assertGe(lt, lowest);
-        assertLe(lt, cf);
-        if (elapsed >= 30 days && cf > 5000) assertEq(lt, 5000);
+        WindDownState memory w = registry.windDownState(id);
+        assertEq(w.targetLtBps, uint256(cf) * 5000 / 10_000);
+        assertLe(w.targetLtBps, w.startLtBps);
     }
 
     // TEST-213 verifies: REQ-MREG-033, Q-358

@@ -3,8 +3,10 @@ name: models
 # Python and Quint models outside the spec-stage quick path. Every pull request and every push to main runs the
 # formal-verification areas of audit/formal-verification/ (each area's run.sh: every Z3, enumeration and Quint model,
 # then check_ids.py where the area has one), the user simulation of audit/user-simulation/ (the reported run with
-# --extra-seeds 4, and the deployment-topology grid one seed per job) and contract_checklist.py --check for every
-# contract with a checklist in audit/traceability/results/contract-checklists/. The nightly run (06:00 UTC), every
+# --extra-seeds 4, and the deployment-topology grid one seed per job) and contract_checklist.py --all --check
+# --links-only: every contract key of contract_checklist.py, and the TEST rows on no contract's checklist, must be
+# linked by a tag on a test of their own (a row is "not run" here, since this workflow runs no test; contracts.yml's
+# evidence job checks that the linked tests ran and passed). The nightly run (06:00 UTC), every
 # release tag (`v*`) and every manual run also run the topology simulator checks of spec/05-verification/quint/topology_run.sh, the part that
 # run_all.sh --nightly adds to the quick path; spec.yml runs the quick path. A simulation job also fails when a run
 # reports an invariant violation, since run_simulation.py exits 0 whenever it completes.
@@ -174,25 +176,16 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
 
-      - name: Every ID of each checklisted contract linked from contracts/test or contracts/certora
-        # One contract per checklist file, so a new checklist joins this check without a workflow change.
+      - name: Every row of every contract linked by a test of its own (contract_checklist.py --all --check --links-only)
+        # Every key of contract_checklist.CONTRACTS, so a contract cannot drop out of the check by having no committed
+        # checklist file, and the TEST rows on no contract's checklist (--uncovered). A row fails when no tag on a test
+        # of its own names it, or its only tests use a stand-in for the contract (evidence.STAND_INS).
         run: |
-          failed=()
-          found=0
-          for f in audit/traceability/results/contract-checklists/*.md; do
-            [ -e "$f" ] || continue
-            found=1
-            c=$(basename "$f" .md)
-            echo "::group::$c"
-            if ! spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py "$c" --check; then
-              failed+=("$c")
-            fi
-            echo "::endgroup::"
-          done
-          [ "$found" -eq 1 ] || { echo "::error::no checklist in audit/traceability/results/contract-checklists/"; exit 1; }
-          if [ "${#failed[@]}" -gt 0 ]; then
-            echo "::error::contract_checklist.py --check failed for: ${failed[*]}"; exit 1
-          fi
+          rc=0
+          spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --all --check --links-only \
+            --summary checklists.md || rc=$?
+          cat checklists.md >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
 
   quint-topology:
     # The topology simulator runs of quint/topology_run.sh (1,000 traces x 25 steps per check), which

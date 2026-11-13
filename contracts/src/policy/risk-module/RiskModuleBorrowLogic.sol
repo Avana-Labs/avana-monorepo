@@ -93,8 +93,14 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         address proxy,
         uint256 minHealthFactor
     ) external view override returns (uint256 healthFactor) {
-        (, uint256 marketId) = _account(proxy);
-        (, healthFactor) = _health(proxy);
+        uint256 marketId;
+        address lpOracle;
+        uint256 served;
+        (, healthFactor, served, marketId, lpOracle) = _healthAndPrice(proxy);
+        // The accepted price bounds borrowing (SPEC-ORC-017): the check runs at min(served, accepted). The served
+        // price is read once, by the rescue-unit valuation when the account has rescue units.
+        if (served == 0) served = _served(lpOracle);
+        healthFactor = RiskModuleMath.boundedHealthFactor(healthFactor, served, _accepted(lpOracle));
         uint256 required = RiskModuleMath.requiredHealthFactor(_store().hardHealthFloor(marketId), minHealthFactor);
         if (healthFactor < required) revert HealthFactorTooLow(healthFactor, required);
     }
@@ -121,16 +127,27 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
     function _health(
         address proxy
     ) internal view returns (uint256 hf, uint256 hfEx) {
-        (address spoke, uint256 marketId) = _account(proxy);
+        (hf, hfEx,,,) = _healthAndPrice(proxy);
+    }
+
+    /// @dev `_health`, with the served price it read (0 when the account has no rescue units, so none was read), the
+    /// account's market and that market's LPOracle.
+    function _healthAndPrice(
+        address proxy
+    ) internal view returns (uint256 hf, uint256 hfEx, uint256 served, uint256 marketId, address lpOracle) {
+        address spoke;
+        (spoke, marketId) = _account(proxy);
         Market memory m = _market(marketId);
+        lpOracle = m.lpOracle;
         IAaveV4Spoke.UserAccountData memory a = _accountData(spoke, proxy);
         hf = a.healthFactor;
         uint256 u = ICollateralizationViews(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
-        if (u == 0) return (hf, hf);
+        if (u == 0) return (hf, hf, 0, marketId, lpOracle);
         IAaveV4Spoke sp = IAaveV4Spoke(spoke);
         uint32 key = sp.getUserPosition(m.reserveId, proxy).dynamicConfigKey;
         uint256 cf = sp.getDynamicReserveConfig(m.reserveId, key).collateralFactor;
-        uint256 e = RiskModuleMath.rescueValue(u, _served(m.lpOracle), cf, m.decimals);
+        served = _served(lpOracle);
+        uint256 e = RiskModuleMath.rescueValue(u, served, cf, m.decimals);
         hfEx = RiskModuleMath.healthExcludingRescue(hf, e, a.totalDebtValueRay);
     }
 

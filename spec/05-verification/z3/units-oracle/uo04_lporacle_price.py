@@ -18,7 +18,7 @@ from z3 import (Int, Ints, Real, Reals, And, Or, If, BitVec, BitVecVal, ULE, ULT
                 BVMulNoOverflow, Extract)
 from _common import prove, witness, note, finish, PRICE_ONE, MAX_ROUTE_ANSWER
 
-A_MAX = MAX_ROUTE_ANSWER   # listing bound on any route value ($10,000, 8 decimals)
+A_MAX = MAX_ROUTE_ANSWER   # listing bound on any route value ($10,000,000,000, 8 decimals)
 
 # ---------------------------------------------------------------------------
 # MATH-UO-14  Rounding direction and error of price8 = isqrt(4*a0*a1).

@@ -229,9 +229,6 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
             registry.syncDrawCap(address(spoke), GHO_RESERVE);
             vm.prank(c[j]);
             vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, marketId));
-            registry.stepWindDown(marketId);
-            vm.prank(c[j]);
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, marketId));
             registry.closeMarket(marketId);
             vm.revertToState(snap);
         }

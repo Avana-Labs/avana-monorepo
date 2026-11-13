@@ -1,0 +1,327 @@
+# Checklist: RiskModule
+
+Spec pages: 07-risk-module.md. CVL specs: RiskModule.spec, RiskModuleDrift.spec.
+
+Run results: none given (links only); recorded prover results and Halmos logs are read. [x] verified (ran and passed), [!] failed, [~] not run (linked, no result), [ ] unlinked (no counting check).
+
+## REQ / SPEC on the page (161: 0 verified, 0 failed, 140 not run, 21 unlinked)
+
+- [~] `REQ-RISK-001` (07-risk-module.md:134) The RiskModule MUST sit behind one fixed UUPS proxy address referenced by Collateralization (immutable), the A — TEST-062
+- [~] `REQ-RISK-002` (07-risk-module.md:135) The RiskModule MUST be a UUPS proxy whose `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only by the t — TEST-062, TEST-242
+- [~] `REQ-RISK-003` (07-risk-module.md:136) The RiskModule MUST NOT hold or approve any token or NFT, MUST NOT call any state-changing Aave, AMM-protocol  — TEST-035
+- [~] `REQ-RISK-004` (07-risk-module.md:137) The RiskModule MUST NOT store or write exposure counters; Collateralization keeps and updates them with satura — TEST-012
+- [~] `REQ-RISK-005` (07-risk-module.md:138) No exit path (repay, debt-free withdrawal and removal, `repayAllAndWithdraw`, zero-credit release, fee collect — TEST-276
+- [~] `REQ-RISK-006` (07-risk-module.md:139) `checkPledge` MUST write nothing but the pledge window, and that only when Collateralization calls (`REQ-RISK- — TEST-164
+- [~] `REQ-RISK-007` (07-risk-module.md:140) A faulty or hostile RiskModule implementation MUST NOT be able to mint, credit backing, move an NFT or move an — TEST-012, TEST-132, TEST-156
+- [~] `REQ-RISK-008` (07-risk-module.md:141) Avana sets no allowlist and no cap on markets per wallet. Its per-account limits are: one collateral market pe — TEST-034, TEST-196, TEST-278
+- [~] `REQ-RISK-009` (07-risk-module.md:147) The market MUST have status `Active` in the MarketRegistry; otherwise `MarketNotActive(marketId)`, or `MarketO — TEST-012, TEST-028
+- [~] `REQ-RISK-010` (07-risk-module.md:148) The position MUST be the one the market's pinned AMM integration took into custody and validated: Collateraliz — TEST-012, TEST-034
+- [~] `REQ-RISK-011` (07-risk-module.md:149) The pool MUST be the market's recorded pool (address or identifier, per the integration's pool keying); the in — TEST-034
+- [~] `REQ-RISK-012` (07-risk-module.md:150) The position MUST match the market's exact shape: for concentrated liquidity, `tickLower` and `tickUpper` equa — TEST-011, TEST-034
+- [~] `REQ-RISK-013` (07-risk-module.md:151) The units to credit MUST be greater than 0 (error `ZeroLiquidity`); the pledge's value must also reach `minPle — TEST-012
+- [~] `REQ-RISK-014` (07-risk-module.md:152) An `Offboarding` market MUST take no pledge, new account or top-up (error `MarketOffboarding(marketId)`, `REQ- — TEST-012
+- [~] `REQ-RISK-015` (07-risk-module.md:153) No pool-broken restriction exists. A broken pool is contained by an Aave freeze of the market's vault-token re — TEST-028, TEST-035, TEST-155
+- [~] `REQ-RISK-016` (07-risk-module.md:154) `checkPledge` MUST NOT read the application pause state, its reason or the address freeze: the Adapter applies — TEST-228
+- [~] `REQ-RISK-017` (07-risk-module.md:155) Price state of the pledged market only (the worst-state rule does not apply to pledges): a new-account pledge  — TEST-012
+- [~] `REQ-RISK-018` (07-risk-module.md:156) For a new-account pledge, `checkAaveConfig(spoke, [marketId])` MUST pass, including the risk-configuration rea — TEST-012, TEST-033
+- [~] `REQ-RISK-019` (07-risk-module.md:157) For a new-account pledge, no enabled debt reserve of the Spoke may be paused on Aave (`getReserveConfig(r).pau — TEST-012
+- [~] `REQ-RISK-020` (07-risk-module.md:158) Aave pre-checks for every pledge, so failures surface as Avana errors instead of Aave errors from inside `Spok — TEST-012
+- [~] `REQ-RISK-021` (07-risk-module.md:159) The pledge's USD value MUST be booked with [SPEC-CAP-001](#cap-math) and tested with [SPEC-CAP-002](#cap-math) — TEST-013, TEST-070, TEST-272
+- [~] `REQ-RISK-022` (07-risk-module.md:160) A pledge MAY use the market's top-up slice only if it is a top-up, the account's health factor before the pled — TEST-013
+- [~] `REQ-RISK-023` (07-risk-module.md:161) Avana's share of the pool MUST satisfy [SPEC-CAP-005](#cap-math) for every pledge except a rescue top-up (`REQ — TEST-034, TEST-071
+- [~] `REQ-RISK-024` (07-risk-module.md:162) Exposure caps MUST be checked on pledge against post-pledge totals only (there is no idle part to move back at — TEST-013
+- [~] `REQ-RISK-025` (07-risk-module.md:163) `checkPledge` MUST return `PledgeCharge{usdCharge, sliceUsd, rescue, rescueUnits}` with `usdCharge` from SPEC- — TEST-010
+- [~] `REQ-RISK-026` (07-risk-module.md:164) The price used for booking a pledge, top-up or re-credit (`marketUsdCap`, `tokenUsdCap`, `minPledgeUsd`, the r — PROP-062, TEST-010, TEST-013, TEST-164
+- [~] `REQ-RISK-027` (07-risk-module.md:165) Collateralization's and the integration's own custody checks (pinned integration, caller owns the position, po — TEST-011, TEST-034
+- [~] `REQ-RISK-028` (07-risk-module.md:166) `checkPledge` MUST read the account's debt and health factor from the CDP Spoke at the current block and MUST  — TEST-012
+- [~] `REQ-RISK-029` (07-risk-module.md:167) The market's CDP Spoke, home Hub, integration, `reserveId`, `hubAssetId`, pool, pool tokens and vault token MU — TEST-181
+- [~] `REQ-RISK-030` (07-risk-module.md:168) Errors from Aave V4, an AMM protocol or Chainlink that are not caught MUST pass through unchanged; Avana custo — TEST-182
+- [~] `REQ-RISK-031` (07-risk-module.md:169) `previewPledge(depositor, marketId, positionKey)` MUST run the same code paths as `checkPledge`, with the prox — TEST-011, TEST-028, TEST-034
+- [~] `REQ-RISK-057` (07-risk-module.md:170) Minimum pledge value: for every pledge, new account and top-up alike, `pledgeUsd = mulDiv(L, price8, 10^d, Flo — PROP-062, TEST-034, TEST-071, TEST-196, TEST-235
+- [ ] `REQ-RISK-058` (07-risk-module.md:171) `checkPledge` MUST be callable for its effect only from Collateralization's `pledge`: Collateralization passes — TEST-171 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `REQ-RISK-066` (07-risk-module.md:175) **Rescue top-up.** `checkPledge` MUST compute `eligible = borrowCount > 0 ∧ hf < rescueHealthFactor` (1.10e18) — PROP-062, TEST-235, TEST-238
+- [~] `REQ-RISK-067` (07-risk-module.md:176) A rescue top-up's value at the booking price `min(fresh, A)` (`REQ-RISK-026`) MUST reach `min(minPledgeUsd[m], — PROP-062, TEST-062, TEST-196, TEST-235
+- [~] `REQ-RISK-068` (07-risk-module.md:177) **Rescue units never support new debt.** `postHealthCheck` MUST read the account's rescue units `COLLATERALIZA — PROP-067, TEST-071, TEST-077, TEST-236
+- [~] `REQ-RISK-070` (07-risk-module.md:178) `checkRemainingRecord(marketId, remainingUnits)` MUST revert with `RecordBelowMinPledge(remainingUsd, minPledg — TEST-237
+- [~] `REQ-RISK-032` (07-risk-module.md:182) There is no Avana market freeze and the RiskModule has no `freezeMarket`. Stopping new risk in one market uses — TEST-035, TEST-155
+- [~] `REQ-RISK-033` (07-risk-module.md:183) The RiskModule MUST NOT set or clear any market status; `setMarketOffboarding` is a MarketRegistry function at — TEST-035
+- [~] `REQ-RISK-034` (07-risk-module.md:184) `Offboarding` MUST block pledges into the market and borrowing against the market's accounts, and MUST NOT blo — TEST-012, TEST-155, TEST-213
+- [~] `REQ-RISK-035` (07-risk-module.md:185) The pool-broken restriction, the Guardian market freeze, the per-function pauses and the incident clock no lon — TEST-035, TEST-228
+- [~] `REQ-RISK-036` (07-risk-module.md:186) No RiskModule check MAY depend on an incident deadline or an expiry: the pause state has no on-chain expiry, a — TEST-065, TEST-228
+- [~] `REQ-RISK-037` (07-risk-module.md:187) Leaving `Frozen` or `Paused` is `unfreeze()` or `unpause()` by `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_AD — TEST-035, TEST-065
+- [~] `REQ-RISK-038` (07-risk-module.md:188) Pledge, borrow and withdraw-with-debt are stopped for a Hub only through that Hub's pause state, which the Ada — TEST-028, TEST-228
+- [~] `REQ-RISK-039` (07-risk-module.md:189) The RiskModule MUST have no pause, unpause, freeze or restriction function of any kind. (Source: Q-227) — TEST-035
+- [ ] `REQ-RISK-040` (07-risk-module.md:190) No RiskModule check and no state the RiskModule reads MAY block repay, fee collection, debt-free withdrawal, z — TEST-132 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `REQ-RISK-054` (07-risk-module.md:191) The RiskModule MUST have no privileged function other than its upgrade, so no key can change a gate without a  — TEST-035, TEST-242
+- [~] `REQ-RISK-055` (07-risk-module.md:192) The RiskModule MUST read the MarketRegistry and ParameterStore only through their views and MUST keep no copy  — TEST-062
+- [ ] `REQ-RISK-046` (07-risk-module.md:193) Cap and reserve values are Aave DAO and service-provider decisions; they MUST be sized off-chain with [SPEC-CA — checked outside contracts/: cap and reserve sizing is the Aave DAO's and its risk service providers' off-chain decision with no on-chain enforcement (Q-249); the spec-stage models of SPEC-CAP-007 check the formula
+- [~] `REQ-RISK-065` (07-risk-module.md:194) **Circuit breakers.** The RiskModule MUST evaluate breakers only in `checkPledge` (non-rescue), `preBorrowChec — TEST-028, TEST-060, TEST-095, TEST-228
+- [~] `REQ-RISK-071` (07-risk-module.md:195) The zero-operator halt of `REQ-ADAPTER-010` MUST count `LP_VAULT_SWAP.activeKeeperCount()`, the registered com — TEST-068, TEST-098
+- [~] `REQ-RISK-077` (07-risk-module.md:196) **No minimum debt.** `preBorrowCheck(proxy, r, amount)` MUST NOT read or enforce a minimum debt: a borrow of a — TEST-028, TEST-272, TEST-278
+- [~] `REQ-RISK-078` (07-risk-module.md:197) **Standard-Spoke settings breaker.** The RiskModule MUST evaluate the security freeze `CONFIG_DRIFT` of a CDP  — TEST-268
+- [~] `REQ-RISK-079` (07-risk-module.md:198) **Caps keyed by Hub and by pool token.** Every token cap and depositor cap MUST be read per Hub (`tokenUsdCap( — TEST-272
+- [~] `REQ-RISK-080` (07-risk-module.md:199) **No idle part; cap squatting is an accepted risk.** A market's USD budget MUST have two parts in Collateraliz — TEST-013
+- [~] `REQ-RISK-090` (07-risk-module.md:200) **Per-block drift poke.** `pokeConfig(spoke)` MUST be callable by anyone, MUST run `checkAaveConfig(spoke, mar — PROP-078, TEST-268
+- [~] `REQ-RISK-091` (07-risk-module.md:201) **Breaker poke.** `pokeBreakers(marketId)` MUST be callable by anyone and MUST evaluate, from live state, the  — TEST-228
+- [~] `REQ-RISK-081` (07-risk-module.md:202) **Sequencer gate.** On a chain whose ParameterStore records a sequencer-uptime feed (Base: `0xBCF85224fc0756B9 — TEST-028, TEST-275
+- [~] `REQ-RISK-082` (07-risk-module.md:203) **Cross-Hub credit lines.** For a debt reserve whose funding Hub differs from the Spoke's home Hub, `preBorrow — TEST-028, TEST-247, TEST-273
+- [~] `REQ-RISK-056` (07-risk-module.md:237) Both pre-checks MUST call `poke()` on the LPOracle of every market in the collateral scope (the market's `lpOr — TEST-028, TEST-163, TEST-201, TEST-273
+- [ ] `REQ-ADAPTER-009` (07-risk-module.md:238) The pre-checks and `postHealthCheck` MUST be called only for borrow, withdraw-with-debt and partial removal wi — TEST-018 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `REQ-ADAPTER-010` (07-risk-module.md:239) Both pre-checks MUST revert with `LiquidationHalted(marketId)` while `LPVaultSwap.activeKeeperCount() == 0` on — TEST-068, TEST-098
+- [~] `REQ-RISK-062` (07-risk-module.md:240) Both pre-checks MUST revert with `DebtLiquidationHalted(r)` for the first reserve `r` in the debt scope into w — TEST-028, TEST-068
+- [~] `REQ-ADAPTER-011` (07-risk-module.md:241) Both pre-checks MUST revert with `UnknownSpoke(spoke)` unless `MarketRegistry.getSpoke(spoke).approved` for th — TEST-028
+- [~] `REQ-ADAPTER-012` (07-risk-module.md:242) The scope MUST be computed from the Spoke, not from the caller: for every `reserveId` in `[0, spoke.getReserve — TEST-028
+- [~] `REQ-ADAPTER-013` (07-risk-module.md:243) Every reserve in the collateral scope MUST be the account's market's reserve, mapped through `MarketRegistry.m — TEST-028
+- [~] `REQ-ADAPTER-014` (07-risk-module.md:244) Every reserve in the debt scope MUST be in the MarketRegistry's enabled debt-reserve set for the Spoke; otherw — TEST-028
+- [~] `REQ-ADAPTER-015` (07-risk-module.md:245) For the account's market the LPOracle price state MUST be Live; Drifting (for any reason, including a USD-band — TEST-028, TEST-276
+- [~] `REQ-ADAPTER-016` (07-risk-module.md:246) For the account's market and every Chainlink input of its served price, `t_i ≤ block.timestamp` and `block.tim — TEST-028, TEST-276
+- [~] `REQ-RISK-061` (07-risk-module.md:247) For every reserve `r` in the debt scope: `spoke.getReserveConfig(r).paused` MUST be false (`DebtReservePaused( — TEST-028, TEST-158, TEST-201
+- [~] `REQ-ADAPTER-017` (07-risk-module.md:248) No pool-broken check exists (`REQ-RISK-015`); a broken pool reaches the pre-checks only through the Aave reser — TEST-019, TEST-035, TEST-155
+- [~] `REQ-ADAPTER-061` (07-risk-module.md:249) Both pre-checks MUST revert with `AaveReservePaused(reserveId)` if `spoke.getReserveConfig(reserveId).paused`  — TEST-028, TEST-155, TEST-158
+- [~] `REQ-ADAPTER-018` (07-risk-module.md:250) The RiskModule MUST NOT read the application pause state in the pre-checks: the Adapter applies it to the call — TEST-028, TEST-228
+- [~] `REQ-ADAPTER-019` (07-risk-module.md:251) `preBorrowCheck` MUST revert with `MarketOffboarding(marketId)` if the account's market has status `Offboardin — PROP-046, TEST-028, TEST-155
+- [~] `REQ-ADAPTER-020` (07-risk-module.md:252) Both pre-checks MUST run `checkAaveConfig(spoke, [marketId])` for the account's market, and read the Spoke's ` — TEST-033, TEST-268
+- [~] `REQ-ADAPTER-021` (07-risk-module.md:253) Both pre-checks MUST revert with `HubSharesNotEqualAssets(marketId)` if `isHubSharesEqualAssets(marketId)` is  — TEST-028, TEST-155
+- [~] `REQ-ADAPTER-022` (07-risk-module.md:254) For every reserve in the debt scope, `spoke.getReserve(r)` MUST match the MarketRegistry's `DebtReserveDef` (` — TEST-028, TEST-204
+- [~] `REQ-ADAPTER-023` (07-risk-module.md:255) `preBorrowCheck` MUST NOT check the `drawCap`, a debt reserve's freeze or any daily limit other than the speed — TEST-028
+- [~] `REQ-ADAPTER-024` (07-risk-module.md:256) `preBorrowCheck` MUST pass for an account on an approved Spoke, with the sequencer `Up`, whose market is Activ — TEST-028, TEST-095, TEST-273, TEST-276
+- [~] `REQ-ADAPTER-025` (07-risk-module.md:257) `preWithdrawCheck` MUST run the checks of `preBorrowCheck` except `REQ-ADAPTER-019` (Offboarding and the Aave  — TEST-028, TEST-095, TEST-155, TEST-273, TEST-276
+- [~] `REQ-ADAPTER-026` (07-risk-module.md:258) `postHealthCheck(proxy, minHealthFactor)` MUST read `spoke.getUserAccountData(proxy)` on the market's Spoke (W — TEST-236
+- [~] `REQ-ADAPTER-027` (07-risk-module.md:259) The health check MUST apply to every borrow, including when the account's health factor was already below `res — TEST-236
+- [~] `REQ-RISK-059` (07-risk-module.md:260) **No Avana opening floor.** The RiskModule MUST NOT enforce a constant health floor or a minimum opening healt — PROP-067, TEST-062, TEST-236
+- [~] `REQ-RISK-060` (07-risk-module.md:261) `getAccountGateStatus(proxy)` MUST NOT poke: it evaluates the same checks on the stored LPOracle state, so a v — TEST-028
+- [~] `REQ-ADAPTER-028` (07-risk-module.md:267) Reserve identity: for each market, `getReserve(reserveId)` MUST return `underlying == vaultToken`, `hub == hom — PROP-078, TEST-181
+- [~] `REQ-ADAPTER-029` (07-risk-module.md:268) Reserve flags: for each market, `getReserveConfig(reserveId)` MUST return `receiveSharesEnabled == false` and  — PROP-078, TEST-268
+- [~] `REQ-ADAPTER-030` (07-risk-module.md:269) Liquidation fee: for each market, `getDynamicReserveConfig(reserveId, key).liquidationFee` MUST be 0 for the r — PROP-078, TEST-033, TEST-268
+- [~] `REQ-ADAPTER-031` (07-risk-module.md:270) Single Spoke on the vault-token asset: for each market, `homeHub.getSpokeCount(hubAssetId)` MUST be 2 and the  — PROP-078, TEST-181
+- [~] `REQ-ADAPTER-032` (07-risk-module.md:271) No draw on the vault-token asset: every Spoke's `drawCap` on it MUST be 0, `homeHub.getAssetDrawnShares(hubAss — PROP-078, TEST-181
+- [~] `REQ-ADAPTER-033` (07-risk-module.md:272) No reinvestment controller: `getAssetConfig(assetId).reinvestmentController` MUST be `address(0)` for each mar — PROP-078, TEST-204, TEST-268
+- [~] `REQ-ADAPTER-034` (07-risk-module.md:273) Expected price sources: `IAaveOracle(spoke.ORACLE()).getReserveSource(reserveId)` MUST equal the market's LPOr — PROP-078, TEST-181, TEST-204
+- [~] `REQ-ADAPTER-035` (07-risk-module.md:274) Risk premium threshold ordering: for each enabled debt reserve with Hub asset `a` on Hub `h`, with `T = h.getS — PROP-078, TEST-112
+- [~] `REQ-ADAPTER-036` (07-risk-module.md:275) Liquidation exclusivity on a standard Spoke comes from the vault token's transfer rule (only proxy → Hub suppl — PROP-078, TEST-268
+- [~] `REQ-ADAPTER-063` (07-risk-module.md:276) Spoke implementation (Spoke-wide), checked first: `MarketRegistry.spokeImplementationStatus(spoke)` MUST repor — PROP-078, TEST-114, TEST-182, TEST-268
+- [~] `REQ-ADAPTER-064` (07-risk-module.md:277) Spoke oracle (Spoke-wide): `spoke.ORACLE()` MUST equal `MarketRegistry.getSpoke(spoke).aaveOracle`, the AaveOr — TEST-182
+- [~] `REQ-RISK-063` (07-risk-module.md:278) Debt-reserve set (Spoke-wide): for every `reserveId` in `[0, spoke.getReserveCount())`, `getReserveConfig(rese — TEST-204, TEST-268
+- [~] `REQ-RISK-069` (07-risk-module.md:279) Risk configuration (per market): `checkAaveConfig` MUST revert with `ConfigDrift(marketId, CollateralFactorAbo — TEST-033, TEST-249, TEST-268
+- [~] `REQ-ADAPTER-037` (07-risk-module.md:280) `isHubSharesEqualAssets(marketId)` MUST return `homeHub.getAddedAssets(hubAssetId) == homeHub.getAddedShares(h — TEST-028
+- [~] `REQ-RISK-088` (07-risk-module.md:281) **Halted Spoke, position managers and oracle switch.** `checkAaveConfig` MUST also report drift, latching the  — PROP-078, TEST-031, TEST-033, TEST-181, TEST-182, TEST-187
+- [~] `REQ-RISK-089` (07-risk-module.md:282) **Gas floor before a gas-limited probe.** Before each issuer-probe `staticcall` with `ISSUER_PROBE_GAS`, the R — TEST-221, TEST-228, TEST-287
+- [~] `REQ-ADAPTER-038` (07-risk-module.md:283) `getAccountGateStatus(proxy)` MUST evaluate the borrow-side checks with the same code paths as the pre-checks, — TEST-028, TEST-033, TEST-068, TEST-155, TEST-201, TEST-228, TEST-236, TEST-247, TEST-273, TEST-276
+- [~] `REQ-ADAPTER-039` (07-risk-module.md:290) Custom errors MUST be defined only for Avana gates; errors from Aave V4, AMM-protocol or Chainlink reads that  — TEST-028, TEST-163, TEST-273
+- [ ] `REQ-RISK-092` (07-risk-module.md:296) **Borrow-speed limit.** After every other gate (step (14) of the borrow-side checks), `preBorrowCheck(proxy, r
+- [ ] `REQ-RISK-093` (07-risk-module.md:297) **Pledge-speed limit.** `checkPledge` MUST test every pledge and re-credit that is not a rescue top-up against
+- [ ] `REQ-RISK-094` (07-risk-module.md:298) **Exits are never throttled.** No speed limit applies to repay, repay with collateral and `deleverage`, liquid
+- [ ] `REQ-RISK-095` (07-risk-module.md:299) **Window storage and writes.** The windows MUST sit in the RiskModule's ERC-7201 namespace `avana.storage.Risk
+- [ ] `REQ-RISK-096` (07-risk-module.md:300) **Fail closed, overrides and parameter changes.** A scope whose parameters were never written (`window == 0`) 
+- [ ] `REQ-RISK-097` (07-risk-module.md:301) **Speed views.** `getBorrowSpeed(marketId, debtReserveId)` and `getPledgeSpeed(marketId)` MUST return, without
+- [~] `SPEC-CAP-001` (07-risk-module.md:307) **Stress-floor booking and minimum pledge value.** Booking: `usdCharge = mulDiv(L, max(price8, stressFloorUsd[ — TEST-010, TEST-070, TEST-071, TEST-164, TEST-196, TEST-238
+- [~] `SPEC-CAP-002` (07-risk-module.md:308) **Cap tests and counter booking.** From `counters`: `R = regularUsed`, `S = sliceUsed`, `P = depositorUsed` (t — TEST-013, TEST-034, TEST-272
+- [~] `SPEC-CAP-003` (07-risk-module.md:309) **Top-up slice eligibility and restore amount.** Eligible iff the account has debt on any debt reserve (`getUs — TEST-013, TEST-235
+- [~] `SPEC-CAP-004` (07-risk-module.md:310) **Exit release** (implemented by Collateralization, [2.3](03-collateralization.md)). For a record with origina — TEST-014, TEST-097, TEST-236
+- [~] `SPEC-CAP-005` (07-risk-module.md:311) **Pool-share cap, per pool.** `depth` = `riskStatus(marketId).depthUnits` from the market's AMM integration, i — PROP-042, TEST-034, TEST-071, TEST-225, TEST-238, TEST-247, TEST-264, TEST-265, TEST-272
+- [~] `SPEC-CAP-006` (07-risk-module.md:312) **Hub `addCap` sizing.** For each market `m`, `addCap(m) = homeHub.getSpokeConfig(hubAssetId, spoke).addCap` ( — PROP-030, TEST-125, TEST-138, TEST-225, TEST-272
+- [ ] `SPEC-CAP-007` (07-risk-module.md:313) **Cap sizing rule** (guidance for the Aave DAO and its risk service providers, who own every cap and reserve v — checked outside contracts/: cap sizing guidance for the Aave DAO and its risk service providers; Avana enforces none of it on-chain (Q-249); MATH-AR-29/30/31/43/44 and SIM-02B/08A check the formula
+- [ ] `SPEC-CAP-008` (07-risk-module.md:314) **Tail coverage ratio** (reported by the Lens, `getTailCoverage(asset)`, and by monitoring; not enforced). For — TEST-247 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `SPEC-CAP-009` (07-risk-module.md:315) **Account debt value.** From `a = spoke.getUserAccountData(proxy)`: debt value `debtUsd = ⌊a.totalDebtValueRay — TEST-272
+- [~] `SPEC-CAP-010` (07-risk-module.md:316) **Cross-Hub credit-line sum.** For a funding Hub `h` and asset `a`: `sum(h, a) = Σ_{s ∈ drawers(h, a)} drawCap — TEST-273
+- [ ] `SPEC-CAP-011` (07-risk-module.md:317) **Speed window.** One window per scope holds `(start, prev, curr)`, amounts in the scope's unit, with the scop
+- [ ] `SPEC-CAP-012` (07-risk-module.md:318) **Speed limit.** `L = min(max, max(min, ⌊rate × sat(D − prev − curr) / 10^4⌋))` with `rate` in bps (at most 10
+- [ ] `SPEC-CAP-013` (07-risk-module.md:319) **Speed units and rounding.** Market and pledge windows count 8-decimal USD: a borrow charges `amountUsd = ⌈am
+- [~] `SPEC-CF-001` (07-risk-module.md:323) **LP collateral factor and borrowing capacity.** `CF_LP = floor(min_i CF_i × poolRiskFactor / 10^4)` (bps) ove — TEST-028, TEST-249
+- [~] `SPEC-CF-002` (07-risk-module.md:324) **Bonus bound at listing.** With `maxLB` the reserve's `maxLiquidationBonus` (bps, 100_00 = no bonus), `ceil(m — TEST-249
+- [~] `SPEC-CF-003` (07-risk-module.md:325) **Opening debt bound.** After a borrow or withdraw-with-debt, with the reviewed RiskModule, the account's tota — TEST-156, TEST-236
+- [~] `SPEC-CF-004` (07-risk-module.md:326) **Listing margin.** For every price route `r` (primary, alternate and standby, since a guardian can put the st — TEST-064, TEST-138, TEST-250
+- [~] `SPEC-CF-005` (07-risk-module.md:327) **Health factor with rescue units excluded.** With `(hf, totalDebtValueRay) = spoke.getUserAccountData(proxy)` — PROP-067, TEST-060, TEST-071, TEST-077, TEST-236, TEST-247
+- [~] `SPEC-BRK-001` (07-risk-module.md:333) **Price drop (monitoring alert, no on-chain trip).** With `(cp, at) = O_m.priceCheckpoint()` (the accepted pri — TEST-228
+- [~] `SPEC-BRK-002` (07-risk-module.md:334) **Concentration gate (market).** With `q_i` the uncapped quotes of the market's `n` tokens from its LPOracle ( — TEST-028, TEST-060, TEST-228
+- [~] `SPEC-BRK-003` (07-risk-module.md:335) **Issuer action (market tokens and debt assets).** For each token whose listing records a probe ([2.8](08-mark — TEST-221, TEST-228, TEST-287
+- [~] `SPEC-BRK-004` (07-risk-module.md:336) **Debt conditions** of `(spoke, r)` with definition `def = MarketRegistry.getDebtReserve(spoke, r)`: `DEFICIT` — TEST-228
+- [~] `SPEC-BRK-007` (07-risk-module.md:337) **Temporary-gate recovery.** For a market or debt key `k` with temporary reasons `T = {ORACLE, POOL_SHARE, POO — TEST-228
+- [~] `SPEC-BRK-008` (07-risk-module.md:338) **Security-freeze latch.** For a key `k` and security reasons `S = {ISSUER, CONFIG_DRIFT, DEFICIT}`: `pokeBrea — TEST-228, TEST-268
+- [ ] `REQ-RISK-047` (07-risk-module.md:344) Any pledge eligibility check fails | `checkPledge` reverts with its Avana error; the Adapter's `pledge` revert — TEST-235 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `REQ-RISK-048` (07-risk-module.md:345) Market Cached or Expired | New-account pledges and top-ups revert `PriceNotAccepted`. (Source: Q-132) — TEST-012
+- [~] `REQ-RISK-049` (07-risk-module.md:346) Market Drifting | New-account pledges revert unless the only reason is a USD-band breach; top-ups continue. (S — TEST-012
+- [~] `REQ-RISK-050` (07-risk-module.md:347) Aave configuration drift or Hub shares ≠ assets | New-account pledges revert; top-ups continue; monitoring ala — TEST-012
+- [~] `REQ-RISK-051` (07-risk-module.md:348) Regular budget full | New-account pledges revert `CapExceeded`; eligible top-ups may use the slice under SPEC- — TEST-013
+- [~] `REQ-RISK-052` (07-risk-module.md:349) The integration's time-weighted depth cannot cover `twapWindow` | Pledges revert `PoolShareUnavailable`; nothi — TEST-034
+- [ ] `REQ-RISK-053` (07-risk-module.md:350) RiskModule implementation broken or reverting | Pledges (rescue top-ups included), re-credits, borrows, withdr — TEST-132 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `REQ-RISK-064` (07-risk-module.md:351) Pledge value below `minPledgeUsd` | `checkPledge` reverts `BelowMinPledge(pledgeUsd, minPledgeUsd)`; new pledg — TEST-196
+- [ ] `REQ-ADAPTER-052` (07-risk-module.md:352) Borrow while `Frozen` or `Paused` | The Adapter refuses before `preBorrowCheck` (`ApplicationFrozen`, `Applica — TEST-027 (only excluded checks: uses a stand-in for RiskModule)
+- [ ] `REQ-ADAPTER-053` (07-risk-module.md:353) Withdraw-with-debt while `Paused` | The Adapter refuses with `ApplicationPaused` before `preWithdrawCheck`; de — TEST-019 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `REQ-ADAPTER-054` (07-risk-module.md:354) No active committed operator on the chain, or a pool token of the account's market with no usable swap route i — TEST-068
+- [~] `REQ-ADAPTER-055` (07-risk-module.md:355) The account's market Drifting (including a USD-band breach), Cached or Expired, any collateral input older tha — TEST-028, TEST-201
+- [~] `REQ-ADAPTER-056` (07-risk-module.md:356) The account's market `Offboarding` or its vault-token reserve frozen on Aave | `preBorrowCheck` reverts `Marke — TEST-155
+- [~] `REQ-ADAPTER-057` (07-risk-module.md:357) Debt reserve of the account outside the enabled set, or its Aave reserve not matching the recorded definition  — TEST-030
+- [~] `REQ-ADAPTER-058` (07-risk-module.md:358) Aave configuration drift (including a CDP Spoke implementation, oracle or borrowable-reserve set other than th — TEST-028
+- [~] `REQ-ADAPTER-059` (07-risk-module.md:359) Rescue-excluded health factor after the Spoke call, held to the accepted price (`hfB`, `SPEC-CF-005`), below ` — TEST-236
+- [~] `REQ-ADAPTER-062` (07-risk-module.md:360) A collateral reserve or a debt reserve of the account is paused on Aave | Both pre-checks revert `AaveReserveP — TEST-158, TEST-201
+- [~] `REQ-RISK-072` (07-risk-module.md:361) `grantRole(DEFAULT_ADMIN_ROLE or APPLICATION_ADMIN, account)` with `account != TIMELOCK` | The RiskModule over — TEST-242
+- [~] `REQ-RISK-073` (07-risk-module.md:362) A market breaker of the pledged market (non-rescue), of a collateral market at a borrow or withdraw-with-debt, — TEST-228, TEST-268
+- [~] `REQ-RISK-074` (07-risk-module.md:363) A pledge or re-credit that needs an exemption (`requireRescue`, pool share, market breaker, `minPledgeUsd` abo — TEST-235
+- [~] `REQ-RISK-075` (07-risk-module.md:364) Record left by a removal with debt worth less than `minPledgeUsd` | `checkRemainingRecord` reverts `RecordBelo — TEST-237
+- [~] `REQ-RISK-076` (07-risk-module.md:365) A collateral factor above `expectedCollateralFactorBps`, a bonus bound violation or a changed target health fa — TEST-033, TEST-249
+- [ ] `REQ-RISK-098` (07-risk-module.md:366) A borrow whose charge does not fit the market window or the (funding Hub, asset) window, or into a scope with 
+- [ ] `REQ-RISK-099` (07-risk-module.md:367) A non-rescue pledge or re-credit whose `usdCharge` does not fit the market's pledge window | `checkPledge` rev
+- [~] `REQ-RISK-083` (07-risk-module.md:368) A borrow of any amount above 0 that passes every other gate, however small the account's debt after it | `preB — TEST-278
+- [~] `REQ-RISK-084` (07-risk-module.md:369) The chain's sequencer down, or within its grace period after a restart | New-account pledges, borrows and with — TEST-275
+- [~] `REQ-RISK-085` (07-risk-module.md:370) A borrow of a cross-Hub debt reserve while cross-Hub lines are off, or with the line's `drawCap` sum above the — TEST-273
+- [~] `REQ-RISK-086` (07-risk-module.md:371) A standard-Spoke setting drifts (`receiveSharesEnabled`, `liquidationFee`, reinvestment controller, borrowable — TEST-268
+- [~] `REQ-RISK-087` (07-risk-module.md:372) A pledge into a market whose `Regular` budget is held by accounts with no debt (AMMN-FLOW-16, accepted risk) | — TEST-013
+
+## TEST rows (66: 0 verified, 0 failed, 49 not run, 17 unlinked)
+
+- [~] `TEST-010` [unit] Pledge happy path: the NFT owner approves the LPVault for one `positionKey` and calls `AaveAdapter.pledge(mark
+- [~] `TEST-012` [unit] Pledge gates: a new account (no debt on any debt reserve) requires the market Live; a top-up is allowed into a
+- [~] `TEST-013` [unit] Exposure caps: `RiskModule.checkPledge` values the pledge from the LPOracle and checks the post-pledge totals 
+- [~] `TEST-019` [unit] Withdrawal that leaves debt: Paused reverts `ApplicationPaused` and Frozen allows it; the Adapter calls `RiskM
+- [~] `TEST-027` [unit] Borrow: `AaveAdapter.borrow(spoke, debtReserveId, amount, receiver, deadline, minHealthFactor, expectedNonce)`
+- [~] `TEST-028` [unit] Borrow gates in `RiskModule.preBorrowCheck(proxy, spoke, debtReserveId)` and `postHealthCheck`: it pokes every
+- [~] `TEST-155` [unit] Aave frozen flag on borrow: when the Aave Spoke configurator freezes any vault-token reserve the account has e
+- [~] `TEST-163` [unit] Poke ordering: `RiskModule.preBorrowCheck` and `preWithdrawCheck` call `poke()` on every collateral market's L
+- [~] `TEST-033` [unit] Drift checks on pledge of a new account and on borrow and withdraw-with-debt (`RiskModule.checkAaveConfig`, re
+- [~] `TEST-034` [unit] Pledge eligibility: `RiskModule.previewPledge(depositor, spoke, marketId, positionKey)` returns the same reaso
+- [~] `TEST-035` [unit] Per-market containment: Avana has no per-function or per-market pause selector (inventory over the AaveAdapter
+- [~] `TEST-158` [unit] Aave reserve pauses: when Aave's `SpokeConfigurator.pauseReserve` pauses a vault-token reserve the account hol
+- [~] `TEST-164` [unit] Pledge cap charge ownership: `RiskModule.checkPledge` computes the USD charge from the LPOracle (not from the 
+- [~] `TEST-196` [unit] Minimum pledge value: `RiskModule.checkPledge` computes `pledgeUsd = mulDiv(L, price8, 10^d, Floor)` with the 
+- [~] `TEST-201` [unit] Stale debt price, account-wide for new debt and per reserve for liquidation: with the USDC DebtOracle not Live
+- [ ] `TEST-320` [unit, fuzz] Speed-window math (`SpeedLimitMath`): rollover to `(t, 0, 0)` from `start + 2τ`, to `(start + τ, curr, 0)` fro
+- [ ] `TEST-321` [unit] Borrow-speed limit in `preBorrowCheck`: the market window (USD of the Spoke's debt reserves at the AaveOracle 
+- [ ] `TEST-322` [unit] Pledge-speed limit in `checkPledge`: a non-rescue pledge or re-credit is charged its `usdCharge` against `clam
+- [ ] `TEST-323` [fuzz] Split borrows: any sequence of borrows by up to eight accounts at fuzzed times and amounts, each passing, tota
+- [ ] `TEST-324` [invariant] Speed windows under a handler with many accounts, borrows, pledges, repays, withdrawals and time warps: no int
+- [ ] `TEST-326` [integration] On the real local Aave V4 Hub and CDP Spoke through the AaveAdapter: a borrow charges both windows by the real
+- [~] `TEST-043` [unit] USD-band breach: when the LP's USD level per unit of liquidity leaves [`usdBandLow`, `usdBandHigh`] while both
+- [~] `TEST-157` [unit] Persistent disagreement: with both routes fresh and disagreeing by more than `feedAgreementToleranceBps`, seiz
+- [~] `TEST-068` [unit] While liquidation is halted for an account (no usable settlement path for a market of the account, zero active
+- [ ] `TEST-168` [access-control] Pause location: the only pause state is the MarketRegistry's `PauseState`; the AaveAdapter, RiskModule, Parame (only excluded checks: uses a stand-in for RiskModule)
+- [~] `TEST-213` [unit] Market offboarding: `setMarketOffboarding(marketId)` (short delay) sets status `Offboarding`; afterwards pledg
+- [~] `TEST-070` [fuzz] Rounding table: every Avana rounding site rounds against the borrower or keeper as specified (oracle price dow
+- [~] `TEST-071` [fuzz] Overflow: `amount × price × 10^(18 − decimals)`, `CF × value`, `4·a0·a1`, `L × price8` in the `minPledgeUsd` c
+- [ ] `TEST-072` [boundary] Boundary vectors: liquidity 0 and 1; liquidity near `type(uint128).max`; first pledge and last withdrawal in a (only excluded checks: tag on a test named for another row)
+- [~] `TEST-077` [fuzz] Opening-gate rounding: no rounding path lets a borrow or withdraw-with-debt finish with an exact collateral-to
+- [~] `TEST-095` [invariant] Risk-increasing actions: with the reviewed RiskModule, after every borrow and withdraw-with-debt the account's
+- [~] `TEST-097` [invariant] Caps: Collateralization's aggregate counters equal the sum of remaining record charges, never go negative, and
+- [~] `TEST-098` [invariant] Keeper floor: the number of active (registered and unfrozen) committed operators on LPVaultSwap never falls be
+- [ ] `TEST-106` [invariant] Borrow path: every completed borrow moved exactly `drawn` of the reserve's asset from the Hub to the proxy and (only excluded checks: uses a stand-in for RiskModule)
+- [ ] `TEST-215` [invariant] Multi-actor invariant suite (Foundry invariant test with handlers, extending `TEST-082`). Actors: borrowers wi (only excluded checks: tag on a test named for another row)
+- [ ] `TEST-218` [invariant] Withdrawal and liquidation cascades: N accounts (N up to 200) opened near HF 1.10 in two markets; outside LPs  (only excluded checks: uses a stand-in for RiskModule)
+- [~] `TEST-112` [fork] Collateral-risk increase: raising a vault reserve's `collateralRisk` without first raising the threshold makes
+- [~] `TEST-114` [fork] Drift checks against real configurators: for each critical setting the DAO executor changes it on the fork (`r
+- [ ] `TEST-117` [fork] Chainlink on the Ethereum and Base forks: each launch token's primary feed and alternate route have the pinned — checked outside contracts/: measures the deployed Chainlink feeds on both forks at the pinned blocks (decimals, min/max answers, heartbeats of the launch feeds); the rules it relies on are local tests: same round never refreshes (TEST-040), per-feed borrowPriceMaxAge (TEST-028, TEST-201), disjoint backup routes and normalised minimum >= 1 (TEST-219), fixed GHO source (TEST-201)
+- [~] `TEST-125` [fork] Hub `addCap` fit: every pledge and top-up that fits Avana's USD budgets also fits under the Hub `addCap` sized
+- [ ] `TEST-169` [fork] Aave-side reserve pause: the Aave Protocol Guardian pauses a vault-token reserve and then each debt reserve on (only excluded checks: tag on a test named for another row)
+- [~] `TEST-181` [fork] Listing settings on the standard CDP Spoke, driven through the real configurators by the DAO executor: a non-z
+- [~] `TEST-182` [unit, fork] Implementation drift through `MarketRegistry.spokeImplementationStatus`: `Spoke.extSload(0x3608…2bbc)` equals 
+- [ ] `TEST-202` [fork] Debt-asset price rally: accounts holding stable-LP collateral and WETH debt, opened at HF 1.15, see the WETH C (only excluded checks: uses a stand-in for RiskModule)
+- [~] `TEST-221` [fork] Token edge cases. A fee-on-transfer mock pool token is rejected at listing; a fee switched on after listing on
+- [ ] `TEST-132` [hostile] Hostile RiskModule (approves every borrow, pledge and withdraw-with-debt): borrow and withdraw-with-debt still (only excluded checks: uses a stand-in for RiskModule)
+- [ ] `TEST-156` [hostile] Regression for Quint counterexample C-QNT-3, reviewed-implementation scope: with the reviewed RiskModule a bor (only excluded checks: uses a stand-in for RiskModule)
+- [~] `TEST-204` [deployment-check] Debt-reserve set: for every CDP Spoke, the set of borrowable reserves read on-chain equals `MarketRegistry.get
+- [~] `TEST-225` [invariant] Governance drift sequences: random tighten, loosen and structural operations within bounds, scheduled and exec
+- [~] `TEST-228` [unit] Circuit breakers: each on-chain trigger (ORACLE, POOL_SHARE, ISSUER, DEFICIT, MANUAL) trips and blocks only it
+- [~] `TEST-230` [unit] Stress valuation: an Expired market is served at 1 and a fresh market of the same account is liquidated; the s
+- [~] `TEST-235` [unit] Rescue top-ups: an indebted account below `rescueHealthFactor` (1.10) adds collateral under `Paused(General)`,
+- [~] `TEST-236` [unit] Rescue units excluded: the slice re-leverage loop (top up from the slice or by rescue, then borrow back) fails
+- [~] `TEST-237` [unit] Partial removal: `removeLiquidity` burns exactly `units`, keeps the backing gap, leaves live liquidity ≥ credi
+- [~] `TEST-238` [unit] Re-credit: only the record's depositor can re-credit; after a third party's `increaseLiquidity` the added liqu
+- [~] `TEST-242` [access-control] Admin grant: on every upgradeable Avana contract, `grantRole(APPLICATION_ADMIN, a)` and `grantRole(DEFAULT_ADM
+- [~] `TEST-249` [unit] Drift reasons: a dynamic key's CF above `expectedCollateralFactorBps`, `⌈maxLB × CF / 10⁴⌉ ≥ 10⁴`, a minimum b
+- [~] `TEST-250` [unit] Feed cadence: a feed is fresh while its age is at most its own heartbeat, read from the feed's configuration a
+- [~] `TEST-268` [fork] Drift checks for the standard CDP Spoke settings: for each listed Avana collateral reserve, the DAO executor s
+- [~] `TEST-272` [unit] Hub-keyed and pool-keyed caps: the token and depositor counters are held in the one ledger per chain, keyed by
+- [~] `TEST-273` [unit] Cross-Hub credit line: the funding Hub owns the cap of every line drawing its asset; the registry sums the `dr
+- [~] `TEST-275` [fork] L2 sequencer gate on the Base fork: with the sequencer-uptime feed `0xBCF85224fc0756B9Fa45aA7892530B47e10b6433
+- [~] `TEST-276` [unit] Per-feed freshness and second source: each feed's age limit is its own heartbeat plus the margin (a USDC/USD f
+- [~] `TEST-278` [unit] No minimum debt on any chain: on both chain profiles a borrow of 1 base unit of the debt asset, a borrow of $1
+- [ ] `TEST-284` [fork] Oracle switch never stops liquidation: on a fork, the Aave DAO payload points a vault-token reserve's AaveOrac (only excluded checks: uses a stand-in for RiskModule)
+- [~] `TEST-287` [fork] Transfer fee on a debt asset (`ATTACK-197`): on a fork with a USDT debt reserve, Tether's `basisPointsRate` is
+
+## PROP rows (12: 4 verified, 0 failed, 8 not run, 0 unlinked)
+
+- [~] `PROP-030` [Halmos] A pledge or top-up that fits its Avana USD budget, booked at ≥ `stressFloorUsd` per whole token, fits under a 
+- [~] `PROP-031` [Certora] A successful Adapter `borrow(marketId, r, amount, receiver, deadline, minHF, nonce)` implies: the proxy is `pr
+- [x] `PROP-034` [Certora] Every restricted selector of every upgradeable Avana contract (AaveAdapter, MarketRegistry, ParameterStore, Ri — test/halmos/DebtOracle.halmos.t.sol:DebtOracleHalmosTest.check_PROP_034_setPokeMinGasNeedsApplicationAdmin
+- [x] `PROP-044` [SMTChecker] LPOracle (with the pricing library of each AMM protocol), LPVaultSwap (with SettlementMath), each AMM integrat — ParameterStore job 5cf1a73b625f4624b65c99923de6cb24
+- [~] `PROP-046` [Certora] With the reviewed Adapter and RiskModule, a successful Adapter `borrow` implies that, at the time of the call,
+- [~] `PROP-050` [Certora] With the reviewed RiskModule, `preBorrowCheck` and `preWithdrawCheck` return only if no vault-token reserve of
+- [x] `PROP-061` [Certora] Debt-reserve set: `MarketRegistry.activateMarket` and the RiskModule's drift check revert (`ActivationCheckFai — MarketRegistry job 82741daf7f694336b3b4eab5a93165c6
+- [~] `PROP-062` [Halmos] Minimum pledge: `RiskModule.checkPledge` computes `pledgeUsd = mulDiv(L, price8, 10^d, Floor)` from the bookin
+- [~] `PROP-066` [Certora] Call graph: no path from Adapter `repay`, a debt-free `withdraw` or `removeLiquidity`, `repayAllAndWithdraw`, 
+- [~] `PROP-067` [Halmos] `RiskModule.postHealthCheck(proxy, spoke, minHF)` returns only if `hfB ≥ max(1, hardHealthFloor, minHF)`, with
+- [x] `PROP-070` [Certora] Inductive admin invariant: for every upgradeable Avana contract (not the ProxyManager, which is immutable with — test/halmos/DebtOracle.halmos.t.sol:DebtOracleHalmosTest.check_PROP_070_adminRolesOnlyTimelock
+- [~] `PROP-078` [Certora (`RiskModuleDrift.spec`), Halmos (implementation binding)] Standard-Spoke settings: a pledge of a new account, a borrow and a withdrawal that leaves debt revert while an
+
+## INV (31: 5 verified, 0 failed, 22 not run, 4 unlinked)
+
+- [~] `INV-004` No new-account pledge, borrow, withdrawal that leaves debt, or liquidation completes in a transaction in which — TEST-019, TEST-095, TEST-163
+- [x] `INV-011` Transfer allowlist. A market's vault-token balances change only on these paths, and every other `transfer` and — PROP-008, PROP-055, TEST-022, TEST-087, TEST-189 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_008_movementsOnlyOnAllowedPaths
+- [x] `INV-088` Partial removal and re-credit. In every `removeLiquidity` the units burned from the proxy equal the record's d — PROP-054, PROP-065, TEST-237, TEST-238, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `INV-017` Collateralization and each LPVault obtain an AMM protocol's position manager and factory only from the LPVault — PROP-083, TEST-010, TEST-030, TEST-108, TEST-114, TEST-116, TEST-171, TEST-264, TEST-265
+- [~] `INV-018` Blast radius of upgradeable contracts. (a) AaveAdapter implementation faulty or hostile (one per chain, servin — TEST-031, TEST-107, TEST-130, TEST-133, TEST-195
+- [~] `INV-019` `borrowNonce[p]`, stored per proxy in the AaveAdapter, increases by exactly 1 per successful borrow; the Adapt — PROP-031, TEST-027, TEST-096
+- [ ] `INV-020` In a borrow of debt reserve `r`, `r`'s asset moves from `r`'s funding Hub (the CDP Spoke's home Hub, or anothe — TEST-027, TEST-106 (only excluded checks: uses a stand-in for RiskModule)
+- [x] `INV-063` Adapter-only proxy access. Every call into a PositionProxy reverts with `OnlyAdapter()` unless `msg.sender` is — PROP-056, TEST-026, TEST-031, TEST-089, TEST-172, TEST-187, TEST-211, TEST-271 — PositionProxy job 58d4d482ec8442e0ba96406d32591f0d
+- [~] `INV-072` Account-wide gates for new debt; reserve gates for liquidation. A borrow, a withdrawal that leaves debt, and a — TEST-019, TEST-028, TEST-049, TEST-095, TEST-201, TEST-226
+- [ ] `INV-022` Calldata built by `packages/protocol` asks a user for only two kinds of approval: an approval of exactly one p
+- [~] `INV-023` A borrow or a withdrawal that leaves debt completes only after the AaveAdapter's call to `RiskModule.preBorrow — PROP-031, PROP-046, TEST-019, TEST-027, TEST-028, TEST-095, TEST-155
+- [~] `INV-024` A borrow, a withdrawal that leaves debt, and a partial removal that leaves debt complete only if: the caller ( — TEST-019, TEST-028, TEST-095, TEST-229
+- [~] `INV-025` After every borrow, every withdrawal that leaves debt and every partial removal that leaves debt, the account' — PROP-031, TEST-019, TEST-027, TEST-095, TEST-132, TEST-236
+- [~] `INV-026` (a) A pledge into an account with no collateral and no debt on that Spoke requires the market Live, or Driftin — TEST-012
+- [~] `INV-028` (a) A pledge, top-up or re-credit completes only if, after it, every counter is within its cap (`marketUsdCap` — PROP-030, TEST-013, TEST-272
+- [~] `INV-029` No new-account pledge, borrow or withdrawal that leaves debt completes while the RiskModule's drift check find — PROP-078, TEST-012, TEST-033, TEST-114, TEST-268
+- [~] `INV-060` A borrow or a withdrawal that leaves debt completes only if no vault-token reserve the account has supplied is — PROP-050, TEST-095, TEST-155, TEST-158
+- [~] `INV-069` Minimum pledge value. Every pledge and re-credit, for a new account and for a top-up alike, completes only if  — PROP-062, TEST-196, TEST-235
+- [~] `INV-082` Rescue units never support new debt. Collateralization books, per record, the rescue units of every rescue top — PROP-067, TEST-057, TEST-077, TEST-235, TEST-236
+- [~] `INV-062` One liquidation entry point (Q-404). `LPVaultSwap.liquidate` is the only liquidation entry point and admits an — PROP-022, PROP-053, TEST-174
+- [x] `INV-087` Stress valuation is monotone and never prices a seizure or repayment. A market's LPOracle serves (`SPEC-ORC-01 — PROP-074, TEST-037, TEST-044, TEST-105, TEST-219, TEST-230 — test/halmos/DebtOracle.halmos.t.sol:DebtOracleHalmosTest.check_PROP_074_servedDebtPriceAgainstFixedAlternate
+- [~] `INV-043` For any proxy with debt in reserve `r`, `AaveAdapter.repay(borrower, spoke, r, maxRepaySpend, repayAll, deadli — PROP-057, PROP-066, TEST-029, TEST-075, TEST-099, TEST-132, TEST-162, TEST-193
+- [~] `INV-044` The depositor of any open record, including one at 0 credited units, can collect fees with `AaveAdapter.collec — PROP-057, TEST-017, TEST-060, TEST-099, TEST-132, TEST-151, TEST-193
+- [~] `INV-045` When the proxy has no debt on its Spoke (`spoke.getUserAccountData(proxy).borrowCount == 0`), the depositor's  — PROP-057, PROP-066, TEST-016, TEST-018, TEST-099, TEST-132, TEST-162, TEST-192, TEST-193, TEST-195, TEST-218, TEST-228, TEST-229
+- [~] `INV-046` An account with HF < 1 whose seized collateral market and repaid debt reserve pass `INV-030`, with no Aave pau — PROP-057, PROP-066, TEST-193, TEST-218
+- [ ] `INV-075` No contagion from pool-level failures. A failure confined to collateral market `m′` (its pool, its LPOracle st
+- [~] `INV-081` Stops never reach exits or liquidation. The application pause state and reason, the market and debt breakers a — PROP-066, TEST-218, TEST-228, TEST-229
+- [x] `INV-049` Pause-state transitions. The MarketRegistry holds one `PauseState` and one `PauseReason` for Avana, and they c — PROP-041, PROP-057, TEST-065, TEST-101, TEST-192, TEST-193 — MarketRegistry job 82741daf7f694336b3b4eab5a93165c6
+- [~] `INV-065` Implementation changes only by timelock; proxy code never changes. A PositionProxy's code is fixed at creation — PROP-010, PROP-058, TEST-025, TEST-062, TEST-063, TEST-089, TEST-130, TEST-168, TEST-172, TEST-191
+- [~] `INV-055` `LPOracle.latestAnswer()` never reverts and returns at least 1 (8 decimals) in every state (`SPEC-ORC-017`): t — PROP-023, PROP-027, PROP-074, TEST-036, TEST-038, TEST-105, TEST-217, TEST-219, TEST-230
+- [ ] `INV-099` An oracle switch never stops liquidation. For the life of a market, its LPOracle proxy stays both the Aave pri — TEST-284 (only excluded checks: uses a stand-in for RiskModule)
+
+## ATTACK (17: 0 verified, 0 failed, 4 not run, 13 unlinked)
+
+- [ ] `ATTACK-004` Collateral from a counterfeit NFT, unapproved pool or partial range — TEST-279 (only excluded checks: uses a stand-in for RiskModule)
+- [ ] `ATTACK-017` Cap or sizing manipulation through donated liquidity
+- [ ] `ATTACK-034` Hostile RiskModule approves risky borrowing or withdrawal — TEST-132 (only excluded checks: uses a stand-in for RiskModule)
+- [ ] `ATTACK-035` Hostile RiskModule or Adapter blocks repay or exits — TEST-029, TEST-099, TEST-107, TEST-132, TEST-193, TEST-229, TEST-243 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `ATTACK-044` Borrowing against a lagging feed — TEST-250, TEST-276
+- [ ] `ATTACK-047` Liquidation shield through degraded-market collateral
+- [ ] `ATTACK-050` Borrowing against an Expired price through another market
+- [~] `ATTACK-056` Stale-price borrowing during a silent feed stall — TEST-276
+- [ ] `ATTACK-062` Gas exhaustion in account health evaluation across many reserves
+- [ ] `ATTACK-077` Cap filling to block rescue top-ups
+- [ ] `ATTACK-087` Exposure-cap bypass
+- [ ] `ATTACK-088` Pool-share cap denominator manipulation
+- [~] `ATTACK-112` New debt against a reserve Aave has paused — TEST-155, TEST-158
+- [ ] `ATTACK-146` Slice re-leverage loop
+- [ ] `ATTACK-157` Hub-wide caps multiplied by the number of Spokes — TEST-272 (only excluded checks: uses a stand-in for RiskModule)
+- [~] `ATTACK-171` Liquidation on stale prices after an L2 sequencer outage — TEST-276
+- [ ] `ATTACK-204` Mispriced collateral drained fast
+
+## Cross-cutting TEST rows, every contract (17): see --uncovered
+
+- `TEST-001` [environment] The Foundry workspace builds with solc 0.8.28 and EVM `cancun`, the same compiler as Aave V4; dependencies are
+- `TEST-032` [access-control] Selector inventory: the external selectors of every deployed Avana contract are enumerated from bytecode and c
+- `TEST-061` [unit] Events: every borrower and keeper action is one atomic call that emits the inventory events of its contracts, 
+- `TEST-177` [unit] Zero-amount transfers skipped: with mock tokens that revert on a zero-amount `transfer` and `transferFrom`, ev
+- `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
+- `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- `TEST-080` [fuzz] Dust donations: sending 1 wei up to 10^6 wei of GHO, USDC, WETH, DAI, pool tokens or vault tokens (where the r
+- `TEST-092` [invariant] Conservation: for every token (each debt asset, each pool token, each vault token), the sum of tracked balance
+- `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
+- `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
+- `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
+- `TEST-121` [fork] End-to-end lifecycle on one fork (Avana-deployed Aave V4 plus Ethereum Uniswap v3, Chainlink, GHO, the Aave V3
+- `TEST-126` [fork] Emergency matrix: for every row of the matrix in [3.6](../03-operations/06-emergency-operations.md) (applicati
+- `TEST-127` [fork] Halt deterioration and caps: with liquidation of an account stopped for the 48-hour incident window of `Q-192`
+- `TEST-137` [deployment-check] Upgrade safety: every UUPS contract (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, LPVaul
+- `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
+- `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme

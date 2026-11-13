@@ -5,11 +5,12 @@
 
 The units are every test file under test/ (fork and differential excluded, as in the default profile). A file of
 test/invariant/ is one invariant campaign: Foundry runs all invariants of a test contract in one campaign of
-runs x depth handler calls, checking each invariant after every call, so the calls, not the invariants, take the time;
-running each invariant on its own (`--match-test`) would repeat the whole campaign once per invariant. A campaign whose
-measured time is above SEGMENT_SECONDS is split into m segments `<file>@<k>/<m>`: each runs ceil(runs / m) of the
-campaign's runs at the same depth, with its own seed, so together they run at least the campaign's runs at its depth,
-and each fits in a shard. A file's weight is its measured CPU time in script/test-timings.json (measured at the ci
+runs x depth handler calls, checking each invariant after every call, so the calls take most of the time; running each
+invariant on its own (`--match-test`) would repeat the campaign's calls once per invariant (PayoutEscrow: one of its
+three invariants alone takes 52% of the time of all three). A campaign whose measured time is above SEGMENT_SECONDS is
+split into m segments `<file>@<k>/<m>`: each runs ceil(runs / m) of the campaign's runs at the same depth, with its own
+seed, so together they run at least the campaign's runs at its depth, and each fits in a shard. A file's weight is its
+measured CPU time in script/test-timings.json (measured at the ci
 profile); a file with no entry (a new file) weighs the median of the known files of its kind. When
 FOUNDRY_INVARIANT_RUNS or FOUNDRY_INVARIANT_DEPTH lowers the invariant work (the short check on a pull request), the
 invariant units are scaled by the ratio of runs x depth to the ci profile's 10,000 x 100. Units are taken heaviest

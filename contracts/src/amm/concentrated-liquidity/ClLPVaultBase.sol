@@ -23,7 +23,8 @@ import {IClPositionManager} from "./IClPositionManager.sol";
 /// tokens, in pool order.
 /// @custom:spec REQ-VAULT-001, REQ-VAULT-002, REQ-VAULT-005, REQ-VAULT-150, REQ-VAULT-151, REQ-VAULT-155, REQ-VAULT-085, REQ-VAULT-152, REQ-AMM-CORE-001, INV-052, INV-091, Q-224, Q-226, Q-240, Q-291, Q-371
 abstract contract ClLPVaultBase is IClIntegration {
-    /// @notice A bound market: the configuration of `clMarket` plus the token decimals the composition uses.
+    /// @notice A bound market: the configuration of `clMarket`, the token decimals the composition uses and the unit
+    /// exponent `k`: one vault-token unit is `10^k` units of the position's liquidity (`SPEC-UNIT-002`).
     struct Market {
         // Write-once configuration.
         ClMarketConfig cfg;
@@ -31,12 +32,17 @@ abstract contract ClLPVaultBase is IClIntegration {
         uint8 decimals0;
         // Decimals of token1, read at listing.
         uint8 decimals1;
+        // Unit exponent k of the market's pool, fixed at the pool's first binding.
+        uint8 unitExp;
     }
 
     /// @dev Pool tokens of every concentrated-liquidity market.
     uint256 internal constant TOKEN_COUNT = 2;
     /// @dev Largest token decimals a market accepts; keeps `p * 10^d` of `SPEC-ORC-009` far below 2^256.
     uint8 internal constant MAX_TOKEN_DECIMALS = 18;
+    /// @dev Largest unit exponent `k` (`SPEC-ORC-005`): `10^(18 + k) <= 10^36 < 2^128`, so the liquidity of a whole
+    /// vault token always fits the position manager's `uint128`.
+    uint8 internal constant MAX_UNIT_EXP = 18;
 
     uint32 private immutable _INTEGRATION_ID;
     address internal immutable _COLLATERALIZATION;
@@ -50,6 +56,12 @@ abstract contract ClLPVaultBase is IClIntegration {
     mapping(bytes32 positionKey => address depositor) internal _depositorOf;
     /// @dev Market a custodied position was received for; 0 otherwise.
     mapping(bytes32 positionKey => uint256 marketId) internal _marketOfPosition;
+    /// @dev Unit exponent of a pool plus 1, written by the pool's first `bindMarket` (0 = no market of the pool yet).
+    /// Every market of one pool shares it, so Collateralization's per-pool unit counter and the pool's depth are in
+    /// one unit (`SPEC-CAP-005`).
+    // Written and read by `ClLPVaultMarkets.bindMarket`; the lint reads this abstract base alone.
+    // forge-lint: disable-next-line(unused-state-variables)
+    mapping(address pool => uint8 unitExpPlusOne) internal _poolUnitExp;
 
     /// @notice Fixes the integration identifier and the four Avana bindings; none of them needs code at deployment.
     /// @dev Reverts `InvalidDeployment` for a zero identifier, a zero address or two equal Avana bindings, so no
@@ -160,7 +172,7 @@ abstract contract ClLPVaultBase is IClIntegration {
     ) internal view virtual returns (bool encumbered);
 
     /// @dev The chain's minimum block interval in seconds (`SPEC-ORC-022`).
-    function _blockTime() internal pure virtual returns (uint256 seconds_);
+    function _blockTime() internal view virtual returns (uint256 seconds_);
 
     // ─── Checks ───
 
@@ -233,7 +245,7 @@ abstract contract ClLPVaultBase is IClIntegration {
     }
 
     /// @dev `[p0, p1]` from an oracle price vector: `LengthMismatch` for a length other than 2, `InvalidPrices` for a
-    /// price of 0 or above `MAX_ROUTE_ANSWER` ($10,000), the bound every LPOracle price respects.
+    /// price of 0 or above `MAX_ROUTE_ANSWER` ($10,000,000,000), the bound every LPOracle price respects.
     /// @custom:spec REQ-AMM-CORE-006, REQ-AMM-CORE-002
     function _prices(
         uint256[] calldata prices
@@ -243,18 +255,37 @@ abstract contract ClLPVaultBase is IClIntegration {
         if (!_priceOk(p0) || !_priceOk(p1)) revert InvalidPrices();
     }
 
-    /// @dev Raw amounts (`SPEC-ORC-006`, floored, no reduction) `units` hold on `[tickLower, tickUpper]` at
+    /// @dev Raw amounts (`SPEC-ORC-006`, floored, no reduction) `liquidity` holds on `[tickLower, tickUpper]` at
     /// `sqrtOracleX96` clamped to the range.
     /// @custom:spec SPEC-ORC-006, SPEC-AMM-V3-001
     function _rawAmounts(
         int24 tickLower,
         int24 tickUpper,
         uint160 sqrtOracleX96,
-        uint256 units
+        uint256 liquidity
     ) internal pure returns (uint256 amount0, uint256 amount1) {
         uint160 sa = ClPriceMath.sqrtRatioAtTick(tickLower);
         uint160 sb = ClPriceMath.sqrtRatioAtTick(tickUpper);
-        return ClPriceMath.amountsForLiquidity(ClPriceMath.clamp(sqrtOracleX96, sa, sb), sa, sb, units);
+        return ClPriceMath.amountsForLiquidity(ClPriceMath.clamp(sqrtOracleX96, sa, sb), sa, sb, liquidity);
+    }
+
+    /// @dev Vault-token units of `liquidity` in market `m`: `⌊liquidity / 10^k⌋` (`SPEC-UNIT-002`); the remainder below
+    /// one unit stays with the NFT and is never credited.
+    /// @custom:spec SPEC-UNIT-002, SPEC-ORC-005
+    function _toUnits(
+        Market storage m,
+        uint256 liquidity
+    ) internal view returns (uint256) {
+        return liquidity / 10 ** m.unitExp;
+    }
+
+    /// @dev Liquidity of `units` vault-token units in market `m`: `units * 10^k`, exact (`SPEC-UNIT-002`).
+    /// @custom:spec SPEC-UNIT-002, SPEC-ORC-005
+    function _toLiquidity(
+        Market storage m,
+        uint256 units
+    ) internal view returns (uint256) {
+        return units * 10 ** m.unitExp;
     }
 
     /// @dev The position manager of a key, typed for the custody calls.

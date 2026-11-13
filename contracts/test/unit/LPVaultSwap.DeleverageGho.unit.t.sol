@@ -41,7 +41,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
     ) internal returns (uint256 repaid, uint256 out) {
         vm.prank(alice);
         (repaid, out) =
-            adapter.repayWithCollateral(proxy, _position(key), units, ghoReserveId, new uint256[](0), minDebtRepaid);
+            adapter.repayWithCollateral(proxy, _position(key), units, ghoReserveId, new uint256[](2), minDebtRepaid);
     }
 
     /// @notice 1,000 units repay the model's `x` of GHO; the wallet receives `R − x − φ` with `R` both legs at par.
@@ -81,7 +81,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
         if (aboveMinimum) {
             vm.prank(alice);
             vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, x, x + 1));
-            adapter.repayWithCollateral(proxy, _position(key), uint128(units), ghoReserveId, new uint256[](0), x + 1);
+            adapter.repayWithCollateral(proxy, _position(key), uint128(units), ghoReserveId, new uint256[](2), x + 1);
         } else {
             (uint256 repaid,) = _repayGho(uint128(units), x);
             assertEq(repaid, x, "x");
@@ -105,7 +105,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
         uint256 sourceBefore = gho.balanceOf(address(flashSource));
         vm.prank(alice);
         vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, ghoReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, ghoReserveId, new uint256[](2), 0);
         assertEq(_debtOf(proxy, ghoReserveId), debt, "nothing repaid");
         assertEq(gho.balanceOf(address(flashSource)), sourceBefore, "source unchanged");
     }

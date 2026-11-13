@@ -4,18 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
-import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
 import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
-import {RiskModuleMath} from "../../policy/risk-module/RiskModuleMath.sol";
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {Market} from "../../types/Market.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensPositions} from "./ILensPositions.sol";
-import {LensBase} from "./LensBase.sol";
+import {LensAccountMath} from "./LensAccountMath.sol";
 import {AccountRiskView} from "./types/AccountRiskView.sol";
 import {PledgePreviewView} from "./types/PledgePreviewView.sol";
 import {WithdrawPreview} from "./types/WithdrawPreview.sol";
@@ -28,12 +25,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @custom:spec REQ-LENS-047, REQ-LENS-048, REQ-LENS-049
 // View calls in loops over the Spoke's enabled debt reserves (REQ-LENS-020).
 // forge-lint: disable-start(calls-loop)
-abstract contract LensPositions is LensBase, ILensPositions {
-    /// @dev RAY.
-    uint256 internal constant RAY_ = 1e27;
-    /// @dev WAD.
-    uint256 internal constant WAD_ = 1e18;
-
+abstract contract LensPositions is LensAccountMath, ILensPositions {
     /// @inheritdoc ILensPositions
     /// @custom:spec REQ-LENS-047, REQ-LENS-005, REQ-LENS-006
     function getAccountRisk(
@@ -54,9 +46,11 @@ abstract contract LensPositions is LensBase, ILensPositions {
         }
         if (a.totalDebtValueRay == 0) return v;
         uint256 cfAssets = _cfAssets(m, v.proxy);
-        v.liquidationPrice = cfAssets == 0
-            ? type(uint256).max
-            : Math.mulDiv(a.totalDebtValueRay, 1e4, cfAssets * RAY_, Math.Rounding.Ceil);
+        if (cfAssets == 0) {
+            v.liquidationPrice = type(uint256).max;
+        } else {
+            v.liquidationPrice = Math.mulDiv(a.totalDebtValueRay, 1e4, cfAssets * RAY_, Math.Rounding.Ceil);
+        }
     }
 
     /// @inheritdoc ILensPositions
@@ -87,77 +81,50 @@ abstract contract LensPositions is LensBase, ILensPositions {
         uint256 id = coll.recordIdOf(m.integrationId, positionKey);
         bool own = id != 0 && coll.getRecord(id).proxy == proxy;
         uint256 limit = own ? coll.previewRelease(m.integrationId, positionKey) : 0;
-        v.units = units == 0 ? limit : units;
+        v.units = units;
+        if (units == 0) v.units = limit;
         IAaveV4Spoke.UserAccountData memory a = IAaveV4Spoke(m.spoke).getUserAccountData(proxy);
-        uint256 w = Math.mulDiv(a.avgCollateralFactor, a.totalCollateralValue, WAD_);
-        uint256 removed = _weightedValue(m, proxy, v.units);
-        uint256 left = w > removed ? w - removed : 0;
+        // A withdrawal refreshes the account to the reserve's latest collateral factor before Aave checks it.
+        uint256 cf = _latestCf(m);
+        uint256 left = _weightedLeft(m, a.totalCollateralValue, v.units, cf);
         v.healthFactorAfter = _hf(left, a.totalDebtValueRay);
         if (!own || v.units > limit) return v;
         if (a.totalDebtValueRay == 0) {
             v.allowed = true;
             return v;
         }
-        AccountGateStatus memory st = IRiskModuleViews(_RISK_MODULE).getAccountGateStatus(proxy);
-        uint256 e = _rescue(m, proxy);
-        uint256 h0 = _store().hardHealthFloor(marketId);
-        if (h0 < WAD_) h0 = WAD_;
-        v.allowed = st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused
-            && _hf(left > e ? left - e : 0, a.totalDebtValueRay) >= h0;
+        v.allowed = _withdrawGate(m, marketId, proxy, left, cf, a.totalDebtValueRay);
     }
 
     // ------------------------------------------------------------------------------------------------------ internal
 
-    /// @dev `CF × assets × 10^(18 − d)`: the account's collateral value per unit of 8-decimal price, times its CF (bps).
-    /// @custom:spec REQ-LENS-047
-    function _cfAssets(
+    /// @dev `⌊totalCollateralValue × CF / 10⁴⌋ − ⌈units × Pc × 10^(18 − d) × CF / 10⁴⌉`, floored at 0 (REQ-LENS-049).
+    function _weightedLeft(
         Market memory m,
-        address proxy
+        uint256 collateralValue,
+        uint256 units,
+        uint256 cf
     ) internal view returns (uint256) {
-        uint256 shares = IAaveV4Spoke(m.spoke).getUserSuppliedShares(m.reserveId, proxy);
-        uint256 assets = ILensHubReads(m.hub).previewRemoveByShares(m.hubAssetId, shares);
-        return _cf(m, proxy) * assets * 10 ** (18 - m.decimals);
+        uint256 w = collateralValue * cf / 1e4;
+        uint256 removed = Math.mulDiv(units * _servedPrice(m) * 10 ** (18 - m.decimals), cf, 1e4, Math.Rounding.Ceil);
+        return w - Math.min(w, removed);
     }
 
-    /// @dev The account's own dynamic-configuration collateral factor of the vault-token reserve, bps.
-    function _cf(
+    /// @dev The withdraw-with-debt gate of REQ-LENS-049: the gate status, no `Paused`, and the rescue-excluded health
+    /// factor after at least `max(1e18, hardHealthFloor)`.
+    function _withdrawGate(
         Market memory m,
-        address proxy
-    ) internal view returns (uint256) {
-        uint32 key = IAaveV4Spoke(m.spoke).getUserPosition(m.reserveId, proxy).dynamicConfigKey;
-        return IAaveV4Spoke(m.spoke).getDynamicReserveConfig(m.reserveId, key).collateralFactor;
-    }
-
-    /// @dev `⌈units × Pc × 10^(18 − d) × CF / 10⁴⌉` at the AaveOracle's served price of the vault-token reserve.
-    /// @custom:spec REQ-LENS-049
-    function _weightedValue(
-        Market memory m,
+        uint256 marketId,
         address proxy,
-        uint256 units
-    ) internal view returns (uint256) {
-        uint256 price = IAaveV4Oracle(IAaveV4Spoke(m.spoke).ORACLE()).getReservePrice(m.reserveId);
-        return Math.mulDiv(units * price * 10 ** (18 - m.decimals), _cf(m, proxy), 1e4, Math.Rounding.Ceil);
-    }
-
-    /// @dev SPEC-CF-005 rescue exclusion of the account at the served LPOracle price.
-    function _rescue(
-        Market memory m,
-        address proxy
-    ) internal view returns (uint256) {
-        uint256 u = ICollateralizationViews(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
-        if (u == 0) return 0;
-        int256 served = ILPOracle(m.lpOracle).latestAnswer();
-        // forge-lint: disable-next-line(unsafe-typecast)
-        return RiskModuleMath.rescueValue(u, served > 0 ? uint256(served) : 0, _cf(m, proxy), m.decimals);
-    }
-
-    /// @dev Aave's health factor of a weighted collateral value against a debt value, WAD, rounded down.
-    function _hf(
-        uint256 weighted,
+        uint256 left,
+        uint256 cf,
         uint256 debtRay
-    ) internal pure returns (uint256) {
-        if (debtRay == 0) return type(uint256).max;
-        return Math.mulDiv(weighted * WAD_, RAY_, debtRay);
+    ) internal view returns (bool) {
+        AccountGateStatus memory st = IRiskModuleViews(_RISK_MODULE).getAccountGateStatus(proxy);
+        uint256 e = _rescueAt(m, proxy, cf);
+        uint256 h0 = Math.max(_store().hardHealthFloor(marketId), WAD_);
+        return st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused
+            && _hf(left - Math.min(left, e), debtRay) >= h0;
     }
 }
 // forge-lint: disable-end(calls-loop)

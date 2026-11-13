@@ -2284,19 +2284,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "stepWindDown",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "syncDrawCap",
     "inputs": [
       {
@@ -2423,7 +2410,7 @@ export const marketRegistryAbi = [
             "internalType": "uint64"
           },
           {
-            "name": "lastStepAt",
+            "name": "unusedLastStepAt",
             "type": "uint64",
             "internalType": "uint64"
           },
@@ -2433,7 +2420,7 @@ export const marketRegistryAbi = [
             "internalType": "uint16"
           },
           {
-            "name": "currentLtBps",
+            "name": "targetLtBps",
             "type": "uint16",
             "internalType": "uint16"
           }
@@ -3453,25 +3440,6 @@ export const marketRegistryAbi = [
     "anonymous": false
   },
   {
-    "type": "event",
-    "name": "WindDownStepped",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "liquidationThresholdBps",
-        "type": "uint16",
-        "indexed": false,
-        "internalType": "uint16"
-      }
-    ],
-    "anonymous": false
-  },
-  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -3962,6 +3930,17 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
+    "name": "OffboardNoticeRunning",
+    "inputs": [
+      {
+        "name": "notBefore",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ProtectedAddress",
     "inputs": [
       {
@@ -4073,16 +4052,5 @@ export const marketRegistryAbi = [
     "type": "error",
     "name": "VaultTokenMismatch",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "WindDownStepTooEarly",
-    "inputs": [
-      {
-        "name": "nextAt",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
   }
 ] as const;

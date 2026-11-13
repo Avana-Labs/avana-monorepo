@@ -2,11 +2,12 @@
 
 ## What it proves
 
-Every rule of the spec links to the checks that verify it and to the Solidity that implements it, and no rule changes without its checks being re-run.
+Every rule of the spec links to the checks that verify it and to the Solidity that implements it, which of those checks ran and passed, and no rule changes without its checks being re-run.
 
 - [`trace.py`](../../spec/05-verification/trace.py) reads every `REQ-`, `SPEC-`, `INV-`, `ATTACK-`, flow-step and `Q-` ID in `spec/01`–`04`, every `<CHECK> verifies: <IDs>` tag (Z3, SymPy, Quint, Hypothesis, simulation, Foundry, Certora, Halmos) and every `/// @custom:spec` NatSpec link, and regenerates [`traceability.md`](../../spec/05-verification/traceability.md). It fails on a duplicate ID, a link to an undefined ID, or a rule whose text changed since its checks were last accepted.
 - [`traceability.lock.json`](../../spec/05-verification/traceability.lock.json) holds a hash of each rule's text and the checks accepted for it; `--accept <ID>` records a re-verified change.
-- [`contract_checklist.py`](../../spec/05-verification/contract_checklist.py) prints, for one contract, every REQ/SPEC ID on its page, its TEST, cross-cutting TEST, PROP, INV and ATTACK rows, each ticked when a tag in `contracts/test` or `contracts/certora` links it; `--check` exits 1 while a row is unlinked.
+- [`evidence.py`](../../spec/05-verification/evidence.py) decides which `TEST-`/`PROP-` tags count: a tag sits directly above a test function or CVL rule, the test carries the tag's own row (or the tag gives `shared: <reason>`), the check ran and passed in the run's results (`forge test --json-file`, Halmos logs; a CVL rule needs a prover result with a job id in `contracts/certora/RUNS.md` or a CI result file), and the test uses no harness or mock that stands in for the contract the row belongs to (`STAND_INS`). A `@custom:spec` tag on a body-less declaration is shown as a declaration, not an implementation.
+- [`contract_checklist.py`](../../spec/05-verification/contract_checklist.py) prints, for one contract, every REQ/SPEC ID on its page, its TEST, PROP, INV and ATTACK rows, each verified `[x]`, failed `[!]`, not run `[~]` or unlinked `[ ]`; `--check --results <run>` exits 1 while a row in scope is not verified, `--check --links-only` while one is unlinked or failed. `--all` runs every contract key and `--uncovered` the TEST rows on no contract's checklist.
 
 ## How to run
 
@@ -15,18 +16,36 @@ cd spec/05-verification
 .venv/bin/python trace.py                 # matrix and errors
 .venv/bin/python trace.py --strict        # also coverage gaps
 python3 contract_checklist.py --list      # ID counts per contract
-python3 contract_checklist.py Collateralization --check
+python3 contract_checklist.py Collateralization --check --links-only
+python3 contract_checklist.py --all --check --results ../../contracts/out-results   # with a run's results
 ```
 
 ## Scope
 
-3,478 requirements across `spec/01`–`04`; checks in `spec/05-verification/`, `audit/formal-verification/`, `contracts/test/`, `contracts/certora/`; Solidity in `contracts/src/`.
+3,558 requirements (2026-11-12; 3,478 on 2026-11-10) across `spec/01`–`04`; checks in `spec/05-verification/`, `audit/formal-verification/`, `contracts/test/`, `contracts/certora/`; Solidity in `contracts/src/`.
 
 ## How often it runs
 
-Every contract gate (0 errors, every ID of the contract linked), the `traceability` CI job, and with every spec change. The `models` CI workflow runs `contract_checklist.py <Contract> --check` for every contract with a file in `results/contract-checklists/` on every pull request and push to `main`.
+Every contract gate (0 errors, every row of the contract verified by a test that ran and passed), the `traceability` and `evidence` CI jobs of `contracts.yml` (the evidence job runs `contract_checklist.py --all --check` and `trace.py --strict` on every test shard's results), and with every spec change: the `models` workflow runs `contract_checklist.py --all --check --links-only` for every contract key on every pull request and push to `main`.
 
 ## Latest result
+
+Run on 2026-11-12 on the wave 1 tree, with the rules above (a tag counts only on its own test, run and passed, without a stand-in for the row's contract).
+
+| Measure | Committed matrix (no run results) | With one local run's results |
+|---|---|---|
+| Requirements | 3,558 | 3,558 |
+| Verified | 114 (CVL rules with a recorded prover pass, Halmos checks with a recorded log) | 1,724 |
+| Failed | 0 | 3 (two lite-profile artifacts, see the results file) |
+| Not run | 1,642 | 29 |
+| Unlinked | 1,682 | 1,682 |
+| Changed — re-verify | 120 (rules edited by the spec work in progress) | 120 |
+
+Under the earlier rule (any tag anywhere linked a row) the same tree showed 945 rows Verified and 1,888 rows with a Foundry tag. 146 `TEST-` tags sit on a test named for another row and no longer count; 294 rows have only declaration `@custom:spec` links (for example `REQ-ORACLE-014`: the `ILPOracle` interface, the abstract `LPOracle` and the body-less `_consistency` hook), and every LPOracle test runs on `LPOracleHarness`, so `REQ-ORACLE-014` and `REQ-ORACLE-048` are Unlinked.
+
+Per contract, rows in `--check` scope (REQ/SPEC of the page, TEST and PROP rows), with the local run's results: [`evidence-local-run-2026-11-12.md`](results/evidence-local-run-2026-11-12.md). With that run, 22 of the 26 contracts fail `--check` (AvanaRoles, LPPriceMath, PositionProxy and ProxyManager pass); with links only (the `models` check), 19 fail on unlinked rows and 7 pass (AvanaRoles, Lock, LPPriceMath, VaultTokenFactory, PositionProxy, ProxyManager, FlashLiquidator). The TEST rows on no contract's checklist: 52, of which 27 are keeper, off-chain or CI-tool rows in `OUTSIDE_CONTRACTS` and 18 block `--check` (TEST-003, 005, 008, 009, 076, 082, 103, 110, 111, 121, 126, 127, 134, 135, 183, 184, 263, 282). The full per-contract checklists, written with links only, are in [`results/contract-checklists/`](results/contract-checklists/).
+
+### Earlier result (2026-11-10, earlier rule: a tag anywhere linked a row)
 
 Run on 2026-11-10 at 22:4x, while the spec rewrite of 2.11 and the review fix batches were in progress, from a copy of `trace.py` that writes the matrix outside the repository:
 
@@ -40,7 +59,7 @@ Run on 2026-11-10 at 22:4x, while the spec rewrite of 2.11 and the review fix ba
 
 At each contract's gate `trace.py` reported 0 errors. Lock file (written 2026-11-10 21:04): 3,454 rules with an accepted hash, 8,842 accepted check links.
 
-Per-contract checklists (`contract_checklist.py <C> --check`, 2026-11-10), rows linked / rows listed:
+Per-contract checklists (`contract_checklist.py <C> --check`, 2026-11-10, earlier rule), rows linked / rows listed:
 
 | Contract | REQ/SPEC on the page | TEST | PROP | INV | ATTACK |
 |---|---|---|---|---|---|
@@ -67,4 +86,5 @@ A shared page lists the rules of every contract on it, so most unlinked rows of 
 - [`trace-output-2026-11-10.txt`](results/trace-output-2026-11-10.txt): console output of `trace.py`.
 - [`traceability-summary-2026-11-10.md`](results/traceability-summary-2026-11-10.md): totals and status counts of the regenerated matrix.
 - [`lock-stats-2026-11-10.md`](results/lock-stats-2026-11-10.md): entries of `traceability.lock.json` per ID prefix.
-- [`contract-checklists/`](results/contract-checklists/): the full checklist of each written contract.
+- [`contract-checklists/`](results/contract-checklists/): the full checklist of every contract key, written on 2026-11-12 with links only (`--all --links-only --out-dir`), so a linked row reads not run `[~]`.
+- [`evidence-local-run-2026-11-12.md`](results/evidence-local-run-2026-11-12.md): the per-contract verdicts and the TEST rows on no checklist, from one local run's results.

@@ -117,6 +117,21 @@ contract RiskModuleMathHarness {
         return RiskModuleMath.bonusBoundViolated(maxLb, cf, factor, minBonus);
     }
 
+    function boundedHealthFactor(
+        uint256 hf,
+        uint256 served,
+        uint256 accepted
+    ) external pure returns (uint256) {
+        return RiskModuleMath.boundedHealthFactor(hf, served, accepted);
+    }
+
+    function bookingPrice(
+        uint256 accepted,
+        uint256 fresh
+    ) external pure returns (uint256) {
+        return RiskModuleMath.bookingPrice(accepted, fresh);
+    }
+
     function probe(
         address target,
         uint256 callGas

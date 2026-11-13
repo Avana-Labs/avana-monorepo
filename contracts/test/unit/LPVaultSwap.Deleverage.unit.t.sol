@@ -35,7 +35,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
     ) internal returns (uint256 repaid, uint256 out) {
         vm.prank(alice);
         (repaid, out) =
-            adapter.repayWithCollateral(proxy, _position(key), units, usdcReserveId, new uint256[](0), minDebtRepaid);
+            adapter.repayWithCollateral(proxy, _position(key), units, usdcReserveId, new uint256[](2), minDebtRepaid);
     }
 
     function _request(
@@ -50,7 +50,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
             position: _position(key),
             units: units,
             debtReserveId: usdcReserveId,
-            minAmounts: new uint256[](0),
+            minAmounts: new uint256[](2),
             minDebtRepaid: 0
         });
     }
@@ -93,7 +93,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         uint256 x = 2_075_924_073;
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, x, x + 1));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), x + 1);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), x + 1);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, 0, 0));
         adapter.deleverageRaw(_request(0));
         DeleverageRequest memory r = _request(1000e6);
@@ -110,7 +110,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(small, usdcReserveId);
         vm.prank(carol);
         (uint256 repaid, uint256 out) =
-            adapter.repayWithCollateral(small, _position(smallKey), 1000e6, usdcReserveId, new uint256[](0), 0);
+            adapter.repayWithCollateral(small, _position(smallKey), 1000e6, usdcReserveId, new uint256[](2), 0);
         assertEq(repaid, debt, "whole debt");
         assertEq(_debtOf(small, usdcReserveId), 0, "debt-free");
         uint256 phi = (debt * 5 + 5000) / 10_000;
@@ -161,18 +161,18 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         lpOracle.setState(PriceState.Expired);
         vm.prank(alice);
         vm.expectRevert(_err(ILPVaultSwapErrors.StalePrice.selector));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         lpOracle.setState(PriceState.Live);
         usdcOracle.setState(PriceState.Cached, true);
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         usdcOracle.setState(PriceState.Live, false);
         uint256 assets = IAaveV4Hub(aave.hub).getAddedAssets(vtAssetId);
         vm.mockCall(aave.hub, abi.encodeCall(IAaveV4Hub.getAddedAssets, (vtAssetId)), abi.encode(assets + 1));
         vm.prank(alice);
         vm.expectRevert(_err(ILPVaultSwapErrors.SharesNotEqualAssets.selector));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         vm.clearMockedCalls();
         lpOracle.setFlags(false, false, false, true);
         _repay(1000e6, 0);
@@ -187,17 +187,17 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         v3Pool.setVirtualBalance(address(usdc), uint128(x - 1));
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.FlashLiquidityShort.selector, x - 1, x));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         v3Pool.setVirtualBalance(address(usdc), uint128(18_000_000e6));
         v3Pool.setFlags(address(usdc), true, false, true, true);
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.FlashLiquidityShort.selector, 0, x));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         v3Pool.setFlags(address(usdc), true, false, false, true);
         store.setMaxFlashFeeBps(4);
         vm.prank(alice);
         vm.expectRevert(_err(ILPVaultSwapErrors.FlashFeeTooHigh.selector));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
     }
 
     /// @notice REQ-FLASH-005: the source is refused when its `LENDER()` is any recorded Hub; liquidation is
@@ -208,7 +208,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         registry.setRecordedHub(address(v3Pool), true);
         vm.prank(alice);
         vm.expectRevert(_err(ILPVaultSwapErrors.FlashSourceIsHub.selector));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         (address bobProxy,) = _bobAccount();
         _liquidateAs(keeper, _params(bobProxy, 1950e6));
     }
@@ -235,7 +235,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(proxy, usdcReserveId);
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageShortfall.selector, recovered, x + phi));
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         assertEq(_debtOf(proxy, usdcReserveId), debt, "unchanged");
     }
 
@@ -297,7 +297,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
             .call(
                 abi.encodeCall(
                     adapter.repayWithCollateral,
-                    (proxy, _position(key), uint128(1000e6), usdcReserveId, new uint256[](0), 0)
+                    (proxy, _position(key), uint128(1000e6), usdcReserveId, new uint256[](2), 0)
                 )
             );
         assertFalse(ok, "reverts");

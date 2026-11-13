@@ -77,6 +77,7 @@ contract FlashLiquidatorHalmosTest is Test {
         lvs.setOutcome(X, 2040.3e6, 19.5e6);
 
         registry = new MockMarketRegistry();
+        registry.setRouteReads(true);
         Market memory m;
         m.spoke = SPOKE;
         m.tokens = new address[](2);

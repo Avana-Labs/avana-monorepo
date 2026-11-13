@@ -34,8 +34,11 @@ library LPPriceMath {
     uint256 internal constant BPS = 10_000;
     /// @notice `stableCeilingUsd`: valuation ceiling of a USD-pegged stable, $1.00 (1.5, `Q-177`).
     uint256 internal constant STABLE_CEILING_USD = 1e8;
-    /// @notice Largest route value the listing admits, $10,000 (1.5, `Q-191`).
-    uint256 internal constant MAX_ROUTE_ANSWER = 1e12;
+    /// @notice Largest route value the listing admits, $10,000,000,000 per whole token (1.5, `Q-191`): far above any
+    /// listable token (WBTC near $10^5) and small enough that no product of the price path overflows (MATH-UO-14:
+    /// `lpPrice` stays below `8 * 2^128 * 10^18 < 2^192`, `SPEC-ORC-009`'s `den << 64` below `2^184`, every accepted price
+    /// fits `uint128`).
+    uint256 internal constant MAX_ROUTE_ANSWER = 1e18;
     /// @notice Exclusive upper bound of a raw answer and of a composition amount (`SPEC-ORC-001`, `SPEC-ORC-008`).
     uint256 internal constant ANSWER_BOUND = 2 ** 128;
     /// @notice Range of the vault-token decimals `d` (`SPEC-ORC-005`).
@@ -202,7 +205,8 @@ library LPPriceMath {
     /// rounds down, so the price never exceeds the value of the holdings at the oracle prices, and it is at least 1.
     /// `valid` is false, with `price8 = 0`, unless the three vectors have one length `n` in `[2, MAX_POOL_TOKENS]`,
     /// every `a_i < 2^128`, every `d_i <= 77` and every `v_i` in `[1, MAX_ROUTE_ANSWER]`: a malformed module read
-    /// (`REQ-ORACLE-103`), never a revert or a dropped token. Inside the bounds every term is below `2^168`.
+    /// (`REQ-ORACLE-103`), never a revert or a dropped token. Inside the bounds every term is below `2^188` and the
+    /// sum of at most eight terms below `2^191` (MATH-UO-75a).
     /// @param amounts Composition `a_i` in raw token units, floored by the pricing module.
     /// @param prices Valuation prices `v_i`, 8 decimals.
     /// @param tokenDecimals Token decimals `d_i`.
@@ -277,7 +281,8 @@ library LPPriceMath {
     /// @notice USD level `max{L : L^⊗n <= ⊗ q_i}` that `getPriceState().usdLevel` reports (`SPEC-ORC-011`).
     /// @dev `usdBandLow <= usdLevel` holds exactly when `usdBandLow^⊗n <= ⊗ q_i`, because `L ↦ L^⊗n` is non-decreasing.
     /// Binary search from `min q` (whose power is at most the product) up to `max q + 1`, doubled until its power exceeds
-    /// the product; about `log2(max q - min q)` steps of `n` fixed-point products. 0 when the quotes are malformed.
+    /// the product; about `log2(max q - min q)` steps of `n` fixed-point products. 0 when the quotes are malformed;
+    /// `type(uint256).max` when their product saturates (eight quotes near `MAX_ROUTE_ANSWER`).
     /// Example: `(99,987,000, 100,010,000)` gives 99,998,499; `(81,000,001, 10^8)` gives 90,000,001.
     /// @custom:spec SPEC-ORC-011, REQ-ORACLE-042
     function usdLevel(
@@ -294,7 +299,12 @@ library LPPriceMath {
             hi = Math.max(hi, q);
         }
         uint256 product = fixedPointProduct(quotes);
-        // Invariant: lo^⊗n <= product < hi^⊗n. Products of valid quotes stay below 10^40, so hi stays below 2^128.
+        // A product that saturated exceeds every power that does not, so every band level passes (`inUsdBand` compares
+        // with the same saturated product): the level is reported as saturated too, and the search below, which could
+        // otherwise double `hi` past 256 bits, never runs on it.
+        if (product == SATURATED) return SATURATED;
+        // Invariant: lo^⊗n <= product < hi^⊗n. The product is below 2^256 and hi^⊗n >= hi for hi >= 10^8, so the
+        // doubling stops before hi reaches 2^256.
         ++hi;
         while (fixedPointPower(hi, n) <= product) {
             hi *= 2;
@@ -308,7 +318,7 @@ library LPPriceMath {
     }
 
     /// @notice `x_0 ⊗ x_1 ⊗ … ⊗ x_(n-1)`, left to right; `10^8` for an empty vector (`SPEC-ORC-011`).
-    /// @dev Exact below the listing bounds (eight values `<= MAX_ROUTE_ANSWER` stay below `10^40`); a product of 256 bits
+    /// @dev Exact below the listing bounds (two values `<= MAX_ROUTE_ANSWER` stay below `10^28`; eight can reach `10^88` and saturate); a product of 256 bits
     /// or more saturates at `type(uint256).max` and stays there for every later factor, so the function never reverts.
     /// @custom:spec SPEC-ORC-011
     function fixedPointProduct(
@@ -390,10 +400,13 @@ library LPPriceMath {
 
     /// @notice Served collateral price by state (`SPEC-ORC-017`).
     /// @dev Expired: 1. Cached: `A`. Some token disagreeing (`pauseActive ∨ disagreementExpired`) and not failed:
-    /// `min(lower, fresh, A)`, because the floored `lower` can exceed the floored `fresh` by a few units. Drifting
-    /// otherwise: `min(fresh, A)`. Live: `fresh`. The result is at least 1 for any inputs, at most `A` in every state but
-    /// Live and at most `fresh` in every state but Cached and Expired. Example: `A = 199,980,000`, `lower = 197,483,855`
-    /// serves 197,483,855 during a disagreement, 199,980,000 when Cached and 1 when Expired.
+    /// `min(lower, fresh)`, because the floored `lower` can exceed the floored `fresh` by a few units. Live and Drifting
+    /// otherwise: `fresh`. The accepted price `A` is served only while Cached: it bounds borrowing (the RiskModule values
+    /// new debt and pledge bookings at `min(fresh, A)`), never liquidation, so a rally after the last accepted price can
+    /// never make an account liquidatable, while a fall still can. The result is at least 1 for any inputs and at most
+    /// `fresh` in every state but Cached and Expired. Example: `A = 199,980,000`, `lower = 197,483,855`, `fresh =
+    /// 219,999,600` serves 197,483,855 during a disagreement, 219,999,600 while Drifting on a consistency deviation,
+    /// 199,980,000 when Cached and 1 when Expired.
     /// @param state Price state of the market.
     /// @param disagreeing Some token disagrees.
     /// @param fresh `price8(v)` of the current evaluation.
@@ -409,8 +422,7 @@ library LPPriceMath {
     ) internal pure returns (uint256 served) {
         if (state == PriceState.Expired) return 1;
         if (state == PriceState.Cached) served = accepted;
-        else if (disagreeing) served = Math.min(Math.min(lower, fresh), accepted);
-        else if (state == PriceState.Drifting) served = Math.min(fresh, accepted);
+        else if (disagreeing) served = Math.min(lower, fresh);
         else served = fresh;
         if (served == 0) served = 1;
     }

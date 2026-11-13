@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationUser} from "../../src/custody/collateralization/ICollateralizationUser.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
+import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
@@ -76,7 +77,8 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
             NORMAL_DELAY,
             true,
             new SelectorPair[](0),
-            new SelectorPair[](0)
+            new SelectorPair[](0),
+            GovernedTargets(address(0xA001), address(0xA002), address(0xA003))
         );
         timelock = address(tl);
         super.setUp();

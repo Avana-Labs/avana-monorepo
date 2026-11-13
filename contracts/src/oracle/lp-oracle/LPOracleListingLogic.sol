@@ -30,7 +30,7 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
     /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100
     function checkConfig(
         OracleConfig calldata config
-    ) external view override returns (uint256 failedChecks) {
+    ) external view virtual override returns (uint256 failedChecks) {
         failedChecks = _checkConfig(config);
     }
 
@@ -38,9 +38,9 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
     /// @custom:spec REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-076, REQ-ORACLE-088
     function initializeMarket(
         InitParams calldata params
-    ) external override onlyDelegated {
+    ) external virtual override onlyDelegated {
         _storeVaultDecimals(params.config);
-        uint256 failed = _checkConfig(params.config);
+        uint256 failed = _initCheck(params.config);
         if (failed != 0) revert ConfigCheckFailed(failed);
         Evaluation memory e = _evaluateSeed(params.config);
         if (e.state != PriceState.Live) revert NotLive(uint8(e.state), e.reasons);
@@ -56,6 +56,14 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
         _storeCheckpoint();
     }
 
+    /// @dev `checkConfig` of `config` for `initialize`, run here; an implementation whose listing checks live in
+    /// another logic contract overrides it to run that contract's `checkConfig`.
+    function _initCheck(
+        OracleConfig calldata config
+    ) internal virtual returns (uint256 failed) {
+        failed = _checkConfig(config);
+    }
+
     /// @dev `d`: the smallest decimals in `[6, 18]` whose whole token is worth at least $1 at the listing valuation
     /// prices (`SPEC-ORC-005`); reverts `ConfigCheckFailed` when no route quotes a token or no `d` exists.
     function _storeVaultDecimals(
@@ -68,7 +76,14 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
         if (e.failed) revert ConfigCheckFailed(LPOracleCodes.CHECK_QUOTES);
         (bool found, uint8 d) = LPPriceMath.vaultDecimals(_compositionOrEmpty, e.prices, _s().tokenDecimals);
         if (!found) revert ConfigCheckFailed(LPOracleCodes.CHECK_VAULT_DECIMALS);
-        _s().vaultDecimals = d;
+        Layout storage $ = _s();
+        $.vaultDecimals = d;
+        uint256 n = e.prices.length;
+        for (uint256 i = 0; i < n; ++i) {
+            // Valuation prices are route values of at most MAX_ROUTE_ANSWER = 10^18 < 2^128.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            $.listingPrices.push(uint128(e.prices[i]));
+        }
     }
 }
 // forge-lint: disable-end(reentrancy-events)

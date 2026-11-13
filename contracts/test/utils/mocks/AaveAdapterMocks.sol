@@ -55,6 +55,10 @@ contract AdapterRegistryMock {
             _marketKnown[marketId] = true;
             _spokeMarkets[m.spoke].push(marketId);
         }
+        if (!_spokeListed[m.spoke]) {
+            _spokeListed[m.spoke] = true;
+            _spokeList.push(m.spoke);
+        }
         _markets[marketId] = m;
         marketOfReserveMap[m.spoke][m.reserveId] = marketId;
     }
@@ -135,11 +139,33 @@ contract AdapterRegistryMock {
         return _debtIds[spoke];
     }
 
+    // The CDP Spokes the RiskModule's (Hub, asset) speed window sums over (Q-411): every Spoke a market was set on.
+    address[] internal _spokeList;
+    mapping(address => bool) internal _spokeListed;
+
+    function getSpokes() external view returns (address[] memory) {
+        _ok();
+        return _spokeList;
+    }
+
     function getToken(
         address
     ) external view returns (TokenDef memory def) {
         _ok();
         return def;
+    }
+
+    /// @dev A route contract set for a slot; the registry itself stands in for an unset one.
+    mapping(bytes32 => address) public routeOf;
+
+    function setRouteContract(
+        uint256 marketId,
+        address token,
+        address debtAsset,
+        uint8 kind,
+        address route
+    ) external {
+        routeOf[keccak256(abi.encode(marketId, token, debtAsset, kind))] = route;
     }
 
     function getRoute(
@@ -149,8 +175,10 @@ contract AdapterRegistryMock {
         uint8 kind
     ) external view returns (address route, bool usable) {
         _ok();
-        usable = !routeDown[keccak256(abi.encode(marketId, token, debtAsset, kind))];
-        route = usable ? address(this) : address(0);
+        bytes32 slot = keccak256(abi.encode(marketId, token, debtAsset, kind));
+        usable = !routeDown[slot];
+        address set = routeOf[slot];
+        route = usable ? (set != address(0) ? set : address(this)) : address(0);
     }
 
     function spokeImplementationStatus(

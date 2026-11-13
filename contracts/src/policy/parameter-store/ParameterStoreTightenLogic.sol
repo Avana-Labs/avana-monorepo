@@ -6,11 +6,15 @@ pragma solidity 0.8.28;
 import {Market} from "../../types/Market.sol";
 import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
+import {IParameterStoreSpeed} from "./IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "./IParameterStoreTighten.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
+import {ParameterStoreSpeedRules} from "./ParameterStoreSpeedRules.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
 import {FeedDef} from "./types/FeedDef.sol";
 import {MarketParams} from "./types/MarketParams.sol";
+import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
+import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreTightenLogic
 /// @notice Bodies of every tighten setter: each moves one value strictly in its safer direction, within its hard and liveness bounds; all are on the timelock's short-delay list (12 hours).
@@ -370,6 +374,39 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         if (value >= old) revert NotStricter();
         _s().g.maxFlashFeeBps = value;
         emit ParameterTightened("maxFlashFeeBps", bytes32(0), old, value, msg.sender);
+    }
+
+    /// @notice Body of `IParameterStoreSpeed.tightenMarketSpeedLimits`; the ParameterStore checks the caller's role first.
+    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    function tightenMarketSpeedLimits(
+        uint256 marketId,
+        MarketSpeedLimits calldata limits
+    ) external {
+        _onlyDelegated();
+        _requireMarket(marketId);
+        MarketSpeedLimits memory old = _s().marketSpeed[marketId];
+        (bool noLooser, bool stricter) = ParameterStoreSpeedRules.compareMarket(old, limits);
+        if (!noLooser || !stricter) revert NotStricter();
+        if (!ParameterStoreSpeedRules.validMarket(limits)) revert OutOfBounds();
+        _s().marketSpeed[marketId] = limits;
+        emit IParameterStoreSpeed.MarketSpeedLimitsSet(marketId, old, limits, true);
+    }
+
+    /// @notice Body of `IParameterStoreSpeed.tightenDebtSpeedLimit`; the ParameterStore checks the caller's role first.
+    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    function tightenDebtSpeedLimit(
+        address hub,
+        address asset,
+        SpeedLimit calldata limit
+    ) external {
+        _onlyDelegated();
+        _requireHub(hub);
+        SpeedLimit memory old = _s().debtSpeed[hub][asset];
+        (bool noLooser, bool stricter) = ParameterStoreSpeedRules.compareDebt(old, limit);
+        if (!noLooser || !stricter) revert NotStricter();
+        if (!ParameterStoreSpeedRules.validDebt(limit)) revert OutOfBounds();
+        _s().debtSpeed[hub][asset] = limit;
+        emit IParameterStoreSpeed.DebtSpeedLimitSet(hub, asset, old, limit, true);
     }
 }
 // forge-lint: disable-end(reentrancy-events)

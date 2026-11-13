@@ -31,6 +31,8 @@ contract CoverageSpokeProperties {
     uint256 internal constant ASSET_ID = 0;
     uint256 internal constant RAY = 1e27;
     uint256 internal constant DELAY = 1_209_600;
+    /// @notice The Hub's virtual shares and assets in its share price (`MockCoverageHub.VIRTUAL`, as in the Hub).
+    uint256 internal constant HUB_VIRTUAL = 1e6;
 
     MockDebtAsset internal immutable TOKEN;
     MockCoverageHub internal immutable HUB;
@@ -144,8 +146,9 @@ contract CoverageSpokeProperties {
 
     // ─── Assertion entry points ───
 
-    /// @notice `fund` succeeds exactly for a non-zero amount on an unhalted instance and moves exactly `amount` from
-    /// the funder to the Hub.
+    /// @notice `fund` succeeds exactly for a non-zero amount worth at least one Hub share on an unhalted instance
+    /// (`REQ-FLR-037`: below one share's value, `floor(amount × (S + 1e6) / (A + 1e6)) = 0` once yield lifts the share
+    /// price above 1, the Hub reverts with `InvalidShares`) and moves exactly `amount` from the funder to the Hub.
     function fundAmount(
         uint96 amount
     ) external {
@@ -154,7 +157,8 @@ contract CoverageSpokeProperties {
         uint256 mine = TOKEN.balanceOf(address(this));
         uint256 hubBalance = TOKEN.balanceOf(address(HUB));
         uint256 total = CS.totalFunded();
-        bool expected = amount > 0 && !HUB.halted(address(CS));
+        uint256 shares = (uint256(amount) * (HUB.addedShares() + HUB_VIRTUAL)) / (HUB.totalAddedAssets() + HUB_VIRTUAL);
+        bool expected = amount > 0 && !HUB.halted(address(CS)) && shares > 0;
         try CS.fund(amount) {
             assert(expected);
             assert(TOKEN.balanceOf(address(this)) == mine - amount);

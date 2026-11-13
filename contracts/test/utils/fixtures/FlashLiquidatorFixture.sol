@@ -102,6 +102,7 @@ abstract contract FlashLiquidatorFixture is ParameterStoreFixture {
         d.decimals = 18;
         registry.setDebtReserve(address(spoke), d);
 
+        registry.setRouteReads(true);
         helper = new FlashLiquidator(address(aavePool), address(lvs), address(registry), address(store));
         opHelper = new OperatorFlashLiquidator(
             address(aavePool), address(lvs), address(registry), address(store), signer, safe, OPERATOR_TOP_UP_BPS

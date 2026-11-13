@@ -37,7 +37,7 @@ contract UniswapV3IntegrationForkTest is AvanaTest {
         vm.createSelectFork(rpc, blockNumber);
         Lock lock = new Lock(makeAddr("aaveAdapter"), makeAddr("lpVaultSwap"));
         vault = new UniswapV3Integration(
-            1, makeAddr("collateralization"), registry, address(lock), makeAddr("timelock"), NFPM, FACTORY
+            1, makeAddr("collateralization"), registry, address(lock), makeAddr("timelock"), NFPM, FACTORY, 12
         );
     }
 

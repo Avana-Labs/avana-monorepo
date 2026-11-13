@@ -114,23 +114,25 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
     }
 
     // TEST-028 verifies: REQ-ADAPTER-023, REQ-RISK-077, Q-118, Q-197, Q-314
-    // Sources: 2.7 REQ-ADAPTER-023 (Aave enforces the drawCap and the freeze inside Spoke.borrow; no daily limit)
+    // Sources: 2.7 REQ-ADAPTER-023 (Aave enforces the drawCap and the freeze inside Spoke.borrow; the only amount gate
+    // of the RiskModule is the speed windows of REQ-RISK-092)
     /// @notice `preBorrowCheck` of a same-Hub reserve passes whatever the reserve's `drawCap` and drawn amount, with the
-    /// debt reserve frozen on the Spoke, and for any number of borrows of any size in one block: those limits are
-    /// Aave's, checked inside `Spoke.borrow`.
+    /// debt reserve frozen on the Spoke, and for any number of checks of any size within the speed windows in one
+    /// block: those limits are Aave's, checked inside `Spoke.borrow`. The fixture's store leaves the windows open
+    /// (`uint96` maximum), and a check not made by the AaveAdapter charges nothing.
     /// @dev Kills: a `drawCap`, drawn-amount, debt-reserve freeze or cumulative-amount check added to the borrow gate.
     function test_TEST_028_drawCapFreezeAndDailyLimitAreAaves() public {
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         // The GHO draw cap at 1 whole token, with far more drawn.
         hub.setSpokeConfig(GHO_ASSET, address(spoke), 0, 1);
         rHub.setDrawn(GHO_ASSET, 1e40);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e30);
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e27);
         // The GHO reserve frozen on the Spoke (still borrowable).
         rSpoke.setConfig(GHO_RESERVE, IAaveV4Spoke.ReserveConfig(0, false, true, true, false));
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e30);
-        // No daily limit: repeated large borrows in one block.
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e27);
+        // No daily limit beyond the speed windows: repeated large checks in one block.
         for (uint256 i = 0; i < 5; ++i) {
-            riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e36);
+            riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e27);
         }
         riskModule.preWithdrawCheck(address(proxy));
     }

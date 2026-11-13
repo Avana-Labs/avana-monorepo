@@ -140,6 +140,12 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
     /// @dev How long the Aave DAO's `cancelStandbySwitch` keeps the guardians from switching the same token again: the
     /// normal delay, so a guardian cannot re-apply what the DAO undid before a timelocked review could (REQ-MREG-028).
     uint64 internal constant _STANDBY_RESWITCH_COOLDOWN = 5 days;
+    /// @dev Public notice from `offboardedAt` before the Aave DAO's one liquidation-threshold drop and before
+    /// `closeMarket`, at least the normal delay (REQ-CONFIG-080).
+    uint64 internal constant OFFBOARD_NOTICE_SECONDS = 5 days;
+    /// @dev Share of its liquidation threshold at offboarding an offboarding market is lowered to, bps of that
+    /// threshold (`windDownFinalLtBps`, REQ-CONFIG-080): the target is `⌊startLt × 5,000 / 10,000⌋`.
+    uint16 internal constant OFFBOARD_TARGET_SHARE_BPS = 5000;
     uint8 internal constant _PRIMARY = 0;
     uint8 internal constant _BACKUP = 1;
 

@@ -32,8 +32,14 @@ interface ILensErrors {
     /// @custom:spec REQ-LENS-034, REQ-LENS-039
     error UnknownDebtAsset(address debtAsset);
 
-    /// @notice The eight Lens modules passed to the Lens constructor do not report the same core addresses, or the
+    /// @notice The nine Lens modules passed to the Lens constructor do not report the same core addresses, or the
     /// liquidation module was given no Aave sizing contract.
     /// @custom:spec REQ-LENS-001, REQ-LENS-002
     error InvalidModules();
+
+    /// @notice The Hub lists no asset `assetId` (its underlying reads as address(0)).
+    /// @param hub The Hub passed to `getHubAsset`.
+    /// @param assetId The asset identifier passed.
+    /// @custom:spec REQ-LENS-058
+    error UnknownHubAsset(address hub, uint256 assetId);
 }

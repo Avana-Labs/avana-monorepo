@@ -236,14 +236,18 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         address[6] memory codes = [
             address(implementation), logics.tighten, logics.loosen, logics.listing, logics.adminOracle, logics.adminRisk
         ];
+        bytes4[] memory sels = new bytes4[](removed.length);
         for (uint256 i = 0; i < removed.length; ++i) {
-            bytes4 sel = bytes4(keccak256(bytes(removed[i])));
-            (bool ok,) = address(store).staticcall(abi.encodePacked(sel, new bytes(64)));
+            sels[i] = bytes4(keccak256(bytes(removed[i])));
+            (bool ok,) = address(store).staticcall(abi.encodePacked(sels[i], new bytes(64)));
             assertFalse(ok, removed[i]);
-            for (uint256 j = 0; j < codes.length; ++j) {
-                bytes memory code = codes[j].code;
-                assertFalse(BytecodeInspector.pushesSelector(code, 0, code.length, sel), removed[i]);
-            }
+        }
+        // One pass over each code for all the removed selectors (the store's code grew with the speed limits, and a
+        // pass per selector ran out of the block gas limit in the unoptimized coverage build).
+        for (uint256 j = 0; j < codes.length; ++j) {
+            bytes memory code = codes[j].code;
+            (bool found, bytes4 which) = BytecodeInspector.pushesAnySelector(code, 0, code.length, sels);
+            assertFalse(found, vm.toString(abi.encodePacked(which)));
         }
     }
 

@@ -132,7 +132,7 @@ contract CoverageSpoke is
     // ─── Coverage (COVERAGE_ROLE) ───
 
     /// @inheritdoc ICoverageSpoke
-    /// @custom:spec REQ-FLR-004, REQ-FLR-006, REQ-FLR-014, REQ-FLR-016, REQ-FLR-018, REQ-FLR-019, REQ-FLR-022, REQ-FLR-027, REQ-FLR-029, REQ-FLR-030, REQ-FLR-031, REQ-FLR-032, REQ-FLR-040, SPEC-FLR-001, INV-042, INV-071
+    /// @custom:spec REQ-FLR-004, REQ-FLR-006, REQ-FLR-014, REQ-FLR-016, REQ-FLR-018, REQ-FLR-019, REQ-FLR-022, REQ-FLR-027, REQ-FLR-029, REQ-FLR-030, REQ-FLR-031, REQ-FLR-032, REQ-FLR-040, REQ-FLR-048, SPEC-FLR-001, INV-042, INV-071
     function coverDeficit(
         address borrowSpoke,
         uint256 maxAmount
@@ -140,6 +140,7 @@ contract CoverageSpoke is
         if (!allowedBorrowSpoke[borrowSpoke]) revert SpokeNotAllowlisted(borrowSpoke);
         uint256 deficitRayBefore = _HUB.getSpokeDeficitRay(_ASSET_ID, borrowSpoke);
         if (deficitRayBefore == 0) revert NothingToCover(borrowSpoke);
+        _beforeCover();
         uint256 amount = Math.min(Math.min(maxAmount, Math.ceilDiv(deficitRayBefore, RAY)), fundedBalance());
         if (amount == 0) revert NothingToCover(borrowSpoke);
         // SPEC-FLR-001: amount <= ceil(deficitRay / RAY), so the Hub eliminates exactly `amount` (MATH-ST-114).
@@ -299,6 +300,12 @@ contract CoverageSpoke is
         // forge-lint: disable-end(calls-loop)
         if (open != address(0)) revert DeficitOutstanding(open);
     }
+
+    /// @notice Loss-order hook run by `coverDeficit` after the allowlist and recorded-deficit checks and before the
+    /// amount is computed; the Avana Umbrella has no layer in front of it, so it accepts every call.
+    /// @dev `DeficitOffsetSpoke` overrides it to require a first-loss layer with a funded balance of zero.
+    /// @custom:spec REQ-FLR-048, Q-410
+    function _beforeCover() internal view virtual {}
 
     /// @dev Emits `ReserveBelowMinimum` when the balance left by a coverage or withdrawal is below the minimum.
     /// @custom:spec REQ-FLR-014, REQ-FLR-031

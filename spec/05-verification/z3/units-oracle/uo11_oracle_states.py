@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-"""MATH-UO-42..49 — served prices and timers of the LPOracle and the DebtOracle
-([2.10] SPEC-ORC-001, SPEC-ORC-002, SPEC-ORC-012..018, REQ-ORACLE-095).
+"""MATH-UO-42..49 and 76 — served prices and timers of the LPOracle and the DebtOracle, and the
+borrow-side bound by the accepted price ([2.10] SPEC-ORC-001, SPEC-ORC-002, SPEC-ORC-012..018,
+REQ-ORACLE-095; [2.7] REQ-RISK-026, REQ-RISK-059).
 
   price8(x0, x1) = isqrt(4 * x0 * x1) - 1                                   (SPEC-ORC-008)
-  collateral (SPEC-ORC-017): Live fresh; Drifting with no disagreement min(fresh, A);
-      some token disagrees min(lower, A) with lower = price8(w0, w1), w_i = ceil_i(min(p_i, b_i));
-      Cached A; Expired 1
+  collateral (SPEC-ORC-017): Live and Drifting with no disagreement fresh;
+      some token disagrees (not failed) max(1, min(lower, fresh)) with lower = price8(w0, w1),
+      w_i = ceil_i(min(p_i, b_i)); Cached A (also the block a quote-change cap holds); Expired 1
+  borrow side (REQ-RISK-026, REQ-RISK-059): bookingPrice(A, fresh) = fresh if 0 < fresh < A else A;
+      boundedHealthFactor(hf, served, A) = hf if served == 0 or A >= served else floor(hf * A / served)
   debt (SPEC-ORC-018): Live q; Drifting (routes disagree) max(p, b, A); Cached A;
       Expired ceil(A * (10^4 + delta) / 10^4), delta = min(max(read, 100), 5,000) for any uint16 read;
       served route while Drifting: the route of max(p, b), none (accepted timestamp) when A > max(p, b)
@@ -20,7 +23,7 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from z3 import Ints, Int, Bool, Bools, And, Or, If, Implies, Not
-from _common import prove, witness, finish, MAX_ROUTE_ANSWER, STABLE_CEILING
+from _common import prove, witness, note, finish, MAX_ROUTE_ANSWER, STABLE_CEILING
 
 C = STABLE_CEILING
 
@@ -54,15 +57,43 @@ q = If(qsel, p, b)
 prove('MATH-UO-42c', 'lemma: the disagreement price w = ceil(min(p, b)) is <= the valuation price v = ceil(q) for either quote route, and >= 1',
       [p >= 1, b >= 1], And(ceil_i(mn(p, b)) <= ceil_i(q), ceil_i(mn(p, b)) >= 1))
 fresh, lower, A, served, st = Ints('fresh lower A served state')     # state 0 Live 1 Drift 2 Disagree 3 Cached 4 Expired
-srv = If(st == 0, fresh, If(st == 1, mn(fresh, A), If(st == 2, mn(lower, A), If(st == 3, A, 1))))
-facts = [fresh >= 1, lower >= 1, lower <= fresh, A >= 1, st >= 0, st <= 4, served == srv]   # lower <= fresh from 42a-c
+
+
+def served_rule(state, fr, lw, acc):
+    """LPPriceMath.servedPrice: Expired 1; Cached A; disagreement min(lower, fresh); Live, Drifting fresh; at least 1."""
+    v = If(state == 4, 1, If(state == 3, acc, If(state == 2, mn(lw, fr), fr)))
+    return If(v < 1, 1, v)
+
+
+srv = served_rule(st, fresh, lower, A)
+# lower is not assumed <= fresh: the floored lower-route price can exceed fresh by a few units (MATH-UO-59c).
+facts = [fresh >= 1, lower >= 0, A >= 1, st >= 0, st <= 4, served == srv]
 # MATH-UO-42 verifies: SPEC-ORC-017, SPEC-ORC-012
-prove('MATH-UO-42d', 'served >= 1 in every state; served <= A whenever the state is not Live; served <= fresh whenever not failed (Live, Drifting, disagreement)',
-      facts, And(served >= 1, Implies(st != 0, served <= A), Implies(st <= 2, served <= fresh)))
+prove('MATH-UO-42d', 'served >= 1 in every state; served = A when Cached; served <= fresh whenever not failed (Live, Drifting, disagreement)',
+      facts, And(served >= 1, Implies(st == 3, served == A), Implies(st <= 2, served <= fresh)))
 r0, X0 = Ints('root X')
 # MATH-UO-42 verifies: SPEC-ORC-008, SPEC-ORC-017
 prove('MATH-UO-42e', 'fresh and lower are >= 1: prices >= 1 give isqrt(4*x0*x1) >= 2, so price8 >= 1',
       isqrt_c(r0, X0) + [X0 >= 4], r0 - 1 >= 1)
+capped, evalState = Bool('quoteChangeCapped'), Int('evaluatedState')   # the cap turns a Live evaluation into Cached
+st_cap = If(And(capped, evalState == 0), 3, evalState)
+# MATH-UO-42 verifies: SPEC-ORC-017, REQ-ORACLE-103
+prove('MATH-UO-42f', 'served <= fresh whenever the market is not failed and the quote-change cap does not hold it Cached; '
+      'the capped block serves A in place of fresh',
+      [fresh >= 1, lower >= 0, A >= 1, evalState >= 0, evalState <= 2],
+      And(Implies(Not(capped), served_rule(st_cap, fresh, lower, A) <= fresh),
+          Implies(And(capped, evalState == 0), served_rule(st_cap, fresh, lower, A) == A)))
+f_old, f_new, A_old, A_new, s_old, s_new = Ints('freshOld freshNew acceptedOld acceptedNew stateOld stateNew')
+rally = [f_old >= 1, f_new >= f_old, A_old >= 1, A_new >= 1, Or(s_old == 0, s_old == 1), Or(s_new == 0, s_new == 1)]
+# MATH-UO-42 verifies: SPEC-ORC-017, INV-087
+prove('MATH-UO-42g', 'a rally never lowers the served price: for any accepted prices and any Live/Drifting states before and '
+      'after (Live -> Drifting included), fresh_new >= fresh_old gives served_new >= served_old',
+      rally, served_rule(s_new, f_new, 0, A_new) >= served_rule(s_old, f_old, 0, A_old))
+old_rule = lambda state, fr, acc: If(state == 0, fr, mn(fr, acc))    # the replaced rule: Drifting min(fresh, A)
+# MATH-UO-42 verifies: SPEC-ORC-017, INV-087
+witness('MATH-UO-42h', 'wrong reading (Drifting serves min(fresh, A)): a Live market served at fresh above an older A '
+        'rallies into Drifting and its served price falls to A, so a rally could make an account liquidatable',
+        rally + [A_new == A_old, s_old == 0, s_new == 1, old_rule(s_new, f_new, A_new) < old_rule(s_old, f_old, A_old)])
 
 # ---------------------------------------------------------------------------
 # MATH-UO-43  Debt served price (SPEC-ORC-018).
@@ -104,6 +135,56 @@ drift = [Ad >= 1, pd >= 1, bd >= 1, pd != bd, sel == selr]
 prove('MATH-UO-67', 'while the routes disagree the reported route is the one whose value max(p, b, A) serves: the alternate serves b, the primary p, and none serves A, so the timestamp, legs and age limits always describe the served value',
       drift, And(Implies(sel == 2, mx(mx(pd, bd), Ad) == bd), Implies(sel == 1, mx(mx(pd, bd), Ad) == pd),
                  Implies(sel == 0, mx(mx(pd, bd), Ad) == Ad)))
+
+# ---------------------------------------------------------------------------
+# MATH-UO-76  The accepted price bounds borrowing only (REQ-RISK-026, REQ-RISK-059, SPEC-ORC-017).
+WAD = 10 ** 18
+hf, sv, ac, bh = Ints('hf served76 accepted76 boundedHf')
+bhf = lambda h, srv_, acc: If(Or(srv_ == 0, acc >= srv_), h, (h * acc) / srv_)     # RiskModuleMath.boundedHealthFactor
+base76 = [hf >= 0, sv >= 0, ac >= 1, bh == bhf(hf, sv, ac)]
+# MATH-UO-76 verifies: REQ-RISK-059, SPEC-ORC-017
+prove('MATH-UO-76a', 'boundedHealthFactor never exceeds hf, equals floor(hf * A / served) when A < served and hf when '
+      'A >= served', base76,
+      And(bh <= hf, Implies(And(sv > 0, ac < sv), And(bh * sv <= hf * ac, hf * ac < (bh + 1) * sv)),
+          Implies(ac >= sv, bh == hf)))
+K, Dbt, h_s, b_s, t_a, ks, ka = Ints('K debtValue hfAtServed boundedAtServed hfAtAccepted KS KA')
+# Aave's health factor of an account whose only collateral is the vault token: hf(P) = floor(K * P / D), with
+# K = units * liquidation threshold * WAD scale (constant in P) and D the debt value: linear in P, then floored.
+lin = [K >= 0, Dbt >= 1, sv >= 1, ac >= 1, ac < sv, ks == K * sv, ka == K * ac,
+       h_s * Dbt <= ks, ks < (h_s + 1) * Dbt,                 # Aave's hf at the served price
+       b_s * sv <= h_s * ac, h_s * ac < (b_s + 1) * sv,        # bounded by A / served
+       t_a * Dbt <= ka, ka < (t_a + 1) * Dbt]                  # Aave's hf at the accepted price
+lx, ly, lz = Ints('lemmaX lemmaY lemmaZ')
+# MATH-UO-76 verifies: REQ-RISK-059, SPEC-CF-005
+prove('MATH-UO-76b-i', 'lemma: x <= y and z >= 0 give x * z <= y * z (used to scale the two floors of 76b and 76c)',
+      [lx <= ly, lz >= 0], lx * lz <= ly * lz)
+# MATH-UO-76 verifies: REQ-RISK-059, SPEC-CF-005
+prove('MATH-UO-76b', 'linear health factor: the bounded value is never above the health factor at price A and at most one '
+      'wei below it (hf(A) - 1 <= bounded <= hf(A))', lin + [b_s * sv * Dbt <= h_s * ac * Dbt, h_s * Dbt * ac <= ks * ac],
+      And(b_s <= t_a, b_s >= t_a - 1))
+# MATH-UO-76 verifies: REQ-RISK-059, SPEC-CF-005
+prove('MATH-UO-76c', 'linear health factor with no floor in Aave (D divides K * served): the bounded value is exactly the '
+      'health factor at price A', lin + [h_s * Dbt == ks, b_s * sv * Dbt <= h_s * ac * Dbt, h_s * ac * Dbt == ka * sv],
+      b_s == t_a)
+fr76, bp = Ints('fresh76 bookingPrice')
+bpr = If(And(fr76 != 0, fr76 < ac), fr76, ac)                         # RiskModuleMath.bookingPrice
+# MATH-UO-76 verifies: REQ-RISK-026, SPEC-ORC-017
+prove('MATH-UO-76d', 'bookingPrice = min(fresh, A) when fresh > 0, A when fresh = 0 (a failed market), and never above A',
+      [ac >= 1, fr76 >= 0, bp == bpr],
+      And(Implies(fr76 > 0, bp == mn(fr76, ac)), Implies(fr76 == 0, bp == ac), bp <= ac, bp >= 1))
+req = Int('requiredHf')
+# MATH-UO-76 verifies: REQ-RISK-059, SPEC-ORC-017
+witness('MATH-UO-76e', 'wrong reading (post-action check at the served price): after a rally the unbounded health factor '
+        'passes the required 1.0 while the health factor at the accepted price is below it',
+        [req == WAD, sv == 219_999_899, ac == 199_999_899, hf == 11 * WAD // 10, hf >= req, bhf(hf, sv, ac) < req])
+_b = (11 * WAD // 10) * 199_999_899 // 219_999_899
+_book = lambda acc, fresh_: fresh_ if 0 < fresh_ < acc else acc
+note('MATH-UO-76f', 'RiskModuleMath examples',
+     f'boundedHealthFactor(1.10e18, served 219,999,899, accepted 199,999,899) = {_b:,} (below 1e18); '
+     f'bookingPrice(199,999,899, fresh 219,999,899) = {_book(199_999_899, 219_999_899):,}; '
+     f'bookingPrice(199,999,899, fresh 189,999,899) = {_book(199_999_899, 189_999_899):,}; '
+     f'bookingPrice(199,999,899, fresh 0) = {_book(199_999_899, 0):,}')
+assert _b < WAD and _book(199_999_899, 219_999_899) == 199_999_899 and _book(199_999_899, 189_999_899) == 189_999_899
 
 # ---------------------------------------------------------------------------
 # MATH-UO-44  Failure start and the Cached window (SPEC-ORC-013).

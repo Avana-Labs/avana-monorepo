@@ -52,7 +52,7 @@ ADDR = {
 LAUNCH_PAIRS = [('USDC', 'USDT'), ('DAI', 'USDC'), ('GHO', 'USDC'),
                 ('DAI', 'USDS'), ('GHO', 'DAI'), ('USDC', 'GHO')]
 TICK_SPACINGS = [1, 10, 60, 200]   # fee tiers 0.01%, 0.05%, 0.3%, 1%
-MAX_ROUTE_ANSWER = 10 ** 12        # $10,000 per whole token, 8 decimals (Q-191, Q-210)
+MAX_ROUTE_ANSWER = 10 ** 18        # $10,000,000,000 per whole token, 8 decimals (Q-191, Q-210; MATH-UO-75)
 STABLE_CEILING = PRICE_ONE         # stableCeilingUsd = $1.00000000 (SPEC-ORC-004)
 MAX_FULL_RANGE_EPSILON_INV = 10 ** 12   # listing requires eps < 1e-12 (REQ-ORACLE-050)
 

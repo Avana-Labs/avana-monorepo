@@ -71,10 +71,13 @@ interface IAaveAdapterCollateral {
     /// wallet, Q-356); read `hfBefore`, the backing gap and supplied shares; open the
     /// transient session; call `LP_VAULT_SWAP.deleverage(DeleverageRequest)`, which flash-borrows the debt asset through
     /// the chain's IFlashSource and calls back `deleverageRepay` then `deleverageRelease`; `NoDeleverageSession` unless
-    /// both ran (the session also binds the hash of `minAmounts`); `UnitsMismatch` unless supplied shares fell by
+    /// both ran (the session also binds the hash of `minAmounts`, an empty array normalised to one zero per market
+    /// token, as LPVaultSwap passes it to `deleverageRelease`); `UnitsMismatch` unless supplied shares fell by
     /// `units`; while debt remains,
-    /// `HealthFactorNotImproved` unless `hfAfter >= max(hfBefore, minHealthFactor)`; backing-gap check; close the
-    /// session; `RepaidWithCollateral`. Reads no circuit breaker; open under Frozen.
+    /// `HealthFactorNotImproved` unless `hfAfter >= max(hfBefore, minHealthFactor)`; backing-gap check;
+    /// `AssetOutBelowMinimum` unless `debtAssetToWallet >= minAssetOut`; once no Aave borrow remains,
+    /// `Collateralization.markDebtFree(proxy)`; close the session; `RepaidWithCollateral`. Reads no circuit breaker;
+    /// open under Frozen.
     /// @param p The market, record, units, debt reserve, bounds, deadline and minimum health factor.
     /// @return debtRepaid Debt repaid, base units of the debt asset.
     /// @return debtAssetToWallet Debt asset sent to the caller after the flash loan and its premium.

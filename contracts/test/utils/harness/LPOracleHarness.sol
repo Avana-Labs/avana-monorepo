@@ -9,6 +9,7 @@ import {LPOracleLogicBase} from "../../../src/oracle/lp-oracle/LPOracleLogicBase
 import {LPOraclePokeLogic} from "../../../src/oracle/lp-oracle/LPOraclePokeLogic.sol";
 import {LPOracleStorage} from "../../../src/oracle/lp-oracle/LPOracleStorage.sol";
 import {LPOracleViewLogic} from "../../../src/oracle/lp-oracle/LPOracleViewLogic.sol";
+import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -67,18 +68,16 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         return (true, amounts);
     }
 
-    function _poolLocked() internal view override returns (bool readOk, bool isLocked) {
-        return (!_m().lockReadFails, _m().locked);
-    }
-
-    function _consistency(
+    function _poolCheck(
         uint256[] memory,
         uint256[] memory,
         uint32,
         uint16
-    ) internal view override returns (bool available, bool pass, uint256 deviationBps, bool isClamped) {
+    ) internal view override returns (PoolCheck memory p) {
         ModuleState storage m = _m();
-        return (!m.consistencyUnavailable, !m.consistencyFails, m.deviation, m.clamped);
+        (p.readOk, p.locked) = (!m.lockReadFails, m.locked);
+        (p.available, p.pass, p.deviationBps, p.clamped) =
+        (!m.consistencyUnavailable, !m.consistencyFails, m.deviation, m.clamped);
     }
 
     function _poolTwapPrice(
@@ -159,9 +158,7 @@ contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
             pokeMinGasFloor,
             pokeMinGasCeiling,
             hasSequencer,
-            pokeLogic,
-            listingLogic,
-            viewLogic
+            LPOracleLogicSet(pokeLogic, listingLogic, listingLogic, viewLogic)
         )
     {}
 

@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
+import {ClFeeGrowthPool, ClFeeTrackingNpm} from "./ClFeeGrowthMocks.sol";
 import {MintableToken} from "./UniswapV3Mocks.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -13,7 +14,8 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 /// @notice Slipstream pool stand-in, deployed by `MockCLFactory` as an EIP-1167 clone of one implementation and
 /// initialized once, as Slipstream's `CLFactory` does: the immutables of `ICLPoolConstants` (`factory`, `token0`,
 /// `token1`, `tickSpacing`, `nft`, `gauge`), the 6-field `slot0`, a settable dynamic `fee`, `liquidity` and `observe`.
-contract MockCLPool {
+/// Fee growth (`feeGrowthGlobal*X128`, the 10-field `ticks`) comes from `ClFeeGrowthPool`.
+contract MockCLPool is ClFeeGrowthPool {
     address public factory;
     address public token0;
     address public token1;
@@ -119,6 +121,18 @@ contract MockCLPool {
         (tc[0], tc[1]) = (tickCumulatives[0], tickCumulatives[1]);
         (spl[0], spl[1]) = (secondsPerLiquidity[0], secondsPerLiquidity[1]);
     }
+
+    /// @notice Slipstream `ticks`: only `feeGrowthOutside0X128` and `feeGrowthOutside1X128` (fields 4 and 5) are kept.
+    function ticks(
+        int24 t
+    ) external view returns (uint128, int128, int128, uint256, uint256, uint256, int56, uint160, uint32, bool) {
+        uint256[2] memory o = _feeGrowthOutside[t];
+        return (0, 0, 0, o[0], o[1], 0, 0, 0, 0, o[0] != 0 || o[1] != 0);
+    }
+
+    function _currentTick() internal view override returns (int24) {
+        return tick;
+    }
 }
 
 /// @notice Leaf voter stand-in of the Aero generation: `isGauge(address)` reverts, as observed on Base.
@@ -189,8 +203,9 @@ contract MockCLFactory {
 /// @notice Slipstream NonfungiblePositionManager stand-in on OpenZeppelin ERC-721: the 12-field `positions` with
 /// `int24 tickSpacing` in field 5, `factory()`, a permissionless `increaseLiquidity`, `decreaseLiquidity` priced at
 /// the pool's `slot0` with the slippage check, `collect` paying owed tokens from its own balance, and `burn` of an
-/// empty position, each restricted to the owner or an approved address, as on the canonical manager.
-contract MockSlipstreamNPM is ERC721 {
+/// empty position, each restricted to the owner or an approved address, as on the canonical manager. With
+/// `setTrackFees(true)` it also runs the canonical fee update (`ClFeeTrackingNpm`).
+contract MockSlipstreamNPM is ERC721, ClFeeTrackingNpm {
     struct Position {
         address token0;
         address token1;
@@ -244,6 +259,7 @@ contract MockSlipstreamNPM is ERC721 {
         tokenId = nextId++;
         _positions[tokenId] = Position(token0, token1, tickSpacing, tickLower, tickUpper, liquidity, 0, 0);
         _mint(to, tokenId);
+        _snapshotFees(tokenId);
     }
 
     /// @notice Mints a chosen token ID (overlapping IDs across generations).
@@ -259,6 +275,7 @@ contract MockSlipstreamNPM is ERC721 {
     ) external {
         _positions[tokenId] = Position(token0, token1, tickSpacing, tickLower, tickUpper, liquidity, 0, 0);
         _mint(to, tokenId);
+        _snapshotFees(tokenId);
     }
 
     function positions(
@@ -268,28 +285,33 @@ contract MockSlipstreamNPM is ERC721 {
         view
         returns (uint96, address, address, address, int24, int24, int24, uint128, uint256, uint256, uint128, uint128)
     {
-        Position memory p = _positions[tokenId];
+        // Encoded in two static halves (one ABI word per field), which keeps the legacy code generator within its stack.
+        bytes memory out = abi.encodePacked(_positionHead(tokenId), _positionTail(tokenId));
+        assembly ("memory-safe") {
+            return(add(out, 32), mload(out))
+        }
+    }
+
+    function _positionHead(
+        uint256 tokenId
+    ) internal view returns (bytes memory) {
+        Position storage p = _positions[tokenId];
         require(p.token0 != address(0), "Invalid token ID");
-        return (
-            0,
-            address(0),
-            p.token0,
-            p.token1,
-            p.tickSpacing,
-            p.tickLower,
-            p.tickUpper,
-            p.liquidity,
-            0,
-            0,
-            p.owed0,
-            p.owed1
-        );
+        return abi.encode(uint96(0), address(0), p.token0, p.token1, p.tickSpacing, p.tickLower);
+    }
+
+    function _positionTail(
+        uint256 tokenId
+    ) internal view returns (bytes memory) {
+        Position storage p = _positions[tokenId];
+        return abi.encode(p.tickUpper, p.liquidity, _feeLast[tokenId][0], _feeLast[tokenId][1], p.owed0, p.owed1);
     }
 
     function increaseLiquidity(
         uint256 tokenId,
         uint128 liquidity
     ) external {
+        _updateFees(tokenId, false);
         _positions[tokenId].liquidity += liquidity;
     }
 
@@ -318,6 +340,7 @@ contract MockSlipstreamNPM is ERC721 {
     ) external payable returns (uint256 amount0, uint256 amount1) {
         require(_isAuthorized(_ownerOf(params.tokenId), msg.sender, params.tokenId), "NA");
         require(params.liquidity > 0, "liquidity");
+        _updateFees(params.tokenId, false);
         Position storage p = _positions[params.tokenId];
         p.liquidity -= params.liquidity;
         decreaseCalls++;
@@ -344,6 +367,7 @@ contract MockSlipstreamNPM is ERC721 {
     ) external payable returns (uint256 amount0, uint256 amount1) {
         require(params.amount0Max > 0 || params.amount1Max > 0, "caps");
         require(_isAuthorized(_ownerOf(params.tokenId), msg.sender, params.tokenId), "NA");
+        _updateFees(params.tokenId, true);
         Position storage p = _positions[params.tokenId];
         amount0 = p.owed0 < params.amount0Max ? p.owed0 : params.amount0Max;
         amount1 = p.owed1 < params.amount1Max ? p.owed1 : params.amount1Max;
@@ -363,6 +387,28 @@ contract MockSlipstreamNPM is ERC721 {
         require(p.liquidity == 0 && p.owed0 == 0 && p.owed1 == 0, "NC");
         delete _positions[tokenId];
         _burn(tokenId);
+    }
+
+    function _feePosition(
+        uint256 tokenId
+    ) internal view override returns (address pool, int24 lower, int24 upper, uint128 liquidity) {
+        Position storage p = _positions[tokenId];
+        pool = MockCLFactory(factory).getPool(p.token0, p.token1, p.tickSpacing);
+        (lower, upper, liquidity) = (p.tickLower, p.tickUpper, p.liquidity);
+    }
+
+    function _creditFees(
+        uint256 tokenId,
+        uint128 amount0,
+        uint128 amount1
+    ) internal override {
+        Position storage p = _positions[tokenId];
+        unchecked {
+            p.owed0 += amount0;
+            p.owed1 += amount1;
+        }
+        MintableToken(p.token0).mint(address(this), amount0);
+        MintableToken(p.token1).mint(address(this), amount1);
     }
 }
 

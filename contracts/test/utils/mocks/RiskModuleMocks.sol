@@ -6,6 +6,8 @@ pragma solidity 0.8.28;
 import {RiskStatus} from "../../../src/amm/types/RiskStatus.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
+import {MarketSpeedLimits} from "../../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
+import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
 import {PriceState} from "../../../src/types/PriceState.sol";
@@ -24,6 +26,24 @@ import {
 /// @title RiskHubMock
 /// @notice The Aave V4 Hub reads of the MarketRegistry and the RiskModule, backed by settable storage.
 contract RiskHubMock is RegistryHubMock {
+    // Spokes listed on a Hub asset, for the (Hub, asset) speed window's base (Q-411).
+    mapping(uint256 => mapping(address => bool)) public spokeListed;
+
+    function setSpokeListed(
+        uint256 assetId,
+        address spoke,
+        bool on
+    ) external {
+        spokeListed[assetId][spoke] = on;
+    }
+
+    function isSpokeListed(
+        uint256 assetId,
+        address spoke
+    ) external view returns (bool) {
+        return spokeListed[assetId][spoke];
+    }
+
     mapping(uint256 => uint256) public addedAssets;
     mapping(uint256 => uint256) public addedShares;
     mapping(uint256 => uint256) public drawnShares;
@@ -386,6 +406,46 @@ contract RiskStoreMock is RegistryParameterStoreMock {
     function sequencer() external view returns (address, uint32) {
         return (_seqFeed, _seqGrace);
     }
+
+    // Speed limits (Q-411): unset scopes read as open (one-hour window, 100 %, no bound) so tests of other gates are not
+    // throttled; a test that sets a value gets exactly that value, all zero included.
+    mapping(uint256 => MarketSpeedLimits) internal _marketSpeed;
+    mapping(uint256 => bool) internal _marketSpeedSet;
+    mapping(address => mapping(address => SpeedLimit)) internal _debtSpeed;
+    mapping(address => mapping(address => bool)) internal _debtSpeedSet;
+
+    function setMarketSpeed(
+        uint256 marketId,
+        MarketSpeedLimits memory v
+    ) external {
+        _marketSpeed[marketId] = v;
+        _marketSpeedSet[marketId] = true;
+    }
+
+    function setDebtSpeed(
+        address hub,
+        address asset,
+        SpeedLimit memory v
+    ) external {
+        _debtSpeed[hub][asset] = v;
+        _debtSpeedSet[hub][asset] = true;
+    }
+
+    function marketSpeedLimits(
+        uint256 marketId
+    ) external view returns (MarketSpeedLimits memory v) {
+        if (_marketSpeedSet[marketId]) return _marketSpeed[marketId];
+        uint96 big = type(uint96).max;
+        v = MarketSpeedLimits(3600, 10_000, 10_000, big, big, big, big);
+    }
+
+    function debtSpeedLimit(
+        address hub,
+        address asset
+    ) external view returns (SpeedLimit memory v) {
+        if (_debtSpeedSet[hub][asset]) return _debtSpeed[hub][asset];
+        v = SpeedLimit(10_000, 3600, type(uint96).max, type(uint96).max);
+    }
 }
 
 /// @title RiskSwapMock
@@ -452,6 +512,13 @@ contract RiskLPOracleMock {
     ) external {
         accepted = acceptedPrice;
         _pv.answer = served;
+    }
+
+    /// @notice The report's fresh price (0 reads as a failed market's).
+    function setFresh(
+        int256 fresh
+    ) external {
+        _pv.freshAnswer = fresh;
     }
 
     function setState(

@@ -3,6 +3,117 @@
   "source": "src/policy/risk-module/RiskModule.sol",
   "storage": [],
   "namespaces": {
+    "erc7201:avana.storage.RiskModule.speed": {
+      "baseSlot": "0x1858dc028745fe2a4f37a8a31dd3ca321a1f7863f165bffa26e588c97f1ff200",
+      "declaredIn": "src/policy/risk-module/RiskModuleSpeed.sol",
+      "fields": [
+        {
+          "path": "marketBorrow",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct SpeedWindow)"
+        },
+        {
+          "path": "marketBorrow[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct SpeedWindow"
+        },
+        {
+          "path": "marketBorrow[].start",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "marketBorrow[].prev",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "marketBorrow[].curr",
+          "slot": "0",
+          "offset": 20,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "debtBorrow",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => struct SpeedWindow)"
+        },
+        {
+          "path": "debtBorrow[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct SpeedWindow"
+        },
+        {
+          "path": "debtBorrow[].start",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "debtBorrow[].prev",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "debtBorrow[].curr",
+          "slot": "0",
+          "offset": 20,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "marketPledge",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct SpeedWindow)"
+        },
+        {
+          "path": "marketPledge[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct SpeedWindow"
+        },
+        {
+          "path": "marketPledge[].start",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "marketPledge[].prev",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "marketPledge[].curr",
+          "slot": "0",
+          "offset": 20,
+          "bytes": "12",
+          "type": "uint96"
+        }
+      ]
+    },
     "erc7201:openzeppelin.storage.AccessControl": {
       "baseSlot": "0x02dd7bc7dec4dceedda775e58dd541e08a116c6c53815c0bd028192f7b626800",
       "declaredIn": "dependencies/@openzeppelin-contracts-upgradeable-5.1.0/access/AccessControlUpgradeable.sol",

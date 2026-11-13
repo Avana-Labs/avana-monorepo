@@ -4,7 +4,7 @@
 
 Actors: borrowers (four wallets, one PositionProxy per wallet per Borrow Spoke, several collateral and debt reserves
 per account), an outside LP, approved keepers, a permissionless liquidator, a flash-loan attacker, a pool manipulator,
-a lender on the Lend Spoke, the guardians and the token issuers. Markets: USDC/USDT (d = 6), DAI/USDC (d = 12),
+a public lender on the Lend Spoke (Q-407), the guardians and the token issuers. Markets: USDC/USDT (d = 6), DAI/USDC (d = 12),
 GHO/DAI (d = 18). Debt reserves: GHO (fixed price) and USDC (DebtOracle) on the CDP Spoke; GHO only on the second
 Spoke when it is listed.
 
@@ -114,7 +114,7 @@ class AvanaMachine(RuleBasedStateMachine):
         assert s.records[tid].credited == L and s.nfpm.positions[tid].owner == LPVAULT
         if not s.p.faulty_risk_module:
             assert state in ((LIVE, DRIFTING) if had_debt else (LIVE,)), f"HYP-22 pledge accepted in {state}"
-            assert r["L"] * s.accepted_price(m) // 10 ** mk.d >= min(s.p.min_pledge_usd, s.p.rescue_min_pledge_usd), \
+            assert r["L"] * s.booking_price(m) // 10 ** mk.d >= min(s.p.min_pledge_usd, s.p.rescue_min_pledge_usd), \
                 "HYP-22 pledge below the minimum value"
         # HYP-77 verifies: Q-252, Q-253, INV-082
         if not r["rescue"]:
@@ -257,7 +257,7 @@ class AvanaMachine(RuleBasedStateMachine):
         assert pos.owner == w and pos.fees0 == f0 and pos.fees1 == f1, "HYP-19 NFT or fees not returned whole"
         if not debt_free and not s.p.faulty_risk_module:
             # HYP-20 verifies: Q-018, Q-161, Q-182, Q-229, Q-253, Q-398
-            assert s.hf_ex(pxa) >= max(WAD, s.p.hard_floor_hf, hf_min), "HYP-20 hfEx after withdraw"
+            assert s.hf_ex(pxa, s.borrow_price_of) >= max(WAD, s.p.hard_floor_hf, hf_min), "HYP-20 hfEx after withdraw"
             assert s.pause_state != PAUSED and w not in s.frozen_addresses, "HYP-20 withdraw-with-debt under a stop"
 
     @rule(w=st.sampled_from(WALLETS), i=st.integers(0, 50), frac=st.integers(1, 99))
@@ -279,7 +279,8 @@ class AvanaMachine(RuleBasedStateMachine):
         assert rec.credited == cred0 - units and rec.status == "active", "HYP-78 record not debited by the units"
         assert s.nfpm.positions[rec.token_id].liquidity == live0 - units, "HYP-78 NFT liquidity not reduced by units"
         if not debt_free and not s.p.faulty_risk_module:
-            assert s.hf_ex(rec.proxy) >= max(WAD, s.p.hard_floor_hf), "HYP-78 removal with debt below HF 1.00"
+            assert s.hf_ex(rec.proxy, s.borrow_price_of) >= max(WAD, s.p.hard_floor_hf), \
+                "HYP-78 removal with debt below HF 1.00"
             assert rec.credited * s.accepted_price(rec.market) // 10 ** s.markets[rec.market].d >= s.p.min_pledge_usd
 
     @rule(w=st.sampled_from(WALLETS), i=st.integers(0, 50), pct=st.integers(1, 50))
@@ -443,21 +444,36 @@ class AvanaMachine(RuleBasedStateMachine):
         """A pool manipulator or sandwicher worsens a swap route into the debt asset."""
         self.s.route_haircut[(m, route)] = bps
 
-    @rule(amount=st.sampled_from([10 ** 5, 10 ** 6, 10 ** 7]), add=st.booleans())
-    def lender(self, amount, add):
-        """A lender supplies or withdraws GHO on the Lend Spoke (a withdrawal cascade lowers Hub liquidity)."""
+    @rule(amount=st.sampled_from([10 ** 5, 10 ** 6, 10 ** 7]), add=st.booleans(), over=st.booleans())
+    def lender(self, amount, add, over):
+        """A public lender supplies or withdraws GHO on the Lend Spoke (Q-407): supply is bounded only by the Lend
+        Spoke supply cap, never by the credit line; a withdrawal takes only idle liquidity (a cascade lowers it)."""
         s = self.s
         amt = amount * WAD
+        a = s.hub.assets[GHO]
+        sd = a.spokes[LEND_SPOKE]
+        s.hub.accrue(a)  # the cap and the withdrawal are judged on accrued assets, as inside the call
+        idle = a.liquidity
         if add:
+            room = sd.add_cap * WAD - s.hub.preview_add_by_shares(GHO, sd.added_shares)
             s.fund("lender", GHO, amt)
-            s.ledger.transfer(GHO, "lender", HUB, amt)
-            s.hub.add(GHO, LEND_SPOKE, amt)
-            self.lent += amt
+
+            def supply():
+                s.ledger.transfer(GHO, "lender", HUB, amt)
+                return s.hub.add(GHO, LEND_SPOKE, amt)
+            ok, r = s.tx(supply)
+            # HYP-97 verifies: Q-407, REQ-HUB-017
+            assert ok == (amt <= room), f"HYP-97 Lend Spoke supply of {amt} against room {room}: {r}"
+            if ok:
+                self.lent += amt
+            ev(f"lender supply ok={ok}")
         else:
-            take = min(amt, s.hub.assets[GHO].liquidity, s.hub.preview_remove_by_shares(
-                GHO, s.hub.assets[GHO].spokes[LEND_SPOKE].added_shares))
+            held = s.hub.preview_remove_by_shares(GHO, sd.added_shares)
+            take = min(amt, held) if over else min(amt, idle, held)
             if take > 0:
-                ok, _ = s.tx(s.hub.remove, GHO, LEND_SPOKE, take, "lender", s.xfer)
+                ok, r = s.tx(s.hub.remove, GHO, LEND_SPOKE, take, "lender", s.xfer)
+                # HYP-97 verifies: Q-407, REQ-HUB-019
+                assert ok == (take <= idle), f"HYP-97 Lend Spoke withdrawal of {take} against idle {idle}: {r}"
                 ev(f"lender withdraw ok={ok}")
 
     # ---------------------------------------------------------------- liquidation actors

@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
+import {SpeedView} from "./types/SpeedView.sol";
 
 /// @title IRiskModuleViews
 /// @notice Non-reverting previews, formula views, the health floor and the implementation immutables of the RiskModule.
@@ -150,4 +151,29 @@ interface IRiskModuleViews {
     function debtValueUsd(
         address proxy
     ) external view returns (uint256 usd);
+
+    /// @notice The market's borrow-speed window and the borrow-speed window of reserve `debtReserveId`'s (funding Hub,
+    /// asset), as the next borrow of that reserve would see them now (REQ-RISK-097).
+    /// @dev Never reverts and writes nothing: a failed read returns both views with `unavailable = true` and every other
+    /// field 0. Example (SPEC-CAP-012): Spoke debt $4,000,000 with $600,000 charged gives the market view `{85,000,000,
+    /// 000,000, 60,000,000,000,000, 25,000,000,000,000, start + τ, …}`.
+    /// @param marketId The market.
+    /// @param debtReserveId The reserve.
+    /// @return market The market window, 8-decimal USD.
+    /// @return debt The (funding Hub, asset) window, asset base units.
+    /// @custom:spec REQ-RISK-097, SPEC-CAP-011, Q-411
+    function getBorrowSpeed(
+        uint256 marketId,
+        uint256 debtReserveId
+    ) external view returns (SpeedView memory market, SpeedView memory debt);
+
+    /// @notice The market's pledge-speed window as the next non-rescue pledge would see it now (REQ-RISK-097).
+    /// @dev Never reverts and writes nothing; reads Collateralization's counters, so it reports `unavailable` while the
+    /// Lock is held. `previewPledge` does not read the window; the app reads this view beside it.
+    /// @param marketId The market.
+    /// @return pledge The pledge window, 8-decimal USD.
+    /// @custom:spec REQ-RISK-097, SPEC-CAP-011, Q-411
+    function getPledgeSpeed(
+        uint256 marketId
+    ) external view returns (SpeedView memory pledge);
 }

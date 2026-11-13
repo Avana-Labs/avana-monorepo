@@ -54,7 +54,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         b.unsettledSeizedUnits = IERC20(vaultToken).balanceOf(_LP_VAULT_SWAP);
         b.hubBalance = IERC20(vaultToken).balanceOf(m.hub);
         b.hubLiquidity = hub.getAssetLiquidity(assetId);
-        b.stranded = b.hubBalance > b.hubLiquidity ? b.hubBalance - b.hubLiquidity : 0;
+        b.stranded = b.hubBalance - Math.min(b.hubBalance, b.hubLiquidity);
         (b.addedAssets, b.addedShares) = (hub.getAddedAssets(assetId), hub.getAddedShares(assetId));
         b.drawnShares = hub.getAssetDrawnShares(assetId);
         b.supplyEqualsCredited = b.totalSupply == b.totalCredited + b.pendingUnits;
@@ -101,7 +101,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         (v.blockNumber, v.timestamp, v.vaultToken, v.units, v.amounts) =
         (block.number, block.timestamp, vaultToken, p.units, p.amounts);
         v.unsettledSeizedUnits = IERC20(vaultToken).balanceOf(_LP_VAULT_SWAP);
-        v.settleableUnits = p.units < v.unsettledSeizedUnits ? p.units : v.unsettledSeizedUnits;
+        v.settleableUnits = Math.min(p.units, v.unsettledSeizedUnits);
         v.settleable = v.settleableUnits > 0;
         DebtReserveDef memory def = _registry().getDebtReserve(m.spoke, _registry().settlementReserve(marketId));
         v.debtAsset = def.asset;
@@ -134,8 +134,13 @@ abstract contract LensMarket is LensBase, ILensMarket {
         c.poolShareBps = _poolShareBps(marketId, m.integration, k.poolUnits);
         // forge-lint: disable-next-line(unused-return)
         (uint256 accepted,) = ILPOracle(m.lpOracle).lastAcceptedPrice();
+        // A pledge is booked at min(fresh, accepted) (REQ-RISK-026); a failed market's fresh price is 0.
+        int256 fresh = ILPOracle(m.lpOracle).getPriceState().freshAnswer;
+        // A positive int256 is cast.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        if (fresh > 0 && uint256(fresh) < accepted) accepted = uint256(fresh);
         uint256 floor = _store().stressFloorUsd(marketId);
-        c.chargePricePerWholeToken = accepted > floor ? accepted : floor;
+        c.chargePricePerWholeToken = Math.max(accepted, floor);
         c.vaultTokenAddHeadroom = _addHeadroom(m);
         c.drawHeadroom = _drawHeadrooms(m.spoke);
     }
@@ -159,7 +164,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         for (uint256 i = 0; i < count; ++i) {
             address s = hub.getSpokeAddress(assetId, i);
             IAaveV4Hub.SpokeConfig memory sc = hub.getSpokeConfig(assetId, s);
-            if (sc.drawCap != 0) noDrawCap = false;
+            noDrawCap = noDrawCap && sc.drawCap == 0;
             if (s == cdpSpoke && s != feeReceiver) cdpSeen = true;
             else if (s == feeReceiver && sc.addCap == 0) feeSeen = true;
             else other = true;
@@ -179,7 +184,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         uint32 latest = IAaveV4Spoke(spoke).getReserve(reserveId).dynamicConfigKey;
         for (uint256 key = 0; key <= latest; ++key) {
             // forge-lint: disable-next-line(unsafe-typecast)
-            if (IAaveV4Spoke(spoke).getDynamicReserveConfig(reserveId, uint32(key)).liquidationFee != 0) ok = false;
+            ok = ok && IAaveV4Spoke(spoke).getDynamicReserveConfig(reserveId, uint32(key)).liquidationFee == 0;
         }
     }
 

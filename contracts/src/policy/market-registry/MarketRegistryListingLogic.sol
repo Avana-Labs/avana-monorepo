@@ -16,6 +16,7 @@ import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryMarketChecks} from "./MarketRegistryMarketChecks.sol";
 import {MarketRegistryOracleChecks} from "./MarketRegistryOracleChecks.sol";
+import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
 import {MarketStatus} from "./types/MarketStatus.sol";
@@ -36,7 +37,12 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 // setPriceSource re-checks every market using the token (RiskModule, ParameterStore and LPOracle views); the loop
 // is bounded by the markets timelock operations list, and a reverting callee only reverts the governance call.
 // forge-lint: disable-start(calls-loop)
-contract MarketRegistryListingLogic is MarketRegistryMarketChecks, MarketRegistryOracleChecks, IMarketRegistryLogic {
+contract MarketRegistryListingLogic is
+    MarketRegistryMarketChecks,
+    MarketRegistryOracleChecks,
+    MarketRegistryRouteChecks,
+    IMarketRegistryLogic
+{
     /// @notice Fixes the implementation immutables; they must equal the MarketRegistry's.
     /// @param im The per-chain Avana addresses.
     /// @custom:spec REQ-CONFIG-005
@@ -51,7 +57,7 @@ contract MarketRegistryListingLogic is MarketRegistryMarketChecks, MarketRegistr
     }
 
     /// @notice Body of `listToken`.
-    /// @custom:spec REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-MREG-027
+    /// @custom:spec REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-MREG-027, Q-342
     function listToken(
         address token,
         TokenDef calldata def
@@ -60,6 +66,9 @@ contract MarketRegistryListingLogic is MarketRegistryMarketChecks, MarketRegistr
         TokenDef storage t = _s().tokens[token];
         if (token == address(0) || t.listed) revert ListingCheckFailed("listed");
         if (def.replacedSlot != RouteSlot.None) revert ListingCheckFailed("replacedSlot");
+        // Q-342: an ERC-777 token (an ERC-1820 `ERC777Token` implementer) is never listed, so its send and receive hooks
+        // never run inside a custody, settlement or route call.
+        if (_isErc777Token(token)) revert ListingCheckFailed("erc777");
         if (def.alternateRoute.length == 0 && def.standbyRoute.length == 0) {
             // REQ-CONFIG-021: a monitoring-only listing (a fixed-price debt asset such as GHO) records its one route
             // after the leg checks; it can serve only a fixed-price debt reserve and is never a pool token until

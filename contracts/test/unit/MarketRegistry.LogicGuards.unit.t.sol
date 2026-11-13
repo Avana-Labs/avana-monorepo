@@ -39,7 +39,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     function _bodies() internal view returns (Body[] memory b) {
         address[] memory one = new address[](1);
         one[0] = address(gho);
-        b = new Body[](39);
+        b = new Body[](38);
         uint256 k = 0;
         // Hubs logic.
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordHub, (alice, RiskTier.Stable)));
@@ -100,7 +100,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.tripMarketBreaker, (1)));
         b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.tripDebtBreaker, (address(spoke), 0)));
         // Wind-down logic.
-        b[k++] = Body(logics.windDown, abi.encodeCall(MarketRegistryWindDownLogic.stepWindDown, (1)));
         b[k++] = Body(logics.windDown, abi.encodeCall(MarketRegistryWindDownLogic.closeMarket, (1)));
         b[k++] = Body(
             logics.windDown,
@@ -288,7 +287,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         impl.initialize(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, 1));
-        impl.stepWindDown(1);
+        impl.closeMarket(1);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), 0));
         impl.syncDrawCap(address(spoke), 0);
         vm.prank(address(rm));

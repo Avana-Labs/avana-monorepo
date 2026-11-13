@@ -112,7 +112,9 @@ contract LPOracleStatesUnitTest is LPOracleFixture {
         );
     }
 
-    // TEST-040 verifies: REQ-ORACLE-018, REQ-ORACLE-014, REQ-ORACLE-071, REQ-ORACLE-072, REQ-ORACLE-104, REQ-ORACLE-103, Q-119, Q-330
+    // TEST-040 verifies: REQ-ORACLE-018, REQ-ORACLE-071, REQ-ORACLE-072, REQ-ORACLE-103, Q-119, Q-330
+    /// @dev The core's reaction to each module answer (the base's test module supplies them); the concentrated-liquidity
+    /// module's own reads are checked on real pools in LPOracleCL.Module.unit.t.sol (REQ-ORACLE-014, REQ-ORACLE-104).
     function test_TEST_040_driftingCausesFromThePricingModule() public {
         oracle.setConsistency(true, false, type(uint256).max, false);
         PriceStateView memory v = _state();

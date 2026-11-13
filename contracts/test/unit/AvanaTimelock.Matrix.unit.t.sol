@@ -27,6 +27,7 @@ import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParamet
 import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
 import {IParameterStoreListing} from "../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
+import {IParameterStoreSpeed} from "../../src/policy/parameter-store/IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
@@ -115,7 +116,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function _parameterStoreRows(
         address ps
     ) internal {
-        bytes4[20] memory tighten = [
+        bytes4[22] memory tighten = [
             IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
@@ -135,12 +136,14 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
             IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
             IParameterStoreLiquidation.tightenDebtStressRiseBps.selector,
-            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector
+            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector,
+            IParameterStoreSpeed.tightenMarketSpeedLimits.selector,
+            IParameterStoreSpeed.tightenDebtSpeedLimit.selector
         ];
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
         }
-        bytes4[45] memory normal = [
+        bytes4[47] memory normal = [
             IParameterStoreLoosen.loosenHardHealthFloor.selector,
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
@@ -156,6 +159,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreBreakers.loosenGateRecoverySeconds.selector,
             IParameterStoreLiquidation.loosenMaxShortfallBps.selector,
             IParameterStoreLiquidation.loosenDebtStressRiseBps.selector,
+            IParameterStoreSpeed.loosenMarketSpeedLimits.selector,
+            IParameterStoreSpeed.loosenDebtSpeedLimit.selector,
             IParameterStoreAdmin.setBorrowPriceMaxAge.selector,
             IParameterStoreAdmin.setConsistencyToleranceBps.selector,
             IParameterStoreAdmin.setFeedAgreementToleranceBps.selector,

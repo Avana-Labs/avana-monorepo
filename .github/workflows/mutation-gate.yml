@@ -442,8 +442,9 @@ jobs:
   certora-mutate:
     name: certoraMutate ${{ matrix.conf }}
     # certoraMutate on one conf (the conf's `mutations` section); it submits to the Certora cloud and waits for every
-    # mutant's result. Runs when the CERTORAKEY secret is set; without it the job passes with a warning and runs
-    # nothing. At most six run at a time, the number of Certora jobs the account keeps open at once.
+    # mutant's result. Needs the CERTORAKEY secret: without it the job reports "not run" and fails, since this workflow
+    # runs only when the mutation gate is due. At most six run at a time, the number of Certora jobs the account keeps
+    # open at once.
     needs: plan
     if: needs.plan.outputs.confs != '[]'
     runs-on: ubuntu-24.04
@@ -460,11 +461,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Skip without a Certora key
+      - name: Not run without a Certora key
         if: env.CERTORAKEY == ''
         run: |
-          echo "::warning title=certoraMutate not run::The CERTORAKEY secret is not set; certoraMutate did not run on ${{ matrix.conf }}."
-          echo "certoraMutate not run on ${{ matrix.conf }}: the CERTORAKEY secret is not set." >> "$GITHUB_STEP_SUMMARY"
+          echo "::error title=certoraMutate not run::The CERTORAKEY secret is not set; certoraMutate did not run on ${{ matrix.conf }}."
+          echo "**certoraMutate on ${{ matrix.conf }}: not run.** The CERTORAKEY secret is not set." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
 
       - name: Read the pinned Foundry version
         if: env.CERTORAKEY != ''

@@ -137,6 +137,9 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (!c.topUp) _requireSequencerUp();
         PriceStateView memory pv = ILPOracle(c.m.lpOracle).getPriceState();
         if (pv.state == PriceState.Cached || pv.state == PriceState.Expired) revert PriceNotAccepted(uint8(pv.state));
+        // Not failed (Live or Drifting), so the fresh price is positive.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        c.fresh = pv.freshAnswer > 0 ? uint256(pv.freshAnswer) : 0;
         if (!c.topUp && pv.state == PriceState.Drifting && (pv.reasons & PRICE_DRIFTING_BITS) != PRICE_USD_BAND) {
             revert PriceNotAccepted(uint8(pv.state));
         }
@@ -177,7 +180,7 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     function _value(
         Ctx memory c
     ) internal view {
-        uint256 price8 = _accepted(c.m.lpOracle);
+        uint256 price8 = RiskModuleMath.bookingPrice(_accepted(c.m.lpOracle), c.fresh);
         uint256 floorUsd = _store().stressFloorUsd(c.marketId);
         c.minPledge = _store().minPledgeUsd(c.marketId);
         c.pledgeUsd = RiskModuleMath.pledgeUsd(c.units, price8, c.m.decimals);

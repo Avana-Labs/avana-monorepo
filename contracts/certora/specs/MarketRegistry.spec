@@ -451,11 +451,10 @@ definition pauseGuardianSelector(method f) returns bool =
     || f.selector == sig:resetDebtBreaker(address, uint256).selector
     || f.selector == sig:useStandbyRoute(address, MarketRegistry.RouteSlot).selector;
 
-// Callable by anyone (REQ-CONFIG-080: the wind-down step and close after the notice period; REQ-CONFIG-081: re-reading
-// a Spoke's draw cap). Their own preconditions are checked by the logic, not by a role.
+// Callable by anyone (REQ-CONFIG-080: the close after the notice period; REQ-CONFIG-081: re-reading a Spoke's draw
+// cap). Their own preconditions are checked by the logic, not by a role.
 definition permissionlessSelector(method f) returns bool =
-    f.selector == sig:stepWindDown(uint256).selector || f.selector == sig:closeMarket(uint256).selector
-    || f.selector == sig:syncDrawCap(address, uint256).selector;
+    f.selector == sig:closeMarket(uint256).selector || f.selector == sig:syncDrawCap(address, uint256).selector;
 
 definition riskModuleSelector(method f) returns bool =
     f.selector == sig:recordBreach(bytes32, uint32).selector;

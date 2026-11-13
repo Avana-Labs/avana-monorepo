@@ -45,8 +45,10 @@ interface IFlashLiquidator is IFlashLiquidatorErrors, IFlashLiquidatorEvents {
     /// callback to have run (`InvalidFlashCallback`). Then computes `payout` as the rise of its `T` balance over the
     /// whole call (a fall reverts `PayoutTooLow(0, minPayout)`), reverts `PayoutTooLow(payout, minPayout)` below
     /// `request.minPayout`, in the operator variant reverts `OutlayExceeded` when the Safe's net outlay exceeds
-    /// `floor(D * MAX_TOP_UP_BPS / 1e4)`, sends `payout` and every market token it received (route residues and dust
-    /// legs) to the recipient, leaves no allowance, emits `FlashLiquidated` and clears the context last, so a call
+    /// `floor(D * MAX_TOP_UP_BPS / 1e4)`, sends `payout` and the rise of every token LPVaultSwap may pay it (the
+    /// market's tokens and the intermediates of their primary and backup routes into `T`: route residues, a partly
+    /// filled multi-hop route's intermediate and dust legs) to the recipient, claims to the recipient every PayoutEscrow
+    /// credit of those tokens that was 0 at the start of the call, leaves no allowance, emits `FlashLiquidated` and clears the context last, so a call
     /// re-entered during the payout reverts `ContextActive`. The payer and recipient are `msg.sender` for the public
     /// helper and `FUNDING_SAFE` for the operator variant. Example: the SPEC-LIQ-019 floor case, `X = F = 12,000` USDC
     /// with `maxShortfall = 200` USDC: the helper pulls 200 USDC, LPVaultSwap pulls 12,000 and then the 123.373998 USDC
@@ -81,8 +83,9 @@ interface IFlashLiquidator is IFlashLiquidatorErrors, IFlashLiquidatorEvents {
         bytes calldata params
     ) external returns (bool success);
 
-    /// @notice Claims the helper's PayoutEscrow credit of `token` (a residue or dust leg LPVaultSwap could not deliver
-    /// to it) to the variant's claim recipient.
+    /// @notice Claims the helper's PayoutEscrow credit of `token` to the variant's claim recipient: a credit that stood
+    /// before some call and so could not be matched to its caller (`flashLiquidate` itself claims every credit its own
+    /// call created to its recipient).
     /// @dev Public helper: callable by anyone, pays `feeRecipient` read from the ParameterStore (as LPVaultSwap reads
     /// it), reverting `InvalidFeeRecipient` while it is unset. Operator variant: `SIGNER` only (`NotSigner`), pays
     /// `FUNDING_SAFE`. The escrow is the one LPVaultSwap credits (`LP_VAULT_SWAP.PAYOUT_ESCROW()`); it reverts

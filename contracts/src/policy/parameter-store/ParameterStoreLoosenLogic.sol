@@ -6,9 +6,13 @@ pragma solidity 0.8.28;
 import {Market} from "../../types/Market.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {IParameterStoreLoosen} from "./IParameterStoreLoosen.sol";
+import {IParameterStoreSpeed} from "./IParameterStoreSpeed.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
+import {ParameterStoreSpeedRules} from "./ParameterStoreSpeedRules.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
 import {MarketParams} from "./types/MarketParams.sol";
+import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
+import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreLoosenLogic
 /// @notice Bodies of every loosen setter: each moves one risk parameter in its riskier direction, at the normal delay; none is short-eligible.
@@ -290,6 +294,44 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         if (value > coverageMin) revert OutOfBounds();
         _s().breakerDeficitMax[hub][asset] = value;
         emit ParameterLoosened("breakerDeficitMax", _pair(hub, asset), old, value, msg.sender);
+    }
+
+    /// @notice Body of `IParameterStoreSpeed.loosenMarketSpeedLimits`, which also writes a market's first value; the
+    /// ParameterStore checks the caller's role first.
+    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    function loosenMarketSpeedLimits(
+        uint256 marketId,
+        MarketSpeedLimits calldata limits
+    ) external {
+        _onlyDelegated();
+        _requireMarket(marketId);
+        MarketSpeedLimits memory old = _s().marketSpeed[marketId];
+        (bool noTighter, bool looser) = ParameterStoreSpeedRules.compareMarket(limits, old);
+        if (!noTighter || !looser) revert NotLooser();
+        if (!ParameterStoreSpeedRules.validMarket(limits)) revert OutOfBounds();
+        _s().marketSpeed[marketId] = limits;
+        emit IParameterStoreSpeed.MarketSpeedLimitsSet(marketId, old, limits, false);
+    }
+
+    /// @notice Body of `IParameterStoreSpeed.loosenDebtSpeedLimit`, which also writes a pair's first value; the
+    /// ParameterStore checks the caller's role first.
+    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    function loosenDebtSpeedLimit(
+        address hub,
+        address asset,
+        SpeedLimit calldata limit
+    ) external {
+        _onlyDelegated();
+        _requireHub(hub);
+        SpeedLimit memory old = _s().debtSpeed[hub][asset];
+        (bool noTighter, bool looser) = ParameterStoreSpeedRules.compareDebt(limit, old);
+        if (!noTighter || !looser) revert NotLooser();
+        if (!ParameterStoreSpeedRules.validDebt(limit)) revert OutOfBounds();
+        // forge-lint: disable-next-line(unused-return)
+        (bool found,,,) = _scanReserves(asset, hub);
+        if (!found) revert UnknownDebtReserve(address(0), 0);
+        _s().debtSpeed[hub][asset] = limit;
+        emit IParameterStoreSpeed.DebtSpeedLimitSet(hub, asset, old, limit, false);
     }
 }
 // forge-lint: disable-end(reentrancy-events)

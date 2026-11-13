@@ -228,7 +228,7 @@ export const riskModuleAbi = [
         ]
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -476,6 +476,99 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
+    "name": "getBorrowSpeed",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "tuple",
+        "internalType": "struct SpeedView",
+        "components": [
+          {
+            "name": "limit",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "used",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "available",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "moreAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "moreAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "unavailable",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      },
+      {
+        "name": "debt",
+        "type": "tuple",
+        "internalType": "struct SpeedView",
+        "components": [
+          {
+            "name": "limit",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "used",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "available",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "moreAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "moreAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "unavailable",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getBreakerStatus",
     "inputs": [
       {
@@ -523,6 +616,57 @@ export const riskModuleAbi = [
         "name": "reopensAt",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPledgeSpeed",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pledge",
+        "type": "tuple",
+        "internalType": "struct SpeedView",
+        "components": [
+          {
+            "name": "limit",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "used",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "available",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "moreAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "moreAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "unavailable",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -906,6 +1050,27 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
+    "name": "BorrowSpeedExceeded",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "availableUsd",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "moreAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "BreakerTripped",
     "inputs": [
       {
@@ -1008,6 +1173,32 @@ export const riskModuleAbi = [
         "name": "debtReserveId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "DebtSpeedExceeded",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "available",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "moreAt",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ]
   },
@@ -1147,6 +1338,27 @@ export const riskModuleAbi = [
         "name": "restoreBooked",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PledgeSpeedExceeded",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "availableUsd",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "moreAt",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ]
   },

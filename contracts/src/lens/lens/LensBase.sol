@@ -245,31 +245,21 @@ abstract contract LensBase is ILensErrors {
         v.state = r.state;
         (v.acceptedPrice, v.updatedAt) = debtOracle.lastAcceptedPrice();
         v.age = block.timestamp > v.updatedAt ? block.timestamp - v.updatedAt : 0;
-        (uint256 borrowAge, uint256 liquidationAge) = _legLimits(r.legFeeds);
+        // The smallest borrowPriceMaxAge and liquidationPriceMaxAge over the route's non-zero feeds, read from the
+        // ParameterStore in this call.
+        (uint256 borrowAge, uint256 liquidationAge) = (type(uint256).max, type(uint256).max);
+        for (uint256 i = 0; i < 2; ++i) {
+            if (r.legFeeds[i] == address(0)) continue;
+            borrowAge = Math.min(borrowAge, _store().borrowPriceMaxAge(r.legFeeds[i]));
+            liquidationAge = Math.min(liquidationAge, _store().liquidationPriceMaxAge(r.legFeeds[i]));
+        }
         // A route that names no feed has no source age to check, so it is never reported fresh.
         bool live = r.state == PriceState.Live && (r.legFeeds[0] != address(0) || r.legFeeds[1] != address(0));
-        v.borrowFresh = live && v.age <= borrowAge;
-        v.liquidationFresh = live && v.age <= liquidationAge;
+        // The oracle's own gates close borrowing (sequencer not ready, second source unconfirmed) and liquidation
+        // (sequencer down, a serving alternate past its borrow age) while the state can still be Live and fresh.
+        v.borrowFresh = live && r.borrowAllowed && v.age <= borrowAge;
+        v.liquidationFresh = live && !r.liquidationPaused && v.age <= liquidationAge;
         v.stressPriced = v.price > v.acceptedPrice;
-    }
-
-    /// @dev The smallest `borrowPriceMaxAge` and `liquidationPriceMaxAge` over the non-zero feeds of a route, read from
-    /// the ParameterStore in this call; `(0, 0)` when the route names no feed.
-    /// @custom:spec REQ-LENS-030
-    function _legLimits(
-        address[2] memory feeds
-    ) internal view returns (uint256 borrowAge, uint256 liquidationAge) {
-        (borrowAge, liquidationAge) = (type(uint256).max, type(uint256).max);
-        bool any = false;
-        for (uint256 i = 0; i < 2; ++i) {
-            if (feeds[i] == address(0)) continue;
-            any = true;
-            uint256 b = _store().borrowPriceMaxAge(feeds[i]);
-            uint256 l = _store().liquidationPriceMaxAge(feeds[i]);
-            if (b < borrowAge) borrowAge = b;
-            if (l < liquidationAge) liquidationAge = l;
-        }
-        if (!any) (borrowAge, liquidationAge) = (0, 0);
     }
 
     /// @dev `drawCap` headroom of `spoke` on one debt reserve's funding Hub asset, base units.

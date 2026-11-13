@@ -36,7 +36,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
     ) internal {
         vm.prank(alice);
         vm.expectRevert(err);
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
     }
 
     function _invalid() internal pure returns (bytes memory) {
@@ -50,7 +50,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
         uint256 sourceBefore = usdc.balanceOf(address(source));
         vm.prank(alice);
         (uint256 repaid,) =
-            adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+            adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         assertEq(repaid, X, "x");
         assertEq(source.lastMagic(), keccak256("IFlashReceiver.onFlashLoan"), "magic");
         assertEq(usdc.balanceOf(address(source)), sourceBefore + 1000, "topped up to F + premium by balance");
@@ -92,7 +92,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
         _repayExpect(_invalid());
         source.setRegistrySwitch(address(registry), address(source));
         vm.prank(alice);
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
     }
 
     /// @notice Asset, amount and context mismatches are refused.
@@ -121,7 +121,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(proxy, usdcReserveId);
         vm.prank(alice);
         (uint256 repaid,) =
-            adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+            adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         assertEq(repaid, X - 10, "Fr repaid, never F");
         assertEq(_debtOf(proxy, usdcReserveId), debt - (X - 10), "debt falls by Fr");
     }
@@ -150,7 +150,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
         _repayExpect(abi.encodeWithSelector(ILPVaultSwapErrors.FlashFeeTooHigh.selector));
         source.setQuote(0, cap);
         vm.prank(alice);
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
     }
 
     /// @notice The pre-loan quote bound and the liquidity bound use the registry's source on every call.
@@ -164,6 +164,6 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
         _repayExpect(abi.encodeWithSelector(ILPVaultSwapErrors.FlashLiquidityShort.selector, X - 1, X));
         source.setAvailable(X);
         vm.prank(alice);
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
     }
 }

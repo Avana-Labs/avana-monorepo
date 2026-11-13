@@ -19,7 +19,7 @@ contract LPOracleStressUnitTest is LPOracleFixture {
     // TEST-230 verifies: REQ-ORACLE-020, REQ-ORACLE-085, REQ-ORACLE-086, REQ-ORACLE-087, SPEC-ORC-017, INV-087, INV-055, ATTACK-145, Q-247
     // Sources: 5.1 TEST-230
     function test_TEST_230_servedByState() public {
-        // Drifting with no disagreement: min(fresh, A); fresh above A is served at A.
+        // Drifting with no disagreement serves the fresh price (SPEC-ORC-017).
         vm.warp(T0 + 60);
         oracle.setConsistency(false, true, 80, false);
         PriceStateView memory v = _state();
@@ -31,7 +31,8 @@ contract LPOracleStressUnitTest is LPOracleFixture {
         assertLt(uint256(v.answer), SEEDED);
         // Cached: A. Expired: 1. lastAcceptedPrice stays A in every state.
         oracle.setConsistency(false, false, 0, false);
-        oracle.setLock(false, true);
+        // A failed configuration read recorded by a poke (a locked pool would write nothing, REQ-ORACLE-027).
+        store.setMode(store.getOracleInputs.selector, ReadMode.Revert);
         oracle.poke();
         v = _state();
         assertEq(uint8(v.state), uint8(PriceState.Cached));

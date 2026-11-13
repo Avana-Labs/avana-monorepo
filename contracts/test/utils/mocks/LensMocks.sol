@@ -9,6 +9,7 @@ import {DebtPriceView as OracleDebtView} from "../../../src/oracle/debt-oracle/t
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {SpeedView} from "../../../src/policy/risk-module/types/SpeedView.sol";
 import {AccountGateStatus} from "../../../src/types/AccountGateStatus.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";
@@ -43,6 +44,7 @@ contract LensRegistryMock {
     mapping(uint256 => uint256) public settlementReserve;
     address public flashSource;
     mapping(address => address) public hubOf;
+    mapping(address => mapping(uint256 => uint256)) public marketOfHubAsset;
 
     function setMarket(
         uint256 id,
@@ -50,6 +52,7 @@ contract LensRegistryMock {
     ) external {
         _markets[id] = m;
         marketOfVaultToken[m.vaultToken] = id;
+        if (m.hub != address(0)) marketOfHubAsset[m.hub][m.hubAssetId] = id;
         if (id > marketCount) marketCount = id;
     }
 
@@ -421,6 +424,20 @@ contract LensRiskModuleMock {
     ) external view returns (uint32, uint64) {
         return (_debtReasons[spoke][id], _debtReopens[spoke][id]);
     }
+
+    /// @notice The speed windows the Lens forwards (REQ-LENS-061): open windows with no room, read-only.
+    function getBorrowSpeed(
+        uint256,
+        uint256
+    ) external pure returns (SpeedView memory market, SpeedView memory debt) {
+        return (market, debt);
+    }
+
+    function getPledgeSpeed(
+        uint256
+    ) external pure returns (SpeedView memory pledge) {
+        return pledge;
+    }
 }
 
 /// @notice Price source with a settable 8-decimal answer (the shape Aave's oracle reads).
@@ -582,6 +599,9 @@ contract LensDebtOracleMock {
     uint256 public accepted;
     uint64 public acceptedAt;
     address[2] internal _feeds;
+    // The oracle's own gates beyond the state (sequencer down or not ready, an alternate past its borrow age).
+    bool public extraLiquidationPause;
+    bool public extraBorrowStop;
 
     constructor(
         int256 answer,
@@ -611,9 +631,19 @@ contract LensDebtOracleMock {
         return (accepted, acceptedAt);
     }
 
+    /// @notice Closes liquidation or borrowing the way the real oracle does while its state stays Live.
+    function setGates(
+        bool liquidationPaused,
+        bool borrowStopped
+    ) external {
+        (extraLiquidationPause, extraBorrowStop) = (liquidationPaused, borrowStopped);
+    }
+
     function getPriceState() external view returns (OracleDebtView memory v) {
         (v.state, v.answer, v.acceptedAnswer, v.acceptedUpdatedAt) = (state, latestAnswer, accepted, acceptedAt);
         v.legFeeds = _feeds;
+        v.liquidationPaused = state != PriceState.Live || extraLiquidationPause;
+        v.borrowAllowed = state == PriceState.Live && !extraBorrowStop;
     }
 }
 
@@ -690,5 +720,54 @@ contract LensLPVaultMock is CollLPVaultMock {
         bool available
     ) external {
         (depth, depthAvailable) = (units, available);
+    }
+
+    /// @notice The units a pledge of `key` by `owner` would credit; reverts like `receivePosition` for another owner.
+    function validatePosition(
+        uint256,
+        address owner,
+        bytes32 key
+    ) external view returns (uint128 units) {
+        require(positions[key].owner == owner, "NotTokenOwner");
+        units = positions[key].units;
+    }
+}
+
+/// @notice A Spoke answering `FIRST_LOSS_LAYER()` the way a test sets: a well-formed address word, a revert, a word
+/// with dirty upper bits, or a 64-byte return.
+contract LensFirstLossLayerMock {
+    enum Mode {
+        Address,
+        Revert,
+        DirtyWord,
+        LongReturn
+    }
+
+    Mode public mode;
+    address public layer;
+
+    constructor(
+        address layer_
+    ) {
+        layer = layer_;
+    }
+
+    function set(
+        Mode mode_,
+        address layer_
+    ) external {
+        (mode, layer) = (mode_, layer_);
+    }
+
+    fallback() external {
+        Mode m = mode;
+        uint256 word = uint256(uint160(layer));
+        require(m != Mode.Revert, "no FIRST_LOSS_LAYER");
+        if (m == Mode.DirtyWord) word |= uint256(1) << 200;
+        assembly ("memory-safe") {
+            mstore(0, word)
+            mstore(32, 0)
+            return(0, add(32, mul(32, eq(m, 3))))
+        }
     }
 }

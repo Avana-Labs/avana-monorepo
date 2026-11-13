@@ -3,31 +3,44 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {SpeedView} from "../../policy/risk-module/types/SpeedView.sol";
 import {CapView} from "../../types/CapView.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {PendingView} from "../../types/PendingView.sol";
 import {PriceView} from "../../types/PriceView.sol";
 import {ILens} from "./ILens.sol";
 import {ILensAccount} from "./ILensAccount.sol";
+import {ILensActions} from "./ILensActions.sol";
+import {ILensFees} from "./ILensFees.sol";
+import {ILensHubAssets} from "./ILensHubAssets.sol";
 import {ILensLiquidation} from "./ILensLiquidation.sol";
 import {ILensMarket} from "./ILensMarket.sol";
 import {ILensMarkets} from "./ILensMarkets.sol";
 import {ILensPositions} from "./ILensPositions.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {ILensRisk} from "./ILensRisk.sol";
+import {ILensSizing} from "./ILensSizing.sol";
+import {ILensSpeed} from "./ILensSpeed.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensConstants} from "./LensConstants.sol";
 import {AccountRiskView} from "./types/AccountRiskView.sol";
 import {AccountView} from "./types/AccountView.sol";
+import {ActionPreview} from "./types/ActionPreview.sol";
 import {BackingView} from "./types/BackingView.sol";
+import {BorrowSpeedView} from "./types/BorrowSpeedView.sol";
+import {CloseAccountView} from "./types/CloseAccountView.sol";
 import {DebtPriceView} from "./types/DebtPriceView.sol";
 import {DebtReserveView} from "./types/DebtReserveView.sol";
+import {DeleverageSizing} from "./types/DeleverageSizing.sol";
 import {HubAssetExposureView} from "./types/HubAssetExposureView.sol";
+import {HubAssetView} from "./types/HubAssetView.sol";
 import {LiquidationPreview} from "./types/LiquidationPreview.sol";
 import {MarketView} from "./types/MarketView.sol";
 import {PledgePreviewView} from "./types/PledgePreviewView.sol";
+import {PositionFeesView} from "./types/PositionFeesView.sol";
 import {RecordBackingView} from "./types/RecordBackingView.sol";
 import {RecordView} from "./types/RecordView.sol";
+import {RemovalSizing} from "./types/RemovalSizing.sol";
 import {TailCoverageView} from "./types/TailCoverageView.sol";
 import {WithdrawPreview} from "./types/WithdrawPreview.sol";
 
@@ -36,12 +49,12 @@ import {WithdrawPreview} from "./types/WithdrawPreview.sol";
 /// in one call, and previews sized to stay valid until a transaction's deadline. No Avana contract calls it or relies
 /// on what it returns.
 /// @dev The single address consumers call. Each view is forwarded by STATICCALL, with the caller's calldata
-/// unchanged, to one of eight immutable modules (one per interface piece, the price views apart from the liquidation preview), and the module's return data or revert data is returned unchanged;
+/// unchanged, to one of nine immutable modules (each serving one or more interface pieces or parts of them), and the module's return data or revert data is returned unchanged;
 /// the split keeps each deployed contract within EIP-170. Immutable: no proxy, no storage beyond the module and core
 /// addresses fixed in the constructor, no owner, no role, no event, no state-changing function, and every external
 /// function is `view`. The modules check the Lock, so every view reverts with `Locked()` while an Avana call holds
-/// it. A new Lens is a new deployment of the eight modules and this entry point, recorded in the manifest.
-/// @custom:spec REQ-LENS-001, REQ-LENS-002, REQ-LENS-003, REQ-LENS-004, REQ-LENS-005, REQ-LENS-006, REQ-LENS-007, REQ-LENS-020, REQ-LENS-025, REQ-LENS-040, Q-119, Q-226, Q-319
+/// it. A new Lens is a new deployment of the nine modules and this entry point, recorded in the manifest.
+/// @custom:spec REQ-LENS-001, REQ-LENS-002, REQ-LENS-003, REQ-LENS-004, REQ-LENS-005, REQ-LENS-006, REQ-LENS-007, REQ-LENS-020, REQ-LENS-025, REQ-LENS-040, REQ-LENS-050, REQ-LENS-051, REQ-LENS-052, REQ-LENS-053, REQ-LENS-054, REQ-LENS-055, REQ-LENS-056, REQ-LENS-057, REQ-LENS-058, REQ-LENS-059, REQ-LENS-061, Q-119, Q-226, Q-319
 // View calls in loops over listings bounded by governance (Spokes, debt reserves, markets, pool tokens), one
 // page of at most LENS_MAX_PAGE records or the caller's own arrays (REQ-LENS-020).
 // forge-lint: disable-start(calls-loop)
@@ -62,7 +75,9 @@ contract Lens is ILens {
     address private immutable _MARKETS_MODULE;
     /// @dev `LensPositionsModule`: `ILensPositions`.
     address private immutable _POSITIONS_MODULE;
-    /// @dev Core addresses, equal in the three modules.
+    /// @dev `LensSpeedModule`: `ILensSpeed`.
+    address private immutable _SPEED_MODULE;
+    /// @dev Core addresses, equal in the nine modules.
     address private immutable _COLLATERALIZATION;
     address private immutable _PROXY_MANAGER;
     address private immutable _ADAPTER;
@@ -73,22 +88,23 @@ contract Lens is ILens {
     address private immutable _LP_VAULT_SWAP;
     address private immutable _PAYOUT_ESCROW;
 
-    /// @notice Fixes the eight modules; their core addresses must agree.
+    /// @notice Fixes the nine modules; their core addresses must agree.
     /// @param modules `LensAccountModule`, `LensMarketModule`, `LensPriceModule`, `LensLiquidationModule`,
-    /// `LensRiskModule`, `LensPreviewModule`, `LensMarketsModule`, `LensPositionsModule`, in that order.
+    /// `LensRiskModule`, `LensPreviewModule`, `LensMarketsModule`, `LensPositionsModule`, `LensSpeedModule`, in that
+    /// order.
     /// @custom:spec REQ-LENS-001, REQ-LENS-002, REQ-LENS-040
     constructor(
-        address[8] memory modules
+        address[9] memory modules
     ) {
         bytes32 core = _core(modules[0]);
         bool same = true;
-        for (uint256 i = 1; i < 8; ++i) {
+        for (uint256 i = 1; i < 9; ++i) {
             if (_core(modules[i]) != core) same = false;
         }
         if (!same) revert InvalidModules();
         (_ACCOUNT_MODULE, _MARKET_MODULE, _PRICE_MODULE) = (modules[0], modules[1], modules[2]);
         (_LIQUIDATION_MODULE, _RISK_MODULE_LENS, _PREVIEW_MODULE) = (modules[3], modules[4], modules[5]);
-        (_MARKETS_MODULE, _POSITIONS_MODULE) = (modules[6], modules[7]);
+        (_MARKETS_MODULE, _POSITIONS_MODULE, _SPEED_MODULE) = (modules[6], modules[7], modules[8]);
         LensBase m = LensBase(modules[0]);
         (_COLLATERALIZATION, _PROXY_MANAGER, _ADAPTER) = (m.COLLATERALIZATION(), m.PROXY_MANAGER(), m.ADAPTER());
         (_LOCK, _MARKET_REGISTRY, _PARAMETER_STORE) = (m.LOCK(), m.MARKET_REGISTRY(), m.PARAMETER_STORE());
@@ -435,11 +451,151 @@ contract Lens is ILens {
         _forward(_POSITIONS_MODULE);
     }
 
+    // ------------------------------------------------------------------------------------------------- ILensFees
+
+    /// @inheritdoc ILensFees
+    /// @custom:spec REQ-LENS-050
+    function getPositionFees(
+        uint256,
+        bytes32
+    ) external view override returns (PositionFeesView memory fees) {
+        fees;
+        _forward(_MARKETS_MODULE);
+    }
+
+    /// @inheritdoc ILensFees
+    /// @custom:spec REQ-LENS-051
+    function getAccountFees(
+        address,
+        uint256
+    ) external view override returns (PositionFeesView[] memory fees) {
+        fees;
+        _forward(_MARKETS_MODULE);
+    }
+
+    // ---------------------------------------------------------------------------------------------- ILensActions
+
+    /// @inheritdoc ILensActions
+    /// @custom:spec REQ-LENS-052
+    function previewBorrowAfter(
+        address,
+        uint256,
+        uint256,
+        uint256
+    ) external view override returns (ActionPreview memory preview) {
+        preview;
+        _forward(_POSITIONS_MODULE);
+    }
+
+    /// @inheritdoc ILensActions
+    /// @custom:spec REQ-LENS-052
+    function previewRepayAfter(
+        address,
+        uint256,
+        uint256,
+        uint256
+    ) external view override returns (ActionPreview memory preview) {
+        preview;
+        _forward(_POSITIONS_MODULE);
+    }
+
+    /// @inheritdoc ILensActions
+    /// @custom:spec REQ-LENS-053
+    function previewPledgeAfter(
+        address,
+        uint256,
+        bytes32
+    ) external view override returns (ActionPreview memory preview) {
+        preview;
+        _forward(_POSITIONS_MODULE);
+    }
+
+    /// @inheritdoc ILensActions
+    /// @custom:spec REQ-LENS-053
+    function previewWithdrawAfter(
+        address,
+        uint256,
+        bytes32
+    ) external view override returns (ActionPreview memory preview) {
+        preview;
+        _forward(_POSITIONS_MODULE);
+    }
+
+    // ----------------------------------------------------------------------------------------------- ILensSizing
+
+    /// @inheritdoc ILensSizing
+    /// @custom:spec REQ-LENS-054
+    function previewMaxWithdraw(
+        address,
+        uint256,
+        uint256
+    ) external view override returns (RemovalSizing memory sizing) {
+        sizing;
+        _forward(_POSITIONS_MODULE);
+    }
+
+    /// @inheritdoc ILensSizing
+    /// @custom:spec REQ-LENS-055
+    function previewDeleverageTo(
+        address,
+        uint256,
+        bytes32,
+        uint256,
+        uint256
+    ) external view override returns (DeleverageSizing memory sizing) {
+        sizing;
+        _forward(_PRICE_MODULE);
+    }
+
+    /// @inheritdoc ILensSizing
+    /// @custom:spec REQ-LENS-056
+    function previewCloseAccount(
+        address,
+        uint256,
+        uint256
+    ) external view override returns (CloseAccountView memory close) {
+        close;
+        _forward(_ACCOUNT_MODULE);
+    }
+
+    // -------------------------------------------------------------------------------------------- ILensHubAssets
+
+    /// @inheritdoc ILensHubAssets
+    /// @custom:spec REQ-LENS-058, REQ-LENS-059
+    function getHubAsset(
+        address,
+        uint256
+    ) external view override returns (HubAssetView memory asset) {
+        asset;
+        _forward(_RISK_MODULE_LENS);
+    }
+
+    // ------------------------------------------------------------------------------------------------------ ILensSpeed
+
+    /// @inheritdoc ILensSpeed
+    /// @custom:spec REQ-LENS-061
+    function getBorrowSpeed(
+        uint256,
+        uint256
+    ) external view override returns (BorrowSpeedView memory speed) {
+        speed;
+        _forward(_SPEED_MODULE);
+    }
+
+    /// @inheritdoc ILensSpeed
+    /// @custom:spec REQ-LENS-061
+    function getPledgeSpeed(
+        uint256
+    ) external view override returns (SpeedView memory pledge) {
+        pledge;
+        _forward(_SPEED_MODULE);
+    }
+
     // ------------------------------------------------------------------------------------------------------ ILens
 
     /// @inheritdoc ILens
     /// @custom:spec REQ-LENS-001, REQ-LENS-002
-    function MODULES() external view override returns (address[8] memory modules) {
+    function MODULES() external view override returns (address[9] memory modules) {
         modules = [
             _ACCOUNT_MODULE,
             _MARKET_MODULE,
@@ -448,7 +604,8 @@ contract Lens is ILens {
             _RISK_MODULE_LENS,
             _PREVIEW_MODULE,
             _MARKETS_MODULE,
-            _POSITIONS_MODULE
+            _POSITIONS_MODULE,
+            _SPEED_MODULE
         ];
     }
 
@@ -541,7 +698,7 @@ contract Lens is ILens {
     }
 
     /// @dev STATICCALLs `module` with this call's calldata and ends the call with the module's return data, or reverts
-    /// with its revert data. The module is one of the three immutables, never caller input.
+    /// with its revert data. The module is one of the nine immutables, never caller input.
     /// @custom:spec REQ-LENS-001, REQ-LENS-007
     function _forward(
         address module

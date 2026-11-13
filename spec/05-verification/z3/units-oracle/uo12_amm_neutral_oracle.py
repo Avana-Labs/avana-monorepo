@@ -164,13 +164,14 @@ prove('MATH-UO-52', 'the composition value is non-decreasing in each price: V(q0
 # MATH-UO-53 verifies: SPEC-ORC-011, REQ-ORACLE-015
 lo, qa, qb, qc = Ints('low qa qb qc')
 E = 10 ** 8
-b2 = [lo > 0, qa > 0, qb > 0, lo <= 10 ** 12, qa <= 10 ** 12, qb <= 10 ** 12]
+M = uo.MAX_ROUTE_ANSWER   # route values and band levels <= 10^18 (REQ-ORACLE-049)
+b2 = [lo > 0, qa > 0, qb > 0, lo <= M, qa <= M, qb <= M]
 prove('MATH-UO-53a', 'n = 2: the exact test low^2 <= q0*q1 implies the fixed-point test floor(low^2/1e8) <= floor(q0*q1/1e8)',
       b2, Implies(lo * lo <= qa * qb, (lo * lo) / E <= (qa * qb) / E))
 prove('MATH-UO-53b', 'n = 2: the fixed-point test passing implies low^2 < q0*q1 + 1e8 (differs only within 1e-8 of the edge)',
       b2, Implies((lo * lo) / E <= (qa * qb) / E, lo * lo < qa * qb + E))
 g3 = Int('g3')
-b3 = b2 + [qc > 0, qc <= 10 ** 12, g3 == ((qa * qb) / E) * qc / E]
+b3 = b2 + [qc > 0, qc <= M, g3 == ((qa * qb) / E) * qc / E]
 prove('MATH-UO-53c', 'n = 3: the left-to-right fixed-point product is at most the exact product / 1e16 and at least it minus (qc/1e8 + 1)',
       b3, And(g3 * E * E <= qa * qb * qc, (g3 + 1) * E * E + qc * E > qa * qb * qc))
 note('MATH-UO-53d', 'band examples', f'GHO/USDC uncapped {104_700_000 * 10 ** 8 // E} capped {10 ** 8} vs low^2 {90_000_000 ** 2 // E}, '
@@ -180,7 +181,7 @@ note('MATH-UO-53d', 'band examples', f'GHO/USDC uncapped {104_700_000 * 10 ** 8 
 # ---------------------------------------------------------------- MATH-UO-54 second source
 # MATH-UO-54 verifies: SPEC-ORC-020, REQ-ORACLE-100
 q_, s_, S_ = Ints('q s S')
-b54 = [q_ >= 1, s_ >= 1, q_ <= 10 ** 12, s_ <= 10 ** 12, S_ >= 0, S_ < 2 ** 16]
+b54 = [q_ >= 1, s_ >= 1, q_ <= M, s_ <= M, S_ >= 0, S_ < 2 ** 16]
 ag = lambda a, b: If(a > b, a - b, b - a) * 10 ** 4 <= S_ * If(a < b, a, b)
 prove('MATH-UO-54a', 'second-source test is symmetric in (quote, second source): |q - s| = |s - q| and min(q, s) = min(s, q), '
       'so both sides of the test are unchanged when the two values swap', b54,
@@ -271,9 +272,9 @@ pre_i = lambda Gk: (64 * Gk + 62) // 63 + 5_000
 note('MATH-UO-57d', 'SPEC-ORC-023 example', f'G = 50,000: bound {pre_i(50_000)}; forwarded at that gasleft '
      f'{min(50_000, pre_i(50_000) - pre_i(50_000) // 64)}; G_inputs(2) = 150,000 + 2 * 140,000 = '
      f'{150_000 + 2 * 140_000}, bound {pre_i(430_000)}; measured worst-case two-token poke with the token-decimals '
-     f'reads of REQ-ORACLE-107: W_poke = 830,781, binding feed read at u = 718,836: {718_836 + pre_i(50_000)}; floor '
-     f'max(...) = {max(830_781, 718_836 + pre_i(50_000))}; POKE_MIN_GAS_FLOOR = 900,000 leaves '
-     f'{900_000 - max(830_781, 718_836 + pre_i(50_000))} gas until the fork calibration')
+     f'reads of REQ-ORACLE-107: W_poke = 861,000, binding feed read at u = 748,926: {748_926 + pre_i(50_000)}; floor '
+     f'max(...) = {max(861_000, 748_926 + pre_i(50_000))}; POKE_MIN_GAS_FLOOR = 900,000 leaves '
+     f'{900_000 - max(861_000, 748_926 + pre_i(50_000))} gas until the fork calibration')
 gl1, gl2, uk, Gk = Ints('gasleft1 gasleft2 uk Gk')
 fwdf = lambda gl, Gx: If(Gx < gl - gl / 64, Gx, gl - gl / 64)
 prove('MATH-UO-57f', 'any two gas limits at which a read passes its pre-call check forward the same G to it, so a poke '

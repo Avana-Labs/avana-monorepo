@@ -133,6 +133,12 @@ interface IAaveAdapterErrors {
     /// @custom:spec REQ-ADAPTER-080, REQ-ADAPTER-091, SPEC-PROXY-009, REP-F-021, Q-255
     error HealthFactorNotImproved(uint256 before, uint256 afterCall);
 
+    /// @notice A repay with collateral paid the calling wallet less debt asset than its `minAssetOut`.
+    /// @param assetOut Debt asset LPVaultSwap paid the wallet, base units.
+    /// @param minAssetOut The caller's minimum.
+    /// @custom:spec REQ-ADAPTER-080, REQ-ADAPTER-091
+    error AssetOutBelowMinimum(uint256 assetOut, uint256 minAssetOut);
+
     /// @notice A deleverage callback outside an open session, with other arguments, or a second time; or a session that
     /// closed without both steps.
     /// @custom:spec REQ-ADAPTER-081, REQ-ADAPTER-092, Q-255

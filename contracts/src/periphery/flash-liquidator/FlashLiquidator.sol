@@ -12,9 +12,10 @@ import {FlashLiquidatorBase} from "./FlashLiquidatorBase.sol";
 /// only to its caller.
 /// @dev One instance per chain, named in the deployment manifest and in the MarketRegistry as `FLASH_LIQUIDATOR`, so
 /// the address freeze refuses it (`REQ-MREG-020`). A residue LPVaultSwap could not deliver to it (a market token whose
-/// issuer blocks the helper's address, while its caller could still receive) stays credited to it in the PayoutEscrow;
-/// anyone may call `claimEscrowed`, which sends that credit to `feeRecipient`, read from the ParameterStore as
-/// LPVaultSwap reads it, because the helper cannot tell which caller a pooled credit came from. A debt asset whose
+/// issuer blocks the helper's address, while its caller could still receive) is credited to it in the PayoutEscrow and
+/// claimed to the caller inside the same call (`_forwardTokens`); only a credit standing before a call, which no
+/// caller can be matched to, is left for `claimEscrowed`, which anyone may call and which sends it to `feeRecipient`,
+/// read from the ParameterStore as LPVaultSwap reads it. A debt asset whose
 /// issuer blocks the helper stops only liquidations through the helper: LPVaultSwap's payment of `keeperOut` to it
 /// reverts, and callers fund `liquidate` themselves. It is never a committed operator.
 /// @custom:spec REQ-HELPER-001, REQ-HELPER-010, REQ-SWAP-105, Q-242, Q-404

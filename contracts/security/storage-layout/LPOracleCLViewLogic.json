@@ -1,0 +1,306 @@
+{
+  "contract": "LPOracleCLViewLogic",
+  "source": "src/oracle/lp-oracle/LPOracleCLViewLogic.sol",
+  "storage": [],
+  "namespaces": {
+    "erc7201:avana.storage.LPOracle": {
+      "baseSlot": "0xa4669bdc0496d7e3e6fb1085ffa1fe6df547bcb5a7e81d6911adc6e139bd7300",
+      "declaredIn": "src/oracle/lp-oracle/LPOracleStorage.sol",
+      "fields": [
+        {
+          "path": "parameterStore",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "marketRegistry",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "integration",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "marketId",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "tokens",
+          "slot": "4",
+          "offset": 0,
+          "bytes": "32",
+          "type": "address[]"
+        },
+        {
+          "path": "tokens[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "tokenDecimals",
+          "slot": "5",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint8[]"
+        },
+        {
+          "path": "tokenDecimals[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "isUsdStable",
+          "slot": "6",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bool[]"
+        },
+        {
+          "path": "isUsdStable[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "vaultDecimals",
+          "slot": "7",
+          "offset": 0,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "pokeMinGas",
+          "slot": "7",
+          "offset": 1,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "lastCachedWindow",
+          "slot": "7",
+          "offset": 5,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "lastState",
+          "slot": "7",
+          "offset": 9,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "expiredLatched",
+          "slot": "7",
+          "offset": 10,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "failedSince",
+          "slot": "7",
+          "offset": 11,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "disagreeSince",
+          "slot": "7",
+          "offset": 19,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "recoveredAt",
+          "slot": "8",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "acceptedBlock",
+          "slot": "8",
+          "offset": 8,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "descriptionText",
+          "slot": "9",
+          "offset": 0,
+          "bytes": "32",
+          "type": "string"
+        },
+        {
+          "path": "accepted",
+          "slot": "10",
+          "offset": 0,
+          "bytes": "96",
+          "type": "struct LPOracleStorage.Accepted"
+        },
+        {
+          "path": "accepted.answer",
+          "slot": "10",
+          "offset": 0,
+          "bytes": "32",
+          "type": "int256"
+        },
+        {
+          "path": "accepted.updatedAt",
+          "slot": "11",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "accepted.prices",
+          "slot": "12",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint128[]"
+        },
+        {
+          "path": "accepted.prices[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "16",
+          "type": "uint128"
+        },
+        {
+          "path": "checkpoint",
+          "slot": "13",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct LPOracleStorage.Checkpoint"
+        },
+        {
+          "path": "checkpoint.price8",
+          "slot": "13",
+          "offset": 0,
+          "bytes": "16",
+          "type": "uint128"
+        },
+        {
+          "path": "checkpoint.at",
+          "slot": "13",
+          "offset": 16,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "routeVersion",
+          "slot": "14",
+          "offset": 0,
+          "bytes": "64",
+          "type": "uint64[8]"
+        },
+        {
+          "path": "lastRoute",
+          "slot": "16",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint8[8]"
+        },
+        {
+          "path": "seen",
+          "slot": "17",
+          "offset": 0,
+          "bytes": "2048",
+          "type": "struct LPOracleStorage.Seen[2][2][8]"
+        },
+        {
+          "path": "decimalsCheckedAt",
+          "slot": "81",
+          "offset": 0,
+          "bytes": "8",
+          "type": "uint64"
+        },
+        {
+          "path": "decimalsInvalid",
+          "slot": "81",
+          "offset": 8,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "listingPrices",
+          "slot": "82",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint128[]"
+        },
+        {
+          "path": "listingPrices[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "16",
+          "type": "uint128"
+        }
+      ]
+    },
+    "erc7201:avana.storage.LPOracleCL": {
+      "baseSlot": "0xb7c40d03a80aa05aa5c63763d6d3607d29246f15ca457871c1bef2104cb45600",
+      "declaredIn": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "fields": [
+        {
+          "path": "pool",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "tickLower",
+          "slot": "0",
+          "offset": 20,
+          "bytes": "3",
+          "type": "int24"
+        },
+        {
+          "path": "tickUpper",
+          "slot": "0",
+          "offset": 23,
+          "bytes": "3",
+          "type": "int24"
+        },
+        {
+          "path": "tickSpacing",
+          "slot": "0",
+          "offset": 26,
+          "bytes": "3",
+          "type": "int24"
+        },
+        {
+          "path": "sqrtLower",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "20",
+          "type": "uint160"
+        },
+        {
+          "path": "sqrtUpper",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "20",
+          "type": "uint160"
+        }
+      ]
+    }
+  }
+}

@@ -158,6 +158,11 @@ contract LVSParameterStoreMock {
         return _params[marketId];
     }
 
+    /// @dev The AaveAdapter's sequencer read: a chain without a sequencer feed (the gate is always Up).
+    function sequencer() external pure returns (address feed, uint32 gracePeriod) {
+        return (address(0), 0);
+    }
+
     function setFloorRoundingAllowance(
         address asset,
         uint256 value
