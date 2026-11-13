@@ -5,13 +5,21 @@
 
 import { createConfig } from "ponder";
 import { abis } from "./src/config/abis.ts";
+import { clPoolAbi } from "@avana/services-common/views";
 import {
   activeChains,
+  ammPoolSource,
   chainSources,
   coverageSpokeSource,
   debtOracleSource,
+  hubRecordedSource,
+  hubSource,
   lpOracleSource,
   perChain,
+  samplerSource,
+  spokeAddedSource,
+  spokeApprovedSource,
+  spokeSource,
   vaultTokenSource,
 } from "./src/config/sources.ts";
 
@@ -50,21 +58,23 @@ export default createConfig({
     LPOracle: { abi: abis.LPOracle, chain: lpOracleSource() },
     DebtOracle: { abi: abis.DebtOracle, chain: debtOracleSource() },
     CoverageSpoke: { abi: abis.CoverageSpoke, chain: coverageSpokeSource() },
-    // Aave V4: the CDP (Borrow) Spokes and the Lend Spoke of the manifest, and the Hub. Spoke events are attributed
-    // only to accounts the AaveAdapter and the ProxyManager both announced (TEST-144).
-    AaveSpoke: {
-      abi: abis.AaveSpoke,
-      chain: perChain((m) => {
-        const spokes = [...m.aave.borrowSpokes, m.aave.lendSpoke];
-        return { address: spokes.map((s) => s.address), startBlock: Math.min(...spokes.map((s) => s.startBlock)) };
-      }),
-    },
-    AaveHub: { abi: abis.AaveHub, chain: perChain((m) => a(m.aave.hub)) },
+    // Aave V4: every Hub and every Lend and CDP Spoke, the manifest's and those listed later (src/config/aaveSources.ts).
+    // Spoke events are attributed only to accounts the AaveAdapter and the ProxyManager both announced (TEST-144).
+    AaveSpoke: { abi: abis.AaveSpoke, chain: spokeSource() },
+    AaveSpokeAdded: { abi: abis.AaveSpoke, chain: spokeAddedSource() },
+    AaveSpokeApproved: { abi: abis.AaveSpoke, chain: spokeApprovedSource() },
+    AaveHub: { abi: abis.AaveHub, chain: hubSource() },
+    AaveHubRecorded: { abi: abis.AaveHub, chain: hubRecordedSource() },
+    // The AMM pool of every listed market, for its volume, fee and price series.
+    AmmPool: { abi: clPoolAbi, chain: ammPoolSource() },
   },
   // One row per chain records the last block handled at the realtime head; the export never serves past it.
   blocks: {
     Progress: {
       chain: Object.fromEntries(activeChains.map((c) => [c.key, { startBlock: "latest" as const, interval: 1 }])),
     },
+    // Reads every Hub asset, Spoke slice, market and account once an hour of block time, from the Lens deployment on,
+    // for the chart series (src/handlers/series.ts).
+    SeriesSampler: { chain: samplerSource() },
   },
 });

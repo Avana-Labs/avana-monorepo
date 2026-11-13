@@ -101,7 +101,7 @@ rule servedPriceByState() {
     uint64 acceptedAt;
     accepted, acceptedAt = lastAcceptedPrice();
 
-    PriceStateView v = getPriceState(e);
+    LPOracleCL.PriceStateView v = getPriceState(e);
     int256 served = latestAnswer(e);
     mathint A = to_mathint(accepted);
     mathint fresh = to_mathint(v.freshAnswer);
@@ -109,13 +109,13 @@ rule servedPriceByState() {
 
     assert served == v.answer, "getPriceState().answer differs from latestAnswer()";
     assert served >= 1, "the served price is below 1";
-    assert v.state == PriceState.Expired => served == 1, "Expired did not serve 1";
-    assert v.state == PriceState.Cached => to_mathint(served) == A, "Cached did not serve the accepted price";
+    assert v.state == LPOracleCL.PriceState.Expired => served == 1, "Expired did not serve 1";
+    assert v.state == LPOracleCL.PriceState.Cached => to_mathint(served) == A, "Cached did not serve the accepted price";
     // SPEC-ORC-017: the accepted price bounds borrowing only; Live and Drifting serve the fresh price, a disagreement
     // at most the fresh price, so a rally since the last accepted price never lowers the served price.
-    assert (v.state == PriceState.Live || (v.state == PriceState.Drifting && !disagree))
+    assert (v.state == LPOracleCL.PriceState.Live || (v.state == LPOracleCL.PriceState.Drifting && !disagree))
         => to_mathint(served) == (fresh < 1 ? 1 : fresh), "Live or Drifting did not serve the fresh price";
-    assert (v.state == PriceState.Drifting && disagree) => to_mathint(served) <= (fresh < 1 ? 1 : fresh),
+    assert (v.state == LPOracleCL.PriceState.Drifting && disagree) => to_mathint(served) <= (fresh < 1 ? 1 : fresh),
         "a disagreement served above the fresh price";
 }
 

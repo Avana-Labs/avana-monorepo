@@ -254,26 +254,26 @@ ghost psMinBonus(address) returns uint16;
 ghost tokenRefuses(address, address) returns bool;
 
 // Pause state and reason of every Hub; pauseReason(hub) == None exactly when the Hub is not Paused (PROP-041).
-persistent ghost mapping(address => PauseState) swapHubPauseState;
-persistent ghost mapping(address => PauseReason) swapHubPauseReason;
+persistent ghost mapping(address => LPVaultSwap.PauseState) swapHubPauseState;
+persistent ghost mapping(address => LPVaultSwap.PauseReason) swapHubPauseReason;
 
-function swapHubPauseStateRead(address hub) returns PauseState {
+function swapHubPauseStateRead(address hub) returns LPVaultSwap.PauseState {
     regPauseStateReads = regPauseStateReads + 1;
     regAnyReads = regAnyReads + 1;
-    require (swapHubPauseState[hub] == PauseState.Paused) == (swapHubPauseReason[hub] != PauseReason.None);
+    require (swapHubPauseState[hub] == LPVaultSwap.PauseState.Paused) == (swapHubPauseReason[hub] != LPVaultSwap.PauseReason.None);
     return swapHubPauseState[hub];
 }
 
-function swapHubPauseReasonRead(address hub) returns PauseReason {
+function swapHubPauseReasonRead(address hub) returns LPVaultSwap.PauseReason {
     regPauseReasonReads = regPauseReasonReads + 1;
     regAnyReads = regAnyReads + 1;
-    require (swapHubPauseState[hub] == PauseState.Paused) == (swapHubPauseReason[hub] != PauseReason.None);
+    require (swapHubPauseState[hub] == LPVaultSwap.PauseState.Paused) == (swapHubPauseReason[hub] != LPVaultSwap.PauseReason.None);
     return swapHubPauseReason[hub];
 }
 
-function registryMarket(uint256 m) returns Market {
+function registryMarket(uint256 m) returns LPVaultSwap.Market {
     regAnyReads = regAnyReads + 1;
-    Market mk;
+    LPVaultSwap.Market mk;
     mathint n = mkTokenCount(m);
     require n >= 2 && n <= MAX_TOKENS();
     require mk.hub == hubOfSpoke(mkSpoke(m)) && mk.spoke == mkSpoke(m);
@@ -292,9 +292,9 @@ function registryMarket(uint256 m) returns Market {
     return mk;
 }
 
-function registryDebtReserve(address s, uint256 r) returns DebtReserveDef {
+function registryDebtReserve(address s, uint256 r) returns LPVaultSwap.DebtReserveDef {
     regAnyReads = regAnyReads + 1;
-    DebtReserveDef d;
+    LPVaultSwap.DebtReserveDef d;
     require d.reserveId == r && d.asset == drAsset(s, r) && d.decimals == drDecimals(s, r);
     require d.fundingHub == drFundingHub(s, r) && d.crossHub == (drFundingHub(s, r) != hubOfSpoke(s));
     require d.priceSource == drPriceSource(s, r) && d.fixedPrice == drFixedPrice(s, r);
@@ -345,7 +345,7 @@ function registryCoverageSpokeOf(address h, address a) returns address {
 
 // LPOracle leg prices, one per pool token in market order, fixed per oracle for the rule (SPEC-LIQ-012), with the
 // oracle's served state.
-function swapTokenPrices(address o) returns (uint256[], uint64, PriceState) {
+function swapTokenPrices(address o) returns (uint256[], uint64, LPVaultSwap.PriceState) {
     uint256[] prices;
     mathint n = oracleTokenCount(o);
     require to_mathint(prices.length) == n && n >= 2 && n <= MAX_TOKENS();
@@ -355,8 +355,8 @@ function swapTokenPrices(address o) returns (uint256[], uint64, PriceState) {
     return (prices, pvServedUpdatedAt[o], priceStateOf(o));
 }
 
-function psMarketParams(uint256 m) returns MarketParams {
-    MarketParams p;
+function psMarketParams(uint256 m) returns LPVaultSwap.MarketParams {
+    LPVaultSwap.MarketParams p;
     require p.slippageAllowanceBps == psSlippageBps(m);
     return p;
 }
@@ -433,8 +433,8 @@ function collSettleSeizure(address caller, address vt, uint256 units) returns ui
     return unwindTo(vtMarketIdOf(vt), caller, units);
 }
 
-function collGetPending(address vt) returns Pending {
-    Pending p;
+function collGetPending(address vt) returns LPVaultSwap.Pending {
+    LPVaultSwap.Pending p;
     require pendingUnits[vt] >= 0 && to_mathint(p.units) == pendingUnits[vt];
     return p;
 }
@@ -651,12 +651,12 @@ function legsSwapped(uint256 m, address T) returns mathint {
 // PROP-022 verifies: INV-030, INV-062, Q-053, Q-116, Q-213, Q-216, Q-242, Q-404
 // The only caller conditions of a successful `liquidate` are the freeze, the deadline and the minimum payout; no
 // registry or role of the caller is read (`liquidateIgnoresRegistry`).
-rule liquidateCallerGates(LiquidationParams p) {
+rule liquidateCallerGates(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
     bool frozen = regFrozen[e.msg.sender];
 
-    LiquidationResult r = liquidate(e, p);
+    LPVaultSwap.LiquidationResult r = liquidate(e, p);
 
     assert !frozen, "liquidate by a frozen caller";
     assert e.block.timestamp <= p.deadline, "liquidate after its deadline";
@@ -666,14 +666,14 @@ rule liquidateCallerGates(LiquidationParams p) {
 // PROP-022 verifies: INV-030, INV-062, Q-053, Q-116, Q-128, Q-154, Q-162, Q-208, Q-213, Q-216, Q-234, Q-238, Q-242,
 // Q-247, Q-274, Q-404
 // Holds for every caller, direct or through a flash liquidation helper.
-rule liquidateAccountGates(LiquidationParams p) {
+rule liquidateAccountGates(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
     address spoke = mkSpoke(p.marketId);
     address oracle = mkLpOracle(p.marketId);
     mathint hfBefore = spokeHealthFactor[spoke][p.proxy];
 
-    LiquidationResult r = liquidate(e, p);
+    LPVaultSwap.LiquidationResult r = liquidate(e, p);
 
     assert proxyMarketOf(p.proxy) == p.marketId && vtIsValidProxy(mkVaultToken(p.marketId), p.proxy),
         "liquidate of a proxy not bound to the market or not registered by its vault token";
@@ -688,7 +688,7 @@ rule liquidateAccountGates(LiquidationParams p) {
 
 // PROP-049 verifies: INV-059, Q-162, Q-199, Q-208, Q-247, Q-248
 // PROP-074 verifies: INV-055, INV-087, Q-247, Q-248
-rule disagreementOrStressBlocksOnlyItsOwnReserve(LiquidationParams p) {
+rule disagreementOrStressBlocksOnlyItsOwnReserve(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
     address oracle = mkLpOracle(p.marketId);
@@ -704,7 +704,7 @@ rule disagreementOrStressBlocksOnlyItsOwnReserve(LiquidationParams p) {
 
 // PROP-049 verifies: INV-059, Q-247
 // Liquidation of a fresh market is not restricted by a disagreement on another market of the same wallet.
-rule otherMarketDisagreementDoesNotBlock(LiquidationParams p, uint256 otherMarket) {
+rule otherMarketDisagreementDoesNotBlock(LPVaultSwap.LiquidationParams p, uint256 otherMarket) {
     env e;
     setupSwapScene(e);
     require otherMarket != p.marketId && mkLpOracle(otherMarket) != mkLpOracle(p.marketId);
@@ -716,7 +716,7 @@ rule otherMarketDisagreementDoesNotBlock(LiquidationParams p, uint256 otherMarke
 }
 
 // PROP-074 verifies: INV-087, Q-247, Q-248, Q-255
-rule deleverageNeedsLiveOracles(DeleverageRequest r) {
+rule deleverageNeedsLiveOracles(LPVaultSwap.DeleverageRequest r) {
     env e;
     setupDeleverageScene(e);
 
@@ -730,7 +730,7 @@ rule deleverageNeedsLiveOracles(DeleverageRequest r) {
 // PROP-035 verifies: INV-048, Q-139, Q-155, Q-404
 // The committed-operator registry gates no call: a caller that is not registered, and is not frozen, completes a
 // liquidation, shown for PrimaryThenBackup (BackupOnly runs the same code with the primary route skipped).
-rule liquidateIgnoresRegistry(LiquidationParams p) {
+rule liquidateIgnoresRegistry(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
     require !isApprovedKeeper(e.msg.sender);
@@ -738,13 +738,13 @@ rule liquidateIgnoresRegistry(LiquidationParams p) {
 
     liquidate(e, p);
 
-    satisfy p.routeMode == RouteMode.PrimaryThenBackup;
+    satisfy p.routeMode == LPVaultSwap.RouteMode.PrimaryThenBackup;
 }
 
 // PROP-035 verifies: INV-048, Q-139, Q-155, Q-404
 // A liquidation leaves the registry as it found it, so liquidating never changes who is a committed operator or the
 // count the RiskModule's borrowing halt reads.
-rule liquidateLeavesRegistryUnchanged(LiquidationParams p, address a) {
+rule liquidateLeavesRegistryUnchanged(LPVaultSwap.LiquidationParams p, address a) {
     env e;
     setupSwapScene(e);
     bool registeredBefore = isApprovedKeeper(a);
@@ -921,7 +921,7 @@ rule onFlashLoanRefusedWhileLiquidating(address asset, uint256 amount, uint256 p
 // PROP-016 verifies: INV-021, Q-097, Q-124, Q-213, Q-235, Q-404
 // Every caller, direct or helper-funded: LPVaultSwap ends a liquidation with each token balance and allowance as it
 // found them.
-rule liquidateLeavesBalancesAndAllowances(LiquidationParams p, address token, address spender) {
+rule liquidateLeavesBalancesAndAllowances(LPVaultSwap.LiquidationParams p, address token, address spender) {
     env e;
     setupSwapScene(e);
     mathint balanceBefore = erc20Bal[token][currentContract];
@@ -961,7 +961,7 @@ rule settlePendingLeavesBalancesAndAllowances(uint256 m, uint256 r, address toke
 // S = max(0, R' - D), G = max(0, V - D), A = min(G * share / 10^4, S), kr = min(S, G) - A, B = S - A - kr
 // (SPEC-LIQ-022), keeperOut = Kf + R' - D - A - B >= 0 (SPEC-LIQ-010), paid directly to the caller; no budget draw
 // (Q-397).
-rule waterfallWithOracleFee(LiquidationParams p) {
+rule waterfallWithOracleFee(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
     address caller = e.msg.sender;
@@ -981,7 +981,7 @@ rule waterfallWithOracleFee(LiquidationParams p) {
     mathint pDebt = aavePrice(aaveOracle, p.debtReserveId);
     require pDebt > 0;
 
-    LiquidationResult r = liquidate(e, p);
+    LPVaultSwap.LiquidationResult r = liquidate(e, p);
 
     mathint Kf = r.callerFunds;
     mathint D = r.debtRepaid;
@@ -1014,7 +1014,7 @@ rule waterfallWithOracleFee(LiquidationParams p) {
 // PROP-020 verifies: INV-037, Q-167, Q-236, Q-267, Q-397
 // PROP-047 verifies: INV-038, Q-127, Q-167, Q-190, Q-397
 // There is no settlement budget (Q-397): every seized unit is burned and settled, and the caller funds any gap.
-rule everySeizedUnitIsBurnedAndSettled(LiquidationParams p) {
+rule everySeizedUnitIsBurnedAndSettled(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
 
@@ -1083,7 +1083,7 @@ rule settlePendingLegMinimum(uint256 m, uint256 r, uint256 i) {
 // PROP-021 verifies: INV-039, Q-213, Q-401
 // There is no in-kind mode: `liquidate` pays the borrower and every other address no pool token other than the debt
 // asset, and the escrow receives only a payout whose transfer failed.
-rule liquidatePaysNoPoolTokensOut(LiquidationParams p, uint256 i, address other) {
+rule liquidatePaysNoPoolTokensOut(LPVaultSwap.LiquidationParams p, uint256 i, address other) {
     env e;
     setupSwapScene(e);
     require to_mathint(i) < to_mathint(mkTokenCount(p.marketId));
@@ -1109,7 +1109,7 @@ rule liquidatePaysNoPoolTokensOut(LiquidationParams p, uint256 i, address other)
 // PROP-053 verifies: INV-037, INV-062, Q-213, Q-235, Q-401, Q-404
 // Every caller, direct or through a flash liquidation helper: the borrower receives no pool token other than the debt
 // asset, and the call settles at or above the recovery floor.
-rule liquidatePaysTheBorrowerOnlyTheDebtAsset(LiquidationParams p, uint256 i) {
+rule liquidatePaysTheBorrowerOnlyTheDebtAsset(LPVaultSwap.LiquidationParams p, uint256 i) {
     env e;
     setupSwapScene(e);
     require to_mathint(i) < to_mathint(mkTokenCount(p.marketId));
@@ -1119,7 +1119,7 @@ rule liquidatePaysTheBorrowerOnlyTheDebtAsset(LiquidationParams p, uint256 i) {
     require b != e.msg.sender && b != currentContract;
     mathint borrowerBalance = erc20Bal[token][b];
 
-    LiquidationResult r = liquidate(e, p);
+    LPVaultSwap.LiquidationResult r = liquidate(e, p);
 
     assert token != T => erc20Bal[token][b] == borrowerBalance, "liquidate paid pool tokens to the borrower";
     assert to_mathint(r.recovered) + to_mathint(r.shortfall) >= to_mathint(r.minOut),
@@ -1129,13 +1129,13 @@ rule liquidatePaysTheBorrowerOnlyTheDebtAsset(LiquidationParams p, uint256 i) {
 // PROP-053 verifies: INV-037, INV-062, Q-213, Q-333, Q-397, Q-404
 // The caller's own funding covers the repayment: D <= Kf, so keeperOut = Kf + R' - D - A - B is never negative and
 // InsufficientProceeds cannot fire; LPVaultSwap adds none of its own debt asset.
-rule liquidateCallerCoversTheRepayment(LiquidationParams p) {
+rule liquidateCallerCoversTheRepayment(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
     address T = drAsset(mkSpoke(p.marketId), p.debtReserveId);
     mathint selfBefore = erc20Bal[T][currentContract];
 
-    LiquidationResult r = liquidate(e, p);
+    LPVaultSwap.LiquidationResult r = liquidate(e, p);
 
     mathint keeperOut = to_mathint(r.callerFunds) + to_mathint(r.recovered) + to_mathint(r.shortfall)
         - to_mathint(r.debtRepaid) - to_mathint(r.avanaFee) - to_mathint(r.borrowerSurplus);
@@ -1147,7 +1147,7 @@ rule liquidateCallerCoversTheRepayment(LiquidationParams p) {
 }
 
 // PROP-053 verifies: INV-062, Q-213, Q-235, Q-404
-rule liquidateNeedsAWorkingRoute(LiquidationParams p, uint256 i) {
+rule liquidateNeedsAWorkingRoute(LPVaultSwap.LiquidationParams p, uint256 i) {
     env e;
     setupSwapScene(e);
     require to_mathint(i) < to_mathint(mkTokenCount(p.marketId));
@@ -1164,7 +1164,7 @@ rule liquidateNeedsAWorkingRoute(LiquidationParams p, uint256 i) {
 // PROP-036 verifies: INV-040, Q-404
 // A liquidation calls no flash source: it reads neither MARKET_REGISTRY.flashSource() nor a flash quote, so the
 // caller is its only source of the debt asset (REQ-SWAP-012).
-rule liquidateTakesNoFlashLoan(LiquidationParams p) {
+rule liquidateTakesNoFlashLoan(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
 
@@ -1221,7 +1221,7 @@ rule settlePendingOpenInEveryState(uint256 m, uint256 r) {
     setupSwapScene(e);
     address hub = hubOfSpoke(mkSpoke(m));
     require regFrozen[e.msg.sender];
-    require swapHubPauseState[hub] == PauseState.Paused && swapHubPauseReason[hub] == PauseReason.MintPathSuspect;
+    require swapHubPauseState[hub] == LPVaultSwap.PauseState.Paused && swapHubPauseReason[hub] == LPVaultSwap.PauseReason.MintPathSuspect;
     require regMarketBreakerReasons[m] != 0;
     require !isApprovedKeeper(e.msg.sender);
 
@@ -1235,7 +1235,7 @@ rule settlePendingOpenInEveryState(uint256 m, uint256 r) {
 // ---------------------------------------------------------------------------------------------------------------------
 
 // PROP-072 verifies: INV-089, Q-255
-rule deleverageMakesNoDrawFeeOrBonusPayment(DeleverageRequest r, address a) {
+rule deleverageMakesNoDrawFeeOrBonusPayment(LPVaultSwap.DeleverageRequest r, address a) {
     env e;
     setupDeleverageScene(e);
     address spoke = r.spoke;
@@ -1406,7 +1406,7 @@ rule settlementMathFitsIn256Bits(mathint c, mathint pc, mathint dd, mathint V, m
 // A liquidation writes no persistent storage of LPVaultSwap: no settlement allowance, reserve, window, counter or
 // clock exists to be shared with another market, so what a liquidation in m' reads from LPVaultSwap is the same
 // whatever liquidations in m ran before it (the Lock and the deleverage context are transient and end with the call).
-rule liquidationWritesNoLPVaultSwapStorage(LiquidationParams p) {
+rule liquidationWritesNoLPVaultSwapStorage(LPVaultSwap.LiquidationParams p) {
     env e;
     setupSwapScene(e);
     uint256 countBefore = approvedKeeperCount();
@@ -1420,12 +1420,12 @@ rule liquidationWritesNoLPVaultSwapStorage(LiquidationParams p) {
 // Balance-delta funding: with a debt token that keeps any fee 0 <= fee(a) <= a on the pull into LPVaultSwap, the
 // caller funding Kf LPVaultSwap books is its measured balance increase, debtToCover - fee(debtToCover), and the
 // amount passed to liquidationCall is that Kf (never debtToCover).
-rule callerFundingIsTheMeasuredIncrease(LiquidationParams p) {
+rule callerFundingIsTheMeasuredIncrease(LPVaultSwap.LiquidationParams p) {
     env e;
     setupFeeScene(e);
     address T = drAsset(mkSpoke(p.marketId), p.debtReserveId);
     mathint fee = transferFee(T, p.debtToCover);
-    LiquidationResult r = liquidate(e, p);
+    LPVaultSwap.LiquidationResult r = liquidate(e, p);
     assert to_mathint(r.callerFunds) == to_mathint(p.debtToCover) - fee,
         "the booked caller funding differs from LPVaultSwap's measured balance increase";
     assert liquidationAmountPassed == to_mathint(r.callerFunds), "liquidationCall was passed other than the measured Kf";

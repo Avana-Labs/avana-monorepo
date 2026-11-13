@@ -2,7 +2,7 @@
   "name": "avana-monorepo",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "npm workspace root for the off-chain TypeScript packages: services/common, services/indexer, services/keeper and packages/protocol.",
+  "description": "npm workspace root for the off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/convex and packages/protocol.",
   "engines": {
     "node": ">=22.12"
   },
@@ -10,7 +10,8 @@
     "packages/protocol",
     "services/common",
     "services/indexer",
-    "services/keeper"
+    "services/keeper",
+    "services/convex"
   ],
   "scripts": {
     "typecheck": "npm run typecheck --workspaces",

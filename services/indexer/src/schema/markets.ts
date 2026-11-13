@@ -23,6 +23,12 @@ export const market = onchainTable(
     hubAssetId: t.bigint(),
     /** Registered, Active, Cancelled, Offboarding or Closed. */
     status: t.text().notNull(),
+    /**
+     * Block time of MarketOffboarding, seconds. The offboarding notice runs 5 days from it: the Aave DAO lowers the
+     * reserve's liquidation threshold once, to `windDownState(marketId).targetLtBps`, and `closeMarket` opens, no
+     * earlier than `offboardedAt + 432,000`.
+     */
+    offboardedAt: t.bigint(),
     settlementReserveId: t.bigint(),
     lastBlock: t.bigint().notNull(),
   }),

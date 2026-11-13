@@ -7,6 +7,7 @@
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import type { Hex } from "viem";
+import { AAVE_SPOKE_SOURCES } from "../config/aaveSources.ts";
 import { type LogEventLike, recordLog } from "../lib/record.ts";
 
 type Creation = { wallet: Hex; spoke: Hex; marketId: bigint; proxy: Hex };
@@ -47,12 +48,14 @@ ponder.on("ProxyManager:ProxyDeployed", async ({ event, context }) => {
   await announce(event, context, "ProxyManager.ProxyDeployed", "manager");
 });
 
-ponder.on("AaveSpoke:SetUsingAsCollateral", async ({ event, context }) => {
-  const p = await recordLog(event, context, "AaveSpoke.SetUsingAsCollateral");
-  const key = { chainId: p.chainId, spoke: event.log.address, proxy: event.args.user };
-  if (!(await context.db.find(schema.account, key))) return;
-  await context.db.update(schema.account, key).set({ usingAsCollateral: event.args.usingAsCollateral, lastBlock: p.blockNumber });
-});
+for (const source of AAVE_SPOKE_SOURCES) {
+  ponder.on(`${source}:SetUsingAsCollateral`, async ({ event, context }) => {
+    const p = await recordLog(event, context, "AaveSpoke.SetUsingAsCollateral");
+    const key = { chainId: p.chainId, spoke: event.log.address, proxy: event.args.user };
+    if (!p.fresh || !(await context.db.find(schema.account, key))) return;
+    await context.db.update(schema.account, key).set({ usingAsCollateral: event.args.usingAsCollateral, lastBlock: p.blockNumber });
+  });
+}
 
 /** Adds `delta` drawn shares to an attributed account's debt row; `deficit` marks a ReportDeficit. */
 async function moveDebt(
@@ -66,7 +69,8 @@ async function moveDebt(
 ) {
   const p = await recordLog(event, context, kind);
   const spoke = event.log.address;
-  if (!(await context.db.find(schema.account, { chainId: p.chainId, spoke, proxy: user }))) return;
+  // A second source delivering the same log must not move the debt again.
+  if (!p.fresh || !(await context.db.find(schema.account, { chainId: p.chainId, spoke, proxy: user }))) return;
   const stamp = { lastBlock: p.blockNumber, lastBlockHash: p.blockHash, lastLogIndex: p.logIndex };
   await context.db
     .insert(schema.accountDebt)
@@ -78,22 +82,24 @@ async function moveDebt(
     }));
 }
 
-ponder.on("AaveSpoke:Borrow", async ({ event, context }) => {
-  const a = event.args;
-  await moveDebt(event, context, "AaveSpoke.Borrow", a.user, a.reserveId, a.drawnShares, false);
-});
+for (const source of AAVE_SPOKE_SOURCES) {
+  ponder.on(`${source}:Borrow`, async ({ event, context }) => {
+    const a = event.args;
+    await moveDebt(event, context, "AaveSpoke.Borrow", a.user, a.reserveId, a.drawnShares, false);
+  });
 
-ponder.on("AaveSpoke:Repay", async ({ event, context }) => {
-  const a = event.args;
-  await moveDebt(event, context, "AaveSpoke.Repay", a.user, a.reserveId, -a.drawnShares, false);
-});
+  ponder.on(`${source}:Repay`, async ({ event, context }) => {
+    const a = event.args;
+    await moveDebt(event, context, "AaveSpoke.Repay", a.user, a.reserveId, -a.drawnShares, false);
+  });
 
-ponder.on("AaveSpoke:LiquidationCall", async ({ event, context }) => {
-  const a = event.args;
-  await moveDebt(event, context, "AaveSpoke.LiquidationCall", a.user, a.debtReserveId, -a.drawnSharesLiquidated, false);
-});
+  ponder.on(`${source}:LiquidationCall`, async ({ event, context }) => {
+    const a = event.args;
+    await moveDebt(event, context, "AaveSpoke.LiquidationCall", a.user, a.debtReserveId, -a.drawnSharesLiquidated, false);
+  });
 
-ponder.on("AaveSpoke:ReportDeficit", async ({ event, context }) => {
-  const a = event.args;
-  await moveDebt(event, context, "AaveSpoke.ReportDeficit", a.user, a.reserveId, 0n, true);
-});
+  ponder.on(`${source}:ReportDeficit`, async ({ event, context }) => {
+    const a = event.args;
+    await moveDebt(event, context, "AaveSpoke.ReportDeficit", a.user, a.reserveId, 0n, true);
+  });
+}

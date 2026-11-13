@@ -102,7 +102,7 @@ rule pokeConfigReportsAReplacedImplementation(address spoke) {
     env e;
     require !implCurrent(spoke);
 
-    DriftReason r = pokeConfig(e, spoke);
+    RiskModule.DriftReason r = pokeConfig(e, spoke);
 
-    assert r == DriftReason.SpokeImplementation, "the poke did not report the replaced implementation";
+    assert r == RiskModule.DriftReason.SpokeImplementation, "the poke did not report the replaced implementation";
 }

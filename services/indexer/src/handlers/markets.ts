@@ -6,6 +6,7 @@ import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import { PAUSE_REASON, PAUSE_STATE, enumName, logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
+import { clPoolAbi } from "@avana/services-common/views";
 
 ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
   const p = await recordLog(event, context, "MarketRegistry.MarketRegistered");
@@ -23,6 +24,14 @@ ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
     status: "Registered",
     lastBlock: p.blockNumber,
   });
+  // The pool's series start here; its fee is read once (a dynamic-fee pool is re-read by the hourly sampler). An
+  // integration keyed by pool ID instead of a pool address has no pool contract to follow.
+  if (/^0x0{40}$/i.test(a.pool)) return;
+  const fee = await context.client.readContract({ address: a.pool, abi: clPoolAbi, functionName: "fee" });
+  await context.db
+    .insert(schema.ammPool)
+    .values({ chainId: p.chainId, pool: a.pool.toLowerCase() as `0x${string}`, integrationId: Number(a.integrationId), feePips: Number(fee), listedBlock: p.blockNumber, lastBlock: p.blockNumber })
+    .onConflictDoNothing();
 });
 
 ponder.on("MarketRegistry:MarketActivated", async ({ event, context }) => {
@@ -35,7 +44,6 @@ ponder.on("MarketRegistry:MarketActivated", async ({ event, context }) => {
 
 for (const [name, status] of [
   ["MarketRegistrationCancelled", "Cancelled"],
-  ["MarketOffboarding", "Offboarding"],
   ["MarketClosed", "Closed"],
 ] as const) {
   ponder.on(`MarketRegistry:${name}`, async ({ event, context }) => {
@@ -43,6 +51,15 @@ for (const [name, status] of [
     await context.db.update(schema.market, { chainId: p.chainId, marketId: event.args.marketId }).set({ status, lastBlock: p.blockNumber });
   });
 }
+
+// Offboarding is one step: the notice starts at this block and its end, `offboardedAt + 5 days`, is the earliest time of
+// both the Aave DAO's one liquidation-threshold drop and `closeMarket`.
+ponder.on("MarketRegistry:MarketOffboarding", async ({ event, context }) => {
+  const p = await recordLog(event, context, "MarketRegistry.MarketOffboarding");
+  await context.db
+    .update(schema.market, { chainId: p.chainId, marketId: event.args.marketId })
+    .set({ status: "Offboarding", offboardedAt: p.blockTimestamp, lastBlock: p.blockNumber });
+});
 
 ponder.on("MarketRegistry:SettlementReserveSet", async ({ event, context }) => {
   const p = await recordLog(event, context, "MarketRegistry.SettlementReserveSet");
@@ -120,10 +137,10 @@ ponder.on("MarketRegistry:BreakerReset", async ({ event, context }) => {
     .set({ latchedReasons: 0n, lastBlock: p.blockNumber });
 });
 
-// GateBreached carries no scope; the breach time per key is read live with MarketRegistry.lastBreachAt(key).
+// GateBreached carries no scope; the breach time per key is read live with MarketRegistry.lastBreachAt(key). Hub,
+// CDP Spoke and credit-line events are handled in hubs.ts.
 logOnly("MarketRegistry", [
   "GateBreached",
-  "SpokeApproved",
   "TokenListed",
   "PriceSourceSet",
   "RouteSet",
@@ -132,14 +149,9 @@ logOnly("MarketRegistry", [
   "StandbyRouteActivated",
   "StandbySwitchCancelled",
   "PriceRouteRestored",
-  "HubRecorded",
   "IntegrationRegistered",
   "CoverageSpokeSet",
-  "CrossHubLineSet",
-  "CrossHubLinesEnabledSet",
   "FlashSourceSet",
-  "CreditLineRecorded",
-  "CreditLineSet",
   "SpokeCodeHashApproved",
   "IntegrationContractsRecorded",
 ]);

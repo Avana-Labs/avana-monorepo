@@ -50,6 +50,11 @@ rule vaultTokenAssetKeepsSharesEqualAssets(method f, uint256 assetId) filtered {
     require currentContract._assets[assetId].realizedFees == 0;
     require currentContract._assets[assetId].swept == 0;
     require currentContract._spokes[assetId][e.msg.sender].drawCap == 0;
+    // Every Spoke of the asset is added with drawCap 0 and keeps it (REQ-ARCH-030, Q-181: checked at listing and by
+    // the drift check, with zero drawn shares), so no Spoke has ever drawn; the Hub keeps asset drawnShares equal to
+    // the sum over its Spokes, and the asset's is 0 above. Without this, a Spoke with drawn shares the asset does not
+    // have can restore an amount below one drawn share: `liquidity` grows by `drawnAmount` while no share is burned.
+    require currentContract._spokes[assetId][e.msg.sender].drawnShares == 0;
     require getAddedAssets(e, assetId) == getAddedShares(assetId);
 
     f(e, args);

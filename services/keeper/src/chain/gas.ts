@@ -3,6 +3,8 @@
 // Fee and gas-limit rules (services/README.md, Submission > Gas). Avana pays gas as an operating cost; the
 // per-chain ceiling only stops a fault from draining the gas wallet, and reaching it pages.
 
+import { paddedGasLimit } from "@avana/services-common/gas";
+
 export const GWEI = 1_000_000_000n;
 
 /** Priority fee: the 90th percentile of the last 5 blocks' priority fees, at least 1 gwei. */
@@ -18,9 +20,13 @@ export function maxFee(baseFee: bigint, tip: bigint): bigint {
   return 2n * baseFee + tip;
 }
 
-/** Gas limit ⌈1.25 × estimate⌉; never below the estimate (LPVaultSwap's payout headroom check reverts an under-gassed call). */
+/**
+ * Gas limit ⌈1.3 × estimate⌉ + 25,000 (`@avana/services-common/gas`): the estimate at `latest` misses the Hub accrual
+ * a call pays when mined a second later, and LPVaultSwap's payout headroom check reverts an under-gassed call, so the
+ * limit is never cut below the estimate.
+ */
 export function gasLimit(estimate: bigint): bigint {
-  return (estimate * 125n + 99n) / 100n;
+  return paddedGasLimit(estimate);
 }
 
 /** A replacement raises both fee fields by 15 %, rounded up. */
