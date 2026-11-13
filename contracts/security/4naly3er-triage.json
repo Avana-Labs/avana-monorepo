@@ -1595,6 +1595,15 @@
       "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
     },
     {
+      "fingerprint": "bc57a9d37ec1c08f",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "function": "LPOracleCLModule line 91",
+      "reason": "uint8(unitExp) (the pool's unit exponent k, SPEC-ORC-005): _initMarket returns false when unitExp exceeds ClUnitMath.MAX_UNIT_EXP = 18, a few lines above, so the market is refused and nothing truncates (REQ-ORACLE-058, REQ-ORACLE-105). Covered by TEST-306 (LPOracleCL.PoolReads test_TEST_306_initializeRefusesMalformedMarketWords: an exponent of 19 is refused) and TEST-332 (test_TEST_332_feedWithAnotherExponentIsRefused).",
+      "approval": "approved (Josue, 2026-11-13, by pattern)",
+      "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-13): checked 2026-11-13, the value is range-checked against the target type before the cast, so nothing truncates; Aderyn and 4naly3er do not see checks made in a separate if."
+    },
+    {
       "fingerprint": "61e142d8311092eb",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/oracle/lp-oracle/LPOracleListingLogic.sol",
