@@ -285,9 +285,9 @@ eqm("SYM-132", "SPEC-ORC-014: S_primary starts 1,084,601; alternate gap starts 1
 low, a_low = cl_price8([10 ** 8, 97_500_000], [6, 6], -887_272, 887_272, 6)
 fresh_fr, _ = cl_price8([10 ** 8, 10 ** 8], [6, 6], -887_272, 887_272, 6)
 # SYM-133 verifies: SPEC-ORC-016, SPEC-ORC-017
-eqm("SYM-133", "SPEC-ORC-016/017: pause ends 1,762,653,600; full-range USDC/USDT d = 6: lower composition (987,420, 1,012,739), lower = 197,483,855 = served below A = 199,980,000; fresh 199,999,600 Drifting serves A",
-   sp.Matrix([1_762_650_000 + 3600, a_low[0], a_low[1], low, min(low, 199_980_000), fresh_fr, min(fresh_fr, 199_980_000)]),
-   sp.Matrix([1_762_653_600, 987_420, 1_012_739, 197_483_855, 197_483_855, 199_999_600, 199_980_000]))
+eqm("SYM-133", "SPEC-ORC-016/017: pause ends 1,762,653,600; full-range USDC/USDT d = 6: lower composition (987,420, 1,012,739), lower = 197,483,855 = served min(lower, fresh 199,999,600) during the disagreement; Drifting serves fresh 199,999,600, above A = 199,980,000; Cached serves A",
+   sp.Matrix([1_762_650_000 + 3600, a_low[0], a_low[1], low, min(low, fresh_fr), fresh_fr, int(fresh_fr > 199_980_000), 199_980_000]),
+   sp.Matrix([1_762_653_600, 987_420, 1_012_739, 197_483_855, 197_483_855, 199_999_600, 1, 199_980_000]))
 def usd_level(*q):
     """SPEC-ORC-011: the largest L with L^(x)n <= (x) q, counted up from the real root of the product."""
     n, prod = len(q), fx(*q)
@@ -308,8 +308,8 @@ eqm("SYM-190", "SPEC-ORC-011: usdLevel 99,998,499 for (99,987,000, 100,010,000) 
 fr_v, a_fv = cl_price8([97_544_839, 97_383_701], [6, 6], -887_272, 887_272, 6)
 lo_w, a_lw = cl_price8([97_544_839, 97_383_663], [6, 6], -887_272, 887_272, 6)
 # SYM-191 verifies: SPEC-ORC-017, REQ-ORACLE-086
-eqm("SYM-191", "SPEC-ORC-017: full-range USDC/USDT d = 6: v = (97,544,839, 97,383,701) gives (999,173, 1,000,826) and fresh 194,928,113; w = (97,544,839, 97,383,663) <= v gives (999,173, 1,000,827) and lower 194,928,172; served min(lower, fresh, A = 2e8) = 194,928,113",
-   sp.Matrix([a_fv[0], a_fv[1], fr_v, a_lw[0], a_lw[1], lo_w, min(lo_w, fr_v, 2 * 10 ** 8)]),
+eqm("SYM-191", "SPEC-ORC-017: full-range USDC/USDT d = 6: v = (97,544,839, 97,383,701) gives (999,173, 1,000,826) and fresh 194,928,113; w = (97,544,839, 97,383,663) <= v gives (999,173, 1,000,827) and lower 194,928,172; served min(lower, fresh) = 194,928,113",
+   sp.Matrix([a_fv[0], a_fv[1], fr_v, a_lw[0], a_lw[1], lo_w, min(lo_w, fr_v)]),
    sp.Matrix([999_173, 1_000_826, 194_928_113, 999_173, 1_000_827, 194_928_172, 194_928_113]))
 # SYM-134 verifies: SPEC-ORC-018
 eqm("SYM-134a", "SPEC-ORC-018: Expired USDC A = 99,990,000: delta 500 -> 104,989,500; delta 200 -> 101,989,800; A = 99,987,001 -> 104,986,352; disagreement -> 100,300,000",
@@ -341,9 +341,9 @@ eqm("SYM-170", "SPEC-ORC-021: Base restart at 1,010,000 with grace 3,600: in gra
 eqm("SYM-171", "SPEC-ORC-022: W = 1,800: Ethereum 151, Base 901 observations; the Ethereum value on Base spans 300 s",
    sp.Matrix([-(-1800 // 12) + 1, -(-1800 // 2) + 1, (151 - 1) * 2]), sp.Matrix([151, 901, 300]))
 # SYM-172 verifies: SPEC-ORC-023, REQ-ORACLE-038
-eqm("SYM-172", "SPEC-ORC-023: G = 50,000 needs 50,794 + 5,000 = 55,794; that gasleft forwards min(50,000, 54,923); G_inputs(2) = 150,000 + 2 * 140,000 = 430,000, bound 436,826 + 5,000; worst-case two-token poke with the token-decimals reads: binding read 718,836 + 50,794 + 5,000 = 774,630, W_poke 830,781, floor max = 830,781, below POKE_MIN_GAS_FLOOR = 900,000 by 69,219",
-   sp.Matrix([-(-64 * 50_000 // 63), -(-64 * 50_000 // 63) + 5_000, 55_794 - 55_794 // 64, 150_000 + 2 * 140_000, -(-64 * 430_000 // 63), 718_836 - (-64 * 50_000 // 63) + 5_000, max(830_781, 718_836 - (-64 * 50_000 // 63) + 5_000), 900_000 - max(830_781, 718_836 - (-64 * 50_000 // 63) + 5_000)]),
-   sp.Matrix([50_794, 55_794, 54_923, 430_000, 436_826, 774_630, 830_781, 69_219]))
+eqm("SYM-172", "SPEC-ORC-023: G = 50,000 needs 50,794 + 5,000 = 55,794; that gasleft forwards min(50,000, 54,923); G_inputs(2) = 150,000 + 2 * 140,000 = 430,000, bound 436,826 + 5,000; worst-case two-token poke with the token-decimals reads: binding read 748,926 + 50,794 + 5,000 = 804,720, W_poke 861,000, floor max = 861,000, below POKE_MIN_GAS_FLOOR = 900,000 by 39,000",
+   sp.Matrix([-(-64 * 50_000 // 63), -(-64 * 50_000 // 63) + 5_000, 55_794 - 55_794 // 64, 150_000 + 2 * 140_000, -(-64 * 430_000 // 63), 748_926 - (-64 * 50_000 // 63) + 5_000, max(861_000, 748_926 - (-64 * 50_000 // 63) + 5_000), 900_000 - max(861_000, 748_926 - (-64 * 50_000 // 63) + 5_000)]),
+   sp.Matrix([50_794, 55_794, 54_923, 430_000, 436_826, 804_720, 861_000, 39_000]))
 
 # ======================= [2.2] LPVault =======================
 b0, b1 = burn(1_000_000_000, Q96, 1)

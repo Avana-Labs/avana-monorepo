@@ -219,7 +219,7 @@ def deleverage_asset_out(r: int, x: int, phi: int) -> list[int]:
 
 PRICE_UNIT = 10**8
 BPS = 10**4
-MAX_ROUTE_ANSWER = 10**12
+MAX_ROUTE_ANSWER = 10**18
 ANSWER_BOUND = 2**128
 MIN_TOKENS, MAX_TOKENS = 2, 8
 POST_CALL_GAS = 5_000
@@ -337,16 +337,14 @@ LIVE, DRIFTING, CACHED, EXPIRED = 0, 1, 2, 3
 
 
 def served_price(state: int, disagreeing: int, fresh: int, lower: int, accepted: int) -> list[int]:
-    """SPEC-ORC-017: Expired 1; Cached A; a disagreement min(lower, fresh, A); Drifting min(fresh, A); Live fresh;
-    never below 1 (REQ-ORACLE-060)."""
+    """SPEC-ORC-017: Expired 1; Cached A; a disagreement min(lower, fresh); Live and Drifting fresh; never below 1
+    (REQ-ORACLE-060). The accepted price bounds borrowing only, so it is served only while Cached."""
     if state == EXPIRED:
         return [1]
     if state == CACHED:
         served = accepted
     elif disagreeing:
-        served = min(lower, fresh, accepted)
-    elif state == DRIFTING:
-        served = min(fresh, accepted)
+        served = min(lower, fresh)
     else:
         served = fresh
     return [max(1, served)]
@@ -552,6 +550,35 @@ def cl_unit_decimals(p0: int, p1: int, d0: int, d1: int, tl_off: int, tu_off: in
     return [0, 0]
 
 
+def cl_price8(p0: int, p1: int, d0: int, d1: int, tl_off: int, tu_off: int, s0: int, s1: int) -> list[int]:
+    """The concentrated-liquidity LPOracle's fresh price: [d, price8] with d of SPEC-ORC-005 and price8 of SPEC-ORC-008
+    over the module's raw composition (SPEC-ORC-006) at the valuation prices (SPEC-ORC-004; s0, s1 the stable flags);
+    [0, 0] when no d in [6, 18] qualifies."""
+    v0 = valuation_price(p0, s0)[0]
+    v1 = valuation_price(p1, s1)[0]
+    for d in range(6, 19):
+        a0, a1 = _cl_raw(v0, v1, d0, d1, tl_off, tu_off, 10**d)
+        price8 = max(1, max(a0 - 1, 0) * v0 // 10**d0 + max(a1 - 1, 0) * v1 // 10**d1)
+        if price8 >= PRICE_UNIT:
+            return [d, price8]
+    return [0, 0]
+
+
+def cl_price8_at(p0: int, p1: int, d0: int, d1: int, tl_off: int, tu_off: int, s0: int, s1: int, d: int) -> list[int]:
+    """The concentrated-liquidity LPOracle's fresh price8 of 10^d units at the valuation prices of (p0, p1)."""
+    v0 = valuation_price(p0, s0)[0]
+    v1 = valuation_price(p1, s1)[0]
+    a0, a1 = _cl_raw(v0, v1, d0, d1, tl_off, tu_off, 10**d)
+    return [max(1, max(a0 - 1, 0) * v0 // 10**d0 + max(a1 - 1, 0) * v1 // 10**d1)]
+
+
+def bounded_health_factor(hf: int, served: int, accepted: int) -> list[int]:
+    """REQ-RISK-059: hf * min(served, accepted) / served, floored; hf when accepted >= served or served = 0."""
+    if served == 0 or accepted >= served:
+        return [hf]
+    return [hf * accepted // served]
+
+
 FUNCTIONS = {
     "mulDiv": (mul_div, 4),
     "netBonus": (net_bonus, 2),
@@ -598,6 +625,9 @@ FUNCTIONS = {
     "clAmounts": (cl_amounts, 4),
     "clComposition": (cl_composition, 7),
     "clUnitDecimals": (cl_unit_decimals, 6),
+    "clPrice8": (cl_price8, 8),
+    "clPrice8At": (cl_price8_at, 9),
+    "boundedHealthFactor": (bounded_health_factor, 3),
 }
 
 

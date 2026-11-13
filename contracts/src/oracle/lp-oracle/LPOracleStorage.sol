@@ -67,6 +67,9 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
         // the last `poke()` found a token's decimals unreadable or different (`REQ-ORACLE-107`).
         uint64 decimalsCheckedAt;
         bool decimalsInvalid;
+        // The valuation price vector `initialize` computed `vaultDecimals` at (`REQ-ORACLE-047`); `checkConfig` re-derives
+        // `d` and, once the market is registered, runs its price-dependent checks at it.
+        uint128[] listingPrices;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracle")) - 1)) & ~bytes32(uint256(0xff)).
@@ -159,7 +162,7 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
 
     /// @dev Stores the module's market (pool and exact shape) from `market` and checks it against the pool's own
     /// answers, including the pool's token order equal to `tokens`; false refuses the initialization.
-    /// @custom:spec REQ-ORACLE-048, REQ-ORACLE-058, REQ-ORACLE-103
+    /// @custom:spec REQ-ORACLE-103
     function _initMarket(
         bytes calldata market,
         address[] memory tokens
@@ -167,31 +170,42 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
 
     /// @dev Token amounts `units` vault-token units hold at the price vector `prices`, raw units, rounded down; `ok` is
     /// false for a failed or malformed read (reason bit 1). Never reverts.
-    /// @custom:spec REQ-ORACLE-011, REQ-ORACLE-103, SPEC-ORC-007
+    /// @custom:spec REQ-ORACLE-103
     function _composition(
         uint256 units,
         uint256[] memory prices
     ) internal view virtual returns (bool ok, uint256[] memory amounts);
 
-    /// @dev Whether the pool's reentrancy lock is held (false for an AMM protocol without one); `readOk` false for a
-    /// failed read (reason bit 1). Never reverts.
-    /// @custom:spec REQ-ORACLE-103
-    function _poolLocked() internal view virtual returns (bool readOk, bool locked);
+    /// @notice One pricing-module read of the market's pool for an evaluation (`REQ-ORACLE-103`).
+    struct PoolCheck {
+        // The pool's reentrancy state could be read; false gives reason bit 1.
+        bool readOk;
+        // The pool's reentrancy lock is held (false for an AMM protocol without one); gives reason bit 17.
+        bool locked;
+        // The consistency check could run; false gives reason bit 5.
+        bool available;
+        // The consistency check passed; false gives reason bit 4.
+        bool pass;
+        // The consistency deviation reported by getPriceState().
+        uint256 deviationBps;
+        // The composition at the valuation prices was clamped to the market's shape; gives reason bit 6.
+        bool clamped;
+    }
 
-    /// @dev The consistency check of the quotes against the AMM protocol's time-weighted price over `window`, and
-    /// whether the composition at `prices` was clamped to the market's shape (reason bit 6). `available` false gives
-    /// reason bit 5, `pass` false bit 4. Never reverts.
-    /// @custom:spec REQ-ORACLE-014, REQ-ORACLE-103, REQ-ORACLE-104
-    function _consistency(
+    /// @dev The pool's reentrancy state and the consistency check of the quotes against the AMM protocol's
+    /// time-weighted price over `window` (and the clamp of the composition at `prices`), in one module read. Never
+    /// reverts.
+    /// @custom:spec REQ-ORACLE-103
+    function _poolCheck(
         uint256[] memory quotes,
         uint256[] memory prices,
         uint32 window,
         uint16 toleranceBps
-    ) internal view virtual returns (bool available, bool pass, uint256 deviationBps, bool clamped);
+    ) internal view virtual returns (PoolCheck memory p);
 
     /// @dev The value of token `index` from its `PoolTwap` second source: the time-weighted price of the deep pool
     /// times the reference token's validated quote, 8 decimals; `ok` false when unavailable. Never reverts.
-    /// @custom:spec SPEC-ORC-020, REQ-ORACLE-100
+    /// @custom:spec REQ-ORACLE-103
     function _poolTwapPrice(
         uint256 index,
         SecondSource memory source,
@@ -201,14 +215,14 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
     /// @dev Whether `poolRef` names the market's own pool: its address as `bytes32(uint160(pool))`, or its pool
     /// identifier for an AMM protocol that keys pools by identifier. `checkConfig` refuses a `PoolTwap` second source
     /// on it (`CHECK_SECOND_SOURCE`). Never reverts.
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100, REQ-ORACLE-103
+    /// @custom:spec REQ-ORACLE-103
     function _isOwnPool(
         bytes32 poolRef
     ) internal view virtual returns (bool own);
 
     /// @dev The pricing module's listing checks on `config` at the current quotes; returned bits are shifted to
     /// `MODULE_CHECKS_SHIFT` and above by the caller.
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-048, REQ-ORACLE-055, REQ-ORACLE-105
+    /// @custom:spec REQ-ORACLE-103
     function _listingChecks(
         OracleConfig calldata config,
         uint256[] memory quotes

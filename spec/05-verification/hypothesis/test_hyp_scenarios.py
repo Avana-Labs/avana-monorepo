@@ -203,7 +203,7 @@ def test_hyp55_slice_only_for_rescue_topups():
     restore = s.restore_booked(px, 0)
     room = s.p.cap_market_usd - s.counters_regular[0]
     c = room + restore // 2
-    tid = s.create_position("u", 0, c * 10 ** 6 // max(s.accepted_price(0), s.p.stress_floor_usd8))
+    tid = s.create_position("u", 0, c * 10 ** 6 // max(s.booking_price(0), s.p.stress_floor_usd8))
     s.nfpm.approve("u", tid, LPVAULT)
     ok, r = s.pledge("u", 0, tid)
     assert ok and 0 < r["slice"] <= restore, r
@@ -646,8 +646,8 @@ def test_hyp77_rescue_topups_and_rescue_units(stop, drop):
      "breaker": lambda: s.trip_market_breaker(0), "mint_suspect": lambda: s.pause(MINT_PATH_SUSPECT),
      "freeze_addr": lambda: s.freeze_address("emergency_guardian", "u")}[stop]()
     restore = s.restore_booked(px, 0)
-    L = max(1, restore * 10 ** 6 // max(s.accepted_price(0), s.p.stress_floor_usd8) // 2)
-    assume(L * s.accepted_price(0) // 10 ** 6 >= 10 * USD)
+    L = max(1, restore * 10 ** 6 // max(s.booking_price(0), s.p.stress_floor_usd8) // 2)
+    assume(L * s.booking_price(0) // 10 ** 6 >= 10 * USD)
     tid = s.create_position("u", 0, L)
     s.nfpm.approve("u", tid, LPVAULT)
     ok, r = s.pledge("u", 0, tid)

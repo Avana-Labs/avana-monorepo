@@ -145,7 +145,9 @@ jobs:
           key: sizes-main-${{ github.sha }}
 
       - name: Build Aave V4 with Aave's compiler settings
-        run: FOUNDRY_PROFILE=aave forge build
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -154,6 +156,7 @@ jobs:
           path: |
             contracts/out
             contracts/out-aave
+            contracts/out-univ3
             contracts/cache
           retention-days: 7
 
@@ -324,7 +327,9 @@ jobs:
 
       - name: Build Aave V4 artifacts for the fixture
         # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
-        run: FOUNDRY_PROFILE=aave forge build
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
 
       - name: Gas snapshots (test/gas against the committed snapshots/)
         # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
@@ -367,7 +372,9 @@ jobs:
           path: contracts
 
       - name: Build Aave V4 artifacts (the Spoke and Hub ABIs come from out-aave/)
-        run: FOUNDRY_PROFILE=aave forge build
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -444,7 +451,9 @@ jobs:
 
       - name: Build Aave V4 artifacts for the fixture
         # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
-        run: FOUNDRY_PROFILE=aave forge build
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
 
       - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
         env:
@@ -520,8 +529,10 @@ jobs:
         run: forge soldeer install
 
       - name: Build Aave V4 artifacts for the fork fixture
-        if: env.RPC_MAINNET != '' && env.RPC_BASE != ''
-        run: FOUNDRY_PROFILE=aave forge build
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
 
       - name: Fork tests (Uniswap v3, Chainlink, Aave V3 Pool, GSMs, Sky LitePSM)
         if: steps.ready.outputs.ready == 'true'
@@ -879,7 +890,9 @@ jobs:
       - run: forge soldeer install
 
       - name: Build Aave V4 artifacts for the fixture
-        run: FOUNDRY_PROFILE=aave forge build
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
 
       - name: forge coverage (coverage profile) and the minimums of security/coverage-thresholds.json
         run: script/check-coverage.sh

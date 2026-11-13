@@ -57,7 +57,7 @@ def test_hyp40_tiny_positions(m, L, p):
     assume(tid is not None)
     s.nfpm.approve("u", tid, LPVAULT)
     ok, r = s.pledge("u", m, tid)
-    value = L * s.accepted_price(m) // 10 ** mk.d
+    value = L * s.booking_price(m) // 10 ** mk.d
     if mk.oracle.state(s.now()) == LIVE and value >= s.p.min_pledge_usd:
         assert ok, r
     if not ok:
@@ -194,7 +194,8 @@ ANSWER = st.one_of(st.just(0), st.just(-1), st.just(2 ** 255 - 1), st.just(MAX_P
        poke_between=st.booleans())
 def test_hyp90_oracle_answers_zero_max_and_moves(m, a0, a1, alt0, dt, poke_between):
     """Zero, negative, maximum and out-of-bounds answers are failures, never prices; the served price is at least 1,
-    at most the accepted price in every state but Live, 1 when Expired, and a disagreement serves the lower route."""
+    the accepted price when Cached, 1 when Expired, at most the fresh price whenever there is one, the fresh price
+    itself while Live or Drifting with no disagreement, and a disagreement serves the lower route."""
     s = fresh()
     mk = s.markets[m]
     A = mk.oracle.accepted
@@ -208,8 +209,8 @@ def test_hyp90_oracle_answers_zero_max_and_moves(m, a0, a1, alt0, dt, poke_betwe
     s.advance(dt)
     e = mk.oracle.evaluate(s.now())
     assert e["served"] >= 1
-    if e["state"] != LIVE:
-        assert e["served"] <= A
+    if e["state"] in (LIVE, DRIFTING) and not e["disagree"]:
+        assert e["served"] == e["fresh"]
     if e["state"] == EXPIRED:
         assert e["served"] == 1
     if e["state"] == CACHED:

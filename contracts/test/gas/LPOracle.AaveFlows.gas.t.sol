@@ -13,22 +13,28 @@ import {IGasAaveOracle, LPOracleGasFixture} from "../utils/fixtures/LPOracleGasF
 /// (`latestAnswer`, `latestRoundData`, `getPriceState`, `getTokenPrices`, `poke`, `AaveOracle.getReservePrice`) and
 /// `borrow`, `withdraw` and `liquidationCall` on the CDP Spoke at its reserve limit, in each price scenario.
 abstract contract LPOracleAaveFlowsGasBase is LPOracleGasFixture {
-    // Budgets: the worst scenario measured on the optimized path, plus about 5 %, rounded up to 5,000 gas. Cold: every
-    // account and slot cold, as the first price read of a transaction. Warm: the same call repeated in one
-    // transaction, as the second and later reads of a liquidation are.
-    uint256 internal constant COLD_READ = 400_000;
-    uint256 internal constant COLD_RESERVE_PRICE = 405_000;
-    uint256 internal constant COLD_PRICE_STATE = 525_000;
-    uint256 internal constant COLD_POKE = 570_000;
-    uint256 internal constant COLD_BORROW = 700_000;
-    uint256 internal constant COLD_WITHDRAW = 705_000;
-    uint256 internal constant COLD_LIQUIDATION = 1_175_000;
-    uint256 internal constant WARM_READ = 155_000;
-    uint256 internal constant WARM_PRICE_STATE = 220_000;
-    uint256 internal constant WARM_POKE = 205_000;
-    uint256 internal constant WARM_BORROW = 230_000;
-    uint256 internal constant WARM_WITHDRAW = 235_000;
-    uint256 internal constant WARM_LIQUIDATION = 645_000;
+    // Budgets: the worst scenario measured on the optimized path with the concentrated-liquidity implementation on a real
+    // Uniswap v3 pool, rounded up to the next 5,000 gas (Josue's rule: acceptance is the full worst-case Aave flow; no
+    // price is cached and no freshness, deviation or rounding check is weakened for gas). Cold: every account and slot
+    // cold, as the first price read of a transaction. Warm: the same call repeated in one transaction, as the second and
+    // later reads of a liquidation are. Against the base's measurement with a price-independent test module, each
+    // evaluation adds the pricing module's real work: one delegatecall into the module contract per hook, one `slot0`
+    // read (lock and cardinality), one `observe([1800, 0])` binary search over 151 observations, two to three
+    // square roots and one `tickAtSqrtRatio` (warm `latestAnswer` 173,611 Live / 175,141 Alternate, where 155,000 was
+    // the budget before; cold 416,111 / 417,641 against 400,000).
+    uint256 internal constant COLD_READ = 420_000;
+    uint256 internal constant COLD_RESERVE_PRICE = 430_000;
+    uint256 internal constant COLD_PRICE_STATE = 540_000;
+    uint256 internal constant COLD_POKE = 600_000;
+    uint256 internal constant COLD_BORROW = 710_000;
+    uint256 internal constant COLD_WITHDRAW = 715_000;
+    uint256 internal constant COLD_LIQUIDATION = 1_225_000;
+    uint256 internal constant WARM_READ = 180_000;
+    uint256 internal constant WARM_PRICE_STATE = 240_000;
+    uint256 internal constant WARM_POKE = 235_000;
+    uint256 internal constant WARM_BORROW = 250_000;
+    uint256 internal constant WARM_WITHDRAW = 255_000;
+    uint256 internal constant WARM_LIQUIDATION = 710_000;
 
     function setUp() public {
         _setUpGas(false, FLOOR);

@@ -114,7 +114,7 @@ class AvanaMachine(RuleBasedStateMachine):
         assert s.records[tid].credited == L and s.nfpm.positions[tid].owner == LPVAULT
         if not s.p.faulty_risk_module:
             assert state in ((LIVE, DRIFTING) if had_debt else (LIVE,)), f"HYP-22 pledge accepted in {state}"
-            assert r["L"] * s.accepted_price(m) // 10 ** mk.d >= min(s.p.min_pledge_usd, s.p.rescue_min_pledge_usd), \
+            assert r["L"] * s.booking_price(m) // 10 ** mk.d >= min(s.p.min_pledge_usd, s.p.rescue_min_pledge_usd), \
                 "HYP-22 pledge below the minimum value"
         # HYP-77 verifies: Q-252, Q-253, INV-082
         if not r["rescue"]:
@@ -257,7 +257,7 @@ class AvanaMachine(RuleBasedStateMachine):
         assert pos.owner == w and pos.fees0 == f0 and pos.fees1 == f1, "HYP-19 NFT or fees not returned whole"
         if not debt_free and not s.p.faulty_risk_module:
             # HYP-20 verifies: Q-018, Q-161, Q-182, Q-229, Q-253, Q-398
-            assert s.hf_ex(pxa) >= max(WAD, s.p.hard_floor_hf, hf_min), "HYP-20 hfEx after withdraw"
+            assert s.hf_ex(pxa, s.borrow_price_of) >= max(WAD, s.p.hard_floor_hf, hf_min), "HYP-20 hfEx after withdraw"
             assert s.pause_state != PAUSED and w not in s.frozen_addresses, "HYP-20 withdraw-with-debt under a stop"
 
     @rule(w=st.sampled_from(WALLETS), i=st.integers(0, 50), frac=st.integers(1, 99))
@@ -279,7 +279,8 @@ class AvanaMachine(RuleBasedStateMachine):
         assert rec.credited == cred0 - units and rec.status == "active", "HYP-78 record not debited by the units"
         assert s.nfpm.positions[rec.token_id].liquidity == live0 - units, "HYP-78 NFT liquidity not reduced by units"
         if not debt_free and not s.p.faulty_risk_module:
-            assert s.hf_ex(rec.proxy) >= max(WAD, s.p.hard_floor_hf), "HYP-78 removal with debt below HF 1.00"
+            assert s.hf_ex(rec.proxy, s.borrow_price_of) >= max(WAD, s.p.hard_floor_hf), \
+                "HYP-78 removal with debt below HF 1.00"
             assert rec.credited * s.accepted_price(rec.market) // 10 ** s.markets[rec.market].d >= s.p.min_pledge_usd
 
     @rule(w=st.sampled_from(WALLETS), i=st.integers(0, 50), pct=st.integers(1, 50))

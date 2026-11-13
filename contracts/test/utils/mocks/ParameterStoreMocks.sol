@@ -62,6 +62,14 @@ contract MockLPOracle {
 /// @notice AMM integration `capabilities` and `riskStatus` with settable answers.
 contract MockIntegration {
     bool public hasTwap = true;
+
+    /// @notice No rate tokens: two zero providers, as the concentrated-liquidity integrations report.
+    function rateProviders(
+        uint256
+    ) external pure returns (address[] memory providers) {
+        providers = new address[](2);
+    }
+
     bool public depthAvailable = true;
     bool public reverts;
     ShapeKind public shapeKind = ShapeKind.TickRange;

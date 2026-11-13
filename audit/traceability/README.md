@@ -30,6 +30,23 @@ Every contract gate (0 errors, every row of the contract verified by a test that
 
 ## Latest result
 
+Run on 2026-11-12 on the wave 1 tree, with the rules above (a tag counts only on its own test, run and passed, without a stand-in for the row's contract).
+
+| Measure | Committed matrix (no run results) | With one local run's results |
+|---|---|---|
+| Requirements | 3,558 | 3,558 |
+| Verified | 114 (CVL rules with a recorded prover pass, Halmos checks with a recorded log) | 1,724 |
+| Failed | 0 | 3 (two lite-profile artifacts, see the results file) |
+| Not run | 1,642 | 29 |
+| Unlinked | 1,682 | 1,682 |
+| Changed — re-verify | 120 (rules edited by the spec work in progress) | 120 |
+
+Under the earlier rule (any tag anywhere linked a row) the same tree showed 945 rows Verified and 1,888 rows with a Foundry tag. 146 `TEST-` tags sit on a test named for another row and no longer count; 294 rows have only declaration `@custom:spec` links (for example `REQ-ORACLE-014`: the `ILPOracle` interface, the abstract `LPOracle` and the body-less `_consistency` hook), and every LPOracle test runs on `LPOracleHarness`, so `REQ-ORACLE-014` and `REQ-ORACLE-048` are Unlinked.
+
+Per contract, rows in `--check` scope (REQ/SPEC of the page, TEST and PROP rows), with the local run's results: [`evidence-local-run-2026-11-12.md`](results/evidence-local-run-2026-11-12.md). With that run, 22 of the 26 contracts fail `--check` (AvanaRoles, LPPriceMath, PositionProxy and ProxyManager pass); with links only (the `models` check), 19 fail on unlinked rows and 7 pass (AvanaRoles, Lock, LPPriceMath, VaultTokenFactory, PositionProxy, ProxyManager, FlashLiquidator). The TEST rows on no contract's checklist: 52, of which 27 are keeper, off-chain or CI-tool rows in `OUTSIDE_CONTRACTS` and 18 block `--check` (TEST-003, 005, 008, 009, 076, 082, 103, 110, 111, 121, 126, 127, 134, 135, 183, 184, 263, 282). The full per-contract checklists, written with links only, are in [`results/contract-checklists/`](results/contract-checklists/).
+
+### Earlier result (2026-11-10, earlier rule: a tag anywhere linked a row)
+
 Run on 2026-11-10 at 22:4x, while the spec rewrite of 2.11 and the review fix batches were in progress, from a copy of `trace.py` that writes the matrix outside the repository:
 
 | Measure | Value |
