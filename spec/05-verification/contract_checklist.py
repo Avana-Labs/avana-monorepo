@@ -226,9 +226,9 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     # CI tool rows: the row is the CI step itself, and the step's own result is the evidence (no Foundry test can be).
     "TEST-001": "contracts.yml build job: `forge soldeer install` against soldeer.lock, the solc and EVM pins of "
                 "foundry.toml, and the Foundry version check",
-    "TEST-008": "contracts.yml evidence job: `trace.py --strict` fails on a Foundry test function not named "
-                "test_TEST_NNN_…, testFuzz_TEST_NNN_… or invariant_TEST_NNN_… (trace.misnamed_tests) and on a "
-                "requirement without a test or property, and writes the matrix to evidence/traceability.md",
+    "TEST-008": "`trace.py --strict`, run locally (not in CI since 2026-11-13): fails on a Foundry test function not "
+                "named test_TEST_NNN_…, testFuzz_TEST_NNN_… or invariant_TEST_NNN_… (trace.misnamed_tests) and on a "
+                "requirement without a test or property",
     "TEST-005": "models.yml contract-checklists job: contracts/script/check-mock-counterparts.py against "
                 "contracts/script/mock-counterparts.json (every mocked external has a fork test on its chain)",
     "TEST-007": "contracts.yml test job: the ci profile's fuzz and invariant runs, and the gate's every-shard rule",

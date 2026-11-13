@@ -84,7 +84,7 @@ Rules the parser imposes:
 
 - The list after `verifies:` must hold only IDs defined in `spec/01`–`spec/04`: `REQ-<AREA>-NNN`, `SPEC-<AREA>-NNN`, `INV-NNN`, `ATTACK-NNN`, flow steps `DEP|BOR|REP|WDR|LIQ|EMG|FEE|MKT|DEF-NNN` (with optional `F-`/`POST-`), and `Q-NNN` from the decision log. An undefined ID fails `trace.py`.
 - The list is comma-separated on one line and stops at the first token that is not an ID, silently dropping everything after it. `default …` sources, `FLOW-00N`, `FINDING-…` and spec-stage check IDs (`MATH-`, `QNT-`, `HYP-`, `SIM-`, `SYM-`) never go after `verifies:`; they go on the `// Sources:` line. Some default IDs (`LIQ-005`, `LIQ-030`) match the flow-step pattern and would link to an unrelated liquidation step.
-- `REQ-…`, `SPEC-…` and flow-step IDs of the contract and operation pages are added to a file's tags as those pages are linked (5.1 "Covers"). `trace.py --strict` fails when `contracts/src` exists and any `REQ-`, `SPEC-` or `INV-` has no `TEST-` or `PROP-` link.
+- `REQ-…`, `SPEC-…` and flow-step IDs of the contract and operation pages are added to a file's tags as those pages are linked (5.1 "Covers"). `trace.py --strict` (a local report, not run in CI) fails when `contracts/src` exists and any `REQ-`, `SPEC-` or `INV-` has no `TEST-` or `PROP-` link.
 - Off-chain tests (sections H and I) name their cases `TEST_NNN_<behavior>` and carry the same tag text, but `trace.py` does not scan outside `contracts/`; their coverage is checked by the owning service's CI.
 
 ## 3. Shared fixtures
@@ -297,7 +297,7 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-005 | environment | — | planned in `utils/` `mocks/MockCounterparts.sol` |
 | TEST-006 | environment | `unit/LPOracle.PriceStateDriver.unit.t.sol` (2) | — |
 | TEST-007 | environment | — | planned in `invariant/handlers/` `HandlerBase.sol` |
-| TEST-008 | environment | — | checked by `trace.py --strict` in `.github/workflows/contracts.yml`; the CI name check over `forge test --list --json` is planned |
+| TEST-008 | environment | — | checked by `trace.py --strict`, run locally (CI dropped strict mode on 2026-11-13); the CI name check over `forge test --list --json` is planned |
 | TEST-009 | environment | — | planned in `fork/` `FirstFixture.fork.t.sol` |
 | TEST-010 | unit | `integration/UniswapV3Integration.Collateralization.integration.t.sol` (2), `unit/AaveAdapter.Failures.unit.t.sol` (3), `unit/AaveAdapter.Lifecycle.unit.t.sol` (1), `unit/AaveAdapter.Pledge.unit.t.sol` (5), `unit/AaveAdapter.Smoke.unit.t.sol` (1), `unit/Collateralization.MaxRecords.unit.t.sol` (1), `unit/Collateralization.Pledge.unit.t.sol` (1), `unit/Collateralization.Views.unit.t.sol` (1), `unit/RiskModule.Pledge.unit.t.sol` (1), `unit/SlipstreamIntegration.Custody.unit.t.sol` (1), `unit/UniswapV3Integration.Custody.unit.t.sol` (1) | — |
 | TEST-011 | unit | `integration/UniswapV3Integration.Collateralization.integration.t.sol` (1), `unit/Collateralization.Checks.unit.t.sol` (2), `unit/Collateralization.Pledge.unit.t.sol` (2), `unit/Collateralization.Surface.unit.t.sol` (1), `unit/SlipstreamIntegration.Custody.unit.t.sol` (5), `unit/UniswapV3Integration.Custody.unit.t.sol` (5) | — |
