@@ -117,7 +117,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
     function run() external {
         string memory network = _network();
         require(block.chainid != 1 && block.chainid != 8453, "the world is for test networks");
-        cfg = vm.readFile(string.concat(vm.projectRoot(), "/script/deploy/config/", network, ".json"));
+        cfg = vm.readFile(_configPath(network));
         vm.startBroadcast();
         (, me,) = vm.readCallers();
         deployer = me;

@@ -24,6 +24,16 @@ abstract contract DeployInputs is Script {
     /// @notice Directory of every script output, relative to `contracts/`.
     string internal constant OUTPUT_DIR = "deployments-local";
 
+    /// @notice The network's config file: `AVANA_CONFIG` when set (a path from `contracts/`, for a config with later
+    /// additions), else `script/deploy/config/<network>.json`.
+    function _configPath(
+        string memory network
+    ) internal view returns (string memory) {
+        string memory over = vm.envOr("AVANA_CONFIG", string(""));
+        if (bytes(over).length != 0) return string.concat(vm.projectRoot(), "/", over);
+        return string.concat(vm.projectRoot(), "/script/deploy/config/", network, ".json");
+    }
+
     /// @notice The network name the scripts run for: `AVANA_NETWORK`, default `anvil`.
     function _network() internal view returns (string memory) {
         return vm.envOr("AVANA_NETWORK", string("anvil"));
@@ -40,7 +50,7 @@ abstract contract DeployInputs is Script {
     function _loadInputs(
         string memory network
     ) internal view returns (ChainInputs memory c) {
-        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/script/deploy/config/", network, ".json"));
+        string memory json = vm.readFile(_configPath(network));
         c.network = network;
         c.chainId = vm.parseJsonUint(json, ".chainId");
         c.release = vm.envOr("AVANA_RELEASE", vm.parseJsonString(json, ".release"));

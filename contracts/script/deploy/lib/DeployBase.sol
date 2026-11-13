@@ -73,6 +73,65 @@ abstract contract DeployBase is DeployInputs {
         vm.label(deployed, name);
     }
 
+    /// @notice The contract an earlier run of a step recorded under `key` in output `file`, or 0 when there is none or
+    /// it has no code (each step lists only what is not on chain yet).
+    function _recorded(
+        string memory file,
+        string memory key
+    ) internal view returns (address a) {
+        string memory path = _outputPath(file);
+        if (!vm.exists(path)) return address(0);
+        string memory json = vm.readFile(path);
+        if (!vm.keyExistsJson(json, key)) return address(0);
+        a = vm.parseJsonAddress(json, key);
+        if (a.code.length == 0) a = address(0);
+    }
+
+    /// @notice Starts serializing JSON object `obj` from output `file`, so a step that adds entries keeps the earlier
+    /// ones; returns the file's JSON, or "" when there is no file yet.
+    function _keepOutput(
+        string memory obj,
+        string memory file
+    ) internal returns (string memory json) {
+        string memory path = _outputPath(file);
+        if (vm.exists(path)) json = vm.serializeJson(obj, vm.readFile(path));
+    }
+
+    /// @notice Whether `aavePayload.debtAssets[i]` goes on Hub `label`: every Hub, or only those its `hubs` list names.
+    function _assetOnHub(
+        string memory c,
+        uint256 i,
+        string memory label
+    ) internal view returns (bool) {
+        string memory k = string.concat(".aavePayload.debtAssets[", vm.toString(i), "].hubs");
+        if (!vm.keyExistsJson(c, k)) return true;
+        string[] memory hubs = vm.parseJsonStringArray(c, k);
+        for (uint256 j = 0; j < hubs.length; ++j) {
+            if (keccak256(bytes(hubs[j])) == keccak256(bytes(label))) return true;
+        }
+        return false;
+    }
+
+    /// @notice Whether `aavePayload.debtAssets[i]` is only lent (`lendOnly`): on the Lend Spoke, never borrowed by a CDP
+    /// Spoke, so it has no Coverage Spoke or deficit offset either.
+    function _assetLendOnly(
+        string memory c,
+        uint256 i
+    ) internal view returns (bool) {
+        string memory k = string.concat(".aavePayload.debtAssets[", vm.toString(i), "].lendOnly");
+        return vm.keyExistsJson(c, k) && vm.parseJsonBool(c, k);
+    }
+
+    /// @notice Whether (Hub `h`, asset `i`) of `aavePayload` has loss layers: the asset is on the Hub and borrowable.
+    function _coveredPair(
+        string memory c,
+        uint256 h,
+        uint256 i
+    ) internal view returns (bool) {
+        string memory label = vm.parseJsonString(c, string.concat(".aavePayload.hubs[", vm.toString(h), "].label"));
+        return _assetOnHub(c, i, label) && !_assetLendOnly(c, i);
+    }
+
     /// @notice Creation code of `<Contract>` in `out/<file>/`, from the profile the file is deployed with.
     function _artifact(
         string memory file,

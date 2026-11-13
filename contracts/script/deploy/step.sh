@@ -41,7 +41,7 @@ cd "$(dirname "$0")/../.."
 step="${1:?usage: script/deploy/step.sh <step>; the steps are listed at the top of this file}"
 : "${AVANA_NETWORK:?set AVANA_NETWORK (anvil, sepolia, ethereum, base)}"
 : "${AVANA_RPC_URL:?set AVANA_RPC_URL}"
-CONFIG="script/deploy/config/$AVANA_NETWORK.json"
+CONFIG="${AVANA_CONFIG:-script/deploy/config/$AVANA_NETWORK.json}"
 config() { node -e 'const c=require(process.argv[1]);console.log(process.argv[2].split(".").reduce((o,k)=>o[k],c))' "./$CONFIG" "$1"; }
 
 # Not a forge script: the listing metadata file, written from the config's page text and the chain's IDs.

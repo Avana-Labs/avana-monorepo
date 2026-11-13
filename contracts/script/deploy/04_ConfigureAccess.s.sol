@@ -16,6 +16,22 @@ interface IAccessControlGrant {
     ) external;
 }
 
+/// @notice The views 04 reads to leave out what is already on chain.
+interface IWiringViews {
+    function isRecordedHub(
+        address hub
+    ) external view returns (bool);
+    function flashSource() external view returns (address);
+    function lpVaultOf(
+        uint32 integrationId
+    ) external view returns (address);
+    function sequencer() external view returns (address feed, uint32 gracePeriod);
+    function hasRole(
+        bytes32 role,
+        address account
+    ) external view returns (bool);
+}
+
 interface IWiring {
     function recordHub(
         address hub,
@@ -63,22 +79,35 @@ contract ConfigureAccess is TimelockOperations {
         Operation memory wiring = _wiring(
             c, out, vm.parseJsonAddress(out, ".marketRegistry.proxy"), vm.parseJsonAddress(out, ".parameterStore.proxy")
         );
-        console2.log("guardian-roles", vm.toString(_writeOperation(timelock, roles)), _operationPath(roles.name));
-        console2.log("chain-wiring", vm.toString(_writeOperation(timelock, wiring)), _operationPath(wiring.name));
+        _propose(timelock, roles, c.gov.governanceSafe);
+        _propose(timelock, wiring, c.gov.governanceSafe);
+    }
+
+    /// @notice Writes the operation and, with `AVANA_SCHEDULE`, schedules it as the Safe. Each operation holds only
+    /// what the config adds to the chain (a Hub, an integration, a guardian); with nothing new it is not written, and
+    /// the previous file (already executed) stays.
+    function _propose(
+        address timelock,
+        Operation memory op,
+        address safe
+    ) private {
+        if (op.targets.length == 0) {
+            console2.log(op.name, "nothing to schedule: everything in the config is already on chain");
+            return;
+        }
+        _freshSalt(timelock, op);
+        console2.log(op.name, vm.toString(_writeOperation(timelock, op)), _operationPath(op.name));
         if (vm.envOr("AVANA_SCHEDULE", false)) {
-            ITimelockOps t = ITimelockOps(timelock);
-            vm.startBroadcast(c.gov.governanceSafe);
-            t.scheduleBatch(roles.targets, roles.values, roles.payloads, bytes32(0), roles.salt, 432_000);
-            t.scheduleBatch(wiring.targets, wiring.values, wiring.payloads, bytes32(0), wiring.salt, 432_000);
-            vm.stopBroadcast();
-            console2.log("scheduled as the governance Safe", c.gov.governanceSafe);
+            vm.broadcast(safe);
+            ITimelockOps(timelock).scheduleBatch(op.targets, op.values, op.payloads, bytes32(0), op.salt, 432_000);
+            console2.log("scheduled as the governance Safe", safe);
         }
     }
 
     function _guardianRoles(
         ChainInputs memory c,
         string memory out
-    ) private pure returns (Operation memory roles) {
+    ) private view returns (Operation memory roles) {
         address registry = vm.parseJsonAddress(out, ".marketRegistry.proxy");
         address store = vm.parseJsonAddress(out, ".parameterStore.proxy");
         roles = _newOperation("guardian-roles", c.release, 9);
@@ -117,12 +146,13 @@ contract ConfigureAccess is TimelockOperations {
         string memory out,
         address registry,
         address store
-    ) private pure returns (Operation memory op) {
+    ) private view returns (Operation memory op) {
         address factory = vm.parseJsonAddress(out, ".vaultTokenFactory");
         address[] memory pricing = vm.parseJsonAddressArray(out, ".clOraclePricing");
         address[] memory lpVaults = vm.parseJsonAddressArray(out, ".lpVaults");
         op = _newOperation("chain-wiring", c.release, c.aave.hubs.length + 2 + 2 * lpVaults.length);
         for (uint256 i = 0; i < c.aave.hubs.length; ++i) {
+            if (IWiringViews(registry).isRecordedHub(c.aave.hubs[i].hub)) continue;
             _add(
                 op,
                 registry,
@@ -130,14 +160,17 @@ contract ConfigureAccess is TimelockOperations {
                 "MarketRegistry.recordHub"
             );
         }
-        _add(
-            op,
-            registry,
-            abi.encodeCall(IWiring.setFlashSource, (vm.parseJsonAddress(out, ".flashSource"))),
-            "MarketRegistry.setFlashSource"
-        );
+        if (IWiringViews(registry).flashSource() != vm.parseJsonAddress(out, ".flashSource")) {
+            _add(
+                op,
+                registry,
+                abi.encodeCall(IWiring.setFlashSource, (vm.parseJsonAddress(out, ".flashSource"))),
+                "MarketRegistry.setFlashSource"
+            );
+        }
         for (uint256 i = 0; i < lpVaults.length; ++i) {
             uint32 id = c.integrations[i].integrationId;
+            if (IWiringViews(factory).lpVaultOf(id) == lpVaults[i]) continue;
             _add(
                 op,
                 factory,
@@ -151,7 +184,8 @@ contract ConfigureAccess is TimelockOperations {
                 "MarketRegistry.registerIntegration"
             );
         }
-        if (c.hasSequencer) {
+        (address feed, uint32 grace) = c.hasSequencer ? IWiringViews(store).sequencer() : (address(0), uint32(0));
+        if (c.hasSequencer && (feed != c.sequencerFeed || grace != c.sequencerGraceSeconds)) {
             _add(
                 op,
                 store,
@@ -167,7 +201,8 @@ contract ConfigureAccess is TimelockOperations {
         bytes32 role,
         address account,
         string memory label
-    ) private pure {
+    ) private view {
+        if (IWiringViews(target).hasRole(role, account)) return;
         _add(op, target, abi.encodeCall(IAccessControlGrant.grantRole, (role, account)), label);
     }
 }

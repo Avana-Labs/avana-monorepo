@@ -104,7 +104,7 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
     if (!cache.has(file)) cache.set(file, readJson(join(outDir, `${file}.json`)));
     return cache.get(file)!;
   };
-  const config = readJson(join(contractsDir, "script/deploy/config", `${network}.json`));
+  const config = readJson(join(contractsDir, process.env.AVANA_CONFIG ?? `script/deploy/config/${network}.json`));
   const cfgAddr = (path: string) => resolveAddress(at(config, path), outputs);
   const avana = outputs("avana");
   const chainId = await client.getChainId();

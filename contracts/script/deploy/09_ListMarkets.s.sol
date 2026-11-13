@@ -12,6 +12,7 @@ import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
 import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
 import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
 import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
@@ -102,6 +103,13 @@ contract ListMarkets is ListingBase {
         Operation memory op,
         uint256 delay
     ) private {
+        // Every step lists only what the config adds to the chain; with nothing new there is no operation to schedule,
+        // and the previous operation file (already executed) stays as it is.
+        if (op.targets.length == 0) {
+            console2.log(op.name, "nothing to schedule: everything in the config is already on chain");
+            return;
+        }
+        _freshSalt(timelock, op);
         bytes32 id = _writeOperation(timelock, op);
         console2.log(op.name, vm.toString(id), _operationPath(op.name));
         if (vm.envOr("AVANA_SCHEDULE", false)) {
@@ -120,6 +128,8 @@ contract ListMarkets is ListingBase {
         for (uint256 i = 0; i < c.integrations.length; ++i) {
             uint32 id = c.integrations[i].integrationId;
             uint256 n = c.integrations[i].positionManagers.length;
+            // Recorded and finalized once per integration (the registry refuses a second record).
+            if (registry.integrationContracts(id).length != 0) continue;
             address[] memory contracts = new address[](2 * n);
             for (uint256 j = 0; j < n; ++j) {
                 (contracts[2 * j], contracts[2 * j + 1]) =
@@ -139,6 +149,7 @@ contract ListMarkets is ListingBase {
             );
         }
         for (uint256 h = 0; h < c.aave.hubs.length; ++h) {
+            if (store.depositorUsdCap(c.aave.hubs[h].hub) != 0) continue;
             uint256 cap = vm.parseUint(_str(".listing.hubDepositorUsdCap")) * 1e8;
             _add(
                 op,
@@ -162,6 +173,7 @@ contract ListMarkets is ListingBase {
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("tokens", i);
             string memory sym = _str(string.concat(k, ".symbol"));
+            if (registry.getToken(_token(sym)).listed) continue;
             uint16 dev = uint16(_uint(string.concat(k, ".deviationBps")));
             for (uint256 r = 0; r < 4; ++r) {
                 _add(
@@ -190,6 +202,19 @@ contract ListMarkets is ListingBase {
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("tokens", i);
             address t = _token(_str(string.concat(k, ".symbol")));
+            bool listed = registry.getToken(t).listed;
+            string[] memory hubs = vm.parseJsonStringArray(cfg, string.concat(k, ".hubs"));
+            uint256 cap = vm.parseUint(_str(string.concat(k, ".tokenCapUsd"))) * 1e8;
+            for (uint256 h = 0; h < hubs.length; ++h) {
+                if (store.tokenUsdCap(_hub(hubs[h]), t) != 0) continue;
+                _add(
+                    op,
+                    address(store),
+                    abi.encodeCall(store.setInitialTokenCap, (_hub(hubs[h]), t, cap)),
+                    "PS.setInitialTokenCap"
+                );
+            }
+            if (listed) continue;
             uint16 cf = uint16(_uint(string.concat(k, ".collateralFactorBps")));
             uint16 tol = uint16(_uint(string.concat(k, ".agreementToleranceBps")));
             SecondSource memory none;
@@ -211,16 +236,6 @@ contract ListMarkets is ListingBase {
                 abi.encodeCall(store.setSecondSource, (t, _secondSource(k), none)),
                 "PS.setSecondSource"
             );
-            string[] memory hubs = vm.parseJsonStringArray(cfg, string.concat(k, ".hubs"));
-            uint256 cap = vm.parseUint(_str(string.concat(k, ".tokenCapUsd"))) * 1e8;
-            for (uint256 h = 0; h < hubs.length; ++h) {
-                _add(
-                    op,
-                    address(store),
-                    abi.encodeCall(store.setInitialTokenCap, (_hub(hubs[h]), t, cap)),
-                    "PS.setInitialTokenCap"
-                );
-            }
         }
     }
 
@@ -235,7 +250,7 @@ contract ListMarkets is ListingBase {
             string memory sym = _str(string.concat(k, ".symbol"));
             address asset = _token(sym);
             bool fixedPrice = _bool(string.concat(k, ".fixedPrice"));
-            if (bytes(_tokenKey(asset)).length == 0) {
+            if (bytes(_tokenKey(asset)).length == 0 && !registry.getToken(asset).listed) {
                 uint16 dev = uint16(_uint(string.concat(k, ".deviationBps")));
                 _add(
                     op,
@@ -257,7 +272,7 @@ contract ListMarkets is ListingBase {
                     string.concat("MR.listToken ", sym)
                 );
             }
-            if (!fixedPrice) {
+            if (!fixedPrice && store.debtStressRiseBps(asset) == 0) {
                 uint16 rise = uint16(_uint(string.concat(k, ".stressRiseBps")));
                 _add(
                     op,
@@ -279,6 +294,7 @@ contract ListMarkets is ListingBase {
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("spokes", i);
             string memory label = _str(string.concat(k, ".label"));
+            if (registry.getSpoke(_spokeAddr(label)).approved) continue;
             address impl = _implementationOf(_spokeAddr(label));
             bytes32 h = impl.codehash;
             bool approved = h == standard || registry.isApprovedSpokeCodeHash(h);
@@ -326,6 +342,7 @@ contract ListMarkets is ListingBase {
             string memory hubLabel = _hubOfSpoke(_str(string.concat(k, ".spoke")));
             address hub = _hub(hubLabel);
             address cs = vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", hubLabel, ".", sym, "']"));
+            if (registry.coverageSpokeOf(hub, _token(sym)) != address(0)) continue;
             _add(
                 op,
                 address(registry),
@@ -361,12 +378,16 @@ contract ListMarkets is ListingBase {
     function _oracles() private {
         uint256 n = _count(cfg, ".listing.debtAssets");
         string memory o = "oracles";
-        string memory json;
+        string memory json = _keepOutput(o, "listing-oracles");
         vm.startBroadcast(deployerOf());
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("debtAssets", i);
             string memory sym = _str(string.concat(k, ".symbol"));
-            address source;
+            address source = _recorded("listing-oracles", string.concat(".", sym));
+            if (source != address(0)) {
+                console2.log("price source", sym, source, "(deployed earlier)");
+                continue;
+            }
             if (_bool(string.concat(k, ".fixedPrice"))) {
                 source = _deploy(
                     string.concat("FixedPriceSource.", sym), _artifact("FixedPriceSource.sol", "FixedPriceSource")
@@ -392,7 +413,7 @@ contract ListMarkets is ListingBase {
             console2.log("price source", sym, source);
         }
         vm.stopBroadcast();
-        vm.writeJson(json, _outputPath("listing-oracles"));
+        if (bytes(json).length != 0) vm.writeJson(json, _outputPath("listing-oracles"));
     }
 
     function deployerOf() internal view returns (address) {
@@ -424,20 +445,83 @@ contract ListMarkets is ListingBase {
     function _markets() private returns (Operation memory op) {
         op = _newOperation("listing-markets", release, 200);
         uint256 first = registry.marketCount() + 1;
-        op.salt = _listingMetadataHash(first);
-        _enableDebtReserves(op);
         uint256 n = _count(cfg, ".listing.markets");
-        string memory out = "markets";
-        string memory json;
+        IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
+        // Routes the config adds to listed markets come first: enabling a debt reserve on a Spoke requires every live
+        // market of that Spoke to have its primary and backup routes into the asset (REQ-MREG-032).
         for (uint256 i = 0; i < n; ++i) {
-            Mkt memory m = _market(i, first + i);
+            uint256 listed = registry.marketOfKey(_marketKeyOf(f, i));
+            if (listed == 0) continue;
+            console2.log("market listed already:", _str(string.concat(_at("markets", i), ".name")), listed);
+            Mkt memory old;
+            (old.key, old.marketId) = (_at("markets", i), listed);
+            old.spokeLabel = _str(string.concat(old.key, ".spoke"));
+            _routes(op, old);
+        }
+        _enableDebtReserves(op);
+        string memory out = "markets";
+        string memory json = _keepOutput(out, "listing-markets");
+        uint256 next = first;
+        for (uint256 i = 0; i < n; ++i) {
+            // A market already listed (any status but Cancelled) keeps its ID; the new ones take the next IDs in
+            // config order, as the registry requires.
+            if (registry.marketOfKey(_marketKeyOf(f, i)) != 0) continue;
+            Mkt memory m = _market(i, next++);
+            _checkCollateralFactor(m);
             _deployLpOracle(m);
-            IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
             m.vaultToken = f.predictAddress(m.spoke, f.marketKeyOf(m.integrationId, m.pool, bytes32(0), m.shape));
             address[] memory routes = _listMarket(op, m, f);
             json = vm.serializeString(out, string.concat("market", vm.toString(m.marketId)), _marketJson(m, routes));
         }
-        vm.writeJson(json, _outputPath("listing-markets"));
+        if (op.targets.length != 0) op.salt = _listingMetadataHash(first);
+        if (next != first) vm.writeJson(json, _outputPath("listing-markets"));
+    }
+
+    /// @notice Refuses a market whose `collateralFactorBps` (the vault token's Aave collateral factor, set by step 10's
+    /// AIP) is above `SPEC-CF-001`'s bound, min(token collateral factors) x `poolRiskFactorBps` / 1e4. Activation
+    /// would fail `CollateralFactorAboveExpected` after both timelock delays; the step fails before scheduling instead.
+    function _checkCollateralFactor(
+        Mkt memory m
+    ) private view {
+        uint256 c0 = store.tokenCollateralFactorBps(m.token0);
+        uint256 c1 = store.tokenCollateralFactorBps(m.token1);
+        uint256 bound = ((c0 < c1 ? c0 : c1) * _uint(string.concat(m.key, ".poolRiskFactorBps"))) / 1e4;
+        uint256 cf = _uint(string.concat(m.key, ".collateralFactorBps"));
+        require(
+            cf <= bound,
+            string.concat(
+                _str(string.concat(m.key, ".name")),
+                ": collateralFactorBps ",
+                vm.toString(cf),
+                " is above min(token collateral factors) x poolRiskFactorBps = ",
+                vm.toString(bound)
+            )
+        );
+    }
+
+    /// @notice The VaultTokenFactory market key of config market `i`: integration, pool and position shape.
+    function _marketKeyOf(
+        IVaultTokenFactory f,
+        uint256 i
+    ) private view returns (bytes32) {
+        string memory key = _at("markets", i);
+        address pool = _pool(_str(string.concat(key, ".pool")));
+        return f.marketKeyOf(uint32(_uint(string.concat(key, ".integrationId"))), pool, bytes32(0), _shapeOf(key, pool));
+    }
+
+    /// @notice The position shape of a config market: its tick range, or the pool's full range when both are 0.
+    function _shapeOf(
+        string memory key,
+        address pool
+    ) private view returns (PositionShape memory) {
+        int24 lower = int24(vm.parseJsonInt(cfg, string.concat(key, ".tickLower")));
+        int24 upper = int24(vm.parseJsonInt(cfg, string.concat(key, ".tickUpper")));
+        if (lower == 0 && upper == 0) {
+            int24 sp = IPoolTokens(pool).tickSpacing();
+            upper = (887_272 / sp) * sp;
+            lower = -upper;
+        }
+        return PositionShape(ShapeKind.TickRange, lower, upper);
     }
 
     /// @notice The listing's timelock salt: keccak256 of the listing metadata file `09-market-metadata` wrote
@@ -448,12 +532,28 @@ contract ListMarkets is ListingBase {
         uint256 firstMarketId
     ) private view returns (bytes32 hash) {
         string memory pointer = vm.readFile(_outputPath("listing-metadata"));
-        hash = vm.parseJsonBytes32(pointer, ".hash");
         require(vm.parseJsonUint(pointer, ".chainId") == block.chainid, "listing metadata is for another chain");
         require(
             vm.parseJsonUint(pointer, ".firstMarketId") == firstMarketId,
             "listing metadata names other market IDs: rerun 09-market-metadata"
         );
+        // No new market or debt reserve (new routes only): no pages; the salt names the release, the next market ID and
+        // the time, so two such operations never share an ID.
+        if (vm.parseJsonUint(pointer, ".entries") == 0) {
+            return keccak256(
+                bytes(
+                    string.concat(
+                        "avana.",
+                        release,
+                        ".operation.listing-markets.",
+                        vm.toString(firstMarketId),
+                        ".",
+                        vm.toString(block.timestamp)
+                    )
+                )
+            );
+        }
+        hash = vm.parseJsonBytes32(pointer, ".hash");
         string memory file = string.concat(
             vm.projectRoot(), "/", OUTPUT_DIR, "/", _network(), "/", vm.parseJsonString(pointer, ".file")
         );
@@ -472,14 +572,7 @@ contract ListMarkets is ListingBase {
         m.hub = _hub(_hubOfSpoke(m.spokeLabel));
         m.pool = _pool(_str(string.concat(m.key, ".pool")));
         (m.token0, m.token1) = (IPoolTokens(m.pool).token0(), IPoolTokens(m.pool).token1());
-        int24 lower = int24(vm.parseJsonInt(cfg, string.concat(m.key, ".tickLower")));
-        int24 upper = int24(vm.parseJsonInt(cfg, string.concat(m.key, ".tickUpper")));
-        if (lower == 0 && upper == 0) {
-            int24 sp = IPoolTokens(m.pool).tickSpacing();
-            upper = (887_272 / sp) * sp;
-            lower = -upper;
-        }
-        m.shape = PositionShape(ShapeKind.TickRange, lower, upper);
+        m.shape = _shapeOf(m.key, m.pool);
         (uint256 p0, uint256 p1) = (_price8(m.token0), _price8(m.token1));
         uint256 idx = _integrationIndex(m.integrationId);
         m.integrationData = isSlipstream[m.integrationId]
@@ -592,6 +685,7 @@ contract ListMarkets is ListingBase {
             DebtReserveDef memory d;
             d.asset = _token(sym);
             (d.fundingHub, d.hubAssetId, d.reserveId) = _reserveOf(spokeLabel, d.asset);
+            if (registry.isApprovedDebtReserve(_spokeAddr(spokeLabel), d.reserveId)) continue;
             d.decimals = IDecimals(d.asset).decimals();
             d.priceSource = vm.parseJsonAddress(sources, string.concat(".", sym));
             d.fixedPrice = _debtAssetFixed(sym);
@@ -605,7 +699,7 @@ contract ListMarkets is ListingBase {
                 abi.encodeCall(registry.enableDebtReserve, (_spokeAddr(spokeLabel), d)),
                 string.concat("MR.enableDebtReserve ", spokeLabel, " ", sym)
             );
-            if (!_firstOfPair(i)) continue;
+            if (!_firstOfPair(i) || store.debtSpeedLimit(d.fundingHub, d.asset).window != 0) continue;
             uint256 unit = 10 ** d.decimals;
             SpeedLimit memory s = SpeedLimit({
                 rateBps: uint16(_uint(".listing.speedLimits.debtRateBps")),
@@ -623,6 +717,7 @@ contract ListMarkets is ListingBase {
         uint256 a = _count(cfg, ".listing.debtAssets");
         for (uint256 i = 0; i < a; ++i) {
             string memory k = _at("debtAssets", i);
+            if (store.floorRoundingAllowance(_token(_str(string.concat(k, ".symbol")))) != 0) continue;
             DebtReserveParams memory p = DebtReserveParams({
                 floorRoundingAllowance: vm.parseUint(_str(string.concat(k, ".floorRoundingAllowance")))
             });
@@ -763,6 +858,11 @@ contract ListMarkets is ListingBase {
             address tokenIn = _token(_str(string.concat(rk, ".token")));
             address asset = _token(_str(string.concat(rk, ".asset")));
             for (uint8 kind = 0; kind < 2; ++kind) {
+                (address existing,) = registry.getRoute(m.marketId, tokenIn, asset, kind);
+                if (existing != address(0)) {
+                    routes[2 * i + kind] = existing;
+                    continue;
+                }
                 string[] memory pools =
                     vm.parseJsonStringArray(cfg, string.concat(rk, kind == 0 ? ".primary" : ".backup"));
                 address route = _deployRoute(m, tokenIn, asset, pools);
@@ -838,22 +938,25 @@ contract ListMarkets is ListingBase {
 
     /// @notice `MKT-022`, `MKT-026`: every listed LPOracle poked (it must be Live), then `activateMarket` for each.
     function _activate() private returns (Operation memory op) {
-        string memory markets = vm.readFile(_outputPath("listing-markets"));
+        IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
         uint256 n = _count(cfg, ".listing.markets");
-        uint256 first = registry.marketCount() + 1 - n;
         op = _newOperation("listing-activate", release, n);
-        vm.startBroadcast(deployerOf());
+        // The config's markets that are listed and still Registered: each LPOracle poked Live, then `activateMarket`.
+        uint256[] memory ids = new uint256[](n);
+        uint256 k;
         for (uint256 i = 0; i < n; ++i) {
-            uint256 id = first + i;
+            uint256 id = registry.marketOfKey(_marketKeyOf(f, i));
+            if (id != 0 && registry.getMarket(id).status == MarketStatus.Registered) ids[k++] = id;
+        }
+        vm.startBroadcast(deployerOf());
+        for (uint256 i = 0; i < k; ++i) {
             // `poke` refuses less than `pokeMinGas` at entry (1,000,000 here); a gas estimate is the gas it uses, so the
             // limit is set explicitly.
-            ILPOracle(vm.parseJsonAddress(markets, string.concat(".market", vm.toString(id), ".lpOracle")))
-            .poke{gas: LP_ORACLE_POKE_GAS}();
+            ILPOracle(registry.getMarket(ids[i]).lpOracle).poke{gas: LP_ORACLE_POKE_GAS}();
         }
         vm.stopBroadcast();
-        for (uint256 i = 0; i < n; ++i) {
-            uint256 id = first + i;
-            _add(op, address(registry), abi.encodeCall(registry.activateMarket, (id)), "MR.activateMarket");
+        for (uint256 i = 0; i < k; ++i) {
+            _add(op, address(registry), abi.encodeCall(registry.activateMarket, (ids[i])), "MR.activateMarket");
         }
     }
 }

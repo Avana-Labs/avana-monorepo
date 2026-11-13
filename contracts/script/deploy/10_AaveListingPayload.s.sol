@@ -15,7 +15,8 @@ import {
     ASpokeConfigUpdate,
     ASpokeToAssetsAddition,
     AavePayloads,
-    IAaveHubLimits
+    IAaveHubLimits,
+    IAaveListedViews
 } from "./lib/AavePayloads.sol";
 import {ListingBase} from "./lib/ListingBase.sol";
 
@@ -57,6 +58,8 @@ contract AaveListingPayload is ListingBase, AavePayloads {
             string memory k = _at("debtReserves", i);
             string memory sym = _str(string.concat(k, ".symbol"));
             string memory spokeLabel = _str(string.concat(k, ".spoke"));
+            (,, uint256 rid) = _reserveOf(spokeLabel, _token(sym));
+            if (IAaveListedViews(_spokeAddr(spokeLabel)).getReserveConfig(rid).borrowable) continue;
             AReserveConfigUpdate memory u = _keepReserveConfig();
             u.spokeConfigurator = _addr(cfg, ".aave.spokeConfigurator");
             u.spoke = _spokeAddr(spokeLabel);
@@ -76,6 +79,10 @@ contract AaveListingPayload is ListingBase, AavePayloads {
             string memory k = string.concat(".", keys[i]);
             address vaultToken = vm.parseJsonAddress(markets, string.concat(k, ".vaultToken"));
             require(vaultToken.code.length != 0, "vault token not deployed: execute listing-markets first");
+            if (IAaveListedViews(vm.parseJsonAddress(markets, string.concat(k, ".hub"))).isUnderlyingListed(vaultToken))
+            {
+                continue;
+            }
             _vaultAsset(b, markets, k, vaultToken);
             _vaultReserve(b, markets, k, vaultToken);
         }

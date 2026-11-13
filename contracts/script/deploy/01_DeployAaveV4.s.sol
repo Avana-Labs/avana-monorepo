@@ -7,6 +7,16 @@ import {DeployBase} from "./lib/DeployBase.sol";
 import {AaveV4Bootstrap} from "./local/AaveV4Bootstrap.sol";
 import {console2} from "forge-std/console2.sol";
 
+interface IGovernanceExecutor {
+    function executeTransaction(
+        address target,
+        uint256 value,
+        string calldata signature,
+        bytes calldata data,
+        bool withDelegatecall
+    ) external payable returns (bytes memory);
+}
+
 interface IAuthorityBatch {
     function getReport() external view returns (address accessManager);
 }
@@ -98,9 +108,14 @@ contract DeployAaveV4 is DeployBase {
     function run() external {
         string memory network = _network();
         require(block.chainid != 1 && block.chainid != 8453, "Aave V4 on Ethereum and Base is the Aave DAO's");
-        string memory cfg = vm.readFile(string.concat(vm.projectRoot(), "/script/deploy/config/", network, ".json"));
+        string memory cfg = vm.readFile(_configPath(network));
         aaveDao = _addr(cfg, ".aaveLocal.aaveDao");
         require(SAFE_SINGLETON_FACTORY.code.length != 0, "Safe Singleton Factory missing: run 00_Factories");
+        // Aave V4 deployed already on this network: only the Hubs and Spokes the config adds.
+        if (vm.exists(_outputPath("aave"))) {
+            address am = vm.parseJsonAddress(vm.readFile(_outputPath("aave")), ".accessManager");
+            if (am.code.length != 0) return _addHubsAndSpokes(cfg, network);
+        }
 
         vm.startBroadcast();
         (, address sender,) = vm.readCallers();
@@ -108,7 +123,9 @@ contract DeployAaveV4 is DeployBase {
         _authorityAndConfigurators();
         string[] memory hubs = vm.parseJsonStringArray(cfg, ".aaveLocal.hubs");
         for (uint256 i = 0; i < hubs.length; ++i) {
-            hubsJson = _deployHub(hubs[i]);
+            address hub;
+            (hubsJson, hub) = _deployHub(hubs[i]);
+            _roles(abi.encodeCall(IAaveV4Roles.setupHub, (accessManager, hub)));
         }
         _spokes(cfg);
         _roles(abi.encodeCall(IAaveV4Roles.grantHubRoles, (accessManager, hubCfg, aaveDao, aaveDao)));
@@ -117,6 +134,115 @@ contract DeployAaveV4 is DeployBase {
         configEngine = _configEngine();
         vm.stopBroadcast();
         _write(network);
+    }
+
+    /// @notice A later run on a network with Aave V4: each Hub and Spoke of `aaveLocal` not deployed yet, by Aave's
+    /// instance batches (no permission needed), then its selector roles set by the AccessManager's admin, the governance
+    /// executor, running `AvanaAaveV4Roles` by delegatecall as an AIP would. Everything else is kept from `aave.json`.
+    function _addHubsAndSpokes(
+        string memory cfg,
+        string memory network
+    ) private {
+        string memory a = vm.readFile(_outputPath("aave"));
+        accessManager = vm.parseJsonAddress(a, ".accessManager");
+        hubCfg = vm.parseJsonAddress(a, ".hubConfigurator");
+        spokeCfg = vm.parseJsonAddress(a, ".spokeConfigurator");
+        treasury = vm.parseJsonAddress(a, ".treasurySpoke");
+        liquidationLogic = vm.parseJsonAddress(a, ".liquidationLogic");
+        configEngine = vm.parseJsonAddress(a, ".configEngine");
+        firstSpokeImpl = vm.parseJsonAddress(a, ".standardSpokeImplementation");
+
+        vm.startBroadcast();
+        (, address sender,) = vm.readCallers();
+        baseSalt = bytes32(bytes20(sender)) | (keccak256(abi.encode(AAVE_V4_SALT, keccak256(bytes(network)))) >> 160);
+        roles = _deploy("AvanaAaveV4Roles", _artifactIn("out-aave", "AvanaAaveV4Roles.sol", "AvanaAaveV4Roles"));
+        address[] memory newHubs = _newHubs(cfg, a);
+        address[] memory newSpokes = _newSpokes(cfg, a);
+        vm.stopBroadcast();
+
+        address controller = _addr(cfg, ".aaveLocal.payloadsController");
+        for (uint256 i = 0; i < newHubs.length; ++i) {
+            _asAdmin(controller, abi.encodeCall(IAaveV4Roles.setupHub, (accessManager, newHubs[i])));
+        }
+        for (uint256 i = 0; i < newSpokes.length; ++i) {
+            _asAdmin(controller, abi.encodeCall(IAaveV4Roles.setupSpoke, (accessManager, newSpokes[i])));
+        }
+        if (newHubs.length + newSpokes.length == 0) console2.log("Aave V4: no new Hub or Spoke in the config");
+        _write(network);
+    }
+
+    /// @notice Keeps each Hub of `aave.json` and deploys the config's others; returns the new ones.
+    function _newHubs(
+        string memory cfg,
+        string memory a
+    ) private returns (address[] memory added) {
+        string[] memory hubs = vm.parseJsonStringArray(cfg, ".aaveLocal.hubs");
+        added = new address[](hubs.length);
+        uint256 n;
+        for (uint256 i = 0; i < hubs.length; ++i) {
+            string memory k = string.concat(".hubs.", hubs[i]);
+            if (vm.keyExistsJson(a, k) && vm.parseJsonAddress(a, string.concat(k, ".proxy")).code.length != 0) {
+                _keep("aave.hubs", hubs[i], hubs[i], a, k, "irStrategy");
+                continue;
+            }
+            (hubsJson, added[n]) = _deployHub(hubs[i]);
+            console2.log("Hub", hubs[i], added[n++]);
+        }
+        assembly ("memory-safe") {
+            mstore(added, n)
+        }
+    }
+
+    /// @notice Keeps each Spoke of `aave.json` and deploys the config's others; returns the new ones.
+    function _newSpokes(
+        string memory cfg,
+        string memory a
+    ) private returns (address[] memory added) {
+        uint256 total = _count(cfg, ".aaveLocal.spokes");
+        added = new address[](total);
+        uint256 n;
+        bytes memory spokeCode = _linkedSpokeInstanceCode(liquidationLogic);
+        for (uint256 i = 0; i < total; ++i) {
+            string memory c = string.concat(".aaveLocal.spokes[", vm.toString(i), "]");
+            string memory label = vm.parseJsonString(cfg, string.concat(c, ".label"));
+            string memory k = string.concat(".spokes.", label);
+            if (vm.keyExistsJson(a, k) && vm.parseJsonAddress(a, string.concat(k, ".proxy")).code.length != 0) {
+                _keep("aave.spokes", string.concat("spoke.", label), label, a, k, "oracle");
+                continue;
+            }
+            (spokesJson,, added[n]) =
+                _deploySpoke(spokeCode, label, uint16(vm.parseJsonUint(cfg, string.concat(c, ".userReservesLimit"))));
+            console2.log("Spoke", label, added[n++]);
+        }
+        assembly ("memory-safe") {
+            mstore(added, n)
+        }
+    }
+
+    /// @notice Re-serializes one Hub or Spoke entry of `aave.json` (`proxy`, `implementation` and `third`).
+    function _keep(
+        string memory group,
+        string memory obj,
+        string memory label,
+        string memory a,
+        string memory k,
+        string memory third
+    ) private {
+        vm.serializeAddress(obj, "proxy", vm.parseJsonAddress(a, string.concat(k, ".proxy")));
+        vm.serializeAddress(obj, "implementation", vm.parseJsonAddress(a, string.concat(k, ".implementation")));
+        string memory one = vm.serializeAddress(obj, third, vm.parseJsonAddress(a, string.concat(k, ".", third)));
+        string memory json = vm.serializeString(group, label, one);
+        if (keccak256(bytes(group)) == keccak256("aave.hubs")) hubsJson = json;
+        else spokesJson = json;
+    }
+
+    /// @notice One `AvanaAaveV4Roles` call run by the governance executor (the AccessManager's admin) by delegatecall.
+    function _asAdmin(
+        address controller,
+        bytes memory call
+    ) private {
+        vm.broadcast(controller);
+        IGovernanceExecutor(aaveDao).executeTransaction(roles, 0, "", call, true);
     }
 
     function _authorityAndConfigurators() private {
@@ -168,11 +294,13 @@ contract DeployAaveV4 is DeployBase {
         for (uint256 i = 0; i < n; ++i) {
             string memory k = string.concat(".aaveLocal.spokes[", vm.toString(i), "]");
             address impl;
-            (spokesJson, impl) = _deploySpoke(
+            address spoke;
+            (spokesJson, impl, spoke) = _deploySpoke(
                 spokeCode,
                 vm.parseJsonString(cfg, string.concat(k, ".label")),
                 uint16(vm.parseJsonUint(cfg, string.concat(k, ".userReservesLimit")))
             );
+            _roles(abi.encodeCall(IAaveV4Roles.setupSpoke, (accessManager, spoke)));
             if (i == 0) firstSpokeImpl = impl;
         }
     }
@@ -198,8 +326,10 @@ contract DeployAaveV4 is DeployBase {
 
     function _deployHub(
         string memory label
-    ) private returns (string memory json) {
-        (address hub, address impl, address ir) = IHubInstanceBatch(
+    ) private returns (string memory json, address hub) {
+        address impl;
+        address ir;
+        (hub, impl, ir) = IHubInstanceBatch(
                 _batch(
                     "AaveV4HubInstanceBatch",
                     abi.encode(
@@ -211,7 +341,6 @@ contract DeployAaveV4 is DeployBase {
                 )
             )
             .getReport();
-        _roles(abi.encodeCall(IAaveV4Roles.setupHub, (accessManager, hub)));
         vm.serializeAddress(label, "proxy", hub);
         vm.serializeAddress(label, "implementation", impl);
         string memory one = vm.serializeAddress(label, "irStrategy", ir);
@@ -222,8 +351,7 @@ contract DeployAaveV4 is DeployBase {
         bytes memory spokeCode,
         string memory label,
         uint16 userReservesLimit
-    ) private returns (string memory json, address impl) {
-        address spoke;
+    ) private returns (string memory json, address impl, address spoke) {
         address oracle;
         (spoke, impl, oracle) = ISpokeInstanceBatch(
                 _batch(
@@ -239,7 +367,6 @@ contract DeployAaveV4 is DeployBase {
                 )
             )
             .getReport();
-        _roles(abi.encodeCall(IAaveV4Roles.setupSpoke, (accessManager, spoke)));
         string memory k = string.concat("spoke.", label);
         vm.serializeAddress(k, "proxy", spoke);
         vm.serializeAddress(k, "implementation", impl);

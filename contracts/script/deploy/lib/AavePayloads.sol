@@ -165,6 +165,24 @@ interface IAaveHubLimits {
     ) external view returns (uint256);
 }
 
+/// @notice The Aave V4 views the AIP builders read to leave out what is already on chain.
+interface IAaveListedViews {
+    function isUnderlyingListed(
+        address underlying
+    ) external view returns (bool);
+    function isSpokeListed(
+        uint256 assetId,
+        address spoke
+    ) external view returns (bool);
+    function getReserveConfig(
+        uint256 reserveId
+    ) external view returns (AReserveConfig memory);
+    function getReserveId(
+        address hub,
+        uint256 assetId
+    ) external view returns (uint256);
+}
+
 /// @notice Aave's `EngineFlags` sentinels (a3ef63e `src/config-engine/libraries/EngineFlags.sol`).
 library AFlags {
     uint256 internal constant KEEP_CURRENT = type(uint256).max - 652;
@@ -319,6 +337,20 @@ abstract contract AavePayloads is DeployBase {
 
     /// @notice On a test network (`execute`), deploys the AIP `name` (its data chunks and the payload, from `deployer`, the
     /// DAO-side deployer) and runs it through `executor` as `controller`; on Ethereum and Base only writes its actions.
+    function _empty(
+        Builder memory b,
+        string memory name
+    ) private pure returns (bool) {
+        uint256 actions;
+        for (uint256 i = 0; i < b.n.length; ++i) {
+            actions += b.n[i];
+        }
+        if (actions == 0) {
+            console2.log(string.concat("AIP ", name, ": nothing to propose, everything in the config is on chain"));
+        }
+        return actions == 0;
+    }
+
     function _shipPayload(
         string memory name,
         Builder memory b,
@@ -327,6 +359,8 @@ abstract contract AavePayloads is DeployBase {
         address controller,
         bool execute
     ) internal returns (address payload) {
+        // Each AIP carries only what the config adds to Aave's side; with nothing new there is no AIP.
+        if (_empty(b, name)) return address(0);
         bytes memory data = abi.encode(_trim(b));
         string memory k = string.concat("aip.", name);
         vm.serializeString(k, "name", name);

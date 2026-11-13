@@ -37,7 +37,7 @@ contract DeployCoverageSpokes is DeployBase {
     string internal cfg;
 
     function run() external {
-        cfg = vm.readFile(string.concat(vm.projectRoot(), "/script/deploy/config/", _network(), ".json"));
+        cfg = vm.readFile(_configPath(_network()));
         string memory step = vm.envString("AVANA_COVERAGE_STEP");
         if (_eq(step, "deploy")) _deployAll();
         else if (_eq(step, "fund")) _fundAll();
@@ -75,15 +75,26 @@ contract DeployCoverageSpokes is DeployBase {
 
     function _deployAll() private {
         (uint256 nHubs, uint256 nAssets) = _pairs();
-        string memory json;
+        // Earlier entries are kept; a pair whose Coverage Spoke is deployed already is skipped.
+        string memory json = _keepOutput("coverage", "coverage");
+        bool added;
         vm.startBroadcast();
         for (uint256 h = 0; h < nHubs; ++h) {
             for (uint256 i = 0; i < nAssets; ++i) {
+                if (!_coveredPair(cfg, h, i)) continue;
+                (string memory label, string memory symbol,,) = _name(h, i);
+                string memory name = string.concat("CoverageSpoke.", label, ".", symbol);
+                address done = _recorded("coverage", string.concat("$['", name, "']"));
+                if (done != address(0)) {
+                    console2.log(name, done, "(deployed earlier)");
+                    continue;
+                }
                 json = _deployOne(h, i);
+                added = true;
             }
         }
         vm.stopBroadcast();
-        vm.writeJson(json, _outputPath("coverage"));
+        if (added) vm.writeJson(json, _outputPath("coverage"));
     }
 
     function _deployOne(
@@ -107,6 +118,7 @@ contract DeployCoverageSpokes is DeployBase {
         bool faucet = block.chainid != 1 && block.chainid != 8453;
         for (uint256 h = 0; h < nHubs; ++h) {
             for (uint256 i = 0; i < nAssets; ++i) {
+                if (!_coveredPair(cfg, h, i)) continue;
                 (string memory label, string memory symbol,, address token) = _name(h, i);
                 ICoverageSpoke cs = ICoverageSpoke(
                     vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", label, ".", symbol, "']"))

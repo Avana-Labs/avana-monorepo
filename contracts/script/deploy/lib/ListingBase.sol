@@ -48,7 +48,7 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     IParameterStore internal store;
 
     function _loadListing() internal {
-        cfg = vm.readFile(string.concat(vm.projectRoot(), "/script/deploy/config/", _network(), ".json"));
+        cfg = vm.readFile(_configPath(_network()));
         avanaJson = vm.readFile(_outputPath("avana"));
         timelock = vm.parseJsonAddress(avanaJson, ".timelock");
         registry = IMarketRegistry(vm.parseJsonAddress(avanaJson, ".marketRegistry.proxy"));
@@ -176,18 +176,12 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _feedOfToken(
         address token
     ) internal view returns (address) {
-        string[3] memory symbols = _listedSymbols();
-        for (uint256 i = 0; i < symbols.length; ++i) {
-            if (_token(symbols[i]) == token) return _feed(symbols[i], "primary");
+        uint256 n = _count(cfg, ".listing.tokens");
+        for (uint256 i = 0; i < n; ++i) {
+            string memory sym = _str(string.concat(_at("tokens", i), ".symbol"));
+            if (_token(sym) == token) return _feed(sym, "primary");
         }
         revert("token is not a listed pool token");
-    }
-
-    function _listedSymbols() internal view returns (string[3] memory s) {
-        require(_count(cfg, ".listing.tokens") == 3, "listing.tokens: three pool tokens");
-        for (uint256 i = 0; i < 3; ++i) {
-            s[i] = _str(string.concat(_at("tokens", i), ".symbol"));
-        }
     }
 
     /// @notice The `listing.tokens` key of a pool token, or "" when it is not one.

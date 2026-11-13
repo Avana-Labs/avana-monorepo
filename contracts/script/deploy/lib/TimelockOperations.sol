@@ -87,6 +87,16 @@ abstract contract TimelockOperations is DeployInputs {
         _setLength(op, 0);
     }
 
+    /// @notice A later operation of the same name has other calls, so another ID; when one with these exact calls and
+    /// this salt exists already (scheduled or done), the salt also names the time so the new one gets an ID of its own.
+    function _freshSalt(
+        address timelock,
+        Operation memory op
+    ) internal view {
+        bytes32 id = ITimelockOps(timelock).hashOperationBatch(op.targets, op.values, op.payloads, bytes32(0), op.salt);
+        if (ITimelockOps(timelock).isOperation(id)) op.salt = keccak256(abi.encode(op.salt, block.timestamp));
+    }
+
     function _add(
         Operation memory op,
         address target,

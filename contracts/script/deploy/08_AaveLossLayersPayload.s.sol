@@ -14,9 +14,25 @@ import {
     ASpokeToAssetsAddition,
     ATargetFunctionRoleUpdate,
     AavePayloads,
-    IAaveHubLimits
+    IAaveHubLimits,
+    IAaveListedViews
 } from "./lib/AavePayloads.sol";
 import {console2} from "forge-std/console2.sol";
+
+/// @notice What 08 reads to leave out what is already on chain: role labels and members on Aave's AccessManager, and
+/// a loss layer's allowlist.
+interface ILossLayerViews {
+    function isRoleLabeled(
+        uint64 roleId
+    ) external view returns (bool);
+    function hasRole(
+        uint64 roleId,
+        address account
+    ) external view returns (bool isMember, uint32 executionDelay);
+    function allowedBorrowSpoke(
+        address spoke
+    ) external view returns (bool);
+}
 
 interface ILayerFunding {
     function mint(
@@ -55,7 +71,7 @@ contract AaveLossLayersPayload is AavePayloads {
     string internal offsetsJson;
 
     function run() external {
-        cfg = vm.readFile(string.concat(vm.projectRoot(), "/script/deploy/config/", _network(), ".json"));
+        cfg = vm.readFile(_configPath(_network()));
         execute = block.chainid != 1 && block.chainid != 8453;
         executor = _addr(cfg, ".aave.governanceExecutor");
         am = _addr(cfg, ".aave.accessManager");
@@ -72,12 +88,14 @@ contract AaveLossLayersPayload is AavePayloads {
         _roles(b);
         (uint256 nHubs, uint256 nAssets) = (_count(cfg, ".aavePayload.hubs"), _count(cfg, ".aavePayload.debtAssets"));
         string memory coverage = vm.readFile(_outputPath("coverage"));
+        offsetsJson = _keepOutput("offsets", "deficit-offsets");
+        bool added;
         for (uint256 h = 0; h < nHubs; ++h) {
             for (uint256 i = 0; i < nAssets; ++i) {
-                _pair(b, coverage, h, i);
+                if (_coveredPair(cfg, h, i)) added = _pair(b, coverage, h, i) || added;
             }
         }
-        if (bytes(offsetsJson).length != 0) vm.writeJson(offsetsJson, _outputPath("deficit-offsets"));
+        if (added) vm.writeJson(offsetsJson, _outputPath("deficit-offsets"));
         _shipPayload("AvanaLossLayers", b, _addr(cfg, ".aave.configEngine"), executor, controller, execute);
     }
 
@@ -85,8 +103,12 @@ contract AaveLossLayersPayload is AavePayloads {
     function _roles(
         Builder memory b
     ) private view {
-        _roleUpdate(b, _label(coverageRole, "AVANA_COVERAGE_ROLE"));
-        _roleUpdate(b, _label(reserveAdminRole, "AVANA_RESERVE_ADMIN_ROLE"));
+        if (!ILossLayerViews(am).isRoleLabeled(coverageRole)) {
+            _roleUpdate(b, _label(coverageRole, "AVANA_COVERAGE_ROLE"));
+        }
+        if (!ILossLayerViews(am).isRoleLabeled(reserveAdminRole)) {
+            _roleUpdate(b, _label(reserveAdminRole, "AVANA_RESERVE_ADMIN_ROLE"));
+        }
         _grant(b, coverageRole, _addr(cfg, ".governance.emergencyGuardian"));
         _grant(b, coverageRole, _addr(cfg, ".governance.aaveProtocolGuardian"));
         _grant(b, reserveAdminRole, executor);
@@ -112,22 +134,38 @@ contract AaveLossLayersPayload is AavePayloads {
         uint64 role,
         address account
     ) private view {
-        _roleMembership(b, ARoleMembership(am, role, account, true, 0));
+        (bool member,) = ILossLayerViews(am).hasRole(role, account);
+        if (!member) _roleMembership(b, ARoleMembership(am, role, account, true, 0));
     }
 
-    /// @notice One (Hub, asset): the DAO offset deployed behind the Umbrella, both layers wired.
+    /// @notice One (Hub, asset): the DAO offset deployed behind the Umbrella, both layers wired. A pair wired by an
+    /// earlier run only gets the CDP Spokes the config adds to its Hub allowlisted on both layers.
+    /// @return isNew Whether the pair was wired by this run.
     function _pair(
         Builder memory b,
         string memory coverage,
         uint256 h,
         uint256 i
-    ) private {
+    ) private returns (bool isNew) {
         string memory hk = string.concat(".aavePayload.hubs[", vm.toString(h), "]");
         string memory ak = string.concat(".aavePayload.debtAssets[", vm.toString(i), "]");
         string memory label = vm.parseJsonString(cfg, string.concat(hk, ".label"));
         string memory symbol = vm.parseJsonString(cfg, string.concat(ak, ".symbol"));
         address cs = vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", label, ".", symbol, "']"));
         uint256 unit = 10 ** vm.parseJsonUint(cfg, string.concat(ak, ".decimals"));
+        string[] memory cdps = vm.parseJsonStringArray(cfg, string.concat(hk, ".cdpSpokes"));
+        {
+            ICoverageSpoke c = ICoverageSpoke(cs);
+            if (IAaveListedViews(c.HUB()).isSpokeListed(c.ASSET_ID(), cs)) {
+                address done = execute
+                    ? _recorded("deficit-offsets", string.concat("$['DeficitOffsetSpoke.", label, ".", symbol, "']"))
+                    : _addr(cfg, string.concat(ak, ".deficitOffsetSpokes.", label));
+                _allowNewSpokes(b, cs, cdps);
+                _allowNewSpokes(b, done, cdps);
+                return false;
+            }
+        }
+        isNew = true;
         address dos;
         if (execute) {
             ICoverageSpoke c = ICoverageSpoke(cs);
@@ -142,7 +180,6 @@ contract AaveLossLayersPayload is AavePayloads {
         } else {
             dos = _addr(cfg, string.concat(ak, ".deficitOffsetSpokes.", label));
         }
-        string[] memory cdps = vm.parseJsonStringArray(cfg, string.concat(hk, ".cdpSpokes"));
         _layer(b, cs, cdps, vm.parseJsonUint(cfg, string.concat(ak, ".coverageMinimum")) * unit, 0);
         uint256 offset = vm.parseJsonUint(cfg, string.concat(ak, ".offsetMinimum")) * unit;
         _layer(b, dos, cdps, offset, offset);
@@ -200,6 +237,19 @@ contract AaveLossLayersPayload is AavePayloads {
         if (fund != 0) {
             _postCall(b, c.ASSET(), abi.encodeCall(ILayerFunding.approve, (layer, fund)));
             _postCall(b, layer, abi.encodeCall(ICoverageSpoke.fund, (fund)));
+        }
+    }
+
+    /// @notice The config's CDP Spokes of a wired pair's Hub that its loss layer does not allow yet.
+    function _allowNewSpokes(
+        Builder memory b,
+        address layer,
+        string[] memory cdps
+    ) private view {
+        for (uint256 s = 0; s < cdps.length; ++s) {
+            address spoke = _cdp(cdps[s]);
+            if (ILossLayerViews(layer).allowedBorrowSpoke(spoke)) continue;
+            _postCall(b, layer, abi.encodeCall(ICoverageSpokeAdmin.setAllowedBorrowSpoke, (spoke, true)));
         }
     }
 

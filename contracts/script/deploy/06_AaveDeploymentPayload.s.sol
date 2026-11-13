@@ -14,13 +14,17 @@ import {
     ASpokeConfig,
     ASpokeToAssetsAddition,
     AavePayloads,
-    IAaveHubLimits
+    IAaveHubLimits,
+    IAaveListedViews
 } from "./lib/AavePayloads.sol";
 
 interface IFlashAcl {
     function addFlashBorrower(
         address borrower
     ) external;
+    function isFlashBorrower(
+        address borrower
+    ) external view returns (bool);
 }
 
 interface ITestTokenMint {
@@ -44,6 +48,10 @@ interface ILendSpoke {
         uint256 amount,
         address onBehalfOf
     ) external returns (uint256, uint256);
+    function getUserSuppliedAssets(
+        uint256 reserveId,
+        address user
+    ) external view returns (uint256);
 }
 
 /// @title AaveDeploymentPayload
@@ -68,7 +76,7 @@ contract AaveDeploymentPayload is AavePayloads {
     bool internal execute;
 
     function run() external {
-        cfg = vm.readFile(string.concat(vm.projectRoot(), "/script/deploy/config/", _network(), ".json"));
+        cfg = vm.readFile(_configPath(_network()));
         execute = block.chainid != 1 && block.chainid != 8453;
         executor = _addr(cfg, ".aave.governanceExecutor");
         controller = execute ? _addr(cfg, ".aaveLocal.payloadsController") : address(0);
@@ -112,6 +120,16 @@ contract AaveDeploymentPayload is AavePayloads {
         return string.concat(".aavePayload.debtAssets[", vm.toString(i), "]");
     }
 
+    /// @notice Whether `spoke` is on Hub asset `token` already (its reserve is listed in the same AIP action).
+    function _spokeOn(
+        address hub,
+        address token,
+        address spoke
+    ) private view returns (bool) {
+        if (!IAaveListedViews(hub).isUnderlyingListed(token)) return false;
+        return IAaveListedViews(hub).isSpokeListed(IAaveHubLimits(hub).getAssetId(token), spoke);
+    }
+
     function _deployment() private view returns (Builder memory b) {
         b = _newBuilder();
         uint256 nHubs = _count(cfg, ".aavePayload.hubs");
@@ -129,10 +147,12 @@ contract AaveDeploymentPayload is AavePayloads {
         string memory label = vm.parseJsonString(cfg, string.concat(_hk(h), ".label"));
         uint256 nAssets = _count(cfg, ".aavePayload.debtAssets");
         for (uint256 i = 0; i < nAssets; ++i) {
+            address token = _addr(cfg, string.concat(_ak(i), ".token"));
+            if (!_assetOnHub(cfg, i, label) || IAaveListedViews(_hub(label)).isUnderlyingListed(token)) continue;
             AAssetListing memory l;
             l.hubConfigurator = _addr(cfg, ".aave.hubConfigurator");
             l.hub = _hub(label);
-            l.underlying = _addr(cfg, string.concat(_ak(i), ".token"));
+            l.underlying = token;
             l.feeReceiver = _addr(cfg, ".aave.treasurySpoke");
             l.liquidityFee = 0;
             l.irStrategy = _addr(cfg, string.concat(".aave.irStrategies.", label));
@@ -148,13 +168,17 @@ contract AaveDeploymentPayload is AavePayloads {
         uint256 h
     ) private view {
         string memory hk = _hk(h);
-        address hub = _hub(vm.parseJsonString(cfg, string.concat(hk, ".label")));
+        string memory label = vm.parseJsonString(cfg, string.concat(hk, ".label"));
+        address hub = _hub(label);
         uint40 maxCap = IAaveHubLimits(hub).MAX_ALLOWED_SPOKE_CAP();
         uint24 maxRp = IAaveHubLimits(hub).MAX_RISK_PREMIUM_THRESHOLD();
-        _spokeOnAssets(b, hub, _spoke(vm.parseJsonString(cfg, string.concat(hk, ".lendSpoke"))), maxCap, false, maxRp);
+        _spokeOnAssets(
+            b, label, hub, _spoke(vm.parseJsonString(cfg, string.concat(hk, ".lendSpoke"))), maxCap, false, maxRp
+        );
         string[] memory cdps = vm.parseJsonStringArray(cfg, string.concat(hk, ".cdpSpokes"));
         for (uint256 s = 0; s < cdps.length; ++s) {
-            _spokeOnAssets(b, hub, _spoke(cdps[s]), 0, true, maxRp);
+            // A CDP Spoke new to this Hub also gets its liquidation configuration.
+            if (!_spokeOnAssets(b, label, hub, _spoke(cdps[s]), 0, true, maxRp)) continue;
             ALiquidationConfigUpdate memory lc;
             lc.spokeConfigurator = _addr(cfg, ".aave.spokeConfigurator");
             lc.spoke = _spoke(cdps[s]);
@@ -165,24 +189,33 @@ contract AaveDeploymentPayload is AavePayloads {
 
     /// @notice One Spoke on every debt asset of its Hub: supply-only at `addCap` (Lend) or draw-only at the asset's draw
     /// cap (CDP), and its reserve on each asset (a CDP debt reserve not borrowable yet, collateral factor 0).
+    /// @return isNew Whether the Spoke was on none of this Hub's assets before.
     function _spokeOnAssets(
         Builder memory b,
+        string memory label,
         address hub,
         address spoke,
         uint40 addCap,
         bool cdp,
         uint24 maxRp
-    ) private view {
+    ) private view returns (bool isNew) {
         uint256 nAssets = _count(cfg, ".aavePayload.debtAssets");
         ASpokeToAssetsAddition memory add;
         add.hubConfigurator = _addr(cfg, ".aave.hubConfigurator");
         add.hub = hub;
         add.spoke = spoke;
         add.assets = new ASpokeAssetConfig[](nAssets);
+        uint256 added;
+        isNew = true;
         for (uint256 i = 0; i < nAssets; ++i) {
+            if (!_assetOnHub(cfg, i, label) || (cdp && _assetLendOnly(cfg, i))) continue;
             address token = _addr(cfg, string.concat(_ak(i), ".token"));
+            if (_spokeOn(hub, token, spoke)) {
+                isNew = false;
+                continue;
+            }
             uint40 drawCap = cdp ? uint40(vm.parseJsonUint(cfg, string.concat(_ak(i), ".drawCap"))) : 0;
-            add.assets[i] = ASpokeAssetConfig(token, ASpokeConfig(addCap, drawCap, maxRp, true, false));
+            add.assets[added++] = ASpokeAssetConfig(token, ASpokeConfig(addCap, drawCap, maxRp, true, false));
             AReserveListing memory r;
             r.spokeConfigurator = _addr(cfg, ".aave.spokeConfigurator");
             r.spoke = spoke;
@@ -192,6 +225,11 @@ contract AaveDeploymentPayload is AavePayloads {
             r.config = AReserveConfig(0, false, false, !cdp, false);
             r.dynamicConfig = ADynamicReserveConfig(0, 10_000, 0);
             _reserveListing(b, r);
+        }
+        if (added == 0) return false;
+        ASpokeAssetConfig[] memory assets = add.assets;
+        assembly ("memory-safe") {
+            mstore(assets, added)
         }
         _spokeToAssets(b, add);
     }
@@ -209,10 +247,14 @@ contract AaveDeploymentPayload is AavePayloads {
             for (uint256 i = 0; i < nAssets; ++i) {
                 address token = _addr(cfg, string.concat(_ak(i), ".token"));
                 uint256 amount = vm.parseJsonUint(cfg, string.concat(_ak(i), ".bootstrapSupply"));
-                if (amount == 0) continue;
+                if (amount == 0 || !_assetOnHub(cfg, i, vm.parseJsonString(cfg, string.concat(_hk(h), ".label")))) {
+                    continue;
+                }
+                uint256 reserveId = ILendSpoke(lend).getReserveId(hub, IAaveHubLimits(hub).getAssetId(token));
+                // Supplied once, by the first run that finds the reserve listed.
+                if (ILendSpoke(lend).getUserSuppliedAssets(reserveId, executor) != 0) continue;
                 vm.broadcast(minter);
                 ITestTokenMint(token).mint(executor, amount);
-                uint256 reserveId = ILendSpoke(lend).getReserveId(hub, IAaveHubLimits(hub).getAssetId(token));
                 _postCall(b, token, abi.encodeCall(ITestTokenMint.approve, (lend, amount)));
                 _postCall(b, lend, abi.encodeCall(ILendSpoke.supply, (reserveId, amount, executor)));
             }
@@ -223,7 +265,11 @@ contract AaveDeploymentPayload is AavePayloads {
         b = _newBuilder();
         string memory avana = vm.readFile(_outputPath("avana"));
         address acl = _addr(cfg, ".aavePayload.flashAcl");
-        _postCall(b, acl, abi.encodeCall(IFlashAcl.addFlashBorrower, (vm.parseJsonAddress(avana, ".flashSource"))));
-        _postCall(b, acl, abi.encodeCall(IFlashAcl.addFlashBorrower, (vm.parseJsonAddress(avana, ".flashLiquidator"))));
+        address[2] memory borrowers =
+            [vm.parseJsonAddress(avana, ".flashSource"), vm.parseJsonAddress(avana, ".flashLiquidator")];
+        for (uint256 i = 0; i < 2; ++i) {
+            if (IFlashAcl(acl).isFlashBorrower(borrowers[i])) continue;
+            _postCall(b, acl, abi.encodeCall(IFlashAcl.addFlashBorrower, (borrowers[i])));
+        }
     }
 }
