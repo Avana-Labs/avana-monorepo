@@ -17,7 +17,8 @@
 #            a build of its own file and imports (out-security/build/echidna/<Name>, slow-tier settings) with its heap
 #            bounded by ECHIDNA_MAX_HEAP; corpora in out-security/corpus/ persist between runs
 #   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
-#            assertion tests in one campaign)
+#            assertion tests in one campaign), each on a build of its own file and imports
+#            (out-security/build/medusa/<Name>, slow-tier settings) with a copy of medusa.json pointing at it
 #   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest)
 #   hevm     against a local anvil chain (see hevm_targets below): `hevm symbolic` on each assertion entry point of
 #            every harness, deployed so its constructor has run (each must reach QED), on the runtime code of every
@@ -258,7 +259,7 @@ step_echidna() {
 step_medusa() {
   require medusa || return 1
   ensure_build || return 1
-  local list status=0 name source limit=() seen=""
+  local list status=0 name source limit=() seen="" hbuild config log
   list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
   if [ -z "$list" ]; then
     echo "medusa: skipped, $ECHIDNA_DIR/ and $MEDUSA_DIR/ hold no contract named *Properties"
@@ -270,13 +271,48 @@ step_medusa() {
   while IFS=$'\t' read -r name source; do
     selected "${MEDUSA_HARNESSES:-}" "$name" || continue
     seen+=" $name"
+    # Medusa, through crytic-compile and its own Slither pass, loads every contract of the build it is given. On the
+    # build of all of src/, test/ and script/ (446 MB compressed on c07ddca, up from 254 MB on a6d7acd) every CI job
+    # of run 43387180884 died 10 to 16 minutes in with the runner shut down and no log, as Echidna did on that build.
+    # So each harness gets a build of its own file and imports, with the slow-tier settings, and a copy of medusa.json
+    # that points crytic-compile, Slither and their caches at it. Workers, timeout and test limit are unchanged.
+    hbuild="$OUT/build/medusa/$name"
+    config="$OUT/medusa/$name.json"
+    log="$OUT/medusa/$name.log"
+    echo "=== medusa $name: build of $source and its imports"
+    if ! slow_env forge build "$source" --build-info --out "$hbuild" --cache-path "$hbuild-cache" \
+      >"$OUT/medusa/$name-build.log" 2>&1; then
+      cat "$OUT/medusa/$name-build.log"
+      echo "medusa: the build of $name failed"
+      status=1
+      continue
+    fi
+    if ! "$PY" - medusa.json "$config" "$hbuild" "$OUT/medusa/$name" <<'PYCONF'
+import json, sys
+src, dst, build, work = sys.argv[1:5]
+c = json.load(open(src))
+old = "out-security/build/all"
+for args in (c["compilation"]["platformConfig"]["args"], c["slither"]["args"]):
+    if old not in args:
+        sys.exit(f"medusa.json: no {old} build path to replace in {args}")
+    args[args.index(old)] = build
+c["compilation"]["platformConfig"]["exportDirectory"] = f"{work}/crytic-export"
+c["slither"]["cachePath"] = f"{work}/slither_results.json"
+json.dump(c, open(dst, "w"), indent="\t")
+PYCONF
+    then
+      echo "medusa: no configuration for $name" >&2
+      return 1
+    fi
     echo "=== medusa $name ($source)"
-    if ! medusa fuzz --config medusa.json --target-contracts "$name" --timeout "$MEDUSA_TIMEOUT" ${limit[@]+"${limit[@]}"} \
-      --corpus-dir "$CORPUS/medusa/$name" --no-color >"$OUT/medusa/$name.log" 2>&1; then
+    # The log is streamed as well as kept, so a run that dies still shows how far it got.
+    medusa fuzz --config "$config" --target-contracts "$name" --timeout "$MEDUSA_TIMEOUT" ${limit[@]+"${limit[@]}"} \
+      --corpus-dir "$CORPUS/medusa/$name" --no-color </dev/null 2>&1 | tee "$log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       status=1
       echo "medusa: $name failed"
     fi
-    grep -E '\[(PASSED|FAILED)\]|Test summary|[Ee]rror' "$OUT/medusa/$name.log" || true
+    grep -E '\[(PASSED|FAILED)\]|Test summary|[Ee]rror' "$log" || true
   done <<<"$list"
   unmatched medusa "${MEDUSA_HARNESSES:-}" "$seen" || status=1
   return $status

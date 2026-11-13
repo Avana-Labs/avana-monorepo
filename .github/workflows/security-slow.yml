@@ -225,8 +225,14 @@ jobs:
     name: medusa ${{ matrix.harness }}
     needs: plan
     if: needs.plan.outputs.medusa != '[]'
+    # FALLBACK (not in use): Medusa now fuzzes each harness on a build of its own file and imports
+    # (script/security-slow.sh medusa), since on the build of everything every job of run 43387180884 lost its
+    # runner 10 to 16 minutes in. If a harness's campaign still loses the 4-vCPU, 16 GB runner, move this job (and
+    # campaign-medusa) to a larger runner, for example `runs-on: ubuntu-24.04-8core` once one is set up for the
+    # organisation; the workers, timeout and test limit stay as they are.
     runs-on: ubuntu-24.04
-    # One campaign at MEDUSA_TIMEOUT (30 minutes) plus Medusa's Slither pass: under 1 hour with set-up.
+    # A build of the harness, one campaign at MEDUSA_TIMEOUT (30 minutes) plus Medusa's Slither pass: under 1 hour
+    # with set-up.
     timeout-minutes: 120
     strategy:
       fail-fast: false
