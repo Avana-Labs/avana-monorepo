@@ -46,7 +46,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
 
     /// @notice 1,000 units repay the model's `x` of GHO; the wallet receives `R − x − φ` with `R` both legs at par.
     // TEST-239 verifies: SPEC-LIQ-020, REQ-SWAP-106, REQ-SWAP-088, INV-089
-    function test_ghoDeleverageMatchesModel() public {
+    function test_TEST_239_ghoDeleverageMatchesModel() public {
         uint256 ghoDebt = _debtOf(proxy, ghoReserveId);
         uint256 usdcDebt = _debtOf(proxy, usdcReserveId);
         uint256 wallet = gho.balanceOf(alice);
@@ -70,7 +70,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
 
     /// @notice Any units: `x` of the model, or `DeleverageTooSmall(x, minimum)` for a minimum above it.
     // TEST-239 verifies: SPEC-LIQ-020, REQ-SWAP-116
-    function testFuzz_ghoDeleverageSizing(
+    function testFuzz_TEST_239_ghoDeleverageSizing(
         uint256 units,
         bool aboveMinimum
     ) public {
@@ -92,7 +92,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
     /// @notice A GHO leg route paying below its minimum (a 2 % loss on USDT into GHO) leaves no route for the leg:
     /// `NoRouteAvailable`, nothing repaid, the flash loan never left the source.
     // TEST-239 verifies: SPEC-LIQ-018, REQ-SWAP-106, REQ-SWAP-022
-    function test_ghoLegBelowMinimumRefused() public {
+    function test_TEST_239_ghoLegBelowMinimumRefused() public {
         registry.setRoute(
             MARKET_ID,
             address(usdt),

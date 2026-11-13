@@ -3,7 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
+import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {AaveAdapterHandler, AdapterWorld} from "./handlers/AaveAdapterHandler.sol";
 
@@ -138,6 +141,57 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture {
         }
     }
 
+    // TEST-089 verifies: REQ-PROXY-051, REQ-PROXY-053, REQ-PROXY-099, REQ-VTOKEN-007, REQ-VTOKEN-039, INV-012, INV-064
+    // Sources: QNT-08, HYP-02
+    /// @notice Proxy binding and registry under the random campaign: a vault token lists exactly the proxies the
+    /// Adapter created for its own market (each at the ProxyManager's prediction, with `WALLET()`, `SPOKE()`,
+    /// `MARKET_ID()` and code fixed), never a proxy of the other market, a wallet, the Adapter or LPVaultSwap; a
+    /// registration never turns false; a proxy holds Spoke supply only once registered; and every open record's proxy
+    /// is `proxyOf(depositor, marketId)` of the record's own market.
+    function invariant_TEST_089_proxyBindingAndRegistry() public view {
+        uint256[2] memory markets = [MARKET_ID, MARKET_B];
+        VaultToken[2] memory tokens = [token, tokenB];
+        uint256[2] memory reserves = [vtReserveId, vtReserveIdB];
+        for (uint256 i = 0; i < 3; ++i) {
+            address wallet = handler.walletAt(i);
+            for (uint256 m = 0; m < 2; ++m) {
+                VaultToken own = tokens[m];
+                VaultToken other = tokens[1 - m];
+                address predicted = proxyManager.predictProxy(wallet, aave.cdpSpoke, markets[m]);
+                address p = adapterC.proxyOf(wallet, markets[m]);
+                assertFalse(own.isValidProxy(wallet), "wallet never registered");
+                if (p == address(0)) {
+                    assertFalse(own.isValidProxy(predicted), "no registration without a proxy");
+                    assertEq(handler.openKeysOf(wallet, markets[m]).length, 0, "no record without a proxy");
+                    continue;
+                }
+                assertEq(p, predicted, "at the prediction");
+                assertTrue(own.isValidProxy(p), "registered in its market's token, never removed");
+                assertFalse(other.isValidProxy(p), "never in the other market's token");
+                assertEq(IPositionProxy(p).WALLET(), wallet, "proxy wallet");
+                assertEq(IPositionProxy(p).SPOKE(), aave.cdpSpoke, "proxy spoke");
+                assertEq(IPositionProxy(p).MARKET_ID(), markets[m], "proxy market");
+                assertEq(p.codehash, handler.proxyCodeHash(p), "code unchanged");
+                if (IAaveV4Spoke(aave.cdpSpoke).getUserSuppliedShares(reserves[m], p) > 0) {
+                    assertTrue(own.isValidProxy(p), "supply only after registration");
+                }
+                bytes32[] memory keys = handler.openKeysOf(wallet, markets[m]);
+                for (uint256 k = 0; k < keys.length; ++k) {
+                    uint256 id = coll.recordIdOf(INTEGRATION, keys[k]);
+                    if (id == 0) continue; // closed by a full seizure
+                    BackingRecord memory r = coll.getRecord(id);
+                    assertEq(r.depositor, wallet, "record depositor");
+                    assertEq(uint256(r.marketId), markets[m], "record market");
+                    assertEq(r.proxy, adapterC.proxyOf(r.depositor, r.marketId), "record proxy is proxyOf");
+                }
+            }
+        }
+        for (uint256 m = 0; m < 2; ++m) {
+            assertFalse(tokens[m].isValidProxy(adapter), "adapter never registered");
+            assertFalse(tokens[m].isValidProxy(lpVaultSwap), "LPVaultSwap never registered");
+        }
+    }
+
     // TEST-274 verifies: INV-057
     // Sources: TOPO-04
     /// @notice No borrow completed that left the CDP Spoke's owed amount of the borrowed asset above its draw cap.
@@ -186,5 +240,6 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture {
         invariant_TEST_096_nonceSingleUse();
         invariant_TEST_106_borrowPath();
         invariant_TEST_211_bindingsFixed();
+        invariant_TEST_089_proxyBindingAndRegistry();
     }
 }

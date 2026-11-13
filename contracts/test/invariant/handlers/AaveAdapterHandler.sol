@@ -108,6 +108,14 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         return wallets[i];
     }
 
+    /// @notice The positions `wallet` holds pledged in `market` (open records the handler created).
+    function openKeysOf(
+        address wallet,
+        uint256 market
+    ) external view returns (bytes32[] memory) {
+        return openKeys[wallet][market];
+    }
+
     function _market(
         uint256 seed
     ) internal view returns (uint256 market, VaultToken token, uint256 reserve) {

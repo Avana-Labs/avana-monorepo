@@ -48,7 +48,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     /// @notice At $1.00 Bob's 10,000 units are worth 10,000 USDC against 18,000 USDC of debt: every unit is seized,
     /// the Spoke's USDC deficit rises, Collateralization credits nothing and LPVaultSwap holds nothing.
     // TEST-216 verifies: SPEC-LIQ-005, SPEC-LIQ-010, REQ-SWAP-121, INV-076
-    function test_collateralExhaustedDeficitRecorded() public {
+    function test_TEST_216_collateralExhaustedDeficitRecorded() public {
         uint256 deficitBefore = _deficit();
         uint256 calls = _seizeEverything(100_000_000);
         assertGt(calls, 0, "liquidated");
@@ -61,7 +61,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
 
     /// @notice After the collateral is gone, a further liquidation is refused before any funds move.
     // TEST-216 verifies: REQ-SWAP-077, REQ-SWAP-121
-    function test_nothingLeftToSeize() public {
+    function test_TEST_216_nothingLeftToSeize() public {
         _seizeEverything(100_000_000);
         uint256 callerBefore = usdc.balanceOf(keeper);
         _fund(usdc, keeper, 100e6);
@@ -74,7 +74,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     /// @notice Any collapse price from $0.80 to $1.80: every call conserves the debt asset and meets its floor, the
     /// account ends with no collateral or restored, and the deficit never falls.
     // TEST-216 verifies: SPEC-LIQ-010, INV-035, INV-076
-    function testFuzz_collapseSettlesEveryCall(
+    function testFuzz_TEST_216_collapseSettlesEveryCall(
         uint256 price8
     ) public {
         price8 = bound(price8, 80_000_000, 180_000_000);
@@ -87,7 +87,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
 
     /// @notice A zero repayment is refused `InvalidAmount` even on an insolvent account.
     // TEST-055 verifies: REQ-SWAP-030, REQ-SWAP-077
-    function test_zeroRepaymentRefused() public {
+    function test_TEST_055_zeroRepaymentRefused() public {
         lpOracle.setAnswer(100_000_000);
         _expectLiquidateRevert(keeper, _params(proxy, 0), _err(ILPVaultSwapErrors.InvalidAmount.selector));
     }

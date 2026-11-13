@@ -136,6 +136,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     }
 
     // TEST-250 verifies: REQ-CONFIG-024, REQ-MREG-027, REQ-CONFIG-027
+    // TEST-139 verifies: REQ-CONFIG-024, REQ-CONFIG-027; shared: TEST-139's tolerance guard on the real registry and store, a route the store's feedAgreementToleranceBps cannot cover is refused
     function test_TEST_250_registryRefusesRoutesTheStoreToleranceCannotCover() public {
         // A new standby of 100 bps raises USDC's bound to max(75, 150, 125) + 50 = 200 > 150.
         address wide = address(new MockAggregator(8, 1e6, 1e12));

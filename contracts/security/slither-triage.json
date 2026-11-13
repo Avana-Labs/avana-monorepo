@@ -529,6 +529,12 @@
     },
     {
       "check": "calls-loop",
+      "files": "src/policy/parameter-store/ParameterStoreStorage.sol",
+      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift. Here: one MarketRegistry getToken per market token at listing, to set the market's USD band (REQ-ORACLE-056). Covered by TEST-250.",
+      "approval": "approved (Josue, 2026-11-13, by pattern)"
+    },
+    {
+      "check": "calls-loop",
       "files": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
       "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"

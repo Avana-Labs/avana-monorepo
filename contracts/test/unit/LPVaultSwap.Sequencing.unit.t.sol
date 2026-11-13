@@ -66,7 +66,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// snapshot `beginSeizure` took, so a liquidation that seized `c > 0` units and settled proves the snapshot preceded
     /// Aave's transfer of the shares.
     // TEST-055 verifies: REQ-SWAP-015, REQ-SWAP-045
-    function test_REQ_SWAP_015_beginSeizureBeforeLiquidationCall() public {
+    function test_TEST_055_beginSeizureBeforeLiquidationCall() public {
         vm.expectCall(
             address(coll), abi.encodeCall(ICollateralizationSeizure.beginSeizure, (proxy, address(vt))), uint64(1)
         );
@@ -86,7 +86,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// @notice Without a snapshot the seizure does not settle: a `settleSeizure` for the proxy outside a liquidation
     /// (no `beginSeizure`) reverts in Collateralization, so LPVaultSwap cannot settle a seizure it did not open.
     // TEST-055 verifies: REQ-SWAP-015
-    function test_REQ_SWAP_015_settleWithoutSnapshotRefused() public {
+    function test_TEST_055_settleWithoutSnapshotRefused() public {
         vm.prank(address(lvs));
         (bool ok,) = address(coll)
             .call(abi.encodeCall(ICollateralizationSeizure.settleSeizure, (proxy, address(vt), 1, new uint256[](0))));
@@ -96,7 +96,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// @notice `burnSeized` and `settleSeizure` run once each, for the market and proxy named in the call and the
     /// units Aave seized; the other account of the market is never named.
     // TEST-055 verifies: REQ-SWAP-045
-    function test_REQ_SWAP_045_callsScopedToActiveLiquidation() public {
+    function test_TEST_055_callsScopedToActiveLiquidation() public {
         vm.expectCall(address(adapter), abi.encodeWithSelector(adapter.burnSeized.selector, MARKET_ID, address(vt)), 1);
         vm.expectCall(
             address(coll),
@@ -116,7 +116,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// @notice `settlePending` burns and releases only the named market's vault token: with a pending balance in
     /// market 4 and a second market listed, the burn names market 4 and its token.
     // TEST-170 verifies: REQ-SWAP-045, REQ-SWAP-066
-    function test_REQ_SWAP_045_settlePendingScopedToMarket() public {
+    function test_TEST_170_settlePendingScopedToMarket() public {
         _seizeAndKeep(proxy, 1000e6);
         _liquidateAs(keeper, _params(proxy, 500e6));
         uint256 pending = coll.getPending(address(vt)).units;
@@ -133,7 +133,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// seizure left unsettled move to the pending balance, and the liquidation's `c`, `aᵢ` and `R` are those of its own
     /// seizure alone (equal to the same liquidation on an account with no gap).
     // TEST-170 verifies: REQ-SWAP-067, REQ-SWAP-006, Q-201; shared: the earlier gap TEST-170's pending settlement later settles is moved to pending here
-    function test_REQ_SWAP_067_earlierGapToPendingNotToCaller() public {
+    function test_TEST_170_earlierGapToPendingNotToCaller() public {
         uint256 snapshot = vm.snapshotState();
         LiquidationResult memory clean = _liquidateAs(keeper, _params(proxy, 500e6));
         vm.revertToState(snapshot);
@@ -152,7 +152,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// minimum at the oracle's $0.9995 (`NoRouteAvailable`) and pass it once the oracle serves $0.985, with `minRec`
     /// (the vault price) unchanged by the leg price.
     // TEST-050 verifies: SPEC-LIQ-012, SPEC-LIQ-018, REQ-SWAP-042; shared: TEST-050's floor from the oracle value with no spot-price input, shown by moving pool spot
-    function test_SPEC_LIQ_012_floorFromOracleLegsNotSpot() public {
+    function test_TEST_050_floorFromOracleLegsNotSpot() public {
         uint256 snapshot = vm.snapshotState();
         LiquidationResult memory base = _liquidateAs(keeper, _params(proxy, 1950e6));
         vm.revertToState(snapshot);
@@ -179,7 +179,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// @notice Liquidations of two accounts batched in one transaction both settle: each call takes and frees the
     /// Lock, so the second never waits on the first, and the Lock is free at the end.
     // TEST-093 verifies: SPEC-LIQ-021, REQ-SWAP-118, REQ-SWAP-002
-    function test_SPEC_LIQ_021_batchedCallsInOneTransaction() public {
+    function test_TEST_093_batchedCallsInOneTransaction() public {
         LVSMulticaller m = new LVSMulticaller();
         LiquidationParams[] memory calls = new LiquidationParams[](2);
         calls[0] = _params(proxy, 1950e6);
@@ -202,7 +202,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// @notice An Aave pause of the vault-token reserve, then of the debt reserve, blocks the liquidation with Aave's
     /// `ReservePaused`; no LPVaultSwap path overrides it, and the account liquidates in the first call after unpause.
     // TEST-169 verifies: REQ-SWAP-119; shared: TEST-169's Aave reserve pause run locally against LPVaultSwap, blocked until the unpause
-    function test_REQ_SWAP_119_aavePauseBlocksUntilUnpause() public {
+    function test_TEST_169_aavePauseBlocksUntilUnpause() public {
         uint256[2] memory reserves = [vtReserveId, usdcReserveId];
         for (uint256 i = 0; i < 2; ++i) {
             vm.prank(aaveDao);
@@ -221,7 +221,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// @notice LPVaultSwap has no flash-source setter: the registry's `setFlashSource` is the only way to change the
     /// source, and selectors a setter would use are not served by the proxy.
     // TEST-046 verifies: REQ-SWAP-120, REQ-FLASH-006
-    function test_REQ_SWAP_120_noFlashSourceSetter() public {
+    function test_TEST_046_noFlashSourceSetter() public {
         bytes4[3] memory selectors = [
             bytes4(keccak256("setFlashSource(address)")),
             bytes4(keccak256("setFlashSource(address,address)")),

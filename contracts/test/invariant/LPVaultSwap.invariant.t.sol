@@ -106,7 +106,8 @@ contract LPVaultSwapInvariantTest is LPVaultSwapUnitBase {
     /// @notice The handler's actions settle: a fixed sequence of donations, a pending settlement attempt, a direct
     /// liquidation attempt and route moves leaves all three accounts liquidatable through LPVaultSwap by different
     /// callers in both route modes.
-    function test_handlerSequenceSettles() public {
+    // TEST-092 verifies: REQ-SWAP-042, INV-021
+    function test_TEST_092_handlerSequenceSettles() public {
         handler.donate(5, 7);
         handler.settlePending(1);
         handler.directLiquidation(0, 100e6, true);

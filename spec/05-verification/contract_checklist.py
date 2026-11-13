@@ -220,8 +220,9 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-148": "Convex and web app; no test there carries the ID yet",
     "TEST-149": "web, Ponder and keeper; no test there carries the ID yet",
     "TEST-297": "Lend page builders in packages/protocol; no test there carries the ID yet",
-    "REQ-ORACLE-037": "keeper poke schedule (3.6), services/keeper/src/jobs/oraclePoke.ts; its test belongs in "
-                      "services/keeper/test/oraclePoke.test.ts, and no keeper test carries the ID yet",
+    "REQ-ORACLE-037": "keeper poke schedule (3.6), services/keeper/src/jobs/oraclePoke.ts: every LPOracle and "
+                      "DebtOracle at least once per min(3,600 s, fastest leg's heartbeat); checked by "
+                      "services/keeper/test/oraclePoke.test.ts (services.yml keeper tests)",
     # CI tool rows: the row is the CI step itself, and the step's own result is the evidence (no Foundry test can be).
     "TEST-001": "contracts.yml build job: `forge soldeer install` against soldeer.lock, the solc and EVM pins of "
                 "foundry.toml, and the Foundry version check",
@@ -242,6 +243,10 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-260": "security-slow.yml halmos and hevm jobs (nightly, release tags, by hand)",
     "TEST-261": "security-slow.yml mythril jobs (nightly, release tags, by hand)",
     "TEST-262": "security-slow.yml hevm jobs (nightly, release tags, by hand)",
+    "TEST-263": "the fast tier is contracts.yml's fast-security job and the slow tier security-slow.yml (TEST-253 to "
+                "TEST-262); the upgrade gate is contracts/script/upgrade-operation.py, which builds a timelock "
+                "upgradeToAndCall operation only when security-slow.yml has a completed successful slow-tier run on "
+                "the implementation's commit, checked by script/upgrade-operation.test.sh (contracts.yml build job)",
     "TEST-137": "security-fast.sh storage-layout step (script/storage-layout.js); the diff against a deployed version "
                 "starts with the first deployment",
 }

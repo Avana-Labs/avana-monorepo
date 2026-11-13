@@ -25,14 +25,14 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
 
     /// @notice The namespace and the transient base are the ERC-7201 slots of their identifiers.
     // TEST-242 verifies: REQ-SWAP-040, REQ-SWAP-106
-    function test_namespaceSlots() public pure {
+    function test_TEST_242_namespaceSlots() public pure {
         assertEq(_erc7201("avana.storage.LPVaultSwap"), NAMESPACE, "storage namespace");
         assertEq(_erc7201("avana.lpvaultswap.deleverage"), DELEVERAGE_BASE, "transient base");
     }
 
     /// @notice Each logic contract reports its kind and the implementation's immutables hash.
     // TEST-242 verifies: REQ-SWAP-040
-    function test_logicConfigs() public view {
+    function test_TEST_242_logicConfigs() public view {
         bytes32 hash = keccak256(abi.encode(immutables()));
         address[3] memory logics = [liquidationLogic, pendingLogic, deleverageLogic];
         string[3] memory kinds =
@@ -47,7 +47,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     /// @notice No plain storage slot 0 to 9 of the proxy is written by a liquidation or a settlement, and a
     /// liquidation writes no word of the namespace's first fields.
     // TEST-200 verifies: REQ-SWAP-103, INV-097, PROP-063
-    function test_liquidationWritesNoNamespaceWord() public {
+    function test_TEST_200_liquidationWritesNoNamespaceWord() public {
         (address proxy,) = _bobAccount();
         bytes32[12] memory before;
         for (uint256 i = 0; i < 12; ++i) {
@@ -69,7 +69,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     /// @notice The deleverage context is empty after a deleverage (transient storage clears with the transaction and
     /// the body clears it at the end of the call).
     // TEST-239 verifies: REQ-SWAP-106, REQ-LOCK-007
-    function test_deleverageContextCleared() public {
+    function test_TEST_239_deleverageContextCleared() public {
         (address proxy, bytes32 key) = _openAccount(alice, 10_000e6, 15_000e6, 250_000_000);
         vm.prank(alice);
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
@@ -85,7 +85,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
 
     /// @notice The implementation itself holds no initialized state: its registry is empty and it holds no role.
     // TEST-242 verifies: REQ-SWAP-040, REQ-ACCESS-153
-    function test_implementationHoldsNothing() public view {
+    function test_TEST_242_implementationHoldsNothing() public view {
         assertEq(implementation.approvedKeeperCount(), 0, "no keepers on the implementation");
         assertFalse(implementation.hasRole(0x00, timelock), "no admin on the implementation");
         assertEq(address(implementation).balance, 0, "no ETH");
@@ -94,7 +94,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     /// @notice The namespace fields sit where the layout says: the timelock at word 0, a keeper's flag in the
     /// mapping at word 1, the list length at word 2 and its first entry at keccak(word 2).
     // TEST-242 verifies: REQ-SWAP-032, REQ-SWAP-040
-    function test_registryWords() public view {
+    function test_TEST_242_registryWords() public view {
         uint256 base = uint256(NAMESPACE);
         assertEq(address(uint160(uint256(vm.load(address(lvs), bytes32(base))))), timelock, "timelock word");
         bytes32 flag = keccak256(abi.encode(keeper, base + 1));
@@ -107,7 +107,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     /// @notice A sub-share pending settlement writes only the carry of its settlement asset (word 3 of the
     /// namespace, keyed by the asset); the registry words do not move; a funded settlement clears the carry.
     // TEST-170 verifies: REQ-SWAP-070, REQ-SWAP-103
-    function test_settlementWritesOnlyTheCarry() public {
+    function test_TEST_170_settlementWritesOnlyTheCarry() public {
         (address proxy,) = _bobAccount();
         _seizeAndKeep(proxy, 1000e6);
         _liquidateAs(keeper, _params(proxy, 500e6));
@@ -135,7 +135,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     /// @notice Registry changes move only the registry words: adding and removing keepers changes the list length and
     /// the flags, never the timelock word or any carry.
     // TEST-098 verifies: REQ-SWAP-032, REQ-SWAP-035, REQ-SWAP-103
-    function testFuzz_registryChangesTouchOnlyRegistryWords(
+    function testFuzz_TEST_098_registryChangesTouchOnlyRegistryWords(
         uint8 adds
     ) public {
         uint256 n = bound(adds, 1, 12);

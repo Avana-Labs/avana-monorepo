@@ -36,6 +36,7 @@ contract LensChargePriceFreshUnitTest is LensFixture {
     /// @notice Accepted $2.00, stress floor $1.00. A fresh $1.80 is below the accepted price, so the charge is $1.80; a
     /// fresh $0.50 is below the floor, so the charge is the floor $1.00; a fresh $2.40 is above the accepted price,
     /// so the charge stays $2.00.
+    // TEST-230 verifies: REQ-LENS-018; shared: TEST-230 books a pledge at min(fresh, A) and the Lens previews that same charge price, A after a rally
     // TEST-247 verifies: REQ-LENS-018
     function test_TEST_247_chargePriceIsTheLowerOfFreshAndAccepted() public {
         _fresh(1.8e8);

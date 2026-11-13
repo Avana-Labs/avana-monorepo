@@ -59,7 +59,7 @@ contract LPVaultSwapEventsFuzzTest is LPVaultSwapUnitBase {
 
     /// @notice One `LiquidationSettled` whose report equals the result, for any parameters.
     // TEST-170 verifies: REQ-SWAP-029, REQ-SWAP-115, SPEC-LIQ-010, SPEC-LIQ-022
-    function testFuzz_settledReportEqualsResult(
+    function testFuzz_TEST_170_settledReportEqualsResult(
         uint256 debtToCover,
         bool backupOnly,
         uint256 rateBps,
@@ -97,7 +97,7 @@ contract LPVaultSwapEventsFuzzTest is LPVaultSwapUnitBase {
     /// @notice A failing primary emits exactly one `RouteFailed` for the USDT leg, never one for the backup, and the
     /// report records the backup as the route used.
     // TEST-232 verifies: REQ-SWAP-058, REQ-SWAP-115
-    function testFuzz_primaryFailureRecorded(
+    function testFuzz_TEST_232_primaryFailureRecorded(
         uint256 debtToCover
     ) public {
         debtToCover = bound(debtToCover, 50e6, 6000e6);
@@ -117,7 +117,7 @@ contract LPVaultSwapEventsFuzzTest is LPVaultSwapUnitBase {
     /// @notice `PendingSettlementForwarded` reports the caller, market, vault token, units, amounts, the amount added
     /// and the USDC Coverage Spoke.
     // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-070, SPEC-LIQ-014
-    function testFuzz_pendingEventFields(
+    function testFuzz_TEST_170_pendingEventFields(
         uint256 kept,
         address caller
     ) public {
