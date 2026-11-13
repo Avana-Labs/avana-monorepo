@@ -25,7 +25,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
 
     // TEST-010 verifies: REQ-RISK-025, REQ-RISK-026, SPEC-CAP-001
     // Sources: 2.7 LIFECYCLE step 2
-    function test_TEST_010_newAccountPledgeReturnsCharge() public view {
+    function test_TEST_010_newAccountPledgeReturnsCharge() public {
         PledgeCharge memory c = _pledge(TEN_K, _counters(), false);
         assertEq(c.usdCharge, 20_000e8);
         assertEq(c.sliceUsd, 0);

@@ -17,6 +17,7 @@ import {IMarketRegistryStandby} from "../../policy/market-registry/IMarketRegist
 import {IParameterStoreAdmin} from "../../policy/parameter-store/IParameterStoreAdmin.sol";
 import {IParameterStoreBreakers} from "../../policy/parameter-store/IParameterStoreBreakers.sol";
 import {IParameterStoreLiquidation} from "../../policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStoreSpeed} from "../../policy/parameter-store/IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "../../policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleAdmin} from "../../policy/risk-module/IRiskModuleAdmin.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -54,8 +55,8 @@ library TimelockSelectors {
             || selector == IMarketRegistryHubs.setCrossHubLine.selector || _isInitializer(selector);
     }
 
-    /// @notice Whether `selector` is one of the 32 selectors of the launch short-delay list (`REQ-ACCESS-155`): the
-    /// 20 ParameterStore tighten setters, the 11 MarketRegistry stops and repairs, and LPVaultSwap `removeKeeper`.
+    /// @notice Whether `selector` is one of the 34 selectors of the launch short-delay list (`REQ-ACCESS-155`): the
+    /// 22 ParameterStore tighten setters, the 11 MarketRegistry stops and repairs, and LPVaultSwap `removeKeeper`.
     /// @custom:spec REQ-ACCESS-142, REQ-ACCESS-155
     function isLaunchShortSelector(
         bytes4 selector
@@ -84,6 +85,20 @@ library TimelockSelectors {
             || selector == ILPVaultSwapAdmin.addKeeper.selector;
     }
 
+    /// @notice The contract a short-eligible or DAO-only selector belongs to: 1 the ParameterStore (`tighten*`), 2 the
+    /// MarketRegistry (stops, repairs and `unfreezeAddress`), 3 LPVaultSwap (`removeKeeper`, `addKeeper`), 0 none.
+    /// @custom:spec REQ-ACCESS-155, REQ-ACCESS-156
+    function ownerKind(
+        bytes4 selector
+    ) internal pure returns (uint8) {
+        if (_isTightenSelector(selector)) return 1;
+        if (selector == ILPVaultSwapAdmin.removeKeeper.selector || selector == ILPVaultSwapAdmin.addKeeper.selector) {
+            return 3;
+        }
+        if (isLaunchShortSelector(selector) || isDaoCancelSelector(selector)) return 2;
+        return 0;
+    }
+
     function _isTightenSelector(
         bytes4 s
     ) private pure returns (bool) {
@@ -106,7 +121,9 @@ library TimelockSelectors {
             || s == IParameterStoreBreakers.tightenGateRecoverySeconds.selector
             || s == IParameterStoreLiquidation.tightenMaxShortfallBps.selector
             || s == IParameterStoreLiquidation.tightenDebtStressRiseBps.selector
-            || s == IParameterStoreAdmin.tightenMaxFlashFeeBps.selector;
+            || s == IParameterStoreAdmin.tightenMaxFlashFeeBps.selector
+            || s == IParameterStoreSpeed.tightenMarketSpeedLimits.selector
+            || s == IParameterStoreSpeed.tightenDebtSpeedLimit.selector;
     }
 
     function _isInitializer(

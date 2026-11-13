@@ -12,6 +12,7 @@ import {IParameterStoreCoverage} from "./IParameterStoreCoverage.sol";
 import {IParameterStoreLiquidation} from "./IParameterStoreLiquidation.sol";
 import {ParameterStoreForwardAdmin} from "./ParameterStoreForwardAdmin.sol";
 import {ParameterStoreForwardRisk} from "./ParameterStoreForwardRisk.sol";
+import {ParameterStoreForwardSpeed} from "./ParameterStoreForwardSpeed.sol";
 import {ParameterStoreRouter} from "./ParameterStoreRouter.sol";
 import {ParameterStoreViews} from "./ParameterStoreViews.sol";
 import {GlobalParams} from "./types/GlobalParams.sol";
@@ -34,6 +35,7 @@ contract ParameterStore is
     UUPSUpgradeable,
     ParameterStoreForwardRisk,
     ParameterStoreForwardAdmin,
+    ParameterStoreForwardSpeed,
     ParameterStoreViews,
     IParameterStore
 {

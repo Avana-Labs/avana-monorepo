@@ -27,7 +27,9 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | CDP Spoke implementation and configuration | `ATTACK-120`, `ATTACK-121` |
 | Adapter custody, immutable proxies, governance timing and multi-asset debt | `ATTACK-122` … `ATTACK-137` |
 | Circuit breakers, address freeze, standby routes, rescue and new liquidation paths | `ATTACK-138` … `ATTACK-152` |
-| AMM-neutral core, Hubs and chains | `ATTACK-153` … `ATTACK-197` |
+| AMM-neutral core, Hubs and chains | `ATTACK-153` … `ATTACK-199` |
+| Aave configuration liveness and adversarial review fixes | `ATTACK-200` … `ATTACK-203` |
+| Speed limits | `ATTACK-204` … `ATTACK-206` |
 
 ## Custody and minting
 

@@ -1,5 +1,39 @@
 {
-  "target": 80,
+  "floor": 80,
+  "unreachable": {
+    "src/policy/parameter-store/ParameterStoreRisk.sol": [
+      {
+        "function": "_requireAddCap",
+        "branch": "floor == 0 reverts AddCapTooSmall",
+        "reason": "Every written stressFloorUsd is > 0 (setInitialMarketCaps and setStressFloorUsd refuse 0), and on a market whose caps were never written the callers fail first: loosenMarketUsdCap at its step (value x 10^4 <= 0 x 15,000) and loosenTopUpSliceUsd at value > cap = 0. The check keeps the division safe if a later caller or upgrade reaches it with an unwritten floor.",
+        "tests": "TEST-272 test_TEST_272_initialCaps and test_TEST_272_stressFloor (zero floor refused), TEST-225 test_TEST_225_marketCapStepAndAddCap (step and slice bounds)"
+      }
+    ],
+    "src/oracle/lp-oracle/LPOracleConfig.sol": [
+      {
+        "function": "_loadSeed",
+        "branch": "token count or marketId mismatch",
+        "reason": "checkConfig returns CHECK_TOKENS on the same condition (token count, market id 0 or another market) before _checkAtCurrentQuotes calls _loadSeed, and initialize stores $.tokens and $.marketId from the same configuration it then seeds (LPOracle._storeMarket reverts MarketMismatch otherwise); kept as a defensive check (Josue, 2026-11-11). The check stops being redundant if the initialization or upgrade flow changes (a reinitializer, a migration, or a caller of _loadSeed other than checkConfig and initializeMarket).",
+        "tests": "TEST-219 test_TEST_219_checkConfigRefusesAnotherMarketOrTokenCount, test_TEST_219_checkConfigRefusesOtherTokensInPlace, test_TEST_219_marketChecks; TEST-062 test_TEST_062_initializeRefusesAnotherMarketOrTokenList, test_TEST_062_initializeRefusesUnusableMarketData, test_TEST_062_initializeRefusesRepeatedToken"
+      }
+    ],
+    "src/policy/market-registry/MarketRegistryActivationLogic.sol": [
+      {
+        "function": "_checkOracleAndRoutes",
+        "branch": "!listed || !_commonModeHolds(tokens) reverts ActivationCheckFailed(marketId, \"registration\")",
+        "reason": "A Registered market's pool tokens were all listed and passed the common-mode guard at listCollateralMarket; the registry has no function that unlists a token, and setPriceSource re-runs the common-mode guard on every market that is not Cancelled or Closed (Registered included) and reverts on failure. So both halves hold at activation; the check is kept as defence in depth for a later upgrade that could change token records. The surviving Gambit mutant on the same loop (fingerprint 5a5e0df0ef1ffe86) is equivalent for the same reason.",
+        "tests": "TEST-139 test_TEST_139_firstUnlistedTokenReported and test_TEST_139_commonModeEveryPairing (listing refusals), TEST-231 test_TEST_231_priceSourceChangeGuardsARegisteredMarket (a route change that would break the guard is refused)"
+      }
+    ],
+    "src/policy/market-registry/MarketRegistryHubsLogic.sol": [
+      {
+        "function": "_removeId",
+        "branch": "at == n returns without removing",
+        "reason": "removeDebtReserve calls _removeId only for an approved reserve, and enableDebtReserve pushes the id into debtReserveIds in the same write that approves it, so the id is always present when _removeId runs.",
+        "tests": "TEST-213 test_TEST_213_removeFirstKeepsTheOrder, test_TEST_213_removeMiddleKeepsTheOrder, test_TEST_213_removeLastKeepsTheOrder, test_TEST_213_removalRefusals (UnknownDebtReserve before any removal)"
+      }
+    ]
+  },
   "files": {
     "src/amm/concentrated-liquidity/ClLPVaultBase.sol": 100,
     "src/amm/concentrated-liquidity/ClLPVaultCustody.sol": 86,
@@ -8,33 +42,34 @@
     "src/amm/slipstream/SlipstreamIntegration.sol": 90,
     "src/amm/uniswap-v3/UniswapV3Integration.sol": 88,
     "src/coverage/coverage-spoke/CoverageSpoke.sol": 100,
-    "src/custody/collateralization/CollateralizationBase.sol": 75,
+    "src/custody/collateralization/CollateralizationBase.sol": 80,
     "src/custody/collateralization/CollateralizationDebtMark.sol": 88,
-    "src/custody/collateralization/CollateralizationLedger.sol": 73,
+    "src/custody/collateralization/CollateralizationLedger.sol": 80,
     "src/custody/collateralization/CollateralizationPending.sol": 100,
     "src/custody/collateralization/CollateralizationPledge.sol": 86,
     "src/custody/collateralization/CollateralizationRelease.sol": 80,
     "src/custody/collateralization/CollateralizationSeizure.sol": 90,
-    "src/custody/collateralization/CollateralizationViews.sol": 30,
+    "src/custody/collateralization/CollateralizationViews.sol": 80,
     "src/flash/AaveV3FlashSource.sol": 100,
     "src/governance/timelock/AvanaTimelock.sol": 100,
     "src/liquidation/lp-vault-swap/LPVaultSwap.sol": 100,
-    "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol": 63,
-    "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol": 62,
-    "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol": 58,
+    "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol": 80,
+    "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol": 80,
+    "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol": 80,
     "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol": 81,
     "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol": 100,
-    "src/lens/lens/Lens.sol": 25,
-    "src/lens/lens/LensAccount.sol": 60,
-    "src/lens/lens/LensBase.sol": 54,
-    "src/lens/lens/LensLiquidation.sol": 58,
+    "src/lens/lens/Lens.sol": 80,
+    "src/lens/lens/LensAccount.sol": 80,
+    "src/lens/lens/LensBase.sol": 80,
+    "src/lens/lens/LensLiquidation.sol": 80,
     "src/lens/lens/LensLiquidationSizing.sol": 100,
-    "src/lens/lens/LensMarket.sol": 59,
-    "src/lens/lens/LensMarkets.sol": 71,
-    "src/lens/lens/LensPositions.sol": 38,
-    "src/lens/lens/LensPreview.sol": 48,
-    "src/lens/lens/LensPrice.sol": 40,
-    "src/lens/lens/LensRisk.sol": 80,
+    "src/lens/lens/LensMarket.sol": 91,
+    "src/lens/lens/LensMarkets.sol": 80,
+    "src/lens/lens/LensPositions.sol": 87,
+    "src/lens/lens/LensPreview.sol": 80,
+    "src/lens/lens/LensPrice.sol": 80,
+    "src/lens/lens/LensRisk.sol": 83,
+    "src/lens/lens/LensSpeedModule.sol": 80,
     "src/liquidation/lp-vault-swap/SettlementMath.sol": 100,
     "src/liquidation/payout-escrow/PayoutEscrow.sol": 100,
     "src/liquidation/settlement-routes/DexHops.sol": 100,
@@ -44,21 +79,21 @@
     "src/liquidation/settlement-routes/SwapRouteBase.sol": 100,
     "src/liquidation/settlement-routes/WrapperThenDexRoute.sol": 91,
     "src/lock/lock/Lock.sol": 100,
-    "src/oracle/debt-oracle/DebtOracle.sol": 79,
+    "src/oracle/debt-oracle/DebtOracle.sol": 80,
     "src/oracle/debt-oracle/DebtOracleEvaluation.sol": 81,
-    "src/oracle/debt-oracle/DebtOracleReads.sol": 31,
-    "src/oracle/debt-oracle/DebtOracleRecovery.sol": 47,
+    "src/oracle/debt-oracle/DebtOracleReads.sol": 80,
+    "src/oracle/debt-oracle/DebtOracleRecovery.sol": 80,
     "src/oracle/lp-oracle/LPOracle.sol": 100,
     "src/oracle/lp-oracle/LPOracleCalls.sol": 100,
     "src/oracle/lp-oracle/LPOracleConfig.sol": 90,
     "src/oracle/lp-oracle/LPOracleEval.sol": 98,
-    "src/oracle/lp-oracle/LPOracleListing.sol": 74,
+    "src/oracle/lp-oracle/LPOracleListing.sol": 80,
     "src/oracle/lp-oracle/LPOracleListingLogic.sol": 80,
     "src/oracle/lp-oracle/LPOracleLogicBase.sol": 100,
     "src/oracle/lp-oracle/LPOraclePoke.sol": 90,
     "src/oracle/lp-oracle/LPOracleReads.sol": 96,
-    "src/oracle/lp-oracle/LPOracleRecovery.sol": 61,
-    "src/oracle/lp-oracle/LPOracleStorage.sol": 0,
+    "src/oracle/lp-oracle/LPOracleRecovery.sol": 80,
+    "src/oracle/lp-oracle/LPOracleStorage.sol": 80,
     "src/oracle/lp-oracle/LPOracleViewLogic.sol": 100,
     "src/oracle/lp-oracle/LPOracleViews.sol": 100,
     "src/oracle/lp-oracle/LPPriceMath.sol": 100,
@@ -96,6 +131,7 @@
     "src/policy/parameter-store/ParameterStoreOracle.sol": 96,
     "src/policy/parameter-store/ParameterStoreRisk.sol": 81,
     "src/policy/parameter-store/ParameterStoreRouter.sol": 100,
+    "src/policy/parameter-store/ParameterStoreSpeedRules.sol": 100,
     "src/policy/parameter-store/ParameterStoreStorage.sol": 100,
     "src/policy/parameter-store/ParameterStoreTightenLogic.sol": 100,
     "src/policy/parameter-store/ParameterStoreViews.sol": 100,
@@ -109,44 +145,23 @@
     "src/policy/risk-module/RiskModuleMath.sol": 100,
     "src/policy/risk-module/RiskModulePledgeLogic.sol": 100,
     "src/policy/risk-module/RiskModulePreview.sol": 100,
+    "src/policy/risk-module/RiskModuleSpeed.sol": 100,
+    "src/policy/risk-module/RiskModuleSpeedLogic.sol": 100,
     "src/policy/risk-module/RiskModuleStatusLogic.sol": 100,
+    "src/policy/risk-module/SpeedLimitMath.sol": 100,
     "src/proxy/position-proxy/PositionProxy.sol": 100,
     "src/proxy/proxy-manager/ProxyManager.sol": 85,
     "src/vault-token/vault-token-factory/VaultTokenFactory.sol": 100,
-    "src/vault-token/vault-token/VaultToken.sol": 100
-  },
-  "unreachable": {
-    "src/policy/parameter-store/ParameterStoreRisk.sol": [
-      {
-        "function": "_requireAddCap",
-        "branch": "floor == 0 reverts AddCapTooSmall",
-        "reason": "Every written stressFloorUsd is > 0 (setInitialMarketCaps and setStressFloorUsd refuse 0), and on a market whose caps were never written the callers fail first: loosenMarketUsdCap at its step (value x 10^4 <= 0 x 15,000) and loosenTopUpSliceUsd at value > cap = 0. The check keeps the division safe if a later caller or upgrade reaches it with an unwritten floor.",
-        "tests": "TEST-272 test_TEST_272_initialCaps and test_TEST_272_stressFloor (zero floor refused), TEST-225 test_TEST_225_marketCapStepAndAddCap (step and slice bounds)"
-      }
-    ],
-    "src/oracle/lp-oracle/LPOracleConfig.sol": [
-      {
-        "function": "_loadSeed",
-        "branch": "token count or marketId mismatch",
-        "reason": "checkConfig returns CHECK_TOKENS on the same condition (token count, market id 0 or another market) before _checkAtCurrentQuotes calls _loadSeed, and initialize stores $.tokens and $.marketId from the same configuration it then seeds (LPOracle._storeMarket reverts MarketMismatch otherwise); kept as a defensive check (Josue, 2026-11-11). The check stops being redundant if the initialization or upgrade flow changes (a reinitializer, a migration, or a caller of _loadSeed other than checkConfig and initializeMarket).",
-        "tests": "TEST-219 test_TEST_219_checkConfigRefusesAnotherMarketOrTokenCount, test_TEST_219_checkConfigRefusesOtherTokensInPlace, test_TEST_219_marketChecks; TEST-062 test_TEST_062_initializeRefusesAnotherMarketOrTokenList, test_TEST_062_initializeRefusesUnusableMarketData, test_TEST_062_initializeRefusesRepeatedToken"
-      }
-    ],
-    "src/policy/market-registry/MarketRegistryActivationLogic.sol": [
-      {
-        "function": "_checkOracleAndRoutes",
-        "branch": "!listed || !_commonModeHolds(tokens) reverts ActivationCheckFailed(marketId, \"registration\")",
-        "reason": "A Registered market's pool tokens were all listed and passed the common-mode guard at listCollateralMarket; the registry has no function that unlists a token, and setPriceSource re-runs the common-mode guard on every market that is not Cancelled or Closed (Registered included) and reverts on failure. So both halves hold at activation; the check is kept as defence in depth for a later upgrade that could change token records. The surviving Gambit mutant on the same loop (fingerprint 5a5e0df0ef1ffe86) is equivalent for the same reason.",
-        "tests": "TEST-139 test_TEST_139_firstUnlistedTokenReported and test_TEST_139_commonModeEveryPairing (listing refusals), TEST-231 test_TEST_231_priceSourceChangeGuardsARegisteredMarket (a route change that would break the guard is refused)"
-      }
-    ],
-    "src/policy/market-registry/MarketRegistryHubsLogic.sol": [
-      {
-        "function": "_removeId",
-        "branch": "at == n returns without removing",
-        "reason": "removeDebtReserve calls _removeId only for an approved reserve, and enableDebtReserve pushes the id into debtReserveIds in the same write that approves it, so the id is always present when _removeId runs.",
-        "tests": "TEST-213 test_TEST_213_removeFirstKeepsTheOrder, test_TEST_213_removeMiddleKeepsTheOrder, test_TEST_213_removeLastKeepsTheOrder, test_TEST_213_removalRefusals (UnknownDebtReserve before any removal)"
-      }
-    ]
+    "src/vault-token/vault-token/VaultToken.sol": 100,
+    "src/coverage/deficit-offset-spoke/DeficitOffsetSpoke.sol": 100,
+    "src/governance/timelock/TimelockSelectors.sol": 100,
+    "src/lens/lens/LensAccountMath.sol": 80,
+    "src/lens/lens/LensActions.sol": 80,
+    "src/lens/lens/LensClose.sol": 80,
+    "src/lens/lens/LensDeleverage.sol": 80,
+    "src/lens/lens/LensFees.sol": 80,
+    "src/lens/lens/LensHubAssets.sol": 80,
+    "src/lens/lens/LensRemoval.sol": 80,
+    "src/lens/lens/LensSizing.sol": 80
   }
 }

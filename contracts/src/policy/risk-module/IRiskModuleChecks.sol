@@ -25,7 +25,8 @@ interface IRiskModuleChecks {
 
     /// @notice Full pledge eligibility, rescue rule, minimum, breaker, charge and cap check; returns the charge or reverts.
     /// @dev Called by Collateralization inside `pledge` and `recredit`, after custody and after poking the market's
-    /// LPOracle; `view`. A top-up is a pledge for an account with debt on any debt reserve; a re-credit is a pledge of
+    /// LPOracle. Not `view`: when Collateralization calls, it adds a non-rescue pledge's charge to the market's pledge
+    /// window (REQ-RISK-093, REQ-RISK-095); for any other caller it writes nothing, so a `STATICCALL` succeeds. A top-up is a pledge for an account with debt on any debt reserve; a re-credit is a pledge of
     /// the added units. If `requireRescue`, the pool-share cap fails, the market breaker of `marketId` (without
     /// `ORACLE`, and without `CONFIG_DRIFT` for a top-up) is tripped or the value is below `minPledgeUsd`, only a rescue
     /// top-up passes: indebted, health factor below `rescueHealthFactor` (1.10), charge at most the restore amount,
@@ -39,7 +40,9 @@ interface IRiskModuleChecks {
     /// the Hub `addCap` (`HubAddCapReached`) and the reserve limit (`UserReservesLimit`), cap tests with stress-floor
     /// booking at `lastAcceptedPrice` (`CapExceeded`) and the slice rule (`SliceNotAvailable`), then the pool-share cap,
     /// the market breaker and the rescue rule (`BelowMinPledge`, `NotRescueTopUp`, `PoolShareUnavailable`,
-    /// `PoolShareExceeded`, `BreakerTripped`). The integration validated the position at custody (canonical position
+    /// `PoolShareExceeded`, `BreakerTripped`), and last, for a pledge that is not a rescue top-up, the pledge-speed
+    /// window charged `usdCharge` against `clamp(β × (regularUsed + sliceUsed − used), P_min, P_max)`
+    /// (`PledgeSpeedExceeded`). The integration validated the position at custody (canonical position
     /// manager or pool, exact shape, AMMN-RT-01) and Collateralization refuses a 17th record, so neither is tested here.
     /// Cap tests use the n-token counters: each pool token's counter and the depositor's counter are keyed by the
     /// market's home Hub. Reads no pause state or freeze (the Adapter passes `requireRescue`). Uncaught Aave and AMM
@@ -54,7 +57,7 @@ interface IRiskModuleChecks {
     /// account's record count.
     /// @param requireRescue True under `Paused(General)` or for a frozen depositor: only a rescue top-up passes.
     /// @return charge The USD charge to book, its slice part, the rescue flag and the rescue units.
-    /// @custom:spec REQ-RISK-006, REQ-RISK-009, REQ-RISK-010, REQ-RISK-011, REQ-RISK-012, REQ-RISK-013, REQ-RISK-014, REQ-RISK-016, REQ-RISK-017, REQ-RISK-018, REQ-RISK-019, REQ-RISK-020, REQ-RISK-021, REQ-RISK-022, REQ-RISK-023, REQ-RISK-024, REQ-RISK-025, REQ-RISK-026, REQ-RISK-027, REQ-RISK-028, REQ-RISK-029, REQ-RISK-030, REQ-RISK-047, REQ-RISK-057, REQ-RISK-058, REQ-RISK-064, REQ-RISK-065, REQ-RISK-066, REQ-RISK-067, REQ-RISK-073, REQ-RISK-074, SPEC-CAP-001, SPEC-CAP-002, SPEC-CAP-003, SPEC-CAP-005, SPEC-BRK-001, SPEC-BRK-002, SPEC-BRK-003, Q-230, Q-241, Q-252, Q-253, Q-376, Q-380
+    /// @custom:spec REQ-RISK-006, REQ-RISK-009, REQ-RISK-010, REQ-RISK-011, REQ-RISK-012, REQ-RISK-013, REQ-RISK-014, REQ-RISK-016, REQ-RISK-017, REQ-RISK-018, REQ-RISK-019, REQ-RISK-020, REQ-RISK-021, REQ-RISK-022, REQ-RISK-023, REQ-RISK-024, REQ-RISK-025, REQ-RISK-026, REQ-RISK-027, REQ-RISK-028, REQ-RISK-029, REQ-RISK-030, REQ-RISK-047, REQ-RISK-057, REQ-RISK-058, REQ-RISK-064, REQ-RISK-065, REQ-RISK-066, REQ-RISK-067, REQ-RISK-073, REQ-RISK-074, REQ-RISK-093, REQ-RISK-095, REQ-RISK-099, SPEC-CAP-001, SPEC-CAP-002, SPEC-CAP-003, SPEC-CAP-005, SPEC-BRK-001, SPEC-BRK-002, SPEC-BRK-003, Q-230, Q-241, Q-252, Q-253, Q-376, Q-380
     function checkPledge(
         address depositor,
         address proxy,
@@ -64,7 +67,7 @@ interface IRiskModuleChecks {
         uint128 units,
         PledgeCounters calldata counters,
         bool requireRescue
-    ) external view returns (PledgeCharge memory charge);
+    ) external returns (PledgeCharge memory charge);
 
     /// @notice Pre-borrow gate over the account's collateral market and every debt reserve of the account.
     /// @dev Called by the AaveAdapter before the proxy's borrow; callable by anyone. The Spoke and market are the
@@ -83,11 +86,16 @@ interface IRiskModuleChecks {
     /// (`HubSharesNotEqualAssets`); no liquidation halt (`LiquidationHalted`: 0 active keepers on the chain;
     /// `DebtLiquidationHalted`: a pool token with no usable route into that reserve's asset); no market breaker and
     /// no debt breaker of `debtReserveId` (`BreakerTripped`, `DebtBreakerTripped`): no temporary gate holding or inside
-    /// `gateRecoverySeconds` of its last breach, and no security freeze holding or latched (Q-399). Reads no pause state or freeze.
+    /// `gateRecoverySeconds` of its last breach, and no security freeze holding or latched (Q-399); last, the borrow-speed
+    /// windows of the market (charged `⌈amount × price8 / 10^dec⌉` USD) and of the reserve's (funding Hub, asset)
+    /// (charged `amount`), each against `clamp(rate × (base − used), min, max)` (`BorrowSpeedExceeded`,
+    /// `DebtSpeedExceeded`); only the AaveAdapter's call adds the charges (REQ-RISK-092, REQ-RISK-095). Reads no pause
+    /// state or freeze.
     /// @param proxy The account.
     /// @param debtReserveId The reserve being borrowed; added to the debt scope.
-    /// @param amount Amount being borrowed, base units of the reserve's asset; not read (there is no minimum debt).
-    /// @custom:spec REQ-ADAPTER-009, REQ-ADAPTER-010, REQ-ADAPTER-011, REQ-ADAPTER-012, REQ-ADAPTER-013, REQ-ADAPTER-014, REQ-ADAPTER-015, REQ-ADAPTER-016, REQ-ADAPTER-018, REQ-ADAPTER-019, REQ-ADAPTER-020, REQ-ADAPTER-021, REQ-ADAPTER-022, REQ-ADAPTER-023, REQ-ADAPTER-024, REQ-ADAPTER-061, REQ-RISK-056, REQ-RISK-061, REQ-RISK-062, REQ-RISK-065, REQ-RISK-069, REQ-RISK-071, REQ-ORACLE-099, REQ-ORACLE-100, SPEC-PROXY-002, SPEC-BRK-001, SPEC-BRK-002, SPEC-BRK-003, SPEC-BRK-004, BOR-006, BOR-007, BOR-017, Q-229, Q-234, Q-238, Q-241, Q-248, Q-270, Q-380
+    /// @param amount Amount being borrowed, base units of the reserve's asset; charged to the speed windows (there is no
+    /// minimum debt).
+    /// @custom:spec REQ-ADAPTER-009, REQ-ADAPTER-010, REQ-ADAPTER-011, REQ-ADAPTER-012, REQ-ADAPTER-013, REQ-ADAPTER-014, REQ-ADAPTER-015, REQ-ADAPTER-016, REQ-ADAPTER-018, REQ-ADAPTER-019, REQ-ADAPTER-020, REQ-ADAPTER-021, REQ-ADAPTER-022, REQ-ADAPTER-023, REQ-ADAPTER-024, REQ-ADAPTER-061, REQ-RISK-056, REQ-RISK-061, REQ-RISK-062, REQ-RISK-065, REQ-RISK-069, REQ-RISK-071, REQ-ORACLE-099, REQ-ORACLE-100, REQ-RISK-092, REQ-RISK-095, REQ-RISK-098, SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013, SPEC-PROXY-002, SPEC-BRK-001, SPEC-BRK-002, SPEC-BRK-003, SPEC-BRK-004, BOR-006, BOR-007, BOR-017, Q-229, Q-234, Q-238, Q-241, Q-248, Q-270, Q-380
     function preBorrowCheck(
         address proxy,
         uint256 debtReserveId,

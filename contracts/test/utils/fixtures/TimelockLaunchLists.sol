@@ -14,15 +14,16 @@ import {IMarketRegistryStandby} from "../../../src/policy/market-registry/IMarke
 import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {IParameterStoreBreakers} from "../../../src/policy/parameter-store/IParameterStoreBreakers.sol";
 import {IParameterStoreLiquidation} from "../../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStoreSpeed} from "../../../src/policy/parameter-store/IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
 
 /// @title TimelockLaunchLists
 /// @notice The AvanaTimelock's launch short-delay list (= `SHORT_ELIGIBLE`) and DAO-only cancel set of 2.15
 /// ("Delay classes and timing", `REQ-ACCESS-155`, `REQ-ACCESS-156`), built from the interfaces for given target
-/// addresses: 20 ParameterStore tighten setters, 11 MarketRegistry selectors and LPVaultSwap `removeKeeper`; and
+/// addresses: 22 ParameterStore tighten setters, 11 MarketRegistry selectors and LPVaultSwap `removeKeeper`; and
 /// MarketRegistry `restoreRoute`, `useStandbyRoute`, `unfreezeAddress` with LPVaultSwap `addKeeper`.
 library TimelockLaunchLists {
-    uint256 internal constant SHORT_COUNT = 32;
+    uint256 internal constant SHORT_COUNT = 34;
     uint256 internal constant DAO_COUNT = 4;
 
     function shortEligible(
@@ -30,7 +31,7 @@ library TimelockLaunchLists {
         address marketRegistry,
         address lpVaultSwap
     ) internal pure returns (SelectorPair[] memory pairs) {
-        bytes4[20] memory ps = [
+        bytes4[22] memory ps = [
             IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
@@ -50,7 +51,9 @@ library TimelockLaunchLists {
             IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
             IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
             IParameterStoreLiquidation.tightenDebtStressRiseBps.selector,
-            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector
+            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector,
+            IParameterStoreSpeed.tightenMarketSpeedLimits.selector,
+            IParameterStoreSpeed.tightenDebtSpeedLimit.selector
         ];
         bytes4[11] memory mr = [
             IMarketRegistryRoutes.disableRoute.selector,

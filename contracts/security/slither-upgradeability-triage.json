@@ -47,6 +47,14 @@
       "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (or the upgradeToAndCall that installs the first implementation), and the implementation's constructor calls _disableInitializers (REQ-ADAPTER-074). Covered by TEST-242 (test_TEST_242_initializeRules).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: same as the ParameterStore and MarketRegistry initialize-target entries."
+    },
+    {
+      "fingerprint": "c1f9cd7e08ccabe7",
+      "check": "initialize-target",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "reason": "Same as d5db8888ac8cc58f (fingerprint moved by the speed-limit edit): initialize runs atomically in the ERC1967Proxy constructor, and the implementation's constructor calls _disableInitializers. Covered by TEST-242.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     }
   ]
 }

@@ -238,4 +238,29 @@ interface IRiskModuleErrors {
     /// @param logic The rejected logic contract.
     /// @custom:spec REQ-RISK-002
     error InvalidLogic(address logic);
+
+    /// @notice A borrow whose USD charge does not fit the market's borrow-speed window, or into a market without speed
+    /// parameters.
+    /// @param marketId The market.
+    /// @param availableUsd Room in the window now, 8-decimal USD.
+    /// @param moreAt Time the next charges stop counting, or 0 when only a larger base or a loosening adds room.
+    /// @custom:spec REQ-RISK-092, REQ-RISK-096, REQ-RISK-098, Q-411
+    error BorrowSpeedExceeded(uint256 marketId, uint256 availableUsd, uint64 moreAt);
+
+    /// @notice A borrow that does not fit the (funding Hub, asset) borrow-speed window, or of a pair without speed
+    /// parameters.
+    /// @param hub The funding Hub.
+    /// @param asset The debt asset.
+    /// @param available Room in the window now, asset base units.
+    /// @param moreAt Time the next charges stop counting, or 0.
+    /// @custom:spec REQ-RISK-092, REQ-RISK-096, REQ-RISK-098, Q-411
+    error DebtSpeedExceeded(address hub, address asset, uint256 available, uint64 moreAt);
+
+    /// @notice A pledge or re-credit that is not a rescue top-up whose charge does not fit the market's pledge-speed
+    /// window, or into a market without speed parameters.
+    /// @param marketId The market.
+    /// @param availableUsd Room in the window now, 8-decimal USD.
+    /// @param moreAt Time the next charges stop counting, or 0.
+    /// @custom:spec REQ-RISK-093, REQ-RISK-096, REQ-RISK-099, Q-411
+    error PledgeSpeedExceeded(uint256 marketId, uint256 availableUsd, uint64 moreAt);
 }

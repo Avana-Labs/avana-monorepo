@@ -171,7 +171,7 @@ class TimelockMachine(RuleBasedStateMachine):
         self.executed = []       # (record, t_exec)
         self.cancelled = []      # (record, canceller, canceller held DAO_CANCELLER_ROLE)
         self.done = set()
-        assert self.tl.SHORT_ELIGIBLE == SPEC_SHORT_ELIGIBLE and len(SPEC_SHORT_ELIGIBLE) == 32   # 20 ParameterStore + 11 MarketRegistry + 1 LPVaultSwap, as compiled
+        assert self.tl.SHORT_ELIGIBLE == SPEC_SHORT_ELIGIBLE and len(SPEC_SHORT_ELIGIBLE) == 34   # 22 ParameterStore + 11 MarketRegistry + 1 LPVaultSwap, as compiled
         assert self.tl.DAO_CANCEL_SET == SPEC_DAO_SET
 
     def expect(self, fn, expected, label=""):

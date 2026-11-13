@@ -14,6 +14,8 @@ import {IParameterStoreEvents} from "./IParameterStoreEvents.sol";
 import {FeedDef} from "./types/FeedDef.sol";
 import {GlobalParams} from "./types/GlobalParams.sol";
 import {MarketParams} from "./types/MarketParams.sol";
+import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
+import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreStorage
 /// @notice Storage layout, implementation immutables, hard bounds and shared checks of the ParameterStore and of its
@@ -51,6 +53,9 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(address spoke => uint256) targetHealthFactor;
         mapping(address spoke => uint16) minLiquidationBonus;
         mapping(bytes32 paramKey => uint64) lastLoosenedAt;
+        // Appended for Q-411 (REQ-PSTORE-035); earlier members keep their slots.
+        mapping(uint256 marketId => MarketSpeedLimits) marketSpeed;
+        mapping(address hub => mapping(address asset => SpeedLimit)) debtSpeed;
     }
 
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff))`.

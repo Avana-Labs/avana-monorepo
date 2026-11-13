@@ -217,7 +217,7 @@ Governance is per chain. Ethereum and Base each have their own timelock, a 4-of-
 - **Avana timelock:** every upgrade, parameter change, market listing and role change to Avana's contracts goes through it, with a 5-day delay (never less than 4), or 12 hours when every call only reduces risk. A ready operation can be executed within a 14-day window. The governance Safe and the Aave governance executor can propose; both, and both guardians, can cancel. Only the Aave governance executor can cancel a role change or an operation that restores liquidation.
 - **Guardians:** the Emergency Guardian and the Aave Protocol Guardian can each act at once to freeze or pause Hubs, freeze an address, trip or reset a breaker, switch a token to its pre-approved standby price route, and cancel queued operations. They cannot upgrade contracts, change parameters or move collateral. The Aave Protocol Guardian can also freeze or pause Avana's CDP Spoke reserves on the Aave side, so Avana's markets can be stopped without Avana Labs, and freeze Lend Spoke reserves, which stops new supply and never stops withdrawals.
 - **Signers:** at most 3 of the 7 governance Safe signers come from Avana Labs, across at least three organisations and three jurisdictions. The three Safes share no signers. Named signers will be agreed with service providers.
-- **Exits are never blocked:** pauses, freezes and breakers stop new activity only. Repayment, fee collection, debt-free withdrawal and liquidation stay open.
+- **Exits are never blocked:** pauses, freezes, breakers and the speed limits stop new activity only. Repayment, fee collection, debt-free withdrawal and liquidation stay open.
 
 ### Circuit breakers
 
@@ -233,6 +233,17 @@ On-chain breakers stop new borrowing only where an on-chain check is reliable. O
 | Swap-route failures | 3 in 1 hour | Alert; a guardian freezes new borrowing once the routes are confirmed unable to settle liquidations at the required size |
 
 Temporary price and depth gates reopen after 30 minutes of healthy observations, a provisional value reviewed against live data. The configuration drift check and the Base sequencer check also stop new borrowing under their own conditions.
+
+### Speed limits
+
+Two speed limits slow how fast new debt and new collateral can enter a market. If a price is wrong in a way the oracle checks miss, the collateral cannot be drained faster than one limit per window, which gives monitoring and the guardians time to freeze the market. The RiskModule enforces them inside every borrow and pledge it already checks: no keeper, no bot and no Aave cap change.
+
+- **Borrow speed**, per market and per Hub and debt asset: new debt in any 6-hour window stays within a quarter of the existing debt (for a market, the debt on its Aave Spoke; for a Hub and asset, everything Avana's Spokes owe the Hub), never below a floor and never above a ceiling. Per market (in USD): at least $250,000 and at most $2,500,000. Per Hub and debt asset (in tokens): at least 500,000 and at most 5,000,000.
+- **Pledge speed**, per market: new collateral in any 6-hour window stays within a quarter of the market's collateral, at least $1,000,000 and at most $10,000,000. Rescue top-ups that save a position from liquidation are exempt.
+
+Example: with $4,000,000 of debt, of which $600,000 was borrowed in the current window, the limit counts the debt before the window, $3,400,000, so it is $850,000 and a further $250,000 is available now; a larger borrow is refused with the amount available and the time more frees up, at most 12 hours later. Splitting a borrow across blocks or accounts does not help: the window counts every account, and borrowing in the window does not raise its own limit.
+
+Exits are never throttled: repayment, repay with collateral, withdrawal, fee collection and liquidation do not touch the limits. The values are set per market at listing and per Hub and debt asset when the asset is listed; they can be tightened within 12 hours, or at once by the risk steward, and loosened only at the 5-day delay. A borrower who needs more than a market's ceiling asks governance to raise it for a time through the normal delay; the guardians' freeze still overrides everything.
 
 ### Deficits and first-loss coverage
 

@@ -246,4 +246,27 @@ contract RegistryAaveOracleMock {
     ) external {
         getReserveSource[reserveId] = source;
     }
+
+    // Reserve prices for the RiskModule's speed limits (Q-411): a set price, else the source's `latestAnswer()` as the
+    // AaveOracle reads it, else $1.00 for a source without one (the registry's feed mocks serve rounds only).
+    mapping(uint256 => uint256) public priceOverride;
+
+    function setPrice(
+        uint256 reserveId,
+        uint256 price
+    ) external {
+        priceOverride[reserveId] = price;
+    }
+
+    function getReservePrice(
+        uint256 reserveId
+    ) external view returns (uint256) {
+        uint256 p = priceOverride[reserveId];
+        if (p != 0) return p;
+        (bool ok, bytes memory data) = getReserveSource[reserveId].staticcall(abi.encodeWithSignature("latestAnswer()"));
+        if (!ok || data.length != 32) return 1e8;
+        int256 a = abi.decode(data, (int256));
+        require(a > 0, "price");
+        return uint256(a);
+    }
 }

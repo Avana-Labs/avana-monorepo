@@ -42,6 +42,9 @@ Run: `../../run_all.sh`, or `../../.venv/bin/python <file>.py` from this folder.
 | `SPEC-CHAIN-001` | `G(n) = 1,310,000 + 240,000 × n` gas units per liquidation of an account with `n` records; record cap 16, so `G(16) = 5,150,000 ≤ 16,777,216 / 2 = 8,388,608` (largest fitting count 29); keeper gas budget `k × G(16)`; no minimum debt (`Q-381`) | none | ch01, ar11 |
 | `SPEC-CAP-009` | borrow capacity `capRay = ⌊totalCollateralValue × RAY × avgCollateralFactor / WAD⌋` (maximum at HF 1.00), recommended `⌊capRay × 100 / 110⌋` (HF 1.10, `Q-398`); the idle test is removed (`Q-396`) | capacity down, recommended down | ar11 |
 | `SPEC-CAP-010` | `Σ drawCap ≤ line`; `line × 10^dec × coverageRatioBps ≤ funded × 10^4` | none | ar11 |
+| `SPEC-CAP-011` | window `(start, prev, curr)`: from `start + 2τ` empty, from `start + τ` `(start + τ, curr, 0)`; a charge passes iff `prev + curr + x ≤ L` | none | ar16 |
+| `SPEC-CAP-012` | `L = min(max, max(min, ⌊rate × sat(D − prev − curr) / 10^4⌋))` | floor | ar16 |
+| `SPEC-CAP-013` | `amountUsd = ⌈amount × price8 / 10^dec⌉` | ceiling | ar16 |
 
 ## Properties
 
