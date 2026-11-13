@@ -3843,11 +3843,11 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "f70b677953cf69ba",
+      "fingerprint": "f9337cea69c44472",
       "check": "divide-before-multiply",
-      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
-      "function": "ClLPVaultMarkets._referenceRange(uint160,int24)",
-      "reason": "Tick alignment to the tick spacing: (t / s) * s is the intended truncation (SPEC-ORC-005 reference range; the usable-tick bounds are SPEC-BACK-001's (MIN_TICK / s) * s, as ClPriceMath.isUsableRange computes them), with a floor correction for a negative tick. Covered by TEST-264 (UniswapV3Integration.UnitExponent: narrow18x18StableRangesList, exponentFixedPerPool) and MATH-UO-77a.",
+      "file": "src/amm/concentrated-liquidity/ClUnitMath.sol",
+      "function": "ClUnitMath.referenceRange(uint160,int24)",
+      "reason": "Moved unchanged from ClLPVaultMarkets._referenceRange (was f70b677953cf69ba) into ClUnitMath.referenceRange. Tick alignment to the tick spacing: (t / s) * s is the intended truncation (SPEC-ORC-005 reference range; the usable-tick bounds are SPEC-BACK-001's (MIN_TICK / s) * s, as ClPriceMath.isUsableRange computes them), with a floor correction for a negative tick. Covered by TEST-264 (UniswapV3Integration.UnitExponent: narrow18x18StableRangesList, exponentFixedPerPool) and MATH-UO-77a.",
       "approval": "pending review (approved pattern)",
       "review": "fixmed (adversarial-review fixes 2026-11-12); pattern: divide-before-multiply in ported AMM tick math"
     },

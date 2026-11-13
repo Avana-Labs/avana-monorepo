@@ -1371,10 +1371,10 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "d4cbdc9f6e57315a",
+      "fingerprint": "b82a366ec2143b6a",
       "check": "Division by zero not prevented",
-      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
-      "reason": "tick / spacing in _referenceRange: spacing is the pool's tick spacing, checked > 0 by ClPriceMath.isUsableRange in bindMarket before the decimals search runs (REQ-AMM-CORE-003). Covered by TEST-264.",
+      "file": "src/amm/concentrated-liquidity/ClUnitMath.sol",
+      "reason": "Moved unchanged from ClLPVaultMarkets._referenceRange (was d4cbdc9f6e57315a) into ClUnitMath.referenceRange, reached from bindMarket through _unitDecimals and ClUnitMath.firstBindingExponent. tick / spacing in referenceRange: spacing is the pool's tick spacing, checked > 0 by ClPriceMath.isUsableRange in bindMarket before the decimals search runs (REQ-AMM-CORE-003). Covered by TEST-264.",
       "approval": "pending review (approved pattern)",
       "review": "fixmed (adversarial-review fixes 2026-11-12)"
     },
