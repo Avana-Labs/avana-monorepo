@@ -14,6 +14,7 @@ import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleB
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
 import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDriftLogic.sol";
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
+import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
 import {PledgeCharge} from "../../../src/policy/risk-module/types/PledgeCharge.sol";
 import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
@@ -130,7 +131,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         coll.setCore(address(factory), address(adapter), address(lpVaultSwap));
         uint256 n = vm.getNonce(address(this));
         address predictedRegistry = vm.computeCreateAddress(address(this), n + 7);
-        address predictedRisk = vm.computeCreateAddress(address(this), n + 14);
+        address predictedRisk = vm.computeCreateAddress(address(this), n + 15);
         im = MarketRegistryImmutables({
             timelock: address(timelock),
             aaveGovernanceExecutor: aaveGovernanceExecutor,
@@ -177,6 +178,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         l.pledge = address(new RiskModulePledgeLogic(i, l.drift, l.breaker));
         l.borrow = address(new RiskModuleBorrowLogic(i, l.drift, l.breaker));
         l.status = address(new RiskModuleStatusLogic(i, l.drift, l.breaker, l.borrow));
+        l.speed = address(new RiskModuleSpeedLogic(i));
     }
 
     /// @dev Hub, Spoke, tokens and the GHO debt reserve, as `MarketRegistryFixture._setUpWorld` with richer mocks.
@@ -443,7 +445,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         uint128 units,
         PledgeCounters memory k,
         bool requireRescue
-    ) internal view returns (PledgeCharge memory) {
+    ) internal returns (PledgeCharge memory) {
         return riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), units, k, requireRescue);
     }
 }

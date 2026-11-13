@@ -38,8 +38,8 @@ contract LPOracleCheckConfigUnitTest is LPOracleFixture {
         c = _config();
         c.tokens[0].routes[0].legs[0].maxAnswer = 2e12;
         assertTrue(_check(c) & LPOracleCodes.CHECK_LEG_BOUNDS != 0, "maxAnswer above the aggregator's");
-        pA.setBounds(1, 1e13);
-        c.tokens[0].routes[0].legs[0].maxAnswer = 1e13;
+        pA.setBounds(1, 1e19);
+        c.tokens[0].routes[0].legs[0].maxAnswer = 1e19;
         assertTrue(_check(c) & LPOracleCodes.CHECK_ROUTE_RANGE != 0, "route value at maxAnswer above MAX_ROUTE_ANSWER");
         c = _config();
         c.tokens[0].routes[0].legs[0].heartbeatMargin = 0;

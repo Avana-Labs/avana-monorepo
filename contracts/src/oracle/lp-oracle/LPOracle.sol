@@ -16,6 +16,7 @@ import {LPOracleListing} from "./LPOracleListing.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
 import {InitParams} from "./types/InitParams.sol";
+import {LPOracleLogicSet} from "./types/LPOracleLogicSet.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -40,8 +41,11 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeable, UUPSUpgradeable, LPOracleListing {
     /// @dev Poke logic contract (`LPOraclePokeLogic` with this implementation's pricing module).
     address internal immutable _POKE_LOGIC;
-    /// @dev Listing logic contract (`LPOracleListingLogic` with this implementation's pricing module).
+    /// @dev Listing logic contract (`LPOracleListingLogic` with this implementation's pricing module): `checkConfig`.
     address internal immutable _LISTING_LOGIC;
+    /// @dev Initialization logic contract: `initialize`'s market part (the listing logic itself where both fit one
+    /// contract).
+    address internal immutable _INIT_LOGIC;
     /// @dev View logic contract (`LPOracleViewLogic` with this implementation's pricing module).
     address internal immutable _VIEW_LOGIC;
 
@@ -53,9 +57,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     /// @param pokeMinGasFloor `POKE_MIN_GAS_FLOOR`.
     /// @param pokeMinGasCeiling `POKE_MIN_GAS_CEILING`.
     /// @param hasSequencer True on an L2 with a sequencer-uptime feed.
-    /// @param pokeLogic The poke logic contract.
-    /// @param listingLogic The listing logic contract.
-    /// @param viewLogic The view logic contract.
+    /// @param logics The poke, initialization, listing and view logic contracts.
     /// @custom:spec REQ-ORACLE-078, REQ-ORACLE-080, REQ-ORACLE-097
     constructor(
         address timelock,
@@ -63,20 +65,25 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         uint32 pokeMinGasFloor,
         uint32 pokeMinGasCeiling,
         bool hasSequencer,
-        address pokeLogic,
-        address listingLogic,
-        address viewLogic
+        LPOracleLogicSet memory logics
     ) LPOracleStorage(timelock, chainBlockTime, pokeMinGasFloor, pokeMinGasCeiling, hasSequencer) {
         bytes32 config =
             keccak256(abi.encode(timelock, chainBlockTime, pokeMinGasFloor, pokeMinGasCeiling, hasSequencer));
         if (
-            pokeLogic.code.length == 0 || listingLogic.code.length == 0 || viewLogic.code.length == 0
-                || ILPOracleLogic(pokeLogic).logicConfig() != config
-                || ILPOracleLogic(listingLogic).logicConfig() != config
-                || ILPOracleLogic(viewLogic).logicConfig() != config
+            !_logicOk(logics.pokeLogic, config) || !_logicOk(logics.initLogic, config)
+                || !_logicOk(logics.listingLogic, config) || !_logicOk(logics.viewLogic, config)
         ) revert MarketMismatch(0);
-        (_POKE_LOGIC, _LISTING_LOGIC, _VIEW_LOGIC) = (pokeLogic, listingLogic, viewLogic);
+        (_POKE_LOGIC, _INIT_LOGIC, _LISTING_LOGIC, _VIEW_LOGIC) =
+        (logics.pokeLogic, logics.initLogic, logics.listingLogic, logics.viewLogic);
         _disableInitializers();
+    }
+
+    /// @dev `logic` has code and reports the chain constants `config`.
+    function _logicOk(
+        address logic,
+        bytes32 config
+    ) private view returns (bool) {
+        return logic.code.length != 0 && ILPOracleLogic(logic).logicConfig() == config;
     }
 
     /// @inheritdoc ILPOracle
@@ -96,9 +103,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         _grantRole(DEFAULT_ADMIN_ROLE, _TIMELOCK);
         _grantRole(AvanaRoles.APPLICATION_ADMIN, _TIMELOCK);
         _storeMarket(params);
-        Address.functionDelegateCall(
-            _LISTING_LOGIC, bytes.concat(ILPOracleLogic.initializeMarket.selector, msg.data[4:])
-        );
+        Address.functionDelegateCall(_INIT_LOGIC, bytes.concat(ILPOracleLogic.initializeMarket.selector, msg.data[4:]));
     }
 
     /// @dev Stores the market identity from `params`; reverts `MarketMismatch` for a malformed market.
@@ -258,7 +263,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     /// @custom:spec REQ-ORACLE-039, REQ-ORACLE-061, REQ-ORACLE-106
     function _forward(
         address logic
-    ) private view {
+    ) internal view {
         _asView(_delegateAndReturn)(logic);
     }
 
@@ -309,6 +314,12 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     /// @custom:spec REQ-ORACLE-080
     function LISTING_LOGIC() external view override returns (address logic) {
         logic = _LISTING_LOGIC;
+    }
+
+    /// @inheritdoc ILPOracleRouter
+    /// @custom:spec REQ-ORACLE-080
+    function INIT_LOGIC() external view override returns (address logic) {
+        logic = _INIT_LOGIC;
     }
 
     /// @inheritdoc ILPOracleRouter

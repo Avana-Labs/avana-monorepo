@@ -13,11 +13,11 @@ import {Test} from "forge-std/Test.sol";
 /// order (`PROP-024`); the agreement check is the exact cross-multiplied rule, symmetric, and false outside
 /// `[1, MAX_ROUTE_ANSWER]` (`PROP-026`).
 /// @dev The library is compiled into this contract. Amounts are below `2^128` (a composition of `10^d <= 10^18` units),
-/// prices at most `MAX_ROUTE_ANSWER = 10^12` (normalised answers inside the listing bounds), tolerances `uint16`.
+/// prices at most `MAX_ROUTE_ANSWER = 10^18` (normalised answers inside the listing bounds), tolerances `uint16`.
 /// Token decimals are concrete per check (6/6, 18/6 and 18/18 cover the launch pairs), so every division is by a
 /// constant power of ten.
 contract LPPriceMathHalmosTest is Test {
-    uint256 internal constant MAX_ROUTE = 1e12;
+    uint256 internal constant MAX_ROUTE = 1e18;
 
     // PROP-023 verifies: SPEC-ORC-008, REQ-ORACLE-012, REQ-ORACLE-103, INV-055, Q-191
     // Sources: MATH-UO-14, MATH-UO-16, MATH-UO-51a, AMM-A3f
@@ -115,7 +115,8 @@ contract LPPriceMathHalmosTest is Test {
         assert(valid);
         assert(price8 >= 1);
         assert(price8 < 2 ** 255);
-        // Exact value scaled by 10^(d0 + d1): fits 256 bits for amounts below 2^128, prices <= 10^12 and d <= 18.
+        // Exact value scaled by 10^(d0 + d1): fits 256 bits for amounts below 2^128, prices <= 10^18 and d <= 18
+        // (each product below 2^248, MATH-UO-75a).
         uint256 exactScaled = uint256(a0) * v0 * 10 ** d1 + uint256(a1) * v1 * 10 ** d0;
         uint256 one = 10 ** (uint256(d0) + d1);
         if (exactScaled >= one) assert(price8 * one <= exactScaled);

@@ -289,7 +289,8 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
 
     /// @dev Builds the configuration of market `marketId` from storage: routes in force, legs from the feed
     /// definitions, each token's tolerance and second source in force, the market's window and tolerance, and the
-    /// chain's band, timers and sequencer check.
+    /// market's USD band (the chain's band for an all-stable market, none otherwise, REQ-ORACLE-056), the chain's
+    /// timers and sequencer check.
     /// @custom:spec REQ-CONFIG-072, REQ-PSTORE-011, REQ-PSTORE-029
     function _buildConfig(
         uint256 marketId,
@@ -316,8 +317,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         c.twapMinObservations = _twapMinObservations(p.twapWindow);
         c.consistencyToleranceBps = p.consistencyToleranceBps;
         c.maxQuoteChangeBps = MAX_QUOTE_CHANGE_BPS;
-        c.usdBandLow = $.g.usdBandLow;
-        c.usdBandHigh = $.g.usdBandHigh;
+        (c.usdBandLow, c.usdBandHigh) = _usdBand(marketId);
         c.cachedWindow = $.g.cachedWindow;
         c.disagreementPauseMax = $.g.disagreementPauseMax;
         c.graceDuration = $.g.graceDuration;

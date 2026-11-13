@@ -16,8 +16,9 @@ Ported line for line (rounding and order of operations):
   _evaluateDeficit, notifyReportDeficit)
 
 Simplifications (stated in README): liquidityFee = 0 and nothing swept, so
-totalAddedAssets = liquidity + owed + deficit; the GHO drawn rate is a constant
-DAO-set flat rate (Q-096); riskPremiumThreshold is left at its maximum (Q-141 is
+totalAddedAssets = liquidity + owed + deficit; each debt asset's drawn rate follows Aave V4's kinked
+utilization curve (AssetInterestRateStrategy.calculateInterestRate, Q-408), recomputed after every Hub
+entry point as AssetLogic.updateDrawnRate does; riskPremiumThreshold is left at its maximum (Q-141 is
 covered elsewhere); no position managers (the proxy is the account, Q-064).
 """
 from .mathlib import (RAY, BPS, WAD, HF_LIQ, DUST_VALUE, U120, U200, chk, cdiv, mul_div,
@@ -53,8 +54,26 @@ class SpokeData:
         self.halted = False
 
 
+BPS_TO_RAY = 10 ** 23
+
+
+def curve_rate(ir, liquidity, drawn, swept=0):
+    """AssetInterestRateStrategy.calculateInterestRate, line for line (deficit is not an input)."""
+    base, before, after, opt = ir
+    req(100 <= opt <= 9900, "InvalidOptimalUsageRatio")
+    req(base + before + after <= 1000_00, "InvalidMaxDrawnRate")
+    rate = base * BPS_TO_RAY
+    if drawn == 0:
+        return rate
+    u = ray_div_up(drawn, liquidity + drawn + swept)
+    o = opt * BPS_TO_RAY
+    if u <= o:
+        return rate + ray_div_up(ray_mul_up(before * BPS_TO_RAY, u), o)
+    return rate + before * BPS_TO_RAY + ray_div_up(ray_mul_up(after * BPS_TO_RAY, u - o), RAY - o)
+
+
 class Asset:
-    def __init__(self, token, decimals, drawn_rate_ray=0, drawn_index=RAY):
+    def __init__(self, token, decimals, drawn_rate_ray=0, drawn_index=RAY, ir=None):
         self.token, self.decimals = token, decimals
         self.liquidity = 0
         self.added_shares = 0
@@ -64,6 +83,10 @@ class Asset:
         self.deficit_ray = 0
         self.drawn_index = drawn_index
         self.drawn_rate = drawn_rate_ray
+        self.ir = ir                 # (baseDrawnRate, rateGrowthBeforeOptimal, rateGrowthAfterOptimal, optimal) bps
+        self.rate_index = drawn_index
+        if ir is not None:
+            self.drawn_rate = ir[0] * BPS_TO_RAY
         self.last_update = 0
         self.spokes = {}
 
@@ -90,6 +113,13 @@ class Hub:
             return
         a.drawn_index = chk(self.drawn_index(a), U120, "uint120 drawnIndex")
         a.last_update = self.clock.now
+
+    def update_rate(self, a):
+        """AssetLogic.updateDrawnRate: rate from the stored index after the action (no-op without a curve)."""
+        if a.ir is not None:
+            a.drawn_rate = chk(curve_rate(a.ir, a.liquidity, ray_mul_up(a.drawn_shares, a.drawn_index)), 2 ** 96,
+                               "uint96 drawnRate")
+            a.rate_index = a.drawn_index     # ghost: the index the rate was computed at (an accrue alone moves the index)
 
     def total_added_assets(self, a):
         idx = self.drawn_index(a)
@@ -140,6 +170,7 @@ class Hub:
         a.added_shares += shares
         sd.added_shares += shares
         a.liquidity = chk(liquidity, U120, "uint120 liquidity")
+        self.update_rate(a)
         return shares
 
     def remove(self, aid, spoke, amount, to, transfer):
@@ -156,6 +187,7 @@ class Hub:
         a.added_shares -= shares
         sd.added_shares -= shares
         a.liquidity -= amount
+        self.update_rate(a)
         transfer(a.token, self.addr, to, amount)
         return shares
 
@@ -175,6 +207,7 @@ class Hub:
         a.drawn_shares += ds
         sd.drawn_shares += ds
         a.liquidity -= amount
+        self.update_rate(a)
         transfer(a.token, self.addr, to, amount)
         return ds
 
@@ -203,6 +236,7 @@ class Hub:
         liquidity = a.liquidity + drawn_amount + from_ray_up(delta[2])
         req(self.ledger.balance(a.token, self.addr) >= liquidity, "InsufficientTransferred")
         a.liquidity = chk(liquidity, U120, "uint120 liquidity")
+        self.update_rate(a)
         return ds
 
     def report_deficit(self, aid, spoke, drawn_amount, delta):
@@ -219,6 +253,7 @@ class Hub:
         d = ds * a.drawn_index + delta[2]
         a.deficit_ray = chk(a.deficit_ray + d, U200, "uint200")
         sd.deficit_ray = chk(sd.deficit_ray + d, U200, "uint200")
+        self.update_rate(a)
         return ds, from_ray_up(d)
 
     def eliminate_deficit(self, aid, caller_spoke, amount, covered_spoke):
@@ -236,6 +271,7 @@ class Hub:
         csd.added_shares -= shares
         a.deficit_ray -= amt_ray
         cov.deficit_ray -= amt_ray
+        self.update_rate(a)
         return shares, elim
 
     def refresh_premium(self, aid, spoke, delta):
@@ -244,6 +280,7 @@ class Hub:
         self.accrue(a)
         req(delta[2] == 0, "InvalidPremiumChange")
         self._apply_premium_delta(a, sd, delta)
+        self.update_rate(a)
 
 
 # ----------------------------------------------------------------------------- Spoke

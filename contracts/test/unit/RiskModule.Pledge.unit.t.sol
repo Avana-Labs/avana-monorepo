@@ -25,7 +25,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
 
     // TEST-010 verifies: REQ-RISK-025, REQ-RISK-026, SPEC-CAP-001
     // Sources: 2.7 LIFECYCLE step 2
-    function test_TEST_010_newAccountPledgeReturnsCharge() public view {
+    function test_TEST_010_newAccountPledgeReturnsCharge() public {
         PledgeCharge memory c = _pledge(TEN_K, _counters(), false);
         assertEq(c.usdCharge, 20_000e8);
         assertEq(c.sliceUsd, 0);
@@ -33,7 +33,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         assertEq(c.rescueUnits, 0);
     }
 
-    // TEST-012 verifies: REQ-RISK-009, REQ-RISK-014, INV-026, REQ-ACCESS-036, REQ-VAULT-144
+    // TEST-012 verifies: REQ-RISK-009, REQ-RISK-014, INV-026, REQ-ACCESS-036, REQ-VAULT-144, REQ-RISK-034
     function test_TEST_012_offboardingAndNotActive() public {
         vm.prank(address(timelock));
         registry.setMarketOffboarding(mid);
@@ -73,7 +73,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _pledge(TEN_K, k, false);
     }
 
-    // TEST-012 verifies: REQ-RISK-018, REQ-RISK-019, REQ-RISK-050, INV-029
+    // TEST-012 verifies: REQ-RISK-018, REQ-RISK-019, REQ-RISK-050, INV-029, REQ-RISK-028
     function test_TEST_012_newAccountChecksSkippedForTopUps() public {
         PledgeCounters memory k = _counters();
         // Hub shares != assets.
@@ -156,7 +156,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         assertEq(_pledge(TEN_K, k, false).usdCharge, 20_000e8);
     }
 
-    // TEST-196 verifies: REQ-RISK-057, REQ-RISK-064, SPEC-CAP-001, INV-069
+    // TEST-196 verifies: REQ-RISK-057, REQ-RISK-064, SPEC-CAP-001, INV-069, REQ-RISK-008
     // Sources: 5.1 TEST-196 example (d = 18, price8 = 2.00e8)
     function test_TEST_196_minimumPledgeValue() public {
         PledgeCounters memory k = _counters();
@@ -210,7 +210,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _pledge(500e18, k, true);
     }
 
-    // TEST-013 verifies: REQ-RISK-021, REQ-RISK-024, REQ-RISK-080, SPEC-CAP-002, INV-028
+    // TEST-013 verifies: REQ-RISK-021, REQ-RISK-024, REQ-RISK-080, SPEC-CAP-002, INV-028, REQ-RISK-087
     // Sources: 2.7 REQ-RISK-080 example (whale holds $900,000 of $1,000,000)
     function test_TEST_013_marketCapAndSquatting() public {
         PledgeCounters memory k = _counters();

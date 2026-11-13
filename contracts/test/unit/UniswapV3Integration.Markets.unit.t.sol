@@ -48,25 +48,25 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
         address f = address(v3Factory);
         address l = address(lock);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(0, coll, registry, l, timelock, n, f);
+        new UniswapV3Integration(0, coll, registry, l, timelock, n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, address(0), registry, l, timelock, n, f);
+        new UniswapV3Integration(1, address(0), registry, l, timelock, n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, coll, l, timelock, n, f);
+        new UniswapV3Integration(1, coll, coll, l, timelock, n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, l, n, f);
+        new UniswapV3Integration(1, coll, registry, l, l, n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, address(0), f);
+        new UniswapV3Integration(1, coll, registry, l, timelock, address(0), f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, n, n);
+        new UniswapV3Integration(1, coll, registry, l, timelock, n, n, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, n, timelock);
+        new UniswapV3Integration(1, coll, registry, l, timelock, n, timelock, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, alice, f);
+        new UniswapV3Integration(1, coll, registry, l, timelock, alice, f, 12);
         // An NFPM whose factory() is another factory.
         MockNFPM wrong = new MockNFPM(address(new MockV3Factory()));
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, address(wrong), f);
+        new UniswapV3Integration(1, coll, registry, l, timelock, address(wrong), f, 12);
     }
 
     // TEST-108 verifies: REQ-VAULT-155, REQ-AMM-CORE-001, REQ-AMM-CORE-002, REQ-AMM-CORE-009, REQ-AMM-V3-001, SPEC-AMM-CORE-002
@@ -192,14 +192,15 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
     function test_TEST_264_bindMarketRefusesBadListingData() public {
         PositionShape memory sh = PositionShape(ShapeKind.TickRange, -60, 60);
         bytes[5] memory datas = [
-            bytes(""), abi.encode(uint256(1e8)), abi.encode(0, 1e8), abi.encode(1e8, 1e12 + 1), abi.encode(1e8, 1e8, 1)
+            bytes(""), abi.encode(uint256(1e8)), abi.encode(0, 1e8), abi.encode(1e8, 1e18 + 1), abi.encode(1e8, 1e8, 1)
         ];
         for (uint256 i = 0; i < datas.length; ++i) {
             vm.prank(registry);
             vm.expectRevert(InvalidPool.selector);
             vault.bindMarket(30 + i, address(pool3000), bytes32(0), sh, datas[i]);
         }
-        // Tokens: no decimals(), more than 18 decimals, or a whole token worth less than $1 even at d = 18.
+        // Tokens: no decimals() or more than 18 decimals. A pair whose whole token is worth less than $1 even at d = 18
+        // now lists with a unit exponent k > 0 (SPEC-ORC-005).
         MintableToken d24 = new MintableToken("D24", 24);
         MintableToken d18a = new MintableToken("A18", 18);
         MintableToken d18b = new MintableToken("B18", 18);
@@ -211,9 +212,12 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
         vault.bindMarket(40, noDec, bytes32(0), sh, abi.encode(1e8, 1e8));
         vm.expectRevert(InvalidPool.selector);
         vault.bindMarket(41, big, bytes32(0), sh, abi.encode(1e8, 1e8));
-        vm.expectRevert(InvalidPool.selector);
-        vault.bindMarket(42, cheap, bytes32(0), PositionShape(ShapeKind.TickRange, -887_220, 887_220), abi.encode(1, 1));
+        (, uint8 dCheap) = vault.bindMarket(
+            42, cheap, bytes32(0), PositionShape(ShapeKind.TickRange, -887_220, 887_220), abi.encode(1, 1)
+        );
         vm.stopPrank();
+        assertGt(vault.unitExponent(42), 0, "a $0.00000001 pair lists through k");
+        assertLe(dCheap, 18);
     }
 
     // TEST-264 verifies: SPEC-BACK-001, REQ-AMM-CORE-003, REQ-AMM-V3-008, REQ-ORACLE-105
@@ -284,7 +288,12 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
         vm.expectRevert(InvalidPrices.selector);
         vault.composition(M1, 1, _vec(0, 1e8));
         vm.expectRevert(InvalidPrices.selector);
-        vault.composition(M1, 1, _vec(1e8, 1e12 + 1));
+        vault.composition(M1, 1, _vec(1e8, 1e18 + 1));
+        vm.expectRevert(InvalidPrices.selector);
+        vault.composition(M1, 1, _vec(1e18 + 1, 1e8));
+        // MAX_ROUTE_ANSWER = 10^18 itself is a valid price (ORACLE-04: an ETH above $10,000 stays a route value).
+        vault.composition(M1, 1, _vec(1e8, 1e18));
+        vault.composition(M1, 1, _vec(1e18, 1e8));
         vm.expectRevert(abi.encodeWithSelector(MarketBinding.selector, uint256(77)));
         vault.composition(77, 1, _vec(1e8, 1e8));
         (uint256[] memory a,) = vault.composition(M1, 0, _vec(1e8, 1e8));
@@ -432,7 +441,7 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
     // TEST-264 verifies: REQ-AMM-V3-002
     function test_TEST_264_harnessDiffersOnlyInTheInitCodeHash() public {
         UniswapV3Integration prod = new UniswapV3Integration(
-            INTEGRATION, coll, registry, address(lock), timelock, address(nfpm), address(v3Factory)
+            INTEGRATION, coll, registry, address(lock), timelock, address(nfpm), address(v3Factory), 12
         );
         assertEq(prod.POOL_INIT_CODE_HASH(), 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54);
         // The production contract refuses a mock pool: its CREATE2 address is not the canonical one.

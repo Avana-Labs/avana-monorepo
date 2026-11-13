@@ -10,14 +10,15 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 - Uniswap v3: an exact port of `TickMath.getSqrtRatioAtTick` (checked against `MIN_SQRT_RATIO` and `MAX_SQRT_RATIO`), `Tick.tickSpacingToMaxLiquidityPerTick`, and the `SqrtPriceMath` burn formulas, which round down.
 - Aave V4 Hub: `addCap` in whole tokens as `uint40` (`2^40 − 1` means no cap), `uint120` shares, `toValue = amount · price · 10^(18 − decimals)`, 224-bit `KeyValueList` values.
 - Launch stablecoins in Uniswap address order (token0 < token1): USDC/USDT (`d = 6`), DAI/USDC (`d = 12`), GHO/USDC (`d = 12`), DAI/USDS (`d = 18`), GHO/DAI (`d = 18`); "USDC/GHO" checks that a listing name in the other order gives the same pool order.
-- Constants: `MAX_ROUTE_ANSWER = 10^12` ($10,000, 8 decimals), `stableCeilingUsd = 10^8`, `MAX_FULL_RANGE_EPSILON = 10^-12`, `LISTING_SHOCK_FACTOR = 100`.
+- Constants: `MAX_ROUTE_ANSWER = 10^18` ($10,000,000,000 per whole token, 8 decimals; `MATH-UO-75`), `stableCeilingUsd = 10^8`, `MAX_FULL_RANGE_EPSILON = 10^-12`, `LISTING_SHOCK_FACTOR = 100`.
 
 ## Formulas
 
 | Formula | Final rule | Rounding | Source |
 |---|---|---|---|
 | Decimals | smallest `d ∈ [6, 18]` with `10^d · v ≥ $1`, `v` the USD value of one credited unit at the listing prices; listing fails if none qualifies. A two-token full-range market with an even `d0 + d1` gives `d = (d0 + d1) / 2`, the special case `MATH-UO-01` checks | exact | `SPEC-UNIT-001`, `SPEC-ORC-005` |
-| Unit | 1 base unit = 1 credited liquidity unit; mint and burn exactly the units credited or debited | none | `SPEC-UNIT-002`, `SPEC-BACK-002` |
+| Unit | 1 base unit = 1 credited unit = `10^k` liquidity (`k` the pool's unit exponent, 0 for most pools); a position of liquidity `L` credits `⌊L / 10^k⌋`; mint and burn exactly the units credited or debited | down (credit) | `SPEC-UNIT-002`, `SPEC-BACK-002` |
+| Unit exponent | `k = max(0, e_ref + 2 − 18)`, `e_ref` the smallest `e ∈ [6, 34]` with `price8(10^e)` on the pool's one-spacing reference range `≥ 10^8`, so `k ≤ 18`; fixed at the pool's first binding | exact | `SPEC-ORC-005` |
 | Whole-token value | `2·√(p0·p1)` USD, ideal full range; tick-bounded holdings worth `ideal·(1 − ε)`, `ε = (sP/sU + sL/sP)/2` (the two-token full-range reference of the composition) | — | `SPEC-UNIT-003`, `SPEC-ORC-006`, `SPEC-ORC-007` |
 | Vault-token decimals | smallest `d ∈ [6, 18]` with `price8(10^d) ≥ 10^8` at listing prices | exact | `SPEC-ORC-005` |
 | Composition (concentrated liquidity) | `s = min(max(s_O, s_a), s_b)`; `getAmountsForLiquidity(s, s_a, s_b, 10^d)` | down | `SPEC-ORC-006` |
@@ -33,7 +34,9 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | Vault-token price | `price8 = max(1, Σ_i ⌊(a_i − 1)⁺ · v_i / 10^(d_i)⌋)`, valid only for one length `n ∈ [2, 8]`, `a_i < 2^128`, `d_i ≤ 77`, `v_i ∈ [1, MAX_ROUTE_ANSWER]`; two-token full-range reference `isqrt(4·v0·v1) − 1` | down, then 1 raw unit per token | `SPEC-ORC-008` |
 | USD band | `usdBandLow^⊗n ≤ ⊗ q_i` and `⊗ v_i ≤ usdBandHigh^⊗n`, `x ⊗ y = ⌊x·y/10^8⌋` left to right in pool order, saturating at `2^256 − 1` and staying there (n = 2: `usdBandLow² ≤ q0·q1` up to one floor) | down | `SPEC-ORC-011` |
 | USD level | `usdLevel = max{L : L^⊗n ≤ ⊗ q_i}`; `usdBandLow ≤ usdLevel` iff the lower band test passes | down | `SPEC-ORC-011` |
-| Served collateral price | Live `fresh`; Drifting `min(fresh, A)`; disagreement `min(price8(w0, w1), fresh, A)` with `w = ceil(min(p, b))`; Cached `A`; Expired `1` | as `price8` | `SPEC-ORC-012`, `SPEC-ORC-017` |
+| Served collateral price | Live and Drifting `fresh`; disagreement (not failed) `max(1, min(price8(w0, w1), fresh))` with `w = ceil(min(p, b))`; Cached `A`; Expired `1` | as `price8` | `SPEC-ORC-012`, `SPEC-ORC-017` |
+| Borrow-side bound | `bookingPrice = min(fresh, A)` (`A` when `fresh = 0`); post-action health factor `hf · A / served` rounded down when `A < served`, else `hf` | down | `REQ-RISK-026`, `REQ-RISK-059` |
+| Route bound | every route value in `[1, MAX_ROUTE_ANSWER = 10^18]`; band products may saturate (sticky), `usdLevel = 2^256 − 1` then | — | `REQ-ORACLE-049`, `SPEC-ORC-011` |
 | Served debt price | Live `q`; disagreement `max(p, b, A)`; Cached `A`; Expired `⌈A·(10^4 + max(δ, 100))/10^4⌉`, `100 ≤ δ ≤ 5,000`, saturating at `2^256 − 1` | up | `SPEC-ORC-018` |
 | Failure start | `failureStart = min(S_ts, failedSince, now)`, `staleAt = max(staleFrom_primary, staleFrom_alternate)` | none | `SPEC-ORC-013` |
 | Recovery evidence | `B_i = S_primary ∩ S_alternate`; Expired by timestamps iff `\|B_i\| ≥ cachedWindow` and `E_i > recoveredAt` | none | `SPEC-ORC-014` |
@@ -102,9 +105,9 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 
 | ID | Statement | Verifies | Assumptions / bounds | Result |
 |---|---|---|---|---|
-| `MATH-UO-10a` (USDC/USDT, DAI/USDC, GHO/USDC, DAI/USDS, GHO/DAI, USDC/GHO) | answers in [1, MAX_ROUTE_ANSWER]: num < 2^64 * den, so mulDiv runs and X < 2^256 | `SPEC-ORC-009` | integers, answers in [1, 1e12]; 10b answers up to 1e18 | PROVED (6 of 6) |
-| `MATH-UO-10b` | wrong reading without the num >= 2^64*den pre-check: P_raw in [2^64, 2^128) is a valid Uniswap price but mulDiv reverts before the clamp (first hit d0=6, d1=8) | `SPEC-ORC-009` | integers, answers in [1, 1e12]; 10b answers up to 1e18 | COUNTEREXAMPLE (deliberate) |
-| `MATH-UO-10c` | after a successful mulDiv, sqrt(X) < 2^128 < MAX_SQRT_RATIO, so the upper clamp can never fire | `SPEC-ORC-009` | integers, answers in [1, 1e12]; 10b answers up to 1e18 | PROVED |
+| `MATH-UO-10a` (USDC/USDT, DAI/USDC, GHO/USDC, DAI/USDS, GHO/DAI, USDC/GHO) | answers in [1, MAX_ROUTE_ANSWER]: num < 2^64 * den, so mulDiv runs and X < 2^256 | `SPEC-ORC-009` | integers, answers in [1, 1e18]; 10b answers up to 1e18 | PROVED (6 of 6) |
+| `MATH-UO-10b` | wrong reading without the num >= 2^64*den pre-check: P_raw in [2^64, 2^128) is a valid Uniswap price but mulDiv reverts before the clamp (first hit d0=6, d1=8) | `SPEC-ORC-009` | integers, answers in [1, 1e18]; 10b answers up to 1e18 | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-10c` | after a successful mulDiv, sqrt(X) < 2^128 < MAX_SQRT_RATIO, so the upper clamp can never fire | `SPEC-ORC-009` | integers, answers in [1, 1e18]; 10b answers up to 1e18 | PROVED |
 | `MATH-UO-11a` | below 2^64, X < 2^256 whenever mulDiv runs (no revert path) | `SPEC-ORC-009` | integers | PROVED |
 | `MATH-UO-11c` | in [2^64, 2^128), Y = mulDiv(num, 2^128, den) < 2^256 (no revert path) and Y >= 2^192 | `SPEC-ORC-009` | integers | PROVED |
 | `MATH-UO-11d` | in [2^64, 2^128), isqrt(Y) * 2^32 >= 2^128 > every lower-branch result (monotone across 2^64) | `SPEC-ORC-009` | integers | PROVED |
@@ -127,10 +130,10 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 
 | ID | Statement | Verifies | Assumptions / bounds | Result |
 |---|---|---|---|---|
-| `MATH-UO-14a` | price8 <= ideal (never above the closed-form value) | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e12 | PROVED |
-| `MATH-UO-14b` | ideal - price8 < 1 unit (1e-8 USD); relative error < 1/price8 (<= 1e-8 when a whole token >= $1) | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e12 | PROVED |
-| `MATH-UO-14c` | alternative 2*isqrt(a0*a1) is also <= ideal but can be up to 2 units low | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e12 | PROVED |
-| `MATH-UO-14d` | answers <= 1e+12: 4*a0*a1 does not overflow uint256 and price8 < 2^255 (int256 cast safe) | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e12 | PROVED |
+| `MATH-UO-14a` | price8 <= ideal (never above the closed-form value) | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e18 | PROVED |
+| `MATH-UO-14b` | ideal - price8 < 1 unit (1e-8 USD); relative error < 1/price8 (<= 1e-8 when a whole token >= $1) | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e18 | PROVED |
+| `MATH-UO-14c` | alternative 2*isqrt(a0*a1) is also <= ideal but can be up to 2 units low | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e18 | PROVED |
+| `MATH-UO-14d` | answers <= 1e+18: 4*a0*a1 does not overflow uint256 and price8 < 2^255 (int256 cast safe) | `SPEC-ORC-008`, `SPEC-ORC-002` | reals; 14d 256-bit vectors, answers <= 1e18 | PROVED |
 | `MATH-UO-15a` | a0, a1 >= 1  =>  floored root > 1 (so >= 2), hence served price8 = root - 1 >= 1; AaveOracle never sees 0 | `SPEC-ORC-008`, `SPEC-ORC-001` | reals; integers for feed decimals | PROVED |
 | `MATH-UO-15b` | why a normalised 0 is a failure: a feed with > 8 decimals and a tiny positive answer normalises (floor) to 0 | `SPEC-ORC-008`, `SPEC-ORC-001` | reals; integers for feed decimals | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-15c` | 8-decimal feeds with answer > 0 never normalise to 0 | `SPEC-ORC-008`, `SPEC-ORC-001` | reals; integers for feed decimals | PROVED |
@@ -148,11 +151,11 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | `MATH-UO-19a` | capped value <= uncapped value and <= value with the stable leg exactly at the ceiling | `SPEC-ORC-004` | reals, ceiling 1e8 | PROVED |
 | `MATH-UO-19b` | stable quote <= $1: the ceiling is a no-op (value unchanged) | `SPEC-ORC-004` | reals, ceiling 1e8 | PROVED |
 | `MATH-UO-19c` | capped value is monotone non-decreasing in the stable quote (no inversion at the ceiling) | `SPEC-ORC-004` | reals, ceiling 1e8 | PROVED |
-| `MATH-UO-20a` | wrong reading (ceiling applied before the TWAP check): GHO just above $1.005 with feeds and pool agreeing deviates > tau = 50 ticks -> false Drifting | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e12 | COUNTEREXAMPLE (deliberate) |
-| `MATH-UO-20b` | final rule (uncapped quotes): a stable at any premium whose pool ratio matches its quotes passes the TWAP comparison for every tau >= 0 | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e12 | PROVED |
-| `MATH-UO-20c` | for a market of two stables, v0*v1 <= 1e16, so the upper bound never trips for any usdBandHigh >= $1 | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e12 | PROVED |
-| `MATH-UO-20d` | the squared integer test low^2 <= q0*q1 is exactly low <= sqrt(q0*q1) (no rounding) | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e12 | PROVED |
-| `MATH-UO-20e` | a stable above peg is tested at the ceiling: q0 > $1 gives v0 = 1e8, so the upper test reads 1e8 * v1 whatever the premium | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e12 | PROVED |
+| `MATH-UO-20a` | wrong reading (ceiling applied before the TWAP check): GHO just above $1.005 with feeds and pool agreeing deviates > tau = 50 ticks -> false Drifting | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e18 | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-20b` | final rule (uncapped quotes): a stable at any premium whose pool ratio matches its quotes passes the TWAP comparison for every tau >= 0 | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e18 | PROVED |
+| `MATH-UO-20c` | for a market of two stables, v0*v1 <= 1e16, so the upper bound never trips for any usdBandHigh >= $1 | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e18 | PROVED |
+| `MATH-UO-20d` | the squared integer test low^2 <= q0*q1 is exactly low <= sqrt(q0*q1) (no rounding) | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e18 | PROVED |
+| `MATH-UO-20e` | a stable above peg is tested at the ceiling: q0 > $1 gives v0 = 1e8, so the upper test reads 1e8 * v1 whatever the premium | `SPEC-ORC-010`, `SPEC-ORC-004`, `SPEC-ORC-003`, `SPEC-ORC-011` | reals and integers, quotes <= 1e18 | PROVED |
 | `MATH-UO-21` | premium x on one uncapped leg: value rises by factor sqrt(1+x) <= 1 + x/2 | `SPEC-ORC-004` | reals, premium <= 100% | PROVED |
 
 ### `uo06_agreement_twap.py`
@@ -253,15 +256,25 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | `MATH-UO-42a` | lemma: the floored square root is monotone (X1 <= X2 => isqrt(X1) <= isqrt(X2)) | `SPEC-ORC-008`, `SPEC-ORC-017`, `SPEC-ORC-004`, `SPEC-ORC-012` | integers | PROVED |
 | `MATH-UO-42b` | lemma: 1 <= w_i <= v_i => 4*w0*w1 <= 4*v0*v1 | `SPEC-ORC-008`, `SPEC-ORC-017`, `SPEC-ORC-004`, `SPEC-ORC-012` | integers | PROVED |
 | `MATH-UO-42c` | lemma: the disagreement price w = ceil(min(p, b)) is <= the valuation price v = ceil(q) for either quote route, and >= 1 | `SPEC-ORC-008`, `SPEC-ORC-017`, `SPEC-ORC-004`, `SPEC-ORC-012` | integers | PROVED |
-| `MATH-UO-42d` | served >= 1 in every state; served <= A whenever the state is not Live; served <= fresh whenever not failed (Live, Drifting, disagreement) | `SPEC-ORC-008`, `SPEC-ORC-017`, `SPEC-ORC-004`, `SPEC-ORC-012` | integers | PROVED |
+| `MATH-UO-42d` | served >= 1 in every state; served = A when Cached; served <= fresh whenever not failed (Live, Drifting, disagreement), with the floored lower-route price not assumed below fresh | `SPEC-ORC-008`, `SPEC-ORC-017`, `SPEC-ORC-004`, `SPEC-ORC-012` | integers | PROVED |
 | `MATH-UO-42e` | fresh and lower are >= 1: prices >= 1 give isqrt(4*x0*x1) >= 2, so price8 >= 1 | `SPEC-ORC-008`, `SPEC-ORC-017`, `SPEC-ORC-004`, `SPEC-ORC-012` | integers | PROVED |
-| `MATH-UO-43a` | served debt price >= 1 always, >= A whenever the state is not Live (debt that cannot be priced never counts lower) | `SPEC-ORC-018` | integers, A <= 1e12, delta in [100, 5000] | PROVED |
-| `MATH-UO-43b-i` | lemma: 100 <= delta <= 5,000 and A >= 1 give 10,100*A <= A*(10^4 + delta) <= 15,000*A | `SPEC-ORC-018` | integers, A <= 1e12, delta in [100, 5000] | PROVED |
-| `MATH-UO-43b` | Expired value ceil(A*(10^4+delta)/10^4) is strictly above A and never exceeds 1.5 * A + 1 | `SPEC-ORC-018` | integers, A <= 1e12, delta in [100, 5000] | PROVED |
-| `MATH-UO-43c` | A <= MAX_ROUTE_ANSWER keeps A * (10^4 + delta) < 2^256 | `SPEC-ORC-018` | integers, A <= 1e12, delta in [100, 5000] | PROVED |
+| `MATH-UO-42f` | served <= fresh whenever the market is not failed and the quote-change cap does not hold it Cached; the capped block serves A in place of fresh | `SPEC-ORC-017`, `REQ-ORACLE-103` | integers and booleans | PROVED |
+| `MATH-UO-42g` | a rally never lowers the served price: for any accepted prices and any Live/Drifting states before and after (Live -> Drifting included), fresh_new >= fresh_old gives served_new >= served_old | `SPEC-ORC-017`, `INV-087` | integers | PROVED |
+| `MATH-UO-42h` | wrong reading (Drifting serves min(fresh, A)): a Live market served at fresh above an older A rallies into Drifting and its served price falls to A, so a rally could make an account liquidatable | `SPEC-ORC-017`, `INV-087` | integers | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-43a` | served debt price >= 1 always, >= A whenever the state is not Live (debt that cannot be priced never counts lower) | `SPEC-ORC-018` | integers, A <= 1e18, delta in [100, 5000] | PROVED |
+| `MATH-UO-43b-i` | lemma: 100 <= delta <= 5,000 and A >= 1 give 10,100*A <= A*(10^4 + delta) <= 15,000*A | `SPEC-ORC-018` | integers, A <= 1e18, delta in [100, 5000] | PROVED |
+| `MATH-UO-43b` | Expired value ceil(A*(10^4+delta)/10^4) is strictly above A and never exceeds 1.5 * A + 1 | `SPEC-ORC-018` | integers, A <= 1e18, delta in [100, 5000] | PROVED |
+| `MATH-UO-43c` | A <= MAX_ROUTE_ANSWER keeps A * (10^4 + delta) < 2^256 | `SPEC-ORC-018` | integers, A <= 1e18, delta in [100, 5000] | PROVED |
 | `MATH-UO-43d` | the DebtOracle reads any uint16 stress rise into [100, 5,000] (min(max(read, 100), 5,000)), so MATH-UO-43b-i and -43b keep the Expired value in (A, 1.5 * A + 1] whatever the store returns | `SPEC-ORC-018`, `REQ-ORACLE-092` | integers, read in [0, 65,535] | PROVED |
 | `MATH-UO-43e` | wrong reading (review DO-03): the lower bound alone; a store returning 65,535 bps serves ceil(A * 75,535 / 10^4) = 755,274,465 > 1.5 * A + 1 for A = 99,990,000 | `SPEC-ORC-018` | integers | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-67` | while the routes disagree the reported route is the one whose value max(p, b, A) serves: the alternate serves b, the primary p, and none serves A, so the timestamp, legs and age limits always describe the served value | `SPEC-ORC-012`, `SPEC-ORC-015`, `SPEC-ORC-018`, `REQ-ORACLE-093` | integers, p ≠ b | PROVED |
+| `MATH-UO-76a` | boundedHealthFactor never exceeds hf, equals floor(hf * A / served) when A < served and hf when A >= served | `REQ-RISK-059`, `SPEC-ORC-017` | integers | PROVED |
+| `MATH-UO-76b-i` | lemma: x <= y and z >= 0 give x * z <= y * z (scales the two floors of 76b and 76c) | `REQ-RISK-059`, `SPEC-CF-005` | integers | PROVED |
+| `MATH-UO-76b` | linear health factor hf(P) = floor(K * P / D) (the vault token is the account's only collateral): the bounded value is never above the health factor at price A and at most one wei below it | `REQ-RISK-059`, `SPEC-CF-005` | integers | PROVED |
+| `MATH-UO-76c` | linear health factor with no floor (D divides K * served): the bounded value is exactly the health factor at price A | `REQ-RISK-059`, `SPEC-CF-005` | integers | PROVED |
+| `MATH-UO-76d` | bookingPrice = min(fresh, A) when fresh > 0, A when fresh = 0 (a failed market), and never above A | `REQ-RISK-026`, `SPEC-ORC-017` | integers | PROVED |
+| `MATH-UO-76e` | wrong reading (post-action check at the served price): after a rally the unbounded health factor passes 1.0 while the health factor at the accepted price is below it | `REQ-RISK-059`, `SPEC-ORC-017` | integers | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-76f` | `RiskModuleMath` examples: boundedHealthFactor(1.10e18, 219,999,899, 199,999,899) = 999,999,954,090,888,014; bookingPrice(199,999,899, 219,999,899) = 199,999,899, (199,999,899, 189,999,899) = 189,999,899, (199,999,899, 0) = 199,999,899 | `REQ-RISK-026`, `REQ-RISK-059` | exact integers | COMPUTED |
 | `MATH-UO-44a` | both routes stale: the market is Expired at every now >= staleAt + cachedWindow, whatever failedSince or the poke time | `SPEC-ORC-013` | integers (seconds) | PROVED |
 | `MATH-UO-44b` | a late or missed poke can only report Expired earlier: failureStart <= staleAt and <= now | `SPEC-ORC-013` | integers (seconds) | PROVED |
 | `MATH-UO-44c` | staleFrom is the first failed second: a leg updated at u with feedMaxAge m is valid at u + m and stale at u + m + 1 | `SPEC-ORC-013` | integers (seconds) | PROVED |
@@ -288,9 +301,9 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | `MATH-UO-51b` | above the range the unclamped token1 amount `L(sP − sa)` exceeds the true holding `L(sb − sa)` | same | reals | PROVED |
 | `MATH-UO-51c` | exact-integer sampling (400 draws of range, spacing, decimals, prices $0.90–$1.10, `d` by `SPEC-ORC-005`): price8 ≤ exact fair value at the exact oracle price in every sample; RT-02 example ×2.989 unclamped; worked examples 951,956,208, 999,630,568, 199,999,799 | same | exact integers, 80-digit decimals | COMPUTED |
 | `MATH-UO-52` | the composition value is non-decreasing in each price, so the stable ceiling and the lower route only lower price8 | `SPEC-ORC-007`, `SPEC-ORC-004`, `SPEC-ORC-017` | reals, minimum property instantiated | PROVED |
-| `MATH-UO-53a` | n = 2: the exact band test implies the fixed-point test | `SPEC-ORC-011`, `REQ-ORACLE-015` | integers ≤ 10^12 | PROVED |
-| `MATH-UO-53b` | n = 2: the fixed-point test passing implies `low² < q0·q1 + 10^8` | same | integers ≤ 10^12 | PROVED |
-| `MATH-UO-53c` | n = 3: the left-to-right fixed-point product is within `qc/10^8 + 1` below the exact product / 10^16 | same | integers ≤ 10^12 | PROVED |
+| `MATH-UO-53a` | n = 2: the exact band test implies the fixed-point test | `SPEC-ORC-011`, `REQ-ORACLE-015` | integers ≤ 10^18 | PROVED |
+| `MATH-UO-53b` | n = 2: the fixed-point test passing implies `low² < q0·q1 + 10^8` | same | integers ≤ 10^18 | PROVED |
+| `MATH-UO-53c` | n = 3: the left-to-right fixed-point product is within `qc/10^8 + 1` below the exact product / 10^16 | same | integers ≤ 10^18 | PROVED |
 | `MATH-UO-53d` | band examples of `SPEC-ORC-011` | same | exact integers | COMPUTED |
 | `MATH-UO-54a` | second-source test is symmetric in (quote, second source) | `SPEC-ORC-020`, `REQ-ORACLE-100` | integers ≤ 10^12, S < 2^16 | PROVED |
 | `MATH-UO-54b` | both sides of the second-source test fit 256 bits | same | same | PROVED |
@@ -312,7 +325,7 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | `MATH-UO-57b` | wrong reading (only `gasleft ≥ pokeMinGas` after the catch): a starved read is accepted as a feed failure | same | integers | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-57c` | entry gas at `max(W_poke, max_k(u_k + ⌈64 G_k / 63⌉ + POST_CALL_GAS))`: every pre-call check passes and the whole poke fits | same | integers, three reads at `u_1 ≤ u_2 ≤ u_3 ≤ W_poke` | PROVED |
 | `MATH-UO-57e` | the per-read floor is at most `W_poke + ⌈64 G_max / 63⌉ + POST_CALL_GAS` with `G_max` the largest `G_k` (the 1.5 single-term bound) | same | integers, three reads | PROVED |
-| `MATH-UO-57d` | `SPEC-ORC-023` example: 55,794; `G_inputs(2) = 430,000` with bound 441,826; measured worst-case two-token poke with the token-decimals reads of `REQ-ORACLE-107`: `W_poke = 830,781`, binding feed read at `u = 718,836` gives 774,630, floor 830,781; `POKE_MIN_GAS_FLOOR = 900,000` leaves 69,219 gas until the fork calibration | same | exact integers | COMPUTED |
+| `MATH-UO-57d` | `SPEC-ORC-023` example: 55,794; `G_inputs(2) = 430,000` with bound 441,826; measured worst-case two-token poke with the token-decimals reads of `REQ-ORACLE-107`: `W_poke = 861,000`, binding feed read at `u = 748,926` gives 804,720, floor 861,000; `POKE_MIN_GAS_FLOOR = 900,000` leaves 39,000 gas until the fork calibration | same | exact integers | COMPUTED |
 | `MATH-UO-57f` | two gas limits at which a read passes its pre-call check forward the same `G` to it, so a completed poke computes the same failure, timers and decimals result at any limit, and a limit short of a check reverts before the read | same | integers, EVM 63/64 forwarding | PROVED |
 | `MATH-UO-57g` | the entry check measures gas left at the implementation: a proxy keeping 1/64 and spending `o ≥ 0` first leaves at most the caller's limit, so a transaction must cover `pokeMinGas` plus the work before the check | same | integers | PROVED |
 | `MATH-UO-72a` | `borrowAllowed` implies every token confirmed and a token-decimals verification at most 7,200 s old | `REQ-ORACLE-107`, `REQ-ORACLE-100`, `SPEC-ORC-020`, `REQ-ORACLE-016` | integers and booleans | PROVED |
@@ -331,30 +344,30 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | `MATH-UO-58c` | wrong reading (old bound `aA, aB < 2^255`): the `mulDiv` result can need more than 256 bits | same | integers | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-58d` | wrong reading (unsigned input): a negative answer cast to `uint256` normalises from 18 decimals to more than `10^60` | same | integers | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-58e` | every answer below `2^128` floors to 0 once `f ≥ 47` | same | exact integers | COMPUTED |
-| `MATH-UO-59a` | `max(1, min(lower, fresh, A))` is ≥ 1, ≤ fresh and ≤ A | `SPEC-ORC-017`, `REQ-ORACLE-086`, `REQ-ORACLE-020`, `INV-087` | integers | PROVED |
-| `MATH-UO-59b` | wrong reading (`min(lower, A)`): a floored lower price above fresh is served above fresh | same | integers | COUNTEREXAMPLE (deliberate) |
-| `MATH-UO-59c` | full-range USDC/USDT, `d = 6`: `w ≤ v` gives lower 194,928,172 above fresh 194,928,113, both below the exact value 194,928,473 | same | exact integers, 80-digit decimals | COMPUTED |
+| `MATH-UO-59a` | `max(1, min(lower, fresh))` is ≥ 1 and ≤ fresh | `SPEC-ORC-017`, `REQ-ORACLE-086`, `REQ-ORACLE-020`, `INV-087` | integers | PROVED |
+| `MATH-UO-59b` | wrong reading (the lower-route price alone): a floored lower price above fresh is served above fresh | same | integers | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-59c` | full-range USDC/USDT, `d = 6`: `w ≤ v` gives lower 194,928,172 above fresh 194,928,113, both below the exact value 194,928,473; served `min(lower, fresh)` = 194,928,113 | same | exact integers, 80-digit decimals | COMPUTED |
 | `MATH-UO-60a` | deviation: unsaturated, `\|x − y\| · 10^4` fits 256 bits and the floor is exact | `REQ-ORACLE-042`, `SPEC-ORC-003`, `SPEC-ORC-020` | integers ≤ `2^256 − 1` | PROVED |
 | `MATH-UO-60b` | deviation saturates only when `\|x − y\| · 10^4` really needs more than 256 bits | same | same | PROVED |
 | `MATH-UO-60c` | agreement inside `[1, MAX_ROUTE_ANSWER]` fits 256 bits; outside it is false for every input | same | integers, `T < 2^16` | PROVED |
-| `MATH-UO-61a` | n = 2: `L ↦ L^⊗2` is non-decreasing | `SPEC-ORC-011`, `REQ-ORACLE-042` | integers ≤ 10^12 | PROVED |
+| `MATH-UO-61a` | n = 2: `L ↦ L^⊗2` is non-decreasing | `SPEC-ORC-011`, `REQ-ORACLE-042` | integers ≤ 10^18 | PROVED |
 | `MATH-UO-61b` | one `⊗` step: the raw products are ordered when both arguments grow | same | integers | PROVED |
 | `MATH-UO-61c` | the saturating floor of a step keeps that order, so `L ↦ L^⊗n` is non-decreasing for every n | same | integers ≤ `2^256 − 1` | PROVED |
 | `MATH-UO-61d` | the left-to-right product is non-decreasing in each argument, so `(min q)^⊗n ≤ ⊗q ≤ (max q)^⊗n` bound the search | same | integers ≤ 10^12, n = 3 | PROVED |
-| `MATH-UO-61e` | n = 2: `usdBandLow ≤ usdLevel` iff `usdBandLow^⊗2 ≤ ⊗q` | same | integers ≤ 10^12 | PROVED |
+| `MATH-UO-61e` | n = 2: `usdBandLow ≤ usdLevel` iff `usdBandLow^⊗2 ≤ ⊗q` | same | integers ≤ 10^18 | PROVED |
 | `MATH-UO-61f` | wrong reading (real root `⌊(P · 10^8)^(1/2)⌋`): the level sits below `usdBandLow` while the band passes | same | integers | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-61g` | `usdLevel` of the `SPEC-ORC-011` examples: 99,998,499, 89,000,000, 99,990,000, and 90,000,001 for `(81,000,001, 10^8)` | same | exact integers | COMPUTED |
 | `MATH-UO-61h` | every n: with the monotone power, `usdBandLow ≤ usdLevel` iff `usdBandLow^⊗n ≤ ⊗q` | same | integers | PROVED |
-| `MATH-UO-62a` | eight quotes at `MAX_ROUTE_ANSWER` keep every intermediate below `2^256`: valid quotes never saturate | `SPEC-ORC-011` | exact integers | COMPUTED |
+| `MATH-UO-62a` | six quotes at `MAX_ROUTE_ANSWER = 10^18` keep the product below `2^256`; a seventh factor needs more than 256 bits, so seven or eight quotes near the bound reach the sticky saturation of 62b (defined behaviour, `MATH-UO-75i`, `75j`) | `SPEC-ORC-011` | exact integers | COMPUTED |
 | `MATH-UO-62b` | sticky saturation: a saturated factor gives a saturated product; an unsaturated product is the exact floor and never `2^256 − 1` | same | integers | PROVED |
 | `MATH-UO-62c` | wrong reading (non-sticky): a saturated product times 1 drops below the saturation value | same | integers | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-63` | the fixed-point product depends on the order of its factors: 91,459,272 in pool order, 91,459,273 reversed, against `97,067,963^⊗3 = 91,459,273` | same | exact integers | COMPUTED |
-| `MATH-UO-64` | with `a_i < 2^128` and `v_i ≤ MAX_ROUTE_ANSWER`, each term is below `2^168` and eight below `2^171` | `SPEC-ORC-008`, `REQ-ORACLE-103` | integers | PROVED |
+| `MATH-UO-64` | with `a_i < 2^128` and `v_i ≤ MAX_ROUTE_ANSWER`, each term is below `2^188` and eight below `2^191` (at `MAX_ROUTE_ANSWER = 10^18`) | `SPEC-ORC-008`, `REQ-ORACLE-103` | integers | PROVED |
 | `MATH-UO-65` | Expired debt price with `δ` read as `max(δ, 100)` is ≥ `A + 1`; the saturated value is above `A` | `SPEC-ORC-018`, `REQ-ORACLE-093`, `INV-087` | integers ≤ `2^256 − 1` | PROVED |
 | `MATH-UO-66a` | no route timestamps gives age 0 that every check refuses; a zero block time asks for `2^256 − 1` observations | `SPEC-ORC-012`, `SPEC-ORC-015`, `SPEC-ORC-022`, `SPEC-ORC-023`, `REQ-ORACLE-038`, `REQ-ORACLE-102` | integers | PROVED |
 | `MATH-UO-66b` | one read's term `u_k + ⌈64G_k/63⌉ + POST_CALL_GAS` (`LPPriceMath.pokeMinGasFloor(u_k, G_k)`): the read's pre-call check passes after `u_k` of work | same | integers | PROVED |
 | `MATH-UO-66c` | wrong reading (term without `POST_CALL_GAS`): read `k` fails its own pre-call check | same | integers | COUNTEREXAMPLE (deliberate) |
-| `MATH-UO-66d` | floor example with the token-decimals reads of `REQ-ORACLE-107`: binding read 718,836 + 50,794 + 5,000 = 774,630, `W_poke` 830,781, floor 830,781; configuration read bound 441,826 | same | exact integers | COMPUTED |
+| `MATH-UO-66d` | floor example with the token-decimals reads of `REQ-ORACLE-107`: binding read 748,926 + 50,794 + 5,000 = 804,720, `W_poke` 861,000, floor 861,000; configuration read bound 441,826 | same | exact integers | COMPUTED |
 
 ### `uo14_tolerance_standby.py`
 
@@ -389,9 +402,51 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | `MATH-UO-73e` | every window up to 7,200 s has a grace in `[600, 7,200]` covering it (`max(600, W)`), so the rule never makes a valid window unlistable | `REQ-PSTORE-034`, `REQ-PSTORE-023` | integers | PROVED |
 | `MATH-UO-74` | `REQ-PSTORE-034` example: with a 1,800 s market window and a 2,400 s standby, `setSequencer` 2,399 reverts, 2,400 passes, then `setTwapWindow` 2,401 reverts; the launch values (3,600 s grace, 1,800 s window) pass | `REQ-PSTORE-034` | exact integers | COMPUTED |
 
+### `uo17_unit_exponent.py`
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| `MATH-UO-77a` | every launch pair on spacings 1, 10 and 60, on ranges of ±10, ±100 and ±1,000 spacings around the listing price and on the full range, lists with `d ∈ [6, 18]`; `k` per pool: 0 for USDC/USDT, 0 for DAI/USDC and GHO/USDC on spacing 10 and 60 and 1 on spacing 1, 5 to 7 for DAI/USDS and GHO/DAI | `SPEC-ORC-005`, `SPEC-UNIT-001`, `SPEC-UNIT-002` | exact integers, TickMath port, $1 legs | COMPUTED |
+| `MATH-UO-77b` | `SPEC-ORC-005` example: GHO/USDS on spacing 1 has `k = 7` and `d = 15, 14, 13, 11` on ±10, ±100, ±1,000 and the full range | `SPEC-ORC-005`, `SPEC-UNIT-002` | exact integers | COMPUTED |
+| `MATH-UO-77c` | wrong reading `k = 0`: GHO/USDS on ±10 to ±10,000 ticks has no `d ∈ [6, 18]` | `SPEC-ORC-005` | exact integers | COMPUTED |
+| `MATH-UO-77g` | the reference search ends inside `[6, 34]`: at the cheapest listing prices ($10^−8 per whole token) two 18-decimal tokens on one tick around par find `e = 31` | `SPEC-ORC-005` | exact integers | COMPUTED |
+| `MATH-UO-77d` | credit `q = ⌊L / 10^k⌋` leaves `0 ≤ L − q·10^k < 10^k` with the NFT, and a removal of `u ≤ q` units removes `u·10^k ≤ L` liquidity | `SPEC-UNIT-002`, `SPEC-BACK-010` | integers | PROVED |
+| `MATH-UO-77e` | headroom: `10^e_ref · v_ref ≥ $1` and `v_m ≥ v_ref / 100` give `10^(e_ref + 2) · v_m ≥ $1`, so every market of the pool lists at `d ≤ 18 = e_ref + 2 − k` | `SPEC-ORC-005` | reals | PROVED |
+| `MATH-UO-77f` | wrong reading without headroom: a market worth 1/50 of the reference per unit needs `d > 18` | `SPEC-ORC-005` | reals | COUNTEREXAMPLE (deliberate) |
+
+### `uo18_route_answer_bound.py`
+
+Overflow analysis of the price path at `MAX_ROUTE_ANSWER = 10^18`: route values, valuation prices, quotes and second-source values in `[1, 10^18]`, composition amounts below `2^128`, token decimals of a concentrated-liquidity market at most 18, `2 ≤ n ≤ 8` tokens.
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| `MATH-UO-75a` | lpPrice: `(a_i − 1) · v_i < 2^188`, eight terms below `2^191 < 2^255`, so every `mulDiv`, the sum and the `int256` cast are safe | `SPEC-ORC-008`, `REQ-ORACLE-103` | integers | PROVED |
+| `MATH-UO-75b` | wrong reading (the `2^168` term bound of the old `10^12` limit): at `10^18` a term reaches `2^168` | same | integers | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-75c` | `SPEC-ORC-009`: `num, den ≤ 10^36 < 2^120` and `den << 64 < 2^184` (the listing shock check computes the same operands) | `SPEC-ORC-009`, `REQ-ORACLE-105` | integers, decimals ≤ 18 | PROVED |
+| `MATH-UO-75d` | branch (a): `num < 2^64 · den` gives `mulDiv(num, 2^192, den) < 2^256` | `SPEC-ORC-009` | same | PROVED |
+| `MATH-UO-75e` | agreement and second source: `\|p − b\| · 10^4 ≤ 10^22` and `T · min(p, b) < 2^76` for `T < 2^16` | `SPEC-ORC-003`, `SPEC-ORC-020` | integers | PROVED |
+| `MATH-UO-75f` | every entry of the accepted and the listing price vectors is `≤ 10^18 < 2^128`, so the `uint128` casts are exact | `REQ-ORACLE-047`, `REQ-ORACLE-029` | integers | PROVED |
+| `MATH-UO-75g` | listing shock: `q · 100 ≤ 10^20 < 2^67`; the shocked quotes `min(q · 100, 10^18)` and `max(q / 100, 1)` stay in `[1, 10^18]` | `REQ-ORACLE-050`, `REQ-ORACLE-105` | integers | PROVED |
+| `MATH-UO-75h` | DebtOracle: Drifting `max(p, b, A) ≤ 10^18`, Expired `⌈A (10^4 + δ) / 10^4⌉ ≤ 1.5 · 10^18 + 1 < 2^255`: every served debt price fits `int256` | `SPEC-ORC-018`, `REQ-ORACLE-093` | integers, δ in [100, 5,000] | PROVED |
+| `MATH-UO-75i` | USD-band product of eight quotes at `10^18`: exact value `10^88 > 2^256`; the product saturates at the seventh factor and stays at `2^256 − 1` | `SPEC-ORC-011` | exact integers | COMPUTED |
+| `MATH-UO-75j` | with `usdLevel = 2^256 − 1` on a saturated product: `usdBandLow ≤ usdLevel` exactly when `usdBandLow^⊗n ≤ ⊗q`, saturated or not | `SPEC-ORC-011`, `REQ-ORACLE-042` | integers | PROVED |
+| `MATH-UO-75k` | the doubling search of `usdLevel` on an unsaturated product stops below `2^129`: `acc ⊗ h ≥ acc` from `h ≥ 10^8`, and `h ≥ 2^128` saturates `h ⊗ h` | `SPEC-ORC-011` | integers | PROVED |
+| `MATH-UO-75l` | wrong reading (no early return on a saturated product): every power is `≤ 2^256 − 1`, so the doubling continues and `hi · 2` passes `2^256` | `SPEC-ORC-011` | integers | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-75m` | why `10^18`: WBTC near $100,000 (`10^13`) and ETH at $12,000 (`1.2 · 10^12`) are above the old `10^12` and valid at `10^18` | `REQ-ORACLE-049` | exact integers | COMPUTED |
+
+### `uo19_seizure_fee.py`
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| `MATH-UO-78a` | a seizure of `u` units with `f` fee shares, reconciled against `sharesBefore − f`, leaves the backing gap unchanged | `SPEC-BACK-007`, `REQ-VAULT-176`, `INV-058` | integers | PROVED |
+| `MATH-UO-78b` | with credit equal to shares at the snapshot, exactly `f` units go to pending and the credit after equals the shares after | `SPEC-BACK-007`, `REQ-VAULT-176` | integers | PROVED |
+| `MATH-UO-78c` | wrong reading: debiting `u + f` with nothing moved to pending lowers the gap by `f`, below 0 when the gap was smaller than the fee | `SPEC-BACK-007`, `REQ-VAULT-176` | integers | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-78d` | wrong reading: debiting only `u` leaves the account credited above its shares by `f` | `SPEC-BACK-007`, `REQ-VAULT-176` | integers | COUNTEREXAMPLE (deliberate) |
+| `MATH-UO-78e` | `REQ-VAULT-176` example: 1,000 seized, 100 fee shares: records −1,100, pending +100, supply −1,000, gap unchanged | `REQ-VAULT-176` | exact integers | COMPUTED |
+
 ## Findings
 
-No check in this folder finds a defect in the final spec. All 41 counterexamples are deliberate (24 in `uo01`…`uo11`, 6 in `uo12`, 6 in `uo13`, 1 in `uo14`, 2 in `uo15`, 2 in `uo16`): wrong readings the final rules replace (an unsigned answer, a sequencer grace checked against the market window only or the recorded second-source window only, a tolerance bound over the routes in force only, the `2^255` route bound, a disagreement price without `fresh`, the real-root USD level, non-sticky saturation, a poke floor without `POST_CALL_GAS`, odd decimal sums, no `num ≥ 2^64·den` pre-check, saturation at `MAX_SQRT_RATIO − 1` from `2^64`, a served price without the extra unit, the ceiling applied before the TWAP check, floor-division agreement, per-exit floor releases, a floor-rounded charge, a Hub cap sized at today's price, any-equality backing, unequal burn and debit, a view inside the stated token-decimals detection window, a sequencer answer of any length of at least 160 bytes decoded from its first five words) or cases outside a stated bound (deep depeg, non-standard tick spacing, overflow without listing bounds, common-mode errors that the USD band and the separate alternate feeds address, Hub share drift that `beginSeizure` rejects).
+No check in this folder finds a defect in the final spec. All 48 counterexamples are deliberate (26 in `uo01`…`uo11`, 6 in `uo12`, 6 in `uo13`, 1 in `uo14`, 2 in `uo15`, 2 in `uo16`, 1 in `uo17`, 2 in `uo18`, 2 in `uo19`): wrong readings the final rules replace (a Drifting price capped at the accepted price, a post-borrow health check at the served price, a `usdLevel` search without the early return on a saturated product, the `2^168` term bound at `MAX_ROUTE_ANSWER = 10^18`, an unsigned answer, a sequencer grace checked against the market window only or the recorded second-source window only, a tolerance bound over the routes in force only, the `2^255` route bound, a disagreement price of the lower routes alone, the real-root USD level, non-sticky saturation, a poke floor without `POST_CALL_GAS`, odd decimal sums, no `num ≥ 2^64·den` pre-check, saturation at `MAX_SQRT_RATIO − 1` from `2^64`, a served price without the extra unit, the ceiling applied before the TWAP check, floor-division agreement, per-exit floor releases, a floor-rounded charge, a Hub cap sized at today's price, any-equality backing, unequal burn and debit, a view inside the stated token-decimals detection window, a sequencer answer of any length of at least 160 bytes decoded from its first five words) or cases outside a stated bound (deep depeg, non-standard tick spacing, overflow without listing bounds, common-mode errors that the USD band and the separate alternate feeds address, Hub share drift that `beginSeizure` rejects).
 
 ## Results
 
@@ -409,5 +464,8 @@ No check in this folder finds a defect in the final spec. All 41 counterexamples
 | 2026-11-11 (sequencer restart rule: a borrow needs a round newer than the restart) | `../../.venv/bin/python uo12_amm_neutral_oracle.py` | Python 3.9.6, z3-solver 4.13.0 | as in the property tables; 120 s per query | 25 | 5 (all deliberate) | 8 | 0 | 0 |
 | 2026-11-11 (ParameterStore: sequencer grace covers every TWAP window) | `../../.venv/bin/python uo16_sequencer_twap_grace.py` | Python 3.9.6, z3-solver 4.13.0 | as in the property tables; 120 s per query | 3 | 2 (deliberate) | 1 | 0 | 0 |
 | 2026-11-11 (sequencer answer of exactly 160 bytes) | `../../.venv/bin/python uo12_amm_neutral_oracle.py` | Python 3.9.6, z3-solver 4.13.0 | as in the property tables; 120 s per query | 26 | 6 (all deliberate) | 8 | 0 | 0 |
+| 2026-11-12 (concentrated-liquidity unit exponent `k`, narrow 18/18 ranges) | `../../.venv/bin/python uo17_unit_exponent.py` | Python 3.9.6, z3-solver 4.13.0 | as in the property table; 120 s per query | 2 | 1 (deliberate) | 4 | 0 | 0 |
+| 2026-11-12 (served price: `A` only while Cached, borrow-side bound; `MAX_ROUTE_ANSWER = 10^18`) | `../../.venv/bin/python <file>.py` for `uo03`, `uo04`, `uo05`, `uo06`, `uo11`, `uo12`, `uo13`, `uo18`, one at a time | Python 3.9.6, z3-solver 4.13.0 | as in the property tables; 120 s per query | 126 | 27 (all deliberate) | 21 | 0 | 0 for every script |
+| 2026-11-12 (seizure under Aave's liquidation fee, `REQ-VAULT-176`) | `../../.venv/bin/python uo19_seizure_fee.py` | Python 3.9.6, z3-solver 4.13.0 | as in the property table; 120 s per query | 2 | 2 (deliberate) | 1 | 0 | 0 |
 
-Per script: `uo01` 14 / 4 / 3, `uo02` 31 / 0 / 1, `uo03` 19 / 3 / 3 (since 2026-11-11, with the root above 2^64 of `SPEC-ORC-009`), `uo04` 10 / 2 / 1, `uo05` 8 / 1 / 0, `uo06` 5 / 4 / 0, `uo07` 13 / 4 / 1, `uo08` 9 / 4 / 1, `uo09` 17 / 1 / 0, `uo10` 8 / 0 / 0, `uo11` 25 / 1 / 0 (since 2026-11-11, with the DebtOracle stress clamp and served route), `uo12` 26 / 6 / 8 (since 2026-11-11, with `MATH-UO-57f`, `57g`, `72`, the restart rule `55f` to `55h` and the exact-length read `55i`, `55j`), `uo13` 17 / 6 / 6, `uo14` 3 / 1 / 1, `uo15` 4 / 2 / 1, `uo16` 3 / 2 / 1 (proved / counterexample / computed; `MATH-UO-45c` added on 2026-11-10 with the final `SPEC-ORC-016`; `uo13` added on 2026-11-10 with the LPPriceMath input bounds, the fixed-point USD level and the disagreement price `min(lower, fresh, A)`; it takes about 2 minutes). The slowest script, `uo01`, takes about 26 s.
+Per script: `uo01` 14 / 4 / 3, `uo02` 31 / 0 / 1, `uo03` 19 / 3 / 3 (since 2026-11-11, with the root above 2^64 of `SPEC-ORC-009`), `uo04` 10 / 2 / 1, `uo05` 8 / 1 / 0, `uo06` 5 / 4 / 0, `uo07` 13 / 4 / 1, `uo08` 9 / 4 / 1, `uo09` 17 / 1 / 0, `uo10` 8 / 0 / 0, `uo11` 32 / 3 / 1 (since 2026-11-12, with the served price of `SPEC-ORC-017` that serves `A` only while Cached, `MATH-UO-42f` to `42h`, and the borrow-side bound `MATH-UO-76`), `uo12` 26 / 6 / 8 (since 2026-11-11, with `MATH-UO-57f`, `57g`, `72`, the restart rule `55f` to `55h` and the exact-length read `55i`, `55j`), `uo13` 17 / 6 / 6, `uo14` 3 / 1 / 1, `uo15` 4 / 2 / 1, `uo16` 3 / 2 / 1, `uo18` 9 / 2 / 2, `uo19` 2 / 2 / 1 (proved / counterexample / computed; `MATH-UO-45c` added on 2026-11-10 with the final `SPEC-ORC-016`; `uo13` added on 2026-11-10 with the LPPriceMath input bounds, the fixed-point USD level and the disagreement price, `min(lower, fresh)` since 2026-11-12; it takes about 2 minutes; `uo18` added on 2026-11-12 with `MAX_ROUTE_ANSWER = 10^18`). The slowest script, `uo01`, takes about 26 s.

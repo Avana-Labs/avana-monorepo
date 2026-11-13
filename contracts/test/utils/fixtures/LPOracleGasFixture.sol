@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
+import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
@@ -27,13 +28,13 @@ import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
 import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
 import {VaultTokenBindings} from "../../../src/types/VaultTokenBindings.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
-import {LPOracleHarness, LPOracleHarnessDeployer} from "../harness/LPOracleHarness.sol";
 import {EacProxyMock, OcrAggregatorMock} from "../mocks/ChainlinkCostMocks.sol";
 import {GasMarketRegistry} from "../mocks/GasMarketRegistry.sol";
-import {OracleTokenMock} from "../mocks/LPOracleMocks.sol";
 import {MockMarketRegistry} from "../mocks/MockMarketRegistry.sol";
 import {MockCollateralization} from "../mocks/ParameterStoreMocks.sol";
 import {AaveV4Fixture} from "./AaveV4Fixture.sol";
+import {ClPoolFixture, ClTestToken, IClPool} from "./ClPoolFixture.sol";
+import {LPOracleCLDeployer} from "./LPOracleCLFixture.sol";
 import {ParameterStoreFixture} from "./ParameterStoreFixture.sol";
 import {TimelockLaunchLists} from "./TimelockLaunchLists.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -143,7 +144,7 @@ contract GasDebtAsset is ERC20 {
 /// of the 4 debt reserves, so every health-factor computation prices 1 collateral and 4 debt reserves. The AaveAdapter
 /// and LPVaultSwap are pranked addresses (stand-ins in these tests); `_avanaHook` is where
 /// their pre-flow calls (`poke`, `getPriceState`) go.
-abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
+abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture, ClPoolFixture {
     enum Scenario {
         Live,
         Alternate,
@@ -159,7 +160,8 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
     uint32 internal constant FLOOR = 556_588;
     uint32 internal constant CEILING = 3_000_000;
 
-    LPOracleHarness internal oracle;
+    LPOracleCL internal oracle;
+    IClPool internal clPool;
     GasMarketRegistry internal gasRegistry;
     VaultToken internal vt;
     address internal adapter = makeAddr("aaveAdapter");
@@ -181,10 +183,20 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
         bool hasSequencer,
         uint32 floor
     ) internal {
-        vm.warp(T_START);
+        // The market's real Uniswap v3 USDC/USDT pool (fee 100, spacing 1) is created two hours earlier, so its
+        // observation buffer covers the 1,800 s TWAP window at T_START.
+        vm.warp(T_START - 7200);
         vm.roll(1000);
         _deployAaveV4();
         _deployGasStore(hasSequencer);
+        _deployFactory();
+        (ClTestToken t0, ClTestToken t1) =
+            usdc < usdt ? (ClTestToken(usdc), ClTestToken(usdt)) : (ClTestToken(usdt), ClTestToken(usdc));
+        clPool = _createPool(t0, t1, 100, 1e8, 1e8, 151, 1e15);
+        vm.warp(T_START - 3600);
+        _touch(clPool);
+        vm.warp(T_START);
+        vm.roll(block.number + 300);
         _deployFeeds();
         _configureStore();
         oracle = _deployOracle(floor);
@@ -278,9 +290,9 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
 
     function _deployOracle(
         uint32 floor
-    ) internal returns (LPOracleHarness o) {
-        LPOracleHarness impl = LPOracleHarnessDeployer.deploy(address(timelock), BLOCK_TIME, floor, CEILING, false);
-        o = LPOracleHarness(
+    ) internal returns (LPOracleCL o) {
+        LPOracleCL impl = LPOracleCLDeployer.deploy(address(timelock), BLOCK_TIME, floor, CEILING, false, 7);
+        o = LPOracleCL(
             address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (_initParams(floor)))))
         );
         Market memory m = registry.getMarket(M);
@@ -439,8 +451,8 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
     function _etchToken(
         address token
     ) internal {
-        vm.etch(token, address(new OracleTokenMock(6)).code);
-        vm.store(token, bytes32(uint256(1)), bytes32(uint256(6)));
+        // A plain 6-decimal ERC-20 (decimals are an immutable of the code), so the real pool can move it.
+        vm.etch(token, address(new ClTestToken("T", 6)).code);
     }
 
     function _secondSource(
@@ -472,15 +484,16 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
         c.tokens = new TokenOracleConfig[](2);
         for (uint256 i = 0; i < 2; ++i) {
             TokenOracleConfig memory t = c.tokens[i];
-            uint256 b = 3 * i;
-            t.token = i == 0 ? usdc : usdt;
+            // Pool order: token0 is the lower address.
+            t.token = (i == 0) == (usdc < usdt) ? usdc : usdt;
+            uint256 b = t.token == usdc ? 0 : 3;
             t.routes[0].legCount = 1;
             t.routes[0].legs[0] = _leg(address(legs[b]), 8, 1e6, 1e12);
             t.routes[1].legCount = 2;
             t.routes[1].legs[0] = _leg(address(legs[b + 1]), 18, 1e10, 1e17);
             t.routes[1].legs[1] = _leg(address(legs[b + 2]), 8, 1e8, 1e13);
             t.feedAgreementToleranceBps = 150;
-            t.secondSource = _secondSource(address(legs[10 + i]));
+            t.secondSource = _secondSource(address(legs[t.token == usdc ? 10 : 11]));
         }
     }
 
@@ -497,8 +510,7 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture {
         p.description = "USDC/USDT / USD";
         p.pokeMinGas = pokeMinGas_;
         p.config = _oracleConfig();
-        uint256[] memory k = new uint256[](2);
-        (k[0], k[1]) = (1e18, 1e18);
-        p.market = abi.encode(k);
+        // Full range of spacing 1: at $1 per token one unit of liquidity holds one raw unit of each, so d = 6.
+        p.market = abi.encode(address(clPool), int24(-887_272), int24(887_272));
     }
 }

@@ -12,12 +12,13 @@ import {RepayWithCollateralParams} from "./types/RepayWithCollateralParams.sol";
 /// market's backing gap unchanged. Token amounts are arrays in the order of the market's `tokens`.
 interface IAaveAdapterCollateral {
     /// @notice Removes part of one record's credited units; the position stays in custody.
-    /// @dev Order: Lock; `DeadlineExpired`; `ZeroAmount`; `NoProxy`; `IntegrationMismatch`; `LengthMismatch` unless
-    /// `minAmounts.length` equals the market's token count; debt-free iff `borrowCount == 0`. With debt only:
+    /// @dev Order: Lock; `DeadlineExpired`; `ZeroAmount`; `NoProxy`; `IntegrationMismatch` unless the position names the
+    /// vault token's `integrationId()`; debt-free iff `borrowCount == 0`. With debt only:
     /// `ApplicationPaused` if the market's Hub is Paused, `AddressIsFrozen` for a frozen caller,
     /// `RiskModule.preWithdrawCheck(proxy)`. Read the backing gap; withdraw `units` through `proxy.execute`;
     /// `vaultToken.burn(proxy, units)`; `Collateralization.releasePartial(proxy, vaultToken,
-    /// position.positionKey, units, minAmounts)` (reconcile first, `0 < units < credited`, the LPVault unwinds exactly `units` and pays each token
+    /// position.positionKey, units, minAmounts)` (its own `LengthMismatch(expected, actual)` unless `minAmounts` has one
+    /// entry per market token, reconcile first, `0 < units < credited`, the LPVault unwinds exactly `units` and pays each token
     /// to the depositor of record, each at least its minimum); with debt `RiskModule.checkRemainingRecord`, then
     /// `RiskModule.postHealthCheck` (rescue-excluded, after the debit); backing-gap check; `CollateralReduced`.
     /// Debt-free it reads no MarketRegistry state, pause, freeze, breaker or price.
@@ -65,13 +66,18 @@ interface IAaveAdapterCollateral {
     /// fee; any leftover is paid to the caller in the debt asset.
     /// @dev Order: Lock; `DeadlineExpired`; `ZeroAmount`; `NoProxy`; `ApplicationPaused` if the market's Hub is Paused
     /// with reason `MintPathSuspect` (under `Paused(General)` it stays open: it only reduces debt, AMMN-FLOW-26);
-    /// `AddressIsFrozen` for a frozen caller; `IntegrationMismatch`; `UnknownDebtReserve`; `LengthMismatch`;
-    /// `NothingToRepay` if the reserve's debt is 0; read `hfBefore`, the backing gap and supplied shares; open the
+    /// the RiskModule's `SequencerDown()` while the chain's sequencer gate is Down; `IntegrationMismatch`;
+    /// `UnknownDebtReserve`; `NothingToRepay` if the reserve's debt is 0; no address-freeze read (open to a frozen
+    /// wallet, Q-356); read `hfBefore`, the backing gap and supplied shares; open the
     /// transient session; call `LP_VAULT_SWAP.deleverage(DeleverageRequest)`, which flash-borrows the debt asset through
     /// the chain's IFlashSource and calls back `deleverageRepay` then `deleverageRelease`; `NoDeleverageSession` unless
-    /// both ran; `UnitsMismatch` unless supplied shares fell by `units`; while debt remains,
-    /// `HealthFactorNotImproved` unless `hfAfter >= max(hfBefore, minHealthFactor)`; backing-gap check; close the
-    /// session; `RepaidWithCollateral`. Reads no circuit breaker; open under Frozen.
+    /// both ran (the session also binds the hash of `minAmounts`, an empty array normalised to one zero per market
+    /// token, as LPVaultSwap passes it to `deleverageRelease`); `UnitsMismatch` unless supplied shares fell by
+    /// `units`; while debt remains,
+    /// `HealthFactorNotImproved` unless `hfAfter >= max(hfBefore, minHealthFactor)`; backing-gap check;
+    /// `AssetOutBelowMinimum` unless `debtAssetToWallet >= minAssetOut`; once no Aave borrow remains,
+    /// `Collateralization.markDebtFree(proxy)`; close the session; `RepaidWithCollateral`. Reads no circuit breaker;
+    /// open under Frozen.
     /// @param p The market, record, units, debt reserve, bounds, deadline and minimum health factor.
     /// @return debtRepaid Debt repaid, base units of the debt asset.
     /// @return debtAssetToWallet Debt asset sent to the caller after the flash loan and its premium.

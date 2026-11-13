@@ -636,6 +636,132 @@
           "offset": 0,
           "bytes": "8",
           "type": "uint64"
+        },
+        {
+          "path": "marketSpeed",
+          "slot": "29",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct MarketSpeedLimits)"
+        },
+        {
+          "path": "marketSpeed[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "64",
+          "type": "struct MarketSpeedLimits"
+        },
+        {
+          "path": "marketSpeed[].window",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "marketSpeed[].borrowRateBps",
+          "slot": "0",
+          "offset": 4,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "marketSpeed[].pledgeRateBps",
+          "slot": "0",
+          "offset": 6,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "marketSpeed[].borrowMinUsd",
+          "slot": "0",
+          "offset": 8,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "marketSpeed[].borrowMaxUsd",
+          "slot": "0",
+          "offset": 20,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "marketSpeed[].pledgeMinUsd",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "marketSpeed[].pledgeMaxUsd",
+          "slot": "1",
+          "offset": 12,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "debtSpeed",
+          "slot": "30",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => struct SpeedLimit))"
+        },
+        {
+          "path": "debtSpeed[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct SpeedLimit)"
+        },
+        {
+          "path": "debtSpeed[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct SpeedLimit"
+        },
+        {
+          "path": "debtSpeed[][].rateBps",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "2",
+          "type": "uint16"
+        },
+        {
+          "path": "debtSpeed[][].window",
+          "slot": "0",
+          "offset": 2,
+          "bytes": "4",
+          "type": "uint32"
+        },
+        {
+          "path": "debtSpeed[][].min",
+          "slot": "0",
+          "offset": 6,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "debtSpeed[][].max",
+          "slot": "0",
+          "offset": 18,
+          "bytes": "12",
+          "type": "uint96"
+        },
+        {
+          "path": "unbanded",
+          "slot": "31",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => bool)"
+        },
+        {
+          "path": "unbanded[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
         }
       ]
     },

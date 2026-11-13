@@ -1,0 +1,104 @@
+{
+  "contract": "AaveAdapterExitLogic",
+  "source": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+  "storage": [],
+  "namespaces": {
+    "erc7201:avana.storage.AaveAdapter": {
+      "baseSlot": "0x2072e6d03f11061b0cb3832feb372a04fa53d710ed44fa8554d505a1e2dbd700",
+      "declaredIn": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "fields": [
+        {
+          "path": "proxyOf",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(uint256 => address))"
+        },
+        {
+          "path": "proxyOf[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => address)"
+        },
+        {
+          "path": "proxyOf[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "walletOf",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => address)"
+        },
+        {
+          "path": "walletOf[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "accountOf",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => struct AdapterAccount)"
+        },
+        {
+          "path": "accountOf[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "128",
+          "type": "struct AdapterAccount"
+        },
+        {
+          "path": "accountOf[].spoke",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "accountOf[].marketId",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "accountOf[].vaultToken",
+          "slot": "2",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "accountOf[].reserveId",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        },
+        {
+          "path": "borrowNonce",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => uint256)"
+        },
+        {
+          "path": "borrowNonce[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "uint256"
+        }
+      ]
+    }
+  }
+}

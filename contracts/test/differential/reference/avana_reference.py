@@ -80,16 +80,11 @@ def net_bonus(b: int, lf: int) -> list[int]:
     return [BPS + _floor(Fraction((b - BPS) * (BPS - lf), BPS))]
 
 
-def costs_bps(phi: int, f: int) -> list[int]:
-    """SPEC-LIQ-002: ceil(phi * 1e4 / F) when F > 0, else 0."""
-    return [0 if f == 0 else _ceil(Fraction(phi * BPS, f))]
-
-
-def effective_slippage(bnet: int, costs: int, allowance: int) -> list[int]:
-    """SPEC-LIQ-003: min(allowance, floor(1e4 (bNet - 1e4 - costs) / bNet)) if bNet > 1e4 + costs, else 0."""
-    if bnet <= BPS + costs:
+def effective_slippage(bnet: int, allowance: int) -> list[int]:
+    """SPEC-LIQ-003: min(allowance, floor(1e4 (bNet - 1e4) / bNet)) if bNet > 1e4, else 0 (no cost term, SPEC-LIQ-002)."""
+    if bnet <= BPS:
         return [0]
-    return [min(allowance, _floor(Fraction(BPS * (bnet - BPS - costs), bnet)))]
+    return [min(allowance, _floor(Fraction(BPS * (bnet - BPS), bnet)))]
 
 
 def leg_slippage(s: int, max_shortfall: int, v: int, max_shortfall_bps: int) -> list[int]:
@@ -138,9 +133,9 @@ def recovery_with_floor(min_rec: int, r: int) -> list[int]:
     return [r + max(0, min_rec - r)]
 
 
-def rounding_gap(d: int, phi: int, tau: int, a: int, b: int, kr: int, r: int) -> list[int]:
-    """SPEC-SET-001: g = max(0, D + phi + tau + A + B - Kr - R)."""
-    return [max(0, d + phi + tau + a + b - kr - r)]
+def rounding_gap(d: int, a: int, b: int, kf: int, r: int) -> list[int]:
+    """SPEC-SET-001: g = max(0, D + A + B - Kf - R)."""
+    return [max(0, d + a + b - kf - r)]
 
 
 def shortfall_top_up(min_rec: int, r: int, gap: int, max_shortfall: int) -> list[int]:
@@ -153,20 +148,20 @@ def shortfall_top_up(min_rec: int, r: int, gap: int, max_shortfall: int) -> list
     return [0, max(0, min_rec - r, gap)]
 
 
-def payouts(v: int, d: int, phid: int, rf: int, share: int) -> list[int]:
+def payouts(v: int, d: int, rf: int, share: int) -> list[int]:
     """SPEC-LIQ-008, -009, -022: [status, S, G, A, kr, B]; status 1 = InvalidFeeShare (share above 1e4).
     kr = min(S, G) - A and B = max(0, S - G) are taken as the spec states them, unclamped."""
     if share > BPS:
         return [1, 0, 0, 0, 0, 0]
-    s = max(0, rf - d - phid)
-    g = max(0, v - d - phid)
+    s = max(0, rf - d)
+    g = max(0, v - d)
     a = min(_floor(Fraction(g * share, BPS)), s)
     return [0, s, g, a, min(s, g) - a, max(0, s - g)]
 
 
-def keeper_payout(k: int, f: int, rp: int, d: int, repaid: int, a: int, b: int) -> list[int]:
-    """SPEC-LIQ-010: [status, keeperOut]; status 1 = InsufficientProceeds."""
-    out = (k + f + rp) - (d + repaid + a + b)
+def keeper_payout(kf: int, rp: int, d: int, a: int, b: int) -> list[int]:
+    """SPEC-LIQ-010: [status, keeperOut = (Kf + R') - (D + A + B)]; status 1 = InsufficientProceeds."""
+    out = (kf + rp) - (d + a + b)
     return [1, 0] if out < 0 else [0, out]
 
 
@@ -224,7 +219,7 @@ def deleverage_asset_out(r: int, x: int, phi: int) -> list[int]:
 
 PRICE_UNIT = 10**8
 BPS = 10**4
-MAX_ROUTE_ANSWER = 10**12
+MAX_ROUTE_ANSWER = 10**18
 ANSWER_BOUND = 2**128
 MIN_TOKENS, MAX_TOKENS = 2, 8
 POST_CALL_GAS = 5_000
@@ -314,12 +309,15 @@ def in_usd_band(n_q: int, n_v: int, low: int, high: int, *rest: int) -> list[int
 
 
 def usd_level(n: int, *q: int) -> list[int]:
-    """SPEC-ORC-011: max{L : L^(x)n <= (x) q}; 0 for malformed quotes. Found from the real root of the product (an
-    independent start point) and corrected one unit at a time, not by the contract's binary search."""
+    """SPEC-ORC-011: max{L : L^(x)n <= (x) q}; 0 for malformed quotes; 2^256 - 1 when the product saturates (every
+    power is at most the saturated product). Found from the real root of the product (an independent start point) and
+    corrected one unit at a time, not by the contract's binary search."""
     q = list(q[:n])
     if not MIN_TOKENS <= n <= MAX_TOKENS or not all(_route_value_ok(x) for x in q):
         return [0]
     prod = _fx(q)
+    if prod == UINT256_MAX:
+        return [UINT256_MAX]
     level = _iroot(prod * PRICE_UNIT ** (n - 1), n)
     while _fx([level + 1] * n) <= prod:
         level += 1
@@ -342,16 +340,14 @@ LIVE, DRIFTING, CACHED, EXPIRED = 0, 1, 2, 3
 
 
 def served_price(state: int, disagreeing: int, fresh: int, lower: int, accepted: int) -> list[int]:
-    """SPEC-ORC-017: Expired 1; Cached A; a disagreement min(lower, fresh, A); Drifting min(fresh, A); Live fresh;
-    never below 1 (REQ-ORACLE-060)."""
+    """SPEC-ORC-017: Expired 1; Cached A; a disagreement min(lower, fresh); Live and Drifting fresh; never below 1
+    (REQ-ORACLE-060). The accepted price bounds borrowing only, so it is served only while Cached."""
     if state == EXPIRED:
         return [1]
     if state == CACHED:
         served = accepted
     elif disagreeing:
-        served = min(lower, fresh, accepted)
-    elif state == DRIFTING:
-        served = min(fresh, accepted)
+        served = min(lower, fresh)
     else:
         served = fresh
     return [max(1, served)]
@@ -557,11 +553,39 @@ def cl_unit_decimals(p0: int, p1: int, d0: int, d1: int, tl_off: int, tu_off: in
     return [0, 0]
 
 
+def cl_price8(p0: int, p1: int, d0: int, d1: int, tl_off: int, tu_off: int, s0: int, s1: int) -> list[int]:
+    """The concentrated-liquidity LPOracle's fresh price: [d, price8] with d of SPEC-ORC-005 and price8 of SPEC-ORC-008
+    over the module's raw composition (SPEC-ORC-006) at the valuation prices (SPEC-ORC-004; s0, s1 the stable flags);
+    [0, 0] when no d in [6, 18] qualifies."""
+    v0 = valuation_price(p0, s0)[0]
+    v1 = valuation_price(p1, s1)[0]
+    for d in range(6, 19):
+        a0, a1 = _cl_raw(v0, v1, d0, d1, tl_off, tu_off, 10**d)
+        price8 = max(1, max(a0 - 1, 0) * v0 // 10**d0 + max(a1 - 1, 0) * v1 // 10**d1)
+        if price8 >= PRICE_UNIT:
+            return [d, price8]
+    return [0, 0]
+
+
+def cl_price8_at(p0: int, p1: int, d0: int, d1: int, tl_off: int, tu_off: int, s0: int, s1: int, d: int) -> list[int]:
+    """The concentrated-liquidity LPOracle's fresh price8 of 10^d units at the valuation prices of (p0, p1)."""
+    v0 = valuation_price(p0, s0)[0]
+    v1 = valuation_price(p1, s1)[0]
+    a0, a1 = _cl_raw(v0, v1, d0, d1, tl_off, tu_off, 10**d)
+    return [max(1, max(a0 - 1, 0) * v0 // 10**d0 + max(a1 - 1, 0) * v1 // 10**d1)]
+
+
+def bounded_health_factor(hf: int, served: int, accepted: int) -> list[int]:
+    """REQ-RISK-059: hf * min(served, accepted) / served, floored; hf when accepted >= served or served = 0."""
+    if served == 0 or accepted >= served:
+        return [hf]
+    return [hf * accepted // served]
+
+
 FUNCTIONS = {
     "mulDiv": (mul_div, 4),
     "netBonus": (net_bonus, 2),
-    "costsBps": (costs_bps, 2),
-    "effectiveSlippage": (effective_slippage, 3),
+    "effectiveSlippage": (effective_slippage, 2),
     "legSlippage": (leg_slippage, 4),
     "pendingSlippage": (pending_slippage, 1),
     "seizedValue": (seized_value, 5),
@@ -571,10 +595,10 @@ FUNCTIONS = {
     "recoveryFloor": (recovery_floor, 4),
     "legMinOut": (leg_min_out, 5),
     "recoveryWithFloor": (recovery_with_floor, 2),
-    "roundingGap": (rounding_gap, 7),
+    "roundingGap": (rounding_gap, 5),
     "shortfallTopUp": (shortfall_top_up, 4),
-    "payouts": (payouts, 5),
-    "keeperPayout": (keeper_payout, 7),
+    "payouts": (payouts, 4),
+    "keeperPayout": (keeper_payout, 5),
     "liquidationSettlement": (liquidation_settlement, 7),
     "flashPremiumWithinCap": (flash_premium_within_cap, 3),
     "deleverageCap": (deleverage_cap, 5),
@@ -604,6 +628,9 @@ FUNCTIONS = {
     "clAmounts": (cl_amounts, 4),
     "clComposition": (cl_composition, 7),
     "clUnitDecimals": (cl_unit_decimals, 6),
+    "clPrice8": (cl_price8, 8),
+    "clPrice8At": (cl_price8_at, 9),
+    "boundedHealthFactor": (bounded_health_factor, 3),
 }
 
 

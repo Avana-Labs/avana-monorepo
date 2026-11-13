@@ -10,11 +10,11 @@ import {SettlementMathHarness} from "../utils/harness/SettlementMathHarness.sol"
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title SettlementMathFlashRepaymentFuzzTest
-/// @notice TEST-198 in the debt asset: for 6- and 18-decimal debt assets, `Pdebt` across [0.5e8, 5,000e8] and flash
-/// premiums in [0, maxFlashFeeBps], the flash repayment rounds up by less than one base unit, the slippage inequality
-/// holds for the `s` SettlementMath computes, and the recovery floor covers `D + φD` within one vault-unit value plus
-/// one base unit before its rounding terms. With it: the rounding direction of every value, conservation of the
-/// waterfall, the shortfall rule, the flash bound and the repay-with-collateral sizing, and no overflow at the bounds.
+/// @notice TEST-198 in the debt asset: for 6- and 18-decimal debt assets and `Pdebt` across [0.5e8, 5,000e8], the
+/// slippage inequality holds for the `s` SettlementMath computes and the recovery floor covers `D` within one
+/// vault-unit value plus one base unit before its rounding terms (a liquidation has no flash term, Q-404). With it:
+/// the rounding direction of every value, conservation of the waterfall with the caller's measured funding, the
+/// shortfall rule, the `deleverage` flash bound and repay-with-collateral sizing, and no overflow at the bounds.
 contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
     SettlementMathHarness internal m;
 
@@ -22,7 +22,7 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         m = new SettlementMathHarness();
     }
 
-    // TEST-198 verifies: SPEC-LIQ-002, SPEC-LIQ-015, REQ-FLASH-002, Q-235, Q-335
+    // TEST-198 verifies: SPEC-LIQ-015, REQ-FLASH-002, Q-235, Q-335
     function testFuzz_TEST_198_flashRepaymentRoundsUp(
         uint256 amount,
         uint256 premiumBps,
@@ -36,12 +36,8 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         // Never below the exact value, above it by less than one base unit.
         assertGe(repayment * BPS, amount * (BPS + premiumBps), "repayment below exact");
         assertLt(repayment * BPS, amount * (BPS + premiumBps) + BPS, "repayment one unit above exact");
-        // costsBps rounds up and never exceeds the cap when the premium is within it.
-        uint256 costs = m.costsBps(premium, amount);
-        assertGe(costs * amount, premium * BPS, "costsBps rounds down");
         bool within = m.flashPremiumWithinCap(premium, amount, maxFlashFeeBps);
         assertEq(within, premium * BPS <= maxFlashFeeBps * amount, "cap check differs from the exact inequality");
-        if (within) assertLe(costs, maxFlashFeeBps, "costsBps above maxFlashFeeBps");
     }
 
     // TEST-198 verifies: SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-018, Q-085, Q-235
@@ -72,18 +68,15 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         assertGe(v * den, collateralPrice * 10 ** dd, "unit value rounds down");
     }
 
-    // TEST-198 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003, SPEC-LIQ-016, INV-034, Q-159, Q-190
+    // TEST-198 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003, SPEC-LIQ-016, INV-034, Q-159, Q-190, Q-404
+    /// forge-config: default.fuzz.runs = 10000
     function testFuzz_TEST_198_slippageInequality(
         uint256 bonus,
         uint256 liquidationFee,
-        uint256 premium,
-        uint256 flashAmount,
         uint256 allowance
     ) public view {
         bonus = bound(bonus, 0, type(uint32).max);
         liquidationFee = bound(liquidationFee, 0, 2 * BPS);
-        flashAmount = bound(flashAmount, 0, 1e32);
-        premium = bound(premium, 0, flashAmount * MAX_FLASH_FEE_BPS / BPS);
         allowance = bound(allowance, 0, BPS);
         uint256 bNet = m.netBonus(bonus, liquidationFee);
         assertGe(bNet, BPS, "bNet below 1e4");
@@ -92,14 +85,13 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
             assertGe(bNet * BPS, BPS * BPS + (bonus - BPS) * (BPS - liquidationFee) - BPS + 1, "bNet below floor");
         }
         if (liquidationFee == 0 && bonus >= BPS) assertEq(bNet, bonus, "bNet != b at lf 0");
-        uint256 costs = m.costsBps(premium, flashAmount);
-        uint256 s = m.effectiveSlippage(bNet, costs, allowance);
+        uint256 s = m.effectiveSlippage(bNet, allowance);
         assertLe(s, allowance, "s above the allowance");
         assertLt(s, BPS, "s reaches 100 %");
-        if (bNet > BPS + costs) {
-            assertGe(bNet * (BPS - s), BPS * (BPS + costs), "slippage inequality fails");
+        if (bNet > BPS) {
+            assertGe(bNet * (BPS - s), BPS * BPS, "slippage inequality fails");
             // The cap is the largest such s: one more bps breaks the inequality unless the allowance binds.
-            if (s < allowance) assertLt(bNet * (BPS - s - 1), BPS * (BPS + costs), "cap not maximal");
+            if (s < allowance) assertLt(bNet * (BPS - s - 1), BPS * BPS, "cap not maximal");
         } else {
             assertEq(s, 0, "s > 0 without bonus room");
         }
@@ -107,10 +99,10 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
 
     // TEST-198 verifies: SPEC-LIQ-003, SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-007, INV-034, INV-038, Q-159, Q-198, Q-235
     // Sources: MATH-ST-07 (gap <= one vault unit + 1), TEST-078 bound
-    function testFuzz_TEST_198_floorCoversDebtAndPremium(
+    /// forge-config: default.fuzz.runs = 10000
+    function testFuzz_TEST_198_floorCoversDebt(
         uint256 debt,
         uint256 bonus,
-        uint256 premiumBps,
         uint256 collateralPrice,
         uint256 debtPrice,
         uint8 decimalsCase,
@@ -123,17 +115,12 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         c.bonus = bound(bonus, BPS + 1, 15_000);
         c.pc = bound(collateralPrice, 1e6, 1e12);
         c.pd = bound(debtPrice, 0.5e8, 5000e8);
-        c.premium = Math.mulDiv(c.debt, bound(premiumBps, 0, MAX_FLASH_FEE_BPS), BPS, Math.Rounding.Ceil); // F = D
-        uint256 bNet = m.netBonus(c.bonus, 0);
-        uint256 costs = m.costsBps(c.premium, c.debt);
-        vm.assume(bNet > BPS + costs); // below it SPEC-LIQ-016 keeps the market from listing
-        c.s = m.effectiveSlippage(bNet, costs, bound(allowance, 0, BPS));
+        c.s = m.effectiveSlippage(m.netBonus(c.bonus, 0), bound(allowance, 0, BPS));
         _checkFloorCovers(c);
     }
 
     struct FloorCase {
         uint256 debt;
-        uint256 premium;
         uint256 bonus;
         uint256 s;
         uint256 pc;
@@ -149,7 +136,7 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         uint256 units = Math.mulDiv(c.debt * c.pd, 10 ** c.dv * c.bonus, 10 ** c.dd * c.pc * BPS);
         uint256 v = m.seizedValue(units, c.pc, c.dv, c.dd, c.pd);
         uint256 vaultUnit = m.unitValue(c.pc, c.dv, c.dd, c.pd);
-        uint256 owed = c.debt + c.premium;
+        uint256 owed = c.debt;
         assertLe(owed, Math.mulDiv(v, BPS - c.s, BPS, Math.Rounding.Ceil) + vaultUnit + 1, "slippage term short");
         uint256 eps = 10 ** c.dd;
         assertLe(owed, m.recoveryFloor(v, c.s, 2, eps) + 2 + eps + vaultUnit + 1, "gap above the TEST-078 bound");
@@ -184,6 +171,7 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
     }
 
     // TEST-198 verifies: SPEC-LIQ-019, REQ-SWAP-101, Q-251
+    /// forge-config: default.fuzz.runs = 10000
     function testFuzz_TEST_198_legSlippageBounds(
         uint256 slippage,
         uint256 maxShortfall,
@@ -205,30 +193,26 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         uint256 minRec;
         uint256 recovered;
         uint256 debt;
-        uint256 phi;
-        uint256 tau;
         uint256 payoutsDue;
         uint256 callerFunds;
         uint256 maxShortfall;
     }
 
     // TEST-198 verifies: SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-025, REQ-SWAP-060, REQ-SWAP-061, REQ-SWAP-029, INV-034, Q-397
+    /// forge-config: default.fuzz.runs = 10000
     function testFuzz_TEST_198_shortfallClosesFloorAndGap(
         GapCase memory c
     ) public {
         c.minRec = bound(c.minRec, 0, 1 << 128);
         c.recovered = bound(c.recovered, 0, 1 << 128);
         c.debt = bound(c.debt, 0, 1 << 128);
-        c.phi = bound(c.phi, 0, 1 << 128);
-        c.tau = bound(c.tau, 0, 1 << 128);
         c.payoutsDue = bound(c.payoutsDue, 0, 1 << 128);
         c.callerFunds = bound(c.callerFunds, 0, 1 << 128);
         c.maxShortfall = bound(c.maxShortfall, 0, 1 << 129);
-        uint256 owed = c.debt + c.phi + c.tau + c.payoutsDue;
-        uint256 gap = m.roundingGap(
-            c.debt, c.phi, c.tau, c.payoutsDue / 2, c.payoutsDue - c.payoutsDue / 2, c.callerFunds, c.recovered
-        );
-        assertGe(gap + c.callerFunds + c.recovered, owed, "gap does not close D + phi + tau + A + B");
+        uint256 owed = c.debt + c.payoutsDue;
+        uint256 gap =
+            m.roundingGap(c.debt, c.payoutsDue / 2, c.payoutsDue - c.payoutsDue / 2, c.callerFunds, c.recovered);
+        assertGe(gap + c.callerFunds + c.recovered, owed, "gap does not close D + A + B");
         if (gap > 0) assertEq(gap + c.callerFunds + c.recovered, owed, "gap larger than needed");
         uint256 floorGap = c.minRec > c.recovered ? c.minRec - c.recovered : 0;
         if (floorGap > c.maxShortfall) {
@@ -241,7 +225,7 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
             uint256 shortfall = m.shortfallTopUp(c.minRec, c.recovered, gap, c.maxShortfall);
             assertEq(shortfall, Math.max(floorGap, gap), "shortfall = max(0, minRec - R, g)");
             assertGe(c.recovered + shortfall, c.minRec, "R' below the floor");
-            assertGe(c.callerFunds + c.recovered + shortfall, owed, "K + R' below D + phi + tau + A + B");
+            assertGe(c.callerFunds + c.recovered + shortfall, owed, "Kf + R' below D + A + B");
             assertLe(shortfall, c.maxShortfall, "shortfall above maxShortfall");
         }
     }
@@ -249,62 +233,57 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
     struct FlowCase {
         uint256 value;
         uint256 debt;
-        uint256 flash;
-        uint256 premiumBps;
-        uint256 feeBps;
         uint256 callerFunds;
         uint256 minRec;
         uint256 recovered;
+        uint256 share;
     }
 
-    // TEST-198 verifies: SPEC-LIQ-007, SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-029, REQ-SWAP-062, REQ-SWAP-108, Q-397
-    // Sources: SettlementMath review S2 (an oversized flash loan or a transfer fee never strands a call whose
-    // settlement gap is within maxShortfall)
-    function testFuzz_TEST_198_settlementGapNeverStrandsTheCall(
+    // TEST-198 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-017, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-029, REQ-SWAP-061, REQ-SWAP-062, INV-038, Q-397, Q-404
+    // Sources: 2.11 SPEC-LIQ-019 (with D <= Kf the gap never exceeds the floor gap, so the defensive
+    // InsufficientProceeds checks never fire and the floor top-up alone settles every call)
+    function testFuzz_TEST_198_callerFundingAlwaysSettles(
         FlowCase memory c
     ) public view {
         c.debt = bound(c.debt, 0, (1 << 120) - 1);
-        c.flash = bound(c.flash, c.debt, (1 << 121) - 1); // F >= D: the Lens margin or any oversizing
-        c.premiumBps = bound(c.premiumBps, 0, 9);
-        c.feeBps = bound(c.feeBps, 0, 20);
-        c.callerFunds = bound(c.callerFunds, 0, (1 << 120) - 1);
+        c.callerFunds = bound(c.callerFunds, c.debt, (1 << 121) - 1); // Kf >= D: Aave pulls D out of Kf
         c.value = bound(c.value, 0, (1 << 121) - 1);
         c.minRec = bound(c.minRec, 0, c.value);
         c.recovered = bound(c.recovered, 0, (1 << 121) - 1);
-        uint256 phi = Math.mulDiv(c.flash, c.premiumBps, BPS, Math.Rounding.Ceil);
-        uint256 phiD = Math.mulDiv(c.debt, c.premiumBps, BPS, Math.Rounding.Ceil);
-        uint256 fr = c.flash - c.flash * c.feeBps / BPS; // flash principal received after a transfer fee
-        SettlementMath.Payouts memory p =
-            m.payouts(c.value, c.debt, phiD, m.recoveryWithFloor(c.minRec, c.recovered), AVANA_FEE_SHARE_BPS);
-        uint256 gap =
-            m.roundingGap(c.debt, phi, c.flash - fr, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
-        uint256 shortfall = m.shortfallTopUp(c.minRec, c.recovered, gap, type(uint128).max);
-        // The repayment transfer sends exactly F + phi (no fee on the way out): the call always settles.
-        uint256 out = m.keeperPayout(
-            c.callerFunds, fr, c.recovered + shortfall, c.debt, c.flash + phi, p.avanaFee, p.borrowerSurplus
-        );
-        if (gap > (c.minRec > c.recovered ? c.minRec - c.recovered : 0)) assertEq(out, 0, "a binding gap pays 0");
+        c.share = bound(c.share, 0, 5000);
+        uint256 rf = m.recoveryWithFloor(c.minRec, c.recovered);
+        SettlementMath.Payouts memory p = m.payouts(c.value, c.debt, rf, c.share);
+        uint256 gap = m.roundingGap(c.debt, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
+        uint256 floorGap = c.minRec > c.recovered ? c.minRec - c.recovered : 0;
+        assertLe(gap, floorGap, "g above the floor gap");
+        uint256 shortfall = m.shortfallTopUp(c.minRec, c.recovered, gap, floorGap);
+        assertEq(shortfall, floorGap, "shortfall = max(0, minRec - R)");
+        uint256 out = m.keeperPayout(c.callerFunds, c.recovered + shortfall, c.debt, p.avanaFee, p.borrowerSurplus);
+        assertEq(c.callerFunds + c.recovered + shortfall, c.debt + p.avanaFee + p.borrowerSurplus + out, "conservation");
+        if (c.recovered + shortfall >= c.debt) {
+            assertEq(out, c.callerFunds + p.keeperReward, "keeperOut = Kf + kr");
+        } else {
+            assertEq(out, c.callerFunds - (c.debt - c.recovered - shortfall), "keeperOut = Kf - (D - R')");
+        }
         // The top-up never reaches the borrower: B is at most what the collateral itself produced above its oracle value.
         assertLe(p.borrowerSurplus, c.recovered > c.value ? c.recovered - c.value : 0, "top-up reached the borrower");
+        if (shortfall > 0) assertEq(p.borrowerSurplus, 0, "B > 0 with a floor top-up");
     }
 
     // TEST-198 verifies: SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-022, INV-036, INV-086, Q-256, Q-337
     function testFuzz_TEST_198_waterfallSplitsSurplus(
         uint256 value,
         uint256 debt,
-        uint256 premiumOnDebt,
         uint256 recoveredWithTopUp,
         uint256 share
     ) public view {
         value = bound(value, 0, (1 << 128) - 1);
         debt = bound(debt, 0, (1 << 128) - 1);
-        premiumOnDebt = bound(premiumOnDebt, 0, (1 << 128) - 1);
         recoveredWithTopUp = bound(recoveredWithTopUp, 0, (1 << 128) - 1);
         share = bound(share, 0, BPS);
-        SettlementMath.Payouts memory p = m.payouts(value, debt, premiumOnDebt, recoveredWithTopUp, share);
-        uint256 cost = debt + premiumOnDebt;
-        assertEq(p.surplus, recoveredWithTopUp > cost ? recoveredWithTopUp - cost : 0, "S");
-        assertEq(p.oracleGain, value > cost ? value - cost : 0, "G");
+        SettlementMath.Payouts memory p = m.payouts(value, debt, recoveredWithTopUp, share);
+        assertEq(p.surplus, recoveredWithTopUp > debt ? recoveredWithTopUp - debt : 0, "S");
+        assertEq(p.oracleGain, value > debt ? value - debt : 0, "G");
         assertEq(p.avanaFee, Math.min(p.oracleGain * share / BPS, p.surplus), "A");
         assertEq(p.avanaFee + p.keeperReward + p.borrowerSurplus, p.surplus, "A + kr + B != S");
         assertLe(p.avanaFee, p.surplus, "A above S");
@@ -314,34 +293,23 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
 
     struct PayoutCase {
         uint256 callerFunds;
-        uint256 flash;
         uint256 recoveredWithTopUp;
         uint256 debt;
-        uint256 repaid;
-        uint256 extraPremium;
     }
 
-    // TEST-198 verifies: SPEC-LIQ-010, SPEC-LIQ-007, REQ-SWAP-062, INV-035, Q-097, Q-397
+    // TEST-198 verifies: SPEC-LIQ-010, REQ-SWAP-062, INV-035, Q-097, Q-397
     function testFuzz_TEST_198_keeperPayoutConservesDebtAsset(
         uint256 value,
-        uint256 premiumOnDebt,
         uint256 callerFunds,
-        uint256 flash,
         uint256 recoveredWithTopUp,
-        uint256 debt,
-        uint256 extraPremium
+        uint256 debt
     ) public {
         PayoutCase memory c;
         c.callerFunds = bound(callerFunds, 0, (1 << 128) - 1);
-        c.flash = bound(flash, 0, (1 << 128) - 1);
         c.recoveredWithTopUp = bound(recoveredWithTopUp, 0, (1 << 128) - 1);
         c.debt = bound(debt, 0, (1 << 128) - 1);
-        c.extraPremium = bound(extraPremium, 0, (1 << 64) - 1);
-        premiumOnDebt = bound(premiumOnDebt, 0, (1 << 64) - 1);
-        c.repaid = c.flash + premiumOnDebt + c.extraPremium; // F + phi with phi = phiD + extraPremium
-        SettlementMath.Payouts memory p = m.payouts(
-            bound(value, 0, (1 << 128) - 1), c.debt, premiumOnDebt, c.recoveredWithTopUp, AVANA_FEE_SHARE_BPS
-        );
+        SettlementMath.Payouts memory p =
+            m.payouts(bound(value, 0, (1 << 128) - 1), c.debt, c.recoveredWithTopUp, AVANA_FEE_SHARE_BPS);
         _checkKeeperOut(p, c);
     }
 
@@ -349,43 +317,36 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         SettlementMath.Payouts memory p,
         PayoutCase memory c
     ) internal {
-        uint256 inflow = c.callerFunds + c.flash + c.recoveredWithTopUp;
-        uint256 outflow = c.debt + c.repaid + p.avanaFee + p.borrowerSurplus;
+        uint256 inflow = c.callerFunds + c.recoveredWithTopUp;
+        uint256 outflow = c.debt + p.avanaFee + p.borrowerSurplus;
         if (inflow < outflow) {
             vm.expectRevert(ILPVaultSwapErrors.InsufficientProceeds.selector);
-            m.keeperPayout(
-                c.callerFunds, c.flash, c.recoveredWithTopUp, c.debt, c.repaid, p.avanaFee, p.borrowerSurplus
-            );
+            m.keeperPayout(c.callerFunds, c.recoveredWithTopUp, c.debt, p.avanaFee, p.borrowerSurplus);
             return;
         }
-        uint256 out = m.keeperPayout(
-            c.callerFunds, c.flash, c.recoveredWithTopUp, c.debt, c.repaid, p.avanaFee, p.borrowerSurplus
-        );
+        uint256 out = m.keeperPayout(c.callerFunds, c.recoveredWithTopUp, c.debt, p.avanaFee, p.borrowerSurplus);
         assertEq(inflow, outflow + out, "T is created or kept");
-        if (p.surplus > 0) {
-            assertEq(out + c.extraPremium, c.callerFunds + p.keeperReward, "keeperOut != K + kr - (phi - phiD)");
-        }
+        if (p.surplus > 0) assertEq(out, c.callerFunds + p.keeperReward, "keeperOut != Kf + kr");
+        if (c.callerFunds >= c.debt) assertGe(out + c.debt, c.callerFunds, "keeperOut below Kf - D");
     }
 
     // TEST-198 verifies: SPEC-LIQ-009, INV-036, INV-086, Q-256
     function testFuzz_TEST_198_feeIndependentOfRouting(
         uint256 value,
         uint256 debt,
-        uint256 premiumOnDebt,
         uint256 r1,
         uint256 r2
     ) public view {
         value = bound(value, 0, (1 << 128) - 1);
         debt = bound(debt, 0, (1 << 128) - 1);
-        premiumOnDebt = bound(premiumOnDebt, 0, (1 << 64) - 1);
         r1 = bound(r1, 0, (1 << 128) - 1);
         r2 = bound(r2, 0, (1 << 128) - 1);
-        SettlementMath.Payouts memory p1 = m.payouts(value, debt, premiumOnDebt, r1, AVANA_FEE_SHARE_BPS);
-        SettlementMath.Payouts memory p2 = m.payouts(value, debt, premiumOnDebt, r2, AVANA_FEE_SHARE_BPS);
+        SettlementMath.Payouts memory p1 = m.payouts(value, debt, r1, AVANA_FEE_SHARE_BPS);
+        SettlementMath.Payouts memory p2 = m.payouts(value, debt, r2, AVANA_FEE_SHARE_BPS);
         uint256 feeOnGain = p1.oracleGain * AVANA_FEE_SHARE_BPS / BPS;
         if (p1.surplus >= feeOnGain && p2.surplus >= feeOnGain) assertEq(p1.avanaFee, p2.avanaFee, "fee moved");
         if (r1 <= r2) assertLe(p1.avanaFee, p2.avanaFee, "fee falls as R' rises");
-        SettlementMath.Payouts memory pv = m.payouts(value + 1, debt, premiumOnDebt, r1, AVANA_FEE_SHARE_BPS);
+        SettlementMath.Payouts memory pv = m.payouts(value + 1, debt, r1, AVANA_FEE_SHARE_BPS);
         assertGe(pv.avanaFee, p1.avanaFee, "fee falls as V rises");
     }
 
@@ -444,14 +405,13 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         m.legSlippage(9998, term, 1, 5000);
         m.legSlippage(0, type(uint256).max, value, 5000);
         m.deleverageCap(value, 0, term, term, 100);
-        m.payouts(value, term, term, value, 5000);
-        m.payouts(term, 0, 0, term, BPS);
-        m.roundingGap(term, term, term, term, term, 0, 0);
-        m.keeperPayout(term, term, term, 0, 0, 0, 0);
+        m.payouts(value, term, value, 5000);
+        m.payouts(term, 0, term, BPS);
+        m.roundingGap(term, term, term, 0, 0);
+        m.keeperPayout(term, term, 0, 0, 0);
         m.flashPremiumWithinCap(type(uint256).max, type(uint256).max, 100);
         m.flashPremiumWithinCap(type(uint256).max, type(uint256).max, type(uint256).max);
-        m.costsBps(term, 1);
-        m.effectiveSlippage(type(uint32).max, 100, BPS);
+        m.effectiveSlippage(type(uint32).max, BPS);
         m.netBonus(type(uint32).max, 0);
     }
 }

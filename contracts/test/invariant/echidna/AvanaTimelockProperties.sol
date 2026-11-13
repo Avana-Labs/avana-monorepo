@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
 import {IAvanaTimelockGovernance} from "../../../src/governance/timelock/IAvanaTimelockGovernance.sol";
+import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
 import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -67,7 +68,8 @@ contract AvanaTimelockProperties {
             432_000,
             true,
             TimelockLaunchLists.shortEligible(address(PS), address(MR), address(SWAP)),
-            TimelockLaunchLists.daoOnlyCancel(address(MR), address(SWAP))
+            TimelockLaunchLists.daoOnlyCancel(address(MR), address(SWAP)),
+            GovernedTargets(address(PS), address(MR), address(SWAP))
         );
     }
 

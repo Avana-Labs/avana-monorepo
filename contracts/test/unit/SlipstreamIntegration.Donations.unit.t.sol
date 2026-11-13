@@ -100,7 +100,7 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture,
     }
 
     // TEST-015 verifies: REQ-VAULT-165, REQ-VAULT-079, REQ-VAULT-080, REQ-VAULT-083, REQ-VAULT-122, REQ-VAULT-123, INV-007, ATTACK-006
-    // TEST-166 verifies: REQ-VAULT-082, REQ-VAULT-084, Q-228, REQ-ACCESS-060, REQ-ACCESS-010
+    // TEST-166 verifies: REQ-VAULT-082, REQ-VAULT-084, Q-228, REQ-ACCESS-060, REQ-ACCESS-010, REQ-VAULT-081
     function test_TEST_015_returnStrayOnlyThroughTheTimelockForAStray() public {
         bytes32 stray = _mint1(alice, 1e9);
         bytes32 pledged = _ledgerPledge(bob, bobProxy, 1e9);

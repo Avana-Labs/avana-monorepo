@@ -11,7 +11,8 @@ pragma solidity 0.8.28;
 /// (REQ-SWAP-122): with `owed = amount + premium`, at most `MAX_REPAY_TRANSFERS` (4) times it reads `b =
 /// asset.balanceOf(flashSource)`, stops if `b >= owed`, else transfers `owed - b`; it then reverts
 /// `FlashRepayShort(b, owed)` unless the source holds at least `owed`. Without a transfer fee this is one transfer of
-/// `amount + premium`; with USDT's fee (at most 19 bps and 50 USDT per transfer) four transfers always suffice.
+/// `amount + premium`; with USDT's fee (at most 19 bps and 50 USDT per transfer) four transfers always suffice, though on
+/// Aave V4 a fee on the debt asset stops `deleverage` at Aave's repayment first (REQ-SWAP-123).
 /// @custom:spec REQ-FLASH-004, Q-373
 interface IFlashReceiver {
     /// @notice Runs the liquidation funded by the flash loan and repays `amount + premium` to the flash source.

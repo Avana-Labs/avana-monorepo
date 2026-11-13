@@ -4,9 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
+import {FeeMode} from "../../src/amm/types/FeeMode.sol";
 import {UniswapV3IntegrationFixture} from "../utils/fixtures/UniswapV3IntegrationFixture.sol";
-import {MintableToken} from "../utils/mocks/UniswapV3Mocks.sol";
+import {MintableToken, MockNFPM} from "../utils/mocks/UniswapV3Mocks.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @notice Uniswap v3 LPVault custody: pledge, return, exact-unit removal with the principal-capped collect, partial
 /// release, fee collection, the top-up refusal, custody views under the Lock and re-entry from a pool token.
@@ -84,7 +86,7 @@ contract UniswapV3IntegrationCustodyUnitTest is UniswapV3IntegrationFixture {
         _unlock();
     }
 
-    // TEST-011 verifies: REQ-VAULT-008, REQ-VAULT-009, REQ-AMM-CORE-006, REQ-AMM-CORE-016, REQ-VAULT-173, REQ-AMM-V3-009, INV-005, ATTACK-001
+    // TEST-011 verifies: REQ-VAULT-008, REQ-VAULT-009, REQ-AMM-CORE-006, REQ-AMM-CORE-016, REQ-VAULT-173, REQ-AMM-V3-009, INV-005, ATTACK-001, REQ-RISK-012, REQ-RISK-027
     // Sources: 5.1 TEST-011, TEST-279 (exact range); AMM-A6a–c
     function test_TEST_011_receiveRequiresThePoolAndTheExactRange() public {
         bytes32 other = _mint(alice, pool3000, -60, 60, 1e9);
@@ -453,5 +455,41 @@ contract UniswapV3IntegrationCustodyUnitTest is UniswapV3IntegrationFixture {
         assertEq(l, liquidity - take);
         assertEq(owed0, 11);
         assertEq(owed1, 13);
+    }
+
+    // TEST-017 verifies: REQ-VAULT-126, REQ-VAULT-064, REQ-AMM-CORE-010
+    // Sources: 2.2 REQ-VAULT-126 (the upstream error, no state change, position and fee claim intact)
+    /// @notice A pool token that refuses the depositor (a blocklist) and a position manager that reverts in `collect`
+    /// (a pool inside a callback) make `collectFees` revert with the upstream error unchanged; the position stays in
+    /// custody with its depositor, units and owed fees, and the next collection pays every owed amount.
+    /// @dev Kills: the LPVault catching, re-wrapping or partly applying a failed fee collection.
+    function test_TEST_017_upstreamRevertKeepsPositionAndFeeClaim() public {
+        bytes32 key = _pledge1(alice, 1e12);
+        nfpm.accrue(uint256(key), 3_000_000, 2_000_000);
+        bytes memory blocked = abi.encodeWithSignature("Blocklisted(address)", alice);
+        vm.mockCallRevert(address(_token0()), abi.encodeWithSelector(IERC20.transfer.selector, alice), blocked);
+        _lock();
+        vm.prank(coll);
+        vm.expectRevert(blocked);
+        vault.collectFees(key, alice);
+        _unlock();
+        vm.clearMockedCalls();
+        vm.mockCallRevert(address(nfpm), abi.encodeWithSelector(MockNFPM.collect.selector), bytes("LOK"));
+        _lock();
+        vm.prank(coll);
+        vm.expectRevert(bytes("LOK"));
+        vault.collectFees(key, alice);
+        _unlock();
+        vm.clearMockedCalls();
+        assertEq(nfpm.ownerOf(uint256(key)), address(vault), "still in custody");
+        assertEq(vault.depositorOf(key), alice, "same depositor");
+        assertEq(vault.unitsOf(key), 1e12, "same units");
+        (,,,,,,,,,, uint128 owed0, uint128 owed1) = nfpm.positions(uint256(key));
+        assertEq(owed0, 3_000_000, "fees still owed");
+        assertEq(owed1, 2_000_000);
+        uint256[] memory fees = abi.decode(_asColl(abi.encodeCall(vault.collectFees, (key, alice))), (uint256[]));
+        assertEq(fees[0], 3_000_000, "the claim is intact");
+        assertEq(fees[1], 2_000_000);
+        assertEq(uint8(vault.capabilities().feeMode), uint8(FeeMode.Separate), "fees are collected, not rolled in");
     }
 }

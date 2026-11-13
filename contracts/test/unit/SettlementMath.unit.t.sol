@@ -26,19 +26,17 @@ contract SettlementMathUnitTest is AvanaTest {
         m = new SettlementMathHarness();
     }
 
-    // TEST-198 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003, INV-034, Q-159, Q-190
-    // Sources: 2.11 SPEC-LIQ-001…003 examples, MATH-ST-80, MATH-ST-85
-    function test_TEST_198_bonusCostsAndSlippageExamples() public view {
+    // TEST-198 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003, INV-034, Q-159, Q-190, Q-404
+    // Sources: 2.11 SPEC-LIQ-001…003 examples (no cost term: a liquidation takes no flash loan)
+    function test_TEST_198_bonusAndSlippageExamples() public view {
         assertEq(m.netBonus(10_500, 0), 10_500, "bNet at lf 0");
         assertEq(m.netBonus(10_500, 1000), 10_450, "bNet at lf 1,000");
-        uint256 phi = 975_000; // ceil(1,950e6 x 5 / 1e4)
-        assertEq(m.costsBps(phi, 1950 * USDC), 5, "costsBps of the 5 bps premium");
-        assertEq(m.costsBps(0, 1950 * USDC), 0, "FLASH_BORROWER: no premium");
-        assertEq(m.costsBps(phi, 0), 0, "F = 0");
-        assertEq(m.effectiveSlippage(10_500, 5, 100), 100, "s capped by the allowance");
-        assertEq(m.effectiveSlippage(10_500, 5, 1000), 471, "uncapped s at b 10,500");
-        assertGe(10_500 * (BPS - 100), BPS * (BPS + 5), "10,500 x 9,900 >= 1e4 x 10,005");
-        assertEq(m.effectiveSlippage(10_050, 5, 1000), 44, "s at b 10,050");
+        assertEq(m.effectiveSlippage(10_500, 100), 100, "s = min(100, 476)");
+        assertEq(m.effectiveSlippage(10_500, 1000), 476, "uncapped s at b 10,500");
+        assertGe(10_500 * (BPS - 100), BPS * BPS, "10,500 x 9,900 >= 1e8");
+        assertEq(m.effectiveSlippage(10_050, 1000), 49, "s at b 10,050");
+        assertGe(10_050 * (BPS - 49), BPS * BPS, "10,050 x 9,951 >= 1e8");
+        assertLt(10_050 * (BPS - 50), BPS * BPS, "one bp more would not cover D");
     }
 
     // TEST-198 verifies: SPEC-LIQ-001, SPEC-LIQ-003
@@ -48,9 +46,10 @@ contract SettlementMathUnitTest is AvanaTest {
         assertEq(m.netBonus(9000, 0), BPS, "b below 1e4");
         assertEq(m.netBonus(10_500, BPS), BPS, "lf = 1e4");
         assertEq(m.netBonus(2009, 15_892), BPS, "b < 1e4 and lf > 1e4 do not make a positive bonus");
-        assertEq(m.effectiveSlippage(BPS, 0, 100), 0, "bNet = 1e4 gives s = 0");
-        assertEq(m.effectiveSlippage(10_005, 5, 100), 0, "bNet = 1e4 + costs gives s = 0");
-        assertEq(m.effectiveSlippage(10_006, 5, 100), 0, "floor(1e4 / 10,006) = 0");
+        assertEq(m.effectiveSlippage(BPS, 100), 0, "bNet = 1e4 gives s = 0");
+        assertEq(m.effectiveSlippage(9000, 100), 0, "bNet below 1e4 gives s = 0");
+        assertEq(m.effectiveSlippage(10_001, 100), 0, "floor(1e4 / 10,001) = 0");
+        assertEq(m.effectiveSlippage(10_002, 100), 1, "floor(2e4 / 10,002) = 1");
     }
 
     // TEST-198 verifies: SPEC-LIQ-004, SPEC-LIQ-005, INV-034, Q-085, Q-198, Q-267
@@ -116,7 +115,7 @@ contract SettlementMathUnitTest is AvanaTest {
         assertEq(m.pendingSlippage(20), 20, "s_P below 30");
     }
 
-    // TEST-198 verifies: SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-025, REQ-SWAP-060, INV-034, Q-251, Q-397
+    // TEST-198 verifies: SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-025, REQ-SWAP-060, REQ-SWAP-061, INV-034, Q-251, Q-397
     // Sources: 2.11 SPEC-LIQ-019 examples, 2.13 SPEC-SET-001 examples, MATH-ST-86, MATH-ST-88
     function test_TEST_198_shortfallTopUpExamples() public {
         uint256 v = 12_422_600_000;
@@ -125,11 +124,14 @@ contract SettlementMathUnitTest is AvanaTest {
         assertEq(m.shortfallTopUp(minRec, 12_174 * USDC, 0, 200 * USDC), 123_373_998, "pulled 123.373998 USDC");
         vm.expectRevert(ILPVaultSwapErrors.RecoveryBelowFloor.selector);
         m.shortfallTopUp(minRec, 12_174 * USDC, 0, 123_373_997);
-        // Dust: K = 0, F = D = 3 USDC, phiD = 0.0015, R = 2.95 above the floor.
-        uint256 gap = m.roundingGap(3 * USDC, 1500, 0, 0, 0, 0, 2_950_000);
-        assertEq(gap, 51_500, "g = 0.0515 USDC");
-        assertEq(m.roundingGap(3 * USDC, 1500, 0, 0, 0, 3 * USDC, 2_950_000), 0, "K = 3 USDC closes it");
-        assertEq(m.shortfallTopUp(2_118_498, 2_950_000, gap, 51_500), 51_500, "shortfall = g");
+        // Dust: Kf = D = 3 USDC, R = 2.95 above the floor: g = max(0, 3 + 0 + 0 - 3 - 2.95) = 0, no top-up.
+        uint256 gap = m.roundingGap(3 * USDC, 0, 0, 3 * USDC, 2_950_000);
+        assertEq(gap, 0, "g = 0 with Kf = D");
+        assertEq(m.shortfallTopUp(2_118_498, 2_950_000, gap, 0), 0, "settles with maxShortfall 0");
+        // Defensive: a faulty measurement with Kf below D opens a gap the top-up must close.
+        gap = m.roundingGap(3 * USDC, 0, 0, 0, 2_950_000);
+        assertEq(gap, 50_000, "g = D - R with Kf = 0");
+        assertEq(m.shortfallTopUp(2_118_498, 2_950_000, gap, 50_000), 50_000, "shortfall = g");
         vm.expectRevert(ILPVaultSwapErrors.InsufficientProceeds.selector);
         m.shortfallTopUp(2_118_498, 2_950_000, gap, 0);
         // Both fail: the floor error comes first.
@@ -137,87 +139,86 @@ contract SettlementMathUnitTest is AvanaTest {
         m.shortfallTopUp(10, 0, 20, 5);
         assertEq(m.shortfallTopUp(10, 0, 20, 20), 20, "max of the floor gap and g");
         assertEq(m.shortfallTopUp(0, 5, 0, 0), 0, "nothing to pull");
+        assertEq(m.roundingGap(1950 * USDC, 19_500_000, 0, 1950 * USDC, 2_040_300_000), 0, "routed example: no gap");
     }
 
     // TEST-198 verifies: SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-022, INV-035, INV-036, INV-086, Q-256, Q-337
-    // Sources: 2.11 SPEC-LIQ-008…010 and SPEC-LIQ-022 examples, MATH-ST-82, MATH-ST-83
+    // Sources: 2.11 SPEC-LIQ-008…010 and SPEC-LIQ-022 examples, REQ-SWAP-075 example
     function test_TEST_198_waterfallExamples() public view {
         uint256 v = 2_047_500_000;
         uint256 d = 1950 * USDC;
-        uint256 phi = 975_000;
-        SettlementMath.Payouts memory p = m.payouts(v, d, phi, 2_040_300_000, AVANA_FEE_SHARE_BPS);
-        assertEq(p.surplus, 89_325_000, "S");
-        assertEq(p.oracleGain, 96_525_000, "G");
-        assertEq(p.avanaFee, 19_305_000, "A");
-        assertEq(p.keeperReward, 70_020_000, "kr");
+        SettlementMath.Payouts memory p = m.payouts(v, d, 2_040_300_000, AVANA_FEE_SHARE_BPS);
+        assertEq(p.surplus, 90_300_000, "S = 90.3");
+        assertEq(p.oracleGain, 97_500_000, "G = 97.5");
+        assertEq(p.avanaFee, 19_500_000, "A = 19.5");
+        assertEq(p.keeperReward, 70_800_000, "kr = 70.8");
         assertEq(p.borrowerSurplus, 0, "B");
-        uint256 out = m.keeperPayout(0, d, 2_040_300_000, d, d + phi, p.avanaFee, p.borrowerSurplus);
-        assertEq(out, 70_020_000, "keeperOut");
-        assertEq(0 + d + 2_040_300_000, d + (d + phi) + p.avanaFee + p.borrowerSurplus + out, "T in == T out");
-        // A caller that sandwiched its own routes to R = 2,027 USDC still pays A = 19.305.
-        p = m.payouts(v, d, phi, 2027 * USDC, AVANA_FEE_SHARE_BPS);
-        assertEq(p.surplus, 76_025_000, "S after a self-sandwich");
-        assertEq(p.avanaFee, 19_305_000, "A unchanged");
+        uint256 out = m.keeperPayout(d, 2_040_300_000, d, p.avanaFee, p.borrowerSurplus);
+        assertEq(out, 2_020_800_000, "keeperOut = Kf + kr = 2,020.8");
+        assertEq(d + 2_040_300_000, d + p.avanaFee + p.borrowerSurplus + out, "T in == T out (3,990.3)");
+        // A caller that sandwiched its own routes to R = 2,027 USDC still pays A = 19.5.
+        p = m.payouts(v, d, 2027 * USDC, AVANA_FEE_SHARE_BPS);
+        assertEq(p.surplus, 77 * USDC, "S after a self-sandwich");
+        assertEq(p.avanaFee, 19_500_000, "A unchanged");
+        // REQ-SWAP-075: routes returning 2,035 USDC pay keeperOut 2,015.5.
+        p = m.payouts(v, d, 2035 * USDC, AVANA_FEE_SHARE_BPS);
+        assertEq(m.keeperPayout(d, 2035 * USDC, d, p.avanaFee, p.borrowerSurplus), 2_015_500_000, "keeperOut 2,015.5");
         // Routes better than the oracle: the excess goes to the borrower.
-        p = m.payouts(v, d, phi, 2052 * USDC, AVANA_FEE_SHARE_BPS);
-        assertEq(p.surplus, 101_025_000, "S at R 2,052");
-        assertEq(p.keeperReward, 77_220_000, "kr = G - A");
-        assertEq(p.borrowerSurplus, 4_500_000, "B = R' - max(V, D + phiD)");
-        assertEq(m.keeperPayout(0, d, 2052 * USDC, d, d + phi, p.avanaFee, p.borrowerSurplus), 77_220_000, "keeperOut");
-        // Dust: R_f = max(2.95, 2.118498) = 2.95 USDC, so S = A = B = 0; R' = 2.95 + g = 3.0015 and keeperOut = 0.
+        p = m.payouts(v, d, 2052 * USDC, AVANA_FEE_SHARE_BPS);
+        assertEq(p.surplus, 102 * USDC, "S at R 2,052");
+        assertEq(p.keeperReward, 78 * USDC, "kr = G - A");
+        assertEq(p.borrowerSurplus, 4_500_000, "B = R_f - max(V, D)");
+        assertEq(m.keeperPayout(d, 2052 * USDC, d, p.avanaFee, p.borrowerSurplus), 2028 * USDC, "keeperOut 2,028");
+        // Dust: R_f = max(2.95, 2.118498) = 2.95 USDC, so S = A = B = 0; keeperOut = 3 + 2.95 - 3 = 2.95.
         uint256 rf = m.recoveryWithFloor(2_118_498, 2_950_000);
         assertEq(rf, 2_950_000, "R_f = R above the floor");
-        p = m.payouts(3_150_000, 3 * USDC, 1500, rf, AVANA_FEE_SHARE_BPS);
+        p = m.payouts(3_150_000, 3 * USDC, rf, AVANA_FEE_SHARE_BPS);
         assertEq(p.surplus + p.avanaFee + p.keeperReward + p.borrowerSurplus, 0, "dust split");
-        assertEq(m.keeperPayout(0, 3 * USDC, 3_001_500, 3 * USDC, 3_001_500, 0, 0), 0, "dust keeperOut");
+        assertEq(m.keeperPayout(3 * USDC, 2_950_000, 3 * USDC, 0, 0), 2_950_000, "dust keeperOut");
     }
 
-    // TEST-198 verifies: SPEC-LIQ-007, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-062, INV-086, Q-267
-    // Sources: 2.11 SPEC-LIQ-007 and SPEC-LIQ-017 examples (oversized flash), REQ-SWAP-108 transfer-fee example
-    function test_TEST_198_oversizedFlashAndTransferFee() public view {
+    // TEST-198 verifies: SPEC-LIQ-007, SPEC-LIQ-010, SPEC-LIQ-017, REQ-SWAP-089, REQ-SWAP-108, INV-086, Q-333, Q-404
+    // Sources: 2.11 SPEC-LIQ-017 example (Lens margin), REQ-SWAP-108 transfer-fee example
+    function test_TEST_198_leftoverAndTransferFee() public view {
         uint256 d = 1950 * USDC;
-        uint256 f = 2_047_500_000;
-        uint256 phi = 1_023_750; // ceil(2,047.5e6 x 5 / 1e4)
-        uint256 phiD = 975_000; // premium on min(F, D)
-        SettlementMath.Payouts memory p = m.payouts(2_047_500_000, d, phiD, 2_040_300_000, AVANA_FEE_SHARE_BPS);
-        // Leftover X - D = 97.5 USDC repays part of F; the caller alone bears phi - phiD = 0.04875 USDC.
-        uint256 out = m.keeperPayout(0, f, 2_040_300_000, d, f + phi, p.avanaFee, p.borrowerSurplus);
-        assertEq(out, p.keeperReward - (phi - phiD), "keeperOut = kr - (phi - phiD)");
-        assertEq(p.avanaFee, 19_305_000, "A independent of the oversized flash");
-        assertEq(m.roundingGap(d, phi, 0, p.avanaFee, p.borrowerSurplus, 0, 2_040_300_000), 0, "no gap");
-        // Transfer fee: the measured Fr and P lower keeperOut by tau = (F - Fr) + (P - F - phi).
-        uint256 outFee = m.keeperPayout(0, f - 10, 2_040_300_000, d, f + phi + 7, p.avanaFee, p.borrowerSurplus);
-        assertEq(out - outFee, 17, "tau falls on keeperOut alone");
+        uint256 x = 2_047_500_000;
+        SettlementMath.Payouts memory p = m.payouts(2_047_500_000, d, 2_040_300_000, AVANA_FEE_SHARE_BPS);
+        // The unused 97.5 USDC returns inside keeperOut and never changes A.
+        uint256 out = m.keeperPayout(x, 2_040_300_000, d, p.avanaFee, p.borrowerSurplus);
+        assertEq(out, 2_118_300_000, "keeperOut = 2,118.3 includes the leftover");
+        assertEq(out - p.keeperReward - d, x - d, "leftover = Kf - D");
+        assertEq(p.avanaFee, 19_500_000, "A independent of debtToCover");
+        assertEq(m.roundingGap(d, p.avanaFee, p.borrowerSurplus, x, 2_040_300_000), 0, "no gap");
+        // Transfer fee: a 10 bps fee on the funding lowers the measured Kf and keeperOut by the same amount only.
+        uint256 kf = x - x * 10 / BPS;
+        uint256 outFee = m.keeperPayout(kf, 2_040_300_000, d, p.avanaFee, p.borrowerSurplus);
+        assertEq(out - outFee, x - kf, "the fee falls on keeperOut alone");
     }
 
-    // TEST-198 verifies: SPEC-SET-001, SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, REQ-SWAP-029, REQ-SWAP-062, Q-397
-    // Sources: 2.13 SPEC-SET-001 oversized-flash example (the Lens 5 % margin on a dust liquidation)
-    function test_TEST_198_gapCoversWholeFlashObligation() public view {
+    // TEST-198 verifies: SPEC-SET-001, SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, REQ-SWAP-029, REQ-SWAP-062, INV-038, Q-397
+    // Sources: 2.11 SPEC-LIQ-005 dust example, SPEC-LIQ-019 (g never exceeds the floor gap while D <= Kf)
+    function test_TEST_198_gapNeverExceedsFloorGap() public view {
         uint256 d = 3 * USDC;
-        uint256 f = 3_150_000; // debtToCover and F with the Lens margin
-        uint256 phi = 1575; // ceil(3.15e6 x 5 / 1e4)
-        uint256 phiD = 1500; // premium on min(F, D)
         uint256 minRec = m.recoveryFloor(3_150_000, 100, 2, USDC);
+        // Recovery between the floor and D: no gap, the caller bears D - R in keeperOut.
         uint256 rf = m.recoveryWithFloor(minRec, 2_950_000);
-        SettlementMath.Payouts memory p = m.payouts(3_150_000, d, phiD, rf, AVANA_FEE_SHARE_BPS);
-        uint256 gap = m.roundingGap(d, phi, 0, p.avanaFee, p.borrowerSurplus, 0, 2_950_000);
-        assertEq(gap, 51_575, "g = 0.051575 USDC covers the whole premium");
-        uint256 shortfall = m.shortfallTopUp(minRec, 2_950_000, gap, 60_000);
-        assertEq(m.keeperPayout(0, f, 2_950_000 + shortfall, d, f + phi, 0, 0), 0, "settles with keeperOut 0");
-        // The gap of the earlier rule, D + phiD - K - R = 51,500, left keeperOut = phiD - phi < 0.
-        assertLt(2_950_000 + 51_500 + f, d + f + phi, "D + phiD would have reverted");
-        // Surplus within reach of the flash cost: R = 3.0016 USDC, F = 3.15 USDC, K = 0. S = 100, A = 100 (20 % of
-        // G = 0.1485 USDC is above S), kr = B = 0; the caller tops up the 75 units its oversized premium costs.
-        p = m.payouts(3_150_000, d, phiD, m.recoveryWithFloor(minRec, 3_001_600), AVANA_FEE_SHARE_BPS);
-        assertEq(p.surplus, 100, "S");
-        assertEq(p.avanaFee, 100, "A = S");
-        gap = m.roundingGap(d, phi, 0, p.avanaFee, p.borrowerSurplus, 0, 3_001_600);
-        assertEq(gap, 75, "g = phi - phiD - kr");
-        assertEq(m.keeperPayout(0, f, 3_001_600 + gap, d, f + phi, p.avanaFee, 0), 0, "keeperOut 0, A paid in full");
-        // Transfer fee on the flash principal: Fr = F - 3,150 (10 bps) with K = 0 and R = 2.95 USDC.
-        gap = m.roundingGap(d, phi, 3150, 0, 0, 0, 2_950_000);
-        assertEq(gap, 54_725, "g includes tau = F - Fr");
-        assertEq(m.keeperPayout(0, f - 3150, 2_950_000 + gap, d, f + phi, 0, 0), 0, "settles with keeperOut 0");
+        SettlementMath.Payouts memory p = m.payouts(3_150_000, d, rf, AVANA_FEE_SHARE_BPS);
+        uint256 gap = m.roundingGap(d, p.avanaFee, p.borrowerSurplus, d, 2_950_000);
+        assertEq(gap, 0, "g = 0");
+        assertEq(m.keeperPayout(d, 2_950_000, d, 0, 0), 2_950_000, "loss of 0.05 USDC in keeperOut");
+        // Recovery below the floor: the top-up is the floor gap, and g stays below it.
+        rf = m.recoveryWithFloor(minRec, 2_000_000);
+        p = m.payouts(3_150_000, d, rf, AVANA_FEE_SHARE_BPS);
+        gap = m.roundingGap(d, p.avanaFee, p.borrowerSurplus, d, 2_000_000);
+        assertEq(gap, 0, "g = 0 below the floor too");
+        uint256 shortfall = m.shortfallTopUp(minRec, 2_000_000, gap, 200_000);
+        assertEq(shortfall, minRec - 2_000_000, "shortfall = minRec - R");
+        assertEq(m.keeperPayout(d, 2_000_000 + shortfall, d, 0, 0), minRec, "keeperOut = R'");
+        // Surplus within the oracle gain at the floor: S = R_f - D, A = 20 % of G capped at S.
+        p = m.payouts(3_150_000, d, m.recoveryWithFloor(minRec, 3_001_600), AVANA_FEE_SHARE_BPS);
+        assertEq(p.surplus, 1600, "S");
+        assertEq(p.avanaFee, 1600, "A = S below 20 % of G");
+        assertEq(m.keeperPayout(d, 3_001_600, d, p.avanaFee, 0), d, "keeperOut = Kf");
     }
 
     // TEST-198 verifies: SPEC-LIQ-014, Q-211, Q-338
@@ -326,29 +327,29 @@ contract SettlementMathUnitTest is AvanaTest {
     // Sources: SettlementMath review A3 (a fee share above 1e4 reverts instead of clamping kr)
     function test_TEST_198_feeShareAboveBpsReverts() public {
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.InvalidFeeShare.selector, BPS + 1));
-        m.payouts(2_047_500_000, 1950 * USDC, 975_000, 2_052_000_000, BPS + 1);
-        SettlementMath.Payouts memory p = m.payouts(2_047_500_000, 1950 * USDC, 975_000, 2_052_000_000, BPS);
+        m.payouts(2_047_500_000, 1950 * USDC, 2_052_000_000, BPS + 1);
+        SettlementMath.Payouts memory p = m.payouts(2_047_500_000, 1950 * USDC, 2_052_000_000, BPS);
         assertEq(p.avanaFee, p.oracleGain, "share 1e4 takes the whole oracle gain");
         assertEq(p.keeperReward, 0, "kr = G - A = 0");
         assertEq(p.borrowerSurplus, 4_500_000, "B = S - G");
     }
 
     // TEST-198 verifies: SPEC-LIQ-009, SPEC-LIQ-003, INV-086
-    // Sources: SettlementMath review S1 (Avana's share is best-effort when s sits at the bonus cap)
+    // Sources: 2.11 SPEC-LIQ-009 best-effort example (s at the bonus cap)
     function test_TEST_198_feeBestEffortAtCappedSlippage() public view {
         uint256 d = 1_000_000 * USDC;
-        uint256 phi = 500 * USDC; // F = D at 5 bps
-        uint256 s = m.effectiveSlippage(m.netBonus(10_100, 0), m.costsBps(phi, d), 100);
-        assertEq(s, 94, "s at the bonus cap, below the 100 bps allowance");
+        uint256 s = m.effectiveSlippage(m.netBonus(10_100, 0), 100);
+        assertEq(s, 99, "s at the bonus cap, below the 100 bps allowance");
         uint256 v = 1_010_000 * USDC;
         uint256 minRec = m.recoveryFloor(v, s, 2, USDC);
-        assertEq(minRec, 1_000_504_999_998, "minRec = 1,000,504.999998 USDC");
-        SettlementMath.Payouts memory honest = m.payouts(v, d, phi, 1_009_495 * USDC, AVANA_FEE_SHARE_BPS);
-        assertEq(honest.avanaFee, 1900 * USDC, "A = 1,900 USDC at R = 0.9995 V");
-        assertEq(honest.keeperReward, 7095 * USDC, "kr = 7,095 USDC");
-        SettlementMath.Payouts memory atFloor = m.payouts(v, d, phi, minRec, AVANA_FEE_SHARE_BPS);
-        assertEq(atFloor.avanaFee, 4_999_998, "A = 4.999998 USDC at R = minRec");
+        assertEq(minRec, 999_999_999_998, "minRec = 999,999.999998 USDC");
+        SettlementMath.Payouts memory honest = m.payouts(v, d, 1_009_495 * USDC, AVANA_FEE_SHARE_BPS);
+        assertEq(honest.avanaFee, 2000 * USDC, "A = 2,000 USDC at R = 0.9995 V");
+        assertEq(honest.keeperReward, 7495 * USDC, "kr = 7,495 USDC");
+        SettlementMath.Payouts memory atFloor = m.payouts(v, d, minRec, AVANA_FEE_SHARE_BPS);
+        assertEq(atFloor.avanaFee, 0, "A = 0 at R = minRec below D");
         assertEq(atFloor.keeperReward, 0, "kr = 0");
+        assertEq(m.keeperPayout(d, minRec, d, 0, 0), d - 2, "caller receives Kf - 0.000002 USDC");
     }
 
     // TEST-198 verifies: SPEC-LIQ-015, REQ-FLASH-002
@@ -361,17 +362,17 @@ contract SettlementMathUnitTest is AvanaTest {
         assertTrue(m.flashPremiumWithinCap(_poolPremium(f, 9), f, 10), "a rate strictly below the cap passes");
     }
 
-    // TEST-198 verifies: SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003
-    // Sources: 5.1 TEST-198 examples (flash repayment at 5 bps, 6 and 18 decimals)
+    // TEST-198 verifies: SPEC-LIQ-015, REQ-FLASH-002
+    // Sources: 5.1 TEST-198 examples (deleverage flash repayment at 5 bps, 6 and 18 decimals)
     function test_TEST_198_flashRepaymentExamples() public view {
-        // The Pool's premium ceil(amount x 5 / 1e4) passes the cap and its costsBps is the premium rate.
+        // The Pool's premium ceil(amount x 5 / 1e4) passes the cap.
         uint256 usdcPremium = _poolPremium(1000 * USDC, 5);
         assertEq(1000 * USDC + usdcPremium, 1000.5e6, "1,000e6 USDC repays 1,000.5e6");
         uint256 wethPremium = _poolPremium(1e18, 5);
         assertEq(1e18 + wethPremium, 1.0005e18, "1e18 WETH repays 1.0005e18");
         assertEq(1e18 + 1 + _poolPremium(1e18 + 1, 5), 1.0005e18 + 2, "1e18 + 1 wei rounds up to the next wei");
-        assertEq(m.costsBps(usdcPremium, 1000 * USDC), 5, "costsBps 5");
-        assertEq(m.costsBps(_poolPremium(1e18 + 1, 5), 1e18 + 1), 6, "a premium a hair above 5 bps rounds up to 6");
+        assertTrue(m.flashPremiumWithinCap(usdcPremium, 1000 * USDC, 5), "the 5 bps premium meets a 5 bps cap");
+        assertFalse(m.flashPremiumWithinCap(_poolPremium(1e18 + 1, 5), 1e18 + 1, 5), "a hair above 5 bps fails it");
         assertTrue(m.flashPremiumWithinCap(wethPremium, 1e18, MAX_FLASH_FEE_BPS), "within the cap");
     }
 

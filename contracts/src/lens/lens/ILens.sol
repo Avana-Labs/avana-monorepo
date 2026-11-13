@@ -4,11 +4,18 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILensAccount} from "./ILensAccount.sol";
+import {ILensActions} from "./ILensActions.sol";
 import {ILensErrors} from "./ILensErrors.sol";
+import {ILensFees} from "./ILensFees.sol";
+import {ILensHubAssets} from "./ILensHubAssets.sol";
 import {ILensLiquidation} from "./ILensLiquidation.sol";
 import {ILensMarket} from "./ILensMarket.sol";
+import {ILensMarkets} from "./ILensMarkets.sol";
+import {ILensPositions} from "./ILensPositions.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {ILensRisk} from "./ILensRisk.sol";
+import {ILensSizing} from "./ILensSizing.sol";
+import {ILensSpeed} from "./ILensSpeed.sol";
 
 /// @title ILens
 /// @notice Immutable, read-only views of one chain for the app, keepers, monitoring and the public backing proof: an
@@ -22,16 +29,32 @@ import {ILensRisk} from "./ILensRisk.sol";
 /// Every returned struct carries `blockNumber` and `timestamp`; values within one call come from one block, and
 /// consumers combining calls use the same block tag. No proxy, no storage beyond constructor immutables and the
 /// compile-time constants of `LensConstants`, no owner, no role, no events. Every account-level function takes the
-/// market (or a proxy, whose `MARKET_ID()` names it) and reads the CDP Spoke, home Hub and AMM integration from the
+/// market (or a proxy, whose AaveAdapter binding `accountOf(proxy)` names it) and reads the CDP Spoke, home Hub and AMM integration from the
 /// MarketRegistry; records are named by `positionKey`, never by an AMM-specific token identifier, and every token
 /// amount is an array in the market's token order. No Hub, LPVault or position manager is an immutable. Results are advisory: no core contract stores or calls the
 /// Lens, and LPVaultSwap recomputes every liquidation check on execution. Price states never make a function revert;
 /// dependency failures propagate (no `try/catch`). The liquidation preview sizes `debtToCover` with the pinned Aave V4
 /// liquidation formulas compiled into the Lens. A new Lens is a new deployment, recorded in the verified deployment
-/// manifest. Constructor arguments: `collateralization`, `proxyManager`, `adapter`, `lock`, `marketRegistry`,
-/// `parameterStore`, `riskModule`, `lpVaultSwap`, `payoutEscrow`.
+/// manifest. The Lens is an entry point that forwards each view by STATICCALL to one of nine immutable modules (each serving one or
+/// more interface pieces or parts of them), which keeps each deployed contract within EIP-170; the constructor argument is the nine
+/// modules, whose core addresses (`collateralization`, `proxyManager`,
+/// `adapter`, `lock`, `marketRegistry`, `parameterStore`, `riskModule`, `lpVaultSwap`, `payoutEscrow`) must agree.
 /// @custom:spec REQ-LENS-001, REQ-LENS-002, REQ-LENS-003, REQ-LENS-004, REQ-LENS-005, REQ-LENS-006, REQ-LENS-007, REQ-LENS-020, REQ-LENS-021, REQ-LENS-022, REQ-LENS-025, Q-226, Q-232, Q-268, Q-375, Q-376
-interface ILens is ILensErrors, ILensAccount, ILensMarket, ILensLiquidation, ILensRisk, ILensPreview {
+interface ILens is
+    ILensErrors,
+    ILensAccount,
+    ILensMarket,
+    ILensLiquidation,
+    ILensRisk,
+    ILensPreview,
+    ILensMarkets,
+    ILensPositions,
+    ILensFees,
+    ILensActions,
+    ILensSizing,
+    ILensHubAssets,
+    ILensSpeed
+{
     /// @notice Returns the largest page size `getRecords` and `checkRecordBacking` accept.
     /// @return maxPage `LensConstants.LENS_MAX_PAGE` (200), confirmed by the Foundry gas tests.
     /// @custom:spec REQ-LENS-020
@@ -42,6 +65,16 @@ interface ILens is ILensErrors, ILensAccount, ILensMarket, ILensLiquidation, ILe
     /// @return marginBps `LensConstants.LENS_DUST_MARGIN_BPS` (500).
     /// @custom:spec REQ-LENS-028, Q-268
     function LENS_DUST_MARGIN_BPS() external view returns (uint256 marginBps);
+
+    /// @notice Returns the nine modules the Lens forwards to.
+    /// @return modules `LensAccountModule` (`ILensAccount`), `LensMarketModule` (`ILensMarket`), `LensPriceModule`
+    /// (the price and pause views of `ILensLiquidation`, `ILensSizing.previewDeleverageTo`), `LensLiquidationModule`
+    /// (`previewLiquidation`), `LensRiskModule` (`ILensRisk`, `ILensHubAssets`), `LensPreviewModule` (`ILensPreview`),
+    /// `LensMarketsModule` (`ILensMarkets`, `ILensFees`), `LensPositionsModule` (`ILensPositions`, `ILensActions`,
+    /// `ILensSizing.previewMaxWithdraw`), `LensSpeedModule` (`ILensSpeed`); `LensAccountModule` also serves
+    /// `ILensSizing.previewCloseAccount`.
+    /// @custom:spec REQ-LENS-001, REQ-LENS-002, REQ-LENS-061
+    function MODULES() external view returns (address[9] memory modules);
 
     /// @notice Returns Collateralization, read for records, credited units, pending balances and counters.
     /// @return collateralization Constructor immutable.

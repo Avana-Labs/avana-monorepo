@@ -57,7 +57,7 @@ def test_hyp40_tiny_positions(m, L, p):
     assume(tid is not None)
     s.nfpm.approve("u", tid, LPVAULT)
     ok, r = s.pledge("u", m, tid)
-    value = L * s.accepted_price(m) // 10 ** mk.d
+    value = L * s.booking_price(m) // 10 ** mk.d
     if mk.oracle.state(s.now()) == LIVE and value >= s.p.min_pledge_usd:
         assert ok, r
     if not ok:
@@ -194,7 +194,8 @@ ANSWER = st.one_of(st.just(0), st.just(-1), st.just(2 ** 255 - 1), st.just(MAX_P
        poke_between=st.booleans())
 def test_hyp90_oracle_answers_zero_max_and_moves(m, a0, a1, alt0, dt, poke_between):
     """Zero, negative, maximum and out-of-bounds answers are failures, never prices; the served price is at least 1,
-    at most the accepted price in every state but Live, 1 when Expired, and a disagreement serves the lower route."""
+    the accepted price when Cached, 1 when Expired, at most the fresh price whenever there is one, the fresh price
+    itself while Live or Drifting with no disagreement, and a disagreement serves the lower route."""
     s = fresh()
     mk = s.markets[m]
     A = mk.oracle.accepted
@@ -208,8 +209,8 @@ def test_hyp90_oracle_answers_zero_max_and_moves(m, a0, a1, alt0, dt, poke_betwe
     s.advance(dt)
     e = mk.oracle.evaluate(s.now())
     assert e["served"] >= 1
-    if e["state"] != LIVE:
-        assert e["served"] <= A
+    if e["state"] in (LIVE, DRIFTING) and not e["disagree"]:
+        assert e["served"] == e["fresh"]
     if e["state"] == EXPIRED:
         assert e["served"] == 1
     if e["state"] == CACHED:
@@ -466,27 +467,50 @@ def test_hyp48_small_liquidations_do_not_beat_one(m, drop, pieces):
 
 
 # --------------------------------------------------------------------------- settlement formulas
+def effective_slippage(b_net, allowance):
+    """SettlementMath.effectiveSlippage (SPEC-LIQ-003): min(allowance, ⌊10⁴(bNet − 10⁴)/bNet⌋), 0 when bNet ≤ 10⁴;
+    no cost term (SPEC-LIQ-002)."""
+    return 0 if b_net <= BPS else min(allowance, BPS * (b_net - BPS) // b_net)
+
+
+def payouts(v, d, r_f, fee_share_bps):
+    """SettlementMath.payouts (SPEC-LIQ-008/009/022): S = max(0, R_f − D), G = max(0, V − D),
+    A = min(⌊G × share / 10⁴⌋, S), kr = min(S, G) − A, B = S − A − kr."""
+    S, G = max(0, r_f - d), max(0, v - d)
+    A = min(G * fee_share_bps // BPS, S)
+    kr = min(S, G) - A
+    return S, G, A, kr, S - A - kr
+
+
 # HYP-84 verifies: Q-231, Q-256, Q-261, INV-036, INV-086
 @cfg(500)
 @given(V=st.integers(1, 10 ** 28), d_frac=st.integers(8000, 10_500), slip=st.integers(0, 3000),
-       b=st.integers(10_000, 11_000), costs=st.sampled_from([0, 1, 5, 10, 100]))
-def test_hyp84_fee_and_flash_slippage(V, d_frac, slip, b, costs):
-    """A depends only on V, D and φD while S covers it and never exceeds S; the effective slippage keeps
-    bNet(10⁴ − s) ≥ 10⁴(10⁴ + costsBps), with the flash premium the only cost (no buy leg)."""
+       b=st.integers(9_000, 12_000), allowance=st.integers(0, 3000),
+       share=st.one_of(st.just(2000), st.integers(0, 5000)))
+def test_hyp84_fee_and_effective_slippage(V, d_frac, slip, b, allowance, share):
+    """effectiveSlippage(bNet, allowance) is the largest s ≤ allowance with bNet(10⁴ − s) ≥ 10⁸, with no cost term;
+    payouts(V, D, R_f, share) splits S exactly into A + kr + B, A ≤ min(S, G), and A depends only on V and D while
+    S covers ⌊G × share / 10⁴⌋."""
     s = fresh()
     D = V * d_frac // 10_500
-    s_eff = s.eff_slippage(b, costs)
-    if s_eff > 0:
-        assert b * (BPS - s_eff) >= BPS * (BPS + costs)
+    s_eff = effective_slippage(b, allowance)
+    assert 0 <= s_eff <= allowance and s_eff < BPS
+    if b <= BPS:
+        assert s_eff == 0
     else:
-        assert b <= BPS + costs or s.p.slippage_bps == 0 or b * BPS - (BPS + costs) * BPS < b
-    fee_term = max(0, V - D) * s.p.avana_fee_share_bps // BPS
-    for R1 in (D, D + fee_term, V, V * (BPS - slip) // BPS):
-        S = max(0, R1 - D)
-        A = min(fee_term, S)
-        assert A <= S
+        assert b * (BPS - s_eff) >= BPS * BPS
+        assert s_eff == allowance or b * (BPS - s_eff - 1) < BPS * BPS
+    assert s.eff_slippage(b) == effective_slippage(b, s.p.slippage_bps)
+    fee_term = max(0, V - D) * share // BPS
+    for R_f in (D, D + fee_term, V, V * (BPS - slip) // BPS, V + slip):
+        S, G, A, kr, B = payouts(V, D, R_f, share)
+        assert A + kr + B == S and min(A, kr, B) >= 0
+        assert A <= S and A <= G and kr <= G - A
         if S >= fee_term:
             assert A == fee_term
+        assert B == max(0, S - G)
+        if S > G:
+            assert B == R_f - max(V, D)
 
 
 def leg_minimums(m, p0, p1, units, s_eff, spacing, clamped=None):

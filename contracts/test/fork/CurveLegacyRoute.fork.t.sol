@@ -79,7 +79,7 @@ contract CurveLegacyRouteForkTest is AvanaTest {
     /// @notice 10,000 USDT through the 3pool (USDT at index 2, USDC at 1): LPVaultSwap receives at least 9,950 USDC,
     /// measured as its balance rise although the pool returns nothing; the route keeps no balance or allowance.
     // TEST-054 verifies: REQ-ROUTE-046, REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-016
-    function test_fork_TEST_054_threePoolLegacyHop() public {
+    function test_TEST_054_threePoolLegacyHop() public {
         DexPathRoute route = new DexPathRoute(_config(), _hop(2, 1));
         deal(USDT, address(swapper), 10_000e6);
         uint256 before = IERC20(USDC).balanceOf(address(swapper));
@@ -93,7 +93,7 @@ contract CurveLegacyRouteForkTest is AvanaTest {
 
     /// @notice The 3pool's real `coins(uint256)` refuses wrong indices: DAI at 0 is not USDT, and index 3 does not exist.
     // TEST-054 verifies: REQ-ROUTE-046, REQ-ROUTE-045
-    function test_fork_TEST_054_threePoolWrongIndicesRefused() public {
+    function test_TEST_054_threePoolWrongIndicesRefused() public {
         RouteConfig memory c = _config();
         vm.expectRevert(ISettlementRoute.InvalidRouteConfig.selector);
         this.deployDexPath(c, _hop(0, 1));
@@ -105,7 +105,7 @@ contract CurveLegacyRouteForkTest is AvanaTest {
     /// pools. When the address book pins a legacy pool for a launch route, this test becomes a swap through that pool
     /// at the route's listed size, with its depth measured as `REQ-ROUTE-006` requires.
     // TEST-054 verifies: REQ-ROUTE-046
-    function test_fork_TEST_054_legacyCurveLaunchPoolNotYetNamed() public {
+    function test_TEST_054_legacyCurveLaunchPoolNotYetNamed() public {
         vm.skip(true);
     }
 }

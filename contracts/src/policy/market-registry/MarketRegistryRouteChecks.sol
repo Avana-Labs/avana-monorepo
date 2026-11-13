@@ -89,6 +89,14 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         return true;
     }
 
+    /// @dev Q-342 for `listToken`: true when the chain has the ERC-1820 registry and `token` has an `ERC777Token`
+    /// implementer there (or the read fails); false on a chain without the registry, where no ERC-777 token can exist.
+    function _isErc777Token(
+        address token
+    ) internal view returns (bool) {
+        return _ERC1820_REGISTRY.code.length != 0 && _hasErc777Implementer(token);
+    }
+
     /// @dev True unless the ERC-1820 registry answers `getInterfaceImplementer(token, keccak256("ERC777Token"))` with
     /// exactly one zero word.
     function _hasErc777Implementer(

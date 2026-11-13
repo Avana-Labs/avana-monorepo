@@ -58,6 +58,7 @@ TIGHTEN_SETTERS = (  # the compiled ParameterStore tighten selectors (2.15 launc
     "tightenMinPledgeUsd",
     "tightenBreakerDeficitMax", "tightenGateRecoverySeconds", "tightenMaxShortfallBps", "tightenDebtStressRiseBps",
     "tightenMaxFlashFeeBps",
+    "tightenMarketSpeedLimits", "tightenDebtSpeedLimit",  # speed limits (Q-411)
 )
 REGISTRY_SHORT = (
     "disableRoute", "restoreRoute",  # no buy route exists (REQ-MREG-011)

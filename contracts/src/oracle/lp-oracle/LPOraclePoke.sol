@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {PriceState} from "../../types/PriceState.sol";
 import {LPOracleRecovery} from "./LPOracleRecovery.sol";
-import {Evaluation, LegEval, RouteEval, TokenEval} from "./LPOracleTypes.sol";
+import {Evaluation, LPOracleCodes, LegEval, RouteEval, TokenEval} from "./LPOracleTypes.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // Every external call of the LPOracle is a static call (STATICCALL, or a delegatecall into its own logic, which makes
@@ -29,6 +29,10 @@ abstract contract LPOraclePoke is LPOracleRecovery {
     function _poke() internal returns (PriceState) {
         Layout storage $ = _s();
         Evaluation memory e = _evaluatePoke();
+        // A poke made while the pool's reentrancy lock is held (from inside a swap, flash, mint or burn callback) learns
+        // nothing about the feeds: it reports the failed state and writes nothing, so a caller cannot start or clear a
+        // failure, disagreement or latch timer from inside a callback (REQ-ORACLE-027).
+        if ((e.reasons & LPOracleCodes.POOL_REENTRANCY_LOCKED) != 0) return e.state;
         // Recovery evidence reads the `seen` rounds before this poke overwrites them.
         bool evidence = false;
         uint64 recovered = 0;
@@ -163,7 +167,7 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         uint256 n = e.prices.length;
         delete $.accepted.prices;
         for (uint256 i = 0; i < n; ++i) {
-            // Valuation prices are route values of at most MAX_ROUTE_ANSWER = 10^12 (LPPriceMath.lpPrice checked).
+            // Valuation prices are route values of at most MAX_ROUTE_ANSWER = 10^18 < 2^128 (LPPriceMath.lpPrice checked).
             // forge-lint: disable-next-line(unsafe-typecast)
             $.accepted.prices.push(uint128(e.prices[i]));
         }
@@ -249,9 +253,12 @@ abstract contract LPOraclePoke is LPOracleRecovery {
     /// @custom:spec REQ-ORACLE-088, REQ-ORACLE-059
     function _storeCheckpoint() internal {
         Layout storage $ = _s();
-        // The accepted price is a positive price8 below 2^128 (SPEC-ORC-008 bounds at 10^d <= 10^18 units).
+        // The accepted price is a positive price8; one above 2^128 - 1 (a whole vault token worth more than 3.4 * 10^30
+        // USD, beyond any listing) is stored saturated rather than truncated.
+        uint256 answer = SafeCast.toUint256($.accepted.answer);
+        // Saturated at type(uint128).max on the line itself.
         // forge-lint: disable-next-line(unsafe-typecast)
-        uint128 price8 = uint128(uint256($.accepted.answer));
+        uint128 price8 = uint128(answer > type(uint128).max ? type(uint128).max : answer);
         $.checkpoint = Checkpoint({price8: price8, at: _now64()});
         emit PriceCheckpointed(price8, _now64());
     }

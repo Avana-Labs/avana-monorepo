@@ -1,0 +1,348 @@
+# Checklist: AaveAdapter
+
+Spec pages: 06-aave-adapter.md. CVL specs: AaveAdapter.spec, AaveAdapterGates.spec.
+
+Run results: none given (links only); recorded prover results and Halmos logs are read. [x] verified (ran and passed), [!] failed, [~] not run (linked, no result), [ ] unlinked (no counting check).
+
+## REQ / SPEC on the page (123: 0 verified, 0 failed, 123 not run, 0 unlinked)
+
+- [~] `REQ-ADAPTER-001` (06-aave-adapter.md:138) The chain's one Adapter MUST sit behind one fixed ERC-1967 proxy address that never changes; each vault token  — TEST-062, TEST-195
+- [~] `REQ-ADAPTER-002` (06-aave-adapter.md:139) The user entry points (`pledge`, `recredit`, `borrow`, `repay`, `withdraw`, `removeLiquidity`, `repayAllAndWit — TEST-031
+- [~] `REQ-ADAPTER-003` (06-aave-adapter.md:140) The Adapter MUST be a UUPS proxy whose `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only by the time — TEST-062, TEST-195, TEST-210
+- [~] `REQ-ADAPTER-004` (06-aave-adapter.md:141) The implementation MUST use ERC-7201 namespaced storage, call `_disableInitializers()` in its constructor, run — TEST-062, TEST-242
+- [~] `REQ-ADAPTER-005` (06-aave-adapter.md:142) The Adapter MUST be each vault token's only minter and only burner. It MUST mint only in `pledge` (exactly the — PROP-011, TEST-018, TEST-073, TEST-088, TEST-130, TEST-186, TEST-208, TEST-241
+- [~] `REQ-ADAPTER-006` (06-aave-adapter.md:143) The Adapter MUST NOT call any state-changing Spoke or Hub function from its own address: every Spoke action ru — TEST-031, TEST-130, TEST-172
+- [~] `REQ-ADAPTER-007` (06-aave-adapter.md:144) The Adapter MUST hold no ERC-20 or NFT at the end of any call, MUST grant no allowance, and MUST have no rescu — TEST-010, TEST-027, TEST-031, TEST-099
+- [~] `REQ-ADAPTER-008` (06-aave-adapter.md:145) Every borrow-side risk check MUST be the RiskModule's: the Adapter calls `RISK_MODULE.preBorrowCheck`, `preWit — TEST-019, TEST-026, TEST-027, TEST-028, TEST-114, TEST-132, TEST-156
+- [~] `REQ-ADAPTER-074` (06-aave-adapter.md:147) `initialize(timelock)` MUST run once, atomically with the Adapter proxy deployment, revert with `ZeroAddress() — TEST-062, TEST-242, TEST-247
+- [~] `REQ-ADAPTER-084` (06-aave-adapter.md:148) The Adapter MUST override `_grantRole` to revert with `AdminRoleOnlyTimelock(role, account)` when `role` is `D — TEST-062, TEST-242, TEST-247
+- [~] `REQ-ADAPTER-065` (06-aave-adapter.md:152) `pledge(marketId, position, deadline)` MUST, in this order: acquire the Lock; revert with `DeadlineExpired(dea — TEST-010, TEST-012, TEST-030, TEST-061
+- [~] `REQ-ADAPTER-066` (06-aave-adapter.md:153) On a wallet's first pledge to a market (`proxyOf[msg.sender][marketId] == address(0)`) the Adapter MUST call ` — TEST-010, TEST-025, TEST-026, TEST-061, TEST-203, TEST-211, TEST-271
+- [~] `REQ-ADAPTER-103` (06-aave-adapter.md:154) **Empty account at creation.** In the pledge that deploys a proxy, right after `deployProxy` and before any ot — TEST-190
+- [~] `REQ-ADAPTER-068` (06-aave-adapter.md:155) After `COLLATERALIZATION.pledge` returns, the Adapter MUST call `vaultToken.mint(proxy, credited)` and then ru — TEST-010, TEST-027, TEST-073, TEST-088, TEST-186, TEST-239
+- [~] `REQ-ADAPTER-069` (06-aave-adapter.md:156) **Backing gap.** Every pledge, withdrawal, partial removal, re-credit and repay with collateral MUST read the  — PROP-011, TEST-083, TEST-088, TEST-107, TEST-130, TEST-209, TEST-237, TEST-238, TEST-239, TEST-241
+- [~] `REQ-ADAPTER-067` (06-aave-adapter.md:160) `borrow` MUST name the debt reserve, and the Adapter MUST revert with `UnknownDebtReserve(spoke, debtReserveId — TEST-027, TEST-030, TEST-203, TEST-239, TEST-243
+- [~] `REQ-PROXY-015` (06-aave-adapter.md:161) `borrow(marketId, debtReserveId, amount, receiver, deadline, minHealthFactor, expectedNonce)` MUST, in this or — TEST-027, TEST-096, TEST-273
+- [~] `REQ-PROXY-016` (06-aave-adapter.md:162) There MUST be no minimum borrow amount beyond `amount > 0` and no minimum debt: the RiskModule reads no debt f — TEST-029, TEST-073, TEST-278
+- [~] `REQ-PROXY-017` (06-aave-adapter.md:163) The receiver rule MUST refuse, with `InvalidReceiver(receiver)`: `address(0)`; any registered proxy (`walletOf — TEST-027, TEST-106
+- [~] `REQ-PROXY-018` (06-aave-adapter.md:164) A borrow MUST name its market, which fixes the account: borrowing power on Aave belongs to the whole account,  — TEST-019, TEST-028, TEST-203, TEST-271
+- [~] `REQ-PROXY-019` (06-aave-adapter.md:165) After the call bounds and before the proxy call, `borrow` MUST call `RISK_MODULE.preBorrowCheck(proxy, debtRes — TEST-019, TEST-027, TEST-028, TEST-029, TEST-095
+- [~] `REQ-PROXY-020` (06-aave-adapter.md:166) `preBorrowCheck` is where the price rule on the account's market (Live only), the sequencer gate, Aave reserve — TEST-019, TEST-028, TEST-068, TEST-095, TEST-114, TEST-158, TEST-213
+- [~] `REQ-PROXY-021` (06-aave-adapter.md:167) The Adapter MUST then run the borrow step of [2.5](05-position-proxy-and-proxy-manager.md) `REQ-PROXY-087` thr — TEST-027, TEST-075, TEST-106
+- [~] `REQ-PROXY-022` (06-aave-adapter.md:168) After the proxy call the Adapter MUST call `RISK_MODULE.postHealthCheck(proxy, minHealthFactor)`, which reads  — TEST-010, TEST-019, TEST-027, TEST-028, TEST-095, TEST-236
+- [~] `REQ-PROXY-023` (06-aave-adapter.md:169) The borrowed asset MUST go funding Hub → proxy → `receiver` inside the borrow step; the Adapter never holds it — TEST-027, TEST-106
+- [~] `REQ-PROXY-024` (06-aave-adapter.md:170) `borrow` MUST emit `Borrowed(msg.sender, marketId, debtReserveId, receiver, drawn, nonce, hf)` where `nonce` i — TEST-027, TEST-061
+- [~] `REQ-PROXY-025` (06-aave-adapter.md:171) There MUST be no combined pledge-and-borrow entry point, no batched borrow and no generic multicall; pledge an — TEST-031
+- [~] `REQ-PROXY-026` (06-aave-adapter.md:172) Which contract enforces what: the Adapter enforces the deadline, the nonce, the receiver rule, the proxy resol — TEST-019, TEST-026, TEST-027, TEST-132, TEST-156, TEST-275
+- [~] `REQ-PROXY-079` (06-aave-adapter.md:173) A borrow MUST NOT complete while the account's vault-token reserve, with supplied shares, is frozen on Aave: ` — TEST-019, TEST-095, TEST-155
+- [~] `REQ-PROXY-027` (06-aave-adapter.md:177) `repay(borrower, marketId, debtReserveId, maxRepaySpend, repayAll, deadline)` MUST accept any caller as the pa — TEST-029, TEST-031, TEST-175, TEST-243
+- [~] `REQ-PROXY-028` (06-aave-adapter.md:178) `repay` MUST read `D = spoke.getUserTotalDebt(debtReserveId, proxy)` (drawn plus premium accrued to `block.tim — TEST-029, TEST-075, TEST-165, TEST-248
+- [~] `REQ-PROXY-029` (06-aave-adapter.md:179) `repay` MUST move the sized pull `x` (`min(maxRepaySpend, D)` for a partial repay, `maxRepaySpend` for a repay — TEST-029, TEST-075, TEST-221, TEST-248
+- [~] `REQ-PROXY-030` (06-aave-adapter.md:180) `spent` is the proxy's balance decrease across `Spoke.repay` measured by the Adapter ( `spent ≤ received ≤ x`) — TEST-029, TEST-075, TEST-248
+- [~] `REQ-PROXY-031` (06-aave-adapter.md:181) With `repayAll == true`, after the proxy call the Adapter MUST revert with `DebtRemaining(debtReserveId, d)` u — TEST-073, TEST-075, TEST-203, TEST-237, TEST-248
+- [~] `REQ-PROXY-032` (06-aave-adapter.md:182) Any partial amount MUST be accepted; there is no repay floor. Repay is open in None, Frozen and Paused (both r — TEST-029, TEST-061, TEST-099, TEST-158, TEST-192, TEST-193, TEST-275
+- [~] `REQ-PROXY-083` (06-aave-adapter.md:183) Concurrent payers. Because `repay` sizes its pull from the debt read in the same call, a repay by one payer th — TEST-175
+- [~] `REQ-PROXY-084` (06-aave-adapter.md:184) No token transfer of a zero amount MAY be attempted: a repay sized at 0 makes no pull, approval, Spoke call or — TEST-165, TEST-177, TEST-186
+- [~] `REQ-ADAPTER-085` (06-aave-adapter.md:185) With `repayAll == true` and `0 < D ≤ maxRepaySpend`, `repay` MUST pull exactly `maxRepaySpend` from the payer  — TEST-175, TEST-203, TEST-237, TEST-248
+- [~] `REQ-PROXY-033` (06-aave-adapter.md:189) `withdraw(marketId, position, units, deadline, minHealthFactor)` MUST acquire the Lock, revert with `DeadlineE — TEST-018, TEST-026
+- [~] `REQ-PROXY-034` (06-aave-adapter.md:190) The Adapter MUST decide between debt-free and with-debt from Aave alone, at the start of the withdrawal step:  — TEST-018, TEST-203, TEST-243
+- [~] `REQ-PROXY-035` (06-aave-adapter.md:191) A debt-free withdrawal MUST NOT read the MarketRegistry, the pause state, the address freeze or any breaker, M — TEST-018, TEST-099, TEST-158, TEST-193, TEST-195, TEST-229, TEST-243
+- [~] `REQ-PROXY-036` (06-aave-adapter.md:192) A with-debt withdrawal MUST revert with `ApplicationPaused()` if the market's Hub is Paused for either reason  — TEST-010, TEST-019, TEST-095, TEST-237
+- [~] `REQ-PROXY-037` (06-aave-adapter.md:193) The withdrawal step MUST run [2.5](05-position-proxy-and-proxy-manager.md) `REQ-PROXY-089` through `proxy.exec — PROP-011, TEST-018, TEST-150, TEST-209, TEST-239
+- [~] `REQ-PROXY-038` (06-aave-adapter.md:194) After the burn the Adapter MUST call `COLLATERALIZATION.release(proxy, vaultToken, position.positionKey, units — PROP-011, TEST-018, TEST-150, TEST-209
+- [~] `REQ-PROXY-039` (06-aave-adapter.md:195) The Adapter MUST emit `CollateralWithdrawn(msg.sender, marketId, vaultToken, positionKey, units, withDebt, hf) — TEST-018, TEST-061, TEST-237
+- [~] `REQ-ADAPTER-071` (06-aave-adapter.md:196) `repayAllAndWithdraw(marketId, position, units, debtReserveIds, maxRepaySpends, deadline)` MUST acquire the Lo — TEST-018, TEST-099, TEST-165, TEST-193, TEST-203, TEST-243, TEST-269
+- [~] `REQ-ADAPTER-078` (06-aave-adapter.md:200) `removeLiquidity(marketId, position, units, minAmounts, deadline, minHealthFactor)` removes part of one record — TEST-061, TEST-237, TEST-269
+- [~] `REQ-ADAPTER-079` (06-aave-adapter.md:201) `recredit(marketId, position, topUp, deadline)` credits liquidity added to a pledged position (for a concentra — TEST-061, TEST-235, TEST-238
+- [~] `REQ-ADAPTER-080` (06-aave-adapter.md:205) `repayWithCollateral(p)` repays one debt reserve with liquidity released from one record, through LPVaultSwap, — TEST-061, TEST-099, TEST-192, TEST-239, TEST-241, TEST-275
+- [~] `REQ-ADAPTER-081` (06-aave-adapter.md:206) `deleverageRepay(proxy, debtReserveId, amount)` and `deleverageRelease(proxy, position, units, minAmounts)` MU — TEST-060, TEST-239, TEST-270
+- [~] `REQ-ADAPTER-070` (06-aave-adapter.md:210) `burnSeized(marketId, vaultToken, units)` MUST revert with `NotLPVaultSwap()` unless `msg.sender == LP_VAULT_S — TEST-061, TEST-088, TEST-099, TEST-208, TEST-269, TEST-270
+- [~] `REQ-ADAPTER-044` (06-aave-adapter.md:214) For new activity the Adapter MUST read the pause state of the market's home Hub from `MARKET_REGISTRY.pauseSta — TEST-012, TEST-162, TEST-192, TEST-273
+- [~] `REQ-ADAPTER-045` (06-aave-adapter.md:215) Under `Frozen` the Adapter MUST refuse a pledge or re-credit by an account with no debt (`borrowCount == 0`) a — TEST-012, TEST-019, TEST-192, TEST-193, TEST-235
+- [~] `REQ-ADAPTER-046` (06-aave-adapter.md:216) Under `Paused` the Adapter MUST refuse every borrow, every withdraw-with-debt and every removal with debt with — TEST-012, TEST-019, TEST-192, TEST-193, TEST-208, TEST-235, TEST-237
+- [~] `REQ-ADAPTER-047` (06-aave-adapter.md:217) `repay`, the debt-free branches of `withdraw` and `removeLiquidity`, `repayAllAndWithdraw`, `collectFees`, `re — TEST-029, TEST-060, TEST-099, TEST-107, TEST-132, TEST-151, TEST-162, TEST-193, TEST-195, TEST-208, TEST-229, TEST-237, TEST-239, TEST-243
+- [~] `REQ-ADAPTER-048` (06-aave-adapter.md:218) The Adapter MUST NOT be able to change the pause state, its reason, an address freeze or a breaker. `freeze()` — TEST-031
+- [~] `REQ-ADAPTER-049` (06-aave-adapter.md:219) Per-market containment MUST come from sources the RiskModule reads, not from the Adapter: an Aave freeze or pa — TEST-019, TEST-028, TEST-095, TEST-155, TEST-213, TEST-237
+- [~] `REQ-ADAPTER-082` (06-aave-adapter.md:220) **Address freeze.** The Adapter MUST read `MARKET_REGISTRY.isFrozenAddress(account)` for new activity only and — TEST-192, TEST-193, TEST-229, TEST-237
+- [~] `REQ-ADAPTER-083` (06-aave-adapter.md:221) **Pause reasons in pledges and re-credits.** `pledge` and `recredit` MUST derive `requireRescue` from the appl — TEST-012, TEST-192, TEST-193, TEST-229, TEST-235
+- [~] `REQ-ADAPTER-086` (06-aave-adapter.md:222) **What exits never read.** Repay, the debt-free branches of `withdraw` and `removeLiquidity`, `repayAllAndWith — TEST-028, TEST-029, TEST-099, TEST-114, TEST-132, TEST-162, TEST-192, TEST-193, TEST-208, TEST-213, TEST-229, TEST-237, TEST-239, TEST-243
+- [~] `REQ-ADAPTER-095` (06-aave-adapter.md:226) The Adapter MUST have no function that moves a pledged account's charge between budget parts: `releaseIdle` an — TEST-031, TEST-206
+- [~] `REQ-ADAPTER-096` (06-aave-adapter.md:227) `collectFees(marketId, position, deadline)` MUST acquire the Lock, revert with `DeadlineExpired(deadline)` and — TEST-060, TEST-099, TEST-193, TEST-270
+- [~] `REQ-ADAPTER-097` (06-aave-adapter.md:228) `releaseZeroCredit(marketId, position, deadline)` MUST acquire the Lock, revert with `DeadlineExpired(deadline — TEST-060, TEST-151, TEST-270
+- [~] `REQ-ADAPTER-104` (06-aave-adapter.md:229) `refreshDebtMark(proxy)` MUST be callable by anyone: it acquires the Lock, calls `COLLATERALIZATION.markDebtFr — TEST-029, TEST-099, TEST-193
+- [~] `REQ-ADAPTER-098` (06-aave-adapter.md:230) **One Adapter per chain, scoped by Hub.** The Adapter MUST take each market's Hub, Spoke and integration from  — TEST-012, TEST-030, TEST-192
+- [~] `REQ-ADAPTER-099` (06-aave-adapter.md:231) **Account steps through `execute`.** Every account step MUST be built by the Adapter as calls the proxy makes  — TEST-031, TEST-062, TEST-195
+- [~] `REQ-PROXY-048` (06-aave-adapter.md:235) Every user entry point of the Adapter (`pledge`, `recredit`, `borrow`, `repay`, `withdraw`, `removeLiquidity`, — TEST-010, TEST-060
+- [~] `REQ-PROXY-049` (06-aave-adapter.md:236) The Adapter MUST expose `proxyOf(wallet, marketId)`, `walletOf(proxy)`, `accountOf(proxy)` (returning the boun — TEST-025, TEST-211, TEST-247
+- [~] `REQ-ADAPTER-050` (06-aave-adapter.md:237) The Adapter MUST be one of the Lock's two fixed members (AaveAdapter and LPVaultSwap). Its user entry points t — TEST-060, TEST-270
+- [~] `REQ-ADAPTER-051` (06-aave-adapter.md:238) Gas of every Adapter call MUST be bounded: by the Spoke's reserve count and the account's reserve count (one c — TEST-203, TEST-269
+- [~] `REQ-ADAPTER-040` (06-aave-adapter.md:242) The blast radius of a faulty or hostile Adapter implementation MUST be exactly the statement in [Purpose](#pur — TEST-130, TEST-132, TEST-195
+- [~] `REQ-ADAPTER-041` (06-aave-adapter.md:243) Whatever the Adapter does, it MUST NOT be able to send a position to anyone but its depositor of record (the L — TEST-130
+- [~] `REQ-ADAPTER-042` (06-aave-adapter.md:244) The bound on that blast radius MUST be: every Adapter upgrade waits the chain's normal timelock delay (5 days) — TEST-062, TEST-099, TEST-130, TEST-195, TEST-210
+- [~] `REQ-ADAPTER-043` (06-aave-adapter.md:245) The hostile-component suite MUST run these attempts with a hostile Adapter implementation and assert the outco — TEST-130
+- [~] `SPEC-PROXY-001` (06-aave-adapter.md:251) **Post-action health gate.** After the proxy's Spoke call in `borrow`, and after Collateralization's `release` — TEST-010, TEST-019, TEST-027, TEST-028, TEST-095, TEST-236, TEST-237
+- [~] `SPEC-PROXY-002` (06-aave-adapter.md:252) **Account price check.** Evaluated by `RiskModule.preBorrowCheck` and `preWithdrawCheck` after poking the acco — TEST-019, TEST-028, TEST-095, TEST-203
+- [~] `SPEC-PROXY-003` (06-aave-adapter.md:253) **Repay sizing.** `D = spoke.getUserTotalDebt(r, proxy)` in the asset's base units (`e_r` decimals), equal to  — TEST-029, TEST-073, TEST-075, TEST-165, TEST-248
+- [~] `SPEC-PROXY-004` (06-aave-adapter.md:254) **Borrow forwarding.** With `asset = spoke.getReserve(r).underlying`: `drawn = asset.balanceOf(proxy)_after −  — TEST-027, TEST-075, TEST-106
+- [~] `SPEC-PROXY-006` (06-aave-adapter.md:255) **Account health factor with several debt reserves.** For the account's one market `m` with supplied units `s_ — TEST-010, TEST-027, TEST-075, TEST-203, TEST-271
+- [~] `SPEC-PROXY-007` (06-aave-adapter.md:256) **Repay-all pull and refund.** With `D_e` the live debt of the reserve at execution and `M = maxRepaySpend` (b — TEST-203, TEST-248
+- [~] `SPEC-PROXY-008` (06-aave-adapter.md:257) **Backing gap.** For the touched market, `G = totalCredited + pending.units − totalSupply` (vault-token base u — PROP-011, TEST-083, TEST-186, TEST-209, TEST-237, TEST-241
+- [~] `SPEC-PROXY-009` (06-aave-adapter.md:258) **Repay with collateral: health factor direction.** With `A` the account's CF-weighted collateral value and `D — TEST-239
+- [~] `REQ-PROXY-057` (06-aave-adapter.md:296) The calling wallet (or, for repay, `borrower`) has no proxy for the market | The call reverts with `NoProxy(wa — TEST-018, TEST-026, TEST-027, TEST-029, TEST-237
+- [~] `REQ-PROXY-058` (06-aave-adapter.md:297) `block.timestamp > deadline` on any entry point | The call reverts with `DeadlineExpired(deadline)`; for `borr — TEST-010, TEST-018, TEST-027, TEST-029, TEST-237
+- [~] `REQ-PROXY-059` (06-aave-adapter.md:298) `expectedNonce != borrowNonce[proxy]` | The call reverts with `BadNonce(borrowNonce, expectedNonce)`; nonce un — TEST-027, TEST-096
+- [~] `REQ-PROXY-060` (06-aave-adapter.md:299) `amount == 0`, `units == 0`, or a partial repay with `maxRepaySpend == 0` (checked before the debt is read, wh — TEST-018, TEST-027, TEST-165, TEST-237
+- [~] `REQ-PROXY-061` (06-aave-adapter.md:300) Receiver refused by `REQ-PROXY-017` | The call reverts with `InvalidReceiver(receiver)` (Source: Q-105, Q-233) — TEST-027
+- [~] `REQ-PROXY-062` (06-aave-adapter.md:301) `debtReserveId` not enabled for the market's Spoke in a borrow or a repay with collateral; a vault token unkno — TEST-012, TEST-018, TEST-027, TEST-029, TEST-030, TEST-208, TEST-237
+- [~] `REQ-PROXY-063` (06-aave-adapter.md:302) The account's market is not Live in a borrow or withdraw-with-debt | The RiskModule's `PriceNotLive(marketId,  — TEST-019
+- [~] `REQ-PROXY-064` (06-aave-adapter.md:303) A collateral input of the account is older than its `borrowPriceMaxAge` (its feed's own heartbeat plus margin) — TEST-019
+- [~] `REQ-PROXY-065` (06-aave-adapter.md:304) A debt reserve's Aave price source differs from the recorded one | The RiskModule's `UnexpectedDebtPriceSource — TEST-019
+- [~] `REQ-PROXY-066` (06-aave-adapter.md:305) Any other RiskModule pre-check fails | Its error propagates unchanged ([2.7](07-risk-module.md)) (Source: Q-22 — TEST-019, TEST-028, TEST-068
+- [~] `REQ-PROXY-067` (06-aave-adapter.md:306) The rescue-excluded health factor held to the accepted price (`hfB`, `SPEC-PROXY-001`) below `max(1.00e18, har — TEST-019, TEST-027, TEST-237
+- [~] `REQ-PROXY-068` (06-aave-adapter.md:307) Partial repay at zero debt (with `maxRepaySpend > 0`) | Returns `0`, no token movement, no event (Source: Q-20 — TEST-165
+- [~] `REQ-PROXY-069` (06-aave-adapter.md:308) Repay-all at zero debt | Returns `0`, no token movement, no event (Source: Q-180, Q-209) — TEST-165, TEST-175
+- [~] `REQ-PROXY-070` (06-aave-adapter.md:309) Repay-all with debt above `maxRepaySpend` | The call reverts with `RepayExceedsMax(debt, maxRepaySpend)` befor — TEST-203, TEST-248
+- [~] `REQ-PROXY-071` (06-aave-adapter.md:310) Debt not zero after a repay-all, or `borrowCount > 0` before the withdrawal of `repayAllAndWithdraw` | The cal — TEST-203, TEST-248
+- [~] `REQ-PROXY-072` (06-aave-adapter.md:311) The measured `drawn ≠ amount`, a repay pull delivers nothing or more than was pulled, the supply did not raise — TEST-018, TEST-027, TEST-029, TEST-186, TEST-239
+- [~] `REQ-PROXY-073` (06-aave-adapter.md:312) A borrow of a new debt reserve would exceed the Spoke's per-account reserve limit | Aave's `MaximumUserReserve — TEST-203
+- [~] `REQ-PROXY-074` (06-aave-adapter.md:313) Reserve not enabled as collateral after the supply step | The proxy's `CollateralNotEnabled(reserveId)` propag — TEST-010
+- [~] `REQ-PROXY-075` (06-aave-adapter.md:314) `burnSeized` called by an address other than LPVaultSwap or while LPVaultSwap does not hold the Lock | The cal — TEST-208, TEST-270
+- [~] `REQ-PROXY-076` (06-aave-adapter.md:315) Lock already held when a user entry point starts | The Lock's `LockHeld(holder)` propagates (Source: Q-148) — TEST-060
+- [~] `REQ-PROXY-077` (06-aave-adapter.md:316) Aave blocks the action (reserve paused or frozen, Hub halt, `drawCap`, health factor below 1) | The upstream e — TEST-019, TEST-027, TEST-158, TEST-221
+- [~] `REQ-PROXY-080` (06-aave-adapter.md:317) A vault-token reserve of the account with supplied shares is frozen on Aave at a borrow | The RiskModule's `Re — TEST-155
+- [~] `REQ-PROXY-081` (06-aave-adapter.md:318) An LPOracle `poke()` in the RiskModule's pre-check reverts (for example `InsufficientGas`) | The revert propag — TEST-028
+- [~] `REQ-PROXY-082` (06-aave-adapter.md:319) Withdrawal `units` differ from the record's credited units after Collateralization's reconciliation of an unse — TEST-018, TEST-150
+- [~] `REQ-ADAPTER-060` (06-aave-adapter.md:320) Adapter implementation broken or reverting on every call | Every Adapter entry point fails: pledge, borrow, re — TEST-195
+- [~] `REQ-ADAPTER-072` (06-aave-adapter.md:321) Pledge or re-credit by an account with `borrowCount == 0`, or any borrow, while the market's Hub is Frozen | T — TEST-012, TEST-027, TEST-192, TEST-193, TEST-235
+- [~] `REQ-ADAPTER-073` (06-aave-adapter.md:322) Borrow, withdraw-with-debt or removal with debt while the market's Hub is Paused (either reason); any pledge,  — TEST-012, TEST-019, TEST-027, TEST-192, TEST-193, TEST-235, TEST-237
+- [~] `REQ-ADAPTER-075` (06-aave-adapter.md:323) After a pledge, withdrawal, partial removal, re-credit or repay with collateral, `totalSupply > totalCredited  — TEST-209, TEST-239, TEST-241
+- [~] `REQ-ADAPTER-076` (06-aave-adapter.md:324) `repayAllAndWithdraw` with arrays of different lengths | The call reverts with `LengthMismatch()` (Source: Q-2 — TEST-203
+- [~] `REQ-ADAPTER-077` (06-aave-adapter.md:325) Pledge to a market whose Spoke the MarketRegistry has not approved | The call reverts with `UnknownSpoke(spoke — TEST-012
+- [~] `REQ-ADAPTER-087` (06-aave-adapter.md:326) A frozen caller borrows, withdraws or removes liquidity with debt; a borrow names a frozen receiver | The call — TEST-019, TEST-027, TEST-229, TEST-237
+- [~] `REQ-ADAPTER-088` (06-aave-adapter.md:327) A pledge or re-credit that must be a rescue top-up (Paused with reason `General`, frozen caller, or an exempti — TEST-192, TEST-235
+- [~] `REQ-ADAPTER-089` (06-aave-adapter.md:328) `removeLiquidity` with `units` at or above the record's credited units after reconciliation, a remaining recor — TEST-237
+- [~] `REQ-ADAPTER-090` (06-aave-adapter.md:329) `recredit` by a wallet that is not the depositor of record, on a zero-credit or closed record, or with no uncr — TEST-238
+- [~] `REQ-ADAPTER-091` (06-aave-adapter.md:330) `repayWithCollateral` with no debt in the reserve, a health factor after the call below `max(hfBefore, minHeal — TEST-239
+- [~] `REQ-ADAPTER-092` (06-aave-adapter.md:331) `deleverageRepay` or `deleverageRelease` called by another address, while the Adapter does not hold the Lock,  — TEST-060, TEST-239, TEST-270
+- [~] `REQ-ADAPTER-093` (06-aave-adapter.md:332) `grantRole(DEFAULT_ADMIN_ROLE or APPLICATION_ADMIN, account)` with `account != TIMELOCK` | The call reverts wi — TEST-242
+- [~] `REQ-ADAPTER-094` (06-aave-adapter.md:333) A market breaker of a collateral market or the pledged market, or a debt breaker of the borrowed reserve or of — TEST-028, TEST-095
+- [~] `REQ-ADAPTER-100` (06-aave-adapter.md:334) A call to the removed `releaseIdle` selector | The call reverts at dispatch: the Adapter has no such function, — TEST-031, TEST-206
+- [~] `REQ-ADAPTER-101` (06-aave-adapter.md:335) `collectFees` or `releaseZeroCredit` by a wallet that is not the depositor of record, or fees on an AMM protoc — TEST-060
+- [~] `REQ-ADAPTER-102` (06-aave-adapter.md:336) A borrow or withdraw-with-debt while the chain's sequencer is down or in its grace period | The RiskModule's ` — TEST-275
+
+## TEST rows (88: 0 verified, 0 failed, 77 not run, 11 unlinked)
+
+- [~] `TEST-010` [unit] Pledge happy path: the NFT owner approves the LPVault for one `positionKey` and calls `AaveAdapter.pledge(mark
+- [~] `TEST-011` [unit] Pledge rejections: a caller that does not own the NFT reverts `NotTokenOwner` in the LPVault, including a per-
+- [~] `TEST-012` [unit] Pledge gates: a new account (no debt on any debt reserve) requires the market Live; a top-up is allowed into a
+- [~] `TEST-018` [unit] Debt-free withdrawal: `AaveAdapter.withdraw(spoke, vaultToken, positionKey, units, deadline, minHealthFactor)`
+- [~] `TEST-019` [unit] Withdrawal that leaves debt: Paused reverts `ApplicationPaused` and Frozen allows it; the Adapter calls `RiskM
+- [~] `TEST-150` [unit] Reconcile on withdrawal: a mock LPVaultSwap calls `liquidationCall` on the proxy and keeps the seized vault to
+- [~] `TEST-151` [unit] Reconcile on liquidation settlement: after an unsettled seizure of `c` units, an honest liquidation of the sam
+- [~] `TEST-152` [unit] Pending settlement in Collateralization: only LPVaultSwap can call `Collateralization.settlePending(vaultToken
+- [~] `TEST-171` [unit] Market identity from the vault token: during a pledge Collateralization takes the market ID and the LPOracle o
+- [~] `TEST-186` [unit] Adapter mint equals credit: in `pledge` the AaveAdapter mints to the proxy exactly the `credited` that `Collat
+- [~] `TEST-209` [unit] Withdrawal order: in `AaveAdapter.withdraw` the calls happen in this order, checked with `vm.expectCall` and a
+- [~] `TEST-188` [unit] Proxy registry: `addValidProxy(proxy)` reverts `OnlyAdapter` for every caller other than the AaveAdapter (the 
+- [~] `TEST-025` [unit] Proxy creation and binding: on the wallet's first pledge to a market the Adapter calls `ProxyManager.deployPro
+- [~] `TEST-026` [access-control] Adapter entry points: `pledge`, `borrow`, `withdraw` and `repayAllAndWithdraw` resolve the proxy from `msg.sen
+- [~] `TEST-027` [unit] Borrow: `AaveAdapter.borrow(spoke, debtReserveId, amount, receiver, deadline, minHealthFactor, expectedNonce)`
+- [~] `TEST-028` [unit] Borrow gates in `RiskModule.preBorrowCheck(proxy, spoke, debtReserveId)` and `postHealthCheck`: it pokes every
+- [~] `TEST-029` [unit] Repay: the payer (the wallet or any third party, `TEST-175`; frozen or not) approves the AaveAdapter for the d
+- [~] `TEST-030` [unit] Fixed targets: the proxy calls only the Spoke it was initialized with; vault-token reserve IDs are derived at 
+- [~] `TEST-031` [access-control] No combined pledge-and-borrow entry point and no generic or delegatecall multicall exist on the Adapter or the
+- [~] `TEST-155` [unit] Aave frozen flag on borrow: when the Aave Spoke configurator freezes any vault-token reserve the account has e
+- [~] `TEST-165` [unit] Repay at zero debt: a partial `repay` and a `repayAll` on a reserve where the proxy owes 0 both return 0, pull
+- [~] `TEST-175` [unit] Third-party repay: an address that is not the borrower approves the AaveAdapter and calls `repay(borrower, spo
+- [~] `TEST-190` [unit] Proxy addresses: `ProxyManager.deployProxy(wallet, spoke, marketId)` reverts `OnlyAdapter` for any caller othe
+- [~] `TEST-203` [unit] Accounts with several reserves: an account holds two vault-token collateral reserves and GHO and USDC debt; de
+- [~] `TEST-206` [unit] No interest fee: the selector inventories of the AaveAdapter, the PositionProxy and the ParameterStore contain
+- [~] `TEST-208` [unit] Seized-unit burn: `AaveAdapter.burnSeized(vaultToken, units)` reverts `NotLPVaultSwap` for any other caller an
+- [ ] `TEST-035` [unit] Per-market containment: Avana has no per-function or per-market pause selector (inventory over the AaveAdapter (only excluded checks: uses a stand-in for AaveAdapter)
+- [~] `TEST-158` [unit] Aave reserve pauses: when Aave's `SpokeConfigurator.pauseReserve` pauses a vault-token reserve the account hol
+- [ ] `TEST-326` [integration] On the real local Aave V4 Hub and CDP Spoke through the AaveAdapter: a borrow charges both windows by the real
+- [ ] `TEST-047` [unit] Caller-funded liquidation, run for each debt reserve: `T.transferFrom(msg.sender, LPVaultSwap, debtToCover)` m (only excluded checks: tag on a test named for another row; uses a stand-in for AaveAdapter)
+- [~] `TEST-056` [unit] Debit check: under the Lock `beginSeizure` snapshots the proxy's supplied shares and the vault token's supply 
+- [~] `TEST-060` [unit] Lock: every outer entry point of the AaveAdapter and LPVaultSwap acquires the immutable Lock, whose only membe
+- [~] `TEST-170` [unit] Pending-settlement proceeds to the Coverage Spoke of the market's `(Hub, debt asset)`: `LPVaultSwap.settlePend
+- [~] `TEST-068` [unit] While liquidation is halted for an account (no usable settlement path for a market of the account, zero active
+- [~] `TEST-162` [unit] Pause-state readers: the AaveAdapter reads `MarketRegistry.pauseState()` and `pauseReason()` only in `pledge`,
+- [ ] `TEST-168` [access-control] Pause location: the only pause state is the MarketRegistry's `PauseState`; the AaveAdapter, RiskModule, Parame (only excluded checks: uses a stand-in for AaveAdapter)
+- [~] `TEST-192` [unit] Pause matrix: for each state and reason and each action, with every other check passing: None allows new pledg
+- [~] `TEST-213` [unit] Market offboarding: `setMarketOffboarding(marketId)` (short delay) sets status `Offboarding`; afterwards pledg
+- [~] `TEST-073` [fuzz] Tiny positions, run on a market whose `minPledgeUsd` is 0: 1 to 10^6 liquidity units pledge and mint exactly; 
+- [~] `TEST-075` [fuzz] Borrow and repay with interest, per debt reserve (GHO 18 decimals, USDC 6 decimals): each borrow raises that r
+- [~] `TEST-077` [fuzz] Opening-gate rounding: no rounding path lets a borrow or withdraw-with-debt finish with an exact collateral-to
+- [~] `TEST-083` [invariant] Backing: for every market, vault-token `totalSupply()` is at most Collateralization's `getTotalCredited(vaultT
+- [~] `TEST-088` [invariant] Mint and burn authority: every mint is made by the AaveAdapter inside `pledge`, for exactly the credited units
+- [~] `TEST-089` [invariant] Proxy binding and registry: only the ProxyManager deploys proxies, only on the AaveAdapter's call, each at `pr
+- [~] `TEST-095` [invariant] Risk-increasing actions: with the reviewed RiskModule, after every borrow and withdraw-with-debt the account's
+- [~] `TEST-096` [invariant] Nonce: each `borrowNonce(proxy)` value stored in the AaveAdapter is consumed by at most one successful borrow,
+- [~] `TEST-099` [invariant] Exit liveness (`fail_on_revert` on): repay (by the borrower or any payer), fee collection, debt-free withdrawa
+- [ ] `TEST-100` [invariant] Liquidation liveness (`fail_on_revert` on): an account with HF < 1, fresh and agreeing collateral prices, fres (only excluded checks: tag on a test named for another row)
+- [ ] `TEST-104` [invariant] Settlement postconditions, recorded by ghost variables in the liquidation handlers (registered operators, unre (only excluded checks: tag on a test named for another row)
+- [~] `TEST-106` [invariant] Borrow path: every completed borrow moved exactly `drawn` of the reserve's asset from the Hub to the proxy and
+- [~] `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
+- [~] `TEST-193` [invariant] Exits and liquidation under every pause state and reason (`fail_on_revert` on for the live actions): a pause h
+- [~] `TEST-211` [invariant] Accounts and multi-asset accounting: handlers pledge, borrow, repay and liquidate on two Borrow Spokes, severa
+- [ ] `TEST-215` [invariant] Multi-actor invariant suite (Foundry invariant test with handlers, extending `TEST-082`). Actors: borrowers wi (only excluded checks: tag on a test named for another row)
+- [~] `TEST-114` [fork] Drift checks against real configurators: for each critical setting the DAO executor changes it on the fork (`r
+- [ ] `TEST-169` [fork] Aave-side reserve pause: the Aave Protocol Guardian pauses a vault-token reserve and then each debt reserve on (only excluded checks: tag on a test named for another row)
+- [ ] `TEST-182` [unit, fork] Implementation drift through `MarketRegistry.spokeImplementationStatus`: `Spoke.extSload(0x3608…2bbc)` equals  (only excluded checks: uses a stand-in for AaveAdapter)
+- [~] `TEST-191` [fork] No proxy upgrade path through the real AvanaTimelock: the ProxyManager exposes no function that changes Positi
+- [~] `TEST-195` [fork] Exit inside the delay: the governance multisig schedules an AaveAdapter upgrade to a hostile implementation (n
+- [~] `TEST-221` [fork] Token edge cases. A fee-on-transfer mock pool token is rejected at listing; a fee switched on after listing on
+- [ ] `TEST-223` [fork] LP journeys on one fork, end to end, with the Lens asserted at every step against execution: deposit → borrow  (only excluded checks: uses a stand-in for AaveAdapter)
+- [~] `TEST-130` [hostile] Hostile AaveAdapter (blast radius): once executed, the hostile Adapter can borrow every debt reserve against e
+- [~] `TEST-131` [hostile] Hostile LPVaultSwap: it can seize only accounts Aave deems liquidatable, sized by Aave; it cannot debit anothe
+- [~] `TEST-132` [hostile] Hostile RiskModule (approves every borrow, pledge and withdraw-with-debt): borrow and withdraw-with-debt still
+- [~] `TEST-133` [hostile] Hostile MarketRegistry and ParameterStore: remapping a market to an attacker pool, Spoke, vault token or debt 
+- [~] `TEST-154` [hostile] Regression for Quint counterexample C-QNT-1: a hostile LPVaultSwap installed through the timelock seizes 315 u
+- [~] `TEST-156` [hostile] Regression for Quint counterexample C-QNT-3, reviewed-implementation scope: with the reviewed RiskModule a bor
+- [~] `TEST-210` [hostile] Hostile AaveAdapter against proxies: the governance multisig schedules an AaveAdapter upgrade to a hostile imp
+- [~] `TEST-222` [unit] Reentrancy through `collect` and `decreaseLiquidity`: pool tokens with transfer hooks (ERC-777 style) re-enter
+- [ ] `TEST-226` [unit] Contagion: one account with collateral in markets A and B and GHO and USDC debt. B is Cached, then Expired, th (only excluded checks: tag on a test named for another row; uses a stand-in for AaveAdapter)
+- [~] `TEST-229` [unit] Address freeze: a frozen wallet's new pledge (non-rescue), borrow (as caller or receiver), withdraw-with-debt,
+- [~] `TEST-235` [unit] Rescue top-ups: an indebted account below `rescueHealthFactor` (1.10) adds collateral under `Paused(General)`,
+- [~] `TEST-236` [unit] Rescue units excluded: the slice re-leverage loop (top up from the slice or by rescue, then borrow back) fails
+- [~] `TEST-237` [unit] Partial removal: `removeLiquidity` burns exactly `units`, keeps the backing gap, leaves live liquidity ≥ credi
+- [~] `TEST-238` [unit] Re-credit: only the record's depositor can re-credit; after a third party's `increaseLiquidity` the added liqu
+- [~] `TEST-239` [unit] Repay with collateral: HF does not decrease while debt remains (`HealthFactorNotImproved`); no bonus or Avana 
+- [~] `TEST-241` [unit] Backing gap: an orphan `burnSeized` by a mock LPVaultSwap opens a gap; later pledges, withdrawals, partial rem
+- [~] `TEST-242` [access-control] Admin grant: on every upgradeable Avana contract, `grantRole(APPLICATION_ADMIN, a)` and `grantRole(DEFAULT_ADM
+- [~] `TEST-243` [hostile] Hostile MarketRegistry: an implementation that returns an empty debt set, `isApprovedDebtReserve` false for ev
+- [~] `TEST-247` [fork] Lens against execution at the same fork block: seizure per Aave's formula on the compiled sizing; whole debt a
+- [~] `TEST-248` [unit] Repay-all: the Adapter pulls `maxRepaySpend`, repays the live debt and refunds the rest to the payer in the sa
+- [~] `TEST-269` [gas] Record bound: an account-market holds 16 records at `minPledgeUsd` each with a debt of 1 debt-asset unit above
+- [~] `TEST-270` [access-control] Lock membership: the Lock's members are exactly the AaveAdapter and LPVaultSwap, fixed at construction; every 
+- [~] `TEST-271` [access-control] Proxy per (wallet, Spoke, market): one wallet pledges into two markets of one CDP Spoke and one market of a CD
+- [~] `TEST-273` [unit] Cross-Hub credit line: the funding Hub owns the cap of every line drawing its asset; the registry sums the `dr
+- [~] `TEST-274` [invariant] Draw gate: handlers borrow, accrue interest, cut a Spoke's `drawCap` below its drawn amount and record deficit
+- [~] `TEST-275` [fork] L2 sequencer gate on the Base fork: with the sequencer-uptime feed `0xBCF85224fc0756B9Fa45aA7892530B47e10b6433
+- [~] `TEST-278` [unit] No minimum debt on any chain: on both chain profiles a borrow of 1 base unit of the debt asset, a borrow of $1
+
+## PROP rows (21: 12 verified, 0 failed, 9 not run, 0 unlinked)
+
+- [x] `PROP-001` [Certora] At the end of every outer call (every AaveAdapter, LPVaultSwap and Collateralization depositor entry point), f — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `PROP-006` [Certora] The reviewed Adapter calls `mint` only inside `pledge` and `recredit`: in `pledge` after `Collateralization.pl — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-007` [Certora] The reviewed Adapter burns only: in `withdraw`, `removeLiquidity`, `repayAllAndWithdraw` and the `deleverageRe
+- [x] `PROP-008` [Certora, Halmos] Every successful `transfer` or `transferFrom` has a non-zero amount and `isAllowedTransfer(from, to)`, that is — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_008_movementsOnlyOnAllowedPaths
+- [x] `PROP-009` [Certora, Halmos] Each vault token's proxy registry changes only by `addValidProxy` with `msg.sender == adapter()`, never remove — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_009_registryAppendOnlyByAdapter
+- [~] `PROP-031` [Certora] A successful Adapter `borrow(marketId, r, amount, receiver, deadline, minHF, nonce)` implies: the proxy is `pr
+- [~] `PROP-032` [Certora] Adapter `repay`, LPVault `collectFees`, Collateralization `releaseZeroCredit`, and an Adapter `withdraw` or `r
+- [~] `PROP-033` [Certora] Adapter: `pledge`, `borrow`, `withdraw` and `repayAllAndWithdraw` act only on `proxyOf[msg.sender][marketId]` 
+- [x] `PROP-034` [Certora] Every restricted selector of every upgradeable Avana contract (AaveAdapter, MarketRegistry, ParameterStore, Ri — test/halmos/DebtOracle.halmos.t.sol:DebtOracleHalmosTest.check_PROP_034_setPokeMinGasNeedsApplicationAdmin
+- [x] `PROP-037` [Certora] Lock: any Avana function reachable only from inside the fixed set reverts unless the Lock is held and `msg.sen — test/halmos/PegModuleRoute.halmos.t.sol:PegModuleRouteHalmosTest.check_PROP_037_swapOnlyForLPVaultSwapUnderLock
+- [~] `PROP-046` [Certora] With the reviewed Adapter and RiskModule, a successful Adapter `borrow` implies that, at the time of the call,
+- [x] `PROP-054` [Certora] Backing across the Adapter and Collateralization: in every Adapter `pledge` and `recredit`, the units minted e — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-057` [Certora] Pause-state effects: the Adapter's `pledge` and `recredit` revert `ApplicationFrozen` in Frozen only when the 
+- [x] `PROP-061` [Certora] Debt-reserve set: `MarketRegistry.activateMarket` and the RiskModule's drift check revert (`ActivationCheckFai — MarketRegistry job 82741daf7f694336b3b4eab5a93165c6
+- [x] `PROP-064` [Certora] ProxyManager: `deployProxy(wallet, spoke, marketId)` succeeds only for `msg.sender == ADAPTER`, the chain's si — ProxyManager job 195a664988f54afa9c5ddd05dd0e92e0
+- [x] `PROP-065` [Certora] Backing one-sided across the Adapter, Collateralization and LPVaultSwap: for every market and every reachable  — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-066` [Certora] Call graph: no path from Adapter `repay`, a debt-free `withdraw` or `removeLiquidity`, `repayAllAndWithdraw`, 
+- [~] `PROP-067` [Halmos] `RiskModule.postHealthCheck(proxy, spoke, minHF)` returns only if `hfB ≥ max(1, hardHealthFloor, minHF)`, with
+- [x] `PROP-070` [Certora] Inductive admin invariant: for every upgradeable Avana contract (not the ProxyManager, which is immutable with — test/halmos/DebtOracle.halmos.t.sol:DebtOracleHalmosTest.check_PROP_070_adminRolesOnlyTimelock
+- [~] `PROP-072` [Certora] Repay with collateral: a successful `repayWithCollateral` leaves the debt of every reserve of the account ≤ it
+- [x] `PROP-075` [Certora (`Lock.spec`)] Lock membership: the Lock's members are exactly the AaveAdapter and LPVaultSwap, fixed at construction; every  — Lock job 0f0bbe338f844d87ba9968713df8b185
+
+## INV (49: 19 verified, 0 failed, 27 not run, 3 unlinked)
+
+- [x] `INV-001` For every market `m`: `vaultToken[m].totalSupply() ≤ Σ r.credited + pending[vaultToken[m]].units`, the sum tak — PROP-001, PROP-045, PROP-054, PROP-065, TEST-010, TEST-083, TEST-092, TEST-151, TEST-153, TEST-154, TEST-186, TEST-241, TEST-247 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `INV-003` For every market `m`, at the end of every transaction: `vaultToken[m].balanceOf(Hub) == Hub.getAddedAssets(ass — TEST-086, TEST-087, TEST-247
+- [~] `INV-004` No new-account pledge, borrow, withdrawal that leaves debt, or liquidation completes in a transaction in which — TEST-019, TEST-095, TEST-163
+- [x] `INV-005` One position backs one record in one account: (a) custody is keyed by `(integrationId, positionKey)`: for ever — PROP-002, PROP-003, PROP-083, TEST-010, TEST-011, TEST-265, TEST-279, TEST-291 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `INV-006` `r.credited` is set at pledge by Collateralization to the position's units read through its AMM integration (` — TEST-010, TEST-015, TEST-016, TEST-080, TEST-084, TEST-186
+- [~] `INV-007` The LPVault of each AMM protocol transfers a position out only (a) to `depositorOf(positionKey)`, by a transfe — PROP-003, PROP-038, TEST-015, TEST-130, TEST-291
+- [~] `INV-008` For every registered proxy `p` and market `m`: `Spoke.getUserSuppliedShares(reserveId_m, p) == Σ r.credited` o — PROP-045, TEST-010, TEST-085, TEST-107, TEST-150, TEST-151, TEST-153, TEST-154, TEST-185, TEST-190
+- [x] `INV-058` Reconcile on exit. In `release` (withdrawal), `releasePartial` (partial removal), `releaseForDeleverage` (dele — PROP-045, PROP-051, TEST-020, TEST-150, TEST-151, TEST-153, TEST-154 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `INV-009` `VaultToken.mint(to, amount)` succeeds only when called by the AaveAdapter (the token's immutable `adapter()`) — PROP-005, PROP-006, PROP-055, PROP-099, TEST-010, TEST-022, TEST-088, TEST-130, TEST-189 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_005_supplyChangesOnlyThroughAdapter
+- [x] `INV-010` Only the AaveAdapter burns vault tokens (`burn(from, amount)`, from any holder without an allowance); this aut — PROP-005, PROP-007, PROP-055, TEST-022, TEST-088, TEST-130, TEST-208 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_005_supplyChangesOnlyThroughAdapter
+- [x] `INV-011` Transfer allowlist. A market's vault-token balances change only on these paths, and every other `transfer` and — PROP-008, PROP-055, TEST-022, TEST-087, TEST-189 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_008_movementsOnlyOnAllowedPaths
+- [x] `INV-012` An address is a registered proxy of a market's vault token if and only if the AaveAdapter called `addValidProx — PROP-005, PROP-009, PROP-055, PROP-064, PROP-076, PROP-099, TEST-089, TEST-130, TEST-188, TEST-190 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_005_adapterOnlyFunctionsRefuseOtherCallers
+- [~] `INV-013` A proxy's vault-token supply on the Spoke decreases only through (a) `Spoke.withdraw` called by the proxy thro — PROP-011, TEST-090, TEST-109, TEST-150, TEST-180, TEST-189, TEST-209
+- [~] `INV-014` In every LPVaultSwap liquidation of proxy `p` in market `m`, with `S0` and `T0` Collateralization's own snapsh — PROP-004, PROP-011, TEST-056, TEST-208, TEST-269
+- [x] `INV-066` Backing across contracts. In every AaveAdapter `pledge` and `recredit`, the units minted equal the `credited`  — PROP-054, PROP-065, TEST-088, TEST-186, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `INV-080` Backing one-sided. For every market and at the end of every transaction, `vaultToken.totalSupply() ≤ Collatera — PROP-065, TEST-083, TEST-092, TEST-107, TEST-130, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `INV-088` Partial removal and re-credit. In every `removeLiquidity` the units burned from the proxy equal the record's d — PROP-054, PROP-065, TEST-237, TEST-238, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `INV-016` A PositionProxy is a logic-free immutable account. Its only state-changing function is `execute(target, data)` — PROP-010, PROP-033, PROP-056, TEST-025, TEST-031, TEST-032, TEST-130, TEST-172, TEST-187 — PositionProxy job 58d4d482ec8442e0ba96406d32591f0d
+- [~] `INV-017` Collateralization and each LPVault obtain an AMM protocol's position manager and factory only from the LPVault — PROP-083, TEST-010, TEST-030, TEST-108, TEST-114, TEST-116, TEST-171, TEST-264, TEST-265
+- [~] `INV-018` Blast radius of upgradeable contracts. (a) AaveAdapter implementation faulty or hostile (one per chain, servin — TEST-031, TEST-107, TEST-130, TEST-133, TEST-195
+- [~] `INV-019` `borrowNonce[p]`, stored per proxy in the AaveAdapter, increases by exactly 1 per successful borrow; the Adapt — PROP-031, TEST-027, TEST-096
+- [~] `INV-020` In a borrow of debt reserve `r`, `r`'s asset moves from `r`'s funding Hub (the CDP Spoke's home Hub, or anothe — TEST-027, TEST-106
+- [x] `INV-063` Adapter-only proxy access. Every call into a PositionProxy reverts with `OnlyAdapter()` unless `msg.sender` is — PROP-056, TEST-026, TEST-031, TEST-089, TEST-172, TEST-187, TEST-211, TEST-271 — PositionProxy job 58d4d482ec8442e0ba96406d32591f0d
+- [x] `INV-064` One proxy per (wallet, CDP Spoke, market). The chain's ProxyManager creates a PositionProxy only in `deployPro — PROP-064, PROP-076, TEST-025, TEST-089, TEST-190, TEST-211, TEST-271 — ProxyManager job 195a664988f54afa9c5ddd05dd0e92e0
+- [~] `INV-072` Account-wide gates for new debt; reserve gates for liquidation. A borrow, a withdrawal that leaves debt, and a — TEST-019, TEST-028, TEST-049, TEST-095, TEST-201, TEST-226
+- [x] `INV-021` At the end of every transaction: (a) every ERC-20 allowance an Avana contract granted during the transaction i — PROP-016, PROP-068, PROP-080, TEST-021, TEST-054, TEST-080, TEST-092, TEST-177, TEST-232 — test/halmos/AaveV3FlashSource.halmos.t.sol:AaveV3FlashSourceHalmosTest.check_PROP_080_donationNeverForwarded
+- [ ] `INV-022` Calldata built by `packages/protocol` asks a user for only two kinds of approval: an approval of exactly one p
+- [~] `INV-023` A borrow or a withdrawal that leaves debt completes only after the AaveAdapter's call to `RiskModule.preBorrow — PROP-031, PROP-046, TEST-019, TEST-027, TEST-028, TEST-095, TEST-155
+- [~] `INV-024` A borrow, a withdrawal that leaves debt, and a partial removal that leaves debt complete only if: the caller ( — TEST-019, TEST-028, TEST-095, TEST-229
+- [~] `INV-025` After every borrow, every withdrawal that leaves debt and every partial removal that leaves debt, the account' — PROP-031, TEST-019, TEST-027, TEST-095, TEST-132, TEST-236
+- [~] `INV-026` (a) A pledge into an account with no collateral and no debt on that Spoke requires the market Live, or Driftin — TEST-012
+- [~] `INV-029` No new-account pledge, borrow or withdrawal that leaves debt completes while the RiskModule's drift check find — PROP-078, TEST-012, TEST-033, TEST-114, TEST-268
+- [~] `INV-060` A borrow or a withdrawal that leaves debt completes only if no vault-token reserve the account has supplied is — PROP-050, TEST-095, TEST-155, TEST-158
+- [x] `INV-073` A CDP Spoke's borrowable reserves through Avana are exactly the debt reserves the MarketRegistry approves for  — PROP-061, TEST-019, TEST-030, TEST-114 — MarketRegistry job 82741daf7f694336b3b4eab5a93165c6
+- [~] `INV-089` Repay with collateral. Every `repayWithCollateral` that completes leaves the account's debt in the named reser — PROP-065, PROP-072, TEST-198, TEST-239
+- [ ] `INV-110` Speed limits (`Q-411`). For every market `m`, over any interval of length τ the USD the AaveAdapter's borrows 
+- [x] `INV-040` Flash and swap callbacks. `liquidate` takes no flash loan and has no flash callback (Q-404). The core flash so — PROP-036, PROP-053, PROP-080, TEST-046, TEST-052, TEST-055, TEST-292 — test/halmos/AaveV3FlashSource.halmos.t.sol:AaveV3FlashSourceHalmosTest.check_PROP_080_onlyLPVaultSwapBorrows
+- [~] `INV-043` For any proxy with debt in reserve `r`, `AaveAdapter.repay(borrower, spoke, r, maxRepaySpend, repayAll, deadli — PROP-057, PROP-066, TEST-029, TEST-075, TEST-099, TEST-132, TEST-162, TEST-193
+- [~] `INV-044` The depositor of any open record, including one at 0 credited units, can collect fees with `AaveAdapter.collec — PROP-057, TEST-017, TEST-060, TEST-099, TEST-132, TEST-151, TEST-193
+- [~] `INV-045` When the proxy has no debt on its Spoke (`spoke.getUserAccountData(proxy).borrowCount == 0`), the depositor's  — PROP-057, PROP-066, TEST-016, TEST-018, TEST-099, TEST-132, TEST-162, TEST-192, TEST-193, TEST-195, TEST-218, TEST-228, TEST-229
+- [~] `INV-046` An account with HF < 1 whose seized collateral market and repaid debt reserve pass `INV-030`, with no Aave pau — PROP-057, PROP-066, TEST-193, TEST-218
+- [~] `INV-096` Liquidation stays within one transaction. (a) Each (account, market) holds at most 16 open records; a pledge t — TEST-102, TEST-123, TEST-269
+- [x] `INV-049` Pause-state transitions. The MarketRegistry holds one `PauseState` and one `PauseReason` for Avana, and they c — PROP-041, PROP-057, TEST-065, TEST-101, TEST-192, TEST-193 — MarketRegistry job 82741daf7f694336b3b4eab5a93165c6
+- [~] `INV-053` No Avana function transfers vault tokens or a recorded NFT except through the flows in `INV-007`, `INV-009` an — PROP-051, TEST-032
+- [x] `INV-054` Every external state-changing entry point of the AaveAdapter and LPVaultSwap either acquires the Lock (outer c — PROP-037, PROP-075, TEST-046, TEST-060, TEST-179 — test/halmos/PegModuleRoute.halmos.t.sol:PegModuleRouteHalmosTest.check_PROP_037_swapOnlyForLPVaultSwapUnderLock
+- [~] `INV-065` Implementation changes only by timelock; proxy code never changes. A PositionProxy's code is fixed at creation — PROP-010, PROP-058, TEST-025, TEST-062, TEST-063, TEST-089, TEST-130, TEST-168, TEST-172, TEST-191
+- [~] `INV-067` Pause-state effects. In every application pause state and pause reason, the liquidation entry point `liquidate — PROP-057, PROP-066, TEST-029, TEST-053, TEST-099, TEST-193, TEST-229, TEST-243
+- [x] `INV-091` The Lock has exactly two members: the chain's AaveAdapter and LPVaultSwap, fixed as immutables at the Lock's d — PROP-037, PROP-075, TEST-011, TEST-060, TEST-270 — Lock job 0f0bbe338f844d87ba9968713df8b185
+- [ ] `INV-079` Settlement-asset conservation across sequences, per asset. For each settlement asset `a` (each debt asset, GHO
+
+## ATTACK (27: 0 verified, 0 failed, 24 not run, 3 unlinked)
+
+- [~] `ATTACK-001` Duplicate LP Collateral Registration — TEST-010, TEST-011
+- [~] `ATTACK-003` Pledge of a third party's NFT — TEST-010, TEST-011, TEST-291
+- [~] `ATTACK-007` Re-pledge during the release callback — TEST-060
+- [ ] `ATTACK-009` Unbacked mint through a position-modification flow
+- [~] `ATTACK-010` Pledging into someone else's account — TEST-026
+- [~] `ATTACK-011` Unbacked mint through the minter's upgrade path — TEST-130
+- [~] `ATTACK-012` Over-release of backing on withdrawal rounding — TEST-014
+- [~] `ATTACK-023` Hostile AaveAdapter calls `liquidationCall` as an allowed holder — TEST-189
+- [~] `ATTACK-027` Asset extraction through rescue or sweep functions — TEST-031
+- [~] `ATTACK-032` Credit-line drain through a malicious AaveAdapter or proxy upgrade — TEST-130
+- [~] `ATTACK-034` Hostile RiskModule approves risky borrowing or withdrawal — TEST-132
+- [~] `ATTACK-035` Hostile RiskModule or Adapter blocks repay or exits — TEST-029, TEST-099, TEST-107, TEST-132, TEST-193, TEST-229, TEST-243
+- [~] `ATTACK-036` Borrow-nonce replay or griefing — TEST-096
+- [~] `ATTACK-043` Withdrawal lock-in through forced Drifting — TEST-229, TEST-243
+- [~] `ATTACK-076` One-wei donation DoS on zero-balance checks — TEST-027
+- [~] `ATTACK-078` Repay rules that block risk-reducing repayment — TEST-029
+- [ ] `ATTACK-096` Value extraction through rounding loops
+- [~] `ATTACK-092` Cross-contract reentrancy during settlement — TEST-046, TEST-060, TEST-222
+- [~] `ATTACK-106` Misdirected action through a spoofed reserve, Spoke or proxy — TEST-027, TEST-030, TEST-114
+- [~] `ATTACK-112` New debt against a reserve Aave has paused — TEST-155, TEST-158
+- [~] `ATTACK-117` Front-running a borrower's repay with a third-party repay — TEST-175
+- [~] `ATTACK-122` Hostile AaveAdapter upgrade — TEST-130, TEST-195
+- [~] `ATTACK-124` Burning vault tokens held by the Hub or a victim proxy — TEST-130
+- [~] `ATTACK-143` Re-credit donation and cap use — TEST-238
+- [ ] `ATTACK-144` Repay-with-collateral sandwich
+- [~] `ATTACK-162` Cross-Hub proxy squatting — TEST-271
+- [~] `ATTACK-172` Proxy bug that cannot be patched, or a proxy replacement that strands borrowers — TEST-130
+
+## Cross-cutting TEST rows, every contract (17): see --uncovered
+
+- `TEST-001` [environment] The Foundry workspace builds with solc 0.8.28 and EVM `cancun`, the same compiler as Aave V4; dependencies are
+- `TEST-032` [access-control] Selector inventory: the external selectors of every deployed Avana contract are enumerated from bytecode and c
+- `TEST-061` [unit] Events: every borrower and keeper action is one atomic call that emits the inventory events of its contracts, 
+- `TEST-177` [unit] Zero-amount transfers skipped: with mock tokens that revert on a zero-amount `transfer` and `transferFrom`, ev
+- `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
+- `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- `TEST-080` [fuzz] Dust donations: sending 1 wei up to 10^6 wei of GHO, USDC, WETH, DAI, pool tokens or vault tokens (where the r
+- `TEST-092` [invariant] Conservation: for every token (each debt asset, each pool token, each vault token), the sum of tracked balance
+- `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
+- `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
+- `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
+- `TEST-121` [fork] End-to-end lifecycle on one fork (Avana-deployed Aave V4 plus Ethereum Uniswap v3, Chainlink, GHO, the Aave V3
+- `TEST-126` [fork] Emergency matrix: for every row of the matrix in [3.6](../03-operations/06-emergency-operations.md) (applicati
+- `TEST-127` [fork] Halt deterioration and caps: with liquidation of an account stopped for the 48-hour incident window of `Q-192`
+- `TEST-137` [deployment-check] Upgrade safety: every UUPS contract (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, LPVaul
+- `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
+- `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme

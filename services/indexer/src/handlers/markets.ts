@@ -132,7 +132,6 @@ logOnly("MarketRegistry", [
   "StandbyRouteActivated",
   "StandbySwitchCancelled",
   "PriceRouteRestored",
-  "WindDownStepped",
   "HubRecorded",
   "IntegrationRegistered",
   "CoverageSpokeSet",

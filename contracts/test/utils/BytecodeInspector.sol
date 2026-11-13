@@ -59,6 +59,27 @@ library BytecodeInspector {
         return false;
     }
 
+    /// @notice The first of `selectors` that `code[from:to]` pushes with a PUSH4 (not as PUSH data), in one pass over
+    /// the code; `found` is false when none is pushed.
+    function pushesAnySelector(
+        bytes memory code,
+        uint256 from,
+        uint256 to,
+        bytes4[] memory selectors
+    ) internal pure returns (bool found, bytes4 selector) {
+        uint256 i = from;
+        while (i < to) {
+            uint8 op = uint8(code[i]);
+            if (op == OP_PUSH4 && i + 4 < to) {
+                bytes4 pushed = _read4(code, i + 1);
+                for (uint256 k = 0; k < selectors.length; ++k) {
+                    if (pushed == selectors[k]) return (true, pushed);
+                }
+            }
+            i += _width(op);
+        }
+    }
+
     /// @notice Whether opcode `target` occurs in `code[from:to]` as an instruction (not as PUSH data).
     function hasOpcode(
         bytes memory code,

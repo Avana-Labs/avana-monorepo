@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
 import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
 import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
@@ -170,5 +171,48 @@ contract ParameterStoreOracleInputsUnitTest is ParameterStoreFixture {
         (ok, ret) = address(store).staticcall(call);
         assertFalse(ok, "a failed registry read inside the logic reverts the view");
         assertEq(ret, failure, "the logic's revert data, unchanged");
+    }
+
+    // TEST-250 verifies: REQ-PSTORE-033, REQ-ORACLE-056
+    function test_TEST_250_bandOnlyForAllStableMarkets() public {
+        uint256[] memory w = store.getOracleInputs(address(lpOracle), list, false);
+        assertEq(w[3], store.usdBandLow(), "stable market: chain band low");
+        assertEq(w[4], store.usdBandHigh(), "stable market: chain band high");
+        (uint256 low, uint256 high) = _configBand();
+        assertEq(low, store.usdBandLow(), "stable config band low");
+        assertEq(high, store.usdBandHigh(), "stable config band high");
+        // The same market listed with a token that is not a USD stable (a WETH/USDC pool) gets no band, in the
+        // evaluation inputs and in the configuration its LPOracle is checked with.
+        registry.setUsdStable(usdt, false);
+        registry.setStatus(M, MarketStatus.Registered);
+        vm.prank(address(timelock));
+        store.setInitialMarketParams(M, _launchMarketParams());
+        w = store.getOracleInputs(address(lpOracle), list, false);
+        assertEq(w[3], 0, "volatile market: no band low");
+        assertEq(w[4], type(uint256).max, "volatile market: no band high");
+        (low, high) = _configBand();
+        assertEq(low, 0, "volatile config band low");
+        assertEq(high, type(uint256).max, "volatile config band high");
+    }
+
+    /// @dev The band in the configuration the LPOracle is checked with, read from the encoded return of
+    ///      `getOracleConfig` as LPOracle.Recheck does: the full struct's decoder does not fit the legacy pipeline's
+    ///      stack. After the offset word, the struct's head is marketId, tokens (offset), twapWindow,
+    ///      twapMinObservations, consistencyToleranceBps, maxQuoteChangeBps, usdBandLow, usdBandHigh.
+    function _configBand() internal view returns (uint256 low, uint256 high) {
+        (bool ok, bytes memory raw) =
+            address(store).staticcall(abi.encodeWithSignature("getOracleConfig(address)", address(lpOracle)));
+        assertTrue(ok, "getOracleConfig");
+        assertEq(uint256(bytes32(_word(raw, 0))), 0x20, "one struct, encoded after its offset");
+        return (uint256(_word(raw, 7)), uint256(_word(raw, 8)));
+    }
+
+    function _word(
+        bytes memory raw,
+        uint256 i
+    ) internal pure returns (bytes32 w) {
+        assembly ("memory-safe") {
+            w := mload(add(add(raw, 0x20), mul(i, 0x20)))
+        }
     }
 }

@@ -1,3 +1,204 @@
 {
-  "accepted": []
+  "accepted": [
+    {
+      "fingerprint": "9a5ac225c97bc6f9",
+      "check": "SWC-113",
+      "file": "RiskModule",
+      "function": "_function_0x0fbc5bac",
+      "reason": "RiskModule.pokeConfig(address) (src/policy/risk-module/RiskModule.sol): the permissionless poke reads the Spoke's approval from the MarketRegistry, asks the drift logic (RiskModuleDriftLogic.spokeDrift) for a drift reason and records CONFIG_DRIFT on each Active or Offboarding market of the Spoke (bounded by the Spoke's markets, REQ-RISK-090). Every callee is fixed at deployment (the MarketRegistry proxy and the drift logic named by immutables); none is caller-supplied. The drift logic reads the Aave Spoke inside try/catch, so a failing Aave read reports drift instead of reverting the poke (REQ-CONFIG-076).",
+      "approval": "approved (Josue, 2026-11-12)"
+    },
+    {
+      "fingerprint": "f8e1efaa1c78d685",
+      "check": "SWC-113",
+      "file": "RiskModuleBorrowLogic",
+      "function": "_function_0x8327e67d",
+      "reason": "RiskModuleBorrowLogic.debtValueUsd(address) (src/policy/risk-module/RiskModuleBorrowLogic.sol): a view that reads the account's market from the MarketRegistry and its debt from the account's approved Aave Spoke (getUserAccountData). Both callees are fixed by deployment and listing; a callee that reverts makes the view revert, which is the fail-closed rule for risk reads (SPEC-CAP-009, REQ-RISK-077): no caller can name another callee.",
+      "approval": "approved (Josue, 2026-11-12)"
+    },
+    {
+      "fingerprint": "ce2abf51ff2438a5",
+      "check": "SWC-113",
+      "file": "RiskModulePledgeLogic",
+      "function": "_function_0xe9dc875a",
+      "reason": "RiskModulePledgeLogic.usdToRestore(address) (src/policy/risk-module/RiskModulePledgeLogic.sol): a view that reads the account's market from the MarketRegistry, its health data from the approved Aave Spoke and the latest collateral factor from that Spoke. Every callee is fixed by deployment and listing; a revert of any makes the view revert, the fail-closed rule for risk reads (SPEC-CAP-003).",
+      "approval": "approved (Josue, 2026-11-12)"
+    },
+    {
+      "fingerprint": "f470487a0075cd5c",
+      "check": "SWC-113",
+      "file": "MarketRegistryActivationLogic",
+      "function": "_function_0xf4e6759d",
+      "reason": "MarketRegistryActivationLogic.marketDrift(address,address,address,uint256,uint256) (src/policy/market-registry/MarketRegistryActivationLogic.sol): a view that reads the reserve, reserve config and dynamic config of the market's Aave Spoke. Every read is a try/catch whose failure returns DriftReason.ReserveIdentity, so a callee that fails cannot block the caller: it reports drift and the market fails closed (REQ-CONFIG-076, REQ-ADAPTER-028..030).",
+      "approval": "approved (Josue, 2026-11-12)"
+    },
+    {
+      "fingerprint": "86f1e686c28b0502",
+      "check": "SWC-113",
+      "file": "MarketRegistryActivationLogic.clvault",
+      "function": "_function_0xf4e6759d",
+      "reason": "MarketRegistryActivationLogic.marketDrift(address,address,address,uint256,uint256) (src/policy/market-registry/MarketRegistryActivationLogic.sol): a view that reads the reserve, reserve config and dynamic config of the market's Aave Spoke. Every read is a try/catch whose failure returns DriftReason.ReserveIdentity, so a callee that fails cannot block the caller: it reports drift and the market fails closed (REQ-CONFIG-076, REQ-ADAPTER-028..030).",
+      "approval": "approved (Josue, 2026-11-12)"
+    },
+    {
+      "fingerprint": "85884285ffbf2944",
+      "check": "SWC-116",
+      "file": "MarketRegistry",
+      "function": "_function_0xa4266aa9",
+      "reason": "MarketRegistry.freezesInWindow(address) (src/policy/market-registry/MarketRegistryViews.sol): counts a guardian's address freezes in the hour buckets of the last day (REQ-MREG-019, at most MAX_ADDRESS_FREEZES_PER_DAY). block.timestamp is the specified clock of that rate limit; a validator's few seconds of timestamp drift moves a bucket boundary by those seconds and puts no funds at stake.",
+      "approval": "approved (Josue, 2026-11-12)"
+    },
+    {
+      "fingerprint": "0017ffec676e97ec",
+      "check": "SWC-116",
+      "file": "MarketRegistry.clvault",
+      "function": "_function_0xa4266aa9",
+      "reason": "MarketRegistry.freezesInWindow(address) (src/policy/market-registry/MarketRegistryViews.sol): counts a guardian's address freezes in the hour buckets of the last day (REQ-MREG-019, at most MAX_ADDRESS_FREEZES_PER_DAY). block.timestamp is the specified clock of that rate limit; a validator's few seconds of timestamp drift moves a bucket boundary by those seconds and puts no funds at stake.",
+      "approval": "approved (Josue, 2026-11-12)"
+    },
+    {
+      "fingerprint": "5afb48c59eff3607",
+      "check": "SWC-123",
+      "file": "DebtOracle",
+      "function": "fallback",
+      "reason": "DebtOracle.borrowPriceMaxAge() (src/oracle/debt-oracle/DebtOracle.sol): the nested revert is the analysed contract's own dispatcher. The ParameterStore and MarketRegistry addresses are read from storage, which is symbolic on bare runtime code, so Mythril resolves them to the analysed contract. Every configuration and feed read is a gas-bounded staticcall whose failure is returned as ok = false (DebtOracleReads._call) and fails the evaluation closed (REQ-ORACLE-092); no revert of a callee is passed on.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "b206a5ad98b31669",
+      "check": "SWC-116",
+      "file": "DebtOracle",
+      "function": "_function_0x1fff62fd",
+      "reason": "DebtOracle.borrowPriceMaxAge() (src/oracle/debt-oracle/DebtOracle.sol, via _evaluate): block.timestamp is the specified clock of price freshness and grace (SPEC-ORC-015, REQ-ORACLE-043); a validator's few seconds of drift move a staleness deadline by those seconds against ages of minutes to hours, and put no funds at stake.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "67f0a5e3fd3b34e4",
+      "check": "SWC-123",
+      "file": "LPOracleCLViewLogic",
+      "function": "fallback",
+      "reason": "LPOracleCLViewLogic.getTokenPrices() (src/oracle/lp-oracle/LPOracleCLViewLogic.sol): the nested revert is the analysed contract's own dispatcher. The feed addresses are read from the feed proxy's storage, symbolic on bare runtime code, so Mythril resolves them to the analysed contract. Each feed read is a gas-guarded staticcall (LPOracleCalls.staticRead) whose revert is reported as ok = false and never passed on, and a failed read fails the evaluation closed (SPEC-ORC-023, REQ-ORACLE-001).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "5e6516d347382aaa",
+      "check": "SWC-116",
+      "file": "LPOracleCLViewLogic",
+      "function": "_function_0x3b70bcc4",
+      "reason": "LPOracleCLViewLogic.getPriceState() (src/oracle/lp-oracle/LPOracleCLViewLogic.sol, via _evaluate): block.timestamp is the specified clock of feed freshness and the TWAP window (REQ-ORACLE-042, REQ-ORACLE-080); a few seconds of validator drift move a deadline by those seconds and put no funds at stake.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "07c575cb51f302ee",
+      "check": "SWC-116",
+      "file": "LPOracleCLViewLogic",
+      "function": "getTokenPrices()",
+      "reason": "LPOracleCLViewLogic.getTokenPrices() (src/oracle/lp-oracle/LPOracleCLViewLogic.sol, via _evaluate): block.timestamp is the specified clock of feed freshness and the TWAP window (REQ-ORACLE-042, REQ-ORACLE-080); a few seconds of validator drift move a deadline by those seconds and put no funds at stake.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "0d1193e3b7556d90",
+      "check": "SWC-116",
+      "file": "RiskModule",
+      "function": "_function_0xf629f665",
+      "reason": "RiskModule.getPledgeSpeed(uint256) (src/policy/risk-module/RiskModule.sol, RiskModuleSpeed._rolled): block.timestamp is the specified clock of the speed window (SPEC-CAP-011..013, window τ = 6 hours); a few seconds of validator drift move the window boundary by those seconds and put no funds at stake.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "54c0f0e0a79178f3",
+      "check": "SWC-113",
+      "file": "LensAccountModule",
+      "function": "_function_0x485c32fd",
+      "reason": "LensAccountModule.getEscrowClaimable(address,address[]) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "3efcd317848b3638",
+      "check": "SWC-113",
+      "file": "LensMarketsModule",
+      "function": "_function_0x80968d48",
+      "reason": "LensMarketsModule.getMarkets(uint256,uint256) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "51e3197b41425969",
+      "check": "SWC-113",
+      "file": "LensPriceModule",
+      "function": "_function_0xc9bf98e6",
+      "reason": "LensPriceModule.getApplicationState(address) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "b547ba34338fdf1c",
+      "check": "SWC-113",
+      "file": "LensPriceModule",
+      "function": "_function_0x0efe7292",
+      "reason": "LensPriceModule.getPauseReason(address) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "2b0ffe67ca3022c8",
+      "check": "SWC-113",
+      "file": "LensPriceModule",
+      "function": "_function_0x4b0dac35",
+      "reason": "LensPriceModule.getDebtPriceState(address,uint256) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "c008f4a647191e92",
+      "check": "SWC-113",
+      "file": "LensRiskModule",
+      "function": "_function_0xd16c3f10",
+      "reason": "LensRiskModule.getBreakerStatus(uint256) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "2116a359606cd1b2",
+      "check": "SWC-113",
+      "file": "LensRiskModule",
+      "function": "_function_0xb880d9dc",
+      "reason": "LensRiskModule.getDebtBreakerStatus(address,uint256) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "1f2ec1c105b23033",
+      "check": "SWC-113",
+      "file": "LensRiskModule",
+      "function": "_function_0x2be567ac",
+      "reason": "LensRiskModule.isFrozenAddress(address) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "07d551603da9a73f",
+      "check": "SWC-113",
+      "file": "LensRiskModule",
+      "function": "_function_0x7a3fee78",
+      "reason": "LensRiskModule.uncoveredDeficit(address,address) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "16508c4ec443fa15",
+      "check": "SWC-113",
+      "file": "LensSpeedModule",
+      "function": "_function_0xf629f665",
+      "reason": "LensSpeedModule.getPledgeSpeed(uint256) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "a412714819fc9f70",
+      "check": "SWC-113",
+      "file": "LensSpeedModule",
+      "function": "_function_0xda4b3b1a",
+      "reason": "LensSpeedModule.getBorrowSpeed(uint256,uint256) (src/lens/lens/): a view of the read-only Lens module (no storage, no owner, every function view, reached by STATICCALL from Lens). It reads several contracts fixed at construction (immutables) or by listing; a callee that reverts makes the view revert and changes no state, so no callee can block or redirect anything (REQ-LENS-001, REQ-LENS-006).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "fingerprint": "9b857d8b3042f31a",
+      "check": "SWC-104",
+      "file": "LensRiskModule",
+      "function": "_function_0x7a3fee78",
+      "reason": "LensRiskModule.uncoveredDeficit(address,address) (src/lens/lens/LensRisk.sol, _standsBehind): the staticcall's success flag is checked, inside assembly: matches := and(and(ok, eq(returndatasize(), 32)), eq(mload(p), layer)). A Spoke whose FIRST_LOSS_LAYER() reverts is by specification no match (REQ-LENS-042, REQ-FLR-046); Mythril does not follow the flag through the AND.",
+      "approval": "approved (Josue, 2026-11-13)"
+    }
+  ]
 }

@@ -14,6 +14,8 @@ import {IParameterStoreEvents} from "./IParameterStoreEvents.sol";
 import {FeedDef} from "./types/FeedDef.sol";
 import {GlobalParams} from "./types/GlobalParams.sol";
 import {MarketParams} from "./types/MarketParams.sol";
+import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
+import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreStorage
 /// @notice Storage layout, implementation immutables, hard bounds and shared checks of the ParameterStore and of its
@@ -51,6 +53,11 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(address spoke => uint256) targetHealthFactor;
         mapping(address spoke => uint16) minLiquidationBonus;
         mapping(bytes32 paramKey => uint64) lastLoosenedAt;
+        // Appended for Q-411 (REQ-PSTORE-035); earlier members keep their slots.
+        mapping(uint256 marketId => MarketSpeedLimits) marketSpeed;
+        mapping(address hub => mapping(address asset => SpeedLimit)) debtSpeed;
+        // Appended for REQ-ORACLE-056: true for a market with a token that is not USD-pegged, which gets no USD band.
+        mapping(uint256 marketId => bool) unbanded;
     }
 
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff))`.
@@ -258,5 +265,28 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         address b
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(a, b));
+    }
+
+    /// @dev The USD band of market `marketId` (REQ-ORACLE-056, SPEC-ORC-011): the chain's band when every token of the
+    /// market is a USD-pegged stable, else `0` and `type(uint256).max`, which every price passes.
+    function _usdBand(
+        uint256 marketId
+    ) internal view returns (uint256 low, uint256 high) {
+        Layout storage $ = _s();
+        if ($.unbanded[marketId]) return (0, type(uint256).max);
+        return ($.g.usdBandLow, $.g.usdBandHigh);
+    }
+
+    /// @dev True unless every token is listed as a USD-pegged stable in the MarketRegistry.
+    function _hasNonStableToken(
+        address[] memory tokens
+    ) internal view returns (bool) {
+        // One registry view per market token (at most 8, REQ-COLL-028), at listing only; a reverting registry
+        // reverts the listing (fail closed).
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            // forge-lint: disable-next-line(calls-loop)
+            if (!_REGISTRY.getToken(tokens[i]).isUsdStable) return true;
+        }
+        return false;
     }
 }

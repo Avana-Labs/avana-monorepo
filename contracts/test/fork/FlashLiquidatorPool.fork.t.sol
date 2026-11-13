@@ -85,6 +85,7 @@ contract FlashLiquidatorPoolForkTest is AvanaTest {
         vm.createSelectFork(rpc);
         swap = new ForkLiquidationSwap();
         registry = new MockMarketRegistry();
+        registry.setRouteReads(true);
         Market memory m;
         m.spoke = SPOKE;
         m.tokens = new address[](2);

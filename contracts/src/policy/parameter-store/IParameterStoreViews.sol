@@ -72,10 +72,10 @@ interface IParameterStoreViews {
     ) external view returns (OracleConfig memory config);
 
     /// @notice The inputs an LPOracle evaluation applies, in one read, as the words of `OracleInputsLayout`: the
-    /// market of `lpOracle`, its consistency settings, the band, the timers and the sequencer, and per token of
-    /// `tokens` its tolerance, its routes in force, route version and replaced slot as the MarketRegistry returns them
-    /// in this call, each leg's feed definition and, when `withSecondSources`, the second source in force with its
-    /// feed definition.
+    /// market of `lpOracle`, its consistency settings, its USD band (none unless every token is a USD stable), the
+    /// timers and the sequencer, and per token of `tokens` its tolerance, its routes in force, route version and
+    /// replaced slot as the MarketRegistry returns them in this call, each leg's feed definition and, when
+    /// `withSecondSources`, the second source in force with its feed definition.
     /// @dev The LPOracle passes its own tokens in pool order. A feed that is no market's LPOracle gets `marketId = 0`
     /// and zero words; a failed registry read reverts the call, which the LPOracle reads as a failed configuration.
     /// @param lpOracle The LPOracle feed proxy.

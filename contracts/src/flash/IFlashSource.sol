@@ -22,7 +22,8 @@ pragma solidity 0.8.28;
 /// repays from its own funds.
 /// Amounts are measured by balance delta: with a debt asset that charges a transfer fee, the lender's transfer arrives
 /// short, so the source forwards what it measured and LPVaultSwap books what it measured; such an asset trips the
-/// `ISSUER` debt breaker, which stops new borrows while liquidations and repays continue (AMMN N2b, REQ-SWAP-123).
+/// `ISSUER` debt breaker, which stops new borrows, and Aave V4's Hub refuses its fee-reduced repayment, so `deleverage`
+/// reverts until the fee returns to 0 (AMMN N2b, REQ-SWAP-123).
 /// @custom:spec REQ-FLASH-001, REQ-FLASH-002, REQ-FLASH-003, REQ-FLASH-004, REQ-FLASH-005, REQ-FLASH-006, INV-095, Q-373
 interface IFlashSource {
     /// @notice The caller is not LPVaultSwap.

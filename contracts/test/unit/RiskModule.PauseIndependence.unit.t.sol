@@ -92,13 +92,13 @@ contract RiskModulePauseIndependenceUnitTest is RiskModuleFixture {
         vm.revertToState(snap);
     }
 
-    // TEST-228 verifies: REQ-ADAPTER-018, REQ-RISK-038, INV-045, INV-081
+    // TEST-228 verifies: REQ-ADAPTER-018, REQ-RISK-038, INV-045, INV-081, REQ-RISK-016, REQ-RISK-035, REQ-RISK-036
     function test_TEST_228_checksIgnorePauseOnAPassingAccount() public {
         bytes32[] memory base = _outcomes();
         _sweep(base);
     }
 
-    // TEST-228 verifies: REQ-ADAPTER-018, REQ-RISK-038, INV-045, INV-081
+    // TEST-228 verifies: REQ-ADAPTER-018, REQ-RISK-038, INV-045, INV-081, REQ-RISK-016, REQ-RISK-035
     function test_TEST_228_checksIgnorePauseOnARefusedAccount() public {
         // A refused account: no keeper, a stale USDC price and a health factor under the caller's minimum.
         swap.setKeepers(0);
@@ -108,7 +108,7 @@ contract RiskModulePauseIndependenceUnitTest is RiskModuleFixture {
         _sweep(base);
     }
 
-    // TEST-228 verifies: REQ-ADAPTER-018, REQ-RISK-038
+    // TEST-228 verifies: REQ-ADAPTER-018, REQ-RISK-038, REQ-RISK-016, REQ-RISK-035
     function test_TEST_228_checksIgnorePauseOnADriftedSpoke() public {
         oracle.setState(PriceState.Cached, 0, false);
         rHub.setAdded(VT_ASSET, 10, 9);

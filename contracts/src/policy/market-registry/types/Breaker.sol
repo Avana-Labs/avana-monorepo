@@ -26,8 +26,8 @@ library BreakerReasons {
     uint32 internal constant POOL_SHARE = 1 << 2;
     /// @notice Security freeze, market (pool tokens) or debt (asset): the listing's issuer probe reports an issuer
     /// action (a pause, or a transfer fee switched on). For a debt asset with a fee, new borrows of every reserve of
-    /// that asset stop, while liquidation and repay continue with every amount measured by balance delta (AMMN N2b,
-    /// REQ-SWAP-123).
+    /// that asset stop; repayments of it revert inside Aave V4's Hub (`InsufficientTransferred`) until the fee returns
+    /// to 0 (AMMN N2b, REQ-SWAP-123).
     uint32 internal constant ISSUER = 1 << 3;
     /// @notice Security freeze, debt: the funding Hub's deficit on the Spoke above `breakerDeficitMax` (10,000 GHO
     /// for a GHO reserve; a per-reserve materiality set at listing for other assets).

@@ -13,14 +13,17 @@
 #            forge build --force --build-info of src/, test/ and script/ into out-security/build/all, without
 #            -D warnings since the strict pass found none; Echidna, Medusa, hevm and Mythril read this build, so
 #            out/ and cache/ are never cleaned or overwritten. Strict-pass logs go to out-security/build-strict/
-#   echidna  every `*Properties` harness in test/invariant/echidna/, in property mode and in assertion mode; corpora
-#            in out-security/corpus/ persist between runs
+#   echidna  every `*Properties` harness in test/invariant/echidna/, in property mode and in assertion mode, each on
+#            a build of its own file and imports (out-security/build/echidna/<Name>, slow-tier settings) with its heap
+#            bounded by ECHIDNA_MAX_HEAP; corpora in out-security/corpus/ persist between runs
 #   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
-#            assertion tests in one campaign)
+#            assertion tests in one campaign), each on a build of its own file and imports
+#            (out-security/build/medusa/<Name>, slow-tier settings) with a copy of medusa.json pointing at it
 #   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest)
-#   hevm     `hevm symbolic` on each assertion entry point of every harness (each must reach QED), on the runtime
-#            code of every src/ contract and library (no assertion violation), and `hevm test` on every `prove_`
-#            function in test/symbolic/
+#   hevm     against a local anvil chain (see hevm_targets below): `hevm symbolic` on each assertion entry point of
+#            every harness, deployed so its constructor has run (each must reach QED), on the runtime code of every
+#            src/ contract and library with its address immutables filled (no assertion violation), and `hevm test`
+#            on every `prove_` function in test/symbolic/
 #   mythril  script/security-mythril.sh on the runtime code of every src/ contract and library
 #   mutate   slither-mutate on every implementation file of the layers in security/mutation-layers.json, each mutant
 #            run against its Foundry tests (`forge test -j 2 --match-path <tests>`) in an isolated copy of src/ and
@@ -39,16 +42,20 @@
 # after an earlier one fails; the script exits 1 when any step fails. Reports go to out-security/.
 #
 # Budgets (environment, with defaults): ECHIDNA_TEST_LIMIT (echidna.yaml), ECHIDNA_TIMEOUT=900 and MEDUSA_TIMEOUT=900
-# seconds per harness and mode, ECHIDNA_HARNESSES (space-separated harness names; empty: all), MEDUSA_TEST_LIMIT
-# (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query,
-# HALMOS_LOOP=8; BUILD_CHUNK=60 files per strict build group;
+# seconds per harness and mode, ECHIDNA_MAX_HEAP=8g (GHC heap limit), ECHIDNA_HARNESSES (space-separated harness
+# names; empty: all), MEDUSA_TEST_LIMIT
+# (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query, HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own
+# default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1);
+# SECURITY_MEMORY_MAX (empty: no cap) bounds the memory of each hevm and Halmos run (see `capped`);
+# BUILD_CHUNK=60 files per strict build group;
 # MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
 # security/mutation-layers.json), MUTATE_TIMEOUT=300 seconds per mutant test run, MUTATE_FUZZ_RUNS=256,
 # MUTATE_MUTATORS (comma-separated slither-mutate mutators; empty: all), NECESSIST_TIMEOUT=300 seconds per removal.
 # GAMBIT_TIMEOUT=300 seconds per Gambit mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS).
 # Selectors (environment, space-separated; empty: every target, as above), used by CI to run one target per job:
 # ECHIDNA_HARNESSES and ECHIDNA_MODES (default "property assertion"), MEDUSA_HARNESSES, HALMOS_CONTRACTS (exact
-# contract names, run as --match-contract '^(A|B)$'), HEVM_TARGETS (`harness:<Name>`, `src:<Name>`, `test`),
+# contract names, run as --match-contract '^(A|B)$'), HALMOS_TESTS (exact test function names, run as
+# --match-test '^(a|b)\('), HEVM_TARGETS (`harness:<Name>`, `src:<Name>`, `test`),
 # MYTHRIL_CONTRACTS (src/ contract names), MUTATE_LAYERS and MUTATE_CONTRACTS, NECESSIST_TESTS (test file paths).
 # Survivors of `mutate` and `necessist` are a report for the layer gate review, not a failure; a tool error fails.
 # Survivors of `gambit` fail until a test kills them or the layer gate review accepts them in the triage file.
@@ -70,9 +77,12 @@ ECHIDNA_DIR=test/invariant/echidna
 MEDUSA_DIR=test/invariant/medusa
 
 ECHIDNA_TIMEOUT=${ECHIDNA_TIMEOUT:-900}
+ECHIDNA_MAX_HEAP=${ECHIDNA_MAX_HEAP:-8g}
 MEDUSA_TIMEOUT=${MEDUSA_TIMEOUT:-900}
 HEVM_SMT_TIMEOUT=${HEVM_SMT_TIMEOUT:-300}
+HEVM_SMT_MEMORY=${HEVM_SMT_MEMORY:-1024}
 HALMOS_LOOP=${HALMOS_LOOP:-8}
+SECURITY_MEMORY_MAX=${SECURITY_MEMORY_MAX:-}
 
 mkdir -p "$OUT"
 failed=()
@@ -84,6 +94,38 @@ require() {
       return 1
     fi
   done
+}
+
+# capped <name> <command...>: runs the command, and with SECURITY_MEMORY_MAX set (for example 14G), runs it in a
+# transient systemd scope with that MemoryMax and no swap, so the kernel ends the command when it reaches the cap and
+# the step reports it, instead of the machine running out of memory and the CI runner shutting down with no log (run
+# 43387180884: hevm on PositionProxyProperties and Halmos on check_PROP_019_legSlippage lost their runners). A system
+# scope needs root, so the scope is started with sudo and drops back to the calling user before running the command;
+# PATH and HOME are passed on explicitly because sudo resets them. On GitHub's ubuntu-24.04 runners sudo needs no
+# password. Without SECURITY_MEMORY_MAX (local runs) the command runs as it is.
+capped() {
+  local name=$1 unit rc result
+  shift
+  if [ -z "$SECURITY_MEMORY_MAX" ]; then
+    "$@"
+    return
+  fi
+  if ! command -v systemd-run >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
+    echo "$name: SECURITY_MEMORY_MAX=$SECURITY_MEMORY_MAX needs systemd-run and sudo without a password" >&2
+    return 1
+  fi
+  unit="security-slow-$$-$RANDOM"
+  sudo -n --preserve-env systemd-run --scope --quiet --unit="$unit" --uid="$(id -u)" --gid="$(id -g)" \
+    -p MemoryMax="$SECURITY_MEMORY_MAX" -p MemorySwapMax=0 -- /usr/bin/env "PATH=$PATH" "HOME=$HOME" "$@"
+  rc=$?
+  result=$(systemctl show "$unit" -p Result --value 2>/dev/null || true)
+  if [ "$result" = oom-kill ]; then
+    echo "$name: OUT OF MEMORY, ended at MemoryMax=$SECURITY_MEMORY_MAX (systemd scope $unit)" >&2
+  elif [ "$rc" -eq 137 ]; then
+    echo "$name: killed by SIGKILL (exit 137; scope result: ${result:-unknown}, MemoryMax=$SECURITY_MEMORY_MAX)" >&2
+  fi
+  sudo -n systemctl reset-failed "$unit" >/dev/null 2>&1 || true
+  return "$rc"
 }
 
 # slow_env <command...>: runs the command with the settings of the slow-tier build.
@@ -197,19 +239,47 @@ step_echidna() {
   fi
   [ -n "${ECHIDNA_TEST_LIMIT:-}" ] && limit=(--test-limit "$ECHIDNA_TEST_LIMIT")
   mkdir -p "$OUT/echidna"
+  local hbuild config
   while IFS=$'\t' read -r name source; do
     selected "${ECHIDNA_HARNESSES:-}" "$name" || continue
     seen+=" $name"
+    # Echidna loads every contract of the build it is given, with its source maps and coverage maps. On the build of
+    # all of src/, test/ and script/ (about 470 MB of build info) a harness held 2.2 GB of live heap and 4.8 GB in all
+    # before its first call, and every CI job died 8 to 13 minutes in with the runner shut down and no log; on a build
+    # of the harness's own sources alone the same harness holds 28 MB (604 MB in all). So each harness gets that build,
+    # with the slow-tier settings, and a copy of echidna.yaml that points crytic-compile at it.
+    hbuild="$OUT/build/echidna/$name"
+    config="$OUT/echidna/$name.yaml"
+    echo "=== echidna $name: build of $source and its imports"
+    if ! slow_env forge build "$source" --build-info --out "$hbuild" --cache-path "$hbuild-cache" \
+      >"$OUT/echidna/$name-build.log" 2>&1; then
+      cat "$OUT/echidna/$name-build.log"
+      echo "echidna: the build of $name failed"
+      status=1
+      continue
+    fi
+    sed "s|\"out-security/build/all\"|\"$hbuild\"|" echidna.yaml >"$config"
+    if ! grep -qF "\"$hbuild\"" "$config"; then
+      echo "echidna: echidna.yaml has no cryticArgs build path to replace" >&2
+      return 1
+    fi
     for mode in ${ECHIDNA_MODES:-property assertion}; do
       echo "=== echidna $name ($source), $mode mode"
       mkdir -p "$CORPUS/echidna/$name-$mode"
       log="$OUT/echidna/$name-$mode.log"
-      if ! echidna . --config echidna.yaml --contract "$name" --test-mode "$mode" --timeout "$ECHIDNA_TIMEOUT" \
-        ${limit[@]+"${limit[@]}"} --corpus-dir "$CORPUS/echidna/$name-$mode" --format text >"$log" 2>&1; then
+      # --disable-slither: Echidna's own Slither pass analyses the whole project before fuzzing and fails ("Running
+      # slither failed"), so it adds nothing but time; the project's Slither run is in the fast tier.
+      # +RTS -M: a heap above ECHIDNA_MAX_HEAP ends Echidna with "Heap exhausted" and a failed step with its log,
+      # instead of exhausting the machine. The log is also streamed, so a run that dies still shows how far it got.
+      echidna . --config "$config" --contract "$name" --test-mode "$mode" --timeout "$ECHIDNA_TIMEOUT" \
+        --disable-slither ${limit[@]+"${limit[@]}"} --corpus-dir "$CORPUS/echidna/$name-$mode" --format text \
+        +RTS -M"$ECHIDNA_MAX_HEAP" -RTS 2>&1 | tee "$log" |
+        grep --line-buffered -vE '^\[[^]]*\] +(\[Worker [0-9]+\] New coverage|Saved reproducer)'
+      if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         status=1
         echo "echidna: $name failed in $mode mode"
       fi
-      grep -E ': (passing|failed|FAILED|falsified|error)|Error|ERROR|Crashed|^Total calls' "$log" | grep -v '^\[' || true
+      grep -E ': (passing|failed|FAILED|falsified|error)|Error|ERROR|Crashed|Heap exhausted|^Total calls' "$log" | grep -v '^\[' || true
       # Echidna exits 0 even when its workers crash, and then still prints every test as passing; a run counts only
       # when it executed calls and printed its summary.
       if ! echidna_ran "$log"; then
@@ -225,7 +295,7 @@ step_echidna() {
 step_medusa() {
   require medusa || return 1
   ensure_build || return 1
-  local list status=0 name source limit=() seen=""
+  local list status=0 name source limit=() seen="" hbuild config log
   list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
   if [ -z "$list" ]; then
     echo "medusa: skipped, $ECHIDNA_DIR/ and $MEDUSA_DIR/ hold no contract named *Properties"
@@ -237,13 +307,48 @@ step_medusa() {
   while IFS=$'\t' read -r name source; do
     selected "${MEDUSA_HARNESSES:-}" "$name" || continue
     seen+=" $name"
+    # Medusa, through crytic-compile and its own Slither pass, loads every contract of the build it is given. On the
+    # build of all of src/, test/ and script/ (446 MB compressed on c07ddca, up from 254 MB on a6d7acd) every CI job
+    # of run 43387180884 died 10 to 16 minutes in with the runner shut down and no log, as Echidna did on that build.
+    # So each harness gets a build of its own file and imports, with the slow-tier settings, and a copy of medusa.json
+    # that points crytic-compile, Slither and their caches at it. Workers, timeout and test limit are unchanged.
+    hbuild="$OUT/build/medusa/$name"
+    config="$OUT/medusa/$name.json"
+    log="$OUT/medusa/$name.log"
+    echo "=== medusa $name: build of $source and its imports"
+    if ! slow_env forge build "$source" --build-info --out "$hbuild" --cache-path "$hbuild-cache" \
+      >"$OUT/medusa/$name-build.log" 2>&1; then
+      cat "$OUT/medusa/$name-build.log"
+      echo "medusa: the build of $name failed"
+      status=1
+      continue
+    fi
+    if ! "$PY" - medusa.json "$config" "$hbuild" "$OUT/medusa/$name" <<'PYCONF'
+import json, sys
+src, dst, build, work = sys.argv[1:5]
+c = json.load(open(src))
+old = "out-security/build/all"
+for args in (c["compilation"]["platformConfig"]["args"], c["slither"]["args"]):
+    if old not in args:
+        sys.exit(f"medusa.json: no {old} build path to replace in {args}")
+    args[args.index(old)] = build
+c["compilation"]["platformConfig"]["exportDirectory"] = f"{work}/crytic-export"
+c["slither"]["cachePath"] = f"{work}/slither_results.json"
+json.dump(c, open(dst, "w"), indent="\t")
+PYCONF
+    then
+      echo "medusa: no configuration for $name" >&2
+      return 1
+    fi
     echo "=== medusa $name ($source)"
-    if ! medusa fuzz --config medusa.json --target-contracts "$name" --timeout "$MEDUSA_TIMEOUT" ${limit[@]+"${limit[@]}"} \
-      --corpus-dir "$CORPUS/medusa/$name" --no-color >"$OUT/medusa/$name.log" 2>&1; then
+    # The log is streamed as well as kept, so a run that dies still shows how far it got.
+    medusa fuzz --config "$config" --target-contracts "$name" --timeout "$MEDUSA_TIMEOUT" ${limit[@]+"${limit[@]}"} \
+      --corpus-dir "$CORPUS/medusa/$name" --no-color </dev/null 2>&1 | tee "$log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
       status=1
       echo "medusa: $name failed"
     fi
-    grep -E '\[(PASSED|FAILED)\]|Test summary|[Ee]rror' "$OUT/medusa/$name.log" || true
+    grep -E '\[(PASSED|FAILED)\]|Test summary|[Ee]rror' "$log" || true
   done <<<"$list"
   unmatched medusa "${MEDUSA_HARNESSES:-}" "$seen" || status=1
   return $status
@@ -255,12 +360,17 @@ step_halmos() {
     echo "halmos: skipped, test/halmos/ holds no check_ function"
     return 0
   fi
-  # HALMOS_CONTRACTS selects exact contract names; halmos fails with "No tests with" when one has no check_ test.
-  local match='HalmosTest$'
+  # HALMOS_CONTRACTS selects exact contract names and HALMOS_TESTS exact test function names (CI runs one of each per
+  # job); halmos fails with "No tests with" when the selection matches no test.
+  local match='HalmosTest$' tests=()
   [ -n "${HALMOS_CONTRACTS:-}" ] && match="^($(echo $HALMOS_CONTRACTS | tr ' ' '|'))\$"
-  # Halmos has no deployCode cheatcode, which dynamic test linking turns `new C(...)` into.
-  FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract "$match" --loop "$HALMOS_LOOP" \
-    --solver-timeout-assertion 0 2>&1 |
+  [ -n "${HALMOS_TESTS:-}" ] && tests=(--match-test "^($(echo $HALMOS_TESTS | tr ' ' '|'))\\(")
+  # Halmos has no deployCode cheatcode, which dynamic test linking turns `new C(...)` into. PYTHONUNBUFFERED: each
+  # result line reaches the log when the check ends, so a run stopped by a time limit still shows which checks passed.
+  # --solver-threads 1: one solver process at a time, so a check's queries do not multiply its memory by the number
+  # of CPUs; with SECURITY_MEMORY_MAX the run is capped (`capped`) and a check that reaches the cap is reported.
+  capped halmos env PYTHONUNBUFFERED=1 FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract "$match" \
+    ${tests[@]+"${tests[@]}"} --loop "$HALMOS_LOOP" --solver-timeout-assertion 0 --solver-threads 1 2>&1 |
     tee "$OUT/halmos.txt"
   local rc=${PIPESTATUS[0]}
   # A build failure, or a run that never reached a result line, fails the step whatever the exit code says.
@@ -275,23 +385,120 @@ step_halmos() {
   return "$rc"
 }
 
-# hevm_symbolic <log> <args...>: 0 on QED, 1 on a counterexample or error, 2 on a partial exploration.
+# hevm_targets runs every target against a local anvil chain (`--rpc`), never on bare runtime code: on bare code the
+# immutables are zero, the storage is empty and every called contract is unknown code, whose revert data hevm leaves
+# free, so each call whose failure the contract passes on (a bubbled revert) became an "assertion violation" with
+# Panic(1) as that data. The run on main of 2026-11-12 reported such counterexamples on 41 targets, for example 18 on
+# Collateralization, one per function that first calls the Lock (`nextRecordId()` included); none was an assertion of
+# Avana's code.
+#   harness:<Name>  the harness is deployed on the chain, so its constructor runs and deploys and configures the
+#                   contracts it tests, as for Echidna and Medusa; each assertion entry point is then run symbolically
+#                   from that state, with every contract the call reaches executed from its deployed code and storage.
+#                   Each must reach QED.
+#   src:<Name>      the contract's runtime code is placed on the chain (`anvil_setCode`) at HEVM_SRC_ADDRESS with its
+#                   address immutables filled as a constructor fills them (script/security-targets.py runtime-code)
+#                   and its own-address immutables set to that address; every filled address holds the code
+#                   `PUSH0 PUSH0 REVERT`, so a call to it reverts with empty data and the caller passes that on or
+#                   handles it; an address the caller passes resolves only to accounts on the chain (`--only-deployed`),
+#                   so a caller-chosen contract cannot hand back free revert data either. A Panic(1) can then come only
+#                   from an `assert` of the contract itself. Paths after a successful call to another contract are
+#                   explored by the harness targets, where that contract is deployed.
+HEVM_PORT=${HEVM_PORT:-18545}
+# --max-iterations per entry point, as "<log name>=<bound>" words (hevm's default bound is 5 revisits of a branch).
+# ParameterStoreListingProperties.setFeed9 to setFeed13 stopped at that bound in run 43387180884 ("Max iterations
+# reached ... at pc: 15964", explored only partially). pc 15964 (0x3e5c) is the address check of
+# ParameterStoreListingLogic's ABI decoder, not a loop over data: a successful setFeed on the deployed harness passes
+# it 22 times in one call frame (counted with debug_traceCall on anvil, the same for 9 to 18 decimals), and hevm's
+# loop heuristic counts those visits as iterations. A bound of 32 covers the 22 visits with room; the entry points of
+# 14 to 18 decimals already finish at the default.
+HEVM_MAX_ITERATIONS_FOR=${HEVM_MAX_ITERATIONS_FOR:-"ParameterStoreListingProperties.setFeed9=32
+  ParameterStoreListingProperties.setFeed10=32 ParameterStoreListingProperties.setFeed11=32
+  ParameterStoreListingProperties.setFeed12=32 ParameterStoreListingProperties.setFeed13=32"}
+HEVM_RPC="http://127.0.0.1:$HEVM_PORT"
+HEVM_SRC_ADDRESS=0x000000000000000000000000000000000000a7a5
+HEVM_DEPLOYER=0x0000000000000000000000000000000000030000
+HEVM_ANVIL_PID=""
+
+hevm_chain_start() {
+  anvil --port "$HEVM_PORT" --silent --code-size-limit 1000000 --disable-block-gas-limit --auto-impersonate \
+    --chain-id 31337 >"$OUT/hevm/anvil.log" 2>&1 &
+  HEVM_ANVIL_PID=$!
+  local i
+  for i in $(seq 1 100); do
+    cast block-number --rpc-url "$HEVM_RPC" >/dev/null 2>&1 && break
+    sleep 0.2
+  done
+  if ! cast rpc --rpc-url "$HEVM_RPC" anvil_setBalance "$HEVM_DEPLOYER" 0xffffffffffffffffffffffff >/dev/null; then
+    cat "$OUT/hevm/anvil.log" >&2
+    echo "hevm: the local anvil chain did not start" >&2
+    return 1
+  fi
+}
+
+hevm_chain_stop() { [ -n "$HEVM_ANVIL_PID" ] && kill "$HEVM_ANVIL_PID" 2>/dev/null; HEVM_ANVIL_PID=""; }
+
+# hevm_symbolic <log> <args...>: hevm against the chain's latest block; 0 on QED, 1 on a counterexample or error, 2 on
+# a partial exploration.
+# Block context: hevm 0.58 takes the block number, coinbase, base fee and prevrandao of the fetched block but leaves
+# the timestamp symbolic unless --timestamp is given, and sets the chain id to 1 unless --chainid is given. A symbolic
+# timestamp includes times before the state it explores was written and times at or above 2^64, which no chain
+# reaches; in run 43387180884 SpeedLimitMathProperties.charge(0) can only have failed that way (SpeedLimitMath.roll
+# casts the timestamp to uint64), and every counterexample of that run returned normally when replayed with
+# `cast call` on the deployed harness. So the timestamp, the number and the chain id are those of the chain block
+# the state is read from.
+# Solvers: one z3 instance (--num-solvers 1; the default is one per CPU) with HEVM_SMT_MEMORY megabytes (hevm's own
+# default is 1,024 MB, and z3 answered `(error "out of memory")` at that limit on the RiskModule, SettlementMath and
+# LPPriceMath harnesses in that run). With SECURITY_MEMORY_MAX the whole run is capped (`capped`).
+# HEVM_MAX_ITERATIONS_FOR: per-entry-point --max-iterations (default 5), see below.
 hevm_symbolic() {
-  local log=$1
+  local log=$1 block ts chain iters=()
   shift
-  hevm symbolic --solver z3 --smt-timeout "$HEVM_SMT_TIMEOUT" "$@" >"$log" 2>&1
+  block=$(cast block-number --rpc-url "$HEVM_RPC") &&
+    ts=$(cast block "$block" --field timestamp --rpc-url "$HEVM_RPC") &&
+    chain=$(cast chain-id --rpc-url "$HEVM_RPC") || {
+    echo "hevm: cannot read the block context from $HEVM_RPC" >"$log"
+    return 1
+  }
+  local key=${log##*/}
+  key=${key%.log}
+  local entry
+  for entry in $HEVM_MAX_ITERATIONS_FOR; do
+    [ "${entry%=*}" = "$key" ] && iters=(--max-iterations "${entry#*=}")
+  done
+  capped "hevm $key" hevm symbolic --solver z3 --num-solvers 1 --smt-memory "$HEVM_SMT_MEMORY" \
+    --smt-timeout "$HEVM_SMT_TIMEOUT" ${iters[@]+"${iters[@]}"} --rpc "$HEVM_RPC" --block "$block" \
+    --number "$block" --timestamp "$ts" --chainid "$chain" "$@" >"$log" 2>&1
   local rc=$?
+  grep -E 'OUT OF MEMORY|killed by SIGKILL' "$log" || true
   if grep -q 'QED' "$log" && ! grep -qi 'partially explore' "$log"; then return 0; fi
-  if [ $rc -ne 0 ] || grep -qiE 'counterexample|discovered the following' "$log"; then return 1; fi
+  if grep -qiE 'counterexample|discovered the following|internal error' "$log"; then return 1; fi
   if grep -qi 'partially explore' "$log"; then return 2; fi
   return 1
 }
 
+# hevm_deploy <creation-code file>: deploys it from HEVM_DEPLOYER and prints the new address; fails when the
+# constructor reverts.
+hevm_deploy() {
+  local receipt
+  receipt=$(cast send --rpc-url "$HEVM_RPC" --unlocked --from "$HEVM_DEPLOYER" --gas-limit 29000000000 \
+    --create "0x$(cat "$1")" --json) || return 1
+  "$PY" -c 'import json,sys; r=json.loads(sys.argv[1]); assert int(r["status"], 16) == 1; print(r["contractAddress"])' \
+    "$receipt"
+}
+
 step_hevm() {
-  require hevm z3 || return 1
+  require hevm z3 anvil cast || return 1
   ensure_build || return 1
-  local status=0 list name source sig hex rc seen=""
   mkdir -p "$OUT/hevm"
+  hevm_chain_start || { hevm_chain_stop; return 1; }
+  hevm_targets
+  local rc=$?
+  hevm_chain_stop
+  return $rc
+}
+
+hevm_targets() {
+  local status=0 list name source sig hex rc addr seen=""
 
   list=$(harness_list "$ECHIDNA_DIR" "$MEDUSA_DIR") || return 1
   if [ -z "$list" ]; then
@@ -301,11 +508,17 @@ step_hevm() {
     [ -n "$name" ] || continue
     selected "${HEVM_TARGETS:-}" "harness:$name" || continue
     seen+=" harness:$name"
-    hex="$OUT/hevm/$name.hex"
-    "$PY" script/security-targets.py code "$BUILD" "$name" "$hex" || return 1
+    hex="$OUT/hevm/$name.init.hex"
+    "$PY" script/security-targets.py creation-code "$BUILD" "$name" "$hex" || return 1
+    if ! addr=$(hevm_deploy "$hex"); then
+      echo "hevm $name: FAIL, the harness constructor reverted on the local chain"
+      status=1
+      continue
+    fi
+    echo "hevm $name: deployed at $addr"
     while IFS= read -r sig; do
       [ -n "$sig" ] || continue
-      hevm_symbolic "$OUT/hevm/$name.${sig%%(*}.log" --code-file "$hex" --sig "$sig" --initial-storage Empty
+      hevm_symbolic "$OUT/hevm/$name.${sig%%(*}.log" --address "$addr" --sig "$sig"
       rc=$?
       case $rc in
         0) echo "hevm $name.$sig: QED" ;;
@@ -315,7 +528,16 @@ step_hevm() {
     done < <("$PY" script/security-targets.py assertion-sigs "$BUILD" "$name")
   done <<<"$list"
 
-  list=$("$PY" script/security-targets.py runtime-code "$BUILD" "$OUT/hevm/code") || return 1
+  list=$("$PY" script/security-targets.py runtime-code "$BUILD" "$OUT/hevm/code" "$HEVM_SRC_ADDRESS") || return 1
+  # Each filled immutable address (FILL_BASE + k in security-targets.py) and address 0 (an address read from the empty
+  # storage) get the code `PUSH0 PUSH0 REVERT`: every call to them reverts with empty data, as a call to an account
+  # without code ends in an empty revert of the caller. hevm cannot use an account without code fetched from the chain
+  # (an internal error, or free return data at address 0), and empty revert data can never read as Panic(1).
+  local k
+  for k in $(seq 0 128); do
+    cast rpc --rpc-url "$HEVM_RPC" anvil_setCode "$( [ "$k" = 0 ] && printf '0x%040x' 0 || printf '0xa7a4%036x' "$k")" \
+      0x5f5ffd >/dev/null || return 1
+  done
   if [ -z "$list" ]; then
     echo "hevm src: skipped, no contract or library under src/ compiles to runtime code"
   fi
@@ -323,7 +545,9 @@ step_hevm() {
     [ -n "$name" ] || continue
     selected "${HEVM_TARGETS:-}" "src:$name" || continue
     seen+=" src:$name"
-    hevm_symbolic "$OUT/hevm/src-$name.log" --code-file "$hex"
+    cast rpc --rpc-url "$HEVM_RPC" anvil_setCode "$HEVM_SRC_ADDRESS" "0x$(cat "$hex")" >/dev/null &&
+      cast rpc --rpc-url "$HEVM_RPC" anvil_mine >/dev/null || return 1
+    hevm_symbolic "$OUT/hevm/src-$name.log" --address "$HEVM_SRC_ADDRESS" --only-deployed
     rc=$?
     case $rc in
       0) echo "hevm src $name: QED" ;;
@@ -343,7 +567,8 @@ step_hevm() {
     rm -rf "$root" && mkdir -p "$root"
     for f in src test dependencies foundry.toml remappings.txt; do ln -s "$ROOT/$f" "$root/$f"; done
     if (cd "$root" && forge build --ast --skip script >"$ROOT/$OUT/hevm/test-build.log" 2>&1) &&
-      hevm test --root "$root" --solver z3 --smt-timeout "$HEVM_SMT_TIMEOUT" 2>&1 | tee "$OUT/hevm/test.log"; then
+      capped "hevm test" hevm test --root "$root" --solver z3 --num-solvers 1 --smt-memory "$HEVM_SMT_MEMORY" \
+        --smt-timeout "$HEVM_SMT_TIMEOUT" 2>&1 | tee "$OUT/hevm/test.log"; then
       echo "hevm test: pass"
     else
       echo "hevm test: FAIL (see $OUT/hevm/test.log)"
@@ -383,7 +608,7 @@ isolated_root() {
   solc=$(solc_bin) || return 1
   rm -rf "$root" && mkdir -p "$root/bin"
   cp -R src test "$root/"
-  for f in dependencies foundry.toml remappings.txt out-aave; do
+  for f in dependencies foundry.toml remappings.txt out-aave out-univ3; do
     [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
   done
   ln -s "$solc" "$root/bin/solc"

@@ -16,7 +16,7 @@ import {LPPriceMathHarness} from "../utils/harness/LPPriceMathHarness.sol";
 /// @dev Library half of TEST-036, TEST-038, TEST-039, TEST-042, TEST-070, TEST-139, TEST-167, TEST-217, TEST-230,
 /// TEST-250, TEST-251, TEST-275 and TEST-276; the LPOracle and DebtOracle halves join those rows with the oracles.
 contract LPPriceMathUnitTest is AvanaTest {
-    uint256 internal constant MAX_ROUTE = 1e12;
+    uint256 internal constant MAX_ROUTE = 1e18;
     uint256 internal constant SAT = type(uint256).max;
 
     LPPriceMathHarness internal m;
@@ -210,7 +210,9 @@ contract LPPriceMathUnitTest is AvanaTest {
         assertEq(_price(_u2(0, 0), _u2(1e8, 1e8), _d2(6, 6)), 1, "empty holding is 1");
         assertEq(_price(_u2(1, 1), _u2(1e8, 1e8), _d2(6, 6)), 1, "one raw unit each is taken off");
         assertEq(_price(_u2(2, 0), _u2(1e8, 1e8), _d2(6, 6)), 100, "a' = 1: 1e-6 tokens = 100 units");
-        assertEq(_price(_u2(2 ** 128 - 1, 2), _u2(1e12, 1e8), _d2(77, 0)), 1e8, "d = 77: the first term floors to 0");
+        assertEq(
+            _price(_u2(2 ** 128 - 1, 2), _u2(MAX_ROUTE, 1e8), _d2(77, 0)), 1e8, "d = 77: the first term floors to 0"
+        );
         uint256[] memory three = new uint256[](3);
         (three[0], three[1], three[2]) = (1e6 + 1, 1e18 + 1, 1e8 + 1);
         uint256[] memory prices = new uint256[](3);
@@ -236,11 +238,15 @@ contract LPPriceMathUnitTest is AvanaTest {
         _assertInvalid(_u2(2 ** 128, 1), _u2(1e8, 1e8), _d2(6, 6), "amount 2^128");
         _assertInvalid(_u2(1e6, 1e6), _u2(0, 1e8), _d2(6, 6), "price 0");
         _assertInvalid(_u2(1e6, 1e6), _u2(1e8, MAX_ROUTE + 1), _d2(6, 6), "price above MAX_ROUTE_ANSWER");
+        _assertInvalid(_u2(1e6, 1e6), _u2(MAX_ROUTE + 1, 1e8), _d2(6, 6), "first price above MAX_ROUTE_ANSWER");
+        (bool valid,) = m.lpPrice(_u2(1e6, 1e6), _u2(MAX_ROUTE, MAX_ROUTE), _d2(6, 6));
+        assertTrue(valid, "prices at MAX_ROUTE_ANSWER = 10^18 are valid");
         _assertInvalid(_u2(1e6, 1e6), _u2(1e8, 1e8), _d2(78, 6), "78 decimals");
     }
 
     // TEST-070 verifies: SPEC-ORC-001, SPEC-ORC-002, SPEC-ORC-003, SPEC-ORC-008, SPEC-ORC-018, ATTACK-055, Q-191
-    // Sources: MATH-UO-14d, MATH-UO-24c, MATH-UO-43c, MATH-UO-64 (no overflow at the extremes of the listing bounds)
+    // Sources: MATH-UO-14d, MATH-UO-24c, MATH-UO-43c, MATH-UO-64, MATH-UO-75a (no overflow at the extremes of the
+    // listing bounds: each term below 2^188, eight below 2^191, the int256 cast safe)
     function test_TEST_070_noOverflowAtListingExtremes() public view {
         uint256 maxAmount = 2 ** 128 - 1;
         uint256[] memory a = new uint256[](8);
@@ -251,7 +257,9 @@ contract LPPriceMathUnitTest is AvanaTest {
         }
         uint256 p = _price(a, v, d);
         assertEq(p, 8 * (maxAmount - 1) * MAX_ROUTE, "eight tokens at the extremes");
-        assertLt(p, 2 ** 171, "below 2^171");
+        assertLt(p, 2 ** 191, "below 2^191");
+        assertGe(p, 2 ** 190, "the 2^191 bound is tight: eight terms of nearly 2^188");
+        assertLt((maxAmount - 1) * MAX_ROUTE, 2 ** 188, "each term below 2^188");
         assertTrue(m.routesAgree(MAX_ROUTE, MAX_ROUTE - 1, 1), "agreement at the bound");
         assertEq(m.debtServedPrice(PriceState.Expired, 0, 0, 0, MAX_ROUTE, 5000), MAX_ROUTE * 3 / 2, "1.5 x MAX");
     }
@@ -388,6 +396,25 @@ contract LPPriceMathUnitTest is AvanaTest {
         assertEq(m.usdLevel(_u2(MAX_ROUTE + 1, 1e8)), 0, "oversize quote: 0");
     }
 
+    // TEST-251 verifies: SPEC-ORC-011, REQ-ORACLE-042, REQ-ORACLE-103
+    // Sources: MATH-UO-75i (at MAX_ROUTE_ANSWER = 10^18 six factors are exact, seven or eight saturate), MATH-UO-75j
+    // (a saturated product reports usdLevel = type(uint256).max, and the level and the band test still agree)
+    function test_TEST_251_usdLevelAtTheRouteBound() public view {
+        uint256[] memory six = _filled(6, MAX_ROUTE);
+        assertEq(m.fixedPointProduct(six), 1e68, "six factors of 10^18 are exact: 10^68");
+        assertEq(m.usdLevel(six), MAX_ROUTE, "six tokens at the bound: level 10^18");
+        assertGt(m.fixedPointPower(MAX_ROUTE + 1, 6), 1e68, "one more exceeds the product");
+        for (uint256 n = 7; n <= 8; ++n) {
+            uint256[] memory q = _filled(n, MAX_ROUTE);
+            assertEq(m.fixedPointProduct(q), SAT, "seven or eight factors of 10^18 saturate");
+            assertEq(m.usdLevel(q), SAT, "a saturated product reports the saturated level");
+            assertTrue(_band(q, q, MAX_ROUTE, SAT), "the lower band test passes at every level");
+            assertTrue(_band(q, q, SAT, SAT), "even usdBandLow = type(uint256).max: usdBandLow <= usdLevel");
+            q[n - 1] = MAX_ROUTE + 1;
+            assertEq(m.usdLevel(q), 0, "an oversize quote is malformed before the product");
+        }
+    }
+
     // ─── SPEC-ORC-012 served timestamp, SPEC-ORC-015 age limits ───
 
     // TEST-038 verifies: SPEC-ORC-012, REQ-ORACLE-021, REQ-ORACLE-066
@@ -439,15 +466,16 @@ contract LPPriceMathUnitTest is AvanaTest {
     // ─── SPEC-ORC-017 served collateral price ───
 
     // TEST-230 verifies: SPEC-ORC-017, REQ-ORACLE-020, REQ-ORACLE-085, REQ-ORACLE-086, INV-087, Q-247
-    // Sources: SYM-133, MATH-UO-42d
+    // Sources: SYM-133, MATH-UO-42d, MATH-UO-42h (Drifting serves the fresh price, not min(fresh, A))
     function test_TEST_230_servedPriceSpecExample() public view {
         uint256 a = 199_980_000;
         uint256 lower = 197_483_855;
         uint256 fresh = 199_999_600;
-        assertEq(m.servedPrice(PriceState.Drifting, true, fresh, lower, a), lower, "disagreement");
+        assertEq(m.servedPrice(PriceState.Drifting, true, fresh, lower, a), lower, "disagreement: min(lower, fresh)");
         assertEq(m.servedPrice(PriceState.Cached, false, fresh, lower, a), a, "Cached");
         assertEq(m.servedPrice(PriceState.Expired, false, fresh, lower, a), 1, "Expired");
-        assertEq(m.servedPrice(PriceState.Drifting, false, fresh, lower, a), a, "Drifting: min(fresh, A)");
+        assertEq(m.servedPrice(PriceState.Drifting, false, fresh, lower, a), fresh, "Drifting: fresh, above A");
+        assertGt(fresh, a, "the spec example serves a Drifting price above A");
         assertEq(m.servedPrice(PriceState.Live, false, fresh, lower, a), fresh, "Live: fresh");
     }
 
@@ -458,15 +486,19 @@ contract LPPriceMathUnitTest is AvanaTest {
         uint256 lower = _price(_u2(999_173, 1_000_827), _u2(97_544_839, 97_383_663), _d2(6, 6));
         assertEq(fresh, 194_928_113, "fresh at v");
         assertEq(lower, 194_928_172, "lower at w <= v is 59 units higher after the floors");
-        assertEq(m.servedPrice(PriceState.Drifting, true, fresh, lower, 2e8), fresh, "min(lower, fresh, A) = fresh");
+        assertEq(m.servedPrice(PriceState.Drifting, true, fresh, lower, 2e8), fresh, "min(lower, fresh) = fresh");
+        assertEq(m.servedPrice(PriceState.Drifting, true, fresh, lower, 1), fresh, "A does not enter: still fresh");
     }
 
     // TEST-230 verifies: SPEC-ORC-017, REQ-ORACLE-060, REQ-ORACLE-086, INV-087
     function test_TEST_230_servedPricePrecedenceAndFloor() public view {
         assertEq(m.servedPrice(PriceState.Cached, true, 5, 3, 9), 9, "Cached over disagreement");
         assertEq(m.servedPrice(PriceState.Expired, true, 5, 3, 9), 1, "Expired over disagreement");
-        assertEq(m.servedPrice(PriceState.Drifting, true, 5, 30, 9), 5, "min(lower, fresh, A)");
-        assertEq(m.servedPrice(PriceState.Drifting, true, 50, 30, 9), 9, "A binds");
+        assertEq(m.servedPrice(PriceState.Drifting, true, 5, 30, 9), 5, "min(lower, fresh): fresh binds");
+        assertEq(m.servedPrice(PriceState.Drifting, true, 50, 30, 9), 30, "min(lower, fresh): lower binds, A ignored");
+        assertEq(m.servedPrice(PriceState.Drifting, false, 50, 30, 9), 50, "Drifting: fresh, A ignored");
+        assertEq(m.servedPrice(PriceState.Live, false, 50, 30, 9), 50, "Live: fresh, A ignored");
+        assertEq(m.servedPrice(PriceState.Drifting, true, 50, 0, 9), 1, "floor 1 disagreement");
         assertEq(m.servedPrice(PriceState.Live, false, 0, 0, 0), 1, "floor 1 Live");
         assertEq(m.servedPrice(PriceState.Cached, false, 0, 0, 0), 1, "floor 1 Cached");
     }
@@ -618,6 +650,16 @@ contract LPPriceMathUnitTest is AvanaTest {
     ) internal pure returns (uint256[] memory out) {
         out = new uint256[](2);
         (out[0], out[1]) = (a, b);
+    }
+
+    function _filled(
+        uint256 n,
+        uint256 x
+    ) internal pure returns (uint256[] memory out) {
+        out = new uint256[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            out[i] = x;
+        }
     }
 
     function _u3(

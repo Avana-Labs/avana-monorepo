@@ -134,17 +134,18 @@ class System(SwapMixin):
             sp.manager = SWAP
             sp.max_user_reserves = self.p.max_user_reserves
             self.spokes[name] = sp
-        # --- debt assets on the Hub: Lend Spoke credit line, Coverage Spoke, Borrow Spoke draws (Q-233, Q-236)
-        for asset, dec, rate in ((GHO, 18, self.p.gho_rate_ray), (USDC_DEBT, 6, self.p.usdc_rate_ray)):
-            a = Asset(asset, dec, drawn_rate_ray=rate)
+        # --- debt assets on the Hub: Lend Spoke supply (DAO bootstrap, public lenders later) under its supply cap,
+        #     Coverage Spoke, Borrow Spoke draws within the credit line (Q-233, Q-236, Q-407)
+        for asset, dec, curve in ((GHO, 18, self.p.gho_curve), (USDC_DEBT, 6, self.p.usdc_curve)):
+            a = Asset(asset, dec, ir=curve)
             a.last_update = start
-            a.spokes = {LEND_SPOKE: SpokeData(), COV[asset]: SpokeData()}
+            a.spokes = {LEND_SPOKE: SpokeData(add_cap=self.p.lend_supply_cap[asset]), COV[asset]: SpokeData()}
             for name in spokes:
                 if (GHO_RID if asset == GHO else USDC_RID) in self.approved[name]:
                     a.spokes[name] = SpokeData(add_cap=0, draw_cap=self.p.credit_line[asset] // 10 ** dec)
             self.hub.assets[asset] = a
-            self.ledger.mint(asset, HUB, self.p.credit_line[asset], f"{asset} credit line (Lend Spoke supply)")
-            self.hub.add(asset, LEND_SPOKE, self.p.credit_line[asset])
+            self.ledger.mint(asset, HUB, self.p.bootstrap_supply[asset], f"{asset} DAO bootstrap supply (Lend Spoke)")
+            self.hub.add(asset, LEND_SPOKE, self.p.bootstrap_supply[asset])
             self.ledger.mint(asset, HUB, self.p.first_loss[asset], f"{asset} Coverage Spoke funding")
             self.hub.add(asset, COV[asset], self.p.first_loss[asset])
         for name, sp in self.spokes.items():
@@ -293,6 +294,20 @@ class System(SwapMixin):
     def accepted_price(self, m):
         return self.markets[m].oracle.accepted
 
+    def booking_price(self, m):
+        """REQ-RISK-026: min(fresh, accepted); the accepted price alone when there is no fresh price (failed market)."""
+        A = self.accepted_price(m)
+        fresh = self.markets[m].oracle.evaluate(self.now())["fresh"]
+        return fresh if fresh and fresh < A else A
+
+    def borrow_price_of(self, rid):
+        """Price of a reserve for the post-action health check (REQ-RISK-059): a vault-token reserve at
+        min(served, accepted), every other reserve at its AaveOracle price."""
+        p = self.price_of(rid)
+        if rid in (GHO_RID, USDC_RID):
+            return p
+        return min(p, self.accepted_price(rid - 2))
+
     def vt_value_usd8(self, m, units, price=None):
         price = self.accepted_price(m) if price is None else price
         return units * price // 10 ** self.markets[m].d
@@ -433,9 +448,9 @@ class System(SwapMixin):
             need(cond, err)
 
     def usd_charge(self, m, L):
-        """SPEC-CAP-001: mulDiv(L, max(price8, stressFloorUsd), 10^d, Ceil) at the last accepted price."""
+        """SPEC-CAP-001: mulDiv(L, max(price8, stressFloorUsd), 10^d, Ceil) at the booking price min(fresh, A)."""
         mk = self.markets[m]
-        return cdiv(L * max(self.accepted_price(m), self.p.stress_floor_usd8), 10 ** mk.d)
+        return cdiv(L * max(self.booking_price(m), self.p.stress_floor_usd8), 10 ** mk.d)
 
     def restore_booked(self, proxy_addr, m):
         """SPEC-CAP-003: booked USD of market-m collateral that restores the recommended HF 1.10 (Q-398)."""
@@ -449,21 +464,33 @@ class System(SwapMixin):
             return 0
         x = mul_div(h_o - ad["hf"], ad["tdv_ray"], WAD * RAY, up=True)
         usd = mul_div(x, BPS, cf * 10 ** 18, up=True)
-        # Booked at the accepted price, divided by the served price at which Aave values the collateral.
-        price = self.accepted_price(m)
+        # Booked at the booking price min(fresh, A), divided by the served price at which Aave values the collateral.
+        price = self.booking_price(m)
         served = self.markets[m].oracle.latest_answer(self.now())
         return mul_div(usd, max(price, self.p.stress_floor_usd8), served, up=True)
 
-    def hf_ex(self, proxy_addr):
-        """SPEC-CF-005: Aave's HF with the account's rescue units valued at zero (rounded against the account)."""
+    def hf_ex(self, proxy_addr, price_of=None):
+        """SPEC-CF-005: Aave's HF with the account's rescue units valued at zero (rounded against the account);
+        `price_of` replaces the AaveOracle prices (the post-action check passes borrow_price_of)."""
+        price_of = price_of or self.price_of
         sp = self.spokes[self.proxy_of_addr[proxy_addr].spoke]
+        if price_of is not self.price_of:
+            orig = sp.price_of
+            sp.price_of = price_of
+            try:
+                return self._hf_ex_at(proxy_addr, sp, price_of)
+            finally:
+                sp.price_of = orig
+        return self._hf_ex_at(proxy_addr, sp, price_of)
+
+    def _hf_ex_at(self, proxy_addr, sp, price_of):
         ad = sp.account_data(proxy_addr)
         hf = ad["hf"]
         E = 0
         for mk in self.markets:
             u = self.account_rescue(proxy_addr, mk.idx)
             if u:
-                p = self.price_of(mk.rid)
+                p = price_of(mk.rid)
                 E += mul_div(u * p, sp.reserves[mk.rid].cf * 10 ** 18, 10 ** mk.d * BPS, up=True)
         if E == 0 or ad["tdv_ray"] == 0:
             return hf
@@ -471,9 +498,12 @@ class System(SwapMixin):
         return max(0, hf - sub)
 
     def _post_health_check(self, proxy_addr, min_hf):
-        """SPEC-PROXY-001 / SPEC-CF-005 (Q-398): hfEx ≥ max(1.00, optional hard floor (0 = off), minHF)."""
+        """SPEC-PROXY-001 / SPEC-CF-005 (Q-398): hfEx ≥ max(1.00, optional hard floor (0 = off), minHF), with the
+        vault-token collateral valued at min(served, accepted) (REQ-RISK-059: the accepted price bounds borrowing).
+        The RiskModule scales hfEx by accepted / served for the account's one market; valuing each market at that
+        price is the same value up to the floors (MATH-UO-76b)."""
         need_ = max(WAD, self.p.hard_floor_hf, min_hf)
-        h = self.hf_ex(proxy_addr)
+        h = self.hf_ex(proxy_addr, self.borrow_price_of)
         self._rm(h >= need_, f"HealthFactorTooLow({h}, {need_})")
         return h
 
@@ -539,7 +569,7 @@ class System(SwapMixin):
         self._rm(mk.status == "Active", "MarketOffboarding")
         self._rm(st in ((LIVE, DRIFTING) if has_debt else (LIVE,)), f"PriceState({st})")
         self._rm(self.hub.shares_equal_assets(mk.aid), "HubSharesNotAssets")
-        pledge_usd = L * self.accepted_price(m) // 10 ** mk.d
+        pledge_usd = L * self.booking_price(m) // 10 ** mk.d
         floor_ = min(self.p.min_pledge_usd, self.p.rescue_min_pledge_usd) if rescue else self.p.min_pledge_usd
         self._rm(pledge_usd >= floor_, f"BelowMinPledge({pledge_usd}, {floor_})")
         if not rescue:

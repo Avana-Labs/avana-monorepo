@@ -29,10 +29,11 @@ interface ICollateralizationSeizure {
     /// @notice Checks the share drop and the supply drop, reconciles, debits records and has the market's LPVault
     /// unwind exactly their units to LPVaultSwap.
     /// @dev Requires an active snapshot for exactly this `proxy` and `vaultToken` (`SeizureMismatch`). Checks
-    /// `sharesBefore - sharesAfter == units` (`DebitMismatch`) and `supplyBefore - totalSupply() == units`
-    /// (`SupplyDropMismatch`). With `units == 0` it only checks the zero drops, clears the snapshot and returns zeros.
-    /// Otherwise, in order: `checkReadSafe` (`PoolLocked`); reconcile the account-market with `sharesBefore`
-    /// (principal of the shortfall goes to the pending balance); debit `units` from the seizure list per
+    /// `sharesBefore - sharesAfter >= units`, with no drop when `units == 0` (`DebitMismatch`), and
+    /// `supplyBefore - totalSupply() == units` (`SupplyDropMismatch`); the excess `fee = sharesBefore - sharesAfter - units` is the shares Aave's liquidation
+    /// fee moved to its fee receiver inside the Hub. With `units == 0` it only checks the drops, clears the snapshot and
+    /// returns zeros. Otherwise, in order: `checkReadSafe` (`PoolLocked`); reconcile the account-market with
+    /// `sharesBefore - fee` (principal of the shortfall, the fee units included, goes to the pending balance); debit `units` from the seizure list per
     /// `SPEC-BACK-006` (`InsufficientCredit`); release exposure per record; subtract from the totals; clear the
     /// snapshot; then for each debited record call `LPVault.unwind(positionKey, take, zeros, LP_VAULT_SWAP)`, which
     /// returns only the removed principal (`SPEC-BACK-008`), so fees stay owed to the depositor. Finally requires the

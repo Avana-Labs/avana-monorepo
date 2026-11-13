@@ -119,7 +119,7 @@ Rules:
 | Oracle prices | 8 decimals, USD per whole token (Aave's format) |
 | Exposure caps and USD charges | USD with 8 decimals |
 | Aave value | `amount × price × 10^(18 − decimals)`, 26 decimals (1e26 = $1) |
-| GHO | 18 decimals; GHO debt priced at a fixed $1; the first debt asset on each chain |
+| GHO | 18 decimals; GHO debt priced at a fixed $1; a stable debt asset when the Aave DAO approves it, with USDC, USDT and the like |
 | Other debt assets | The asset's own decimals (USDC and USDT 6, WETH 18); priced by the asset's DebtOracle, the Aave oracle source of the reserve, 8 decimals |
 | Vault tokens | Per-market decimals 6–18; one base unit = one credited unit of the market's AMM integration (liquidity for concentrated liquidity, a pool share for share-based pools) |
 | Times and delays | Seconds (`uint48` timestamps, `uint32` delays) |

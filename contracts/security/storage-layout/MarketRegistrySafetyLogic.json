@@ -225,7 +225,7 @@
           "type": "uint64"
         },
         {
-          "path": "windDown[].lastStepAt",
+          "path": "windDown[].unusedLastStepAt",
           "slot": "0",
           "offset": 8,
           "bytes": "8",
@@ -239,7 +239,7 @@
           "type": "uint16"
         },
         {
-          "path": "windDown[].currentLtBps",
+          "path": "windDown[].targetLtBps",
           "slot": "0",
           "offset": 18,
           "bytes": "2",
@@ -1182,6 +1182,90 @@
           "offset": 0,
           "bytes": "4",
           "type": "uint32"
+        },
+        {
+          "path": "integrationRecords",
+          "slot": "49",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint32 => struct MarketRegistryStorage.IntegrationRecord)"
+        },
+        {
+          "path": "integrationRecords[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "64",
+          "type": "struct MarketRegistryStorage.IntegrationRecord"
+        },
+        {
+          "path": "integrationRecords[].key",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
+        },
+        {
+          "path": "integrationRecords[].finalized",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
+          "path": "routeSlots",
+          "slot": "50",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => struct MarketRegistryStorage.RouteSlotRef[])"
+        },
+        {
+          "path": "routeSlots[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "struct MarketRegistryStorage.RouteSlotRef[]"
+        },
+        {
+          "path": "routeSlots[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "64",
+          "type": "struct MarketRegistryStorage.RouteSlotRef"
+        },
+        {
+          "path": "routeSlots[][].token",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "routeSlots[][].debtAsset",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "20",
+          "type": "address"
+        },
+        {
+          "path": "routeSlots[][].kind",
+          "slot": "1",
+          "offset": 20,
+          "bytes": "1",
+          "type": "uint8"
+        },
+        {
+          "path": "routeSlotListed",
+          "slot": "51",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(bytes32 => bool)"
+        },
+        {
+          "path": "routeSlotListed[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
         }
       ]
     }

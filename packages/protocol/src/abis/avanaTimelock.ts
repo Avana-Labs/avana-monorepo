@@ -69,6 +69,28 @@ export const avanaTimelockAbi = [
             "internalType": "bytes4"
           }
         ]
+      },
+      {
+        "name": "targets",
+        "type": "tuple",
+        "internalType": "struct GovernedTargets",
+        "components": [
+          {
+            "name": "parameterStore",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "marketRegistry",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "lpVaultSwap",
+            "type": "address",
+            "internalType": "address"
+          }
+        ]
       }
     ],
     "stateMutability": "nonpayable"
@@ -1400,6 +1422,11 @@ export const avanaTimelockAbi = [
         "internalType": "bytes4"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidGovernedTargets",
+    "inputs": []
   },
   {
     "type": "error",

@@ -1,6 +1,6 @@
 /*
- * LPOracle (abstract base src/oracle/lp-oracle/LPOracle.sol, verified through its minimal concrete
- * test/utils/harness/LPOracleHarness.sol until the concentrated-liquidity LPOracleCL; interface ILPOracle.sol; spec 2.10).
+ * LPOracle (the AMM-neutral base src/oracle/lp-oracle/LPOracle.sol, verified as the deployable concentrated-liquidity
+ * implementation src/oracle/lp-oracle/LPOracleCL.sol with its three logic contracts; interface ILPOracle.sol; spec 2.10).
  *
  * Serving (`latestAnswer` never reverts and is at least 1 once seeded, PROP-027), the served price by state with the
  * stale-at-Expired value and the lower route during a disagreement (PROP-074, SPEC-ORC-017), the stored first
@@ -16,8 +16,8 @@
  * of `tokens()`). A market has at most `MAX_POOL_TOKENS = 8` tokens, so the route-version comparison is written out
  * for indices 0 to 7.
  *
- * Summaries: Chainlink aggregators and the pool's `observe` are not summarised, so each call returns arbitrary data or
- * reverts (both try/catch paths); the ParameterStore's `getOracleConfig` and `getFeed` and the MarketRegistry's
+ * Summaries: Chainlink aggregators and the pool's `slot0`, `observe`, `token0`, `token1` and `tickSpacing` are not
+ * summarised, so each call returns arbitrary data or reverts (both failure paths of the gas-guarded static reads); the ParameterStore's `getOracleConfig` and `getFeed` and the MarketRegistry's
  * `activePriceRoutes` and `getToken` are NONDET (any configuration, including a failed read); the MarketRegistry's
  * `priceRouteVersion` is an uninterpreted function of the token, so a rule can make it differ from the stored version
  * (a standby switch, its cancellation, a restore or a new price source). A GAS opcode hook fixes a gas floor above
@@ -101,7 +101,7 @@ rule servedPriceByState() {
     uint64 acceptedAt;
     accepted, acceptedAt = lastAcceptedPrice();
 
-    PriceStateView v = getPriceState(e);
+    LPOracleCL.PriceStateView v = getPriceState(e);
     int256 served = latestAnswer(e);
     mathint A = to_mathint(accepted);
     mathint fresh = to_mathint(v.freshAnswer);
@@ -109,13 +109,14 @@ rule servedPriceByState() {
 
     assert served == v.answer, "getPriceState().answer differs from latestAnswer()";
     assert served >= 1, "the served price is below 1";
-    assert v.state != PriceState.Live => to_mathint(served) <= A, "a non-Live state served above the accepted price";
-    assert v.state == PriceState.Expired => served == 1, "Expired did not serve 1";
-    assert v.state == PriceState.Cached => to_mathint(served) == A, "Cached did not serve the accepted price";
-    assert (v.state == PriceState.Drifting && !disagree) => to_mathint(served) == (fresh < A ? fresh : A),
-        "Drifting without a disagreement did not serve min(fresh, accepted)";
-    assert (v.state == PriceState.Drifting && disagree) => (to_mathint(served) <= A && to_mathint(served) <= fresh),
-        "a disagreement served above min(lower route, accepted)";
+    assert v.state == LPOracleCL.PriceState.Expired => served == 1, "Expired did not serve 1";
+    assert v.state == LPOracleCL.PriceState.Cached => to_mathint(served) == A, "Cached did not serve the accepted price";
+    // SPEC-ORC-017: the accepted price bounds borrowing only; Live and Drifting serve the fresh price, a disagreement
+    // at most the fresh price, so a rally since the last accepted price never lowers the served price.
+    assert (v.state == LPOracleCL.PriceState.Live || (v.state == LPOracleCL.PriceState.Drifting && !disagree))
+        => to_mathint(served) == (fresh < 1 ? 1 : fresh), "Live or Drifting did not serve the fresh price";
+    assert (v.state == LPOracleCL.PriceState.Drifting && disagree) => to_mathint(served) <= (fresh < 1 ? 1 : fresh),
+        "a disagreement served above the fresh price";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -223,10 +224,10 @@ function compositionPrice8(mathint a0, mathint a1, mathint v0, mathint v1, mathi
 }
 
 // PROP-023 verifies: Q-191 (primary tool per 5.2: Halmos)
-// Bounds of SPEC-ORC-008: amounts of 10^d <= 10^18 units below 2^128, prices at most MAX_ROUTE_ANSWER = 1e12.
+// Bounds of SPEC-ORC-008: amounts of 10^d <= 10^18 units below 2^128, prices at most MAX_ROUTE_ANSWER = 1e18.
 rule price8IsPositiveAndBelowExact(mathint a0, mathint a1, mathint v0, mathint v1, mathint q0, mathint q1) {
     require a0 >= 0 && a1 >= 0 && a0 < 2^128 && a1 < 2^128;
-    require v0 >= 0 && v1 >= 0 && v0 <= 10^12 && v1 <= 10^12;
+    require v0 >= 0 && v1 >= 0 && v0 <= 10^18 && v1 <= 10^18;
     require q0 >= 1 && q1 >= 1;
     mathint price8 = compositionPrice8(a0, a1, v0, v1, q0, q1);
     // q0 * q1 times the exact value a0 * v0 / q0 + a1 * v1 / q1 of the composition

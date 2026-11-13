@@ -15,6 +15,10 @@ contracts/out/
 contracts/cache/
 contracts/out-aave/
 contracts/cache-aave/
+contracts/out-univ3/
+contracts/cache-univ3/
+contracts/out-lite/
+contracts/cache-lite/
 contracts/dependencies/
 contracts/deployments-local/
 contracts/broadcast/*/31337/

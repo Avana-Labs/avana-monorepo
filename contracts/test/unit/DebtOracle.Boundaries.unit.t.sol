@@ -144,17 +144,17 @@ contract DebtOracleBoundariesUnitTest is DebtOracleFixture {
     // Sources: 2.10 REQ-ORACLE-092 (2): a route value above MAX_ROUTE_ANSWER = 10^12 is Invalid
     /// @notice An alternate of 0.5 x 2,000,000 = exactly 10^12 is valid (and disagrees with the primary, so the asset
     /// drifts and serves it); one unit above, 10^12 + 1, is invalid, so nothing disagrees and the primary serves Live.
-    function test_TEST_219_routeValueBoundAtTenToThe12() public {
-        store.setFeed(address(ethUsd), 8, 0, 1e14, 3600, 1800);
+    function test_TEST_219_routeValueBoundAtTenToThe18() public {
+        store.setFeed(address(ethUsd), 8, 0, 1e20, 3600, 1800);
         aEth.push(500_000_000_000_000_000, block.timestamp);
-        ethUsd.push(2_000_000_000_000, block.timestamp);
+        ethUsd.push(2_000_000_000_000_000_000, block.timestamp);
         DebtPriceView memory v = _view();
-        assertEq(v.alternateValue, 1e12);
+        assertEq(v.alternateValue, 1e18);
         assertEq(uint8(v.state), uint8(PriceState.Drifting), "valid at the bound, and far from the primary");
-        assertEq(uint256(v.answer), 1e12, "Drifting serves the higher route");
-        ethUsd.push(2_000_000_000_002, block.timestamp);
+        assertEq(uint256(v.answer), 1e18, "Drifting serves the higher route");
+        ethUsd.push(2_000_000_000_000_000_002, block.timestamp);
         v = _view();
-        assertEq(v.alternateValue, 1e12 + 1, "the value is reported");
+        assertEq(v.alternateValue, 1e18 + 1, "the value is reported");
         assertEq(uint8(v.state), uint8(PriceState.Live), "but the route is invalid");
         assertEq(uint8(v.routeUsed), uint8(RouteSlot.Primary));
         assertEq(uint256(v.answer), 99_990_000);

@@ -1,6 +1,6 @@
 # Roles and responsibilities
 
-Last updated: 2026-11-11
+Last updated: 2026-11-12
 
 This page lists every authority that can act on Avana, who sits on it, what it can do at once, what it can do only through the timelock, what it can never do, and who can remove it. Governance is per chain: Ethereum and Base each have their own AvanaTimelock and their own Safes, and nothing on one chain can act on the other (`REQ-ACCESS-173`). The role definitions are in [1.4 Permissions and Roles](../spec/01-architecture/04-permissions-and-roles.md) and [2.15 Governance and Timelock](../spec/02-contracts/15-governance-and-timelock.md); parameter values are in [parameters.md](parameters.md).
 
@@ -25,10 +25,10 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 **Holds:** ownership and configuration of each chain's Avana Stable LP Hub and its CDP, Lend and Coverage Spokes. On the AvanaTimelock, its executor holds `PROPOSER_ROLE`, `CANCELLER_ROLE` and `DAO_CANCELLER_ROLE`. On each Coverage Spoke, the DAO executor holds `RESERVE_ADMIN_ROLE` and is the admin of `COVERAGE_ROLE`.
 
 **Does:**
-- Deploys and upgrades each standard CDP Spoke and its AaveOracle; sets collateral factors, caps, reserve flags, the bonus curve, target health factor, collateral risk, debt-asset rates, credit lines and draw caps.
+- Deploys and upgrades each standard CDP Spoke and its AaveOracle; sets collateral factors, caps, reserve flags, the bonus curve, target health factor, collateral risk, each lend asset's utilization curve, which stable assets are listed and borrowable, credit lines and draw caps.
 - Sets the three required settings on every Avana collateral reserve: `receiveSharesEnabled = false`, `liquidationFee = 0`, no reinvestment controller (`REQ-HUB-092`).
 - Grants the `FLASH_BORROWER` role on the Aave V3 Pool.
-- On each Coverage Spoke: sets the allowlisted CDP Spokes and `firstLossReserveMinimum`, requests, cancels and executes reserve withdrawals (14-day delay, and never while a covered Spoke has an open deficit), and grants `COVERAGE_ROLE`.
+- On each Coverage Spoke: sets the allowlisted CDP Spokes and `firstLossReserveMinimum`, requests, cancels and executes reserve withdrawals (14-day delay, and never while a covered Spoke has an open deficit), and grants `COVERAGE_ROLE`; the same on each DAO deficit offset, where it also sets `daoDeficitOffset` and funds and refills the offset from the DAO treasury.
 - On the AvanaTimelock: schedules Avana operations (same delays as everyone), cancels any queued operation, and is the only account that can cancel a role-change or restoring operation (`REQ-ACCESS-156`). On the MarketRegistry it undoes a guardian's standby switch at once (`cancelStandbySwitch`).
 
 **Cannot:** mint vault tokens, move positions, or execute an Avana operation before its delay.
@@ -70,7 +70,7 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 - `freezeAddress`: at most 20 in the 24 one-hour buckets ending with the current hour, never an address of the protected set; no keeper floor applies, so the last active keeper can be frozen and new borrowing then halts (`REQ-ACCESS-157`, `REQ-MREG-021`).
 - Trip and reset market and debt breakers (`REQ-ACCESS-158`).
 - Switch a token to its standby price route or standby second source, both recorded at listing (`REQ-ACCESS-159`, `REQ-ACCESS-179`).
-- `coverDeficit`: spend a Coverage Spoke's reserve on recorded deficits of allowlisted CDP Spokes, in that Coverage Spoke's own asset, never above the deficit or the funded balance, within the 72-hour coverage window (`REQ-FLR-021`).
+- `coverDeficit`: spend a Coverage Spoke's reserve on recorded deficits of allowlisted CDP Spokes, in that Coverage Spoke's own asset, never above the deficit or the funded balance, within the 72-hour coverage window (`REQ-FLR-021`); then, in the same batch, from the DAO deficit offset of that (Hub, asset), which refuses while the Coverage Spoke is active and holds any funds.
 - Cancel queued operations that are neither role-change nor restoring.
 
 **Cannot:** upgrade, change a parameter, choose a price source not recorded at listing, unfreeze an address, schedule an operation, cancel a role-change or restoring operation, move collateral, or stop liquidation, pending settlement, repay, fee collection or debt-free withdrawal (`REQ-ROLE-076`).
@@ -81,11 +81,11 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 
 **Composition:** Aave's guardian multisig; its signers are disjoint from every Avana Safe.
 
-**Holds:** the same Avana roles as the Emergency Guardian (`APPLICATION_PAUSE_GUARDIAN`, `APPLICATION_FREEZE_GUARDIAN`, `CANCELLER_ROLE`, `COVERAGE_ROLE`). On the Aave side, one-way `freezeReserve` and `pauseReserve`.
+**Holds:** the same Avana roles as the Emergency Guardian (`APPLICATION_PAUSE_GUARDIAN`, `APPLICATION_FREEZE_GUARDIAN`, `CANCELLER_ROLE`, `COVERAGE_ROLE`). On the Aave side, one-way `freezeReserve` and `pauseReserve` on CDP Spoke reserves, and one-way `freezeReserve` on Lend Spoke reserves.
 
-**Does:** everything the Emergency Guardian does, independently of Avana's Safes, so Avana's markets can be stopped and deficits covered without Avana Labs' cooperation. Aave-side reserve pauses follow the AIP commitment: exploits only, unpaused within the 48-hour incident window.
+**Does:** everything the Emergency Guardian does, independently of Avana's Safes, so Avana's markets can be stopped and deficits covered without Avana Labs' cooperation. While a deficit beyond the Avana Umbrella and the DAO deficit offset is uncovered it freezes that asset's Lend Spoke reserve (playbook P-18), which stops new supply and leaves every withdrawal open. Aave-side reserve pauses follow the AIP commitment: exploits only, unpaused within the 48-hour incident window.
 
-**Cannot:** everything the Emergency Guardian cannot; unpause an Aave reserve (the Aave DAO does).
+**Cannot:** everything the Emergency Guardian cannot; unpause or unfreeze an Aave reserve (the Aave DAO does); pause a Lend Spoke reserve or stop a lender's withdrawal.
 
 ## Joint Configuration Safe
 

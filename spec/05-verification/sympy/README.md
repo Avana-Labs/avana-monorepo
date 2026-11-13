@@ -32,7 +32,7 @@ Common assumptions: exact real arithmetic; GHO priced at $1 (Aave's fixed GHO so
 
 ## Results
 
-**230 checks: 229 hold, 1 counterexample; 16 derived closed forms.**
+**247 checks: 246 hold, 1 counterexample (the deliberate `SYM-42a`); 16 derived closed forms.** (Run of 2026-11-12, every script.)
 
 - `SYM-42a` is a deliberate wrong reading: a subtractive slippage bound `s = bonus` leaves the slippage term `r·b²` short of the debt. The specification uses the multiplicative bound of `SPEC-LIQ-003` and `SPEC-LIQ-016` (`SYM-41a`–`c`), which covers it exactly.
 - `SYM-138d` was a finding (below), now resolved in the spec; it holds against the corrected 3.4 figures.
@@ -52,7 +52,11 @@ Common assumptions: exact real arithmetic; GHO priced at $1 (Aave's fixed GHO so
 | 2026-11-10 (option C, `Q-404`: caller-funded liquidation, no premium term) | `../.venv/bin/python sym05_settlement.py`, from `spec/05-verification/sympy` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym05 22/23 consistent (SYM-42a wrong reading); SYM-41, -42, -44…47, -49, -180 restated to caller funding `Kf` with no premium term; SYM-44c added (derived) | 0 |
 | 2026-11-10 (LPPriceMath input bounds) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 82/82 consistent; SYM-172 recomputes the poke floor with `POST_CALL_GAS` (556,588), SYM-190 the fixed-point USD level and the band's token order, SYM-191 the disagreement price `min(lower, fresh, A)` from full-range compositions | 0 |
 | 2026-11-11 (LPOracle price-read gas) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 82/82 consistent; SYM-172 restated to the per-read poke floor `max(W_poke, max_k(u_k + ⌈64 G_k / 63⌉ + POST_CALL_GAS))` with the measured two-token worst case (805,471) and `G_inputs(2) = 430,000` |
-| 2026-11-11 (LPOracle token-decimals reads in the poke) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 consistent; SYM-172 restated with the measured two-token worst case including the token-decimals reads (830,781, binding read at 718,836) and the 900,000 floor | 0 |
+| 2026-11-11 (LPOracle token-decimals reads in the poke) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 consistent; SYM-172 restated with the measured two-token worst case including the token-decimals reads (861,000, binding read at 748,926) and the 900,000 floor | 0 |
+| 2026-11-12 (public lending, `Q-407`) | `../.venv/bin/python sym10_risk_examples.py`, from `spec/05-verification/sympy` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym10 51/51 consistent; SYM-192a–d added: the supply rate lenders earn under the flat borrow rate of `SPEC-HUB-007` and its worked example | 0 |
+| 2026-11-12 (kinked rate curve and early withdrawals, `Q-408`) | `../.venv/bin/python sym10_risk_examples.py`, from `spec/05-verification/sympy` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym10 63/63 consistent; SYM-159b–d and SYM-192b–d restated at the curve rate of the `SPEC-HUB-007` example (7.50 % at U = 0.5), SYM-192e–k added (kink continuity, the curve at four utilizations, supply rate at U = 0.95), SYM-193a–e added (an early withdrawal before realization moves its share of an uncovered deficit onto the remaining suppliers, `DEF-014`) | 0 |
+| 2026-11-12 (loss order, `Q-410`) | `../.venv/bin/python sym10_risk_examples.py`, from `spec/05-verification/sympy` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym10 64/64 consistent; SYM-193a–e rewritten from the pro-rata loss after an early withdrawal to the two loss layers and the first-come residual, SYM-193f added | 0 |
+| 2026-11-12 (served price: the accepted price only while Cached, `SPEC-ORC-017`) | `.venv/bin/python sympy/sym08_units_oracle_backing_examples.py`, from `spec/05-verification` | Python 3.9.6, SymPy 1.13.3 | exact symbolic and rational arithmetic, no bounds or seeds | sym08 82/82 consistent, 0 differ from this README; SYM-133 restated (disagreement serves `min(lower, fresh)`, Drifting serves fresh 199,999,600 above A = 199,980,000) and SYM-191 (served `min(lower, fresh)` = 194,928,113) | 0 |
 
 ## Properties
 
@@ -272,7 +276,7 @@ Run: `74 checks: 73 CONSISTENT, 1 INCONSISTENT`, exit 1.
 | SYM-130 | SPEC-ORC-015: servedUpdatedAt 1,762,600,000; deadline 1,762,650,400; maxAge 50,400; on primaries: servedUpdatedAt 1,762,560,000, deadline 1,762,648,200, maxAge 88,200 | `SPEC-ORC-015`, `SPEC-ORC-012` | Holds |
 | SYM-131 | SPEC-ORC-013: staleFrom 1,084,601 and 1,135,401; Cached until 1,139,000, Expired from 1,139,001; late-poke case Expired at 1,004,100 instead of Cached until 1,007,600 | `SPEC-ORC-013` | Holds |
 | SYM-132 | SPEC-ORC-014: S_primary starts 1,084,601; alternate gap starts 1,134,201; B = [1,134,201, 1,190,000) lasts 55,799 >= 3,600; grace ends 1,191,800; fallback gap starts 1,081,001 | `SPEC-ORC-014` | Holds |
-| SYM-133 | SPEC-ORC-016/017: pause ends 1,762,653,600; full-range USDC/USDT d = 6: lower composition (987,420, 1,012,739), lower = 197,483,855 = served below A = 199,980,000; fresh 199,999,600 Drifting serves A | `SPEC-ORC-016`, `SPEC-ORC-017` | Holds |
+| SYM-133 | SPEC-ORC-016/017: pause ends 1,762,653,600; full-range USDC/USDT d = 6: lower composition (987,420, 1,012,739), lower = 197,483,855 = served min(lower, fresh 199,999,600) during the disagreement; Drifting serves fresh 199,999,600, above A = 199,980,000; Cached serves A | `SPEC-ORC-016`, `SPEC-ORC-017` | Holds |
 | SYM-134a | SPEC-ORC-018: Expired USDC A = 99,990,000: delta 500 -> 104,989,500; delta 200 -> 101,989,800; A = 99,987,001 -> 104,986,352; disagreement -> 100,300,000 | `SPEC-ORC-018` | Holds |
 | SYM-134b | SPEC-ORC-018: 10,000 USDC of debt counts as $10,498.95 when Expired | `SPEC-ORC-018` | Holds |
 | SYM-135 | oracle rules: grace to 1,762,651,800 (not 1,762,648,200); price-drop alert 193,900,000*1e4 < 199,950,000*9,700; alternate leg age 21,601 at 1,762,661,601 against a lowered 21,600; limits 84,600 / 88,200 / 5,400 | `REQ-ORACLE-032`, `REQ-ORACLE-088`, `REQ-ORACLE-090`, `REQ-ORACLE-054` | Holds |
@@ -280,9 +284,9 @@ Run: `74 checks: 73 CONSISTENT, 1 INCONSISTENT`, exit 1.
 | SYM-169 | SPEC-ORC-020: S = 100, q = 100,020,000: s = 99,400,000 confirmed (6.2e9 <= 9.94e9); s = 98,900,000 not (1.12e10 > 9.89e9) | `SPEC-ORC-020` | Holds |
 | SYM-170 | SPEC-ORC-021: Base restart at 1,010,000 with grace 3,600: in grace until 1,013,599; borrowing from 1,013,600 on a round newer than the restart (a round of 1,009,000 or 1,010,000 keeps it closed, 1,013,000 opens it) | `SPEC-ORC-021`, `REQ-ORACLE-099` | Holds |
 | SYM-171 | SPEC-ORC-022: W = 1,800: Ethereum 151, Base 901 observations; the Ethereum value on Base spans 300 s | `SPEC-ORC-022`, `REQ-ORACLE-055` | Holds |
-| SYM-172 | SPEC-ORC-023: G = 50,000 needs 50,794 + 5,000 = 55,794; that gasleft forwards min(50,000, 54,923); G_inputs(2) = 150,000 + 2 · 140,000 = 430,000, bound 436,826 + 5,000; worst-case two-token poke with the token-decimals reads of REQ-ORACLE-107: binding read 718,836 + 50,794 + 5,000 = 774,630, W_poke 830,781, floor max = 830,781, 69,219 below POKE_MIN_GAS_FLOOR = 900,000 | `SPEC-ORC-023`, `REQ-ORACLE-038` | Holds |
+| SYM-172 | SPEC-ORC-023: G = 50,000 needs 50,794 + 5,000 = 55,794; that gasleft forwards min(50,000, 54,923); G_inputs(2) = 150,000 + 2 · 140,000 = 430,000, bound 436,826 + 5,000; worst-case two-token poke with the token-decimals reads of REQ-ORACLE-107: binding read 748,926 + 50,794 + 5,000 = 804,720, W_poke 861,000, floor max = 861,000, 39,000 below POKE_MIN_GAS_FLOOR = 900,000 | `SPEC-ORC-023`, `REQ-ORACLE-038` | Holds |
 | SYM-190 | SPEC-ORC-011: usdLevel 99,998,499 for (99,987,000, 100,010,000) (power 99,996,998, next 99,997,000); 89,000,000 for both at 0.89; 99,990,000 for the three-token pool; 90,000,001 = usdBandLow for (81,000,001, 1e8) in band, real root 90,000,000; order example 91,459,272 vs 91,459,273 against 91,459,273 | `SPEC-ORC-011`, `REQ-ORACLE-042` | Holds |
-| SYM-191 | SPEC-ORC-017: full-range USDC/USDT d = 6: v = (97,544,839, 97,383,701) gives (999,173, 1,000,826) and fresh 194,928,113; w = (97,544,839, 97,383,663) <= v gives (999,173, 1,000,827) and lower 194,928,172; served min(lower, fresh, A = 2e8) = 194,928,113 | `SPEC-ORC-017`, `REQ-ORACLE-086` | Holds |
+| SYM-191 | SPEC-ORC-017: full-range USDC/USDT d = 6: v = (97,544,839, 97,383,701) gives (999,173, 1,000,826) and fresh 194,928,113; w = (97,544,839, 97,383,663) <= v gives (999,173, 1,000,827) and lower 194,928,172; served min(lower, fresh) = 194,928,113 | `SPEC-ORC-017`, `REQ-ORACLE-086` | Holds |
 | SYM-136 | REQ-VAULT-161: removing 1e9 units at pool price 1 returns about 1,000 USDC and 1,000 USDT (999999999, 999999999), both above the 995,000,000 minimums | `REQ-VAULT-161`, `SPEC-BACK-008` | Holds |
 | SYM-137a | deposit: pledge value and charge 5e12 ($50,000); pool share 1.525e16 <= 4e16; capacity $15,600; dust 4e6 units = 8e8 < 1e9 | `DEP-012`, `DEP-018`, `SPEC-CAP-001`, `SPEC-CAP-005`, `DEP-004`, `SPEC-BACK-014`, `SPEC-CAP-003`, `DEP-025`, `SPEC-BACK-013` | Holds |
 | SYM-137b | deposit: Avana holds 3.81% of the pool | `DEP-012`, `DEP-018`, `SPEC-CAP-001`, `SPEC-CAP-005`, `DEP-004`, `SPEC-BACK-014`, `SPEC-CAP-003`, `DEP-025`, `SPEC-BACK-013` | Holds |
@@ -329,7 +333,7 @@ Run: `9 checks: 9 CONSISTENT, 0 INCONSISTENT`, exit 0.
 
 ### `sym10_risk_examples.py`
 
-Run: `47 checks: 47 CONSISTENT, 0 INCONSISTENT`, exit 0.
+Run: `51 checks: 51 CONSISTENT, 0 INCONSISTENT`, exit 0.
 
 | ID | Statement | Verifies | Result |
 |---|---|---|---|
@@ -368,9 +372,9 @@ Run: `47 checks: 47 CONSISTENT, 0 INCONSISTENT`, exit 0.
 | SYM-158b | GHO 8,000 at 5.00% for 30 days = 8,032.876712328767123288 (rounded up) | `SPEC-PROXY-003`, `SPEC-PROXY-007` | Holds |
 | SYM-158c | quoteRepayAll = 5,024,657,535 x (1 + 0.06 x 600 / 31,536,000) x 1.001 -> 5,029,687,935 | `SPEC-PROXY-003`, `SPEC-PROXY-007` | Holds |
 | SYM-159a | drawn interest b plus premium b x rp = b (1 + rp) | `SPEC-HUB-007` | Holds |
-| SYM-159b | example: 100,000 x 5.50% = 5,500 GHO drawn interest (before compounding) | `SPEC-HUB-007` | Holds |
-| SYM-159c | example: premium 5,500 x 0.15 = 825 GHO | `SPEC-HUB-007` | Holds |
-| SYM-159d | example: effective 5.50% x 1.15 = 6.325% | `SPEC-HUB-007` | Holds |
+| SYM-159b | example: 100,000 x 7.50% (curve rate at U = 0.5) = 7,500 GHO drawn interest (before compounding) | `SPEC-HUB-007` | Holds |
+| SYM-159c | example: premium 7,500 x 0.15 = 1,125 GHO | `SPEC-HUB-007` | Holds |
+| SYM-159d | example: effective 7.50% x 1.15 = 8.625% | `SPEC-HUB-007` | Holds |
 | SYM-160a | cp (1e4 - b) - 1e4 p = 1e4 cp x ((cp - p)/cp - b/1e4): the alert fires iff the drop exceeds b bps | `SPEC-BRK-001` | Holds |
 | SYM-160b | example: $2.0000 to $1.9399 is a 3.005% drop, above the 3% alert threshold | `SPEC-BRK-001` | Holds |
 | SYM-161 | SPEC-CF-003 example: 24,600 / 1.10 = $22,363.63 (cents, down) | `SPEC-CF-003` | Holds |
@@ -380,4 +384,21 @@ Run: `47 checks: 47 CONSISTENT, 0 INCONSISTENT`, exit 0.
 | SYM-164a | 24,600 / 12,999.5 = 1.892380476172160467 (18 decimals, down) | `SPEC-PROXY-006`, `SPEC-PROXY-001` | Holds |
 | SYM-164b | 24,600 / 22,998.5 = 1.069634976194099615 (18 decimals, down) | `SPEC-PROXY-006`, `SPEC-PROXY-001` | Holds |
 | SYM-165 | SPEC-CF-001 example: (24,600 - 8,000) / 0.9999 = 16,601.66 USDC exhausts B | `SPEC-CF-001` | Holds |
+| SYM-192a | supply rate = D r (1 + rp)(1 - f) / S = r (1 + rp) U (1 - f) with U = D / S | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192b | example: 900,000 x 7.50% x 1.15 = 77,625 GHO of borrow interest a year | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192c | example: U = 900,000 / 1,800,000 = 0.5; supply rate 0.075 x 1.15 x 0.5 x 0.9 = 3.88125% | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192d | example: the public lender's 500,000 GHO earns 19,406.25 GHO a year | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192e | the kinked curve is continuous at the kink: both branches equal base + before at U = U* | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192f | curve example: 5.50% + 3.60% x 0.5 / 0.9 = 7.50% at U = 0.5 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192g | curve example: 9.10% + 50% x 0.05 / 0.10 = 34.10% at U = 0.95 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192h | at U = 0.95: supply rate 0.341 x 1.15 x 0.95 x 0.9 = 33.528825% | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192i | curve example: 9.10% at the kink U = 0.9 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192j | curve example: maximum 5.50% + 3.60% + 50% = 59.10% at U = 1 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-192k | example: suppliers receive 77,625 x 0.9 = 69,862.5 GHO a year | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
+| SYM-193a | the layers pay F_A + F_D and the rest D - F_A - F_D stays recorded | `REQ-FLR-027`, `DEF-014`, `SPEC-FLR-006`, `Q-410` | Holds |
+| SYM-193b | after full repayment liquidity falls short of the lenders' claims by exactly the residual | `REQ-FLR-027`, `DEF-014`, `Q-410` | Holds |
+| SYM-193c | an exit of x <= liquidity is paid x (price A / Sh unchanged); the claims left exceed the liquidity left by r | `REQ-FLR-027`, `DEF-014`, `Q-410` | Holds |
+| SYM-193d | DEF-014 / TEST-299 example: 300,000 GHO against layers of 100,000 and 150,000 leaves 50,000 | `DEF-014`, `SPEC-FLR-006`, `Q-410` | Holds |
+| SYM-193e | DEF-014 example: backed value per share (C - r) / Sh = 0.975 GHO, beside the 1 GHO Aave pays | `DEF-014`, `Q-410` | Holds |
+| SYM-193f | DEF-014 / TEST-299 example: liquidity after full repayment is 1,950,000 GHO against 2,000,000 of claims | `DEF-014`, `Q-410` | Holds |
 

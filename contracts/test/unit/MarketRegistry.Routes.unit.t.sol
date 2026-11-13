@@ -199,12 +199,41 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         registry.restoreRoute(id, usdcIn, address(gho), 0, r1);
         (, usable) = registry.getRoute(id, usdcIn, address(gho), 0);
         assertTrue(usable);
-        // A route approved before stays restorable after being replaced.
+        // A route that `setRoute` replaced leaves the approved set (REQ-ROUTE-017): it cannot come back at the short
+        // delay, only through `setRoute` again; the new route is restorable after a disable.
         registry.setRoute(id, usdcIn, address(gho), 0, r2);
+        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, usdcIn, address(gho), 0, r1);
+        registry.disableRoute(id, usdcIn, address(gho), 0);
+        registry.restoreRoute(id, usdcIn, address(gho), 0, r2);
+        registry.setRoute(id, usdcIn, address(gho), 0, r1);
         vm.stopPrank();
         (address cur,) = registry.getRoute(id, usdcIn, address(gho), 0);
         assertEq(cur, r1);
+    }
+
+    // TEST-054 verifies: REQ-ROUTE-017, REQ-CONFIG-060, REQ-CONFIG-062, ATTACK-201
+    /// @notice ATTACK-201: a route replaced for cause cannot be restored at the short delay, whether the replacement is
+    /// active or disabled; setting the same route again keeps it approved.
+    function test_TEST_054_replacedRouteCannotBeRestored() public {
+        address usdcIn = address(usdc);
+        address bad = _setRoute(id, usdcIn, address(gho), 0, "dexA");
+        address good = address(_newRoute(usdcIn, address(gho), "dexZ"));
+        vm.startPrank(address(timelock));
+        registry.setRoute(id, usdcIn, address(gho), 0, bad);
+        registry.disableRoute(id, usdcIn, address(gho), 0);
+        registry.restoreRoute(id, usdcIn, address(gho), 0, bad);
+        registry.setRoute(id, usdcIn, address(gho), 0, good);
+        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        registry.restoreRoute(id, usdcIn, address(gho), 0, bad);
+        registry.disableRoute(id, usdcIn, address(gho), 0);
+        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        registry.restoreRoute(id, usdcIn, address(gho), 0, bad);
+        registry.restoreRoute(id, usdcIn, address(gho), 0, good);
+        vm.stopPrank();
+        (address cur, bool usable) = registry.getRoute(id, usdcIn, address(gho), 0);
+        assertEq(cur, good);
+        assertTrue(usable);
     }
 
     // TEST-231 verifies: REQ-MREG-028, REQ-CONFIG-009, REQ-CONFIG-026, Q-248, Q-262, Q-263, REQ-ACCESS-159, REQ-ACCESS-171, REQ-ACCESS-093

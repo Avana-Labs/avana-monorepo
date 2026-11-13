@@ -1,7 +1,9 @@
 /*
- * AaveAdapter gates and call graph (planned src/policy/aave-adapter/AaveAdapter.sol, interface
- * src/policy/aave-adapter/IAaveAdapter.sol, spec 2.6). Conf: AaveAdapterGates.conf. The Adapter's backing, mint and
- * burn, proxy-binding and role rules are in AaveAdapter.spec (AaveAdapter.conf).
+ * AaveAdapter gates and call graph (src/policy/aave-adapter/AaveAdapter.sol, the router, with the bodies of its entry
+ * points in AaveAdapterUserLogic, AaveAdapterExitLogic, AaveAdapterCollateralLogic and AaveAdapterSettlementLogic,
+ * reached by delegatecall and linked in the conf; interface src/policy/aave-adapter/IAaveAdapter.sol, spec 2.6). Conf:
+ * AaveAdapterGates.conf. The Adapter's backing, mint and burn, proxy-binding and role rules are in AaveAdapter.spec
+ * (AaveAdapter.conf).
  *
  * An account is one PositionProxy per (wallet, CDP Spoke, market): entry points name a `marketId` and act on
  * `proxyOf[msg.sender][marketId]`, whose Spoke is the one the Adapter stored at creation (`accountOf`). Pause state and
@@ -35,37 +37,56 @@
  *    the enabled set equals the Spoke's borrowable reserves, Q-281).
  *  - PROP-067 (call order): `postHealthCheck` runs after every borrow, withdrawal that leaves debt and partial removal
  *    that leaves debt.
+ *  - PositionManagerApproved by construction (REQ-PROXY-008, REQ-RISK-088): no Adapter method reaches a Spoke's
+ *    `setUserPositionManager`, `setUserPositionManagersWithSig`, `renouncePositionManagerRole` or `multicall`, through a
+ *    proxy or from the Adapter itself.
  *
  * Storage: the Adapter's `borrowNonce`, `proxyOf` and `accountOf` are read through their views; no hooks.
  *
  * Summaries: the Lock by LockModel; the MarketRegistry by RegistryModel's freeze, breaker and debt-reserve reads plus
- * a pause state and reason per Hub, with every other registry view (market, Spoke, debt reserve, Hub of a Spoke)
- * counted as a read; the RiskModule's checks recorded with their arguments and a step number (the RiskModule's own
- * behaviour is proved on the RiskModule); Collateralization's `pledge`, `recredit`, `release`, `releasePartial`,
- * `releaseZeroCredit` and `collectFees` recorded with the `requireRescue` flag and a step number, returning arbitrary
- * values; a PositionProxy's `execute` is dispatched to the real logic-free PositionProxy, so each Spoke call the
- * Adapter makes through a proxy reaches the Aave model with the proxy as caller, and `borrow` and `withdraw` on the
- * Spoke are recorded with a step number, the Spoke and the account; the Spoke's `getUserAccountData` returns a ghost
- * borrow count per account, which no summarised call changes within a rule; vault tokens and ERC-20s by Erc20Model
- * with every `transferFrom` counted and the last `transfer` recorded; the ProxyManager, VaultTokenFactory, the
- * LPVault's `collectFees` and LPVaultSwap `deleverage` are uninterpreted or recorded; ParameterStore reads are counted.
+ * a pause state and reason per Hub, with every other registry view (market, Spoke, debt reserve, Hub of a Spoke, the
+ * receiver rule's LPVault, Hub, PayoutEscrow and flash-source views) counted as a read; the RiskModule's checks
+ * recorded with their arguments and a step number (the RiskModule's own behaviour is proved on the RiskModule);
+ * Collateralization's `pledge`, `recredit`, `release`, `releasePartial`, `releaseForDeleverage`, `releaseZeroCredit`
+ * and `collectFees` recorded with the `requireRescue` flag and a step number, with its credited total per vault token
+ * kept as Collateralization keeps it (a pledge or re-credit adds the units it returns, a release subtracts the units
+ * it releases: Collateralization.spec and AaveAdapter.spec prove that on the real contract), so the Adapter's
+ * backing-gap check passes exactly when the Adapter mints and burns what Collateralization credits and debits; its
+ * debt mark and `recordIdOf` are NONDET (no rule here reads the market-closing count or a record identifier); a
+ * PositionProxy's `execute` is dispatched to the real logic-free PositionProxy, so each Spoke call the Adapter makes
+ * through a proxy reaches the Aave model with the proxy as caller, and `borrow` and `withdraw` on the Spoke are
+ * recorded with a step number, the Spoke and the account; the Spoke's `getUserAccountData` returns a ghost borrow
+ * count per account, which no summarised call changes within a rule; vault tokens and ERC-20s by Erc20Model with
+ * every `transferFrom` counted and the last `transfer` recorded; the ProxyManager and VaultTokenFactory are
+ * uninterpreted; the Hub's listing views used by the receiver rule are NONDET (a refusal only makes a rule's success
+ * premise stronger); LPVaultSwap `deleverage` calls back `deleverageRepay` and `deleverageRelease` once each with the
+ * request's own arguments, as 2.11 specifies; ParameterStore reads (`minPledgeUsd`, `sequencer`) are counted and the
+ * sequencer feed's `latestRoundData` is NONDET (any answer: a Down answer only refuses a repay with collateral).
+ * Transient storage starts empty in every rule (TransientModel), as at the start of a transaction.
  */
 
 import "setup/Erc20Model.spec";
 import "setup/LockModel.spec";
 import "setup/AaveModel.spec";
-import "setup/RegistryModel.spec";
+import "setup/RegistryReadsModel.spec";
+import "setup/TransientModel.spec";
 
 methods {
     function borrow(uint256, uint256, uint256, address, uint256, uint256, uint256) external returns (uint256);
-    function withdraw(uint256, PositionRef, uint256, uint256, uint256) external;
-    function removeLiquidity(uint256, PositionRef, uint128, uint256[], uint256, uint256) external returns (uint256[]);
+    function withdraw(uint256, AaveAdapter.PositionRef, uint256, uint256, uint256) external;
+    function removeLiquidity(uint256, AaveAdapter.PositionRef, uint128, uint256[], uint256, uint256) external returns (uint256[]);
     function repay(address, uint256, uint256, uint256, bool, uint256) external returns (uint256);
-    function repayAllAndWithdraw(uint256, PositionRef, uint256, uint256[], uint256[], uint256) external;
-    function pledge(uint256, PositionRef, uint256) external returns (address, uint256, uint128);
-    function recredit(uint256, PositionRef, bytes, uint256) external returns (uint128);
-    function repayWithCollateral(RepayWithCollateralParams) external returns (uint256, uint256);
+    function repayAllAndWithdraw(uint256, AaveAdapter.PositionRef, uint256, uint256[], uint256[], uint256) external;
+    function pledge(uint256, AaveAdapter.PositionRef, uint256) external returns (address, uint256, uint128);
+    function recredit(uint256, AaveAdapter.PositionRef, bytes, uint256) external returns (uint128);
+    function repayWithCollateral(AaveAdapter.RepayWithCollateralParams) external returns (uint256, uint256);
     function burnSeized(uint256, address, uint256) external;
+    function deleverageRepay(address, uint256, uint256) external returns (uint256);
+    function deleverageRelease(address, AaveAdapter.PositionRef, uint128, uint256[]) external returns (uint256[], bool);
+    function collectFees(uint256, AaveAdapter.PositionRef, uint256) external returns (uint256[]);
+    function releaseZeroCredit(uint256, AaveAdapter.PositionRef, uint256) external;
+    function refreshDebtMark(address) external;
+    function LP_VAULT_SWAP() external returns (address) envfree;
     function borrowNonce(address) external returns (uint256) envfree;
     function proxyOf(address, uint256) external returns (address) envfree;
     function accountOf(address) external returns (address, uint256, address, uint256) envfree;
@@ -77,17 +98,21 @@ methods {
     function _.isLocked() external => lockIsLocked() expect bool;
 
     // MarketRegistry
-    function _.pauseState(address hub) external => registryHubPauseState(hub) expect PauseState;
-    function _.pauseReason(address hub) external => registryHubPauseReason(hub) expect PauseReason;
+    function _.pauseState(address hub) external => registryHubPauseState(hub) expect AaveAdapterUserLogic.PauseState;
+    function _.pauseReason(address hub) external => registryHubPauseReason(hub) expect AaveAdapterUserLogic.PauseReason;
     function _.isFrozenAddress(address a) external => registryIsFrozenAddress(a) expect bool;
     function _.marketBreaker(uint256 m) external => registryMarketBreaker(m) expect (uint32, uint64);
     function _.debtBreaker(address s, uint256 r) external => registryDebtBreaker(s, r) expect (uint32, uint64);
     function _.isApprovedDebtReserve(address s, uint256 r) external => registryApprovedDebtReserve(s, r) expect bool;
-    function _.getSpoke(address s) external => regSpokeDef(s) expect SpokeDef;
+    function _.getSpoke(address s) external => regSpokeDef(s) expect AaveAdapterUserLogic.SpokeDef;
     function _.hubOf(address s) external => regHubOfSpoke(s) expect address;
     function _.marketOfVaultToken(address vt) external => regMarketOfVaultToken(vt) expect uint256;
-    function _.getMarket(uint256 m) external => regMarketDef(m) expect Market;
-    function _.getDebtReserve(address s, uint256 r) external => regDebtReserveDef(s, r) expect DebtReserveDef;
+    function _.getMarket(uint256 m) external => regMarketDef(m) expect AaveAdapterUserLogic.Market;
+    function _.getDebtReserve(address s, uint256 r) external => regDebtReserveDef(s, r) expect AaveAdapterUserLogic.DebtReserveDef;
+    function _.integrationIdOf(address a) external => regReceiverIntegration(a) expect uint32;
+    function _.isRecordedHub(address a) external => regReceiverHub(a) expect bool;
+    function _.PAYOUT_ESCROW() external => regReceiverAddress() expect address;
+    function _.flashSource() external => regReceiverAddress() expect address;
 
     // VaultTokenFactory and vault tokens
     function _.isVaultToken(address vt) external => factoryIsVaultToken(vt) expect bool;
@@ -109,14 +134,20 @@ methods {
     function _.transferFrom(address from, address to, uint256 a) external with (env e) => countedTransferFrom(calledContract, e.msg.sender, from, to, a) expect bool;
 
     // Collateralization
-    function _.pledge(address d, address p, address vt, bytes32 key, bool rescue) external => collPledge(rescue) expect (uint256, uint128);
-    function _.recredit(address d, address p, address vt, bytes32 key, bytes topUp, bool rescue) external => collRecredit(rescue) expect (uint128, uint128);
-    function _.release(address p, address vt, bytes32 key, uint256 u) external => collRelease() expect void;
-    function _.releasePartial(address p, address vt, bytes32 key, uint128 u, uint256[] mins) external => collReleasePartial() expect (uint128, uint256[]);
+    function _.pledge(address d, address p, address vt, bytes32 key, bool rescue) external => collPledge(vt, rescue) expect (uint256, uint128);
+    function _.recredit(address d, address p, address vt, bytes32 key, bytes topUp, bool rescue) external => collRecredit(vt, rescue) expect (uint128, uint128);
+    function _.release(address p, address vt, bytes32 key, uint256 u) external => collRelease(vt, u) expect void;
+    function _.releasePartial(address p, address vt, bytes32 key, uint128 u, uint256[] mins) external => collReleasePartial(vt, u) expect (uint128, uint256[]);
+    function _.releaseForDeleverage(address p, address vt, bytes32 key, uint128 u, uint256[] mins) external => collReleaseForDeleverage(vt, u) expect (uint256[], bool);
+    // The indebted mark only feeds `closeMarket`'s count, which no rule here reads; record identifiers are only
+    // reported in the re-credit event.
+    function _.markIndebted(address) external => NONDET;
+    function _.markDebtFree(address) external => NONDET;
+    function _.recordIdOf(uint32, bytes32) external => NONDET;
     function _.releaseZeroCredit(address d, address vt, bytes32 key) external => collReleaseZeroCredit() expect void;
     function _.collectFees(address d, address vt, bytes32 key) external => feesPaid() expect uint256[];
     function _.getTotalCredited(address vt) external => collTotalCredited(vt) expect uint256;
-    function _.getPending(address vt) external => collPending(vt) expect Pending;
+    function _.getPending(address vt) external => collPending(vt) expect AaveAdapterUserLogic.Pending;
 
     // LPVault
     function _.collectFees(bytes32 key, address d) external => feesPaid() expect uint256[];
@@ -142,10 +173,28 @@ methods {
     function _.getReserveId(address hub, uint256 assetId) external => spokeReserveIdOf(calledContract, hub, assetId) expect uint256;
     function _.getUserSuppliedShares(uint256 rid, address u) external => spokeGetUserSuppliedShares(calledContract, rid, u) expect uint256;
     function _.getAssetId(address t) external => hubAssetIdOf(calledContract, t) expect uint256;
+    function _.getUserReserveStatus(uint256 rid, address u) external => spokeGetUserReserveStatus(calledContract, rid, u) expect (bool, bool);
+    function _.getReserveConfig(uint256 rid) external => spokeGetReserveConfig(calledContract, rid) expect IAaveV4Spoke.ReserveConfig;
+    function _.getReserve(uint256 rid) external => spokeReserveOf(calledContract, rid) expect IAaveV4Spoke.Reserve;
+    function _.getReserveCount() external => spokeReserveCount(calledContract) expect uint256;
+    // Receiver rule (REQ-PROXY-017): a listing on the funding Hub only refuses a borrow.
+    function _.isSpokeListed(uint256, address) external => NONDET;
+    function _.isUnderlyingListed(address) external => NONDET;
+
+    // Position-manager surface of the Spoke (PositionManagerApproved): any call that reaches one of these selectors is
+    // recorded. The Adapter never builds one; the rule `noPositionManagerApproval` proves no method reaches them.
+    function _.setUserPositionManager(address, bool) external => positionManagerCall() expect void;
+    function _.setUserPositionManagersWithSig(IAaveV4SpokePositionManagers.SetUserPositionManagers, bytes) external => positionManagerCall() expect void;
+    function _.renouncePositionManagerRole(address) external => positionManagerCall() expect void;
+    function _.multicall(bytes[]) external => positionManagerMulticall() expect bytes[];
 
     // LPVaultSwap and ParameterStore
-    function _.deleverage(DeleverageRequest) external => swapDeleverage() expect (uint256, uint256);
+    function _.deleverage(AaveAdapterCollateralLogic.DeleverageRequest r) external => swapDeleverage(r) expect (uint256, uint256);
     function _.minPledgeUsd(uint256) external => psRead() expect uint256;
+    function _.sequencer() external => psSequencer() expect (address, uint32);
+    // The sequencer-uptime feed is read by a bounded STATICCALL; any answer is allowed (a Down answer only refuses a
+    // repay with collateral, which no rule here needs to pass).
+    function _.latestRoundData() external => NONDET;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -169,7 +218,8 @@ ghost regMarketHub(uint256) returns address;
 ghost regMarketSpoke(uint256) returns address;
 ghost regMarketVaultToken(uint256) returns address;
 ghost regFundingHub(address, uint256) returns address;
-ghost collTotalCreditedOf(address) returns uint256;
+// Collateralization's credited total per vault token, kept as the real contract keeps it (see the header).
+persistent ghost mapping(address => mathint) collCredited;
 ghost collPendingUnitsOf(address) returns uint256;
 ghost pmProxyOf(address, address, uint256) returns address;
 ghost postHealthHf(address) returns uint256;
@@ -177,8 +227,8 @@ ghost postHealthHf(address) returns uint256;
 persistent ghost mapping(address => mapping(address => uint256)) borrowCountOf;
 
 // Pause state and reason per Hub (the MarketRegistry keys every pause by Hub).
-persistent ghost mapping(address => PauseState) hubPause;
-persistent ghost mapping(address => PauseReason) hubPauseReason;
+persistent ghost mapping(address => AaveAdapterUserLogic.PauseState) hubPause;
+persistent ghost mapping(address => AaveAdapterUserLogic.PauseReason) hubPauseReason;
 
 // Step counter: each recorded call takes the next step number.
 persistent ghost mathint step;
@@ -206,6 +256,9 @@ persistent ghost mathint collDebitStep;
 persistent ghost mathint collPledgeCalls;
 persistent ghost bool collPledgeRescue;
 persistent ghost mathint deleverageCalls;
+// Calls that reached the Spoke's position-manager surface (setUserPositionManager, renouncePositionManagerRole,
+// multicall).
+persistent ghost mathint positionManagerCalls;
 
 function resetScene() {
     step = 0;
@@ -223,7 +276,10 @@ function resetScene() {
     collPledgeCalls = 0;
     collPledgeRescue = false;
     deleverageCalls = 0;
+    positionManagerCalls = 0;
     resetRegistryReads();
+    // A rule is one transaction: transient storage (the repay-with-collateral session) starts empty.
+    transientStorageEmpty();
 }
 
 function nextStep() returns mathint {
@@ -231,24 +287,24 @@ function nextStep() returns mathint {
     return step;
 }
 
-function registryHubPauseState(address hub) returns PauseState {
+function registryHubPauseState(address hub) returns AaveAdapterUserLogic.PauseState {
     regPauseStateReads = regPauseStateReads + 1;
     regAnyReads = regAnyReads + 1;
     // pauseReason(hub) == None exactly when the Hub is not Paused (PROP-041).
-    require (hubPause[hub] == PauseState.Paused) == (hubPauseReason[hub] != PauseReason.None);
+    require (hubPause[hub] == AaveAdapterUserLogic.PauseState.Paused) == (hubPauseReason[hub] != AaveAdapterUserLogic.PauseReason.None);
     return hubPause[hub];
 }
 
-function registryHubPauseReason(address hub) returns PauseReason {
+function registryHubPauseReason(address hub) returns AaveAdapterUserLogic.PauseReason {
     regPauseReasonReads = regPauseReasonReads + 1;
     regAnyReads = regAnyReads + 1;
-    require (hubPause[hub] == PauseState.Paused) == (hubPauseReason[hub] != PauseReason.None);
+    require (hubPause[hub] == AaveAdapterUserLogic.PauseState.Paused) == (hubPauseReason[hub] != AaveAdapterUserLogic.PauseReason.None);
     return hubPauseReason[hub];
 }
 
-function regSpokeDef(address s) returns SpokeDef {
+function regSpokeDef(address s) returns AaveAdapterUserLogic.SpokeDef {
     regAnyReads = regAnyReads + 1;
-    SpokeDef d;
+    AaveAdapterUserLogic.SpokeDef d;
     require d.approved == regSpokeApproved(s) && d.hub == regSpokeHub(s);
     return d;
 }
@@ -263,16 +319,34 @@ function regMarketOfVaultToken(address vt) returns uint256 {
     return regMarketOf(vt);
 }
 
-function regMarketDef(uint256 m) returns Market {
+function regReceiverIntegration(address a) returns uint32 {
     regAnyReads = regAnyReads + 1;
-    Market mk;
+    uint32 id;
+    return id;
+}
+
+function regReceiverHub(address a) returns bool {
+    regAnyReads = regAnyReads + 1;
+    bool recorded;
+    return recorded;
+}
+
+function regReceiverAddress() returns address {
+    regAnyReads = regAnyReads + 1;
+    address x;
+    return x;
+}
+
+function regMarketDef(uint256 m) returns AaveAdapterUserLogic.Market {
+    regAnyReads = regAnyReads + 1;
+    AaveAdapterUserLogic.Market mk;
     require mk.hub == regMarketHub(m) && mk.spoke == regMarketSpoke(m) && mk.vaultToken == regMarketVaultToken(m);
     return mk;
 }
 
-function regDebtReserveDef(address s, uint256 r) returns DebtReserveDef {
+function regDebtReserveDef(address s, uint256 r) returns AaveAdapterUserLogic.DebtReserveDef {
     regAnyReads = regAnyReads + 1;
-    DebtReserveDef d;
+    AaveAdapterUserLogic.DebtReserveDef d;
     require d.approved == regApprovedDebtReserve(s, r) && d.fundingHub == regFundingHub(s, r);
     return d;
 }
@@ -283,9 +357,13 @@ function requireMarketHub(uint256 m, address hub) {
     require hub == regMarketHub(m) && regSpokeHub(regMarketSpoke(m)) == hub && vtHubOf(regMarketVaultToken(m)) == hub;
 }
 
-// A bound proxy's stored account agrees with the MarketRegistry's market record.
+// A bound proxy's stored account agrees with the MarketRegistry's market record: the Adapter writes the binding once,
+// in the creating pledge, from that record after checking the record's vault token against the VaultTokenFactory and
+// the token's own immutables (bindingIsWrittenOnce in AaveAdapter.spec; a market's Spoke and vault token never change
+// in the registry, REQ-ARCH-207).
 function requireBinding(address proxy, uint256 m) {
-    require proxy != 0 => (boundSpoke(proxy) == regMarketSpoke(m) && boundMarket(proxy) == m);
+    require proxy != 0 => (boundSpoke(proxy) == regMarketSpoke(m) && boundMarket(proxy) == m
+        && boundVaultToken(proxy) == regMarketVaultToken(m));
 }
 
 function boundSpoke(address proxy) returns address {
@@ -300,10 +378,39 @@ function boundMarket(address proxy) returns uint256 {
     return m;
 }
 
+function boundVaultToken(address proxy) returns address {
+    address s; uint256 m; address vt; uint256 r;
+    s, m, vt, r = accountOf(proxy);
+    return vt;
+}
+
 function psRead() returns uint256 {
     psReads = psReads + 1;
     uint256 v;
     return v;
+}
+
+function psSequencer() returns (address, uint32) {
+    psReads = psReads + 1;
+    address feed;
+    uint32 grace;
+    return (feed, grace);
+}
+
+function spokeReserveOf(address spoke, uint256 rid) returns IAaveV4Spoke.Reserve {
+    IAaveV4Spoke.Reserve r;
+    require r.underlying == spokeUnderlyingOf(spoke, rid) && r.hub == spokeHubOf(spoke);
+    return r;
+}
+
+function positionManagerCall() {
+    positionManagerCalls = positionManagerCalls + 1;
+}
+
+function positionManagerMulticall() returns bytes[] {
+    positionManagerCalls = positionManagerCalls + 1;
+    bytes[] results;
+    return results;
 }
 
 function countedTransferFrom(address t, address spender, address from, address to, uint256 a) returns bool {
@@ -318,31 +425,48 @@ function recordedTransfer(address t, address from, address to, uint256 a) return
     return erc20Transfer(t, from, to, a);
 }
 
-function collPledge(bool rescue) returns (uint256, uint128) {
+function collPledge(address vt, bool rescue) returns (uint256, uint128) {
     collPledgeCalls = collPledgeCalls + 1;
     collPledgeRescue = rescue;
     uint256 id;
     uint128 credited;
+    collCredited[vt] = collCredited[vt] + credited;
     return (id, credited);
 }
 
-function collRecredit(bool rescue) returns (uint128, uint128) {
+function collRecredit(address vt, bool rescue) returns (uint128, uint128) {
     collPledgeCalls = collPledgeCalls + 1;
     collPledgeRescue = rescue;
     uint128 added;
     uint128 rescueUnits;
+    collCredited[vt] = collCredited[vt] + added;
     return (added, rescueUnits);
 }
 
-function collRelease() {
-    collDebitStep = nextStep();
+function collDebit(address vt, mathint units) {
+    require collCredited[vt] >= units;
+    collCredited[vt] = collCredited[vt] - units;
 }
 
-function collReleasePartial() returns (uint128, uint256[]) {
+function collRelease(address vt, uint256 units) {
     collDebitStep = nextStep();
+    collDebit(vt, units);
+}
+
+function collReleasePartial(address vt, uint128 units) returns (uint128, uint256[]) {
+    collDebitStep = nextStep();
+    collDebit(vt, units);
     uint128 remaining;
     uint256[] amounts;
     return (remaining, amounts);
+}
+
+function collReleaseForDeleverage(address vt, uint128 units) returns (uint256[], bool) {
+    collDebitStep = nextStep();
+    collDebit(vt, units);
+    uint256[] amounts;
+    bool closed;
+    return (amounts, closed);
 }
 
 function collReleaseZeroCredit() {
@@ -355,11 +479,12 @@ function feesPaid() returns uint256[] {
 }
 
 function collTotalCredited(address vt) returns uint256 {
-    return collTotalCreditedOf(vt);
+    require collCredited[vt] >= 0 && collCredited[vt] < 2^128;
+    return require_uint256(collCredited[vt]);
 }
 
-function collPending(address vt) returns Pending {
-    Pending p;
+function collPending(address vt) returns AaveAdapterUserLogic.Pending {
+    AaveAdapterUserLogic.Pending p;
     require p.units == collPendingUnitsOf(vt);
     return p;
 }
@@ -419,9 +544,19 @@ function accountData(address spoke, address user) returns IAaveV4Spoke.UserAccou
     return d;
 }
 
-function swapDeleverage() returns (uint256, uint256) {
+// LPVaultSwap.deleverage (2.11): flash-borrows the debt asset (not modelled), calls back the session's repay and release
+// steps once each, in that order, as LPVaultSwap and with the request's own arguments, and sells the released tokens
+// (not modelled).
+function swapDeleverage(AaveAdapterCollateralLogic.DeleverageRequest r) returns (uint256, uint256) {
     deleverageCalls = deleverageCalls + 1;
-    uint256 repaid;
+    env eSwap;
+    require eSwap.msg.sender == LP_VAULT_SWAP();
+    uint256 amount;
+    require amount > 0;
+    uint256 repaid = currentContract.deleverageRepay(eSwap, r.proxy, r.debtReserveId, amount);
+    uint256[] released;
+    bool closed;
+    released, closed = currentContract.deleverageRelease(eSwap, r.proxy, r.position, r.units, r.minAmounts);
     uint256 out;
     return (repaid, out);
 }
@@ -443,8 +578,8 @@ rule borrowEnforcesGates(uint256 marketId, uint256 r, uint256 amount, address re
     requireMarketHub(marketId, hub);
     require fundingHub == regFundingHub(spoke, r);
     mathint nonceBefore = borrowNonce(proxy);
-    PauseState marketHubState = hubPause[hub];
-    PauseState fundingHubState = hubPause[fundingHub];
+    AaveAdapterUserLogic.PauseState marketHubState = hubPause[hub];
+    AaveAdapterUserLogic.PauseState fundingHubState = hubPause[fundingHub];
     bool callerFrozen = regFrozen[e.msg.sender];
     bool receiverFrozen = regFrozen[receiver];
 
@@ -459,7 +594,7 @@ rule borrowEnforcesGates(uint256 marketId, uint256 r, uint256 amount, address re
     assert regApprovedDebtReserve(spoke, r), "borrow named a debt reserve outside the approved set of the proxy's Spoke";
     assert receiver != 0 && lastTransferStep > spokeBorrowStep && lastTransferTo == receiver
         && lastTransferAmount == amount, "borrow paid an unchecked receiver or another amount";
-    assert marketHubState == PauseState.None && fundingHubState == PauseState.None,
+    assert marketHubState == AaveAdapterUserLogic.PauseState.None && fundingHubState == AaveAdapterUserLogic.PauseState.None,
         "borrow ran while the market's Hub or the debt reserve's funding Hub was Frozen or Paused";
     assert !callerFrozen && !receiverFrozen, "borrow ran for a frozen caller or receiver";
     assert preBorrowStep > 0 && preBorrowStep < spokeBorrowStep, "preBorrowCheck did not run before the Spoke borrow";
@@ -507,7 +642,7 @@ rule borrowIsReachable(uint256 marketId, uint256 r, uint256 amount, address rece
 
 // PROP-031 verifies: INV-025, Q-128, Q-161, Q-229
 // PROP-067 verifies: INV-082, Q-253
-rule withdrawLeavingDebtEnforcesFloor(uint256 marketId, PositionRef position, uint256 units, uint256 deadline,
+rule withdrawLeavingDebtEnforcesFloor(uint256 marketId, AaveAdapter.PositionRef position, uint256 units, uint256 deadline,
                                       uint256 minHf, address hub) {
     env e;
     resetScene();
@@ -516,12 +651,12 @@ rule withdrawLeavingDebtEnforcesFloor(uint256 marketId, PositionRef position, ui
     requireBinding(proxy, marketId);
     requireMarketHub(marketId, hub);
     require borrowCountOf[spoke][proxy] > 0;
-    PauseState state = hubPause[hub];
+    AaveAdapterUserLogic.PauseState state = hubPause[hub];
     bool callerFrozen = regFrozen[e.msg.sender];
 
     withdraw(e, marketId, position, units, deadline, minHf);
 
-    assert state != PauseState.Paused, "a withdrawal that leaves debt ran while the market's Hub was Paused";
+    assert state != AaveAdapterUserLogic.PauseState.Paused, "a withdrawal that leaves debt ran while the market's Hub was Paused";
     assert !callerFrozen, "a withdrawal that leaves debt ran for a frozen caller";
     assert preWithdrawStep > 0 && preWithdrawStep < spokeWithdrawStep && preWithdrawProxy == proxy,
         "preWithdrawCheck did not run for the account before the Spoke withdrawal";
@@ -531,7 +666,7 @@ rule withdrawLeavingDebtEnforcesFloor(uint256 marketId, PositionRef position, ui
 
 // PROP-031 verifies: INV-025, Q-229
 // PROP-067 verifies: INV-082, Q-253
-rule removeLiquidityLeavingDebtEnforcesFloor(uint256 marketId, PositionRef position, uint128 units, uint256[] minAmounts,
+rule removeLiquidityLeavingDebtEnforcesFloor(uint256 marketId, AaveAdapter.PositionRef position, uint128 units, uint256[] minAmounts,
                                              uint256 deadline, uint256 minHf, address hub) {
     env e;
     resetScene();
@@ -540,12 +675,12 @@ rule removeLiquidityLeavingDebtEnforcesFloor(uint256 marketId, PositionRef posit
     requireBinding(proxy, marketId);
     requireMarketHub(marketId, hub);
     require borrowCountOf[spoke][proxy] > 0;
-    PauseState state = hubPause[hub];
+    AaveAdapterUserLogic.PauseState state = hubPause[hub];
     bool callerFrozen = regFrozen[e.msg.sender];
 
     removeLiquidity(e, marketId, position, units, minAmounts, deadline, minHf);
 
-    assert state != PauseState.Paused, "a partial removal that leaves debt ran while the market's Hub was Paused";
+    assert state != AaveAdapterUserLogic.PauseState.Paused, "a partial removal that leaves debt ran while the market's Hub was Paused";
     assert !callerFrozen, "a partial removal that leaves debt ran for a frozen caller";
     assert preWithdrawStep > 0 && preWithdrawStep < spokeWithdrawStep && preWithdrawProxy == proxy,
         "preWithdrawCheck did not run for the account before the Spoke withdrawal";
@@ -572,7 +707,7 @@ rule repayMakesNoPolicyRead(address borrower, uint256 marketId, uint256 r, uint2
 
 // PROP-032 verifies: Q-122, Q-158, Q-209, Q-227, Q-241, Q-242, Q-254, Q-260
 // PROP-066 verifies: INV-043, INV-045, INV-081, Q-241, Q-242, Q-260
-rule debtFreeWithdrawMakesNoPolicyRead(uint256 marketId, PositionRef position, uint256 units, uint256 deadline,
+rule debtFreeWithdrawMakesNoPolicyRead(uint256 marketId, AaveAdapter.PositionRef position, uint256 units, uint256 deadline,
                                        uint256 minHf) {
     env e;
     resetScene();
@@ -584,7 +719,7 @@ rule debtFreeWithdrawMakesNoPolicyRead(uint256 marketId, PositionRef position, u
 
 // PROP-032 verifies: Q-122, Q-209, Q-227, Q-241, Q-242, Q-254, Q-260
 // PROP-066 verifies: INV-043, INV-045, INV-081, Q-241, Q-242, Q-260
-rule debtFreeRemovalMakesNoPolicyRead(uint256 marketId, PositionRef position, uint128 units, uint256[] minAmounts,
+rule debtFreeRemovalMakesNoPolicyRead(uint256 marketId, AaveAdapter.PositionRef position, uint128 units, uint256[] minAmounts,
                                       uint256 deadline, uint256 minHf) {
     env e;
     resetScene();
@@ -596,7 +731,7 @@ rule debtFreeRemovalMakesNoPolicyRead(uint256 marketId, PositionRef position, ui
 
 // PROP-032 verifies: Q-180, Q-227, Q-241, Q-242, Q-260
 // PROP-066 verifies: INV-043, INV-045, INV-081, Q-241, Q-242, Q-260
-rule repayAllAndWithdrawMakesNoPolicyRead(uint256 marketId, PositionRef position, uint256 units, uint256[] ids,
+rule repayAllAndWithdrawMakesNoPolicyRead(uint256 marketId, AaveAdapter.PositionRef position, uint256 units, uint256[] ids,
                                           uint256[] maxes, uint256 deadline) {
     env e;
     resetScene();
@@ -632,7 +767,7 @@ rule repayAtZeroDebtIsNoop(address borrower, uint256 marketId, uint256 r, uint25
 rule repayIsReachableInEveryPauseState(address borrower, uint256 marketId, uint256 r, uint256 maxSpend, bool all,
                                        uint256 deadline) {
     env e;
-    require forall address h. hubPause[h] == PauseState.Paused && hubPauseReason[h] == PauseReason.MintPathSuspect;
+    require forall address h. hubPause[h] == AaveAdapterUserLogic.PauseState.Paused && hubPauseReason[h] == AaveAdapterUserLogic.PauseReason.MintPathSuspect;
     require regFrozen[e.msg.sender] && regFrozen[borrower];
     repay(e, borrower, marketId, r, maxSpend, all, deadline);
     satisfy true;
@@ -643,12 +778,12 @@ rule repayIsReachableInEveryPauseState(address borrower, uint256 marketId, uint2
 // ---------------------------------------------------------------------------------------------------------------------
 
 // PROP-057 verifies: INV-043, INV-044, INV-045, INV-046, INV-049, INV-050, INV-067, Q-227, Q-252, Q-254
-rule pledgePauseEffects(uint256 marketId, PositionRef position, uint256 deadline, address hub) {
+rule pledgePauseEffects(uint256 marketId, AaveAdapter.PositionRef position, uint256 deadline, address hub) {
     env e;
     resetScene();
     requireMarketHub(marketId, hub);
-    PauseState state = hubPause[hub];
-    PauseReason reason = hubPauseReason[hub];
+    AaveAdapterUserLogic.PauseState state = hubPause[hub];
+    AaveAdapterUserLogic.PauseReason reason = hubPauseReason[hub];
     address proxyBefore = proxyOf(e.msg.sender, marketId);
     requireBinding(proxyBefore, marketId);
     bool callerFrozen = regFrozen[e.msg.sender];
@@ -656,21 +791,21 @@ rule pledgePauseEffects(uint256 marketId, PositionRef position, uint256 deadline
 
     pledge(e, marketId, position, deadline);
 
-    assert !(state == PauseState.Frozen && noDebt), "a pledge by an account with no debt ran while the market's Hub was Frozen";
-    assert !(state == PauseState.Paused && reason == PauseReason.MintPathSuspect),
+    assert !(state == AaveAdapterUserLogic.PauseState.Frozen && noDebt), "a pledge by an account with no debt ran while the market's Hub was Frozen";
+    assert !(state == AaveAdapterUserLogic.PauseState.Paused && reason == AaveAdapterUserLogic.PauseReason.MintPathSuspect),
         "a pledge ran while the market's Hub was Paused(MintPathSuspect)";
     assert collPledgeCalls == 1, "pledge did not call Collateralization.pledge exactly once";
-    assert ((state == PauseState.Paused && reason == PauseReason.General) || callerFrozen) => collPledgeRescue,
+    assert ((state == AaveAdapterUserLogic.PauseState.Paused && reason == AaveAdapterUserLogic.PauseReason.General) || callerFrozen) => collPledgeRescue,
         "a pledge under Paused(General) or by a frozen caller was not limited to a rescue top-up";
 }
 
 // PROP-057 verifies: INV-043, INV-044, INV-046, INV-049, INV-067, Q-227, Q-252, Q-254
-rule recreditPauseEffects(uint256 marketId, PositionRef position, bytes topUp, uint256 deadline, address hub) {
+rule recreditPauseEffects(uint256 marketId, AaveAdapter.PositionRef position, bytes topUp, uint256 deadline, address hub) {
     env e;
     resetScene();
     requireMarketHub(marketId, hub);
-    PauseState state = hubPause[hub];
-    PauseReason reason = hubPauseReason[hub];
+    AaveAdapterUserLogic.PauseState state = hubPause[hub];
+    AaveAdapterUserLogic.PauseReason reason = hubPauseReason[hub];
     address proxy = proxyOf(e.msg.sender, marketId);
     requireBinding(proxy, marketId);
     bool callerFrozen = regFrozen[e.msg.sender];
@@ -678,19 +813,19 @@ rule recreditPauseEffects(uint256 marketId, PositionRef position, bytes topUp, u
 
     recredit(e, marketId, position, topUp, deadline);
 
-    assert !(state == PauseState.Frozen && noDebt), "a re-credit for an account with no debt ran while the market's Hub was Frozen";
-    assert !(state == PauseState.Paused && reason == PauseReason.MintPathSuspect),
+    assert !(state == AaveAdapterUserLogic.PauseState.Frozen && noDebt), "a re-credit for an account with no debt ran while the market's Hub was Frozen";
+    assert !(state == AaveAdapterUserLogic.PauseState.Paused && reason == AaveAdapterUserLogic.PauseReason.MintPathSuspect),
         "a re-credit ran while the market's Hub was Paused(MintPathSuspect)";
-    assert ((state == PauseState.Paused && reason == PauseReason.General) || callerFrozen) => collPledgeRescue,
+    assert ((state == AaveAdapterUserLogic.PauseState.Paused && reason == AaveAdapterUserLogic.PauseReason.General) || callerFrozen) => collPledgeRescue,
         "a re-credit under Paused(General) or by a frozen caller was not limited to a rescue top-up";
 }
 
 // A Frozen market Hub admits a top-up of an indebted account (no rescue requirement).
 // PROP-057 verifies: INV-044, Q-227
-rule topUpIsReachableWhileFrozen(uint256 marketId, PositionRef position, uint256 deadline, address hub) {
+rule topUpIsReachableWhileFrozen(uint256 marketId, AaveAdapter.PositionRef position, uint256 deadline, address hub) {
     env e;
     requireMarketHub(marketId, hub);
-    require hubPause[hub] == PauseState.Frozen;
+    require hubPause[hub] == AaveAdapterUserLogic.PauseState.Frozen;
     address proxy = proxyOf(e.msg.sender, marketId);
     requireBinding(proxy, marketId);
     require proxy != 0 && borrowCountOf[boundSpoke(proxy)][proxy] > 0;
@@ -700,37 +835,61 @@ rule topUpIsReachableWhileFrozen(uint256 marketId, PositionRef position, uint256
 
 // A rescue top-up while the market's Hub is Paused(General) is reachable.
 // PROP-057 verifies: INV-067, Q-252
-rule rescueTopUpIsReachableUnderGeneralPause(uint256 marketId, PositionRef position, uint256 deadline, address hub) {
+rule rescueTopUpIsReachableUnderGeneralPause(uint256 marketId, AaveAdapter.PositionRef position, uint256 deadline, address hub) {
     env e;
     requireMarketHub(marketId, hub);
-    require hubPause[hub] == PauseState.Paused && hubPauseReason[hub] == PauseReason.General;
+    require hubPause[hub] == AaveAdapterUserLogic.PauseState.Paused && hubPauseReason[hub] == AaveAdapterUserLogic.PauseReason.General;
     pledge(e, marketId, position, deadline);
     satisfy collPledgeRescue;
 }
 
 // PROP-057 verifies: INV-043, INV-049, INV-050, Q-227, Q-255
-rule repayWithCollateralRefusesMintPathPause(RepayWithCollateralParams p, address hub) {
+rule repayWithCollateralRefusesMintPathPause(AaveAdapter.RepayWithCollateralParams p, address hub) {
     env e;
     requireMarketHub(p.marketId, hub);
-    require hubPause[hub] == PauseState.Paused && hubPauseReason[hub] == PauseReason.MintPathSuspect;
+    requireBinding(proxyOf(e.msg.sender, p.marketId), p.marketId);
+    require hubPause[hub] == AaveAdapterUserLogic.PauseState.Paused && hubPauseReason[hub] == AaveAdapterUserLogic.PauseReason.MintPathSuspect;
     repayWithCollateral@withrevert(e, p);
     assert lastReverted, "repayWithCollateral ran while the market's Hub was Paused(MintPathSuspect)";
 }
 
 // PROP-057 verifies: INV-043, INV-049, Q-227, Q-255
-rule repayWithCollateralIsReachableUnderGeneralPause(RepayWithCollateralParams p, address hub) {
+rule repayWithCollateralIsReachableUnderGeneralPause(AaveAdapter.RepayWithCollateralParams p, address hub) {
     env e;
     requireMarketHub(p.marketId, hub);
-    require hubPause[hub] == PauseState.Paused && hubPauseReason[hub] == PauseReason.General;
+    requireBinding(proxyOf(e.msg.sender, p.marketId), p.marketId);
+    require hubPause[hub] == AaveAdapterUserLogic.PauseState.Paused && hubPauseReason[hub] == AaveAdapterUserLogic.PauseReason.General;
     repayWithCollateral(e, p);
     satisfy deleverageCalls == 1;
 }
 
 // PROP-057 verifies: INV-043, INV-049, Q-227, Q-255
-rule repayWithCollateralIsReachableWhileFrozen(RepayWithCollateralParams p, address hub) {
+rule repayWithCollateralIsReachableWhileFrozen(AaveAdapter.RepayWithCollateralParams p, address hub) {
     env e;
     requireMarketHub(p.marketId, hub);
-    require hubPause[hub] == PauseState.Frozen;
+    requireBinding(proxyOf(e.msg.sender, p.marketId), p.marketId);
+    require hubPause[hub] == AaveAdapterUserLogic.PauseState.Frozen;
     repayWithCollateral(e, p);
     satisfy deleverageCalls == 1;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// PositionManagerApproved by construction (REQ-PROXY-008, REQ-RISK-088)
+// ---------------------------------------------------------------------------------------------------------------------
+
+// No Adapter method, whatever its arguments and caller, reaches the Spoke's position-manager surface: every call a
+// proxy makes is one the Adapter builds through `execute` (dispatched to the real PositionProxy), and the Adapter's
+// own calls are summarised, so a call with one of these selectors from any contract of the scene would reach
+// `positionManagerCall` and be counted. The struct of `setUserPositionManagersWithSig` comes into the scene through
+// `AaveAdapterSpokeTypesHarness`, a stateless contract that is never called. The selector-allowlist tests
+// (AaveAdapter.Access.unit.t.sol) check the same set on the compiled code and on every call a proxy makes.
+rule noPositionManagerApproval(method f) filtered { f -> f.contract == currentContract } {
+    env e;
+    calldataarg args;
+    resetScene();
+
+    f(e, args);
+
+    assert positionManagerCalls == 0,
+        "an Adapter method reached a Spoke's position-manager approval, renouncement or multicall";
 }

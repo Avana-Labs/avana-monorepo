@@ -23,8 +23,8 @@ interface ILPVaultSwapErrors {
     /// @custom:spec REQ-SWAP-004
     error UnknownMarket();
 
-    /// @notice The debt reserve is not a debt reserve the MarketRegistry enabled for the Spoke, or the Spoke reports it
-    /// not borrowable.
+    /// @notice The debt reserve is not a debt reserve the MarketRegistry enabled for the Spoke. Aave's `borrowable` flag
+    /// is not part of the test: a reserve whose new borrowing Aave turned off is still repaid and liquidated.
     /// @param debtReserveId The rejected reserve.
     /// @custom:spec REQ-SWAP-087, REQ-SWAP-095
     error UnknownDebtReserve(uint256 debtReserveId);
@@ -205,4 +205,18 @@ interface ILPVaultSwapErrors {
     /// @param feeShareBps The rejected share, bps.
     /// @custom:spec SPEC-LIQ-009
     error InvalidFeeShare(uint256 feeShareBps);
+
+    /// @notice A constructor argument of the implementation or a logic contract is the zero address, or `initialize`
+    /// was given a zero timelock.
+    /// @custom:spec REQ-SWAP-040
+    error ZeroAddress();
+
+    /// @notice A logic contract passed to the implementation's constructor reports another kind or other immutables.
+    /// @custom:spec REQ-SWAP-040
+    error InvalidLogic();
+
+    /// @notice A body of `liquidate`, `settlePending`, `deleverage` or `onFlashLoan` was called on the implementation or
+    /// on its logic contract directly instead of through the LPVaultSwap proxy.
+    /// @custom:spec REQ-SWAP-040, REQ-SWAP-043
+    error NotDelegated();
 }

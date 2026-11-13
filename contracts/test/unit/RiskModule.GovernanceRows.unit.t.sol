@@ -13,16 +13,24 @@ contract RiskModuleGovernanceRowsUnitTest is RiskModuleFixture {
         _deployRiskWorld();
     }
 
-    // TEST-035 verifies: REQ-ACCESS-035, REQ-ACCESS-081, REQ-ACCESS-136
+    // TEST-035 verifies: REQ-ACCESS-035, REQ-ACCESS-081, REQ-ACCESS-136, REQ-RISK-015, REQ-ADAPTER-017, REQ-RISK-032, REQ-RISK-033, REQ-RISK-035, REQ-RISK-037
     // Sources: 2.15 REQ-ACCESS-035 (the RiskModule holds no switch and no parameter)
     function test_TEST_035_noMarketSwitchOnTheRiskModule() public {
-        string[6] memory absent = [
+        // The market status (Active, Offboarding, wind-down, Closed) and the Hub's pause state are the MarketRegistry's;
+        // the RiskModule can neither set nor clear them (REQ-RISK-033, REQ-RISK-037).
+        string[12] memory absent = [
             "freezeMarket(uint256)",
             "unfreezeMarket(uint256)",
             "pauseMarket(uint256)",
             "setPoolBroken(uint256,bool)",
             "isPoolBroken(uint256)",
-            "liftHalting(uint256)"
+            "liftHalting(uint256)",
+            "setMarketOffboarding(uint256)",
+            "activateMarket(uint256)",
+            "stepWindDown(uint256)",
+            "closeMarket(uint256)",
+            "unfreeze(address)",
+            "unpause(address)"
         ];
         for (uint256 i = 0; i < absent.length; ++i) {
             (bool ok,) = address(riskModule).call(abi.encodeWithSignature(absent[i], mid, true));

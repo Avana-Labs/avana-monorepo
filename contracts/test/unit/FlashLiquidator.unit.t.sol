@@ -429,20 +429,18 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         _liquidate(_exampleRequest());
     }
 
-    /// @notice A market token that refuses the helper: LPVaultSwap escrows the residue credited to the helper and the
-    /// liquidation completes; the credit is claimable only to `feeRecipient`, never to the caller.
+    /// @notice A market token that refuses the helper: LPVaultSwap escrows the residue credited to the helper, the
+    /// liquidation completes and the helper claims the credit its call created to the caller; a later `claimEscrowed`
+    /// finds nothing.
     // TEST-289 verifies: REQ-HELPER-010, REQ-SWAP-076, Q-389
     function test_TEST_289_residueRefusedByHelperEscrowedToHelper() public {
         lvs.addResidue(usdtToken, 0.4e6);
         usdtToken.setBlocked(address(helper), true);
         uint256 payout = _liquidate(_exampleRequest());
         assertEq(payout, EXAMPLE_PAYOUT);
-        assertEq(escrow.claimable(address(usdtToken), address(helper)), 0.4e6, "credited to the helper");
-        assertEq(usdtToken.balanceOf(caller), 0);
-        vm.prank(caller);
-        helper.claimEscrowed(address(usdtToken));
-        assertEq(usdtToken.balanceOf(caller), 0, "never to the caller");
-        assertEq(usdtToken.balanceOf(feeRecipient), 0.4e6, "to feeRecipient");
+        assertEq(escrow.claimable(address(usdtToken), address(helper)), 0, "claimed in the call");
+        assertEq(usdtToken.balanceOf(caller), 0.4e6, "to the caller");
+        assertEq(usdtToken.balanceOf(feeRecipient), 0, "not to feeRecipient");
     }
 
     // ─── Blocklists and transfer fees ───
@@ -469,20 +467,18 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
     }
 
     /// @notice A transfer fee on the debt asset: the helper receives less than `X` from the caller and the Pool, so
-    /// LPVaultSwap's pull of `X` fails and the call reverts; the caller then funds `liquidate` itself.
+    /// LPVaultSwap's pull of `X` fails and the whole call reverts, owing no loan or premium. A caller-funded
+    /// `liquidate` meets Aave V4's `InsufficientTransferred` instead (TEST-048).
     // TEST-174 verifies: REQ-HELPER-007, REQ-SWAP-108, REQ-SWAP-123
     function test_TEST_174_transferFeeOnDebtAssetReverts() public {
         usdcToken.setFeeBps(10);
         vm.expectPartialRevert(IERC20Errors.ERC20InsufficientBalance.selector);
         _liquidate(_exampleRequest());
-        _fund(caller, address(lvs), 1950e6);
-        vm.prank(caller);
-        lvs.liquidate(_params(1950e6));
-        assertEq(lvs.lastKf(), 1948.05e6, "LPVaultSwap measures Kf when the caller funds directly");
+        assertEq(lvs.calls(), 0, "nothing reached LPVaultSwap");
     }
 
-    /// @notice A balance the helper held before the call never pays for it: a fee that would leave the helper below
-    /// its start reverts `PayoutTooLow(0, minPayout)`; a fee the payout covers is paid from the payout.
+    /// @notice A balance the helper held before the call never pays for it: a payout that arrives short and would leave
+    /// the helper below its start reverts `PayoutTooLow(0, minPayout)`; a shortfall the payout covers is paid from it.
     // TEST-174 verifies: REQ-HELPER-001, REQ-HELPER-007, REQ-HELPER-008, REQ-SWAP-108
     function test_TEST_174_transferFeePaidFromPayoutNeverFromHelperBalance() public {
         usdcToken.mint(address(helper), 1e6);
@@ -540,7 +536,8 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
     }
 
     /// @notice Every external call the helper makes goes to the Pool (and its address provider and ACLManager for the
-    /// premium quote), LPVaultSwap, the MarketRegistry, the ParameterStore, the debt asset or the market's tokens.
+    /// premium quote), LPVaultSwap, the MarketRegistry, the ParameterStore, the PayoutEscrow (credit reads), the debt
+    /// asset or the market's tokens (no route is recorded in this fixture).
     // TEST-290 verifies: REQ-HELPER-012, REQ-HELPER-001
     function test_TEST_290_callsOnlyFixedTargets() public {
         lvs.addResidue(usdtToken, 1e6);
@@ -559,7 +556,8 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
             assertTrue(
                 target == address(helper) || target == address(aavePool) || target == address(provider)
                     || target == address(acl) || target == address(lvs) || target == address(registry)
-                    || target == address(store) || target == address(usdcToken) || target == address(usdtToken),
+                    || target == address(store) || target == address(usdcToken) || target == address(usdtToken)
+                    || target == address(escrow),
                 "call to an unlisted target"
             );
         }

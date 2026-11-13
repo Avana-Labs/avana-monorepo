@@ -90,7 +90,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
 
     // ─── registerIntegration (TEST-024) ───
 
-    // TEST-024 verifies: REQ-VTOKEN-044, REQ-AMM-CORE-001, Q-291, Q-374
+    // TEST-024 verifies: REQ-VTOKEN-044, REQ-AMM-CORE-001, Q-291, Q-374, REQ-VAULT-174
     function test_TEST_024_registerIntegrationWritesOnceAndEmits() public {
         assertEq(factory.lpVaultOf(V3_ID), address(v3Vault), "v3 registered in setUp");
         LPVaultIdentityMock slip = _vault(SLIPSTREAM_ID, AERODROME_SLIPSTREAM);
@@ -116,7 +116,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
         factory.registerIntegration(SLIPSTREAM_ID, address(slip));
     }
 
-    // TEST-024 verifies: REQ-VTOKEN-044, REQ-VTOKEN-045, Q-291
+    // TEST-024 verifies: REQ-VTOKEN-044, REQ-VTOKEN-045, Q-291, REQ-VAULT-174
     function test_TEST_024_registerIntegrationRefusesBadIdOrAddress() public {
         LPVaultIdentityMock zeroId = _vault(0, UNISWAP_V3);
         _expectInvalidIntegration(0, address(zeroId));

@@ -141,7 +141,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.04,
+  "seconds": 0.03,
   "model": "fv_ctl_registry"
  },
  {
@@ -179,7 +179,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_registry"
  },
  {

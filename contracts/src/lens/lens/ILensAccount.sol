@@ -34,12 +34,25 @@ interface ILensAccount {
         uint256 marketId
     ) external view returns (AccountView memory account);
 
+    /// @notice Returns `getAccount(wallet, m)` for each market `m` of `marketIds`, in order.
+    /// @dev Each market's account has its own health factor and none backs another, so no combined value is computed.
+    /// Bounded by `marketIds.length`.
+    /// @param wallet The wallet.
+    /// @param marketIds The markets.
+    /// @return accounts One account view per market, in the order of `marketIds`.
+    /// @custom:spec REQ-LENS-040, Q-307
+    function getAccounts(
+        address wallet,
+        uint256[] calldata marketIds
+    ) external view returns (AccountView[] memory accounts);
+
     /// @notice Returns one page of an account's records (at most 16) in Collateralization's seizure-list order.
     /// @dev Read with `Collateralization.getAccountRecords(proxy, vaultToken, offset, limit)`
     /// with the vault token of the proxy's market; zero-credit records are not in
     /// the list. Returns an empty array for `limit == 0` or an `offset` beyond the last record; fails with
     /// `LimitTooHigh` above `LENS_MAX_PAGE`.
-    /// @param proxy The account's proxy; its market is the proxy's `MARKET_ID()`.
+    /// @param proxy The account's proxy; its market is the AaveAdapter's binding `accountOf(proxy)` (`UnknownProxy` when
+    /// the Adapter did not create it).
     /// @param offset Position of the first record returned.
     /// @param limit Maximum number of records.
     /// @return records The page.

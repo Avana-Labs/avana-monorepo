@@ -17,7 +17,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.03,
+  "seconds": 0.02,
   "model": "fv_ctl_params"
  },
  {
@@ -37,7 +37,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_params"
  },
  {
@@ -78,7 +78,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_params"
  },
  {
@@ -118,7 +118,7 @@
   ],
   "detail": "Changed for the AMM-neutral design: one swap leg per pool token into the debt asset, so the two-leg inequality with a buy allowance became the single-leg inequality of REQ-PSTORE-021. minLB is Aave configuration read at each check; an Aave bonus cut after activation is drift (REQ-HUB-108).",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_params"
  },
  {
@@ -288,7 +288,7 @@
    "T-71",
    "T-54"
   ],
-  "detail": "23 parameters compared over 6 page readings; 20 ParameterStore compiled tighten selectors compared with 3 page readings; 8 SettlementBudget readings checked empty",
+  "detail": "25 parameters compared over 6 page readings; 22 ParameterStore compiled tighten selectors compared with 3 page readings; 8 SettlementBudget readings checked empty",
   "counterexample": null,
   "seconds": 0.0,
   "model": "fv_ctl_params"
@@ -408,7 +408,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_params"
  },
  {
@@ -433,7 +433,7 @@
   "id": "FV-CTL-62",
   "title": "SHORT_ELIGIBLE (2.15 launch list) holds no loosen, structural set, role, upgrade, implementation-setter, initializer, timelock, price-source, route, keeper-add, unfreeze or reset selector; setShortDelaySelector(..., true) admits only SHORT_ELIGIBLE pairs, so no loosen selector can ever be short",
   "status": "Verified",
-  "method": "exhaustive enumeration (669 cases)",
+  "method": "exhaustive enumeration (695 cases)",
   "verifies": [
    "REQ-ACCESS-142",
    "REQ-ACCESS-155",
@@ -445,7 +445,7 @@
    "T-71",
    "T-54"
   ],
-  "detail": "32 SHORT_ELIGIBLE pairs; 48 ParameterStore loosen or set selectors",
+  "detail": "34 SHORT_ELIGIBLE pairs; 50 ParameterStore loosen or set selectors",
   "counterexample": null,
   "seconds": 0.0,
   "model": "fv_ctl_params"
@@ -486,7 +486,7 @@
    "T-54",
    "T-71"
   ],
-  "detail": "20 short selectors read from the owning pages",
+  "detail": "22 short selectors read from the owning pages",
   "counterexample": null,
   "seconds": 0.0,
   "model": "fv_ctl_params"

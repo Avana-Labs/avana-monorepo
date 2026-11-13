@@ -32,6 +32,9 @@ contract SlipstreamIntegration is ClLPVaultCustody, ClLPVaultMarkets, ISlipstrea
     uint8 internal constant GENERATION_COUNT = 4;
     /// @dev Base's block interval, seconds (`SPEC-ORC-022`, `AMMN-RT-08`).
     uint256 private constant BLOCK_TIME = 2;
+    /// @dev `BLOCK_TIME`, set in the constructor: the shared base reads the interval through a view hook, which the
+    /// Uniswap v3 LPVault fills from its constructor argument (`REQ-AMM-V3-012`).
+    uint256 private immutable _BLOCK_TIME;
     /// @dev Bit offset of the generation byte in a position key.
     uint256 private constant GENERATION_SHIFT = 248;
     /// @dev Largest tick spacing a market accepts: `maxLiquidityPerTick(6,931) <= 2^120 - 1 < maxLiquidityPerTick(6,932)`,
@@ -98,6 +101,7 @@ contract SlipstreamIntegration is ClLPVaultCustody, ClLPVaultMarkets, ISlipstrea
         ) revert InvalidDeployment();
         (_NPM_0, _NPM_1, _NPM_2, _NPM_3) = (npms[0], npms[1], npms[2], npms[3]);
         (_FACTORY_0, _FACTORY_1, _FACTORY_2, _FACTORY_3) = (factories[0], factories[1], factories[2], factories[3]);
+        _BLOCK_TIME = BLOCK_TIME;
     }
 
     /// @inheritdoc IAmmIntegration
@@ -252,8 +256,8 @@ contract SlipstreamIntegration is ClLPVaultCustody, ClLPVaultMarkets, ISlipstrea
         return gauge != address(0) && _manager(positionKey).ownerOf(_tokenId(positionKey)) == gauge;
     }
 
-    function _blockTime() internal pure override returns (uint256) {
-        return BLOCK_TIME;
+    function _blockTime() internal view override returns (uint256) {
+        return _BLOCK_TIME;
     }
 
     // ─── Internal ───

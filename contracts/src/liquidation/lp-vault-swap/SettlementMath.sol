@@ -6,9 +6,12 @@ pragma solidity 0.8.28;
 import {ILPVaultSwapErrors} from "./ILPVaultSwapErrors.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+// The valuation checks (decimals, zero prices) revert inside the callers' leg loops by design: a token with an
+// invalid price or decimals must stop the settlement (SPEC-LIQ-004).
+// forge-lint: disable-start(require-revert-in-loop)
 /// @title SettlementMath
-/// @notice The settlement arithmetic of a liquidation, in base units of the repaid debt asset `T`: net bonus, flash
-/// costs and effective slippage; oracle values of the seizure, of each released leg and of one raw unit; the recovery
+/// @notice The settlement arithmetic of a liquidation, in base units of the repaid debt asset `T`: net bonus and
+/// effective slippage; oracle values of the seizure, of each released leg and of one raw unit; the recovery
 /// floor and the pending-settlement floor; each leg's oracle-derived minimum output; the caller's shortfall top-up and
 /// settlement gap; the waterfall into Avana's fee, the keeper reward and the borrower surplus; the caller's payout; the
 /// flash premium bound; and repay-with-collateral sizing.
@@ -21,9 +24,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// 2^244, use OpenZeppelin `Math.mulDiv`. Bounds: amounts, `V` and the flash premium below 2^200, waterfall terms
 /// below 2^129, Aave's bonus below 2^32, 8-decimal prices below 2^64, bps arguments at most 10^4 (`maxShortfallBps`
 /// at most 5,000, `maxFlashFeeBps` at most 100).
-/// Liquidation calls the flash-aware functions with `F = φ = φD = τ = 0`, `costsBps = 0` and `Kr = Kf`, the caller
-/// funding: `liquidate` takes no flash loan (`Q-404`), so they reduce to the formulas of 2.11 (`s` with no premium term,
-/// `g = max(0, D + A + B − Kf − R)`, `keeperOut = Kf + R' − D − A − B`); `deleverage` uses the flash terms.
+/// No liquidation function has a flash principal, flash premium or transfer-fee term: `liquidate` takes no flash loan
+/// (`Q-404`), so `s` has no premium term, `g = max(0, D + A + B − Kf − R)` and `keeperOut = Kf + R' − D − A − B`, with
+/// `Kf` the caller funding measured by balance delta. Only the `deleverage` sizing carries the flash fee cap and premium.
 /// @custom:spec SPEC-LIQ-001, SPEC-LIQ-002, SPEC-LIQ-003, SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-014, SPEC-LIQ-015, SPEC-LIQ-018, SPEC-LIQ-019, SPEC-LIQ-020, SPEC-LIQ-022, SPEC-SET-001, REQ-SWAP-100, REQ-SWAP-121, INV-034, INV-035, INV-036, INV-083, INV-086, Q-240, Q-404
 library SettlementMath {
     /// @notice 100 % in basis points.
@@ -39,8 +42,8 @@ library SettlementMath {
     uint8 internal constant MAX_DECIMALS = 36;
 
     /// @notice The split of the realized surplus `S` (`SPEC-LIQ-008`, `SPEC-LIQ-009`, `SPEC-LIQ-022`).
-    /// @param surplus `S = max(0, R_f − D − φD)`, with `R_f = max(R, minRec)`.
-    /// @param oracleGain `G = max(0, V − D − φD)`.
+    /// @param surplus `S = max(0, R_f − D)`, with `R_f = max(R, minRec)`.
+    /// @param oracleGain `G = max(0, V − D)`.
     /// @param avanaFee `A = min(⌊G × avanaFeeShareBps / 10⁴⌋, S)`.
     /// @param keeperReward `kr = min(S, G) − A`.
     /// @param borrowerSurplus `B = S − A − kr`.
@@ -67,31 +70,17 @@ library SettlementMath {
         return BPS + (bonus - BPS) * (BPS - liquidationFee) / BPS;
     }
 
-    /// @notice Flash costs `costsBps = ⌈φ × 10⁴ / F⌉` when `F > 0`, else 0, rounded up.
-    /// @param premium `φ`, the flash premium charged on `flashAmount`.
-    /// @param flashAmount `F`, the flash principal.
-    /// @custom:spec SPEC-LIQ-002
-    function costsBps(
-        uint256 premium,
-        uint256 flashAmount
-    ) internal pure returns (uint256) {
-        if (flashAmount == 0) return 0;
-        return Math.ceilDiv(premium * BPS, flashAmount);
-    }
-
-    /// @notice Effective slippage `s = min(allowance, ⌊10⁴ × (bNet − 10⁴ − costsBps) / bNet⌋)` if
-    /// `bNet > 10⁴ + costsBps`, else 0; rounded down. Always below 10⁴.
+    /// @notice Effective slippage `s = min(allowance, ⌊10⁴ × (bNet − 10⁴) / bNet⌋)` if `bNet > 10⁴`, else 0; rounded
+    /// down. Always below 10⁴. A liquidation has no cost term (`SPEC-LIQ-002`): it takes no flash loan.
     /// @param bNet Net bonus from `netBonus`.
-    /// @param costs `costsBps` from `costsBps`.
     /// @param allowanceBps The market's `slippageAllowanceBps`.
-    /// @custom:spec SPEC-LIQ-003, SPEC-LIQ-016
+    /// @custom:spec SPEC-LIQ-002, SPEC-LIQ-003, SPEC-LIQ-016
     function effectiveSlippage(
         uint256 bNet,
-        uint256 costs,
         uint256 allowanceBps
     ) internal pure returns (uint256) {
-        if (bNet <= BPS || bNet - BPS <= costs) return 0;
-        uint256 cap = BPS * (bNet - BPS - costs) / bNet;
+        if (bNet <= BPS) return 0;
+        uint256 cap = BPS * (bNet - BPS) / bNet;
         return allowanceBps < cap ? allowanceBps : cap;
     }
 
@@ -264,27 +253,23 @@ library SettlementMath {
         return recovered > minRec ? recovered : minRec;
     }
 
-    /// @notice Settlement gap `g = max(0, D + φ + τ + A + B − Kr − R)`: what the caller pays inside `shortfall` so that
-    /// its own funds and the recovery cover the debt, the whole flash premium, the transfer-fee loss on the flash
-    /// principal and the payouts already due from the recovery. `A` and `B` come from `payouts` on `R_f`.
+    /// @notice Settlement gap `g = max(0, D + A + B − Kf − R)`: what the caller pays inside `shortfall` so that its own
+    /// funding and the recovery cover the debt and the payouts already due from the recovery. `A` and `B` come from
+    /// `payouts` on `R_f`. Because `D ≤ Kf`, `g` never exceeds the floor gap `max(0, minRec − R)` (`SPEC-LIQ-019`).
     /// @param debtRepaid `D`.
-    /// @param flashPremium `φ`, the premium charged on the whole flash amount `F`.
-    /// @param transferCost `τ = F − Fr`, the flash principal lost to a transfer fee on `T` (0 without one).
     /// @param avanaFee `A`.
     /// @param borrowerSurplus `B`.
-    /// @param callerFunds `Kr`, the caller funds received.
+    /// @param callerFunds `Kf`, the caller funding measured by balance delta.
     /// @param recovered `R`.
     /// @custom:spec SPEC-SET-001, SPEC-LIQ-019, REQ-SWAP-029
     function roundingGap(
         uint256 debtRepaid,
-        uint256 flashPremium,
-        uint256 transferCost,
         uint256 avanaFee,
         uint256 borrowerSurplus,
         uint256 callerFunds,
         uint256 recovered
     ) internal pure returns (uint256) {
-        return _subFloor(debtRepaid + flashPremium + transferCost + avanaFee + borrowerSurplus, callerFunds, recovered);
+        return _subFloor(debtRepaid + avanaFee + borrowerSurplus, callerFunds, recovered);
     }
 
     /// @notice The caller's top-up `shortfall = max(0, minRec − R, g)`. Reverts with `RecoveryBelowFloor` if
@@ -308,55 +293,48 @@ library SettlementMath {
 
     // ------------------------------------------------------------------------------------------------------- waterfall
 
-    /// @notice Surplus, oracle gain and their split: `S = max(0, R_f − D − φD)`, `G = max(0, V − D − φD)`,
+    /// @notice Surplus, oracle gain and their split: `S = max(0, R_f − D)`, `G = max(0, V − D)`,
     /// `A = min(⌊G × avanaFeeShareBps / 10⁴⌋, S)`, `kr = min(S, G) − A`, `B = S − A − kr = max(0, S − G)`.
     /// `A + kr + B = S` for every input. Reverts with `InvalidFeeShare` if `avanaFeeShareBps > 10⁴`; within it
     /// `A ≤ min(S, G)`, so `kr` never saturates.
     /// @param value `V`, below 2^200.
     /// @param debtRepaid `D`.
-    /// @param premiumOnDebt `φD`.
     /// @param recoveredWithFloor `R_f = max(R, minRec)` from `recoveryWithFloor`.
     /// @param feeShareBps `avanaFeeShareBps`.
-    /// @custom:spec SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-022, INV-036, INV-086
+    /// @custom:spec SPEC-LIQ-007, SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-022, INV-036, INV-086
     function payouts(
         uint256 value,
         uint256 debtRepaid,
-        uint256 premiumOnDebt,
         uint256 recoveredWithFloor,
         uint256 feeShareBps
     ) internal pure returns (Payouts memory p) {
         if (feeShareBps > BPS) revert ILPVaultSwapErrors.InvalidFeeShare(feeShareBps);
-        p.surplus = _subFloor(recoveredWithFloor, debtRepaid, premiumOnDebt);
-        p.oracleGain = _subFloor(value, debtRepaid, premiumOnDebt);
+        p.surplus = _subFloor(recoveredWithFloor, debtRepaid, 0);
+        p.oracleGain = _subFloor(value, debtRepaid, 0);
         uint256 feeOnGain = p.oracleGain * feeShareBps / BPS;
         p.avanaFee = feeOnGain < p.surplus ? feeOnGain : p.surplus;
         p.keeperReward = (p.surplus < p.oracleGain ? p.surplus : p.oracleGain) - p.avanaFee;
         p.borrowerSurplus = p.surplus - p.avanaFee - p.keeperReward;
     }
 
-    /// @notice Caller payout `keeperOut = (K + F + R') − (D + (F + φ) + A + B)`; reverts with `InsufficientProceeds`
-    /// if the first sum is smaller. With a transfer fee on `T` the caller passes the measured `Kr`, `Fr` and `P`. A
-    /// shortfall that covers the settlement gap makes the first sum at least the second unless the repayment transfer
-    /// itself loses units to a fee (`P > F + φ`).
-    /// @param callerFunds `K` (`Kr`).
-    /// @param flashReceived `F` (`Fr`).
-    /// @param recoveredWithTopUp `R'`.
+    /// @notice Caller payout `keeperOut = (Kf + R') − (D + A + B)`; reverts with `InsufficientProceeds` if the first
+    /// sum is smaller (defensive: `D ≤ Kf` and `A + B ≤ max(0, R' − D)` keep it non-negative). `Kf` is the measured
+    /// funding; a transfer fee on `T` itself reverts in Aave V4's Hub before this runs (REQ-SWAP-123).
+    /// @param callerFunds `Kf`.
+    /// @param recoveredWithTopUp `R' = R + shortfall`.
     /// @param debtRepaid `D`.
-    /// @param flashRepaid `F + φ` (`P`).
     /// @param avanaFee `A`.
     /// @param borrowerSurplus `B`.
     /// @custom:spec SPEC-LIQ-010, REQ-SWAP-026, REQ-SWAP-062, INV-035
     function keeperPayout(
         uint256 callerFunds,
-        uint256 flashReceived,
         uint256 recoveredWithTopUp,
         uint256 debtRepaid,
-        uint256 flashRepaid,
         uint256 avanaFee,
         uint256 borrowerSurplus
     ) internal pure returns (uint256) {
-        uint256 inflow = callerFunds + flashReceived + recoveredWithTopUp;
-        uint256 outflow = debtRepaid + flashRepaid + avanaFee + borrowerSurplus;
+        uint256 inflow = callerFunds + recoveredWithTopUp;
+        uint256 outflow = debtRepaid + avanaFee + borrowerSurplus;
         if (inflow < outflow) revert ILPVaultSwapErrors.InsufficientProceeds();
         return inflow - outflow;
     }
@@ -461,3 +439,4 @@ library SettlementMath {
         return a > c ? a - c : 0;
     }
 }
+// forge-lint: disable-end(require-revert-in-loop)

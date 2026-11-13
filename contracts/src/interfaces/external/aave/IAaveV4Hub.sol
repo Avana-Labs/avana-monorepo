@@ -93,6 +93,14 @@ interface IAaveV4Hub {
         uint256 assetId
     ) external view returns (uint256);
 
+    /// @notice Added shares that `assets` of asset `assetId` would mint now, rounded down.
+    /// @dev Read by LPVaultSwap's `settlePending`, which funds a Coverage Spoke only when the amount is worth at least
+    /// one share and carries it otherwise (REQ-SWAP-070).
+    function previewAddByAssets(
+        uint256 assetId,
+        uint256 assets
+    ) external view returns (uint256);
+
     /// @notice Total drawn shares of asset `assetId`.
     /// @dev Read by the RiskModule drift check, which requires zero for a vault-token asset.
     function getAssetDrawnShares(
@@ -150,6 +158,12 @@ interface IAaveV4Hub {
     function isSpokeListed(
         uint256 assetId,
         address spoke
+    ) external view returns (bool);
+
+    /// @notice Whether `underlying` is listed as an asset of the Hub.
+    /// @dev Read by the AaveAdapter's receiver rule: a borrow may not be sent to a token listed on the funding Hub.
+    function isUnderlyingListed(
+        address underlying
     ) external view returns (bool);
 
     /// @notice Spoke at position `index` in asset `assetId`'s Spoke list.

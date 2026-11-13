@@ -99,7 +99,7 @@ jobs:
 
   gate:
     # The one check branch protection requires: it passes only when every package job passed.
-    name: gate
+    name: services-gate
     if: always()
     needs: [check]
     runs-on: ubuntu-24.04

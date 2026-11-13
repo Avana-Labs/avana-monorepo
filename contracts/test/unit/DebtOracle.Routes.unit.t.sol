@@ -112,9 +112,9 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
         // A route value above MAX_ROUTE_ANSWER is Invalid even inside the pinned bounds.
         store.setFeed(address(pUsd), 8, 0, 1e30, 86_400, 1800);
         pUsd.setDecimals(8);
-        pUsd.push(1e12 + 1, block.timestamp);
+        pUsd.push(1e18 + 1, block.timestamp);
         _assertFailedOver(99_990_000);
-        pUsd.push(1e12, block.timestamp);
+        pUsd.push(1e18, block.timestamp);
         assertEq(uint8(_view().routeUsed), uint8(RouteSlot.Primary));
         // A two-leg route worth 0 is Invalid: the asset has no route.
         pUsd.push(0, block.timestamp);

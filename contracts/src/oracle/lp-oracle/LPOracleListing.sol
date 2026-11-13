@@ -51,7 +51,8 @@ abstract contract LPOracleListing is LPOracleViews {
         failed |= _checkSharedFeeds(config) | _checkTolerances(config) | _checkBand(config);
         if (config.maxQuoteChangeBps == 0) failed |= LPOracleCodes.CHECK_QUOTE_CAP;
         if (_HAS_SEQUENCER != (config.sequencer.feed != address(0))) failed |= LPOracleCodes.CHECK_SEQUENCER;
-        failed |= _checkAtCurrentQuotes(config) | _checkMarket(config.marketId);
+        (bool readOk, uint256 registered) = _registeredMarket();
+        failed |= _checkPrices(config, readOk && registered != 0) | _checkMarket(config.marketId, readOk, registered);
     }
 
     // ─── Legs and routes (REQ-ORACLE-049, REQ-ORACLE-054) ───
@@ -254,22 +255,41 @@ abstract contract LPOracleListing is LPOracleViews {
         return ok ? 0 : LPOracleCodes.CHECK_USD_BAND;
     }
 
-    // ─── Current quotes: shock, vault-token decimals and the module (REQ-ORACLE-047, REQ-ORACLE-050) ───
+    // ─── Prices: vault-token decimals, shock and the module (REQ-ORACLE-047, REQ-ORACLE-050) ───
 
-    /// @dev Evaluates the configured routes at their current answers, then the listing shock, the vault-token decimals
-    /// and the pricing module's checks.
-    function _checkAtCurrentQuotes(
-        OracleConfig calldata config
+    /// @dev `d` re-derived at the listing price vector stored by `initialize` (`REQ-ORACLE-047`), so no later price move
+    /// changes it. Before the market is registered (at `initialize` and until `listCollateralMarket`), the configured
+    /// routes must quote every token now (`CHECK_QUOTES`) and the listing shock and the pricing module's checks run at
+    /// those current quotes. Once registered, they run at the listing price vector instead: a price move or another
+    /// feed's outage after listing changes no answer of `checkConfig`, so it never blocks the ParameterStore's setters,
+    /// the guardian's standby switches or `setPriceSource`, while every configuration check still runs.
+    function _checkPrices(
+        OracleConfig calldata config,
+        bool registered
     ) private view returns (uint256 failed) {
-        Evaluation memory e;
-        _allocate(e);
-        _loadSeed(e, config);
-        if (!e.failed) _selectQuotes(e);
-        if (e.failed) return LPOracleCodes.CHECK_QUOTES;
-        (bool found, uint8 d) = LPPriceMath.vaultDecimals(_compositionOrEmpty, e.prices, _s().tokenDecimals);
+        uint256[] memory listing = _listingPrices();
+        (bool found, uint8 d) = LPPriceMath.vaultDecimals(_compositionOrEmpty, listing, _s().tokenDecimals);
         if (!found || d != _s().vaultDecimals) failed |= LPOracleCodes.CHECK_VAULT_DECIMALS;
-        if (!_shockHolds(e.quotes)) failed |= LPOracleCodes.CHECK_SHOCK;
-        failed |= _listingChecks(config, e.quotes) << LPOracleCodes.MODULE_CHECKS_SHIFT;
+        uint256[] memory quotes = listing;
+        if (!registered) {
+            Evaluation memory e;
+            _allocate(e);
+            _loadSeed(e, config);
+            if (!e.failed) _selectQuotes(e);
+            if (e.failed) return failed | LPOracleCodes.CHECK_QUOTES;
+            quotes = e.quotes;
+        }
+        if (!_shockHolds(quotes)) failed |= LPOracleCodes.CHECK_SHOCK;
+        failed |= _listingChecks(config, quotes) << LPOracleCodes.MODULE_CHECKS_SHIFT;
+    }
+
+    /// @dev The stored listing price vector.
+    function _listingPrices() internal view returns (uint256[] memory prices) {
+        uint128[] storage stored = _s().listingPrices;
+        prices = new uint256[](stored.length);
+        for (uint256 i = 0; i < stored.length; ++i) {
+            prices[i] = stored[i];
+        }
     }
 
     /// @dev With each token's quote multiplied by `LISTING_SHOCK_FACTOR` and the others divided by it, and the
@@ -308,25 +328,30 @@ abstract contract LPOracleListing is LPOracleViews {
 
     // ─── Registered market (REQ-ORACLE-047, REQ-ORACLE-048) ───
 
-    /// @dev Once the MarketRegistry maps this feed to a market, that market must be `marketId`, with this feed, this
-    /// integration, the vault-token decimals `d` and the tokens in this order. Before registration nothing is checked.
-    function _checkMarket(
-        uint256 marketId
-    ) private view returns (uint256) {
-        Layout storage $ = _s();
-        (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            $.marketRegistry,
+    /// @dev `MarketRegistry.marketOfLpOracle(this)`: the market this feed is registered for, 0 before registration.
+    function _registeredMarket() private view returns (bool ok, uint256 registered) {
+        bytes memory ret;
+        (ok, ret) = LPOracleCalls.staticRead(
+            _s().marketRegistry,
             CONFIG_CALL_GAS,
             abi.encodeCall(IMarketRegistryViews.marketOfLpOracle, (address(this))),
             WORD
         );
-        uint256 registered = 0;
         if (ok) (ok, registered) = LPOracleCalls.wordAt(ret, 0);
-        if (!ok) return LPOracleCodes.CHECK_MARKET;
+    }
+
+    /// @dev Once the MarketRegistry maps this feed to a market, that market must be `marketId`, with this feed, this
+    /// integration, the vault-token decimals `d` and the tokens in this order. Before registration nothing is checked.
+    function _checkMarket(
+        uint256 marketId,
+        bool readOk,
+        uint256 registered
+    ) private view returns (uint256) {
+        if (!readOk) return LPOracleCodes.CHECK_MARKET;
         if (registered == 0) return 0;
         if (registered != marketId) return LPOracleCodes.CHECK_MARKET;
-        (ok, ret) = LPOracleCalls.staticRead(
-            $.marketRegistry,
+        (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
+            _s().marketRegistry,
             ORACLE_CONFIG_BASE_GAS,
             abi.encodeCall(IMarketRegistryViews.getMarket, (marketId)),
             MARKET_LENGTH

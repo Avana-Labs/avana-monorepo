@@ -8,7 +8,7 @@
       {"src": "src/oracle/lp-oracle", "files": ["LPPriceMath"], "tests": "test/{unit,fuzz}/LPPriceMath.*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz}/LPOracle.*"},
       {"src": "src/oracle/debt-oracle", "tests": "test/{unit,fuzz,integration}/DebtOracle.*"},
-      {"src": "src/liquidation/lp-vault-swap", "tests": "test/{unit,fuzz}/SettlementMath*"},
+      {"src": "src/liquidation/lp-vault-swap", "tests": "test/{unit,fuzz,integration}/{SettlementMath,LPVaultSwap}*"},
       {"src": "src/policy/parameter-store", "tests": "test/unit/ParameterStore*"},
       {"src": "src/policy/market-registry", "tests": "test/unit/MarketRegistry*"},
       {"src": "src/vault-token/vault-token", "tests": "test/{unit,integration}/VaultToken.*"},
@@ -31,10 +31,13 @@
     "2.5": [
       {"src": "src/liquidation/settlement-routes", "tests": "test/{unit,fuzz}/{DexPathRoute,PegModuleRoute,WrapperThenDexRoute,RouteMath,RouteReads,DexHops,SwapRouteBase,SwapRoutes}*"},
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
+      {"src": "src/policy/aave-adapter", "tests": "test/unit/AaveAdapter*"},
+      {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes}.*"},
       {"src": "src/coverage/coverage-spoke", "tests": "test/unit/CoverageSpoke*"}
     ],
     "2.6": [
-      {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz}/FlashLiquidator.*"}
+      {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz}/FlashLiquidator.*"},
+      {"src": "src/lens/lens", "tests": "test/{unit,fuzz,integration}/Lens.*"}
     ]
   },
   "gambit": {

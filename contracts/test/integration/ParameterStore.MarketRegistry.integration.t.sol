@@ -136,6 +136,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     }
 
     // TEST-250 verifies: REQ-CONFIG-024, REQ-MREG-027, REQ-CONFIG-027
+    // TEST-139 verifies: REQ-CONFIG-024, REQ-CONFIG-027; shared: TEST-139's tolerance guard on the real registry and store, a route the store's feedAgreementToleranceBps cannot cover is refused
     function test_TEST_250_registryRefusesRoutesTheStoreToleranceCannotCover() public {
         // A new standby of 100 bps raises USDC's bound to max(75, 150, 125) + 50 = 200 > 150.
         address wide = address(new MockAggregator(8, 1e6, 1e12));
@@ -420,5 +421,29 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         vm.prank(address(timelock));
         store.tightenConsistencyToleranceBps(id, 40);
         assertEq(store.getMarketParams(id).consistencyToleranceBps, 40);
+    }
+
+    // TEST-138 verifies: REQ-PSTORE-004, REQ-PSTORE-012, REQ-CONFIG-046
+    // Sources: 5.1 TEST-138 (listing order: the store's initial parameters before activation)
+    /// @notice A listed market cannot be activated before the ParameterStore's listing writes
+    /// (`setInitialMarketParams`, including `minPledgeUsd`, and the initial caps): `activateMarket` reverts
+    /// `ActivationCheckFailed` and the market stays Registered. After the store's writes it activates, the store serves
+    /// the listed values, and the listing writes close.
+    function test_TEST_138_activationOnlyAfterTheStoreListing() public {
+        (uint256 id, address vaultToken,) = _listMarket();
+        vm.expectPartialRevert(IMarketRegistryErrors.ActivationCheckFailed.selector);
+        vm.prank(address(timelock));
+        registry.activateMarket(id);
+        assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Registered), "still Registered");
+        _storeListing(id, vaultToken);
+        vm.prank(address(timelock));
+        registry.activateMarket(id);
+        assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Active), "Active after the store listing");
+        assertEq(store.minPledgeUsd(id), 10e8, "the listed minimum pledge");
+        assertEq(store.getMarketParams(id).poolRiskFactor, 4000, "the listed pool risk factor");
+        _refuses(
+            abi.encodeCall(store.setInitialMarketCaps, (id, 1e8, 0, 1e8)),
+            abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector)
+        );
     }
 }

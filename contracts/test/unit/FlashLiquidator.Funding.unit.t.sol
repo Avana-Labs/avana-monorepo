@@ -228,11 +228,26 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
 
     // ─── FL-03: the public helper's escrowed credits ───
 
-    /// @notice Review PoC: USDT blocks the public helper, so a 0.4 USDT residue is credited to the helper in the
-    /// PayoutEscrow. Anyone now claims it to `feeRecipient`, read from the ParameterStore as LPVaultSwap reads it.
+    /// @notice USDT blocks the public helper, so a 0.4 USDT residue is credited to the helper in the PayoutEscrow; the
+    /// helper claims the credit its own call created to its caller in the same call (REQ-HELPER-010).
+    // TEST-289 verifies: REQ-HELPER-010, REQ-HELPER-008, REQ-SWAP-076, Q-389
+    function test_TEST_289_publicHelperCreditGoesToItsCaller() public {
+        usdtToken.setBlocked(address(helper), true);
+        lvs.addResidue(usdtToken, 0.4e6);
+        vm.prank(caller);
+        helper.flashLiquidate(_exampleRequest());
+        assertEq(escrow.claimable(address(usdtToken), address(helper)), 0, "claimed in the call");
+        assertEq(usdtToken.balanceOf(caller), 0.4e6, "the caller's own residue");
+        assertEq(usdtToken.balanceOf(feeRecipient), 0, "not Avana's");
+    }
+
+    /// @notice When the caller cannot receive the residue either, the claim inside the call fails without failing the
+    /// liquidation, the credit stays, and anyone later claims it to `feeRecipient`, read from the ParameterStore as
+    /// LPVaultSwap reads it.
     // TEST-289 verifies: REQ-HELPER-010, REQ-SWAP-076, Q-389
     function test_TEST_289_publicHelperCreditClaimedToFeeRecipient() public {
         usdtToken.setBlocked(address(helper), true);
+        usdtToken.setBlocked(caller, true);
         lvs.addResidue(usdtToken, 0.4e6);
         vm.prank(caller);
         helper.flashLiquidate(_exampleRequest());
@@ -250,6 +265,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
     // TEST-289 verifies: REQ-HELPER-010, REQ-SWAP-028
     function test_TEST_289_publicHelperClaimRefusesZeroFeeRecipient() public {
         usdtToken.setBlocked(address(helper), true);
+        usdtToken.setBlocked(caller, true);
         lvs.addResidue(usdtToken, 0.4e6);
         vm.prank(caller);
         helper.flashLiquidate(_exampleRequest());

@@ -9,6 +9,7 @@ import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol
 import {LiquidationParams} from "../../liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
+import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {IMarketRegistryHubs} from "../../policy/market-registry/IMarketRegistryHubs.sol";
 import {IMarketRegistryRouteViews} from "../../policy/market-registry/IMarketRegistryRouteViews.sol";
 import {IMarketRegistryViews} from "../../policy/market-registry/IMarketRegistryViews.sol";
@@ -33,9 +34,10 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// pays the inventory, the shortfall budget and the top-ups (`_payer`), who receives the payout (`_recipient`), who
 /// receives a claimed credit (`_claimRecipient`) and the operator bounds (`_topUpBound`, `_checkLoanNeed`,
 /// `_checkOutlay`). External calls beyond the Pool's: the MarketRegistry (`getMarket`, `getDebtReserve`,
-/// `isRecordedHub`), the ParameterStore (`maxFlashFeeBps`, `feeRecipient`), LPVaultSwap (`liquidate`,
-/// `PAYOUT_ESCROW`), the PayoutEscrow (`claim`), the debt asset and the market's tokens (`balanceOf`, `allowance`,
-/// `approve`, `transfer`, `transferFrom`).
+/// `isRecordedHub`, `getRoute`), the market's swap routes (`intermediates`), the ParameterStore (`maxFlashFeeBps`,
+/// `feeRecipient`), LPVaultSwap (`liquidate`, `PAYOUT_ESCROW`), the PayoutEscrow (`claimable`, `claim`), the debt
+/// asset, the market's tokens and the routes' intermediates (`balanceOf`, `allowance`, `approve`, `transfer`,
+/// `transferFrom`).
 /// @custom:spec REQ-HELPER-001, REQ-HELPER-002, REQ-HELPER-003, REQ-HELPER-004, REQ-HELPER-005, REQ-HELPER-006, REQ-HELPER-007, REQ-HELPER-008, REQ-HELPER-009, REQ-HELPER-010, REQ-HELPER-012, REQ-HELPER-013, REQ-HELPER-014, REQ-HELPER-015, SPEC-LIQ-015, SPEC-LIQ-019, REQ-SWAP-012, REQ-SWAP-105, Q-045, Q-335, Q-345, Q-404
 abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     using SafeERC20 for IERC20;
@@ -43,6 +45,17 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     using TransientSlot for TransientSlot.Uint256Slot;
     using TransientSlot for TransientSlot.AddressSlot;
     using TransientSlot for TransientSlot.Bytes32Slot;
+
+    /// @notice Every token LPVaultSwap may pay the helper besides `T` in one call: the market's tokens and the
+    /// intermediates of each of their primary and backup swap routes into `T`, with the helper's balance and its
+    /// PayoutEscrow credit of each before the call.
+    struct Watch {
+        address escrow;
+        address[] tokens;
+        uint256[] balances;
+        uint256[] credits;
+        uint256 count;
+    }
 
     /// @notice Context state: none open, open awaiting the Pool's callback, callback ran (used).
     uint256 private constant STATE_NONE = 0;
@@ -126,7 +139,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
 
         // Balances before anything moves: the payout and the forwarded market tokens are rises over these.
         uint256 assetBefore = asset.balanceOf(address(this));
-        uint256[] memory tokensBefore = _balances(market.tokens);
+        Watch memory w = _watch(request.params.marketId, market.tokens, address(asset));
         address payer = _openContext(lender, address(asset), request);
         // Inventory X - F and the SPEC-LIQ-019 shortfall budget; the unused part returns in the payout.
         uint256 prefund = request.params.debtToCover - flashAmount + request.params.maxShortfall;
@@ -144,7 +157,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
             if (STATE_SLOT.asUint256().tload() != STATE_USED) revert InvalidFlashCallback();
         }
 
-        payout = _payOut(asset, assetBefore, request.minPayout, prefund, market.tokens, tokensBefore);
+        payout = _payOut(asset, assetBefore, request.minPayout, prefund, w);
         // The context stays open through the payout, so a reentrant `flashLiquidate` from a token transfer reverts
         // `ContextActive`; it is cleared as the last step.
         _clearContext();
@@ -341,25 +354,24 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     }
 
     /// @notice After the loan returned: computes the net payout as the rise of the `T` balance over the whole call,
-    /// enforces `minPayout` and the variant's outlay bound, withdraws any Pool allowance left, sends the payout and
-    /// every market-token rise to the recipient and emits `FlashLiquidated`.
+    /// enforces `minPayout` and the variant's outlay bound, withdraws any Pool allowance left, sends the payout, every
+    /// rise of a watched token and every PayoutEscrow credit this call created to the recipient and emits
+    /// `FlashLiquidated`.
     /// @dev A `T` balance that ended below its start (only possible when `T` charges a transfer fee and the helper held
     /// `T` before the call) reverts `PayoutTooLow(0, minPayout)`, so nothing the helper held before pays for a call.
     /// @param asset `T`.
     /// @param assetBefore The `T` balance before the call.
     /// @param minPayout The request's net minimum.
     /// @param prefund The inventory and shortfall budget pulled before the loan.
-    /// @param tokens The market's tokens.
-    /// @param tokensBefore Their balances before the call.
+    /// @param w The watched tokens with their balances and escrow credits before the call.
     /// @return payout The net payout sent.
-    /// @custom:spec REQ-HELPER-001, REQ-HELPER-008, REQ-HELPER-011, REQ-HELPER-014, Q-345
+    /// @custom:spec REQ-HELPER-001, REQ-HELPER-008, REQ-HELPER-010, REQ-HELPER-011, REQ-HELPER-014, Q-345
     function _payOut(
         IERC20 asset,
         uint256 assetBefore,
         uint256 minPayout,
         uint256 prefund,
-        address[] memory tokens,
-        uint256[] memory tokensBefore
+        Watch memory w
     ) private returns (uint256 payout) {
         uint256 assetAfter = asset.balanceOf(address(this));
         if (assetAfter < assetBefore) revert PayoutTooLow(0, minPayout);
@@ -373,7 +385,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         address recipient = RECIPIENT_SLOT.asAddress().tload();
         // The caller's payout is sent directly; a recipient the asset refuses reverts the whole call (never escrowed).
         if (payout != 0) asset.safeTransfer(recipient, payout);
-        _forwardTokens(address(asset), recipient, tokens, tokensBefore);
+        _forwardTokens(recipient, w);
 
         // The event reports what the loan's callback measured, known only after the loan returned; a reentrant call
         // reverts `ContextActive` until the context is cleared after this event, so no log can be reordered.
@@ -390,40 +402,100 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         );
     }
 
-    /// @notice Sends the recipient the rise of the helper's balance of each market token other than `T` (route
-    /// residues and dust legs LPVaultSwap paid it).
-    /// @param asset `T`, whose rise is the payout.
-    /// @param recipient The payout recipient.
+    /// @notice The tokens LPVaultSwap may pay the helper in a liquidation of `marketId` into `asset` besides `asset`:
+    /// the market's tokens and the `intermediates()` of each pool token's primary and backup route into `asset`, each
+    /// once, with the helper's balance and PayoutEscrow credit of each. A route that is unset or whose
+    /// `intermediates()` reverts adds nothing: LPVaultSwap does not swap through it either (REQ-SWAP-022).
+    /// @param marketId The market.
     /// @param tokens The market's tokens (at most `MAX_POOL_TOKENS` = 8).
-    /// @param tokensBefore Their balances before the call.
-    /// @custom:spec REQ-HELPER-001, REQ-HELPER-008
-    function _forwardTokens(
-        address asset,
-        address recipient,
+    /// @param asset `T`.
+    /// @return w The watch list.
+    /// @custom:spec REQ-HELPER-001, REQ-HELPER-008, REQ-HELPER-010
+    function _watch(
+        uint256 marketId,
         address[] memory tokens,
-        uint256[] memory tokensBefore
-    ) private {
+        address asset
+    ) private view returns (Watch memory w) {
+        w.escrow = ILPVaultSwapViews(LP_VAULT_SWAP).PAYOUT_ESCROW();
+        w.tokens = new address[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
-            if (tokens[i] == asset) continue;
-            // At most MAX_POOL_TOKENS = 8 market tokens, fixed by the MarketRegistry's market record.
+            _add(w, tokens[i], asset);
+            for (uint8 kind = 0; kind < 2; ++kind) {
+                // At most 8 market tokens and two route slots each, fixed by the MarketRegistry's records; views only.
+                // Only the route address is used: an unusable slot is still read, since its route may hold residues.
+                // forge-lint: disable-next-line(calls-loop, unused-return)
+                (address route,) = IMarketRegistryRouteViews(MARKET_REGISTRY).getRoute(marketId, tokens[i], asset, kind);
+                if (route == address(0)) continue;
+                // A route listed by the MarketRegistry; a reverting one is skipped, as LPVaultSwap skips it.
+                // forge-lint: disable-next-line(calls-loop)
+                try ISettlementRoute(route).intermediates() returns (address[] memory mid) {
+                    for (uint256 j = 0; j < mid.length; ++j) {
+                        _add(w, mid[j], asset);
+                    }
+                } catch {}
+            }
+        }
+        w.balances = new uint256[](w.count);
+        w.credits = new uint256[](w.count);
+        for (uint256 i = 0; i < w.count; ++i) {
+            // Bounded by the watch list above; views only.
             // forge-lint: disable-next-line(calls-loop)
-            uint256 balance = IERC20(tokens[i]).balanceOf(address(this));
-            if (balance > tokensBefore[i]) IERC20(tokens[i]).safeTransfer(recipient, balance - tokensBefore[i]);
+            w.balances[i] = IERC20(w.tokens[i]).balanceOf(address(this));
+            // forge-lint: disable-next-line(calls-loop)
+            w.credits[i] = IPayoutEscrow(w.escrow).claimable(w.tokens[i], address(this));
         }
     }
 
-    /// @notice The helper's balance of each token.
-    /// @param tokens The market's tokens (at most 8).
-    /// @return balances Balances, same order.
-    /// @custom:spec REQ-HELPER-008
-    function _balances(
-        address[] memory tokens
-    ) private view returns (uint256[] memory balances) {
-        balances = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            // At most MAX_POOL_TOKENS = 8 market tokens, fixed by the MarketRegistry's market record.
+    /// @notice Adds `token` to the watch list once; `T` and `address(0)` are never added.
+    /// @param w The watch list.
+    /// @param token A market token or route intermediate.
+    /// @param asset `T`.
+    function _add(
+        Watch memory w,
+        address token,
+        address asset
+    ) private pure {
+        if (token == asset || token == address(0)) return;
+        for (uint256 k = 0; k < w.count; ++k) {
+            if (w.tokens[k] == token) return;
+        }
+        if (w.count == w.tokens.length) {
+            address[] memory grown = new address[](w.count * 2 + 1);
+            for (uint256 k = 0; k < w.count; ++k) {
+                grown[k] = w.tokens[k];
+            }
+            w.tokens = grown;
+        }
+        w.tokens[w.count] = token;
+        ++w.count;
+    }
+
+    /// @notice Sends the recipient the rise of the helper's balance of each watched token (route residues, route
+    /// intermediates of a partly filled multi-hop route and dust legs LPVaultSwap paid it), then claims to the
+    /// recipient every PayoutEscrow credit of a watched token that this call created: one that was 0 before the call
+    /// and is not now (a residue LPVaultSwap could not deliver to the helper). A credit already standing before the
+    /// call, or one whose claim the recipient cannot receive, is left to `claimEscrowed`.
+    /// @param recipient The payout recipient.
+    /// @param w The watch list with its balances and credits before the call.
+    /// @custom:spec REQ-HELPER-001, REQ-HELPER-008, REQ-HELPER-010
+    function _forwardTokens(
+        address recipient,
+        Watch memory w
+    ) private {
+        for (uint256 i = 0; i < w.count; ++i) {
+            // Bounded by the watch list: at most 8 market tokens and their routes' intermediates.
             // forge-lint: disable-next-line(calls-loop)
-            balances[i] = IERC20(tokens[i]).balanceOf(address(this));
+            uint256 balance = IERC20(w.tokens[i]).balanceOf(address(this));
+            // forge-lint: disable-next-line(calls-loop)
+            if (balance > w.balances[i]) IERC20(w.tokens[i]).safeTransfer(recipient, balance - w.balances[i]);
+            // forge-lint: disable-next-line(calls-loop)
+            if (w.credits[i] == 0 && IPayoutEscrow(w.escrow).claimable(w.tokens[i], address(this)) != 0) {
+                // The whole credit is this call's: it was 0 when the call started (REQ-HELPER-010). A claim the
+                // recipient cannot receive leaves the credit standing for `claimEscrowed`, so the call itself never
+                // fails on a residue.
+                // forge-lint: disable-next-line(calls-loop)
+                try IPayoutEscrow(w.escrow).claim(w.tokens[i], recipient) {} catch {}
+            }
         }
     }
 

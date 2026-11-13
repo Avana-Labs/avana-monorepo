@@ -7,8 +7,10 @@ import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
 import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
 import {IAvanaTimelockEvents} from "../../src/governance/timelock/IAvanaTimelockEvents.sol";
 import {IAvanaTimelockGovernance} from "../../src/governance/timelock/IAvanaTimelockGovernance.sol";
+import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
 import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -142,7 +144,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         address[] memory dao
     ) internal returns (AvanaTimelock) {
         SelectorPair[] memory none = new SelectorPair[](0);
-        return new AvanaTimelock(proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none);
+        return new AvanaTimelock(proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none, _targets());
     }
 
     function _list(
@@ -180,6 +182,98 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         vm.expectRevert(err);
         _deployWith(two, exec, canc, _list(bob)); // DAO canceller without CANCELLER_ROLE
         _deployWith(two, exec, canc, dao);
+    }
+
+    function _expectShort(
+        address target,
+        bytes4 selector
+    ) internal {
+        SelectorPair[] memory one = new SelectorPair[](1);
+        one[0] = SelectorPair(target, selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAvanaTimelockErrors.InvalidShortDelaySelector.selector, target, selector)
+        );
+        _newTimelockWith(NORMAL_DELAY, true, one, new SelectorPair[](0), _targets());
+    }
+
+    function _expectDao(
+        address target,
+        bytes4 selector
+    ) internal {
+        SelectorPair[] memory one = new SelectorPair[](1);
+        one[0] = SelectorPair(target, selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAvanaTimelockErrors.InvalidDaoCancelSelector.selector, target, selector)
+        );
+        _newTimelockWith(NORMAL_DELAY, true, new SelectorPair[](0), one, _targets());
+    }
+
+    // TEST-244 verifies: REQ-ACCESS-155, REQ-ACCESS-156, REQ-ACCESS-181
+    /// @notice Every pair must name the deployed contract its selector belongs to: a `tighten*` selector only the
+    /// ParameterStore, a MarketRegistry stop or repair only the MarketRegistry, `removeKeeper` and `addKeeper` only
+    /// LPVaultSwap; a pair naming another target, or a contract outside the three, reverts.
+    function test_TEST_244_constructorRefusesPairsOnTheWrongTarget() public {
+        address ps = address(parameterStore);
+        address mr = address(marketRegistry);
+        address lvs = address(lpVaultSwap);
+        bytes4 cap = IParameterStoreTighten.tightenMarketUsdCap.selector;
+        bytes4 disable = IMarketRegistryRoutes.disableRoute.selector;
+        bytes4 remove = ILPVaultSwapAdmin.removeKeeper.selector;
+        _expectShort(mr, cap);
+        _expectShort(lvs, cap);
+        _expectShort(address(other), cap);
+        _expectShort(ps, disable);
+        _expectShort(lvs, disable);
+        _expectShort(ps, remove);
+        _expectShort(mr, remove);
+        bytes4 restore = IMarketRegistryRoutes.restoreRoute.selector;
+        bytes4 unfreeze = IMarketRegistryFreeze.unfreezeAddress.selector;
+        bytes4 add = ILPVaultSwapAdmin.addKeeper.selector;
+        _expectDao(lvs, restore);
+        _expectDao(ps, restore);
+        _expectDao(lvs, unfreeze);
+        _expectDao(mr, add);
+        _expectDao(address(other), add);
+        // The right targets pass: every launch pair, each with its own contract.
+        AvanaTimelock t = _newTimelock(
+            NORMAL_DELAY,
+            true,
+            TimelockLaunchLists.shortEligible(ps, mr, lvs),
+            TimelockLaunchLists.daoOnlyCancel(mr, lvs)
+        );
+        assertTrue(t.isShortEligible(ps, cap));
+        assertFalse(t.isShortEligible(mr, cap));
+    }
+
+    // TEST-244 verifies: REQ-ACCESS-155, REQ-ACCESS-156
+    /// @notice The three governed targets must be non-zero, distinct and not the timelock.
+    function test_TEST_244_constructorRefusesBrokenTargets() public {
+        address[] memory proposers = _list(governanceMultisig, aaveGovernanceExecutor);
+        address[] memory executors = _list(governanceMultisig);
+        address[] memory cancellers = _list(emergencyGuardian, aaveGuardian);
+        address[] memory dao = _list(aaveGovernanceExecutor);
+        SelectorPair[] memory none = new SelectorPair[](0);
+        address a = address(parameterStore);
+        address b = address(marketRegistry);
+        address c = address(lpVaultSwap);
+        GovernedTargets[6] memory bad = [
+            GovernedTargets(address(0), b, c),
+            GovernedTargets(a, address(0), c),
+            GovernedTargets(a, b, address(0)),
+            GovernedTargets(a, a, c),
+            GovernedTargets(a, b, b),
+            GovernedTargets(c, b, c)
+        ];
+        for (uint256 i = 0; i < bad.length; ++i) {
+            vm.expectRevert(IAvanaTimelockErrors.InvalidGovernedTargets.selector);
+            new AvanaTimelock(proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none, bad[i]);
+        }
+        // The timelock's own (predicted) address as a target.
+        address self = vm.computeCreateAddress(address(this), vm.getNonce(address(this)));
+        vm.expectRevert(IAvanaTimelockErrors.InvalidGovernedTargets.selector);
+        new AvanaTimelock(
+            proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none, GovernedTargets(a, self, c)
+        );
     }
 
     // TEST-244 verifies: REQ-ACCESS-142, REQ-ACCESS-155, REQ-ACCESS-181, INV-090
@@ -235,7 +329,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         assertFalse(off.publicExecution());
         (uint256 normal, uint256 shortSet, uint256 toggled) = _countEvents(address(off));
         assertEq(normal, 1, "NormalDelayChanged(0, d)");
-        assertEq(shortSet, 32, "ShortDelaySelectorSet per launch entry");
+        assertEq(shortSet, 34, "ShortDelaySelectorSet per launch entry");
         assertEq(toggled, 1, "PublicExecutionToggled(false)");
     }
 

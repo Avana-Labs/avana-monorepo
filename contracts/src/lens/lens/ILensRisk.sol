@@ -41,21 +41,26 @@ interface ILensRisk {
         address account
     ) external view returns (bool frozen);
 
-    /// @notice Returns the funded First-Loss Reserve of a debt asset against its largest one-token tail exposure.
+    /// @notice Returns the funded First-Loss Reserve of a (funding Hub, debt asset) pair against its largest one-token
+    /// tail exposure.
     /// @dev Loops over the MarketRegistry's Spokes, their approved debt reserves and its markets. Reverts with
-    /// `UnknownDebtAsset(debtAsset)` when no approved debt reserve lends the asset. Rounding never overstates coverage.
+    /// `UnknownDebtAsset(debtAsset)` when no approved debt reserve of any CDP Spoke draws the asset from `hub`. Rounding
+    /// never overstates coverage.
+    /// @param hub The funding Hub.
     /// @param debtAsset The debt asset.
     /// @return coverage Funded balance, minimum, worst token, tail exposure and coverage ratio.
     /// @custom:spec REQ-LENS-034, REQ-LENS-039, SPEC-CAP-008, Q-249
     function getTailCoverage(
+        address hub,
         address debtAsset
     ) external view returns (TailCoverageView memory coverage);
 
-    /// @notice Deficit of `(hub, asset)` recorded by the Hub above what its Coverage Spoke holds, base units.
+    /// @notice Deficit of `(hub, asset)` recorded by the Hub above what its two loss layers hold (the Coverage Spoke and
+    /// the DAO deficit offset, every listed Spoke whose `FIRST_LOSS_LAYER()` is that Coverage Spoke), base units.
     /// @param hub The Hub.
     /// @param asset The asset.
-    /// @return uncovered `max(0, deficit - fundedBalance)`.
-    /// @custom:spec REQ-LENS-042
+    /// @return uncovered `max(0, deficit - fundedBalance - offsetFunded)`.
+    /// @custom:spec REQ-LENS-042, REQ-FLR-046
     function uncoveredDeficit(
         address hub,
         address asset

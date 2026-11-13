@@ -6,7 +6,12 @@ pragma solidity 0.8.28;
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
+import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
+import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IMarketRegistryApprovals} from "../../src/policy/market-registry/IMarketRegistryApprovals.sol";
@@ -22,11 +27,15 @@ import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParamet
 import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
 import {IParameterStoreListing} from "../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
+import {IParameterStoreSpeed} from "../../src/policy/parameter-store/IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
+import {TimelockLaunchLists} from "../utils/fixtures/TimelockLaunchLists.sol";
+import {LVSMarketRegistryMock} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title AvanaTimelockMatrixUnitTest
@@ -53,7 +62,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         _marketRegistryRows(address(marketRegistry));
         _parameterStoreRows(address(parameterStore));
         _otherRows(address(other));
-        // LPVaultSwap keeper registry (the timelock half only; the contract itself is not written yet).
+        // LPVaultSwap keeper registry: the delay and cancel classes here; the same selectors executed through the
+        // timelock on the real LPVaultSwap in test_TEST_063_lpVaultSwapKeeperRegistryThroughTimelock.
         rows.push(Row(address(lpVaultSwap), ILPVaultSwapAdmin.addKeeper.selector, false, true));
         rows.push(Row(address(lpVaultSwap), ILPVaultSwapAdmin.removeKeeper.selector, true, false));
     }
@@ -106,7 +116,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function _parameterStoreRows(
         address ps
     ) internal {
-        bytes4[20] memory tighten = [
+        bytes4[22] memory tighten = [
             IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
@@ -126,12 +136,14 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
             IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
             IParameterStoreLiquidation.tightenDebtStressRiseBps.selector,
-            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector
+            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector,
+            IParameterStoreSpeed.tightenMarketSpeedLimits.selector,
+            IParameterStoreSpeed.tightenDebtSpeedLimit.selector
         ];
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
         }
-        bytes4[45] memory normal = [
+        bytes4[47] memory normal = [
             IParameterStoreLoosen.loosenHardHealthFloor.selector,
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
@@ -147,6 +159,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreBreakers.loosenGateRecoverySeconds.selector,
             IParameterStoreLiquidation.loosenMaxShortfallBps.selector,
             IParameterStoreLiquidation.loosenDebtStressRiseBps.selector,
+            IParameterStoreSpeed.loosenMarketSpeedLimits.selector,
+            IParameterStoreSpeed.loosenDebtSpeedLimit.selector,
             IParameterStoreAdmin.setBorrowPriceMaxAge.selector,
             IParameterStoreAdmin.setConsistencyToleranceBps.selector,
             IParameterStoreAdmin.setFeedAgreementToleranceBps.selector,
@@ -207,7 +221,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     /// @notice Each matrix selector, alone in an operation, needs exactly its matrix delay: 43,200 s for the short
     /// list, the normal delay (432,000 s) for every other call; scheduling one second below reverts
     /// `DelayBelowRequired`; a batch of every short selector stays short and one normal call makes it normal.
-    // TEST-063 verifies: SPEC-GOV-001, REQ-ACCESS-141, REQ-ACCESS-031, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-184, REQ-ACCESS-133, REQ-ACCESS-134, REQ-ACCESS-036, REQ-ACCESS-145, REQ-ACCESS-175, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-158, REQ-ACCESS-159, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-051, REQ-ACCESS-174, REQ-ACCESS-060, REQ-ACCESS-061, REQ-ACCESS-064, REQ-ACCESS-088, REQ-ACCESS-091, REQ-ACCESS-148, REQ-ROUTE-017, REQ-ROUTE-018, REQ-ROUTE-019, REQ-ROUTE-020, REQ-ACCESS-172, REQ-ACCESS-128
+    // TEST-063 verifies: SPEC-GOV-001, REQ-ACCESS-141, REQ-ACCESS-031, REQ-ACCESS-033, REQ-ACCESS-034, REQ-ACCESS-045, REQ-ACCESS-046, REQ-ACCESS-047, REQ-ACCESS-048, REQ-ACCESS-184, REQ-ACCESS-133, REQ-ACCESS-134, REQ-ACCESS-036, REQ-ACCESS-145, REQ-ACCESS-175, REQ-ACCESS-062, REQ-ACCESS-063, REQ-ACCESS-158, REQ-ACCESS-159, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-051, REQ-ACCESS-174, REQ-ACCESS-060, REQ-ACCESS-061, REQ-ACCESS-064, REQ-ACCESS-088, REQ-ACCESS-091, REQ-ACCESS-148, REQ-ROUTE-017, REQ-ROUTE-018, REQ-ROUTE-019, REQ-ROUTE-020, REQ-ACCESS-172, REQ-ACCESS-128, REQ-ORACLE-079
     // Sources: 2.15 "Restricted-function matrix", "Delay classes and timing"; MATH-GOV-01
     function test_TEST_063_everyMatrixSelectorNeedsItsDelayClass() public {
         uint256 shortCount;
@@ -494,5 +508,78 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         vm.warp(block.timestamp + SHORT_DELAY);
         _execute(attacker, more, bytes32(0));
         assertEq(marketRegistry.callCount(), 1);
+    }
+
+    /// @notice The real LPVaultSwap's keeper registry through the timelock: `addKeeper` runs only after the normal
+    /// delay and `removeKeeper` after the short delay, both executed by anyone once ready; a removal that would leave
+    /// fewer active committed operators than `keeperFloor` (1) reverts `KeeperFloor` inside the execution, so the
+    /// operation stays unexecuted; a direct call by any account other than the timelock reverts with the missing
+    /// `APPLICATION_ADMIN` role.
+    // TEST-063 verifies: REQ-ACCESS-011, REQ-ACCESS-053, REQ-ACCESS-054, REQ-ACCESS-100, REQ-ACCESS-121, SPEC-GOV-008
+    // TEST-045 verifies: REQ-ACCESS-053, REQ-ACCESS-054; shared: TEST-045's keeper registry through the real AvanaTimelock, addKeeper at the normal delay, removeKeeper at the short delay, KeeperFloor
+    function test_TEST_063_lpVaultSwapKeeperRegistryThroughTimelock() public {
+        ILPVaultSwap lvs = _realLPVaultSwap();
+        address second = makeAddr("secondKeeper");
+        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (second)))), NORMAL_DELAY);
+        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (keeper)))), SHORT_DELAY);
+        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (second))), bytes32("add"));
+        assertTrue(lvs.isApprovedKeeper(second), "added after the normal delay");
+        assertEq(lvs.activeKeeperCount(), 2);
+        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (keeper))), bytes32("remove"));
+        assertFalse(lvs.isApprovedKeeper(keeper), "removed after the short delay");
+        Call[] memory last = _one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (second)));
+        _schedule(governanceMultisig, last, SHORT_DELAY, bytes32("floor"));
+        vm.warp(block.timestamp + SHORT_DELAY);
+        (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(last);
+        vm.prank(attacker);
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        timelock.executeBatch(t, v, p, bytes32(0), bytes32("floor"));
+        assertTrue(lvs.isApprovedKeeper(second), "the floor keeps the last committed operator");
+        vm.prank(governanceMultisig);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                governanceMultisig,
+                AvanaRoles.APPLICATION_ADMIN
+            )
+        );
+        ILPVaultSwapAdmin(address(lvs)).addKeeper(makeAddr("direct"));
+    }
+
+    /// @dev Deploys the real LPVaultSwap (three logic contracts, the implementation, the proxy initialised with this
+    /// timelock and one keeper) and a timelock whose launch lists name it, and makes that timelock the fixture's.
+    function _realLPVaultSwap() internal returns (ILPVaultSwap lvs) {
+        LPVaultSwapImmutables memory im = LPVaultSwapImmutables({
+            lock: makeAddr("lock"),
+            aaveAdapter: makeAddr("aaveAdapter"),
+            collateralization: makeAddr("collateralization"),
+            marketRegistry: address(new LVSMarketRegistryMock()), // freeze reads of addKeeper and activeKeeperCount
+            parameterStore: makeAddr("store"),
+            payoutEscrow: makeAddr("escrow"),
+            keeperFloor: 1
+        });
+        LPVaultSwapLogics memory logics = LPVaultSwapLogics({
+            liquidation: deployCode("LPVaultSwapLiquidationLogic.sol:LPVaultSwapLiquidationLogic", abi.encode(im)),
+            pending: deployCode("LPVaultSwapPendingLogic.sol:LPVaultSwapPendingLogic", abi.encode(im)),
+            deleverage: deployCode("LPVaultSwapDeleverageLogic.sol:LPVaultSwapDeleverageLogic", abi.encode(im))
+        });
+        LPVaultSwap implementation = new LPVaultSwap(im, logics);
+        address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
+        timelock = _newTimelock(
+            NORMAL_DELAY,
+            true,
+            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), predicted),
+            TimelockLaunchLists.daoOnlyCancel(address(marketRegistry), predicted)
+        );
+        address[] memory keepers = new address[](1);
+        keepers[0] = keeper;
+        lvs = ILPVaultSwap(
+            address(
+                new ERC1967Proxy(
+                    address(implementation), abi.encodeCall(LPVaultSwap.initialize, (address(timelock), keepers))
+                )
+            )
+        );
+        assertEq(address(lvs), predicted, "the timelock's lists name the deployed LPVaultSwap");
     }
 }

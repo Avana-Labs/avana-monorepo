@@ -1167,6 +1167,11 @@ export const lpVaultSwapAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidLogic",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "KeeperFloor",
     "inputs": [
       {
@@ -1200,6 +1205,11 @@ export const lpVaultSwapAbi = [
   {
     "type": "error",
     "name": "NotAdapter",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotDelegated",
     "inputs": []
   },
   {
@@ -1278,6 +1288,11 @@ export const lpVaultSwapAbi = [
   {
     "type": "error",
     "name": "UnknownProxy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
     "inputs": []
   },
   {

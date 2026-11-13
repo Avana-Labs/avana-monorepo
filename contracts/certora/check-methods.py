@@ -44,13 +44,13 @@ INTERFACE_OF = {
     "WrapperThenDexRoute": ["ISettlementRoute"],
     "CoverageSpoke": ["ICoverageSpoke"],
     "AaveV3FlashSource": ["IFlashSource", "IAaveV3FlashLoanReceiver"],
-    "LPOracleHarness": ["ILPOracle"],
+    "LPOracleCL": ["ILPOracle", "ILPOracleCL"],
 }
 
 # Contracts that inherit OpenZeppelin AccessControl (v5.1.0) and so expose IAccessControl (PROP-034, PROP-070).
 ACCESS_CONTROL = {
     "AaveAdapter", "ProxyManager", "MarketRegistry", "ParameterStore", "RiskModule", "LPOracle", "DebtOracle",
-    "LPVaultSwap", "AvanaTimelock", "LPOracleHarness",
+    "LPVaultSwap", "AvanaTimelock", "LPOracleCL",
 }
 
 # Specs verified by no conf: the contract whose interface their unqualified entries bind to.

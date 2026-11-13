@@ -66,7 +66,7 @@ Route records (in the MarketRegistry; `kind` is the slot, `PRIMARY = 0` or `BACK
 
 | Record set | Key | Fields | Written by |
 |---|---|---|---|
-| Swap routes | `(marketId, token, debtAsset, kind)` | `route`, `status` (`Active`, `Disabled`), `approvedBefore[route]` | `setRoute`, `disableRoute`, `restoreRoute` |
+| Swap routes | `(marketId, token, debtAsset, kind)` | `route`, `status` (`Active`, `Disabled`), `approvedBefore[route]` (the slot's current route; a replaced route leaves it) | `setRoute`, `disableRoute`, `restoreRoute` |
 
 Depth thresholds (in the ParameterStore): `routeDepthThreshold(marketId, token, debtAsset, kind)`, the USD notional the route must swap within `slippageAllowanceBps` under the stress case of `REQ-ROUTE-006`.
 
@@ -144,7 +144,7 @@ No guardian can suspend or quarantine a route (`Q-227`). A route that fails at r
 
 ## Route changes and status
 
-- `REQ-ROUTE-017` Adding or changing a route record MUST go through `MarketRegistry.setRoute` (normal delay) and MUST mark the route in `approvedBefore` for that key. A route contract is never modified in place. (Source: Q-062, Q-151, Q-228)
+- `REQ-ROUTE-017` Adding or changing a route record MUST go through `MarketRegistry.setRoute` (normal delay) and MUST mark the route in `approvedBefore` for that key; when the call replaces a different route, it MUST clear that route from `approvedBefore` for the key. A route contract is never modified in place. Why: `restoreRoute` exists to undo a `disableRoute` of the slot's own route at the short delay; a route that governance replaced was retired by a normal-delay review, often because it was found unsafe, and bringing it back is a change that needs the same review again (`ATTACK-201`). Example: `setRoute(R)`, later `setRoute(R')` because R's pool drained; `restoreRoute(R)` then reverts `NotPreviouslyApproved`, and only `setRoute(R)` at the normal delay can bring R back. (Source: Q-062, Q-151, Q-228)
 - `REQ-ROUTE-018` `disableRoute` (short delay) MUST set the slot Disabled until `restoreRoute` or a new `setRoute` executes. (Source: Q-151, Q-227, Q-228)
 - `REQ-ROUTE-019` `restoreRoute` (short delay, DAO-only cancel) MUST revert with `NotPreviouslyApproved` unless `approvedBefore[route]` is true for that key, and set the slot Active only after re-running `REQ-ROUTE-005`, including the GSM health check. (Source: Q-151, Q-228, Q-263)
 - `REQ-ROUTE-020` Route quarantine does not exist (`Q-227`); a suspect route is disabled at the short delay while guardians stop new activity with a freeze or a pause, never liquidation. (Source: Q-227, Q-228, Q-241, Q-252, Q-399)

@@ -54,7 +54,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
 
     /// @inheritdoc IMarketRegistryRoutes
     /// @dev Body of `setRoute`.
-    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-ROUTE-002, REQ-ROUTE-005, Q-341, Q-342, Q-379
+    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-ROUTE-002, REQ-ROUTE-005, REQ-ROUTE-017, Q-341, Q-342, Q-379
     function setRoute(
         uint256 marketId,
         address token,
@@ -66,6 +66,10 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         Layout storage l = _s();
         _checkRoute(marketId, token, debtAsset, kind, route);
         bytes32 key = _slotKey(marketId, token, debtAsset, kind);
+        // REQ-ROUTE-017: a route this call replaces leaves the slot's approved set, so `restoreRoute` cannot bring it
+        // back at the short delay; returning to it is a change and takes `setRoute` at the normal delay again.
+        address replaced = l.routes[key].route;
+        if (replaced != address(0) && replaced != route) delete l.approvedBefore[key][replaced];
         l.routes[key] = RouteRecord({route: route, active: true});
         l.approvedBefore[key][route] = true;
         l.knownRoute[route] = true;

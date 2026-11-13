@@ -11,6 +11,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {
     CollHubSpokeConfig,
@@ -24,6 +25,7 @@ import {
 } from "../utils/fixtures/CollateralizationFixture.sol";
 import {UniswapV3IntegrationHarness} from "../utils/harness/UniswapV3IntegrationHarness.sol";
 import {MintableToken, MockNFPM, MockV3Factory, MockV3Pool} from "../utils/mocks/UniswapV3Mocks.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 
 /// @notice The Uniswap v3 LPVault behind the real Collateralization, the real Lock, the real VaultTokenFactory and its
 /// vault token on the real local Aave V4: integration 2, market 5 on the full range of a USDC/USDT 0.3% pool (6
@@ -45,6 +47,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
     address internal vt2;
     VaultToken internal token2;
     uint256 internal reserve2;
+    CollPriceSource internal price2;
 
     function setUp() public {
         _deployCollateralization();
@@ -90,7 +93,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
     function _listVaultToken2() internal {
         IAaveV4Hub hubView = IAaveV4Hub(aave.hub);
         bytes memory irData = abi.encode(CollInterestRateData(9000, 0, 400, 6000));
-        CollPriceSource price = new CollPriceSource(2e8);
+        price2 = new CollPriceSource(2e8);
         vm.startPrank(aaveDao);
         uint256 assetId = ICollHubConfigurator(aave.hubConfigurator)
             .addAssetWithDecimals(aave.hub, vt2, 6, aave.treasurySpoke, 0, aave.irStrategy, irData);
@@ -106,7 +109,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
                 aave.cdpSpoke,
                 aave.hub,
                 assetId,
-                address(price),
+                address(price2),
                 CollSpokeReserveConfig(0, false, false, false, false),
                 CollSpokeDynamicReserveConfig(8000, 10_500, 0)
             );
@@ -344,5 +347,225 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         assertEq(c1.depositorUsed, uint256(charge1) + charge2, "the Hub-wide depositor counter holds both charges");
         assertEq(c2.depositorUsed, c1.depositorUsed, "one counter per (Hub, depositor)");
         assertEq(coll.getPending(vt).units + coll.getPending(vt2).units, 0);
+    }
+
+    /// @notice Principal-capped collect through Collateralization: the LPVault's `unwind` is refused to any caller but
+    /// Collateralization under the Lock; a seizure settled by Collateralization removes exactly the seized units and
+    /// pays LPVaultSwap the removal's principal only, the position's owed fees stay owed, and the depositor collects
+    /// every owed fee after the rest of the position is withdrawn.
+    // TEST-058 verifies: REQ-VAULT-149, REQ-VAULT-057, REQ-VAULT-058, SPEC-BACK-008
+    function test_TEST_058_seizureUnwindTakesPrincipalOnlyAndFeesStayOwed() public {
+        bytes32 key = _pledgeV3(alice, aliceProxy, 5e9);
+        nfpm.accrue(uint256(key), 1_000_000, 2_000_000);
+        vm.prank(attacker);
+        vm.expectRevert();
+        v3Vault.unwind(key, 1, new uint256[](2), attacker);
+        vm.prank(address(coll));
+        vm.expectRevert();
+        v3Vault.unwind(key, 1, new uint256[](2), lpVaultSwap);
+
+        vm.prank(aliceProxy);
+        IAaveV4Spoke(aave.cdpSpoke).borrow(debtReserveId, 7000e18, aliceProxy);
+        price2.set(1.5e8);
+        vm.prank(lpVaultSwap);
+        lock.acquire();
+        vm.prank(lpVaultSwap);
+        coll.beginSeizure(aliceProxy, vt2);
+        debt.mint(lpVaultSwap, 1000e18);
+        vm.startPrank(lpVaultSwap);
+        debt.approve(aave.cdpSpoke, 1000e18);
+        IAaveV4Spoke(aave.cdpSpoke).liquidationCall(reserve2, debtReserveId, aliceProxy, 1000e18, false);
+        vm.stopPrank();
+        uint256 seized = token2.balanceOf(lpVaultSwap);
+        vm.prank(adapter);
+        token2.burn(lpVaultSwap, seized);
+        (uint256 b0, uint256 b1) = (tUsdc.balanceOf(lpVaultSwap), tUsdt.balanceOf(lpVaultSwap));
+        vm.startPrank(lpVaultSwap);
+        uint256[] memory amounts = coll.settleSeizure(aliceProxy, vt2, seized, new uint256[](2));
+        lock.release();
+        vm.stopPrank();
+        (,,,,,,, uint128 l,,, uint128 owed0, uint128 owed1) = nfpm.positions(uint256(key));
+        assertEq(l, 5e9 - seized, "exactly the seized units removed");
+        assertEq(owed0, 1_000_000, "fees stay owed to the position");
+        assertEq(owed1, 2_000_000, "fees stay owed to the position");
+        (address t0,) = (v3Pool.token0(), v3Pool.token1());
+        (uint256 got0, uint256 got1) = t0 == address(tUsdc)
+            ? (tUsdc.balanceOf(lpVaultSwap) - b0, tUsdt.balanceOf(lpVaultSwap) - b1)
+            : (tUsdt.balanceOf(lpVaultSwap) - b1, tUsdc.balanceOf(lpVaultSwap) - b0);
+        assertEq(got0, amounts[0], "principal of token0 only");
+        assertEq(got1, amounts[1], "principal of token1 only");
+
+        debt.mint(aliceProxy, 10_000e18);
+        vm.startPrank(aliceProxy);
+        debt.approve(aave.cdpSpoke, type(uint256).max);
+        IAaveV4Spoke(aave.cdpSpoke).repay(debtReserveId, type(uint256).max, aliceProxy);
+        vm.stopPrank();
+        _withdrawV3(aliceProxy, key, 5e9 - seized);
+        assertEq(nfpm.ownerOf(uint256(key)), alice, "the rest returned to the depositor");
+        (,,,,,,,,,, owed0, owed1) = nfpm.positions(uint256(key));
+        assertEq(owed0, 1_000_000, "every owed fee still the depositor's");
+        assertEq(owed1, 2_000_000, "every owed fee still the depositor's");
+    }
+
+    /// @notice Stray depositors: a pledge naming Collateralization or the LPVault as depositor reverts
+    /// `InvalidDepositor`, and a position the LPVault already owns, pledged by a wallet, reverts the LPVault's
+    /// `NotTokenOwner`; nothing is recorded.
+    // TEST-252 verifies: REQ-COLL-003, REQ-VAULT-103
+    function test_TEST_252_strayDepositorsRefused() public {
+        uint256 id = nfpm.mint(alice, v3Pool.token0(), v3Pool.token1(), 3000, -FULL, FULL, 5e9);
+        vm.startPrank(adapter);
+        lock.acquire();
+        token2.addValidProxy(aliceProxy);
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.InvalidDepositor.selector, address(coll)));
+        coll.pledge(address(coll), aliceProxy, vt2, bytes32(id), false);
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.InvalidDepositor.selector, address(v3Vault)));
+        coll.pledge(address(v3Vault), aliceProxy, vt2, bytes32(id), false);
+        lock.release();
+        vm.stopPrank();
+        vm.prank(alice);
+        nfpm.transferFrom(alice, address(v3Vault), id);
+        vm.startPrank(adapter);
+        lock.acquire();
+        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        coll.pledge(alice, aliceProxy, vt2, bytes32(id), false);
+        lock.release();
+        vm.stopPrank();
+        assertEq(coll.recordIdOf(V3_INTEGRATION, bytes32(id)), 0, "no record");
+        assertEq(coll.getTotalCredited(vt2), 0, "no credit");
+    }
+
+    // ─── The LPVault and vault tokens, gates and upgradeable contracts ───
+
+    /// @dev Pledge, fee collection, a seizure through LPVaultSwap and the withdrawal of the rest, with alice's
+    /// position on market 5; returns every account access the four flows made.
+    function _lifecycleAccesses() internal returns (VmSafe.AccountAccess[] memory accesses, bytes32 key) {
+        vm.startStateDiffRecording();
+        key = _pledgeV3(alice, aliceProxy, 5e9);
+        nfpm.accrue(uint256(key), 1_000_000, 2_000_000);
+        vm.startPrank(adapter);
+        lock.acquire();
+        coll.collectFees(alice, vt2, key);
+        lock.release();
+        vm.stopPrank();
+        // $10,000 at CF 80 %: 7,000 GHO of debt, then the vault token falls to $1.50 (HF 0.857).
+        vm.prank(aliceProxy);
+        IAaveV4Spoke(aave.cdpSpoke).borrow(debtReserveId, 7000e18, aliceProxy);
+        price2.set(1.5e8);
+        vm.prank(lpVaultSwap);
+        lock.acquire();
+        vm.prank(lpVaultSwap);
+        coll.beginSeizure(aliceProxy, vt2);
+        uint256 before = token2.balanceOf(lpVaultSwap);
+        debt.mint(lpVaultSwap, 1000e18);
+        vm.startPrank(lpVaultSwap);
+        debt.approve(aave.cdpSpoke, 1000e18);
+        IAaveV4Spoke(aave.cdpSpoke).liquidationCall(reserve2, debtReserveId, aliceProxy, 1000e18, false);
+        vm.stopPrank();
+        uint256 seized = token2.balanceOf(lpVaultSwap) - before;
+        vm.prank(adapter);
+        token2.burn(lpVaultSwap, seized);
+        vm.startPrank(lpVaultSwap);
+        coll.settleSeizure(aliceProxy, vt2, seized, new uint256[](2));
+        lock.release();
+        vm.stopPrank();
+        // Repay everything, then withdraw the rest.
+        debt.mint(aliceProxy, 10_000e18);
+        vm.startPrank(aliceProxy);
+        debt.approve(aave.cdpSpoke, type(uint256).max);
+        IAaveV4Spoke(aave.cdpSpoke).repay(debtReserveId, type(uint256).max, aliceProxy);
+        vm.stopPrank();
+        _withdrawV3(aliceProxy, key, 5e9 - seized);
+        accesses = vm.stopAndReturnStateDiff();
+        assertGt(seized, 0, "the seizure took units");
+    }
+
+    // TEST-162 verifies: REQ-VAULT-005, REQ-VAULT-098, REQ-VAULT-039, REQ-VAULT-040, REQ-VAULT-041, REQ-VAULT-045, REQ-VAULT-096, INV-045
+    // Sources: 2.2 REQ-VAULT-005 (no pause, reads no gate), REQ-VAULT-039 to REQ-VAULT-045 and REQ-VAULT-096 (no
+    // vault-token code path), REQ-VAULT-098 (calls no upgradeable Avana contract, instructions only from
+    // Collateralization)
+    /// @notice Across a pledge, a fee collection, a seizure and the withdrawal of the rest, the LPVault touches no
+    /// vault token (no call, no balance or code read), no Aave contract, no MarketRegistry, LPOracle, RiskModule,
+    /// AaveAdapter, LPVaultSwap, VaultTokenFactory or timelock; every call into it comes from Collateralization or,
+    /// for the receiver hook, the position manager; the mints and burns of the lifecycle are the Adapter's. It has no
+    /// pause of its own.
+    /// @dev Kills: any vault-token call, pause or freeze read, registry or oracle read, or call to an upgradeable
+    /// contract added to the LPVault's custody, unwind or fee paths.
+    function test_TEST_162_lpVaultTouchesNoVaultTokenGateOrUpgradeableContract() public {
+        (VmSafe.AccountAccess[] memory accesses, bytes32 key) = _lifecycleAccesses();
+        address[13] memory denied = [
+            vt2,
+            vt,
+            aave.hub,
+            aave.cdpSpoke,
+            registry,
+            address(oracle),
+            address(riskModule),
+            adapter,
+            lpVaultSwap,
+            address(factory),
+            timelock,
+            address(coll),
+            aliceProxy
+        ];
+        uint256 vaultCalls = 0;
+        for (uint256 i = 0; i < accesses.length; ++i) {
+            VmSafe.AccountAccess memory a = accesses[i];
+            if (a.accessor == address(v3Vault)) {
+                for (uint256 j = 0; j < denied.length; ++j) {
+                    assertTrue(a.account != denied[j], string.concat("LPVault touched ", vm.toString(denied[j])));
+                }
+            }
+            if (a.account == address(v3Vault) && a.kind == VmSafe.AccountAccessKind.Call) {
+                ++vaultCalls;
+                assertTrue(
+                    a.accessor == address(coll) || a.accessor == address(nfpm),
+                    string.concat("call into the LPVault from ", vm.toString(a.accessor))
+                );
+            }
+            if (a.account == vt2 && a.kind == VmSafe.AccountAccessKind.Call && _isSupplyChange(a.data)) {
+                assertEq(a.accessor, adapter, "every vault-token mint and burn is the Adapter's");
+            }
+        }
+        assertGe(vaultCalls, 4, "receive, collect, unwind and return reached the LPVault");
+        assertEq(nfpm.ownerOf(uint256(key)), alice, "the rest returned to alice");
+        assertEq(token2.balanceOf(address(v3Vault)), 0, "no vault token at the LPVault");
+        (bool hasPause,) = address(v3Vault).call(abi.encodeWithSignature("pause()"));
+        (bool hasPaused,) = address(v3Vault).call(abi.encodeWithSignature("paused()"));
+        assertFalse(hasPause || hasPaused, "no pause of its own");
+    }
+
+    function _isSupplyChange(
+        bytes memory data
+    ) internal pure returns (bool) {
+        if (data.length < 4) return false;
+        bytes4 s = bytes4(data);
+        return s == IVaultToken.mint.selector || s == IVaultToken.burn.selector;
+    }
+
+    // TEST-189 verifies: REQ-VAULT-044, REQ-VAULT-045, REQ-VAULT-039, REQ-VTOKEN-006
+    // Sources: 2.2 REQ-VAULT-044 (not an allowed recipient; a transfer or mint to it reverts)
+    /// @notice No vault token can reach the LPVault: a mint to it reverts `UnauthorizedRecipient`, a proxy's transfer
+    /// to it reverts `UnauthorizedTransfer`, and it cannot be registered as a proxy (`ReservedAddress`), so its balance
+    /// stays 0 with a position pledged.
+    /// @dev Kills: the LPVault becoming an allowed recipient, a registrable proxy or a transfer destination.
+    function test_TEST_189_noVaultTokenCanReachTheLPVault() public {
+        _pledgeV3(alice, aliceProxy, 5e9);
+        address lpv = address(v3Vault);
+        assertFalse(token2.isAllowedRecipient(lpv), "not an allowed recipient");
+        vm.startPrank(adapter);
+        lock.acquire();
+        vm.expectRevert(abi.encodeWithSelector(IVaultToken.UnauthorizedRecipient.selector, lpv));
+        token2.mint(lpv, 1);
+        vm.expectRevert(abi.encodeWithSelector(IVaultToken.ReservedAddress.selector, lpv));
+        token2.addValidProxy(lpv);
+        lock.release();
+        vm.stopPrank();
+        // A unit in the proxy's hands (withdrawn from the Spoke) cannot be sent to the LPVault.
+        vm.prank(aliceProxy);
+        IAaveV4Spoke(aave.cdpSpoke).withdraw(reserve2, 1, aliceProxy);
+        vm.prank(aliceProxy);
+        vm.expectRevert(abi.encodeWithSelector(IVaultToken.UnauthorizedTransfer.selector, aliceProxy, lpv));
+        token2.transfer(lpv, 1);
+        assertEq(token2.balanceOf(lpv), 0, "the LPVault holds no vault token");
     }
 }

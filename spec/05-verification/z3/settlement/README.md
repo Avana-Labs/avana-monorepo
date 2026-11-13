@@ -22,12 +22,12 @@ Amounts are base units of the debt asset repaid (`Q-333`: every liquidation sett
 | Spec ID | Formula (final text) | Rounding | Script |
 |---|---|---|---|
 | `SPEC-LIQ-001` | `bNet = 10⁴ + ⌊(b − 10⁴)(10⁴ − lf)/10⁴⌋` | down | st02 |
-| `SPEC-LIQ-002` | `costsBps = ⌈φ·10⁴/F⌉`, 0 when `F = 0` | up | st02 |
-| `SPEC-LIQ-003`, `-016` | `s = min(allowance, ⌊10⁴(bNet − 10⁴ − costs)/bNet⌋)` when `bNet > 10⁴ + costs`, else 0; liveness `minLB(10⁴ − smin) ≥ 10⁴(10⁴ + maxFlashFeeBps)` (st02 also checks the general `cBuy` form, of which this is `cBuy = 0`) | down | st02, st16 |
+| `SPEC-LIQ-002` | no cost term in a liquidation: the former `costsBps` is 0 on every call (the models keep it as a parameter fixed at 0; `⌈φ·10⁴/F⌉` survives only as the deleverage and helper pre-loan quote of `SPEC-LIQ-015`) | — | st02, st11 |
+| `SPEC-LIQ-003`, `-016` | `s = min(allowance, ⌊10⁴(bNet − 10⁴)/bNet⌋)` when `bNet > 10⁴`, else 0, so `bNet(10⁴ − s) ≥ 10⁸`; liveness `minLB(10⁴ − smin) ≥ 10⁴(10⁴ + maxFlashFeeBps)` (st02 also checks the general `cBuy` form, of which this is `cBuy = 0`) | down | st02, st16 |
 | `SPEC-LIQ-004` | `V = mulDiv(c·Pc, 10^dd, 10^dv·Pdebt)` | down | st02, st14 |
 | `SPEC-LIQ-005` | `U = Σᵢ ⌈pᵢ·10^dd/(10^dᵢ·Pdebt)⌉`; `minRec = max(0, ⌈V(10⁴ − s)/10⁴⌉ − U − floorRoundingAllowance)`, tested on `R' = R + shortfall` | slippage term up, `U` up | st01, st02, st04 |
 | `SPEC-LIQ-006` | `R` = debt-asset balance change from just before `burnSeized` to after the last route call | exact | st01 |
-| `SPEC-LIQ-007` | `φD = flashFee(T, min(F, D))`; quote `fee(x) = ⌈x·p/10⁴⌉` (V3.4 rounds half-up; the source's ceiling quote is the binding gate) | up | st03, st11 |
+| `SPEC-LIQ-007` | no `φD` term: `G`, `S`, `A`, `kr`, `B` from `D` alone; a helper's or deleverage loan quote is `fee(x) = ⌈x·p/10⁴⌉` (V3.4 rounds half-up; the source's ceiling quote is the binding gate) | up | st03, st11 |
 | `SPEC-LIQ-008` | `S = max(0, R_f − D − φD)`, `R_f = max(R, minRec)` | exact | st03, st16 |
 | `SPEC-LIQ-009` | `A = min(⌊max(0, V − D − φD)·avanaFeeShareBps/10⁴⌋, S)` | down | st01, st03 |
 | `SPEC-LIQ-010` | `keeperOut = (K + F + R') − (D + F + φ + A + B)`, `InsufficientProceeds` if negative; with a transfer fee `K`, `F`, `F + φ` are the measured `Kr`, `Fr`, `P` and `τ = (F − Fr) + (P − F − φ)` falls on `keeperOut` | checked | st03, st16 |
@@ -94,7 +94,7 @@ Exact Solidity 0.8 checked arithmetic: every intermediate lies in `[0, 2²⁵⁶
 | MATH-ST-20 | Wrong reading: a fee on the realized surplus falls from 18.06 to 15.40 USDC when the caller swaps worse, though `V` is unchanged (the 2.11 example gives `A = 19.5`). | `SPEC-LIQ-008`, `-009` | COUNTEREXAMPLE |
 | MATH-ST-51 | No premium term: `S`, `G`, `A`, `kr`, `B` depend on `R`, `minRec`, `V`, `D` only, so callers funding `Kf` or `Kf2 ≥ D` (own balance or a helper loan of any size) get the same split. | `SPEC-LIQ-007` | PROVED |
 | MATH-ST-52 | An oversized `debtToCover` returns the leftover `Kf − D` inside `keeperOut`, unswapped. | `SPEC-LIQ-007`, `SPEC-SET-001`, `LIQ-041` | PROVED |
-| MATH-ST-53 | A transfer fee on the caller's funding (`Kf < X`) lowers `keeperOut` by exactly the fee and leaves `A`, `B` unchanged. | `SPEC-LIQ-007`, `-010`, `SPEC-SET-001` | PROVED |
+| MATH-ST-53 | A transfer fee on the caller's funding (`Kf < X`) lowers `keeperOut` by exactly the fee and leaves `A`, `B` unchanged (measured amounts; a fee that also applies to Aave's pull reverts in the Hub, `REQ-SWAP-123`). | `SPEC-LIQ-007`, `-010`, `SPEC-SET-001` | PROVED |
 | MATH-ST-54 | With `s = 0` the loss is still the caller's: a call that settles has `keeperOut ≥ 0` and `Kf + R' ≥ D`. | `SPEC-SET-001`, `SPEC-LIQ-016` | PROVED |
 | MATH-ST-55 | A call that settles has `R' ≥ minRec`, and the caller pays exactly `max(0, minRec − R) ≤ maxShortfall`. | `SPEC-LIQ-019`, `-005` | PROVED |
 | MATH-ST-96 | `A + kr + B = S`, `0 ≤ kr ≤ G − A`, `B = max(0, S − G)`, and `keeperOut = Kf + kr` whenever `R' ≥ D`. | `SPEC-LIQ-022`, `-010` | PROVED |
@@ -257,7 +257,7 @@ Figures written with fewer digits ("about", "≈", health factors to four decima
 | MATH-ST-109 | Three liquidations on different markets, in any order, each settle from their own caller's funding and top-up (`Kf ≥ D`), with no shared pool; examples: the dust call by any caller and through the helper. | `SPEC-SET-001`, `SPEC-LIQ-019`, `REQ-SWAP-073`, `INV-097`, `AMMN-RT-13` | PROVED / COUNTEREXAMPLE / COMPUTED |
 | MATH-ST-110 | A deleverage or helper loan that passes the checks draws from no recorded Hub and has a premium rate at most `maxFlashFeeBps`. | `LIQ-POST-020`, `REQ-FLASH-002`, `REQ-FLASH-005`, `REQ-FLASH-006`, `REQ-SWAP-013`, `SPEC-LIQ-015`, `INV-095` | PROVED / COUNTEREXAMPLE (2, deliberate) |
 | MATH-ST-111 | Flash repayment by balance delta (`REQ-SWAP-122`): with USDT's fee `min(⌊x·ρ/10⁴⌋, maxFee)`, `ρ ∈ {1, 10, 19}` bps and `maxFee ≤ 50·10⁶`, four top-up transfers bring the source's balance to exactly `owed` for every `owed < 2¹²⁸` (residual 0, delivered = owed, `P ≥ owed`); boundary: three transfers can leave a residual at 19 bps (counterexample expected); the 2.11 example (transfers 5,002,500,000, 5,002,500, 5,002, 5; `P = 5,007,507,507`) | `REQ-SWAP-122`, `REQ-FLASH-003` | PROVED (3) / COUNTEREXAMPLE (boundary) / COMPUTED |
-| MATH-ST-112 | Measured conservation with a transfer fee: with the measured `Kf ≤ X` and a fee on the payout transfer, the fee cost `(X − Kf) + payout fee` falls on what the caller receives alone; `A`, `kr`, `B` keep their fee-free values; USDT example `Kf = 4,995`. | `SPEC-LIQ-010`, `REQ-SWAP-108`, `REQ-SWAP-123`, `REQ-FLASH-003` | PROVED / COUNTEREXAMPLE (deliberate) / COMPUTED |
+| MATH-ST-112 | Measured conservation with a transfer fee: with the measured `Kf ≤ X` and a fee on the payout transfer, the fee cost `(X − Kf) + payout fee` falls on what the caller receives alone; `A`, `kr`, `B` keep their fee-free values; USDT example `Kf = 4,995`. General form for measured amounts: a fee on the debt asset itself never reaches it on Aave V4, whose Hub refuses the fee-reduced repayment (`InsufficientTransferred`, `REQ-SWAP-123`). | `SPEC-LIQ-010`, `REQ-SWAP-108`, `REQ-SWAP-123`, `REQ-FLASH-003` | PROVED / COUNTEREXAMPLE (deliberate) / COMPUTED |
 
 ### `st17_helper_funding.py`: how a flash liquidation helper call is funded
 

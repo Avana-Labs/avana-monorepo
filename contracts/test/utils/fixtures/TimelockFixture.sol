@@ -5,6 +5,8 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
+import {TimelockSelectors} from "../../../src/governance/timelock/TimelockSelectors.sol";
+import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
 import {AvanaTest} from "../AvanaTest.sol";
 import {CallRecorder} from "../mocks/CallRecorder.sol";
@@ -52,6 +54,17 @@ abstract contract TimelockFixture is AvanaTest {
         SelectorPair[] memory shortEligible,
         SelectorPair[] memory daoOnly
     ) internal returns (AvanaTimelock) {
+        return
+            _newTimelockWith(normalDelay, publicExecution, shortEligible, daoOnly, _targetsOf(shortEligible, daoOnly));
+    }
+
+    function _newTimelockWith(
+        uint256 normalDelay,
+        bool publicExecution,
+        SelectorPair[] memory shortEligible,
+        SelectorPair[] memory daoOnly,
+        GovernedTargets memory targets
+    ) internal returns (AvanaTimelock) {
         address[] memory proposers = new address[](2);
         (proposers[0], proposers[1]) = (governanceMultisig, aaveGovernanceExecutor);
         address[] memory executors = new address[](1);
@@ -61,8 +74,48 @@ abstract contract TimelockFixture is AvanaTest {
         address[] memory daoCancellers = new address[](1);
         daoCancellers[0] = aaveGovernanceExecutor;
         return new AvanaTimelock(
-            proposers, executors, cancellers, daoCancellers, normalDelay, publicExecution, shortEligible, daoOnly
+            proposers,
+            executors,
+            cancellers,
+            daoCancellers,
+            normalDelay,
+            publicExecution,
+            shortEligible,
+            daoOnly,
+            targets
         );
+    }
+
+    /// @dev The fixture's ParameterStore, MarketRegistry and LPVaultSwap recorders as the governed targets, or fixed
+    /// placeholder addresses before `_deployTimelock` created them (no deployment, so no nonce moves).
+    function _targets() internal view returns (GovernedTargets memory t) {
+        if (address(parameterStore) == address(0)) {
+            return GovernedTargets(
+                address(uint160(uint256(keccak256("fixture.parameterStore")))),
+                address(uint160(uint256(keccak256("fixture.marketRegistry")))),
+                address(uint160(uint256(keccak256("fixture.lpVaultSwap"))))
+            );
+        }
+        t = GovernedTargets(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
+    }
+
+    /// @dev The governed targets the given lists name (the first pair of each owner), the fixture's otherwise, so a
+    /// suite that lists the launch pairs on its own contracts deploys a timelock bound to them.
+    function _targetsOf(
+        SelectorPair[] memory shortEligible,
+        SelectorPair[] memory daoOnly
+    ) internal view returns (GovernedTargets memory t) {
+        t = _targets();
+        bool[4] memory seen;
+        for (uint256 i = 0; i < shortEligible.length + daoOnly.length; ++i) {
+            SelectorPair memory pair = i < shortEligible.length ? shortEligible[i] : daoOnly[i - shortEligible.length];
+            uint8 kind = TimelockSelectors.ownerKind(pair.selector);
+            if (kind == 0 || seen[kind]) continue;
+            seen[kind] = true;
+            if (kind == 1) t.parameterStore = pair.target;
+            else if (kind == 2) t.marketRegistry = pair.target;
+            else t.lpVaultSwap = pair.target;
+        }
     }
 
     // ─── Operation helpers ───

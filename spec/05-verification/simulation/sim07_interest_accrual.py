@@ -3,8 +3,9 @@
 """SIM-07 Interest accrual pushing idle accounts across HF 1 (Q-096, Q-145, Q-098, Q-169).
 
 All accounts open at t = 0 with HF >= 1.10 (no drifted accounts); 70% are idle and never
-react. Prices stay at peg with small noise; feeds and keepers work. The GHO rate (base plus
-risk premium, Q-096) is a flat APR of 6% / 9% / 12%. Two years, 12-hour steps, seeds 11/22,
+react. Prices stay at peg with small noise; feeds and keepers work. The all-in GHO rate (the curve's
+drawn rate plus risk premium, Q-096, Q-408) is held at 6% / 9% / 12% APR, each standing for the rate at
+a fixed utilization of the kinked curve (SPEC-HUB-007). Two years, 12-hour steps, seeds 11/22,
 gas 20 gwei (also 0.2 gwei at prf 0.40), minimum bonus 2%, target HF 1.10.
 """
 from dataclasses import replace

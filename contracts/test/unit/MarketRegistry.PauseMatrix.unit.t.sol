@@ -434,7 +434,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         registry.setMarketOffboarding(id);
         vm.warp(block.timestamp + 30 days);
-        registry.stepWindDown(id);
+        registry.closeMarket(id);
         _assertState(address(hub), S_PAUSED_MINT);
         _assertState(hubB, S_NONE);
     }

@@ -9,6 +9,7 @@ import {LPOracleLogicBase} from "../../../src/oracle/lp-oracle/LPOracleLogicBase
 import {LPOraclePokeLogic} from "../../../src/oracle/lp-oracle/LPOraclePokeLogic.sol";
 import {LPOracleStorage} from "../../../src/oracle/lp-oracle/LPOracleStorage.sol";
 import {LPOracleViewLogic} from "../../../src/oracle/lp-oracle/LPOracleViewLogic.sol";
+import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -32,6 +33,9 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         uint256 listingFailures;
         mapping(uint256 index => uint256 value) twapValue;
         bytes32 ownPool;
+        // A composition at a price of token `failIndex` below `failBelow` fails (0: never).
+        uint256 failIndex;
+        uint256 failBelow;
     }
 
     bytes32 private constant MODULE_SLOT = keccak256("avana.test.LPOracleHarnessModule");
@@ -55,10 +59,13 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
 
     function _composition(
         uint256 units,
-        uint256[] memory
+        uint256[] memory prices
     ) internal view override returns (bool ok, uint256[] memory amounts) {
         ModuleState storage m = _m();
         if (m.compositionFails) return (false, amounts);
+        if (m.failBelow != 0 && m.failIndex < prices.length && prices[m.failIndex] < m.failBelow) {
+            return (false, amounts);
+        }
         uint256 n = m.coefficients.length;
         amounts = new uint256[](n);
         for (uint256 i = 0; i < n; ++i) {
@@ -67,18 +74,16 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         return (true, amounts);
     }
 
-    function _poolLocked() internal view override returns (bool readOk, bool isLocked) {
-        return (!_m().lockReadFails, _m().locked);
-    }
-
-    function _consistency(
+    function _poolCheck(
         uint256[] memory,
         uint256[] memory,
         uint32,
         uint16
-    ) internal view override returns (bool available, bool pass, uint256 deviationBps, bool isClamped) {
+    ) internal view override returns (PoolCheck memory p) {
         ModuleState storage m = _m();
-        return (!m.consistencyUnavailable, !m.consistencyFails, m.deviation, m.clamped);
+        (p.readOk, p.locked) = (!m.lockReadFails, m.locked);
+        (p.available, p.pass, p.deviationBps, p.clamped) =
+        (!m.consistencyUnavailable, !m.consistencyFails, m.deviation, m.clamped);
     }
 
     function _poolTwapPrice(
@@ -159,9 +164,7 @@ contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
             pokeMinGasFloor,
             pokeMinGasCeiling,
             hasSequencer,
-            pokeLogic,
-            listingLogic,
-            viewLogic
+            LPOracleLogicSet(pokeLogic, listingLogic, listingLogic, viewLogic)
         )
     {}
 
@@ -175,6 +178,14 @@ contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
         bool v
     ) external {
         _m().compositionFails = v;
+    }
+
+    /// @notice Fails every composition whose price of token `index` is below `price` (`price` 0: never).
+    function setCompositionFailsBelow(
+        uint256 index,
+        uint256 price
+    ) external {
+        (_m().failIndex, _m().failBelow) = (index, price);
     }
 
     function setLock(

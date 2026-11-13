@@ -10,14 +10,27 @@ import {ClMarketConfig} from "./types/ClMarketConfig.sol";
 /// @notice Shared extension of the concentrated-liquidity LPVaults (Uniswap v3 on Ethereum, Aerodrome Slipstream on
 /// Base): NFT positions, exact tick ranges and the v3 liquidity math.
 /// @dev `positionKey` encodes the NFT: `bytes32(tokenId)` for Uniswap v3, and for Slipstream
-/// `bytes32((uint256(generation) << 248) | tokenId)` with `tokenId < 2^248`. Units are position liquidity `L`
-/// (vault-token base units, multiplier 1), bounded by `type(uint120).max`. Composition:
+/// `bytes32((uint256(generation) << 248) | tokenId)` with `tokenId < 2^248`. One unit (one vault-token base unit) is
+/// `10^k` units of position liquidity, `k = unitExponent(marketId)`: a position of liquidity `L` holds
+/// `⌊L / 10^k⌋` units, bounded by `type(uint120).max`, and the remainder stays with the NFT. Composition of `u` units:
 /// `sO = isqrt(mulDiv(num, 2^192, den))` from the oracle prices, clamped to `[sqrtRatioAtTick(tickLower),
-/// sqrtRatioAtTick(tickUpper)]`, then `(a0, a1) = getAmountsForLiquidity(sO, sa, sb, L)` floored, each reduced by 1 raw
-/// unit when positive. Uncollected fees (`tokensOwed`, fee growth) never enter the value. The NFT is pulled with
+/// sqrtRatioAtTick(tickUpper)]`, then `(a0, a1) = getAmountsForLiquidity(sO, sa, sb, u * 10^k)` floored, each reduced
+/// by 1 raw unit when positive. Uncollected fees (`tokensOwed`, fee growth) never enter the value. The NFT is pulled with
 /// `transferFrom`, never `safeTransferFrom`; an NFT that arrives through `safeTransferFrom` is stray.
 /// @custom:spec REQ-AMM-V3-001, REQ-AMM-V3-003, REQ-AMM-V3-004, REQ-AMM-SLIP-001, REQ-AMM-SLIP-003, Q-370, Q-371
 interface IClIntegration is ILPVault {
+    /// @notice Returns the market's unit exponent `k`: one vault-token unit is `10^k` units of position liquidity.
+    /// @dev Fixed for every market of a pool by the pool's first binding (`SPEC-ORC-005`); 0 for a pool whose one-spacing
+    /// range already lists at `d <= 16`. Every unit amount the integration reports or takes (`unitsOf`,
+    /// `receivePosition`, `unwind`, `composition`, `riskMetadata`, `riskStatus`) is in these units. Reverts with
+    /// `MarketBinding` for a market not bound to this integration.
+    /// @param marketId The market.
+    /// @return k The unit exponent, at most 18.
+    /// @custom:spec SPEC-UNIT-002, SPEC-ORC-005
+    function unitExponent(
+        uint256 marketId
+    ) external view returns (uint8 k);
+
     /// @notice Returns the market's concentrated-liquidity configuration.
     /// @dev Reverts with `MarketBinding` for a market not bound to this integration.
     /// @custom:spec REQ-AMM-V3-002, REQ-AMM-SLIP-002

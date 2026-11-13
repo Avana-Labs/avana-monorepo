@@ -14,28 +14,31 @@ import {ClMarketConfig} from "../types/ClMarketConfig.sol";
 import {IUniswapV3Integration} from "./IUniswapV3Integration.sol";
 
 /// @title UniswapV3Integration
-/// @notice The Uniswap v3 LPVault on Ethereum: immutable custodian of canonical NonfungiblePositionManager positions in
+/// @notice The Uniswap v3 LPVault: immutable custodian of canonical NonfungiblePositionManager positions in
 /// exact-range markets, `AMM_PROTOCOL() = keccak256("UNISWAP_V3")`, `positionKey = bytes32(tokenId)`, units are the
 /// position's liquidity.
 /// @dev The AMM-neutral custody, binding and pricing code is the shared concentrated-liquidity base
 /// (`src/amm/concentrated-liquidity/`); this contract supplies what names Uniswap v3: the NFPM and factory immutables,
 /// the 12-field `positions` and 7-field `slot0` layouts, the pool derivation `FACTORY.getPool(token0, token1, fee)`,
 /// and the listing check of a pool against the factory, its CREATE2 address and the standard fee tiers.
-/// @custom:spec REQ-AMM-V3-001, REQ-AMM-V3-002, REQ-AMM-V3-003, REQ-AMM-V3-004, REQ-AMM-V3-005, REQ-AMM-V3-006, REQ-AMM-V3-007, REQ-VAULT-155, REQ-VAULT-174, REQ-AMM-CORE-002, Q-226, Q-291, Q-305, Q-371
+/// @custom:spec REQ-AMM-V3-001, REQ-AMM-V3-002, REQ-AMM-V3-003, REQ-AMM-V3-004, REQ-AMM-V3-005, REQ-AMM-V3-006, REQ-AMM-V3-007, REQ-AMM-V3-012, REQ-VAULT-155, REQ-VAULT-174, REQ-AMM-CORE-002, Q-226, Q-291, Q-305, Q-371
 contract UniswapV3Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV3Integration {
     /// @notice `keccak256("UNISWAP_V3")`.
     bytes32 public constant UNISWAP_V3 = keccak256("UNISWAP_V3");
     /// @notice Init code hash of the canonical Uniswap v3 pool, from which `FACTORY` derives every pool address.
     bytes32 public constant POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
-    /// @dev Ethereum's block interval, seconds (`SPEC-ORC-022`).
-    uint256 private constant BLOCK_TIME = 12;
-
+    /// @notice Largest block interval accepted, seconds: Ethereum's.
+    uint256 public constant MAX_BLOCK_TIME = 12;
     address private immutable _NFPM;
     address private immutable _FACTORY;
+    /// @dev The chain's minimum block interval, seconds (`SPEC-ORC-022`, `REQ-AMM-V3-012`).
+    uint256 private immutable _BLOCK_TIME;
 
     /// @notice Fixes the integration identifier, the Avana bindings and the canonical NFPM and factory.
-    /// @dev Reverts `InvalidDeployment` for a zero NFPM or factory, either equal to an Avana binding, or an NFPM whose
-    /// `factory()` is not `factory` (`REQ-AMM-V3-001`).
+    /// @dev Reverts `InvalidDeployment` for a zero NFPM or factory, either equal to an Avana binding, an NFPM whose
+    /// `factory()` is not `factory` (`REQ-AMM-V3-001`), or a block time of 0, above 12 s, or other than the known
+    /// interval of the chain Avana deploys on (12 s on Ethereum and Sepolia, 2 s on Base, Base Sepolia and OP
+    /// Mainnet; `REQ-AMM-V3-012`).
     /// @param integrationId Identifier registered for this LPVault in the VaultTokenFactory.
     /// @param collateralization The chain's Collateralization.
     /// @param marketRegistry The chain's MarketRegistry proxy.
@@ -43,7 +46,8 @@ contract UniswapV3Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV3I
     /// @param timelock The chain's AvanaTimelock.
     /// @param nfpm Canonical Uniswap v3 NonfungiblePositionManager.
     /// @param factory Canonical Uniswap v3 factory.
-    /// @custom:spec REQ-AMM-V3-001, REQ-VAULT-155
+    /// @param blockTime The chain's minimum block interval, seconds.
+    /// @custom:spec REQ-AMM-V3-001, REQ-AMM-V3-012, REQ-VAULT-155
     constructor(
         uint32 integrationId,
         address collateralization,
@@ -51,8 +55,13 @@ contract UniswapV3Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV3I
         address lock,
         address timelock,
         address nfpm,
-        address factory
+        address factory,
+        uint256 blockTime
     ) ClLPVaultBase(integrationId, collateralization, marketRegistry, lock, timelock) {
+        uint256 known = _knownBlockTime(block.chainid);
+        if (blockTime == 0 || blockTime > MAX_BLOCK_TIME || (known != 0 && blockTime != known)) {
+            revert InvalidDeployment();
+        }
         if (nfpm == address(0) || factory == address(0) || nfpm == factory) revert InvalidDeployment();
         if (
             nfpm == collateralization || nfpm == marketRegistry || nfpm == lock || nfpm == timelock
@@ -63,6 +72,13 @@ contract UniswapV3Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV3I
         }
         _NFPM = nfpm;
         _FACTORY = factory;
+        _BLOCK_TIME = blockTime;
+    }
+
+    /// @inheritdoc IUniswapV3Integration
+    /// @custom:spec REQ-AMM-V3-012, SPEC-ORC-022
+    function BLOCK_TIME() external view override returns (uint256) {
+        return _BLOCK_TIME;
     }
 
     /// @inheritdoc IUniswapV3Integration
@@ -168,8 +184,19 @@ contract UniswapV3Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV3I
         return false;
     }
 
-    function _blockTime() internal pure override returns (uint256) {
-        return BLOCK_TIME;
+    /// @dev The constructor's block interval (`REQ-AMM-V3-012`).
+    function _blockTime() internal view override returns (uint256) {
+        return _BLOCK_TIME;
+    }
+
+    /// @dev The block interval of a chain Avana deploys on: 12 s for Ethereum (1) and Sepolia (11155111), 2 s for Base
+    /// (8453), Base Sepolia (84532) and OP Mainnet (10); 0 for any other chain, where the constructor's value stands.
+    function _knownBlockTime(
+        uint256 chainId
+    ) private pure returns (uint256) {
+        if (chainId == 1 || chainId == 11_155_111) return 12;
+        if (chainId == 8453 || chainId == 84_532 || chainId == 10) return 2;
+        return 0;
     }
 
     /// @dev The CREATE2 address `FACTORY` deploys the pool of `(token0, token1, fee)` at, Uniswap v3-periphery

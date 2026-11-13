@@ -203,7 +203,7 @@ def test_hyp55_slice_only_for_rescue_topups():
     restore = s.restore_booked(px, 0)
     room = s.p.cap_market_usd - s.counters_regular[0]
     c = room + restore // 2
-    tid = s.create_position("u", 0, c * 10 ** 6 // max(s.accepted_price(0), s.p.stress_floor_usd8))
+    tid = s.create_position("u", 0, c * 10 ** 6 // max(s.booking_price(0), s.p.stress_floor_usd8))
     s.nfpm.approve("u", tid, LPVAULT)
     ok, r = s.pledge("u", 0, tid)
     assert ok and 0 < r["slice"] <= restore, r
@@ -646,8 +646,8 @@ def test_hyp77_rescue_topups_and_rescue_units(stop, drop):
      "breaker": lambda: s.trip_market_breaker(0), "mint_suspect": lambda: s.pause(MINT_PATH_SUSPECT),
      "freeze_addr": lambda: s.freeze_address("emergency_guardian", "u")}[stop]()
     restore = s.restore_booked(px, 0)
-    L = max(1, restore * 10 ** 6 // max(s.accepted_price(0), s.p.stress_floor_usd8) // 2)
-    assume(L * s.accepted_price(0) // 10 ** 6 >= 10 * USD)
+    L = max(1, restore * 10 ** 6 // max(s.booking_price(0), s.p.stress_floor_usd8) // 2)
+    assume(L * s.booking_price(0) // 10 ** 6 >= 10 * USD)
     tid = s.create_position("u", 0, L)
     s.nfpm.approve("u", tid, LPVAULT)
     ok, r = s.pledge("u", 0, tid)
@@ -995,7 +995,9 @@ def test_hyp89_orphan_burn_keeps_market_working(m, burn, drop):
 @cfg(30)
 @given(fee=st.integers(1, 50), drop=CRASH, path=st.sampled_from(["liquidate", "settle", "remove", "deleverage"]))
 def test_hyp91_usdt_fee_switch(fee, drop, path):
-    """With USDT's transfer fee switched on, settlement, removal and deleverage of a USDT market keep working at the
+    """USDT is a pool token here and GHO the debt, so no fee-charged transfer enters the Hub (a fee on a debt asset is
+    refused by Aave V4's Hub, REQ-SWAP-123).
+    With USDT's transfer fee switched on, settlement, removal and deleverage of a USDT market keep working at the
     amounts that actually arrive, the issuer breaker trips, and no Avana contract keeps a token (Q-271)."""
     s = fresh()
     tid = pledge(s, "u", 0, 50_000)

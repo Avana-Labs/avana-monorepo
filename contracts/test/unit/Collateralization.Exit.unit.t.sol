@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
 import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
@@ -407,5 +408,37 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         assertEq(token.balanceOf(attacker), 0);
         assertEq(coll.previewRelease(INTEGRATION, KEY42), 5_000_000_000, "no shortfall");
         assertEq(coll.getPending(vt).units, 0);
+    }
+
+    // TEST-017 verifies: REQ-AMM-CORE-019, REQ-AMM-CORE-011, REQ-VAULT-064
+    // Sources: 2.19 REQ-AMM-CORE-019 (collectFees on an integration whose fees compound reverts FeesRolledIn)
+    /// @notice For an integration whose fees compound, the LPVault's `FeesRolledIn` reaches the caller of
+    /// `Collateralization.collectFees` unchanged, and the record, the credit and the custody stay as they were; the
+    /// fee claim of a separate-fee integration is then paid as usual.
+    /// @dev Kills: Collateralization catching, re-wrapping or ignoring the LPVault's `FeesRolledIn`.
+    function test_TEST_017_rolledInFeesRevertReachesTheCaller() public {
+        uint256 id = _pledge(alice, aliceProxy, KEY7, 2_000_000_000);
+        BackingRecord memory before = coll.getRecord(id);
+        vm.mockCallRevert(
+            address(lpVault),
+            abi.encodeWithSelector(IAmmIntegration.collectFees.selector),
+            abi.encodeWithSelector(ILPVaultErrors.FeesRolledIn.selector)
+        );
+        _acquire(adapter);
+        vm.expectRevert(ILPVaultErrors.FeesRolledIn.selector);
+        vm.prank(adapter);
+        coll.collectFees(alice, vt, KEY7);
+        _release(adapter);
+        vm.clearMockedCalls();
+        BackingRecord memory afterRevert = coll.getRecord(id);
+        assertEq(afterRevert.credited, before.credited, "credit unchanged");
+        assertEq(afterRevert.currentUsdCharge, before.currentUsdCharge, "charge unchanged");
+        assertEq(coll.getTotalCredited(vt), 2_000_000_000, "total unchanged");
+        lpVault.accrueFees(KEY7, 1_650_000);
+        _acquire(adapter);
+        vm.prank(adapter);
+        uint256[] memory fees = coll.collectFees(alice, vt, KEY7);
+        _release(adapter);
+        assertEq(fees[0], 1_650_000, "a separate-fee collection pays");
     }
 }

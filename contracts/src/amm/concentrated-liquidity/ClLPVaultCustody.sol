@@ -44,7 +44,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         uint256 tokenId = _tokenId(positionKey);
         manager.transferFrom(owner, address(this), tokenId);
         if (manager.ownerOf(tokenId) != address(this)) revert NotTokenOwner();
-        (,,, units) = _readPosition(positionKey);
+        units = _liveUnits(m, positionKey);
         if (units == 0) revert ZeroUnits();
         emit PositionReceived(positionKey, marketId, owner, units);
     }
@@ -58,7 +58,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     ) external view override returns (uint128 units) {
         Market storage m = _market(marketId);
         _checkPosition(m, owner, positionKey);
-        (,,, units) = _readPosition(positionKey);
+        units = _liveUnits(m, positionKey);
         if (units == 0) revert ZeroUnits();
     }
 
@@ -105,7 +105,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         (, Market storage m) = _custodied(positionKey);
         _requireUnlocked(m.cfg.pool);
         if (recipient == address(0) || recipient == address(this)) revert InvalidRecipient();
-        amounts = _removePrincipal(positionKey, units, minAmounts, recipient);
+        amounts = _removePrincipal(positionKey, SafeCast.toUint128(_toLiquidity(m, units)), minAmounts, recipient);
         emit UnitsUnwound(positionKey, units, recipient, amounts);
     }
 
@@ -119,7 +119,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         _onlyCustodyCaller();
         (address depositor, Market storage m) = _custodied(positionKey);
         _requireUnlocked(m.cfg.pool);
-        amounts = _removePrincipal(positionKey, units, minAmounts, depositor);
+        amounts = _removePrincipal(positionKey, SafeCast.toUint128(_toLiquidity(m, units)), minAmounts, depositor);
         emit UnitsReleased(positionKey, units, depositor, amounts);
     }
 
@@ -233,16 +233,26 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         if (locked && msg.sender != _COLLATERALIZATION) revert Locked();
         (, Market storage m) = _custodied(positionKey);
         if (locked) _requireUnlocked(m.cfg.pool);
-        (,,, units) = _readPosition(positionKey);
+        units = _liveUnits(m, positionKey);
     }
 
     // ─── Internal ───
 
-    /// @dev `SPEC-BACK-008`: removes exactly `units` and collects exactly the principal the removal returned to
-    /// `recipient`, so every owed fee stays with the NFT.
+    /// @dev The position's live liquidity in vault-token units, `⌊liquidity / 10^k⌋` (`SPEC-UNIT-002`).
+    function _liveUnits(
+        Market storage m,
+        bytes32 positionKey
+    ) private view returns (uint128) {
+        (,,, uint128 liquidity) = _readPosition(positionKey);
+        return SafeCast.toUint128(_toUnits(m, liquidity));
+    }
+
+    /// @dev `SPEC-BACK-008`: removes exactly `liquidity` (the liquidity of the units removed, `units * 10^k`,
+    /// `SPEC-UNIT-002`) and collects exactly the principal the removal returned to `recipient`, so every owed fee stays
+    /// with the NFT.
     function _removePrincipal(
         bytes32 positionKey,
-        uint128 units,
+        uint128 liquidity,
         uint256[] calldata minAmounts,
         address recipient
     ) private returns (uint256[] memory amounts) {
@@ -252,7 +262,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         (uint256 a0, uint256 a1) = manager.decreaseLiquidity(
             IClPositionManager.DecreaseLiquidityParams({
                 tokenId: tokenId,
-                liquidity: units,
+                liquidity: liquidity,
                 amount0Min: minAmounts[0],
                 amount1Min: minAmounts[1],
                 deadline: block.timestamp

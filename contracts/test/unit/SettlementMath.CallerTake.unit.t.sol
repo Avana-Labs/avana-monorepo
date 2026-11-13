@@ -39,11 +39,10 @@ contract SettlementMathCallerTakeUnitTest is AvanaTest {
         uint256 minRec,
         uint256 recovered
     ) internal view returns (Settled memory o) {
-        o.p = m.payouts(value, debt, 0, m.recoveryWithFloor(minRec, recovered), AVANA_FEE_SHARE_BPS);
-        uint256 gap = m.roundingGap(debt, 0, 0, o.p.avanaFee, o.p.borrowerSurplus, callerFunds, recovered);
+        o.p = m.payouts(value, debt, m.recoveryWithFloor(minRec, recovered), AVANA_FEE_SHARE_BPS);
+        uint256 gap = m.roundingGap(debt, o.p.avanaFee, o.p.borrowerSurplus, callerFunds, recovered);
         o.shortfall = m.shortfallTopUp(minRec, recovered, gap, 0);
-        o.keeperOut =
-            m.keeperPayout(callerFunds, 0, recovered + o.shortfall, debt, 0, o.p.avanaFee, o.p.borrowerSurplus);
+        o.keeperOut = m.keeperPayout(callerFunds, recovered + o.shortfall, debt, o.p.avanaFee, o.p.borrowerSurplus);
     }
 
     /// @notice `SPEC-LIQ-011` example: `G = 97.5` USDC and `kr ≤ 78` USDC after `A`. With routes at `R = 2,040.3` the

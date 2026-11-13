@@ -125,6 +125,9 @@ contract MarketRegistryRoutesHandler is MarketRegistryFixture {
         bool expected = !guardian && _fits(kind, route);
         vm.prank(_caller(guardian));
         try registry.setRoute(marketId, address(usdc), address(gho), kind, route) {
+            // REQ-ROUTE-017: a different route this call replaces leaves the slot's approved set.
+            address replaced = _model[kind].route;
+            if (replaced != address(0) && replaced != route) _approved[kind][replaced] = false;
             _model[kind] = Rec(route, true);
             _approved[kind][route] = true;
             _after(true, expected, guardian);

@@ -13,11 +13,13 @@ import {PositionRef} from "../../types/PositionRef.sol";
 /// and token amounts are arrays in the order of the market's `tokens`.
 interface IAaveAdapterUser {
     /// @notice Pledges one AMM position into a market, creating the wallet's proxy for that market if needed.
-    /// @dev Order: Lock; `DeadlineExpired`; `ApplicationPaused` if the market's Hub is Paused with reason
-    /// `MintPathSuspect`; `UnknownMarket` unless `marketId` is a registered market whose CDP Spoke is approved;
-    /// `IntegrationMismatch` unless `position.integrationId` is the market's; on the wallet's first pledge to the market
-    /// `ProxyManager.deployProxy(msg.sender, spoke, marketId)` (the ProxyManager refuses a frozen wallet), store the
-    /// binding (wallet, Spoke, market, vault token, reserve), emit `UserProxyCreated`; `ApplicationFrozen` if Frozen
+    /// @dev Order: Lock; `DeadlineExpired`; `UnknownMarket` unless the registry's market names a VaultTokenFactory token
+    /// whose own market, Spoke and Hub are the record's; `ApplicationPaused` if the market's Hub is Paused with reason
+    /// `MintPathSuspect`; `UnknownSpoke` unless its CDP Spoke is approved; `IntegrationMismatch` unless
+    /// `position.integrationId` is the market's; on the wallet's first pledge to the market
+    /// `ProxyManager.deployProxy(msg.sender, spoke, marketId)` (the ProxyManager refuses a frozen wallet),
+    /// `AccountNotEmpty` unless the new proxy's Spoke account has no debt and no collateral, store the binding (wallet,
+    /// Spoke, market, vault token, reserve), emit `UserProxyCreated`; `ApplicationFrozen` if Frozen
     /// and `borrowCount == 0`; `requireRescue` under `Paused(General)` or for a frozen caller; `addValidProxy` if not yet
     /// valid; read the backing gap; `Collateralization.pledge(msg.sender, proxy, vaultToken, position.positionKey, requireRescue)` with the market's
     /// vault token from its MarketRegistry record
@@ -80,8 +82,9 @@ interface IAaveAdapterUser {
     /// D)`; `safeTransferFrom(msg.sender, proxy, x)`, `received` = the proxy's balance delta (`UnitsMismatch` if 0 or
     /// above `x`); through `proxy.execute`, approve exactly `received`, `spoke.repay(debtReserveId, received, proxy)`,
     /// reset the approval, return `received - spent` to the payer when non-zero (Aave takes at most the debt);
-    /// repay-all: `DebtRemaining` unless the reserve's debt is 0; when `borrowCount == 0` after the repay,
-    /// `Collateralization.markDebtFree(proxy)` (REQ-PROXY-032); `Repaid`. Never reads the MarketRegistry, the pause
+    /// repay-all: `DebtRemaining` unless the reserve's debt is 0; `Repaid`; when the reserve's debt is 0 after the
+    /// repay, `Collateralization.markDebtFree(proxy)`, which clears the indebted mark only at `borrowCount == 0`
+    /// (REQ-PROXY-032). Never reads the MarketRegistry, the pause
     /// state, the address freeze, a breaker, the RiskModule, a price or a parameter: the binding (Spoke, vault token,
     /// reserve) comes from the Adapter's own storage written at proxy creation.
     /// @param borrower The wallet whose account is repaid.
@@ -150,7 +153,8 @@ interface IAaveAdapterUser {
 
     /// @notice Returns the position of a record at 0 credited units to its depositor of record.
     /// @dev Depositor of record only (Collateralization checks `NotDepositor`). Order: Lock; `DeadlineExpired`;
-    /// `Collateralization.releaseZeroCredit(msg.sender, vaultToken, position.positionKey)` with the market's vault token
+    /// `NoProxy` unless the caller has an account for the market; `IntegrationMismatch`;
+    /// `Collateralization.releaseZeroCredit(msg.sender, vaultToken, position.positionKey)` with that account's vault token
     /// (open record at 0 credited units, position returned through the market's LPVault). Mints, burns and supplies
     /// nothing; reads no MarketRegistry state, pause, freeze, breaker or price. The Adapter is the outer entry point
     /// because Collateralization is not a Lock member (Q-377).
@@ -167,7 +171,8 @@ interface IAaveAdapterUser {
     /// @notice Collects the fees a custodied position has earned, for an AMM protocol that keeps fees apart from the
     /// position, and pays them to the depositor of record.
     /// @dev Depositor of record only (Collateralization checks `NotDepositor`). Order: Lock; `DeadlineExpired`;
-    /// `Collateralization.collectFees(msg.sender, vaultToken, position.positionKey)` with the market's vault token, which
+    /// `NoProxy` unless the caller has an account for the market; `IntegrationMismatch`;
+    /// `Collateralization.collectFees(msg.sender, vaultToken, position.positionKey)` with that account's vault token, which
     /// calls the market's LPVault `collectFees` (open record, fees only, principal untouched, paid to the depositor). For an AMM protocol whose fees are rolled into
     /// the position (Uniswap v2, Curve, Balancer) the LPVault reverts with `FeesRolledIn`. Reads no MarketRegistry state,
     /// pause, freeze, breaker or price.

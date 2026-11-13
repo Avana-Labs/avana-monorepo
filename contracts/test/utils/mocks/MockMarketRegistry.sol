@@ -38,6 +38,38 @@ contract MockMarketRegistry {
     address public LOCK = address(0xBEEF05);
     address public PAYOUT_ESCROW = address(0xBEEF06);
     address public flashSource = address(0xBEEF07);
+    /// @dev Swap-route records `(marketId, token, debtAsset, kind) → route`, as the MarketRegistry's `getRoute` serves.
+    mapping(bytes32 => address) internal _routeOf;
+    /// @dev `getRoute` answers only once a suite turns it on (the flash helper's suites); every other suite keeps the
+    /// registry without route reads, so a contract that tries the read takes its failure path as before.
+    bool public routeReads;
+
+    function setRouteReads(
+        bool on
+    ) external {
+        routeReads = on;
+    }
+
+    function setRouteRecord(
+        uint256 marketId,
+        address token,
+        address debtAsset,
+        uint8 kind,
+        address route
+    ) external {
+        _routeOf[keccak256(abi.encode(marketId, token, debtAsset, kind))] = route;
+    }
+
+    function getRoute(
+        uint256 marketId,
+        address token,
+        address debtAsset,
+        uint8 kind
+    ) external view returns (address route, bool usable) {
+        require(routeReads, "no route reads");
+        route = _routeOf[keccak256(abi.encode(marketId, token, debtAsset, kind))];
+        usable = route != address(0);
+    }
     address public PARAMETER_STORE = address(0xBEEF08);
     address public FLASH_LIQUIDATOR = address(0xBEEF09);
     address public STANDARD_SPOKE_IMPLEMENTATION = address(0xBEEF0A);
@@ -97,11 +129,19 @@ contract MockMarketRegistry {
         TokenDef storage t = _tokens[token];
         t.listed = true;
         t.decimals = 6;
+        t.isUsdStable = true;
         t.primaryRoute = primary;
         t.alternateRoute = alternate;
         t.standbyRoute = standby;
         _primary[token] = primary;
         _alternate[token] = alternate;
+    }
+
+    function setUsdStable(
+        address token,
+        bool stable
+    ) external {
+        _tokens[token].isUsdStable = stable;
     }
 
     function setActiveRoutes(

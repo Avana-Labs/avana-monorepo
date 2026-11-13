@@ -7,3 +7,8 @@ useDefault = true
 description = "SHA-256 hashes of reviewed source files recorded with a triage approval (reviewedFiles), not credentials."
 regexTarget = "line"
 regexes = ['''^\s*"(src|test|script)/[A-Za-z0-9_./-]+\.sol": "[0-9a-f]{64}",?\s*$''']
+
+[[allowlists]]
+description = "Spec traceability comments made only of a check ID and requirement IDs (for example `// TEST-166 verifies: REQ-ACCESS-060, REQ-ACCESS-010`), not credentials. Approved by Josue, 2026-11-13."
+regexTarget = "line"
+regexes = ['''^\s*//+\s*(?:@custom:spec|(?:TEST|PROP|MATH|HYP|QNT|SYM|SIM)-[A-Za-z0-9-]+ verifies:)\s+[A-Z]+(?:-[A-Za-z0-9]+)+(?:,\s*[A-Z]+(?:-[A-Za-z0-9]+)+)*\s*$''']

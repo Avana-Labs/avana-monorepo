@@ -55,238 +55,6 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "920045d1ee868675",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "LockHeld",
-      "reason": "`LockHeld` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "03e2f113a3bf73fd",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "UnknownProxy",
-      "reason": "`UnknownProxy` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "dbf63d8d255c2baa",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "UnknownMarket",
-      "reason": "`UnknownMarket` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "ed6786c59cd534e6",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "UnknownDebtReserve",
-      "reason": "`UnknownDebtReserve` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "08cc87ca314bdad0",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "InvalidAmount",
-      "reason": "`InvalidAmount` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "cfae267de7e43c4a",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "NotLiquidatable",
-      "reason": "`NotLiquidatable` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "c734f75bc305c1be",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "SharesNotEqualAssets",
-      "reason": "`SharesNotEqualAssets` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "6f8ed4cbe30c178c",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "StalePrice",
-      "reason": "`StalePrice` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "c25f5854116da0fc",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "DebtPriceStale",
-      "reason": "`DebtPriceStale` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "09fddbbd7b6e13bb",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "GraceHealthFactor",
-      "reason": "`GraceHealthFactor` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "02083982930f0138",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "FundingMismatch",
-      "reason": "`FundingMismatch` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "e2df106fa0b7255a",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "FlashFeeTooHigh",
-      "reason": "`FlashFeeTooHigh` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "60bebc507068dacc",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "FlashSourceIsHub",
-      "reason": "`FlashSourceIsHub` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "8dbb0e348d158736",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "FlashRepayShort",
-      "reason": "`FlashRepayShort` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "cc8b23fcd1fb6485",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "InvalidFlashCallback",
-      "reason": "`InvalidFlashCallback` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "cc8b1c6e67e42a16",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "NothingSeized",
-      "reason": "`NothingSeized` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "657463ceecf50d2b",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "NoRouteAvailable",
-      "reason": "`NoRouteAvailable` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "dd6514d769048bb0",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "FlashLiquidityShort",
-      "reason": "`FlashLiquidityShort` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "6b67cddb03568b2e",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "InvalidFeeRecipient",
-      "reason": "`InvalidFeeRecipient` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "66ddca55761c96df",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "InvalidKeeper",
-      "reason": "`InvalidKeeper` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "96b2d252f3c01127",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "KeeperFloor",
-      "reason": "`KeeperFloor` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "b8094b385369f45e",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "TooManyKeepers",
-      "reason": "`TooManyKeepers` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "41f1a34e584efb82",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "NothingPending",
-      "reason": "`NothingPending` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "bbe443e7a904d498",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "DeadlineExpired",
-      "reason": "`DeadlineExpired` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "d302c7a60954dbf4",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "PayoutTooLow",
-      "reason": "`PayoutTooLow` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "e2989f3dbc5893f5",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "InsufficientGas",
-      "reason": "`InsufficientGas` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "e58385fa692e916d",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "AddressIsFrozen",
-      "reason": "`AddressIsFrozen` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "f8af48c1b558e8ac",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "NotAdapter",
-      "reason": "`NotAdapter` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "2e61c4a675743330",
-      "check": "unused-error",
-      "file": "src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol",
-      "error": "AdminRoleOnlyTimelock",
-      "reason": "`AdminRoleOnlyTimelock` is reverted with by LPVaultSwap (2.11), whose implementation is not in this folder. SettlementMath, the folder's only implementation, is a pure library and reverts only with RecoveryBelowFloor, InsufficientProceeds, DeleverageTooSmall and DeleverageShortfall; the entry applies while that holds.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
       "fingerprint": "3dbcd01d6b739bd5",
       "check": "contract-locks-ether",
       "file": "src/policy/parameter-store/ParameterStore.sol",
@@ -324,38 +92,6 @@
       "file": "src/policy/parameter-store/ParameterStoreRouter.sol",
       "function": "ParameterStoreRouter._forward(address)",
       "reason": "Setters return nothing, so the delegatecall's return data is empty; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "8a267dec23f3aa42",
-      "check": "reentrancy-state-change",
-      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
-      "function": "ParameterStoreListingLogic.setFeed (decimals read)",
-      "reason": "decimals(), aggregator(), minAnswer() and maxAnswer() are view interfaces compiled to STATICCALL, which cannot re-enter or change state; setFeed must read them before writing the pinned values (REQ-CONFIG-022).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "12c6d773dc37023f",
-      "check": "reentrancy-state-change",
-      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
-      "function": "ParameterStoreListingLogic.setFeed (aggregator read)",
-      "reason": "As for the decimals read: a STATICCALL view read that must precede the write.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "db966f5470b5e01b",
-      "check": "reentrancy-state-change",
-      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
-      "function": "ParameterStoreListingLogic.setFeed (minAnswer read)",
-      "reason": "As for the decimals read: a STATICCALL view read that must precede the write.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "a4d1dff6afe6558d",
-      "check": "reentrancy-state-change",
-      "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
-      "function": "ParameterStoreListingLogic.setFeed (maxAnswer read)",
-      "reason": "As for the decimals read: a STATICCALL view read that must precede the write.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -454,22 +190,6 @@
       "file": "src/liquidation/payout-escrow/PayoutEscrow.sol",
       "function": "PayoutEscrow.claim (LOCK.isLocked())",
       "reason": "Every external call of deposit and claim runs under the escrow's transient reentrancy flag, which is the first check of both functions (REQ-ESCROW-007): a callback into deposit or claim reverts Reentrancy before reading or writing any state, and the escrow has no other state-changing function. The flagged call is ILock.isLocked(), a view (STATICCALL) of the immutable protocol Lock; the LockHeld check must precede the effects (REQ-ESCROW-004). The token transfer itself comes after every state write (checks-effects-interactions). Covered by TEST-179, PROP-052.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "cbd537417a3e9389",
-      "check": "reentrancy-state-change",
-      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
-      "function": "VaultTokenFactory.registerIntegration",
-      "reason": "The _lpVaultOf write follows only view calls to the LPVault (INTEGRATION_ID, COLLATERALIZATION, LOCK, AMM_PROTOCOL) and to Collateralization (LOCK), declared view in ILPVault/ICollateralizationViews and therefore compiled to STATICCALL, which cannot change state or re-enter a state-changing function. The function is callable only by the AvanaTimelock after the normal delay (REQ-VTOKEN-044), and every storage check precedes the calls. Covered by TEST-024 (registration rejections) and PROP-055 (Halmos check_PROP_055_registrationIsWriteOnce).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "1fffe90232d9deb1",
-      "check": "reentrancy-state-change",
-      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
-      "function": "VaultTokenFactory.registerIntegration",
-      "reason": "The _isLpVault write follows only view calls to the LPVault (INTEGRATION_ID, COLLATERALIZATION, LOCK, AMM_PROTOCOL) and to Collateralization (LOCK), declared view in ILPVault/ICollateralizationViews and therefore compiled to STATICCALL, which cannot change state or re-enter a state-changing function. The function is callable only by the AvanaTimelock after the normal delay (REQ-VTOKEN-044), and every storage check precedes the calls. Covered by TEST-024 (registration rejections) and PROP-055 (Halmos check_PROP_055_registrationIsWriteOnce).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -651,13 +371,6 @@
     },
     {
       "fingerprint": "ecef53e08d398917",
-      "check": "unused-import",
-      "file": "src/policy/market-registry/MarketRegistry.sol",
-      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "920b805a3e2bef67",
       "check": "unused-import",
       "file": "src/policy/market-registry/MarketRegistry.sol",
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
@@ -1093,14 +806,6 @@
       "review": "Reviewed per call site, group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11."
     },
     {
-      "fingerprint": "9a67876a90d34f21",
-      "check": "unsafe-casting",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
-      "function": "LPOracleReads._decodeRound",
-      "reason": "answer = int256(rawAnswer): the ABI encoding of the int256 answer of latestRoundData() is its two's-complement word, so the cast is the decoding, not a truncation; LPPriceMath maps every answer outside (0, 2^128) to 0 (SPEC-ORC-001). Covered by TEST-219 (negative and extreme answers).",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
       "fingerprint": "d5bec8df2a852186",
       "check": "empty-block",
       "file": "src/oracle/lp-oracle/LPOracle.sol",
@@ -1125,14 +830,6 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
-      "fingerprint": "ca763563d74e6166",
-      "check": "unchecked-return",
-      "file": "src/oracle/lp-oracle/LPOracle.sol",
-      "function": "LPOracle.initialize",
-      "reason": "The listing logic's initializeMarket returns nothing, so the delegatecall's return data is empty; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error (REQ-ORACLE-106).",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
       "fingerprint": "7b524371a133b5a0",
       "check": "unused-import",
       "file": "src/oracle/lp-oracle/LPOracleListingLogic.sol",
@@ -1154,30 +851,12 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "b121b05f036cf252",
-      "check": "require-revert-in-loop",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._forwardTokens",
-      "reason": "The revert in the loop is SafeERC20's on a residue transfer the recipient's token refuses; the whole call must revert then (REQ-HELPER-008: the helper escrows nothing for its recipient). Bounded at MAX_POOL_TOKENS = 8. Covered by test_TEST_174_residueRefusedByRecipientRevertsWholeLiquidation.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: bounded loops (at most 8 market tokens; a refused residue must revert the whole call, REQ-HELPER-008)."
-    },
-    {
       "fingerprint": "f617ade4761bef6f",
       "check": "unchecked-return",
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase.flashLiquidate (F = 0 branch)",
       "reason": "The internal _liquidate(asset, request.params) of the operator helper's no-loan path returns (keeperOut, unused, debtRepaid), which only the loan path's _runLoan needs, to size the repayment owed to a lender (_checkLoanNeed and _repay). With F = 0 nothing is owed and there is no lender: _liquidate itself stores keeperOut and debtRepaid in the transient context (KEEPER_OUT_SLOT, DEBT_REPAID_SLOT), _payOut reads them for the operator's outlay bound and the FlashLiquidated event, and the payout is the rise of the helper's T balance over the whole call, which already holds the unused shortfall budget (REQ-HELPER-006, REQ-HELPER-008, REQ-HELPER-011). No value is lost by not binding the returns. Replaces stale entry f64a71575f3db858 (an unused LiquidationResult inside _liquidate, which now reads result.debtRepaid). Covered by TEST-174 (FlashLiquidator.ZeroLoan: operatorZeroLoanFundedBySafe, operatorZeroLoanOutlayBound, operatorZeroLoanShortfall, operatorZeroLoanMinPayout, testFuzz operatorZeroLoanBounded).",
       "approval": "approved (Josue, 2026-11-11; reviewed per call site: with F = 0, _liquidate stores keeperOut and debtRepaid in transient slots that _payOut reads; the payout is the measured balance rise)"
-    },
-    {
-      "fingerprint": "ac0d473439addc9e",
-      "check": "contract-locks-ether",
-      "file": "src/policy/risk-module/RiskModule.sol",
-      "function": "RiskModule",
-      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the RiskModule holds no funds (REQ-RISK-005) and has no receive or fallback, and ERC1967Utils.upgradeToAndCall reverts ERC1967NonPayable for value without calldata. Same as the ParameterStore and MarketRegistry entries. Covered by TEST-035 (noFundsNoPauseNoSetter), TEST-242 (upgradeNeedsApplicationAdmin).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group Q (higher severity: contract-locks-ether): checked 2026-11-11, RiskModule has no receive, fallback or payable function of its own; the only payable entry is OpenZeppelin upgradeToAndCall (APPLICATION_ADMIN = TIMELOCK only), and ERC1967Utils rejects value without calldata (ERC1967NonPayable). Same as the Josue-approved ParameterStore and MarketRegistry entries."
     },
     {
       "fingerprint": "14539534e56f1eb6",
@@ -1492,6 +1171,1178 @@
       "reason": "Writes onStandby for at most MAX_POOL_TOKENS (8) tokens of one market to put each standby in force for one checkConfig, then writes the same slots back (REQ-PSTORE-029, REQ-PSTORE-009); bounded by the market's token count, net state change zero. Covered by TEST-250 (tightenBorrowAgeChecksTheStandby asserts onStandby is false after the call).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (2026-11-10 list), at most 8 iterations."
+    },
+    {
+      "fingerprint": "218d961d831e8d54",
+      "check": "contract-locks-ether",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock never sends ETH with an upgrade, and LPVaultSwap has no receive, fallback or other payable function, so no ETH can arrive by an Avana call.",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "afb5d2f3034eb7e9",
+      "check": "reentrancy-state-change",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.removeKeeper",
+      "reason": "Aderyn form of the reentrancy finding on removeKeeper: the only call before the registry write is MarketRegistry.isFrozenAddress (through activeKeeperCount), a view compiled to STATICCALL that cannot re-enter; the setter is timelock-only (APPLICATION_ADMIN).",
+      "approval": "pending (Josue)"
+    },
+    {
+      "fingerprint": "411e367abceecc8c",
+      "check": "yul-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap._delegate",
+      "reason": "Router dispatch (LPVaultSwap._delegate): return(0, returndatasize()) ends the external call with the delegated logic contract's return data, the standard proxy pattern; it is reached only from liquidate, settlePending, deleverage and onFlashLoan, each of which has no code after the dispatch. Covered by every liquidate, settlePending and deleverage test.",
+      "approval": "pending (lead review)"
+    },
+    {
+      "fingerprint": "db2e608cb9ecc1e3",
+      "check": "costly-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Bounded loop over the launch keeper list (at most MAX_KEEPERS = 32), run once in initialize.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "dc745726962449a0",
+      "check": "empty-block",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap._authorizeUpgrade",
+      "reason": "_authorizeUpgrade has no body because its onlyRole(APPLICATION_ADMIN) modifier is the whole check (OpenZeppelin UUPS pattern).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "eada974443f6ef4c",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "60e00768bd111996",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._settleLoan",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "dd5cfa8c06f15d9e",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._repaySource",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "a640d572f97e0878",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._waterfall",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "883a50e97b2621f2",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "0782834196ad441d",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._releaseAndSwap",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b00bab5c3eb5e0ee",
+      "check": "require-revert-in-loop",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._unitSum",
+      "reason": "Specified refusal inside a bounded loop (market tokens 2 to 4, keepers at most 32, repayment transfers at most 4): a leg without a working route (NoRouteAvailable), a payout without the gas for its transfer, an invalid keeper or a flash source still short after MAX_REPAY_TRANSFERS must revert the whole call (REQ-SWAP-022, REQ-SWAP-076, REQ-SWAP-032, REQ-SWAP-122).",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "89e74c680609ca58",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "f49ae2af6f1b7e2f",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "LPVaultSwap.initialize",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b1654e0280e02db1",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._runFlash",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "477fb0b29045b54e",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._prepare",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "830a9282070e11b4",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "b27c6c1bfe51fe70",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8353a0b6970cb630",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._unwindAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "8dc48498c727e4c0",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._waterfall",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "7a2372507dc9655f",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "128be9f28eee0f6a",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic.settlePending",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "f4dbe49b8f477c77",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._releaseAndSwap",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "60dc526aba6eff43",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+      "function": "LPVaultSwapPendingLogic._fundCoverage",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "756950ce084dd2ed",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkCollateralPrice",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "95999a6a5900c364",
+      "check": "unchecked-return",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._checkDebtPrice",
+      "reason": "Return value deliberately not used: amounts are measured as LPVaultSwap balance deltas (REQ-SWAP-108), oracle pokes are read back through getPriceState, and role grants in initialize return a bool OpenZeppelin already acted on. Covered by LPVaultSwap.Funding, LPVaultSwap.PriceGates and LPVaultSwap.Admin.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "17e66bd621894e97",
+      "check": "unsafe-erc20-operation",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
+      "function": "LPVaultSwapSettlement._deliver",
+      "reason": "The gas-limited payout transfer of REQ-SWAP-076 (LPVaultSwapSettlement._deliver): encoded transfer(address,uint256) sent with a 100,000-gas low-level call, return data not copied; what left LPVaultSwap is measured as its own balance fall and the rest escrowed, so a token returning false, nothing or reverting is handled. Covered by LPVaultSwap.PayoutEscrow and LPVaultSwap.Delivery.fuzz.",
+      "approval": "pending (lead review)"
+    },
+    {
+      "fingerprint": "9311844e2d1b3046",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "28ada90340ccf7c8",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "25a0eb34cfa9344f",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "83d98e24bec06036",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "87900517e379d73b",
+      "check": "unused-import",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "function": "",
+      "reason": "Import kept for @inheritdoc, which must name the interface piece declaring the function (BRIEF rule), or for a type used only in NatSpec-linked signatures.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "5421581a600ee4b9",
+      "check": "contract-locks-ether",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock sends no value with Adapter operations and no other function accepts ETH.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the ParameterStore and MarketRegistry entries."
+    },
+    {
+      "fingerprint": "374e3fa1d74d901b",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "19b9eda521070586",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "e1cec072da843537",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "f37fc92ec6e4d6b1",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "d002a5494af9495d",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "82dcdce3b6eea3ca",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "a1c1fbcd5b6bafc2",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "78ac4763ef9e880c",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "2c4fcba2eef53969",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "4b14c70523277f59",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "1e22ee45798a2c8c",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "137327e83ae6d5dc",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "372b3985ae4f3fa1",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "5fa93b054053b147",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
+      "approval": "pending (Josue)",
+      "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
+    },
+    {
+      "fingerprint": "e64abc174bf15b08",
+      "check": "empty-block",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "The UUPS authorization hook: onlyRole(APPLICATION_ADMIN) is the whole check (REQ-ADAPTER-003), as OpenZeppelin documents.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the ParameterStore and MarketRegistry entries."
+    },
+    {
+      "fingerprint": "7e2103b44bb93411",
+      "check": "require-revert-in-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterExitLogic.sol",
+      "reason": "The DebtRemaining scan finds the first borrowed reserve in a loop and reverts after it, on the failure path only, bounded by the Spoke's reserve count (REQ-ADAPTER-051, REQ-PROXY-071). Covered by test_TEST_203_debtRemainingNamesFirstBorrowed.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: bounded loops."
+    },
+    {
+      "fingerprint": "b27ccfce55db2b84",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "76ae8101303662d0",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "bb993715baa381c5",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "a3d4d777eb000277",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "9690f2fc1ce83c1b",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "59c406e34c26aa96",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "0e2660e0154552f7",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "b7a43bdbc7340fe4",
+      "check": "unchecked-return",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Either _grantRole in initialize (a first grant to the timelock always returns true), _forward of an entry point that returns nothing (empty return data; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error), or the proxy's execute of a call whose result is checked as a balance delta right after (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by TEST-242 and the AaveAdapter unit suites.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the MarketRegistry entry."
+    },
+    {
+      "fingerprint": "1a433bb92a2af4c2",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "c87fef43df496bd0",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "d694c984a2182fca",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "20cc522e5d4cb848",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "ceab37968726357a",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "729d73f3b2808ec4",
+      "check": "unsafe-erc20-operation",
+      "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
+      "reason": "Not a direct ERC-20 call: the vault token's and the debt asset's balanceOf/allowance reads and `abi.encodeCall(IERC20.approve/transfer, ...)` payloads the proxy executes, whose return value _tokenCall checks with SafeERC20's rule and whose effect the step checks as a balance delta (REQ-PROXY-042, REQ-PROXY-087, REQ-PROXY-088). Covered by AaveAdapter.Failures (token-call step failures) and TEST-177.",
+      "approval": "pending review (approved pattern)"
+    },
+    {
+      "fingerprint": "e6e914ac551ec6ec",
+      "check": "unused-error",
+      "file": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+      "reason": "`LockHeld` is raised by the Lock's acquire and propagates through every entry point; it is declared on the Adapter so the app decodes it from the Adapter's ABI (REQ-PROXY-076). Covered by the LockHeld tests of AaveAdapter.Lock.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: errors declared for the ABI (as the ILPVaultSwapErrors LockHeld entry)."
+    },
+    {
+      "fingerprint": "9b415feb1b9b988c",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "0f78952aaae18f66",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "705c1edbc478e093",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "d15140b4a08ef23b",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "fa4294a21723f957",
+      "check": "unused-import",
+      "file": "src/policy/aave-adapter/AaveAdapter.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: imports for @inheritdoc."
+    },
+    {
+      "fingerprint": "ced72c813be7d191",
+      "check": "reentrancy-state-change",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Constructor only: reads the nine modules' core getters (STATICCALL to contracts the deployer passes) before writing immutables; there is no state to re-enter and no later state change. Test: constructorRejectsMismatchedModules.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "df86f4a852f65be4",
+      "check": "reentrancy-state-change",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Constructor only: reads the nine modules' core getters (STATICCALL to contracts the deployer passes) before writing immutables; there is no state to re-enter and no later state change. Test: constructorRejectsMismatchedModules.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2bb8ae4d3f3ba378",
+      "check": "yul-return",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e57fac3aabcb1d45",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "032d13c5afd43710",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "158e40e7cc092a37",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "a30b72ec826dd4e1",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "742edef1ccbab1f5",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "56f5c64e721a40f4",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "090d493000fcf2ea",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "8922832beb654b8f",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "8cfbb775f2519d25",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e8aef9a69c3ccbb6",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c7b5f2aba11dc9ff",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1da62f903fb15535",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "240f2caa9c397e10",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "724d78b90f80d307",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "087cdadf26fddca3",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "55351e381e27a5cc",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "c4979ea58e29c155",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "4d7b8b1e8e561347",
+      "check": "require-revert-in-loop",
+      "file": "src/lens/lens/LensAccount.sol",
+      "reason": "getAccounts loops over the caller's own market list and an unlisted market ends the whole call with UnknownMarket (REQ-LENS-022, REQ-LENS-040); no partial answer is meaningful. Test: getAccountsUnknownMarketReverts.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7f37f4c4c66317fa",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "98db742bba8267eb",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "97163492152c544f",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1ae39cc32df12e71",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "93d7adfe36fc769b",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "2df3936c04af754e",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "7de31de13bfeb70c",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f163ce31bc9103fa",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "bfb3a1ce08be009e",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "58c4922ebb3211d7",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "1c9cc441ae21bc12",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "47ac6272fe6a57f4",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "pending (Josue)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "e10194e48f472495",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "3b0bbe59afb65324",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "06acd73bcbbd5343",
+      "check": "reentrancy-state-change",
+      "file": "src/coverage/deficit-offset-spoke/DeficitOffsetSpoke.sol",
+      "function": "constructor (DeficitOffsetSpoke)",
+      "reason": "Constructor only: the calls before the immutable `_FIRST_LOSS_LAYER` is written are the first-loss layer's `HUB()`, `ASSET()` and `ASSET_ID()`, views compiled to STATICCALL that cannot change state, made to check REQ-FLR-047 and fail closed with FirstLossLayerMismatch; an immutable does not exist until the constructor returns. Covered by TEST-298 (constructorRejectsMismatchedLayer).",
+      "approval": "pending review (approved pattern)",
+      "review": "DeficitOffsetSpoke (Q-410), new site; same shape as the UniswapV3Integration and Lens constructor entries (view-only calls before writes)."
+    },
+    {
+      "fingerprint": "feaed29377f9984b",
+      "check": "empty-block",
+      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "function": "CoverageSpoke._beforeCover",
+      "reason": "The loss-order hook: the Avana Umbrella has no layer in front of it, so its hook accepts every call (REQ-FLR-048); DeficitOffsetSpoke._beforeCover overrides it with the FirstLossLayerNotExhausted check. An empty body is the specified behaviour, not a missing check. Covered by TEST-298 (offsetRefusedWhileAvanaLayerFunded; the deletion mutant of the hook call is killed) and TEST-128.",
+      "approval": "approved by pattern",
+      "review": "group X (empty override of a variant hook): same shape as FlashLiquidator._checkLoanNeed and _checkOutlay."
+    },
+    {
+      "fingerprint": "0f02c6bcba2a7971",
+      "check": "require-revert-in-loop",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._forwardTokens",
+      "reason": "The loop's safeTransfer of a watched token's rise to the recipient reverts the whole call when the recipient refuses it, the specified outcome for a payout the caller chose (REQ-HELPER-008); the bounded loop is over the market's tokens and their routes' intermediates. Covered by TEST-174.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); pattern: bounded loops"
+    },
+    {
+      "fingerprint": "e129dec5f52bb7e1",
+      "check": "contract-locks-ether",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule",
+      "reason": "Same as ac0d473439addc9e (fingerprint moved by the speed-limit edit): the only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock); the RiskModule holds no funds (REQ-RISK-005), has no receive or fallback, and ERC1967Utils rejects value without calldata. Covered by TEST-035, TEST-242.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "4ea0e639c02a5a26",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.tightenMarketSpeedLimits",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "0b129f11f0e49d77",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.loosenMarketSpeedLimits",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "951bfd95771a4b6d",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.tightenDebtSpeedLimit",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "d2ab20ca0da965e4",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.loosenDebtSpeedLimit",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "b56efa3eab11693c",
+      "check": "state-change-without-event",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.checkPledge",
+      "reason": "The only state change is the pledge-window charge, made inside a pledge that emits its own events in Collateralization; the window is readable through getPledgeSpeed and the Lens. Same reasoning as the CollateralizationDebtMark entries. Covered by TEST-320, TEST-325.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "6066e843a6200a9f",
+      "check": "state-change-without-event",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.preBorrowCheck",
+      "reason": "The only state change is the borrow-window charges, made inside a borrow that emits its own events in the AaveAdapter and the Aave V4 Spoke; the windows are readable through getBorrowSpeed and the Lens. Same reasoning as the CollateralizationDebtMark entries. Covered by TEST-320, TEST-326.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "dcd097a60953b839",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModuleSpeedLogic.sol",
+      "reason": "IRiskModuleSpeedLogic is used by the @inheritdoc NatSpec tags of the logic's external functions; removing the import breaks the documentation build.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "2a41bc864e4b2b84",
+      "check": "contract-locks-ether",
+      "file": "src/oracle/lp-oracle/LPOracleCL.sol",
+      "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock, REQ-ORACLE-058); LPOracleCL has no receive, fallback or other payable function, holds no funds, and ERC1967Utils rejects value without calldata. Same as the ParameterStore, MarketRegistry and RiskModule entries.",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "High severity: same reasoning as the approved ParameterStore entry 3dbcd01d6b739bd5"
+    },
+    {
+      "fingerprint": "bcced99d5e0d80f9",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "reason": "poke forwards its calldata to the poke logic contract held in the implementation immutable _POKE_LOGIC, checked at construction (code and logicConfig equal to the implementation's chain constants) and changed only by an upgrade at the normal delay; no address comes from calldata or storage. Same router pattern as the ParameterStore and MarketRegistry entries. Covered by TEST-062, TEST-306.",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "High severity: same reasoning as the approved ParameterStore/MarketRegistry delegate-call entries"
+    },
+    {
+      "fingerprint": "599cb7fbcb3c6c83",
+      "check": "unsafe-casting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each cast follows a range check of the same word: uint16(card) after LPOracleCalls.uintAt(..., type(uint16).max), address(uint160(word)) after uintAt(..., type(uint160).max), int24(value) after LPOracleCalls.intAt(..., 24) (a sign-extended 24-bit word); a word outside its type fails the read (ok false), so nothing truncates. Covered by LPOracleCL.Module (TEST-306).",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "High severity: same reasoning as the approved LPOracleConfig unsafe-casting entries (a2e7add59e680cf7)"
+    },
+    {
+      "fingerprint": "f28a1f5f5ac8a376",
+      "check": "unsafe-casting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each cast follows a range check of the same word: uint16(card) after LPOracleCalls.uintAt(..., type(uint16).max), address(uint160(word)) after uintAt(..., type(uint160).max), int24(value) after LPOracleCalls.intAt(..., 24) (a sign-extended 24-bit word); a word outside its type fails the read (ok false), so nothing truncates. Covered by LPOracleCL.Module (TEST-306).",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "High severity: same reasoning as the approved LPOracleConfig unsafe-casting entries (a2e7add59e680cf7)"
+    },
+    {
+      "fingerprint": "1767771affbd3d3d",
+      "check": "unsafe-casting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each cast follows a range check of the same word: uint16(card) after LPOracleCalls.uintAt(..., type(uint16).max), address(uint160(word)) after uintAt(..., type(uint160).max), int24(value) after LPOracleCalls.intAt(..., 24) (a sign-extended 24-bit word); a word outside its type fails the read (ok false), so nothing truncates. Covered by LPOracleCL.Module (TEST-306).",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "High severity: same reasoning as the approved LPOracleConfig unsafe-casting entries (a2e7add59e680cf7)"
+    },
+    {
+      "fingerprint": "1680e323e5cc6517",
+      "check": "costly-loop",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
+    },
+    {
+      "fingerprint": "e52b4d75f38e2a35",
+      "check": "costly-loop",
+      "file": "src/oracle/lp-oracle/LPOracleListingLogic.sol",
+      "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
+    },
+    {
+      "fingerprint": "625a60f92f0b4ac0",
+      "check": "costly-loop",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
+    },
+    {
+      "fingerprint": "ff7b5c4e58585b0d",
+      "check": "costly-loop",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
+    },
+    {
+      "fingerprint": "7cf9954cc6833ff2",
+      "check": "costly-loop",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
+    },
+    {
+      "fingerprint": "18b627168a9bd0fe",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
+    },
+    {
+      "fingerprint": "b6391a31b8f98701",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
+    },
+    {
+      "fingerprint": "c85ae2bda80fe41e",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
+    },
+    {
+      "fingerprint": "e67cfe5a202d1b13",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
+    },
+    {
+      "fingerprint": "3b8bf92f479c259f",
+      "check": "redundant-statement",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
+    },
+    {
+      "fingerprint": "094328c473cc36ad",
+      "check": "require-revert-in-loop",
+      "file": "src/lens/lens/LensSizing.sol",
+      "reason": "The bisection loops of previewDeleverageTo (at most 2 x 128 steps) call the pure SettlementMath sizing, which reverts only for decimals above 36 (InvalidDecimals; no listed market has them) or an arithmetic overflow; zero prices return before it. Either one ends the whole preview, which has no meaningful partial answer (REQ-LENS-055). Tests: Lens.DeleverageTo (TEST-247).",
+      "approval": "approved (Josue, 2026-11-13)",
+      "review": "Lens round 2, new reasoning"
+    },
+    {
+      "fingerprint": "71d20022c358ec46",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "0ea05288c70ebb8c",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "71733a9412dddb78",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "3f1a936bf3ce3e49",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "ead7f8fd35cc7679",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracleListing.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "bc7119848011c2a4",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "83310c2ff871f406",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "f47dbaf486473ecc",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "46c28ce7c7b7fe8b",
+      "check": "require-revert-in-loop",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
+      "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
+    },
+    {
+      "fingerprint": "4b84ac9f5ab9df7c",
+      "check": "unchecked-return",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "reason": "The initialization logic's initializeMarket returns nothing, so the delegatecall's return data is empty; Address.functionDelegateCall reverts on failure and bubbles the logic's error (REQ-ORACLE-058, REQ-ORACLE-106).",
+      "approval": "pending review (approved pattern)",
+      "review": "Re-key of ca763563d74e6166 (approved Josue 2026-11-11): the call now goes to _INIT_LOGIC"
+    },
+    {
+      "fingerprint": "af5eac1e25abacb7",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
+    },
+    {
+      "fingerprint": "9b4eb0d574df1b3a",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
+    },
+    {
+      "fingerprint": "f87aa284615e0fd6",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
+    },
+    {
+      "fingerprint": "f929ad7b45145717",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
+    },
+    {
+      "fingerprint": "7bbba9b4c992dc72",
+      "check": "unused-import",
+      "file": "src/lens/lens/Lens.sol",
+      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
+      "approval": "pending review (approved pattern)",
+      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
     }
   ]
 }

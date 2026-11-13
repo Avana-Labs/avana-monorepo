@@ -3,8 +3,8 @@
 # Copyright (c) 2026 Avana Labs
 #
 # Builds the failure report of one workflow run and records it (see .github/workflows/ci-failure-report.yml).
-# Inputs (environment): GH_TOKEN, REPO, RUN_ID, WORKFLOW, CONCLUSION, EVENT, BRANCH, SHA, RUN_URL, PR_NUMBER;
-# DRY_RUN=1 prints the report instead of writing an issue or comment.
+# Inputs (environment): GH_TOKEN, REPO, RUN_ID, WORKFLOW, CONCLUSION, EVENT, BRANCH, SHA, RUN_URL;
+# DRY_RUN=1 prints the report instead of writing an issue or comment. Off main, the report goes to the job summary only.
 # Log text is quoted inside fenced blocks only; nothing from a log or a pull request is executed.
 set -euo pipefail
 
@@ -117,9 +117,7 @@ elif on_main; then
   else
     gh issue create --repo "$REPO" --title "$TITLE" --label "$LABEL" --body-file "$body"
   fi
-elif [ -n "${PR_NUMBER:-}" ]; then
-  gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file "$body"
 else
-  echo "No pull request and not main: report written to the job summary only."
+  echo "Not main: report written to the job summary only."
 fi
 cat "$body" >>"${GITHUB_STEP_SUMMARY:-/dev/null}"

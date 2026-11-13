@@ -8,20 +8,24 @@
 Config (JSON):
 
     {
-      "target": 80,
-      "files": {"src/lock/lock/Lock.sol": 100, ...}
+      "floor": 80,
+      "files": {"src/lock/lock/Lock.sol": 100, ...},
+      "unreachable": {"src/...": [{"function": ..., "branch": ..., "reason": ..., "tests": ...}, ...]}
     }
 
-Every file under src/ that has at least one branch in the lcov report needs an entry in `files`, its minimum branch
-coverage in whole percent. A file fails when its measured branch coverage (branches hit / branches found, in percent)
-is below its minimum; a file with branches but no entry fails too, so every file with branches has a minimum. An
-entry naming a file without branches in the report fails, so no entry outlives its file. Minimums never
-exceed 100 and are whole numbers. The gate prints each file with its measured value, its minimum, and whether the
-minimum is below `target`.
+`floor` is the branch coverage every file must reach (80 %, decided 2026-11-12). Every file under src/ that has at
+least one branch in the lcov report needs an entry in `files`, its minimum branch coverage in whole percent; a minimum
+may be higher than the floor, never lower (a minimum below the floor is a config error). A file fails when its
+measured branch coverage is below its minimum; a file with branches but no entry fails too. An entry naming a file
+without branches in the report fails, so no entry outlives its file.
 
---update rewrites `files`: a file without an entry gets the measured value rounded down; an existing minimum is raised
-to the measured value rounded down when that is higher and is never lowered; entries of files without branches are
-removed. Run it after adding tests, review the diff, and commit it.
+Measured branch coverage is branches hit / (branches found - unreachable), in percent. Only a branch listed under
+`unreachable` with the function, the branch, the reason it cannot be reached and the tests that show the reachable
+side leaves the denominator, one branch per entry; an entry without all four fields is a config error.
+
+--update rewrites `files`: a file without an entry gets the larger of the floor and the measured value rounded down;
+an existing minimum is raised to the measured value rounded down when that is higher and is never lowered; entries of
+files without branches are removed. Run it after adding tests, review the diff, and commit it.
 """
 
 from __future__ import annotations
@@ -75,29 +79,46 @@ def main() -> int:
         print("coverage-gate: the lcov report holds no branch of a src/ file", file=sys.stderr)
         return 1
     config = json.loads(args.config.read_text(encoding="utf8")) if args.config.exists() else {}
-    target = int(config.get("target", 80))
+    floor = int(config.get("floor", 80))
     minimums: dict[str, int] = dict(config.get("files", {}))
+    unreachable: dict[str, list] = dict(config.get("unreachable", {}))
+    errors = [f"{f}: minimum {m} is below the floor of {floor} %" for f, m in sorted(minimums.items())
+              if isinstance(m, int) and m < floor]
+    for f, entries in sorted(unreachable.items()):
+        for i, e in enumerate(entries):
+            missing = [k for k in ("function", "branch", "reason", "tests") if not str(e.get(k, "")).strip()]
+            if missing:
+                errors.append(f"{f}: unreachable entry {i + 1} has no {', '.join(missing)}")
+    excluded = {f: len(v) for f, v in unreachable.items()}
+    measured = {f: (found - min(excluded.get(f, 0), found - hit), hit) for f, (found, hit) in measured.items()}
 
     if args.update:
         updated = {}
         for f, (found, hit) in sorted(measured.items()):
-            floor = math.floor(percent(found, hit))
-            updated[f] = max(floor, minimums.get(f, floor))
-        config["target"] = target
+            value = math.floor(percent(found, hit)) if found else 100
+            updated[f] = max(floor, value, minimums.get(f, 0))
+        config.pop("target", None)
+        config["floor"] = floor
         config["files"] = updated
         args.config.write_text(json.dumps(config, indent=2) + "\n", encoding="utf8")
         minimums = updated
         print(f"coverage-gate: wrote {len(updated)} minimum(s) to {args.config}")
 
-    lines = [f"branch coverage of src/ (minimum per file; target {target} %)"]
-    failures = 0
+    lines = [f"branch coverage of src/ (minimum per file, never below the floor of {floor} %; unreachable branches "
+             f"listed in the config leave the denominator)"]
+    lines += [f"  FAIL  config: {e}" for e in errors]
+    failures = len(errors)
     for f in sorted(set(measured) | set(minimums)):
         if f not in measured:
             lines.append(f"  FAIL  {f}: listed with minimum {minimums[f]} % but has no branch in the report")
             failures += 1
             continue
         found, hit = measured[f]
-        value = percent(found, hit)
+        value = percent(found, hit) if found else 100.0
+        if f in excluded:
+            hit_note = f", {excluded[f]} unreachable left out"
+        else:
+            hit_note = ""
         if f not in minimums:
             lines.append(f"  FAIL  {f}: {value:6.2f} % ({hit}/{found}), no minimum listed in {args.config}")
             failures += 1
@@ -107,12 +128,12 @@ def main() -> int:
             lines.append(f"  FAIL  {f}: minimum {minimum!r} is not a whole percent between 0 and 100")
             failures += 1
             continue
-        below = "  (minimum below target)" if minimum < target else ""
+        minimum = max(minimum, floor)
         if value + 1e-9 < minimum:
-            lines.append(f"  FAIL  {f}: {value:6.2f} % ({hit}/{found}) < minimum {minimum} %{below}")
+            lines.append(f"  FAIL  {f}: {value:6.2f} % ({hit}/{found}{hit_note}) < minimum {minimum} %")
             failures += 1
         else:
-            lines.append(f"  ok    {f}: {value:6.2f} % ({hit}/{found}) >= minimum {minimum} %{below}")
+            lines.append(f"  ok    {f}: {value:6.2f} % ({hit}/{found}{hit_note}) >= minimum {minimum} %")
     total_found = sum(v[0] for v in measured.values())
     total_hit = sum(v[1] for v in measured.values())
     lines.append(f"total: {percent(total_found, total_hit):.2f} % ({total_hit}/{total_found}) over {len(measured)} file(s)")

@@ -12,7 +12,7 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from z3 import Real, Reals, Int, Ints, And, Or, If, Implies, BitVec, BitVecVal, ULE, ULT, UGT, BVMulNoOverflow
-from _common import prove, witness, finish
+from _common import prove, witness, finish, MAX_ROUTE_ANSWER
 
 t0, t1, p0, p1, b0, b1, s0, s1, T, g, O = Reals('t0 t1 p0 p1 b0 b1 s0 s1 T g O')
 pos = [t0 > 0, t1 > 0, p0 > 0, p1 > 0, b0 > 0, b1 > 0, s0 > 0, s1 > 0, O > 0]
@@ -86,7 +86,7 @@ prove('MATH-UO-24b', 'cross-multiplied rule |p-b|*1e4 <= T*min(p,b) is symmetric
 pb, bb, Tbv = BitVec('p', 256), BitVec('b', 256), BitVec('T', 256)
 # MATH-UO-24 verifies: SPEC-ORC-003
 prove('MATH-UO-24c', 'p, b <= MAX_ROUTE_ANSWER and T < 2^16: |p-b|*1e4 and T*min(p,b) fit in 256 bits',
-      [ULE(pb, BitVecVal(10 ** 12, 256)), ULE(bb, BitVecVal(10 ** 12, 256)), ULT(Tbv, BitVecVal(2 ** 16, 256))],
+      [ULE(pb, BitVecVal(MAX_ROUTE_ANSWER, 256)), ULE(bb, BitVecVal(MAX_ROUTE_ANSWER, 256)), ULT(Tbv, BitVecVal(2 ** 16, 256))],
       And(BVMulNoOverflow(If(UGT(pb, bb), pb - bb, bb - pb), BitVecVal(10 ** 4, 256), False),
           BVMulNoOverflow(Tbv, If(ULT(pb, bb), pb, bb), False)))
 

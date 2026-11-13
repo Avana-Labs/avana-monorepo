@@ -15,7 +15,7 @@ contract LPOracleStatesUnitTest is LPOracleFixture {
         _deployMarket();
     }
 
-    // TEST-040 verifies: REQ-ORACLE-005, REQ-ORACLE-006, REQ-ORACLE-007, REQ-ORACLE-019, REQ-ORACLE-067, Q-079, Q-130
+    // TEST-040 verifies: REQ-ORACLE-005, REQ-ORACLE-006, REQ-ORACLE-007, REQ-ORACLE-019, REQ-ORACLE-067, Q-079, Q-130, REQ-ORACLE-079
     // Sources: 5.1 TEST-040, SIM-02C
     function test_TEST_040_failoverKeepsLive() public {
         vm.warp(T0 + MAX_AGE + 1);
@@ -112,7 +112,25 @@ contract LPOracleStatesUnitTest is LPOracleFixture {
         );
     }
 
-    // TEST-040 verifies: REQ-ORACLE-018, REQ-ORACLE-014, REQ-ORACLE-071, REQ-ORACLE-072, REQ-ORACLE-104, REQ-ORACLE-103, Q-119, Q-330
+    // TEST-040 verifies: REQ-ORACLE-017, SPEC-ORC-013, REQ-ORACLE-068
+    /// @notice The mirror of `failureStartFromSourceTimestamps`: token B's primary is updated later (at T0 + 1,000) and
+    /// goes stale at T0 + 1,000 + 88,201, after its alternate (stale from T0 + 88,201). Both routes have failed from the
+    /// later of the two, the primary's, so that is the failure start and the cached window runs an hour from it.
+    function test_TEST_040_failureStartFromTheLaterPrimary() public {
+        pB.push(int256(ONE), T0 + 1000);
+        uint256 staleAt = T0 + 1000 + MAX_AGE + 1;
+        vm.warp(staleAt + 10);
+        pA.push(int256(ONE), staleAt + 10);
+        PriceStateView memory v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Cached));
+        assertEq(v.failureStart, staleAt, "failureStart is the primary's later stale start");
+        assertEq(v.cachedUntil, staleAt + 3600);
+        assertTrue(_has(v.reasons, 8), "SOURCE_TIMESTAMP_FAILURE");
+    }
+
+    // TEST-040 verifies: REQ-ORACLE-018, REQ-ORACLE-071, REQ-ORACLE-072, REQ-ORACLE-103, Q-119, Q-330
+    /// @dev The core's reaction to each module answer (the base's test module supplies them); the concentrated-liquidity
+    /// module's own reads are checked on real pools in LPOracleCL.Module.unit.t.sol (REQ-ORACLE-014, REQ-ORACLE-104).
     function test_TEST_040_driftingCausesFromThePricingModule() public {
         oracle.setConsistency(true, false, type(uint256).max, false);
         PriceStateView memory v = _state();
