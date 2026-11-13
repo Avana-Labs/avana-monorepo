@@ -12,6 +12,7 @@ import {
   HUB_C,
   LEND_A,
   LEND_A2,
+  SPEED_MORE_AT,
   USDC,
   type FakeChain,
   fakeChainClient,
@@ -19,6 +20,7 @@ import {
   fixtureHubsDeployment,
 } from "@avana/services-common/fixtures";
 import { type ChainSnapshot, readChainSnapshot, reconcileHubAsset } from "@avana/services-common/views";
+import { readPoolBorrowables } from "../convex/details.ts";
 import { defaultSlug, hubLabel } from "../convex/lib/format.ts";
 import { hubSummary, lendTotals } from "../convex/lib/hubViews.ts";
 import { assetSnapshot, hubAssetKey, lendSnapshot } from "../convex/lib/pages.ts";
@@ -146,10 +148,32 @@ describe("a Hub recorded after start-up", () => {
     const after = totalsOf(w);
     expect(after.hubCount).toBe(3);
     const c = after.byHub.find((h) => h.hub === HUB_C)!;
-    expect(c).toMatchObject({ label: "hub-aa0000", slug: "ethereum-hub-aa0000", tier: 3, lendAssets: 1, suppliedUsd: 2_000_000, borrowedUsd: 500_000 });
-    expect(after.suppliedUsd).toBeCloseTo(before.suppliedUsd + 2_000_000, 6);
+    // Hub C's USDC: 2,050,000 added, the DAO deficit offset's 50,000 included.
+    expect(c).toMatchObject({ label: "hub-aa0000", slug: "ethereum-hub-aa0000", tier: 3, lendAssets: 1, suppliedUsd: 2_050_000, borrowedUsd: 500_000 });
+    expect(after.suppliedUsd).toBeCloseTo(before.suppliedUsd + 2_050_000, 6);
     expect(after.byToken.find((x) => x.symbol === "USDC")!.hubs.map((h) => h.label)).toEqual(["Stable", "Core", "hub-aa0000"]);
     expect(w.hubAssets.find((a) => a.hub === HUB_C)!.slug).toBe("ethereum-hub-aa0000-usdc");
+  });
+});
+
+describe("assets a pool can borrow (BOR-024)", () => {
+  it("shows each debt reserve's amount available now and when more frees up", async () => {
+    const w = worldOf(await read(fixtureHubsChain.start));
+    const rows = readPoolBorrowables(w, "ethereum-market-1");
+    expect(rows.map((r) => [r.symbol, r.availableNow, r.availableNowUsd, r.moreFrom])).toEqual([
+      ["USDC", 500_000, 500_000, new Date(SPEED_MORE_AT * 1_000).toISOString()],
+      ["USDC", 500_000, 500_050, new Date(SPEED_MORE_AT * 1_000).toISOString()],
+      ["USDT", 500_000, 499_950, new Date(SPEED_MORE_AT * 1_000).toISOString()],
+    ]);
+  });
+
+  it("shows no amount when the Lens refuses the speed read", async () => {
+    const w = worldOf(await read({ ...fixtureHubsChain.start, locked: true }));
+    expect(readPoolBorrowables(w, "ethereum-market-1").map((r) => [r.availableNow, r.moreFrom])).toEqual([
+      [null, null],
+      [null, null],
+      [null, null],
+    ]);
   });
 });
 

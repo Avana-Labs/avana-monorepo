@@ -30,8 +30,12 @@ export interface ChainDeployment {
   readonly coverageSpokes: readonly { readonly address: Address; readonly asset: Address; readonly hub?: Address }[];
 }
 
-/** What a Spoke is to one Hub asset. Only CDP Spokes draw; the others have `drawCap = 0` (REQ-HUB-015). */
-export type SpokeKind = "lend" | "cdp" | "coverage" | "feeReceiver" | "other";
+/**
+ * What a Spoke is to one Hub asset. Only CDP Spokes draw; the others have `drawCap = 0` (REQ-HUB-015). A
+ * `deficitOffset` is the asset's DAO deficit offset: a Spoke whose `FIRST_LOSS_LAYER()` is the asset's Coverage Spoke,
+ * the second loss layer behind it (REQ-FLR-046).
+ */
+export type SpokeKind = "lend" | "cdp" | "coverage" | "feeReceiver" | "other" | "deficitOffset";
 
 export interface RateCurve {
   readonly optimalUsageBps: number;
@@ -87,6 +91,10 @@ export interface HubAssetRow {
     readonly coverageBoundHolds: boolean;
     readonly uncovered: DecimalString;
     readonly priceAdj: DecimalString;
+    /** The DAO deficit offset of the pair; the zero address when none is listed. */
+    readonly deficitOffset: Address;
+    /** Added assets of every deficit-offset Spoke of the pair: the second loss layer, which `uncovered` nets too. */
+    readonly offsetFunded: DecimalString;
   } | null;
   readonly blockNumber: DecimalString;
   readonly timestamp: number;
@@ -137,6 +145,40 @@ export interface SpokeReserveRow {
   readonly blockNumber: DecimalString;
 }
 
+/**
+ * One speed window as the next borrow or pledge would see it now (`Lens.getBorrowSpeed`, `getPledgeSpeed`): new debt or
+ * booked collateral per window is at most `limit`; `used` still counts, `available` is the room now and `moreAmount`
+ * frees up at `moreAt` (unix seconds, 0 when nothing is counting). `unavailable` means a read inside the RiskModule
+ * failed and every other field is 0.
+ */
+export interface SpeedWindow {
+  readonly limit: DecimalString;
+  readonly used: DecimalString;
+  readonly available: DecimalString;
+  readonly moreAt: number;
+  readonly moreAmount: DecimalString;
+  readonly unavailable: boolean;
+}
+
+/**
+ * One debt reserve a market can borrow (BOR-024): the market's own borrow rate and what can be borrowed now. The
+ * borrow passes both windows, the market's (8-decimal USD) and the (funding Hub, asset)'s (base units), so
+ * `availableNow = min(market room in the asset at its price, asset room)`, base units, and more frees up from `moreAt`,
+ * the earlier of the two windows' (0 when neither is counting). `speed` is null when the Lens refuses the read (the
+ * Lock is held).
+ */
+export interface MarketBorrowRow {
+  readonly reserveId: DecimalString;
+  /** `⌈drawnRate × (10⁴ + collateralRiskBps) / 10⁴⌉`, RAY per year. */
+  readonly borrowRateRay: DecimalString;
+  readonly speed: {
+    readonly availableNow: DecimalString;
+    readonly moreAt: number;
+    readonly market: SpeedWindow;
+    readonly debt: SpeedWindow;
+  } | null;
+}
+
 /** One collateral market (one pool range on one CDP Spoke). */
 export interface MarketRow {
   readonly chainId: number;
@@ -182,6 +224,10 @@ export interface MarketRow {
   readonly addHeadroom: DecimalString;
   readonly pauseState: number;
   readonly breakerReasons: number;
+  /** Every debt reserve enabled on the market's Spoke, with the market's rate and borrow speed. */
+  readonly borrow: readonly MarketBorrowRow[];
+  /** The market's pledge-speed window, 8-decimal USD; null when the Lens refuses the read. */
+  readonly pledgeSpeed: SpeedWindow | null;
   readonly blockNumber: DecimalString;
 }
 

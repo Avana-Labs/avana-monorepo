@@ -212,9 +212,9 @@ The `SeriesSampler` block source runs once an hour of block time (300 blocks on 
 | Scope (`series_point.scopeKind`) | Key | Reads | Metrics |
 |---|---|---|---|
 | `hubAsset` | `chainId:hub:assetId` | MarketRegistry `getHubs`, `getSpokes`, `hubOf`, `isRecordedHub`, `hubTier`, `coverageSpokeOf`; Hub `getAssetCount`, `getAssetUnderlyingAndDecimals`, `getAssetConfig`, `getSpokeCount`, `getSpokeAddress`, `getSpoke` (discovery of every Hub, Hub asset and Spoke); every Lend Spoke's `getReserveCount`, `getReserve`, `getReserveConfig`, its `ORACLE().getReservePrice`; Hub `getAddedAssets`, `getAddedShares`, `getAssetOwed`, `getAssetLiquidity`, `getAssetDeficitRay`, `getAssetAccruedFees`, `getAssetDrawnRate`, `getAssetDrawnIndex`, `getAssetConfig`; the rate strategy's `getInterestRateData`; `Lens.getHubAssetExposure` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
-| `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getSpokeAddedAssets`, `getSpokeTotalOwed` | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
+| `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getSpokeAddedAssets`, `getSpokeTotalOwed`; `FIRST_LOSS_LAYER()` of each Spoke of an asset with a Coverage Spoke that is none of the known kinds (finds the DAO deficit offset) | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
 | `creditLine` | `chainId:fundingHub:assetId:spoke` | MarketRegistry `crossHubLineCap`, `crossHubLineTotal`, `crossHubLinesEnabled`, for every CDP Spoke drawing on a Hub other than its home Hub | `cap`, `total`, `enabled` (1 or 0); the draw is the `hubAssetSpoke` series of the same Spoke |
-| `market` | `chainId:marketId` | `Lens.getMarkets`, Spoke `getReserve` (collateral risk), Hub `getAssetUnderlyingAndDecimals` (vault-token decimals) | `suppliedUnits`, `acceptedPrice`, `suppliedUsd8`, `marketHeadroomUsd8`, `debtUsd8`, `borrowers` |
+| `market` | `chainId:marketId` | `Lens.getMarkets`, Spoke `getReserve` (collateral risk), Hub `getAssetUnderlyingAndDecimals` (vault-token decimals); `Lens.getBorrowSpeed(marketId, debtReserveId)` per debt reserve and `Lens.getPledgeSpeed(marketId)` (read for the current rows, not charted) | `suppliedUnits`, `acceptedPrice`, `suppliedUsd8`, `marketHeadroomUsd8`, `debtUsd8`, `borrowers` |
 | `marketReserve` | `chainId:marketId:spoke:reserveId` | `Spoke.getUserDebt(reserveId, proxy)` of every attributed account of the market | `debt`, `borrowers` |
 | `position` (daily) | `chainId:spoke:proxy` | `Spoke.getUserSuppliedAssets(collateralReserveId, proxy)`, `getUserDebt` per debt reserve | `marketId`, `collateralUnits`, `collateralUsd8`, `debtUsd8` |
 
@@ -242,7 +242,9 @@ These values change with time, interest or prices and emit no event, or emit onl
 | Escrow credits | `PayoutEscrow.claimable(token, account)`; `Lens.getEscrowClaimable(account, tokens)` | C |
 | Borrow nonce | `AaveAdapter.borrowNonce(proxy)` | browser (intent preparation) |
 | Backing and caps | `Lens.checkBacking(vaultToken)`, `Lens.getCapHeadroom(vaultToken, depositor)` | C M (`M-21`) |
-| Tail coverage and deficits | `Lens.getTailCoverage(debtAsset)`, `Lens.uncoveredDeficit(hub, asset)`, `Hub.getSpokeDeficitRay(assetId, spoke)` | M (`M-14`, `M-15`) |
+| Tail coverage and deficits | `Lens.getTailCoverage(debtAsset)` (with the DAO deficit offset and its funds, `deficitOffset`, `offsetFunded`), `Lens.uncoveredDeficit(hub, asset)`, `Hub.getSpokeDeficitRay(assetId, spoke)` | M (`M-14`, `M-15`) |
+| Speed limits (BOR-024) | `Lens.getBorrowSpeed(marketId, debtReserveId)` ("available to borrow now", "more from"), `Lens.getPledgeSpeed(marketId)`, through the snapshot reader | C |
+| Account previews and sizing | `Lens.getPositionFees`, `getAccountFees`, `previewBorrowAfter`, `previewRepayAfter`, `previewPledgeAfter`, `previewWithdrawAfter`, `previewMaxWithdraw`, `previewDeleverageTo`, `previewCloseAccount`, `getHubAsset` (`@avana/services-common/views`, `appViews.ts`) | browser |
 | Hub utilization and draw caps | `Hub.getAssetLiquidity`, `getAddedAssets`, `getSpokeTotalOwed`, `getSpokeConfig` | M (`M-18`, `M-19`) |
 | Coverage Spoke balance | `CoverageSpoke.totalFunded()`, `totalCovered()`, `totalWithdrawn()` | M (`M-13`) |
 | Timelock expiry | `AvanaTimelock.getTimestamp(id)` plus `GRACE_PERIOD()` | M (`M-22`) |

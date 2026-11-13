@@ -94,7 +94,7 @@ export function reconcileHubAsset(asset: HubAssetRow, slices: readonly HubAssetS
   const mine = slices.filter((s) => s.chainId === asset.chainId && s.hub === asset.hub && s.assetId === asset.assetId);
   const mixed = mine.filter((s) => s.blockNumber !== asset.blockNumber);
   if (mixed.length > 0) throw new Error(`slices of ${asset.hub}:${asset.assetId} read at another block than the asset`);
-  const addedByKind = { lend: 0n, cdp: 0n, coverage: 0n, feeReceiver: 0n, other: 0n };
+  const addedByKind = { lend: 0n, cdp: 0n, coverage: 0n, feeReceiver: 0n, other: 0n, deficitOffset: 0n };
   let cdpOwed = 0n;
   let slicesAdded = 0n;
   let drawingSpokes = 0n;

@@ -3,8 +3,8 @@
 // Reads one chain's Hubs, their assets and Spoke slices, the Hub-to-Hub credit lines, the CDP debt reserves and the
 // collateral markets at one block, for every Hub and Spoke discovery.ts finds.
 // The indexer runs it at each hourly sample block (chart history) and Convex at the head (current values); both
-// get the same rows from the same calls. Round-1 Lens views plus the Aave V4 Hub and Spoke views the Lens itself
-// reads; round2.ts lists the Lens views planned to replace the direct Hub reads.
+// get the same rows from the same calls. Lens market, exposure and speed-limit views plus the Aave V4 Hub and Spoke
+// views the Lens itself reads; appViews.ts holds the Lens views the app reads per account or Hub asset.
 
 import { aaveOracleAbi, hubViewsAbi, lensViewsAbi, rateStrategyAbi, registryViewsAbi, spokeViewsAbi } from "./abi.ts";
 import { type ContractCall, type ViewClient, ZERO, all, lower, s, some, uniq } from "./client.ts";
@@ -19,8 +19,10 @@ import type {
   HubAssetSpokeRow,
   HubRow,
   LendReserve,
+  MarketBorrowRow,
   MarketRow,
   SpokeKind,
+  SpeedWindow,
   SpokeReserveRow,
 } from "./types.ts";
 
@@ -45,6 +47,22 @@ interface DecodedExposure {
   uncovered: bigint;
   priceAdj: bigint;
   spokes: readonly { spoke: Address; homeHub: Address }[];
+  deficitOffset: Address;
+  offsetFunded: bigint;
+}
+interface DecodedSpeed {
+  limit: bigint;
+  used: bigint;
+  available: bigint;
+  moreAt: bigint | number;
+  moreAmount: bigint;
+  unavailable: boolean;
+}
+interface DecodedBorrowSpeed {
+  market: DecodedSpeed;
+  debt: DecodedSpeed;
+  availableNow: bigint;
+  moreAt: bigint | number;
 }
 interface DecodedMarket {
   marketId: bigint;
@@ -77,6 +95,19 @@ interface DecodedMarket {
   addHeadroom: bigint;
   pauseState: number;
   breakerReasons: number;
+  collateralRiskBps: bigint;
+  liquidationFeeBps: bigint;
+  targetHealthFactor: bigint;
+  healthFactorForMaxBonus: bigint;
+  liquidationBonusFactorBps: bigint;
+  hardHealthFloor: bigint;
+  marketUsdCap: bigint;
+  topUpSliceUsd: bigint;
+  depositorUsdCap: bigint;
+  tokenUsdCaps: readonly bigint[];
+  addCap: bigint;
+  debtReserveIds: readonly bigint[];
+  borrowRatesRay: readonly bigint[];
 }
 interface DecodedDebtReserve {
   spoke: Address;
@@ -97,6 +128,14 @@ interface DecodedDebtReserve {
 const reg = (registry: Address, functionName: string, args: readonly unknown[]): ContractCall => ({ address: registry, abi: registryViewsAbi, functionName, args });
 const hubCall = (hub: Address, functionName: string, args: readonly unknown[]): ContractCall => ({ address: hub, abi: hubViewsAbi, functionName, args });
 const spokeCall = (spoke: Address, functionName: string, args: readonly unknown[] = []): ContractCall => ({ address: spoke, abi: spokeViewsAbi, functionName, args });
+const speedRow = (v: DecodedSpeed): SpeedWindow => ({
+  limit: s(v.limit),
+  used: s(v.used),
+  available: s(v.available),
+  moreAt: Number(v.moreAt),
+  moreAmount: s(v.moreAmount),
+  unavailable: v.unavailable,
+});
 
 /** Every market, page by page, until a short page. */
 async function readMarkets(client: ViewClient, lens: Address): Promise<DecodedMarket[]> {
@@ -212,9 +251,11 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
           ? "cdp"
           : topo.coverage.has(spoke) || (exposure != null && lower(exposure.coverageSpoke) === spoke)
             ? "coverage"
-            : spoke === t.info.feeReceiver
-              ? "feeReceiver"
-              : "other";
+            : t.info.deficitOffsets.includes(spoke)
+              ? "deficitOffset"
+              : spoke === t.info.feeReceiver
+                ? "feeReceiver"
+                : "other";
       return { t, spoke, data, homeHub, kind, crossHub: kind === "cdp" && homeHub !== ZERO && homeHub !== t.info.hub };
     }),
   );
@@ -302,6 +343,8 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
             coverageBoundHolds: exposure.coverageBoundHolds,
             uncovered: s(exposure.uncovered),
             priceAdj: s(exposure.priceAdj),
+            deficitOffset: lower(exposure.deficitOffset),
+            offsetFunded: s(exposure.offsetFunded),
           }
         : null,
       blockNumber: block,
@@ -344,12 +387,30 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     blockNumber: block,
   }));
 
-  // 6. Markets and the collateral risk of each vault-token reserve.
+  // 6. Markets, the collateral risk of each vault-token reserve, and each market's borrow speed per debt reserve and
+  // pledge speed (the Lens refuses both while the Lock is held).
   const decoded = await readMarkets(client, lens);
   const marketReads = await all(
     client,
     decoded.flatMap((m) => [spokeCall(lower(m.spoke), "getReserve", [m.reserveId]), hubCall(lower(m.hub), "getAssetUnderlyingAndDecimals", [m.hubAssetId])]),
   );
+  const borrowKeys = decoded.flatMap((m, mi) => m.debtReserveIds.map((reserveId, ri) => ({ mi, reserveId, rateRay: m.borrowRatesRay[ri] ?? 0n, marketId: m.marketId })));
+  const speeds = await some(client, [
+    ...borrowKeys.map((k): ContractCall => ({ address: lens, abi: lensViewsAbi, functionName: "getBorrowSpeed", args: [k.marketId, k.reserveId] })),
+    ...decoded.map((m): ContractCall => ({ address: lens, abi: lensViewsAbi, functionName: "getPledgeSpeed", args: [m.marketId] })),
+  ]);
+  const borrowOf = (mi: number): MarketBorrowRow[] =>
+    borrowKeys.flatMap((k, j) => {
+      if (k.mi !== mi) return [];
+      const v = speeds[j] as DecodedBorrowSpeed | null;
+      return [
+        {
+          reserveId: s(k.reserveId),
+          borrowRateRay: s(k.rateRay),
+          speed: v ? { availableNow: s(v.availableNow), moreAt: Number(v.moreAt), market: speedRow(v.market), debt: speedRow(v.debt) } : null,
+        },
+      ];
+    });
   const markets: MarketRow[] = decoded.map((m, i) => {
     const liq = liqConfigs.get(lower(m.spoke));
     return {
@@ -393,6 +454,8 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       addHeadroom: s(m.addHeadroom),
       pauseState: Number(m.pauseState),
       breakerReasons: Number(m.breakerReasons),
+      borrow: borrowOf(i),
+      pledgeSpeed: speeds[borrowKeys.length + i] ? speedRow(speeds[borrowKeys.length + i] as DecodedSpeed) : null,
       blockNumber: block,
     };
   });

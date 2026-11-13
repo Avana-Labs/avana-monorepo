@@ -37,23 +37,24 @@ The [`services`](../.github/workflows/services.yml) workflow runs the same steps
 
 ## Scopes
 
-A chain has several Aave V4 Hubs (on the local deployment three: GHO, USDC and USDT on each). Each Hub has one or more supply-only Lend Spokes and its CDP Spokes (one per AMM protocol), each (Hub, debt asset) its Coverage Spoke, and a CDP Spoke may draw on another Hub's asset through a Hub-to-Hub credit line. The services start from the Hubs and Spokes of the release manifest and add, at every read, each Hub the MarketRegistry has recorded and each CDP Spoke it has approved since; on a Hub that no manifest Lend Spoke supplies, a Spoke shaped like a Lend Spoke (not CDP, not Coverage, not the fee receiver, with an add cap and no draw cap) is read as its Lend Spoke. A Hub, Spoke or market listed on chain therefore shows up, with its data and series, without a code or configuration change. The services keep every number at the scope that owns it:
+A chain has several Aave V4 Hubs (on the local deployment three: GHO, USDC and USDT on each). Each Hub has one or more supply-only Lend Spokes and its CDP Spokes (one per AMM protocol), each (Hub, debt asset) its Coverage Spoke and, behind it, possibly the Aave DAO's deficit offset (a Spoke whose `FIRST_LOSS_LAYER()` is that Coverage Spoke, the second loss layer), and a CDP Spoke may draw on another Hub's asset through a Hub-to-Hub credit line. The services start from the Hubs and Spokes of the release manifest and add, at every read, each Hub the MarketRegistry has recorded and each CDP Spoke it has approved since; on a Hub that no manifest Lend Spoke supplies, a Spoke shaped like a Lend Spoke (not CDP, not Coverage, not a deficit offset, not the fee receiver, with an add cap and no draw cap) is read as its Lend Spoke. A Hub, Spoke or market listed on chain therefore shows up, with its data and series, without a code or configuration change. The services keep every number at the scope that owns it:
 
 | Scope | Key | Owns |
 |---|---|---|
 | Hub | chain, Hub | Label (from the manifest), tier, recorded flag, application state, its Lend and CDP Spokes; its totals are the sum of its Hub assets |
-| Hub asset | chain, Hub, assetId | Added, owed (drawn + premium), liquidity, deficit, rates, rate curve, reserve factor, every Lend Spoke reserve on it and the price of the first one's oracle |
+| Hub asset | chain, Hub, assetId | Added, owed (drawn + premium), liquidity, deficit, rates, rate curve, reserve factor, every Lend Spoke reserve on it and the price of the first one's oracle, coverage and the deficit offset's funds |
 | Spoke slice | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit and caps on that asset |
 | Hub-to-Hub credit line | chain, funding Hub, assetId, Spoke | The registry's cap for a CDP Spoke whose home Hub is another one, and the funding Hub's total of such caps; the draw is the Spoke slice |
 | CDP debt reserve | chain, Spoke, reserveId | The reserve's flags, debt price and breaker; its Hub asset is joined, never copied |
-| Collateral market | chain, marketId | Pool, range, vault token, accepted price, collateral value, collateral factor, collateral risk, cap headroom |
+| Collateral market | chain, marketId | Pool, range, vault token, accepted price, collateral value, collateral factor, collateral risk, cap headroom; per debt reserve the market's borrow rate and what it can borrow now under the speed limits and when more frees up (`Lens.getBorrowSpeed`); the pledge-speed window (`Lens.getPledgeSpeed`) |
 | Market debt | chain, marketId, Spoke, reserveId | Debt the market's accounts owe in that reserve |
 | Account | chain, Spoke, proxy | One wallet's position in one market |
 
 A Lend page is one Hub asset; the same token on two Hubs is two Hub assets with two pages, and the Lend totals add the Hub assets of every Hub while the per-Hub breakdown keeps them apart. A Borrow asset page is one CDP Spoke's slice of the same Hub asset, read from the same row; a pool page is one market. The identities that tie them, checked on fixture data by the tests:
 
 - Per Hub asset, Σ CDP slices' owed = the Hub's owed, up to one base unit per Spoke (each Spoke rounds up); only CDP Spokes draw, a CDP Spoke of another Hub on a credit line included.
-- Σ slices' added = the Hub's added (Lend Spoke + Coverage Spoke + fee receiver), each rounding down.
+- Σ slices' added = the Hub's added (Lend Spoke + Coverage Spoke + deficit offset + fee receiver), each rounding down.
+- What a market can borrow now of one debt reserve is `min(⌊market window room × 10^dec / price⌋, (Hub, asset) window room)`, and more frees up at the earlier of the two windows' next expiry. Example: market room $250,000 and USDC at $0.9999 give 250,025.0025 USDC when the (Hub, USDC) window has more room.
 - added + accrued fees = liquidity + owed + deficit: "available" is the Hub's liquidity, never added − owed.
 - What a Spoke can draw is `min(drawCap − owed − deficit, liquidity)`, and all CDP Spokes together `min(Σ cap room, liquidity)`.
 - Σ over a CDP Spoke's markets of the debt they back = the Spoke's owed amount, up to one unit per account.

@@ -6,7 +6,7 @@
 // 2,000,000), 7,000,000 liquidity. U's slice rounds its owed amount up by one base unit, as the Hub does per Spoke.
 // The chain with several Hubs that the reader runs on is in fixtureHubs.ts.
 
-import type { HubAssetRow, HubAssetSpokeRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "./types.ts";
+import type { HubAssetRow, HubAssetSpokeRow, MarketReserveDebtRow, MarketRow, SpeedWindow, SpokeReserveRow } from "./types.ts";
 
 export * from "./fixtureChain.ts";
 export * from "./fixtureHubs.ts";
@@ -53,6 +53,8 @@ export const fixtureHubAsset: HubAssetRow = {
     coverageBoundHolds: true,
     uncovered: "0",
     priceAdj: "1000000",
+    deficitOffset: "0x0000000000000000000000000000000000000000",
+    offsetFunded: "0",
   },
   blockNumber: BLOCK,
   timestamp: 1_767_225_600,
@@ -106,6 +108,15 @@ const reserve = (spoke: `0x${string}`, reserveId: string): SpokeReserveRow => ({
 
 export const fixtureSpokeReserves: SpokeReserveRow[] = [reserve(FIXTURE_U, "1"), reserve(FIXTURE_X, "1")];
 
+const speed = (limit: bigint, used: bigint, moreAt: number, moreAmount: bigint): SpeedWindow => ({
+  limit: limit.toString(10),
+  used: used.toString(10),
+  available: (limit > used ? limit - used : 0n).toString(10),
+  moreAt,
+  moreAmount: moreAmount.toString(10),
+  unavailable: false,
+});
+
 const market = (marketId: string, name: string, suppliedWhole: bigint, collateralRiskBps: number): MarketRow => ({
   chainId: 1,
   marketId,
@@ -141,6 +152,20 @@ const market = (marketId: string, name: string, suppliedWhole: bigint, collatera
   addHeadroom: "0",
   pauseState: 0,
   breakerReasons: 0,
+  borrow: [
+    {
+      reserveId: "1",
+      borrowRateRay: ((6n * 10n ** 25n * BigInt(10_000 + collateralRiskBps) + 9_999n) / 10_000n).toString(10),
+      // Market window $250,000 of room, USDC window 400,000 USDC: $250,000 at $1 is the smaller.
+      speed: {
+        availableNow: USDC(250_000),
+        moreAt: 1_767_240_000,
+        market: speed(1_000_000n * 10n ** 8n, 750_000n * 10n ** 8n, 1_767_240_000, 100_000n * 10n ** 8n),
+        debt: speed(500_000n * 10n ** 6n, 100_000n * 10n ** 6n, 1_767_250_000, 50_000n * 10n ** 6n),
+      },
+    },
+  ],
+  pledgeSpeed: speed(2_500_000n * 10n ** 8n, 0n, 0, 0n),
   blockNumber: BLOCK,
 });
 

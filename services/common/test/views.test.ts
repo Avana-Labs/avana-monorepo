@@ -123,8 +123,11 @@ describe("snapshot reader", () => {
     vaultToken: "0xBBBB000000000000000000000000000000000001", name: "USDC/USDT", symbol: "av-1", lpOracle: "0xCCCC000000000000000000000000000000000001",
     hub: HUB, spoke: FIXTURE_U, reserveId: 3n, hubAssetId: 0n, acceptedPrice: 200_000_000n, priceState: 0, suppliedUnits: 10n ** 22n,
     suppliedUsd: 2n * 10n ** 12n, collateralFactorBps: 8_000n, liquidationThresholdBps: 8_000n, maxLiquidationBonusBps: 500n, marketHeadroomUsd: 0n,
-    sliceHeadroomUsd: 0n, addHeadroom: 0n, pauseState: 0, breakerReasons: 0,
+    sliceHeadroomUsd: 0n, addHeadroom: 0n, pauseState: 0, breakerReasons: 0, collateralRiskBps: 500n, liquidationFeeBps: 1_000n,
+    targetHealthFactor: 11n * 10n ** 17n, healthFactorForMaxBonus: 95n * 10n ** 16n, liquidationBonusFactorBps: 5_000n, hardHealthFloor: 0n, marketUsdCap: 0n,
+    topUpSliceUsd: 0n, depositorUsdCap: 0n, tokenUsdCaps: [0n], addCap: 0n, debtReserveIds: [1n], borrowRatesRay: [63n * 10n ** 24n],
   };
+  const window = (limit: bigint, used: bigint, moreAt: bigint) => ({ limit, used, available: limit - used, moreAt, moreAmount: used, unavailable: false });
   const REGISTRY = "0x8000000000000000000000000000000000000001";
   const VT = "0xbbbb000000000000000000000000000000000001";
   const answers: Record<string, unknown> = {
@@ -166,7 +169,8 @@ describe("snapshot reader", () => {
     [`getSpokeAddress:${HUB}:1:1`]: COV,
     [`getSpokeAddress:${HUB}:1:2`]: FIXTURE_U,
     [`getInterestRateData:${IRS}:1`]: { optimalUsageRatio: 8_000, baseDrawnRate: 0, rateGrowthBeforeOptimal: 400, rateGrowthAfterOptimal: 6_000 },
-    [`getHubAssetExposure:${LENS}:${HUB}:${fixtureHubAsset.underlying}`]: { coverageSpoke: COV, fundedBalance: u(200_000), line: u(7_000_000), coverageBoundHolds: true, uncovered: 0n, priceAdj: 10n ** 6n, spokes: [{ spoke: FIXTURE_U, homeHub: HUB }] },
+    [`getHubAssetExposure:${LENS}:${HUB}:${fixtureHubAsset.underlying}`]: { coverageSpoke: COV, fundedBalance: u(200_000), line: u(7_000_000), coverageBoundHolds: true, uncovered: 0n, priceAdj: 10n ** 6n, spokes: [{ spoke: FIXTURE_U, homeHub: HUB, kind: 1 }], deficitOffset: "0x0000000000000000000000000000000000000000", offsetFunded: 0n },
+    [`getBorrowSpeed:${LENS}:1:1`]: { market: window(10n ** 14n, 6n * 10n ** 13n, 1_200n), debt: window(u(500_000), 0n, 0n), availableNow: u(400_000), moreAt: 1_200n },
     [`LENS_MAX_PAGE:${LENS}`]: 200n,
     [`getMarkets:${LENS}:0:200`]: [market],
     [`getReserve:${FIXTURE_U}:3`]: { collateralRisk: 500 },
@@ -204,6 +208,21 @@ describe("snapshot reader", () => {
     ]);
     expect(snap.spokeReserves[0]).toMatchObject({ spoke: FIXTURE_U, reserveId: "1", assetId: "1", borrowable: true });
     expect(snap.markets[0]).toMatchObject({ marketId: "1", collateralRiskBps: 500, suppliedUsd8: "2000000000000", liquidation: { liquidationBonusFactorBps: 5_000 } });
+    // Borrow speed of reserve 1 (available now 400,000 USDC, more from t = 1,200); the pledge-speed read reverted.
+    expect(snap.markets[0]!.borrow).toEqual([
+      {
+        reserveId: "1",
+        borrowRateRay: (63n * 10n ** 24n).toString(),
+        speed: {
+          availableNow: u(400_000).toString(),
+          moreAt: 1_200,
+          market: { limit: "100000000000000", used: "60000000000000", available: "40000000000000", moreAt: 1_200, moreAmount: "60000000000000", unavailable: false },
+          debt: { limit: u(500_000).toString(), used: "0", available: u(500_000).toString(), moreAt: 0, moreAmount: "0", unavailable: false },
+        },
+      },
+    ]);
+    expect(snap.markets[0]!.pledgeSpeed).toBeNull();
+    expect(asset.exposure).toMatchObject({ deficitOffset: "0x0000000000000000000000000000000000000000", offsetFunded: "0" });
     expect(new Set([asset.blockNumber, ...snap.slices.map((s) => s.blockNumber), snap.markets[0]!.blockNumber, snap.hubs[0]!.blockNumber])).toEqual(new Set(["77"]));
     expect(snap.hubs).toEqual([
       { chainId: 1, hub: HUB, label: "Stable", tier: 1, recorded: true, applicationState: 0, assetCount: 2, lendAssetIds: ["1"], lendSpokes: [LEND], cdpSpokes: [FIXTURE_U], blockNumber: "77" },

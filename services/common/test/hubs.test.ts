@@ -18,6 +18,8 @@ import {
   LEND_A2,
   LEND_B,
   LEND_C,
+  OFFSET_C,
+  SPEED_MORE_AT,
   USDC,
   type FakeChain,
   fakeChainClient,
@@ -120,8 +122,42 @@ describe("a chain with two Hubs and three Lend Spokes", () => {
   });
 });
 
+const kindOf = (snap: Awaited<ReturnType<typeof read>>, spoke: Address) => snap.slices.find((s) => s.spoke === spoke)!.kind;
+
+describe("speed limits of each market (BOR-024)", () => {
+  it("reads what each debt reserve of the market can borrow now and when more frees up", async () => {
+    const m = (await read()).markets[0]!;
+    expect(m.borrow.map((b) => [b.reserveId, b.borrowRateRay, b.speed?.availableNow, b.speed?.moreAt])).toEqual([
+      ["1", (63n * 10n ** 24n).toString(), six(500_000), SPEED_MORE_AT],
+      ["2", (63n * 10n ** 24n).toString(), six(500_000), SPEED_MORE_AT],
+      ["3", (63n * 10n ** 24n).toString(), six(500_000), SPEED_MORE_AT],
+    ]);
+    expect(m.borrow[0]!.speed!.market).toEqual({
+      limit: (1_000_000n * 10n ** 8n).toString(),
+      used: (250_000n * 10n ** 8n).toString(),
+      available: (750_000n * 10n ** 8n).toString(),
+      moreAt: SPEED_MORE_AT,
+      moreAmount: (250_000n * 10n ** 8n).toString(),
+      unavailable: false,
+    });
+    expect(m.borrow[0]!.speed!.debt).toMatchObject({ available: six(500_000), moreAt: 0 });
+    expect(m.pledgeSpeed).toMatchObject({ available: (2_500_000n * 10n ** 8n).toString(), moreAt: 0, unavailable: false });
+  });
+
+  it("keeps the market and its rates when the Lens refuses the speed views while the Lock is held", async () => {
+    const m = (await read({ ...fixtureHubsChain.start, locked: true })).markets[0]!;
+    expect(m.borrow.map((b) => [b.reserveId, b.speed])).toEqual([
+      ["1", null],
+      ["2", null],
+      ["3", null],
+    ]);
+    expect(m.pledgeSpeed).toBeNull();
+    expect(m.marketId).toBe("1");
+  });
+});
+
 describe("a Hub recorded after start-up", () => {
-  it("appears at the next read with the same deployment, with its Lend, Coverage and CDP Spokes found on chain", async () => {
+  it("appears at the next read with the same deployment, with its Lend, Coverage, CDP and deficit-offset Spokes found on chain", async () => {
     const before = await read(fixtureHubsChain.start);
     const after = await read(fixtureHubsChain.later);
     expect(before.hubs.map((h) => h.hub)).toEqual([HUB_A, HUB_B]);
@@ -129,8 +165,9 @@ describe("a Hub recorded after start-up", () => {
     expect(after.hubs[2]).toMatchObject({ hub: HUB_C, label: null, tier: 3, recorded: true, lendAssetIds: ["0"], lendSpokes: [LEND_C], cdpSpokes: [CDP_C] });
 
     const c0 = after.hubAssets.find((a) => a.hub === HUB_C)!;
-    expect([c0.assetId, c0.underlying, c0.added, c0.owed, c0.priceUsd8, c0.lend.spoke]).toEqual(["0", USDC, six(2_000_000), six(500_000), "100000000", LEND_C]);
-    expect(after.slices.filter((s) => s.hub === HUB_C).map((s) => s.kind)).toEqual(["lend", "coverage", "feeReceiver", "cdp"]);
+    expect([c0.assetId, c0.underlying, c0.added, c0.owed, c0.priceUsd8, c0.lend.spoke]).toEqual(["0", USDC, six(2_050_000), six(500_000), "100000000", LEND_C]);
+    expect(after.slices.filter((s) => s.hub === HUB_C).map((s) => s.kind)).toEqual(["lend", "coverage", "deficitOffset", "feeReceiver", "cdp"]);
+    expect(c0.exposure).toMatchObject({ coverageSpoke: COV_C, fundedBalance: six(100_000), deficitOffset: OFFSET_C, offsetFunded: six(50_000) });
     expect(after.slices.find((s) => s.spoke === COV_C)!.kind).toBe("coverage");
     expect(reconcileHubAsset(c0, after.slices).balanceHolds).toBe(true);
     expect(after.spokeReserves.filter((r) => r.spoke === CDP_C).map((r) => [r.hub, r.assetId])).toEqual([[HUB_C, "0"]]);
@@ -147,6 +184,8 @@ describe("a Hub recorded after start-up", () => {
     const chain: FakeChain = { ...later, hubs: later.hubs.map((h) => (h.hub !== HUB_C ? h : { ...h, assets: h.assets.map(({ coverageSpoke: _, ...a }) => a) })) };
     const snap = await read(chain);
     expect(snap.hubs[2]!.lendSpokes).toEqual([LEND_C]);
-    expect(snap.slices.find((s) => s.spoke === COV_C)!.kind).toBe("other");
+    expect(kindOf(snap, COV_C)).toBe("other");
+    // Without a Coverage Spoke there is no layer for the offset to stand behind: it is not a Lend Spoke either.
+    expect(kindOf(snap, OFFSET_C)).toBe("other");
   });
 });

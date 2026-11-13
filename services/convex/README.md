@@ -23,10 +23,10 @@ A chain has several Aave V4 Hubs. Each has one or more supply-only Lend Spokes (
 |---|---|---|---|
 | `hubs` | chain, Hub | Label, tier, recorded flag, application state, Lend and CDP Spokes, lend assets. No totals: they are the sum of the Hub's `hubAssets` | Lend totals by Hub (`markets.getLendTotals`), Hub list and page (`hubs.list`, `hubs.get`, `hubs.getBySlug`) |
 | `hubAssets` | chain, Hub, assetId | Added, owed (drawn + premium), liquidity, deficit, fees, rates, rate curve, reserve factor, every Lend Spoke reserve on it and the first one's oracle price, coverage | Lend list and page; the Hub block and Hub charts of every Borrow asset page |
-| `hubAssetSpokes` | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit, caps, kind (lend, cdp, coverage, fee receiver) | Lend allocation by Spoke; "borrowed via this Spoke" on a Borrow asset page |
+| `hubAssetSpokes` | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit, caps, kind (lend, cdp, coverage, deficit offset, fee receiver, other) | Lend allocation by Spoke; "borrowed via this Spoke" on a Borrow asset page |
 | `creditLines` | chain, funding Hub, assetId, Spoke | A Hub-to-Hub line's cap, the funding Hub's total of caps and whether lines are open; the draw is the Spoke's `hubAssetSpokes` row | `creditLines.list`; both Hubs' pages; "drawn by other Hubs" on the Lend page |
 | `spokeReserves` | chain, Spoke, reserveId | A CDP debt reserve's flags, debt price, breaker. No Hub totals | Borrow list asset rows, Borrow asset page |
-| `markets` | chain, marketId | A collateral market: pool, range, vault token, accepted price, collateral value, collateral factor, bonus, collateral risk, liquidation config, cap headroom | Borrow list pool rows, pool page |
+| `markets` | chain, marketId | A collateral market: pool, range, vault token, accepted price, collateral value, collateral factor, bonus, collateral risk, liquidation config, cap headroom; per debt reserve the market's rate, "available to borrow now" and "more from" (speed limits); the pledge-speed window | Borrow list pool rows, pool page, "Assets you can borrow" |
 | `marketReserveDebt` | chain, marketId, Spoke, reserveId | Debt a market backs in one debt reserve, and its borrowers | Pool page "debt backed"; Borrow asset page split by market |
 | `positions` | chain, Spoke, proxy | An account's collateral and debt value at the last daily sample | Wallets at risk, borrower lists |
 | `series` | scope kind, scope key, resolution, bucket | Every chart point | Every chart |

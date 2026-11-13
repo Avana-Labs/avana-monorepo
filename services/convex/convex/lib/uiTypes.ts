@@ -164,6 +164,14 @@ export interface PoolBorrowable {
   readonly name: string;
   readonly symbol: string;
   readonly borrowAprPct: number;
+  /**
+   * "Available to borrow now" (BOR-024): what fits both speed windows, the market's and the (Hub, asset)'s, in whole
+   * tokens and USD at the asset's price; null when the Lens refused the read.
+   */
+  readonly availableNow: number | null;
+  readonly availableNowUsd: number | null;
+  /** "More from": when the next charges stop counting (ISO time); null when nothing is counting. */
+  readonly moreFrom: string | null;
 }
 
 export interface Cashflow {

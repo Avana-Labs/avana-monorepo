@@ -2,8 +2,9 @@
 // Copyright (c) 2026 Avana Labs
 // Test data only: an in-memory chain that answers the snapshot reader's view calls the way the contracts do, so the
 // tests run the real reader (snapshot.ts, discovery.ts) end to end. It holds Hubs with their assets and Spokes, Lend
-// Spokes with their oracles, CDP Spokes with their debt reserves, the MarketRegistry's records and Hub-to-Hub lines,
-// and the Lens. A call to an address or function the chain does not hold fails, as it reverts on chain.
+// Spokes with their oracles, CDP Spokes with their debt reserves, DAO deficit offsets, the MarketRegistry's records and
+// Hub-to-Hub lines, and the Lens with its speed-limit views. A call to an address or function the chain does not hold
+// fails, as it reverts on chain.
 
 import type { CallResult, ContractCall, ViewClient } from "./client.ts";
 import type { Address } from "./types.ts";
@@ -15,6 +16,8 @@ export interface FakeSlice {
   readonly addCap: number;
   readonly drawCap: number;
   readonly active?: boolean;
+  /** Set on a DAO deficit offset: the Coverage Spoke its `FIRST_LOSS_LAYER()` answers. */
+  readonly firstLossLayer?: Address;
 }
 
 export interface FakeAsset {
@@ -64,7 +67,17 @@ export interface FakeChain {
   readonly crossHubLines: readonly { readonly fundingHub: Address; readonly asset: Address; readonly spoke: Address; readonly cap: bigint }[];
   readonly crossHubLinesEnabled: boolean;
   readonly markets: readonly Record<string, unknown>[];
+  /** The Lock is held: the Lens speed views revert `Locked()`. */
+  readonly locked?: boolean;
 }
+
+/**
+ * The speed windows every market answers: the market window has $750,000 of room of $1,000,000 and $250,000 frees up
+ * at `SPEED_MORE_AT`; each (funding Hub, asset) window has 500,000 whole tokens of room and nothing counting; the
+ * pledge window is empty with $2,500,000 of room. So `availableNow` is 500,000 whole tokens at a $1 price.
+ */
+export const SPEED_MORE_AT = 1_767_240_000;
+const speedView = (limit: bigint, used: bigint, moreAt: number, moreAmount: bigint) => ({ limit, used, available: limit - used, moreAt: BigInt(moreAt), moreAmount, unavailable: false });
 
 const RAY = 10n ** 27n;
 const ZERO: Address = "0x0000000000000000000000000000000000000000";
@@ -173,6 +186,8 @@ function answer(c: FakeChain, call: ContractCall): unknown {
     if (fn === "getLiquidationConfig") return { targetHealthFactor: 11n * 10n ** 17n, healthFactorForMaxBonus: 95n * 10n ** 16n, liquidationBonusFactor: 5_000 };
     if (fn === "getReserve") return { underlying: ZERO, hub: cdp.homeHub, assetId: 0, decimals: 18, collateralRisk: 500, flags: 0, dynamicConfigKey: 0 };
   }
+  const offset = c.hubs.flatMap((h) => h.assets.flatMap((a) => a.slices)).find((x) => x.spoke === at && x.firstLossLayer);
+  if (offset && fn === "FIRST_LOSS_LAYER") return offset.firstLossLayer;
   if (at === c.rateStrategy && fn === "getInterestRateData") return { optimalUsageRatio: 8_000, baseDrawnRate: 0, rateGrowthBeforeOptimal: 400, rateGrowthAfterOptimal: 6_000 };
   if (at === c.lens) {
     switch (fn) {
@@ -191,9 +206,56 @@ function answer(c: FakeChain, call: ContractCall): unknown {
         const h = c.hubs.find((x) => eq(args[0], x.hub))!;
         const a = h.assets.find((x) => eq(args[1], x.underlying));
         if (!a?.coverageSpoke) throw new CallFailed("NoCoverage");
-        const spokes = a.slices.filter((x) => x.drawCap > 0).map((x) => ({ spoke: x.spoke, homeHub: c.cdpSpokes.find((s) => s.spoke === x.spoke)?.homeHub ?? ZERO }));
-        return { coverageSpoke: a.coverageSpoke, fundedBalance: 0n, line: 0n, coverageBoundHolds: true, uncovered: 0n, priceAdj: 10n ** 6n, spokes };
+        const cdpOf = (sp: Address) => c.cdpSpokes.find((s) => s.spoke === sp);
+        const isOffset = (x: FakeSlice) => x.firstLossLayer === a.coverageSpoke;
+        const kind = (x: FakeSlice) =>
+          cdpOf(x.spoke) ? 1 : x.spoke === a.coverageSpoke ? 2 : x.spoke === a.feeReceiver ? 3 : isOffset(x) ? 5 : c.lendSpokes.some((l) => l.spoke === x.spoke) ? 0 : 4;
+        const spokes = a.slices.map((x) => ({
+          spoke: x.spoke,
+          homeHub: cdpOf(x.spoke)?.homeHub ?? ZERO,
+          drawCap: BigInt(x.drawCap),
+          drawn: x.owed,
+          deficit: 0n,
+          kind: kind(x),
+          added: x.added,
+          addedShares: x.added,
+          addCap: BigInt(x.addCap),
+          drawnOwed: x.owed,
+          premiumOwed: 0n,
+          drawnShares: x.owed,
+          premiumShares: 0n,
+          active: x.active ?? true,
+          halted: false,
+        }));
+        const offsets = a.slices.filter(isOffset);
+        return {
+          coverageSpoke: a.coverageSpoke,
+          fundedBalance: a.slices.find((x) => x.spoke === a.coverageSpoke)?.added ?? 0n,
+          line: 0n,
+          coverageBoundHolds: true,
+          uncovered: 0n,
+          priceAdj: 10n ** 6n,
+          spokes,
+          deficitOffset: offsets[0]?.spoke ?? ZERO,
+          offsetFunded: offsets.reduce((acc, x) => acc + x.added, 0n),
+        };
       }
+      case "getBorrowSpeed": {
+        if (c.locked) throw new CallFailed("Locked");
+        const m = c.markets.find((x) => x.marketId === args[0]);
+        const r = c.cdpSpokes.find((x) => x.spoke === m?.spoke)?.debtReserves.find((x) => x.reserveId === args[1]);
+        if (!m || !r) throw new CallFailed("UnknownDebtReserve");
+        const unit = 10n ** BigInt(r.decimals);
+        return {
+          market: speedView(1_000_000n * 10n ** 8n, 250_000n * 10n ** 8n, SPEED_MORE_AT, 250_000n * 10n ** 8n),
+          debt: speedView(500_000n * unit, 0n, 0, 0n),
+          availableNow: 500_000n * unit,
+          moreAt: BigInt(SPEED_MORE_AT),
+        };
+      }
+      case "getPledgeSpeed":
+        if (c.locked) throw new CallFailed("Locked");
+        return speedView(2_500_000n * 10n ** 8n, 0n, 0, 0n);
     }
   }
   throw new CallFailed(`${fn} on ${at}`);

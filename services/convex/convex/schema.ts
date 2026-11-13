@@ -17,6 +17,8 @@ const dec = v.string();
 
 /** The block a row was read at; every row of one refresh carries the same one. */
 const read = { blockNumber: dec, updatedAt: v.number() };
+/** One speed window of the RiskModule as `Lens.getBorrowSpeed` / `getPledgeSpeed` report it (`SpeedWindow`). */
+const speedWindow = v.object({ limit: dec, used: dec, available: dec, moreAt: v.number(), moreAmount: dec, unavailable: v.boolean() });
 
 export default defineSchema({
   /**
@@ -104,7 +106,7 @@ export default defineSchema({
     lendReserves: v.array(v.object({ spoke: address, reserveId: dec, paused: v.boolean(), frozen: v.boolean() })),
     exposure: v.union(
       v.null(),
-      v.object({ coverageSpoke: address, fundedBalance: dec, line: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec }),
+      v.object({ coverageSpoke: address, fundedBalance: dec, line: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec, deficitOffset: address, offsetFunded: dec }),
     ),
     timestamp: v.number(),
     ...read,
@@ -119,7 +121,7 @@ export default defineSchema({
     hub: address,
     assetId: dec,
     spoke: address,
-    kind: v.union(v.literal("lend"), v.literal("cdp"), v.literal("coverage"), v.literal("feeReceiver"), v.literal("other")),
+    kind: v.union(v.literal("lend"), v.literal("cdp"), v.literal("coverage"), v.literal("feeReceiver"), v.literal("other"), v.literal("deficitOffset")),
     homeHub: address,
     added: dec,
     addedShares: dec,
@@ -198,6 +200,15 @@ export default defineSchema({
     addHeadroom: dec,
     pauseState: v.number(),
     breakerReasons: v.number(),
+    /** Each debt reserve of the market's Spoke: the market's borrow rate and what it can borrow now (BOR-024). */
+    borrow: v.array(
+      v.object({
+        reserveId: dec,
+        borrowRateRay: dec,
+        speed: v.union(v.null(), v.object({ availableNow: dec, moreAt: v.number(), market: speedWindow, debt: speedWindow })),
+      }),
+    ),
+    pledgeSpeed: v.union(v.null(), speedWindow),
     ...read,
   })
     .index("by_key", ["chainId", "marketId"])

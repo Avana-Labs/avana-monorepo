@@ -8,9 +8,11 @@
 // Lend Spokes are not recorded by the MarketRegistry (they are Aave standard Spokes). The manifest's Lend Spokes are
 // always read; on a Hub that none of them supplies (a Hub recorded after the manifest), a Spoke is read as a Lend
 // Spoke when it is shaped like one: not a CDP Spoke, not a Coverage Spoke, not the asset's fee receiver, active, with
-// an add cap and no draw cap, and answering `getReserveCount`.
+// an add cap and no draw cap, and answering `getReserveCount`. A Spoke whose `FIRST_LOSS_LAYER()` answers the asset's
+// Coverage Spoke is that asset's DAO deficit offset (REQ-FLR-046); it is supply-only too, so it is found first and
+// never read as a Lend Spoke.
 
-import { hubViewsAbi, lensViewsAbi, registryViewsAbi, spokeViewsAbi } from "./abi.ts";
+import { deficitOffsetViewsAbi, hubViewsAbi, lensViewsAbi, registryViewsAbi, spokeViewsAbi } from "./abi.ts";
 import { type ContractCall, type ViewClient, ZERO, all, lower, some, uniq } from "./client.ts";
 import type { Address, ChainDeployment } from "./types.ts";
 
@@ -45,6 +47,8 @@ export interface HubAssetInfo {
   readonly irStrategy: Address;
   /** `MarketRegistry.coverageSpokeOf(hub, underlying)`; the zero address when none is set. */
   readonly coverageSpoke: Address;
+  /** Spokes of the asset whose `FIRST_LOSS_LAYER()` is `coverageSpoke`: its DAO deficit offsets. */
+  readonly deficitOffsets: readonly Address[];
   readonly spokes: readonly { readonly spoke: Address; readonly data: DecodedSpokeData }[];
 }
 
@@ -131,19 +135,32 @@ export async function discover(client: ViewClient, dep: ChainDeployment): Promis
   // 5. Each Spoke's configuration on each asset.
   const data = (await all(client, listed.flatMap((b) => b.spokeAddrs.map((sp) => hubCall(b.hub, "getSpoke", [b.assetId, sp]))))) as DecodedSpokeData[];
   cursor = 0;
-  const assets: HubAssetInfo[] = listed.map(({ spokeAddrs, spokeCount: _, ...b }, i) => ({
+  const found = listed.map(({ spokeAddrs, spokeCount: _, ...b }, i) => ({
     ...b,
     coverageSpoke: covers[i] ? lower(covers[i] as string) : ZERO,
     spokes: spokeAddrs.map((spoke) => ({ spoke, data: data[cursor++]! })),
   }));
-
-  // 6. Lend Spokes.
-  const coverage = new Set([...dep.coverageSpokes.map((c) => lower(c.address)), ...assets.map((a) => a.coverageSpoke).filter((a) => a !== ZERO)]);
+  const coverage = new Set([...dep.coverageSpokes.map((c) => lower(c.address)), ...found.map((a) => a.coverageSpoke).filter((a) => a !== ZERO)]);
   const cdp = new Set(cdpSpokes);
   const manifestLend = uniq(dep.lendSpokes.map(lower));
+
+  // 6. DAO deficit offsets: on an asset with a Coverage Spoke, each Spoke that is none of the known kinds answers
+  // `FIRST_LOSS_LAYER()` with that Coverage Spoke; any other Spoke reverts or names another layer.
+  const offsetKeys = found.flatMap((a, ai) =>
+    a.coverageSpoke === ZERO
+      ? []
+      : a.spokes.filter(({ spoke }) => !cdp.has(spoke) && !coverage.has(spoke) && !manifestLend.includes(spoke) && spoke !== a.feeReceiver).map(({ spoke }) => ({ ai, spoke })),
+  );
+  const layers = await some(client, offsetKeys.map(({ spoke }): ContractCall => ({ address: spoke, abi: deficitOffsetViewsAbi, functionName: "FIRST_LOSS_LAYER", args: [] })));
+  const assets: HubAssetInfo[] = found.map((a, ai) => ({
+    ...a,
+    deficitOffsets: offsetKeys.filter((k, j) => k.ai === ai && layers[j] !== null && lower(layers[j] as string) === a.coverageSpoke).map((k) => k.spoke),
+  }));
+
+  // 7. Lend Spokes.
   const supplied = new Set(assets.filter((a) => a.spokes.some((s) => manifestLend.includes(s.spoke))).map((a) => a.hub));
   const candidates = uniq(
-    assets.filter((a) => !supplied.has(a.hub)).flatMap((a) => a.spokes.filter((s) => lendShaped(s, a, cdp, coverage)).map((s) => s.spoke)),
+    assets.filter((a) => !supplied.has(a.hub)).flatMap((a) => a.spokes.filter((s) => lendShaped(s, a, cdp, coverage) && !a.deficitOffsets.includes(s.spoke)).map((s) => s.spoke)),
   )
     .filter((sp) => !manifestLend.includes(sp))
     .sort();

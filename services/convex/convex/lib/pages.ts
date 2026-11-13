@@ -17,6 +17,7 @@ import {
   rayToAprPct,
   rayToApyPct,
   spokeHeadroom,
+  tokens,
   usd,
 } from "@avana/services-common/views";
 import { feeTierLabel } from "./format.ts";
@@ -171,7 +172,10 @@ export function interestRateModel(slug: string, asset: HubAssetRow): InterestRat
   };
 }
 
-/** "Assets you can borrow" on a pool page: each debt reserve of the market's Spoke at this market's rate. */
+/**
+ * "Assets you can borrow" on a pool page: each debt reserve of the market's Spoke at this market's rate, with what the
+ * market can borrow of it now under the speed limits and when more frees up (BOR-024).
+ */
 export function poolBorrowables(
   market: MarketRow,
   reserves: readonly WithSlug<SpokeReserveRow>[],
@@ -184,7 +188,18 @@ export function poolBorrowables(
       const a = assets.get(hubAssetKey(r));
       if (!a) return [];
       const symbol = symbolOf(r.asset);
-      return [{ id: r.slug, name: symbol, symbol, borrowAprPct: rayToAprPct(marketBorrowRateRay(a.drawnRateRay, market.collateralRiskBps)) }];
+      const speed = market.borrow.find((b) => b.reserveId === r.reserveId)?.speed ?? null;
+      return [
+        {
+          id: r.slug,
+          name: symbol,
+          symbol,
+          borrowAprPct: rayToAprPct(marketBorrowRateRay(a.drawnRateRay, market.collateralRiskBps)),
+          availableNow: speed ? tokens(speed.availableNow, a.decimals) : null,
+          availableNowUsd: speed ? usd(speed.availableNow, a.decimals, a.priceUsd8) : null,
+          moreFrom: speed && speed.moreAt > 0 ? new Date(speed.moreAt * 1_000).toISOString() : null,
+        },
+      ];
     })
     .sort((x, y) => x.name.localeCompare(y.name));
 }
