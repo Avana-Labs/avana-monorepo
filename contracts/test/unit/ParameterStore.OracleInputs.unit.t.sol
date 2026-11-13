@@ -8,7 +8,6 @@ import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.
 import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
 import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -196,10 +195,24 @@ contract ParameterStoreOracleInputsUnitTest is ParameterStoreFixture {
         assertEq(high, type(uint256).max, "volatile config band high");
     }
 
-    /// @dev The band in the configuration the LPOracle is checked with. Decoded here, in a frame of its own: the
-    ///      configuration struct's decoder does not fit the test's stack without the IR pipeline.
+    /// @dev The band in the configuration the LPOracle is checked with, read from the encoded return of
+    ///      `getOracleConfig` as LPOracle.Recheck does: the full struct's decoder does not fit the legacy pipeline's
+    ///      stack. After the offset word, the struct's head is marketId, tokens (offset), twapWindow,
+    ///      twapMinObservations, consistencyToleranceBps, maxQuoteChangeBps, usdBandLow, usdBandHigh.
     function _configBand() internal view returns (uint256 low, uint256 high) {
-        OracleConfig memory c = store.getOracleConfig(address(lpOracle));
-        return (c.usdBandLow, c.usdBandHigh);
+        (bool ok, bytes memory raw) =
+            address(store).staticcall(abi.encodeWithSignature("getOracleConfig(address)", address(lpOracle)));
+        assertTrue(ok, "getOracleConfig");
+        assertEq(uint256(bytes32(_word(raw, 0))), 0x20, "one struct, encoded after its offset");
+        return (uint256(_word(raw, 7)), uint256(_word(raw, 8)));
+    }
+
+    function _word(
+        bytes memory raw,
+        uint256 i
+    ) internal pure returns (bytes32 w) {
+        assembly ("memory-safe") {
+            w := mload(add(add(raw, 0x20), mul(i, 0x20)))
+        }
     }
 }
