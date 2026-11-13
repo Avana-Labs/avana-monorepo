@@ -1,0 +1,9 @@
+# Gitleaks findings reviewed and accepted (fingerprint: commit:file:rule:line). Each value is a public Ethereum
+# address, not a secret; the generic-api-key rule matches it after a name containing "token" or "access".
+
+# anvil's first default account, the test-network token minter (public address).
+639cec0b7f364e01bd5cd17d59ea384b5671b49c:contracts/script/deploy/config/anvil.json:generic-api-key:535
+# The same token minter in the removed Tenderly rehearsal config (public address).
+639cec0b7f364e01bd5cd17d59ea384b5671b49c:contracts/script/deploy/config/tenderly-rehearsal.json:generic-api-key:535
+# Aave V4's AccessManagerEnumerable on Ethereum, checked by check-aave-unmodified (public contract address).
+8878d445b92837c6d62a19fbc6964181bc9c5411:packages/protocol/src/manifest/upstream.ts:generic-api-key:55
