@@ -96,6 +96,19 @@ export const lensAbi = [
   },
   {
     "type": "function",
+    "name": "MODULES",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "modules",
+        "type": "address[9]",
+        "internalType": "address[9]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PARAMETER_STORE",
     "inputs": [],
     "outputs": [
@@ -774,6 +787,532 @@ export const lensAbi = [
   },
   {
     "type": "function",
+    "name": "getAccountFees",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "fees",
+        "type": "tuple[]",
+        "internalType": "struct PositionFeesView[]",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "positionKey",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "supported",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "inCustody",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "depositor",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "liquidity",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "tokensOwed",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          },
+          {
+            "name": "amounts",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAccountRisk",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "risk",
+        "type": "tuple",
+        "internalType": "struct AccountRiskView",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "liquidationPrice",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "reserveIds",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          },
+          {
+            "name": "borrowRatesRay",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAccounts",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "accounts",
+        "type": "tuple[]",
+        "internalType": "struct AccountView[]",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "wallet",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "spoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "marketId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "deployed",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "borrowNonce",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactor",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "totalCollateralValue",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "totalDebtValueRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "avgCollateralFactor",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "riskPremium",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "activeCollateralCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "borrowCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "gateStatus",
+            "type": "tuple",
+            "internalType": "struct AccountGateStatus",
+            "components": [
+              {
+                "name": "spokeApproved",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "markets",
+                "type": "tuple[]",
+                "internalType": "struct MarketGateStatus[]",
+                "components": [
+                  {
+                    "name": "marketId",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "reserveId",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "priceState",
+                    "type": "uint8",
+                    "internalType": "enum PriceState"
+                  },
+                  {
+                    "name": "oldestFeedAge",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "feedTooOld",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "offboarding",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "aaveReservePaused",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "aaveReserveFrozen",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "hubSharesEqualAssets",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "noSettlementPath",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "liquidationHalted",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "breakerReasons",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  },
+                  {
+                    "name": "breakerLatchedUntil",
+                    "type": "uint64",
+                    "internalType": "uint64"
+                  }
+                ]
+              },
+              {
+                "name": "unknownCollateralReserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "unapprovedDebtReserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "pausedDebtReserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "staleDebtReserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "haltedDebtReserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "driftMarketId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "driftReason",
+                "type": "uint8",
+                "internalType": "enum DriftReason"
+              },
+              {
+                "name": "noApprovedKeeper",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "pauseState",
+                "type": "uint8",
+                "internalType": "enum PauseState"
+              },
+              {
+                "name": "healthFactor",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "hardHealthFloor",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "borrowAllowed",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "withdrawWithDebtAllowed",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "pauseReason",
+                "type": "uint8",
+                "internalType": "enum PauseReason"
+              },
+              {
+                "name": "healthFactorExcludingRescue",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "breakerDebtReserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "debtBreakerReasons",
+                "type": "uint32",
+                "internalType": "uint32"
+              },
+              {
+                "name": "statusUnavailable",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          },
+          {
+            "name": "walletFrozen",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "breakerReasons",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "debts",
+            "type": "tuple[]",
+            "internalType": "struct DebtPosition[]",
+            "components": [
+              {
+                "name": "reserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "asset",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "drawn",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "premium",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "total",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "paused",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "priceFresh",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "breakerReasons",
+                "type": "uint32",
+                "internalType": "uint32"
+              }
+            ]
+          },
+          {
+            "name": "markets",
+            "type": "tuple[]",
+            "internalType": "struct MarketPosition[]",
+            "components": [
+              {
+                "name": "vaultToken",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "reserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "suppliedShares",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "suppliedAssets",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "collateralEnabled",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "credited",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "recordCount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "shortfall",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "priceState",
+                "type": "uint8",
+                "internalType": "enum PriceState"
+              },
+              {
+                "name": "breakerReasons",
+                "type": "uint32",
+                "internalType": "uint32"
+              },
+              {
+                "name": "rescueUnits",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getApplicationState",
     "inputs": [
       {
@@ -787,6 +1326,116 @@ export const lensAbi = [
         "name": "state",
         "type": "uint8",
         "internalType": "enum PauseState"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getBorrowSpeed",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "speed",
+        "type": "tuple",
+        "internalType": "struct BorrowSpeedView",
+        "components": [
+          {
+            "name": "market",
+            "type": "tuple",
+            "internalType": "struct SpeedView",
+            "components": [
+              {
+                "name": "limit",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "used",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "available",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "moreAt",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "moreAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "unavailable",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          },
+          {
+            "name": "debt",
+            "type": "tuple",
+            "internalType": "struct SpeedView",
+            "components": [
+              {
+                "name": "limit",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "used",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "available",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "moreAt",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "moreAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "unavailable",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          },
+          {
+            "name": "availableNow",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "moreAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -1055,6 +1704,343 @@ export const lensAbi = [
   },
   {
     "type": "function",
+    "name": "getDebtReserve",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "reserve",
+        "type": "tuple",
+        "internalType": "struct DebtReserveView",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "spoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "reserveId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "price",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fixedPrice",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "hub",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "hubAssetId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "added",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawn",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "premium",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidity",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "utilizationBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawnRateRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "supplyRateRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidityFeeBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "optimalUsageBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "baseDrawnRateBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "rateGrowthBeforeOptimalBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "rateGrowthAfterOptimalBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawHeadroom",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "paused",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "frozen",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "borrowable",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "breakerReasons",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pauseState",
+            "type": "uint8",
+            "internalType": "enum PauseState"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getDebtReserves",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "reserves",
+        "type": "tuple[]",
+        "internalType": "struct DebtReserveView[]",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "spoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "reserveId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "price",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fixedPrice",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "hub",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "hubAssetId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "added",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawn",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "premium",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidity",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "utilizationBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawnRateRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "supplyRateRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidityFeeBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "optimalUsageBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "baseDrawnRateBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "rateGrowthBeforeOptimalBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "rateGrowthAfterOptimalBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawHeadroom",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "paused",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "frozen",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "borrowable",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "breakerReasons",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pauseState",
+            "type": "uint8",
+            "internalType": "enum PauseState"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getEscrowClaimable",
     "inputs": [
       {
@@ -1073,6 +2059,259 @@ export const lensAbi = [
         "name": "amounts",
         "type": "uint256[]",
         "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHubAsset",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "assetId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "asset",
+        "type": "tuple",
+        "internalType": "struct HubAssetView",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "hub",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "assetId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "underlying",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "added",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "addedShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawn",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "premium",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "owed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawnShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "premiumShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidity",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "swept",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "deficit",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "accruedFees",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "utilizationBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "drawnRateRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "supplyRateRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidityFeeBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "feeReceiver",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "irStrategy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "optimalUsageBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "baseDrawnRateBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "rateGrowthBeforeOptimalBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "rateGrowthAfterOptimalBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "lendSpoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "priceUsd8",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "spokes",
+            "type": "tuple[]",
+            "internalType": "struct SpokeDraw[]",
+            "components": [
+              {
+                "name": "spoke",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "homeHub",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "drawCap",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "drawn",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "deficit",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "kind",
+                "type": "uint8",
+                "internalType": "enum SpokeKind"
+              },
+              {
+                "name": "added",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "addedShares",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "addCap",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "drawnOwed",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "premiumOwed",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "drawnShares",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "premiumShares",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "active",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "halted",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -1098,6 +2337,16 @@ export const lensAbi = [
         "type": "tuple",
         "internalType": "struct HubAssetExposureView",
         "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
           {
             "name": "hub",
             "type": "address",
@@ -1167,8 +2416,585 @@ export const lensAbi = [
                 "name": "deficit",
                 "type": "uint256",
                 "internalType": "uint256"
+              },
+              {
+                "name": "kind",
+                "type": "uint8",
+                "internalType": "enum SpokeKind"
+              },
+              {
+                "name": "added",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "addedShares",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "addCap",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "drawnOwed",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "premiumOwed",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "drawnShares",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "premiumShares",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "active",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "halted",
+                "type": "bool",
+                "internalType": "bool"
               }
             ]
+          },
+          {
+            "name": "deficitOffset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "offsetFunded",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarket",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "tuple",
+        "internalType": "struct MarketView",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "chainId",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "status",
+            "type": "uint8",
+            "internalType": "enum MarketStatus"
+          },
+          {
+            "name": "pool",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "poolId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "tokens",
+            "type": "address[]",
+            "internalType": "address[]"
+          },
+          {
+            "name": "tokenDecimals",
+            "type": "uint8[]",
+            "internalType": "uint8[]"
+          },
+          {
+            "name": "feeTier",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "tickLower",
+            "type": "int24",
+            "internalType": "int24"
+          },
+          {
+            "name": "tickUpper",
+            "type": "int24",
+            "internalType": "int24"
+          },
+          {
+            "name": "integrationId",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "ammProtocol",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "vaultToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "lpOracle",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "hub",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "spoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "reserveId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "hubAssetId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "acceptedPrice",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "priceState",
+            "type": "uint8",
+            "internalType": "enum PriceState"
+          },
+          {
+            "name": "suppliedUnits",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "suppliedUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "collateralFactorBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationThresholdBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxLiquidationBonusBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketHeadroomUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "sliceHeadroomUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "addHeadroom",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "pauseState",
+            "type": "uint8",
+            "internalType": "enum PauseState"
+          },
+          {
+            "name": "breakerReasons",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "collateralRiskBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationFeeBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "targetHealthFactor",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorForMaxBonus",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationBonusFactorBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "hardHealthFloor",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketUsdCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "topUpSliceUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "depositorUsdCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tokenUsdCaps",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          },
+          {
+            "name": "addCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtReserveIds",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          },
+          {
+            "name": "borrowRatesRay",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarkets",
+    "inputs": [
+      {
+        "name": "offset",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "markets",
+        "type": "tuple[]",
+        "internalType": "struct MarketView[]",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "chainId",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "status",
+            "type": "uint8",
+            "internalType": "enum MarketStatus"
+          },
+          {
+            "name": "pool",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "poolId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "tokens",
+            "type": "address[]",
+            "internalType": "address[]"
+          },
+          {
+            "name": "tokenDecimals",
+            "type": "uint8[]",
+            "internalType": "uint8[]"
+          },
+          {
+            "name": "feeTier",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "tickLower",
+            "type": "int24",
+            "internalType": "int24"
+          },
+          {
+            "name": "tickUpper",
+            "type": "int24",
+            "internalType": "int24"
+          },
+          {
+            "name": "integrationId",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "ammProtocol",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "vaultToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "lpOracle",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "hub",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "spoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "reserveId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "hubAssetId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "acceptedPrice",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "priceState",
+            "type": "uint8",
+            "internalType": "enum PriceState"
+          },
+          {
+            "name": "suppliedUnits",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "suppliedUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "collateralFactorBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationThresholdBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxLiquidationBonusBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketHeadroomUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "sliceHeadroomUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "addHeadroom",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "pauseState",
+            "type": "uint8",
+            "internalType": "enum PauseState"
+          },
+          {
+            "name": "breakerReasons",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "collateralRiskBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationFeeBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "targetHealthFactor",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorForMaxBonus",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationBonusFactorBps",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "hardHealthFloor",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketUsdCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "topUpSliceUsd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "depositorUsdCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tokenUsdCaps",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          },
+          {
+            "name": "addCap",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtReserveIds",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          },
+          {
+            "name": "borrowRatesRay",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
           }
         ]
       }
@@ -1264,6 +3090,133 @@ export const lensAbi = [
             "name": "valueDebt",
             "type": "uint256",
             "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPledgeSpeed",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pledge",
+        "type": "tuple",
+        "internalType": "struct SpeedView",
+        "components": [
+          {
+            "name": "limit",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "used",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "available",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "moreAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "moreAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "unavailable",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPositionFees",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "fees",
+        "type": "tuple",
+        "internalType": "struct PositionFeesView",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "marketId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "positionKey",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "supported",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "inCustody",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "depositor",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "liquidity",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "tokensOwed",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
+          },
+          {
+            "name": "amounts",
+            "type": "uint256[]",
+            "internalType": "uint256[]"
           }
         ]
       }
@@ -1504,6 +3457,11 @@ export const lensAbi = [
     "name": "getTailCoverage",
     "inputs": [
       {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "debtAsset",
         "type": "address",
         "internalType": "address"
@@ -1574,6 +3532,16 @@ export const lensAbi = [
             "name": "ratioBps",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "deficitOffset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "offsetFunded",
+            "type": "uint256",
+            "internalType": "uint256"
           }
         ]
       }
@@ -1624,6 +3592,92 @@ export const lensAbi = [
         "name": "deployed",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewBorrowAfter",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "preview",
+        "type": "tuple",
+        "internalType": "struct ActionPreview",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "collateralValueAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtValueAfterRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -1697,6 +3751,182 @@ export const lensAbi = [
         "name": "maximum",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewCloseAccount",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "close",
+        "type": "tuple",
+        "internalType": "struct CloseAccountView",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "debts",
+            "type": "tuple[]",
+            "internalType": "struct DebtClose[]",
+            "components": [
+              {
+                "name": "reserveId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "asset",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "total",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "maxRepaySpend",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "records",
+            "type": "tuple[]",
+            "internalType": "struct RecordClose[]",
+            "components": [
+              {
+                "name": "positionKey",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "units",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "amounts",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewDeleverageTo",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "targetHealthFactor",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "sizing",
+        "type": "tuple",
+        "internalType": "struct DeleverageSizing",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "reachable",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "units",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtRepaid",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtAssetToWallet",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -1993,6 +4223,273 @@ export const lensAbi = [
   },
   {
     "type": "function",
+    "name": "previewMaxWithdraw",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "targetHealthFactor",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "sizing",
+        "type": "tuple",
+        "internalType": "struct RemovalSizing",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "target",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxUnits",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "bestIndex",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "records",
+            "type": "tuple[]",
+            "internalType": "struct RecordRemoval[]",
+            "components": [
+              {
+                "name": "positionKey",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "units",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "fits",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewPledge",
+    "inputs": [
+      {
+        "name": "depositor",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pledge",
+        "type": "tuple",
+        "internalType": "struct PledgePreviewView",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "preview",
+            "type": "tuple",
+            "internalType": "struct PledgePreview",
+            "components": [
+              {
+                "name": "eligible",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "reason",
+                "type": "bytes4",
+                "internalType": "bytes4"
+              },
+              {
+                "name": "isTopUp",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "usdCharge",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "sliceUsd",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "marketRoomUsd",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "sliceRoomUsd",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "tokenRoomUsd",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+              },
+              {
+                "name": "depositorRoomUsd",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "poolShareRoomUnits",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "recordRoom",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewPledgeAfter",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "preview",
+        "type": "tuple",
+        "internalType": "struct ActionPreview",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "collateralValueAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtValueAfterRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "previewRecredit",
     "inputs": [
       {
@@ -2021,6 +4518,92 @@ export const lensAbi = [
         "name": "rescueOnly",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewRepayAfter",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "preview",
+        "type": "tuple",
+        "internalType": "struct ActionPreview",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "collateralValueAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtValueAfterRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -2070,6 +4653,148 @@ export const lensAbi = [
         "name": "healthFactorAfter",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewWithdraw",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "units",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "withdrawal",
+        "type": "tuple",
+        "internalType": "struct WithdrawPreview",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "units",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewWithdrawAfter",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "preview",
+        "type": "tuple",
+        "internalType": "struct ActionPreview",
+        "components": [
+          {
+            "name": "blockNumber",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proxy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "healthFactorAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceBefore",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "liquidationPriceAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "collateralValueAfter",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debtValueAfterRay",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -2134,6 +4859,11 @@ export const lensAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidModules",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "LimitTooHigh",
     "inputs": [
       {
@@ -2170,6 +4900,22 @@ export const lensAbi = [
       },
       {
         "name": "reserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "UnknownHubAsset",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "assetId",
         "type": "uint256",
         "internalType": "uint256"
       }
