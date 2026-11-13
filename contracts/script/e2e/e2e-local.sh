@@ -191,7 +191,7 @@ if [[ " $STEPS " == *" services "* ]]; then
     script/e2e/services-smoke.sh "$OUT/manifest.json" > "$LOG/services.log" 2>&1
     rc=$?
     case $rc in
-      0) record services pass "$(grep -E '^(keeper|indexer):' "$LOG/services.log" | tr '\n' ' ')" ;;
+      0) record services pass "$(grep -E '^(keeper|indexer):|^convex: [0-9]' "$LOG/services.log" | tr '\n' ' ')" ;;
       3) record services not-run "$(tail -1 "$LOG/services.log")" ;;
       *) record services fail "see $LOG/services.log: $(tail -2 "$LOG/services.log" | tr '\n' ' ')" ;;
     esac

@@ -2,10 +2,11 @@ name: e2e-local
 
 # Local deployment rehearsal (deployments/README.md, stage 1): a fresh anvil node with Avana's own Aave V4, Uniswap v3,
 # Aerodrome Slipstream, an Aave V3 market, Multicall3, test tokens, Chainlink OCR2 feeds and dozens of pools; then every
-# Avana deploy step, the first two timelock operations through the real AvanaTimelock, the release manifest produced and
-# verified against the chain, the keeper and the indexer started on it, and the scenario runner.
-# contracts/script/e2e/e2e-local.sh records each step as pass, fail or not-run; a not-run step (a missing tool, build or
-# contract such as the concentrated-liquidity LPOracle) is reported as a warning annotation and in the job summary,
+# Avana deploy step and the Aave-side AIPs through market activation, every timelock operation through the real
+# AvanaTimelock, the release manifest produced and verified against the chain, the keeper, the indexer and a local Convex
+# deployment started on it (every listed market's page with its data and listing text), and the scenario runner.
+# contracts/script/e2e/e2e-local.sh records each step as pass, fail or not-run; a not-run step (a missing tool or
+# build) is reported as a warning annotation and in the job summary,
 # never as a pass, and fails the job only when E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job.
 # Runs nightly, on release tags and by hand.
 
