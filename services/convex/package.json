@@ -1,0 +1,26 @@
+{
+  "name": "@avana/convex",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Avana's Convex backend: market, Hub asset, Spoke reserve and position views by scope, chart series, listing content, the frontend fee quote and the import of the indexer's export.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "convex dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@avana/services-common": "file:../common",
+    "convex": "1.43.0",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

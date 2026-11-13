@@ -24,6 +24,13 @@ export interface ChainInfo {
   readonly privateFlow: "builders" | "sequencer";
 }
 
+/**
+ * Multicall3, at the same address on every chain the services read (deployed by its keyless transaction; placed at the
+ * same address on a local anvil node). Passed explicitly to every `multicall`, because viem's chain definition for
+ * anvil names none.
+ */
+export const MULTICALL3_ADDRESS = "0xcA11bde05977b3631167028862bE2a173976CA11" as const;
+
 export const CHAINS: Readonly<Record<ChainKey, ChainInfo>> = {
   mainnet: { key: "mainnet", id: 1, envSuffix: "MAINNET", networkSet: "production", blockTimeSeconds: 12, hasSequencer: false, privateFlow: "builders" },
   base: { key: "base", id: 8453, envSuffix: "BASE", networkSet: "production", blockTimeSeconds: 2, hasSequencer: true, privateFlow: "sequencer" },
