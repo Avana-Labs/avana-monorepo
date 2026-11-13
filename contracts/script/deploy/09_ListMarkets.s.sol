@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
+import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {DexHop, HopKind} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
 import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
@@ -478,6 +479,7 @@ contract ListMarkets is ListingBase {
         bytes integrationData;
         address lpVault;
         uint8 decimals;
+        uint8 unitExp;
         address lpOracle;
         address vaultToken;
         address debtAsset;
@@ -620,12 +622,14 @@ contract ListMarkets is ListingBase {
             ? abi.encode(_uint(string.concat(m.key, ".generation")), p0, p1)
             : abi.encode(p0, p1);
         m.lpVault = vm.parseJsonAddressArray(avanaJson, ".lpVaults")[idx];
-        // The vault-token decimals `d` the LPVault's `bindMarket` derives inside `listCollateralMarket`, read by a
-        // simulated binding that is reverted: `deployVaultToken` earlier in the batch must name the same `d`.
+        // The vault-token decimals `d` and the pool's unit exponent `k` the LPVault's `bindMarket` derives inside
+        // `listCollateralMarket`, read by a simulated binding that is reverted: `deployVaultToken` earlier in the batch
+        // must name the same `d`, and the market's LPOracle the same `k` (SPEC-ORC-005, `CL_CHECK_UNIT_EXP`).
         uint256 snap = vm.snapshotState();
         vm.prank(address(registry));
         (, m.decimals) =
             IAmmIntegration(m.lpVault).bindMarket(m.marketId, m.pool, bytes32(0), m.shape, m.integrationData);
+        m.unitExp = IClIntegration(m.lpVault).unitExponent(m.marketId);
         vm.revertToState(snap);
         m.debtAsset = _debtAssetOf(m.spokeLabel);
     }
@@ -668,7 +672,8 @@ contract ListMarkets is ListingBase {
         p.description = _str(string.concat(m.key, ".name"));
         p.pokeMinGas = LP_ORACLE_POKE_MIN_GAS;
         p.config = _oracleConfig(m, p.isUsdStable[0] && p.isUsdStable[1]);
-        p.market = abi.encode(m.pool, m.shape.tickLower, m.shape.tickUpper);
+        // `abi.encode(pool, tickLower, tickUpper, k)`: k is the pool's unit exponent (SPEC-ORC-005).
+        p.market = abi.encode(m.pool, m.shape.tickLower, m.shape.tickUpper, uint256(m.unitExp));
         address impl = vm.parseJsonAddressArray(avanaJson, ".clOraclePricing")[_integrationIndex(m.integrationId)];
         vm.broadcast(deployerOf());
         m.lpOracle = _deploy(
