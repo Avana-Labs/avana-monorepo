@@ -107,7 +107,10 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     ...m.avana.lensModules.map((x, i): [string, Immutable] => [`Lens module ${i}`, x]),
     ...m.avana.operatorHelpers.map((x, i): [string, Immutable] => [`OperatorFlashLiquidator ${i}`, x]),
     ...m.avana.lpVaults.map((x): [string, Immutable] => [`LPVault ${x.integrationId} (${x.kind})`, x]),
-    ...(m.avana.clOraclePricing ? [["LPOracleCL implementation", m.avana.clOraclePricing] as [string, Immutable]] : []),
+    ...m.avana.clOracles.flatMap((x): [string, Immutable][] => [
+      [`LPOracleCL implementation ${x.integrationId}`, x],
+      [`LPOracleCLModuleLogic ${x.integrationId}`, x.moduleLogic],
+    ]),
   ];
   const upgradeables: [string, Upgradeable][] = [
     ["AaveAdapter", m.avana.aaveAdapter],
@@ -133,6 +136,9 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     await compare(`${label} proxy`, u.address, u.codeHash, null);
     await compare(`${label} implementation`, u.implementation, u.implementationCodeHash, u.implementationArtifact);
     for (const l of u.logics) await compare(`${label} ${l.name}`, l.address, l.codeHash, l.artifact);
+  }
+  for (const x of m.avana.clOracles) {
+    for (const l of x.logics) await compare(`LPOracleCL ${x.integrationId} ${l.name}`, l.address, l.codeHash, l.artifact);
   }
   for (const e of m.external) add(`code hash ${e.group} ${e.name}`, (await codeHash(client, e.address).catch(() => "0x")) === e.codeHash, e.address);
 
@@ -199,6 +205,33 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     add(`LPVault ${v.integrationId} TIMELOCK`, (await read(v.address, "TIMELOCK")) === t);
     add(`LPVault ${v.integrationId} MARKET_REGISTRY`, (await read(v.address, "MARKET_REGISTRY")) === m.avana.marketRegistry.address);
   }
-  add("concentrated-liquidity LPOracle implementation", m.avana.clOraclePricing ? true : "pending", m.avana.clOraclePricing ? "" : "LPOracleCL not deployed: integrations unregistered, no market listable");
+  // Listed markets: vault tokens, routes and LPOracles are the recorded code, and each LPOracle proxy points at its
+  // integration's LPOracleCL implementation; Coverage Spokes and the DAO deficit offsets are the recorded code.
+  for (const mk of m.markets) {
+    await compare(`market ${mk.marketId} vault token`, mk.vaultToken.address, mk.vaultToken.codeHash, null);
+    for (const [i, r] of mk.routes.entries()) await compare(`market ${mk.marketId} route ${i}`, r.address, r.codeHash, r.artifact);
+    const cl = m.avana.clOracles.find((x) => x.integrationId === mk.integrationId);
+    add(`market ${mk.marketId} LPOracle implementation`, !!cl && (await implementationOf(client, mk.lpOracle.address)) === cl.address, mk.lpOracle.implementation);
+  }
+  for (const d of m.debtReserves) {
+    if (d.debtOracle) add(`DebtOracle ${d.asset} implementation`, (await implementationOf(client, d.debtOracle.address)) === d.debtOracle.implementation, d.debtOracle.implementation);
+  }
+  for (const x of [...m.avana.coverageSpokes, ...m.avana.deficitOffsetSpokes]) {
+    await compare(`loss layer ${x.hub} ${x.asset}`, x.address, x.codeHash, x.artifact);
+  }
+
+  // Each integration is registered with its LPVault and its LPOracleCL implementation as pricing (REQ-CONFIG-016).
+  const integrationOf = parseAbi(["function integrationOf(uint32 integrationId) view returns (address lpVault, address pricing)"]);
+  for (const v of m.avana.lpVaults) {
+    const cl = m.avana.clOracles.find((x) => x.integrationId === v.integrationId);
+    const [lpVault, pricing] = (await client.readContract({
+      address: m.avana.marketRegistry.address, abi: integrationOf, functionName: "integrationOf", args: [v.integrationId],
+    })) as readonly [Address, Address];
+    if (lpVault === "0x0000000000000000000000000000000000000000") {
+      add(`integration ${v.integrationId} registered`, "pending", "registered by the chain-wiring operation, not executed yet");
+    } else {
+      add(`integration ${v.integrationId} registered`, lpVault === v.address && !!cl && pricing === cl.address, `${lpVault} ${pricing}`);
+    }
+  }
   return checks;
 }

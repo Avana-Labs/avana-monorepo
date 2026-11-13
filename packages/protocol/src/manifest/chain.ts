@@ -38,9 +38,15 @@ export function broadcastBlocks(contractsDir: string, chainId: number): Map<stri
   const blocks = new Map<string, number>();
   const root = join(contractsDir, "broadcast");
   if (!existsSync(root)) return blocks;
+  // Every run of every script, not only run-latest.json: a script run in several steps (07 deploy then fund) or
+  // rerun from a saved state keeps its earlier deployments in the timestamped run files.
+  const files: string[] = [];
   for (const script of readdirSync(root)) {
-    const file = join(root, script, String(chainId), "run-latest.json");
-    if (!existsSync(file)) continue;
+    const dir = join(root, script, String(chainId));
+    if (!existsSync(dir)) continue;
+    for (const f of readdirSync(dir)) if (/^run-.*\.json$/.test(f)) files.push(join(dir, f));
+  }
+  for (const file of files) {
     const run = JSON.parse(readFileSync(file, "utf8")) as {
       transactions: {
         hash: string;

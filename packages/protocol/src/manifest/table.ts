@@ -51,7 +51,11 @@ export function contractTable(m: ReleaseManifest, explorer: string | undefined =
   a.lensModules.forEach((x, i) => imm("Avana", `Lens module ${i}`, x));
   imm("Avana", "LensAaveSizing", a.lensAaveSizing);
   imm("Avana", "DebtOracle implementation", a.debtOracleImplementation);
-  if (a.clOraclePricing) imm("Avana", "LPOracleCL implementation", a.clOraclePricing);
+  for (const x of a.clOracles) {
+    imm("Avana", `LPOracleCL implementation, integration ${x.integrationId}`, x);
+    imm("Avana", `LPOracleCLModuleLogic, integration ${x.integrationId}`, x.moduleLogic);
+    for (const l of x.logics) rows.push({ group: "Avana", name: `LPOracleCL ${x.integrationId} · ${l.name}`, address: l.address, kind: "logic (delegatecall target)", codeHash: l.codeHash });
+  }
   for (const mk of m.markets) {
     imm("Avana markets", `Vault token, market ${mk.marketId}`, mk.vaultToken);
     upg("Avana markets", `LPOracle, market ${mk.marketId}`, mk.lpOracle);

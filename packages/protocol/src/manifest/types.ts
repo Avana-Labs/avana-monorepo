@@ -54,6 +54,13 @@ export interface CoverageSpoke extends Immutable {
   readonly hub: Address;
 }
 
+/** The concentrated-liquidity LPOracle implementation an integration registers as its pricing, with its logic. */
+export interface ClOracle extends Immutable {
+  readonly integrationId: number;
+  readonly moduleLogic: Immutable;
+  readonly logics: readonly Logic[];
+}
+
 export interface Market {
   readonly marketId: string;
   readonly integrationId: number;
@@ -148,9 +155,11 @@ export interface ReleaseManifest {
     readonly operatorHelpers: readonly OperatorHelper[];
     readonly lpVaults: readonly LpVault[];
     readonly coverageSpokes: readonly CoverageSpoke[];
+    /** The Aave DAO's deficit offset behind each Coverage Spoke (2.14), deployed on the Aave side. */
+    readonly deficitOffsetSpokes: readonly CoverageSpoke[];
     readonly debtOracleImplementation: Immutable;
     /** Null while the concentrated-liquidity LPOracle implementation is not deployed. */
-    readonly clOraclePricing: Immutable | null;
+    readonly clOracles: readonly ClOracle[];
     readonly proxyCreationCodeHash: Hex;
   };
   readonly markets: readonly Market[];

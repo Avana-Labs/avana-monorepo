@@ -98,8 +98,16 @@ export const releaseManifestSchema: Schema = {
       operatorHelpers: arr(obj({ ...immutableProps, signer: address, fundingSafe: address })),
       lpVaults: arr(obj({ ...immutableProps, integrationId: { type: "integer", minimum: 1 }, kind: { enum: ["uniswap-v3", "slipstream"] } })),
       coverageSpokes: arr(obj({ ...immutableProps, asset: address, hub: address })),
+      deficitOffsetSpokes: arr(obj({ ...immutableProps, asset: address, hub: address })),
       debtOracleImplementation: ref("immutable"),
-      clOraclePricing: nullable(ref("immutable")),
+      clOracles: arr(
+        obj({
+          ...immutableProps,
+          integrationId: { type: "integer", minimum: 1 },
+          moduleLogic: ref("immutable"),
+          logics: arr(obj({ name: { type: "string" }, address, codeHash: hash, artifact: { type: "string" } })),
+        }),
+      ),
       proxyCreationCodeHash: hash,
     }),
     markets: arr(ref("market")),
