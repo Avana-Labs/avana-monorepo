@@ -293,7 +293,7 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         c = riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), units, k, rescue);
     }
 
-    // TEST-322 verifies: REQ-RISK-093, REQ-RISK-095, REQ-RISK-097
+    // TEST-322 verifies: REQ-RISK-093, REQ-RISK-095, REQ-RISK-097, REQ-RISK-058
     function test_TEST_322_collateralizationPledgeChargesThePledgeWindow() public {
         store.setMarket(mid, 4000, 10e8, 100_000_000e8, 100_000e8, 1e8);
         PledgeCounters memory k = _counters();
@@ -307,7 +307,7 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         assertEq(p.limit, 1_495_000e8);
     }
 
-    // TEST-322 verifies: REQ-RISK-006, REQ-RISK-095
+    // TEST-322 verifies: REQ-RISK-006, REQ-RISK-095, REQ-RISK-058
     function test_TEST_322_otherCallersWriteNothingAndStaticcallWorks() public {
         PledgeCounters memory k = _counters();
         _pledge(TEN_K, k, false);

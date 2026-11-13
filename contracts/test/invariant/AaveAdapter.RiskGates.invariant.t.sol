@@ -68,6 +68,7 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture {
 
     // TEST-095 verifies: REQ-PROXY-019, REQ-PROXY-020, REQ-PROXY-036, REQ-PROXY-079, REQ-ADAPTER-049, REQ-ADAPTER-094, SPEC-PROXY-002, INV-004, INV-023, INV-060, INV-072
     // Sources: 5.1 TEST-095
+    // TEST-106 verifies: REQ-PROXY-020; shared: the same campaign turns Aave drift (receiveSharesEnabled on the vault-token reserve) on and off and counts any borrow that completed while it held
     /// @notice No borrow and no withdrawal with debt completed while the market's price was not Live and borrowable,
     /// a feed or the USDC DebtOracle was stale, a breaker was latched or a drift held; no borrow while the market was
     /// Offboarding or its reserve frozen on Aave.
