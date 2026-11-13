@@ -280,7 +280,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     /// `e` the smallest exponent in `[6, 34]` whose `10^e` liquidity on the pool's reference range (one tick spacing,
     /// holding the listing price) is worth at least $1. Then `d` is the smallest in `[6, 18]` with
     /// `price8(10^(d + k)) >= 10^8` on this market's range. `InvalidPool` when no `e` or `d` passes or a listing price is
-    /// outside `[1, MAX_ROUTE_ANSWER]`; `k <= MAX_UNIT_EXP` by the bound on `e`.
+    /// outside `[1, MAX_ROUTE_ANSWER]`; `k <= ClUnitMath.MAX_UNIT_EXP` by the bound on `e`.
     function _unitDecimals(
         ClMarketConfig memory cfg,
         uint8 d0,
