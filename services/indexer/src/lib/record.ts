@@ -40,11 +40,13 @@ export function normaliseArgs(value: unknown): unknown {
 
 /**
  * Writes the log row. A replay of the same log (restart, reorg replay) hits the primary key
- * `chainId + txHash + logIndex` and changes nothing, so every handler is idempotent at this step.
+ * `chainId + txHash + logIndex` and changes nothing, so every handler is idempotent at this step. `fresh` is false
+ * when the row was already there: a Hub or Spoke followed by two sources (src/config/aaveSources.ts) delivers each of
+ * its logs to both, and a handler that adds to a running total acts only on the fresh delivery.
  */
-export async function recordLog(event: LogEventLike, context: Context, kind: string): Promise<Provenance> {
+export async function recordLog(event: LogEventLike, context: Context, kind: string): Promise<Provenance & { readonly fresh: boolean }> {
   const p = provenance(event, context);
-  await context.db
+  const inserted = await context.db
     .insert(schema.eventLog)
     .values({
       chainId: p.chainId,
@@ -58,5 +60,5 @@ export async function recordLog(event: LogEventLike, context: Context, kind: str
       args: normaliseArgs(event.args),
     })
     .onConflictDoNothing();
-  return p;
+  return { ...p, fresh: inserted !== null };
 }

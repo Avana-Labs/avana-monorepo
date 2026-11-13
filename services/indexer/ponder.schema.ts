@@ -7,4 +7,6 @@ export * from "./src/schema/accounts.ts";
 export * from "./src/schema/collateral.ts";
 export * from "./src/schema/liquidation.ts";
 export * from "./src/schema/markets.ts";
+export * from "./src/schema/hubs.ts";
 export * from "./src/schema/governance.ts";
+export * from "./src/schema/series.ts";

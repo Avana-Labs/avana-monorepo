@@ -9,11 +9,12 @@ import { type LogEventLike, recordLog } from "./record.ts";
 
 type EventName = Parameters<typeof ponder.on>[0];
 
-export function logOnly(contract: string, events: readonly string[]): void {
+/** `kindOf` names the log kind when the contract is one of several sources of the same Aave contract (aaveSources.ts). */
+export function logOnly(contract: string, events: readonly string[], kindOf: string = contract): void {
   for (const name of events) {
     const full = `${contract}:${name}` as EventName;
     ponder.on(full, async ({ event, context }) => {
-      await recordLog(event as unknown as LogEventLike, context, `${contract}.${name}`);
+      await recordLog(event as unknown as LogEventLike, context, `${kindOf}.${name}`);
     });
   }
 }

@@ -15,6 +15,7 @@ import {
   type ExportPage,
   type ExportRecord,
   type HexString,
+  canonicalJson,
   chainById,
 } from "@avana/services-common";
 
@@ -96,14 +97,4 @@ export async function buildExportPage(chainId: number, after: ExportCursor | nul
     finalizedBlock: finalized.toString(10),
   };
   return { ...body, pageHash: keccak256(toBytes(canonicalJson(body))) };
-}
-
-/** JSON with object keys sorted at every level, so producer and consumer hash the same bytes. */
-export function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  if (value !== null && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
 }
