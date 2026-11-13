@@ -324,14 +324,19 @@ contract LPOracleCLPoolReadsTest is LPOracleCLFixture {
     }
 
     // TEST-306 verifies: REQ-ORACLE-058, REQ-ORACLE-048, REQ-ORACLE-105
-    /// @notice `initialize` refuses market words that are not `abi.encode(pool, tickLower, tickUpper)`: a fourth word,
-    /// a pool word with bit 160 set, and a lower tick of `2^23` (outside `int24`).
+    /// @notice `initialize` refuses market words that are not `abi.encode(pool, tickLower, tickUpper, unitExp)`: three
+    /// words, a fifth word, a pool word with bit 160 set, a lower tick of `2^23` (outside `int24`) and a unit exponent
+    /// of 19 (above `MAX_UNIT_EXP`).
     function test_TEST_306_initializeRefusesMalformedMarketWords() public {
         _deployClMarket(_ethUsdc());
-        _expectInitRevertWith(abi.encode(address(pool), tickLower, tickUpper, uint256(0)));
-        _expectInitRevertWith(abi.encode(uint256(uint160(address(pool))) | (1 << 160), tickLower, tickUpper));
-        _expectInitRevertWith(abi.encode(address(pool), int256(1 << 23), tickUpper));
-        _expectInitRevertWith(abi.encode(address(pool), tickLower, -int256(1 << 23) - 1));
+        _expectInitRevertWith(abi.encode(address(pool), tickLower, tickUpper));
+        _expectInitRevertWith(abi.encode(address(pool), tickLower, tickUpper, uint256(0), uint256(0)));
+        _expectInitRevertWith(
+            abi.encode(uint256(uint160(address(pool))) | (1 << 160), tickLower, tickUpper, uint256(0))
+        );
+        _expectInitRevertWith(abi.encode(address(pool), int256(1 << 23), tickUpper, uint256(0)));
+        _expectInitRevertWith(abi.encode(address(pool), tickLower, -int256(1 << 23) - 1, uint256(0)));
+        _expectInitRevertWith(abi.encode(address(pool), tickLower, tickUpper, uint256(19)));
     }
 
     // TEST-306 verifies: REQ-ORACLE-058, REQ-ORACLE-048
@@ -345,7 +350,7 @@ contract LPOracleCLPoolReadsTest is LPOracleCLFixture {
         oracle = LPOracleCL(address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (_params())))));
         _assertState(PriceState.Live);
         _pairWith(usdc, 19);
-        _expectInitRevertWith(abi.encode(address(pool), tickLower, tickUpper));
+        _expectInitRevertWith(abi.encode(address(pool), tickLower, tickUpper, uint256(0)));
     }
 
     // TEST-306 verifies: REQ-ORACLE-058, REQ-ORACLE-080

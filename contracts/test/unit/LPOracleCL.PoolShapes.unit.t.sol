@@ -143,7 +143,7 @@ contract LPOracleCLPoolShapesTest is LPOracleCLFixture {
         LPOracleCL impl = LPOracleCLDeployer.deploy(tl, 2, POKE_FLOOR, POKE_CEILING, false, 7);
         InitParams memory p = _params();
         p.config = c;
-        p.market = abi.encode(address(base), int24(-10), int24(10));
+        p.market = abi.encode(address(base), int24(-10), int24(10), uint256(0));
         LPOracleCL onBase =
             LPOracleCL(address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (p)))));
         assertEq(uint8(onBase.getPriceState().state), uint8(PriceState.Live), "901 observations at 2 s: Live");

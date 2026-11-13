@@ -22,7 +22,8 @@ import {LPOracleStorage} from "./LPOracleStorage.sol";
 /// (the last word) and the observation cardinality (word 3) are read, never the pool's price or tick (`REQ-ORACLE-011`).
 /// @custom:spec REQ-ORACLE-011, REQ-ORACLE-014, REQ-ORACLE-103, REQ-ORACLE-104, REQ-AMM-V3-003, REQ-AMM-SLIP-003, SPEC-ORC-010, SPEC-ORC-023
 abstract contract LPOracleCLPool is LPOracleStorage {
-    /// @notice The market's pool and exact range, and the range's square-root ratios computed once at `initialize`.
+    /// @notice The market's pool and exact range, the range's square-root ratios computed once at `initialize`, and the
+    /// pool's unit exponent.
     /// @custom:storage-location erc7201:avana.storage.LPOracleCL
     struct ClLayout {
         address pool;
@@ -31,6 +32,9 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         int24 tickSpacing;
         uint160 sqrtLower;
         uint160 sqrtUpper;
+        // Unit exponent `k` of the market's pool (`SPEC-ORC-005`): one vault-token unit is `10^k` liquidity, as in the
+        // integration (`IClIntegration.unitExponent`).
+        uint8 unitExp;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracleCL")) - 1)) & ~bytes32(uint256(0xff)).

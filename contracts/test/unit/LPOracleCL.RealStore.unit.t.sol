@@ -160,7 +160,7 @@ contract LPOracleCLRealStoreTest is ParameterStoreFixture {
         p.description = "USDC/USDT [-10,10] / USD";
         p.pokeMinGas = POKE_FLOOR;
         p.config = c;
-        p.market = abi.encode(address(realPool), int24(-10), int24(10));
+        p.market = abi.encode(address(realPool), int24(-10), int24(10), uint256(0));
     }
 
     // TEST-219 verifies: REQ-ORACLE-077, REQ-ORACLE-046, REQ-PSTORE-009, Q-184, Q-191
