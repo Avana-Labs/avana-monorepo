@@ -23,7 +23,9 @@ import {
 import type { ChainDeployment } from "@avana/services-common/views";
 
 const NETWORK_SET = (optionalEnv(process.env, "INDEXER_NETWORK_SET") ?? "testnet") as NetworkSet;
-if (NETWORK_SET !== "production" && NETWORK_SET !== "testnet") throw new Error("INDEXER_NETWORK_SET must be production or testnet");
+if (NETWORK_SET !== "production" && NETWORK_SET !== "testnet" && NETWORK_SET !== "local") {
+  throw new Error("INDEXER_NETWORK_SET must be production, testnet or local");
+}
 
 const manifests = new Map<number, ServiceManifest>(
   listEnv(process.env, "AVANA_MANIFEST").map((path) => {

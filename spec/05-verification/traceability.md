@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3562 requirements · 121 verified · 0 failed · 1875 not run · 1566 unlinked · 0 changed — re-verify · 0 errors · 3468 warnings**
+**3562 requirements · 121 verified · 0 failed · 1875 not run · 1566 unlinked · 0 changed — re-verify · 0 errors · 3470 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|

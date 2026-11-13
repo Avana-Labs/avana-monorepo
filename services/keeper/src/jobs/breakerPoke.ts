@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Breaker and configuration pokes. Every block the keeper simulates RiskModule.pokeBreakers(marketId) for every
-// active market and RiskModule.pokeConfig(spoke) for every CDP Spoke, and sends only when the simulation returns
+// active market and RiskModule.pokeConfig(spoke) for every CDP Spoke of the manifest that the MarketRegistry approved
+// (pokeConfig reverts UnknownSpoke for any other), and sends only when the simulation returns
 // a non-zero result: pokeBreakers records a breach only when a condition is true, and pokeConfig writes nothing
 // when it finds no drift, so a send in any other block would change no state (EMG-053, REQ-RISK-090/091).
 
@@ -23,9 +24,10 @@ export function breakerPokeJob(): Job<Target, Target> {
 
     async discover(ctx: BlockContext) {
       const m = ctx.config.manifest;
+      const approved = new Set((await ctx.reader.approvedSpokes()).map((a) => a.toLowerCase()));
       return [
         ...m.markets.map((x): Target => ({ kind: "market", marketId: x.marketId })),
-        ...m.aave.borrowSpokes.map((s): Target => ({ kind: "spoke", spoke: s.address })),
+        ...m.aave.borrowSpokes.filter((s) => approved.has(s.address.toLowerCase())).map((s): Target => ({ kind: "spoke", spoke: s.address })),
       ];
     },
 

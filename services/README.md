@@ -61,6 +61,20 @@ A Lend page is one Hub asset; the same token on two Hubs is two Hub assets with 
 
 Every row of one read carries its block, so the indexer's hourly sampler and Convex's 30-second refresh, which run the same reader (`@avana/services-common/views`), produce rows for which these identities hold exactly.
 
+## Running against a manifest
+
+Both services take every address from the release manifests listed in `AVANA_MANIFEST` (comma-separated, one per chain) and the network set from `INDEXER_NETWORK_SET` / `KEEPER_NETWORK_SET`: `production` (Ethereum, Base) and `testnet` (Sepolia, Base Sepolia) load manifests from `deployments/verified/`; `local` (anvil, chain 31337) loads a rehearsal manifest from `contracts/deployments-local/<network>/manifest.json` and is never used for a published deployment. A manifest for a chain outside the set is ignored, and a set with no manifest stops startup.
+
+```bash
+# Rehearsal on a local anvil node, after contracts/script/e2e/e2e-local.sh (or its deploy and manifest steps):
+export AVANA_MANIFEST=$PWD/contracts/deployments-local/anvil/manifest.json
+export RPC_ANVIL=http://127.0.0.1:8545 RPC_ANVIL_FALLBACK=http://127.0.0.1:8545 RPC_ANVIL_WS=ws://127.0.0.1:8545
+(cd services/indexer && INDEXER_NETWORK_SET=local npx ponder start)       # PGlite store; production uses DATABASE_URL
+(cd services/keeper && KEEPER_NETWORK_SET=local KEEPER_MODE=observe ... npx tsx src/main.ts)
+```
+
+`contracts/script/e2e/services-smoke.sh <manifest>` runs both on a manifest with throwaway kill-switch certificates and checks that the indexer reaches `/ready` and the keeper serves its metrics in observe mode. It then starts a fresh local Convex deployment of `services/convex` (`CONVEX_AGENT_MODE=anonymous npx convex dev`, no account), points it at the indexer's export and at the rehearsal's listing metadata files (`contracts/deployments-local/<network>/listing-content/`, served as `LISTING_CONTENT_URL`), writes the deployment row from the manifest, imports the export and samples the chain; every listed market's pool page and every debt reserve's asset page must then show its on-chain numbers and the text of the listing metadata file its listing operation committed to. The manifest is produced and verified with `npm run manifest` in `packages/protocol` ([`deployments/README.md`](../deployments/README.md)); the services check its ABI hash against `@avana/protocol` and refuse a mismatch.
+
 ## Indexer (`indexer/`)
 
 ### Events

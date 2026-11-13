@@ -1,0 +1,1301 @@
+{
+  "network": "anvil",
+  "chainId": 31337,
+  "release": "v0.1.0-local",
+  "governance": {
+    "governanceSafe": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "emergencyGuardian": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    "aaveProtocolGuardian": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    "aaveGovernanceExecutor": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "jointConfigSafe": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc"
+  },
+  "aaveLocal": {
+    "aaveDao": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "hubs": [
+      "stable",
+      "correlated",
+      "volatile"
+    ],
+    "spokes": [
+      {
+        "label": "uniV3Stable",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "uniV3Correlated",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "uniV3Volatile",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "slipStable",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "slipCorrelated",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "slipVolatile",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "lendStable",
+        "userReservesLimit": 65535
+      },
+      {
+        "label": "lendCorrelated",
+        "userReservesLimit": 65535
+      },
+      {
+        "label": "lendVolatile",
+        "userReservesLimit": 65535
+      }
+    ],
+    "payloadsController": "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
+  },
+  "aave": {
+    "accessManager": "$aave:.accessManager",
+    "standardSpokeImplementation": "$aave:.standardSpokeImplementation",
+    "v3Pool": "$world:.aaveV3Pool",
+    "hubs": [
+      {
+        "hub": "$aave:.hubs.stable.proxy",
+        "tier": 1,
+        "label": "stable"
+      },
+      {
+        "hub": "$aave:.hubs.correlated.proxy",
+        "tier": 2,
+        "label": "correlated"
+      },
+      {
+        "hub": "$aave:.hubs.volatile.proxy",
+        "tier": 3,
+        "label": "volatile"
+      }
+    ],
+    "governanceExecutor": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "configEngine": "$aave:.configEngine",
+    "hubConfigurator": "$aave:.hubConfigurator",
+    "spokeConfigurator": "$aave:.spokeConfigurator",
+    "treasurySpoke": "$aave:.treasurySpoke",
+    "irStrategies": {
+      "stable": "$aave:.hubs.stable.irStrategy",
+      "correlated": "$aave:.hubs.correlated.irStrategy",
+      "volatile": "$aave:.hubs.volatile.irStrategy"
+    },
+    "spokes": {
+      "uniV3Stable": "$aave:.spokes.uniV3Stable.proxy",
+      "uniV3Correlated": "$aave:.spokes.uniV3Correlated.proxy",
+      "uniV3Volatile": "$aave:.spokes.uniV3Volatile.proxy",
+      "slipStable": "$aave:.spokes.slipStable.proxy",
+      "slipCorrelated": "$aave:.spokes.slipCorrelated.proxy",
+      "slipVolatile": "$aave:.spokes.slipVolatile.proxy",
+      "lendStable": "$aave:.spokes.lendStable.proxy",
+      "lendCorrelated": "$aave:.spokes.lendCorrelated.proxy",
+      "lendVolatile": "$aave:.spokes.lendVolatile.proxy"
+    }
+  },
+  "chain": {
+    "blockTime": 12,
+    "hasSequencer": false,
+    "sequencerFeed": "0x0000000000000000000000000000000000000000",
+    "sequencerGraceSeconds": 0
+  },
+  "parameters": {
+    "initialPoolShareMaxBps": 10000,
+    "maxMarketCount": 64,
+    "keeperFloor": 1,
+    "globals": {
+      "cachedWindow": 3600,
+      "disagreementPauseMax": 3600,
+      "usdBandLow": 90000000,
+      "usdBandHigh": 102000000,
+      "graceDuration": 1800,
+      "graceHealthFactor": 950000000000000000,
+      "maxFlashFeeBps": 10,
+      "avanaFeeShareBps": 2000,
+      "feeRecipient": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "feedAgreementMarginBps": 50,
+      "gateRecoverySeconds": 1800,
+      "maxShortfallBps": 1000
+    }
+  },
+  "keepers": [
+    "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
+  ],
+  "operatorHelpers": [
+    {
+      "signer": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+      "fundingSafe": "0x23618e81E3F5cdF7f54C3d65f7FBc0aBf5B21E8f",
+      "maxTopUpBps": 100
+    }
+  ],
+  "integrations": [
+    {
+      "integrationId": 1,
+      "kind": "uniswap-v3",
+      "positionManagers": [
+        "$world:.uniswapV3PositionManager"
+      ],
+      "factories": [
+        "$world:.uniswapV3Factory"
+      ]
+    },
+    {
+      "integrationId": 2,
+      "kind": "slipstream",
+      "positionManagers": [
+        "$world:.slipstreamPositionManagers[0]",
+        "$world:.slipstreamPositionManagers[1]",
+        "$world:.slipstreamPositionManagers[2]",
+        "$world:.slipstreamPositionManagers[3]"
+      ],
+      "factories": [
+        "$world:.slipstreamFactories[0]",
+        "$world:.slipstreamFactories[1]",
+        "$world:.slipstreamFactories[2]",
+        "$world:.slipstreamFactories[3]"
+      ]
+    }
+  ],
+  "world": {
+    "observationCardinality": 151,
+    "aaveV3SupplyUsd": 50000000,
+    "tokens": [
+      {
+        "symbol": "USDC",
+        "decimals": 6,
+        "price8": 100000000
+      },
+      {
+        "symbol": "USDT",
+        "decimals": 6,
+        "price8": 100000000
+      },
+      {
+        "symbol": "DAI",
+        "decimals": 18,
+        "price8": 100000000
+      },
+      {
+        "symbol": "GHO",
+        "decimals": 18,
+        "price8": 100000000
+      },
+      {
+        "symbol": "USDS",
+        "decimals": 18,
+        "price8": 100000000
+      },
+      {
+        "symbol": "USDe",
+        "decimals": 18,
+        "price8": 99950000
+      },
+      {
+        "symbol": "WETH",
+        "decimals": 18,
+        "price8": 300000000000
+      },
+      {
+        "symbol": "wstETH",
+        "decimals": 18,
+        "price8": 357000000000
+      },
+      {
+        "symbol": "cbETH",
+        "decimals": 18,
+        "price8": 327000000000
+      },
+      {
+        "symbol": "rETH",
+        "decimals": 18,
+        "price8": 341000000000
+      },
+      {
+        "symbol": "WBTC",
+        "decimals": 8,
+        "price8": 9500000000000
+      },
+      {
+        "symbol": "cbBTC",
+        "decimals": 8,
+        "price8": 9500000000000
+      },
+      {
+        "symbol": "tBTC",
+        "decimals": 18,
+        "price8": 9480000000000
+      },
+      {
+        "symbol": "LINK",
+        "decimals": 18,
+        "price8": 1500000000
+      },
+      {
+        "symbol": "AAVE",
+        "decimals": 18,
+        "price8": 25000000000
+      },
+      {
+        "symbol": "UNI",
+        "decimals": 18,
+        "price8": 800000000
+      },
+      {
+        "symbol": "AERO",
+        "decimals": 18,
+        "price8": 90000000
+      },
+      {
+        "symbol": "THIN",
+        "decimals": 18,
+        "price8": 250000000
+      },
+      {
+        "symbol": "PEPE",
+        "decimals": 18,
+        "price8": 1000
+      },
+      {
+        "symbol": "FOT",
+        "decimals": 18,
+        "price8": 200000000,
+        "kind": "feeOnTransfer"
+      },
+      {
+        "symbol": "REBASE",
+        "decimals": 18,
+        "price8": 100000000,
+        "kind": "rebasing"
+      },
+      {
+        "symbol": "NODEC",
+        "decimals": 18,
+        "price8": 100000000,
+        "kind": "noDecimals"
+      },
+      {
+        "symbol": "FSUSD",
+        "decimals": 6,
+        "price8": 100000000,
+        "kind": "feeSwitch"
+      }
+    ],
+    "uniswapPools": [
+      {
+        "name": "USDC-USDT-100",
+        "a": "USDC",
+        "b": "USDT",
+        "fee": 100,
+        "usd": 20000000
+      },
+      {
+        "name": "USDC-DAI-100",
+        "a": "USDC",
+        "b": "DAI",
+        "fee": 100,
+        "usd": 15000000
+      },
+      {
+        "name": "DAI-USDT-100",
+        "a": "DAI",
+        "b": "USDT",
+        "fee": 100,
+        "usd": 8000000
+      },
+      {
+        "name": "GHO-USDC-100",
+        "a": "GHO",
+        "b": "USDC",
+        "fee": 100,
+        "usd": 10000000
+      },
+      {
+        "name": "GHO-USDT-100",
+        "a": "GHO",
+        "b": "USDT",
+        "fee": 100,
+        "usd": 4000000
+      },
+      {
+        "name": "USDS-USDC-100",
+        "a": "USDS",
+        "b": "USDC",
+        "fee": 100,
+        "usd": 6000000
+      },
+      {
+        "name": "USDe-USDT-100",
+        "a": "USDe",
+        "b": "USDT",
+        "fee": 100,
+        "usd": 5000000
+      },
+      {
+        "name": "USDC-USDT-500",
+        "a": "USDC",
+        "b": "USDT",
+        "fee": 500,
+        "usd": 3000000
+      },
+      {
+        "name": "WETH-USDC-500",
+        "a": "WETH",
+        "b": "USDC",
+        "fee": 500,
+        "usd": 30000000
+      },
+      {
+        "name": "WETH-USDT-500",
+        "a": "WETH",
+        "b": "USDT",
+        "fee": 500,
+        "usd": 12000000
+      },
+      {
+        "name": "WETH-DAI-3000",
+        "a": "WETH",
+        "b": "DAI",
+        "fee": 3000,
+        "usd": 4000000
+      },
+      {
+        "name": "wstETH-WETH-100",
+        "a": "wstETH",
+        "b": "WETH",
+        "fee": 100,
+        "usd": 20000000
+      },
+      {
+        "name": "cbETH-WETH-500",
+        "a": "cbETH",
+        "b": "WETH",
+        "fee": 500,
+        "usd": 4000000
+      },
+      {
+        "name": "rETH-WETH-500",
+        "a": "rETH",
+        "b": "WETH",
+        "fee": 500,
+        "usd": 3000000
+      },
+      {
+        "name": "WBTC-WETH-3000",
+        "a": "WBTC",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 15000000
+      },
+      {
+        "name": "WBTC-USDC-3000",
+        "a": "WBTC",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 8000000
+      },
+      {
+        "name": "cbBTC-WBTC-100",
+        "a": "cbBTC",
+        "b": "WBTC",
+        "fee": 100,
+        "usd": 3000000
+      },
+      {
+        "name": "tBTC-WBTC-500",
+        "a": "tBTC",
+        "b": "WBTC",
+        "fee": 500,
+        "usd": 1500000
+      },
+      {
+        "name": "LINK-WETH-3000",
+        "a": "LINK",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 4000000
+      },
+      {
+        "name": "AAVE-WETH-3000",
+        "a": "AAVE",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 3000000
+      },
+      {
+        "name": "UNI-WETH-3000",
+        "a": "UNI",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 2500000
+      },
+      {
+        "name": "LINK-USDC-3000",
+        "a": "LINK",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "LINK-USDT-3000",
+        "a": "LINK",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "THIN-USDC-10000",
+        "a": "THIN",
+        "b": "USDC",
+        "fee": 10000,
+        "usd": 20000
+      },
+      {
+        "name": "PEPE-WETH-10000",
+        "a": "PEPE",
+        "b": "WETH",
+        "fee": 10000,
+        "usd": 50000
+      },
+      {
+        "name": "GHO-WETH-3000",
+        "a": "GHO",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 500000
+      },
+      {
+        "name": "PEPE-USDC-10000",
+        "a": "PEPE",
+        "b": "USDC",
+        "fee": 10000,
+        "usd": 3000000
+      },
+      {
+        "name": "PEPE-USDT-10000",
+        "a": "PEPE",
+        "b": "USDT",
+        "fee": 10000,
+        "usd": 2000000
+      },
+      {
+        "name": "WBTC-PEPE-10000",
+        "a": "WBTC",
+        "b": "PEPE",
+        "fee": 10000,
+        "usd": 2000000
+      },
+      {
+        "name": "AAVE-USDC-3000",
+        "a": "AAVE",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 3000000
+      },
+      {
+        "name": "UNI-USDC-3000",
+        "a": "UNI",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 2000000
+      },
+      {
+        "name": "AAVE-UNI-3000",
+        "a": "AAVE",
+        "b": "UNI",
+        "fee": 3000,
+        "usd": 1500000
+      },
+      {
+        "name": "WBTC-USDT-3000",
+        "a": "WBTC",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 4000000
+      },
+      {
+        "name": "THIN-WETH-10000",
+        "a": "THIN",
+        "b": "WETH",
+        "fee": 10000,
+        "usd": 200000
+      },
+      {
+        "name": "THIN-USDT-10000",
+        "a": "THIN",
+        "b": "USDT",
+        "fee": 10000,
+        "usd": 200000
+      },
+      {
+        "name": "AERO-WETH-3000",
+        "a": "AERO",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 2000000
+      },
+      {
+        "name": "AERO-USDC-3000",
+        "a": "AERO",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 2000000
+      },
+      {
+        "name": "cbBTC-USDC-500",
+        "a": "cbBTC",
+        "b": "USDC",
+        "fee": 500,
+        "usd": 5000000
+      },
+      {
+        "name": "FOT-USDC-3000",
+        "a": "FOT",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "REBASE-USDC-3000",
+        "a": "REBASE",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "NODEC-USDC-3000",
+        "a": "NODEC",
+        "b": "USDC",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "FSUSD-USDC-100",
+        "a": "FSUSD",
+        "b": "USDC",
+        "fee": 100,
+        "usd": 1000000
+      },
+      {
+        "name": "FOT-WETH-3000",
+        "a": "FOT",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "FOT-USDT-3000",
+        "a": "FOT",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "REBASE-WETH-3000",
+        "a": "REBASE",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "REBASE-USDT-3000",
+        "a": "REBASE",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "NODEC-WETH-3000",
+        "a": "NODEC",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "NODEC-USDT-3000",
+        "a": "NODEC",
+        "b": "USDT",
+        "fee": 3000,
+        "usd": 1000000
+      },
+      {
+        "name": "FSUSD-USDT-100",
+        "a": "FSUSD",
+        "b": "USDT",
+        "fee": 100,
+        "usd": 1000000
+      },
+      {
+        "name": "FSUSD-WETH-3000",
+        "a": "FSUSD",
+        "b": "WETH",
+        "fee": 3000,
+        "usd": 1000000
+      }
+    ],
+    "slipstreamPools": [
+      {
+        "name": "USDC-USDT-cl1-g0",
+        "a": "USDC",
+        "b": "USDT",
+        "tickSpacing": 1,
+        "generation": 0,
+        "usd": 12000000
+      },
+      {
+        "name": "USDC-DAI-cl1-g1",
+        "a": "USDC",
+        "b": "DAI",
+        "tickSpacing": 1,
+        "generation": 1,
+        "usd": 4000000
+      },
+      {
+        "name": "GHO-USDC-cl1-g3",
+        "a": "GHO",
+        "b": "USDC",
+        "tickSpacing": 1,
+        "generation": 3,
+        "usd": 6000000
+      },
+      {
+        "name": "USDe-USDC-cl1-g2",
+        "a": "USDe",
+        "b": "USDC",
+        "tickSpacing": 1,
+        "generation": 2,
+        "usd": 3000000
+      },
+      {
+        "name": "USDS-USDC-cl1-g3",
+        "a": "USDS",
+        "b": "USDC",
+        "tickSpacing": 1,
+        "generation": 3,
+        "usd": 2000000
+      },
+      {
+        "name": "WETH-USDC-cl100-g0",
+        "a": "WETH",
+        "b": "USDC",
+        "tickSpacing": 100,
+        "generation": 0,
+        "usd": 20000000
+      },
+      {
+        "name": "wstETH-WETH-cl1-g0",
+        "a": "wstETH",
+        "b": "WETH",
+        "tickSpacing": 1,
+        "generation": 0,
+        "usd": 10000000
+      },
+      {
+        "name": "cbETH-WETH-cl1-g2",
+        "a": "cbETH",
+        "b": "WETH",
+        "tickSpacing": 1,
+        "generation": 2,
+        "usd": 4000000
+      },
+      {
+        "name": "cbBTC-WETH-cl100-g3",
+        "a": "cbBTC",
+        "b": "WETH",
+        "tickSpacing": 100,
+        "generation": 3,
+        "usd": 6000000
+      },
+      {
+        "name": "cbBTC-USDC-cl100-g1",
+        "a": "cbBTC",
+        "b": "USDC",
+        "tickSpacing": 100,
+        "generation": 1,
+        "usd": 5000000
+      },
+      {
+        "name": "AERO-USDC-cl200-g0",
+        "a": "AERO",
+        "b": "USDC",
+        "tickSpacing": 200,
+        "generation": 0,
+        "usd": 3000000
+      },
+      {
+        "name": "AERO-WETH-cl200-g3",
+        "a": "AERO",
+        "b": "WETH",
+        "tickSpacing": 200,
+        "generation": 3,
+        "usd": 2000000
+      },
+      {
+        "name": "THIN-WETH-cl200-g0",
+        "a": "THIN",
+        "b": "WETH",
+        "tickSpacing": 200,
+        "generation": 0,
+        "usd": 15000
+      },
+      {
+        "name": "LINK-WETH-cl200-g2",
+        "a": "LINK",
+        "b": "WETH",
+        "tickSpacing": 200,
+        "generation": 2,
+        "usd": 800000
+      }
+    ]
+  },
+  "aavePayload": {
+    "tokenMinter": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "flashAcl": "$world:.aaveV3ACLManager",
+    "hubs": [
+      {
+        "label": "stable",
+        "lendSpoke": "lendStable",
+        "cdpSpokes": [
+          "uniV3Stable",
+          "slipStable"
+        ]
+      },
+      {
+        "label": "correlated",
+        "lendSpoke": "lendCorrelated",
+        "cdpSpokes": [
+          "uniV3Correlated",
+          "slipCorrelated"
+        ]
+      },
+      {
+        "label": "volatile",
+        "lendSpoke": "lendVolatile",
+        "cdpSpokes": [
+          "uniV3Volatile",
+          "slipVolatile"
+        ]
+      }
+    ],
+    "debtAssets": [
+      {
+        "symbol": "GHO",
+        "token": "$world:.tokens.GHO",
+        "decimals": 18,
+        "priceSource": "$world:.feeds.GHO.primary",
+        "drawCap": 10000000,
+        "bootstrapSupply": "20000000000000000000000000",
+        "coverageMinimum": 100000,
+        "offsetMinimum": 75000
+      },
+      {
+        "symbol": "USDC",
+        "token": "$world:.tokens.USDC",
+        "decimals": 6,
+        "priceSource": "$world:.feeds.USDC.primary",
+        "drawCap": 10000000,
+        "bootstrapSupply": "20000000000000",
+        "coverageMinimum": 100000,
+        "offsetMinimum": 75000
+      },
+      {
+        "symbol": "USDT",
+        "token": "$world:.tokens.USDT",
+        "decimals": 6,
+        "priceSource": "$world:.feeds.USDT.primary",
+        "drawCap": 5000000,
+        "bootstrapSupply": "10000000000000",
+        "coverageMinimum": 50000,
+        "offsetMinimum": 25000
+      }
+    ],
+    "lossLayerRoles": {
+      "coverageRole": 500,
+      "reserveAdminRole": 501
+    }
+  },
+  "listing": {
+    "feed": {
+      "heartbeat": 86400,
+      "heartbeatMargin": 1800,
+      "driftBps": 10,
+      "maxAnswerCap": "1000000000000000000"
+    },
+    "hubDepositorUsdCap": "2000000",
+    "creditLineWhole": 50000000,
+    "tokens": [
+      {
+        "symbol": "USDC",
+        "isUsdStable": true,
+        "deviationBps": 25,
+        "collateralFactorBps": 9000,
+        "agreementToleranceBps": 150,
+        "secondToleranceBps": 150,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "stable",
+          "volatile"
+        ],
+        "address": "$world:.tokens.USDC",
+        "feeds": {
+          "primary": "$world:.feeds.USDC.primary",
+          "alternate": "$world:.feeds.USDC.alternate",
+          "standby": "$world:.feeds.USDC.standby",
+          "second": "$world:.feeds.USDC.second"
+        }
+      },
+      {
+        "symbol": "USDT",
+        "isUsdStable": true,
+        "deviationBps": 25,
+        "collateralFactorBps": 9000,
+        "agreementToleranceBps": 150,
+        "secondToleranceBps": 150,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "stable"
+        ],
+        "address": "$world:.tokens.USDT",
+        "feeds": {
+          "primary": "$world:.feeds.USDT.primary",
+          "alternate": "$world:.feeds.USDT.alternate",
+          "standby": "$world:.feeds.USDT.standby",
+          "second": "$world:.feeds.USDT.second"
+        }
+      },
+      {
+        "symbol": "WETH",
+        "isUsdStable": false,
+        "deviationBps": 50,
+        "collateralFactorBps": 8500,
+        "agreementToleranceBps": 200,
+        "secondToleranceBps": 200,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "volatile"
+        ],
+        "address": "$world:.tokens.WETH",
+        "feeds": {
+          "primary": "$world:.feeds.WETH.primary",
+          "alternate": "$world:.feeds.WETH.alternate",
+          "standby": "$world:.feeds.WETH.standby",
+          "second": "$world:.feeds.WETH.second"
+        }
+      }
+    ],
+    "debtAssets": [
+      {
+        "symbol": "GHO",
+        "fixedPrice": true,
+        "deviationBps": 25,
+        "floorRoundingAllowance": "1000000000000000000",
+        "address": "$world:.tokens.GHO",
+        "feeds": {
+          "primary": "$world:.feeds.GHO.primary"
+        }
+      },
+      {
+        "symbol": "USDC",
+        "fixedPrice": false,
+        "stressRiseBps": 500,
+        "floorRoundingAllowance": "1000000",
+        "debtOraclePokeMinGas": 1000000,
+        "address": "$world:.tokens.USDC",
+        "feeds": {
+          "primary": "$world:.feeds.USDC.primary"
+        }
+      }
+    ],
+    "spokes": [
+      {
+        "label": "uniV3Stable",
+        "hub": "stable",
+        "integrationId": 1,
+        "tier": 1,
+        "spoke": "$aave:.spokes.uniV3Stable.proxy"
+      },
+      {
+        "label": "uniV3Volatile",
+        "hub": "volatile",
+        "integrationId": 1,
+        "tier": 3,
+        "spoke": "$aave:.spokes.uniV3Volatile.proxy"
+      },
+      {
+        "label": "slipStable",
+        "hub": "stable",
+        "integrationId": 2,
+        "tier": 1,
+        "spoke": "$aave:.spokes.slipStable.proxy"
+      },
+      {
+        "label": "slipVolatile",
+        "hub": "volatile",
+        "integrationId": 2,
+        "tier": 3,
+        "spoke": "$aave:.spokes.slipVolatile.proxy"
+      }
+    ],
+    "debtReserves": [
+      {
+        "spoke": "uniV3Stable",
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v3-stable",
+          "name": "GHO on Uniswap v3 (stable Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's stable Hub against Uniswap v3 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the stable Hub of Aave V4, through the Uniswap v3 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v3 markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "uniV3Volatile",
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v3-volatile",
+          "name": "GHO on Uniswap v3 (volatile Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's volatile Hub against Uniswap v3 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the volatile Hub of Aave V4, through the Uniswap v3 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v3 markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "slipStable",
+        "symbol": "USDC",
+        "content": {
+          "slug": "usdc-slipstream-stable",
+          "name": "USDC on Slipstream (stable Hub)",
+          "symbol": "USDC",
+          "category": "stable",
+          "description": "Borrow USDC from Aave V4's stable Hub against Slipstream liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the USDC come from?",
+              "answer": "From the stable Hub of Aave V4, through the Slipstream CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Slipstream markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "slipVolatile",
+        "symbol": "USDC",
+        "content": {
+          "slug": "usdc-slipstream-volatile",
+          "name": "USDC on Slipstream (volatile Hub)",
+          "symbol": "USDC",
+          "category": "stable",
+          "description": "Borrow USDC from Aave V4's volatile Hub against Slipstream liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the USDC come from?",
+              "answer": "From the volatile Hub of Aave V4, through the Slipstream CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Slipstream markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      }
+    ],
+    "speedLimits": {
+      "window": 21600,
+      "borrowRateBps": 2500,
+      "pledgeRateBps": 2500,
+      "borrowMinUsd": 250000,
+      "borrowMaxUsd": 2500000,
+      "pledgeMinUsd": 1000000,
+      "pledgeMaxUsd": 10000000,
+      "debtRateBps": 2500,
+      "debtMinWhole": 500000,
+      "debtMaxWhole": 5000000
+    },
+    "markets": [
+      {
+        "name": "uni-USDC-USDT-100",
+        "integrationId": 1,
+        "spoke": "uniV3Stable",
+        "pool": "USDC-USDT-100",
+        "generation": 0,
+        "tickLower": -50,
+        "tickUpper": 50,
+        "collateralFactorBps": 3500,
+        "maxLiquidationBonus": 10500,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 250,
+        "slippageAllowanceMinBps": 30,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "USDT",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDC-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "uniswap-v3-usdc-usdt-0-01",
+          "name": "USDC/USDT Uniswap v3",
+          "category": "stable",
+          "venueLabel": "Uniswap v3",
+          "description": "Borrow GHO against a USDC/USDT liquidity position in the Uniswap v3 pool with 0.01% fee tier.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v3 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v3 CDP Spoke of the stable Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v3 liquidity position in the USDC/USDT pool with 0.01% fee tier. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the stable Hub, up to 35% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
+      },
+      {
+        "name": "uni-WETH-USDC-500",
+        "integrationId": 1,
+        "spoke": "uniV3Volatile",
+        "pool": "WETH-USDC-500",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3000,
+        "maxLiquidationBonus": 10800,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 100,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 300,
+        "slippageAllowanceMinBps": 50,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "WETH",
+            "asset": "GHO",
+            "primary": [
+              "GHO-WETH-3000"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDT-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "uniswap-v3-weth-usdc-0-05",
+          "name": "WETH/USDC Uniswap v3",
+          "category": "crypto",
+          "venueLabel": "Uniswap v3",
+          "description": "Borrow GHO against a WETH/USDC liquidity position in the Uniswap v3 pool with 0.05% fee tier.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v3 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v3 CDP Spoke of the volatile Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 1%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v3 liquidity position in the WETH/USDC pool with 0.05% fee tier. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the volatile Hub, up to 30% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 1%."
+            }
+          ]
+        }
+      },
+      {
+        "name": "slip-USDC-USDT-cl1",
+        "integrationId": 2,
+        "spoke": "slipStable",
+        "pool": "USDC-USDT-cl1-g0",
+        "generation": 0,
+        "tickLower": -50,
+        "tickUpper": 50,
+        "collateralFactorBps": 3500,
+        "maxLiquidationBonus": 10500,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 250,
+        "slippageAllowanceMinBps": 30,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "USDT",
+            "asset": "USDC",
+            "primary": [
+              "USDC-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-500"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "slipstream-usdc-usdt-cl1",
+          "name": "USDC/USDT Slipstream",
+          "category": "stable",
+          "venueLabel": "Slipstream",
+          "description": "Borrow USDC against a USDC/USDT liquidity position in the Slipstream pool with tick spacing 1.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Slipstream integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Slipstream CDP Spoke of the stable Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Slipstream liquidity position in the USDC/USDT pool with tick spacing 1. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "USDC from the stable Hub, up to 35% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
+      },
+      {
+        "name": "slip-WETH-USDC-cl100",
+        "integrationId": 2,
+        "spoke": "slipVolatile",
+        "pool": "WETH-USDC-cl100-g0",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3000,
+        "maxLiquidationBonus": 10800,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 100,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 300,
+        "slippageAllowanceMinBps": 50,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "WETH",
+            "asset": "USDC",
+            "primary": [
+              "WETH-USDC-500"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "USDC-USDT-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "slipstream-weth-usdc-cl100",
+          "name": "WETH/USDC Slipstream",
+          "category": "crypto",
+          "venueLabel": "Slipstream",
+          "description": "Borrow USDC against a WETH/USDC liquidity position in the Slipstream pool with tick spacing 100.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Slipstream integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Slipstream CDP Spoke of the volatile Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 1%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Slipstream liquidity position in the WETH/USDC pool with tick spacing 100. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "USDC from the volatile Hub, up to 30% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 1%."
+            }
+          ]
+        }
+      }
+    ],
+    "pools": {
+      "GHO-USDC-100": "$world:.uniswapPools['GHO-USDC-100']",
+      "GHO-USDT-100": "$world:.uniswapPools['GHO-USDT-100']",
+      "GHO-WETH-3000": "$world:.uniswapPools['GHO-WETH-3000']",
+      "USDC-USDT-100": "$world:.uniswapPools['USDC-USDT-100']",
+      "USDC-USDT-500": "$world:.uniswapPools['USDC-USDT-500']",
+      "USDC-USDT-cl1-g0": "$world:.slipstreamPools['USDC-USDT-cl1-g0']",
+      "WETH-USDC-500": "$world:.uniswapPools['WETH-USDC-500']",
+      "WETH-USDC-cl100-g0": "$world:.slipstreamPools['WETH-USDC-cl100-g0']",
+      "WETH-USDT-500": "$world:.uniswapPools['WETH-USDT-500']"
+    },
+    "uniswapV3Factory": "$world:.uniswapV3Factory"
+  },
+  "coverage": {
+    "funder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  }
+}

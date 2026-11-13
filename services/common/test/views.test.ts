@@ -20,7 +20,7 @@ import {
   usd,
   utilizationBps,
 } from "../src/views/math.ts";
-import type { HubAssetRow, HubAssetSpokeRow } from "../src/views/types.ts";
+import type { ChainDeployment, HubAssetRow, HubAssetSpokeRow } from "../src/views/types.ts";
 
 const u = (whole: number) => BigInt(whole) * 1_000_000n;
 const cdp = (spoke: string) => fixtureSlices.find((s) => s.spoke === spoke)!;
@@ -228,6 +228,20 @@ describe("snapshot reader", () => {
       { chainId: 1, hub: HUB, label: "Stable", tier: 1, recorded: true, applicationState: 0, assetCount: 2, lendAssetIds: ["1"], lendSpokes: [LEND], cdpSpokes: [FIXTURE_U], blockNumber: "77" },
     ]);
     expect(snap.creditLines).toEqual([]);
+  });
+
+  it("leaves out a manifest Hub and Spokes with no code yet at the block read (added in a later release step)", async () => {
+    const { readChainSnapshot } = await import("../src/views/snapshot.ts");
+    const later = "0x00000000000000000000000000000000000000a7" as const;
+    const laterLend = "0x00000000000000000000000000000000000000a8" as const;
+    const laterCdp = "0x00000000000000000000000000000000000000a9" as const;
+    const hubs = [
+      { address: HUB, label: "Stable" },
+      { address: later, label: "growth" },
+    ];
+    const dep: ChainDeployment = { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs, lendSpokes: [LEND, laterLend], cdpSpokes: [FIXTURE_U, laterCdp], coverageSpokes: [] };
+    const snap = await readChainSnapshot(client, dep, { blockNumber: 77n, timestamp: 1_000 });
+    expect(snap.hubs.map((h) => [h.hub, h.lendSpokes, h.cdpSpokes])).toEqual([[HUB, [LEND], [FIXTURE_U]]]);
   });
 
   it("fails the whole snapshot when a required view reverts", async () => {

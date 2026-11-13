@@ -21,6 +21,22 @@ contracts/out-lite/
 contracts/cache-lite/
 contracts/dependencies/
 contracts/deployments-local/
+contracts/out-univ3/
+contracts/cache-univ3/
+contracts/out-univ3-periphery/
+contracts/cache-univ3-periphery/
+contracts/out-aerodrome/
+contracts/cache-aerodrome/
+contracts/out-aave-v3/
+contracts/cache-aave-v3/
+contracts/out-chainlink-ocr2/
+contracts/cache-chainlink-ocr2/
+contracts/out-chainlink-proxy/
+contracts/cache-chainlink-proxy/
+contracts/out-slipstream-v1/
+contracts/cache-slipstream-v1/
+contracts/out-slipstream-main/
+contracts/cache-slipstream-main/
 contracts/broadcast/*/31337/
 
 # Security tooling (contracts/script/install-security-tools.sh, security-fast.sh, security-slow.sh)
@@ -56,7 +72,6 @@ tools/heimdall/bin/
 
 # Folders outside this repository's tracked tree
 web/
-deployments/
 # Only packages/protocol (the ABIs the services import) is tracked under packages/.
 packages/*
 !packages/protocol/

@@ -39,6 +39,12 @@ function record(ctx: BlockContext, plan: Pick<TxPlan, "job" | "subject" | "param
   };
 }
 
+/** A candidate as text for the attempt log: a string as is, an object as JSON (bigints as decimal strings). */
+export function describeCandidate(candidate: unknown): string {
+  if (typeof candidate !== "object" || candidate === null) return String(candidate);
+  return JSON.stringify(candidate, (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v));
+}
+
 export async function runJob<C, D>(job: Job<C, D>, ctx: BlockContext, deps: PipelineDeps): Promise<void> {
   const candidates = await job.discover(ctx);
   for (const candidate of candidates) {
@@ -46,7 +52,7 @@ export async function runJob<C, D>(job: Job<C, D>, ctx: BlockContext, deps: Pipe
     try {
       await (job.exclusive ? job.exclusive(candidate, pass) : pass());
     } catch (err) {
-      logAttempt(record(ctx, { job: job.kind, subject: String(candidate), params: {} }, { outcome: "skipped", reason: err instanceof Error ? err.message : String(err) }));
+      logAttempt(record(ctx, { job: job.kind, subject: describeCandidate(candidate), params: {} }, { outcome: "skipped", reason: err instanceof Error ? err.message : String(err) }));
     }
   }
 }
@@ -55,7 +61,7 @@ async function runOne<C, D>(job: Job<C, D>, ctx: BlockContext, deps: PipelineDep
   const check = await job.check(ctx, candidate);
   if (!check.act) {
     if (job.kind === "liquidation" && check.reason !== "healthy") {
-      logAttempt(record(ctx, { job: job.kind, subject: String(candidate), params: {} }, { outcome: "skipped", reason: check.reason }));
+      logAttempt(record(ctx, { job: job.kind, subject: describeCandidate(candidate), params: {} }, { outcome: "skipped", reason: check.reason }));
     }
     return;
   }

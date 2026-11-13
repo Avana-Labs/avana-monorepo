@@ -1,3 +1,16 @@
+dependencies/aave-v3-origin-3.7.0/:solidity-utils/=dependencies/aave-solidity-utils-fdc69f9/src/
+dependencies/aave-v3-origin-3.7.0/:openzeppelin-contracts-upgradeable/=dependencies/openzeppelin-contracts-upgradeable-aave-fa52531/
+dependencies/aave-v3-origin-3.7.0/:openzeppelin-contracts/contracts/=dependencies/@openzeppelin-contracts-5.1.0/
+dependencies/aave-solidity-utils-fdc69f9/:openzeppelin-contracts-upgradeable/=dependencies/openzeppelin-contracts-upgradeable-aave-fa52531/
+dependencies/aave-solidity-utils-fdc69f9/:openzeppelin-contracts/contracts/=dependencies/@openzeppelin-contracts-5.1.0/
+dependencies/aerodrome-contracts-1.0/:@openzeppelin/contracts/=dependencies/openzeppelin-contracts-aerodrome-7b3e7b7/contracts/
+dependencies/uniswap-v3-periphery-24ccf01/:@openzeppelin/contracts/=dependencies/openzeppelin-contracts-solc-0.7-3.4.2/
+dependencies/slipstream-1.0.0/:contracts/=dependencies/slipstream-1.0.0/contracts/
+dependencies/slipstream-1.0.0/:@openzeppelin/contracts/=dependencies/openzeppelin-contracts-solc-0.7-3.4.2/
+dependencies/slipstream-1.0.0/:@nomad-xyz/=dependencies/excessively-safe-call-81cd99c/
+dependencies/slipstream-main-f8717fa/:contracts/=dependencies/slipstream-main-f8717fa/contracts/
+dependencies/slipstream-main-f8717fa/:@openzeppelin/contracts/=dependencies/openzeppelin-contracts-solc-0.7-3.4.2/
+dependencies/slipstream-main-f8717fa/:@nomad-xyz/=dependencies/excessively-safe-call-81cd99c/
 forge-std/=dependencies/forge-std-1.17.0/src/
 halmos-cheatcodes/=dependencies/halmos-cheatcodes-6da4e69/src/
 @openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.1.0/
