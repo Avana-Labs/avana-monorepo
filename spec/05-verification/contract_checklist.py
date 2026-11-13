@@ -220,6 +220,8 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-148": "Convex and web app; no test there carries the ID yet",
     "TEST-149": "web, Ponder and keeper; no test there carries the ID yet",
     "TEST-297": "Lend page builders in packages/protocol; no test there carries the ID yet",
+    "REQ-ORACLE-037": "keeper poke schedule (3.6), services/keeper/src/jobs/oraclePoke.ts; its test belongs in "
+                      "services/keeper/test/oraclePoke.test.ts, and no keeper test carries the ID yet",
     # CI tool rows: the row is the CI step itself, and the step's own result is the evidence (no Foundry test can be).
     "TEST-001": "contracts.yml build job: `forge soldeer install` against soldeer.lock, the solc and EVM pins of "
                 "foundry.toml, and the Foundry version check",
