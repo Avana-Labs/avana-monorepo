@@ -140,7 +140,7 @@ contract LPVaultSwapRealOraclesIntegrationTest is LPVaultSwapUnitBase {
     /// agreement tolerance). From the first stored observation seizure reverts `StalePrice` inside the pause; after
     /// `disagreementPauseMax` (3,600 s) with the routes still apart the market stays refused (Expired for its own
     /// seizure); once the routes agree again seizure resumes.
-    // TEST-044 verifies: REQ-SWAP-008, REQ-ORACLE-022
+    // TEST-044 verifies: REQ-SWAP-008, REQ-ORACLE-022; shared: the disagreement pause of TEST-044 is the first half of this test, before the expiry TEST-157 adds
     // TEST-157 verifies: REQ-SWAP-008, REQ-ORACLE-022
     function test_TEST_157_persistentDisagreementStopsSeizureUntilRoutesAgree() public {
         _step(60);

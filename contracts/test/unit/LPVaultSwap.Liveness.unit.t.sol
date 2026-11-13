@@ -195,6 +195,38 @@ contract LPVaultSwapLivenessUnitTest is LPVaultSwapUnitBase {
         }
     }
 
+    /// @notice Liquidation-liveness bounds: for any `slippageAllowanceBps` the ParameterStore accepts (below 10,000)
+    /// and any `graceHealthFactor` it accepts (`[0.9e18, 1e18)`), inside the grace window or outside it, a reference
+    /// liquidation of an account at HF 0.889 settles, against its USDC debt and against its GHO debt.
+    // TEST-064 verifies: REQ-SWAP-009, SPEC-LIQ-003
+    /// forge-config: default.fuzz.runs = 256
+    function testFuzz_TEST_064_referenceLiquidationSettlesAtEveryAcceptedValue(
+        uint256 slippage,
+        uint256 graceHf,
+        bool inGrace,
+        bool useGho
+    ) public {
+        store.setSlippage(MARKET_ID, uint16(bound(slippage, 0, BPS - 1)));
+        store.setGraceHealthFactor(bound(graceHf, 0.9e18, 1e18 - 1));
+        lpOracle.setFlags(false, false, false, inGrace);
+        address target = proxy;
+        LiquidationParams memory p;
+        if (useGho) {
+            (target,) = _openAccount(carol, 10_000e6, 0, 250_000_000);
+            lpOracle.setAnswer(250_000_000);
+            adapter.borrow(target, ghoReserveId, address(gho), 18_000e18, carol);
+            p = _params(target, 1000e18);
+            p.debtReserveId = ghoReserveId;
+        } else {
+            p = _params(target, 1000e6);
+        }
+        lpOracle.setAnswer(200_000_000);
+        assertLt(_hf(target), 0.9e18, "the reference account sits below every accepted grace bound");
+        p.maxShortfall = p.debtToCover / 20;
+        LiquidationResult memory r = _liquidateAs(keeper, p);
+        assertGt(r.unitsSeized, 0, "the reference liquidation settles");
+    }
+
     function _args(
         bytes memory data
     ) internal pure returns (bytes memory out) {
