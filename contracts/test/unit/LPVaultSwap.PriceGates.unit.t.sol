@@ -101,6 +101,7 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
     /// within `liquidationPriceMaxAge` on every leg; otherwise `DebtPriceStale(r)`.
     // TEST-049 verifies: REQ-SWAP-091, REQ-SWAP-096, Q-238, Q-247, Q-248
     // TEST-226 verifies: REQ-SWAP-091
+    // TEST-201 verifies: REQ-SWAP-091, REQ-SWAP-096; shared: TEST-201's stale USDC debt price refused, then a fresh one settles
     function test_TEST_049_staleRepaidReserveRefused() public {
         usdcOracle.setState(PriceState.Cached, true);
         _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _debtStale());
@@ -131,6 +132,7 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
     /// while the USDC DebtOracle is Expired, and its USDC reserve is refused (the gate is per repaid reserve).
     // TEST-049 verifies: REQ-SWAP-091, INV-072, Q-247
     // TEST-226 verifies: REQ-SWAP-091, INV-072, Q-247, Q-248
+    // TEST-201 verifies: REQ-SWAP-091, INV-072; shared: TEST-201's per-reserve liquidation gate, USDC refused and GHO settled
     function test_TEST_226_ghoRepaidWhileUsdcOracleExpired() public {
         (address mixed,) = _openAccount(alice, 10_000e6, 16_000e6, 250_000_000);
         lpOracle.setAnswer(250_000_000);

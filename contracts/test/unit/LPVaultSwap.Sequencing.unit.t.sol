@@ -132,7 +132,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// @notice `settleSeizure` reconciles an earlier gap before settling the current seizure: units an earlier
     /// seizure left unsettled move to the pending balance, and the liquidation's `c`, `aᵢ` and `R` are those of its own
     /// seizure alone (equal to the same liquidation on an account with no gap).
-    // TEST-170 verifies: REQ-SWAP-067, REQ-SWAP-006, Q-201
+    // TEST-170 verifies: REQ-SWAP-067, REQ-SWAP-006, Q-201; shared: the earlier gap TEST-170's pending settlement later settles is moved to pending here
     function test_REQ_SWAP_067_earlierGapToPendingNotToCaller() public {
         uint256 snapshot = vm.snapshotState();
         LiquidationResult memory clean = _liquidateAs(keeper, _params(proxy, 500e6));
@@ -151,7 +151,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// changes only `R`; the USDT leg minimum follows the oracle's USDT leg price, so routes paying 0.988 fail the leg
     /// minimum at the oracle's $0.9995 (`NoRouteAvailable`) and pass it once the oracle serves $0.985, with `minRec`
     /// (the vault price) unchanged by the leg price.
-    // TEST-072 verifies: SPEC-LIQ-012, SPEC-LIQ-018, REQ-SWAP-042
+    // TEST-050 verifies: SPEC-LIQ-012, SPEC-LIQ-018, REQ-SWAP-042; shared: TEST-050's floor from the oracle value with no spot-price input, shown by moving pool spot
     function test_SPEC_LIQ_012_floorFromOracleLegsNotSpot() public {
         uint256 snapshot = vm.snapshotState();
         LiquidationResult memory base = _liquidateAs(keeper, _params(proxy, 1950e6));
@@ -201,7 +201,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
 
     /// @notice An Aave pause of the vault-token reserve, then of the debt reserve, blocks the liquidation with Aave's
     /// `ReservePaused`; no LPVaultSwap path overrides it, and the account liquidates in the first call after unpause.
-    // TEST-169 verifies: REQ-SWAP-119
+    // TEST-169 verifies: REQ-SWAP-119; shared: TEST-169's Aave reserve pause run locally against LPVaultSwap, blocked until the unpause
     function test_REQ_SWAP_119_aavePauseBlocksUntilUnpause() public {
         uint256[2] memory reserves = [vtReserveId, usdcReserveId];
         for (uint256 i = 0; i < 2; ++i) {
