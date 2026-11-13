@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
 import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
@@ -78,8 +79,14 @@ abstract contract AvanaCoreDeploy is DeployBase {
         SelectorPair[] memory shortList =
             TimelockLaunchLists.shortEligible(p.parameterStore, p.marketRegistry, p.lpVaultSwap);
         SelectorPair[] memory daoOnly = TimelockLaunchLists.daoOnlyCancel(p.marketRegistry, p.lpVaultSwap);
-        bytes memory args =
-            abi.encode(proposers, executors, cancellers, daoCancellers, uint256(432_000), true, shortList, daoOnly);
+        // The selector pairs of both sets must name the chain's ParameterStore, MarketRegistry and LPVaultSwap
+        // (`REQ-ACCESS-155`, `REQ-ACCESS-156`): the predicted proxy addresses.
+        GovernedTargets memory targets = GovernedTargets({
+            parameterStore: p.parameterStore, marketRegistry: p.marketRegistry, lpVaultSwap: p.lpVaultSwap
+        });
+        bytes memory args = abi.encode(
+            proposers, executors, cancellers, daoCancellers, uint256(432_000), true, shortList, daoOnly, targets
+        );
         return _deploy3("AvanaTimelock", bytes.concat(_artifact("AvanaTimelock.sol", "AvanaTimelock"), args));
     }
 
@@ -155,7 +162,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         );
     }
 
-    /// @notice RiskModule: drift, breaker, pledge, borrow and status logic, the router, the proxy.
+    /// @notice RiskModule: drift, breaker, pledge, borrow, status and speed logic, the router, the proxy.
     function _deployRiskModule(
         Predicted memory p
     ) internal returns (UpgradeableDeployment memory d) {
@@ -169,7 +176,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
                 timelock: p.timelock
             })
         );
-        d.logics = new address[](5);
+        d.logics = new address[](6);
         d.logics[0] = _deploy(
             "RiskModuleDriftLogic", bytes.concat(_artifact("RiskModuleDriftLogic.sol", "RiskModuleDriftLogic"), im)
         );
@@ -192,8 +199,13 @@ abstract contract AvanaCoreDeploy is DeployBase {
                 _artifact("RiskModuleStatusLogic.sol", "RiskModuleStatusLogic"), im, db, abi.encode(d.logics[3])
             )
         );
-        // RiskModuleLogics{drift, breaker, pledge, borrow, status}.
-        bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4]);
+        // The borrow-speed and pledge-speed reads (Q-411).
+        d.logics[5] = _deploy(
+            "RiskModuleSpeedLogic", bytes.concat(_artifact("RiskModuleSpeedLogic.sol", "RiskModuleSpeedLogic"), im)
+        );
+        // RiskModuleLogics{drift, breaker, pledge, borrow, status, speed}.
+        bytes memory logics =
+            abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
         d.implementation =
             _deploy("RiskModuleImplementation", bytes.concat(_artifact("RiskModule.sol", "RiskModule"), im, logics));
         d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModuleAdmin.initialize, (p.timelock)));

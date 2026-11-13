@@ -11,11 +11,6 @@ import {AvanaDeployment, ChainInputs, IntegrationInput} from "./DeployTypes.sol"
 /// AMM integration, VaultTokenFactory, ProxyManager, PayoutEscrow, the flash source and the flash liquidation
 /// helpers), the Lens, the DebtOracle implementation and the concentrated-liquidity LPOracle implementation.
 abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
-    /// @notice Source file and contract name of the concentrated-liquidity LPOracle implementation, its logic contracts
-    /// and the LPOracle `slot0` word counts; the contract is written separately and wired here by name.
-    string internal constant CL_ORACLE_FILE = "LPOracleCL.sol";
-    string internal constant CL_ORACLE = "LPOracleCL";
-
     function _deployImmutables(
         ChainInputs memory c,
         Predicted memory p,
@@ -78,15 +73,17 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
         }
         d.lpVaults = new address[](c.integrations.length);
         for (uint256 i = 0; i < c.integrations.length; ++i) {
-            d.lpVaults[i] = _deployLpVault(c.integrations[i], p);
+            d.lpVaults[i] = _deployLpVault(c.integrations[i], p, c.blockTime);
         }
     }
 
-    /// @notice One LPVault (step 6): `UniswapV3Integration` with one position manager and factory, or
+    /// @notice One LPVault (step 6): `UniswapV3Integration` with one position manager, factory and the chain's block
+    /// interval (12 s on Ethereum and Sepolia, 2 s on Base, Base Sepolia and OP Mainnet; `REQ-AMM-V3-012`), or
     /// `SlipstreamIntegration` with the four generations of 2.21.
     function _deployLpVault(
         IntegrationInput memory it,
-        Predicted memory p
+        Predicted memory p,
+        uint32 blockTime
     ) internal returns (address) {
         bytes memory base = abi.encode(it.integrationId, p.collateralization, p.marketRegistry, p.lock, p.timelock);
         string memory name = string.concat("LPVault.", vm.toString(it.integrationId));
@@ -97,7 +94,7 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
                 bytes.concat(
                     _artifact("UniswapV3Integration.sol", "UniswapV3Integration"),
                     base,
-                    abi.encode(it.positionManagers[0], it.factories[0])
+                    abi.encode(it.positionManagers[0], it.factories[0], uint256(blockTime))
                 )
             );
         }
@@ -114,7 +111,7 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
         );
     }
 
-    /// @notice Step 11: the Lens over its eight modules and Aave's liquidation sizing (`REQ-LENS-001`).
+    /// @notice Step 11: the Lens over its nine modules and Aave's liquidation sizing (`REQ-LENS-001`).
     function _deployLens(
         AvanaDeployment memory d
     ) internal {
@@ -124,7 +121,7 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
         (c9[3], c9[4], c9[5]) = (d.lock, d.marketRegistry.proxy, d.parameterStore.proxy);
         (c9[6], c9[7], c9[8]) = (d.riskModule.proxy, d.lpVaultSwap.proxy, d.payoutEscrow);
         bytes memory core = abi.encode(c9);
-        string[8] memory names = [
+        string[9] memory names = [
             "LensAccountModule",
             "LensMarketModule",
             "LensPriceModule",
@@ -132,16 +129,17 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
             "LensRiskModule",
             "LensPreviewModule",
             "LensMarketsModule",
-            "LensPositionsModule"
+            "LensPositionsModule",
+            "LensSpeedModule"
         ];
-        d.lensModules = new address[](8);
-        for (uint256 i = 0; i < 8; ++i) {
+        d.lensModules = new address[](9);
+        for (uint256 i = 0; i < 9; ++i) {
             bytes memory args = i == 3 ? bytes.concat(core, abi.encode(d.lensAaveSizing)) : core;
             d.lensModules[i] =
                 _deploy(names[i], bytes.concat(_artifact(string.concat(names[i], ".sol"), names[i]), args));
         }
-        address[8] memory m;
-        for (uint256 i = 0; i < 8; ++i) {
+        address[9] memory m;
+        for (uint256 i = 0; i < 9; ++i) {
             m[i] = d.lensModules[i];
         }
         d.lens = _deploy3("Lens", bytes.concat(_artifact("Lens.sol", "Lens"), abi.encode(m)));

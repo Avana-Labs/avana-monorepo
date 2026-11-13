@@ -49,6 +49,8 @@ abstract contract DeploymentOutput is Script {
         vm.serializeAddress(o, "lensAaveSizing", d.lensAaveSizing);
         vm.serializeAddress(o, "debtOracleImplementation", d.debtOracleImplementation);
         vm.serializeAddress(o, "clOraclePricing", d.clOraclePricing);
+        vm.serializeAddress(o, "clOracleModuleLogics", d.clOracleModuleLogics);
+        vm.serializeAddress(o, "clOracleLogics", d.clOracleLogics);
         string memory json = vm.serializeUint(o, "deployedAtBlock", block.number);
         vm.writeJson(json, path);
     }

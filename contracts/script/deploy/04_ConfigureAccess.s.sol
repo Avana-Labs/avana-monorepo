@@ -50,8 +50,8 @@ interface IFactoryRegistration {
 /// Joint Configuration Safe; `APPLICATION_PAUSE_GUARDIAN` on the ParameterStore for the Emergency Guardian and the Aave
 /// Protocol Guardian; `APPLICATION_RISK_STEWARD` on the ParameterStore for the Joint Configuration Safe. Only the Aave
 /// governance executor can cancel it. `chain-wiring` records the chain's Avana Hubs, the flash source, each LPVault in
-/// the VaultTokenFactory and, when the concentrated-liquidity LPOracle implementation exists, in the MarketRegistry
-/// with it as pricing, and the sequencer feed on an L2. It is kept apart so a cancel of one never drops the other.
+/// the VaultTokenFactory and in the MarketRegistry with its concentrated-liquidity LPOracle implementation as pricing,
+/// and the sequencer feed on an L2. It is kept apart so a cancel of one never drops the other.
 /// Scheduling as the Safe needs `AVANA_SCHEDULE=1` and a node that accepts the Safe as an unlocked sender
 /// (`anvil --auto-impersonate`), run with `--unlocked --sender <safe>`.
 contract ConfigureAccess is TimelockOperations {
@@ -119,7 +119,7 @@ contract ConfigureAccess is TimelockOperations {
         address store
     ) private pure returns (Operation memory op) {
         address factory = vm.parseJsonAddress(out, ".vaultTokenFactory");
-        address pricing = vm.parseJsonAddress(out, ".clOraclePricing");
+        address[] memory pricing = vm.parseJsonAddressArray(out, ".clOraclePricing");
         address[] memory lpVaults = vm.parseJsonAddressArray(out, ".lpVaults");
         op = _newOperation("chain-wiring", c.release, c.aave.hubs.length + 2 + 2 * lpVaults.length);
         for (uint256 i = 0; i < c.aave.hubs.length; ++i) {
@@ -144,18 +144,12 @@ contract ConfigureAccess is TimelockOperations {
                 abi.encodeCall(IFactoryRegistration.registerIntegration, (id, lpVaults[i])),
                 "VaultTokenFactory.registerIntegration"
             );
-            if (pricing != address(0)) {
-                _add(
-                    op,
-                    registry,
-                    abi.encodeCall(IWiring.registerIntegration, (id, lpVaults[i], pricing)),
-                    "MarketRegistry.registerIntegration"
-                );
-            } else {
-                console2.log(
-                    "BLOCKED: MarketRegistry.registerIntegration left out (no LPOracleCL pricing) for integration", id
-                );
-            }
+            _add(
+                op,
+                registry,
+                abi.encodeCall(IWiring.registerIntegration, (id, lpVaults[i], pricing[i])),
+                "MarketRegistry.registerIntegration"
+            );
         }
         if (c.hasSequencer) {
             _add(

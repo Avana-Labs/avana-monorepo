@@ -107,7 +107,9 @@ struct AvanaDeployment {
     address[] lensModules;
     address lensAaveSizing;
     address debtOracleImplementation;
-    // The concentrated-liquidity LPOracle implementation each integration registers as its pricing; zero while that
-    // contract is not in the build (03_DeployAvana reports it and the wiring operation leaves the integration out).
-    address clOraclePricing;
+    // Per integration (same order as `integrations`): the concentrated-liquidity LPOracle implementation the
+    // integration registers as its pricing, its module logic and its four logic contracts (poke, init, listing, view).
+    address[] clOraclePricing;
+    address[] clOracleModuleLogics;
+    address[] clOracleLogics;
 }
