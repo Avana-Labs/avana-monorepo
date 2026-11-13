@@ -16,7 +16,8 @@ accepted requirement disappears without `retired_to` in the lock, and when an AM
 marked `listed` in amm-integrations.json lacks a listing method or a passing result.
 
 With --strict it also fails when a requirement has no spec-stage check, or (once
-contracts exist) no implementation test or Solidity link.
+contracts exist) no counting implementation check, only declaration Solidity links or none, a check that did not run
+or failed (with --results), or a TEST tag placed on another row's test.
 
 ID kinds
   Requirements (defined in spec/01-04 as the first `ID` of a list item, table row or heading):
@@ -36,11 +37,23 @@ ID kinds
   audit/design-review/amm-neutral/); those links are listed apart from the requirement matrix.
   ATTACK-* entries name their checks in the `| Checks |` row under their heading.
 
-A PROP-* rule counts as an implementation check only once contracts/certora/RUNS.md records a
-prover pass for it (a line `- **Prover passed**: PROP-001, PROP-002`). Until then its rows show
-"Planned (prover)".
+Implementation evidence (evidence.py). A TEST-*/PROP-* tag counts for a row only when it sits in the comment block
+directly above a test function or a CVL rule, carries its own row (a TEST tag on a function named for another TEST
+row counts for nothing unless the tag says `shared: <reason>`), its check ran and passed in the results given with
+--results (`forge test --json-file` output, Halmos logs; CVL rules: a prover result with a job id recorded in
+contracts/certora/RUNS.md or a certora result file), and its test does not use a stand-in (evidence.STAND_INS) for a
+contract whose spec page defines the row. Each row's implementation state is one of
+  Verified   a counting check ran and passed
+  Failed     a counting check ran and failed
+  Not run    counting checks exist, none has a result (no --results, skipped, timed out, or no prover job)
+  Unlinked   no counting check
+A `@custom:spec` tag on a body-less declaration (an interface, a function without a body, an abstract contract no
+concrete src/ contract inherits) is shown as "(decl.)" and is not an implementation link.
 
-Tag format (any comment style):   <CHECK-ID> verifies: <REQ-ID>, <REQ-ID>
+Without --results the matrix is written to traceability.md (committed): every Foundry row is then "Not run", since
+no run is given. With --results it is written to the file named by --out (the CI evidence job's report).
+
+Tag format (any comment style):   <CHECK-ID> verifies: <REQ-ID>, <REQ-ID>[; shared: <reason>]
 """
 from __future__ import annotations
 
@@ -51,6 +64,9 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import evidence as ev  # noqa: E402  (tag placement, stand-ins and run results; beside this file)
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = ROOT / "spec"
@@ -97,8 +113,6 @@ AMM_STATUS = ("draft", "review", "listed")
 PASS = {"proved", "computed", "holds", "pass"}
 FINDINGS = VERIF / "03-audit-findings.md"
 REVIEW = ROOT / "audit" / "design-review" / "amm-neutral"
-PROVER_LOG = ROOT / "contracts" / "certora" / "RUNS.md"
-PROVER_PASSED = re.compile(r"^\s*-\s+\*\*Prover passed\*\*:(.*)$")
 
 
 def norm(text: str) -> str:
@@ -133,24 +147,86 @@ def collect_requirements(errors: list[str]) -> dict[str, dict]:
 
 
 def collect_links() -> tuple[dict[str, list[dict]], dict[str, set]]:
+    """Requirement -> links, and check -> the IDs it names.
+
+    Spec-stage models link through any `verifies:` tag in their file. Tags under contracts/test and contracts/certora
+    link only from the comment block directly above a test function or CVL rule (evidence.scan_tags); each such link
+    carries its tag, so its state and stand-ins can be read. Loose tags still name their IDs in `check_targets` (an
+    undefined ID fails), but link nothing; main() reports them as errors. `@custom:spec` links in contracts/src carry
+    `decl`: why the tag is on a body-less declaration, or ""."""
     links: dict[str, list[dict]] = defaultdict(list)
     check_targets: dict[str, set] = defaultdict(set)
+    impl_roots = ("contracts/test/", "contracts/certora/")
     for pattern in CHECK_GLOBS:
         for path in ROOT.glob(pattern):
             if not path.is_file() or SKIP & set(path.parts) or path.resolve() == Path(__file__).resolve():
                 continue
             rel = str(path.relative_to(ROOT))
+            in_src = rel.startswith("contracts/src/")
             for n, line in enumerate(path.read_text(errors="ignore").splitlines(), 1):
-                for m in TAG.finditer(line):
-                    cid = m.group(1)
-                    kind = CHECK_KIND[cid.split("-")[0]]
-                    for rid in SPLIT.findall(m.group(2)):
-                        links[rid].append({"id": cid, "kind": kind, "where": f"{rel}:{n}"})
-                        check_targets[cid].add(rid)
+                if not rel.startswith(impl_roots):
+                    for m in TAG.finditer(line):
+                        cid = m.group(1)
+                        kind = CHECK_KIND[cid.split("-")[0]]
+                        for rid in SPLIT.findall(m.group(2)):
+                            links[rid].append({"id": cid, "kind": kind, "where": f"{rel}:{n}"})
+                            check_targets[cid].add(rid)
                 for m in SOL_TAG.finditer(line):
+                    decl = ev.declaration_only(path, n - 1) if in_src else ""
                     for rid in SPLIT.findall(m.group(1)):
-                        links[rid].append({"id": Path(rel).stem, "kind": "Solidity", "where": f"{rel}:{n}"})
+                        links[rid].append({"id": Path(rel).stem, "kind": "Solidity", "where": f"{rel}:{n}",
+                                           "decl": decl})
+    on, loose = ev.scan_tags(TARGET)
+    for tag in on:
+        for rid in tag["targets"]:
+            links[rid].append({"id": tag["check"], "kind": CHECK_KIND[tag["check"].split("-")[0]],
+                               "where": f"contracts/{tag['file']}:{tag['line']}", "tag": tag})
+            check_targets[tag["check"]].add(rid)
+    for tag in loose:
+        check_targets[tag["check"]].update(tag["targets"])
     return links, check_targets
+
+
+_STATE: dict[int, tuple[str, str]] = {}
+
+
+def tag_state(tag: dict, results: "ev.Results") -> tuple[str, str]:
+    """(state, evidence) of a tag's check in this run, computed once per tag."""
+    key = id(tag)
+    if key not in _STATE:
+        _STATE[key] = results.state(tag)
+    return _STATE[key]
+
+
+def owner_keys() -> dict[str, set[str]]:
+    """REQ-/SPEC- ID -> the contract keys of contract_checklist.CONTRACTS whose spec pages (or page sections) define it.
+    A link whose test uses a stand-in for one of them does not count for the row."""
+    import contract_checklist as cc  # noqa: E402  (imports this module; loaded here to avoid a cycle)
+    out: dict[str, set[str]] = defaultdict(set)
+    for key, (pages, _, _) in cc.CONTRACTS.items():
+        for rid, _, _ in cc.page_ids(pages)[0]:
+            out[rid].add(key)
+    return out
+
+
+def counts_for(link: dict, owners: set[str]) -> bool:
+    """A Foundry or formal link counts for a row owned by `owners` when its tag sits on a check, carries its own row
+    (a PROP tag: sits on a prover or symbolic check) and its test uses no stand-in for any of the owners."""
+    return (link["kind"] in ("Foundry", "Formal") and "tag" in link and not link["tag"]["excluded"]
+            and not (ev.tag_stand_in_keys(link["tag"]) & owners))
+
+
+def impl_state(checks: list[dict], owners: set[str], results: "ev.Results") -> tuple[str, list[dict]]:
+    """Implementation state of a row (Verified, Failed, Not run, Unlinked) and the links that count."""
+    counting = [c for c in checks if counts_for(c, owners)]
+    states = {tag_state(c["tag"], results)[0] for c in counting}
+    if not counting:
+        return "Unlinked", counting
+    if ev.FAIL in states:
+        return "Failed", counting
+    if ev.PASS in states:
+        return "Verified", counting
+    return "Not run", counting
 
 
 def collect_attack_checks(links: dict, check_targets: dict) -> None:
@@ -231,14 +307,6 @@ def check_amm(reqs: dict, links: dict, findings: dict[str, str], errors: list[st
                     errors.append(f"AMM {p}: {cid} has result {res.get('result', 'none')} and no resolved FINDING")
 
 
-def prover_passed() -> set[str]:
-    """PROP-* rules with a logged prover pass in contracts/certora/RUNS.md."""
-    if not PROVER_LOG.exists():
-        return set()
-    return {cid for line in PROVER_LOG.read_text().splitlines() for m in [PROVER_PASSED.match(line)] if m
-            for cid in re.findall(rf"\b(PROP-[A-Z0-9]+(?:-[A-Z0-9]+)*)\b", m.group(1))}
-
-
 def review_findings() -> dict[str, str]:
     """AMMN-* design-review findings defined in audit/design-review/amm-neutral/."""
     found: dict[str, str] = {}
@@ -258,7 +326,14 @@ def main() -> int:
     ap.add_argument("--strict", action="store_true", help="fail on coverage gaps too")
     ap.add_argument("--accept", nargs="*", default=[], metavar="ID", help="record re-verified requirement(s)")
     ap.add_argument("--accept-all", action="store_true", help="record every requirement as re-verified")
+    ap.add_argument("--results", nargs="+", type=Path, metavar="PATH",
+                    help="run results: forge --json-file output, Halmos logs, certora result files, or folders of them")
+    ap.add_argument("--out", type=Path, help="write the matrix here (required with --results; default traceability.md)")
     args = ap.parse_args()
+    if args.results and not args.out:
+        ap.error("--results needs --out: traceability.md is the committed matrix, written without run results")
+    out = args.out or OUT
+    results = ev.Results(args.results)
 
     errors: list[str] = []
     warnings: list[str] = []
@@ -287,8 +362,16 @@ def main() -> int:
     collect_attack_checks(links, check_targets)
     findings = check_findings(errors, warnings)
     check_amm(reqs, links, findings, errors, warnings)
-    ran = prover_passed()
     review = review_findings()
+    owners = owner_keys()
+    on, loose = ev.scan_tags(TARGET)
+    for t in loose:
+        errors.append(f"contracts/{t['file']}:{t['line']}: {t['check']} verifies: tag {t['why']}; it links nothing")
+    misplaced = sorted({(t["check"], t["file"], t["line"], t["fn"]) for t in on if t["misplaced"]})
+    for cid, f, n, fn in misplaced:
+        warnings.append(f"contracts/{f}:{n}: {cid} tag on `{fn}`, a test of another row; it counts for nothing "
+                        f"(name the test for {cid} or give `shared: <reason>`)")
+    warnings.extend(results.warnings)
     lock = json.loads(LOCK.read_text()) if LOCK.exists() else {}
     for rid, entry in lock.items():
         if rid not in reqs and not entry.get("retired_to"):
@@ -307,35 +390,48 @@ def main() -> int:
     accept = set(reqs) if args.accept_all else set(args.accept)
     contracts_exist = any((ROOT / "contracts" / "src").glob("**/*.sol"))
     rows = []
+    tally: dict[str, int] = defaultdict(int)
     for rid in sorted(reqs, key=lambda r: (r.split("-")[0], r)):
         h = digest(reqs[rid]["text"])
         checks = links.get(rid, [])
         kinds = {c["kind"] for c in checks}
-        # A formal property is an implementation check only after a logged prover pass.
-        planned = any(c["kind"] == "Formal" and c["id"] not in ran for c in checks)
-        implemented = any(c["kind"] == "Foundry" or (c["kind"] == "Formal" and c["id"] in ran) for c in checks)
-        status = "Unverified"
+        mine = owners.get(rid, set())
+        state, counting = impl_state(checks, mine, results)
+        status = state
         if rid in accept:
             lock[rid] = {**lock.get(rid, {}), "hash": h, "checks": sorted({c["id"] for c in checks})}
         if rid in lock and lock[rid]["hash"] != h:
             status = "Changed — re-verify"
             errors.append(f"{rid} changed since last accepted ({reqs[rid]['where']}); re-run its checks, then --accept {rid}")
-        elif kinds & SPEC_STAGE and implemented:
-            status = "Verified"
-        elif planned:
-            status = "Planned (prover)"
-        elif kinds & SPEC_STAGE:
-            status = "Modelled"
+        tally[status] += 1
         if not rid.startswith(("Q-", "ATTACK-")) and not kinds & SPEC_STAGE:
             warnings.append(f"{rid} has no spec-stage check ({reqs[rid]['where']})")
         if contracts_exist and rid.startswith(("REQ-", "INV-", "SPEC-")):
-            if not kinds & {"Foundry", "Formal"}:
-                warnings.append(f"{rid} has no implementation test or property")
-            if "Solidity" not in kinds:
+            if state == "Unlinked":
+                why = ("its only test links are excluded (stand-in, a tag on another row's test, or a PROP tag on a "
+                       "fuzz test)"
+                       if any(c["kind"] in ("Foundry", "Formal") for c in checks) else "no test or property links it")
+                warnings.append(f"{rid} has no counting implementation check: {why}")
+            elif state == "Failed":
+                warnings.append(f"{rid}: a counting check failed in the results given")
+            elif state == "Not run" and results.given:
+                warnings.append(f"{rid}: no counting check ran and passed in the results given")
+            sol = [c for c in checks if c["kind"] == "Solidity"]
+            if not sol:
                 warnings.append(f"{rid} has no Solidity link (@custom:spec)")
+            elif all(c.get("decl") for c in sol):
+                warnings.append(f"{rid} has only declaration links in contracts/src ({sol[0]['decl']})")
+
+        def mark(c):
+            if not any(c is x for x in counting):
+                return "‡"
+            return {ev.PASS: "", ev.FAIL: "✗"}.get(tag_state(c["tag"], results)[0], "°")
 
         def cell(kset):
-            return ", ".join(sorted({f"`{c['id']}`" + ("†" if c["kind"] == "Formal" and c["id"] not in ran else "")
+            if kset == {"Solidity"}:
+                return ", ".join(sorted({f"`{c['id']}`" + (" (decl.)" if c.get("decl") else "")
+                                         for c in checks if c["kind"] == "Solidity"})) or "—"
+            return ", ".join(sorted({f"`{c['id']}`" + (mark(c) if "tag" in c else "")
                                      for c in checks if c["kind"] in kset})) or "—"
         # Links in rule text are relative to the rule's own page; show their labels only.
         shown = re.sub(r"\[([^\]]*)\]\([^)]*\)?", r"\1", reqs[rid]["text"])
@@ -346,7 +442,12 @@ def main() -> int:
     if accept:
         LOCK.write_text(json.dumps(dict(sorted(lock.items())), indent=2) + "\n")
 
-    OUT.write_text(
+    run = ("Run results: " + ", ".join(str(p) for p in args.results) + ".") if args.results else (
+        "No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test "
+        "counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or "
+        "audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix "
+        "from the run's results.")
+    out.write_text(
         "# Requirement Traceability\n\n"
         "> **Generated by `trace.py` — do not edit by hand.** Run `.venv/bin/python trace.py` from this folder.\n\n"
         "Every English rule links to its checks, tests and Solidity. A changed rule fails `trace.py` until its checks "
@@ -357,11 +458,17 @@ def main() -> int:
         "`<CHECK-ID> verifies: <REQ-ID>, …`; Solidity with `/// @custom:spec <REQ-ID>`. AMM integration rules use "
         "`REQ-AMM-CORE-*` and `REQ-/SPEC-/INV-/ATTACK-AMM-<P>-*`; flash-source and per-chain rules `REQ-FLASH-*`, "
         "`REQ-CHAIN-*`.\n\n"
-        "Status: **Modelled** (spec-stage checks only), **Planned (prover)** (a `PROP-*` rule names the row and the "
-        "prover has not passed it; marked †), **Verified** (spec-stage checks plus a Foundry test or a prover-passed "
-        "property), **Changed — re-verify**.\n\n"
-        f"**{len(reqs)} requirements · {sum(1 for r in rows if '| Unverified |' not in r)} with checks · "
-        f"{len(errors)} errors · {len(warnings)} warnings**\n\n"
+        "Status is the row's implementation state: **Verified** (a counting test or property ran and passed), "
+        "**Failed** (a counting check failed), **Not run** (counting checks exist and none has a result), "
+        "**Unlinked** (no counting check), or **Changed — re-verify**. A test or rule counts when its tag sits "
+        "directly above it, carries its own row, and its test uses no stand-in (harness or mock) for a contract whose "
+        "page defines the row. In the Impl. column, ° marks a check without a result, ✗ a failed one and ‡ one that "
+        "does not count (stand-in or a tag on another row's test); in the Solidity column, (decl.) marks a "
+        "`@custom:spec` tag on a body-less declaration, which is not an implementation link.\n\n"
+        + run + "\n\n"
+        f"**{len(reqs)} requirements · " + " · ".join(f"{tally[k]} {k.lower()}" for k in
+                                                  ("Verified", "Failed", "Not run", "Unlinked", "Changed — re-verify"))
+        + f" · {len(errors)} errors · {len(warnings)} warnings**\n\n"
         "| Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |\n"
         "|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n"
         + ("\n## Design-review findings closed by checks\n\n"
@@ -378,7 +485,9 @@ def main() -> int:
         print("WARN   ", w)
     if not args.strict and len(warnings) > 20:
         print(f"WARN    … {len(warnings) - 20} more (use --strict to list and enforce)")
-    print(f"traceability: {len(reqs)} requirements, {len(errors)} errors, {len(warnings)} warnings -> {OUT.relative_to(ROOT)}")
+    print(f"traceability: {len(reqs)} requirements (" + ", ".join(f"{tally[k]} {k.lower()}" for k in
+          ("Verified", "Failed", "Not run", "Unlinked", "Changed — re-verify")) + f"), {len(errors)} errors, "
+          f"{len(warnings)} warnings -> {out}")
     return 1 if errors or (args.strict and warnings) else 0
 
 

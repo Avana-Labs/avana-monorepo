@@ -23,7 +23,7 @@ HALMOS_CONTRACTS=VaultTokenHalmosTest HALMOS_LOOP=16 script/security-slow.sh hal
 
 ## How often it runs
 
-Contract gate (every `check_` of the contract passes) and the slow tier at each layer gate. In CI, every pull request and push to `main` runs the `Halmos` jobs of `contracts.yml` (loop 8) and every push to `main` the `halmos` jobs of `security-slow.yml` (loop 16), one job per test contract in both, each bounded at 4 hours.
+Contract gate (every `check_` of the contract passes) and the slow tier at each layer gate. In CI, the `halmos` jobs of `security-slow.yml` (loop 16, one job per check, up to 6 hours each) run every night on `main`, on every release tag and by hand; no pull-request or push workflow runs Halmos. A check that timed out or has no recorded pass counts as not run in the traceability evidence.
 
 ## Latest result
 

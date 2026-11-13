@@ -9,6 +9,10 @@
 # own. Every unit lands in exactly one shard. Extra arguments go to `forge test`. Refresh the times from the shard logs
 # of a full run on main: script/update-test-timings.py <log>...
 #
+# With TEST_RESULTS_DIR set, each forge invocation also writes its results (`forge test --json-file`) to
+# $TEST_RESULTS_DIR/<shard or unit>-<n>.json; spec/05-verification/trace.py and contract_checklist.py read them
+# (--results) to tell a test that ran and passed from one that only carries a tag.
+#
 # Usage, from contracts/:  script/test-shard.sh <K> <N> [forge test arguments]
 #                          script/test-shard.sh --list <K> <N>     (print the shard's units)
 #                          script/test-shard.sh --unit <unit> [forge test arguments]   (one unit, as printed by
@@ -42,13 +46,24 @@ segment_args() {
   printf '%s\n' --fuzz-seed "$(printf '0x%x' $(( ${seed:-0xa7a7a} + k * 4294967296 )))" ${out[@]+"${out[@]}"}
 }
 
+# results_args <name>: `--json-file <file>` when TEST_RESULTS_DIR is set.
+results_args() {
+  [ -n "${TEST_RESULTS_DIR:-}" ] || return 0
+  mkdir -p "$TEST_RESULTS_DIR"
+  printf '%s\n' --json-file "$TEST_RESULTS_DIR/$(echo "$1" | tr -c 'A-Za-z0-9._-' '_').json"
+}
+tag=${K:+shard-$K-of-$N}
+tag=${tag:-unit-$units}
+
 # Whole files run in one forge invocation; each segment runs on its own. Every invocation runs even after one fails,
 # and the shard fails if any failed.
 rc=0
 files=$(echo "$units" | grep -v '@' || true)
 if [ -n "$files" ]; then
   glob="{$(echo "$files" | paste -sd, -)}"
-  forge test --match-path "$glob" "$@" || rc=1
+  res=()
+  while IFS= read -r a; do [ -n "$a" ] && res+=("$a"); done < <(results_args "$tag-files")
+  forge test --match-path "$glob" ${res[@]+"${res[@]}"} "$@" || rc=1
 fi
 segments=$(echo "$units" | grep '@' || true)
 if [ -n "$segments" ]; then
@@ -59,6 +74,7 @@ if [ -n "$segments" ]; then
     echo "invariant campaign segment: $file, part $k of $m, $seg_runs of $runs runs"
     args=()
     while IFS= read -r a; do args+=("$a"); done < <(segment_args "$k" "$@")
+    while IFS= read -r a; do [ -n "$a" ] && args+=("$a"); done < <(results_args "$tag-$file-$k-of-$m")
     FOUNDRY_INVARIANT_RUNS=$seg_runs forge test --match-path "$file" "${args[@]}" || rc=1
   done <<< "$segments"
 fi

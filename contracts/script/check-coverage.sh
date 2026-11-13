@@ -5,8 +5,11 @@
 # source maps are exact; fork, differential, Halmos and invariant suites excluded), then script/coverage-gate.py
 # against the per-file minimums in security/coverage-thresholds.json.
 #
-# Fails when a test fails, when a src/ file with branches is below its minimum or has no minimum, or when the config
-# lists a file that has no branch in the report. Reports in out-security/coverage/ (lcov.info, summary.txt, run.log).
+# Fails when a test fails, when a src/ file with branches is below its minimum or has no minimum, when a minimum is below
+# the config's floor (80 % branch coverage for every file; a minimum may be higher, never lower), or when the config
+# lists a file that has no branch in the report. A branch that cannot be reached leaves a file's denominator only
+# through the config's `unreachable` list, with its function, branch, reason and tests. Reports in
+# out-security/coverage/ (lcov.info, summary.txt, run.log).
 #
 # Exact-gas assertions (`*exactCycleCost*`) are skipped here: their expected values hold for the optimized build, and
 # coverage compiles without the optimizer. They run in every other test profile.
@@ -17,7 +20,8 @@
 # Usage, from contracts/:
 #   script/check-coverage.sh                 run coverage, then the gate
 #   script/check-coverage.sh --lcov <file>   gate an existing lcov report
-#   script/check-coverage.sh --update        run coverage, raise minimums to the measured values (never lowers them)
+#   script/check-coverage.sh --update        run coverage, raise minimums to the measured values (never lowers them,
+#                                            never writes one below the floor)
 # Environment: COVERAGE_JOBS (default 2), COVERAGE_NO_MATCH_TEST (default 'exactCycleCost').
 
 set -uo pipefail
