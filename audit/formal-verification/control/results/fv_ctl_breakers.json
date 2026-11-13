@@ -194,7 +194,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_breakers"
  },
  {

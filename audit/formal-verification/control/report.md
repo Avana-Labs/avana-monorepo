@@ -897,6 +897,8 @@ The harness gained `open_finding(check, finding)` (`common.py`): a violation reg
 
 #### FV-CTL-F-26 — Short tighten selectors missing from `SHORT_ELIGIBLE` (Low)
 
+- **Status.** Resolved (2026-11-13): `FV-CTL-153` is Verified against the 2.15 launch list, which names every ParameterStore tighten selector 2.9 marks short, the speed-limit tighteners `tightenMarketSpeedLimits` and `tightenDebtSpeedLimit` included.
+
 - **Check.** `FV-CTL-153`.
 - **Counterexample.** Short on the owning page, absent from `SHORT_ELIGIBLE`: `ParameterStore.tightenFloorRoundingAllowance` and `tightenMaxFlashFeeBps` (2.9), `SettlementBudget.tightenAssetWindow` and `tightenMarketWindow` (2.13). In `SHORT_ELIGIBLE` but not defined on 2.9: `ParameterStore.tightenFloorRoundingAllowanceGho`.
 - **Impact.** `SHORT_ELIGIBLE` is immutable; built from 2.15 as written, the governance Safe can never lower the flash-fee ceiling, a rounding allowance or a SettlementBudget window at the short delay, so a flash-provider premium raise or a dust-wave drain waits the normal delay (up to 5 days) for its response.

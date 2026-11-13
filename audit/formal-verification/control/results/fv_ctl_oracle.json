@@ -1,7 +1,7 @@
 [
  {
   "id": "FV-CTL-63",
-  "title": "Served price by state (SPEC-ORC-017): fresh when Live, min(fresh, A) when Drifting without disagreement, min(lower, A) during a disagreement, A when Cached, 1 when Expired; served >= 1 always, <= A whenever not Live, <= fresh whenever not failed, <= price8 of getTokenPrices() and equal to it when Live or Cached; the accepted price and checkpoint stay >= 1 after every poke",
+  "title": "Served price by state (SPEC-ORC-017): fresh when Live, fresh when Drifting without disagreement, min(lower, fresh) during a disagreement, A when Cached, 1 when Expired; served >= 1 always, <= A whenever failed, <= fresh whenever not failed (even when the floored lower exceeds fresh), <= price8 of getTokenPrices() and equal to it when Live, Cached or Drifting without disagreement; the accepted price and checkpoint stay >= 1 after every poke",
   "status": "Verified",
   "method": "Z3 (unsat of negation)",
   "verifies": [
@@ -18,7 +18,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -59,7 +59,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -79,12 +79,12 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
   "id": "FV-CTL-67",
-  "title": "After a poke a disagreeing market is Drifting, served at its lower routes and liquidation-paused; the first-observation time is set once per episode (per route version) and never moves; the pause lasts < disagreementPauseMax from it, then disagreementExpired holds until the routes agree",
+  "title": "After a poke a disagreeing market is Drifting, served at min(lower, fresh) and liquidation-paused; the first-observation time is set once per episode (per route version) and never moves; the pause lasts < disagreementPauseMax from it, then disagreementExpired holds until the routes agree",
   "status": "Verified",
   "method": "Z3 (unsat of negation)",
   "verifies": [
@@ -217,7 +217,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -238,7 +238,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.09,
+  "seconds": 0.07,
   "model": "fv_ctl_oracle"
  },
  {
@@ -290,7 +290,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -306,7 +306,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -328,7 +328,7 @@
  },
  {
   "id": "FV-CTL-110",
-  "title": "Lower-route price (SPEC-ORC-017): with w_i = ceil_i(min(p_i, b_i)) when both routes are valid (else v_i), 1 <= w_i <= v_i, so w0 w1 <= v0 v1 and lower = isqrt(4 w0 w1) - 1 satisfies 1 <= lower <= fresh; served = min(lower, A) lies in [1, A]",
+  "title": "Lower-route price (SPEC-ORC-017): with w_i = ceil_i(min(p_i, b_i)) when both routes are valid (else v_i), 1 <= w_i <= v_i, so w0 w1 <= v0 v1 and lower = isqrt(4 w0 w1) - 1 satisfies 1 <= lower <= fresh; served = min(lower, fresh) lies in [1, fresh]",
   "status": "Verified",
   "method": "Z3 (unsat of negation, 4 lemmas)",
   "verifies": [
@@ -343,12 +343,12 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.06,
+  "seconds": 0.05,
   "model": "fv_ctl_oracle"
  },
  {
   "id": "FV-CTL-111",
-  "title": "SPEC-ORC-017 example (full-range USDC/USDT, spacing 1, d = 6): A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give the composition (987,420, 1,012,739), lower = 197,483,855 and served 197,483,855; Cached serves 199,980,000; Expired serves 1; Drifting on a consistency deviation with fresh 199,999,600 (both tokens at $1) serves 199,980,000",
+  "title": "SPEC-ORC-017 example (full-range USDC/USDT, spacing 1, d = 6): A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give the composition (987,420, 1,012,739), lower = 197,483,855 and served min(197,483,855, 199,999,600) = 197,483,855; Cached serves 199,980,000; Expired serves 1; Drifting on a consistency deviation with fresh 199,999,600 (both tokens at $1) serves 199,999,600, above A, and a top-up there is booked at min(199,999,600, 199,980,000) = 199,980,000",
   "status": "Verified",
   "method": "direct computation",
   "verifies": [
@@ -367,7 +367,7 @@
  },
  {
   "id": "FV-CTL-112",
-  "title": "Whenever some token disagrees (REQ-ORACLE-008) and the market is not failed, pauseActive or disagreementExpired holds, so the market is served at its lower routes and liquidationPaused is true (REQ-ORACLE-086: 'While some token disagrees (SPEC-ORC-016 pauseActive or disagreementExpired)')",
+  "title": "Whenever some token disagrees (REQ-ORACLE-008) and the market is not failed, pauseActive or disagreementExpired holds, so the market is served at min(lower, fresh) and liquidationPaused is true (REQ-ORACLE-086: 'While some token disagrees (SPEC-ORC-016 pauseActive or disagreementExpired)')",
   "status": "Verified",
   "method": "Z3 (unsat of negation)",
   "verifies": [
@@ -387,7 +387,7 @@
  },
  {
   "id": "FV-CTL-113",
-  "title": "Expired serves exactly 1 (REQ-ORACLE-085) and Cached serves A; whenever the served price is one of the stress values (Cached A, Expired 1, a disagreement's lower routes), liquidationPaused is true, so no stress value sizes a seizure of this market",
+  "title": "Expired serves exactly 1 (REQ-ORACLE-085) and Cached serves A; whenever the served price is one of the stress values (Cached A, Expired 1, a disagreement's min(lower, fresh)), liquidationPaused is true, so no stress value sizes a seizure of this market: with liquidationPaused false the served price is exactly fresh",
   "status": "Verified",
   "method": "Z3 (unsat of negation)",
   "verifies": [
@@ -422,7 +422,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.24,
+  "seconds": 0.27,
   "model": "fv_ctl_oracle"
  },
  {
@@ -591,7 +591,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.02,
+  "seconds": 0.01,
   "model": "fv_ctl_oracle"
  },
  {
@@ -687,7 +687,7 @@
   ],
   "detail": "",
   "counterexample": null,
-  "seconds": 0.01,
+  "seconds": 0.02,
   "model": "fv_ctl_oracle"
  },
  {

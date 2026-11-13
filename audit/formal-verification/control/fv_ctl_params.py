@@ -27,7 +27,7 @@ How Avana works here, and what each check proves:
 - Delay classes. Every page names the same parameters as having a short-delay tighten selector, with the same
   direction, under the compiled ParameterStore selector names, and no page or compiled source names a
   SettlementBudget selector (FV-CTL-58; resolves FV-CTL-F-25), and every selector an owning page marks short is in
-  `SHORT_ELIGIBLE` (FV-CTL-153, open finding FV-CTL-F-26). The short-delay list starts equal to the timelock's immutable `SHORT_ELIGIBLE` set and
+  `SHORT_ELIGIBLE` (FV-CTL-153; resolves FV-CTL-F-26). The short-delay list starts equal to the timelock's immutable `SHORT_ELIGIBLE` set and
   can never gain a pair outside it; that set holds no loosen, structural, role, upgrade, price-source, route,
   keeper, unfreeze or reset selector (FV-CTL-62), and it holds every new-activity stop, so the governance Safe
   halts new activity within 12 hours when no guardian acts (FV-CTL-140).
@@ -514,7 +514,9 @@ P049 = {"slippageAllowanceBps", "floorRoundingAllowance", "marketUsdCap", "topUp
         "poolRiskFactor", "hardHealthFloor", "gateRecoverySeconds",
         # "breakerDeficitMax, maxShortfallBps and debtStressRiseBps follow REQ-PSTORE-016, -018 and -020",
         # each of which gives a short tighten selector (Q-399: no other stored breaker threshold):
-        "breakerDeficitMax", "maxShortfallBps", "debtStressRiseBps"}
+        "breakerDeficitMax", "maxShortfallBps", "debtStressRiseBps",
+        # Q-411: the borrow and pledge speed limits, tightened field by field at the short delay (REQ-PSTORE-036).
+        "marketSpeedLimits", "debtSpeedLimit"}
 _049_text = _no_tighten_stated["2.9 REQ-CONFIG-049"]
 _049_anchor = [n for n in P049 if not n.startswith("breaker") and n not in ("routeDepthThreshold", "maxShortfallBps",
                                                                             "debtStressRiseBps")
@@ -813,7 +815,6 @@ for r in table_after("02-contracts/09-parameter-store.md", "| `initialize(addres
             _short_owner[("ParameterStore", s_)] = "2.9"
 _missing153 = sorted(f"{t}.{s_} ({pg})" for (t, s_), pg in _short_owner.items() if (t, s_) not in SHORT_ELIGIBLE)
 _extra153 = sorted(f"{t}.{s_}" for t, s_ in SHORT_ELIGIBLE if t == "ParameterStore" and (t, s_) not in _short_owner)
-open_finding("FV-CTL-153", "FV-CTL-F-26")
 # FV-CTL-153 verifies: REQ-ACCESS-141, REQ-ACCESS-155, REQ-CONFIG-049, REQ-PSTORE-024
 expect("FV-CTL-153", "Every ParameterStore tighten selector that its owning page (2.9 setter table) marks short is in SHORT_ELIGIBLE, and SHORT_ELIGIBLE names no ParameterStore tighten selector that 2.9 does not define",
        not _missing153 and not _extra153, verifies=["REQ-ACCESS-141", "REQ-ACCESS-155", "REQ-CONFIG-049", "REQ-PSTORE-024"],

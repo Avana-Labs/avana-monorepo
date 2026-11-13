@@ -6118,7 +6118,7 @@
     "checks": []
   },
   "MKT-027": {
-    "hash": "8a4160eef5f9e536",
+    "hash": "407a46c97fea7754",
     "checks": [
       "FV-CTL-58"
     ]
@@ -17395,7 +17395,7 @@
     ]
   },
   "REQ-CONFIG-049": {
-    "hash": "b76993410ecd710c",
+    "hash": "0512529eb25e5c5d",
     "checks": [
       "FV-CTL-132",
       "FV-CTL-153",
@@ -25838,7 +25838,7 @@
     "checks": []
   },
   "REQ-ROLE-027": {
-    "hash": "7c6999a8da87caf6",
+    "hash": "a3b727ff4cb8390f",
     "checks": [
       "AvanaRoles",
       "FV-CTL-58",
