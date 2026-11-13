@@ -758,8 +758,10 @@ jobs:
           mkdir -p out-results
           .venv/bin/certoraRun "certora/conf/$CONF.conf" --wait_for_results all 2>&1 | tee "out-results/certora-$CONF.log"
           # --wait_for_results all exits non-zero on any rule that is not verified, so reaching this line means every
-          # rule of the conf passed. Record it with the job link for spec/05-verification/evidence.py.
-          job=$(grep -oE 'https://prover\.certora\.com/output/[0-9]+/[0-9a-f]{32}' "out-results/certora-$CONF.log" | tail -n 1)
+          # rule of the conf passed. Record it with the job link for spec/05-verification/evidence.py: the older
+          # prover.certora.com/output link, or the app.certora.com report link certora-cli 8.x prints.
+          job=$(grep -oE 'https://(prover\.certora\.com/output/[0-9]+/[0-9a-f]{32}|app\.certora\.com/orgs/[A-Za-z0-9_-]+/jobs/[0-9a-f-]{36}/report)' \
+            "out-results/certora-$CONF.log" | tail -n 1)
           [ -n "$job" ] || { echo "certoraRun printed no job link"; exit 1; }
           printf '{"tool": "certora", "conf": "%s", "job": "%s", "all_rules_verified": true}\n' "$CONF" "$job" \
             > "out-results/certora-$CONF.json"
