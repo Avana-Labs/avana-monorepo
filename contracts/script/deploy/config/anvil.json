@@ -53,7 +53,8 @@
         "label": "lendVolatile",
         "userReservesLimit": 65535
       }
-    ]
+    ],
+    "payloadsController": "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
   },
   "aave": {
     "accessManager": "$aave:.accessManager",
@@ -75,7 +76,28 @@
         "tier": 3,
         "label": "volatile"
       }
-    ]
+    ],
+    "governanceExecutor": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "configEngine": "$aave:.configEngine",
+    "hubConfigurator": "$aave:.hubConfigurator",
+    "spokeConfigurator": "$aave:.spokeConfigurator",
+    "treasurySpoke": "$aave:.treasurySpoke",
+    "irStrategies": {
+      "stable": "$aave:.hubs.stable.irStrategy",
+      "correlated": "$aave:.hubs.correlated.irStrategy",
+      "volatile": "$aave:.hubs.volatile.irStrategy"
+    },
+    "spokes": {
+      "uniV3Stable": "$aave:.spokes.uniV3Stable.proxy",
+      "uniV3Correlated": "$aave:.spokes.uniV3Correlated.proxy",
+      "uniV3Volatile": "$aave:.spokes.uniV3Volatile.proxy",
+      "slipStable": "$aave:.spokes.slipStable.proxy",
+      "slipCorrelated": "$aave:.spokes.slipCorrelated.proxy",
+      "slipVolatile": "$aave:.spokes.slipVolatile.proxy",
+      "lendStable": "$aave:.spokes.lendStable.proxy",
+      "lendCorrelated": "$aave:.spokes.lendCorrelated.proxy",
+      "lendVolatile": "$aave:.spokes.lendVolatile.proxy"
+    }
   },
   "chain": {
     "blockTime": 12,
@@ -568,7 +590,9 @@
         "decimals": 18,
         "priceSource": "$world:.feeds.GHO.primary",
         "drawCap": 10000000,
-        "bootstrapSupply": "20000000000000000000000000"
+        "bootstrapSupply": "20000000000000000000000000",
+        "coverageMinimum": 100000,
+        "offsetMinimum": 75000
       },
       {
         "symbol": "USDC",
@@ -576,7 +600,9 @@
         "decimals": 6,
         "priceSource": "$world:.feeds.USDC.primary",
         "drawCap": 10000000,
-        "bootstrapSupply": "20000000000000"
+        "bootstrapSupply": "20000000000000",
+        "coverageMinimum": 100000,
+        "offsetMinimum": 75000
       },
       {
         "symbol": "USDT",
@@ -584,8 +610,17 @@
         "decimals": 6,
         "priceSource": "$world:.feeds.USDT.primary",
         "drawCap": 5000000,
-        "bootstrapSupply": "10000000000000"
+        "bootstrapSupply": "10000000000000",
+        "coverageMinimum": 50000,
+        "offsetMinimum": 25000
       }
-    ]
+    ],
+    "lossLayerRoles": {
+      "coverageRole": 500,
+      "reserveAdminRole": 501
+    }
+  },
+  "coverage": {
+    "funder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
   }
 }

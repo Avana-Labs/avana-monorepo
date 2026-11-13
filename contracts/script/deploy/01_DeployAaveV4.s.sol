@@ -93,6 +93,7 @@ contract DeployAaveV4 is DeployBase {
     address internal firstSpokeImpl;
     string internal hubsJson;
     string internal spokesJson;
+    address internal configEngine;
 
     function run() external {
         string memory network = _network();
@@ -113,6 +114,7 @@ contract DeployAaveV4 is DeployBase {
         _roles(abi.encodeCall(IAaveV4Roles.grantHubRoles, (accessManager, hubCfg, aaveDao, aaveDao)));
         _roles(abi.encodeCall(IAaveV4Roles.grantSpokeRoles, (accessManager, spokeCfg, aaveDao, aaveDao)));
         _roles(abi.encodeCall(IAaveV4Roles.replaceDefaultAdminRole, (accessManager, aaveDao, address(boot))));
+        configEngine = _configEngine();
         vm.stopBroadcast();
         _write(network);
     }
@@ -129,6 +131,30 @@ contract DeployAaveV4 is DeployBase {
             .getReport();
         _roles(abi.encodeCall(IAaveV4Roles.setupConfigurators, (accessManager, hubCfg, spokeCfg)));
         treasury = ITreasurySpokeBatch(_batch("AaveV4TreasurySpokeBatch", abi.encode(aaveDao, baseSalt))).getReport();
+    }
+
+    /// @notice Aave's config engine (`src/config-engine`, a3ef63e), stateless, which every Aave V4 governance payload runs
+    /// by `delegatecall` (on Ethereum the DAO's deployed instance): its four sub-engine libraries, the tokenization Spoke
+    /// deployer linked into the Hub engine, and `AaveV4ConfigEngine` linked to the four.
+    function _configEngine() private returns (address engine) {
+        string memory dir = "dependencies/aave-v4-a3ef63e/src/config-engine/libraries/";
+        address tokenization =
+            _deploy("TokenizationSpokeDeployer", _artifactIn("out-aave", "TokenizationSpokeDeployer.sol", "TokenizationSpokeDeployer"));
+        string[] memory fqn = new string[](1);
+        address[] memory lib = new address[](1);
+        (fqn[0], lib[0]) = (string.concat(dir, "TokenizationSpokeDeployer.sol:TokenizationSpokeDeployer"), tokenization);
+        string[4] memory names = ["AccessManagerEngine", "HubEngine", "PositionManagerEngine", "SpokeEngine"];
+        string[] memory fqns = new string[](4);
+        address[] memory libs = new address[](4);
+        for (uint256 i = 0; i < 4; ++i) {
+            bytes memory code = i == 1
+                ? _artifactLinked("out-aave", "HubEngine.sol", "HubEngine", fqn, lib)
+                : _artifactIn("out-aave", string.concat(names[i], ".sol"), names[i]);
+            (fqns[i], libs[i]) = (string.concat(dir, names[i], ".sol:", names[i]), _deploy(names[i], code));
+        }
+        engine = _deploy(
+            "AaveV4ConfigEngine", _artifactLinked("out-aave", "AaveV4ConfigEngine.sol", "AaveV4ConfigEngine", fqns, libs)
+        );
     }
 
     function _spokes(
@@ -158,6 +184,7 @@ contract DeployAaveV4 is DeployBase {
         vm.serializeAddress(o, "treasurySpoke", treasury);
         vm.serializeAddress(o, "liquidationLogic", liquidationLogic);
         vm.serializeAddress(o, "aaveDao", aaveDao);
+        vm.serializeAddress(o, "configEngine", configEngine);
         vm.serializeAddress(o, "standardSpokeImplementation", firstSpokeImpl);
         vm.serializeString(o, "hubs", hubsJson);
         string memory json = vm.serializeString(o, "spokes", spokesJson);
