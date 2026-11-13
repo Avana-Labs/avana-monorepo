@@ -74,7 +74,7 @@ contract LPVaultSwapDeleverageFuzzTest is LPVaultSwapUnitBase {
         uint256 x = debt < cap ? debt : cap;
         vm.prank(alice);
         try adapter.repayWithCollateral(
-            proxy, _position(key), uint128(units), usdcReserveId, new uint256[](0), 0
+            proxy, _position(key), uint128(units), usdcReserveId, new uint256[](2), 0
         ) returns (
             uint256 repaid, uint256 out
         ) {
@@ -111,10 +111,10 @@ contract LPVaultSwapDeleverageFuzzTest is LPVaultSwapUnitBase {
         uint256 x = debt < cap ? debt : cap;
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, x, x + 1));
-        adapter.repayWithCollateral(proxy, _position(key), uint128(units), usdcReserveId, new uint256[](0), x + 1);
+        adapter.repayWithCollateral(proxy, _position(key), uint128(units), usdcReserveId, new uint256[](2), x + 1);
         vm.prank(alice);
         (uint256 repaid,) =
-            adapter.repayWithCollateral(proxy, _position(key), uint128(units), usdcReserveId, new uint256[](0), x);
+            adapter.repayWithCollateral(proxy, _position(key), uint128(units), usdcReserveId, new uint256[](2), x);
         assertEq(repaid, x, "a minimum equal to x settles");
     }
 
@@ -131,11 +131,11 @@ contract LPVaultSwapDeleverageFuzzTest is LPVaultSwapUnitBase {
         uint256 hf = _hf(proxy);
         vm.prank(alice);
         (uint256 r1,) =
-            adapter.repayWithCollateral(proxy, _position(key), uint128(first), usdcReserveId, new uint256[](0), 0);
+            adapter.repayWithCollateral(proxy, _position(key), uint128(first), usdcReserveId, new uint256[](2), 0);
         uint256 hfMid = _hf(proxy);
         vm.prank(alice);
         (uint256 r2,) =
-            adapter.repayWithCollateral(proxy, _position(key), uint128(second), usdcReserveId, new uint256[](0), 0);
+            adapter.repayWithCollateral(proxy, _position(key), uint128(second), usdcReserveId, new uint256[](2), 0);
         assertEq(r1, _capOf(first, P_VAULT), "first x");
         assertEq(r2, _capOf(second, P_VAULT), "second x");
         assertEq(_debtOf(proxy, usdcReserveId), debt - r1 - r2, "debt down by both");

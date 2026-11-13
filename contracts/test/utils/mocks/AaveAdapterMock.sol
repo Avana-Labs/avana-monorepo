@@ -27,7 +27,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// @dev The lead replaces it with the real AaveAdapter in the integration tests after the merge. Checks follow 2.6:
 /// `burnSeized` and both deleverage steps revert `NotLPVaultSwap` unless the caller is LPVaultSwap and the Lock holder
 /// is the expected member, `ZeroAmount` for zero units or amounts, `UnknownMarket` for a vault token the mock did not
-/// bind to the market, `NoDeleverageSession` outside an open session or out of order.
+/// bind to the market, `NoDeleverageSession` outside an open session, out of order, or for a release whose position,
+/// units or minimums differ from the session's (the real Adapter's `_checkReleaseSession`).
 contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
     using SafeERC20 for IERC20;
 
@@ -45,6 +46,11 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
         uint256 debtReserveId;
         bool repaid;
         bool released;
+        // The release the session admits, as the real Adapter binds it (REQ-ADAPTER-080/081): position, units and
+        // the hash of the borrower's minimums.
+        bytes32 positionKey;
+        uint128 units;
+        bytes32 minsHash;
     }
 
     address public lock;
@@ -195,6 +201,10 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
     ) external returns (uint256[] memory amounts, bool closed) {
         _checkStep(proxy);
         if (!_session.repaid || _session.released) revert NoDeleverageSession();
+        if (
+            position.positionKey != _session.positionKey || units != _session.units
+                || keccak256(abi.encode(minAmounts)) != _session.minsHash
+        ) revert NoDeleverageSession();
         if (units == 0) revert ZeroAmount();
         ++releaseCalls;
         _session.released = true;
@@ -220,7 +230,9 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
         Binding memory b = _binding[proxy];
         ILock(lock).acquire();
         uint256 hfBefore = IAaveV4Spoke(b.spoke).getUserAccountData(proxy).healthFactor;
-        _session = Session(true, proxy, debtReserveId, false, false);
+        _session = Session(
+            true, proxy, debtReserveId, false, false, position.positionKey, units, keccak256(abi.encode(minAmounts))
+        );
         (debtRepaid, assetOut) = ILPVaultSwapDeleverage(lpVaultSwap)
             .deleverage(
                 DeleverageRequest({
@@ -250,7 +262,16 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
         DeleverageRequest calldata r
     ) external returns (uint256 debtRepaid, uint256 assetOut) {
         ILock(lock).acquire();
-        _session = Session(true, r.proxy, r.debtReserveId, false, false);
+        _session = Session(
+            true,
+            r.proxy,
+            r.debtReserveId,
+            false,
+            false,
+            r.position.positionKey,
+            r.units,
+            keccak256(abi.encode(r.minAmounts))
+        );
         (debtRepaid, assetOut) = ILPVaultSwapDeleverage(lpVaultSwap).deleverage(r);
         delete _session;
         ILock(lock).release();

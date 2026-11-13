@@ -32,7 +32,7 @@ contract LPVaultSwapCallbacksFuzzTest is LPVaultSwapUnitBase {
 
     function _repay() internal returns (bool ok, bytes memory reason) {
         vm.prank(alice);
-        try adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0) {
+        try adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0) {
             ok = true;
         } catch (bytes memory r) {
             reason = r;
