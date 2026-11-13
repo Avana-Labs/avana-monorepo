@@ -242,6 +242,10 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-260": "security-slow.yml halmos and hevm jobs (nightly, release tags, by hand)",
     "TEST-261": "security-slow.yml mythril jobs (nightly, release tags, by hand)",
     "TEST-262": "security-slow.yml hevm jobs (nightly, release tags, by hand)",
+    "TEST-263": "the fast tier is contracts.yml's fast-security job and the slow tier security-slow.yml (TEST-253 to "
+                "TEST-262); the upgrade gate is contracts/script/upgrade-operation.py, which builds a timelock "
+                "upgradeToAndCall operation only when security-slow.yml has a completed successful slow-tier run on "
+                "the implementation's commit, checked by script/upgrade-operation.test.sh (contracts.yml build job)",
     "TEST-137": "security-fast.sh storage-layout step (script/storage-layout.js); the diff against a deployed version "
                 "starts with the first deployment",
 }

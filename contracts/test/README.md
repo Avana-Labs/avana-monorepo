@@ -552,7 +552,7 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-260 | formal | — | checked by the `check_PROP_NNN_*` functions of `halmos/` (section 5) and the Echidna assertion entry points; `prove_*` checks in `symbolic/` are planned |
 | TEST-261 | static-analysis | — | checked by `contracts/script/security-mythril.sh` |
 | TEST-262 | formal | — | checked by `contracts/script/security-slow.sh hevm` on `src/` runtime code |
-| TEST-263 | environment | — | checked by the CI workflow gates (`.github/workflows/contracts.yml`, `security-slow.yml`) and `contracts/security/*-triage.json` |
+| TEST-263 | environment | — | checked by the CI workflow gates (`.github/workflows/contracts.yml`, `security-slow.yml`) and `contracts/security/*-triage.json`; a timelock upgrade's operation is built only by `script/upgrade-operation.py`, which requires a successful `security-slow.yml` slow-tier run on the implementation's commit (`script/upgrade-operation.test.sh`) |
 | TEST-264 | fork | `fork/UniswapV3Integration.fork.t.sol` (1), `unit/MarketRegistry.Hubs.unit.t.sol` (1), `unit/MarketRegistry.ShapeAndCoverage.unit.t.sol` (1), `unit/SlipstreamIntegration.Markets.unit.t.sol` (1), `unit/UniswapV3Integration.Markets.unit.t.sol` (10) | — |
 | TEST-265 | fork | `fork/SlipstreamIntegration.fork.t.sol` (3), `unit/SlipstreamIntegration.Custody.unit.t.sol` (6), `unit/SlipstreamIntegration.Markets.unit.t.sol` (9) | — |
 | TEST-266 | fork | `unit/LPOracle.SpotReads.unit.t.sol` (1), `unit/SlipstreamIntegration.SpotMove.unit.t.sol` (3), `unit/UniswapV3Integration.SpotMove.unit.t.sol` (3) | — |
