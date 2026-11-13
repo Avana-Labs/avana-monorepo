@@ -96,7 +96,7 @@ rule servedDebtPriceByState() {
     mathint A = to_mathint(accepted);
     mathint delta = stressRiseOf(ASSET());
 
-    DebtPriceView v = getPriceState(e);
+    DebtOracle.DebtPriceView v = getPriceState(e);
     int256 served = latestAnswer(e);
     bool disagree = v.disagreementPauseActive || v.disagreementExpired;
     mathint p = v.primaryValue;
@@ -104,11 +104,11 @@ rule servedDebtPriceByState() {
     mathint maxPB = p > b ? p : b;
 
     assert served == v.answer, "getPriceState().answer differs from latestAnswer()";
-    assert v.state != PriceState.Live => to_mathint(served) >= A, "a non-Live DebtOracle served below the accepted price";
-    assert v.state == PriceState.Cached => to_mathint(served) == A, "Cached did not serve the accepted price";
-    assert v.state == PriceState.Expired => to_mathint(served) == ceilDiv(A * (10000 + delta), 10000),
+    assert v.state != DebtOracle.PriceState.Live => to_mathint(served) >= A, "a non-Live DebtOracle served below the accepted price";
+    assert v.state == DebtOracle.PriceState.Cached => to_mathint(served) == A, "Cached did not serve the accepted price";
+    assert v.state == DebtOracle.PriceState.Expired => to_mathint(served) == ceilDiv(A * (10000 + delta), 10000),
         "Expired did not serve the accepted price raised by debtStressRiseBps, rounded up";
-    assert (v.state == PriceState.Drifting && disagree) => to_mathint(served) == (maxPB > A ? maxPB : A),
+    assert (v.state == DebtOracle.PriceState.Drifting && disagree) => to_mathint(served) == (maxPB > A ? maxPB : A),
         "a disagreement did not serve max(primary, alternate, accepted)";
 }
 

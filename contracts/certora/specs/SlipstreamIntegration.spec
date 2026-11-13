@@ -38,7 +38,7 @@ rule validatePositionRequiresExactRange(uint256 marketId, address owner, bytes32
 
     validatePosition(marketId, owner, positionKey);
 
-    ClMarketConfig m = clMarket(marketId);
+    SlipstreamIntegration.ClMarketConfig m = clMarket(marketId);
     assert ghostTickLower[tokenId] == m.tickLower && ghostTickUpper[tokenId] == m.tickUpper,
         "a position whose ticks differ from the market's exact range was accepted";
 }
@@ -47,7 +47,7 @@ rule validatePositionRequiresExactRange(uint256 marketId, address owner, bytes32
 rule receivePositionRequiresExactRange(uint256 marketId, address owner, bytes32 positionKey) {
     env e;
     uint256 tokenId = tokenIdOf(positionKey);
-    ClMarketConfig m = clMarket(marketId);
+    SlipstreamIntegration.ClMarketConfig m = clMarket(marketId);
 
     receivePosition(e, marketId, owner, positionKey);
 

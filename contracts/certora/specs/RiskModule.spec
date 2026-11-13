@@ -168,7 +168,7 @@ ghost mHub(uint256) returns address;
 ghost spokeApproved(address) returns bool;
 ghost mOfReserve(address, uint256) returns uint256;
 ghost mLpOracle(uint256) returns address;
-ghost mStatus(uint256) returns MarketStatus;
+ghost mStatus(uint256) returns RiskModule.MarketStatus;
 ghost mSpoke(uint256) returns address;
 ghost mReserve(uint256) returns uint256;
 ghost mHubAsset(uint256) returns uint256;
@@ -198,14 +198,14 @@ function reserveConfigOf(address spoke, uint256 rid) returns IAaveV4Spoke.Reserv
     return c;
 }
 
-function spokeDefOf(address s) returns SpokeDef {
-    SpokeDef d;
+function spokeDefOf(address s) returns RiskModule.SpokeDef {
+    RiskModule.SpokeDef d;
     require d.approved == spokeApproved(s);
     return d;
 }
 
-function marketOf(uint256 m) returns Market {
-    Market k;
+function marketOf(uint256 m) returns RiskModule.Market {
+    RiskModule.Market k;
     require k.lpOracle == mLpOracle(m);
     require k.status == mStatus(m);
     require k.spoke == mSpoke(m);
@@ -217,8 +217,8 @@ function marketOf(uint256 m) returns Market {
     return k;
 }
 
-function debtDefOf(address s, uint256 r) returns DebtReserveDef {
-    DebtReserveDef d;
+function debtDefOf(address s, uint256 r) returns RiskModule.DebtReserveDef {
+    RiskModule.DebtReserveDef d;
     require d.reserveId == r;
     require d.approved == regApprovedDebtReserve(s, r);
     require d.fixedPrice == debtFixedPrice(s, r);
@@ -269,7 +269,7 @@ rule preBorrowCheckCollateralGates(address proxy, uint256 debtReserveId, uint256
     preBorrowCheck(e, proxy, debtReserveId, amount);
 
     assert spokeApproved(spoke), "preBorrowCheck passed for an unapproved Spoke";
-    assert mStatus(m) == MarketStatus.Active, "preBorrowCheck passed with a collateral market not Active";
+    assert mStatus(m) == RiskModule.MarketStatus.Active, "preBorrowCheck passed with a collateral market not Active";
     assert pokeCount[o] > pokesBefore, "preBorrowCheck did not poke the collateral market's LPOracle";
     assert pvIsLive(o), "preBorrowCheck passed with a collateral market that is not Live";
     assert to_mathint(pvServedUpdatedAt[o]) <= to_mathint(e.block.timestamp)
@@ -433,7 +433,7 @@ persistent ghost uint256 recHaltedDebt;
 persistent ghost uint256 recBreakerDebt;
 persistent ghost uint32 recDebtBreakerReasons;
 persistent ghost uint256 recDriftMarket;
-persistent ghost DriftReason recDriftReason;
+persistent ghost RiskModule.DriftReason recDriftReason;
 persistent ghost bool recNoKeeper;
 persistent ghost uint256 recHf;
 persistent ghost uint256 recHfEx;
@@ -441,14 +441,14 @@ persistent ghost uint256 recFloor;
 persistent ghost bool recBorrowAllowed;
 persistent ghost bool recWithdrawAllowed;
 persistent ghost bool recUnavailable;
-persistent ghost PauseState recPauseState;
-persistent ghost PauseReason recPauseReason;
+persistent ghost RiskModule.PauseState recPauseState;
+persistent ghost RiskModule.PauseReason recPauseReason;
 persistent ghost mathint recStatusCalls { init_state axiom recStatusCalls == 0; }
 persistent ghost mathint recPauseCalls { init_state axiom recPauseCalls == 0; }
 
 // An arbitrary status body result, pause fields included, recorded field by field.
-function recordStatus(address p) returns AccountGateStatus {
-    AccountGateStatus s;
+function recordStatus(address p) returns RiskModule.AccountGateStatus {
+    RiskModule.AccountGateStatus s;
     recStatusCalls = recStatusCalls + 1;
     recSpokeApproved = s.spokeApproved;
     recUnknownCollateral = s.unknownCollateralReserveId;
@@ -471,9 +471,9 @@ function recordStatus(address p) returns AccountGateStatus {
 }
 
 // An arbitrary pause state and reason of the account's Hub, recorded.
-function recordPause(address p) returns (PauseState, PauseReason) {
-    PauseState st;
-    PauseReason r;
+function recordPause(address p) returns (RiskModule.PauseState, RiskModule.PauseReason) {
+    RiskModule.PauseState st;
+    RiskModule.PauseReason r;
     recPauseCalls = recPauseCalls + 1;
     recPauseState = st;
     recPauseReason = r;
@@ -491,7 +491,7 @@ rule statusPauseReachesOnlyPauseFields(address proxy) {
     require recStatusCalls == 0 && recPauseCalls == 0;
     storage before = lastStorage;
 
-    AccountGateStatus st = getAccountGateStatus(e, proxy);
+    RiskModule.AccountGateStatus st = getAccountGateStatus(e, proxy);
 
     assert recStatusCalls == 1 && recPauseCalls == 1, "the view did not read the body and the pause once each";
     assert st.borrowAllowed == recBorrowAllowed, "borrowAllowed differs from the body's gate result";
@@ -566,7 +566,7 @@ rule hfExRoundsAgainstTheBorrower(mathint hf, mathint u, mathint p, mathint cf, 
 // every other pledge.
 // PROP-062 verifies: INV-069, REQ-RISK-026, REQ-RISK-066, REQ-RISK-067, Q-230, Q-252, Q-277
 rule minimumPledgeUsesAcceptedPrice(address depositor, address proxy, uint256 marketId, uint32 integrationId,
-                                    bytes32 positionKey, uint128 L, PledgeCounters counters, bool requireRescue) {
+                                    bytes32 positionKey, uint128 L, RiskModule.PledgeCounters counters, bool requireRescue) {
     env e;
     address o = mLpOracle(marketId);
     uint8 d = mDecimals(marketId);
@@ -579,7 +579,7 @@ rule minimumPledgeUsesAcceptedPrice(address depositor, address proxy, uint256 ma
     mathint rescueMin = to_mathint(RESCUE_MIN_PLEDGE_USD());
     mathint required = minUsd < rescueMin ? minUsd : rescueMin;
 
-    PledgeCharge charge = checkPledge@withrevert(e, depositor, proxy, marketId, integrationId, positionKey, L, counters,
+    RiskModule.PledgeCharge charge = checkPledge@withrevert(e, depositor, proxy, marketId, integrationId, positionKey, L, counters,
                                                  requireRescue);
     bool reverted = lastReverted;
 
