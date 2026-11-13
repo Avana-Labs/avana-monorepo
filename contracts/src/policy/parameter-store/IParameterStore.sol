@@ -13,6 +13,7 @@ import {IParameterStoreLiquidation} from "./IParameterStoreLiquidation.sol";
 import {IParameterStoreListing} from "./IParameterStoreListing.sol";
 import {IParameterStoreLoosen} from "./IParameterStoreLoosen.sol";
 import {IParameterStoreRiskViews} from "./IParameterStoreRiskViews.sol";
+import {IParameterStoreSpeed} from "./IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "./IParameterStoreTighten.sol";
 import {IParameterStoreViews} from "./IParameterStoreViews.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -35,7 +36,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// `APPLICATION_ADMIN`, and the tighten setters and `setAvanaFeeShareBps` also accept `APPLICATION_RISK_STEWARD`, held by
 /// the Joint Configuration Safe, which calls them at once (REQ-PSTORE-002). The ParameterStore entries of the timelock's immutable `SHORT_ELIGIBLE` are exactly the
 /// `tighten…` selectors of `IParameterStoreTighten`, `IParameterStoreLiquidation` (`tightenMaxShortfallBps`, `tightenDebtStressRiseBps`), `IParameterStoreBreakers`
-/// (`tightenBreakerDeficitMax`, `tightenGateRecoverySeconds`) and `IParameterStoreAdmin` (`tightenMaxFlashFeeBps`), each of which accepts only a strictly
+/// (`tightenBreakerDeficitMax`, `tightenGateRecoverySeconds`), `IParameterStoreAdmin` (`tightenMaxFlashFeeBps`) and `IParameterStoreSpeed` (`tightenMarketSpeedLimits`, `tightenDebtSpeedLimit`), each of which accepts only a strictly
 /// safer value; every other setter and upgrades take the
 /// normal delay. Step-limited loosenings move one step at most once per `normalDelay`.
 /// No guardian holds a function here except `useStandbySecondSource` (`APPLICATION_PAUSE_GUARDIAN`, REQ-PSTORE-029), no
@@ -56,5 +57,6 @@ interface IParameterStore is
     IParameterStoreBreakers,
     IParameterStoreLiquidation,
     IParameterStoreChain,
-    IParameterStoreCoverage
+    IParameterStoreCoverage,
+    IParameterStoreSpeed
 {}

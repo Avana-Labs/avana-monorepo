@@ -53,9 +53,13 @@ gas_reports = ["*"]
 # Each LPOracle implementation is a proxy target plus three logic contracts (views, poke, listing), each carrying the
 # evaluation core and the AMM protocol's pricing module; at 10,000 runs the poke and listing logic exceed EIP-170, at 200
 # runs they fit. The base's test harness and fuzz target compile the same way; each AMM protocol's deployable LPOracle
-# files take the same restriction.
+# files take the same restriction. The concentrated-liquidity implementation (LPOracleCL.sol) also runs its pricing
+# module in its own contract (LPOracleCLModuleLogic.sol, by delegatecall) and splits initialization from checkConfig
+# (LPOracleCLInitLogic.sol, LPOracleCLListingLogic.sol); its four logic files (poke, listing, initialization, views) take
+# the same restriction, so each of its contracts fits EIP-170 with the 1,024-byte margin at 200 runs.
 # The concentrated-liquidity LPVaults carry the shared custody, binding and pricing base plus their AMM protocol's hooks;
-# at 10,000 runs the Slipstream LPVault is within about 140 bytes of EIP-170. At 1,000 runs both have about 2 KB of
+# at 10,000 runs the Slipstream LPVault is within about 140 bytes of EIP-170, and with the unit exponent of SPEC-ORC-005
+# (narrow 18/18-decimal ranges) it was 531 bytes over its 1,024-byte margin at 1,000 runs. At 200 runs both keep the
 # margin. Both deployable files take the same setting so their margins stay alike; everything compiled with them (the
 # shared base, the Uniswap v3 test harness, their test suites) builds with it too, and every other contract keeps the
 # default. certora/conf/LPVault.conf,
@@ -63,7 +67,7 @@ gas_reports = ["*"]
 additional_compiler_profiles = [
   { name = "collateralization", optimizer = true, via_ir = true, optimizer_runs = 200 },
   { name = "lporacle", optimizer = true, via_ir = false, optimizer_runs = 200 },
-  { name = "clvault", optimizer = true, via_ir = false, optimizer_runs = 1_000 },
+  { name = "clvault", optimizer = true, via_ir = false, optimizer_runs = 200 },
 ]
 # The DebtOracle implementation (one proxy per non-GHO debt asset) is about 27.8 KB under the legacy pipeline at 10,000
 # runs and 24.5 KB at 200 runs, too close to EIP-170; the IR pipeline at 200 runs brings it to about 23.3 KB. The
@@ -76,9 +80,15 @@ compilation_restrictions = [
   { paths = "src/custody/collateralization/Collateralization.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "test/utils/harness/LPOracleHarness.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCL.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLPokeLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLListingLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLInitLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLViewLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLModuleLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "test/invariant/echidna/LPOracleProperties.sol", via_ir = false, optimizer_runs = 200 },
-  { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 1_000 },
-  { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 1_000 },
+  { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/liquidation/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/lens/lens/Lens*Module.sol", via_ir = true, optimizer_runs = 200 },
 ]
@@ -169,6 +179,8 @@ compilation_restrictions = [
 # into out-univ3/. Built alone, the pool's creation code hashes to Uniswap's canonical POOL_INIT_CODE_HASH
 # 0xe34f199b…8b54, which the position manager and Avana's UniswapV3Integration use to derive pool addresses; compiled
 # in one job with other sources it does not (the hash moved to 0x664ea9b6…2c20 when the periphery shared the job).
+# Tests deploy the factory with deployCode("out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json") and create pools
+# through it. Build it alone before the tests or the deploy: `FOUNDRY_PROFILE=univ3 forge build` (make build-univ3).
 src = "dependencies/uniswap-v3-core-5ea68a7/contracts"
 test = "dependencies/uniswap-v3-core-5ea68a7/contracts/test"
 script = "dependencies/uniswap-v3-core-5ea68a7/contracts/test"
@@ -182,6 +194,9 @@ via_ir = false
 bytecode_hash = "none"
 cbor_metadata = true
 no_match_path = ""
+skip = ["dependencies/uniswap-v3-core-5ea68a7/contracts/test/**"]
+additional_compiler_profiles = []
+compilation_restrictions = []
 
 [profile.univ3-periphery]
 # The pinned Uniswap v3 periphery (24ccf01): NonfungiblePositionManager at Uniswap's 2,000 runs and SwapRouter, with

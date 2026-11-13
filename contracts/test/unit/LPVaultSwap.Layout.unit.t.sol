@@ -72,7 +72,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     function test_deleverageContextCleared() public {
         (address proxy, bytes32 key) = _openAccount(alice, 10_000e6, 15_000e6, 250_000_000);
         vm.prank(alice);
-        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         for (uint256 i = 0; i < 9; ++i) {
             bytes32 v;
             bytes32 slot = bytes32(uint256(DELEVERAGE_BASE) + i);

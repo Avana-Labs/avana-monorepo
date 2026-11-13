@@ -113,14 +113,6 @@
       "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
     },
     {
-      "fingerprint": "0614d8260ec68208",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
-      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: drop <= startLt - LTf, so the result lies in [LTf, startLt].",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
-    },
-    {
       "fingerprint": "742921ff25c7cbf1",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/policy/parameter-store/ParameterStoreListingLogic.sol",
@@ -153,14 +145,6 @@
       "review": "Reviewed per call site, group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern. The conversion widens (address -> uint160 -> uint256 -> bytes32)."
     },
     {
-      "fingerprint": "a61018616f4de70f",
-      "check": "Division by zero not prevented",
-      "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
-      "reason": "Division by zero not possible: bNet <= BPS returns 0 on the line before, so bNet > BPS > 0.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
-    },
-    {
       "fingerprint": "2cbe3ff5473ea4cd",
       "check": "Division by zero not prevented",
       "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
@@ -189,14 +173,6 @@
       "check": "Division by zero not prevented",
       "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
       "reason": "Division by zero not possible: _BPS is a constant (10,000).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
-    },
-    {
-      "fingerprint": "ead29c0b789fa7f1",
-      "check": "Division by zero not prevented",
-      "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
-      "reason": "Division by zero not possible: _WIND_DOWN_RAMP_SECONDS is a non-zero constant.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
     },
@@ -623,15 +599,6 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._payOut (payout)",
       "reason": "Zero-value transfer not possible: guarded by `payout != 0` on the same line.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
-    },
-    {
-      "fingerprint": "9f30f4dcf8b4fb92",
-      "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._forwardTokens (residue)",
-      "reason": "Zero-value transfer not possible: guarded by `balance > tokensBefore[i]` on the same line.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
     },
@@ -1230,13 +1197,6 @@
       "review": "Pattern: mint to a checked recipient."
     },
     {
-      "fingerprint": "b5c61af7c7e986aa",
-      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
-      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
-      "reason": "Not a signed message: keccak256(abi.encode(minAmounts)) binds the borrower's per-token minimums in the transient repay-with-collateral session so the callback must present the same array (REQ-ADAPTER-081), and keccak256(abi.encode(im)) is the logic contracts' immutables hash compared at construction (REQ-ADAPTER-004); no signature or EIP-712 domain is involved. Covered by test_TEST_239_sessionMisuseReverts (WeakMinimums) and test_TEST_062_constructorChecks.",
-      "approval": "pending review (approved pattern)"
-    },
-    {
       "fingerprint": "acdb187104e30bad",
       "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
       "file": "src/policy/aave-adapter/AaveAdapterSettlementLogic.sol",
@@ -1263,30 +1223,6 @@
       "check": "Division by zero not prevented",
       "file": "src/lens/lens/LensPreview.sol",
       "reason": "The divisor is checked on the line before (unitValue == 0 returns) or is a non-zero constant or price checked above. Tests: Lens.Preview, Lens.States (a zero answer).",
-      "approval": "pending (Josue)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "2be6bee5d509a011",
-      "check": "Signature use at deadlines should be allowed",
-      "file": "src/lens/lens/LensPreview.sol",
-      "reason": "No signature: the deadline is the caller's transaction deadline used only to size the interest growth; a deadline at or before now counts no time (REQ-LENS-035, REQ-LENS-036). Test: repayAllDeadlineInPast.",
-      "approval": "pending (Josue)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "b80ce58173f9e15d",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/lens/lens/LensMarket.sol",
-      "reason": "The loop index runs from 0 to the reserve's latest dynamic configuration key, itself a uint32, so uint32(key) never truncates. Test: checkBackingLiquidationFeeOnAnyKey.",
-      "approval": "pending (Josue)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "f0b3243169ececd1",
-      "check": "A year is not always 365 days",
-      "file": "src/lens/lens/LensPreview.sol",
-      "reason": "Aave V4's own convention: its drawn rate is per 365-day year (MathUtils.SECONDS_PER_YEAR), so the growth until the deadline uses the same year (REQ-LENS-035, REQ-LENS-036). Tests: repayAllCoversDebtAtDeadline, repayAllUsdcExample.",
       "approval": "pending (Josue)",
       "review": "Lens (wave 1), new site"
     },
@@ -1427,20 +1363,252 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "ee8306734398bd25",
-      "check": "Use of deprecated chainlink function: `latestAnswer()`",
-      "file": "src/lens/lens/LensPositions.sol",
-      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
-      "approval": "pending (Josue)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
       "fingerprint": "30311fccb661c2cd",
       "check": "`symbol()` is not a part of the ERC-20 standard",
       "file": "src/lens/lens/LensMarkets.sol",
       "reason": "The vault token is Avana's own IERC20Metadata token (VaultToken), which implements name() and symbol(); the Lens reads them only for display (REQ-LENS-045). Test: marketIdentity.",
       "approval": "pending (Josue)",
       "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d4cbdc9f6e57315a",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "reason": "tick / spacing in _referenceRange: spacing is the pool's tick spacing, checked > 0 by ClPriceMath.isUsableRange in bindMarket before the decimals search runs (REQ-AMM-CORE-003). Covered by TEST-264.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "116469fafdc38dc5",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "Division by the constant _BPS = 10,000 (offboarding target, REQ-CONFIG-080). Covered by TEST-213.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "bef835a540778658",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "reason": "The transfer runs only when the watched token's balance rose (balance > balanceBefore), so the amount is never 0 (REQ-HELPER-008). Covered by TEST-174.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "cfeab2e9659cb94b",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Not a signature: the hash binds the repay-with-collateral session's unwind minimums in transient storage, compared with the hash of the array LPVaultSwap passes back in the same transaction (REQ-ADAPTER-080, REQ-SWAP-106). Covered by TEST-239.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "96dd20c6504a476d",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "As cfeab2e9659cb94b: the hash of one zero per market token for an empty minAmounts, the normalised array LPVaultSwap passes to deleverageRelease (REQ-ADAPTER-080). Covered by TEST-239 (emptyMinAmountsMatchesTheSession).",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "b4e79c31cb5ef4dc",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/SpeedLimitMath.sol",
+      "reason": "uint64(nowTs) of a block timestamp, far below 2^64 seconds (PROP-110 assumes timestamps < 2^40). Group E (timestamp casts). Covered by TEST-322, PROP-110.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "958bc972be335af2",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/SpeedLimitMath.sol",
+      "reason": "uint64(start + window) where start + window <= nowTs < 2^64, stated in the comment. Group E (timestamp casts). Covered by TEST-322, PROP-110.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "3dfb59282aec3681",
+      "check": "Division by zero not prevented",
+      "file": "src/lens/lens/LensRemoval.sol",
+      "reason": "The divisor per is checked on the first line of the function (per == 0 returns 0). Tests: Lens.Preview, Lens.Actions (TEST-247).",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 70e5954afe4eae54"
+    },
+    {
+      "fingerprint": "ce2236cf2db80cc3",
+      "check": "Signature use at deadlines should be allowed",
+      "file": "src/lens/lens/LensDeleverage.sol",
+      "reason": "No signature: the deadline is the caller's transaction deadline used only to size the interest growth; a deadline at or before now counts no time (REQ-LENS-035, REQ-LENS-036). Test: repayAllDeadlineInPast.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2: the deadline growth moved from LensPreview (2be6bee5d509a011) to LensDeleverage"
+    },
+    {
+      "fingerprint": "c822afa69898294b",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/lens/lens/LensFees.sol",
+      "reason": "uint128 of the fee growth in _owedAfterUpdate reproduces the position manager's own 0.7 arithmetic: tokensOwed is a uint128 that wraps (differences mod 2^256, the owed sum mod 2^128), so the view reports exactly what collect would pay (REQ-LENS-050, REQ-LENS-051). Test: Lens.FeesEdges (test_TEST_247_owedWrapsLikeTheManager).",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new reasoning (intended wrap)"
+    },
+    {
+      "fingerprint": "2521704fea850089",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/lens/lens/LensMarket.sol",
+      "reason": "The loop index runs from 0 to the reserve's latest dynamic configuration key, itself a uint32, so uint32(key) never truncates. Test: checkBackingLiquidationFeeOnAnyKey.",
+      "approval": "pending (Josue)",
+      "review": "Re-key of b80ce58173f9e15d (same uint32(key) cast, line text moved)"
+    },
+    {
+      "fingerprint": "896f1e27aba361e7",
+      "check": "A year is not always 365 days",
+      "file": "src/lens/lens/LensDeleverage.sol",
+      "reason": "Aave V4's own convention: its drawn rate is per 365-day year (MathUtils.SECONDS_PER_YEAR), so the growth until the deadline uses the same year (REQ-LENS-035, REQ-LENS-036). Tests: repayAllCoversDebtAtDeadline, repayAllUsdcExample.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2: the deadline growth moved from LensPreview (f0b3243169ececd1) to LensDeleverage"
+    },
+    {
+      "fingerprint": "14c4a85d005bb56c",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensActions.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
+    },
+    {
+      "fingerprint": "b292bece4080a42d",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensClose.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
+    },
+    {
+      "fingerprint": "b0107e7e50fba5bc",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensFees.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
+    },
+    {
+      "fingerprint": "9039e4c2c0bb83ab",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensHubAssets.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
+    },
+    {
+      "fingerprint": "b5335162368cd7e1",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensRemoval.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
+    },
+    {
+      "fingerprint": "7d4966b534ccd823",
+      "check": "`block.number` means different things on different L2s",
+      "file": "src/lens/lens/LensSizing.sol",
+      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
+    },
+    {
+      "fingerprint": "6a3b09fee4405b45",
+      "check": "Use of deprecated chainlink function: `latestAnswer()`",
+      "file": "src/lens/lens/LensAccountMath.sol",
+      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
+      "approval": "pending (Josue)",
+      "review": "Lens round 2, new site; same reasoning as 0bf882c837aed024"
+    },
+    {
+      "fingerprint": "1ba60cd2d7eb2ff0",
+      "check": "Division by zero not prevented",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Division by zero not possible: _meanOf returns (false, 0) when window == 0 on its first line, and w = window.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: d6516c425a527751 (divisor checked on the line before, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "3e8c6e6a2f3e17a8",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "b9affa48a9221165",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "65e724024d54aa7a",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "12f7ecc3f22b6cea",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "6986a4332e618ec0",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "4edeaa36fb51747d",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "43ee035e2c3fb995",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "c65e1ad8990fa466",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "61e142d8311092eb",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOracleListingLogic.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
+    },
+    {
+      "fingerprint": "ea295c3211e48480",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
     }
   ]
 }

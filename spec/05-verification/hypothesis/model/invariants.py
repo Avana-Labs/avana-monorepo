@@ -204,8 +204,10 @@ def check_all(s, solvency_check=False):
     for mk in s.markets:
         e = mk.oracle.evaluate(now)
         check(e["served"] >= 1, "HYP-11", "LPOracle served 0")
-        if e["state"] != "Live":
-            check(e["served"] <= mk.oracle.accepted, "HYP-11", "a non-Live market served above its accepted price")
+        if e["state"] == "Cached":
+            check(e["served"] == mk.oracle.accepted, "HYP-11", "a Cached market not served at its accepted price")
+        if e["fresh"] is not None:
+            check(e["served"] <= e["fresh"], "HYP-11", "a market that is not failed served above its fresh price")
     de = s.debt_oracle.evaluate(now)
     check(de["served"] >= 1, "HYP-11", "DebtOracle served 0")
     if de["state"] != "Live":

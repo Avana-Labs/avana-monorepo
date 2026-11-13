@@ -200,6 +200,20 @@ contract LensPriceUnitTest is LensFixture {
         assertFalse(v.borrowFresh, "not Live");
     }
 
+    // TEST-247 verifies: REQ-LENS-030, REQ-LENS-016
+    function test_TEST_247_debtPriceFollowsTheOraclesOwnGates() public {
+        // Live with a fresh accepted price, yet the oracle closes liquidation (sequencer down, or an alternate leg
+        // past its borrow age) or borrowing (sequencer not ready, second source unconfirmed).
+        usdcOracle.setGates(true, false);
+        DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
+        assertTrue(v.state == PriceState.Live && v.borrowFresh, "borrowing stays open");
+        assertFalse(v.liquidationFresh, "liquidation of the reserve is paused");
+        usdcOracle.setGates(false, true);
+        v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
+        assertFalse(v.borrowFresh, "the RiskModule would refuse the borrow");
+        assertTrue(v.liquidationFresh, "liquidation open");
+    }
+
     // TEST-247 verifies: REQ-LENS-030
     function test_TEST_247_debtPriceLiveButOld() public {
         usdcOracle.set(1e8, PriceState.Live, 1e8, uint64(block.timestamp - 4201));

@@ -8,6 +8,7 @@ import {IAvanaTimelock} from "./IAvanaTimelock.sol";
 import {IAvanaTimelockGovernance} from "./IAvanaTimelockGovernance.sol";
 import {IAvanaTimelockViews} from "./IAvanaTimelockViews.sol";
 import {TimelockSelectors} from "./TimelockSelectors.sol";
+import {GovernedTargets} from "./types/GovernedTargets.sol";
 import {SelectorPair} from "./types/SelectorPair.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
@@ -50,6 +51,8 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
     /// @param publicExecution_ Whether anyone may execute ready operations (launch `true`).
     /// @param shortEligible The immutable `SHORT_ELIGIBLE` set, also the launch short-delay list.
     /// @param daoOnlyCancel The immutable DAO-only cancel set.
+    /// @param targets The chain's deterministic ParameterStore, MarketRegistry and LPVaultSwap addresses: every pair of
+    /// either set must name the one its selector belongs to (`REQ-ACCESS-155`, `REQ-ACCESS-156`).
     /// @custom:spec REQ-ACCESS-027, REQ-ACCESS-141, REQ-ACCESS-142, REQ-ACCESS-155, REQ-ACCESS-156, REQ-ACCESS-181, REQ-ACCESS-183
     constructor(
         address[] memory proposers,
@@ -59,7 +62,8 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         uint256 normalDelay_,
         bool publicExecution_,
         SelectorPair[] memory shortEligible,
-        SelectorPair[] memory daoOnlyCancel
+        SelectorPair[] memory daoOnlyCancel,
+        GovernedTargets memory targets
     )
         TimelockController(
             SHORT_DELAY, _checkedRoleLists(proposers, executors, cancellers, daoCancellers), executors, address(0)
@@ -81,11 +85,12 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
             daoCanCancel = daoCanCancel && hasRole(CANCELLER_ROLE, daoCancellers[i]);
         }
         if (!daoCanCancel) revert InvalidRoleHolders();
-        uint256 bad = _firstInvalidShort(shortEligible);
+        _checkTargets(targets);
+        uint256 bad = _firstInvalidShort(shortEligible, targets);
         if (bad < shortEligible.length) {
             revert InvalidShortDelaySelector(shortEligible[bad].target, shortEligible[bad].selector);
         }
-        bad = _firstInvalidDao(daoOnlyCancel);
+        bad = _firstInvalidDao(daoOnlyCancel, targets);
         if (bad < daoOnlyCancel.length) {
             revert InvalidDaoCancelSelector(daoOnlyCancel[bad].target, daoOnlyCancel[bad].selector);
         }
@@ -436,33 +441,61 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
     }
 
     /// @dev Index of the first `SHORT_ELIGIBLE` pair that targets the timelock, names a never-short selector or a
-    /// selector outside the launch short-delay list (REQ-ACCESS-142), or `pairs.length` when there is none.
+    /// selector outside the launch short-delay list (REQ-ACCESS-142), or a target other than the deployed contract
+    /// its selector belongs to (REQ-ACCESS-155), or `pairs.length` when there is none.
     function _firstInvalidShort(
-        SelectorPair[] memory pairs
+        SelectorPair[] memory pairs,
+        GovernedTargets memory targets
     ) private view returns (uint256) {
         for (uint256 i = 0; i < pairs.length; ++i) {
             bytes4 s = pairs[i].selector;
             if (
                 pairs[i].target == address(this) || TimelockSelectors.isNeverShort(s)
-                    || !TimelockSelectors.isLaunchShortSelector(s)
+                    || !TimelockSelectors.isLaunchShortSelector(s) || pairs[i].target != _ownerOf(s, targets)
             ) return i;
         }
         return pairs.length;
     }
 
     /// @dev Index of the first DAO-only pair that targets the timelock, names a never-short selector or a selector
-    /// outside the four of REQ-ACCESS-156 (REQ-ACCESS-181), or `pairs.length` when there is none.
+    /// outside the four of REQ-ACCESS-156 (REQ-ACCESS-181), or a target other than the deployed contract its selector
+    /// belongs to (REQ-ACCESS-156), or `pairs.length` when there is none.
     function _firstInvalidDao(
-        SelectorPair[] memory pairs
+        SelectorPair[] memory pairs,
+        GovernedTargets memory targets
     ) private view returns (uint256) {
         for (uint256 i = 0; i < pairs.length; ++i) {
             bytes4 s = pairs[i].selector;
             if (
                 pairs[i].target == address(this) || TimelockSelectors.isNeverShort(s)
-                    || !TimelockSelectors.isDaoCancelSelector(s)
+                    || !TimelockSelectors.isDaoCancelSelector(s) || pairs[i].target != _ownerOf(s, targets)
             ) return i;
         }
         return pairs.length;
+    }
+
+    /// @dev `InvalidGovernedTargets` unless the three targets are non-zero, distinct and not the timelock.
+    function _checkTargets(
+        GovernedTargets memory t
+    ) private view {
+        if (
+            t.parameterStore == address(0) || t.marketRegistry == address(0) || t.lpVaultSwap == address(0)
+                || t.parameterStore == t.marketRegistry || t.parameterStore == t.lpVaultSwap
+                || t.marketRegistry == t.lpVaultSwap || t.parameterStore == address(this)
+                || t.marketRegistry == address(this) || t.lpVaultSwap == address(this)
+        ) revert InvalidGovernedTargets();
+    }
+
+    /// @dev The deployed contract a short-eligible or DAO-only selector belongs to; `address(0)` for any other.
+    function _ownerOf(
+        bytes4 selector,
+        GovernedTargets memory t
+    ) private pure returns (address) {
+        uint8 kind = TimelockSelectors.ownerKind(selector);
+        if (kind == 1) return t.parameterStore;
+        if (kind == 2) return t.marketRegistry;
+        if (kind == 3) return t.lpVaultSwap;
+        return address(0);
     }
 
     function _selectorOf(

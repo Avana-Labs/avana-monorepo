@@ -12,8 +12,8 @@ Rules modelled (final text):
   SPEC-ORC-015       borrowPriceMaxAge = min(heartbeat + 600, 4,200); a serving alternate is held to it for
                      liquidation as well (Q-274)
   SPEC-ORC-016       liquidation of the market paused while Cached, Expired, disagreeing or alternate past borrow age
-  SPEC-ORC-017       served price: fresh (Live), min(fresh, A) (Drifting), min(lower, A) (disagreement), A (Cached),
-                     1 (Expired)
+  SPEC-ORC-017       served price: fresh (Live, Drifting), max(1, min(lower, fresh)) (disagreement), A (Cached),
+                     1 (Expired); the accepted price bounds borrowing only (REQ-RISK-026, REQ-RISK-059)
   SPEC-ORC-018       DebtOracle served price: q (Live), max(p, b, A) (disagreement), A (Cached),
                      ⌈A·(10⁴ + δ)/10⁴⌉ (Expired)
   Q-248              standby route per token replaces the primary or alternate slot at once
@@ -250,13 +250,10 @@ class LPOracle(_StateMachine):
             st, reason = DRIFTING, "band"
         else:
             st, reason = LIVE, "ok"
-        A = None if seeding else self.accepted
-        if st == LIVE:
-            served = fresh
-        elif disagree:
-            served = min(lp_price8(r0["w"], r1["w"]), A)
+        if disagree:
+            served = max(1, min(lp_price8(r0["w"], r1["w"]), fresh))
         else:
-            served = min(fresh, A)
+            served = fresh
         borrow_ok = all(now - r["t"] <= r["feed"].borrow_age for r in (r0, r1))
         alt_late = any(r["route"] == "alternate" and now - r["t"] > r["feed"].borrow_age for r in (r0, r1))
         return dict(state=st, served=served, fresh=fresh, ts=ts, reason=reason, borrow_age_ok=borrow_ok,

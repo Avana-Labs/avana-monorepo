@@ -95,7 +95,6 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         registry.setMarketOffboarding(id);
         vm.stopPrank();
         vm.warp(block.timestamp + 6 days);
-        registry.stepWindDown(id);
         registry.closeMarket(id);
         VmSafe.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();
         assertEq(_checkAccesses(acc), 1, "exactly one bindMarket for one listing");

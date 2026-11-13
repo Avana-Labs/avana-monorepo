@@ -32,6 +32,7 @@
       {"src": "src/liquidation/settlement-routes", "tests": "test/{unit,fuzz}/{DexPathRoute,PegModuleRoute,WrapperThenDexRoute,RouteMath,RouteReads,DexHops,SwapRouteBase,SwapRoutes}*"},
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
       {"src": "src/policy/aave-adapter", "tests": "test/unit/AaveAdapter*"},
+      {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes}.*"},
       {"src": "src/coverage/coverage-spoke", "tests": "test/unit/CoverageSpoke*"}
     ],
     "2.6": [

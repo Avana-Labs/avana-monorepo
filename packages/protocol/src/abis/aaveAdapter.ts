@@ -787,6 +787,11 @@ export const aaveAdapterAbi = [
             "internalType": "uint256"
           },
           {
+            "name": "minAssetOut",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "deadline",
             "type": "uint256",
             "internalType": "uint256"
@@ -1358,6 +1363,17 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
+    "name": "AccountNotEmpty",
+    "inputs": [
+      {
+        "name": "proxy",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "AddressIsFrozen",
     "inputs": [
       {
@@ -1392,6 +1408,22 @@ export const aaveAdapterAbi = [
     "type": "error",
     "name": "ApplicationPaused",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AssetOutBelowMinimum",
+    "inputs": [
+      {
+        "name": "assetOut",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minAssetOut",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1507,6 +1539,17 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidLogic",
+    "inputs": [
+      {
+        "name": "logic",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidReceiver",
     "inputs": [
       {
@@ -1552,6 +1595,11 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "NotDelegated",
+    "inputs": []
   },
   {
     "type": "error",

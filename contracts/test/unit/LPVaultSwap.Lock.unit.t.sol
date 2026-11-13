@@ -138,7 +138,7 @@ contract LPVaultSwapLockUnitTest is LPVaultSwapUnitBase {
         uint256 repays = adapter.repayCalls();
         uint256 releases = adapter.releaseCalls();
         vm.prank(alice);
-        adapter.repayWithCollateral(aliceProxy, _position(key), 1000e6, usdcReserveId, new uint256[](0), 0);
+        adapter.repayWithCollateral(aliceProxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         assertEq(adapter.repayCalls(), repays + 1, "repay once");
         assertEq(adapter.releaseCalls(), releases + 1, "release once");
         assertFalse(lock.isLocked(), "released by the AaveAdapter");

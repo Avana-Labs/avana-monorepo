@@ -157,13 +157,12 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         registry.setMarketOffboarding(marketId);
         vm.stopPrank();
         vm.warp(block.timestamp + 7 days);
-        registry.stepWindDown(marketId);
     }
 
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002, INV-065, REQ-MREG-003, REQ-ACCESS-015, REQ-ACCESS-031
     // Sources: 5.1 TEST-168, TEST-137
     // An upgrade through the timelock at the normal delay replaces the implementation and keeps every record; the
-    // next ramp step runs on the new implementation from the kept wind-down state.
+    // close of the offboarding market runs on the new implementation from the kept offboarding record.
     function test_TEST_168_upgradeThroughTheTimelockKeepsEveryRecord() public {
         _fill();
         bytes32 before = _digest();
@@ -176,11 +175,10 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         // The digest reads the clock (freeze window, lock end); compare at the same time as before the upgrade.
         vm.warp(block.timestamp - NORMAL_DELAY);
         assertEq(_digest(), before, "a record changed across the upgrade");
-        // Offboarded at t0, stepped at t0 + 7 days (7,334); the next step at t0 + 13 days reads
-        // 7,500 - floor(2,500 x 8 / 30) = 6,834.
+        // Offboarded with a 7,500 bps reserve: the published target 3,750 survives the upgrade and the market closes.
         vm.warp(block.timestamp + NORMAL_DELAY + 1 days);
-        registry.stepWindDown(marketId);
-        assertEq(registry.windDownState(marketId).currentLtBps, 6834);
+        assertEq(registry.windDownState(marketId).targetLtBps, 3750);
+        registry.closeMarket(marketId);
     }
 
     // TEST-242 verifies: REQ-MREG-005, REQ-ACCESS-153, INV-084, Q-259

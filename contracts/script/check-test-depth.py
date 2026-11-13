@@ -3,12 +3,17 @@
 # Copyright (c) 2026 Avana Labs
 """Test depth per contract folder: non-comment, non-blank Solidity lines of tests per line of contract code.
 
-Target: at least 6x per folder and repo-wide (the depth of Aave V4's own suite). Interfaces are not counted as
-contract code. A test file belongs to the folder of the longest contract name its file name starts with
-(`MarketRegistry.Routes.unit.t.sol` -> policy/market-registry). Shared fixtures and mocks in test/utils/ are
-not counted. Report only by default; `--min X` exits 1 when the repo-wide ratio is below X.
+Target: at least 6x per folder and repo-wide (the depth of Aave V4's own suite); the Lens folder 2x (TARGETS).
+Interfaces are not counted as contract code. A test file belongs to the folder of the longest contract name its file
+name starts with (`MarketRegistry.Routes.unit.t.sol` -> policy/market-registry). Shared fixtures and mocks in
+test/utils/ are not counted. The ratio counts lines, not assertions: it shows where tests are thin, not that they are
+strong (mutation testing does that).
 
-Usage: script/check-test-depth.py [--min 6] [--folder policy/market-registry]
+Report only by default; CI runs `--enforce`, which exits 1 when a folder is below its target and is not in EXEMPT
+(each entry with its reason; none today). `--min X` exits 1 when the repo-wide ratio is below X. `--markdown` prints the table as Markdown with a
+verdict per folder, for a CI job summary.
+
+Usage: script/check-test-depth.py [--min 6] [--folder policy/market-registry] [--enforce] [--markdown]
 """
 import argparse
 import collections
@@ -18,6 +23,10 @@ import re
 import sys
 
 TARGET = 6.0
+# Folders with a target other than TARGET.
+TARGETS = {"lens/lens": 2.0}
+# Folders the target does not apply to: folder -> reason. Empty: every folder is measured (decided 2026-11-12).
+EXEMPT: dict = {}
 
 
 def code_lines(path):
@@ -52,6 +61,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--min", type=float, default=None)
     ap.add_argument("--folder", default=None)
+    ap.add_argument("--enforce", action="store_true", help="exit 1 on a folder below its target and not exempt")
+    ap.add_argument("--markdown", action="store_true", help="print a Markdown table with a verdict per folder")
     a = ap.parse_args()
     os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
@@ -76,14 +87,45 @@ def main():
             unmatched += n
 
     rows = [f for f in sorted(src, key=lambda f: -src[f]) if not a.folder or f == a.folder]
-    print(f"{'folder':42} {'code':>6} {'tests':>7} {'ratio':>6} {'to 6x':>7}")
+    below = []
+    out = []
+    if a.markdown:
+        out += ["### Test depth (test lines per contract line)", "",
+                "| Folder | Code | Tests | Ratio | Target | Verdict |", "|---|---:|---:|---:|---:|---|"]
+    else:
+        out.append(f"{'folder':42} {'code':>6} {'tests':>7} {'ratio':>6} {'target':>6} {'to target':>9}  verdict")
     for f in rows:
         r = tests[f] / src[f] if src[f] else 0.0
-        print(f"{f:42} {src[f]:>6} {tests[f]:>7} {r:>6.1f} {max(0, round(TARGET * src[f]) - tests[f]):>7}")
+        t = TARGETS.get(f, TARGET)
+        if f in EXEMPT:
+            verdict = f"exempt: {EXEMPT[f]}"
+        elif r + 1e-9 >= t:
+            verdict = "meets target"
+        else:
+            verdict = "BELOW TARGET"
+            below.append(f)
+        gap = max(0, round(t * src[f]) - tests[f])
+        if a.markdown:
+            out.append(f"| {f} | {src[f]} | {tests[f]} | {r:.1f} | {t:.0f}x | {verdict} |")
+        else:
+            out.append(f"{f:42} {src[f]:>6} {tests[f]:>7} {r:>6.1f} {t:>5.0f}x {gap:>9}  {verdict}")
     total_src, total_tests = sum(src.values()), sum(tests.values()) + unmatched
     ratio = total_tests / total_src if total_src else 0.0
-    print(f"{'repo (incl. ' + str(unmatched) + ' unmatched test lines)':42} {total_src:>6} {total_tests:>7} {ratio:>6.1f}")
+    label = f"repo (incl. {unmatched} unmatched test lines)"
+    if a.markdown:
+        out.append(f"| {label} | {total_src} | {total_tests} | {ratio:.1f} | {TARGET:.0f}x | "
+                   f"{'meets target' if ratio >= TARGET else 'BELOW TARGET'} |")
+        out += ["", f"{len(below)} of {len(rows)} folders below their target"
+                + (f": {', '.join(below)}." if below else ".")
+                + (" Enforced." if a.enforce else " Report only (not enforced).")]
+    else:
+        out.append(f"{label:42} {total_src:>6} {total_tests:>7} {ratio:>6.1f}")
+        out.append(f"{len(below)} of {len(rows)} folders below their target"
+                   + (f": {', '.join(below)}" if below else "") + ("" if a.enforce else " (report only)"))
+    print("\n".join(out))
     if a.min is not None and ratio < a.min:
+        sys.exit(1)
+    if a.enforce and below:
         sys.exit(1)
 
 

@@ -2,345 +2,348 @@
 
 Spec pages: 03-collateralization.md. CVL specs: Collateralization.spec.
 
-## REQ / SPEC on the page (159)
+Run results: none given (links only); recorded prover results and Halmos logs are read. [x] verified (ran and passed), [!] failed, [~] not run (linked, no result), [ ] unlinked (no counting check).
 
-- [x] `REQ-COLL-001` (03-collateralization.md:117) Collateralization MUST be deployed as a non-upgradeable contract: no proxy, no `delegatecall`, no `selfdestruc — TEST-108
-- [x] `REQ-COLL-002` (03-collateralization.md:118) Collateralization MUST take its Avana addresses only from constructor immutables (`ADAPTER`, `LP_VAULT_SWAP`,  — TEST-108, TEST-171
-- [x] `REQ-COLL-003` (03-collateralization.md:119) A vault token is valid for Collateralization only if `VAULT_TOKEN_FACTORY.isVaultToken(vaultToken)` and `VAULT — TEST-152, TEST-171
-- [ ] `REQ-COLL-004` (03-collateralization.md:120) Collateralization MUST NOT hold a position or a vault token and MUST NOT call any AMM protocol contract: it mo
-- [x] `REQ-COLL-005` (03-collateralization.md:121) Collateralization MUST trust the Adapter for the `depositor`, `proxy`, `units` and `requireRescue` arguments o — TEST-011
-- [x] `REQ-COLL-006` (03-collateralization.md:122) At the end of every transaction, a position has an open record in Collateralization under (`integrationId`, `p — TEST-010, TEST-018
-- [x] `REQ-COLL-007` (03-collateralization.md:123) `release`, `releasePartial`, `recredit` and `releaseForDeleverage` MUST NOT verify the vault-token mint or bur — TEST-241
-- [x] `REQ-COLL-008` (03-collateralization.md:124) Collateralization MUST NOT read the application pause state, a breaker, the address freeze, a price state or a — TEST-018
-- [ ] `REQ-COLL-009` (03-collateralization.md:125) Collateralization MUST NOT have any sweep or rescue function for market tokens, vault tokens, ETH or positions
-- [x] `REQ-COLL-028` (03-collateralization.md:126) Every amount array Collateralization stores, passes or returns (`pending[vt].amounts`, removal and fee amounts — TEST-208
-- [x] `REQ-COLL-029` (03-collateralization.md:127) Collateralization MUST be reachable for any state change only through the chain's AaveAdapter and LPVaultSwap, — TEST-060
-- [ ] `REQ-COLL-030` (03-collateralization.md:128) Each chain MUST have exactly one Collateralization, serving every Hub, CDP Spoke, market and AMM integration o
-- [x] `REQ-VAULT-006` (03-collateralization.md:132) `pledge` MUST revert with `NotAdapter` unless `msg.sender == ADAPTER` and with `LockNotHeld` unless `LOCK.hold — TEST-060
-- [x] `REQ-VAULT-007` (03-collateralization.md:133) The depositor of record MUST be the `depositor` the Adapter passes (the wallet that called `Adapter.pledge`),  — TEST-011
-- [x] `REQ-VAULT-010` (03-collateralization.md:134) Every LPVault call that takes custody, reads live units under the Lock or removes units (`pledge`, `recredit`, — TEST-239
-- [x] `REQ-VAULT-012` (03-collateralization.md:135) After custody, `pledge` MUST credit exactly the `units` that `receivePosition` returns, which the LPVault read — TEST-010, TEST-011, TEST-186
-- [x] `REQ-VAULT-013` (03-collateralization.md:136) `pledge` MUST take the proxy from the Adapter, which resolves it as the depositor's PositionProxy for (`vaultT — TEST-011
-- [x] `REQ-VAULT-014` (03-collateralization.md:137) After custody, `pledge` MUST read `marketId = vaultToken.marketId()` and `lpOracle = vaultToken.lpOracle()`, c — TEST-010, TEST-013, TEST-171
-- [x] `REQ-VAULT-015` (03-collateralization.md:138) `checkPledge` returns `PledgeCharge{usdCharge, sliceUsd, rescue, rescueUnits}` computed by the RiskModule ([2. — TEST-013, TEST-235
-- [x] `REQ-VAULT-016` (03-collateralization.md:139) `pledge` MUST create the record with `recordId = nextRecordId++`, `positionKey`, `depositor`, `proxy`, `vaultT — PROP-014, TEST-010, TEST-057, TEST-124
-- [x] `REQ-VAULT-017` (03-collateralization.md:140) `pledge` MUST add `L` to `totalCredited[vaultToken]` and to `accountCredited[proxy][vaultToken]`, and add the  — TEST-010
-- [x] `REQ-VAULT-018` (03-collateralization.md:141) `pledge` MUST return `credited = L`, and Collateralization has no mint power: the Adapter mints exactly `credi — TEST-010, TEST-186
-- [ ] `REQ-VAULT-019` (03-collateralization.md:142) Collateralization MUST NOT call the PositionProxy: the Adapter has the proxy supply the minted units with `sup
-- [ ] `REQ-VAULT-020` (03-collateralization.md:143) The supply check MUST be the Adapter's: after the proxy's supply the Adapter requires the proxy's supplied sha
-- [x] `REQ-VAULT-021` (03-collateralization.md:144) The pledge MUST be atomic: any failing step, including the poke, the RiskModule check, the custody transfer, t — TEST-013
-- [x] `REQ-VAULT-022` (03-collateralization.md:145) `pledge` MUST emit `CollateralPledged` after the record and counters are written; the Adapter emits `Collatera — TEST-010
-- [ ] `REQ-VAULT-023` (03-collateralization.md:146) Collateralization MUST NOT offer a borrow path, a multicall or a combined pledge-and-borrow; borrowing is a se
-- [x] `REQ-COLL-024` (03-collateralization.md:147) **Exact shape at pledge (`AMMN-RT-01`).** `pledge` MUST call `checkReadSafe(marketId)` and then `receivePositi — TEST-010, TEST-279
-- [x] `REQ-COLL-025` (03-collateralization.md:148) `pledge` MUST revert with `TooManyRecords(openRecords)` before any custody call when `openRecordCount[proxy][v — TEST-269
-- [x] `REQ-COLL-026` (03-collateralization.md:149) **Hub-keyed counters (`AMMN-RT-05`).** Every pledge, re-credit and exit MUST update `tokenUsd[hub][token]` for — TEST-013, TEST-272
-- [x] `REQ-COLL-027` (03-collateralization.md:150) **Integration binding.** `pledge` MUST take the LPVault only from `vaultToken.integration()` after `REQ-COLL-0 — TEST-010
-- [x] `REQ-COLL-031` (03-collateralization.md:151) **One market per proxy (`AMMN-FLOW-07`).** `pledge` MUST set `proxyMarket[proxy] = vaultToken` at the proxy's  — TEST-269
-- [x] `REQ-VAULT-024` (03-collateralization.md:155) Every pledge MUST create a new record for a new position; adding collateral to an account that already exists  — TEST-016, TEST-238
-- [x] `REQ-VAULT-025` (03-collateralization.md:156) An account MUST hold at most `MAX_RECORDS_PER_ACCOUNT_MARKET = 16` open records in one market, records at 0 cr — TEST-269
-- [x] `REQ-VAULT-026` (03-collateralization.md:157) Each PositionProxy belongs to exactly one (CDP Spoke, market), so its Aave account holds exactly one collatera — TEST-269
-- [x] `REQ-VAULT-027` (03-collateralization.md:158) A position MUST back at most one open record: `pledge` reverts with `AlreadyPledged` if `recordIdOf[integratio — TEST-011
-- [x] `REQ-COLL-037` (03-collateralization.md:162) **Top-up for fungible shares.** `recredit` MUST take `bytes topUp`. When `topUp` is non-empty it MUST call `to — TEST-238
-- [x] `REQ-COLL-038` (03-collateralization.md:163) **No idle part (`AMMN-FLOW-16`, accepted risk).** Collateralization MUST have no idle budget part and no funct — TEST-272
-- [x] `REQ-COLL-039` (03-collateralization.md:164) `markIndebted(proxy)` MUST be callable only by the Adapter holding the Lock, inside a borrow after `preBorrowC — TEST-272
-- [x] `REQ-COLL-040` (03-collateralization.md:165) `markDebtFree(proxy)` MUST be callable only by the Adapter or LPVaultSwap holding the Lock (`NotAdapter` for a — TEST-272
-- [ ] `REQ-VAULT-028` (03-collateralization.md:169) Collateralization MUST be the only writer of backing records, per-market and per-account totals, the pending-s
-- [x] `REQ-VAULT-029` (03-collateralization.md:170) Collateralization MUST keep `totalCredited[vaultToken]`, `accountCredited` and `pending[vaultToken]` per `SPEC — TEST-241
-- [x] `REQ-VAULT-030` (03-collateralization.md:171) A record's `positionKey`, `depositor`, `proxy`, `vaultToken` and `pledgedAt` MUST NOT change while it is open; — TEST-238
-- [x] `REQ-VAULT-031` (03-collateralization.md:172) A record's `credited` MUST decrease only through debits in `settleSeizure`, reconciliation (`REQ-VAULT-134`),  — TEST-237, TEST-239
-- [x] `REQ-VAULT-032` (03-collateralization.md:173) Collateralization MUST keep each record's live units at or above its credited units (`SPEC-BACK-010`): it asks — TEST-237
-- [x] `REQ-VAULT-033` (03-collateralization.md:174) Closing a record MUST remove it from the seizure list if `inList`, else from the zero-credit list (at most 16  — TEST-018
-- [x] `REQ-VAULT-034` (03-collateralization.md:178) Collateralization MUST hold the exposure counters `marketUsd[vaultToken][bucket]`, `tokenUsd[hub][token]` and  — TEST-013, TEST-272
-- [x] `REQ-VAULT-035` (03-collateralization.md:179) The cap charge of a pledge is computed by the RiskModule at a price of at least `stressFloorUsd` per whole vau — TEST-010
-- [x] `REQ-VAULT-036` (03-collateralization.md:180) Every exit (credited units leaving a record through `settleSeizure`, reconciliation, `release`, `releasePartia — PROP-028, TEST-014, TEST-097, TEST-237, TEST-239
-- [x] `REQ-VAULT-037` (03-collateralization.md:181) Exits MUST NOT call the RiskModule, the Adapter, the MarketRegistry or the ParameterStore, and the counter sub — TEST-014, TEST-097
-- [x] `REQ-VAULT-038` (03-collateralization.md:182) Exposure released by an exit MUST leave the market counters slice first (`SPEC-BACK-005`): the released amount — TEST-014, TEST-097
-- [x] `REQ-VAULT-042` (03-collateralization.md:186) Collateralization MUST NOT return credited units from `pledge` for a position the LPVault did not take into cu — TEST-186, TEST-238
-- [ ] `REQ-VAULT-043` (03-collateralization.md:187) Collateralization MUST NOT debit, settle, release, reduce or re-credit a record of any proxy other than the on
-- [x] `REQ-VAULT-046` (03-collateralization.md:191) `beginSeizure(proxy, vaultToken)` MUST revert with `NotLPVaultSwap` unless `msg.sender == LP_VAULT_SWAP`, and  — TEST-056
-- [x] `REQ-VAULT-047` (03-collateralization.md:192) `beginSeizure` MUST revert with `SharesNotEqualAssets` unless `Hub.getAddedAssets(assetId) == Hub.getAddedShar — TEST-056
-- [x] `REQ-VAULT-048` (03-collateralization.md:193) `beginSeizure` MUST validate the vault token (`REQ-COLL-003`), revert with `SeizureActive` if a snapshot is al — TEST-056
-- [x] `REQ-VAULT-049` (03-collateralization.md:194) The seizure snapshot MUST be taken by Collateralization itself while the lock is held; no snapshot value suppl — TEST-056
-- [x] `REQ-VAULT-050` (03-collateralization.md:195) `settleSeizure(proxy, vaultToken, units, minAmounts)` MUST revert with `NotLPVaultSwap` unless `msg.sender ==  — TEST-056, TEST-208
-- [x] `REQ-VAULT-051` (03-collateralization.md:196) `settleSeizure` MUST read `sharesAfter = Spoke.getUserSuppliedShares(reserveId, proxy)` and `supplyAfter = vau — TEST-056, TEST-208
-- [x] `REQ-VAULT-052` (03-collateralization.md:197) If `units == 0`, `settleSeizure` MUST only verify the zero share drop and the zero supply drop, clear the snap — TEST-208
-- [x] `REQ-VAULT-053` (03-collateralization.md:198) If `units > 0`, `settleSeizure` MUST, in this order: reconcile the account-market with `sharesBefore` as the s — TEST-056
-- [x] `REQ-VAULT-054` (03-collateralization.md:199) The debit MUST walk the account-market's seizure list from the head and stop as soon as the seized units are c — PROP-012, TEST-057
-- [x] `REQ-VAULT-055` (03-collateralization.md:200) If the seized units exceed the account-market's credited units left after reconciliation, `settleSeizure` MUST — PROP-013, TEST-057
-- [x] `REQ-VAULT-056` (03-collateralization.md:201) A record debited to 0 credited units MUST stay open (`REQ-VAULT-074`); nothing is pushed to the depositor duri — PROP-012, TEST-057
-- [x] `REQ-VAULT-059` (03-collateralization.md:202) Liquidation and reconciliation MUST NOT reduce the fees owed to the depositor; the depositor's fee claim survi — TEST-020
-- [x] `REQ-VAULT-060` (03-collateralization.md:203) `settleSeizure` MUST return the summed `amounts` that `unwind` paid to LPVaultSwap, one per market token, as i — TEST-056
-- [x] `REQ-VAULT-061` (03-collateralization.md:204) Market tokens MUST NOT rest in Avana's custody contracts except the pending-settlement balance of `Q-201`, whi — TEST-151, TEST-237
-- [x] `REQ-VAULT-062` (03-collateralization.md:205) `settleSeizure` MUST emit one `RecordDebited` per record debited for the seizure and one `SeizureSettled` per  — TEST-056
-- [ ] `REQ-VAULT-063` (03-collateralization.md:206) Collateralization MUST NOT compute or check liquidation size, bonus, health factor, price state, pause state o
-- [x] `REQ-VAULT-068` (03-collateralization.md:210) `release(proxy, vaultToken, positionKey, units)` MUST revert with `NotAdapter` unless `msg.sender == ADAPTER`, — TEST-018
-- [x] `REQ-VAULT-069` (03-collateralization.md:211) After reconciliation (`REQ-VAULT-131`), `release` MUST revert with `UnitsMismatch` unless `units == record.cre — TEST-018
-- [x] `REQ-VAULT-070` (03-collateralization.md:212) `release` MUST NOT read health factor, debt, price state, pause state or any policy contract; it reads `Spoke. — TEST-018
-- [x] `REQ-VAULT-071` (03-collateralization.md:213) `release` MUST release exposure per `SPEC-BACK-005` with exited units equal to `units` (which clears the recor — TEST-018
-- [x] `REQ-VAULT-072` (03-collateralization.md:214) The position MUST go only to the depositor of record, with all of its live units (including units anyone added — TEST-016, TEST-018
-- [x] `REQ-VAULT-073` (03-collateralization.md:215) `release` MUST emit `CollateralReleased` with `unitsBurned = units`, the units the Adapter burned for this rel — TEST-018
-- [x] `REQ-VAULT-074` (03-collateralization.md:219) A record whose credited units reach 0 through seizure or reconciliation MUST move from the seizure list to the — PROP-012, TEST-020, TEST-057, TEST-239
-- [x] `REQ-VAULT-075` (03-collateralization.md:220) `releaseZeroCredit(depositor, vaultToken, positionKey)` MUST revert with `NotAdapter` unless `msg.sender == AD — TEST-020
-- [x] `REQ-VAULT-076` (03-collateralization.md:221) No address other than the depositor of record (not the proxy, the Adapter, LPVaultSwap, governance or the stra — TEST-020
-- [x] `REQ-COLL-032` (03-collateralization.md:222) `collectFees(depositor, vaultToken, positionKey)` MUST revert with `NotAdapter` unless `msg.sender == ADAPTER` — TEST-020
-- [x] `REQ-VAULT-086` (03-collateralization.md:226) Collateralization MUST NOT acquire the Lock: it is not a Lock member. Every state-changing entry point MUST re — PROP-037, TEST-060, TEST-270
-- [ ] `REQ-VAULT-087` (03-collateralization.md:227) The only calls Collateralization makes into another contract MUST be: the market LPVault's `receivePosition`, 
-- [x] `REQ-VAULT-088` (03-collateralization.md:228) Every amount Collateralization acts on MUST come from a return value, a stored amount or a balance delta measu — TEST-237
-- [ ] `REQ-VAULT-089` (03-collateralization.md:229) Collateralization MUST follow checks-effects-interactions: a reconciliation completes its record, counter, tot
-- [ ] `REQ-VAULT-090` (03-collateralization.md:230) Collateralization MUST NOT hold a position, grant any approval on a position contract, implement ERC-1271 `isV
-- [x] `REQ-VAULT-091` (03-collateralization.md:231) Record, total, pending, counter and preview views MUST revert with `Locked` while the lock is held, unless `ms — PROP-037, TEST-060
-- [ ] `REQ-VAULT-092` (03-collateralization.md:232) Upstream errors from the LPVault and its AMM protocol, the market tokens, the LPOracle, the RiskModule, the Sp
-- [x] `REQ-VAULT-128` (03-collateralization.md:233) `getAccountRecords(proxy, vaultToken)` MUST return the at most 16 records of the account-market's seizure list — TEST-010
-- [x] `REQ-VAULT-129` (03-collateralization.md:239) Collateralization MUST keep `accountCredited[proxy][vaultToken]` equal to the sum of `credited` over the accou — TEST-150
-- [x] `REQ-VAULT-130` (03-collateralization.md:240) Reconciliation MUST compute `shortfall` per `SPEC-BACK-011` from `accountCredited[proxy][vaultToken]` and the  — TEST-150
-- [x] `REQ-VAULT-131` (03-collateralization.md:241) `release`, `releasePartial` and `releaseForDeleverage` MUST reconcile before their units check, with supplied  — TEST-150
-- [x] `REQ-VAULT-132` (03-collateralization.md:242) `releaseZeroCredit` MUST reconcile before its credited check, with supplied shares `Spoke.getUserSuppliedShare — TEST-020
-- [x] `REQ-VAULT-133` (03-collateralization.md:243) `settleSeizure` with `units > 0` MUST reconcile before it allocates the seized `units`, with the snapshot `sha — TEST-151
-- [x] `REQ-VAULT-134` (03-collateralization.md:244) When `shortfall > 0`, reconciliation MUST debit `shortfall` from the account-market's seizure list largest-fir — TEST-150, TEST-151
-- [x] `REQ-VAULT-135` (03-collateralization.md:245) For each record debited in reconciliation with `take > 0`, Collateralization MUST call `unwind(positionKey, ta — TEST-150, TEST-151
-- [x] `REQ-VAULT-136` (03-collateralization.md:246) After reconciliation the call continues normally: `release` closes the record and returns the rest of the posi — TEST-150, TEST-151
-- [x] `REQ-VAULT-137` (03-collateralization.md:247) The pending-settlement balance MUST back the vault tokens of unsettled seizures until they are burned: its mar — TEST-152
-- [x] `REQ-VAULT-138` (03-collateralization.md:248) `settlePending(vaultToken, units)` MUST revert with `NotLPVaultSwap` unless `msg.sender == LP_VAULT_SWAP`, wit — TEST-152
-- [x] `REQ-VAULT-139` (03-collateralization.md:249) Before the call LPVaultSwap has had the Adapter burn `units` from its own balance (`Adapter.burnSeized`). `set — PROP-065, TEST-152
-- [x] `REQ-VAULT-140` (03-collateralization.md:250) Reconciliation MUST NOT debit more than `shortfall`, MUST NOT run for any proxy other than the one whose recor — PROP-045, TEST-150, TEST-151
-- [x] `REQ-VAULT-145` (03-collateralization.md:251) `getPending(vaultToken)`, like every Collateralization view, MUST revert with `Locked` while the lock is held  — TEST-060, TEST-152
-- [x] `REQ-VAULT-146` (03-collateralization.md:252) Collateralization MUST skip, not attempt, every market-token transfer whose amount is zero in `settlePending`, — TEST-177
-- [x] `REQ-COLL-014` (03-collateralization.md:266) `releasePartial(proxy, vaultToken, positionKey, units, minAmounts)` MUST, in this order: revert with `NotAdapt — TEST-237
-- [x] `REQ-COLL-015` (03-collateralization.md:267) `recredit(depositor, proxy, vaultToken, positionKey, topUp, requireRescue)` MUST, in this order: revert with ` — TEST-238
-- [x] `REQ-COLL-016` (03-collateralization.md:268) Collateralization MUST book on each record its rescue units per `SPEC-BACK-014`: `rescueUnits += charge.rescue — TEST-057, TEST-235, TEST-236
-- [x] `REQ-COLL-017` (03-collateralization.md:269) `releaseForDeleverage(proxy, vaultToken, positionKey, units, minAmounts)` MUST, in this order: revert with `No — TEST-239
-- [x] `REQ-COLL-018` (03-collateralization.md:270) `previewRecredit(integrationId, positionKey)` MUST return the `added` units `recredit` would credit now: `unit — TEST-150, TEST-236
-- [x] `SPEC-BACK-002` (03-collateralization.md:276) Credited units and mint. `c` = the `units` that the LPVault's `receivePosition` returns, read after it took cu — TEST-010, TEST-011, TEST-186
-- [x] `SPEC-BACK-003` (03-collateralization.md:277) Pledge cap charge (computed by the RiskModule, booked by Collateralization). The RiskModule returns `usdCharge — TEST-010, TEST-013
-- [x] `SPEC-BACK-004` (03-collateralization.md:278) Counter increments at pledge and re-credit. The slice part `sliceUsd` is non-zero only for a top-up of an inde — TEST-010, TEST-013, TEST-235
-- [x] `SPEC-BACK-005` (03-collateralization.md:279) Exposure release on exit (fixed basis, slice first). For a record with `U0 = originalUnits`, `V0 = originalUsd — PROP-028, TEST-014, TEST-097, TEST-237, TEST-239
-- [x] `SPEC-BACK-006` (03-collateralization.md:280) Seizure list and allocation. Each account-market keeps the record IDs with `credited > 0` in the array `seizur — PROP-012, PROP-013, PROP-014, TEST-057, TEST-124
-- [x] `SPEC-BACK-007` (03-collateralization.md:281) Debit equality (share drop = supply drop = debit). At `beginSeizure`: `sharesBefore = Spoke.getUserSuppliedSha — TEST-056, TEST-208
-- [x] `SPEC-BACK-009` (03-collateralization.md:282) Per-market and per-account totals and the backing gap. `totalCredited[vt] += c` and `accountCredited[P][vt] += — TEST-186, TEST-241
-- [x] `SPEC-BACK-010` (03-collateralization.md:283) Live units cover credit. For every open record, `live_r = unitsOf(positionKey) ≥ credited_r`: pledge sets `cre — TEST-016, TEST-237, TEST-238
-- [x] `SPEC-BACK-011` (03-collateralization.md:284) Reconciliation shortfall. `shortfall = accountCredited[P][vt] > S ? accountCredited[P][vt] − S : 0`, where `S` — PROP-045, TEST-150, TEST-151
-- [x] `SPEC-BACK-012` (03-collateralization.md:285) Pending settlement: burn check and payout. For `settlePending(vt, x)` with `0 < x ≤ p.units` (`p = pending[vt] — PROP-065, TEST-152, TEST-241
-- [x] `SPEC-BACK-013` (03-collateralization.md:286) Charge basis after a re-credit. For a record with `u_b = credited` after reconciliation and `c_b = currentUsdC — PROP-028, TEST-014, TEST-238
-- [x] `SPEC-BACK-014` (03-collateralization.md:287) Rescue units. For a pledge or re-credit of `L` units whose charge is `(usdCharge, sliceUsd, rescue, rescueUnit — TEST-057, TEST-235, TEST-236
-- [x] `SPEC-BACK-015` (03-collateralization.md:288) Unwind accounting for `n` tokens. For a removal of `take` units from a record, the LPVault returns `a[i]` (the — TEST-150, TEST-151, TEST-237
-- [x] `SPEC-BACK-016` (03-collateralization.md:289) Record bound and packing. `openRecordCount[P][vt] ≤ R = 16`; worst-case seizure gas `G = G_base + R · g_record — TEST-269
-- [ ] `REQ-VAULT-100` (03-collateralization.md:372) `Adapter.pledge` called after its `deadline` | The Adapter reverts with `DeadlineExpired` before calling Colla
-- [x] `REQ-VAULT-102` (03-collateralization.md:373) Vault token not registered in the factory for its (Spoke, market), its LPVault not the factory's LPVault for i — TEST-018, TEST-171
-- [ ] `REQ-VAULT-103` (03-collateralization.md:374) The position's pool, derived through the market's pinned factory, differs from the market's | The LPVault reve
-- [x] `REQ-VAULT-104` (03-collateralization.md:375) The position's shape differs from the market's exact shape (for concentrated liquidity, any tick of the range) — TEST-279
-- [x] `REQ-VAULT-105` (03-collateralization.md:376) The AMM protocol reports the pool mid-operation during `pledge`, `recredit`, `releasePartial`, `releaseForDele — TEST-056, TEST-239
-- [x] `REQ-VAULT-106` (03-collateralization.md:377) The position already backs an open record | Reverts with `AlreadyPledged` (Source: Q-067, Q-292) — TEST-011
-- [x] `REQ-VAULT-107` (03-collateralization.md:378) Units after custody are 0 or above `MAX_CREDITED_UNITS`, or a re-credit would take `credited` above it | Rever — TEST-011, TEST-238
-- [ ] `REQ-VAULT-108` (03-collateralization.md:379) A seizure or reconciliation debits every record of an account-market | At most 16 records, about 5,150,000 gas
-- [x] `REQ-VAULT-109` (03-collateralization.md:380) The RiskModule's `checkPledge` reverts, including `BelowMinPledge`, `BreakerTripped` and `NotRescueTopUp` | Th — TEST-013
-- [x] `REQ-VAULT-110` (03-collateralization.md:381) `checkPledge` returns `usdCharge == 0`, `usdCharge ≥ 2^64`, `sliceUsd > usdCharge`, `rescueUnits` above the un — TEST-013, TEST-238
-- [ ] `REQ-VAULT-111` (03-collateralization.md:382) After `pledge` or `recredit` returns, the proxy's supply does not raise its shares by the units minted, or the
-- [x] `REQ-VAULT-112` (03-collateralization.md:383) An inner entry point is called while the lock is not held by its named caller | Reverts with `LockNotHeld` (So — TEST-060
-- [x] `REQ-VAULT-113` (03-collateralization.md:384) `pledge`, `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `releaseZeroCredit` or `collectFees — TEST-018, TEST-060
-- [x] `REQ-VAULT-114` (03-collateralization.md:385) Hub added assets differ from added shares for the vault-token asset at `beginSeizure` | Reverts with `SharesNo — TEST-056
-- [x] `REQ-VAULT-115` (03-collateralization.md:386) A snapshot is already active at `beginSeizure` or `settlePending`, or none matches at `settleSeizure` | Revert — TEST-056, TEST-208
-- [x] `REQ-VAULT-116` (03-collateralization.md:387) The proxy's share drop or the token's supply drop since `beginSeizure` differs from `units` | Reverts with `De — TEST-208
-- [x] `REQ-VAULT-117` (03-collateralization.md:388) Seized units exceed the proxy's credited units in the market left after reconciliation | Reverts with `Insuffi — PROP-013
-- [x] `REQ-VAULT-118` (03-collateralization.md:389) `release` units differ from the record's credited units after reconciliation, or are 0; `releasePartial` units — TEST-018
-- [x] `REQ-VAULT-119` (03-collateralization.md:390) No open record for `positionKey` in `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `releaseZ — TEST-018, TEST-150
-- [x] `REQ-VAULT-121` (03-collateralization.md:391) `releaseZeroCredit` on a record with credited units after reconciliation | Reverts with `RecordHasCredit` (Sou — TEST-020
-- [x] `REQ-VAULT-125` (03-collateralization.md:392) A view is called while the lock is held, by an address other than the holder | Reverts with `Locked` (Source:  — TEST-060
-- [ ] `REQ-VAULT-127` (03-collateralization.md:393) A counter subtraction would go below 0 | Clamp at 0 and emit `CounterSaturated`; never revert (Source: Q-055, 
-- [x] `REQ-VAULT-141` (03-collateralization.md:394) `settlePending` with `units == 0` or `units > pending[vaultToken].units` | Reverts with `PendingExceeded` (Sou — TEST-152
-- [ ] `REQ-VAULT-142` (03-collateralization.md:395) A market token reverts on the transfer in `settlePending` | The call reverts with the token's error; the burn,
-- [x] `REQ-VAULT-143` (03-collateralization.md:396) Hub added assets differ from added shares during `release`, `releasePartial`, `recredit`, `releaseForDeleverag — TEST-150
-- [ ] `REQ-VAULT-144` (03-collateralization.md:397) The market's LPOracle `poke()` reverts during `pledge`, or the vault token's `marketId()` names a market that 
-- [x] `REQ-COLL-010` (03-collateralization.md:398) `pledge` or `beginSeizure` names a proxy the vault token has not registered | Reverts with `UnknownProxy(proxy — TEST-011, TEST-056
-- [x] `REQ-COLL-011` (03-collateralization.md:399) `releaseZeroCredit`, `recredit` or `collectFees` names a depositor other than the record's | Reverts with `Not — TEST-020
-- [x] `REQ-COLL-012` (03-collateralization.md:400) `settlePending` called while `totalSupply + units > totalCredited + pending.units` (the supply leaves no room  — TEST-152
-- [x] `REQ-COLL-013` (03-collateralization.md:401) The LPVault's `receivePosition` reverts: the depositor does not own the position, the LPVault is not approved  — TEST-011
-- [x] `REQ-COLL-019` (03-collateralization.md:402) `pledge` names the market's LPVault or Collateralization as depositor | Reverts with `InvalidDepositor(deposit — TEST-011
-- [x] `REQ-COLL-020` (03-collateralization.md:403) `releasePartial` with `units ≥` the record's credited units after reconciliation | Reverts with `PartialRemova — TEST-237
-- [x] `REQ-COLL-021` (03-collateralization.md:404) `recredit` for a record at 0 credited units, or with no live units above `credited` after reconciliation | Rev — TEST-020, TEST-238
-- [x] `REQ-COLL-022` (03-collateralization.md:405) `recredit` names a depositor other than the record's | Reverts with `NotDepositor` (Source: Q-254) — TEST-238
-- [x] `REQ-COLL-023` (03-collateralization.md:406) The AMM removal in a partial removal returns less than a depositor minimum (the pool price moved) | The AMM pr — TEST-239
-- [x] `REQ-COLL-033` (03-collateralization.md:407) `pledge` into an account-market that already holds 16 open records | Reverts with `TooManyRecords(openRecords) — TEST-269
-- [x] `REQ-COLL-034` (03-collateralization.md:408) `pledge` names a proxy already bound to another market | Reverts with `ProxyMarketMismatch(proxy)` (Source: Q- — TEST-269
-- [x] `REQ-COLL-035` (03-collateralization.md:409) After custody the LPVault's `marketOfPosition(positionKey)` differs from `vaultToken.marketId()` | Reverts wit — TEST-279
-- [x] `REQ-COLL-036` (03-collateralization.md:410) A `minAmounts` array whose length differs from the market's token count | Reverts with `LengthMismatch` (Sourc — TEST-208
+## REQ / SPEC on the page (159: 2 verified, 0 failed, 157 not run, 0 unlinked)
 
-## TEST rows (70)
+- [~] `REQ-COLL-001` (03-collateralization.md:119) Collateralization MUST be deployed as a non-upgradeable contract: no proxy, no `delegatecall`, no `selfdestruc — TEST-108
+- [~] `REQ-COLL-002` (03-collateralization.md:120) Collateralization MUST take its Avana addresses only from constructor immutables (`ADAPTER`, `LP_VAULT_SWAP`,  — TEST-108, TEST-171
+- [~] `REQ-COLL-003` (03-collateralization.md:121) A vault token is valid for Collateralization only if `VAULT_TOKEN_FACTORY.isVaultToken(vaultToken)` and `VAULT — TEST-011, TEST-018, TEST-097, TEST-152, TEST-171
+- [~] `REQ-COLL-004` (03-collateralization.md:122) Collateralization MUST NOT hold a position or a vault token and MUST NOT call any AMM protocol contract: it mo — TEST-032
+- [~] `REQ-COLL-005` (03-collateralization.md:123) Collateralization MUST trust the Adapter for the `depositor`, `proxy`, `units` and `requireRescue` arguments o — TEST-011
+- [~] `REQ-COLL-006` (03-collateralization.md:124) At the end of every transaction, a position has an open record in Collateralization under (`integrationId`, `p — TEST-010, TEST-018
+- [~] `REQ-COLL-007` (03-collateralization.md:125) `release`, `releasePartial`, `recredit` and `releaseForDeleverage` MUST NOT verify the vault-token mint or bur — TEST-241
+- [~] `REQ-COLL-008` (03-collateralization.md:126) Collateralization MUST NOT read the application pause state, a breaker, the address freeze, a price state or a — TEST-018
+- [~] `REQ-COLL-009` (03-collateralization.md:127) Collateralization MUST NOT have any sweep or rescue function for market tokens, vault tokens, ETH or positions — TEST-032
+- [~] `REQ-COLL-028` (03-collateralization.md:128) Every amount array Collateralization stores, passes or returns (`pending[vt].amounts`, removal and fee amounts — TEST-208, TEST-237, TEST-239
+- [~] `REQ-COLL-029` (03-collateralization.md:129) Collateralization MUST be reachable for any state change only through the chain's AaveAdapter and LPVaultSwap, — TEST-060
+- [~] `REQ-COLL-030` (03-collateralization.md:130) Each chain MUST have exactly one Collateralization, serving every Hub, CDP Spoke, market and AMM integration o — TEST-010
+- [~] `REQ-VAULT-006` (03-collateralization.md:134) `pledge` MUST revert with `NotAdapter` unless `msg.sender == ADAPTER` and with `LockNotHeld` unless `LOCK.hold — TEST-060
+- [~] `REQ-VAULT-007` (03-collateralization.md:135) The depositor of record MUST be the `depositor` the Adapter passes (the wallet that called `Adapter.pledge`),  — TEST-011
+- [~] `REQ-VAULT-010` (03-collateralization.md:136) Every LPVault call that takes custody, reads live units under the Lock or removes units (`pledge`, `recredit`, — TEST-239
+- [~] `REQ-VAULT-012` (03-collateralization.md:137) After custody, `pledge` MUST credit exactly the `units` that `receivePosition` returns, which the LPVault read — TEST-010, TEST-011, TEST-186
+- [~] `REQ-VAULT-013` (03-collateralization.md:138) `pledge` MUST take the proxy from the Adapter, which resolves it as the depositor's PositionProxy for (`vaultT — TEST-011
+- [~] `REQ-VAULT-014` (03-collateralization.md:139) After custody, `pledge` MUST read `marketId = vaultToken.marketId()` and `lpOracle = vaultToken.lpOracle()`, c — TEST-010, TEST-013, TEST-171
+- [~] `REQ-VAULT-015` (03-collateralization.md:140) `checkPledge` returns `PledgeCharge{usdCharge, sliceUsd, rescue, rescueUnits}` computed by the RiskModule ([2. — TEST-013, TEST-235, TEST-238
+- [~] `REQ-VAULT-016` (03-collateralization.md:141) `pledge` MUST create the record with `recordId = nextRecordId++`, `positionKey`, `depositor`, `proxy`, `vaultT — PROP-014, TEST-010, TEST-057, TEST-124
+- [~] `REQ-VAULT-017` (03-collateralization.md:142) `pledge` MUST add `L` to `totalCredited[vaultToken]` and to `accountCredited[proxy][vaultToken]`, and add the  — TEST-010
+- [~] `REQ-VAULT-018` (03-collateralization.md:143) `pledge` MUST return `credited = L`, and Collateralization has no mint power: the Adapter mints exactly `credi — TEST-010, TEST-186
+- [~] `REQ-VAULT-019` (03-collateralization.md:144) Collateralization MUST NOT call the PositionProxy: the Adapter has the proxy supply the minted units (`Spoke.s — TEST-032
+- [~] `REQ-VAULT-020` (03-collateralization.md:145) The supply check MUST be the Adapter's: after the proxy's supply the Adapter requires the proxy's supplied sha — TEST-011, TEST-032
+- [~] `REQ-VAULT-021` (03-collateralization.md:146) The pledge MUST be atomic: any failing step, including the poke, the RiskModule check, the custody transfer, t — TEST-013
+- [~] `REQ-VAULT-022` (03-collateralization.md:147) `pledge` MUST emit `CollateralPledged` after the record and counters are written; the Adapter emits `Collatera — TEST-010
+- [~] `REQ-VAULT-023` (03-collateralization.md:148) Collateralization MUST NOT offer a borrow path, a multicall or a combined pledge-and-borrow; borrowing is a se — TEST-032
+- [~] `REQ-COLL-024` (03-collateralization.md:149) **Exact shape at pledge (`AMMN-RT-01`).** `pledge` MUST call `checkReadSafe(marketId)` and then `receivePositi — TEST-010, TEST-011, TEST-279
+- [~] `REQ-COLL-025` (03-collateralization.md:150) `pledge` MUST revert with `TooManyRecords(openRecords)` before any custody call when `openRecordCount[proxy][v — TEST-269
+- [~] `REQ-COLL-026` (03-collateralization.md:151) **Hub-keyed counters (`AMMN-RT-05`).** Every pledge, re-credit and exit MUST update `tokenUsd[hub][token]` for — TEST-010, TEST-013, TEST-097, TEST-153, TEST-208, TEST-272
+- [~] `REQ-COLL-027` (03-collateralization.md:152) **Integration binding.** `pledge` MUST take the LPVault only from `vaultToken.integration()` after `REQ-COLL-0 — TEST-010
+- [~] `REQ-COLL-031` (03-collateralization.md:153) **One market per proxy (`AMMN-FLOW-07`).** `pledge` MUST set `proxyMarket[proxy] = vaultToken` at the proxy's  — TEST-018, TEST-269, TEST-272
+- [~] `REQ-VAULT-024` (03-collateralization.md:157) Every pledge MUST create a new record for a new position; adding collateral to an account that already exists  — TEST-016, TEST-057, TEST-124, TEST-238
+- [~] `REQ-VAULT-025` (03-collateralization.md:158) An account MUST hold at most `MAX_RECORDS_PER_ACCOUNT_MARKET = 16` open records in one market, records at 0 cr — TEST-102, TEST-269
+- [~] `REQ-VAULT-026` (03-collateralization.md:159) Each PositionProxy belongs to exactly one (CDP Spoke, market), so its Aave account holds exactly one collatera — TEST-269
+- [~] `REQ-VAULT-027` (03-collateralization.md:160) A position MUST back at most one open record: `pledge` reverts with `AlreadyPledged` if `recordIdOf[integratio — TEST-011, TEST-269
+- [~] `REQ-COLL-037` (03-collateralization.md:164) **Top-up for fungible shares.** `recredit` MUST take `bytes topUp`. When `topUp` is non-empty it MUST call `to — TEST-238
+- [~] `REQ-COLL-038` (03-collateralization.md:165) **No idle part (`AMMN-FLOW-16`, accepted risk).** Collateralization MUST have no idle budget part and no funct — TEST-272
+- [~] `REQ-COLL-039` (03-collateralization.md:166) `markIndebted(proxy)` MUST be callable only by the Adapter holding the Lock, inside a borrow after `preBorrowC — TEST-027, TEST-029, TEST-060, TEST-272
+- [~] `REQ-COLL-040` (03-collateralization.md:167) `markDebtFree(proxy)` MUST be callable only by the Adapter or LPVaultSwap holding the Lock (`NotAdapter` for a — TEST-029, TEST-099, TEST-213, TEST-272
+- [~] `REQ-VAULT-028` (03-collateralization.md:171) Collateralization MUST be the only writer of backing records, per-market and per-account totals, the pending-s — TEST-032
+- [~] `REQ-VAULT-029` (03-collateralization.md:172) Collateralization MUST keep `totalCredited[vaultToken]`, `accountCredited` and `pending[vaultToken]` per `SPEC — TEST-241
+- [~] `REQ-VAULT-030` (03-collateralization.md:173) A record's `positionKey`, `depositor`, `proxy`, `vaultToken` and `pledgedAt` MUST NOT change while it is open; — TEST-238
+- [~] `REQ-VAULT-031` (03-collateralization.md:174) A record's `credited` MUST decrease only through debits in `settleSeizure`, reconciliation (`REQ-VAULT-134`),  — TEST-237, TEST-239
+- [~] `REQ-VAULT-032` (03-collateralization.md:175) Collateralization MUST keep each record's live units at or above its credited units (`SPEC-BACK-010`): it asks — TEST-084, TEST-237
+- [~] `REQ-VAULT-033` (03-collateralization.md:176) Closing a record MUST remove it from the seizure list if `inList`, else from the zero-credit list (at most 16  — TEST-018, TEST-124
+- [~] `REQ-VAULT-034` (03-collateralization.md:180) Collateralization MUST hold the exposure counters `marketUsd[vaultToken][bucket]`, `tokenUsd[hub][token]` and  — TEST-013, TEST-097, TEST-272
+- [~] `REQ-VAULT-035` (03-collateralization.md:181) The cap charge of a pledge is computed by the RiskModule at a price of at least `stressFloorUsd` per whole vau — TEST-010
+- [~] `REQ-VAULT-036` (03-collateralization.md:182) Every exit (credited units leaving a record through `settleSeizure`, reconciliation, `release`, `releasePartia — PROP-028, TEST-014, TEST-097, TEST-237, TEST-239
+- [~] `REQ-VAULT-037` (03-collateralization.md:183) Exits MUST NOT call the RiskModule, the Adapter, the MarketRegistry or the ParameterStore, and the counter sub — TEST-014, TEST-018, TEST-097
+- [~] `REQ-VAULT-038` (03-collateralization.md:184) Exposure released by an exit MUST leave the market counters slice first (`SPEC-BACK-005`): the released amount — TEST-014, TEST-097
+- [~] `REQ-VAULT-042` (03-collateralization.md:188) Collateralization MUST NOT return credited units from `pledge` for a position the LPVault did not take into cu — TEST-186, TEST-238
+- [~] `REQ-VAULT-043` (03-collateralization.md:189) Collateralization MUST NOT debit, settle, release, reduce or re-credit a record of any proxy other than the on — TEST-131
+- [~] `REQ-VAULT-046` (03-collateralization.md:193) `beginSeizure(proxy, vaultToken)` MUST revert with `NotLPVaultSwap` unless `msg.sender == LP_VAULT_SWAP`, and  — TEST-056, TEST-152
+- [~] `REQ-VAULT-047` (03-collateralization.md:194) `beginSeizure` MUST revert with `SharesNotEqualAssets` unless `Hub.getAddedAssets(assetId) == Hub.getAddedShar — TEST-056
+- [~] `REQ-VAULT-048` (03-collateralization.md:195) `beginSeizure` MUST validate the vault token (`REQ-COLL-003`), revert with `SeizureActive` if a snapshot is al — TEST-056
+- [~] `REQ-VAULT-049` (03-collateralization.md:196) The seizure snapshot MUST be taken by Collateralization itself while the lock is held; no snapshot value suppl — TEST-056, TEST-131
+- [~] `REQ-VAULT-050` (03-collateralization.md:197) `settleSeizure(proxy, vaultToken, units, minAmounts)` MUST revert with `NotLPVaultSwap` unless `msg.sender ==  — TEST-056, TEST-131, TEST-152, TEST-208
+- [~] `REQ-VAULT-051` (03-collateralization.md:198) `settleSeizure` MUST read `sharesAfter = Spoke.getUserSuppliedShares(reserveId, proxy)` and `supplyAfter = vau — TEST-056, TEST-131, TEST-208
+- [~] `REQ-VAULT-052` (03-collateralization.md:199) If `units == 0`, `settleSeizure` MUST only verify the zero share drop and the zero supply drop, clear the snap — TEST-208
+- [~] `REQ-VAULT-053` (03-collateralization.md:200) If `units > 0`, `settleSeizure` MUST, in this order: reconcile the account-market with `sharesBefore` as the s — TEST-056
+- [~] `REQ-VAULT-054` (03-collateralization.md:201) The debit MUST walk the account-market's seizure list from the head and stop as soon as the seized units are c — PROP-012, TEST-057, TEST-269
+- [~] `REQ-VAULT-055` (03-collateralization.md:202) If the seized units exceed the account-market's credited units left after reconciliation, `settleSeizure` MUST — PROP-013, TEST-057
+- [~] `REQ-VAULT-056` (03-collateralization.md:203) A record debited to 0 credited units MUST stay open (`REQ-VAULT-074`); nothing is pushed to the depositor duri — PROP-012, TEST-057
+- [~] `REQ-VAULT-059` (03-collateralization.md:204) Liquidation and reconciliation MUST NOT reduce the fees owed to the depositor; the depositor's fee claim survi — TEST-020
+- [~] `REQ-VAULT-060` (03-collateralization.md:205) `settleSeizure` MUST return the summed `amounts` that `unwind` paid to LPVaultSwap, one per market token, as i — TEST-056, TEST-208
+- [~] `REQ-VAULT-061` (03-collateralization.md:206) Market tokens MUST NOT rest in Avana's custody contracts except the pending-settlement balance of `Q-201`, whi — TEST-151, TEST-237
+- [~] `REQ-VAULT-062` (03-collateralization.md:207) `settleSeizure` MUST emit one `RecordDebited` per record debited for the seizure and one `SeizureSettled` per  — TEST-056, TEST-208, TEST-269
+- [~] `REQ-VAULT-063` (03-collateralization.md:208) Collateralization MUST NOT compute or check liquidation size, bonus, health factor, price state, pause state o — TEST-032
+- [~] `REQ-VAULT-068` (03-collateralization.md:212) `release(proxy, vaultToken, positionKey, units)` MUST revert with `NotAdapter` unless `msg.sender == ADAPTER`, — TEST-018, TEST-060
+- [~] `REQ-VAULT-069` (03-collateralization.md:213) After reconciliation (`REQ-VAULT-131`), `release` MUST revert with `UnitsMismatch` unless `units == record.cre — TEST-018, TEST-239
+- [~] `REQ-VAULT-070` (03-collateralization.md:214) `release` MUST NOT read health factor, debt, price state, pause state or any policy contract; it reads `Spoke. — TEST-018
+- [~] `REQ-VAULT-071` (03-collateralization.md:215) `release` MUST release exposure per `SPEC-BACK-005` with exited units equal to `units` (which clears the recor — TEST-014, TEST-018
+- [~] `REQ-VAULT-072` (03-collateralization.md:216) The position MUST go only to the depositor of record, with all of its live units (including units anyone added — TEST-016, TEST-018
+- [~] `REQ-VAULT-073` (03-collateralization.md:217) `release` MUST emit `CollateralReleased` with `unitsBurned = units`, the units the Adapter burned for this rel — TEST-018
+- [~] `REQ-VAULT-074` (03-collateralization.md:221) A record whose credited units reach 0 through seizure or reconciliation MUST move from the seizure list to the — PROP-012, TEST-020, TEST-057, TEST-102, TEST-238, TEST-239
+- [~] `REQ-VAULT-075` (03-collateralization.md:222) `releaseZeroCredit(depositor, vaultToken, positionKey)` MUST revert with `NotAdapter` unless `msg.sender == AD — TEST-020
+- [~] `REQ-VAULT-076` (03-collateralization.md:223) No address other than the depositor of record (not the proxy, the Adapter, LPVaultSwap, governance or the stra — TEST-020
+- [~] `REQ-COLL-032` (03-collateralization.md:224) `collectFees(depositor, vaultToken, positionKey)` MUST revert with `NotAdapter` unless `msg.sender == ADAPTER` — TEST-020
+- [~] `REQ-VAULT-086` (03-collateralization.md:228) Collateralization MUST NOT acquire the Lock: it is not a Lock member. Every state-changing entry point MUST re — PROP-037, TEST-060, TEST-108, TEST-270
+- [~] `REQ-VAULT-087` (03-collateralization.md:229) The only calls Collateralization makes into another contract MUST be: the market LPVault's `receivePosition`,  — TEST-272
+- [~] `REQ-VAULT-088` (03-collateralization.md:230) Every amount Collateralization acts on MUST come from a return value, a stored amount or a balance delta measu — TEST-208, TEST-237
+- [~] `REQ-VAULT-089` (03-collateralization.md:231) Collateralization MUST follow checks-effects-interactions: a reconciliation completes its record, counter, tot — TEST-018, TEST-237
+- [~] `REQ-VAULT-090` (03-collateralization.md:232) Collateralization MUST NOT hold a position, grant any approval on a position contract, implement ERC-1271 `isV — TEST-032
+- [~] `REQ-VAULT-091` (03-collateralization.md:233) Record, total, pending, counter and preview views MUST revert with `Locked` while the lock is held, unless `ms — PROP-037, TEST-028, TEST-060, TEST-236
+- [~] `REQ-VAULT-092` (03-collateralization.md:234) Upstream errors from the LPVault and its AMM protocol, the market tokens, the LPOracle, the RiskModule, the Sp — TEST-011, TEST-170
+- [~] `REQ-VAULT-128` (03-collateralization.md:235) `getAccountRecords(proxy, vaultToken)` MUST return the at most 16 records of the account-market's seizure list — TEST-010, TEST-060, TEST-097, TEST-102, TEST-150, TEST-236
+- [~] `REQ-VAULT-129` (03-collateralization.md:241) Collateralization MUST keep `accountCredited[proxy][vaultToken]` equal to the sum of `credited` over the accou — TEST-085, TEST-102, TEST-150, TEST-153, TEST-154
+- [~] `REQ-VAULT-130` (03-collateralization.md:242) Reconciliation MUST compute `shortfall` per `SPEC-BACK-011` from `accountCredited[proxy][vaultToken]` and the  — TEST-150
+- [~] `REQ-VAULT-131` (03-collateralization.md:243) `release`, `releasePartial` and `releaseForDeleverage` MUST reconcile before their units check, with supplied  — TEST-150, TEST-154
+- [~] `REQ-VAULT-132` (03-collateralization.md:244) `releaseZeroCredit` MUST reconcile before its credited check, with supplied shares `Spoke.getUserSuppliedShare — TEST-020
+- [~] `REQ-VAULT-133` (03-collateralization.md:245) `settleSeizure` with `units > 0` MUST reconcile before it allocates the seized `units`, with the snapshot `sha — TEST-151, TEST-153
+- [~] `REQ-VAULT-134` (03-collateralization.md:246) When `shortfall > 0`, reconciliation MUST debit `shortfall` from the account-market's seizure list in list ord — TEST-150, TEST-151, TEST-154
+- [~] `REQ-VAULT-135` (03-collateralization.md:247) For each record debited in reconciliation with `take > 0`, Collateralization MUST call `unwind(positionKey, ta — TEST-150, TEST-151, TEST-208
+- [~] `REQ-VAULT-136` (03-collateralization.md:248) After reconciliation the call continues normally: `release` closes the record and returns the rest of the posi — TEST-150, TEST-151, TEST-153, TEST-154
+- [~] `REQ-VAULT-137` (03-collateralization.md:249) The pending-settlement balance MUST back the vault tokens of unsettled seizures until they are burned: its mar — TEST-152, TEST-153, TEST-208
+- [~] `REQ-VAULT-138` (03-collateralization.md:250) `settlePending(vaultToken, units)` MUST revert with `NotLPVaultSwap` unless `msg.sender == LP_VAULT_SWAP`, wit — TEST-056, TEST-152
+- [x] `REQ-VAULT-139` (03-collateralization.md:251) Before the call LPVaultSwap has had the Adapter burn `units` from its own balance (`Adapter.burnSeized`). `set — PROP-065, TEST-152, TEST-153, TEST-154, TEST-208 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `REQ-VAULT-140` (03-collateralization.md:252) Reconciliation MUST NOT debit more than `shortfall`, MUST NOT run for any proxy other than the one whose recor — PROP-045, TEST-085, TEST-131, TEST-150, TEST-151
+- [~] `REQ-VAULT-145` (03-collateralization.md:253) `getPending(vaultToken)`, like every Collateralization view, MUST revert with `Locked` while the lock is held  — TEST-060, TEST-152
+- [~] `REQ-VAULT-146` (03-collateralization.md:254) Collateralization MUST skip, not attempt, every market-token transfer whose amount is zero in `settlePending`, — TEST-177
+- [~] `REQ-COLL-014` (03-collateralization.md:268) `releasePartial(proxy, vaultToken, positionKey, units, minAmounts)` MUST, in this order: revert with `NotAdapt — TEST-153, TEST-237
+- [~] `REQ-COLL-015` (03-collateralization.md:269) `recredit(depositor, proxy, vaultToken, positionKey, topUp, requireRescue)` MUST, in this order: revert with ` — TEST-057, TEST-153, TEST-238
+- [~] `REQ-COLL-016` (03-collateralization.md:270) Collateralization MUST book on each record its rescue units per `SPEC-BACK-014`: `rescueUnits += charge.rescue — TEST-057, TEST-235, TEST-236, TEST-238
+- [~] `REQ-COLL-017` (03-collateralization.md:271) `releaseForDeleverage(proxy, vaultToken, positionKey, units, minAmounts)` MUST, in this order: revert with `No — TEST-153, TEST-239
+- [~] `REQ-COLL-018` (03-collateralization.md:272) `previewRecredit(integrationId, positionKey)` MUST return the `added` units `recredit` would credit now: `unit — TEST-010, TEST-028, TEST-060, TEST-150, TEST-236, TEST-238
+- [~] `SPEC-BACK-002` (03-collateralization.md:278) Credited units and mint. `c` = the `units` that the LPVault's `receivePosition` returns, read after it took cu — TEST-010, TEST-011, TEST-013, TEST-186
+- [~] `SPEC-BACK-003` (03-collateralization.md:279) Pledge cap charge (computed by the RiskModule, booked by Collateralization). The RiskModule returns `usdCharge — TEST-010, TEST-013
+- [~] `SPEC-BACK-004` (03-collateralization.md:280) Counter increments at pledge and re-credit. The slice part `sliceUsd` is non-zero only for a top-up of an inde — TEST-010, TEST-013, TEST-097, TEST-235, TEST-236
+- [~] `SPEC-BACK-005` (03-collateralization.md:281) Exposure release on exit (fixed basis, slice first). For a record with `U0 = originalUnits`, `V0 = originalUsd — PROP-028, TEST-014, TEST-057, TEST-097, TEST-150, TEST-153, TEST-237, TEST-239
+- [~] `SPEC-BACK-006` (03-collateralization.md:282) Seizure list and allocation. Each account-market keeps the record IDs with `credited > 0` in the array `seizur — PROP-012, PROP-013, PROP-014, TEST-020, TEST-057, TEST-102, TEST-124, TEST-153, TEST-236, TEST-269
+- [~] `SPEC-BACK-007` (03-collateralization.md:283) Debit equality (share drop = supply drop = debit). At `beginSeizure`: `sharesBefore = Spoke.getUserSuppliedSha — TEST-056, TEST-131, TEST-208
+- [~] `SPEC-BACK-009` (03-collateralization.md:284) Per-market and per-account totals and the backing gap. `totalCredited[vt] += c` and `accountCredited[P][vt] += — TEST-083, TEST-186, TEST-241
+- [~] `SPEC-BACK-010` (03-collateralization.md:285) Live units cover credit. For every open record, `live_r = unitsOf(positionKey) ≥ credited_r`: pledge sets `cre — TEST-016, TEST-084, TEST-237, TEST-238
+- [~] `SPEC-BACK-011` (03-collateralization.md:286) Reconciliation shortfall. `shortfall = accountCredited[P][vt] > S ? accountCredited[P][vt] − S : 0`, where `S` — PROP-045, TEST-020, TEST-150, TEST-151, TEST-153, TEST-154, TEST-238, TEST-247
+- [x] `SPEC-BACK-012` (03-collateralization.md:287) Pending settlement: burn check and payout. For `settlePending(vt, x)` with `0 < x ≤ p.units` (`p = pending[vt] — PROP-065, TEST-152, TEST-153, TEST-154, TEST-208, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `SPEC-BACK-013` (03-collateralization.md:288) Charge basis after a re-credit. For a record with `u_b = credited` after reconciliation and `c_b = currentUsdC — PROP-028, TEST-014, TEST-097, TEST-238
+- [~] `SPEC-BACK-014` (03-collateralization.md:289) Rescue units. For a pledge or re-credit of `L` units whose charge is `(usdCharge, sliceUsd, rescue, rescueUnit — TEST-057, TEST-235, TEST-236, TEST-238
+- [~] `SPEC-BACK-015` (03-collateralization.md:290) Unwind accounting for `n` tokens. For a removal of `take` units from a record, the LPVault returns `a[i]` (the — TEST-020, TEST-150, TEST-151, TEST-153, TEST-208, TEST-237
+- [~] `SPEC-BACK-016` (03-collateralization.md:291) Record bound and packing. `openRecordCount[P][vt] ≤ R = 16`; worst-case seizure gas `G = G_base + R · g_record — TEST-123, TEST-208, TEST-269
+- [~] `REQ-VAULT-100` (03-collateralization.md:374) `Adapter.pledge` called after its `deadline` | The Adapter reverts with `DeadlineExpired` before calling Colla — TEST-032
+- [~] `REQ-VAULT-102` (03-collateralization.md:375) Vault token not registered in the factory for its (Spoke, market), its LPVault not the factory's LPVault for i — TEST-011, TEST-018, TEST-171
+- [~] `REQ-VAULT-103` (03-collateralization.md:376) The position's pool, derived through the market's pinned factory, differs from the market's | The LPVault reve — TEST-011
+- [~] `REQ-VAULT-104` (03-collateralization.md:377) The position's shape differs from the market's exact shape (for concentrated liquidity, any tick of the range) — TEST-279
+- [~] `REQ-VAULT-105` (03-collateralization.md:378) The AMM protocol reports the pool mid-operation during `pledge`, `recredit`, `releasePartial`, `releaseForDele — TEST-056, TEST-239
+- [~] `REQ-VAULT-106` (03-collateralization.md:379) The position already backs an open record | Reverts with `AlreadyPledged` (Source: Q-067, Q-292) — TEST-011, TEST-269
+- [~] `REQ-VAULT-107` (03-collateralization.md:380) Units after custody are 0 or above `MAX_CREDITED_UNITS`, or a re-credit would take `credited` above it | Rever — TEST-011, TEST-238
+- [~] `REQ-VAULT-108` (03-collateralization.md:381) A seizure or reconciliation debits every record of an account-market | At most 16 records, about 5,150,000 gas — TEST-208, TEST-269
+- [~] `REQ-VAULT-109` (03-collateralization.md:382) The RiskModule's `checkPledge` reverts, including `BelowMinPledge`, `BreakerTripped` and `NotRescueTopUp` | Th — TEST-013
+- [~] `REQ-VAULT-110` (03-collateralization.md:383) `checkPledge` returns `usdCharge == 0`, `usdCharge ≥ 2^64`, `sliceUsd > usdCharge`, `rescueUnits` above the un — TEST-013, TEST-238
+- [~] `REQ-VAULT-111` (03-collateralization.md:384) After `pledge` or `recredit` returns, the proxy's supply does not raise its shares by the units minted, or the — TEST-186, TEST-241
+- [~] `REQ-VAULT-112` (03-collateralization.md:385) An inner entry point is called while the lock is not held by its named caller | Reverts with `LockNotHeld` (So — TEST-060
+- [~] `REQ-VAULT-113` (03-collateralization.md:386) `pledge`, `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `releaseZeroCredit` or `collectFees — TEST-018, TEST-060, TEST-152
+- [~] `REQ-VAULT-114` (03-collateralization.md:387) Hub added assets differ from added shares for the vault-token asset at `beginSeizure` | Reverts with `SharesNo — TEST-056
+- [~] `REQ-VAULT-115` (03-collateralization.md:388) A snapshot is already active at `beginSeizure` or `settlePending`, or none matches at `settleSeizure` | Revert — TEST-056, TEST-152, TEST-208
+- [~] `REQ-VAULT-116` (03-collateralization.md:389) The proxy's share drop or the token's supply drop since `beginSeizure` differs from `units` | Reverts with `De — TEST-131, TEST-208
+- [~] `REQ-VAULT-117` (03-collateralization.md:390) Seized units exceed the proxy's credited units in the market left after reconciliation | Reverts with `Insuffi — PROP-013
+- [~] `REQ-VAULT-118` (03-collateralization.md:391) `release` units differ from the record's credited units after reconciliation, or are 0; `releasePartial` units — TEST-018
+- [~] `REQ-VAULT-119` (03-collateralization.md:392) No open record for `positionKey` in `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `releaseZ — TEST-018, TEST-150
+- [~] `REQ-VAULT-121` (03-collateralization.md:393) `releaseZeroCredit` on a record with credited units after reconciliation | Reverts with `RecordHasCredit` (Sou — TEST-020
+- [~] `REQ-VAULT-125` (03-collateralization.md:394) A view is called while the lock is held, by an address other than the holder; `getAccountRescueUnits` or `pool — TEST-060
+- [~] `REQ-VAULT-127` (03-collateralization.md:395) A counter subtraction would go below 0 | Clamp at 0 and emit `CounterSaturated`; never revert (Source: Q-055,  — TEST-097
+- [~] `REQ-VAULT-141` (03-collateralization.md:396) `settlePending` with `units == 0` or `units > pending[vaultToken].units` | Reverts with `PendingExceeded` (Sou — TEST-152
+- [~] `REQ-VAULT-142` (03-collateralization.md:397) A market token reverts on the transfer in `settlePending` | The call reverts with the token's error; the burn, — TEST-170
+- [~] `REQ-VAULT-143` (03-collateralization.md:398) Hub added assets differ from added shares during `release`, `releasePartial`, `recredit`, `releaseForDeleverag — TEST-020, TEST-150, TEST-239
+- [~] `REQ-VAULT-144` (03-collateralization.md:399) The market's LPOracle `poke()` reverts during `pledge`, or the vault token's `marketId()` names a market that  — TEST-011, TEST-012
+- [~] `REQ-COLL-010` (03-collateralization.md:400) `pledge` or `beginSeizure` names a proxy the vault token has not registered | Reverts with `UnknownProxy(proxy — TEST-011, TEST-056
+- [~] `REQ-COLL-011` (03-collateralization.md:401) `releaseZeroCredit`, `recredit` or `collectFees` names a depositor other than the record's | Reverts with `Not — TEST-020
+- [~] `REQ-COLL-012` (03-collateralization.md:402) `settlePending` called while `totalSupply + units > totalCredited + pending.units` (the supply leaves no room  — TEST-152
+- [~] `REQ-COLL-013` (03-collateralization.md:403) The LPVault's `receivePosition` reverts: the depositor does not own the position, the LPVault is not approved  — TEST-011
+- [~] `REQ-COLL-019` (03-collateralization.md:404) `pledge` names the zero address, the market's LPVault or Collateralization as depositor | Reverts with `Invali — TEST-011
+- [~] `REQ-COLL-020` (03-collateralization.md:405) `releasePartial` with `units ≥` the record's credited units after reconciliation | Reverts with `PartialRemova — TEST-237
+- [~] `REQ-COLL-021` (03-collateralization.md:406) `recredit` for a record at 0 credited units, or with no live units above `credited` after reconciliation | Rev — TEST-020, TEST-238
+- [~] `REQ-COLL-022` (03-collateralization.md:407) `recredit` names a depositor other than the record's | Reverts with `NotDepositor` (Source: Q-254) — TEST-020, TEST-238
+- [~] `REQ-COLL-023` (03-collateralization.md:408) The AMM removal in a partial removal returns less than a depositor minimum (the pool price moved) | The AMM pr — TEST-239
+- [~] `REQ-COLL-033` (03-collateralization.md:409) `pledge` into an account-market that already holds 16 open records | Reverts with `TooManyRecords(openRecords) — TEST-269
+- [~] `REQ-COLL-034` (03-collateralization.md:410) `pledge` names a proxy already bound to another market | Reverts with `ProxyMarketMismatch(proxy)` (Source: Q- — TEST-269
+- [~] `REQ-COLL-035` (03-collateralization.md:411) After custody the LPVault's `marketOfPosition(positionKey)` differs from `vaultToken.marketId()` | Reverts wit — TEST-279
+- [~] `REQ-COLL-036` (03-collateralization.md:412) A `minAmounts` array whose length differs from the market's token count | Reverts with `LengthMismatch` (Sourc — TEST-208
 
-- [x] `TEST-010` [unit] Pledge happy path: the NFT owner approves the LPVault for one `positionKey` and calls `AaveAdapter.pledge(spok
-- [x] `TEST-011` [unit] Pledge rejections: a caller that does not own the NFT reverts `NotTokenOwner` in the LPVault, including a per-
-- [ ] `TEST-012` [unit] Pledge gates: a new account (no debt on any debt reserve) requires the market Live; a top-up is allowed into a
-- [x] `TEST-013` [unit] Exposure caps: `RiskModule.checkPledge` values the pledge from the LPOracle and checks the post-pledge totals 
-- [x] `TEST-014` [fuzz] Exit charges: after an exit of `actualExitedUnits`, `remainingCharge = ceil(originalUsdCharge × remainingUnits
-- [ ] `TEST-015` [unit] Stray NFTs: an NFT sent to the LPVault outside a pledge is not credited and cannot be pledged; `onERC721Receiv
-- [x] `TEST-016` [unit] Donations: a third party's `increaseLiquidity` on a pledged NFT raises live liquidity only; credited units in 
-- [x] `TEST-018` [unit] Debt-free withdrawal: `AaveAdapter.withdraw(spoke, vaultToken, positionKey, units, deadline, minHealthFactor)`
-- [x] `TEST-020` [unit] Zero-credit record: after a full seizure the record stays open with 0 credited units; it cannot be debited or 
-- [x] `TEST-150` [unit] Reconcile on withdrawal: a mock LPVaultSwap calls `liquidationCall` on the proxy and keeps the seized vault to
-- [x] `TEST-151` [unit] Reconcile on liquidation settlement: after an unsettled seizure of `c` units, an honest liquidation of the sam
-- [x] `TEST-152` [unit] Pending settlement in Collateralization: only LPVaultSwap can call `Collateralization.settlePending(vaultToken
-- [x] `TEST-171` [unit] Market identity from the vault token: during a pledge Collateralization takes the market ID and the LPOracle o
-- [x] `TEST-186` [unit] Adapter mint equals credit: in `pledge` the AaveAdapter mints to the proxy exactly the `credited` that `Collat
-- [ ] `TEST-209` [unit] Withdrawal order: in `AaveAdapter.withdraw` the calls happen in this order, checked with `vm.expectCall` and a
-- [ ] `TEST-163` [unit] Poke ordering: `RiskModule.preBorrowCheck` and `preWithdrawCheck` call `poke()` on every collateral market's L
-- [x] `TEST-208` [unit] Seized-unit burn: `AaveAdapter.burnSeized(vaultToken, units)` reverts `NotLPVaultSwap` for any other caller an
-- [ ] `TEST-164` [unit] Pledge cap charge ownership: `RiskModule.checkPledge` computes the USD charge from the LPOracle (not from the 
-- [ ] `TEST-047` [unit] Caller-funded liquidation, run for each debt reserve: `T.transferFrom(msg.sender, LPVaultSwap, debtToCover)` m
-- [x] `TEST-056` [unit] Debit check: under the Lock `beginSeizure` snapshots the proxy's supplied shares and the vault token's supply 
-- [x] `TEST-057` [unit] Seizure order (2.3 `SPEC-BACK-006`): each pledge inserts its record before the first record with fewer credite
-- [ ] `TEST-058` [unit] Principal-capped collect: `LPVault.removeLiquidity(positionKey, units, recipient)` (the integration's `unwind`
-- [x] `TEST-060` [unit] Lock: every outer entry point of the AaveAdapter and LPVaultSwap acquires the immutable Lock, whose only membe
-- [ ] `TEST-170` [unit] Pending-settlement proceeds to the Coverage Spoke of the market's `(Hub, debt asset)`: `LPVaultSwap.settlePend
-- [ ] `TEST-162` [unit] Pause-state readers: the AaveAdapter reads `MarketRegistry.pauseState()` and `pauseReason()` only in `pledge`,
-- [x] `TEST-070` [fuzz] Rounding table: every Avana rounding site rounds against the borrower or keeper as specified (oracle price dow
-- [ ] `TEST-071` [fuzz] Overflow: `amount × price × 10^(18 − decimals)`, `CF × value`, `4·a0·a1`, `L × price8` in the `minPledgeUsd` c
-- [ ] `TEST-072` [boundary] Boundary vectors: liquidity 0 and 1; liquidity near `type(uint128).max`; first pledge and last withdrawal in a
-- [ ] `TEST-073` [fuzz] Tiny positions, run on a market whose `minPledgeUsd` is 0: 1 to 10^6 liquidity units pledge and mint exactly; 
-- [ ] `TEST-083` [invariant] Backing: for every market, vault-token `totalSupply()` is at most Collateralization's `getTotalCredited(vaultT
-- [ ] `TEST-084` [invariant] Custody: each open Collateralization record's NFT is owned by the LPVault, `LPVault.depositorOf(positionKey)` 
-- [ ] `TEST-085` [invariant] Per-proxy ledger, for any LPVaultSwap implementation: for every proxy and market, the proxy's supplied vault-t
-- [ ] `TEST-088` [invariant] Mint and burn authority: every mint is made by the AaveAdapter inside `pledge`, for exactly the credited units
-- [x] `TEST-089` [invariant] Proxy binding and registry: only the ProxyManager deploys proxies, only on the AaveAdapter's call, each at `pr
-- [x] `TEST-097` [invariant] Caps: Collateralization's aggregate counters equal the sum of remaining record charges, never go negative, and
-- [ ] `TEST-099` [invariant] Exit liveness (`fail_on_revert` on): repay (by the borrower or any payer), fee collection, debt-free withdrawa
-- [ ] `TEST-100` [invariant] Liquidation liveness (`fail_on_revert` on): an account with HF < 1, fresh and agreeing collateral prices, fres
-- [ ] `TEST-102` [invariant] Pledge states: new accounts open only in Live, or Drifting only by a USD-band breach; top-ups land only in Liv
-- [ ] `TEST-104` [invariant] Settlement postconditions, recorded by ghost variables in the liquidation handlers (registered operators, unre
-- [ ] `TEST-153` [invariant] Reconcile on exit: the handlers of `TEST-082` add hostile seize-and-keep, honest settlement of pending balance
-- [ ] `TEST-193` [invariant] Exits and liquidation under every pause state and reason (`fail_on_revert` on for the live actions): a pause h
-- [ ] `TEST-211` [invariant] Accounts and multi-asset accounting: handlers pledge, borrow, repay and liquidate on two Borrow Spokes, severa
-- [ ] `TEST-215` [invariant] Multi-actor invariant suite (Foundry invariant test with handlers, extending `TEST-082`). Actors: borrowers wi
-- [ ] `TEST-216` [invariant] Solvency per debt asset (`INV-074`) across arbitrary sequences of the `TEST-215` handlers, run once with GHO a
-- [ ] `TEST-218` [invariant] Withdrawal and liquidation cascades: N accounts (N up to 200) opened near HF 1.10 in two markets; outside LPs 
-- [ ] `TEST-116` [fork] Each AMM integration on its chain's fork, through the AMM integration interface (`TEST-264` for Uniswap v3 on 
-- [ ] `TEST-123` [gas] Full seizure across many dust records: an account-market holds a large number of minimum-value records (at `mi
-- [x] `TEST-124` [gas] Records list growth: pledging records of random sizes into one account-market in random order keeps every inse
-- [ ] `TEST-125` [fork] Hub `addCap` fit: every pledge and top-up that fits Avana's USD budgets also fits under the Hub `addCap` sized
-- [ ] `TEST-195` [fork] Exit inside the delay: the governance multisig schedules an AaveAdapter upgrade to a hostile implementation (n
-- [ ] `TEST-223` [fork] LP journeys on one fork, end to end, with the Lens asserted at every step against execution: deposit → borrow 
-- [ ] `TEST-130` [hostile] Hostile AaveAdapter (blast radius): once executed, the hostile Adapter can borrow every debt reserve against e
-- [ ] `TEST-131` [hostile] Hostile LPVaultSwap: it can seize only accounts Aave deems liquidatable, sized by Aave; it cannot debit anothe
-- [ ] `TEST-133` [hostile] Hostile MarketRegistry and ParameterStore: remapping a market to an attacker pool, Spoke, vault token or debt 
-- [ ] `TEST-154` [hostile] Regression for Quint counterexample C-QNT-1: a hostile LPVaultSwap installed through the timelock seizes 315 u
-- [ ] `TEST-222` [unit] Reentrancy through `collect` and `decreaseLiquidity`: pool tokens with transfer hooks (ERC-777 style) re-enter
-- [x] `TEST-235` [unit] Rescue top-ups: an indebted account below `rescueHealthFactor` (1.10) adds collateral under `Paused(General)`,
-- [x] `TEST-236` [unit] Rescue units excluded: the slice re-leverage loop (top up from the slice or by rescue, then borrow back) fails
-- [x] `TEST-237` [unit] Partial removal: `removeLiquidity` burns exactly `units`, keeps the backing gap, leaves live liquidity ≥ credi
-- [x] `TEST-238` [unit] Re-credit: only the record's depositor can re-credit; after a third party's `increaseLiquidity` the added liqu
-- [x] `TEST-239` [unit] Repay with collateral: HF does not decrease while debt remains (`HealthFactorNotImproved`); no bonus or Avana 
-- [x] `TEST-241` [unit] Backing gap: an orphan `burnSeized` by a mock LPVaultSwap opens a gap; later pledges, withdrawals, partial rem
-- [x] `TEST-252` [unit] Small fixes: grace starts at the newest leg in use of the fresh price, never after `block.timestamp`, includin
-- [x] `TEST-264` [fork] Uniswap v3 integration on the Ethereum fork, through the AMM integration interface: `receive` takes custody of
-- [ ] `TEST-265` [fork] Aerodrome Slipstream integration on the Base fork, through the same interface and the same assertions as `TEST
-- [x] `TEST-269` [gas] Record bound: an account-market holds 16 records at `minPledgeUsd` each with a debt of 1 debt-asset unit above
-- [x] `TEST-270` [access-control] Lock membership: the Lock's members are exactly the AaveAdapter and LPVaultSwap, fixed at construction; every 
-- [x] `TEST-272` [unit] Hub-keyed and pool-keyed caps: the token and depositor counters are held in the one ledger per chain, keyed by
-- [x] `TEST-279` [unit] Exact range and clamp: a position on a listed pool whose range differs from the market's exact `[tickLower, ti
-- [ ] `TEST-280` [unit] Pending settlement and payout asset: recovered value from pending settlement goes to the Coverage Spoke of the
+## TEST rows (70: 0 verified, 0 failed, 62 not run, 8 unlinked)
 
-## Cross-cutting TEST rows, every contract (17)
+- [~] `TEST-010` [unit] Pledge happy path: the NFT owner approves the LPVault for one `positionKey` and calls `AaveAdapter.pledge(mark
+- [~] `TEST-011` [unit] Pledge rejections: a caller that does not own the NFT reverts `NotTokenOwner` in the LPVault, including a per-
+- [~] `TEST-012` [unit] Pledge gates: a new account (no debt on any debt reserve) requires the market Live; a top-up is allowed into a
+- [~] `TEST-013` [unit] Exposure caps: `RiskModule.checkPledge` values the pledge from the LPOracle and checks the post-pledge totals 
+- [~] `TEST-014` [fuzz] Exit charges: after an exit of `actualExitedUnits`, `remainingCharge = ceil(originalUsdCharge × remainingUnits
+- [~] `TEST-015` [unit] Stray NFTs: an NFT sent to the LPVault outside a pledge is not credited and cannot be pledged; `onERC721Receiv
+- [~] `TEST-016` [unit] Donations: a third party's `increaseLiquidity` on a pledged NFT raises live liquidity only; credited units in 
+- [~] `TEST-018` [unit] Debt-free withdrawal: `AaveAdapter.withdraw(spoke, vaultToken, positionKey, units, deadline, minHealthFactor)`
+- [~] `TEST-020` [unit] Zero-credit record: after a full seizure the record stays open with 0 credited units; it cannot be debited or 
+- [~] `TEST-150` [unit] Reconcile on withdrawal: a mock LPVaultSwap calls `liquidationCall` on the proxy and keeps the seized vault to
+- [~] `TEST-151` [unit] Reconcile on liquidation settlement: after an unsettled seizure of `c` units, an honest liquidation of the sam
+- [~] `TEST-152` [unit] Pending settlement in Collateralization: only LPVaultSwap can call `Collateralization.settlePending(vaultToken
+- [~] `TEST-171` [unit] Market identity from the vault token: during a pledge Collateralization takes the market ID and the LPOracle o
+- [~] `TEST-186` [unit] Adapter mint equals credit: in `pledge` the AaveAdapter mints to the proxy exactly the `credited` that `Collat
+- [~] `TEST-209` [unit] Withdrawal order: in `AaveAdapter.withdraw` the calls happen in this order, checked with `vm.expectCall` and a
+- [ ] `TEST-163` [unit] Poke ordering: `RiskModule.preBorrowCheck` and `preWithdrawCheck` call `poke()` on every collateral market's L (only excluded checks: uses a stand-in for Collateralization)
+- [~] `TEST-208` [unit] Seized-unit burn: `AaveAdapter.burnSeized(vaultToken, units)` reverts `NotLPVaultSwap` for any other caller an
+- [ ] `TEST-164` [unit] Pledge cap charge ownership: `RiskModule.checkPledge` computes the USD charge from the LPOracle (not from the  (only excluded checks: uses a stand-in for Collateralization)
+- [~] `TEST-047` [unit] Caller-funded liquidation, run for each debt reserve: `T.transferFrom(msg.sender, LPVaultSwap, debtToCover)` m
+- [~] `TEST-056` [unit] Debit check: under the Lock `beginSeizure` snapshots the proxy's supplied shares and the vault token's supply 
+- [~] `TEST-057` [unit] Seizure order (2.3 `SPEC-BACK-006`): each pledge inserts its record before the first record with fewer credite
+- [~] `TEST-058` [unit] Principal-capped collect: the integration's `unwind(positionKey, units, minAmounts, recipient)` of exactly `un
+- [~] `TEST-060` [unit] Lock: every outer entry point of the AaveAdapter and LPVaultSwap acquires the immutable Lock, whose only membe
+- [~] `TEST-170` [unit] Pending-settlement proceeds to the Coverage Spoke of the market's `(Hub, debt asset)`: `LPVaultSwap.settlePend
+- [~] `TEST-162` [unit] Pause-state readers: the AaveAdapter reads `MarketRegistry.pauseState()` and `pauseReason()` only in `pledge`,
+- [~] `TEST-070` [fuzz] Rounding table: every Avana rounding site rounds against the borrower or keeper as specified (oracle price dow
+- [~] `TEST-071` [fuzz] Overflow: `amount × price × 10^(18 − decimals)`, `CF × value`, `4·a0·a1`, `L × price8` in the `minPledgeUsd` c
+- [ ] `TEST-072` [boundary] Boundary vectors: liquidity 0 and 1; liquidity near `type(uint128).max`; first pledge and last withdrawal in a (only excluded checks: tag on a test named for another row)
+- [~] `TEST-073` [fuzz] Tiny positions, run on a market whose `minPledgeUsd` is 0: 1 to 10^6 liquidity units pledge and mint exactly; 
+- [~] `TEST-083` [invariant] Backing: for every market, vault-token `totalSupply()` is at most Collateralization's `getTotalCredited(vaultT
+- [~] `TEST-084` [invariant] Custody: each open Collateralization record's NFT is owned by the LPVault, `LPVault.depositorOf(positionKey)` 
+- [~] `TEST-085` [invariant] Per-proxy ledger, for any LPVaultSwap implementation: for every proxy and market, the proxy's supplied vault-t
+- [~] `TEST-088` [invariant] Mint and burn authority: every mint is made by the AaveAdapter inside `pledge`, for exactly the credited units
+- [~] `TEST-089` [invariant] Proxy binding and registry: only the ProxyManager deploys proxies, only on the AaveAdapter's call, each at `pr
+- [~] `TEST-097` [invariant] Caps: Collateralization's aggregate counters equal the sum of remaining record charges, never go negative, and
+- [~] `TEST-099` [invariant] Exit liveness (`fail_on_revert` on): repay (by the borrower or any payer), fee collection, debt-free withdrawa
+- [ ] `TEST-100` [invariant] Liquidation liveness (`fail_on_revert` on): an account with HF < 1, fresh and agreeing collateral prices, fres (only excluded checks: tag on a test named for another row)
+- [~] `TEST-102` [invariant] Pledge states: new accounts open only in Live, or Drifting only by a USD-band breach; top-ups land only in Liv
+- [ ] `TEST-104` [invariant] Settlement postconditions, recorded by ghost variables in the liquidation handlers (registered operators, unre (only excluded checks: tag on a test named for another row)
+- [~] `TEST-153` [invariant] Reconcile on exit: the handlers of `TEST-082` add hostile seize-and-keep, honest settlement of pending balance
+- [~] `TEST-193` [invariant] Exits and liquidation under every pause state and reason (`fail_on_revert` on for the live actions): a pause h
+- [~] `TEST-211` [invariant] Accounts and multi-asset accounting: handlers pledge, borrow, repay and liquidate on two Borrow Spokes, severa
+- [ ] `TEST-215` [invariant] Multi-actor invariant suite (Foundry invariant test with handlers, extending `TEST-082`). Actors: borrowers wi (only excluded checks: tag on a test named for another row)
+- [~] `TEST-216` [invariant] Solvency per debt asset (`INV-074`) across arbitrary sequences of the `TEST-215` handlers, run once with GHO a
+- [~] `TEST-218` [invariant] Withdrawal and liquidation cascades: N accounts (N up to 200) opened near HF 1.10 in two markets; outside LPs 
+- [ ] `TEST-116` [fork] Each AMM integration on its chain's fork, through the AMM integration interface (`TEST-264` for Uniswap v3 on  (only excluded checks: tag on a test named for another row)
+- [~] `TEST-123` [gas] Full seizure across many dust records: an account-market holds a large number of minimum-value records (at `mi
+- [~] `TEST-124` [gas] Records list growth: pledging records of random sizes into one account-market in random order keeps every inse
+- [~] `TEST-125` [fork] Hub `addCap` fit: every pledge and top-up that fits Avana's USD budgets also fits under the Hub `addCap` sized
+- [~] `TEST-195` [fork] Exit inside the delay: the governance multisig schedules an AaveAdapter upgrade to a hostile implementation (n
+- [~] `TEST-223` [fork] LP journeys on one fork, end to end, with the Lens asserted at every step against execution: deposit → borrow 
+- [~] `TEST-130` [hostile] Hostile AaveAdapter (blast radius): once executed, the hostile Adapter can borrow every debt reserve against e
+- [~] `TEST-131` [hostile] Hostile LPVaultSwap: it can seize only accounts Aave deems liquidatable, sized by Aave; it cannot debit anothe
+- [ ] `TEST-133` [hostile] Hostile MarketRegistry and ParameterStore: remapping a market to an attacker pool, Spoke, vault token or debt  (only excluded checks: uses a stand-in for Collateralization)
+- [~] `TEST-154` [hostile] Regression for Quint counterexample C-QNT-1: a hostile LPVaultSwap installed through the timelock seizes 315 u
+- [~] `TEST-222` [unit] Reentrancy through `collect` and `decreaseLiquidity`: pool tokens with transfer hooks (ERC-777 style) re-enter
+- [~] `TEST-235` [unit] Rescue top-ups: an indebted account below `rescueHealthFactor` (1.10) adds collateral under `Paused(General)`,
+- [~] `TEST-236` [unit] Rescue units excluded: the slice re-leverage loop (top up from the slice or by rescue, then borrow back) fails
+- [~] `TEST-237` [unit] Partial removal: `removeLiquidity` burns exactly `units`, keeps the backing gap, leaves live liquidity ≥ credi
+- [~] `TEST-238` [unit] Re-credit: only the record's depositor can re-credit; after a third party's `increaseLiquidity` the added liqu
+- [~] `TEST-239` [unit] Repay with collateral: HF does not decrease while debt remains (`HealthFactorNotImproved`); no bonus or Avana 
+- [~] `TEST-241` [unit] Backing gap: an orphan `burnSeized` by a mock LPVaultSwap opens a gap; later pledges, withdrawals, partial rem
+- [~] `TEST-252` [unit] Small fixes: grace starts at the newest leg in use of the fresh price, never after `block.timestamp`, includin
+- [~] `TEST-264` [fork] Uniswap v3 integration on the Ethereum fork, through the AMM integration interface: `receive` takes custody of
+- [~] `TEST-265` [fork] Aerodrome Slipstream integration on the Base fork, through the same interface and the same assertions as `TEST
+- [~] `TEST-269` [gas] Record bound: an account-market holds 16 records at `minPledgeUsd` each with a debt of 1 debt-asset unit above
+- [~] `TEST-270` [access-control] Lock membership: the Lock's members are exactly the AaveAdapter and LPVaultSwap, fixed at construction; every 
+- [~] `TEST-272` [unit] Hub-keyed and pool-keyed caps: the token and depositor counters are held in the one ledger per chain, keyed by
+- [~] `TEST-279` [unit] Exact range and clamp: a position on a listed pool whose range differs from the market's exact `[tickLower, ti
+- [~] `TEST-280` [unit] Pending settlement and payout asset: recovered value from pending settlement goes to the Coverage Spoke of the
 
-- [ ] `TEST-001` [environment] The Foundry workspace builds with solc 0.8.28 and EVM `cancun`, the same compiler as Aave V4; dependencies are
-- [x] `TEST-032` [access-control] Selector inventory: the external selectors of every deployed Avana contract are enumerated from bytecode and c
-- [x] `TEST-061` [unit] Events: every borrower and keeper action is one atomic call that emits the inventory events of its contracts, 
-- [x] `TEST-177` [unit] Zero-amount transfers skipped: with mock tokens that revert on a zero-amount `transfer` and `transferFrom`, ev
-- [x] `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
-- [x] `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
-- [x] `TEST-080` [fuzz] Dust donations: sending 1 wei up to 10^6 wei of GHO, USDC, WETH, DAI, pool tokens or vault tokens (where the r
-- [ ] `TEST-092` [invariant] Conservation: for every token (each debt asset, each pool token, each vault token), the sum of tracked balance
-- [ ] `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
-- [x] `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
-- [x] `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
-- [ ] `TEST-121` [fork] End-to-end lifecycle on one fork (Avana-deployed Aave V4 plus Ethereum Uniswap v3, Chainlink, GHO, the Aave V3
-- [ ] `TEST-126` [fork] Emergency matrix: for every row of the matrix in [3.6](../03-operations/06-emergency-operations.md) (applicati
-- [ ] `TEST-127` [fork] Halt deterioration and caps: with liquidation of an account stopped for the 48-hour incident window of `Q-192`
-- [ ] `TEST-137` [deployment-check] Upgrade safety: every UUPS contract (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, LPVaul
-- [ ] `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
-- [x] `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme
+## PROP rows (22: 8 verified, 0 failed, 14 not run, 0 unlinked)
 
-## PROP rows (22)
+- [x] `PROP-001` [Certora] At the end of every outer call (every AaveAdapter, LPVaultSwap and Collateralization depositor entry point), f — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-002` [Certora] For every open Collateralization record, the AMM integration's units of its `positionKey` are ≥ its credited u
+- [x] `PROP-003` [Certora] At most one open record per `positionKey` (`Collateralization.recordIdOf`); `LPVault.returnStray` never moves  — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-004` [Certora] Every liquidation debit of proxy `p` in market `m` equals the drop in `p`'s supplied shares between Collateral
+- [x] `PROP-006` [Certora] The reviewed Adapter calls `mint` only inside `pledge` and `recredit`: in `pledge` after `Collateralization.pl — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-011` [Halmos] When the vault-token Hub asset has shares == assets, `previewRemoveByShares(k) == k`, and the proxy's share dr
+- [~] `PROP-012` [Certora] For an account-market's seizure list as 2.3 `SPEC-BACK-006` maintains it, a liquidation or reconcile-on-exit d
+- [~] `PROP-013` [Certora] A debit with `u > Σ credited` of the proxy in that market reverts with no state change. (Source: Q-160, Q-189)
+- [~] `PROP-014` [Certora] Every pledge inserts its record before the first record in the list with fewer credited units, or at the tail 
+- [~] `PROP-028` [Halmos] Exit charge: `remainingCharge = ceil(originalUsdCharge × remainingUnits / originalUnits)` is independent of ho
+- [~] `PROP-029` [Certora] Collateralization's aggregate counters equal the sum of their records' remaining charges after every function 
+- [~] `PROP-032` [Certora] Adapter `repay`, LPVault `collectFees`, Collateralization `releaseZeroCredit`, and an Adapter `withdraw` or `r
+- [~] `PROP-033` [Certora] Adapter: `pledge`, `borrow`, `withdraw` and `repayAllAndWithdraw` act only on `proxyOf[msg.sender][marketId]` 
+- [x] `PROP-037` [Certora] Lock: any Avana function reachable only from inside the fixed set reverts unless the Lock is held and `msg.sen — test/halmos/PegModuleRoute.halmos.t.sol:PegModuleRouteHalmosTest.check_PROP_037_swapOnlyForLPVaultSwapUnderLock
+- [~] `PROP-038` [Certora] `collectFees` transfers fees only to `depositorOf(positionKey)`; a position leaves its LPVault only through `r
+- [x] `PROP-043` [SMTChecker] The immutable contracts (every LPVault, Collateralization, vault token, VaultTokenFactory, ProxyManager, Posit — Lock job 0f0bbe338f844d87ba9968713df8b185
+- [x] `PROP-045` [Certora] Reconcile on exit: in `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `releaseZeroCredit` and — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-047` [Certora] Every completed `liquidate` happens in a call in which `Collateralization.settleSeizure` debited at least one 
+- [x] `PROP-054` [Certora] Backing across the Adapter and Collateralization: in every Adapter `pledge` and `recredit`, the units minted e — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `PROP-065` [Certora] Backing one-sided across the Adapter, Collateralization and LPVaultSwap: for every market and every reachable  — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `PROP-067` [Halmos] `RiskModule.postHealthCheck(proxy, spoke, minHF)` returns only if `hfB ≥ max(1, hardHealthFloor, minHF)`, with
+- [~] `PROP-072` [Certora] Repay with collateral: a successful `repayWithCollateral` leaves the debt of every reserve of the account ≤ it
 
-- [x] `PROP-001` [Certora] At the end of every outer call (every AaveAdapter, LPVaultSwap and Collateralization depositor entry point), f
-- [x] `PROP-002` [Certora] For every open Collateralization record, the AMM integration's units of its `positionKey` are ≥ its credited u
-- [x] `PROP-003` [Certora] At most one open record per `positionKey` (`Collateralization.recordIdOf`); `LPVault.returnStray` never moves 
-- [x] `PROP-004` [Certora] Every liquidation debit of proxy `p` in market `m` equals the drop in `p`'s supplied shares between Collateral
-- [x] `PROP-006` [Certora] The reviewed Adapter calls `mint` only inside `pledge` and `recredit`: in `pledge` after `Collateralization.pl
-- [x] `PROP-011` [Halmos] When the vault-token Hub asset has shares == assets, `previewRemoveByShares(k) == k`, and the proxy's share dr
-- [x] `PROP-012` [Certora] For an account-market's seizure list as 2.3 `SPEC-BACK-006` maintains it, a liquidation or reconcile-on-exit d
-- [x] `PROP-013` [Certora] A debit with `u > Σ credited` of the proxy in that market reverts with no state change. (Source: Q-160, Q-189)
-- [x] `PROP-014` [Certora] Every pledge inserts its record before the first record in the list with fewer credited units, or at the tail 
-- [x] `PROP-028` [Halmos] Exit charge: `remainingCharge = ceil(originalUsdCharge × remainingUnits / originalUnits)` is independent of ho
-- [x] `PROP-029` [Certora] Collateralization's aggregate counters equal the sum of their records' remaining charges after every function 
-- [x] `PROP-032` [Certora] Adapter `repay`, LPVault `collectFees`, Collateralization `releaseZeroCredit`, and an Adapter `withdraw` or `r
-- [x] `PROP-033` [Certora] Adapter: `pledge`, `borrow`, `withdraw` and `repayAllAndWithdraw` act only on `proxyOf[msg.sender][marketId]` 
-- [x] `PROP-037` [Certora] Lock: any Avana function reachable only from inside the fixed set reverts unless the Lock is held and `msg.sen
-- [x] `PROP-038` [Certora] `collectFees` transfers fees only to `depositorOf(positionKey)`; a position leaves its LPVault only through `r
-- [x] `PROP-043` [SMTChecker] The immutable contracts (every LPVault, Collateralization, vault token, VaultTokenFactory, ProxyManager, Posit
-- [x] `PROP-045` [Certora] Reconcile on exit: in `release`, `releasePartial`, `recredit`, `releaseForDeleverage`, `releaseZeroCredit` and
-- [x] `PROP-047` [Certora] Every completed `liquidate` happens in a call in which `Collateralization.settleSeizure` debited at least one 
-- [x] `PROP-054` [Certora] Backing across the Adapter and Collateralization: in every Adapter `pledge` and `recredit`, the units minted e
-- [x] `PROP-065` [Certora] Backing one-sided across the Adapter, Collateralization and LPVaultSwap: for every market and every reachable 
-- [x] `PROP-067` [Halmos] `RiskModule.postHealthCheck(proxy, spoke, minHF)` returns only if `hfEx ≥ max(1, hardHealthFloor, minHF)`, wit
-- [x] `PROP-072` [Certora] Repay with collateral: a successful `repayWithCollateral` leaves the debt of every reserve of the account ≤ it
+## INV (35: 12 verified, 0 failed, 23 not run, 0 unlinked)
 
-## INV (34)
+- [x] `INV-001` For every market `m`: `vaultToken[m].totalSupply() ≤ Σ r.credited + pending[vaultToken[m]].units`, the sum tak — PROP-001, PROP-045, PROP-054, PROP-065, TEST-010, TEST-083, TEST-092, TEST-151, TEST-153, TEST-154, TEST-186, TEST-241, TEST-247 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `INV-002` For every open record `r`: `integration[r.integrationId].unitsOf(r.positionKey) ≥ r.credited`, where `unitsOf` — PROP-002, TEST-016, TEST-084, TEST-247, TEST-265, TEST-291
+- [~] `INV-003` For every market `m`, at the end of every transaction: `vaultToken[m].balanceOf(Hub) == Hub.getAddedAssets(ass — TEST-086, TEST-087, TEST-247
+- [~] `INV-004` No new-account pledge, borrow, withdrawal that leaves debt, or liquidation completes in a transaction in which — TEST-019, TEST-095, TEST-163
+- [x] `INV-005` One position backs one record in one account: (a) custody is keyed by `(integrationId, positionKey)`: for ever — PROP-002, PROP-003, PROP-083, TEST-010, TEST-011, TEST-265, TEST-279, TEST-291 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `INV-006` `r.credited` is set at pledge by Collateralization to the position's units read through its AMM integration (` — TEST-010, TEST-015, TEST-016, TEST-080, TEST-084, TEST-186
+- [~] `INV-007` The LPVault of each AMM protocol transfers a position out only (a) to `depositorOf(positionKey)`, by a transfe — PROP-003, PROP-038, TEST-015, TEST-130, TEST-291
+- [~] `INV-008` For every registered proxy `p` and market `m`: `Spoke.getUserSuppliedShares(reserveId_m, p) == Σ r.credited` o — PROP-045, TEST-010, TEST-085, TEST-107, TEST-150, TEST-151, TEST-153, TEST-154, TEST-185, TEST-190
+- [x] `INV-058` Reconcile on exit. In `release` (withdrawal), `releasePartial` (partial removal), `releaseForDeleverage` (dele — PROP-045, PROP-051, TEST-020, TEST-150, TEST-151, TEST-153, TEST-154 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `INV-009` `VaultToken.mint(to, amount)` succeeds only when called by the AaveAdapter (the token's immutable `adapter()`) — PROP-005, PROP-006, PROP-055, PROP-099, TEST-010, TEST-022, TEST-088, TEST-130, TEST-189 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_005_supplyChangesOnlyThroughAdapter
+- [x] `INV-010` Only the AaveAdapter burns vault tokens (`burn(from, amount)`, from any holder without an allowance); this aut — PROP-005, PROP-007, PROP-055, TEST-022, TEST-088, TEST-130, TEST-208 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_005_supplyChangesOnlyThroughAdapter
+- [x] `INV-011` Transfer allowlist. A market's vault-token balances change only on these paths, and every other `transfer` and — PROP-008, PROP-055, TEST-022, TEST-087, TEST-189 — test/halmos/VaultToken.halmos.t.sol:VaultTokenHalmosTest.check_PROP_008_movementsOnlyOnAllowedPaths
+- [~] `INV-013` A proxy's vault-token supply on the Spoke decreases only through (a) `Spoke.withdraw` called by the proxy thro — PROP-011, TEST-090, TEST-109, TEST-150, TEST-180, TEST-189, TEST-209
+- [~] `INV-014` In every LPVaultSwap liquidation of proxy `p` in market `m`, with `S0` and `T0` Collateralization's own snapsh — PROP-004, PROP-011, TEST-056, TEST-208, TEST-269
+- [~] `INV-015` Collateralization keeps the records of each `(p, m)` with credited units > 0 in one stored list, inserting eac — PROP-012, PROP-013, PROP-014, TEST-020, TEST-057, TEST-102, TEST-124, TEST-153, TEST-269
+- [x] `INV-066` Backing across contracts. In every AaveAdapter `pledge` and `recredit`, the units minted equal the `credited`  — PROP-054, PROP-065, TEST-088, TEST-186, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `INV-080` Backing one-sided. For every market and at the end of every transaction, `vaultToken.totalSupply() ≤ Collatera — PROP-065, TEST-083, TEST-092, TEST-107, TEST-130, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [x] `INV-088` Partial removal and re-credit. In every `removeLiquidity` the units burned from the proxy equal the record's d — PROP-054, PROP-065, TEST-237, TEST-238, TEST-241 — Collateralization job 8a8379652a2f4faaacd36ef1e8a3c13a
+- [~] `INV-017` Collateralization and each LPVault obtain an AMM protocol's position manager and factory only from the LPVault — PROP-083, TEST-010, TEST-030, TEST-108, TEST-114, TEST-116, TEST-171, TEST-264, TEST-265
+- [~] `INV-018` Blast radius of upgradeable contracts. (a) AaveAdapter implementation faulty or hostile (one per chain, servin — TEST-031, TEST-107, TEST-130, TEST-133, TEST-195
+- [~] `INV-020` In a borrow of debt reserve `r`, `r`'s asset moves from `r`'s funding Hub (the CDP Spoke's home Hub, or anothe — TEST-027, TEST-106
+- [x] `INV-021` At the end of every transaction: (a) every ERC-20 allowance an Avana contract granted during the transaction i — PROP-016, PROP-068, PROP-080, TEST-021, TEST-054, TEST-080, TEST-092, TEST-177, TEST-232 — test/halmos/AaveV3FlashSource.halmos.t.sol:AaveV3FlashSourceHalmosTest.check_PROP_080_donationNeverForwarded
+- [~] `INV-026` (a) A pledge into an account with no collateral and no debt on that Spoke requires the market Live, or Driftin — TEST-012
+- [~] `INV-027` For each market, the regular counter plus the top-up slice counter equals `Σ remainingCharge(r)` over the mark — PROP-028, PROP-029, TEST-014, TEST-097
+- [~] `INV-028` (a) A pledge, top-up or re-credit completes only if, after it, every counter is within its cap (`marketUsdCap` — PROP-030, TEST-013, TEST-272
+- [~] `INV-082` Rescue units never support new debt. Collateralization books, per record, the rescue units of every rescue top — PROP-067, TEST-057, TEST-077, TEST-235, TEST-236
+- [~] `INV-092` Caps keyed by Hub. The token and depositor counters of `INV-027` and `INV-028` live in the one Collateralizati — TEST-272
+- [~] `INV-044` The depositor of any open record, including one at 0 credited units, can collect fees with `AaveAdapter.collec — PROP-057, TEST-017, TEST-060, TEST-099, TEST-132, TEST-151, TEST-193
+- [~] `INV-045` When the proxy has no debt on its Spoke (`spoke.getUserAccountData(proxy).borrowCount == 0`), the depositor's  — PROP-057, PROP-066, TEST-016, TEST-018, TEST-099, TEST-132, TEST-162, TEST-192, TEST-193, TEST-195, TEST-218, TEST-228, TEST-229
+- [~] `INV-081` Stops never reach exits or liquidation. The application pause state and reason, the market and debt breakers a — PROP-066, TEST-218, TEST-228, TEST-229
+- [~] `INV-096` Liquidation stays within one transaction. (a) Each (account, market) holds at most 16 open records; a pledge t — TEST-102, TEST-123, TEST-269
+- [~] `INV-052` The vault tokens, VaultTokenFactory, every LPVault (one per AMM protocol per chain), Collateralization (one pe — PROP-099, TEST-108, TEST-166
+- [x] `INV-054` Every external state-changing entry point of the AaveAdapter and LPVaultSwap either acquires the Lock (outer c — PROP-037, PROP-075, TEST-046, TEST-060, TEST-179 — test/halmos/PegModuleRoute.halmos.t.sol:PegModuleRouteHalmosTest.check_PROP_037_swapOnlyForLPVaultSwapUnderLock
+- [~] `INV-067` Pause-state effects. In every application pause state and pause reason, the liquidation entry point `liquidate — PROP-057, PROP-066, TEST-029, TEST-053, TEST-099, TEST-193, TEST-229, TEST-243
+- [x] `INV-091` The Lock has exactly two members: the chain's AaveAdapter and LPVaultSwap, fixed as immutables at the Lock's d — PROP-037, PROP-075, TEST-011, TEST-060, TEST-270 — Lock job 0f0bbe338f844d87ba9968713df8b185
 
-- [x] `INV-001` For every market `m`: `vaultToken[m].totalSupply() ≤ Σ r.credited + pending[vaultToken[m]].units`, the sum tak
-- [x] `INV-002` For every open record `r`: `integration[r.integrationId].unitsOf(r.positionKey) ≥ r.credited`, where `unitsOf`
-- [ ] `INV-003` For every market `m`, at the end of every transaction: `vaultToken[m].balanceOf(Hub) == Hub.getAddedAssets(ass
-- [ ] `INV-004` No new-account pledge, borrow, withdrawal that leaves debt, or liquidation completes in a transaction in which
-- [x] `INV-005` One position backs one record in one account: (a) custody is keyed by `(integrationId, positionKey)`: for ever
-- [x] `INV-006` `r.credited` is set at pledge by Collateralization to the position's units read through its AMM integration (`
-- [x] `INV-007` The LPVault of each AMM protocol transfers a position out only (a) to `depositorOf(positionKey)`, by a transfe
-- [x] `INV-008` For every registered proxy `p` and market `m`: `Spoke.getUserSuppliedShares(reserveId_m, p) == Σ r.credited` o
-- [x] `INV-058` Reconcile on exit. In `release` (withdrawal), `releasePartial` (partial removal), `releaseForDeleverage` (dele
-- [x] `INV-009` `VaultToken.mint(to, amount)` succeeds only when called by the AaveAdapter (the token's immutable `adapter()`)
-- [x] `INV-010` Only the AaveAdapter burns vault tokens (`burn(from, amount)`, from any holder without an allowance); this aut
-- [x] `INV-011` Transfer allowlist. A market's vault-token balances change only on these paths, and every other `transfer` and
-- [x] `INV-013` A proxy's vault-token supply on the Spoke decreases only through (a) `Spoke.withdraw` called by the proxy in `
-- [x] `INV-014` In every LPVaultSwap liquidation of proxy `p` in market `m`, with `S0` and `T0` Collateralization's own snapsh
-- [x] `INV-015` Collateralization keeps the records of each `(p, m)` with credited units > 0 in one stored list, inserting eac
-- [x] `INV-066` Backing across contracts. In every AaveAdapter `pledge` and `recredit`, the units minted equal the `credited` 
-- [x] `INV-080` Backing one-sided. For every market and at the end of every transaction, `vaultToken.totalSupply() ≤ Collatera
-- [x] `INV-088` Partial removal and re-credit. In every `removeLiquidity` the units burned from the proxy equal the record's d
-- [x] `INV-017` Collateralization and each LPVault obtain an AMM protocol's position manager, factory and a market's pool only
-- [ ] `INV-018` Blast radius of upgradeable contracts. (a) AaveAdapter implementation faulty or hostile (one per chain, servin
-- [ ] `INV-020` In a borrow of debt reserve `r`, `r`'s asset moves from `r`'s funding Hub (the CDP Spoke's home Hub, or anothe
-- [x] `INV-021` At the end of every transaction: (a) every ERC-20 allowance an Avana contract granted during the transaction i
-- [ ] `INV-026` (a) A pledge into an account with no collateral and no debt on that Spoke requires the market Live, or Driftin
-- [x] `INV-027` For each market, the regular counter plus the top-up slice counter equals `Σ remainingCharge(r)` over the mark
-- [x] `INV-028` (a) A pledge, top-up or re-credit completes only if, after it, every counter is within its cap (`marketUsdCap`
-- [x] `INV-082` Rescue units never support new debt. Collateralization books, per record, the rescue units of every rescue top
-- [x] `INV-092` Caps keyed by Hub. The token and depositor counters of `INV-027` and `INV-028` live in the one Collateralizati
-- [x] `INV-045` When the proxy has no debt on its Spoke (`spoke.getUserAccountData(proxy).borrowCount == 0`), the depositor's 
-- [x] `INV-081` Stops never reach exits or liquidation. The application pause state and reason, the market and debt breakers a
-- [x] `INV-096` Liquidation stays within one transaction. (a) Each (account, market) holds at most 16 open records; a pledge t
-- [x] `INV-052` The vault tokens, VaultTokenFactory, every LPVault (one per AMM protocol per chain), Collateralization (one pe
-- [x] `INV-054` Every external state-changing entry point of the AaveAdapter and LPVaultSwap either acquires the Lock (outer c
-- [x] `INV-067` Pause-state effects. In every application pause state and pause reason, the liquidation entry point `liquidate
-- [x] `INV-091` The Lock has exactly two members: the chain's AaveAdapter and LPVaultSwap, fixed as immutables at the Lock's d
+## ATTACK (23: 0 verified, 0 failed, 20 not run, 3 unlinked)
 
-## ATTACK (22)
-
-- [x] `ATTACK-001` Duplicate LP Collateral Registration
-- [x] `ATTACK-004` Collateral from a counterfeit NFT, unapproved pool or partial range
-- [x] `ATTACK-005` Fake backing through an upgradeable market map
-- [ ] `ATTACK-007` Re-pledge during the release callback
+- [~] `ATTACK-001` Duplicate LP Collateral Registration — TEST-010, TEST-011
+- [~] `ATTACK-004` Collateral from a counterfeit NFT, unapproved pool or partial range — TEST-279
+- [~] `ATTACK-005` Fake backing through an upgradeable market map — TEST-011, TEST-138, TEST-171
+- [~] `ATTACK-007` Re-pledge during the release callback — TEST-060
 - [ ] `ATTACK-009` Unbacked mint through a position-modification flow
-- [x] `ATTACK-012` Over-release of backing on withdrawal rounding
-- [x] `ATTACK-013` Keeper-chosen record or allocation drift in multi-NFT seizure
-- [x] `ATTACK-016` Liquidation or withdrawal DoS by liquidity donation
-- [x] `ATTACK-025` Hostile LPVaultSwap debits a healthy account's records
-- [x] `ATTACK-026` Hostile LPVaultSwap seizes and keeps vault tokens
-- [x] `ATTACK-033` Re-pointing proxies or the LPVault through configuration
-- [x] `ATTACK-061` Liquidation gas exhaustion with many dust NFTs in one market
-- [x] `ATTACK-079` Debit check that bricks liquidation or trusts LPVaultSwap's snapshot
-- [x] `ATTACK-091` Cap bypass or lockout through counter drift
-- [x] `ATTACK-092` Cross-contract reentrancy during settlement
-- [x] `ATTACK-093` Read-only reentrancy on the Lens or LPOracle
-- [x] `ATTACK-113` Theft or over-debit through the pending-settlement balance
-- [x] `ATTACK-143` Re-credit donation and cap use
-- [x] `ATTACK-153` Narrow-range position credited at the market range's value
-- [x] `ATTACK-157` Hub-wide caps multiplied by the number of Spokes
-- [x] `ATTACK-169` Lock that cannot admit vaults and ledgers added later
+- [~] `ATTACK-012` Over-release of backing on withdrawal rounding — TEST-014
+- [~] `ATTACK-013` Keeper-chosen record or allocation drift in multi-NFT seizure — PROP-012, TEST-057
+- [~] `ATTACK-016` Liquidation or withdrawal DoS by liquidity donation — TEST-016
+- [~] `ATTACK-025` Hostile LPVaultSwap debits a healthy account's records — TEST-131, TEST-150, TEST-208
+- [~] `ATTACK-026` Hostile LPVaultSwap seizes and keeps vault tokens — TEST-150
+- [~] `ATTACK-033` Re-pointing proxies or the LPVault through configuration — TEST-138, TEST-171
+- [~] `ATTACK-061` Liquidation gas exhaustion with many dust NFTs in one market — TEST-269
+- [~] `ATTACK-079` Debit check that bricks liquidation or trusts LPVaultSwap's snapshot — TEST-131, TEST-208
+- [~] `ATTACK-091` Cap bypass or lockout through counter drift — TEST-014
+- [~] `ATTACK-092` Cross-contract reentrancy during settlement — TEST-046, TEST-060, TEST-222
+- [~] `ATTACK-093` Read-only reentrancy on the Lens or LPOracle — TEST-060, TEST-222
+- [~] `ATTACK-113` Theft or over-debit through the pending-settlement balance — TEST-152
+- [~] `ATTACK-143` Re-credit donation and cap use — TEST-238
+- [~] `ATTACK-153` Narrow-range position credited at the market range's value — TEST-279
+- [~] `ATTACK-157` Hub-wide caps multiplied by the number of Spokes — TEST-272
+- [~] `ATTACK-169` Lock that cannot admit vaults and ledgers added later — TEST-060
 - [ ] `ATTACK-192` Two-token and tokenId keys colliding in shared code
-58 IDs without a link from contracts/: REQ-COLL-004, REQ-COLL-009, REQ-COLL-030, REQ-VAULT-019, REQ-VAULT-020, REQ-VAULT-023, REQ-VAULT-028, REQ-VAULT-043, REQ-VAULT-063, REQ-VAULT-087, REQ-VAULT-089, REQ-VAULT-090, REQ-VAULT-092, REQ-VAULT-100, REQ-VAULT-103, REQ-VAULT-108, REQ-VAULT-111, REQ-VAULT-127, REQ-VAULT-142, REQ-VAULT-144 …
+- [ ] `ATTACK-202` Liquidation fee on the vault-token reserve halts seizure
+
+## Cross-cutting TEST rows, every contract (17): see --uncovered
+
+- `TEST-001` [environment] The Foundry workspace builds with solc 0.8.28 and EVM `cancun`, the same compiler as Aave V4; dependencies are
+- `TEST-032` [access-control] Selector inventory: the external selectors of every deployed Avana contract are enumerated from bytecode and c
+- `TEST-061` [unit] Events: every borrower and keeper action is one atomic call that emits the inventory events of its contracts, 
+- `TEST-177` [unit] Zero-amount transfers skipped: with mock tokens that revert on a zero-amount `transfer` and `transferFrom`, ev
+- `TEST-062` [access-control] Role map: every privileged selector of every Avana contract checks the role or the `TIMELOCK` address in the r
+- `TEST-066` [access-control] Guardian powers: the Emergency Guardian (3-of-5) and the Aave Protocol Guardian hold `APPLICATION_PAUSE_GUARDI
+- `TEST-080` [fuzz] Dust donations: sending 1 wei up to 10^6 wei of GHO, USDC, WETH, DAI, pool tokens or vault tokens (where the r
+- `TEST-092` [invariant] Conservation: for every token (each debt asset, each pool token, each vault token), the sum of tracked balance
+- `TEST-107` [invariant] Hostile suite: with the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap replaced through 
+- `TEST-108` [invariant] Structure and governance: immutables and runtime code hashes of the LPVault, Collateralization, vault tokens, 
+- `TEST-212` [invariant] Timelock timing: handlers schedule normal, short and mixed batches (short-listed and normal calls in one batch
+- `TEST-121` [fork] End-to-end lifecycle on one fork (Avana-deployed Aave V4 plus Ethereum Uniswap v3, Chainlink, GHO, the Aave V3
+- `TEST-126` [fork] Emergency matrix: for every row of the matrix in [3.6](../03-operations/06-emergency-operations.md) (applicati
+- `TEST-127` [fork] Halt deterioration and caps: with liquidation of an account stopped for the 48-hour incident window of `Q-192`
+- `TEST-137` [deployment-check] Upgrade safety: every UUPS contract (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, LPVaul
+- `TEST-214` [deployment-check] Role snapshot: on every upgradeable Avana contract `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` are held only 
+- `TEST-224` [deployment-check] Deployment simulation: `forge script` on the Ethereum fork and on the Base fork runs the chain's full deployme

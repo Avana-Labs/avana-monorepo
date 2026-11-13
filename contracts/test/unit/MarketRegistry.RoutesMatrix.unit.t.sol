@@ -200,6 +200,9 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         // Closed market.
         _setRoute(id, address(usdc), address(gho), 1, "dexB");
         _prepareActivation(id, vt);
+        // Activation set slot 0 again; a replaced route leaves the approved set (REQ-ROUTE-017), so the slot's current
+        // route is the one to restore from here on.
+        (p,) = registry.getRoute(id, address(usdc), address(gho), 0);
         vm.startPrank(address(timelock));
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
         registry.activateMarket(id);

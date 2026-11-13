@@ -101,6 +101,10 @@ Avana deploys its own Aave V4 from `dependencies/aave-v4-a3ef63e/` (commit `a3ef
 6. `LiquidationLogic`: `SpokeInstance` calls it as an external library. The library step CREATE2-deploys `LiquidationLogic` (from `out-aave/`) with salt 0 through the factory; its address depends only on its init code, so it is the same on Anvil, Sepolia and every fork. The step writes `FOUNDRY_LIBRARIES=dependencies/aave-v4-a3ef63e/src/spoke/libraries/LiquidationLogic.sol:LiquidationLogic:<address>` to `deployments-local/libraries.env`, and `FOUNDRY_PROFILE=aave forge build --force` is rerun with it so the `SpokeInstance` artifact is linked. Fixtures deploy the library at that address (CREATE2 through the etched factory) before deploying Spokes. The manifest records the address. `TEST-002` asserts that the Spoke calls a contract whose runtime code is `LiquidationLogic` at the CREATE2 address.
 7. Bytecode identity: `TEST-002` and `TEST-134` compare the runtime hashes of `HubInstance`, `SpokeInstance`, `AaveOracle`, the configurators, `TreasurySpoke`, `AccessManagerEnumerable` and `LiquidationLogic` built by the `aave` profile with the Aave build of the same commit (and, on the fork, with the DAO deployment when one exists).
 
+### 3.1a Local Uniswap v3 pools (`ClPoolFixture`)
+
+The concentrated-liquidity LPOracle is tested against real Uniswap v3 pools, not mocks. Build them once with `FOUNDRY_PROFILE=univ3 forge build` (`make build-univ3`): the `univ3` profile compiles the pinned `uniswap-v3-core` release with its own compiler, Solidity 0.7.6, and Uniswap's settings (800 optimizer runs, istanbul, no metadata hash) into `out-univ3/`. Avana's 0.8.28 build never imports these sources. `ClPoolFixture` deploys the factory with `deployCode("out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json")`, creates pools through it (fee 100 is enabled at spacing 1), initializes them, grows their observation buffers and mints, swaps and flashes through `ClPoolActor`, a 0.8 contract that implements the pool callbacks. The NonfungiblePositionManager is not built: periphery needs OpenZeppelin 3.4 for Solidity 0.7, which is not pinned, and the LPOracle reads only the pool. Aerodrome Slipstream sources are not pinned either; the Slipstream `slot0` layout (6 words) is covered by the oracle's unit tests on a pool whose `slot0` returns that layout.
+
 ### 3.2 Avana on top (`AvanaFixture`, `MarketFixture`)
 
 Avana deploys in the deploy-plan order. Every immutable is wired by address, so contracts that reference each other use predicted addresses and the fixture asserts each predicted address equals the deployed one:
@@ -583,6 +587,14 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-295 | unit, integration | `integration/ParameterStore.MarketCountGas.integration.t.sol` (1), `unit/MarketRegistry.MarketCount.unit.t.sol` (4) | — |
 | TEST-296 | unit | `unit/MarketRegistry.IntegrationRecord.unit.t.sol` (8) | — |
 | TEST-297 | off-chain | — | planned; file not named yet |
+| TEST-320 | unit, fuzz | `unit/SpeedLimitMath.unit.t.sol` (15) | — |
+| TEST-321 | unit, integration | `integration/RiskModule.Collateralization.integration.t.sol` (1), `unit/RiskModule.Speed.unit.t.sol` (14), `unit/RiskModule.SpeedScopes.unit.t.sol` (7) | — |
+| TEST-322 | unit, integration | `integration/RiskModule.Collateralization.integration.t.sol` (1), `unit/RiskModule.Speed.unit.t.sol` (5), `unit/RiskModule.SpeedScopes.unit.t.sol` (6) | — |
+| TEST-323 | fuzz | `fuzz/RiskModule.Speed.fuzz.t.sol` (3), `fuzz/SpeedLimitMath.fuzz.t.sol` (5) | — |
+| TEST-324 | invariant | `invariant/RiskModule.Speed.invariant.t.sol` (4) | — |
+| TEST-325 | unit, fuzz, invariant | `invariant/ParameterStore.Speed.invariant.t.sol` (2), `unit/ParameterStore.Speed.unit.t.sol` (16), `unit/ParameterStore.SpeedRules.unit.t.sol` (6) | — |
+| TEST-326 | integration | `integration/AaveAdapter.Speed.integration.t.sol` (7) | — |
+| TEST-327 | unit | `unit/Lens.Speed.unit.t.sol` (9) | — |
 
 ## 8. INV map
 
@@ -682,6 +694,7 @@ Every invariant of 4.1, its Foundry invariant function(s), the handlers that can
 | INV-090 | `invariant_TEST_212_normalDelayBounds`, `invariant_TEST_215_allInvariantsAfterEveryStep` | `Timelock.invariant.t.sol`, `MultiActor.invariant.t.sol` | Governance, Guardian (cancel) | TEST-224, TEST-244, PROP-073 |
 | INV-091 | `invariant_TEST_108_immutableCode`, `invariant_TEST_108_noReentry`, `invariant_TEST_215_allInvariantsAfterEveryStep` | `Governance.invariant.t.sol`, `MultiActor.invariant.t.sol` | Attacker (direct Collateralization and LPVault calls), Reentry, Borrower, Keeper, Governance (upgrades) | TEST-270, PROP-075 |
 | INV-092 | `invariant_TEST_097_countersEqualCharges`, `invariant_TEST_097_capsHold`, `invariant_TEST_215_allInvariantsAfterEveryStep` | `Balances.invariant.t.sol`, `MultiActor.invariant.t.sol` | Borrower (several markets of one pool and of one Hub), Keeper, Oracle, Governance (cap changes) | TEST-272, PROP-077 |
+| INV-110 | `invariant_TEST_324_borrowWindowsHoldTheirLimits`, `invariant_TEST_324_pledgeWindowHoldsItsLimit`, `invariant_TEST_324_storedWindowMatchesTheLog`, `invariant_TEST_324_exitsPassAndRefusalsAreSpeedErrors` | `RiskModule.Speed.invariant.t.sol` | RiskModuleSpeed (borrows by six accounts, pledges, repays, withdrawals with debt, time) | TEST-320, TEST-323, PROP-110, PROP-111 |
 | INV-093 | `invariant_TEST_106_noNewRiskUnderDrift`, `invariant_TEST_211_debtSetEqualsRegistry`, `invariant_TEST_215_allInvariantsAfterEveryStep` | `Borrowing.invariant.t.sol`, `Accounts.invariant.t.sol`, `MultiActor.invariant.t.sol` | Governance (Aave DAO Spoke settings: receive shares, liquidation fee, reinvestment controller, borrowable), Borrower, Attacker (`liquidationCall` with `receiveShares` true) | TEST-109, TEST-180, TEST-181, TEST-204, TEST-268, PROP-078 |
 | INV-094 | `invariant_TEST_274_noBorrowAboveDrawCap`, `invariant_TEST_274_overCapFallsOnlyThroughRepayLiquidationCoverage`, `invariant_TEST_274_reductionPathsSucceedAboveCap`, `invariant_TEST_274_capSumRuleHolds`, `invariant_TEST_215_allInvariantsAfterEveryStep` | `DrawGate.invariant.t.sol`, `MultiActor.invariant.t.sol` | Borrower, Keeper, AnyCaller, Payer, Governance (`drawCap` cuts, cross-Hub caps, `coverDeficit`), Guardian (funding Hub pause), Time | TEST-273, PROP-079 |
 | INV-095 | `invariant_TEST_104_noLoanInLiquidateAndHelperBounds`, `invariant_TEST_215_allInvariantsAfterEveryStep` | `Liquidation.invariant.t.sol`, `MultiActor.invariant.t.sol` | Keeper, AnyCaller, Attacker (direct flash callback), Governance (flash source changes) | TEST-046, TEST-118, TEST-267, PROP-080, TEST-285, TEST-287, PROP-096, PROP-097 |

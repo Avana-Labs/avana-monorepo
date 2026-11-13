@@ -30,8 +30,8 @@ contract MarketRegistryLifecycleInvariantTest is Test {
         actions[3] = MarketRegistryLifecycleHandler.activate.selector;
         actions[4] = MarketRegistryLifecycleHandler.cancel.selector;
         actions[5] = MarketRegistryLifecycleHandler.offboard.selector;
-        actions[6] = MarketRegistryLifecycleHandler.step.selector;
-        actions[7] = MarketRegistryLifecycleHandler.step.selector;
+        actions[6] = MarketRegistryLifecycleHandler.offboard.selector;
+        actions[7] = MarketRegistryLifecycleHandler.warp.selector;
         actions[8] = MarketRegistryLifecycleHandler.close.selector;
         actions[9] = MarketRegistryLifecycleHandler.warp.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
@@ -96,16 +96,14 @@ contract MarketRegistryLifecycleInvariantTest is Test {
     }
 
     // TEST-213 verifies: REQ-CONFIG-080, Q-355
-    function invariant_TEST_213_windDownStaysOnTheRamp() public view {
-        assertEq(handler.ltMismatch(), 0, "a step differs from the closed-form ramp");
+    function invariant_TEST_213_offboardingTargetIsPublished() public view {
+        assertEq(handler.ltMismatch(), 0, "a published target differs from half the start");
         for (uint256 i = 0; i < handler.SHAPES(); ++i) {
             MarketRegistryLifecycleHandler.Slot memory s = _slot(i);
             if (s.status != MarketStatus.Offboarding && s.status != MarketStatus.Closed) continue;
             WindDownState memory w = handler.windDownOf(i);
-            uint256 floor_ = w.startLtBps < 5000 ? w.startLtBps : 5000;
-            assertLe(w.currentLtBps, w.startLtBps, "never above the start");
-            assertGe(w.currentLtBps, floor_, "never below the final value");
-            if (w.lastStepAt != 0) assertGe(w.lastStepAt, w.offboardedAt + 5 days, "no step inside the notice");
+            assertEq(w.targetLtBps, uint256(w.startLtBps) * 5000 / 10_000, "the target is half the start");
+            assertEq(w.unusedLastStepAt, 0, "the former ramp field stays 0");
         }
     }
 

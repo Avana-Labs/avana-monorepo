@@ -88,9 +88,10 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         ) revert UnknownMarket();
     }
 
-    /// @dev The debt reserve's record: enabled in the MarketRegistry for `spoke` and borrowable on the Spoke
-    /// (`UnknownDebtReserve`).
-    /// @custom:spec REQ-SWAP-087, REQ-SWAP-095
+    /// @dev The debt reserve's record: enabled in the MarketRegistry for `spoke`, with an asset (`UnknownDebtReserve`).
+    /// Aave's `borrowable` flag is not read: Aave keeps repaying and liquidating a reserve whose new borrowing it turned
+    /// off, and so does LPVaultSwap (REQ-SWAP-003).
+    /// @custom:spec REQ-SWAP-087, REQ-SWAP-095, REQ-SWAP-003
     function _loadDebtReserve(
         address spoke,
         uint256 reserveId
@@ -98,9 +99,7 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         IMarketRegistry mr = IMarketRegistry(_MARKET_REGISTRY);
         if (!mr.isApprovedDebtReserve(spoke, reserveId)) revert UnknownDebtReserve(reserveId);
         def = mr.getDebtReserve(spoke, reserveId);
-        if (def.asset == address(0) || !IAaveV4Spoke(spoke).getReserveConfig(reserveId).borrowable) {
-            revert UnknownDebtReserve(reserveId);
-        }
+        if (def.asset == address(0)) revert UnknownDebtReserve(reserveId);
     }
 
     /// @dev `SharesNotEqualAssets` unless the vault-token asset's added shares equal its added assets on its Hub.

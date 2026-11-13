@@ -26,7 +26,7 @@ pragma solidity 0.8.28;
 ///   `freeze`, `freezeAddress`, `tripMarketBreaker` and `tripDebtBreaker`, immediately; role admin
 ///   `APPLICATION_ADMIN`. A key holding only this role can never undo a freeze, an address freeze or a breaker trip.
 /// - `APPLICATION_RISK_STEWARD` (ParameterStore only): the 2-of-3 Joint Configuration Safe (one Avana Labs, one Aave
-///   Labs and one LlamaRisk signer); the 20 ParameterStore tighten setters and `setAvanaFeeShareBps` within its
+///   Labs and one LlamaRisk signer); the 22 ParameterStore tighten setters and `setAvanaFeeShareBps` within its
 ///   0–5,000 bps bound, immediately, beside the timelock; role admin `APPLICATION_ADMIN`. It cannot loosen, upgrade,
 ///   change a route, a price source, a keeper or a role, cover a deficit or cancel an operation.
 /// - `DAO_CANCELLER_ROLE` (AvanaTimelock only): the Aave governance executor; needed with `CANCELLER_ROLE` to cancel

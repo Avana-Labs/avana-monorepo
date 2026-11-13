@@ -19,6 +19,7 @@ import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {RegistryFeedMock, RegistryLPOracleMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
+import {RegistryErc1820Mock} from "../utils/mocks/MarketRegistryRouteMocks.sol";
 
 /// @notice Token listing, price sources and market registration (with relisting) of the MarketRegistry.
 contract MarketRegistryListingUnitTest is MarketRegistryFixture {
@@ -37,6 +38,29 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     ) internal pure returns (address[] memory r) {
         r = new address[](1);
         r[0] = a;
+    }
+
+    // TEST-250 verifies: REQ-CONFIG-017, Q-342
+    /// @notice With the ERC-1820 registry present, `listToken` refuses a token with an `ERC777Token` implementer
+    /// (`ListingCheckFailed("erc777")`); an implementer for another interface hash does not count. (Every other listing
+    /// test runs with no code at the registry's address, where no token is refused.)
+    function test_TEST_250_listTokenRefusesErc777() public {
+        RegistryTokenMock dai = new RegistryTokenMock(18);
+        (address[] memory p, address[] memory a, address[] memory s) = _routes("dai777");
+        TokenDef memory d = _tokenDef(p, a, s);
+        address erc1820 = 0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24;
+        vm.etch(erc1820, address(new RegistryErc1820Mock()).code);
+        RegistryErc1820Mock reg = RegistryErc1820Mock(erc1820);
+        reg.setImplementer(address(dai), keccak256("ERC777Token"), uint256(uint160(makeAddr("hooks"))));
+        vm.startPrank(address(timelock));
+        _expectListing("erc777");
+        registry.listToken(address(dai), d);
+        vm.stopPrank();
+        reg.setImplementer(address(dai), keccak256("ERC777Token"), 0);
+        reg.setImplementer(address(dai), keccak256("ERC20Token"), uint256(uint160(makeAddr("hooks"))));
+        vm.prank(address(timelock));
+        registry.listToken(address(dai), d);
+        assertTrue(registry.getToken(address(dai)).listed, "listed once no ERC777Token implementer");
     }
 
     // TEST-250 verifies: REQ-CONFIG-017, REQ-CONFIG-021, REQ-CONFIG-025, REQ-MREG-027, Q-248, Q-274, REQ-ACCESS-133

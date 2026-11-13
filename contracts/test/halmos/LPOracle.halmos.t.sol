@@ -162,15 +162,35 @@ contract LPOracleHalmosTest is Test {
             _inputs(failed, disagreeing, false, failedSince, 0, cachedWindow, 3600, fresh, lower, accepted);
         LPOracleDecisionHarness.Outcome memory e = h.decide(x);
         assertGe(e.served, 1, "served below 1");
-        if (e.state != PriceState.Live) assertLe(e.served, accepted, "a state other than Live served above A");
         if (e.state == PriceState.Expired) assertEq(e.served, 1, "Expired did not serve 1");
         if (e.state == PriceState.Cached) assertEq(e.served, accepted, "Cached did not serve A");
         if (failed) assertTrue(e.state == PriceState.Cached || e.state == PriceState.Expired, "failed but not stale");
         if (!failed && fresh >= 1) assertLe(e.served, fresh, "served above the fresh price");
-        if (!failed && !disagreeing) {
-            uint256 m = fresh < accepted ? fresh : accepted;
-            if (e.state == PriceState.Drifting) assertEq(e.served, m == 0 ? 1 : m, "Drifting: min(fresh, A)");
+        // The accepted price bounds borrowing only (SPEC-ORC-017): Live and Drifting serve the fresh price.
+        if (!failed && !disagreeing && (e.state == PriceState.Live || e.state == PriceState.Drifting)) {
+            assertEq(e.served, fresh == 0 ? 1 : fresh, "Live or Drifting: fresh");
         }
+    }
+
+    // PROP-074 verifies: SPEC-ORC-017, INV-087
+    // Sources: MATH-UO-42
+    /// @dev A rally never lowers the served price: with the same state inputs, a higher fresh price (and the lower-route
+    /// price that follows it) serves at least as much, whatever the accepted price.
+    function check_PROP_074_rallyNeverLowersServed(
+        bool disagreeing,
+        uint256 fresh,
+        uint256 rise,
+        uint256 lower,
+        uint256 accepted
+    ) public {
+        vm.assume(rise < 2 ** 199 && fresh < 2 ** 199);
+        LPOracleDecisionHarness.Inputs memory x =
+            _inputs(false, disagreeing, false, 0, 0, 3600, 3600, fresh, lower, accepted);
+        uint256 before = h.decide(x).served;
+        x.fresh = fresh + rise;
+        x.lower = lower + rise;
+        uint256 afterRally = h.decide(x).served;
+        assertGe(afterRally, before, "a rally lowered the served price");
     }
 
     // PROP-074 verifies: SPEC-ORC-013, REQ-ORACLE-017, REQ-ORACLE-027, INV-031, Q-183

@@ -10,9 +10,11 @@ import {Lock} from "../../src/lock/lock/Lock.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
+import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleImmutables.sol";
+import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RegistrySpokeImplMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
@@ -96,6 +98,41 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 
+    // TEST-322 verifies: REQ-RISK-097, REQ-RISK-093
+    /// @notice The pledge-speed view reads the real ledger's booked counters: free, it reports the window on the
+    /// market's booked value; with any Lock member holding the Lock, the ledger refuses the read and the view reports
+    /// `unavailable` instead of reverting.
+    function test_TEST_322_pledgeViewReadsTheRealLedger() public {
+        store.setMarketSpeed(
+            mid, MarketSpeedLimits(21_600, 2500, 2500, 250_000e8, 2_500_000e8, 1_000_000e8, 10_000_000e8)
+        );
+        SpeedView memory p = riskModule.getPledgeSpeed(mid);
+        assertFalse(p.unavailable);
+        assertEq(p.limit, 1_000_000e8, "empty ledger: P_min");
+        _acquire(address(adapter));
+        p = riskModule.getPledgeSpeed(mid);
+        assertTrue(p.unavailable, "ledger locked: unavailable, no revert");
+        assertEq(p.limit, 0);
+        _release(address(adapter));
+        assertFalse(riskModule.getPledgeSpeed(mid).unavailable);
+    }
+
+    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-095
+    /// @notice Inside the Adapter's Lock session the borrow-speed check charges the windows like any other borrow:
+    /// the speed reads touch no ledger view.
+    function test_TEST_321_borrowSpeedUnderTheAdapterLock() public {
+        rHub.setSpokeListed(GHO_ASSET, address(spoke), true);
+        hub.setOwed(GHO_ASSET, address(spoke), 1_000_000e18, 0);
+        store.setMarketSpeed(mid, MarketSpeedLimits(21_600, 2500, 2500, 0, 2_500_000e8, 0, 0));
+        _acquire(address(adapter));
+        vm.prank(address(adapter));
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 100_000e18);
+        _release(address(adapter));
+        (SpeedView memory m,) = riskModule.getBorrowSpeed(mid, GHO_RESERVE);
+        assertEq(m.used, 100_000e8);
+        assertEq(m.limit, 225_000e8, "25 % of ($1,000,000 - $100,000)");
+    }
+
     // ─── Helpers ───
 
     function _acquire(
@@ -157,9 +194,9 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         factory = new VaultTokenFactory(
             address(adapter), address(lpVaultSwap), predictedLedger, address(timelock), marketRegistry_
         );
-        // After the ledger (nonce n + 1): registry logics (6), registry implementation and proxy, risk logics (5),
+        // After the ledger (nonce n + 1): registry logics (6), registry implementation and proxy, risk logics (6),
         // risk implementation and proxy.
-        address predictedRisk = vm.computeCreateAddress(address(this), n + 16);
+        address predictedRisk = vm.computeCreateAddress(address(this), n + 17);
         ledger = ICollateralization(
             deployCode(
                 "Collateralization.sol:Collateralization",

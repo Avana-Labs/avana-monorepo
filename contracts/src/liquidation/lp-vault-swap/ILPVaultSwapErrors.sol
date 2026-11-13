@@ -23,8 +23,8 @@ interface ILPVaultSwapErrors {
     /// @custom:spec REQ-SWAP-004
     error UnknownMarket();
 
-    /// @notice The debt reserve is not a debt reserve the MarketRegistry enabled for the Spoke, or the Spoke reports it
-    /// not borrowable.
+    /// @notice The debt reserve is not a debt reserve the MarketRegistry enabled for the Spoke. Aave's `borrowable` flag
+    /// is not part of the test: a reserve whose new borrowing Aave turned off is still repaid and liquidated.
     /// @param debtReserveId The rejected reserve.
     /// @custom:spec REQ-SWAP-087, REQ-SWAP-095
     error UnknownDebtReserve(uint256 debtReserveId);

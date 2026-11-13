@@ -82,14 +82,22 @@ contract FlashLiquidatorOperatorUnitTest is FlashLiquidatorFixture {
         assertEq(usdcToken.balanceOf(safe), 1000e6 - 98e6, "98 USDC of top-up from the Safe");
     }
 
-    /// @notice A residue the operator helper cannot receive is escrowed for it, and the signer claims it to the Safe.
+    /// @notice A residue the operator helper cannot receive is escrowed for it and claimed to the Safe in the same call;
+    /// when the Safe cannot receive it then, the credit stays and the signer claims it to the Safe later.
     // TEST-174 verifies: REQ-HELPER-010, REQ-HELPER-011, REQ-SWAP-076, Q-389
     function test_TEST_174_operatorClaimEscrowedToSafe() public {
         lvs.addResidue(usdtToken, 0.4e6);
         usdtToken.setBlocked(address(opHelper), true);
+        uint256 snap = vm.snapshotState();
+        _signerLiquidates(_exampleRequest());
+        assertEq(escrow.claimable(address(usdtToken), address(opHelper)), 0, "claimed in the call");
+        assertEq(usdtToken.balanceOf(safe), 0.4e6, "to the Safe");
+        vm.revertToState(snap);
+        usdtToken.setBlocked(safe, true);
         _signerLiquidates(_exampleRequest());
         assertEq(escrow.claimable(address(usdtToken), address(opHelper)), 0.4e6);
         assertEq(usdcToken.balanceOf(safe), 69.825e6);
+        usdtToken.setBlocked(safe, false);
         vm.prank(signer);
         uint256 claimed = opHelper.claimEscrowed(address(usdtToken));
         assertEq(claimed, 0.4e6);

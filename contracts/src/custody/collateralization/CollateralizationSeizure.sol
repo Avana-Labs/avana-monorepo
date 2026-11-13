@@ -15,9 +15,10 @@ import {ICollateralizationSeizure} from "./ICollateralizationSeizure.sol";
 // forge-lint: disable-start(reentrancy-no-eth)
 /// @title CollateralizationSeizure
 /// @notice LPVaultSwap's seizure path: `beginSeizure` snapshots the proxy's supplied shares and the vault token's
-/// supply in transient storage before `Spoke.liquidationCall`; `settleSeizure` proves the share drop and the supply
-/// drop both equal the seized units, reconciles any earlier unsettled seizure, debits the records largest-first and has
-/// the LPVault unwind exactly those units to LPVaultSwap.
+/// supply in transient storage before `Spoke.liquidationCall`; `settleSeizure` proves the supply drop equals the
+/// seized units and the share drop covers them, reconciles any earlier unsettled seizure together with the units Aave
+/// paid as its liquidation fee (into the pending balance), debits the records largest-first and has the LPVault unwind
+/// exactly the seized units to LPVaultSwap.
 /// @dev The snapshot is taken by Collateralization itself; no caller-supplied value is accepted (REQ-VAULT-049). It
 /// lives in transient storage, so a liquidation that never settles leaves nothing behind for the next transaction. A
 /// liquidation by anyone but LPVaultSwap never reaches this contract: if it seizes units the vault token refuses the
@@ -49,14 +50,17 @@ abstract contract CollateralizationSeizure is CollateralizationLedger, ICollater
         uint256[] calldata minAmounts
     ) external override returns (uint256[] memory amounts) {
         _onlyLPVaultSwap();
-        (Ctx memory c, uint256 sharesBefore) = _checkDrops(proxy, vaultToken, units);
+        (Ctx memory c, uint256 sharesBefore, uint256 feeUnits) = _checkDrops(proxy, vaultToken, units);
         _checkLength(c, minAmounts.length);
         if (units == 0) {
             _storeSnapshot(address(0), address(0), 0, 0, 0);
             return new uint256[](c.tokens.length);
         }
         _checkReadSafe(c);
-        _reconcile(c, proxy, sharesBefore);
+        // SPEC-BACK-007: the units Aave moved to its fee receiver inside the Hub left the proxy's shares without
+        // reaching LPVaultSwap; reconciling against `sharesBefore - feeUnits` debits them with any earlier shortfall
+        // and moves their principal into the pending balance, so the backing gap is unchanged.
+        _reconcile(c, proxy, sharesBefore - feeUnits);
         uint256 count;
         (amounts, count) = _settleDebits(c, proxy, units);
         uint256 n = amounts.length;
@@ -71,24 +75,30 @@ abstract contract CollateralizationSeizure is CollateralizationLedger, ICollater
         emit SeizureSettled(proxy, vaultToken, units, amounts, count);
     }
 
-    /// @notice Checks the active snapshot names `proxy` and `vaultToken`, and that the proxy's share drop and the
-    /// vault token's supply drop since `beginSeizure` both equal `units` (SPEC-BACK-007).
+    /// @notice Checks the active snapshot names `proxy` and `vaultToken`, that the vault token's supply drop since
+    /// `beginSeizure` equals `units` and that the proxy's share drop is at least `units` (SPEC-BACK-007); returns the
+    /// excess `feeUnits`, the liquidation-fee shares Aave moved to its fee receiver inside the Hub (no vault token
+    /// left the Hub for them, which the exact supply drop proves).
     /// @custom:spec REQ-VAULT-050, REQ-VAULT-051, REQ-VAULT-115, REQ-VAULT-116, SPEC-BACK-007, INV-014
     function _checkDrops(
         address proxy,
         address vaultToken,
         uint256 units
-    ) private view returns (Ctx memory c, uint256 sharesBefore) {
+    ) private view returns (Ctx memory c, uint256 sharesBefore, uint256 feeUnits) {
         (address snapProxy, address snapToken,, uint256 shares0, uint256 supply0) = _loadSnapshot();
         if (snapProxy == address(0) || snapProxy != proxy || snapToken != vaultToken) revert SeizureMismatch();
         c = _load(vaultToken);
         _withReserve(c);
         uint256 sharesAfter = _supplied(c, proxy);
-        if (sharesAfter > shares0 || shares0 - sharesAfter != units) revert DebitMismatch();
+        // An Aave fee is a part of a seizure, so a share drop with no seized units is never one (TEST-131).
+        if (sharesAfter > shares0 || shares0 - sharesAfter < units || (units == 0 && sharesAfter != shares0)) {
+            revert DebitMismatch();
+        }
         uint256 supplyAfter = _supply(vaultToken);
         uint256 supplyDrop = supplyAfter > supply0 ? 0 : supply0 - supplyAfter;
         if (supplyAfter > supply0 || supplyDrop != units) revert SupplyDropMismatch(units, supplyDrop);
         sharesBefore = shares0;
+        feeUnits = shares0 - sharesAfter - units;
     }
 
     /// @notice Debits the seized units largest-first, clears the snapshot, then has the LPVault unwind each debited

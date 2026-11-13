@@ -703,14 +703,18 @@ rule seizureDebitEqualsSnapshotDrop(address p, address vt, uint256 u, uint256[] 
 
     settleSeizure(eSettle, p, vt, u, minAmounts);
 
-    mathint shortfall = (u > 0 && creditedBefore > sharesBefore) ? creditedBefore - sharesBefore : 0;
+    // Shares Aave's liquidation fee moved to its fee receiver inside the Hub: the share drop beyond the seized units
+    // (SPEC-BACK-007). They count as a shortfall reconciled into the pending balance.
+    mathint fee = sharesBefore - sharesAfter - u;
+    mathint shortfall = (u > 0 && creditedBefore > sharesBefore - fee) ? creditedBefore - (sharesBefore - fee) : 0;
 
-    assert to_mathint(u) == sharesBefore - sharesAfter, "debit differs from the snapshot share drop";
+    assert to_mathint(u) <= sharesBefore - sharesAfter, "debit above the snapshot share drop";
+    assert u == 0 => sharesAfter == sharesBefore, "a share drop with no seized units settled as a seizure";
     assert to_mathint(u) == burned, "debit differs from the supply drop since beginSeizure";
     assert to_mathint(currentContract.accountCredited[p][vt]) == creditedBefore - shortfall - u,
-        "account credit not lowered by the shortfall and the seized units";
+        "account credit not lowered by the shortfall (fee units included) and the seized units";
     assert to_mathint(currentContract.pending[vt].units) == pendingBefore + shortfall,
-        "pending units not raised by exactly the shortfall";
+        "pending units not raised by exactly the shortfall (fee units included)";
     assert gap(vt) == gapBefore, "a seizure settlement changed the backing gap";
     assert (u > 0 && creditedBefore >= sharesBefore) => to_mathint(currentContract.accountCredited[p][vt]) == sharesAfter,
         "supplied shares and credited units differ after the settlement";

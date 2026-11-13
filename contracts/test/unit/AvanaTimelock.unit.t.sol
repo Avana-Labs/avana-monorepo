@@ -118,7 +118,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
     function test_TEST_244_shortEligibleIsTheLaunchList() public view {
         SelectorPair[] memory launch =
             TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
-        assertEq(launch.length, 32);
+        assertEq(launch.length, 34);
         for (uint256 i; i < launch.length; ++i) {
             assertTrue(timelock.isShortEligible(launch[i].target, launch[i].selector), "eligible");
             assertTrue(timelock.isShortDelaySelector(launch[i].target, launch[i].selector), "listed at launch");
@@ -203,13 +203,13 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         vm.expectRevert(
             abi.encodeWithSelector(IAvanaTimelockErrors.InvalidShortDelaySelector.selector, predicted, selector)
         );
-        _newTimelock(NORMAL_DELAY, true, one, none);
+        _newTimelockWith(NORMAL_DELAY, true, one, none, _targets());
         predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)));
         one[0] = SelectorPair(predicted, selector);
         vm.expectRevert(
             abi.encodeWithSelector(IAvanaTimelockErrors.InvalidDaoCancelSelector.selector, predicted, selector)
         );
-        _newTimelock(NORMAL_DELAY, true, none, one);
+        _newTimelockWith(NORMAL_DELAY, true, none, one, _targets());
     }
 
     // ─── requiredDelay and scheduling (SPEC-GOV-001) ───

@@ -79,19 +79,28 @@ computed('MATH-AR-46e', 'SPEC-CAP-002 example (K $1,000,000, Z $100,000, R $990,
 
 # ---------------------------------------------------------------------------
 # MATH-AR-47  SPEC-CAP-003 restore amount: restoreBooked = ceil(usdToRestore x M / sv), with
-# M = max(price8, floor) (price8 the accepted price) and sv = served8 = latestAnswer() <= price8
-# (equal while Live; min(fresh, accepted) while Drifting, SPEC-ORC-017).
+# M = max(price8, floor), price8 the booking price min(fresh, accepted) (REQ-RISK-026), and sv = served8 =
+# latestAnswer() (SPEC-ORC-017): fresh while Live or Drifting, so at or above price8 after a rally; min(lower, fresh)
+# during a disagreement; the accepted price while Cached. No order between sv and price8 is assumed.
 hf, ho, Dv, cf, x, u, rb, M, Ae, sv = Ints('hf h_o Dray CF x usdToRestore restoreBooked bookPrice Aexact served8')
 hx = [x * WAD * RAY >= (ho - hf) * Dv, x * WAD * RAY < (ho - hf) * Dv + WAD * RAY]
 hu = [u * cf * 10**18 >= x * BPS, u * cf * 10**18 < x * BPS + cf * 10**18]
 hr = [rb * sv >= u * M, rb * sv < u * M + sv]
-b47 = [hf >= 0, ho > hf, Dv > 0, cf > 0, cf < BPS, p > 0, M >= p, sv > 0, sv <= p] + hx + hu + hr
+b47 = [hf >= 0, ho > hf, Dv > 0, cf > 0, cf < BPS, p > 0, M >= p, sv > 0] + hx + hu + hr
 # MATH-AR-47 verifies: SPEC-CAP-003, REQ-RISK-066
 prove('MATH-AR-47a', 'adding usdToRestore of collateral at CF_m restores h_o: (A + CF u 1e14) x WAD x RAY >= h_o x D (A x WAD x RAY >= hf x D)',
       b47 + [Ae * WAD * RAY >= hf * Dv], (Ae + cf * u * 10**14) * WAD * RAY >= ho * Dv)
 Lr, dpw, chr_ = Ints('Lr dpw chargeR')
-prove('MATH-AR-47b', 'a slice top-up charged <= restoreBooked has served value < usdToRestore + 1 (it cannot grow the position)',
-      b47 + [Lr > 0, dpw > 0, chr_ * dpw >= Lr * M, chr_ <= rb], Lr * sv < (u + 1) * dpw)
+prove('MATH-AR-47b', 'served8 <= max(price8, floor): a slice top-up charged <= restoreBooked has served value < usdToRestore + 1 (it cannot grow the position)',
+      b47 + [sv <= M, Lr > 0, dpw > 0, chr_ * dpw >= Lr * M, chr_ <= rb], Lr * sv < (u + 1) * dpw)
+# MATH-AR-47 verifies: SPEC-CAP-003, REQ-RISK-026, REQ-RISK-066
+prove('MATH-AR-47g', 'every state (served8 above the booking basis after a rally included): a slice top-up charged <= restoreBooked '
+      'has served value < usdToRestore + served8 / max(price8, floor) units of 1e-8 USD, a rounding excess only',
+      b47 + [Lr > 0, dpw > 0, chr_ * dpw >= Lr * M, chr_ <= rb], Lr * sv * M < (u * M + sv) * dpw)
+# MATH-AR-47 verifies: SPEC-CAP-003, REQ-RISK-026
+witness('MATH-AR-47h', 'why 47b needs served8 <= max(price8, floor): with served8 above the basis the one-unit bound of 47b can be '
+        'exceeded by the rounding of restoreBooked (by less than served8 / max(price8, floor) units, 47g)',
+        b47 + [sv > M, Lr > 0, dpw > 0, chr_ * dpw >= Lr * M, chr_ <= rb, Lr * sv >= (u + 1) * dpw])
 # SIM-GAP-14: a top-up worth usdToRestore at the served price (the collateral that restores h_o
 # in Aave's health factor) is charged at most restoreBooked, whatever the gap between the prices.
 prove('MATH-AR-47f', 'a top-up worth <= usdToRestore at served8, charged ceil(L x M) at the accepted basis, fits under restoreBooked',
@@ -111,7 +120,7 @@ computed('MATH-AR-47e', 'SPEC-CAP-003 / REQ-RISK-066 example (D $10,000, hf 1.02
          [('x = 8e28', 8 * 10**28, x_e), ('usdToRestore', 266_666_666_667, u_e),
           ('restoreBooked at 199,990,000', 266_666_666_667, cdiv(u_e * max(199_990_000, 10**8), 199_990_000)),
           ('restoreBooked at 80,000,000', 333_333_333_334, cdiv(u_e * max(80_000_000, 10**8), 80_000_000)),
-          ('Drifting: accepted 198,950,000, served 154,800,000', 342_721_791_560, cdiv(u_e * 198_950_000, 154_800_000)),
+          ('disagreement: booking min(fresh, A) = 198,950,000, served lower routes 154,800,000', 342_721_791_560, cdiv(u_e * 198_950_000, 154_800_000)),
           ('old divisor admitted 77.8% of the gap', 778, round(1000 * 154_800_000 / 198_950_000)),
           ('debt 7,000.30 GHO + 3,000 USDC at 0.9999 = $10,000.00', 10**57,
            (700_030 * 10**16 * 10**8 + 3000 * 10**6 * 99_990_000 * 10**12) * RAY),
@@ -225,13 +234,7 @@ prove('MATH-AR-51c', 'a draw admitted only when amount <= idle liquidity keeps d
       hub + [a51 > 0, a51 <= liq], drw + a51 <= sup)
 prove('MATH-AR-51d', 'a withdrawal admitted only when amount <= idle liquidity keeps drawn <= supplied after it',
       hub + [w51 > 0, w51 <= liq], drw <= sup - w51)
-# A lender's loss bound: deficit <= line (draws stay in the line), coverage F x 1e4 >= ratio x line (DEF-019),
-# uncovered = max(0, deficit - F); each supplier's loss is uncovered x its shares / all shares (DEF-014).
-dfc, Fc, ratio, uncov, shi, sh = Ints('deficit funded ratioBps uncovered lenderShares allShares')
-b51e = [cl > 0, Or(dec == 10**6, dec == 10**18), dfc >= 0, dfc <= cl * dec, Fc >= 0, ratio >= 0, ratio <= BPS,
-        Fc * BPS >= ratio * cl * dec, uncov == If(dfc > Fc, dfc - Fc, 0), sh > 0, shi >= 0, shi <= sh]
-prove('MATH-AR-51e', 'a lender (DAO or public) loses at most its share of line x (1 - coverageRatioBps / 1e4), whatever it supplied',
-      b51e, uncov * shi * BPS <= cl * dec * (BPS - ratio) * sh)
+# MATH-AR-51e (the residual beyond the loss layers, Q-410) is in ar15_loss_layers.py.
 computed('MATH-AR-51f', 'REQ-ARCH-211 / TEST-297 example: idle liquidity a lender can withdraw now',
          [('supplied: 1,000,000 DAO + 500,000 public + 300,000 Coverage Spoke', 1_800_000, 1_000_000 + 500_000 + 300_000),
           ('idle = supplied - drawn 1,600,000', 200_000, 1_800_000 - 1_600_000),

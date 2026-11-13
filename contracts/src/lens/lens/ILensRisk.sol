@@ -55,11 +55,12 @@ interface ILensRisk {
         address debtAsset
     ) external view returns (TailCoverageView memory coverage);
 
-    /// @notice Deficit of `(hub, asset)` recorded by the Hub above what its Coverage Spoke holds, base units.
+    /// @notice Deficit of `(hub, asset)` recorded by the Hub above what its two loss layers hold (the Coverage Spoke and
+    /// the DAO deficit offset, every listed Spoke whose `FIRST_LOSS_LAYER()` is that Coverage Spoke), base units.
     /// @param hub The Hub.
     /// @param asset The asset.
-    /// @return uncovered `max(0, deficit - fundedBalance)`.
-    /// @custom:spec REQ-LENS-042
+    /// @return uncovered `max(0, deficit - fundedBalance - offsetFunded)`.
+    /// @custom:spec REQ-LENS-042, REQ-FLR-046
     function uncoveredDeficit(
         address hub,
         address asset

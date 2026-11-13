@@ -13,6 +13,7 @@ import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Po
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
 import {IMarketRegistryPause} from "../../src/policy/market-registry/IMarketRegistryPause.sol";
+import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
@@ -240,7 +241,12 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
             assertTrue(ok, "call to an address outside the market's neighbours");
             if (a.account == address(riskModule)) {
                 ++riskReads;
-                assertTrue(a.kind == VmSafe.AccountAccessKind.StaticCall, "RiskModule called with state access");
+                // `checkPledge` is reached by a plain CALL: it charges the market's pledge-speed window when
+                // Collateralization calls (REQ-RISK-006, REQ-RISK-095); it is the only RiskModule call Collateralization makes.
+                assertTrue(a.kind == VmSafe.AccountAccessKind.Call, "checkPledge reached by a plain call");
+                assertEq(
+                    bytes4(a.data), IRiskModuleChecks.checkPledge.selector, "Collateralization calls only checkPledge"
+                );
             }
         }
         assertGt(calls, 0, "sanity: calls recorded");

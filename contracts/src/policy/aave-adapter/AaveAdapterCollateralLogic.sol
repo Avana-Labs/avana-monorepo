@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
+import {ICollateralizationDebtMark} from "../../custody/collateralization/ICollateralizationDebtMark.sol";
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
@@ -193,16 +194,14 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
     }
 
     /// @notice Body of `repayWithCollateral` (REQ-ADAPTER-080).
-    /// @custom:spec REQ-ADAPTER-080, REQ-ADAPTER-067, REQ-ADAPTER-091, SPEC-PROXY-009
+    /// @custom:spec REQ-ADAPTER-080, REQ-ADAPTER-067, REQ-ADAPTER-091, SPEC-PROXY-009, REQ-COLL-040
     function repayWithCollateral(
         RepayWithCollateralParams calldata p
     ) external returns (uint256 debtRepaid, uint256 debtAssetToWallet) {
         _onlyDelegated();
         _acquire();
         Before memory b = _repayWithCollateralGates(p);
-        _openSession(
-            b.proxy, p.marketId, p.position.positionKey, p.units, p.debtReserveId, keccak256(abi.encode(p.minAmounts))
-        );
+        _openSession(b.proxy, p.marketId, p.position.positionKey, p.units, p.debtReserveId, _minsHash(p));
         (debtRepaid, debtAssetToWallet) = ILPVaultSwapDeleverage(_LP_VAULT_SWAP)
             .deleverage(
                 DeleverageRequest({
@@ -219,6 +218,11 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
                 })
             );
         uint256 hfAfter = _afterDeleverage(b, p.units, p.minHealthFactor);
+        // The borrower's own bound on what the call pays it (REQ-ADAPTER-080): each swap leg may fill anywhere above
+        // its oracle minimum, so without it a sandwich could take up to the slippage allowance out of the leftover.
+        if (debtAssetToWallet < p.minAssetOut) revert AssetOutBelowMinimum(debtAssetToWallet, p.minAssetOut);
+        // REQ-COLL-040: a repay with collateral that leaves no Aave borrow clears the indebted mark.
+        if (hfAfter == type(uint256).max) ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(b.proxy);
         _clearSession();
         emit RepaidWithCollateral(
             msg.sender,
@@ -233,6 +237,17 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
             hfAfter
         );
         _release();
+    }
+
+    /// @dev The hash the session binds for the unwind minimums: of `p.minAmounts`, or of one zero per market token when
+    /// it is empty, the array LPVaultSwap passes to `deleverageRelease` in that case (REQ-SWAP-106), so both sides hash
+    /// the same normalised array.
+    function _minsHash(
+        RepayWithCollateralParams calldata p
+    ) private view returns (bytes32) {
+        if (p.minAmounts.length != 0) return keccak256(abi.encode(p.minAmounts));
+        uint256 n = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(p.marketId).tokens.length;
+        return keccak256(abi.encode(new uint256[](n)));
     }
 
     /// @dev The gates of a repay with collateral in the order of REQ-ADAPTER-080, then the reads before the session:

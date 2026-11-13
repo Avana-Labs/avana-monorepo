@@ -17,7 +17,7 @@ import {DifferentialTest} from "./utils/DifferentialTest.sol";
 /// `2^128`, prices from 0 to above `MAX_ROUTE_ANSWER`, vectors of 0 to 9 entries with unequal lengths, and `q != p`
 /// for the debt price. Signed values cross FFI as their two's-complement words.
 contract LPPriceMathDifferentialTest is DifferentialTest {
-    uint256 internal constant MAX_ROUTE = 1e12;
+    uint256 internal constant MAX_ROUTE = 1e18;
     uint256 internal constant SAT = type(uint256).max;
 
     LPPriceMathHarness internal m;
@@ -197,6 +197,8 @@ contract LPPriceMathDifferentialTest is DifferentialTest {
         for (uint256 i = 0; i < n; ++i) {
             uint256 h = uint256(keccak256(abi.encode(seed, i)));
             q[i] = h % 3 == 0 ? 1 + (h >> 8) % MAX_ROUTE : 80_000_000 + (h >> 8) % 40_000_001;
+            // One run in eleven puts every quote near MAX_ROUTE_ANSWER: seven or eight of them saturate the product.
+            if (seed % 11 == 0) q[i] = MAX_ROUTE - (h >> 8) % 1e15;
             if (h % 17 == 0) q[i] = 0;
             args[1 + i] = q[i];
         }

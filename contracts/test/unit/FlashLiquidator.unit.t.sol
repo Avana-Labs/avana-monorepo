@@ -429,20 +429,18 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         _liquidate(_exampleRequest());
     }
 
-    /// @notice A market token that refuses the helper: LPVaultSwap escrows the residue credited to the helper and the
-    /// liquidation completes; the credit is claimable only to `feeRecipient`, never to the caller.
+    /// @notice A market token that refuses the helper: LPVaultSwap escrows the residue credited to the helper, the
+    /// liquidation completes and the helper claims the credit its call created to the caller; a later `claimEscrowed`
+    /// finds nothing.
     // TEST-289 verifies: REQ-HELPER-010, REQ-SWAP-076, Q-389
     function test_TEST_289_residueRefusedByHelperEscrowedToHelper() public {
         lvs.addResidue(usdtToken, 0.4e6);
         usdtToken.setBlocked(address(helper), true);
         uint256 payout = _liquidate(_exampleRequest());
         assertEq(payout, EXAMPLE_PAYOUT);
-        assertEq(escrow.claimable(address(usdtToken), address(helper)), 0.4e6, "credited to the helper");
-        assertEq(usdtToken.balanceOf(caller), 0);
-        vm.prank(caller);
-        helper.claimEscrowed(address(usdtToken));
-        assertEq(usdtToken.balanceOf(caller), 0, "never to the caller");
-        assertEq(usdtToken.balanceOf(feeRecipient), 0.4e6, "to feeRecipient");
+        assertEq(escrow.claimable(address(usdtToken), address(helper)), 0, "claimed in the call");
+        assertEq(usdtToken.balanceOf(caller), 0.4e6, "to the caller");
+        assertEq(usdtToken.balanceOf(feeRecipient), 0, "not to feeRecipient");
     }
 
     // ─── Blocklists and transfer fees ───
@@ -538,7 +536,8 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
     }
 
     /// @notice Every external call the helper makes goes to the Pool (and its address provider and ACLManager for the
-    /// premium quote), LPVaultSwap, the MarketRegistry, the ParameterStore, the debt asset or the market's tokens.
+    /// premium quote), LPVaultSwap, the MarketRegistry, the ParameterStore, the PayoutEscrow (credit reads), the debt
+    /// asset or the market's tokens (no route is recorded in this fixture).
     // TEST-290 verifies: REQ-HELPER-012, REQ-HELPER-001
     function test_TEST_290_callsOnlyFixedTargets() public {
         lvs.addResidue(usdtToken, 1e6);
@@ -557,7 +556,8 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
             assertTrue(
                 target == address(helper) || target == address(aavePool) || target == address(provider)
                     || target == address(acl) || target == address(lvs) || target == address(registry)
-                    || target == address(store) || target == address(usdcToken) || target == address(usdtToken),
+                    || target == address(store) || target == address(usdcToken) || target == address(usdtToken)
+                    || target == address(escrow),
                 "call to an unlisted target"
             );
         }

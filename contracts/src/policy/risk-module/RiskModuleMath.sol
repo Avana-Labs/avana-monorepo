@@ -215,6 +215,34 @@ library RiskModuleMath {
         e = Math.mulDiv(units, price8 * cfBps * WAD, 10 ** uint256(d) * BPS, Math.Rounding.Ceil);
     }
 
+    /// @notice The price a borrow is held to and a pledge is booked at (REQ-RISK-026, SPEC-ORC-017): `min(fresh,
+    /// accepted)`, the accepted price alone when there is no fresh price (`fresh = 0`, a failed market).
+    /// @dev The accepted price bounds borrowing only: a rally since the last accepted price adds no borrowing power until
+    /// the LPOracle accepts it, while liquidation sees the fresh price. Example: accepted 199,999,899 and fresh
+    /// 219,999,899 give 199,999,899; fresh 189,999,899 gives 189,999,899.
+    /// @custom:spec REQ-RISK-026, SPEC-ORC-017
+    function bookingPrice(
+        uint256 accepted,
+        uint256 fresh
+    ) internal pure returns (uint256) {
+        return fresh != 0 && fresh < accepted ? fresh : accepted;
+    }
+
+    /// @notice The health factor after a borrow-side action held to the booking price (REQ-RISK-059, SPEC-CF-005):
+    /// `hf * min(served, accepted) / served`, rounded down; `hf` when `accepted >= served` or `served = 0`.
+    /// @dev An account's only collateral is its market's vault token, so Aave's health factor (and the rescue-excluded
+    /// one) is linear in that token's price; scaling by `accepted / served` is the health factor Aave would compute at
+    /// the accepted price. Example: `hf = 1.10e18`, served 219,999,899, accepted 199,999,899 gives 0.99999...e18.
+    /// @custom:spec REQ-RISK-059, REQ-RISK-026, SPEC-CF-005
+    function boundedHealthFactor(
+        uint256 hf,
+        uint256 served,
+        uint256 accepted
+    ) internal pure returns (uint256) {
+        if (served == 0 || accepted >= served) return hf;
+        return Math.mulDiv(hf, accepted, served);
+    }
+
     /// @notice SPEC-CF-005 `hfEx = hf - mulDiv(E, WAD * RAY, D, Ceil)`, saturating at 0; `hf` when `E = 0` or `D = 0`.
     /// @custom:spec SPEC-CF-005, REQ-RISK-068
     function healthExcludingRescue(

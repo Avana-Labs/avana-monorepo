@@ -3,7 +3,7 @@
   "contracts": {
     "SlipstreamIntegration": {
       "margin": 1024,
-      "reason": "Compiled at 1,000 optimizer runs (its own compilation_restrictions entry in foundry.toml, the clvault profile), because at 10,000 runs it was 24,436 bytes (140 under EIP-170) and the CL-01 to CL-03 fixes would have put it 22 bytes over (audit/reviews/cl-lpvaults, CL-05). Measured with script/check-sizes.sh on the default profile on 2026-11-12: 23,019 bytes, 1,557 under EIP-170, so it meets the default 1,024-byte margin with 533 bytes to spare and the entry keeps that margin. The Slipstream integration carries the four NPM and factory generations as immutables; a change that grows it past the margin must split code out, not lower the margin."
+      "reason": "Compiled at 200 optimizer runs (its own compilation_restrictions entry in foundry.toml, the clvault profile, shared with the Uniswap v3 LPVault). At 10,000 runs it was 24,436 bytes (140 under EIP-170, audit/reviews/cl-lpvaults, CL-05); at 1,000 runs the unit exponent of SPEC-ORC-005 (narrow 18/18-decimal ranges, 2026-11-12) put it at 24,083 bytes, 531 over this margin. Measured with script/check-sizes.sh on the default profile on 2026-11-12 at 200 runs: 23,025 bytes, 1,551 under EIP-170, so it meets the default 1,024-byte margin with 527 bytes to spare and the entry keeps that margin. The Slipstream integration carries the four NPM and factory generations as immutables; a change that grows it past the margin must split code out, not lower the margin."
     }
   }
 }

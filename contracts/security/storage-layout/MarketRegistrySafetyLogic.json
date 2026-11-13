@@ -225,7 +225,7 @@
           "type": "uint64"
         },
         {
-          "path": "windDown[].lastStepAt",
+          "path": "windDown[].unusedLastStepAt",
           "slot": "0",
           "offset": 8,
           "bytes": "8",
@@ -239,7 +239,7 @@
           "type": "uint16"
         },
         {
-          "path": "windDown[].currentLtBps",
+          "path": "windDown[].targetLtBps",
           "slot": "0",
           "offset": 18,
           "bytes": "2",

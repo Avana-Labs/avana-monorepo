@@ -228,13 +228,28 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
         return makeAddr("dave");
     }
 
-    /// @notice A residue the token refuses to deliver to the public helper is credited to the helper in the escrow;
-    /// anyone then claims it to `feeRecipient` (REQ-HELPER-010).
+    /// @notice A residue the token refuses to deliver to the public helper is credited to the helper in the escrow and
+    /// claimed to its caller in the same call (REQ-HELPER-010).
+    // TEST-289 verifies: REQ-HELPER-010, REQ-SWAP-076
+    function test_TEST_289_helperEscrowClaimedToItsCaller() public {
+        (, uint256 a1) = _released(975e6);
+        usdtUsdcPool.setMaxIn(a1 - 13);
+        usdt.setBlocked(address(helper), true);
+        uint256 before = usdt.balanceOf(carol);
+        vm.prank(carol);
+        helper.flashLiquidate(_request(1950e6, 1950e6));
+        assertEq(escrow.claimable(address(usdt), address(helper)), 0, "claimed in the call");
+        assertEq(usdt.balanceOf(carol), before + 13, "the caller's residue");
+    }
+
+    /// @notice When the caller cannot receive it either, the credit stays with the helper and anyone then claims it to
+    /// `feeRecipient` (REQ-HELPER-010).
     // TEST-289 verifies: REQ-HELPER-010, REQ-SWAP-076
     function test_TEST_289_helperEscrowClaimedToFeeRecipient() public {
         (, uint256 a1) = _released(975e6);
         usdtUsdcPool.setMaxIn(a1 - 13);
         usdt.setBlocked(address(helper), true);
+        usdt.setBlocked(carol, true);
         vm.prank(carol);
         helper.flashLiquidate(_request(1950e6, 1950e6));
         assertEq(escrow.claimable(address(usdt), address(helper)), 13, "credited to the helper");

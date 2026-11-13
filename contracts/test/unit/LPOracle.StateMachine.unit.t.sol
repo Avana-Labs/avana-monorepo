@@ -136,7 +136,7 @@ contract LPOracleStateMachineUnitTest is LPOracleFixture {
         PriceStateView memory d = _state();
         assertEq(uint8(d.state), uint8(PriceState.Drifting), "consistency check fails");
         assertGt(uint256(d.freshAnswer), accepted);
-        assertEq(uint256(d.answer), accepted, "Drifting serves min(fresh, accepted)");
+        assertEq(uint256(d.answer), uint256(d.freshAnswer), "Drifting serves the fresh price (SPEC-ORC-017)");
         pB.setMode(pB.latestRoundData.selector, ReadMode.Revert);
         aB.setMode(aB.latestRoundData.selector, ReadMode.Revert);
         assertEq(uint256(oracle.latestAnswer()), accepted, "Cached serves the accepted price");

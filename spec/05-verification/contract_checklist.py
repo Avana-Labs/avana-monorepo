@@ -1,27 +1,48 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-"""Per-contract checklist: every spec ID one contract must cover, and whether a test already links it.
+"""Per-contract checklist: every spec ID one contract must cover, and whether a check of it ran and passed.
 
 For one contract it lists
-  - the REQ-/SPEC- IDs defined on its spec page (2.x), with their link status in contracts/test and contracts/certora;
+  - the REQ-/SPEC- IDs defined on its spec page (2.x);
   - the TEST rows of 5.1 whose "Contract / flow" column names the contract;
   - the PROP rows mapped to its CVL spec in contracts/certora/README.md, plus the 5.2 rows that name it, with the tool;
   - the INV rows of 4.1 the page cites or that name the contract;
   - the ATTACK scenarios of 4.2 whose Target names the contract.
 
+Each row has one of four states (evidence.py decides which tags count):
+  [x] verified   a counting test, Halmos check or CVL rule ran and passed (a CVL rule: a prover result with a job id)
+  [!] failed     a counting check ran and failed
+  [~] not run    counting checks exist and none has a result in the results given
+  [ ] unlinked   no counting check: no tag, only tags on another row's test, or only tests that use a stand-in
+                 (evidence.STAND_INS) for this contract
+For a REQ/SPEC/INV/ATTACK row, a test counts when a tag on it names the row; for a TEST or PROP row, when the test
+or rule is tagged with that TEST/PROP id and (for a TEST id) its function name carries it.
+
 Usage, from the repository root:
     spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --list
     spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py Lock [--out FILE] [--check]
+        [--results PATH ... | --links-only]
+    spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --all [--check] [--out-dir DIR]
+        [--summary FILE] [--results PATH ... | --links-only]
+    spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --uncovered [--check] ...
 
---check exits 1 when a REQ-/SPEC- ID of the page, a TEST row or a PROP row has no link from contracts/test or
-contracts/certora. It is the "every ID linked" step of the per-contract gate. Rows owned by a contract not written
-yet (PENDING) are shown as deferred to it and are not part of another contract's --check. A contract specified in
-one section of a shared page takes that section only ("page.md#Heading"); a row of that section another contract
-decides is shown as owned by it (OWNED_ELSEWHERE) and stays on the owner's checklist. Table rows of a shared page that
-only a pending contract decides, and TEST rows whose test drives a pending contract, are deferred by name
-(DEFERRED_ROWS); rows about a deployed chain's configuration or an off-chain sizing rule are shown as checked outside
-contracts/ (OUTSIDE_CONTRACTS), with the reason, and are not part of --check.
+--results takes `forge test --json-file` output, Halmos logs and certora result files (or folders of them); recorded
+prover results (contracts/certora/RUNS.md) and Halmos logs (audit/halmos/results/) are always read. --check exits 1
+when a row in scope is not verified. With --links-only (no run results, the check of models.yml), --check exits 1
+only on unlinked and failed rows; "not run" is then expected and reported. --check without either is refused.
+
+--all runs every contract key and prints one line per contract. --uncovered lists the TEST rows of 5.1 that are on
+no contract's checklist (their "Contract / flow" column names no key); with --check it exits 1 on any of them that is
+not verified (not linked, with --links-only) and is not in OUTSIDE_CONTRACTS with its reason. --all includes it.
+
+Rows owned by a contract not written yet (PENDING) are shown as deferred to it and are not part of another
+contract's --check. A contract specified in one section of a shared page takes that section only ("page.md#Heading");
+a row of that section another contract decides is shown as owned by it (OWNED_ELSEWHERE) and stays on the owner's
+checklist. Table rows of a shared page that only a pending contract decides, and TEST rows whose test drives a pending
+contract, are deferred by name (DEFERRED_ROWS); rows about a deployed chain's configuration, an off-chain sizing rule,
+the keeper and off-chain services, or a CI tool's own run are shown as checked outside contracts/ (OUTSIDE_CONTRACTS),
+with the reason, and are not part of --check.
 """
 from __future__ import annotations
 
@@ -31,6 +52,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import evidence as ev  # noqa: E402  (tag placement, stand-ins and run results; beside this file)
 import trace as tr  # noqa: E402  (the traceability script in this folder; its main() is guarded)
 
 ROOT = tr.ROOT
@@ -88,7 +110,12 @@ CONTRACTS: dict[str, tuple[list[str], list[str], list[str]]] = {
     "PayoutEscrow": (["18-payout-escrow.md"], ["PayoutEscrow", "payout escrow"], ["PayoutEscrow.spec"]),
     "LPVaultSwap": (["11-lpvaultswap.md"], ["LPVaultSwap"], ["LPVaultSwap.spec"]),
     "CoverageSpoke": (["14-first-loss-reserve.md"], ["CoverageSpoke", "Coverage Spoke", "Coverage Spokes"], ["CoverageSpoke.spec"]),
-    "Lens": (["17-lens.md"], ["Lens"], []),
+    "Lens": (["17-lens.md"], ["Lens", "LensSpeedModule"], []),
+    "FlashLiquidator": (
+        ["11-lpvaultswap.md#Flash liquidation helper"],
+        ["FlashLiquidator", "OperatorFlashLiquidator", "Flash liquidation helper", "flash liquidation helper"],
+        [],
+    ),
 }
 
 # 5.1 rows whose "Contract / flow" column applies to every contract (shown separately, not part of --check).
@@ -169,6 +196,40 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
                 "heartbeats of the launch feeds); the rules it relies on are local tests: same round never refreshes "
                 "(TEST-040), per-feed borrowPriceMaxAge (TEST-028, TEST-201), disjoint backup routes and normalised "
                 "minimum >= 1 (TEST-219), fixed GHO source (TEST-201)",
+    # Keeper, indexer, web and monitoring rows: checked by tests under services/ and packages/, not contracts/. No test
+    # there carries these IDs yet, so they are not checked anywhere today; they are listed here so the contract gate
+    # does not hide them, and services.yml is where their tests belong.
+    "TEST-136": "monitoring service (scheduled live-configuration rerun and drift alerts) in services/; no services "
+                "test carries the ID yet",
+    "TEST-140": "keeper observe-only mode, services/keeper; no keeper test carries the ID yet",
+    "TEST-141": "keeper behaviour, services/keeper; no keeper test carries the ID yet",
+    "TEST-142": "keeper liquidation path, services/keeper; no keeper test carries the ID yet",
+    "TEST-178": "keeper behaviour, services/keeper; no keeper test carries the ID yet",
+    "TEST-143": "Ponder replay and reorg handling, services/indexer; no indexer test carries the ID yet",
+    "TEST-144": "Ponder and web, services/ and the app; no test there carries the ID yet",
+    "TEST-145": "Convex export, services/; no test there carries the ID yet",
+    "TEST-146": "packages/protocol builders and the web app; no test there carries the ID yet",
+    "TEST-147": "web app; no test there carries the ID yet",
+    "TEST-148": "Convex and web app; no test there carries the ID yet",
+    "TEST-149": "web, Ponder and keeper; no test there carries the ID yet",
+    "TEST-297": "Lend page builders in packages/protocol; no test there carries the ID yet",
+    # CI tool rows: the row is the CI step itself, and the step's own result is the evidence (no Foundry test can be).
+    "TEST-001": "contracts.yml build job: `forge soldeer install` against soldeer.lock, the solc and EVM pins of "
+                "foundry.toml, and the Foundry version check",
+    "TEST-007": "contracts.yml test job: the ci profile's fuzz and invariant runs, and the gate's every-shard rule",
+    "TEST-207": "contracts.yml build job: script/check-file-size.sh",
+    "TEST-253": "contracts.yml build job and security-fast.sh: `forge fmt --check`, `forge lint`",
+    "TEST-254": "security-fast.sh (contracts.yml fast-security job): build with warnings denied, solhint",
+    "TEST-255": "security-fast.sh (contracts.yml fast-security job): Slither and slither-check-upgradeability",
+    "TEST-256": "security-fast.sh (contracts.yml fast-security job): Aderyn",
+    "TEST-257": "contracts.yml build job: script/check-file-size.sh and `forge build --sizes`",
+    "TEST-258": "security-slow.yml echidna jobs (nightly, release tags, by hand)",
+    "TEST-259": "security-slow.yml medusa jobs (nightly, release tags, by hand)",
+    "TEST-260": "security-slow.yml halmos and hevm jobs (nightly, release tags, by hand)",
+    "TEST-261": "security-slow.yml mythril jobs (nightly, release tags, by hand)",
+    "TEST-262": "security-slow.yml hevm jobs (nightly, release tags, by hand)",
+    "TEST-137": "security-fast.sh storage-layout step (script/storage-layout.js); the diff against a deployed version "
+                "starts with the first deployment",
 }
 
 
@@ -240,9 +301,19 @@ def word_re(names: list[str]) -> re.Pattern:
     return re.compile(r"(?<![A-Za-z0-9])(?:" + "|".join(re.escape(n) for n in names) + r")(?![A-Za-z0-9])")
 
 
+_PAGE_IDS: dict[tuple[str, ...], tuple[list[tuple[str, str, str]], set[str]]] = {}
+
+
 def page_ids(pages: list[str]) -> tuple[list[tuple[str, str, str]], set[str]]:
     """REQ-/SPEC- IDs defined on the pages (or on the named "## " section of a "page.md#Heading" entry), and every
     INV- cited there."""
+    key = tuple(pages)
+    if key not in _PAGE_IDS:
+        _PAGE_IDS[key] = _page_ids(pages)
+    return _PAGE_IDS[key]
+
+
+def _page_ids(pages: list[str]) -> tuple[list[tuple[str, str, str]], set[str]]:
     defined, cited_inv = [], set()
     for entry in pages:
         page, _, section = entry.partition("#")
@@ -268,10 +339,11 @@ def page_ids(pages: list[str]) -> tuple[list[tuple[str, str, str]], set[str]]:
 
 
 def table_rows(path: Path, prefix: str) -> list[list[str]]:
+    """Cells of the table rows that start with `prefix`; an escaped pipe (`\\|`, as in `|p − b|`) stays in its cell."""
     rows = []
     for line in path.read_text().splitlines():
         if line.startswith(f"| `{prefix}-") or line.startswith(f"| {prefix}-"):
-            rows.append([c.strip() for c in line.strip().strip("|").split("|")])
+            rows.append([c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))])
     return rows
 
 
@@ -322,32 +394,175 @@ def attacks_for(names: re.Pattern) -> list[tuple[str, str]]:
     return out
 
 
-def linked_ids() -> dict[str, list[str]]:
-    """ID -> check IDs from contracts/test and contracts/certora only (not the spec-stage models)."""
-    links, _ = tr.collect_links()
-    out: dict[str, list[str]] = {}
-    for rid, hits in links.items():
-        checks = [h["id"] for h in hits if h["where"].startswith("contracts/") and h["kind"] != "Solidity"]
-        if checks:
-            out[rid] = sorted(set(checks))
+BOX = {ev.PASS: "[x]", ev.FAIL: "[!]", ev.NOT_RUN: "[~]", "unlinked": "[ ]"}
+STATES = (ev.PASS, ev.FAIL, ev.NOT_RUN, "unlinked")
+
+
+class Evidence:
+    """Tags, links and run results, read once and shared by every checklist of one invocation."""
+
+    def __init__(self, results: list[Path] | None):
+        self.results = ev.Results(results)
+        self.links, _ = tr.collect_links()
+        self.by_check: dict[str, list[dict]] = {}
+        for tag in ev.scan_tags(tr.TARGET)[0]:
+            self.by_check.setdefault(tag["check"], []).append(tag)
+
+    def _state(self, tags: list[dict], key: str) -> tuple[str, str]:
+        """State of a row from the tags that could count for it on `key`'s checklist, and a note on excluded tags."""
+        counting = [t for t in tags if not t["excluded"] and key not in ev.tag_stand_in_keys(t)]
+        excluded = [t for t in tags if not any(t is c for c in counting)]
+        note = ""
+        if excluded and not counting:
+            why = sorted({t["excluded"] or f"uses a stand-in for {key}" for t in excluded})
+            note = f" (only excluded checks: {'; '.join(why)})"
+        if not counting:
+            return "unlinked", note
+        states = [self.results.state(t) for t in counting]
+        for want in (ev.FAIL, ev.PASS):
+            hit = next((e for s, e in states if s == want), None)
+            if hit:
+                return want, f" — {hit}"
+        return ev.NOT_RUN, ""
+
+    def row(self, rid: str, key: str) -> tuple[str, str, list[str]]:
+        """(state, note, check ids) of a REQ/SPEC/INV/ATTACK row: checks whose tags name it."""
+        tags = [c["tag"] for c in self.links.get(rid, []) if "tag" in c]
+        state, note = self._state(tags, key)
+        return state, note, sorted({t["check"] for t in tags})
+
+    def check(self, cid: str, key: str) -> tuple[str, str]:
+        """(state, note) of a TEST or PROP row: the tests and rules tagged with that id."""
+        return self._state(self.by_check.get(cid, []), key)
+
+
+def checklist(key: str, evd: Evidence) -> dict:
+    """Every row of one contract's checklist with its state, and the rows its --check covers."""
+    pages, names, cvl = CONTRACTS[key]
+    rx = word_re(names)
+    reqs, cited = page_ids(pages)
+    tests, props = tests_for(rx), props_for(rx, cvl)
+    invs, attacks = invs_for(rx, cited), attacks_for(rx)
+    req_later, test_later = deferred_page_rows(pages, key), deferred_test_rows(key)
+    req_ids = {r for r, _, _ in reqs}
+    req_later.update({r: owner for r, (owner, _) in DEFERRED_ROWS.items() if r in req_ids and r not in req_later})
+    test_ids = {t for t, _, _ in tests}
+    test_later.update({t: owner for t, (owner, _) in DEFERRED_ROWS.items() if t in test_ids and t not in test_later})
+    outside = {i: why for i, why in OUTSIDE_CONTRACTS.items() if i in req_ids or i in test_ids}
+    owned = {r: OWNED_ELSEWHERE[r] for r, _, _ in reqs if OWNED_ELSEWHERE.get(r, (key,))[0] != key}
+
+    def entry(rid, text, state, note, extra="", scope=True):
+        return {"id": rid, "text": text, "state": state, "note": note, "extra": extra, "scope": scope}
+
+    sections = {"REQ / SPEC on the page": [], "TEST rows": [], "PROP rows": [], "INV": [], "ATTACK": []}
+    for r, text, where in reqs:
+        st, note, ids = evd.row(r, key)
+        extra = (f" — {', '.join(ids)}" if ids else "")
+        scope = r not in req_later and r not in owned and r not in outside
+        if r in req_later:
+            extra += f" — deferred to {req_later[r]} (not written yet)"
+        if r in outside:
+            extra += f" — checked outside contracts/: {outside[r]}"
+        if r in owned:
+            extra += f" — owned by {owned[r][0]}: {owned[r][1]}"
+        sections["REQ / SPEC on the page"].append(entry(r, f"({where}) {text}", st, note, extra, scope))
+    for t, kind, text in tests:
+        st, note = evd.check(t, key)
+        extra = ""
+        if t in test_later:
+            extra += f" — deferred to {test_later[t]} (not written yet)"
+        if t in outside:
+            extra += f" — checked outside contracts/: {outside[t]}"
+        sections["TEST rows"].append(entry(t, f"[{kind}] {text}", st, note, extra,
+                                           t not in test_later and t not in outside))
+    for p, tool, text in props:
+        st, note = evd.check(p, key)
+        sections["PROP rows"].append(entry(p, f"[{tool}] {text}", st, note))
+    for i, text in invs:
+        st, note, ids = evd.row(i, key)
+        sections["INV"].append(entry(i, text, st, note, f" — {', '.join(ids)}" if ids else ""))
+    for a, title in attacks:
+        st, note, ids = evd.row(a, key)
+        sections["ATTACK"].append(entry(a, title, st, note, f" — {', '.join(ids)}" if ids else ""))
+    return {"key": key, "pages": pages, "cvl": cvl, "sections": sections, "owned": owned}
+
+
+def blocking(rows: list[dict], links_only: bool) -> list[dict]:
+    """Rows in --check scope that fail it: anything not verified, or with --links-only anything unlinked or failed.
+    INV and ATTACK rows are listed for review and are not part of --check, as before."""
+    bad = {"unlinked", ev.FAIL} if links_only else {"unlinked", ev.FAIL, ev.NOT_RUN}
+    return [r for r in rows if r["scope"] and r["state"] in bad]
+
+
+def check_rows(c: dict) -> list[dict]:
+    s = c["sections"]
+    return s["REQ / SPEC on the page"] + s["TEST rows"] + s["PROP rows"]
+
+
+def render(c: dict, given: str) -> str:
+    lines = [f"# Checklist: {c['key']}", "",
+             f"Spec pages: {', '.join(c['pages'])}. CVL specs: {', '.join(c['cvl']) or 'none'}.", "",
+             f"Run results: {given}. [x] verified (ran and passed), [!] failed, [~] not run (linked, no result), "
+             "[ ] unlinked (no counting check).", ""]
+    for title, rows in c["sections"].items():
+        tally = ", ".join(f"{sum(1 for r in rows if r['state'] == s)} {s}" for s in STATES)
+        lines += [f"## {title} ({len(rows)}: {tally})", ""]
+        lines += [f"- {BOX[r['state']]} `{r['id']}` {r['text']}{r['extra']}{r['note']}" for r in rows]
+        lines.append("")
+    cross = cross_tests()
+    lines += [f"## Cross-cutting TEST rows, every contract ({len(cross)}): see --uncovered", ""]
+    lines += [f"- `{t}` [{kind}] {text}" for t, kind, text in cross]
+    return "\n".join(lines) + "\n"
+
+
+def uncovered(evd: Evidence) -> list[dict]:
+    """TEST rows of 5.1 on no contract's checklist, with their state."""
+    on = set()
+    for key, (_, names, _) in CONTRACTS.items():
+        on |= {t for t, _, _ in tests_for(word_re(names))}
+    out = []
+    for cols in table_rows(TESTS, "TEST"):
+        tid = cols[0].strip("`")
+        if len(cols) >= 4 and tid not in on:
+            st, note = evd.check(tid, "")
+            out.append({"id": tid, "text": f"[{cols[1]}] {cols[3]}", "state": st, "note": note,
+                        "extra": f" — checked outside contracts/: {OUTSIDE_CONTRACTS[tid]}"
+                        if tid in OUTSIDE_CONTRACTS else "", "scope": tid not in OUTSIDE_CONTRACTS})
     return out
 
 
-def implemented_tests() -> set[str]:
-    """TEST-/PROP- IDs that have a test or rule tag in contracts/."""
-    _, check_targets = tr.collect_links()
-    return set(check_targets)
+def structural_errors() -> list[str]:
+    errs = []
+    stale = sorted(r for r, (owner, _) in DEFERRED_ROWS.items() if any(k not in PENDING for k in owner.split(", ")))
+    if stale:
+        errs.append(f"DEFERRED_ROWS names a contract that is not in PENDING for: {', '.join(stale)}")
+    landed = implemented_pending()
+    if landed:
+        errs.append(f"PENDING lists contracts that now have code in contracts/src: {', '.join(landed)}; remove them")
+    for key in CONTRACTS:
+        for r, (owner, _) in OWNED_ELSEWHERE.items():
+            if r in {i for i, _, _ in page_ids(CONTRACTS[key][0])[0]} and owner != key \
+                    and r not in {i for i, _, _ in page_ids(CONTRACTS[owner][0])[0]}:
+                errs.append(f"OWNED_ELSEWHERE names an owner whose pages do not define: {r}")
+    return sorted(set(errs))
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("contract", nargs="?", help="contract key (see --list)")
     ap.add_argument("--list", action="store_true", help="list contract keys with ID counts")
+    ap.add_argument("--all", action="store_true", help="every contract key, then --uncovered")
+    ap.add_argument("--uncovered", action="store_true", help="TEST rows on no contract's checklist")
     ap.add_argument("--out", type=Path, help="write the checklist to this file instead of stdout")
-    ap.add_argument("--check", action="store_true", help="exit 1 if any listed ID has no link from contracts/")
+    ap.add_argument("--out-dir", type=Path, help="with --all: write <dir>/<Contract>.md for every contract")
+    ap.add_argument("--summary", type=Path, help="with --all: also write the per-contract table here (Markdown)")
+    ap.add_argument("--check", action="store_true", help="exit 1 if a row in scope is not verified")
+    ap.add_argument("--results", nargs="+", type=Path, metavar="PATH", help="run results (see evidence.py)")
+    ap.add_argument("--links-only", action="store_true",
+                    help="no run results: --check fails only on unlinked and failed rows")
     args = ap.parse_args()
 
-    if args.list or not args.contract:
+    if args.list or not (args.contract or args.all or args.uncovered):
         print(f"{'contract':24} {'REQ/SPEC':>8} {'TEST':>5} {'PROP':>5} {'INV':>4} {'ATTACK':>6}")
         for key, (pages, names, cvl) in CONTRACTS.items():
             rx = word_re(names)
@@ -355,81 +570,80 @@ def main() -> int:
             print(f"{key:24} {len(reqs):>8} {len(tests_for(rx)):>5} {len(props_for(rx, cvl)):>5} "
                   f"{len(invs_for(rx, cited)):>4} {len(attacks_for(rx)):>6}")
         return 0
-
-    if args.contract not in CONTRACTS:
+    if args.check and not args.results and not args.links_only:
+        ap.error("--check needs --results (the run's results) or --links-only (links only, no run)")
+    if args.contract and args.contract not in CONTRACTS:
         print(f"unknown contract {args.contract}; use --list", file=sys.stderr)
         return 2
-    pages, names, cvl = CONTRACTS[args.contract]
-    rx = word_re(names)
-    reqs, cited = page_ids(pages)
-    tests, props = tests_for(rx), props_for(rx, cvl)
-    invs, attacks = invs_for(rx, cited), attacks_for(rx)
-    links, done = linked_ids(), implemented_tests()
-    req_later, test_later = deferred_page_rows(pages, args.contract), deferred_test_rows(args.contract)
-    req_ids = {r for r, _, _ in reqs}
-    req_later.update({r: owner for r, (owner, _) in DEFERRED_ROWS.items() if r in req_ids and r not in req_later})
-    test_ids = {t for t, _, _ in tests}
-    test_later.update({t: owner for t, (owner, _) in DEFERRED_ROWS.items() if t in test_ids and t not in test_later})
-    stale = sorted(r for r, (owner, _) in DEFERRED_ROWS.items()
-                   if any(k not in PENDING for k in owner.split(", ")))
-    outside = {i: why for i, why in OUTSIDE_CONTRACTS.items()
-               if i in req_ids or i in {t for t, _, _ in tests}}
-    owned = {r: OWNED_ELSEWHERE[r] for r, _, _ in reqs if OWNED_ELSEWHERE.get(r, (args.contract,))[0] != args.contract}
-    orphaned = [r for r, (owner, _) in owned.items() if r not in {i for i, _, _ in page_ids(CONTRACTS[owner][0])[0]}]
 
-    def box(ok: bool) -> str:
-        return "[x]" if ok else "[ ]"
+    evd = Evidence(args.results)
+    given = ("; ".join(str(p) for p in args.results) if args.results else
+             "none given (links only); recorded prover results and Halmos logs are read")
+    for w in evd.results.warnings:
+        print(f"note: {w}", file=sys.stderr)
+    errs = structural_errors() if args.check else []
+    rc = 0
 
-    def later(rid: str, deferred: dict[str, str], ok: bool) -> str:
-        return f" — deferred to {deferred[rid]} (not written yet)" if rid in deferred and not ok else ""
+    if args.contract and not args.all:
+        c = checklist(args.contract, evd)
+        text = render(c, given)
+        if args.out:
+            args.out.write_text(text)
+        else:
+            sys.stdout.write(text)
+        bad = blocking(check_rows(c), args.links_only)
+        if args.check and bad:
+            print(f"{len(bad)} IDs in scope not {'linked' if args.links_only else 'verified'}: "
+                  + ", ".join(f"{r['id']} ({r['state']})" for r in bad[:20]) + (" …" if len(bad) > 20 else ""),
+                  file=sys.stderr)
+            rc = 1
 
-    def offchain(rid: str, ok: bool) -> str:
-        return f" — checked outside contracts/: {outside[rid]}" if rid in outside and not ok else ""
+    if args.all:
+        table = ["| Contract | Verified | Failed | Not run | Unlinked | Out of scope | --check |",
+                 "|---|---:|---:|---:|---:|---:|---|"]
+        print(f"{'contract':24} {'verified':>8} {'failed':>6} {'not run':>7} {'unlinked':>8} {'out of scope':>12}  check")
+        if args.out_dir:
+            args.out_dir.mkdir(parents=True, exist_ok=True)
+        for key in CONTRACTS:
+            c = checklist(key, evd)
+            rows = check_rows(c)
+            inscope = [r for r in rows if r["scope"]]
+            n = {s: sum(1 for r in inscope if r["state"] == s) for s in STATES}
+            bad = blocking(rows, args.links_only)
+            verdict = "pass" if not bad else f"FAIL ({len(bad)})"
+            if bad:
+                rc = 1
+            print(f"{key:24} {n[ev.PASS]:>8} {n[ev.FAIL]:>6} {n[ev.NOT_RUN]:>7} {n['unlinked']:>8} "
+                  f"{len(rows) - len(inscope):>12}  {verdict}")
+            table.append(f"| {key} | {n[ev.PASS]} | {n[ev.FAIL]} | {n[ev.NOT_RUN]} | {n['unlinked']} | "
+                         f"{len(rows) - len(inscope)} | {verdict} |")
+            if args.out_dir:
+                (args.out_dir / f"{key}.md").write_text(render(c, given))
+        if args.summary:
+            args.summary.write_text("### Contract checklists (REQ/SPEC, TEST and PROP rows in scope)\n\n"
+                                    f"Run results: {given}.\n\n" + "\n".join(table) + "\n")
 
-    lines = [f"# Checklist: {args.contract}", "",
-             f"Spec pages: {', '.join(pages)}. CVL specs: {', '.join(cvl) or 'none'}.", "",
-             f"## REQ / SPEC on the page ({len(reqs)})", ""]
-    lines += [f"- {box(r in links)} `{r}` ({where}) {text}" + (f" — {', '.join(links[r])}" if r in links else "")
-              + later(r, req_later, r in links) + offchain(r, r in links)
-              + (f" — owned by {owned[r][0]}: {owned[r][1]}" if r in owned and r not in links else "")
-              for r, text, where in reqs]
-    lines += ["", f"## TEST rows ({len(tests)})", ""]
-    lines += [f"- {box(t in done)} `{t}` [{kind}] {text}" + later(t, test_later, t in done) + offchain(t, t in done)
-              for t, kind, text in tests]
-    cross = cross_tests()
-    lines += ["", f"## Cross-cutting TEST rows, every contract ({len(cross)})", ""]
-    lines += [f"- {box(t in done)} `{t}` [{kind}] {text}" for t, kind, text in cross]
-    lines += ["", f"## PROP rows ({len(props)})", ""]
-    lines += [f"- {box(p in done)} `{p}` [{tool}] {text}" for p, tool, text in props]
-    lines += ["", f"## INV ({len(invs)})", ""]
-    lines += [f"- {box(i in links)} `{i}` {text}" for i, text in invs]
-    lines += ["", f"## ATTACK ({len(attacks)})", ""]
-    lines += [f"- {box(a in links)} `{a}` {title}" for a, title in attacks]
-    text = "\n".join(lines) + "\n"
-    if args.out:
-        args.out.write_text(text)
-    else:
-        sys.stdout.write(text)
+    if args.uncovered or args.all:
+        rows = uncovered(evd)
+        bad = blocking(rows, args.links_only)
+        print(f"\nTEST rows on no contract checklist: {len(rows)} ("
+              + ", ".join(f"{sum(1 for r in rows if r['state'] == s)} {s}" for s in STATES)
+              + f"; {sum(1 for r in rows if not r['scope'])} in OUTSIDE_CONTRACTS)")
+        for r in rows:
+            print(f"- {BOX[r['state']]} `{r['id']}` {r['text'][:90]}{r['extra'][:120]}{r['note']}")
+        if args.summary and args.all:
+            with args.summary.open("a") as f:
+                f.write(f"\n### TEST rows on no contract checklist ({len(rows)}; {len(bad)} block --check)\n\n"
+                        + "\n".join(f"- {BOX[r['state']]} `{r['id']}` {r['text'][:90]}"
+                                    + (" — outside contracts/" if not r["scope"] else "") for r in rows) + "\n")
+        if args.check and bad:
+            print(f"{len(bad)} TEST rows on no checklist, not {'linked' if args.links_only else 'verified'} and "
+                  f"not in OUTSIDE_CONTRACTS: {', '.join(r['id'] for r in bad)}", file=sys.stderr)
+            rc = 1
 
-    missing = ([r for r, _, _ in reqs if r not in links and r not in req_later and r not in owned and r not in outside]
-               + [t for t, _, _ in tests if t not in done and t not in test_later and t not in outside]
-               + [p for p, _, _ in props if p not in done])
-    if args.check and stale:
-        print(f"DEFERRED_ROWS names a contract that is not in PENDING for: {', '.join(stale)}", file=sys.stderr)
-        return 1
-    landed = implemented_pending()
-    if args.check and landed:
-        print(f"PENDING lists contracts that now have code in contracts/src: {', '.join(landed)}; remove them",
-              file=sys.stderr)
-        return 1
-    if args.check and orphaned:
-        print(f"OWNED_ELSEWHERE names an owner whose pages do not define: {', '.join(orphaned)}", file=sys.stderr)
-        return 1
-    if args.check and missing:
-        print(f"{len(missing)} IDs without a link from contracts/: {', '.join(missing[:20])}"
-              + (" …" if len(missing) > 20 else ""), file=sys.stderr)
-        return 1
-    return 0
+    for e in errs:
+        print(e, file=sys.stderr)
+    return 1 if errs or rc else 0
 
 
 if __name__ == "__main__":

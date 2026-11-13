@@ -48,7 +48,9 @@ contract LPOracleBorrowGatesUnitTest is LPOracleFixture {
         assertTrue(v.tokens[0].reasons & (1 << 5) != 0, "SECOND_SOURCE_UNAVAILABLE");
     }
 
-    // TEST-276 verifies: REQ-ORACLE-100, SPEC-ORC-020, Q-323, Q-385
+    // TEST-276 verifies: REQ-ORACLE-100, Q-323, Q-385
+    /// @dev The core's gate on a `PoolTwap` token (the base's test module supplies its value); the value itself, a deep
+    /// Uniswap v3 pool's TWAP, is checked in LPOracleCL.Module.unit.t.sol.
     function test_TEST_276_poolTwapSecondSource() public {
         _sequencerUp(T0 - 7200);
         OracleConfig memory c = _config();
