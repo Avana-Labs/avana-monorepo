@@ -2318,6 +2318,104 @@
       "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "06acd73bcbbd5343",
+      "check": "reentrancy-state-change",
+      "file": "src/coverage/deficit-offset-spoke/DeficitOffsetSpoke.sol",
+      "function": "constructor (DeficitOffsetSpoke)",
+      "reason": "Constructor only: the calls before the immutable `_FIRST_LOSS_LAYER` is written are the first-loss layer's `HUB()`, `ASSET()` and `ASSET_ID()`, views compiled to STATICCALL that cannot change state, made to check REQ-FLR-047 and fail closed with FirstLossLayerMismatch; an immutable does not exist until the constructor returns. Covered by TEST-298 (constructorRejectsMismatchedLayer).",
+      "approval": "pending review (approved pattern)",
+      "review": "DeficitOffsetSpoke (Q-410), new site; same shape as the UniswapV3Integration and Lens constructor entries (view-only calls before writes)."
+    },
+    {
+      "fingerprint": "feaed29377f9984b",
+      "check": "empty-block",
+      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "function": "CoverageSpoke._beforeCover",
+      "reason": "The loss-order hook: the Avana Umbrella has no layer in front of it, so its hook accepts every call (REQ-FLR-048); DeficitOffsetSpoke._beforeCover overrides it with the FirstLossLayerNotExhausted check. An empty body is the specified behaviour, not a missing check. Covered by TEST-298 (offsetRefusedWhileAvanaLayerFunded; the deletion mutant of the hook call is killed) and TEST-128.",
+      "approval": "approved by pattern",
+      "review": "group X (empty override of a variant hook): same shape as FlashLiquidator._checkLoanNeed and _checkOutlay."
+    },
+    {
+      "fingerprint": "0f02c6bcba2a7971",
+      "check": "require-revert-in-loop",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._forwardTokens",
+      "reason": "The loop's safeTransfer of a watched token's rise to the recipient reverts the whole call when the recipient refuses it, the specified outcome for a payout the caller chose (REQ-HELPER-008); the bounded loop is over the market's tokens and their routes' intermediates. Covered by TEST-174.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); pattern: bounded loops"
+    },
+    {
+      "fingerprint": "e129dec5f52bb7e1",
+      "check": "contract-locks-ether",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule",
+      "reason": "Same as ac0d473439addc9e (fingerprint moved by the speed-limit edit): the only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock); the RiskModule holds no funds (REQ-RISK-005), has no receive or fallback, and ERC1967Utils rejects value without calldata. Covered by TEST-035, TEST-242.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "4ea0e639c02a5a26",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.tightenMarketSpeedLimits",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "0b129f11f0e49d77",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.loosenMarketSpeedLimits",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "951bfd95771a4b6d",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.tightenDebtSpeedLimit",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "d2ab20ca0da965e4",
+      "check": "delegate-call-unchecked-address",
+      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
+      "function": "ParameterStoreForwardSpeed.loosenDebtSpeedLimit",
+      "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "b56efa3eab11693c",
+      "check": "state-change-without-event",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.checkPledge",
+      "reason": "The only state change is the pledge-window charge, made inside a pledge that emits its own events in Collateralization; the window is readable through getPledgeSpeed and the Lens. Same reasoning as the CollateralizationDebtMark entries. Covered by TEST-320, TEST-325.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "6066e843a6200a9f",
+      "check": "state-change-without-event",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.preBorrowCheck",
+      "reason": "The only state change is the borrow-window charges, made inside a borrow that emits its own events in the AaveAdapter and the Aave V4 Spoke; the windows are readable through getBorrowSpeed and the Lens. Same reasoning as the CollateralizationDebtMark entries. Covered by TEST-320, TEST-326.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "dcd097a60953b839",
+      "check": "unused-import",
+      "file": "src/policy/risk-module/RiskModuleSpeedLogic.sol",
+      "reason": "IRiskModuleSpeedLogic is used by the @inheritdoc NatSpec tags of the logic's external functions; removing the import breaks the documentation build.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     }
   ]
 }

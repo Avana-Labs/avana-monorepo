@@ -393,9 +393,10 @@ Run: `51 checks: 51 CONSISTENT, 0 INCONSISTENT`, exit 0.
 | SYM-192i | curve example: 9.10% at the kink U = 0.9 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
 | SYM-192j | curve example: maximum 5.50% + 3.60% + 50% = 59.10% at U = 1 | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
 | SYM-192k | example: suppliers receive 77,625 x 0.9 = 69,862.5 GHO a year | `SPEC-HUB-007`, `REQ-HUB-008`, `REQ-HUB-009` | Holds |
-| SYM-193a | the early withdrawer is paid w A / Sh and carries none of the loss: the remaining (Sh - w) shares carry all Un | `DEF-014`, `Q-353`, `Q-408` | Holds |
-| SYM-193b | the loss per remaining share rises from Un / Sh to Un / (Sh - w) | `DEF-014`, `Q-353`, `Q-408` | Holds |
-| SYM-193c | DEF-014 example: 18,525 shares withdrawn before realization are paid 1,900,000 / 1,852,500 each, 19,000 GHO | `DEF-014`, `Q-353`, `Q-408` | Holds |
-| SYM-193d | DEF-014 example: the 1,834,000 remaining shares carry all 30,000 GHO: 0.016358 GHO a share instead of 0.016194 | `DEF-014`, `Q-353`, `Q-408` | Holds |
-| SYM-193e | DEF-014 example: the loss the early withdrawer avoided, 18,525 x 30,000 / 1,852,500 = 300 GHO | `DEF-014`, `Q-353`, `Q-408` | Holds |
+| SYM-193a | the layers pay F_A + F_D and the rest D - F_A - F_D stays recorded | `REQ-FLR-027`, `DEF-014`, `SPEC-FLR-006`, `Q-410` | Holds |
+| SYM-193b | after full repayment liquidity falls short of the lenders' claims by exactly the residual | `REQ-FLR-027`, `DEF-014`, `Q-410` | Holds |
+| SYM-193c | an exit of x <= liquidity is paid x (price A / Sh unchanged); the claims left exceed the liquidity left by r | `REQ-FLR-027`, `DEF-014`, `Q-410` | Holds |
+| SYM-193d | DEF-014 / TEST-299 example: 300,000 GHO against layers of 100,000 and 150,000 leaves 50,000 | `DEF-014`, `SPEC-FLR-006`, `Q-410` | Holds |
+| SYM-193e | DEF-014 example: backed value per share (C - r) / Sh = 0.975 GHO, beside the 1 GHO Aave pays | `DEF-014`, `Q-410` | Holds |
+| SYM-193f | DEF-014 / TEST-299 example: liquidity after full repayment is 1,950,000 GHO against 2,000,000 of claims | `DEF-014`, `Q-410` | Holds |
 

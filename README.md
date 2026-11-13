@@ -5,7 +5,7 @@
 
 </div>
 
-Avana lets a liquidity provider borrow against a liquidity position in a listed AMM pool without taking the liquidity out of the pool. It runs on several chains, Hubs and AMM protocols: at launch on Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), each with an Avana Stable LP Hub; the core also supports Uniswap v2, Curve, Balancer and Uniswap v4 once each passes its listing guards. The Aave DAO decides which assets are borrowable; on a Stable LP Hub they are stable debt assets it approves (for example GHO, USDC, USDT), each with its own credit line, draw cap, price source, swap routes and Avana Umbrella. Each lend asset's rate follows Aave V4's standard utilization curve. The diagram below borrows GHO as an example.
+Avana lets a liquidity provider borrow against a liquidity position in a listed AMM pool without taking the liquidity out of the pool. It runs on several chains, Hubs and AMM protocols: at launch on Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), each with an Avana Stable LP Hub; the core also supports Uniswap v2, Curve, Balancer and Uniswap v4 once each passes its listing guards. The Aave DAO decides which assets are borrowable; on a Stable LP Hub they are stable debt assets it approves (for example GHO, USDC, USDT), each with its own credit line, draw cap, price source, swap routes and two loss layers: the Avana-funded Avana Umbrella, then a DAO deficit offset funded by the Aave DAO treasury. Each lend asset's rate follows Aave V4's standard utilization curve. The diagram below borrows GHO as an example.
 
 ```mermaid
 sequenceDiagram

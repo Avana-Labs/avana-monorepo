@@ -225,13 +225,7 @@ prove('MATH-AR-51c', 'a draw admitted only when amount <= idle liquidity keeps d
       hub + [a51 > 0, a51 <= liq], drw + a51 <= sup)
 prove('MATH-AR-51d', 'a withdrawal admitted only when amount <= idle liquidity keeps drawn <= supplied after it',
       hub + [w51 > 0, w51 <= liq], drw <= sup - w51)
-# A lender's loss bound: deficit <= line (draws stay in the line), coverage F x 1e4 >= ratio x line (DEF-019),
-# uncovered = max(0, deficit - F); each supplier's loss is uncovered x its shares / all shares (DEF-014).
-dfc, Fc, ratio, uncov, shi, sh = Ints('deficit funded ratioBps uncovered lenderShares allShares')
-b51e = [cl > 0, Or(dec == 10**6, dec == 10**18), dfc >= 0, dfc <= cl * dec, Fc >= 0, ratio >= 0, ratio <= BPS,
-        Fc * BPS >= ratio * cl * dec, uncov == If(dfc > Fc, dfc - Fc, 0), sh > 0, shi >= 0, shi <= sh]
-prove('MATH-AR-51e', 'a lender (DAO or public) loses at most its share of line x (1 - coverageRatioBps / 1e4), whatever it supplied',
-      b51e, uncov * shi * BPS <= cl * dec * (BPS - ratio) * sh)
+# MATH-AR-51e (the residual beyond the loss layers, Q-410) is in ar15_loss_layers.py.
 computed('MATH-AR-51f', 'REQ-ARCH-211 / TEST-297 example: idle liquidity a lender can withdraw now',
          [('supplied: 1,000,000 DAO + 500,000 public + 300,000 Coverage Spoke', 1_800_000, 1_000_000 + 500_000 + 300_000),
           ('idle = supplied - drawn 1,600,000', 200_000, 1_800_000 - 1_600_000),

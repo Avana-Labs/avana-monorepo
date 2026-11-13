@@ -2189,7 +2189,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 
 ## AMM-neutral core, Hubs and chains
 
-Scenarios against the shared core that serves several AMM protocols, debt assets, Hubs and chains: `ATTACK-153` … `ATTACK-168` follow the red-team review (`AMMN-RT-01` … `AMMN-RT-16`) and `ATTACK-169` … `ATTACK-194` follow the flow walkthroughs (`AMMN-FLOW-01` … `AMMN-FLOW-26`), in that order, and `ATTACK-195` … `ATTACK-197` follow the attacks found in the final re-check (`FINDING-293` … `FINDING-295`). A *market* is one (chain, AMM protocol, pool, exact position shape); for concentrated liquidity the shape is the exact `[tickLower, tickUpper]` range.
+Scenarios against the shared core that serves several AMM protocols, debt assets, Hubs and chains: `ATTACK-153` … `ATTACK-168` follow the red-team review (`AMMN-RT-01` … `AMMN-RT-16`) and `ATTACK-169` … `ATTACK-194` follow the flow walkthroughs (`AMMN-FLOW-01` … `AMMN-FLOW-26`), in that order, and `ATTACK-195` … `ATTACK-197` follow the attacks found in the final re-check (`FINDING-293` … `FINDING-295`); `ATTACK-198` and `ATTACK-199` follow the loss order of `Q-410`. A *market* is one (chain, AMM protocol, pool, exact position shape); for concentrated liquidity the shape is the exact `[tickLower, tickUpper]` range.
 
 ### ATTACK-153: Narrow-range position credited at the market range's value
 
@@ -2616,9 +2616,9 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Field | Value |
 |---|---|
 | Target | Lend Spoke supply on the funding Hub |
-| Objective | Withdraw at full value before an uncovered deficit is realised, leaving the loss to the last lenders, who include public lenders and new suppliers who enter at the unadjusted price |
+| Objective | Withdraw at full value ahead of other lenders while a deficit beyond the loss layers is outstanding, leaving the unbacked claims to the last lenders, who include public lenders and any new supplier |
 | Affected steps | `DEF`, Lend Spoke withdraw |
-| Prerequisites | A deficit larger than the Coverage Spoke's funds |
+| Prerequisites | A deficit larger than the Avana Umbrella and the DAO deficit offset of that (Hub, asset) together |
 | Attack approach | Watch for deficit reports and withdraw first |
 | Impact | Bounded by the funding Hub's first-loss coverage and the credit lines |
 | Expected protection | `INV-042`, `INV-074`, `INV-094`: each (Hub, debt asset) has its own Coverage Spoke and every credit line is capped at the coverage behind it (`DEF-019`); deficits and coverage per drawing Spoke and Hub are readable on-chain and in the Lens (`uncoveredDeficit`, the deficit-adjusted share price, `getHubAssetExposure`), so no lender has an information advantage; the moment `uncoveredDeficit > 0`, P-18 sets the drawing Spokes' `drawCap`s to 0 and the Aave Protocol Guardian freezes the Lend Spoke reserve of that (Hub, asset), which stops new supply while withdrawals stay open, and the app's Lend page builds no supply into it (`REQ-ARCH-211`); an uncovered remainder follows Aave V4's Hub loss rule once realized (Source: Q-236, Q-353, Q-363, Q-407) |

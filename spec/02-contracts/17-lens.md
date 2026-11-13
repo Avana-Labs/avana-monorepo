@@ -26,6 +26,7 @@ The Lens is **not** part of the protocol's security. Its liquidation preview siz
 | RiskModule | Account gate status, Hub shares == assets, market and debt-reserve breaker status, re-credit charge ([2.7](07-risk-module.md)) |
 | LPVaultSwap | Committed-operator registry and its active count on the chain |
 | Avana Umbrella (Coverage Spokes) | Funded balance and `firstLossReserveMinimum` of each (Hub, debt asset) First-Loss Reserve ([2.14](14-first-loss-reserve.md)) |
+| DAO deficit offsets (`DeficitOffsetSpoke`) | The Avana Umbrella each stands behind (`FIRST_LOSS_LAYER()`), read from every Spoke listed on a Hub asset to find the pair's second loss layer ([2.14](14-first-loss-reserve.md) `REQ-FLR-046`) |
 | PayoutEscrow | Payouts (borrower surplus, Avana fee, keeper reward) a token refused, held for the recipient and not yet claimed (`Q-401`) |
 | Lock | Whether an Avana call is in flight |
 

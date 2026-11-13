@@ -8,7 +8,7 @@ units excluded), SPEC-CAP-007 / SPEC-CAP-008 (cap sizing guidance, tail ratio), 
 SPEC-CAP-006 (addCap), SPEC-PROXY-003 / SPEC-PROXY-007 (repay sizing and quote), SPEC-HUB-007
 (borrow rate), SPEC-BRK-001 (price-drop alert), SPEC-CF-003 (opening bound), SPEC-HUB-005 (bonus curve),
 SPEC-CF-004 / SPEC-HUB-006 (listing margin), SPEC-PROXY-006 (health factor), SPEC-HUB-007 supply rate
-(SYM-192, Q-407, Q-408), DEF-014 loss after an early withdrawal (SYM-193, Q-353, Q-408).
+(SYM-192, Q-407, Q-408), DEF-014 loss layers and the first-come residual (SYM-193, Q-410).
 Exact integer rounding of the same formulas is in the Z3 models (z3/aave-risk, MATH-AR-...).
 """
 import sympy as sp
@@ -187,21 +187,23 @@ ex95 = {**ex, Dr: 1_710_000, r_: r95}
 numeric("SYM-192h", "at U = 0.95: supply rate 0.341 x 1.15 x 0.95 x 0.9 = 33.528825%", Q(33528825, 10**8),
         supply_rate.subs(ex95), 0)
 
-# ---------- SYM-193: who bears an uncovered deficit when a lender withdraws before realization (Q-353, Q-408) ----------
-A_, Sh_, Un_, w_ = sp.symbols("A Sh Un w", positive=True)   # assets, shares, uncovered deficit, withdrawn shares
-paid = w_ * A_ / Sh_                                           # Aave pays the unadjusted price before realization
-left_after = (A_ - paid) - Un_                                 # remaining suppliers' assets after realization
-# SYM-193 verifies: DEF-014, Q-353, Q-408
-eq("SYM-193a", "the early withdrawer is paid w A / Sh and carries none of the loss: the remaining (Sh - w) shares carry all Un",
-   (Sh_ - w_) * A_ / Sh_ - left_after, Un_)
-eq("SYM-193b", "the loss per remaining share rises from Un / Sh to Un / (Sh - w)",
-   Un_ / (Sh_ - w_) - Un_ / Sh_, Un_ * w_ / (Sh_ * (Sh_ - w_)))
-d14 = {A_: 2_000_000 - 100_000, Sh_: 1_950_000 - 97_500, Un_: 30_000, w_: 18_525}
-numeric("SYM-193c", "DEF-014 example: 18,525 shares withdrawn before realization are paid 1,900,000 / 1,852,500 each, "
-        "19,000 GHO", Q(19000), paid.subs(d14), 0)
-numeric("SYM-193d", "DEF-014 example: the 1,834,000 remaining shares carry all 30,000 GHO: 0.016358 GHO a share "
-        "instead of 0.016194", Q(16358, 10**6), (Un_ / (Sh_ - w_)).subs(d14), Q(1, 10**6))
-numeric("SYM-193e", "DEF-014 example: the loss the early withdrawer avoided, 18,525 x 30,000 / 1,852,500 = 300 GHO",
-        Q(300), (w_ * Un_ / Sh_).subs(d14), 0)
+# ---------- SYM-193: the loss layers and the residual beyond them (Q-410; replaces the pro-rata reading) ----------
+# Aave V4 burns only the caller Spoke's shares in eliminateDeficit and has no write-down, so the residual r stays in the
+# asset's added assets A: the share price A / Sh does not fall, and withdrawals are paid at it first-come.
+Dd, FA_, FD_, C_, Sh_, x_ = sp.symbols("D F_A F_D C Sh x", positive=True)  # deficit, layers, lender claims, shares, exit
+r_ = Dd - FA_ - FD_                                            # residual when D > F_A + F_D
+liq = C_ - r_                                                  # liquidity once every borrower has repaid
+# SYM-193 verifies: REQ-FLR-027, DEF-014, SPEC-FLR-006, Q-410
+eq("SYM-193a", "the layers pay F_A + F_D and the rest D - F_A - F_D stays recorded", Dd - (FA_ + FD_), r_)
+eq("SYM-193b", "after full repayment liquidity falls short of the lenders' claims by exactly the residual", C_ - liq, r_)
+eq("SYM-193c", "an exit of x <= liquidity is paid x (price A / Sh unchanged); the claims left exceed the liquidity left by r",
+   (C_ - x_) - (liq - x_), r_)
+ex193 = {Dd: 300_000, FA_: 100_000, FD_: 150_000, C_: 2_000_000, Sh_: 2_000_000}
+numeric("SYM-193d", "DEF-014 / TEST-299 example: 300,000 GHO against layers of 100,000 and 150,000 leaves 50,000",
+        Q(50_000), r_.subs(ex193), 0)
+numeric("SYM-193f", "DEF-014 / TEST-299 example: liquidity after full repayment is 1,950,000 GHO against 2,000,000 of claims",
+        Q(1_950_000), liq.subs(ex193), 0)
+numeric("SYM-193e", "DEF-014 example: backed value per share (C - r) / Sh = 0.975 GHO, beside the 1 GHO Aave pays",
+        Q(975, 1000), ((C_ - r_) / Sh_).subs(ex193), 0)
 
 done()
