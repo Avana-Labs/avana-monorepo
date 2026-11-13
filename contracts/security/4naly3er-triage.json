@@ -1431,7 +1431,7 @@
       "check": "Division by zero not prevented",
       "file": "src/lens/lens/LensRemoval.sol",
       "reason": "The divisor per is checked on the first line of the function (per == 0 returns 0). Tests: Lens.Preview, Lens.Actions (TEST-247).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 70e5954afe4eae54"
     },
     {
@@ -1439,7 +1439,7 @@
       "check": "Signature use at deadlines should be allowed",
       "file": "src/lens/lens/LensDeleverage.sol",
       "reason": "No signature: the deadline is the caller's transaction deadline used only to size the interest growth; a deadline at or before now counts no time (REQ-LENS-035, REQ-LENS-036). Test: repayAllDeadlineInPast.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: the deadline growth moved from LensPreview (2be6bee5d509a011) to LensDeleverage"
     },
     {
@@ -1447,7 +1447,7 @@
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/lens/lens/LensFees.sol",
       "reason": "uint128 of the fee growth in _owedAfterUpdate reproduces the position manager's own 0.7 arithmetic: tokensOwed is a uint128 that wraps (differences mod 2^256, the owed sum mod 2^128), so the view reports exactly what collect would pay (REQ-LENS-050, REQ-LENS-051). Test: Lens.FeesEdges (test_TEST_247_owedWrapsLikeTheManager).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new reasoning (intended wrap)"
     },
     {
@@ -1455,7 +1455,7 @@
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/lens/lens/LensMarket.sol",
       "reason": "The loop index runs from 0 to the reserve's latest dynamic configuration key, itself a uint32, so uint32(key) never truncates. Test: checkBackingLiquidationFeeOnAnyKey.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Re-key of b80ce58173f9e15d (same uint32(key) cast, line text moved)"
     },
     {
@@ -1463,7 +1463,7 @@
       "check": "A year is not always 365 days",
       "file": "src/lens/lens/LensDeleverage.sol",
       "reason": "Aave V4's own convention: its drawn rate is per 365-day year (MathUtils.SECONDS_PER_YEAR), so the growth until the deadline uses the same year (REQ-LENS-035, REQ-LENS-036). Tests: repayAllCoversDebtAtDeadline, repayAllUsdcExample.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: the deadline growth moved from LensPreview (f0b3243169ececd1) to LensDeleverage"
     },
     {
@@ -1471,7 +1471,7 @@
       "check": "`block.number` means different things on different L2s",
       "file": "src/lens/lens/LensActions.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
@@ -1479,7 +1479,7 @@
       "check": "`block.number` means different things on different L2s",
       "file": "src/lens/lens/LensClose.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
@@ -1487,7 +1487,7 @@
       "check": "`block.number` means different things on different L2s",
       "file": "src/lens/lens/LensFees.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
@@ -1495,7 +1495,7 @@
       "check": "`block.number` means different things on different L2s",
       "file": "src/lens/lens/LensHubAssets.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
@@ -1503,7 +1503,7 @@
       "check": "`block.number` means different things on different L2s",
       "file": "src/lens/lens/LensRemoval.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
@@ -1511,7 +1511,7 @@
       "check": "`block.number` means different things on different L2s",
       "file": "src/lens/lens/LensSizing.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
@@ -1519,7 +1519,7 @@
       "check": "Use of deprecated chainlink function: `latestAnswer()`",
       "file": "src/lens/lens/LensAccountMath.sol",
       "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 0bf882c837aed024"
     },
     {

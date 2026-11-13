@@ -495,7 +495,7 @@
       "check": "missing-assignment",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as 9cc0a5913e28b4b3"
     },
     {
@@ -503,7 +503,7 @@
       "check": "missing-assignment",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as 9cc0a5913e28b4b3"
     },
     {
@@ -511,7 +511,7 @@
       "check": "missing-assignment",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as 9cc0a5913e28b4b3"
     },
     {
@@ -519,7 +519,7 @@
       "check": "missing-assignment",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as 9cc0a5913e28b4b3"
     },
     {
@@ -527,7 +527,7 @@
       "check": "missing-assignment",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as 9cc0a5913e28b4b3"
     },
     {

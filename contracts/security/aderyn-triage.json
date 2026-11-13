@@ -2101,7 +2101,7 @@
       "check": "contract-locks-ether",
       "file": "src/oracle/lp-oracle/LPOracleCL.sol",
       "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock, REQ-ORACLE-058); LPOracleCL has no receive, fallback or other payable function, holds no funds, and ERC1967Utils rejects value without calldata. Same as the ParameterStore, MarketRegistry and RiskModule entries.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "High severity: same reasoning as the approved ParameterStore entry 3dbcd01d6b739bd5"
     },
     {
@@ -2109,7 +2109,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/oracle/lp-oracle/LPOracle.sol",
       "reason": "poke forwards its calldata to the poke logic contract held in the implementation immutable _POKE_LOGIC, checked at construction (code and logicConfig equal to the implementation's chain constants) and changed only by an upgrade at the normal delay; no address comes from calldata or storage. Same router pattern as the ParameterStore and MarketRegistry entries. Covered by TEST-062, TEST-306.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "High severity: same reasoning as the approved ParameterStore/MarketRegistry delegate-call entries"
     },
     {
@@ -2117,7 +2117,7 @@
       "check": "unsafe-casting",
       "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
       "reason": "Each cast follows a range check of the same word: uint16(card) after LPOracleCalls.uintAt(..., type(uint16).max), address(uint160(word)) after uintAt(..., type(uint160).max), int24(value) after LPOracleCalls.intAt(..., 24) (a sign-extended 24-bit word); a word outside its type fails the read (ok false), so nothing truncates. Covered by LPOracleCL.Module (TEST-306).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "High severity: same reasoning as the approved LPOracleConfig unsafe-casting entries (a2e7add59e680cf7)"
     },
     {
@@ -2125,7 +2125,7 @@
       "check": "unsafe-casting",
       "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
       "reason": "Each cast follows a range check of the same word: uint16(card) after LPOracleCalls.uintAt(..., type(uint16).max), address(uint160(word)) after uintAt(..., type(uint160).max), int24(value) after LPOracleCalls.intAt(..., 24) (a sign-extended 24-bit word); a word outside its type fails the read (ok false), so nothing truncates. Covered by LPOracleCL.Module (TEST-306).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "High severity: same reasoning as the approved LPOracleConfig unsafe-casting entries (a2e7add59e680cf7)"
     },
     {
@@ -2133,7 +2133,7 @@
       "check": "unsafe-casting",
       "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
       "reason": "Each cast follows a range check of the same word: uint16(card) after LPOracleCalls.uintAt(..., type(uint16).max), address(uint160(word)) after uintAt(..., type(uint160).max), int24(value) after LPOracleCalls.intAt(..., 24) (a sign-extended 24-bit word); a word outside its type fails the read (ok false), so nothing truncates. Covered by LPOracleCL.Module (TEST-306).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "High severity: same reasoning as the approved LPOracleConfig unsafe-casting entries (a2e7add59e680cf7)"
     },
     {
@@ -2181,7 +2181,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
     },
     {
@@ -2189,7 +2189,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
     },
     {
@@ -2197,7 +2197,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
     },
     {
@@ -2205,7 +2205,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
     },
     {
@@ -2213,7 +2213,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
     },
     {
@@ -2221,7 +2221,7 @@
       "check": "require-revert-in-loop",
       "file": "src/lens/lens/LensSizing.sol",
       "reason": "The bisection loops of previewDeleverageTo (at most 2 x 128 steps) call the pure SettlementMath sizing, which reverts only for decimals above 36 (InvalidDecimals; no listed market has them) or an arithmetic overflow; zero prices return before it. Either one ends the whole preview, which has no meaningful partial answer (REQ-LENS-055). Tests: Lens.DeleverageTo (TEST-247).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new reasoning"
     },
     {
