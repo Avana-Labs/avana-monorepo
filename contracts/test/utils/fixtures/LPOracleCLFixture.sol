@@ -76,7 +76,8 @@ library LPOracleCLDeployer {
     }
 }
 
-/// @notice The market's integration as the LPOracle reads it at listing: `rateProviders(marketId)` (`REQ-AMM-CORE-004`).
+/// @notice The market's integration as the LPOracle reads it at listing: `rateProviders(marketId)` (`REQ-AMM-CORE-004`)
+/// and `unitExponent(marketId)` (`SPEC-ORC-005`).
 /// @dev The Uniswap v3 and Slipstream integrations return two zero addresses (their own suites check it); a test sets
 /// a provider to check that the oracle refuses a rate token.
 contract ClIntegrationStub {
@@ -84,12 +85,20 @@ contract ClIntegrationStub {
 
     address[2] internal _providers;
     bool public bound;
+    uint8 public unitExp;
 
     /// @notice Binds the market, as the integration's `bindMarket` does inside `listCollateralMarket`.
     function setBound(
         bool b
     ) external {
         bound = b;
+    }
+
+    /// @notice Sets the unit exponent `unitExponent` reports once bound.
+    function setUnitExp(
+        uint8 k
+    ) external {
+        unitExp = k;
     }
 
     function setProvider(
@@ -105,6 +114,14 @@ contract ClIntegrationStub {
         if (!bound) revert MarketBinding(marketId);
         providers = new address[](2);
         (providers[0], providers[1]) = (_providers[0], _providers[1]);
+    }
+
+    /// @notice The market's unit exponent `k` (`SPEC-ORC-005`); reverts before the market is bound.
+    function unitExponent(
+        uint256 marketId
+    ) external view returns (uint8) {
+        if (!bound) revert MarketBinding(marketId);
+        return unitExp;
     }
 }
 
@@ -160,6 +177,9 @@ abstract contract LPOracleCLFixture is ClPoolFixture {
     int24 internal tickUpper;
     uint256 internal price0;
     uint256 internal price1;
+    // The pool's unit exponent `k` the feed's market argument carries (`SPEC-ORC-005`); kept here, not read from the
+    // stub, so `_params()` makes no external call (a test may build it right after `vm.expectRevert`).
+    uint8 internal unitExp;
 
     function _usdcUsdt() internal pure returns (MarketSpec memory s) {
         s = MarketSpec("USDC", 6, 1e8, true, "USDT", 6, 1e8, true, 100, false, -10, 10, 1e15);
@@ -298,7 +318,7 @@ abstract contract LPOracleCLFixture is ClPoolFixture {
         p.description = "CL market / USD";
         p.pokeMinGas = POKE_FLOOR;
         p.config = _config();
-        p.market = abi.encode(address(pool), tickLower, tickUpper);
+        p.market = abi.encode(address(pool), tickLower, tickUpper, uint256(unitExp));
     }
 
     function _one(

@@ -511,6 +511,6 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture, Cl
         p.pokeMinGas = pokeMinGas_;
         p.config = _oracleConfig();
         // Full range of spacing 1: at $1 per token one unit of liquidity holds one raw unit of each, so d = 6.
-        p.market = abi.encode(address(clPool), int24(-887_272), int24(887_272));
+        p.market = abi.encode(address(clPool), int24(-887_272), int24(887_272), uint256(0));
     }
 }

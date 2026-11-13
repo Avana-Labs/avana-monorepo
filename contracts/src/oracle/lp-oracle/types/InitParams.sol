@@ -10,7 +10,7 @@ import {OracleConfig} from "../../../types/OracleConfig.sol";
 /// the market, so the market's identity comes from these arguments: the tokens and their pool order are
 /// `config.tokens[i].token` (the pricing module checks them against the pool's own order), each token's decimals are
 /// read from the token, and `market` is the pricing module's market (concentrated liquidity:
-/// `abi.encode(pool, tickLower, tickUpper)`). The MarketRegistry's `listCollateralMarket` later requires the feed's
+/// `abi.encode(pool, tickLower, tickUpper, unitExp)`, `unitExp` the pool's unit exponent `k` of `SPEC-ORC-005`). The MarketRegistry's `listCollateralMarket` later requires the feed's
 /// `marketId()` and `integration()` to match, and `checkConfig` then requires the registered market to carry this
 /// feed, this integration, these tokens in this order and the vault-token decimals `d` the feed computed.
 /// `isUsdStable.length` equals the market's token count; `isUsdStable[i]` is true for every approved USD-pegged stable
@@ -36,6 +36,6 @@ struct InitParams {
     uint32 pokeMinGas;
     // Configuration validated by checkConfig and evaluated for the seed; its routes are the routes to be listed.
     OracleConfig config;
-    // The pricing module's market: pool and exact shape, ABI-encoded by the module.
+    // The pricing module's market: pool, exact shape and unit exponent, ABI-encoded by the module.
     bytes market;
 }

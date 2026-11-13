@@ -4,7 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegrationHooks} from "../../amm/IAmmIntegrationHooks.sol";
+import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
+import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {IMarketRegistryViews} from "../../policy/market-registry/IMarketRegistryViews.sol";
 import {OracleConfig} from "../../types/OracleConfig.sol";
@@ -24,8 +26,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// (`REQ-ORACLE-104`).
 /// @dev Compiled into `LPOracleCL` (for `initialize`) and into `LPOracleCLModuleLogic`, the one module contract per
 /// implementation that the poke, listing and view logic contracts reach by delegatecall (2.10 Upgrade rules), so every
-/// hook runs in the proxy's storage. The composition reads no pool state: only the stored range, the token decimals,
-/// `units` and the price vector, so moving the pool's spot price cannot move it (`SPEC-ORC-007`). It returns the floored
+/// hook runs in the proxy's storage. The composition reads no pool state: only the stored range and unit exponent, the
+/// token decimals, `units` and the price vector, so moving the pool's spot price cannot move it (`SPEC-ORC-007`). It returns the floored
 /// amounts of `LiquidityAmounts.getAmountsForLiquidity`; `LPPriceMath.lpPrice` then takes one raw unit off each
 /// (`SPEC-ORC-008`), so the deduction is made once. Every hook is a view that never reverts except `InsufficientGas`.
 /// Example: full-range USDC/USDT (spacing 1, both at $1, `d = 6`) composes `10^6` units to `(999,999, 999,999)`,
@@ -49,6 +51,9 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     /// @notice The integration reports a rate provider for a token (`REQ-AMM-CORE-004`): the concentrated-liquidity
     /// module values every token at its Chainlink USD price and has no rate-feed path, so a rate token is refused.
     uint256 internal constant CL_CHECK_RATE_TOKEN = 1 << 6;
+    /// @notice The integration's unit exponent of the market (`IClIntegration.unitExponent`) is not the `k` stored at
+    /// `initialize` (`SPEC-ORC-005`): the feed would price `10^d` units of another size than the vault token's.
+    uint256 internal constant CL_CHECK_UNIT_EXP = 1 << 7;
     /// @notice Smallest consistency tolerance a market may carry, ticks (`twapToleranceMinTicks`, `REQ-ORACLE-055`).
     uint16 internal constant TWAP_TOLERANCE_MIN_TICKS = 10;
     /// @dev Largest token decimals the module prices: `p * 10^d` must fit with `p <= MAX_ROUTE_ANSWER`.
@@ -56,17 +61,21 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
 
     // ─── Market (REQ-ORACLE-058) ───
 
-    /// @dev `market = abi.encode(pool, tickLower, tickUpper)`: the pool's `token0()` and `token1()` must be `tokens` in
-    /// that order, both tokens at most 18 decimals, and the range usable at the pool's `tickSpacing()`
-    /// (`SPEC-BACK-001`). Stores the pool, range, spacing and the range's square-root ratios.
+    /// @dev `market = abi.encode(pool, tickLower, tickUpper, unitExp)`: the pool's `token0()` and `token1()` must be
+    /// `tokens` in that order, both tokens at most 18 decimals, the range usable at the pool's `tickSpacing()`
+    /// (`SPEC-BACK-001`) and `unitExp` the pool's unit exponent `k <= MAX_UNIT_EXP` (`SPEC-ORC-005`: the pool's stored
+    /// one, or `ClUnitMath.firstBindingExponent` at the listing prices for the pool's first market). Stores the pool,
+    /// range, spacing, the range's square-root ratios and `k`; `CL_CHECK_UNIT_EXP` requires the integration's `k` to
+    /// equal it once the market is bound.
     /// @custom:spec REQ-ORACLE-048, REQ-ORACLE-058, REQ-ORACLE-103, REQ-ORACLE-105
     function _initMarket(
         bytes calldata market,
         address[] memory tokens
     ) internal virtual override returns (bool ok) {
-        if (market.length != 96 || tokens.length != 2) return false;
+        if (market.length != 128 || tokens.length != 2) return false;
         (address pool, int24 lower, int24 upper, bool shaped) = _decodeMarket(market);
-        if (!shaped || pool.code.length == 0) return false;
+        uint256 unitExp = uint256(bytes32(market[96:128]));
+        if (!shaped || unitExp > ClUnitMath.MAX_UNIT_EXP || pool.code.length == 0) return false;
         uint8[] storage decs = _s().tokenDecimals;
         if (decs[0] > CL_MAX_TOKEN_DECIMALS || decs[1] > CL_MAX_TOKEN_DECIMALS) return false;
         (bool ok0, address t0) = _poolAddress(pool, abi.encodeCall(IUniswapV3Pool.token0, ()), CONFIG_CALL_GAS);
@@ -77,10 +86,13 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         ClLayout storage c = _cl();
         (c.pool, c.tickLower, c.tickUpper, c.tickSpacing) = (pool, lower, upper, spacing);
         (c.sqrtLower, c.sqrtUpper) = (ClPriceMath.sqrtRatioAtTick(lower), ClPriceMath.sqrtRatioAtTick(upper));
+        // At most MAX_UNIT_EXP = 18, checked above.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        c.unitExp = uint8(unitExp);
         return true;
     }
 
-    /// @dev The three words of `market`; `shaped` false for an address above 160 bits or a tick outside `int24`.
+    /// @dev The first three words of `market`; `shaped` false for an address above 160 bits or a tick outside `int24`.
     function _decodeMarket(
         bytes calldata market
     ) private pure returns (address pool, int24 lower, int24 upper, bool shaped) {
@@ -100,8 +112,9 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
 
     // ─── Pricing hooks (REQ-ORACLE-103) ───
 
-    /// @dev `SPEC-ORC-006`: the amounts `units` hold at `s = clamp(SPEC-ORC-009(p0, p1), s_a, s_b)`, each floored;
-    /// `ok` false for a vector of another length, a price outside `[1, MAX_ROUTE_ANSWER]` or `units >= 2^128`.
+    /// @dev `SPEC-ORC-006`: the amounts `units` vault-token units, `units * 10^k` liquidity (`SPEC-ORC-005`), hold at
+    /// `s = clamp(SPEC-ORC-009(p0, p1), s_a, s_b)`, each floored; `ok` false for a vector of another length, a price
+    /// outside `[1, MAX_ROUTE_ANSWER]`, `units >= 2^128` or `units * 10^k >= 2^128`.
     /// @custom:spec SPEC-ORC-006, SPEC-ORC-009, REQ-ORACLE-011, REQ-ORACLE-012, REQ-ORACLE-103, REQ-AMM-V3-005
     function _composition(
         uint256 units,
@@ -109,10 +122,13 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     ) internal view virtual override returns (bool ok, uint256[] memory amounts) {
         if (prices.length != 2 || units >= LPPriceMath.ANSWER_BOUND || !_pricesOk(prices)) return (false, amounts);
         ClLayout storage c = _cl();
+        // units < 2^128 and 10^k <= 10^18 < 2^60, so the product cannot overflow.
+        uint256 liquidity = units * 10 ** uint256(c.unitExp);
+        if (liquidity >= LPPriceMath.ANSWER_BOUND) return (false, amounts);
         (uint160 sa, uint160 sb) = (c.sqrtLower, c.sqrtUpper);
         uint160 s = ClPriceMath.clamp(_oracleSqrt(prices), sa, sb);
         amounts = new uint256[](2);
-        (amounts[0], amounts[1]) = ClPriceMath.amountsForLiquidity(s, sa, sb, units);
+        (amounts[0], amounts[1]) = ClPriceMath.amountsForLiquidity(s, sa, sb, liquidity);
         ok = true;
     }
 
@@ -188,7 +204,8 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
 
     /// @dev `REQ-ORACLE-105` and `REQ-ORACLE-055` on the pool and the configuration words `x`, `SPEC-ORC-009`'s lower
     /// branch at the prices `quotes` shocked by `LISTING_SHOCK_FACTOR` each way (the base passes the current quotes at
-    /// listing and the listing prices once the market is registered), the `PoolTwap` pairing and the rate-token check.
+    /// listing and the listing prices once the market is registered), the `PoolTwap` pairing, the rate-token check and
+    /// the unit-exponent check.
     /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-048, REQ-ORACLE-055, REQ-ORACLE-105, SPEC-ORC-022, REQ-AMM-CORE-004
     function _clListingChecks(
         ClListingInputs memory x,
@@ -214,6 +231,20 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
             if (!paired) failed |= CL_CHECK_POOL_TWAP;
         }
         if (!_noRateTokens()) failed |= CL_CHECK_RATE_TOKEN;
+        if (!_unitExpMatches()) failed |= CL_CHECK_UNIT_EXP;
+    }
+
+    /// @dev `integration.unitExponent(marketId)` equals the stored `k` (`SPEC-ORC-005`). Before the integration binds the
+    /// market (at `initialize`, which precedes the listing batch) the read reverts and is not counted; from the
+    /// MarketRegistry's registration on, a failed or malformed read or another exponent fails the check.
+    /// @custom:spec SPEC-ORC-005, REQ-ORACLE-046, REQ-ORACLE-105
+    function _unitExpMatches() internal view returns (bool) {
+        Layout storage $ = _s();
+        (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
+            $.integration, CONFIG_CALL_GAS, abi.encodeCall(IClIntegration.unitExponent, ($.marketId)), 32 + 1
+        );
+        if (!ok) return !_bound();
+        return ret.length == 32 && _wordIs(ret, 0, _cl().unitExp);
     }
 
     /// @dev `integration.rateProviders(marketId)` is two zero addresses (`REQ-AMM-CORE-004`). Before the integration

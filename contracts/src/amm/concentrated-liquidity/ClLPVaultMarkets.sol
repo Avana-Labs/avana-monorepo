@@ -18,6 +18,7 @@ import {RiskMetadata} from "../types/RiskMetadata.sol";
 import {RiskStatus} from "../types/RiskStatus.sol";
 import {ClLPVaultBase} from "./ClLPVaultBase.sol";
 import {ClPriceMath} from "./ClPriceMath.sol";
+import {ClUnitMath} from "./ClUnitMath.sol";
 import {IClPoolObservations} from "./IClPoolObservations.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -29,21 +30,6 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 /// price vector.
 /// @custom:spec REQ-AMM-CORE-003, REQ-AMM-CORE-004, REQ-AMM-CORE-012, REQ-AMM-CORE-013, REQ-AMM-CORE-017, REQ-VAULT-166, REQ-AMM-V3-002, REQ-AMM-V3-005, REQ-AMM-V3-006, REQ-AMM-V3-008, SPEC-AMM-CORE-001, SPEC-AMM-V3-001, SPEC-BACK-001
 abstract contract ClLPVaultMarkets is ClLPVaultBase {
-    /// @dev The listing prices of a binding: the price vector, the token decimals and the oracle square-root price.
-    struct Valuation {
-        uint256[] prices;
-        uint8[] decs;
-        uint160 sO;
-    }
-
-    /// @dev Decades of headroom the pool's unit exponent leaves below its reference range (`SPEC-ORC-005`): a later
-    /// market of the pool whose liquidity is worth down to 1/100 of the reference range's per unit still lists.
-    uint8 internal constant UNIT_EXP_HEADROOM = 2;
-    /// @dev Largest reference exponent searched, `MAX_VAULT_DECIMALS + MAX_UNIT_EXP - UNIT_EXP_HEADROOM`, so `k` is at
-    /// most `MAX_UNIT_EXP` of ClLPVaultBase. Even at the cheapest listing prices, $10^-8 per whole token, two 18-decimal
-    /// tokens on one tick find `e = 31` (`MATH-UO-77g`), so the search ends inside the bound for every listable pool.
-    uint8 internal constant MAX_REFERENCE_EXP = LPPriceMath.MAX_VAULT_DECIMALS + MAX_UNIT_EXP - UNIT_EXP_HEADROOM;
-
     // ─── Binding ───
 
     /// @inheritdoc IAmmIntegration
@@ -289,12 +275,12 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
 
     // ─── Internal ───
 
-    /// @dev `SPEC-ORC-005` over this market's raw composition. The unit exponent `k` is the pool's stored one, or, at the
-    /// pool's first binding, `max(0, e + UNIT_EXP_HEADROOM − 18)` with `e` the smallest exponent in `[6, 34]` whose
-    /// `10^e` liquidity on the pool's reference range (one tick spacing, holding the listing price) is worth at least
-    /// $1. Then `d` is the smallest in `[6, 18]` with `price8(10^(d + k)) >= 10^8` on this market's range. `InvalidPool`
-    /// when no `e` or `d` passes or a listing price is outside `[1, MAX_ROUTE_ANSWER]`; `k <= MAX_UNIT_EXP` by the bound
-    /// on `e`.
+    /// @dev `SPEC-ORC-005` over this market's raw composition (`ClUnitMath`). The unit exponent `k` is the pool's stored
+    /// one, or, at the pool's first binding, `ClUnitMath.firstBindingExponent`: `max(0, e + UNIT_EXP_HEADROOM − 18)` with
+    /// `e` the smallest exponent in `[6, 34]` whose `10^e` liquidity on the pool's reference range (one tick spacing,
+    /// holding the listing price) is worth at least $1. Then `d` is the smallest in `[6, 18]` with
+    /// `price8(10^(d + k)) >= 10^8` on this market's range. `InvalidPool` when no `e` or `d` passes or a listing price is
+    /// outside `[1, MAX_ROUTE_ANSWER]`; `k <= ClUnitMath.MAX_UNIT_EXP` by the bound on `e`.
     function _unitDecimals(
         ClMarketConfig memory cfg,
         uint8 d0,
@@ -307,26 +293,13 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         ) {
             revert InvalidPool();
         }
-        Valuation memory v = Valuation({
-            prices: _pair(price0, price1),
-            decs: new uint8[](TOKEN_COUNT),
-            sO: ClPriceMath.oracleSqrtPrice(price0, price1, d0, d1)
-        });
-        (v.decs[0], v.decs[1]) = (d0, d1);
+        ClUnitMath.Valuation memory v = ClUnitMath.valuation(price0, price1, d0, d1);
         uint8 stored = _poolUnitExp[cfg.pool];
-        if (stored != 0) {
-            k = stored - 1;
-        } else {
-            (int24 refLower, int24 refUpper) = _referenceRange(v.sO, cfg.tickSpacing);
-            uint8 e = _firstWorthOneDollar(v, refLower, refUpper, LPPriceMath.MIN_VAULT_DECIMALS, MAX_REFERENCE_EXP);
-            // e <= MAX_REFERENCE_EXP = 34, so k = e + 2 - 18 <= MAX_UNIT_EXP = 18.
-            k = e + UNIT_EXP_HEADROOM > LPPriceMath.MAX_VAULT_DECIMALS
-                ? e + UNIT_EXP_HEADROOM - LPPriceMath.MAX_VAULT_DECIMALS
-                : 0;
-        }
-        d = _firstWorthOneDollar(
-            v, cfg.tickLower, cfg.tickUpper, LPPriceMath.MIN_VAULT_DECIMALS + k, LPPriceMath.MAX_VAULT_DECIMALS + k
-        ) - k;
+        bool found = true;
+        if (stored != 0) k = stored - 1;
+        else (found, k) = ClUnitMath.firstBindingExponent(v, cfg.tickSpacing);
+        if (found) (found, d) = ClUnitMath.unitDecimals(v, cfg.tickLower, cfg.tickUpper, k);
+        if (!found) revert InvalidPool();
     }
 
     /// @dev Reads the token decimals, finds `d` and the pool's `k` (`_unitDecimals`), writes the market and, at the
@@ -347,54 +320,6 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         m.decimals1 = d1;
         m.unitExp = k;
         if (_poolUnitExp[cfg.pool] == 0) _poolUnitExp[cfg.pool] = k + 1;
-    }
-
-    /// @dev The smallest `e` in `[from, to]` whose `10^e` liquidity on `[tickLower, tickUpper]` at the listing price
-    /// clamped to the range is worth at least $1 at the listing prices (`LPPriceMath.lpPrice`); `InvalidPool` when none
-    /// is (a market range worth less than 1/100 of its pool's reference range per unit of liquidity).
-    function _firstWorthOneDollar(
-        Valuation memory v,
-        int24 tickLower,
-        int24 tickUpper,
-        uint8 from,
-        uint8 to
-    ) private pure returns (uint8) {
-        uint160 sa = ClPriceMath.sqrtRatioAtTick(tickLower);
-        uint160 sb = ClPriceMath.sqrtRatioAtTick(tickUpper);
-        for (uint8 e = from; e <= to; ++e) {
-            if (_worthOneDollar(v, sa, sb, 10 ** e)) return e;
-        }
-        revert InvalidPool();
-    }
-
-    /// @dev Whether `liquidity` on `[sa, sb]` at the listing price clamped to the range is worth at least $1 at the
-    /// listing prices (`LPPriceMath.lpPrice`, one raw unit off each token).
-    function _worthOneDollar(
-        Valuation memory v,
-        uint160 sa,
-        uint160 sb,
-        uint256 liquidity
-    ) private pure returns (bool) {
-        (uint256 a0, uint256 a1) = ClPriceMath.amountsForLiquidity(ClPriceMath.clamp(v.sO, sa, sb), sa, sb, liquidity);
-        (bool valid, uint256 price8) = LPPriceMath.lpPrice(_pair(a0, a1), v.prices, v.decs);
-        return valid && price8 >= LPPriceMath.PRICE_UNIT;
-    }
-
-    /// @dev The pool's reference range: the one tick spacing `[t, t + s]` holding the tick of the listing price
-    /// (`SPEC-ORC-005`). It always lies inside the usable ticks: listing prices lie in `[1, MAX_ROUTE_ANSWER = 10^18]`
-    /// and token decimals in `[0, 18]`, so the raw price ratio lies in `[10^-36, 10^36]` and `|t| <= 828,973`, so the
-    /// range reaches at most `828,973 + 6,931 = 835,904`, while the usable ticks reach at least `±880,237` for every
-    /// spacing up to Slipstream's largest, 6,931.
-    function _referenceRange(
-        uint160 sO,
-        int24 spacing
-    ) private pure returns (int24 lower, int24 upper) {
-        int24 tick = ClPriceMath.tickAtSqrtRatio(sO);
-        // Floor of tick / spacing toward −∞; Solidity truncates toward zero.
-        // forge-lint: disable-next-line(divide-before-multiply)
-        lower = (tick / spacing) * spacing;
-        if (lower > tick) lower -= spacing;
-        upper = lower + spacing;
     }
 
     /// @dev Token decimals read at listing; `InvalidPool` for a token without `decimals()` or above 18.

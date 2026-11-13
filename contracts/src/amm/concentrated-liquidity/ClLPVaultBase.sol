@@ -40,9 +40,6 @@ abstract contract ClLPVaultBase is IClIntegration {
     uint256 internal constant TOKEN_COUNT = 2;
     /// @dev Largest token decimals a market accepts; keeps `p * 10^d` of `SPEC-ORC-009` far below 2^256.
     uint8 internal constant MAX_TOKEN_DECIMALS = 18;
-    /// @dev Largest unit exponent `k` (`SPEC-ORC-005`): `10^(18 + k) <= 10^36 < 2^128`, so the liquidity of a whole
-    /// vault token always fits the position manager's `uint128`.
-    uint8 internal constant MAX_UNIT_EXP = 18;
 
     uint32 private immutable _INTEGRATION_ID;
     address internal immutable _COLLATERALIZATION;

@@ -142,7 +142,8 @@ abstract contract FullStackMarkets is FullStackFixture {
         ip.description = "USDC/USDT LP / USD";
         ip.pokeMinGas = POKE_FLOOR;
         ip.config = _oracleConfig(id);
-        ip.market = abi.encode(address(p), lower, upper);
+        // USDC/USDT at $1 on any tier lists its one-spacing range at d <= 16, so the pool's unit exponent is 0.
+        ip.market = abi.encode(address(p), lower, upper, uint256(0));
         o = LPOracleCL(address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (ip)))));
     }
 

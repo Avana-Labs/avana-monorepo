@@ -70,6 +70,13 @@ contract MockIntegration {
         providers = new address[](2);
     }
 
+    /// @notice Unit exponent 0: one vault-token unit is one unit of liquidity, as for every pool these suites list.
+    function unitExponent(
+        uint256
+    ) external pure returns (uint8) {
+        return 0;
+    }
+
     bool public depthAvailable = true;
     bool public reverts;
     ShapeKind public shapeKind = ShapeKind.TickRange;
