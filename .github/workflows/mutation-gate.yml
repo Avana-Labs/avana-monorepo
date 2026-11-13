@@ -77,8 +77,9 @@ jobs:
           printf '%s\n' "contracts=$contracts" "groups=$groups" "tests=$tests" "confs=$confs" | tee -a "$GITHUB_OUTPUT"
 
   build:
-    name: Aave V4 build
-    # The mutation jobs' isolated copies link out-aave/, which the Aave V4 fixture deploys from.
+    name: Aave V4 and Uniswap v3 builds
+    # The mutation jobs' isolated copies link out-aave/ and out-univ3/, which the Aave V4 and Uniswap v3 fixtures
+    # deploy from (vm.getCode).
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -101,11 +102,19 @@ jobs:
       - run: |
           forge soldeer install
           FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: out-aave
           path: contracts/out-aave
+          if-no-files-found: error
+          retention-days: 7
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: out-univ3
+          path: contracts/out-univ3
           if-no-files-found: error
           retention-days: 7
 
@@ -160,6 +169,11 @@ jobs:
         with:
           name: out-aave
           path: contracts/out-aave
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: out-univ3
+          path: contracts/out-univ3
 
       - name: slither-mutate on ${{ matrix.contract }}, mutators ${{ env.MUTATE_MUTATORS }}
         run: script/security-slow.sh mutate
@@ -224,6 +238,11 @@ jobs:
           name: out-aave
           path: contracts/out-aave
 
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: out-univ3
+          path: contracts/out-univ3
+
       - name: slither-mutate on ${{ matrix.contract }}, mutators ${{ env.MUTATE_MUTATORS }}
         run: script/security-slow.sh mutate
 
@@ -287,6 +306,11 @@ jobs:
           name: out-aave
           path: contracts/out-aave
 
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: out-univ3
+          path: contracts/out-univ3
+
       - name: slither-mutate on ${{ matrix.contract }}, mutators ${{ env.MUTATE_MUTATORS }}
         run: script/security-slow.sh mutate
 
@@ -348,6 +372,11 @@ jobs:
         with:
           name: out-aave
           path: contracts/out-aave
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: out-univ3
+          path: contracts/out-univ3
 
       - name: Gambit on ${{ matrix.contract }}
         run: script/security-slow.sh gambit
@@ -417,6 +446,11 @@ jobs:
         with:
           name: out-aave
           path: contracts/out-aave
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: out-univ3
+          path: contracts/out-univ3
 
       - name: Necessist on ${{ matrix.test }}
         run: script/security-slow.sh necessist
