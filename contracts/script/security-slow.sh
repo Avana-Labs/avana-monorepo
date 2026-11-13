@@ -608,7 +608,7 @@ isolated_root() {
   solc=$(solc_bin) || return 1
   rm -rf "$root" && mkdir -p "$root/bin"
   cp -R src test "$root/"
-  for f in dependencies foundry.toml remappings.txt out-aave; do
+  for f in dependencies foundry.toml remappings.txt out-aave out-univ3; do
     [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
   done
   ln -s "$solc" "$root/bin/solc"
