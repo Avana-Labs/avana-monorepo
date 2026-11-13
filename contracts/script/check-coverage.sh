@@ -14,6 +14,9 @@
 # Exact-gas assertions (`*exactCycleCost*`) are skipped here: their expected values hold for the optimized build, and
 # coverage compiles without the optimizer. They run in every other test profile.
 #
+# forge coverage writes no build artifacts. TEST-247 reads the Lens ABIs from out/, so a default `forge build` must be in
+# out/ first (CI downloads the build job's output).
+#
 # The via-IR compilation restriction on Collateralization.sol does not apply: forge coverage disables via-IR and the
 # optimizer for every file, and EIP-170 is not enforced in coverage runs.
 #
