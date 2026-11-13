@@ -81,7 +81,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     /// @notice 1,950 GHO at par routes: `R = (a₀ + a₁) × 10¹²`, every figure equal to the model, the caller paid in
     /// GHO, the fee in GHO, LPVaultSwap neutral in every token.
     // TEST-048 verifies: REQ-SWAP-088, REQ-SWAP-089, SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-010, SPEC-LIQ-022
-    function test_ghoWaterfallMatchesModel() public {
+    function test_TEST_048_ghoWaterfallMatchesModel() public {
         uint256 feeBefore = gho.balanceOf(feeRecipient);
         LiquidationResult memory r = _liquidateAs(keeper, _ghoParams(1950e18));
         (uint256 a0, uint256 a1) = _released(r.unitsSeized);
@@ -100,7 +100,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     /// @notice Any repayment, vault price and route rates within ±3 %: the model's figures with GHO conserved, or a
     /// named refusal.
     // TEST-078 verifies: SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-010, SPEC-LIQ-019, REQ-SWAP-088
-    function testFuzz_ghoSettlementMatchesModel(
+    function testFuzz_TEST_078_ghoSettlementMatchesModel(
         uint256 debtToCover,
         uint256 price8,
         uint256 usdcRate,
@@ -151,7 +151,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     /// leg meets its minimum at par, yet `R` stays below the floor. Without a budget the call reverts
     /// `RecoveryBelowFloor` and nothing moves; with one the caller tops up exactly `minRec − R` in GHO.
     // TEST-233 verifies: SPEC-LIQ-019, REQ-SWAP-025, REQ-SWAP-026, REQ-SWAP-111
-    function test_ghoShortfallTopUp() public {
+    function test_TEST_233_ghoShortfallTopUp() public {
         lpOracle.setAnswer(215_000_000);
         uint256 debt = _debtOf(proxy, ghoReserveId);
         _expectLiquidateRevert(keeper, _ghoParams(1950e18), _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
@@ -173,7 +173,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     /// @notice Routes paying 3 % above the oracle make `R > V`: the borrower surplus `B = S − G > 0` is paid to Alice's
     /// wallet in GHO with `BorrowerSurplusPaid`.
     // TEST-048 verifies: SPEC-LIQ-022, REQ-SWAP-089, INV-086
-    function test_ghoBorrowerSurplusToWallet() public {
+    function test_TEST_048_ghoBorrowerSurplusToWallet() public {
         usdcGhoPool.setRate(1e12 * 10_300, 10_000);
         usdtGhoPool.setRate(1e12 * 10_300, 10_000);
         uint256 walletBefore = gho.balanceOf(alice);
@@ -186,7 +186,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
 
     /// @notice The fee recipient's share is computed on the oracle gain in GHO, at every fee share up to 50 %.
     // TEST-240 verifies: SPEC-LIQ-009, SPEC-LIQ-022, INV-036
-    function testFuzz_ghoFeeShare(
+    function testFuzz_TEST_240_ghoFeeShare(
         uint16 share
     ) public {
         share = uint16(bound(share, 0, 5000));
@@ -203,7 +203,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     /// @notice A market whose settlement reserve is GHO: the pending balance left by an earlier seizure is released,
     /// both tokens are swapped into GHO and `R` funds the GHO Coverage Spoke; the caller receives nothing.
     // TEST-280 verifies: REQ-SWAP-066, REQ-SWAP-070, Q-338
-    function test_pendingIntoGhoCoverage() public {
+    function test_TEST_280_pendingIntoGhoCoverage() public {
         (address bobProxy,) = _bobAccount();
         _seizeAndKeep(bobProxy, 1000e6);
         _liquidateAs(keeper, _params(bobProxy, 500e6));
@@ -223,7 +223,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     /// @notice `settlePending` names the market's settlement reserve: the USDC reserve for a GHO-settling market is
     /// refused `UnknownDebtReserve`.
     // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-068
-    function test_pendingWrongReserveRefused() public {
+    function test_TEST_170_pendingWrongReserveRefused() public {
         (address bobProxy,) = _bobAccount();
         _seizeAndKeep(bobProxy, 1000e6);
         _liquidateAs(keeper, _params(bobProxy, 500e6));

@@ -143,7 +143,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// with `ε` split three ways and their unit values (`⌈p 10^dd / (10^dᵢ Pdebt)⌉`: 1, 600 and 1 USDC base units);
     /// `R` is the USDC released plus every route's output.
     // TEST-232 verifies: SPEC-LIQ-018, REQ-SWAP-021, REQ-SWAP-100, INV-083
-    function test_fourTokenMinimumsAndRecovery() public {
+    function test_TEST_232_fourTokenMinimumsAndRecovery() public {
         Legs memory l = _four(1000e6, 1000e6, 0.05e8, 2000e18);
         uint256 eps = 1e6;
         (uint8[] memory used, uint256 recovered,) = _run(l, 100, eps);
@@ -159,7 +159,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// @notice A dust leg (`Vleg ≤ Uleg`: 1 raw unit of WBTC is worth 600 base units ≤ its unit 600) is not swapped and
     /// does not count in `n'`: the two other legs split `ε` two ways.
     // TEST-232 verifies: SPEC-LIQ-018, REQ-SWAP-121
-    function test_dustLegSkippedAndNotCounted() public {
+    function test_TEST_232_dustLegSkippedAndNotCounted() public {
         Legs memory l = _four(0, 1000e6, 1, 2000e18);
         uint256 eps = 1e6;
         (uint8[] memory used,, uint256[] memory residues) = _run(l, 100, eps);
@@ -172,7 +172,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// @notice A primary that reverts sends the leg to the backup, with `RouteFailed(market, token, route, selector)`;
     /// the backup's failure emits nothing and leaves `NoRouteAvailable`.
     // TEST-232 verifies: REQ-SWAP-022, REQ-SWAP-058, SPEC-LIQ-013
-    function test_primaryRevertFallsBackWithEvent() public {
+    function test_TEST_232_primaryRevertFallsBackWithEvent() public {
         usdtPrimary.setBehaviour(BPS, true, false);
         Legs memory l = _four(0, 1000e6, 0, 0);
         vm.expectEmit(address(harness));
@@ -188,7 +188,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
 
     /// @notice A primary whose `intermediates()` read fails counts as a reverted route: `RouteFailed` and the backup.
     // TEST-232 verifies: REQ-SWAP-022, REQ-SWAP-024
-    function test_intermediatesFailureIsARevertedRoute() public {
+    function test_TEST_232_intermediatesFailureIsARevertedRoute() public {
         usdtPrimary.setBehaviour(BPS, false, true);
         Legs memory l = _four(0, 500e6, 0, 0);
         vm.expectEmit(address(harness));
@@ -201,7 +201,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// @notice An unusable primary is skipped without an event; `BackupOnly` never calls the primary; an unusable
     /// backup in `BackupOnly` reverts even when the primary works.
     // TEST-174 verifies: REQ-SWAP-010, REQ-SWAP-022, REQ-SWAP-058
-    function test_routeModesAndUsability() public {
+    function test_TEST_174_routeModesAndUsability() public {
         registry.setUsable(address(usdt), address(usdc), 0, false);
         Legs memory l = _four(0, 300e6, 0, 0);
         (uint8[] memory used,,) = _run(l, 100, 1e6);
@@ -221,7 +221,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// @notice A primary that pays below its minimum fails it (`MinOutNotMet`) and the backup settles; both below it,
     /// `NoRouteAvailable`.
     // TEST-232 verifies: SPEC-LIQ-018, REQ-SWAP-023, REQ-SWAP-058
-    function test_belowMinimumFailsTheRoute() public {
+    function test_TEST_232_belowMinimumFailsTheRoute() public {
         usdtPrimary.setRate(98, 100);
         Legs memory l = _four(0, 1000e6, 0, 0);
         (uint8[] memory used, uint256 recovered,) = _run(l, 100, 1e6);
@@ -236,7 +236,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// @notice A route that takes only part of its input leaves the rest as a residue of that token; a route that
     /// sends back an intermediate token leaves it as a residue of the intermediate, tracked from before the call.
     // TEST-232 verifies: REQ-SWAP-024, REQ-SWAP-042, REQ-SWAP-121
-    function test_residuesMeasuredPerToken() public {
+    function test_TEST_232_residuesMeasuredPerToken() public {
         usdtPrimary.setBehaviour(9000, false, false);
         usdtPrimary.setIntermediate(weth, 3e15);
         weth.mint(address(harness), 7e15); // a donation before the call is not a residue
@@ -250,7 +250,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
 
     /// @notice During the call each route holds an approval of exactly its input; after it, zero.
     // TEST-232 verifies: REQ-SWAP-023, REQ-SWAP-042, INV-021
-    function test_exactApprovalThenZero() public {
+    function test_TEST_232_exactApprovalThenZero() public {
         Legs memory l = _four(0, 1234e6, 0.01e8, 0);
         _run(l, 100, 1e6);
         assertEq(usdtPrimary.lastAmountIn(), 1234e6, "input is the released amount");
@@ -262,7 +262,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// @notice A relaxed leg slippage (`sLeg` above `s` by the caller's budget) lowers every minimum by the formula
     /// and lets a route paying below the unrelaxed minimum settle.
     // TEST-233 verifies: SPEC-LIQ-019, REQ-SWAP-111
-    function test_relaxedLegSlippage() public {
+    function test_TEST_233_relaxedLegSlippage() public {
         usdtPrimary.setRate(97, 100);
         usdtBackup.setRate(97, 100);
         Legs memory l = _four(0, 1000e6, 0, 0);
@@ -277,7 +277,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
     /// @notice Any amounts of the three non-debt tokens at par routes: every non-dust leg is routed once at its exact
     /// minimum, `R` is the USDC released plus the outputs, no residue remains and no approval is left.
     // TEST-161 verifies: SPEC-LIQ-018, REQ-SWAP-021, REQ-SWAP-100, INV-083
-    function testFuzz_legsMatchModel(
+    function testFuzz_TEST_161_legsMatchModel(
         uint64 aUsdc,
         uint64 aUsdt,
         uint32 aWbtc,

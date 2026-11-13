@@ -264,7 +264,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
     /// Pool's idle USDC falls below that size (the monitoring alert's condition is below twice it) the helper refuses
     /// before LPVaultSwap is called, and a committed operator settles the same liquidation from its own inventory.
     // TEST-289 verifies: REQ-FLASH-008, REQ-SWAP-014, REQ-HELPER-015; shared: the public helper's liquidity bound behind REQ-FLASH-008's listing size
-    function test_REQ_FLASH_008_largestLiquidationWithinHalfThePool() public {
+    function test_TEST_289_largestLiquidationWithinHalfThePool() public {
         uint256 largest = _debtOf(proxy, usdcReserveId);
         assertLe(2 * largest, helper.maxFlashLoan(address(usdc)), "sized within half of the Pool's idle USDC");
         uint256 snapshot = vm.snapshotState();
