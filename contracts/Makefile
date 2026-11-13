@@ -17,7 +17,7 @@ MNEMONIC_INDEX ?= 0
 
 BROADCAST = $(if $(filter 0,$(dry)),--broadcast $(if $(filter anvil,$(chain)),,--verify),)
 
-.PHONY: build build-aave build-external e2e-local fmt test test-fork test-differential gas gas-check sizes coverage security-fast
+.PHONY: build build-aave build-external e2e-local check-aave-unmodified fmt test test-fork test-differential gas gas-check sizes coverage security-fast
 
 build:
 	forge build
@@ -41,6 +41,15 @@ build-external:
 # and `npm ci` at the repository root. Prints and writes deployments-local/anvil/e2e-status.json.
 e2e-local:
 	script/e2e/e2e-local.sh
+
+# One named deployment step of the recipe (script/deploy/step.sh lists them in order), on AVANA_NETWORK with
+# AVANA_RPC_URL and, off anvil, AVANA_SIGNER_FLAGS: `make step-03-avana`.
+step-%:
+	script/deploy/step.sh $*
+
+# The Aave V4 build Avana deploys is the code the Aave DAO runs on Ethereum (packages/protocol, RPC_MAINNET).
+check-aave-unmodified:
+	cd ../packages/protocol && node src/manifest/cli.ts check-aave-unmodified --rpc-env RPC_MAINNET
 
 fmt:
 	forge fmt

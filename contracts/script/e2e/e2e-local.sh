@@ -84,13 +84,11 @@ skipped() { # step
   return 0
 }
 
-run_script() { # step script sender [env...]
-  local step="$1" script="$2" sender="$3"; shift 3
+run_script() { # step (a name of script/deploy/step.sh)
+  local step="$1"
   skipped "$step" && return 0
-  # One script run deploys hundreds of contracts: lift the simulation's per-call gas cap (Foundry's gas_limit, 2^30
-  # by default) as well as the block gas limit.
-  if env FOUNDRY_GAS_LIMIT=30000000000 "$@" forge script "script/deploy/$script" --rpc-url "$RPC_ANVIL" --broadcast --unlocked --sender "$sender" \
-    --slow --non-interactive --disable-block-gas-limit --memory-limit 1073741824 $FRESH > "$LOG/$step.log" 2>&1; then
+  if AVANA_NETWORK=anvil AVANA_RPC_URL="$RPC_ANVIL" AVANA_DEPLOYER="$DEPLOYER" AVANA_FORGE_FLAGS="$FRESH" \
+    script/deploy/step.sh "$step" > "$LOG/$step.log" 2>&1; then
     record "$step" pass "$(grep -E 'BLOCKED|output' "$LOG/$step.log" | head -3 | tr '\n' ' ')"
     return 0
   fi
@@ -129,7 +127,7 @@ advance() { # seconds name
 # account admin, and every Aave-side AIP then runs as `executeTransaction(payload, 0, "execute()", "", true)` from the
 # PayloadsController (a stand-in account here). The stand-in's owner sits in storage slot 0.
 place_executor() {
-  skipped aave-executor && return 0
+  skipped place-executor && return 0
   local dao controller code
   dao="$(node -e 'console.log(require("./script/deploy/config/anvil.json").aaveLocal.aaveDao)')"
   controller="$(node -e 'console.log(require("./script/deploy/config/anvil.json").aaveLocal.payloadsController)')"
@@ -137,8 +135,8 @@ place_executor() {
   cast rpc anvil_setCode "$dao" "$code" --rpc-url "$RPC_ANVIL" >/dev/null &&
     cast rpc anvil_setStorageAt "$dao" 0x0 "$(cast abi-encode 'f(address)' "$controller")" --rpc-url "$RPC_ANVIL" >/dev/null &&
     [ "$(cast call "$dao" 'owner()(address)' --rpc-url "$RPC_ANVIL")" = "$(cast to-check-sum-address "$controller")" ] &&
-    record aave-executor pass "executor stand-in at $dao, owner $controller" ||
-    { record aave-executor fail "could not place the executor stand-in at $dao"; return 1; }
+    record place-executor pass "executor stand-in at $dao, owner $controller" ||
+    { record place-executor fail "could not place the executor stand-in at $dao"; return 1; }
 }
 
 if [[ " $STEPS " == *" deploy "* ]]; then
@@ -147,30 +145,30 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     "$OUT"/operation-*.json "$OUT"/aip-*.json
   [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337
   place_multicall3 &&
-    run_script 00-factories 00_Factories.s.sol "$DEPLOYER" &&
-    run_script 01-aave-v4 01_DeployAaveV4.s.sol "$DEPLOYER" &&
+    run_script 00-factories &&
+    run_script 01-aave-v4 &&
     place_executor &&
-    run_script 02-world 02_DeployWorld.s.sol "$DEPLOYER" &&
-    run_script 03-avana 03_DeployAvana.s.sol "$DEPLOYER" &&
-    run_script 04-access 04_ConfigureAccess.s.sol "$SAFE" AVANA_SCHEDULE=1 &&
-    advance 432001 timelock-wait-access &&
-    run_script 05-execute 05_ExecuteOperations.s.sol "$DEPLOYER" &&
-    run_script 06-aip-deployment 06_AaveDeploymentPayload.s.sol "$DEPLOYER" &&
-    run_script 07-coverage-deploy 07_DeployCoverageSpokes.s.sol "$DEPLOYER" AVANA_COVERAGE_STEP=deploy &&
-    run_script 08-aip-loss-layers 08_AaveLossLayersPayload.s.sol "$DEPLOYER" &&
-    run_script 07-coverage-fund 07_DeployCoverageSpokes.s.sol "$DEPLOYER" AVANA_COVERAGE_STEP=fund &&
-    run_script 09-listing-setup 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=setup AVANA_SCHEDULE=1 &&
-    advance 432001 timelock-wait-listing-setup &&
-    run_script 09-listing-setup-execute 05_ExecuteOperations.s.sol "$DEPLOYER" AVANA_OPERATIONS=listing-setup &&
-    run_script 09-listing-oracles 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=oracles &&
-    run_script 10-aip-debt-reserves 10_AaveListingPayload.s.sol "$DEPLOYER" AVANA_AAVE_STEP=debt &&
-    run_script 09-listing-markets 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=markets AVANA_SCHEDULE=1 &&
-    advance 432001 timelock-wait-listing-markets &&
-    run_script 09-listing-markets-execute 05_ExecuteOperations.s.sol "$DEPLOYER" AVANA_OPERATIONS=listing-markets &&
-    run_script 10-aip-markets 10_AaveListingPayload.s.sol "$DEPLOYER" AVANA_AAVE_STEP=vault-tokens &&
-    run_script 09-listing-activate 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=activate AVANA_SCHEDULE=1 &&
-    advance 43201 timelock-wait-activation &&
-    run_script 09-listing-activate-execute 05_ExecuteOperations.s.sol "$DEPLOYER" AVANA_OPERATIONS=listing-activate
+    run_script 02-test-world &&
+    run_script 03-avana &&
+    run_script 04-access-operations &&
+    advance 432001 wait-access-operations &&
+    run_script 05-execute-access-operations &&
+    run_script 06-aave-deployment-aip &&
+    run_script 07-deploy-coverage-spokes &&
+    run_script 08-aave-loss-layers-aip &&
+    run_script 07-fund-coverage-spokes &&
+    run_script 09-listing-setup &&
+    advance 432001 wait-listing-setup &&
+    run_script 09-execute-listing-setup &&
+    run_script 09-debt-oracles &&
+    run_script 10-aave-debt-reserves-aip &&
+    run_script 09-listing-markets &&
+    advance 432001 wait-listing-markets &&
+    run_script 09-execute-listing-markets &&
+    run_script 10-aave-markets-aip &&
+    run_script 09-listing-activate &&
+    advance 43201 wait-listing-activate &&
+    run_script 09-execute-listing-activate
 fi
 
 if [[ " $STEPS " == *" manifest "* ]]; then
