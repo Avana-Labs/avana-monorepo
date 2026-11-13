@@ -8,6 +8,7 @@ import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.
 import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
 import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
+import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -178,7 +179,9 @@ contract ParameterStoreOracleInputsUnitTest is ParameterStoreFixture {
         uint256[] memory w = store.getOracleInputs(address(lpOracle), list, false);
         assertEq(w[3], store.usdBandLow(), "stable market: chain band low");
         assertEq(w[4], store.usdBandHigh(), "stable market: chain band high");
-        assertEq(store.getOracleConfig(address(lpOracle)).usdBandLow, store.usdBandLow(), "stable config band");
+        (uint256 low, uint256 high) = _configBand();
+        assertEq(low, store.usdBandLow(), "stable config band low");
+        assertEq(high, store.usdBandHigh(), "stable config band high");
         // The same market listed with a token that is not a USD stable (a WETH/USDC pool) gets no band, in the
         // evaluation inputs and in the configuration its LPOracle is checked with.
         registry.setUsdStable(usdt, false);
@@ -188,7 +191,15 @@ contract ParameterStoreOracleInputsUnitTest is ParameterStoreFixture {
         w = store.getOracleInputs(address(lpOracle), list, false);
         assertEq(w[3], 0, "volatile market: no band low");
         assertEq(w[4], type(uint256).max, "volatile market: no band high");
-        assertEq(store.getOracleConfig(address(lpOracle)).usdBandLow, 0, "volatile config band low");
-        assertEq(store.getOracleConfig(address(lpOracle)).usdBandHigh, type(uint256).max, "volatile config band high");
+        (low, high) = _configBand();
+        assertEq(low, 0, "volatile config band low");
+        assertEq(high, type(uint256).max, "volatile config band high");
+    }
+
+    /// @dev The band in the configuration the LPOracle is checked with. Decoded here, in a frame of its own: the
+    ///      configuration struct's decoder does not fit the test's stack without the IR pipeline.
+    function _configBand() internal view returns (uint256 low, uint256 high) {
+        OracleConfig memory c = store.getOracleConfig(address(lpOracle));
+        return (c.usdBandLow, c.usdBandHigh);
     }
 }
