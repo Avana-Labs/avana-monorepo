@@ -3491,6 +3491,132 @@
       "review": "Lens (wave 1), new site"
     },
     {
+      "fingerprint": "59a2517dc1359c7d",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensBase.sol",
+      "function": "LensBase._debtView(address,DebtReserveDef)",
+      "reason": "Specified timestamps: the debt price's age block.timestamp - updatedAt (0 for a future stamp) against the borrow and liquidation age limits gives borrowFresh and liquidationFresh (REQ-LENS-030, Q-247, Q-248); stressPriced compares two prices. A view, no state; validator drift of seconds is far below the age limits and only reports a price fresh or stale a few seconds early or late. Covered by TEST-247 (Lens.Price: debtPriceExpiredStress; Lens.Edges: debtRouteWithoutFeedIsNeverFresh; Lens.Account: getAccountDebtPriceFreshness).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "d67b69bfa0ea6f47",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensClose.sol",
+      "function": "LensClose.previewCloseAccount(address,uint256,uint256)",
+      "reason": "No time comparison: Slither taints the whole result struct once one field is set to block.timestamp (the report's blockNumber/timestamp stamp, REQ-LENS-005) and follows that taint into values read through it; the flagged comparisons are the record loop index (i < rs.length) and a record's units (rs[i].units > 0) (REQ-LENS-056). A view, no state. Covered by TEST-247 (Lens.SizingGates: closeRecordsMatchGetRecords; Lens.CloseAccount.fuzz: closingCallsEmptyTheAccount).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "1ea44503ddc0766e",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensClose.sol",
+      "function": "LensClose._debtCloses(Market,address,uint256)",
+      "reason": "No time comparison: totals[i] > 0 tests the account's debt on a reserve (Spoke.getUserTotalDebt); Slither links it to the deadline growth (_growth, REQ-LENS-036) computed later in the same function. A view, no state. Covered by TEST-247 (Lens.SizingGates: closeQuotesGrowWithTheDeadline; Lens.CloseAccount.fuzz: closingCallsEmptyTheAccount).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "4f82b52d613d923b",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensDeleverage.sol",
+      "function": "LensDeleverage._deleverageLimit(LensDeleverage.Repay)",
+      "reason": "Specified timestamps: the deleverage limit is 0 unless the market price is usable and the debt price is liquidation-fresh, both age checks against the configured limits (REQ-LENS-038, REQ-LENS-055, REQ-LENS-030). A view, no state; drift of seconds only moves the boundary by seconds. Covered by TEST-247 (Lens.DeleverageTo: deleverageToClosedByAStaleDebtPrice).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "d29bb1217638c558",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "function": "LensLiquidation._priceGates(LiquidationPreview,LensLiquidation.Ctx)",
+      "reason": "Specified timestamps: pricesUsable combines the input and debt-price liquidation freshness (age checks, REQ-LENS-016, REQ-SWAP-008, REQ-SWAP-009) and belowGraceHealthFactor the LPOracle's grace flag with a health-factor comparison; it mirrors the gates LPVaultSwap applies. A view, no state. Covered by TEST-069 (Lens.Liquidation: pricesUsableWhenFresh, staleInputBlocks, staleDebtPriceBlocksOnlyItsReserve, graceReported).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "cd309fdde74b5278",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "function": "LensLiquidation._stressValued(address,address,uint256)",
+      "reason": "No time comparison: ids[i] == debtReserveId compares reserve ids and getUserTotalDebt(...) == 0 the account's debt; Slither links them to the timestamp fields of the DebtOracle reads (lastAcceptedPrice) in the same loop (REQ-LENS-016, REQ-LENS-030). A view, no state. Covered by TEST-069 (Lens.Liquidation: stressValuedOtherReserveNeverBlocks).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "5150ec60470fc5a1",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPositions.sol",
+      "function": "LensPositions._withdrawGate(Market,uint256,address,uint256,uint256,uint256)",
+      "reason": "No time comparison: the gate is the RiskModule's withdraw-with-debt flag, the pause state and the rescue-excluded health factor against max(1e18, hardHealthFloor) (REQ-LENS-049); none is derived from block.timestamp. A view, no state. Covered by TEST-247 (Lens.Positions: withdrawGates, withdrawExampleAtTheBoundary).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "e0c2f83f04dbc789",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPositions.sol",
+      "function": "LensPositions.getAccountRisk(address,uint256)",
+      "reason": "No time comparison: Slither taints the whole result struct once one field is set to block.timestamp (the report's blockNumber/timestamp stamp, REQ-LENS-005) and follows that taint into values read through it; the flagged comparisons are the reserve loop index, the account's debt (totalDebtValueRay == 0) and its weighted collateral (cfAssets == 0) (REQ-LENS-047). A view, no state. Covered by TEST-247 (Lens.Positions: liquidationPriceZeroWithoutDebtAndMaxWithoutCollateral, borrowRatesIncludeRiskPremium).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "642a3db6f4a2d5bf",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPositions.sol",
+      "function": "LensPositions.previewWithdraw(address,uint256,bytes32,uint256)",
+      "reason": "No time comparison: Slither taints the whole result struct once one field is set to block.timestamp (the report's blockNumber/timestamp stamp, REQ-LENS-005) and follows that taint into values read through it; the flagged comparison !own || v.units > limit compares record ownership and units (REQ-LENS-049). A view, no state. Covered by TEST-247 (Lens.Positions: withdrawOtherRecordOrNoRecord, withdrawExampleAtTheBoundary).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "d229143c2dc2ac5e",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPreview.sol",
+      "function": "LensPreview._borrowPreview(address,uint256,uint256,uint256)",
+      "reason": "Specified timestamp: the maximum borrow uses the target health factor grown by the interest until the caller's deadline, max(0, deadline - now) (REQ-LENS-035, Q-398); the flagged comparison recommended > maximum caps one amount by the other. A view, no state; drift of seconds changes the growth by seconds of interest. Covered by TEST-247 (Lens.Preview: borrowMaxRateGrowsTarget, borrowMaxHardFloor).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "fb331e39fb904ec4",
+      "check": "timestamp",
+      "file": "src/lens/lens/LensPreview.sol",
+      "function": "LensPreview._capacity(LensPreview.Borrow,uint256)",
+      "reason": "Specified timestamp, through the target: maxDebt <= debtValue and amount > headroom compare debt values and the draw-cap headroom, where the target health factor carries the deadline growth of REQ-LENS-035 (REQ-LENS-044). Pure, no state. Covered by TEST-247 (Lens.Preview: borrowMaxRateGrowsTarget, borrowMaxCappedByDrawHeadroom).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "963d952ccd22f696",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensLiquidation.sol",
+      "function": "LensLiquidation._stressValued(address,address,uint256)",
+      "reason": "Exact comparisons on a reserve id (ids[i] == debtReserveId) and on a debt of zero (getUserTotalDebt(...) == 0), which only skip reserves the account owes nothing on; not a balance a donation can steer to a refusal, and the result is a reported flag of a view (REQ-LENS-016). Covered by TEST-069 (Lens.Liquidation: stressValuedOtherReserveNeverBlocks).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "77fc07dbbd50f669",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensMarket.sol",
+      "function": "LensMarket.checkBacking(address)",
+      "reason": "The exact equalities are the specified backing checks the view reports as flags: supplyEqualsCredited (totalSupply == totalCredited + pendingUnits), sharesEqualAssets (addedShares == addedAssets) and noDrawnShares (drawnShares == 0) (REQ-LENS-012, REQ-LENS-013); a view that reports, never gates a state change. Covered by TEST-247 (Lens.Market: checkBackingRawValues, checkBackingHealthyFlags, checkBackingStrandedDonation).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
+      "fingerprint": "03014b6b72ff2b15",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensPositions.sol",
+      "function": "LensPositions.getAccountRisk(address,uint256)",
+      "reason": "totalDebtValueRay == 0 returns the report early for an account without debt and cfAssets == 0 reports the liquidation price as type(uint256).max instead of dividing by zero (REQ-LENS-047); a view, no state. Covered by TEST-247 (Lens.Positions: liquidationPriceZeroWithoutDebtAndMaxWithoutCollateral).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
+    },
+    {
       "fingerprint": "84abc2797015a941",
       "check": "timestamp",
       "file": "src/lens/lens/LensBase.sol",
@@ -4274,6 +4400,15 @@
       "reason": "Analysis artefact of the compilation restrictions (same as the CL-05 entries aa08521a4de1ca38 and c7afac09851548c3): LPOracleCLPool.sol is also compiled alone at the default settings, in a unit where no contract inherits it, and Slither reports its internal pool readers there. In the 200-run unit each one (_cl, _listingInputs, _slot0, _poolAddress, _tickSpacing, _meanTick, _meanOf, _observeShape) is reached from LPOracleCLModule's hooks run by LPOracleCLModuleLogic or from LPOracleCL.initialize. Covered by LPOracleCL.Module (TEST-306: observeOldIsUnavailable, slot0LayoutIsFixedPerImplementation).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: per-compilation-unit false positive, approved for ClLPVaultBase (aa08521a4de1ca38, c7afac09851548c3)"
+    },
+    {
+      "fingerprint": "a0ea48d8b157bc69",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "function": "LPOracleCLModule._unitExpMatches()",
+      "reason": "Analysis artefact of the compilation restrictions (same as 7f67080222fdbcc7 and the other LPOracleCLModule dead-code entries): LPOracleCLModule.sol is also compiled alone at the default settings, in a unit where no contract inherits it, and Slither reports its internal helpers there. In the 200-run unit of LPOracleCL and its logic contracts, _unitExpMatches is reached from LPOracleCLModuleLogic's listingChecks hook through _clListingChecks (bit CL_CHECK_UNIT_EXP, SPEC-ORC-005, REQ-ORACLE-105), and Slither does not report it there. Covered by TEST-332 (LPOracleCL.UnitExponent: feedWithAnotherExponentIsRefused, unitExponentReadBeforeBinding).",
+      "approval": "pending (new finding; needs Josue's approval)",
+      "review": "New site of the per-compilation-unit false-positive pattern (7f67080222fdbcc7; ClLPVaultBase aa08521a4de1ca38, c7afac09851548c3)"
     },
     {
       "fingerprint": "7f67080222fdbcc7",
