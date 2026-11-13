@@ -97,8 +97,8 @@ abstract contract ParameterStoreViews is ParameterStoreRouter, IParameterStoreVi
         Layout storage $ = _s();
         MarketParams storage p = $.market[marketId];
         (w[0], w[1], w[2]) = (marketId, p.twapWindow, p.consistencyToleranceBps);
-        (w[3], w[4], w[5], w[6], w[7]) =
-        ($.g.usdBandLow, $.g.usdBandHigh, $.g.cachedWindow, $.g.disagreementPauseMax, $.g.graceDuration);
+        (w[3], w[4]) = _usdBand(marketId);
+        (w[5], w[6], w[7]) = ($.g.cachedWindow, $.g.disagreementPauseMax, $.g.graceDuration);
         (w[8], w[9]) = (uint160($.sequencer.feed), $.sequencer.gracePeriod);
         for (uint256 i = 0; i < tokens.length; ++i) {
             _tokenInputs(w, OracleInputsLayout.HEAD_WORDS + i * stride, tokens[i], withSecondSources);

@@ -42,7 +42,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     /// @dev Largest reference exponent searched, `MAX_VAULT_DECIMALS + MAX_UNIT_EXP - UNIT_EXP_HEADROOM`, so `k` is at
     /// most `MAX_UNIT_EXP` of ClLPVaultBase. Even at the cheapest listing prices, $10^-8 per whole token, two 18-decimal
     /// tokens on one tick find `e = 31` (`MATH-UO-77g`), so the search ends inside the bound for every listable pool.
-    uint8 internal constant MAX_REFERENCE_EXP = 34;
+    uint8 internal constant MAX_REFERENCE_EXP = LPPriceMath.MAX_VAULT_DECIMALS + MAX_UNIT_EXP - UNIT_EXP_HEADROOM;
 
     // ─── Binding ───
 

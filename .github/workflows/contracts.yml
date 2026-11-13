@@ -868,6 +868,7 @@ jobs:
 
   coverage:
     name: branch coverage (per-file minimums)
+    needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -889,10 +890,13 @@ jobs:
 
       - run: forge soldeer install
 
-      - name: Build Aave V4 artifacts for the fixture
-        run: |
-          FOUNDRY_PROFILE=aave forge build
-          FOUNDRY_PROFILE=univ3 forge build
+      - name: Reuse the build job's compiled output
+        # out-aave and out-univ3 for the fixtures; out/ for the tests that read build artifacts (TEST-247 reads the Lens
+        # ABIs), which forge coverage does not write.
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
 
       - name: forge coverage (coverage profile) and the minimums of security/coverage-thresholds.json
         run: script/check-coverage.sh

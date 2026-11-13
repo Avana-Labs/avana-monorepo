@@ -18,7 +18,12 @@ A tag in contracts/test or contracts/certora counts only when all of these hold:
      whose check has no result is "not run", never "verified"; a failed or timed-out check is "failed" / "not run".
   4. No stand-in. The test does not replace the contract the row belongs to: a test file that uses (directly or through
      the fixtures, handlers and base tests it imports) a stand-in listed in STAND_INS for contract X does not count
-     for X's rows. A CVL conf that verifies or links a stand-in for X does not count for X's rows.
+     for X's rows. Only what the test runs counts as use: from an imported test file, the contracts, libraries and
+     file-level definitions the test's code names (used_code), so importing a fixture's structs uses none of the
+     stand-ins its fixture contract deploys. A CVL conf that verifies or links a stand-in for X does not count for X's
+     rows.
+  5. Exercises the contract (TEST rows naming several contracts, contract_checklist.py). A test counts for contract X
+     of such a row only when the code it runs deploys or calls X's real contract (exercises).
 
 `/// @custom:spec` tags in contracts/src stay implementation pointers; on a body-less declaration (an interface, a
 function without a body, an abstract contract that no concrete contract in src/ inherits) they are "declaration only"
@@ -65,7 +70,7 @@ PASS, FAIL, NOT_RUN = "verified", "failed", "not run"
 # a test installs on purpose (BrokenAdapter, HostileAdapter, AdapterPlaceholder, which the fixture replaces with the
 # real Adapter before any test runs) are not stand-ins.
 STAND_INS: dict[str, tuple[str, ...]] = {
-    # LPOracle: no concrete CL LPOracle exists; the harness's linear module replaces the pricing hooks.
+    # LPOracle: the harness's linear module replaces the CL pricing hooks of LPOracleCL.
     "LPOracleHarness": ("LPOracle", "ClPricing"),
     "LPOracleHarnessModule": ("LPOracle", "ClPricing"),
     "LPOracleHarnessViewLogic": ("LPOracle", "ClPricing"),
@@ -77,7 +82,9 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "MockLPOracle": ("LPOracle",),
     "RegistryLPOracleMock": ("LPOracle",),
     "RiskLPOracleMock": ("LPOracle",),
+    "IntegLPOracleMock": ("LPOracle",),
     # DebtOracle
+    "IntegDebtOracleMock": ("DebtOracle",),
     "LVSDebtOracleMock": ("DebtOracle",),
     "LensDebtOracleMock": ("DebtOracle",),
     "RegistryDebtOracleMock": ("DebtOracle",),
@@ -103,6 +110,7 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "FreezeRegistryMock": ("MarketRegistry",),
     "GasMarketRegistry": ("MarketRegistry",),
     "HarnessMarketRegistry": ("MarketRegistry",),
+    "IntegRegistryMock": ("MarketRegistry",),
     "LVSMarketRegistryMock": ("MarketRegistry",),
     "LensRegistryMock": ("MarketRegistry",),
     "MockMarketRegistry": ("MarketRegistry",),
@@ -115,6 +123,7 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "RegistryParameterStoreMock": ("ParameterStore",),
     "RiskStoreMock": ("ParameterStore",),
     "MockFlashFeeCap": ("ParameterStore",),
+    "IntegStoreMock": ("ParameterStore",),
     # RiskModule
     "AdapterRiskModuleMock": ("RiskModule",),
     "CollRiskModuleMock": ("RiskModule",),
@@ -132,6 +141,7 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "RiskLPVaultMock": ("UniswapV3Integration", "SlipstreamIntegration"),
     "MockIntegration": ("UniswapV3Integration", "SlipstreamIntegration"),
     "LPVaultIdentityMock": ("UniswapV3Integration", "SlipstreamIntegration"),
+    "IntegLPVaultMock": ("UniswapV3Integration", "SlipstreamIntegration"),
     # Flash source
     "LVSFlashSourceMock": ("AaveV3FlashSource",),
     "LensFlashSourceMock": ("AaveV3FlashSource",),
@@ -244,77 +254,182 @@ def _concrete_runners(contract: str, file: Path) -> list[tuple[str, str]]:
     return out
 
 
-def _imports(path: Path) -> list[Path]:
-    out = []
-    for m in re.finditer(r'import\s+(?:[^;]*?from\s+)?"([^"]+)"\s*;', _text(path), re.S):
-        spec = m.group(1)
-        if spec.startswith("."):
-            q = (path.parent / spec).resolve()
-        elif spec.startswith("test/"):
-            q = (CONTRACTS / spec).resolve()
-        else:
+def _resolve(path: Path, spec: str) -> Path | None:
+    """The test file an import of `path` names, or None (a library, a src file, a missing file)."""
+    if spec.startswith("."):
+        q = (path.parent / spec).resolve()
+    elif spec.startswith("test/"):
+        q = (CONTRACTS / spec).resolve()
+    else:
+        return None
+    return q if q.is_file() and TEST_DIR in q.parents else None
+
+
+IMPORT = re.compile(r'\bimport\s+([^;"]*?)?\s*"([^"]+)"\s*(?:as\s+(\w+))?\s*;', re.S)
+IDENT = re.compile(r"\b[A-Za-z_]\w*\b")
+FILE_LEVEL = re.compile(r"\b(?:struct|enum|error|event|function|type)\s+(\w+)|\bconstant\s+(\w+)")
+
+
+@lru_cache(maxsize=None)
+def _code(path: Path) -> str:
+    """A file's code: comments and import statements left out."""
+    return IMPORT.sub("", _strip_comments(_text(path)))
+
+
+@lru_cache(maxsize=None)
+def _chunks(path: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """(name -> chunk id, chunk id -> code) of a file. Each contract, library and interface is its own chunk (from its
+    declaration to its closing brace); the code outside them (structs, enums, errors, free functions, constants) is the
+    chunk "", which every name declared there maps to."""
+    code = _code(path)
+    names: dict[str, str] = {}
+    text: dict[str, str] = {}
+    outside, i = [], 0
+    for m in re.finditer(r"\b(?:abstract\s+)?(?:contract|library|interface)\s+(\w+)[^{;]*\{", code):
+        if m.start() < i:
             continue
-        if q.is_file() and TEST_DIR in q.parents:
-            out.append(q)
+        depth, j = 1, m.end()
+        while j < len(code) and depth:
+            depth += {"{": 1, "}": -1}.get(code[j], 0)
+            j += 1
+        outside.append(code[i:m.start()])
+        names[m.group(1)] = m.group(1)
+        text[m.group(1)] = code[m.start():j]
+        i = j
+    outside.append(code[i:])
+    text[""] = "\n".join(outside)
+    for m in FILE_LEVEL.finditer(text[""]):
+        names.setdefault(m.group(1) or m.group(2), "")
+    return names, text
+
+
+@lru_cache(maxsize=None)
+def _visible(path: Path) -> dict[str, tuple[Path, str]]:
+    """Names a file imports from other test files -> (that file, chunk id, or "*" for a whole-file alias). Mocks and
+    harnesses are left out: a test that uses one names it, and the name is what counts."""
+    out: dict[str, tuple[Path, str]] = {}
+    for m in IMPORT.finditer(_strip_comments(_text(path))):
+        q = _resolve(path, m.group(2))
+        if q is None or "utils/mocks" in str(q) or "utils/harness" in str(q):
+            continue
+        clause = (m.group(1) or "").strip()
+        names = _chunks(q)[0]
+        brace = re.match(r"^\{(.*)\}\s*from$", clause, re.S)
+        if brace:
+            for item in brace.group(1).split(","):
+                parts = item.split()
+                if parts and parts[0] in names:
+                    out[parts[-1]] = (q, names[parts[0]])
+        elif re.match(r"^\*\s+as\s+(\w+)\s+from$", clause) or m.group(3):
+            alias = m.group(3) or re.match(r"^\*\s+as\s+(\w+)", clause).group(1)
+            out[alias] = (q, "*")
+        elif not clause:
+            for n, cid in names.items():
+                out.setdefault(n, (q, cid))
     return out
 
 
 @lru_cache(maxsize=None)
-def _own_stand_ins(path: Path) -> frozenset[str]:
-    """Stand-in names a file's code uses (comments, imports and its own contract definitions left out)."""
-    code = _strip_comments(_text(path))
-    code = re.sub(r"import\s+[^;]*;", "", code)
-    code = re.sub(r"\b(?:abstract\s+)?contract\s+\w+", "", code)
-    return frozenset(STAND_IN_RE.findall(code))
-
-
-@lru_cache(maxsize=None)
-def closure(path: Path) -> tuple[Path, ...]:
-    """A test file and the test files it imports, transitively (fixtures, handlers, base tests); mocks and harnesses
-    are left out, so only what the test code itself names counts."""
-    seen, todo = [], [path]
+def used_code(path: Path) -> tuple[str, ...]:
+    """The code a test file runs: the file itself and, from each test file it imports (fixtures, handlers, base
+    tests), only the contracts, libraries and file-level definitions its code names, transitively. A test that imports
+    a fixture file for its structs uses the file-level chunk only, never the fixture contract beside them."""
+    out = [_code(path)]
+    seen: set[tuple[Path, str]] = set()
+    todo: list[tuple[Path, str]] = [(path, "*")]
     while todo:
-        p = todo.pop()
-        if p in seen:
+        p, cid = todo.pop()
+        if (p, cid) in seen:
             continue
-        seen.append(p)
-        for q in _imports(p):
-            if "utils/mocks" in str(q) or "utils/harness" in str(q):
-                continue
-            todo.append(q)
-    return tuple(seen)
+        seen.add((p, cid))
+        names, text = _chunks(p)
+        code = _code(p) if cid == "*" else text[cid]
+        if (p, cid) != (path, "*"):
+            out.append(code)
+        vis = _visible(p)
+        for ident in set(IDENT.findall(code)):
+            if ident in vis:
+                todo.append(vis[ident])
+            if cid != "*" and ident in names and names[ident] != cid:
+                todo.append((p, names[ident]))
+    return tuple(out)
 
 
 @lru_cache(maxsize=None)
-def _own_deploys(path: Path) -> frozenset[str]:
-    code = _strip_comments(_text(path))
-    return frozenset(re.findall(r"\bnew\s+(\w+)\s*[({]", code)) | frozenset(
-        re.findall(r'deployCode\(\s*"(?:[^"]*:)?(\w+)', code))
+def _used_stand_ins(path: Path) -> frozenset[str]:
+    """Stand-in names in the code a test file runs (its own contract definitions left out)."""
+    return frozenset(n for code in used_code(path)
+                     for n in STAND_IN_RE.findall(re.sub(r"\b(?:abstract\s+)?contract\s+\w+", "", code)))
 
 
-# The real contract of each key, by the names a test deploys it with. A test closure that deploys the real contract
-# and also names a stand-in for it uses the stand-in as a placeholder the fixture replaces (a registry fixture wires a
+@lru_cache(maxsize=None)
+def _used_deploys(path: Path) -> frozenset[str]:
+    out: set[str] = set()
+    for code in used_code(path):
+        out |= set(re.findall(r"\bnew\s+(\w+)\s*[({]", code))
+        out |= set(re.findall(r'deployCode\(\s*"(?:[^"]*:)?(\w+)', code))
+    return frozenset(out)
+
+
+# The real contract of each key, by the names a test deploys it with. A test that deploys the real contract and also
+# names a stand-in for it uses the stand-in as a placeholder the fixture replaces (a registry fixture wires a
 # RiskModule stand-in until the RiskModule fixture deploys the real one), so the stand-in does not exclude it. LPOracle
-# and ClPricing have no concrete contract in src/: their harness always stands in.
+# and ClPricing are the concentrated-liquidity LPOracle, LPOracleCL, whose constructor takes its logic contracts.
+# The library keys add their exposer harness, which runs the library's own code.
 REAL: dict[str, tuple[str, ...]] = {
     "UniswapV3Integration": ("UniswapV3Integration", "UniswapV3IntegrationHarness"),
     "SlipstreamIntegration": ("SlipstreamIntegration",),
-    "LPOracle": (),
-    "ClPricing": (),
+    "LPOracle": ("LPOracleCL",),
+    "ClPricing": ("LPOracleCL",),
     "SwapRoutes": ("DexPathRoute", "WrapperThenDexRoute", "PegModuleRoute"),
     "Lock": ("Lock",),
+    "LPPriceMath": ("LPPriceMath", "LPPriceMathHarness"),
+    "SettlementMath": ("SettlementMath", "SettlementMathHarness"),
+}
+
+# Contracts that only an Avana factory creates: a test exercises one when it deploys the real factory, which makes
+# real instances (exercises only; a stand-in is still judged by REAL).
+MADE_BY: dict[str, tuple[str, ...]] = {
+    "VaultToken": ("VaultTokenFactory",),
+    "PositionProxy": ("ProxyManager",),
 }
 
 
 @lru_cache(maxsize=None)
 def stand_ins_of(path: Path) -> frozenset[str]:
-    """Stand-ins a test file uses, directly or through the test files it imports, less those whose real contract the
-    same closure deploys (see REAL)."""
-    files = closure(path)
-    names = set().union(*(_own_stand_ins(p) for p in files))
-    deployed = set().union(*(_own_deploys(p) for p in files))
+    """Stand-ins a test file uses, directly or through the test code it imports (used_code), less those whose real
+    contract the same code deploys (see REAL)."""
+    names = _used_stand_ins(path)
+    deployed = _used_deploys(path)
     real = {k for k in {k for n in names for k in STAND_INS[n]} if set(REAL.get(k, (k,))) & deployed}
     return frozenset(n for n in names if not set(STAND_INS[n]) <= real)
+
+
+def _use_re(names: tuple[str, ...]) -> re.Pattern:
+    alt = "|".join(re.escape(n) for n in names)
+    return re.compile(
+        rf"(?<![\w.])(?:{alt})\b(?=\s*(?:\.|\(|\{{|\s+(?:(?:internal|public|private|immutable|memory|storage|calldata)"
+        rf"\s+)*[a-z_$]\w*\s*[;=,)]))"
+        rf'|deployCode\(\s*"(?:[^"]*:)?(?:{alt})\b')
+
+
+@lru_cache(maxsize=None)
+def _exercises_file(path: Path, names: tuple[str, ...]) -> bool:
+    rx = _use_re(names)
+    return any(rx.search(code) for code in used_code(path))
+
+
+def exercises(tag: dict, names: tuple[str, ...]) -> bool:
+    """Whether the code a tagged test runs (its file or the file of any concrete runner) deploys or calls one of
+    `names`: `new X`, `deployCode("X")`, a cast and call `X(a).f()`, a library or static call `X.f()`, or a
+    variable of type X. A CVL rule exercises the contract its conf verifies."""
+    if not names:
+        return False
+    if tag["kind"] == "cvl":
+        return any(c["verify"] in names for c in confs().values()
+                   if c["spec"].endswith("/" + Path(tag["file"]).name))
+    files = {(CONTRACTS / tag["file"]).resolve()} | {(CONTRACTS / f).resolve() for f, _ in tag["runners"]}
+    return any(_exercises_file(f, tuple(sorted(names))) for f in files)
 
 
 def stand_in_keys(names) -> set[str]:

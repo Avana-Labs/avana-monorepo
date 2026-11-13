@@ -145,6 +145,23 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         assertEq(oracle.latestAnswer(), int256(SEEDED));
     }
 
+    // TEST-062 verifies: REQ-ORACLE-097, REQ-ORACLE-038, SPEC-ORC-023
+    /// @notice Every LPOracle contract's constructor refuses a zero timelock or a zero block time (`MarketMismatch(0)`),
+    /// and a poke floor of 0 or a ceiling below the floor (`PokeMinGasOutOfBounds(ceiling)`); the launch constants
+    /// (timelock `0x7173`, 12-second blocks, floor 900,000, ceiling 3,000,000) deploy.
+    function test_TEST_062_constructorRefusesBadChainConstants() public {
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        new LPOracleHarnessPokeLogic(address(0), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        new LPOracleHarnessPokeLogic(tl, 0, POKE_FLOOR, POKE_CEILING, false);
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_CEILING));
+        new LPOracleHarnessPokeLogic(tl, BLOCK_TIME, 0, POKE_CEILING, false);
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_FLOOR - 1));
+        new LPOracleHarnessPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_FLOOR - 1, false);
+        LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
+        assertEq(impl.TIMELOCK(), tl);
+    }
+
     // TEST-062 verifies: REQ-ORACLE-106, REQ-ORACLE-080, REQ-ORACLE-078, Q-240
     function test_TEST_062_logicContractsRunOnlyInTheProxy() public {
         address pokeLogic = oracle.POKE_LOGIC();

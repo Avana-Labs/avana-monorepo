@@ -84,6 +84,9 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         if (!_marketFits(m, params.twapWindow)) revert OutOfBounds();
         MarketParams memory old = _s().market[marketId];
         _s().market[marketId] = params;
+        // The band the market's LPOracle is checked and evaluated with (REQ-ORACLE-056); token stability is fixed at
+        // `listToken`, so it is recorded once here.
+        _s().unbanded[marketId] = _hasNonStableToken(m.tokens);
         _checkLpOracle(m.lpOracle);
         bytes32 scope = bytes32(marketId);
         emit ParameterSet("twapWindow", scope, old.twapWindow, params.twapWindow);

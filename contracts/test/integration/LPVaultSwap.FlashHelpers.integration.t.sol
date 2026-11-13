@@ -58,7 +58,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
     /// helper repays `F + φ` from `keeperOut` and pays its caller `keeperOut − F − φ`; neither the helper nor
     /// LPVaultSwap keeps a balance; LPVaultSwap called no flash source.
     // TEST-289 verifies: REQ-HELPER-004, REQ-HELPER-006, REQ-HELPER-007, REQ-HELPER-008, REQ-HELPER-010, REQ-SWAP-012, REQ-SWAP-014, REQ-SWAP-073, Q-404
-    // TEST-267 verifies: REQ-HELPER-006, REQ-HELPER-007, REQ-HELPER-008, REQ-SWAP-012
+    // TEST-267 verifies: REQ-HELPER-006, REQ-HELPER-007, REQ-HELPER-008, REQ-SWAP-012; shared: TEST-267's public helper path, run locally on the real LPVaultSwap
     function test_TEST_289_publicHelperFundsLiquidate() public {
         Snap memory s0 = _snap(carol);
         uint256 phi = _premium(1950e6);
@@ -146,7 +146,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
     /// @notice A dust liquidation whose `keeperOut` is below `F + φ`: the helper pulls the top-up from its caller up to
     /// `maxTopUp`; with `maxTopUp = 0` the whole liquidation reverts `TopUpExceeded`.
     // TEST-289 verifies: REQ-HELPER-007, REQ-SWAP-081
-    // TEST-267 verifies: REQ-HELPER-007
+    // TEST-267 verifies: REQ-HELPER-007; shared: TEST-267's maxTopUp bound, run locally on the real LPVaultSwap
     function test_TEST_289_topUpBoundedByMaxTopUp() public {
         usdtUsdcPool.setRate(5, 10);
         FlashLiquidationRequest memory q = _request(3e6, 3e6);
@@ -200,7 +200,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
     /// @notice The operator variant: only its signer calls; `F = 0` takes no loan and the Safe funds `X`; the payout
     /// returns to the Safe; a loan above the need is refused after `liquidate` returns.
     // TEST-289 verifies: REQ-HELPER-011, REQ-HELPER-016
-    // TEST-267 verifies: REQ-HELPER-011
+    // TEST-267 verifies: REQ-HELPER-011; shared: TEST-267's operator variant, run locally on the real LPVaultSwap
     function test_TEST_289_operatorSignerSafeAndNoLoan() public {
         vm.prank(carol);
         vm.expectRevert(IFlashLiquidatorErrors.NotSigner.selector);
@@ -263,7 +263,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
     /// allows (its whole USDC debt) fits within half of `maxFlashLoan(USDC)` and settles through the helper; once the
     /// Pool's idle USDC falls below that size (the monitoring alert's condition is below twice it) the helper refuses
     /// before LPVaultSwap is called, and a committed operator settles the same liquidation from its own inventory.
-    // TEST-289 verifies: REQ-FLASH-008, REQ-SWAP-014, REQ-HELPER-015
+    // TEST-289 verifies: REQ-FLASH-008, REQ-SWAP-014, REQ-HELPER-015; shared: the public helper's liquidity bound behind REQ-FLASH-008's listing size
     function test_REQ_FLASH_008_largestLiquidationWithinHalfThePool() public {
         uint256 largest = _debtOf(proxy, usdcReserveId);
         assertLe(2 * largest, helper.maxFlashLoan(address(usdc)), "sized within half of the Pool's idle USDC");

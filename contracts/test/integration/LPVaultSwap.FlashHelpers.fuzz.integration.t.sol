@@ -88,7 +88,7 @@ contract LPVaultSwapFlashHelpersFuzzIntegrationTest is LPVaultSwapUnitBase {
 
     /// @notice `minPayout` above the payout reverts `PayoutTooLow(payout, minPayout)` after LPVaultSwap returns and
     /// nothing moves; at the payout it settles.
-    // TEST-289 verifies: REQ-HELPER-008, REQ-SWAP-073
+    // TEST-289 verifies: REQ-HELPER-008, REQ-HELPER-014, REQ-SWAP-073
     function testFuzz_TEST_289_minPayoutBoundary(
         uint256 x,
         uint256 extra

@@ -129,11 +129,19 @@ contract MockMarketRegistry {
         TokenDef storage t = _tokens[token];
         t.listed = true;
         t.decimals = 6;
+        t.isUsdStable = true;
         t.primaryRoute = primary;
         t.alternateRoute = alternate;
         t.standbyRoute = standby;
         _primary[token] = primary;
         _alternate[token] = alternate;
+    }
+
+    function setUsdStable(
+        address token,
+        bool stable
+    ) external {
+        _tokens[token].isUsdStable = stable;
     }
 
     function setActiveRoutes(

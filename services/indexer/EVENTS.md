@@ -121,7 +121,6 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | `MarketActivated(uint256 marketId, uint256 chainId, address spoke, uint256 reserveId, address hub, uint256 hubAssetId)` | `market` Active | K C M |
 | `MarketRegistrationCancelled(uint256 marketId)`, `MarketOffboarding(uint256 marketId)`, `MarketClosed(uint256 marketId idx)` | `market.status` | K C M |
 | `SettlementReserveSet(uint256 marketId idx, uint256 debtReserveId)` | `market.settlementReserveId` | K |
-| `WindDownStepped(uint256 marketId idx, uint16 liquidationThresholdBps)` | log | C M |
 | `DebtReserveApproved(address spoke idx, uint256 reserveId idx, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address coverageSpoke)` | `debt_reserve`; starts the DebtOracle source | K C M |
 | `DebtReserveRemoved(address spoke idx, uint256 reserveId idx)` | `debt_reserve.approved` | K C M |
 | `SpokeApproved(address spoke idx, address hub idx, uint32 integrationId idx, address implementation, address aaveOracle)` | log | M (`M-20`) |

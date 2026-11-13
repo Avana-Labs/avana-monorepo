@@ -748,6 +748,20 @@
           "offset": 18,
           "bytes": "12",
           "type": "uint96"
+        },
+        {
+          "path": "unbanded",
+          "slot": "31",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(uint256 => bool)"
+        },
+        {
+          "path": "unbanded[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
         }
       ]
     },

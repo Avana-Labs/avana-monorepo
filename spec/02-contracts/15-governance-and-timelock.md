@@ -180,7 +180,7 @@ Launch short-delay list (`REQ-ACCESS-141`), equal at construction to the immutab
 
 | Contract | Selectors |
 |---|---|
-| ParameterStore | `tightenHardHealthFloor`, `tightenSlippageAllowanceBps`, `tightenFloorRoundingAllowance`, `tightenBorrowPriceMaxAge`, `tightenConsistencyToleranceBps`, `tightenFeedAgreementToleranceBps`, `tightenPoolRiskFactor`, `tightenRouteDepthThreshold`, `tightenMarketUsdCap`, `tightenTopUpSliceUsd`, `tightenTokenUsdCap`, `tightenDepositorUsdCap`, `tightenPoolShareMaxBps`, `tightenPoolShareMaxBpsOf`, `tightenMinPledgeUsd`, `tightenBreakerDeficitMax`, `tightenGateRecoverySeconds`, `tightenMaxShortfallBps`, `tightenDebtStressRiseBps`, `tightenMaxFlashFeeBps` |
+| ParameterStore | `tightenHardHealthFloor`, `tightenSlippageAllowanceBps`, `tightenFloorRoundingAllowance`, `tightenBorrowPriceMaxAge`, `tightenConsistencyToleranceBps`, `tightenFeedAgreementToleranceBps`, `tightenPoolRiskFactor`, `tightenRouteDepthThreshold`, `tightenMarketUsdCap`, `tightenTopUpSliceUsd`, `tightenTokenUsdCap`, `tightenDepositorUsdCap`, `tightenPoolShareMaxBps`, `tightenPoolShareMaxBpsOf`, `tightenMinPledgeUsd`, `tightenBreakerDeficitMax`, `tightenGateRecoverySeconds`, `tightenMaxShortfallBps`, `tightenDebtStressRiseBps`, `tightenMaxFlashFeeBps`, `tightenMarketSpeedLimits`, `tightenDebtSpeedLimit` |
 | MarketRegistry | `disableRoute`, `restoreRoute`, `setMarketOffboarding`, `activateMarket`, `cancelRegistration`, `freeze`, `pause`, `freezeAddress`, `tripMarketBreaker`, `tripDebtBreaker`, `useStandbyRoute` |
 | LPVaultSwap | `removeKeeper` |
 
