@@ -17,7 +17,9 @@ Each row has one of four states (evidence.py decides which tags count):
   [ ] unlinked   no counting check: no tag, only tags on another row's test, or only tests that use a stand-in
                  (evidence.STAND_INS) for this contract
 For a REQ/SPEC/INV/ATTACK row, a test counts when a tag on it names the row; for a TEST or PROP row, when the test
-or rule is tagged with that TEST/PROP id and (for a TEST id) its function name carries it.
+or rule is tagged with that TEST/PROP id and (for a TEST id) its function name carries it. A TEST row whose
+"Contract / flow" column names several contracts counts for each of them separately: for contract X only through a
+test whose code deploys or calls X's real contract (exercise_names, evidence.exercises).
 
 Usage, from the repository root:
     spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --list
@@ -347,6 +349,31 @@ def table_rows(path: Path, prefix: str) -> list[list[str]]:
     return rows
 
 
+_TEST_KEYS: dict[str, frozenset[str]] = {}
+
+
+def test_keys() -> dict[str, frozenset[str]]:
+    """TEST ID -> the contract keys its "Contract / flow" column names."""
+    if not _TEST_KEYS:
+        rx = {k: word_re(names) for k, (_, names, _) in CONTRACTS.items()}
+        for cols in table_rows(TESTS, "TEST"):
+            if len(cols) >= 4:
+                _TEST_KEYS[cols[0].strip("`")] = frozenset(k for k, r in rx.items() if r.search(cols[3]))
+    return _TEST_KEYS
+
+
+def exercise_names(key: str) -> tuple[str, ...]:
+    """Contracts whose deployment or call by a test exercises `key`: its real contract (evidence.REAL), the factory
+    that makes its instances (evidence.MADE_BY), and every name of CONTRACTS[key] (the key included) that is a
+    concrete contract or library in contracts/src. A TEST row naming several contracts counts for `key` only through
+    a test that exercises it."""
+    src = ev._src_decls()
+    concrete = {n for n, d in src.items() if d["kind"] == "library" or (d["kind"] == "contract" and not d["abstract"])}
+    names = set(ev.REAL.get(key, ())) | set(ev.MADE_BY.get(key, ()))
+    names |= {n for n in [key, *CONTRACTS[key][1]] if n in concrete}
+    return tuple(sorted(names))
+
+
 def tests_for(names: re.Pattern) -> list[tuple[str, str, str]]:
     out = []
     for cols in table_rows(TESTS, "TEST"):
@@ -408,14 +435,22 @@ class Evidence:
         for tag in ev.scan_tags(tr.TARGET)[0]:
             self.by_check.setdefault(tag["check"], []).append(tag)
 
-    def _state(self, tags: list[dict], key: str) -> tuple[str, str]:
-        """State of a row from the tags that could count for it on `key`'s checklist, and a note on excluded tags."""
-        counting = [t for t in tags if not t["excluded"] and key not in ev.tag_stand_in_keys(t)]
-        excluded = [t for t in tags if not any(t is c for c in counting)]
+    def _state(self, tags: list[dict], key: str, names: tuple[str, ...] | None = None) -> tuple[str, str]:
+        """State of a row from the tags that could count for it on `key`'s checklist, and a note on excluded tags.
+        With `names` (a TEST row naming several contracts) a tag counts only when its test exercises one of them."""
+        def why_not(t: dict) -> str:
+            if t["excluded"]:
+                return t["excluded"]
+            if key in ev.tag_stand_in_keys(t):
+                return f"uses a stand-in for {key}"
+            if names is not None and not ev.exercises(t, names):
+                return f"its test does not exercise {key}"
+            return ""
+        reasons = [(t, why_not(t)) for t in tags]
+        counting = [t for t, r in reasons if not r]
         note = ""
-        if excluded and not counting:
-            why = sorted({t["excluded"] or f"uses a stand-in for {key}" for t in excluded})
-            note = f" (only excluded checks: {'; '.join(why)})"
+        if reasons and not counting:
+            note = f" (only excluded checks: {'; '.join(sorted({r for _, r in reasons}))})"
         if not counting:
             return "unlinked", note
         states = [self.results.state(t) for t in counting]
@@ -431,9 +466,10 @@ class Evidence:
         state, note = self._state(tags, key)
         return state, note, sorted({t["check"] for t in tags})
 
-    def check(self, cid: str, key: str) -> tuple[str, str]:
-        """(state, note) of a TEST or PROP row: the tests and rules tagged with that id."""
-        return self._state(self.by_check.get(cid, []), key)
+    def check(self, cid: str, key: str, names: tuple[str, ...] | None = None) -> tuple[str, str]:
+        """(state, note) of a TEST or PROP row: the tests and rules tagged with that id (with `names`, only those whose
+        test exercises the contract, see exercise_names)."""
+        return self._state(self.by_check.get(cid, []), key, names)
 
 
 def checklist(key: str, evd: Evidence) -> dict:
@@ -467,7 +503,7 @@ def checklist(key: str, evd: Evidence) -> dict:
             extra += f" — owned by {owned[r][0]}: {owned[r][1]}"
         sections["REQ / SPEC on the page"].append(entry(r, f"({where}) {text}", st, note, extra, scope))
     for t, kind, text in tests:
-        st, note = evd.check(t, key)
+        st, note = evd.check(t, key, exercise_names(key) if len(test_keys().get(t, ())) > 1 else None)
         extra = ""
         if t in test_later:
             extra += f" — deferred to {test_later[t]} (not written yet)"
