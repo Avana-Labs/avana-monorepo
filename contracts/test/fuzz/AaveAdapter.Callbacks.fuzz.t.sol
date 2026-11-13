@@ -188,7 +188,7 @@ contract AaveAdapterCallbacksFuzzTest is AaveAdapterFixture {
             IAaveAdapterCollateral.repayWithCollateral.selector,
             bytes4(
                 keccak256(
-                    "repayWithCollateral((uint256,(uint32,bytes32),uint128,uint256,uint256[],uint256,uint256,uint256))"
+                    "repayWithCollateral((uint256,(uint32,bytes32),uint128,uint256,uint256[],uint256,uint256,uint256,uint256))"
                 )
             ),
             "repayWithCollateral"

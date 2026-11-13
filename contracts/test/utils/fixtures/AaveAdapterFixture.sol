@@ -401,6 +401,7 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
             debtReserveId: reserveId,
             minAmounts: _mins(),
             minDebtRepaid: 0,
+            minAssetOut: 0,
             deadline: _deadline(),
             minHealthFactor: 0
         });

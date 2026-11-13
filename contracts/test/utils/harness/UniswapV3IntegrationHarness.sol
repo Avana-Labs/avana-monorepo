@@ -21,7 +21,26 @@ contract UniswapV3IntegrationHarness is UniswapV3Integration {
         address nfpm,
         address factory,
         bytes32 initCodeHash
-    ) UniswapV3Integration(integrationId, collateralization, marketRegistry, lock, timelock, nfpm, factory) {
+    ) UniswapV3Integration(integrationId, collateralization, marketRegistry, lock, timelock, nfpm, factory, 12) {
+        _INIT_CODE_HASH = initCodeHash;
+    }
+
+    function _poolInitCodeHash() internal view override returns (bytes32) {
+        return _INIT_CODE_HASH;
+    }
+}
+
+/// @title UniswapV3IntegrationChainHarness
+/// @notice `UniswapV3IntegrationHarness` with the chain's block interval as a constructor argument (`REQ-AMM-V3-012`), for
+/// suites that run the TWAP observation check at another chain's interval.
+contract UniswapV3IntegrationChainHarness is UniswapV3Integration {
+    bytes32 private immutable _INIT_CODE_HASH;
+
+    constructor(
+        address[6] memory bindings,
+        bytes32 initCodeHash,
+        uint256 blockTime
+    ) UniswapV3Integration(1, bindings[0], bindings[1], bindings[2], bindings[3], bindings[4], bindings[5], blockTime) {
         _INIT_CODE_HASH = initCodeHash;
     }
 

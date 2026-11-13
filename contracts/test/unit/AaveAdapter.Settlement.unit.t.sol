@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
+import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
@@ -111,6 +112,35 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         _rwcAs(alice, params);
         assertEq(_borrowCountOf(p), 0, "debt-free");
         assertEq(debt.balanceOf(alice), 10_000e18 + 500e18, "borrowed GHO plus the leftover");
+    }
+
+    // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-091
+    /// @notice `minAssetOut` bounds the debt asset paid to the wallet: 500 GHO + 1 wei reverts
+    /// `AssetOutBelowMinimum(500 GHO, 500 GHO + 1)`, exactly 500 GHO passes.
+    function test_TEST_239_minAssetOutBoundsTheLeftover() public {
+        swap.setDeleverage(0, 2e12 + 1e11, 0);
+        RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 5_000_000_000, debtReserveId);
+        params.minAssetOut = 500e18 + 1;
+        _expectRwcRevert(
+            abi.encodeWithSelector(IAaveAdapterErrors.AssetOutBelowMinimum.selector, 500e18, 500e18 + 1), params
+        );
+        params.minAssetOut = 500e18;
+        (, uint256 out) = _rwcAs(alice, params);
+        assertEq(out, 500e18, "a minimum equal to the leftover passes");
+    }
+
+    // TEST-272 verifies: REQ-COLL-040, REQ-ADAPTER-080
+    /// @notice A repay with collateral that leaves no borrow clears the account's indebted mark in the same call; one
+    /// that leaves debt keeps it.
+    function test_TEST_272_debtFreeDeleverageClearsTheMark() public {
+        ICollateralizationViews views = ICollateralizationViews(address(coll));
+        assertFalse(views.getMarketDebtFree(vt), "marked by the borrow");
+        _rwcAs(alice, _rwc(MARKET_ID, k1, RELEASE, debtReserveId));
+        assertFalse(views.getMarketDebtFree(vt), "debt remains: still marked");
+        swap.setDeleverage(0, 2e12 + 1e11, 0);
+        _rwcAs(alice, _rwc(MARKET_ID, k1, 4_000_000_000, debtReserveId));
+        assertEq(_borrowCountOf(p), 0, "debt-free");
+        assertTrue(views.getMarketDebtFree(vt), "mark cleared");
     }
 
     // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-091, SPEC-PROXY-009, PROP-072

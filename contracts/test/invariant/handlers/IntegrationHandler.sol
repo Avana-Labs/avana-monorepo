@@ -247,6 +247,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             debtReserveId: reserveId,
             minAmounts: new uint256[](2),
             minDebtRepaid: 0,
+            minAssetOut: 0,
             deadline: block.timestamp,
             minHealthFactor: 0
         });

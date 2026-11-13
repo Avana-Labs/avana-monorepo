@@ -241,7 +241,6 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
             _expectTransition(abi.encodeCall(registry.activateMarket, (m)), s == 1, _err("reg", m));
             _expectTransition(abi.encodeCall(registry.cancelRegistration, (m)), s == 1, _err("reg", m));
             _expectTransition(abi.encodeCall(registry.setMarketOffboarding, (m)), s == 2, _err("active", m));
-            _expectTransition(abi.encodeCall(registry.stepWindDown, (m)), s == 3, _err("offboarding", m));
             _expectTransition(abi.encodeCall(registry.closeMarket, (m)), s == 3, _err("offboarding", m));
         }
     }
@@ -379,11 +378,10 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         uint256 t0 = _offboard(id);
         assertEq(uint8(_status(id)), uint8(MarketStatus.Offboarding));
         assertEq(registry.activeMarketCount(address(spoke)), 1);
-        for (uint256 d = 5; d <= 36; ++d) {
-            vm.warp(t0 + d * 1 days);
-            registry.stepWindDown(id);
-        }
-        assertEq(registry.windDownState(id).currentLtBps, 5000);
+        // The Aave DAO lowers the threshold once after the notice in its own payload; the registry only publishes the
+        // target and the date, and closes the market once it is debt-free.
+        assertEq(registry.windDownState(id).targetLtBps, 3750, "half of the 7,500 bps threshold");
+        vm.warp(t0 + 5 days);
         registry.closeMarket(id);
         assertEq(uint8(_status(id)), uint8(MarketStatus.Closed));
         assertEq(registry.activeMarketCount(address(spoke)), 0);
@@ -392,11 +390,11 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfVaultToken(vt), id);
     }
 
-    // ─── Offboarding and the wind-down ramp ───
+    // ─── Offboarding notice and the one-step target ───
 
     // TEST-213 verifies: REQ-MREG-015, REQ-CONFIG-080, Q-355
     // Offboarding records the collateral factor of the reserve's latest dynamic key at that moment, after any Aave
-    // change since activation.
+    // change since activation, and publishes the one target, half of it.
     function test_TEST_213_offboardingRecordsTheCurrentCollateralFactor() public {
         _activate(id);
         _setCf(VT_RESERVE, 6100);
@@ -404,123 +402,46 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         uint256 t0 = _offboard(id);
         WindDownState memory w = registry.windDownState(id);
         assertEq(w.offboardedAt, t0);
-        assertEq(w.lastStepAt, 0);
+        assertEq(w.unusedLastStepAt, 0, "the former ramp field stays 0");
         assertEq(w.startLtBps, 6100);
-        assertEq(w.currentLtBps, 6100);
-    }
-
-    // TEST-213 verifies: REQ-CONFIG-080, Q-355
-    // Golden ramp points for LT0 = 7,500: LT(t) = 7,500 - floor(2,500 x min(t, 30 d) / 30 d).
-    function test_TEST_213_rampGoldenPointsRoundTheDropDown() public {
-        _activate(id);
-        vm.warp(5_000_000);
-        uint256 t0 = _offboard(id);
-        uint256 start = t0 + 5 days;
-        // (elapsed after the notice, expected LT)
-        uint256[2][7] memory points = [
-            [uint256(0), uint256(7500)],
-            [uint256(1 days), uint256(7417)],
-            [uint256(10 days), uint256(6667)],
-            [uint256(15 days), uint256(6250)],
-            [uint256(29 days), uint256(5084)],
-            [uint256(30 days), uint256(5000)],
-            [uint256(400 days), uint256(5000)]
-        ];
-        for (uint256 i = 0; i < points.length; ++i) {
-            vm.warp(start + points[i][0]);
-            vm.expectEmit(address(registry));
-            emit IMarketRegistryWindDown.WindDownStepped(id, uint16(points[i][1]));
-            registry.stepWindDown(id);
-            WindDownState memory w = registry.windDownState(id);
-            assertEq(w.currentLtBps, points[i][1]);
-            assertEq(w.lastStepAt, block.timestamp);
-            assertEq(w.startLtBps, 7500, "the start never changes");
-            assertEq(w.offboardedAt, t0, "the offboarding time never changes");
-        }
-    }
-
-    // TEST-213 verifies: REQ-CONFIG-080, Q-355
-    // One second inside the ramp the drop is floor(2,500 / 2,592,000) = 0; the first whole bp of drop comes at
-    // ceil(2,592,000 / 2,500) = 1,037 s.
-    function test_TEST_213_rampFirstBasisPointBoundary() public {
-        _activate(id);
-        uint256 t0 = _offboard(id);
-        uint256 snap = vm.snapshotState();
-        vm.warp(t0 + 5 days + 1037);
-        registry.stepWindDown(id);
-        assertEq(registry.windDownState(id).currentLtBps, 7499);
-        vm.revertToState(snap);
-        vm.warp(t0 + 5 days + 1036);
-        registry.stepWindDown(id);
-        assertEq(registry.windDownState(id).currentLtBps, 7500);
-        // The next step waits a day; at that point the drop is floor(2,500 x (86,400 + 1,036) / 2,592,000) = 84.
-        vm.warp(t0 + 6 days + 1036);
-        registry.stepWindDown(id);
-        assertEq(registry.windDownState(id).currentLtBps, 7416);
+        assertEq(w.targetLtBps, 3050, "one drop to half: 6,100 x 5,000 / 10,000");
     }
 
     // TEST-213 verifies: REQ-CONFIG-080
-    // A start at or below the final 5,000 bps stays where it is for the whole ramp.
-    function test_TEST_213_startAtOrBelowFinalStaysFlat() public {
+    // The target rounds down: an odd threshold of 4,201 bps halves to 2,100.
+    function test_TEST_213_targetRoundsDown() public {
         _setCf(VT_RESERVE, 5000);
         _activate(id);
-        _setCf(VT_RESERVE, 4200);
-        uint256 t0 = _offboard(id);
-        assertEq(registry.windDownState(id).startLtBps, 4200);
-        for (uint256 d = 5; d <= 40; d += 5) {
-            vm.warp(t0 + d * 1 days);
-            vm.expectEmit(address(registry));
-            emit IMarketRegistryWindDown.WindDownStepped(id, 4200);
-            registry.stepWindDown(id);
-        }
+        _setCf(VT_RESERVE, 4201);
+        _offboard(id);
+        WindDownState memory w = registry.windDownState(id);
+        assertEq(w.startLtBps, 4201);
+        assertEq(w.targetLtBps, 2100);
     }
 
-    // TEST-213 verifies: REQ-CONFIG-080, Q-355
-    // The first step is allowed exactly at offboardedAt + 5 days, never a second earlier; each later step exactly one
-    // day after the previous one, never a second earlier.
-    function test_TEST_213_stepBoundariesToTheSecond() public {
-        _activate(id);
-        uint256 t0 = _offboard(id);
-        vm.warp(t0 + 5 days - 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.WindDownStepTooEarly.selector, t0 + 5 days));
-        registry.stepWindDown(id);
-        vm.warp(t0 + 5 days);
-        registry.stepWindDown(id);
-        uint256 last = block.timestamp;
-        vm.warp(last + 1 days - 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.WindDownStepTooEarly.selector, last + 1 days));
-        registry.stepWindDown(id);
-        vm.warp(last + 1 days);
-        registry.stepWindDown(id);
-        assertEq(registry.windDownState(id).lastStepAt, last + 1 days);
-    }
-
-    // TEST-213 verifies: REQ-CONFIG-080, Q-355
-    // A late step jumps straight to the ramp value of its own time: the schedule is a function of time, not of the
-    // number of steps.
-    function test_TEST_213_lateStepJumpsToTheRampValue() public {
-        _activate(id);
-        uint256 t0 = _offboard(id);
-        vm.warp(t0 + 5 days + 12 days);
-        registry.stepWindDown(id);
-        // 2,500 x 12 / 30 = 1,000.
-        assertEq(registry.windDownState(id).currentLtBps, 6500);
-    }
-
-    // TEST-213 verifies: REQ-CONFIG-080, Q-355
-    function testFuzz_TEST_213_stepEqualsTheClosedForm(
-        uint32 elapsed,
+    // TEST-213 verifies: REQ-CONFIG-080
+    function testFuzz_TEST_213_targetIsHalfTheStart(
         uint16 startCf
     ) public {
-        startCf = uint16(bound(startCf, 1, 7999));
+        startCf = uint16(bound(startCf, 1, 9999));
         _activate(id);
         _setCf(VT_RESERVE, startCf);
+        _offboard(id);
+        WindDownState memory w = registry.windDownState(id);
+        assertEq(w.startLtBps, startCf);
+        assertEq(w.targetLtBps, uint256(startCf) * 5000 / 10_000);
+        assertEq(w.unusedLastStepAt, 0);
+    }
+
+    // TEST-213 verifies: REQ-CONFIG-080
+    // The registry has no ramp entry point any more: the old `stepWindDown()` selector reaches no function.
+    function test_TEST_213_noRampEntryPoint() public {
+        _activate(id);
         uint256 t0 = _offboard(id);
-        vm.warp(t0 + 5 days + uint256(elapsed));
-        registry.stepWindDown(id);
-        uint256 span = elapsed < 30 days ? elapsed : 30 days;
-        uint256 expected = startCf <= 5000 ? startCf : startCf - (uint256(startCf - 5000) * span) / 30 days;
-        assertEq(registry.windDownState(id).currentLtBps, expected);
+        vm.warp(t0 + 40 days);
+        (bool ok,) = address(registry).call(abi.encodeWithSignature("stepWindDown(uint256)", id));
+        assertFalse(ok, "stepWindDown is gone");
+        assertEq(registry.windDownState(id).targetLtBps, 3750, "nothing moved the record");
     }
 
     // TEST-213 verifies: REQ-CONFIG-080, REQ-COLL-040, Q-355
@@ -533,7 +454,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         emit IMarketRegistryWindDown.MarketClosed(id);
         vm.prank(makeAddr("anyone"));
         registry.closeMarket(id);
-        assertEq(registry.windDownState(id).lastStepAt, 0, "close needs no step");
+        assertEq(registry.windDownState(id).unusedLastStepAt, 0, "close needs no step");
     }
 
     // TEST-213 verifies: REQ-CONFIG-080, REQ-COLL-040
@@ -558,7 +479,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         _activate(id);
         uint256 t0 = _offboard(id);
         collat.setHasDebt(vt, true);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.WindDownStepTooEarly.selector, t0 + 5 days));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
         registry.closeMarket(id);
     }
 }

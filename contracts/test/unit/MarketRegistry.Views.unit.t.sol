@@ -274,7 +274,7 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
     function test_TEST_213_windDownViewOfALiveMarket() public view {
         WindDownState memory w = registry.windDownState(marketId);
         assertEq(w.offboardedAt, 0);
-        assertEq(w.currentLtBps, 0);
+        assertEq(w.targetLtBps, 0);
         assertEq(registry.settlementReserve(marketId), GHO_RESERVE);
         assertEq(registry.activeMarketCount(address(spoke)), 1);
         assertEq(registry.MAX_ADDRESS_FREEZES_PER_DAY(), 20);

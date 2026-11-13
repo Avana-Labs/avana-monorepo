@@ -35,7 +35,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// LPOracle `poke()` and collateral price rule, the debt price rule, grace; funding `Kf` by balance delta; bonus and
 /// prices; `beginSeizure`; `liquidationCall` with `Kf` as Aave's bound; `D` and `c` by delta; `burnSeized` and
 /// `settleSeizure`; legs at their minimums; `R`; floor, gap, shortfall pull; `keeperOut`, `minPayout`; `A`, `B`,
-/// `keeperOut`, residues; `LiquidationSettled`; Lock release. Reads no pause state, breaker or committed-operator
+/// `keeperOut`, residues; `LiquidationSettled`; `markDebtFree`; Lock release. Reads no pause state, breaker or committed-operator
 /// registry and takes no flash loan.
 /// @custom:spec REQ-SWAP-001, REQ-SWAP-002, REQ-SWAP-003, REQ-SWAP-005, REQ-SWAP-006, REQ-SWAP-009, REQ-SWAP-011, REQ-SWAP-012, REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-020, REQ-SWAP-025, REQ-SWAP-026, REQ-SWAP-028, REQ-SWAP-072, REQ-SWAP-074, REQ-SWAP-075, REQ-SWAP-105, SPEC-LIQ-006, SPEC-LIQ-010, SPEC-LIQ-019
 // Each function carries the body of a selector LPVaultSwap declares and delegates here; this contract inherits no
@@ -79,7 +79,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
 
     /// @notice Body of `liquidate`.
     /// @dev See `ILPVaultSwapLiquidation.liquidate`; the implementation forwards its calldata unchanged.
-    /// @custom:spec REQ-SWAP-001, REQ-SWAP-002, REQ-SWAP-072, REQ-SWAP-073, REQ-SWAP-074, REQ-SWAP-105, REQ-SWAP-041, REQ-SWAP-093
+    /// @custom:spec REQ-SWAP-001, REQ-SWAP-002, REQ-SWAP-072, REQ-SWAP-073, REQ-SWAP-074, REQ-SWAP-105, REQ-SWAP-041, REQ-SWAP-093, REQ-COLL-040
     function liquidate(
         LiquidationParams calldata p
     ) external returns (LiquidationResult memory result) {
@@ -92,6 +92,9 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         _seize(c, p);
         _unwindAndSwap(c, p);
         result = _waterfall(c, p);
+        // REQ-COLL-040: a liquidation that leaves the account with no Aave borrow (its last debt repaid, or the rest
+        // reported as deficit) clears its indebted mark; Collateralization reads `borrowCount` itself.
+        ICollateralization(_COLLATERALIZATION).markDebtFree(p.proxy);
         ILock(_LOCK).release();
     }
 

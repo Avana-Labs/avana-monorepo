@@ -428,14 +428,6 @@ contract MarketRegistry is UUPSUpgradeable, MarketRegistryRouter, IMarketRegistr
 
     /// @inheritdoc IMarketRegistryWindDown
     /// @custom:spec REQ-CONFIG-080
-    function stepWindDown(
-        uint256
-    ) external override {
-        _forward(_WIND_DOWN_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistryWindDown
-    /// @custom:spec REQ-CONFIG-080
     function closeMarket(
         uint256
     ) external override {

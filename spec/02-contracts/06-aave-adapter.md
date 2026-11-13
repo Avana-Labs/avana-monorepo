@@ -59,7 +59,7 @@ All mutable storage sits in one ERC-7201 namespace (`avana.storage.AaveAdapter`)
 
 There is no parameter, fee index, fee recipient, pause flag, freeze list, breaker state or per-market restriction in the Adapter.
 
-`repayWithCollateral` takes `RepayWithCollateralParams{uint256 marketId; PositionRef position; uint128 units; uint256 debtReserveId; uint256[] minAmounts; uint256 minDebtRepaid; uint256 deadline; uint256 minHealthFactor}`: `minAmounts` holds one raw minimum per pool token in the market's token order for the unwind of `units`; `minDebtRepaid` is in the debt asset's base units (LPVaultSwap flash-borrows the debt asset and sells the released tokens straight into it, so there is no buy leg); `minHealthFactor` in WAD. Every swap leg also carries its oracle `minOut`, so the caller's minimums only tighten it.
+`repayWithCollateral` takes `RepayWithCollateralParams{uint256 marketId; PositionRef position; uint128 units; uint256 debtReserveId; uint256[] minAmounts; uint256 minDebtRepaid; uint256 minAssetOut; uint256 deadline; uint256 minHealthFactor}`: `minAmounts` holds one raw minimum per pool token in the market's token order for the unwind of `units`, or is empty for no minimum (read as one zero per token); `minDebtRepaid` and `minAssetOut` are in the debt asset's base units, `minAssetOut` bounding the debt asset paid to the wallet after the flash loan and its premium (LPVaultSwap flash-borrows the debt asset and sells the released tokens straight into it, so there is no buy leg); `minHealthFactor` in WAD. Every swap leg also carries its oracle `minOut`, so the caller's minimums only tighten it.
 
 ## Functions
 

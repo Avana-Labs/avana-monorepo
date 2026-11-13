@@ -3970,6 +3970,96 @@
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of six immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
       "approval": "pending (Josue)",
       "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "f70b677953cf69ba",
+      "check": "divide-before-multiply",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "function": "ClLPVaultMarkets._referenceRange(uint160,int24)",
+      "reason": "Tick alignment to the tick spacing: (t / s) * s is the intended truncation (SPEC-ORC-005 reference range; the usable-tick bounds are SPEC-BACK-001's (MIN_TICK / s) * s, as ClPriceMath.isUsableRange computes them), with a floor correction for a negative tick. Covered by TEST-264 (UniswapV3Integration.UnitExponent: narrow18x18StableRangesList, exponentFixedPerPool) and MATH-UO-77a.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); pattern: divide-before-multiply in ported AMM tick math"
+    },
+    {
+      "fingerprint": "71f016850886eda6",
+      "check": "unused-return",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._watch(uint256,address[],address)",
+      "reason": "Only the route address of getRoute is needed: a slot whose route is not usable is still read, since LPVaultSwap may have swapped through it in an earlier state and the helper only watches its intermediates for residues (REQ-HELPER-001, REQ-HELPER-008). forge-lint suppression on the line with the same reason. Covered by TEST-174 (FlashLiquidator.Residues).",
+      "approval": "pending (Josue)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); new site"
+    },
+    {
+      "fingerprint": "232c523482242ae5",
+      "check": "unused-return",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._forwardTokens(address,FlashLiquidatorBase.Watch)",
+      "reason": "PayoutEscrow.claim pays the helper's whole credit of the token to the recipient and returns the amount; the helper reads nothing back, since the credit was 0 when the call started and the escrow pays it straight to the caller (REQ-HELPER-010). The claim runs in try/catch so a recipient that cannot receive leaves the credit for claimEscrowed. Covered by TEST-174 (escrowedIntermediateClaimedToTheCaller, standingCreditStaysForClaimEscrowed), TEST-289.",
+      "approval": "pending (Josue)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); new site"
+    },
+    {
+      "fingerprint": "8200e74a3661f516",
+      "check": "calls-loop",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._watch(uint256,address[],address)",
+      "reason": "Bounded loops of views: getRoute for two slots of each market token (at most MAX_POOL_TOKENS = 8), intermediates() of each set route (a reverting one is skipped), and balanceOf and PayoutEscrow.claimable of each watched token, the snapshot the forwarded residues and new escrow credits are measured against (REQ-HELPER-008, REQ-HELPER-010). Covered by TEST-174 (FlashLiquidator.Residues).",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); pattern: bounded loops"
+    },
+    {
+      "fingerprint": "6ca15802c188306a",
+      "check": "reentrancy-events",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._payOut(IERC20,uint256,uint256,uint256,FlashLiquidatorBase.Watch)",
+      "reason": "FlashLiquidated reports values measured after the loan returned and is emitted after the payout, the forwarded residues and the escrow claims, as IFlashLiquidatorEvents specifies; the transient context stays open until after the event, so a reentrant flashLiquidate reverts ContextActive and no log can be reordered (same as f591badecd3eafec). Covered by TEST-174.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); pattern: events after measured external calls"
+    },
+    {
+      "fingerprint": "be2f7db00ecf0e3f",
+      "check": "dead-code",
+      "file": "src/lens/lens/LensBase.sol",
+      "function": "LensBase._legLimits(address[2])",
+      "reason": "Used at LensBase.sol line 248 by the module that prices legs; Slither analyses a compilation unit (the Lens*Module compilation restriction) in which no caller of this internal helper is compiled. Not touched by this change; reported blocking on the base as well.",
+      "approval": "pending (lead review)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12); pre-existing at the base commit"
+    },
+    {
+      "fingerprint": "35b318d05cf099f9",
+      "check": "calls-loop",
+      "file": "src/policy/risk-module/RiskModuleSpeedLogic.sol",
+      "function": "RiskModuleSpeedLogic._spokeDebtUsd(address,address)",
+      "reason": "View loop over the CDP Spoke's debt reserves as listed in the MarketRegistry (appended only by timelock listing): Hub getSpokeTotalOwed and AaveOracle getReservePrice per reserve, skipping reserves with nothing owed. A reverting read reverts the borrow (fail closed, REQ-RISK-098). Same pattern as the RiskModule logic calls-loop entries. Covered by TEST-321, TEST-322.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "ca2c3609c5826f2c",
+      "check": "calls-loop",
+      "file": "src/policy/risk-module/RiskModuleSpeedLogic.sol",
+      "function": "RiskModuleSpeedLogic._owedToHub(address,uint256)",
+      "reason": "View loop over the MarketRegistry's listed Spokes (appended only by timelock listing), reading Hub getSpokeTotalOwed per Spoke for the (Hub, asset) base. A reverting read reverts the borrow (fail closed, REQ-RISK-098). Same pattern as the RiskModule logic calls-loop entries. Covered by TEST-321, TEST-322.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "2410047b606b219b",
+      "check": "reentrancy-benign",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule.preBorrowCheck(address,uint256,uint256)",
+      "reason": "The speed windows are written after the borrow logic's poke and the speed logic's view reads; every callee is an Avana immutable (logic contracts, MarketRegistry, ParameterStore) or the listed Aave V4 Hub/oracle, and the caller (AaveAdapter) holds the Lock for the whole action, so no re-entry reaches the window write. Only the Adapter's call writes (REQ-RISK-092, REQ-RISK-095). Covered by TEST-320, TEST-326.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "45dc60db45a0bf34",
+      "check": "assembly",
+      "file": "src/policy/risk-module/RiskModuleSpeed.sol",
+      "function": "RiskModuleSpeed._speed()",
+      "reason": "ERC-7201 namespaced storage: assigns a compile-time constant slot (keccak256('avana.storage.RiskModule.speed') formula in the comment) to the storage pointer; no other assembly. Same as the other ERC-7201 assembly entries. The storage-layout check covers the slot.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     }
   ]
 }

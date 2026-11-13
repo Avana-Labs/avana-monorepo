@@ -107,6 +107,7 @@ abstract contract IntegrationFlows is IntegrationFixture {
             debtReserveId: reserveId,
             minAmounts: new uint256[](2),
             minDebtRepaid: 0,
+            minAssetOut: 0,
             deadline: _deadline(),
             minHealthFactor: 0
         });

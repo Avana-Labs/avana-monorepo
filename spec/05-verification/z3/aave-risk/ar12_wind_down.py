@@ -1,77 +1,57 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-"""Wind-down ramp of an offboarding market (2.8 REQ-CONFIG-080).
+"""One-step offboarding target of a market (2.8 REQ-CONFIG-080, 3.8 MKT-059).
 
-The MarketRegistry's `stepWindDown` records and announces the liquidation threshold of the linear ramp
-    LT(e) = LT0 - floor((LT0 - LTf) * min(e, R) / R)      for LT0 > LTf, else LT(e) = LT0,
-with LT0 the reserve's collateral factor when offboarding began (bps), LTf = 5,000 bps the final threshold,
-R = 30 days the ramp length and e >= 0 the seconds elapsed since the notice ended (offboardedAt + 5 days).
-Steps are at least one day apart. Everything is an exact integer in bps and seconds.
+`setMarketOffboarding` records LT0, the reserve's collateral factor (bps), and publishes the target
+    T = floor(LT0 * S / 10,000),      S = windDownFinalLtBps = 5,000 bps of LT0,
+with the earliest date offboardedAt + N, N = 5 days. After that date the Aave DAO lowers the threshold once, to T.
+Everything is an exact integer in bps and seconds.
 """
-from z3 import Int, Real, If, And
+from z3 import Int, And, Implies
 from _common import prove, computed, finish, floor_div
 
-R = 30 * 86_400
-LTF = 5_000
+S = 5_000
 BPS = 10**4
+N = 5 * 86_400
 
-lt0, e, e2 = Int('lt0'), Int('e'), Int('e2')
-d, p1, p2 = Int('d'), Int('p1'), Int('p2')
+lt0, hf = Int('lt0'), Int('hf')
+t, ct = floor_div(lt0 * S, BPS, 'target')
+base = [lt0 > 0, lt0 < BPS]
 
-# MATH-AR-70 verifies: REQ-CONFIG-080
-# Proved over the reals (complete non-linear real arithmetic), so it holds for every integer instance.
-rd, rs1, rs2 = Real('rd'), Real('rs1'), Real('rs2')
-prove('MATH-AR-70a', 'lemma: for 0 <= d and 0 <= s1 <= s2 <= R, 0 <= d*s1 <= d*s2 <= d*R',
-      [rd >= 0, rd < BPS, rs1 >= 0, rs1 <= rs2, rs2 <= R],
-      And(0 <= rd * rs1, rd * rs1 <= rd * rs2, rd * rs2 <= rd * R))
-
-# With the lemma, the products p_i = d * s_i (d = LT0 - LTf, s_i = min(e_i, R)) are linear unknowns.
-drop1, f1 = floor_div(p1, R, 'drop1')
-drop2, f2 = floor_div(p2, R, 'drop2')
-lemma = [d > 0, d < BPS, 0 <= p1, p1 <= p2, p2 <= d * R]
+# MATH-AR-70 verifies: REQ-CONFIG-080, MKT-059
+prove('MATH-AR-70a', 'the target is half LT0 rounded down (2T in {LT0 - 1, LT0}), never 0 and below LT0 for LT0 >= 2',
+      base + ct, And(t >= 0, 2 * t <= lt0, 2 * t >= lt0 - 1, Implies(lt0 >= 2, And(t >= 1, t < lt0))))
 
 # MATH-AR-70 verifies: REQ-CONFIG-080
-prove('MATH-AR-70b', 'the ramp stays within [LTf, LT0]: 0 <= drop <= LT0 - LTf',
-      lemma + f1, And(drop1 >= 0, drop1 <= d))
+prove('MATH-AR-70b', 'every target fits uint16 (the WindDownState field)', base + ct, And(t >= 0, t < 2**16))
 
+lt1 = Int('lt1')
+t1, ct1 = floor_div(lt1 * S, BPS, 'target1')
 # MATH-AR-70 verifies: REQ-CONFIG-080
-prove('MATH-AR-70c', 'the ramp never rises: a later step drops at least as much as an earlier one',
-      lemma + f1 + f2, drop2 >= drop1)
+prove('MATH-AR-70c', 'a higher threshold at offboarding never gives a lower target (monotone)',
+      base + ct + ct1 + [lt1 >= lt0, lt1 < BPS], t1 >= t)
+
+# MATH-AR-70 verifies: REQ-CONFIG-080, MKT-059
+# Health factor scales with the threshold: hf' = floor(hf * T / LT0) (in bps of HF), so with an even LT0 an account at
+# health factor 2 or more at offboarding stays at or above 1 after the drop; one below 2 falls below 1.
+hfa, chf = floor_div(hf * t, lt0, 'hfAfter')
+k = Int('k')
+prove('MATH-AR-70d', 'with an even LT0, an account at HF >= 2 (20,000 bps) keeps HF >= 1 after the drop to T',
+      base + ct + chf + [lt0 == 2 * k, hf >= 20_000], hfa >= 10_000)
+prove('MATH-AR-70f', 'with an even LT0, an account below HF 2 falls below HF 1 after the drop to T',
+      base + ct + chf + [lt0 == 2 * k, hf >= 0, hf < 20_000], hfa < 10_000)
 
 
-def ramp(start, elapsed, name):
-    span = If(elapsed < R, elapsed, R)
-    drop, cons = floor_div((start - LTF) * span, R, name)
-    return If(start <= LTF, start, start - drop), cons
-
-
-lt_e, c1 = ramp(lt0, e, 'dropE')
-base = [lt0 > 0, lt0 < BPS, e >= 0]
-
-# MATH-AR-70 verifies: REQ-CONFIG-080
-prove('MATH-AR-70d', 'from the end of the ramp the threshold is LTf (when LT0 > LTf)',
-      base + c1 + [lt0 > LTF, e >= R], lt_e == LTF)
-
-# MATH-AR-70 verifies: REQ-CONFIG-080
-prove('MATH-AR-70e', 'a start at or below LTf never moves, and every result fits uint16',
-      base + c1 + [lt0 <= LTF], And(lt_e == lt0, lt_e < 2**16))
-
-
-def ramp_int(start, elapsed):
-    if start <= LTF:
-        return start
-    return start - (start - LTF) * min(elapsed, R) // R
-
-
-# MATH-AR-70 verifies: REQ-CONFIG-080
-computed('MATH-AR-70f', 'REQ-CONFIG-080 worked example and the unit-test vectors', [
-    ('8,000 bps at the notice end (day 5)', 8_000, ramp_int(8_000, 0)),
-    ('8,000 bps at day 20 (15 of 30 days)', 6_500, ramp_int(8_000, 15 * 86_400)),
-    ('8,000 bps at day 35 (ramp end)', 5_000, ramp_int(8_000, R)),
-    ('HF 1.30 under 8,000 falls to 1.30 x 5,000 / 8,000 = 0.8125', 8_125, 13_000 * 5_000 // 8_000),
-    ('7,500 bps at day 20 (15 of 30 days)', 6_250, ramp_int(7_500, 15 * 86_400)),
-    ('7,500 bps at day 40 (past the ramp)', 5_000, ramp_int(7_500, 35 * 86_400)),
-    ('4,000 bps (below LTf) never moves', 4_000, ramp_int(4_000, R)),
+# MATH-AR-70 verifies: REQ-CONFIG-080, MKT-059
+computed('MATH-AR-70e', 'REQ-CONFIG-080 and MKT-059 worked examples and the unit-test vectors', [
+    ('8,000 bps -> target', 4_000, 8_000 * S // BPS),
+    ('HF 1.30 under 8,000 falls to 1.30 x 4,000 / 8,000 = 0.65', 6_500, 13_000 * 4_000 // 8_000),
+    ('7,500 bps -> target', 3_750, 7_500 * S // BPS),
+    ('6,100 bps -> target', 3_050, 6_100 * S // BPS),
+    ('4,201 bps -> target (rounds down)', 2_100, 4_201 * S // BPS),
+    ('MKT-059: 3,400 bps -> 1,700; HF 1.70 -> 0.85', 8_500, 17_000 * 1_700 // 3_400),
+    ('3.8 walkthrough: 3,120 bps -> 1,560; Carol HF 20,000 x 0.156 / 5,000', 6_240, 20_000 * 1_560 // 5_000),
+    ('earliest date: offboardedAt + 432,000 s', 432_000, N),
 ])
 
 finish()

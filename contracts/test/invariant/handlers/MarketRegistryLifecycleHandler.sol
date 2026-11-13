@@ -23,8 +23,6 @@ import {RegistryLPOracleMock} from "../../utils/mocks/MarketRegistryMocks.sol";
 contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
     uint256 public constant SHAPES = 6;
     uint64 internal constant NOTICE = 5 days;
-    uint64 internal constant STEP = 1 days;
-    uint64 internal constant RAMP = 30 days;
 
     struct Slot {
         address vaultToken;
@@ -33,7 +31,6 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
         MarketStatus status;
         bool prepared;
         uint64 offboardedAt;
-        uint64 lastStepAt;
         uint16 startLt;
         uint16 lt;
         bool debt;
@@ -213,37 +210,12 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
         try registry.setMarketOffboarding(s.id) {
             s.status = MarketStatus.Offboarding;
             s.offboardedAt = uint64(block.timestamp);
-            s.lastStepAt = 0;
-            (s.startLt, s.lt) = (cf, cf);
+            // REQ-CONFIG-080: the published one-step target is half the threshold at offboarding, rounded down.
+            (s.startLt, s.lt) = (cf, uint16(uint256(cf) * 5000 / 10_000));
+            if (registry.windDownState(s.id).targetLtBps != s.lt) ++ltMismatch;
             _check("offboard", true, expected, i);
         } catch {
             _check("offboard", false, expected, i);
-        }
-    }
-
-    function step(
-        uint256 seed
-    ) external {
-        uint256 i = seed % SHAPES;
-        Slot storage s = _slots[i];
-        if (s.id == 0) return;
-        bool expected = s.status == MarketStatus.Offboarding;
-        uint64 start = s.offboardedAt + NOTICE;
-        uint64 next = start;
-        if (s.lastStepAt != 0 && s.lastStepAt + STEP > next) next = s.lastStepAt + STEP;
-        uint64 nowTs = uint64(block.timestamp);
-        expected = expected && nowTs >= next;
-        try registry.stepWindDown(s.id) {
-            if (nowTs < start) {
-                ++ltMismatch;
-            } else {
-                uint16 want = _ramp(s.startLt, nowTs - start);
-                if (registry.windDownState(s.id).currentLtBps != want) ++ltMismatch;
-                (s.lastStepAt, s.lt) = (nowTs, want);
-            }
-            _check("step", true, expected, i);
-        } catch {
-            _check("step", false, expected, i);
         }
     }
 
@@ -273,15 +245,6 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
     }
 
     // ─── Model helpers ───
-
-    function _ramp(
-        uint16 startLt,
-        uint64 elapsed
-    ) internal pure returns (uint16) {
-        if (startLt <= 5000) return startLt;
-        uint256 span = elapsed < RAMP ? elapsed : RAMP;
-        return uint16(startLt - (uint256(startLt - 5000) * span) / RAMP);
-    }
 
     /// @dev The Aave payload, ParameterStore values and routes of slot `i` (Hub asset and Spoke reserve 100 + i).
     function _prepare(

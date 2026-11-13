@@ -29,12 +29,28 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 /// price vector.
 /// @custom:spec REQ-AMM-CORE-003, REQ-AMM-CORE-004, REQ-AMM-CORE-012, REQ-AMM-CORE-013, REQ-AMM-CORE-017, REQ-VAULT-166, REQ-AMM-V3-002, REQ-AMM-V3-005, REQ-AMM-V3-006, REQ-AMM-V3-008, SPEC-AMM-CORE-001, SPEC-AMM-V3-001, SPEC-BACK-001
 abstract contract ClLPVaultMarkets is ClLPVaultBase {
+    /// @dev The listing prices of a binding: the price vector, the token decimals and the oracle square-root price.
+    struct Valuation {
+        uint256[] prices;
+        uint8[] decs;
+        uint160 sO;
+    }
+
+    /// @dev Decades of headroom the pool's unit exponent leaves below its reference range (`SPEC-ORC-005`): a later
+    /// market of the pool whose liquidity is worth down to 1/100 of the reference range's per unit still lists.
+    uint8 internal constant UNIT_EXP_HEADROOM = 2;
+    /// @dev Largest reference exponent searched, `MAX_VAULT_DECIMALS + MAX_UNIT_EXP - UNIT_EXP_HEADROOM`, so `k` is at
+    /// most `MAX_UNIT_EXP` of ClLPVaultBase. Even at the cheapest listing prices, $10^-8 per whole token, two 18-decimal
+    /// tokens on one tick find `e = 31` (`MATH-UO-77g`), so the search ends inside the bound for every listable pool.
+    uint8 internal constant MAX_REFERENCE_EXP = 34;
+
     // ─── Binding ───
 
     /// @inheritdoc IAmmIntegration
-    /// @dev `integrationData` carries the listing valuation prices of the two tokens (8 decimals), from which
-    /// `unitDecimals` is the smallest `d` in `[6, 18]` whose whole token is worth at least $1 (`SPEC-UNIT-001`,
-    /// `SPEC-ORC-005`). Refuses `marketId == 0` (0 means "not in custody" in `marketOfPosition`), a `poolId`, any shape
+    /// @dev `integrationData` carries the listing valuation prices of the two tokens (8 decimals). The pool's unit
+    /// exponent `k` (one vault-token unit = `10^k` liquidity) is fixed by its first market and shared by every later
+    /// one; `unitDecimals` is the smallest `d` in `[6, 18]` whose whole token, `10^(d + k)` liquidity, is worth at least
+    /// $1 (`SPEC-UNIT-001`, `SPEC-UNIT-002`, `SPEC-ORC-005`). Refuses `marketId == 0` (0 means "not in custody" in `marketOfPosition`), a `poolId`, any shape
     /// other than an aligned `TickRange` inside the usable ticks, and token decimals above 18.
     /// @custom:spec REQ-AMM-CORE-003, REQ-AMM-CORE-004, REQ-AMM-CORE-017, REQ-VAULT-166, REQ-AMM-V3-002, REQ-AMM-V3-007, REQ-AMM-V3-008, SPEC-BACK-001, SPEC-UNIT-001, SPEC-ORC-005
     function bindMarket(
@@ -53,13 +69,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         cfg.tickLower = shape.tickLower;
         cfg.tickUpper = shape.tickUpper;
         cfg.maxLiquidityPerTick = ClPriceMath.maxLiquidityPerTick(cfg.tickSpacing);
-        uint8 d0 = _tokenDecimals(cfg.token0);
-        uint8 d1 = _tokenDecimals(cfg.token1);
-        unitDecimals = _unitDecimals(cfg, d0, d1, price0, price1);
-        Market storage m = _markets[marketId];
-        m.cfg = cfg;
-        m.decimals0 = d0;
-        m.decimals1 = d1;
+        unitDecimals = _storeMarket(marketId, cfg, price0, price1);
         tokens = new address[](TOKEN_COUNT);
         (tokens[0], tokens[1]) = (cfg.token0, cfg.token1);
         // Every call before the event is a view (STATICCALL) of the pool, the factory or a token, so no code can run
@@ -83,6 +93,14 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         (tokens[0], tokens[1]) = (cfg.token0, cfg.token1);
         shape = PositionShape({kind: ShapeKind.TickRange, tickLower: cfg.tickLower, tickUpper: cfg.tickUpper});
         return (cfg.pool, bytes32(0), shape, tokens);
+    }
+
+    /// @inheritdoc IClIntegration
+    /// @custom:spec SPEC-UNIT-002, SPEC-ORC-005
+    function unitExponent(
+        uint256 marketId
+    ) external view override returns (uint8) {
+        return _market(marketId).unitExp;
     }
 
     /// @inheritdoc IClIntegration
@@ -119,8 +137,8 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     // ─── Composition ───
 
     /// @inheritdoc IAmmIntegration
-    /// @dev `SPEC-AMM-V3-001`: the amounts of `SPEC-ORC-006` at the oracle square-root price clamped to the range,
-    /// each then reduced by 1 raw unit when positive. Always exact.
+    /// @dev `SPEC-AMM-V3-001`: the amounts of `SPEC-ORC-006` of `units * 10^k` liquidity at the oracle square-root
+    /// price clamped to the range, each then reduced by 1 raw unit when positive. Always exact.
     /// @custom:spec REQ-AMM-CORE-006, REQ-AMM-CORE-012, REQ-AMM-V3-005, SPEC-AMM-CORE-001, SPEC-AMM-V3-001, SPEC-ORC-006, SPEC-ORC-007
     function composition(
         uint256 marketId,
@@ -128,11 +146,20 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         uint256[] calldata prices
     ) external view override returns (uint256[] memory amounts, bool exact) {
         Market storage m = _market(marketId);
-        (uint256 p0, uint256 p1) = _prices(prices);
-        uint160 sO = ClPriceMath.oracleSqrtPrice(p0, p1, m.decimals0, m.decimals1);
-        (uint256 a0, uint256 a1) = _rawAmounts(m.cfg.tickLower, m.cfg.tickUpper, sO, units);
+        (uint256 a0, uint256 a1) = _oracleAmounts(m, _toLiquidity(m, units), prices);
         amounts = _pair(a0 == 0 ? 0 : a0 - 1, a1 == 0 ? 0 : a1 - 1);
         exact = true;
+    }
+
+    /// @dev Raw amounts `liquidity` holds on the market's range at the oracle square-root price of `prices`.
+    function _oracleAmounts(
+        Market storage m,
+        uint256 liquidity,
+        uint256[] calldata prices
+    ) private view returns (uint256 a0, uint256 a1) {
+        (uint256 p0, uint256 p1) = _prices(prices);
+        uint160 sO = ClPriceMath.oracleSqrtPrice(p0, p1, m.decimals0, m.decimals1);
+        (a0, a1) = _rawAmounts(m.cfg.tickLower, m.cfg.tickUpper, sO, liquidity);
     }
 
     /// @inheritdoc IClIntegration
@@ -154,36 +181,45 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     // ─── Risk metadata ───
 
     /// @inheritdoc IAmmIntegration
-    /// @dev `inRange = tickLower <= slot0.tick < tickUpper`, `readSafe = slot0.unlocked`, `poolUnits = liquidity()`.
+    /// @dev `inRange = tickLower <= slot0.tick < tickUpper`, `readSafe = slot0.unlocked`, `poolUnits = liquidity()` in
+    /// vault-token units (`⌊liquidity / 10^k⌋`).
     /// The LPVault keeps no unit counter, so `avanaUnits` and `poolShareBps` are 0: Avana's units in a market are
     /// Collateralization's credited total, which the RiskModule reads (`SPEC-CAP-005`, `SPEC-BRK-002`).
-    /// `positionUnits` is the named position's live liquidity.
-    /// @custom:spec REQ-AMM-CORE-008, REQ-AMM-CORE-013, REQ-AMM-V3-006
+    /// `positionUnits` is the named position's live liquidity in vault-token units.
+    /// @custom:spec REQ-AMM-CORE-008, REQ-AMM-CORE-013, REQ-AMM-V3-006, SPEC-UNIT-002
     function riskMetadata(
         uint256 marketId,
         bytes32 positionKey
     ) external view override returns (RiskMetadata memory meta) {
-        ClMarketConfig storage cfg = _market(marketId).cfg;
+        Market storage m = _market(marketId);
+        ClMarketConfig storage cfg = m.cfg;
         (int24 tick,, bool unlocked) = _slot0(cfg.pool);
         meta.inRange = cfg.tickLower <= tick && tick < cfg.tickUpper;
         meta.readSafe = unlocked;
-        meta.poolUnits = IClPoolObservations(cfg.pool).liquidity();
-        if (positionKey != bytes32(0)) (,,, meta.positionUnits) = _readPosition(positionKey);
+        meta.poolUnits = _toUnits(m, IClPoolObservations(cfg.pool).liquidity());
+        if (positionKey != bytes32(0)) {
+            (,,, uint128 live) = _readPosition(positionKey);
+            // At most the position's uint128 liquidity.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            meta.positionUnits = uint128(_toUnits(m, live));
+        }
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev Harmonic-mean in-range liquidity of `observe([window, 0])` (`OracleLibrary.consult`); unavailable for a
-    /// zero window, a failed `observe` or a zero seconds-per-liquidity difference.
-    /// @custom:spec REQ-AMM-CORE-013, REQ-AMM-V3-006, SPEC-CAP-005
+    /// @dev Harmonic-mean in-range liquidity of `observe([window, 0])` (`OracleLibrary.consult`) in vault-token units
+    /// (`⌊liquidity / 10^k⌋`); unavailable for a zero window, a failed `observe` or a zero seconds-per-liquidity
+    /// difference.
+    /// @custom:spec REQ-AMM-CORE-013, REQ-AMM-V3-006, SPEC-CAP-005, SPEC-UNIT-002
     function riskStatus(
         uint256 marketId,
         uint32 window
     ) external view override returns (RiskStatus memory status) {
-        address pool = _market(marketId).cfg.pool;
+        Market storage m = _market(marketId);
         if (window == 0) return status;
-        (bool ok,, uint160 splDelta) = _observe(pool, window);
+        (bool ok,, uint160 splDelta) = _observe(m.cfg.pool, window);
         if (!ok) return status;
         (status.depthUnits, status.depthAvailable) = ClPriceMath.harmonicMeanLiquidity(splDelta, window);
+        status.depthUnits = _toUnits(m, status.depthUnits);
     }
 
     /// @inheritdoc IAmmIntegrationHooks
@@ -253,38 +289,111 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
 
     // ─── Internal ───
 
-    /// @dev `SPEC-ORC-005` over this market's raw composition: the smallest `d` in `[6, 18]` with
-    /// `price8(10^d) >= 10^8`, or `InvalidPool` when none passes or a listing price is outside `[1, MAX_ROUTE_ANSWER]`.
+    /// @dev `SPEC-ORC-005` over this market's raw composition. The unit exponent `k` is the pool's stored one, or, at the
+    /// pool's first binding, `max(0, e + UNIT_EXP_HEADROOM − 18)` with `e` the smallest exponent in `[6, 34]` whose
+    /// `10^e` liquidity on the pool's reference range (one tick spacing, holding the listing price) is worth at least
+    /// $1. Then `d` is the smallest in `[6, 18]` with `price8(10^(d + k)) >= 10^8` on this market's range. `InvalidPool`
+    /// when no `e` or `d` passes or a listing price is outside `[1, MAX_ROUTE_ANSWER]`; `k <= MAX_UNIT_EXP` by the bound
+    /// on `e`.
     function _unitDecimals(
         ClMarketConfig memory cfg,
         uint8 d0,
         uint8 d1,
         uint256 price0,
         uint256 price1
-    ) private pure returns (uint8) {
-        uint256[] memory prices = _pair(price0, price1);
-        uint8[] memory decs = new uint8[](TOKEN_COUNT);
-        (decs[0], decs[1]) = (d0, d1);
+    ) private view returns (uint8 d, uint8 k) {
         if (
             price0 == 0 || price1 == 0 || price0 > LPPriceMath.MAX_ROUTE_ANSWER || price1 > LPPriceMath.MAX_ROUTE_ANSWER
         ) {
             revert InvalidPool();
         }
-        uint160 sO = ClPriceMath.oracleSqrtPrice(price0, price1, d0, d1);
-        uint160 sa = ClPriceMath.sqrtRatioAtTick(cfg.tickLower);
-        uint160 sb = ClPriceMath.sqrtRatioAtTick(cfg.tickUpper);
-        uint160 sC = ClPriceMath.clamp(sO, sa, sb);
-        uint8 found = 0;
-        for (uint8 d = LPPriceMath.MIN_VAULT_DECIMALS; d <= LPPriceMath.MAX_VAULT_DECIMALS; ++d) {
-            (uint256 a0, uint256 a1) = ClPriceMath.amountsForLiquidity(sC, sa, sb, 10 ** d);
-            (bool valid, uint256 price8) = LPPriceMath.lpPrice(_pair(a0, a1), prices, decs);
-            if (valid && price8 >= LPPriceMath.PRICE_UNIT) {
-                found = d;
-                break;
-            }
+        Valuation memory v = Valuation({
+            prices: _pair(price0, price1),
+            decs: new uint8[](TOKEN_COUNT),
+            sO: ClPriceMath.oracleSqrtPrice(price0, price1, d0, d1)
+        });
+        (v.decs[0], v.decs[1]) = (d0, d1);
+        uint8 stored = _poolUnitExp[cfg.pool];
+        if (stored != 0) {
+            k = stored - 1;
+        } else {
+            (int24 refLower, int24 refUpper) = _referenceRange(v.sO, cfg.tickSpacing);
+            uint8 e = _firstWorthOneDollar(v, refLower, refUpper, LPPriceMath.MIN_VAULT_DECIMALS, MAX_REFERENCE_EXP);
+            // e <= MAX_REFERENCE_EXP = 34, so k = e + 2 - 18 <= MAX_UNIT_EXP = 18.
+            k = e + UNIT_EXP_HEADROOM > LPPriceMath.MAX_VAULT_DECIMALS
+                ? e + UNIT_EXP_HEADROOM - LPPriceMath.MAX_VAULT_DECIMALS
+                : 0;
         }
-        if (found == 0) revert InvalidPool();
-        return found;
+        d = _firstWorthOneDollar(
+            v, cfg.tickLower, cfg.tickUpper, LPPriceMath.MIN_VAULT_DECIMALS + k, LPPriceMath.MAX_VAULT_DECIMALS + k
+        ) - k;
+    }
+
+    /// @dev Reads the token decimals, finds `d` and the pool's `k` (`_unitDecimals`), writes the market and, at the
+    /// pool's first binding, the pool's exponent; returns `d`.
+    function _storeMarket(
+        uint256 marketId,
+        ClMarketConfig memory cfg,
+        uint256 price0,
+        uint256 price1
+    ) private returns (uint8 d) {
+        uint8 d0 = _tokenDecimals(cfg.token0);
+        uint8 d1 = _tokenDecimals(cfg.token1);
+        uint8 k;
+        (d, k) = _unitDecimals(cfg, d0, d1, price0, price1);
+        Market storage m = _markets[marketId];
+        m.cfg = cfg;
+        m.decimals0 = d0;
+        m.decimals1 = d1;
+        m.unitExp = k;
+        if (_poolUnitExp[cfg.pool] == 0) _poolUnitExp[cfg.pool] = k + 1;
+    }
+
+    /// @dev The smallest `e` in `[from, to]` whose `10^e` liquidity on `[tickLower, tickUpper]` at the listing price
+    /// clamped to the range is worth at least $1 at the listing prices (`LPPriceMath.lpPrice`); `InvalidPool` when none
+    /// is (a market range worth less than 1/100 of its pool's reference range per unit of liquidity).
+    function _firstWorthOneDollar(
+        Valuation memory v,
+        int24 tickLower,
+        int24 tickUpper,
+        uint8 from,
+        uint8 to
+    ) private pure returns (uint8) {
+        uint160 sa = ClPriceMath.sqrtRatioAtTick(tickLower);
+        uint160 sb = ClPriceMath.sqrtRatioAtTick(tickUpper);
+        for (uint8 e = from; e <= to; ++e) {
+            if (_worthOneDollar(v, sa, sb, 10 ** e)) return e;
+        }
+        revert InvalidPool();
+    }
+
+    /// @dev Whether `liquidity` on `[sa, sb]` at the listing price clamped to the range is worth at least $1 at the
+    /// listing prices (`LPPriceMath.lpPrice`, one raw unit off each token).
+    function _worthOneDollar(
+        Valuation memory v,
+        uint160 sa,
+        uint160 sb,
+        uint256 liquidity
+    ) private pure returns (bool) {
+        (uint256 a0, uint256 a1) = ClPriceMath.amountsForLiquidity(ClPriceMath.clamp(v.sO, sa, sb), sa, sb, liquidity);
+        (bool valid, uint256 price8) = LPPriceMath.lpPrice(_pair(a0, a1), v.prices, v.decs);
+        return valid && price8 >= LPPriceMath.PRICE_UNIT;
+    }
+
+    /// @dev The pool's reference range: the one tick spacing `[t, t + s]` holding the tick of the listing price
+    /// (`SPEC-ORC-005`). It always lies inside the usable ticks: listing prices lie in `[1, MAX_ROUTE_ANSWER = 10^12]`
+    /// and token decimals in `[0, 18]`, so the raw price ratio lies in `[10^-30, 10^30]` and `|t| <= 690,776`, while the
+    /// usable ticks reach at least `±880,237` for every spacing up to Slipstream's largest, 6,931.
+    function _referenceRange(
+        uint160 sO,
+        int24 spacing
+    ) private pure returns (int24 lower, int24 upper) {
+        int24 tick = ClPriceMath.tickAtSqrtRatio(sO);
+        // Floor of tick / spacing toward −∞; Solidity truncates toward zero.
+        // forge-lint: disable-next-line(divide-before-multiply)
+        lower = (tick / spacing) * spacing;
+        if (lower > tick) lower -= spacing;
+        upper = lower + spacing;
     }
 
     /// @dev Token decimals read at listing; `InvalidPool` for a token without `decimals()` or above 18.

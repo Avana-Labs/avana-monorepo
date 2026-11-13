@@ -200,7 +200,7 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 
 ### `ar12_wind_down.py`
 
-The wind-down ramp `LT(e) = LT0 − ⌊(LT0 − LTf) × min(e, R) / R⌋` for `LT0 > LTf`, else `LT0`, with `LTf = 5,000` bps and `R = 30` days (2.8 `REQ-CONFIG-080`).
+The one-step offboarding target `T = ⌊LT0 × 5,000 / 10,000⌋` bps, published by `setMarketOffboarding` with the earliest date `offboardedAt + 5 days`, to which the Aave DAO lowers the threshold once (2.8 `REQ-CONFIG-080`, 3.8 `MKT-059`).
 
 | ID | Statement | Verifies | Assumptions / bounds | Result |
 |---|---|---|---|---|

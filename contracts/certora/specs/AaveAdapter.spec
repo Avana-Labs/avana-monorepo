@@ -753,6 +753,7 @@ rule repayWithCollateralNeverRaisesDebtAndRepaysFirst(AaveAdapter.RepayWithColla
         "debt remains and Aave's HF fell below max(HF before, minHealthFactor)";
     assert vtBurnedFrom[vt][proxy] - burnedBefore == to_mathint(p.units),
         "the release burned other than p.units from the proxy";
+    assert debtAssetToWallet >= p.minAssetOut, "the wallet received less than the caller's minAssetOut";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

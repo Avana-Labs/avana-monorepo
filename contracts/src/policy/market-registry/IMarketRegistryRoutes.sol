@@ -33,13 +33,15 @@ interface IMarketRegistryRoutes {
     /// backup slot that answers `getIsSeized() == false`, `getIsFrozen() == false` and `getExposureCap() > 0`
     /// (REQ-ROUTE-002, Q-341), and unless no token among `token`, `debtAsset` and `route.intermediates()` has an
     /// ERC-1820 `ERC777Token` implementer (Q-342). Each of these reads must return exactly the expected length; a
-    /// revert or a shorter or longer answer refuses the route. Emits `RouteSet`.
+    /// revert or a shorter or longer answer refuses the route. A different route the slot held before leaves the
+    /// slot's previously approved set (REQ-ROUTE-017), so only the slot's current route can be restored. Emits
+    /// `RouteSet`.
     /// @param marketId Market identifier.
     /// @param token Pool token sold.
     /// @param debtAsset Debt asset bought.
     /// @param kind 0 primary, 1 backup.
     /// @param route Swap route contract (`ISettlementRoute`).
-    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-MREG-035, REQ-ROUTE-002, REQ-ROUTE-005, Q-341, Q-342, Q-379
+    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-MREG-035, REQ-ROUTE-002, REQ-ROUTE-005, REQ-ROUTE-017, Q-341, Q-342, Q-379
     function setRoute(
         uint256 marketId,
         address token,
@@ -63,7 +65,8 @@ interface IMarketRegistryRoutes {
     ) external;
 
     /// @notice Re-enables a previously approved swap route for a slot.
-    /// @dev Short delay. Reverts `NotPreviouslyApproved` unless the address was set for the slot by `setRoute`, and
+    /// @dev Short delay. Reverts `NotPreviouslyApproved` unless the address was set for the slot by `setRoute` and no
+    /// later `setRoute` replaced it, and
     /// `InvalidRoute` when the route checks of `setRoute` fail at the restoring block, the GSM health check and the
     /// ERC-777 check included: a GSM frozen since the route was set keeps it disabled (REQ-ROUTE-019). Emits
     /// `RouteRestored`.

@@ -317,7 +317,7 @@ Z3 checks every formula in exact integers, or at Solidity bit widths where overf
 | Folder | Covers | Scripts | Proved | Counterexamples (deliberate) | Computed |
 |---|---|---|---|---|---|
 | [`z3/units-oracle/`](spec/05-verification/z3/units-oracle/) | Vault-token units and decimals, LPOracle and DebtOracle math, price states, backing ledger, cap counters | 16 | 212 | 40 | 27 |
-| [`z3/aave-risk/`](spec/05-verification/z3/aave-risk/) | Health factor on Aave V4 `a3ef63e`, opening gate, liquidation sizing and bonus, repay, risk premium, caps, breakers, wind-down ramp | 13 | 149 | 12 | 55 |
+| [`z3/aave-risk/`](spec/05-verification/z3/aave-risk/) | Health factor on Aave V4 `a3ef63e`, opening gate, liquidation sizing and bonus, repay, risk premium, caps, breakers, offboarding target | 13 | 149 | 12 | 55 |
 | [`z3/settlement/`](spec/05-verification/z3/settlement/) | Net bonus and slippage, recovery floor, per-leg minimums, caller top-up, waterfall, payout escrow, First-Loss coverage | 17 | 199 | 58 | 33 |
 | [`z3/governance/`](spec/05-verification/z3/governance/) | Timelock delays, execution window and expiry, delay floor, short-delay allowlist, cancel rights, pause state, market-count limit | 3 | 31 | 4 | — |
 | [`z3/amm-pricing/`](spec/05-verification/z3/amm-pricing/) | Fair-composition LP pricing for concentrated liquidity, constant product, StableSwap and weighted pools | 3 | 50 | 9 | 16 |

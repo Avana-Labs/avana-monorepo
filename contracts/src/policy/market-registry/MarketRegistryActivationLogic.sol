@@ -153,10 +153,16 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         IAaveV4Spoke s = IAaveV4Spoke(m.spoke);
         uint16 cf = s.getDynamicReserveConfig(m.reserveId, s.getReserve(m.reserveId).dynamicConfigKey).collateralFactor;
         m.status = MarketStatus.Offboarding;
-        l.windDown[marketId] =
-        // Block timestamps and chain identifiers fit 64 bits.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        WindDownState({offboardedAt: uint64(block.timestamp), lastStepAt: 0, startLtBps: cf, currentLtBps: cf});
+        l.windDown[marketId] = WindDownState({
+            // Block timestamps and chain identifiers fit 64 bits.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            offboardedAt: uint64(block.timestamp),
+            unusedLastStepAt: 0,
+            startLtBps: cf,
+            // At most cf, a uint16.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            targetLtBps: uint16((uint256(cf) * OFFBOARD_TARGET_SHARE_BPS) / _BPS)
+        });
         emit MarketOffboarding(marketId);
     }
 

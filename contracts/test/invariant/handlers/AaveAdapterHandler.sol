@@ -376,6 +376,7 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
             debtReserveId: w.ghoReserve,
             minAmounts: _mins(),
             minDebtRepaid: 0,
+            minAssetOut: 0,
             deadline: _deadline(),
             minHealthFactor: 0
         });

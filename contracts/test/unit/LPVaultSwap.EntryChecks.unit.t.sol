@@ -8,6 +8,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
@@ -148,8 +149,8 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
         _expectLiquidateRevert(keeper, _params(carol, 1950e6), _err(ILPVaultSwapErrors.UnknownProxy.selector));
     }
 
-    /// @notice `UnknownDebtReserve(r)` for a reserve the MarketRegistry has not enabled for the Spoke, for an enabled
-    /// record with no asset, and for a reserve the Spoke reports not borrowable.
+    /// @notice `UnknownDebtReserve(r)` for a reserve the MarketRegistry has not enabled for the Spoke and for an enabled
+    /// record with no asset; a reserve the Spoke reports not borrowable is still liquidated.
     // TEST-055 verifies: REQ-SWAP-087, REQ-SWAP-095
     function test_TEST_055_unknownDebtReserve() public {
         LiquidationParams memory p = _params(proxy, 1950e6);
@@ -167,11 +168,10 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
         IAaveV4Spoke.ReserveConfig memory cfg = IAaveV4Spoke(aave.cdpSpoke).getReserveConfig(usdcReserveId);
         cfg.borrowable = false;
         vm.mockCall(aave.cdpSpoke, abi.encodeCall(IAaveV4Spoke.getReserveConfig, (usdcReserveId)), abi.encode(cfg));
-        _expectLiquidateRevert(
-            keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, usdcReserveId)
-        );
+        // An approved reserve Aave reports not borrowable is still liquidated (REQ-SWAP-087, ATTACK-200).
+        LiquidationResult memory r = _liquidateAs(keeper, p);
+        assertGt(r.unitsSeized, 0, "borrowing off: liquidated");
         vm.clearMockedCalls();
-        _liquidateAs(keeper, p);
     }
 
     /// @notice `NotLiquidatable` at `HF ≥ 1`; LPVaultSwap never recomputes the health factor.

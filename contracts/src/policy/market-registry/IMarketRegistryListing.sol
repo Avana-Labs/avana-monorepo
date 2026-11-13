@@ -97,11 +97,12 @@ interface IMarketRegistryListing {
     /// 86,400 s, so no fixed 3,600 s bound applies, AMMN-INT-01), and `def.replacedSlot == None`. A definition with an
     /// empty alternate and standby route is a monitoring-only listing (REQ-CONFIG-021): only the primary route's leg
     /// checks run; the token can then serve only a fixed-price debt reserve (`enableDebtReserve` refuses it otherwise)
-    /// and `listCollateralMarket` refuses it as a pool token until `setPriceSource` gives it three routes. Emits
-    /// `TokenListed`.
+    /// and `listCollateralMarket` refuses it as a pool token until `setPriceSource` gives it three routes. Reverts
+    /// `ListingCheckFailed("erc777")` for a token with an ERC-1820 `ERC777Token` implementer (Q-342), read as the route
+    /// check reads it. Emits `TokenListed`.
     /// @param token Pool token or debt asset.
     /// @param def Token definition.
-    /// @custom:spec REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-MREG-027, Q-248, Q-274
+    /// @custom:spec REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-MREG-027, Q-248, Q-274, Q-342
     function listToken(
         address token,
         TokenDef calldata def

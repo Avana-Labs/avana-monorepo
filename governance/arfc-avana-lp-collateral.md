@@ -254,7 +254,7 @@ Aave V4 only lets a Spoke burn its own supply to clear a deficit, which is why e
 
 Avana Labs publishes weekly usage and monthly revenue reports per chain: debt and collateral by market, concentration, health factors, liquidations, first-loss reserve usage, bad debt, oracle incidents, pauses, breaker trips and alerts, credit-line and supply usage, and fees earned. Each quarter it also reports frontend-fee revenue per chain, separately from the liquidation fee share.
 
-To offboard a market, a 12-hour timelock operation and an Aave reserve freeze stop new pledges and borrowing at once. After five days' public notice, the market's liquidation threshold falls once a day over 30 days to half its listed value, so remaining borrowers can repay in time. Debt is never cancelled and there is no force-close; repayment, withdrawal and liquidation stay open.
+To offboard a market, a 12-hour timelock operation and an Aave reserve freeze stop new pledges and borrowing at once. Avana publishes the target liquidation threshold, half the market's threshold at that moment, and the earliest date, five days later. After that public notice, an Aave DAO payload lowers the market's liquidation threshold once, to the target; remaining borrowers have the five days to repay or add collateral. Debt is never cancelled and there is no force-close; repayment, withdrawal and liquidation stay open.
 
 ## Verification
 

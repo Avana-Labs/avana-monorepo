@@ -265,7 +265,8 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
             lock,
             address(timelock),
             address(new MockNFPM(address(v3Factory))),
-            address(v3Factory)
+            address(v3Factory),
+            12
         );
         for (uint256 i = 0; i < getters.length; ++i) {
             uint256 g0 = gasleft();

@@ -1441,6 +1441,78 @@
       "reason": "The vault token is Avana's own IERC20Metadata token (VaultToken), which implements name() and symbol(); the Lens reads them only for display (REQ-LENS-045). Test: marketIdentity.",
       "approval": "pending (Josue)",
       "review": "Lens (wave 1), new site"
+    },
+    {
+      "fingerprint": "d4cbdc9f6e57315a",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "reason": "tick / spacing in _referenceRange: spacing is the pool's tick spacing, checked > 0 by ClPriceMath.isUsableRange in bindMarket before the decimals search runs (REQ-AMM-CORE-003). Covered by TEST-264.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "10c534d22b3204fe",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "reason": "MIN_TICK / spacing in _referenceRange; spacing > 0 as for d4cbdc9f6e57315a.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "cfad8484d236b74f",
+      "check": "Division by zero not prevented",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "reason": "MAX_TICK / spacing in _referenceRange; spacing > 0 as for d4cbdc9f6e57315a.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "116469fafdc38dc5",
+      "check": "Division by zero not prevented",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "reason": "Division by the constant _BPS = 10,000 (offboarding target, REQ-CONFIG-080). Covered by TEST-213.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "bef835a540778658",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "reason": "The transfer runs only when the watched token's balance rose (balance > balanceBefore), so the amount is never 0 (REQ-HELPER-008). Covered by TEST-174.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "cfeab2e9659cb94b",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "Not a signature: the hash binds the repay-with-collateral session's unwind minimums in transient storage, compared with the hash of the array LPVaultSwap passes back in the same transaction (REQ-ADAPTER-080, REQ-SWAP-106). Covered by TEST-239.",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "96dd20c6504a476d",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol",
+      "reason": "As cfeab2e9659cb94b: the hash of one zero per market token for an empty minAmounts, the normalised array LPVaultSwap passes to deleverageRelease (REQ-ADAPTER-080). Covered by TEST-239 (emptyMinAmountsMatchesTheSession).",
+      "approval": "pending review (approved pattern)",
+      "review": "fixmed (adversarial-review fixes 2026-11-12)"
+    },
+    {
+      "fingerprint": "b4e79c31cb5ef4dc",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/SpeedLimitMath.sol",
+      "reason": "uint64(nowTs) of a block timestamp, far below 2^64 seconds (PROP-110 assumes timestamps < 2^40). Group E (timestamp casts). Covered by TEST-322, PROP-110.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "958bc972be335af2",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/SpeedLimitMath.sol",
+      "reason": "uint64(start + window) where start + window <= nowTs < 2^64, stated in the comment. Group E (timestamp casts). Covered by TEST-322, PROP-110.",
+      "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
+      "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     }
   ]
 }

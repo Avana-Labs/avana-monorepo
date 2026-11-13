@@ -102,7 +102,8 @@ interface ICollateralizationErrors {
     /// @custom:spec REQ-VAULT-050, REQ-VAULT-115
     error SeizureMismatch();
 
-    /// @notice The proxy's supplied-share drop since `beginSeizure` differs from the seized units.
+    /// @notice The proxy's supplied-share drop since `beginSeizure` is smaller than the seized units, or is nonzero
+    /// while no units were seized.
     /// @custom:spec REQ-VAULT-051, REQ-VAULT-116, SPEC-BACK-007
     error DebitMismatch();
 

@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
 import {IAvanaTimelockGovernance} from "../../src/governance/timelock/IAvanaTimelockGovernance.sol";
+import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
 import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
@@ -57,7 +58,17 @@ contract AvanaTimelockHalmosTest is Test {
         SelectorPair[] memory shortList =
             TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
         SelectorPair[] memory daoList = TimelockLaunchLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
-        timelock = new AvanaTimelock(proposers, executors, cancellers, dao, NORMAL_DELAY, true, shortList, daoList);
+        timelock = new AvanaTimelock(
+            proposers,
+            executors,
+            cancellers,
+            dao,
+            NORMAL_DELAY,
+            true,
+            shortList,
+            daoList,
+            GovernedTargets(address(parameterStore), address(marketRegistry), address(lpVaultSwap))
+        );
     }
 
     function _one(

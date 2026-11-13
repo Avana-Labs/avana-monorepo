@@ -56,16 +56,18 @@ interface IAvanaTimelockErrors {
     error UpdateDelayDisabled();
 
     /// @notice `setShortDelaySelector` tried to enable a pair outside the immutable `SHORT_ELIGIBLE` set, or the
-    /// constructor received a pair whose target is the timelock or whose selector is a role, upgrade or
-    /// initializer selector, none of which may ever take the short delay.
+    /// constructor received a pair whose target is the timelock, whose selector is a role, upgrade or initializer
+    /// selector, none of which may ever take the short delay, or whose target is not the deployed contract its
+    /// selector belongs to.
     /// @param target Rejected target.
     /// @param selector Rejected selector.
     /// @custom:spec REQ-ACCESS-142, REQ-ACCESS-152, REQ-ACCESS-155
     error InvalidShortDelaySelector(address target, bytes4 selector);
 
-    /// @notice The constructor received a DAO-only cancel pair whose target is the timelock or whose selector is a
+    /// @notice The constructor received a DAO-only cancel pair whose target is the timelock, whose selector is a
     /// role, upgrade, flash-source, deployment-operation, cross-Hub or initializer selector, which would shield that
-    /// change from every canceller but the Aave governance executor.
+    /// change from every canceller but the Aave governance executor, or whose target is not the deployed contract its
+    /// selector belongs to.
     /// @param target Rejected target.
     /// @param selector Rejected selector.
     /// @custom:spec REQ-ACCESS-181
@@ -84,4 +86,9 @@ interface IAvanaTimelockErrors {
     /// canceller, or a DAO canceller without `CANCELLER_ROLE`.
     /// @custom:spec REQ-ACCESS-183, REQ-ACCESS-160
     error InvalidRoleHolders();
+
+    /// @notice The constructor's governed targets (ParameterStore, MarketRegistry, LPVaultSwap) hold a zero address,
+    /// repeat one another or name the timelock.
+    /// @custom:spec REQ-ACCESS-155, REQ-ACCESS-156
+    error InvalidGovernedTargets();
 }
