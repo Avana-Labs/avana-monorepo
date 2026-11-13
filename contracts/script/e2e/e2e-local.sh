@@ -25,7 +25,7 @@ export RPC_ANVIL="http://127.0.0.1:${PORT}"
 OUT="$CONTRACTS/deployments-local/anvil"
 LOG="$OUT/logs"
 STATUS="$OUT/e2e-status.json"
-STEPS="${E2E_STEPS:-deploy day2 manifest services scenarios}"
+STEPS="${E2E_STEPS:-deploy day2 hostile manifest services scenarios}"
 # E2E_RESUME=<step name> reloads the anvil state the last run saved (anvil-state.json) and runs the deploy steps from
 # that one on, keeping the earlier outputs: a failed step is fixed and rerun without redeploying the whole world.
 RESUME="${E2E_RESUME:-}"
@@ -160,7 +160,7 @@ place_executor() {
 
 if [[ " $STEPS " == *" deploy "* ]]; then
   # A fresh deployment: no output of an earlier run may stand in for this one's.
-  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets,listing-metadata,config-day2}.json \
+  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets,listing-metadata,config-day2,config-exotic,config-hostile-fot,config-hostile-rebase,config-hostile-nodec,config-hostile-feeswitch}.json \
     "$OUT"/operation-*.json "$OUT"/aip-*.json
   [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337 "$OUT/listing-content" &&
     find "$LOG" -name '*.log' ! -name anvil.log -delete
@@ -192,40 +192,110 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     run_script 09-execute-listing-activate
 fi
 
-# Day 2: the operator's later changes (script/e2e/day2-additions.ts: a Hub with its Spokes, a lend asset, a borrowable
-# asset on a listed Spoke, a collateral token and two markets) through the same named steps, each acting only on what
-# the config adds; then every step once more, which must do nothing. Later steps read the day-2 config.
+# Later releases: the operator's changes after the first deployment, through the same named steps, each acting only
+# on what the config adds. Day 2 (script/e2e/day2-additions.ts: a Hub with its Spokes, a lend asset, a borrowable asset
+# on a listed Spoke, a collateral token and two markets), then the exotic pass (script/e2e/exotic-additions.ts: a Hub
+# lending a meme coin, a governance token, an 8-decimals token and USDC against meme, governance, WBTC-type and thin
+# pools on Uniswap v3 and Slipstream). After the last one, every step once more, which must do nothing. Later steps
+# read the last config.
+grow() { # phase generator config
+  node "$2" --network anvil > "$LOG/${1}config.log" 2>&1 || { record "${1}config" fail "see $LOG/${1}config.log"; return 1; }
+  export AVANA_CONFIG="$3"
+  PHASE="$1:"
+  run_script 01-aave-v4 &&
+    run_script 04-access-operations &&
+    advance 432001 "${PHASE}wait-access-operations" &&
+    run_script 05-execute-access-operations &&
+    run_script 06-aave-deployment-aip &&
+    run_script 07-deploy-coverage-spokes &&
+    run_script 08-aave-loss-layers-aip &&
+    run_script 07-fund-coverage-spokes &&
+    run_script 09-listing-setup &&
+    advance 432001 "${PHASE}wait-listing-setup" &&
+    run_script 09-execute-listing-setup &&
+    run_script 09-debt-oracles &&
+    run_script 10-aave-debt-reserves-aip &&
+    run_script 09-market-metadata &&
+    run_script 09-listing-markets &&
+    advance 432001 "${PHASE}wait-listing-markets" &&
+    run_script 09-execute-listing-markets &&
+    run_script 10-aave-markets-aip &&
+    run_script 09-listing-activate &&
+    advance 43201 "${PHASE}wait-listing-activate" &&
+    run_script 09-execute-listing-activate
+  local ok=$?
+  PHASE=""
+  return $ok
+}
+GREW=""
 if [[ " $STEPS " == *" day2 "* ]]; then
-  if node script/e2e/day2-additions.ts --network anvil > "$LOG/day2-config.log" 2>&1; then
-    export AVANA_CONFIG=deployments-local/anvil/config-day2.json
-    PHASE=day2:
-    run_script 01-aave-v4 &&
-      run_script 04-access-operations &&
-      advance 432001 day2:wait-access-operations &&
-      run_script 05-execute-access-operations &&
-      run_script 06-aave-deployment-aip &&
-      run_script 07-deploy-coverage-spokes &&
-      run_script 08-aave-loss-layers-aip &&
-      run_script 07-fund-coverage-spokes &&
-      run_script 09-listing-setup &&
-      advance 432001 day2:wait-listing-setup &&
-      run_script 09-execute-listing-setup &&
-      run_script 09-debt-oracles &&
-      run_script 10-aave-debt-reserves-aip &&
-      run_script 09-market-metadata &&
-      run_script 09-listing-markets &&
-      advance 432001 day2:wait-listing-markets &&
-      run_script 09-execute-listing-markets &&
-      run_script 10-aave-markets-aip &&
-      run_script 09-listing-activate &&
-      advance 43201 day2:wait-listing-activate &&
-      run_script 09-execute-listing-activate &&
-      for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-coverage-spokes 08-aave-loss-layers-aip \
-        07-fund-coverage-spokes 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
-        09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
-    PHASE=""
+  grow day2 script/e2e/day2-additions.ts deployments-local/anvil/config-day2.json && GREW=1
+fi
+if [[ " $STEPS " == *" exotic "* ]]; then
+  if [ -f "$OUT/config-day2.json" ]; then
+    grow exotic script/e2e/exotic-additions.ts deployments-local/anvil/config-exotic.json && GREW=1
   else
-    record day2-config fail "see $LOG/day2-config.log"
+    record exotic not-run "needs the day-2 config (run day2 first)"
+  fi
+fi
+if [ -n "$GREW" ]; then
+  for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-coverage-spokes 08-aave-loss-layers-aip \
+    07-fund-coverage-spokes 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
+    09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
+fi
+
+# Hostile tokens (REQ-ARCH-014): each case of script/e2e/hostile-additions.ts runs the release steps from an anvil
+# snapshot, which is reverted afterwards, and must be refused at some step with the expected error. A case that lists
+# is a finding. Steps that pass before the refusal (the Aave side lists the asset, setup is scheduled) are reverted too.
+HOSTILE_FLOW=(01-aave-v4 04-access-operations @432001 05-execute-access-operations 06-aave-deployment-aip
+  07-deploy-coverage-spokes 08-aave-loss-layers-aip 07-fund-coverage-spokes 09-listing-setup @432001
+  09-execute-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata 09-listing-markets @432001
+  09-execute-listing-markets 10-aave-markets-aip 09-listing-activate @43201 09-execute-listing-activate)
+hostile() { # case refusal-regex
+  local name="hostile:$1" cfg="deployments-local/anvil/config-hostile-$1.json" snap failed="" log="" st
+  skipped "$name" && return 0
+  node script/e2e/hostile-additions.ts --network anvil --case "$1" > "$LOG/hostile-$1-config.log" 2>&1 ||
+    { record "$name" fail "see $LOG/hostile-$1-config.log"; return 1; }
+  # The steps also rewrite the deployment outputs (oracles, markets, operations, metadata): kept and put back.
+  local bak="$OUT/.hostile-outputs"
+  rm -rf "$bak" && rsync -a --exclude logs --exclude .hostile-outputs --exclude anvil-state.json "$OUT/" "$bak/"
+  snap="$(cast rpc evm_snapshot --rpc-url "$RPC_ANVIL" | tr -d '"')"
+  for st in "${HOSTILE_FLOW[@]}"; do
+    if [[ "$st" == @* ]]; then
+      cast rpc evm_increaseTime "${st#@}" --rpc-url "$RPC_ANVIL" >/dev/null && cast rpc evm_mine --rpc-url "$RPC_ANVIL" >/dev/null &&
+        node script/e2e/refresh-feeds.ts --network anvil >> "$LOG/feeds.log" 2>&1
+      continue
+    fi
+    log="$LOG/hostile-$1-$st.log"
+    AVANA_CONFIG="$cfg" AVANA_NETWORK=anvil AVANA_RPC_URL="$RPC_ANVIL" AVANA_DEPLOYER="$DEPLOYER" \
+      script/deploy/step.sh "$st" > "$log" 2>&1 || { failed="$st"; break; }
+  done
+  cast rpc evm_revert "$snap" --rpc-url "$RPC_ANVIL" >/dev/null && cast rpc evm_mine --rpc-url "$RPC_ANVIL" >/dev/null &&
+    node script/e2e/refresh-feeds.ts --network anvil >> "$LOG/feeds.log" 2>&1
+  rsync -a --delete --exclude logs --exclude .hostile-outputs --exclude anvil-state.json --exclude 'config-hostile-*' "$bak/" "$OUT/" &&
+    rm -rf "$bak"
+  if [ -z "$failed" ]; then
+    record "$name" fail "listed: no step refused it (REQ-ARCH-014); see $LOG/hostile-$1-*.log"
+    return 1
+  fi
+  # Only the step's error lines count (paths and config names in the log could match the pattern).
+  local err
+  err="$(grep -iE 'error|cannot be listed|revert' "$log" | grep -E "$2" | head -1)"
+  if [ -n "$err" ]; then
+    record "$name" pass "refused at $failed: $(echo "$err" | sed -E 's/^ *//' | cut -c1-160)"
+    return 0
+  fi
+  record "$name" fail "refused at $failed, not with /$2/: see $log: $(grep -E 'Error|revert' "$log" | head -2 | tr '\n' ' ')"
+  return 1
+}
+if [[ " $STEPS " == *" hostile "* ]]; then
+  if [ -f "$OUT/config-day2.json" ] && [ -f "$OUT/avana.json" ]; then
+    hostile fot 'transfer fee|TransferFee|FeeOnTransfer'
+    hostile rebase 'rebas|balance changed'
+    hostile nodec 'InvalidPool|decimals'
+    hostile feeswitch 'TransferFeeActive|InsufficientTransferred|transfer fee'
+  else
+    record hostile not-run "needs the day-2 config (run day2 first)"
   fi
 fi
 
