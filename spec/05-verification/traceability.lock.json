@@ -14836,7 +14836,7 @@
     ]
   },
   "REQ-AMM-CORE-019": {
-    "hash": "4fec276c2ab87be6",
+    "hash": "afa96faa9d9a7291",
     "checks": [
       "TEST-017"
     ]
@@ -21563,7 +21563,7 @@
     ]
   },
   "REQ-ORACLE-022": {
-    "hash": "cda83a5ee3f7588b",
+    "hash": "7870e2c84374bb37",
     "checks": [
       "DebtOracleEvaluation",
       "FV-CTL-112",
@@ -21798,7 +21798,7 @@
     ]
   },
   "REQ-ORACLE-036": {
-    "hash": "82d0dbc73bbda5b8",
+    "hash": "0b0db6f6d971ffa3",
     "checks": [
       "ILPOracle",
       "TEST-159"
@@ -22654,7 +22654,7 @@
     ]
   },
   "REQ-ORACLE-096": {
-    "hash": "dc98c62362fc6615",
+    "hash": "24510bb149fa0eca",
     "checks": [
       "DebtOracle",
       "FV-CTL-127",
@@ -22904,6 +22904,18 @@
       "TEST-276",
       "TEST-294"
     ]
+  },
+  "REQ-ORACLE-108": {
+    "hash": "435a76efe38f5283",
+    "checks": []
+  },
+  "REQ-ORACLE-109": {
+    "hash": "f13d8f7422a9b3de",
+    "checks": []
+  },
+  "REQ-ORACLE-110": {
+    "hash": "2b84c7f9ea9ffaaa",
+    "checks": []
   },
   "REQ-PROXY-001": {
     "hash": "ede172afbeccdc1d",
@@ -24529,7 +24541,7 @@
     ]
   },
   "REQ-PSTORE-033": {
-    "hash": "4360eb7882e7e455",
+    "hash": "42fb3c6479d83f36",
     "checks": [
       "IParameterStoreViews",
       "OracleInputsLayout",

@@ -85,7 +85,7 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
         IAaveRiskConfigurator(aave.spokeConfigurator).updateLiquidationFee(aave.cdpSpoke, vtReserveId, key, feeBps);
     }
 
-    // TEST-055 verifies: ATTACK-202, ATTACK-120, SPEC-BACK-007, REQ-VAULT-051, REQ-SWAP-003
+    // TEST-055 verifies: ATTACK-202, ATTACK-120, SPEC-BACK-007, REQ-VAULT-051, REQ-VAULT-176, REQ-SWAP-003
     /// @notice H1: with `liquidationFee > 0` on the vault-token reserve's key, Aave moves fee shares inside the Hub to
     /// its fee receiver, so the proxy's share drop exceeds the units LPVaultSwap receives. The liquidation settles: the
     /// seized units are debited and unwound to LPVaultSwap, the fee units are debited into the pending balance, the
@@ -115,7 +115,7 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
         );
     }
 
-    // TEST-055 verifies: ATTACK-202, SPEC-BACK-007, REQ-VAULT-051
+    // TEST-055 verifies: ATTACK-202, SPEC-BACK-007, REQ-VAULT-051, REQ-VAULT-176
     /// @notice Over any liquidation fee Aave can set (1 bp to 50 %), the liquidation settles, the fee units go to the
     /// pending balance and the backing gap does not move.
     function testFuzz_TEST_055_anyLiquidationFeeIsReconciled(

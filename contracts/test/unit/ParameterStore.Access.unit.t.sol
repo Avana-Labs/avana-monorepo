@@ -193,7 +193,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         new ParameterStoreTightenLogic(address(0), address(registry), 12, false);
     }
 
-    // TEST-206 verifies: REQ-PSTORE-010, Q-231, REQ-ACCESS-043
+    // TEST-206 verifies: REQ-PSTORE-010, Q-231, REQ-ACCESS-043; shared: the same probe shows the store has no interest-fee selector and only the liquidation fee share
     // TEST-278 verifies: REQ-PSTORE-025, Q-381, REQ-ACCESS-146
     function test_TEST_278_noMinimumDebtOrInterestFeeSelector() public view {
         bytes4[4] memory absent = [

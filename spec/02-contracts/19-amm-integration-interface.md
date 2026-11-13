@@ -120,4 +120,11 @@ Units: `prices[i]` in USD per whole token, 8 decimals; `amounts[i]` in raw units
 | `REQ-AMM-CORE-016` | A position's pool or shape differs from the market's in any field, including a range one tick spacing wider or narrower | Reverts with `PoolMismatch` or `RangeMismatch`; the pledge reverts and nothing moves. Checked by: MATH-AMM-V3-PRICE-06 (Source: Q-293) |
 | `REQ-AMM-CORE-017` | `bindMarket` for a pool that does not derive from the pinned factory, a misaligned or out-of-bounds shape, fewer than 2 or more than 8 tokens, or an unsupported token | Reverts with `InvalidPool`, `InvalidShape` or the integration's listing error; the listing batch reverts as a whole (Source: Q-291, Q-293, Q-297) |
 | `REQ-AMM-CORE-018` | The AMM protocol reports the pool mid-operation during custody, removal or a quote | Reverts with `PoolLocked`; a quote read under a pool lock counts as a price failure (Source: Q-144, Q-302, Q-305) |
-| `REQ-AMM-CORE-019` | `collectFees` on an integration whose fees compound | Reverts with `FeesRolledIn` (Source: Q-297) |
+
+## Future integrations
+
+The launch integrations, Uniswap v3 and Aerodrome Slipstream, pay fees apart from principal ([2.20](20-uniswap-v3-integration.md), [2.21](21-aerodrome-slipstream-integration.md)). The rules below bind an integration of the kind each row names, and no other: the kind is the set of `IntegrationCapabilities` fields its `capabilities()` returns. While no concrete integration in `contracts/src` returns those fields, no contract is held to these rows; the commit that adds one brings them into its checks.
+
+| ID | Condition | Behavior (revert / pause / fallback) | Integration kind |
+|---|---|---|---|
+| `REQ-AMM-CORE-019` | `collectFees` on an integration whose fees compound | Reverts with `FeesRolledIn` (Source: Q-297) | `feeMode: FeeMode.RolledIn` |

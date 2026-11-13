@@ -149,6 +149,30 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         assertEq(uint8(_state().state), uint8(PriceState.Live));
     }
 
+    // TEST-231 verifies: REQ-ORACLE-095, REQ-ORACLE-028, Q-248
+    /// @notice The disagreement first observed at `T1` is stored; at `T1 + 1,000` the guardian switches token B's
+    /// alternate slot to a standby reading 1.00, which agrees with the primary: the poke that observes the version
+    /// change emits `PriceRouteVersionObserved(1, 0, 1)` and `DisagreementCleared(T1, T1 + 1,000)`, stores
+    /// `disagreeSince = 0` and serves Live.
+    function test_TEST_231_agreeingStandbyClearsDisagreementOnVersionChange() public {
+        oracle.poke();
+        (, uint64 since,,) = oracle.storedTimers();
+        assertEq(since, T1);
+        vm.warp(T1 + 1000);
+        OracleFeedMock standby = _feed("standby");
+        standby.push(int256(ONE), T1 + 1000);
+        registry.setRoutes(address(tokenB), _one(address(pB)), _one(address(standby)), RouteSlot.Alternate);
+        registry.bumpVersion(address(tokenB));
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.PriceRouteVersionObserved(1, 0, 1);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.DisagreementCleared(uint64(T1), uint64(T1 + 1000));
+        assertEq(uint8(oracle.poke()), uint8(PriceState.Live));
+        (, since,,) = oracle.storedTimers();
+        assertEq(since, 0, "cleared by the version change");
+        assertEq(oracle.storedRouteVersion(1), 1);
+    }
+
     // TEST-231 verifies: REQ-ORACLE-095, SPEC-ORC-013, Q-248
     function test_TEST_231_switchNeverDelaysCachedOrExpired() public {
         aB.push(int256(ONE), T1);

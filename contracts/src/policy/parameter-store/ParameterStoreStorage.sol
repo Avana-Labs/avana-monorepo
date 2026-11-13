@@ -56,6 +56,8 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         // Appended for Q-411 (REQ-PSTORE-035); earlier members keep their slots.
         mapping(uint256 marketId => MarketSpeedLimits) marketSpeed;
         mapping(address hub => mapping(address asset => SpeedLimit)) debtSpeed;
+        // Appended for REQ-ORACLE-056: true for a market with a token that is not USD-pegged, which gets no USD band.
+        mapping(uint256 marketId => bool) unbanded;
     }
 
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff))`.
@@ -263,5 +265,25 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         address b
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(a, b));
+    }
+
+    /// @dev The USD band of market `marketId` (REQ-ORACLE-056, SPEC-ORC-011): the chain's band when every token of the
+    /// market is a USD-pegged stable, else `0` and `type(uint256).max`, which every price passes.
+    function _usdBand(
+        uint256 marketId
+    ) internal view returns (uint256 low, uint256 high) {
+        Layout storage $ = _s();
+        if ($.unbanded[marketId]) return (0, type(uint256).max);
+        return ($.g.usdBandLow, $.g.usdBandHigh);
+    }
+
+    /// @dev True unless every token is listed as a USD-pegged stable in the MarketRegistry.
+    function _hasNonStableToken(
+        address[] memory tokens
+    ) internal view returns (bool) {
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            if (!_REGISTRY.getToken(tokens[i]).isUsdStable) return true;
+        }
+        return false;
     }
 }

@@ -10,6 +10,8 @@ import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlem
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @title LPVaultSwapSettlePendingUnitTest
@@ -239,5 +241,69 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         usdcOracle.setState(PriceState.Expired, true);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId));
         lvs.settlePending(MARKET_ID, usdcReserveId);
+    }
+
+    /// @notice The Coverage Spoke pull is checked as LPVaultSwap's balance falling by exactly `Rt` (REQ-SWAP-070): a
+    /// Coverage Spoke that takes nothing, one that takes `Rt - 1`, and one that takes `Rt` but sends 1 more back all
+    /// revert `FundingMismatch` with the units still pending; the same contract taking exactly `Rt` is funded.
+    // TEST-170 verifies: REQ-SWAP-070, REQ-SWAP-071
+    function test_TEST_170_fundPullMismatch() public {
+        PendingCoverageSkimmer skimmer = new PendingCoverageSkimmer(address(usdc));
+        usdc.mint(address(skimmer), 1e6);
+        registry.setCoverageSpoke(aave.hub, address(usdc), address(skimmer));
+        PendingCoverageSkimmer.Mode[3] memory faulty = [
+            PendingCoverageSkimmer.Mode.None, PendingCoverageSkimmer.Mode.OneShort, PendingCoverageSkimmer.Mode.Rebate
+        ];
+        for (uint256 i = 0; i < faulty.length; ++i) {
+            skimmer.setMode(faulty[i]);
+            vm.expectRevert(_err(ILPVaultSwapErrors.FundingMismatch.selector));
+            lvs.settlePending(MARKET_ID, usdcReserveId);
+            assertEq(coll.getPending(address(vt)).units, kept, "pending unchanged");
+            assertEq(vt.balanceOf(address(lvs)), kept, "units still held");
+        }
+        skimmer.setMode(PendingCoverageSkimmer.Mode.Exact);
+        uint256 skimmerBefore = usdc.balanceOf(address(skimmer));
+        (,, uint256 added) = lvs.settlePending(MARKET_ID, usdcReserveId);
+        assertEq(usdc.balanceOf(address(skimmer)), skimmerBefore + added, "exactly R pulled");
+        assertEq(usdc.balanceOf(address(lvs)), 0, "nothing carried");
+        assertEq(usdc.allowance(address(lvs), address(skimmer)), 0, "approval reset");
+    }
+}
+
+/// @title PendingCoverageSkimmer
+/// @notice A Coverage Spoke stand-in for the `fund` pull check of `settlePending`: `fund(amount)` takes nothing
+/// (`None`), `amount - 1` (`OneShort`), `amount` then sends `amount + 1` back (`Rebate`), or exactly `amount` (`Exact`).
+contract PendingCoverageSkimmer {
+    using SafeERC20 for IERC20;
+
+    enum Mode {
+        Exact,
+        None,
+        OneShort,
+        Rebate
+    }
+
+    IERC20 internal immutable _ASSET;
+    Mode public mode;
+
+    constructor(
+        address asset
+    ) {
+        _ASSET = IERC20(asset);
+    }
+
+    function setMode(
+        Mode m
+    ) external {
+        mode = m;
+    }
+
+    function fund(
+        uint256 amount
+    ) external returns (uint256 shares) {
+        if (mode == Mode.None) return 0;
+        shares = mode == Mode.OneShort ? amount - 1 : amount;
+        _ASSET.safeTransferFrom(msg.sender, address(this), shares);
+        if (mode == Mode.Rebate) _ASSET.safeTransfer(msg.sender, amount + 1);
     }
 }

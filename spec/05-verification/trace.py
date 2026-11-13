@@ -17,7 +17,9 @@ marked `listed` in amm-integrations.json lacks a listing method or a passing res
 
 With --strict it also fails when a requirement has no spec-stage check, or (once
 contracts exist) no counting implementation check, only declaration Solidity links or none, a check that did not run
-or failed (with --results), or a TEST tag placed on another row's test.
+or failed (with --results), a TEST tag placed on another row's test, or a Foundry test function under contracts/test
+(`test*`, `invariant*`) not named `test_TEST_NNN_<behavior>`, `testFuzz_TEST_NNN_<behavior>` or
+`invariant_TEST_NNN_<name>` (TEST-008; Halmos `check_*` and hevm `prove*` functions are not Foundry tests).
 
 ID kinds
   Requirements (defined in spec/01-04 as the first `ID` of a list item, table row or heading):
@@ -113,6 +115,22 @@ AMM_STATUS = ("draft", "review", "listed")
 PASS = {"proved", "computed", "holds", "pass"}
 FINDINGS = VERIF / "03-audit-findings.md"
 REVIEW = ROOT / "audit" / "design-review" / "amm-neutral"
+
+
+FOUNDRY_TEST_FN = re.compile(r"^\s*function\s+((?:test|invariant)\w*)\s*\(")
+TEST_NAME = re.compile(r"^(?:test|testFuzz|invariant)_TEST_[0-9]{3}_[A-Za-z0-9]\w*$")
+
+
+def misnamed_tests() -> list[str]:
+    """Foundry test functions under contracts/test whose name does not carry its TEST row in the form of TEST-008."""
+    out = []
+    for path in sorted((ROOT / "contracts" / "test").rglob("*.sol")):
+        for n, line in enumerate(path.read_text(errors="ignore").splitlines(), 1):
+            m = FOUNDRY_TEST_FN.match(line)
+            if m and not TEST_NAME.match(m.group(1)):
+                out.append(f"{path.relative_to(ROOT)}:{n}: test function `{m.group(1)}` is not named "
+                           "test_TEST_NNN_<behavior>, testFuzz_TEST_NNN_<behavior> or invariant_TEST_NNN_<name> (TEST-008)")
+    return out
 
 
 def norm(text: str) -> str:
@@ -372,6 +390,7 @@ def main() -> int:
         warnings.append(f"contracts/{f}:{n}: {cid} tag on `{fn}`, a test of another row; it counts for nothing "
                         f"(name the test for {cid} or give `shared: <reason>`)")
     warnings.extend(results.warnings)
+    warnings.extend(misnamed_tests())
     lock = json.loads(LOCK.read_text()) if LOCK.exists() else {}
     for rid, entry in lock.items():
         if rid not in reqs and not entry.get("retired_to"):

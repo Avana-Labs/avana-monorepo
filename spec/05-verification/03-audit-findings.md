@@ -3418,7 +3418,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-06`) |
 | Resolution | Uniswap v2, Curve StableSwap-NG, Balancer and Uniswap v4 are not listed at launch; each has a readiness section with its pricing model and the guards it must pass before listing: v2 reads `getReserves`, never `balanceOf`, with effective supply including pending `feeTo` liquidity; Curve and Balancer value at the minimum token price and check the pool's reentrancy lock before every read; Uniswap v4 requires a hook allowlist with no remove-liquidity hooks or return deltas; every AMM protocol has a per-block quote-change cap. Uniswap v4 intake checks the `PoolKey` hook address bits on-chain at listing and refuses a position with a subscriber. Changed rules: `INV-078`, `ATTACK-158`, `REQ-AMM-V4-001`, `REQ-AMM-CORE-004`, `REQ-AMM-CORE-012`, `REQ-AMM-CORE-014`, `SPEC-AMM-CORE-001`, `REQ-AMM-CORE-018`. |
 | Status | Resolved in spec — re-verification pending |
-| Verification | `TEST-283` |
+| Verification | `TEST-331` |
 
 #### FINDING-207: Read-only reentrancy and in-transaction pool-state manipulation in v2, Curve and Balancer fair-reserve pricing
 
@@ -3433,7 +3433,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-07`) |
 | Resolution | Uniswap v2, Curve StableSwap-NG, Balancer and Uniswap v4 are not listed at launch; each has a readiness section with its pricing model and the guards it must pass before listing: v2 reads `getReserves`, never `balanceOf`, with effective supply including pending `feeTo` liquidity; Curve and Balancer value at the minimum token price and check the pool's reentrancy lock before every read; Uniswap v4 requires a hook allowlist with no remove-liquidity hooks or return deltas; every AMM protocol has a per-block quote-change cap. Changed rules: `ATTACK-093`, `ATTACK-159`, `REQ-AMM-CORE-004`, `REQ-AMM-CURVE-002`, `REQ-AMM-BAL-002`, `REQ-AMM-CORE-012`, `REQ-AMM-CORE-014`, `SPEC-AMM-CORE-001`, `REQ-AMM-CORE-018`, `REQ-AMM-V3-005`. |
 | Status | Resolved in spec — re-verification pending |
-| Verification | `TEST-283` |
+| Verification | `TEST-328`, `TEST-329`, `TEST-330` |
 
 #### FINDING-208: TWAP buffer sized for 12-second blocks lets a dust-swap griefer keep a Base market Drifting
 

@@ -50,7 +50,7 @@ contract LPVaultSwapAaveV4IntegrationTest is LPVaultSwapUnitBase {
     /// vault token's transfer rule when it calls `liquidationCall` directly; `receiveShares = true` is refused by the
     /// Spoke's reserve setting; LPVaultSwap's `liquidate` seizes.
     // TEST-180 verifies: REQ-SWAP-084, REQ-SWAP-019, INV-013, INV-041, ATTACK-002, Q-116, Q-222
-    // TEST-109 verifies: REQ-SWAP-084, INV-013, Q-116, Q-144
+    // TEST-109 verifies: REQ-SWAP-084, INV-013, Q-116, Q-144; shared: the seizure proof's direct liquidationCall attempts, run on the local Aave V4
     function test_TEST_180_nonLPVaultSwapCallersRevertOnVaultTokenTransfer() public {
         address[2] memory eoas = [keeper, attacker];
         for (uint256 i = 0; i < eoas.length; ++i) {

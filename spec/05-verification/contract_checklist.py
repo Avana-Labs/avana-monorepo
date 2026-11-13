@@ -17,7 +17,9 @@ Each row has one of four states (evidence.py decides which tags count):
   [ ] unlinked   no counting check: no tag, only tags on another row's test, or only tests that use a stand-in
                  (evidence.STAND_INS) for this contract
 For a REQ/SPEC/INV/ATTACK row, a test counts when a tag on it names the row; for a TEST or PROP row, when the test
-or rule is tagged with that TEST/PROP id and (for a TEST id) its function name carries it.
+or rule is tagged with that TEST/PROP id and (for a TEST id) its function name carries it. A TEST row whose
+"Contract / flow" column names several contracts counts for each of them separately: for contract X only through a
+test whose code deploys or calls X's real contract (exercise_names, evidence.exercises).
 
 Usage, from the repository root:
     spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --list
@@ -43,6 +45,11 @@ checklist. Table rows of a shared page that only a pending contract decides, and
 contract, are deferred by name (DEFERRED_ROWS); rows about a deployed chain's configuration, an off-chain sizing rule,
 the keeper and off-chain services, or a CI tool's own run are shown as checked outside contracts/ (OUTSIDE_CONTRACTS),
 with the reason, and are not part of --check.
+
+Rows of a "Future integrations" section (a "## " heading on a contract page, a "### " heading in 5.1) bind an AMM
+integration of the kind their "Integration kind" column names by `IntegrationCapabilities` fields. While no
+`IntegrationCapabilities({...})` literal in contracts/src returns all of those fields, the row is shown as future and is
+not part of --check; the commit that adds such an integration brings the row into scope (future_rows).
 """
 from __future__ import annotations
 
@@ -213,9 +220,16 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-148": "Convex and web app; no test there carries the ID yet",
     "TEST-149": "web, Ponder and keeper; no test there carries the ID yet",
     "TEST-297": "Lend page builders in packages/protocol; no test there carries the ID yet",
+    "REQ-ORACLE-037": "keeper poke schedule (3.6), services/keeper/src/jobs/oraclePoke.ts; its test belongs in "
+                      "services/keeper/test/oraclePoke.test.ts, and no keeper test carries the ID yet",
     # CI tool rows: the row is the CI step itself, and the step's own result is the evidence (no Foundry test can be).
     "TEST-001": "contracts.yml build job: `forge soldeer install` against soldeer.lock, the solc and EVM pins of "
                 "foundry.toml, and the Foundry version check",
+    "TEST-008": "contracts.yml evidence job: `trace.py --strict` fails on a Foundry test function not named "
+                "test_TEST_NNN_…, testFuzz_TEST_NNN_… or invariant_TEST_NNN_… (trace.misnamed_tests) and on a "
+                "requirement without a test or property, and writes the matrix to evidence/traceability.md",
+    "TEST-005": "models.yml contract-checklists job: contracts/script/check-mock-counterparts.py against "
+                "contracts/script/mock-counterparts.json (every mocked external has a fork test on its chain)",
     "TEST-007": "contracts.yml test job: the ci profile's fuzz and invariant runs, and the gate's every-shard rule",
     "TEST-207": "contracts.yml build job: script/check-file-size.sh",
     "TEST-253": "contracts.yml build job and security-fast.sh: `forge fmt --check`, `forge lint`",
@@ -231,6 +245,61 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-137": "security-fast.sh storage-layout step (script/storage-layout.js); the diff against a deployed version "
                 "starts with the first deployment",
 }
+
+
+FUTURE_HEADING = "Future integrations"
+FUTURE_COLUMN = "Integration kind"
+_FUTURE: dict[str, tuple[str, ...]] = {}
+
+
+def _cells(line: str) -> list[str]:
+    return [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+
+
+def future_rows() -> dict[str, tuple[str, ...]]:
+    """ID -> the `IntegrationCapabilities` fields (`feeMode: FeeMode.RolledIn`, ...) of the integration kind its row
+    binds, for every table row of a "Future integrations" section whose header has an "Integration kind" column."""
+    if not _FUTURE:
+        for path in [*sorted(CONTRACT_PAGES.glob("*.md")), TESTS]:
+            level, col = 0, None
+            for line in path.read_text().splitlines():
+                h = re.match(r"^(#+) (.*)$", line)
+                if h:
+                    if h.group(2).strip() == FUTURE_HEADING:
+                        level, col = len(h.group(1)), None
+                    elif level and len(h.group(1)) <= level:
+                        level = 0
+                    continue
+                if not level or not line.startswith("|"):
+                    continue
+                cells = _cells(line)
+                if cells[0] == "ID":
+                    col = cells.index(FUTURE_COLUMN) if FUTURE_COLUMN in cells else None
+                elif col is not None and col < len(cells) and re.fullmatch(rf"`?(?:{tr.REQ_ID}|TEST-[0-9]{{3}})`?", cells[0]):
+                    _FUTURE[cells[0].strip("`")] = tuple(re.findall(r"`([^`]+)`", cells[col]))
+    return _FUTURE
+
+
+_CAPS: list[str] = []
+
+
+def integration_present(fields: tuple[str, ...]) -> bool:
+    """Whether a concrete integration in contracts/src returns every one of `fields` from `capabilities()`: one
+    `IntegrationCapabilities({...})` literal (comments and whitespace ignored) contains them all."""
+    if not _CAPS:
+        for f in sorted((ROOT / "contracts" / "src").rglob("*.sol")):
+            code = ev._strip_comments(f.read_text(errors="ignore"))
+            _CAPS.extend(re.sub(r"\s+", "", m.group(1))
+                         for m in re.finditer(r"IntegrationCapabilities\s*\(\s*\{(.*?)\}\s*\)", code, re.S))
+        _CAPS.append("")  # the scan ran
+    want = [re.sub(r"\s+", "", x) for x in fields]
+    return bool(want) and any(all(w in lit for w in want) for lit in _CAPS if lit)
+
+
+def future_inactive() -> dict[str, str]:
+    """Future rows whose integration kind no contract in contracts/src has yet: ID -> the fields it waits for."""
+    return {i: ", ".join(f"`{x}`" for x in fields) for i, fields in future_rows().items()
+            if not integration_present(fields)}
 
 
 CONTRACT_IDENT = re.compile(r"^[A-Z][A-Za-z0-9]*$")
@@ -347,6 +416,31 @@ def table_rows(path: Path, prefix: str) -> list[list[str]]:
     return rows
 
 
+_TEST_KEYS: dict[str, frozenset[str]] = {}
+
+
+def test_keys() -> dict[str, frozenset[str]]:
+    """TEST ID -> the contract keys its "Contract / flow" column names."""
+    if not _TEST_KEYS:
+        rx = {k: word_re(names) for k, (_, names, _) in CONTRACTS.items()}
+        for cols in table_rows(TESTS, "TEST"):
+            if len(cols) >= 4:
+                _TEST_KEYS[cols[0].strip("`")] = frozenset(k for k, r in rx.items() if r.search(cols[3]))
+    return _TEST_KEYS
+
+
+def exercise_names(key: str) -> tuple[str, ...]:
+    """Contracts whose deployment or call by a test exercises `key`: its real contract (evidence.REAL), the factory
+    that makes its instances (evidence.MADE_BY), and every name of CONTRACTS[key] (the key included) that is a
+    concrete contract or library in contracts/src. A TEST row naming several contracts counts for `key` only through
+    a test that exercises it."""
+    src = ev._src_decls()
+    concrete = {n for n, d in src.items() if d["kind"] == "library" or (d["kind"] == "contract" and not d["abstract"])}
+    names = set(ev.REAL.get(key, ())) | set(ev.MADE_BY.get(key, ()))
+    names |= {n for n in [key, *CONTRACTS[key][1]] if n in concrete}
+    return tuple(sorted(names))
+
+
 def tests_for(names: re.Pattern) -> list[tuple[str, str, str]]:
     out = []
     for cols in table_rows(TESTS, "TEST"):
@@ -408,14 +502,22 @@ class Evidence:
         for tag in ev.scan_tags(tr.TARGET)[0]:
             self.by_check.setdefault(tag["check"], []).append(tag)
 
-    def _state(self, tags: list[dict], key: str) -> tuple[str, str]:
-        """State of a row from the tags that could count for it on `key`'s checklist, and a note on excluded tags."""
-        counting = [t for t in tags if not t["excluded"] and key not in ev.tag_stand_in_keys(t)]
-        excluded = [t for t in tags if not any(t is c for c in counting)]
+    def _state(self, tags: list[dict], key: str, names: tuple[str, ...] | None = None) -> tuple[str, str]:
+        """State of a row from the tags that could count for it on `key`'s checklist, and a note on excluded tags.
+        With `names` (a TEST row naming several contracts) a tag counts only when its test exercises one of them."""
+        def why_not(t: dict) -> str:
+            if t["excluded"]:
+                return t["excluded"]
+            if key in ev.tag_stand_in_keys(t):
+                return f"uses a stand-in for {key}"
+            if names is not None and not ev.exercises(t, names):
+                return f"its test does not exercise {key}"
+            return ""
+        reasons = [(t, why_not(t)) for t in tags]
+        counting = [t for t, r in reasons if not r]
         note = ""
-        if excluded and not counting:
-            why = sorted({t["excluded"] or f"uses a stand-in for {key}" for t in excluded})
-            note = f" (only excluded checks: {'; '.join(why)})"
+        if reasons and not counting:
+            note = f" (only excluded checks: {'; '.join(sorted({r for _, r in reasons}))})"
         if not counting:
             return "unlinked", note
         states = [self.results.state(t) for t in counting]
@@ -431,9 +533,10 @@ class Evidence:
         state, note = self._state(tags, key)
         return state, note, sorted({t["check"] for t in tags})
 
-    def check(self, cid: str, key: str) -> tuple[str, str]:
-        """(state, note) of a TEST or PROP row: the tests and rules tagged with that id."""
-        return self._state(self.by_check.get(cid, []), key)
+    def check(self, cid: str, key: str, names: tuple[str, ...] | None = None) -> tuple[str, str]:
+        """(state, note) of a TEST or PROP row: the tests and rules tagged with that id (with `names`, only those whose
+        test exercises the contract, see exercise_names)."""
+        return self._state(self.by_check.get(cid, []), key, names)
 
 
 def checklist(key: str, evd: Evidence) -> dict:
@@ -449,6 +552,7 @@ def checklist(key: str, evd: Evidence) -> dict:
     test_ids = {t for t, _, _ in tests}
     test_later.update({t: owner for t, (owner, _) in DEFERRED_ROWS.items() if t in test_ids and t not in test_later})
     outside = {i: why for i, why in OUTSIDE_CONTRACTS.items() if i in req_ids or i in test_ids}
+    future = {i: f for i, f in future_inactive().items() if i in req_ids or i in test_ids}
     owned = {r: OWNED_ELSEWHERE[r] for r, _, _ in reqs if OWNED_ELSEWHERE.get(r, (key,))[0] != key}
 
     def entry(rid, text, state, note, extra="", scope=True):
@@ -458,23 +562,27 @@ def checklist(key: str, evd: Evidence) -> dict:
     for r, text, where in reqs:
         st, note, ids = evd.row(r, key)
         extra = (f" — {', '.join(ids)}" if ids else "")
-        scope = r not in req_later and r not in owned and r not in outside
+        scope = r not in req_later and r not in owned and r not in outside and r not in future
         if r in req_later:
             extra += f" — deferred to {req_later[r]} (not written yet)"
         if r in outside:
             extra += f" — checked outside contracts/: {outside[r]}"
         if r in owned:
             extra += f" — owned by {owned[r][0]}: {owned[r][1]}"
+        if r in future:
+            extra += f" — future integration: binds an integration whose capabilities() returns {future[r]}; none in contracts/src"
         sections["REQ / SPEC on the page"].append(entry(r, f"({where}) {text}", st, note, extra, scope))
     for t, kind, text in tests:
-        st, note = evd.check(t, key)
+        st, note = evd.check(t, key, exercise_names(key) if len(test_keys().get(t, ())) > 1 else None)
         extra = ""
         if t in test_later:
             extra += f" — deferred to {test_later[t]} (not written yet)"
         if t in outside:
             extra += f" — checked outside contracts/: {outside[t]}"
+        if t in future:
+            extra += f" — future integration: binds an integration whose capabilities() returns {future[t]}; none in contracts/src"
         sections["TEST rows"].append(entry(t, f"[{kind}] {text}", st, note, extra,
-                                           t not in test_later and t not in outside))
+                                           t not in test_later and t not in outside and t not in future))
     for p, tool, text in props:
         st, note = evd.check(p, key)
         sections["PROP rows"].append(entry(p, f"[{tool}] {text}", st, note))
@@ -520,14 +628,15 @@ def uncovered(evd: Evidence) -> list[dict]:
     on = set()
     for key, (_, names, _) in CONTRACTS.items():
         on |= {t for t, _, _ in tests_for(word_re(names))}
-    out = []
+    out, future = [], future_inactive()
     for cols in table_rows(TESTS, "TEST"):
         tid = cols[0].strip("`")
         if len(cols) >= 4 and tid not in on:
             st, note = evd.check(tid, "")
-            out.append({"id": tid, "text": f"[{cols[1]}] {cols[3]}", "state": st, "note": note,
-                        "extra": f" — checked outside contracts/: {OUTSIDE_CONTRACTS[tid]}"
-                        if tid in OUTSIDE_CONTRACTS else "", "scope": tid not in OUTSIDE_CONTRACTS})
+            extra = (f" — checked outside contracts/: {OUTSIDE_CONTRACTS[tid]}" if tid in OUTSIDE_CONTRACTS else
+                     f" — future integration: waits for {future[tid]}" if tid in future else "")
+            out.append({"id": tid, "text": f"[{cols[1]}] {cols[3]}", "state": st, "note": note, "extra": extra,
+                        "scope": tid not in OUTSIDE_CONTRACTS and tid not in future})
     return out
 
 
@@ -544,6 +653,10 @@ def structural_errors() -> list[str]:
             if r in {i for i, _, _ in page_ids(CONTRACTS[key][0])[0]} and owner != key \
                     and r not in {i for i, _, _ in page_ids(CONTRACTS[owner][0])[0]}:
                 errs.append(f"OWNED_ELSEWHERE names an owner whose pages do not define: {r}")
+    for i, fields in future_rows().items():
+        if not fields:
+            errs.append(f"{i}: a Future integrations row names no IntegrationCapabilities field in its "
+                        f"'{FUTURE_COLUMN}' column")
     return sorted(set(errs))
 
 

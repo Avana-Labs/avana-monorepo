@@ -22,15 +22,18 @@ abstract contract LPOracleAaveFlowsGasBase is LPOracleGasFixture {
     // read (lock and cardinality), one `observe([1800, 0])` binary search over 151 observations, two to three
     // square roots and one `tickAtSqrtRatio` (warm `latestAnswer` 173,611 Live / 175,141 Alternate, where 155,000 was
     // the budget before; cold 416,111 / 417,641 against 400,000).
-    uint256 internal constant COLD_READ = 420_000;
+    // The per-market USD band (REQ-ORACLE-056) adds one storage read to every evaluation: one cold read (2,100 gas) on
+    // the cold read and cold `getPriceState` budgets (worst 420,310 and 540,443, Alternate) and one warm read (100 gas)
+    // on the warm `getPriceState` budget (worst 240,046, Alternate).
+    uint256 internal constant COLD_READ = 422_100;
     uint256 internal constant COLD_RESERVE_PRICE = 430_000;
-    uint256 internal constant COLD_PRICE_STATE = 540_000;
+    uint256 internal constant COLD_PRICE_STATE = 542_100;
     uint256 internal constant COLD_POKE = 600_000;
     uint256 internal constant COLD_BORROW = 710_000;
     uint256 internal constant COLD_WITHDRAW = 715_000;
     uint256 internal constant COLD_LIQUIDATION = 1_225_000;
     uint256 internal constant WARM_READ = 180_000;
-    uint256 internal constant WARM_PRICE_STATE = 240_000;
+    uint256 internal constant WARM_PRICE_STATE = 240_100;
     uint256 internal constant WARM_POKE = 235_000;
     uint256 internal constant WARM_BORROW = 250_000;
     uint256 internal constant WARM_WITHDRAW = 255_000;
