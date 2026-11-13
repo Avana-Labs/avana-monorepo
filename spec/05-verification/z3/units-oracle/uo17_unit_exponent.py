@@ -6,6 +6,8 @@ One vault-token unit is 10^k liquidity, k fixed per pool at its first binding:
     e_ref = smallest e in [6, 36] with price8(amounts(10^e) on the one-spacing reference range) >= 10^8,
     k     = max(0, e_ref + 2 - 18)  (two decades of headroom), refused when k > 18;
     d     = smallest d in [6, 18] with price8(amounts(10^(d + k)) on the market's range) >= 10^8.
+The market's LPOracle carries the same k (its market argument) and composes u units as u * 10^k liquidity, so it finds
+the same d; checkConfig requires its k to equal the integration's (MATH-UO-77h-j).
 A position of liquidity L credits floor(L / 10^k) units; a removal of u units removes u * 10^k liquidity.
 amounts() is v3-periphery LiquidityAmounts over the exact TickMath port (both round down); price8 is SPEC-ORC-008
 with one raw unit off each token.
@@ -114,6 +116,32 @@ e_cheap = first(0, 1, cheap, g, oracle_sqrt(1, 1, 18, 18), 6, 34)
 note('MATH-UO-77g', 'cheapest listing prices ($1e-8, $1e-8), 18/18 decimals, one tick: the reference exponent is found below 34',
      f'e = {e_cheap}')
 assert 0 < e_cheap <= 34, e_cheap
+
+# MATH-UO-77h  The LPOracle's unit: WETH/DAI (18/18) at $3,000 and $1 on spacing 60. The pool takes k = 3 and its full
+#              range lists at d = 13; a feed composing 10^d units as 10^d liquidity (k = 0) finds d = 16, one with k = 4
+#              finds d = 12, so only the pool's own k gives the vault token's d, in either token order.
+weth_dai = []
+for p_wd in ((3000 * PRICE_ONE, PRICE_ONE), (PRICE_ONE, 3000 * PRICE_ONE)):
+    d_wd = (18, 18)
+    k_wd = unit_exponent(p_wd, d_wd, 60)
+    full = usable_ticks(60)
+    weth_dai.append((k_wd, decimals(p_wd, d_wd, k_wd, *full), decimals(p_wd, d_wd, 0, *full),
+                     decimals(p_wd, d_wd, 4, *full)))
+# MATH-UO-77 verifies: SPEC-ORC-005, SPEC-ORC-006
+note('MATH-UO-77h', 'SPEC-ORC-005 example: WETH/DAI spacing 60 at ($3,000, $1), full range: k = 3, d = 13; '
+     'a feed with k = 0 finds d = 16 and with k = 4 finds d = 12', f'(k, d, d at k=0, d at k=4) = {weth_dai}')
+assert weth_dai == [(3, 13, 16, 12), (3, 13, 16, 12)], weth_dai
+
+# MATH-UO-77i  Why the feed's k is checked and not only d: with E the smallest exponent worth $1 on the market's range,
+#              d(k) = E - k while E - k lies in [6, 18]. Two exponents then give one d only if they are equal; below the
+#              interval both give d = 6 and their whole-token prices differ by 10^(k2 - k1).
+E, k1, k2, dd1, dd2 = Ints('E k1 k2 dd1 dd2')
+# MATH-UO-77 verifies: SPEC-ORC-005
+prove('MATH-UO-77i', 'E - k1 and E - k2 in [6, 18] and E - k1 == E - k2 imply k1 == k2',
+      [k1 >= 0, k2 >= 0, E - k1 >= 6, E - k1 <= 18, E - k2 >= 6, E - k2 <= 18, E - k1 == E - k2], k1 == k2)
+# MATH-UO-77 verifies: SPEC-ORC-005
+witness('MATH-UO-77j', 'below the interval: E < 6 + k1 and E < 6 + k2 give d = 6 for both while k1 != k2',
+        [k1 >= 0, k2 >= 0, k1 <= 18, k2 <= 18, k1 != k2, E >= 0, E < 6 + k1, E < 6 + k2, dd1 == 6, dd2 == 6, dd1 == dd2])
 
 # MATH-UO-77d  Credit and removal: floor(L / 10^k) units, the remainder below one unit stays with the NFT, and a
 #              removal of u <= credited units removes u * 10^k <= L liquidity.

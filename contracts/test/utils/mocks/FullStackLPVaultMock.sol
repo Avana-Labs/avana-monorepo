@@ -54,6 +54,14 @@ contract FullStackLPVaultMock is IntegLPVaultMock {
         unitDecimals = unitDecimalsOf[marketId];
     }
 
+    /// @notice Unit exponent of a bound market: 0, one vault-token unit per unit of liquidity (USDC/USDT full range).
+    function unitExponent(
+        uint256 marketId
+    ) external view returns (uint8) {
+        if (_tokens[marketId].length == 0) revert MarketBinding(marketId);
+        return 0;
+    }
+
     /// @notice Rate providers of a bound market: none for a concentrated-liquidity pool.
     function rateProviders(
         uint256 marketId

@@ -31,6 +31,13 @@ contract LPOracleCLMathHarness is LPOracleCLModule {
         (c.sqrtLower, c.sqrtUpper) = (ClPriceMath.sqrtRatioAtTick(tickLower), ClPriceMath.sqrtRatioAtTick(tickUpper));
     }
 
+    /// @dev Sets the market's unit exponent `k` (one vault-token unit is `10^k` liquidity, `SPEC-ORC-005`).
+    function setUnitExp(
+        uint8 k
+    ) external {
+        _cl().unitExp = k;
+    }
+
     function composition(
         uint256 units,
         uint256 p0,

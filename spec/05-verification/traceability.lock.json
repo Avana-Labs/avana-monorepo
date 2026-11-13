@@ -14753,7 +14753,7 @@
     ]
   },
   "REQ-AMM-CORE-012": {
-    "hash": "1c6290579e2256c2",
+    "hash": "6401004aa3a2280b",
     "checks": [
       "ClLPVaultMarkets",
       "IAmmIntegration",
@@ -15160,7 +15160,7 @@
     ]
   },
   "REQ-AMM-V3-002": {
-    "hash": "97d175a12775df55",
+    "hash": "78994e94854eb0f3",
     "checks": [
       "ClLPVaultMarkets",
       "ClMarketConfig",
@@ -15169,6 +15169,7 @@
       "MATH-AMM-V3-PRICE-05",
       "TEST-264",
       "TEST-306",
+      "TEST-332",
       "UniswapV3Integration"
     ]
   },
@@ -22850,10 +22851,10 @@
     ]
   },
   "REQ-ORACLE-105": {
-    "hash": "ab4d9da5beab7b11",
+    "hash": "887ad95aac43fae0",
     "checks": [
       "HYP-AMM-05",
-      "LPOracleCLLogic",
+      "LPOracleCLListingLogic",
       "LPOracleCLModule",
       "LPOracleCLModuleCaller",
       "LPOracleCLModuleLogic",
@@ -22863,7 +22864,8 @@
       "TEST-139",
       "TEST-264",
       "TEST-279",
-      "TEST-306"
+      "TEST-306",
+      "TEST-332"
     ]
   },
   "REQ-ORACLE-106": {
@@ -32903,13 +32905,15 @@
     ]
   },
   "SPEC-ORC-005": {
-    "hash": "dcdc17d736a7773c",
+    "hash": "3b7b6f5f44da5f60",
     "checks": [
       "ClLPVaultBase",
       "ClLPVaultMarkets",
+      "ClUnitMath",
       "IClIntegration",
       "ILPOracle",
       "LPOracle",
+      "LPOracleCLModule",
       "LPOracleListingLogic",
       "LPPriceMath",
       "MATH-UO-01",
@@ -32924,11 +32928,12 @@
       "TEST-062",
       "TEST-139",
       "TEST-264",
-      "TEST-305"
+      "TEST-305",
+      "TEST-332"
     ]
   },
   "SPEC-ORC-006": {
-    "hash": "97f256cdb048778c",
+    "hash": "dec836da764adffd",
     "checks": [
       "ClLPVaultBase",
       "ClLPVaultMarkets",
@@ -32942,6 +32947,7 @@
       "MATH-UO-07",
       "MATH-UO-08",
       "MATH-UO-51",
+      "MATH-UO-77",
       "PROP-025",
       "PROP-083",
       "SYM-125",
@@ -32955,7 +32961,8 @@
       "TEST-264",
       "TEST-266",
       "TEST-279",
-      "TEST-305"
+      "TEST-305",
+      "TEST-332"
     ]
   },
   "SPEC-ORC-007": {

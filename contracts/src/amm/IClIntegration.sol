@@ -22,8 +22,9 @@ interface IClIntegration is ILPVault {
     /// @notice Returns the market's unit exponent `k`: one vault-token unit is `10^k` units of position liquidity.
     /// @dev Fixed for every market of a pool by the pool's first binding (`SPEC-ORC-005`); 0 for a pool whose one-spacing
     /// range already lists at `d <= 16`. Every unit amount the integration reports or takes (`unitsOf`,
-    /// `receivePosition`, `unwind`, `composition`, `riskMetadata`, `riskStatus`) is in these units. Reverts with
-    /// `MarketBinding` for a market not bound to this integration.
+    /// `receivePosition`, `unwind`, `composition`, `riskMetadata`, `riskStatus`) is in these units, and the market's
+    /// LPOracle prices the same unit: it carries `k` in its market argument and its `checkConfig` requires it to equal
+    /// this value. Reverts with `MarketBinding` for a market not bound to this integration.
     /// @param marketId The market.
     /// @return k The unit exponent, at most 18.
     /// @custom:spec SPEC-UNIT-002, SPEC-ORC-005
