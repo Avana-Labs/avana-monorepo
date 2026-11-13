@@ -28,7 +28,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @notice The app's market list and debt-reserve views: identity, accepted price, Aave supply and its value, limits,
 /// headroom, Hub totals, drawn and supply rates and the rate curve.
 /// @dev Bounded by the caller's page, the market's pool tokens and the Spoke's enabled debt reserves.
-/// @custom:spec REQ-LENS-045, REQ-LENS-046
+/// @custom:spec REQ-LENS-045, REQ-LENS-046, REQ-LENS-057
 // View calls in loops over a page of at most LENS_MAX_PAGE markets and a Spoke's enabled debt reserves (REQ-LENS-020).
 // forge-lint: disable-start(calls-loop)
 abstract contract LensMarkets is LensBase, ILensMarkets {
@@ -116,14 +116,47 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         uint32 key = IAaveV4Spoke(m.spoke).getReserve(m.reserveId).dynamicConfigKey;
         IAaveV4Spoke.DynamicReserveConfig memory c = IAaveV4Spoke(m.spoke).getDynamicReserveConfig(m.reserveId, key);
         (v.collateralFactorBps, v.liquidationThresholdBps) = (c.collateralFactor, c.collateralFactor);
-        v.maxLiquidationBonusBps = c.maxLiquidationBonus;
+        (v.maxLiquidationBonusBps, v.liquidationFeeBps) = (c.maxLiquidationBonus, c.liquidationFee);
         PledgeCounters memory k = ICollateralizationViews(_COLLATERALIZATION).getCounters(m.vaultToken, address(0));
-        v.marketHeadroomUsd = _room(_store().marketUsdCap(marketId), k.regularUsed);
-        v.sliceHeadroomUsd = _room(_store().topUpSliceUsd(marketId), k.sliceUsed);
+        (v.marketUsdCap, v.topUpSliceUsd) = (_store().marketUsdCap(marketId), _store().topUpSliceUsd(marketId));
+        v.marketHeadroomUsd = _room(v.marketUsdCap, k.regularUsed);
+        v.sliceHeadroomUsd = _room(v.topUpSliceUsd, k.sliceUsed);
         v.addHeadroom = _addHeadroom(m);
         v.pauseState = _registry().pauseState(m.hub);
         // forge-lint: disable-next-line(unused-return)
         (v.breakerReasons,) = IRiskModuleViews(_RISK_MODULE).getBreakerStatus(marketId);
+        _riskConfig(v, m, marketId);
+    }
+
+    /// @dev The risk configuration of REQ-LENS-057: collateral risk, liquidation configuration, the hard floor, the
+    /// Hub-keyed caps, the Hub's add cap and each enabled debt reserve's rate for the market's borrowers,
+    /// `⌈drawnRate × (10⁴ + collateralRisk) / 10⁴⌉` (with one collateral reserve, Aave's risk premium of every account of
+    /// the market is the reserve's `collateralRisk`).
+    /// @custom:spec REQ-LENS-057
+    function _riskConfig(
+        MarketView memory v,
+        Market memory m,
+        uint256 marketId
+    ) internal view {
+        IAaveV4Spoke spoke = IAaveV4Spoke(m.spoke);
+        v.collateralRiskBps = spoke.getReserveConfig(m.reserveId).collateralRisk;
+        IAaveV4Spoke.LiquidationConfig memory lc = spoke.getLiquidationConfig();
+        (v.targetHealthFactor, v.healthFactorForMaxBonus, v.liquidationBonusFactorBps) =
+        (lc.targetHealthFactor, lc.healthFactorForMaxBonus, lc.liquidationBonusFactor);
+        v.hardHealthFloor = _store().hardHealthFloor(marketId);
+        v.depositorUsdCap = _store().depositorUsdCap(m.hub);
+        v.tokenUsdCaps = new uint256[](m.tokens.length);
+        for (uint256 i = 0; i < m.tokens.length; ++i) {
+            v.tokenUsdCaps[i] = _store().tokenUsdCap(m.hub, m.tokens[i]);
+        }
+        v.addCap = IAaveV4Hub(m.hub).getSpokeConfig(m.hubAssetId, m.spoke).addCap;
+        v.debtReserveIds = _registry().getDebtReserveIds(m.spoke);
+        v.borrowRatesRay = new uint256[](v.debtReserveIds.length);
+        for (uint256 i = 0; i < v.debtReserveIds.length; ++i) {
+            DebtReserveDef memory def = _registry().getDebtReserve(m.spoke, v.debtReserveIds[i]);
+            uint256 drawn = ILensHubReads(def.fundingHub).getAssetDrawnRate(def.hubAssetId);
+            v.borrowRatesRay[i] = Math.mulDiv(drawn, 1e4 + v.collateralRiskBps, 1e4, Math.Rounding.Ceil);
+        }
     }
 
     /// @dev The debt-reserve view of REQ-LENS-046.

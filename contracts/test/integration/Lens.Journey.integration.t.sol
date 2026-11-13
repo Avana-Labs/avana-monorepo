@@ -16,16 +16,19 @@ import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 /// @title LensJourneyIntegrationTest
 /// @notice One borrower's journey on the real Aave V4 Spoke and Collateralization with the Lens asserted at every step
 /// against what the chain then holds: pledge, borrow, partial repay, a third party's donation and its re-credit
-/// preview, a price drop, a partial liquidation sized by the Lens, reconciliation into pending settlement, repay all
-/// and the full withdrawal; the frozen-wallet and pause variants keep the views answering.
+/// preview, a price drop, a partial seizure sized by the Lens and executed by Aave's own `liquidationCall` (the Lens's
+/// sizing against Aave's formula), reconciliation into pending settlement, repay all and the full withdrawal; the
+/// frozen-wallet and pause variants keep the views answering. The seizure calls the Spoke as the LPVaultSwap address
+/// directly, so this file checks the Lens against Aave (TEST-247); the journey through the real LPVaultSwap is
+/// TEST-223 in `LpJourney.integration.t.sol`.
 /// forge-config: default.isolate = false
 contract LensJourneyIntegrationTest is LensFixture {
     function setUp() public {
         _deployLens();
     }
 
-    // TEST-223 verifies: REQ-LENS-008, REQ-LENS-009, REQ-LENS-011, REQ-LENS-012, REQ-LENS-016, REQ-LENS-026, REQ-LENS-028, REQ-LENS-035, REQ-LENS-036, REQ-LENS-038, Q-268
-    function test_TEST_223_borrowerJourney() public {
+    // TEST-247 verifies: REQ-LENS-008, REQ-LENS-009, REQ-LENS-011, REQ-LENS-012, REQ-LENS-016, REQ-LENS-026, REQ-LENS-028, REQ-LENS-035, REQ-LENS-036, REQ-LENS-038, Q-268
+    function test_TEST_247_borrowerJourney() public {
         // Before the pledge: the predicted account.
         (address predicted, bool deployed) = lens.predictProxy(alice, MARKET_ID);
         assertFalse(deployed, "no account yet");
@@ -84,8 +87,8 @@ contract LensJourneyIntegrationTest is LensFixture {
         assertEq(lens.getAccount(alice, MARKET_ID).markets[0].credited, 0, "nothing credited");
     }
 
-    // TEST-223 verifies: REQ-LENS-009, REQ-LENS-031, REQ-LENS-037, REQ-LENS-038, Q-242, Q-252
-    function test_TEST_223_frozenAndPausedVariantsKeepViewsOpen() public {
+    // TEST-247 verifies: REQ-LENS-009, REQ-LENS-031, REQ-LENS-037, REQ-LENS-038, Q-242, Q-252
+    function test_TEST_247_frozenAndPausedVariantsKeepViewsOpen() public {
         _open(alice, aliceProxy, 1, 20_000e6);
         _borrow(aliceProxy, 10_000e18);
         vault.addUnits(_key(1), 1000e6);

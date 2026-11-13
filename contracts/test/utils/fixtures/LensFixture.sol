@@ -15,6 +15,7 @@ import {LensPositionsModule} from "../../../src/lens/lens/LensPositionsModule.so
 import {LensPreviewModule} from "../../../src/lens/lens/LensPreviewModule.sol";
 import {LensPriceModule} from "../../../src/lens/lens/LensPriceModule.sol";
 import {LensRiskModule} from "../../../src/lens/lens/LensRiskModule.sol";
+import {LensSpeedModule} from "../../../src/lens/lens/LensSpeedModule.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
@@ -73,7 +74,7 @@ abstract contract LensFixture is CollateralizationFixture {
     LPVaultSwapLensMock internal swapMock;
     LensLPVaultMock internal vault;
     ILens internal lens;
-    address[8] internal modules;
+    address[9] internal modules;
     address[9] internal core;
     address internal sizing;
 
@@ -128,7 +129,7 @@ abstract contract LensFixture is CollateralizationFixture {
 
     function _deployModules(
         address[9] memory c
-    ) internal returns (address[8] memory m) {
+    ) internal returns (address[9] memory m) {
         m[0] = address(new LensAccountModule(c));
         m[1] = address(new LensMarketModule(c));
         m[2] = address(new LensPriceModule(c));
@@ -137,6 +138,7 @@ abstract contract LensFixture is CollateralizationFixture {
         m[5] = address(new LensPreviewModule(c));
         m[6] = address(new LensMarketsModule(c));
         m[7] = address(new LensPositionsModule(c));
+        m[8] = address(new LensSpeedModule(c));
     }
 
     /// @dev USDC (the market's first pool token) as a debt reserve of the CDP Spoke, priced by its DebtOracle.

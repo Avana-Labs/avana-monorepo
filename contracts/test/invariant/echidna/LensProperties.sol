@@ -4,10 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILensAccount} from "../../../src/lens/lens/ILensAccount.sol";
+import {ILensActions} from "../../../src/lens/lens/ILensActions.sol";
+import {ILensFees} from "../../../src/lens/lens/ILensFees.sol";
+import {ILensHubAssets} from "../../../src/lens/lens/ILensHubAssets.sol";
 import {ILensLiquidation} from "../../../src/lens/lens/ILensLiquidation.sol";
 import {ILensMarket} from "../../../src/lens/lens/ILensMarket.sol";
 import {ILensPreview} from "../../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../../src/lens/lens/ILensRisk.sol";
+import {ILensSizing} from "../../../src/lens/lens/ILensSizing.sol";
+import {ILensSpeed} from "../../../src/lens/lens/ILensSpeed.sol";
 import {Lens} from "../../../src/lens/lens/Lens.sol";
 import {LensConstants} from "../../../src/lens/lens/LensConstants.sol";
 
@@ -82,9 +87,9 @@ contract LensProperties {
     Lens internal immutable REVERTING;
 
     constructor() {
-        address[8] memory m;
-        address[8] memory r;
-        for (uint256 i = 0; i < 8; ++i) {
+        address[9] memory m;
+        address[9] memory r;
+        for (uint256 i = 0; i < 9; ++i) {
             m[i] = address(new LensModuleStub(i, false));
             r[i] = address(new LensModuleStub(i, true));
         }
@@ -101,7 +106,7 @@ contract LensProperties {
 
     /// @notice The entry point reports the modules' core addresses and the modules in order.
     function property_coreAndModules() external view returns (bool) {
-        address[8] memory m = LENS.MODULES();
+        address[9] memory m = LENS.MODULES();
         return LENS.COLLATERALIZATION() == address(1) && LENS.ADAPTER() == address(3)
             && LENS.PAYOUT_ESCROW() == address(9) && m[0] != m[5] && m[0] != address(0);
     }
@@ -126,6 +131,43 @@ contract LensProperties {
             (data, expected) = (abi.encodeCall(ILensRisk.getBreakerStatus, (x)), 4);
         } else {
             (data, expected) = (abi.encodeCall(ILensPreview.quoteRepayAll, (address(uint160(x)), x, x, x)), 5);
+        }
+        (bool ok, bytes memory ret) = address(LENS).staticcall(data);
+        assert(ok);
+        assert(keccak256(ret) == keccak256(abi.encode(expected, keccak256(data))));
+        (ok, ret) = address(REVERTING).staticcall(data);
+        assert(!ok);
+        assert(keccak256(ret) == keccak256(abi.encode(expected, keccak256(data))));
+    }
+
+    /// @notice Routing of the views added for the app pages: fees to `LensMarketsModule`, after-action previews and the
+    /// removal sizing to `LensPositionsModule`, the deleverage sizing to `LensPriceModule`, the close-account preview to
+    /// `LensAccountModule`, the Hub-asset view to `LensRiskModule` and the speed views to `LensSpeedModule`, with the
+    /// calldata and the answer unchanged.
+    function checkRouteAdded(
+        uint8 which,
+        uint256 x
+    ) external view {
+        address a = address(uint160(x));
+        bytes memory data;
+        uint256 expected;
+        uint8 w = which % 8;
+        if (w == 0) {
+            (data, expected) = (abi.encodeCall(ILensFees.getPositionFees, (x, bytes32(x))), 6);
+        } else if (w == 1) {
+            (data, expected) = (abi.encodeCall(ILensActions.previewBorrowAfter, (a, x, x, x)), 7);
+        } else if (w == 2) {
+            (data, expected) = (abi.encodeCall(ILensSizing.previewMaxWithdraw, (a, x, x)), 7);
+        } else if (w == 3) {
+            (data, expected) = (abi.encodeCall(ILensSizing.previewDeleverageTo, (a, x, bytes32(x), x, x)), 2);
+        } else if (w == 4) {
+            (data, expected) = (abi.encodeCall(ILensSizing.previewCloseAccount, (a, x, x)), 0);
+        } else if (w == 5) {
+            (data, expected) = (abi.encodeCall(ILensHubAssets.getHubAsset, (a, x)), 4);
+        } else if (w == 6) {
+            (data, expected) = (abi.encodeCall(ILensSpeed.getBorrowSpeed, (x, x)), 8);
+        } else {
+            (data, expected) = (abi.encodeCall(ILensSpeed.getPledgeSpeed, (x)), 8);
         }
         (bool ok, bytes memory ret) = address(LENS).staticcall(data);
         assert(ok);

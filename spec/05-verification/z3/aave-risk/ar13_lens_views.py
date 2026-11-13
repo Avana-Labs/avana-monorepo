@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-"""MATH-AR-71..73 — The Lens's account and reserve views: the supply rate derived from the Hub's accounting
-(REQ-LENS-046), the exact liquidation price of a one-collateral account (REQ-LENS-047) and the health factor after a
-withdrawal (REQ-LENS-049), against Aave V4's health factor (Spoke._processUserAccountData at a3ef63e).
+"""MATH-AR-71..73, 76, 77 — The Lens's account and reserve views: the supply rate derived from the Hub's accounting
+(REQ-LENS-046), the exact liquidation price of a one-collateral account (REQ-LENS-047), the health factor after a
+withdrawal (REQ-LENS-049), against Aave V4's health factor (Spoke._processUserAccountData at a3ef63e); the largest
+removal that keeps a target health factor (REQ-LENS-054) and the uncollected fees of a concentrated-liquidity position
+in wrapping arithmetic (REQ-LENS-050).
 """
 from z3 import Ints
 from _common import prove, computed, finish, floor_div, ceil_div, RAY, WAD, BPS
@@ -54,5 +56,69 @@ computed('MATH-AR-73b', 'REQ-LENS-049 example: $20,000 at CF 80 % against 8,000 
      // (8_000 * 10**26 * RAY)),
     ('HF after 5,001 tokens', 999_800_000_000_000_000,
      (16_000 * 10**26 - 5001 * 10**6 * 2 * 10**8 * 10**12 * 8000 // BPS) * WAD * RAY // (8_000 * 10**26 * RAY))])
+
+# MATH-AR-76  Largest removal: u* = floor((W - E - need) x 1e4 / per), with need = ceil(target x debtRay / (WAD x RAY)),
+# removal ceil(u x per / 1e4), per = served value per unit x CF (bps).
+W6, E6, nd, per, u6, tgt, D6 = Ints('W6 E6 need per u6 target debtRay6')
+us, h6 = floor_div((W6 - E6 - nd) * BPS, per, 'uStar')
+rm1, h7 = ceil_div(us * per, BPS, 'removedStar')
+rm2, h8 = ceil_div((us + 1) * per, BPS, 'removedNext')
+hyp6 = [W6 >= 0, W6 < 2**200, E6 >= 0, nd >= 0, W6 >= E6 + nd, per >= 1, per < 2**100] + h6 + h7 + h8
+# MATH-AR-76 verifies: REQ-LENS-054
+prove('MATH-AR-76a', 'u* keeps W - E - removal(u*) >= need', hyp6, W6 - E6 - rm1 >= nd)
+prove('MATH-AR-76b', 'u* + 1 does not: u* is the largest such removal', hyp6, W6 - E6 - rm2 < nd)
+need6, h9 = ceil_div(tgt * D6, WAD * RAY, 'need6')
+hf6, h10 = floor_div(u6 * WAD * RAY, D6, 'hf6')
+hyp7 = [tgt >= 0, tgt < 2**128, D6 >= 1, D6 < 2**250, u6 >= 0, u6 < 2**200] + h9 + h10
+prove('MATH-AR-76c', 'left >= need  <=>  floor(left x WAD x RAY / debtRay) >= target', hyp7,
+      (u6 >= need6) == (hf6 >= tgt))
+A6, Wa, ua = Ints('assets6 Wfloor uBound')
+Wd, h11 = floor_div(A6 * per, BPS, 'Wfromassets')
+ub, h12 = floor_div((Wd - E6 - nd) * BPS, per, 'uFromW')
+prove('MATH-AR-76e', 'the bound never exceeds the assets: floor((floor(assets x per / 1e4) - E - need) x 1e4 / per) <= assets',
+      [A6 >= 0, A6 < 2**128, per >= 1, per < 2**100, E6 >= 0, nd >= 0, Wd >= E6 + nd] + h11 + h12, ub <= A6)
+computed('MATH-AR-76d', 'REQ-LENS-054 example: 16,000 vault tokens at $2, CF 80 %, 10,000 GHO, target 1.25', [
+    ('maxUnits', 8_187_500_000,
+     (8000 * 16_000 * 10**6 * 2 * 10**20 // BPS - (125 * 10**16 * (10_000 * 10**26 * RAY) + WAD * RAY - 1)
+      // (WAD * RAY)) * BPS // (2 * 10**20 * 8000))])
+
+# MATH-AR-77  Uncollected fees in wrapping arithmetic. True accumulators are unbounded naturals; the pool stores them
+# mod 2^256 and the position manager's owed amount mod 2^128.
+M = 2**256
+
+
+def stored(x, name):
+    """The uint256 a pool stores for the unbounded accumulator x: x mod 2^256, as x = q x 2^256 + r, 0 <= r < 2^256."""
+    q, r = Ints(name + '_q ' + name + '_r')
+    return r, [x == q * M + r, r >= 0, r < M]
+
+
+def wrap(expr, name, mod=M):
+    """The result of a wrapping uint operation: expr mod `mod`."""
+    k, r = Ints(name + '_k ' + name + '_r')
+    return r, [r == expr + k * mod, r >= 0, r < mod]
+
+
+g, b, a7, last, nowi = Ints('global below above lastInside nowInside')
+gs, hg = stored(g, 'g')
+bs, hb = stored(b, 'b')
+as_, ha = stored(a7, 'a')
+ins, hi = wrap(gs - bs - as_, 'inside')
+# MATH-AR-77 verifies: REQ-LENS-050
+prove('MATH-AR-77a', 'feeGrowthInside computed mod 2^256 equals the true inside growth when it is in [0, 2^256)',
+      [g >= 0, b >= 0, a7 >= 0, g - b - a7 >= 0, g - b - a7 < M] + hg + hb + ha + hi, ins == g - b - a7)
+ls, hl = stored(last, 'last')
+ns, hn = stored(nowi, 'now')
+dg, hd = wrap(ns - ls, 'growth')
+prove('MATH-AR-77b', 'growth since the snapshot mod 2^256 equals the true growth when it is in [0, 2^256)',
+      [last >= 0, nowi >= last, nowi - last < M] + hl + hn + hd, dg == nowi - last)
+own, gr = Ints('owed growth')
+ow, ho = wrap(own + gr, 'owedSum', 2**128)
+prove('MATH-AR-77c', 'owed + growth mod 2^128 equals the true owed amount while it fits uint128',
+      [own >= 0, own < 2**128, gr >= 0, gr < 2**128, own + gr < 2**128] + ho, ow == own + gr)
+computed('MATH-AR-77d', 'REQ-LENS-050 examples (L = 2e12)', [
+    ('in range, global 3, outside(lower) 1: 2 x L', 4 * 10**12, ((3 - 1 - 0) * 2**128) * (2 * 10**12) // 2**128),
+    ('wrap: snapshot 2^256 - 2^129, now 2^128: 3 x L', 6 * 10**12,
+     ((2**128 - (M - 2**129)) % M) * (2 * 10**12) // 2**128)])
 
 finish()

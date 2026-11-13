@@ -46,7 +46,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @notice The Avana stack deployed together on the real local Aave V4 (Stable LP Hub, Lend Spoke and one standard
 /// CDP Spoke per AMM integration: "uniswap-v3-stable" and "slipstream-stable"): the AaveAdapter (router and four logic
 /// contracts), LPVaultSwap (router and three logic contracts, launch keeper), the RiskModule (router and five logic
-/// contracts), each behind its ERC-1967 proxy, the Lens (entry point, eight modules and Aave's sizing), the public flash
+/// contracts), each behind its ERC-1967 proxy, the Lens (entry point, nine modules and Aave's sizing), the public flash
 /// liquidation helper, Collateralization, Lock, VaultTokenFactory, the vault tokens, ProxyManager and PositionProxies,
 /// PayoutEscrow, a Coverage Spoke per debt asset, the AaveV3FlashSource and `DexPathRoute` swap routes. Nothing
 /// between the borrower's wallet and the Spoke is a stand-in.
@@ -344,6 +344,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         l.borrow = deployCode("RiskModuleBorrowLogic.sol:RiskModuleBorrowLogic", abi.encode(im, l.drift, l.breaker));
         l.status =
             deployCode("RiskModuleStatusLogic.sol:RiskModuleStatusLogic", abi.encode(im, l.drift, l.breaker, l.borrow));
+        l.speed = deployCode("RiskModuleSpeedLogic.sol:RiskModuleSpeedLogic", abi.encode(im));
         address impl = deployCode("RiskModule.sol:RiskModule", abi.encode(im, l));
         // Collateralization was built before the RiskModule with its `RISK_MODULE` immutable at the base fixture's
         // address; the reviewed RiskModule's ERC-1967 proxy is placed there (its storage is ERC-7201 namespaced, so the
@@ -442,7 +443,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
             address(escrow)
         ];
         address sizing = deployCode("out-aave/LensAaveSizing.sol/LensAaveSizing.json");
-        address[8] memory m;
+        address[9] memory m;
         m[0] = deployCode("LensAccountModule.sol:LensAccountModule", abi.encode(core));
         m[1] = deployCode("LensMarketModule.sol:LensMarketModule", abi.encode(core));
         m[2] = deployCode("LensPriceModule.sol:LensPriceModule", abi.encode(core));
@@ -451,6 +452,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         m[5] = deployCode("LensPreviewModule.sol:LensPreviewModule", abi.encode(core));
         m[6] = deployCode("LensMarketsModule.sol:LensMarketsModule", abi.encode(core));
         m[7] = deployCode("LensPositionsModule.sol:LensPositionsModule", abi.encode(core));
+        m[8] = deployCode("LensSpeedModule.sol:LensSpeedModule", abi.encode(core));
         lens = ILens(deployCode("Lens.sol:Lens", abi.encode(m)));
     }
 

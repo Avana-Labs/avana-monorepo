@@ -207,12 +207,76 @@ The one-step offboarding target `T = ⌊LT0 × 5,000 / 10,000⌋` bps, published
 
 | ID | Statement | Verifies | Assumptions / bounds | Result |
 |---|---|---|---|---|
-| MATH-AR-70a | for `0 ≤ d` and `0 ≤ s1 ≤ s2 ≤ R`, `0 ≤ d·s1 ≤ d·s2 ≤ d·R` (lemma, over the reals) | REQ-CONFIG-080 | `d < 10⁴` | PROVED |
-| MATH-AR-70b | the ramp stays within `[LTf, LT0]` | REQ-CONFIG-080 | integers | PROVED |
-| MATH-AR-70c | the ramp never rises: a later step drops at least as much as an earlier one | REQ-CONFIG-080 | integers | PROVED |
-| MATH-AR-70d | from the end of the ramp the threshold is `LTf` (when `LT0 > LTf`) | REQ-CONFIG-080 | integers | PROVED |
-| MATH-AR-70e | a start at or below `LTf` never moves, and every result fits `uint16` | REQ-CONFIG-080 | integers | PROVED |
-| MATH-AR-70f | `REQ-CONFIG-080` worked example and the unit-test vectors | REQ-CONFIG-080 | exact integers | COMPUTED |
+| MATH-AR-70a | the target is half `LT0` rounded down (`2T ∈ {LT0 − 1, LT0}`), never 0 and below `LT0` for `LT0 ≥ 2` | REQ-CONFIG-080, MKT-059 | `0 < LT0 < 10⁴` | PROVED |
+| MATH-AR-70b | every target fits `uint16` | REQ-CONFIG-080 | integers | PROVED |
+| MATH-AR-70c | a higher threshold at offboarding never gives a lower target | REQ-CONFIG-080 | integers | PROVED |
+| MATH-AR-70d | with an even `LT0`, an account at HF ≥ 2 keeps HF ≥ 1 after the drop | REQ-CONFIG-080, MKT-059 | integers, HF in bps | PROVED |
+| MATH-AR-70f | with an even `LT0`, an account below HF 2 falls below HF 1 after the drop | REQ-CONFIG-080, MKT-059 | integers, HF in bps | PROVED |
+| MATH-AR-70e | `REQ-CONFIG-080`, `MKT-059` and 3.8 walkthrough examples and the unit-test vectors | REQ-CONFIG-080, MKT-059 | exact integers | COMPUTED |
+
+### `ar13_lens_views.py`
+
+The Lens's account and reserve views against Aave V4's health factor (`Spoke._processUserAccountData` at a3ef63e): the supply rate (2.17 `REQ-LENS-046`), the liquidation price of a one-collateral account (`REQ-LENS-047`), the health factor after a withdrawal (`REQ-LENS-049`), the largest removal that keeps a target health factor (`REQ-LENS-054`) and uncollected fees in the pools' wrapping arithmetic (`REQ-LENS-050`).
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| MATH-AR-71a | utilization at most 100 % ⇒ the supply rate is at most the drawn rate | REQ-LENS-046 | rate `< 2^96`, amounts `< 2^128`, fee ≤ 10⁴ | PROVED |
+| MATH-AR-71b | the supply rate rounds down, never above `drawnRate × owed × (10⁴ − fee) / (added × 10⁴)` | REQ-LENS-046 | as above | PROVED |
+| MATH-AR-71c | `REQ-LENS-046` example: utilization 6,000 bps, supply rate 0.0432 RAY | REQ-LENS-046 | exact integers | COMPUTED |
+| MATH-AR-72a | at `liquidationPrice` Aave's health factor is at least 1.00 | REQ-LENS-047 | debt `< 2^200`, assets `< 2^96`, CF ≤ 10⁴ | PROVED |
+| MATH-AR-72b | one 8-decimal unit below it the health factor is below 1.00 | REQ-LENS-047 | as above | PROVED |
+| MATH-AR-72c | `REQ-LENS-047` example: 187,500,000 ($1.875) | REQ-LENS-047 | exact integers | COMPUTED |
+| MATH-AR-73a | removing collateral never raises the health factor | REQ-LENS-049 | weighted value `< 2^200`, units `< 2^128` | PROVED |
+| MATH-AR-73b | `REQ-LENS-049` example: HF 2.00 before, 1.00 after 5,000 tokens, 0.9998 after 5,001 | REQ-LENS-049 | exact integers | COMPUTED |
+| MATH-AR-76a | the removal bound `u*` keeps `W − E − ⌈u* × per / 10⁴⌉ ≥ need` | REQ-LENS-054 | `W < 2^200`, `per < 2^100`, `W ≥ E + need` | PROVED |
+| MATH-AR-76b | `u* + 1` breaks it: `u*` is the largest such removal | REQ-LENS-054 | as above | PROVED |
+| MATH-AR-76c | `left ≥ need ⇔ ⌊left × WAD × RAY / debtRay⌋ ≥ target` with `need = ⌈target × debtRay / (WAD × RAY)⌉` | REQ-LENS-054 | target `< 2^128`, debt `< 2^250` | PROVED |
+| MATH-AR-76e | the bound never exceeds the account's assets, so `min(assets, ·)` needs no separate cap | REQ-LENS-054 | assets `< 2^128`, `per < 2^100` | PROVED |
+| MATH-AR-76d | `REQ-LENS-054` example: 8,187,500,000 units | REQ-LENS-054 | exact integers | COMPUTED |
+| MATH-AR-77a | the fee growth inside computed from stored (mod 2^256) values equals the true growth inside whenever that lies in `[0, 2^256)` | REQ-LENS-050 | unbounded accumulators | PROVED |
+| MATH-AR-77b | the growth since the position's snapshot, mod 2^256, equals the true growth whenever it lies in `[0, 2^256)` | REQ-LENS-050 | unbounded accumulators | PROVED |
+| MATH-AR-77c | the owed amount mod 2^128 equals the true amount while it fits `uint128` | REQ-LENS-050 | integers | PROVED |
+| MATH-AR-77d | `REQ-LENS-050` examples: 4,000,000,000,000 in range; 6,000,000,000,000 across a wrap | REQ-LENS-050 | exact integers | COMPUTED |
+
+### `ar15_loss_layers.py`
+
+The two loss layers of each (Hub, debt asset) and the residual beyond them (`Q-410`): Aave V4's `Hub.eliminateDeficit` burns only the calling Spoke's own added shares and nothing writes a deficit down across suppliers, so the Avana Umbrella pays first, the DAO deficit offset pays only once the Avana Umbrella is at 0 or deactivated on the Hub, and a residual is paid by nobody: withdrawals are paid in full first-come. `MATH-AR-51e` replaces the pro-rata lender loss bound that `ar08_caps.py` held. Kept apart from `ar08_caps.py`, whose `MATH-AR-52a` query is sensitive to the constants declared before it.
+
+| ID | Statement | Verifies | Assumptions / bounds | Result |
+|---|---|---|---|---|
+| MATH-AR-51e | the residual beyond both loss layers is at most `max(0, line × (1 − coverageRatioBps / 10⁴) − F_D)` | SPEC-HUB-003, REQ-FLR-027, DEF-014, DEF-019, REQ-ARCH-211 | deficit ≤ line (draws within the line); `F_A × 10⁴ ≥ coverageRatioBps × line`; the Avana Umbrella active (deactivated, `MATH-AR-51h5`) | PROVED |
+| MATH-AR-51h, h2, h3 | while the Avana Umbrella is active the DAO offset pays only after it paid all it held, the two never exceed the deficit, and with full limits the residual is `max(0, d − F_A − F_D)`; no state has the offset paying while the active Umbrella keeps a balance | SPEC-FLR-006, REQ-FLR-048, INV-100 | integers; the Umbrella's Hub `active` flag symbolic; `F_D` read at the offset's call | PROVED |
+| MATH-AR-51h5 | deactivated Umbrella (`Q-410` trade-off): it pays nothing, the offset pays `min(d, F_D)` and the Umbrella keeps all of `F_A` | SPEC-FLR-006, REQ-FLR-048, INV-100 | integers | PROVED |
+| MATH-AR-51h4 | `SPEC-FLR-006` / `TEST-299` example: 300,000 GHO covered 100,000 then 150,000, residual 50,000 | SPEC-FLR-006 | exact integers | COMPUTED |
+| MATH-AR-51i, i2 | first-come: the lenders lose exactly the residual between them, each at most `min(claim, r)`; a lender whose claim fits the liquidity is paid in full and the last holds the residual | REQ-FLR-027, DEF-014, ATTACK-198 | two lenders in order; liquidity after full repayment = claims − r | PROVED |
+| MATH-AR-51i3 | `DEF-014` / `TEST-299` example: 2,000,000 GHO of claims, 1,950,000 paid in full, 50,000 unpaid, backed value 0.975 per share | DEF-014 | exact integers | COMPUTED |
+| MATH-AR-51j | covering a layer's whole funded balance `⌊s A' / S'⌋` burns `⌈F S' / A'⌉ = s` shares when `A' ≥ S'`: an exhausted layer keeps no share | SPEC-FLR-006, SPEC-FLR-001, SPEC-FLR-002, INV-100 | `1 ≤ s ≤ S'`, `10⁶ ≤ S' ≤ A' < 2^128` | PROVED |
+
+### `ar16_speed_limits.py`
+
+Borrow-speed and pledge-speed limits (`Q-411`). Launch values: τ = 21,600 s; borrow 2,500 bps within $250,000 .. $2,500,000; pledge 2,500 bps within $1,000,000 .. $10,000,000; (Hub, asset) 2,500 bps within 500,000 .. 5,000,000 tokens.
+
+| ID | Statement | Verifies | Bounds | Result |
+|---|---|---|---|---|
+| MATH-AR-85a | one passing charge inside `[T0, T0 + τ)` preserves the window invariant (induction step) | SPEC-CAP-011, REQ-RISK-092, REQ-RISK-093 | unbounded integers | PROVED |
+| MATH-AR-85b | every charge inside `[T0, T0 + τ)` leaves the interval total at most the `L` of that check | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85c | the invariant holds before the first charge of the interval | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85d | rolling at a view time and again later gives the same window total as rolling once | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85e | six charges split across times within one τ total at most the last check's `L` | SPEC-CAP-011, REQ-RISK-092 | unbounded integers | PROVED |
+| MATH-AR-85f | over an interval of length τ + 1 two charges of `L` each pass (design: the bound is for τ) | SPEC-CAP-011 | unbounded integers | COUNTEREXAMPLE (deliberate) |
+| MATH-AR-85i | over any 2τ at most `2L` | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85g | a charge no longer counts at any check from `t + 2τ` | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85h | the bucket of a charge starts after `t − τ` | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-86a | `min ≤ L ≤ max` whenever `min ≤ max` | SPEC-CAP-012 | rate ≤ 10^4 | PROVED |
+| MATH-AR-86b | `L` never decreases when the base grows | SPEC-CAP-012 | products abstracted as monotone | PROVED |
+| MATH-AR-86c | own charges never raise `L` (`D = D0 + charges`) | SPEC-CAP-012, REQ-RISK-092 | rate ≤ 10^4 | PROVED |
+| MATH-AR-86d | on the raw `D` a split would raise `L` inside the window (why the base subtracts the window) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
+| MATH-AR-86e | an unset scope refuses every positive charge | REQ-RISK-096 | — | PROVED |
+| MATH-AR-87a–c | the USD charge is the ceiling, less than one unit above the exact value, products below 2^192 | SPEC-CAP-013 | amounts `< 2^128`, prices `< 2^64` | PROVED |
+| MATH-AR-88a–c | at `moreAt` the window holds exactly what it says; `moreAt` lies after the check and within 2τ | SPEC-CAP-011, REQ-RISK-097 | unbounded integers | PROVED |
+| MATH-AR-89a–c | the 2.7, 3.2 and pledge worked examples | SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013, BOR-023 | exact integers | COMPUTED |
+
+Run on 2026-11-12: 18 PROVED, 2 COUNTEREXAMPLE (both deliberate), 3 COMPUTED, 0 mismatches; exit 0.
 
 ### `ar14_rate_curve.py`
 
@@ -254,7 +318,7 @@ The other counterexamples are deliberate: wrong-reading checks (MATH-AR-17a, 22,
 | 2026-11-12 (public lending, `Q-407`: `MATH-AR-51c–f` added for the idle-liquidity bound, the lender loss bound and the Lend page example) | `../../.venv/bin/python ar08_caps.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar08 27 | 0 | ar08 9 | 0 | 0 | 0 |
 | 2026-11-12 (kinked rate curve, `Q-408`: `ar14_rate_curve.py` added, `MATH-AR-74`, `MATH-AR-75`) | `../../.venv/bin/python ar14_rate_curve.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar14 21 | 0 | ar14 2 | 0 | 0 | 0 |
 
-Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 24/0/8/0 (includes MATH-AR-47f); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the wind-down ramp); ar14 21/0/2/0 (`MATH-AR-74`, `MATH-AR-75`, the rate curve); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
+Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 27/1/9/0 (includes MATH-AR-47f, 47g, the deliberate 47h and MATH-AR-51c–d, f; re-run 2026-11-12); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the one-step offboarding target, re-run 2026-11-12); ar13 12/0/5/0 (`MATH-AR-71`–`73`, `MATH-AR-76`, `MATH-AR-77`, the Lens views); ar14 21/0/2/0 (`MATH-AR-74`, `MATH-AR-75`, the rate curve); ar15 8/0/2/0 (`MATH-AR-51e`, `MATH-AR-51h`–`j`, the loss layers and the deactivated-Umbrella case, 2026-11-12); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
 
 ## Assumptions common to all models
 

@@ -9,8 +9,9 @@ import {PriceState} from "../../../types/PriceState.sol";
 /// @dev `source` is `AaveOracle.getReserveSource(debtReserveId)`; `price` is the served `getReservePrice(debtReserveId)`
 /// (USD, 8 decimals); `fixedPrice` comes from the reserve's `DebtReserveDef`. For a DebtOracle source `state`,
 /// `acceptedPrice` and `updatedAt` (original source timestamp of the accepted round) come from the DebtOracle,
-/// `age = timestamp - updatedAt`, `borrowFresh = state Live && age <= borrowPriceMaxAge(feed)`,
-/// `liquidationFresh = state Live && age <= liquidationPriceMaxAge(feed)` with ParameterStore values of the same call,
+/// `age = timestamp - updatedAt`, `borrowFresh = state Live && borrowAllowed && age <= borrowPriceMaxAge(feed)`,
+/// `liquidationFresh = state Live && !liquidationPaused && age <= liquidationPriceMaxAge(feed)` with the DebtOracle's
+/// own `borrowAllowed` and `liquidationPaused` flags and ParameterStore values of the same call,
 /// and `stressPriced = price > acceptedPrice` (higher route during a disagreement, accepted price raised by
 /// `debtStressRiseBps` once Expired). For a fixed-price source (such as GHO)
 /// `state` is Live, `acceptedPrice = price`, `updatedAt = timestamp`, `age = 0`, both flags are true and `stressPriced`

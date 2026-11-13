@@ -12,6 +12,7 @@ import {ILensMarkets} from "../../src/lens/lens/ILensMarkets.sol";
 import {ILensPositions} from "../../src/lens/lens/ILensPositions.sol";
 import {ILensPreview} from "../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
+import {ILensSpeed} from "../../src/lens/lens/ILensSpeed.sol";
 import {Lens} from "../../src/lens/lens/Lens.sol";
 import {LensBase} from "../../src/lens/lens/LensBase.sol";
 import {LensConstants} from "../../src/lens/lens/LensConstants.sol";
@@ -66,7 +67,7 @@ contract LensSurfaceUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-001, REQ-LENS-003
     function test_TEST_247_noStateChangingOpcode() public view {
         uint8[12] memory forbidden = [0x55, 0x5d, 0xf0, 0xf1, 0xf2, 0xf4, 0xf5, 0xff, 0xa0, 0xa1, 0xa2, 0xa3];
-        address[9] memory parts = _parts();
+        address[10] memory parts = _parts();
         for (uint256 i = 0; i < parts.length; ++i) {
             bytes memory code = parts[i].code;
             for (uint256 k = 0; k < forbidden.length; ++k) {
@@ -80,7 +81,7 @@ contract LensSurfaceUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-001
     function test_TEST_247_noStorage() public view {
-        address[9] memory parts = _parts();
+        address[10] memory parts = _parts();
         for (uint256 i = 0; i < parts.length; ++i) {
             for (uint256 slot = 0; slot < 8; ++slot) {
                 assertEq(vm.load(parts[i], bytes32(slot)), bytes32(0), "no storage");
@@ -101,8 +102,8 @@ contract LensSurfaceUnitTest is LensFixture {
         assertEq(lens.PAYOUT_ESCROW(), address(escrow), "PayoutEscrow");
         assertEq(lens.LENS_MAX_PAGE(), 200, "page limit");
         assertEq(lens.LENS_DUST_MARGIN_BPS(), 500, "dust margin");
-        address[8] memory m = lens.MODULES();
-        for (uint256 i = 0; i < 8; ++i) {
+        address[9] memory m = lens.MODULES();
+        for (uint256 i = 0; i < 9; ++i) {
             assertEq(m[i], modules[i], "module order");
             LensBase b = LensBase(m[i]);
             assertEq(b.COLLATERALIZATION(), address(coll), "module core");
@@ -125,7 +126,7 @@ contract LensSurfaceUnitTest is LensFixture {
     function test_TEST_247_constructorRejectsMismatchedModules() public {
         address[9] memory other = core;
         other[5] = makeAddr("otherStore");
-        address[8] memory mixed = modules;
+        address[9] memory mixed = modules;
         mixed[4] = _deployModules(other)[4];
         vm.expectRevert(ILensErrors.InvalidModules.selector);
         new Lens(mixed);
@@ -137,7 +138,7 @@ contract LensSurfaceUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-001
     function test_TEST_247_constructorRejectsMissingModule() public {
-        address[8] memory mixed = modules;
+        address[9] memory mixed = modules;
         mixed[2] = address(0);
         vm.expectRevert();
         new Lens(mixed);
@@ -274,9 +275,9 @@ contract LensSurfaceUnitTest is LensFixture {
 
     // ─── helpers ───
 
-    function _parts() internal view returns (address[9] memory p) {
+    function _parts() internal view returns (address[10] memory p) {
         p[0] = address(lens);
-        for (uint256 i = 0; i < 8; ++i) {
+        for (uint256 i = 0; i < 9; ++i) {
             p[i + 1] = modules[i];
         }
     }
@@ -303,7 +304,7 @@ contract LensSurfaceUnitTest is LensFixture {
     }
 
     function _allCalls() internal view returns (bytes[] memory c) {
-        c = new bytes[](32);
+        c = new bytes[](34);
         address[] memory toks = new address[](1);
         toks[0] = address(usdc);
         uint256[] memory ids = new uint256[](1);
@@ -341,5 +342,7 @@ contract LensSurfaceUnitTest is LensFixture {
         c[29] = abi.encodeCall(ILensPositions.getAccountRisk, (alice, MARKET_ID));
         c[30] = abi.encodeCall(ILensPositions.previewPledge, (alice, MARKET_ID, _key(1)));
         c[31] = abi.encodeCall(ILensPositions.previewWithdraw, (alice, MARKET_ID, _key(1), 0));
+        c[32] = abi.encodeCall(ILensSpeed.getBorrowSpeed, (MARKET_ID, debtReserveId));
+        c[33] = abi.encodeCall(ILensSpeed.getPledgeSpeed, (MARKET_ID));
     }
 }
