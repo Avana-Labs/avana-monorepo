@@ -617,6 +617,10 @@ jobs:
             .venv/bin/pip install -r test/differential/reference/requirements.txt
           fi
 
+      - name: Build Uniswap v3 artifacts for the fixture
+        # LPOracleCL.differential.t.sol deploys the Uniswap v3 pool and position manager from out-univ3/ (vm.getCode).
+        run: FOUNDRY_PROFILE=univ3 forge build
+
       - name: Differential fuzzing (TEST-037)
         run: |
           mkdir -p out-results
