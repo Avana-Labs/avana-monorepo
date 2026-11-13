@@ -26,7 +26,7 @@ python3 contract_checklist.py --all --check --results ../../contracts/out-result
 
 ## How often it runs
 
-Every contract gate (0 errors, every row of the contract verified by a test that ran and passed), the `traceability` and `evidence` CI jobs of `contracts.yml` (the evidence job runs `contract_checklist.py --all --check` and `trace.py` on every test shard's results; `--strict` is run locally only), and with every spec change: the `models` workflow runs `contract_checklist.py --all --check --links-only` for every contract key on every pull request and push to `main`.
+Every contract gate (0 errors, every row of the contract verified by a test that ran and passed), the `traceability` and `evidence` CI jobs of `contracts.yml` (the evidence job runs `contract_checklist.py --all --check` and `trace.py` on every test shard's results; since 2026-11-13 these jobs, and the `spec` and `models` workflows, report without failing), and with every spec change: the `models` workflow runs `contract_checklist.py --all --check --links-only` for every contract key on every pull request and push to `main`.
 
 ## Latest result
 

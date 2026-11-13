@@ -336,7 +336,7 @@ cd ../spec/05-verification
 .venv/bin/python trace.py --strict --results ../../contracts/out-results --out /tmp/traceability-run.md   # with a run
 ```
 
-The `contracts` workflow runs `trace.py` on every change; its `evidence` job reads every test shard's results and runs `contract_checklist.py --all --check` on them, which fails the gate while a row in scope is not verified, and `trace.py` with the run's results, which fails on errors. `--strict` is a local report; CI does not run it. The `spec` workflow runs `trace.py` as part of `run_all.sh`.
+The `contracts` workflow runs `trace.py` on every change; its `evidence` job reads every test shard's results and runs `contract_checklist.py --all --check` and `trace.py` on them and writes both reports to the job summary. Both are report only since 2026-11-13: no spec check fails a run (the `spec` and `models` workflows likewise), and the `gate` check does not require them. The `spec` workflow runs `trace.py` as part of `run_all.sh`.
 
 ## CI
 
