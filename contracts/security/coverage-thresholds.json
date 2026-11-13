@@ -32,6 +32,22 @@
         "reason": "removeDebtReserve calls _removeId only for an approved reserve, and enableDebtReserve pushes the id into debtReserveIds in the same write that approves it, so the id is always present when _removeId runs.",
         "tests": "TEST-213 test_TEST_213_removeFirstKeepsTheOrder, test_TEST_213_removeMiddleKeepsTheOrder, test_TEST_213_removeLastKeepsTheOrder, test_TEST_213_removalRefusals (UnknownDebtReserve before any removal)"
       }
+    ],
+    "src/lens/lens/LensRemoval.sol": [
+      {
+        "function": "_removalBound",
+        "branch": "per == 0 returns 0",
+        "reason": "The only caller, _maxRemoval, returns 0 itself when per == 0 or assets == 0 before it calls _removalBound, so per is never 0 there. The check keeps the division by per safe if another caller is added.",
+        "tests": "test_TEST_247_maxWithdrawLatestFactorZeroCountsNothing and test_TEST_247_maxWithdrawVaultTokenNotCollateralCountsNothing (Lens.RemovalUncounted: per == 0 and assets == 0 stop in _maxRemoval), test_TEST_247_maxWithdrawIsTheExactAaveBound and test_TEST_247_maxWithdrawSubtractsTheRescueExclusion (Lens.InverseSizing: per > 0 reaches the bound)"
+      }
+    ],
+    "src/lens/lens/LensSizing.sol": [
+      {
+        "function": "_reaches",
+        "branch": "units == 0 returns false",
+        "reason": "previewDeleverageTo returns before sizing when the deleverage limit is 0, and _reaches is then called only with hi from _fullRepayUnits (at least 1: limit, or a mid above lo) and with mid = lo + (hi - lo) / 2 while hi - lo > 1, so mid >= lo + 1 >= 1. The check keeps a zero-unit repayment from counting as reaching the target if another caller is added.",
+        "tests": "Lens.DeleverageTo (test_TEST_247_deleverageToWithASixDecimalDebt, test_TEST_247_deleverageToFromBelowOneRaisesTheTargetToOne, test_TEST_247_deleverageToBeyondTheRecordIsUnreachable: units >= 1 reach _reaches)"
+      }
     ]
   },
   "files": {
