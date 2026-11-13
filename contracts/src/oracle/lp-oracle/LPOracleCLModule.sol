@@ -17,7 +17,6 @@ import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
 import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title LPOracleCLModule
 /// @notice The concentrated-liquidity pricing module of the LPOracle (2.10 Concentrated-liquidity pricing): the
@@ -87,8 +86,9 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         ClLayout storage c = _cl();
         (c.pool, c.tickLower, c.tickUpper, c.tickSpacing) = (pool, lower, upper, spacing);
         (c.sqrtLower, c.sqrtUpper) = (ClPriceMath.sqrtRatioAtTick(lower), ClPriceMath.sqrtRatioAtTick(upper));
-        // At most MAX_UNIT_EXP = 18, checked above, so the checked cast never reverts.
-        c.unitExp = SafeCast.toUint8(unitExp);
+        // At most MAX_UNIT_EXP = 18, checked above.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        c.unitExp = uint8(unitExp);
         return true;
     }
 
