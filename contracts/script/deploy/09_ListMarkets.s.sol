@@ -694,12 +694,7 @@ contract ListMarkets is ListingBase {
             abi.encodeCall(store.setInitialMarketParams, (m.marketId, _marketParams(m.key))),
             "PS.setInitialMarketParams"
         );
-        _add(
-            op,
-            address(store),
-            _marketCapsCall(m),
-            "PS.setInitialMarketCaps"
-        );
+        _add(op, address(store), _marketCapsCall(m), "PS.setInitialMarketCaps");
         _add(
             op,
             address(store),
