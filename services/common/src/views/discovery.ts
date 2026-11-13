@@ -79,17 +79,37 @@ export async function discover(client: ViewClient, dep: ChainDeployment): Promis
     boolean,
   ];
   const labels = new Map(dep.hubs.map((h) => [lower(h.address), h.label]));
-  const hubAddrs = uniq([...dep.hubs.map((h) => lower(h.address)), ...recordedHubs.map(lower)]);
-  const cdpSpokes = uniq([...dep.cdpSpokes.map(lower), ...approvedSpokes.map(lower)]);
-
-  // 2. Each Hub's asset count and registry record, each CDP Spoke's home Hub; the tier and application state may
-  // revert for a Hub the registry has not recorded.
-  const n = hubAddrs.length;
-  const required = await all(client, [
-    ...hubAddrs.map((h) => hubCall(h, "getAssetCount")),
-    ...hubAddrs.map((h) => reg(registry, "isRecordedHub", [h])),
-    ...cdpSpokes.map((sp) => reg(registry, "hubOf", [sp])),
+  const recorded = new Set(recordedHubs.map(lower));
+  const candidateHubs = uniq([...dep.hubs.map((h) => lower(h.address)), ...recorded]);
+  // A manifest CDP Spoke the registry has not approved yet, or a manifest Lend Spoke, may have no code yet at this block
+  // (a Spoke added in a later release step): one that does not answer its reads is left out.
+  const approved = new Set(approvedSpokes.map(lower));
+  const pendingCdp = uniq(dep.cdpSpokes.map(lower)).filter((sp) => !approved.has(sp));
+  const manifestLendAll = uniq(dep.lendSpokes.map(lower));
+  const probed = await some(client, [
+    ...pendingCdp.flatMap((sp): ContractCall[] => [
+      { address: lens, abi: lensViewsAbi, functionName: "getDebtReserves", args: [sp] },
+      { address: sp, abi: spokeViewsAbi, functionName: "getLiquidationConfig", args: [] },
+    ]),
+    ...manifestLendAll.map((sp): ContractCall => ({ address: sp, abi: spokeViewsAbi, functionName: "getReserveCount", args: [] })),
   ]);
+  const liveCdp = new Set(pendingCdp.filter((_, i) => probed[2 * i] !== null && probed[2 * i + 1] !== null));
+  const liveLend = new Set(manifestLendAll.filter((_, i) => probed[2 * pendingCdp.length + i] !== null));
+  const cdpSpokes = uniq([...dep.cdpSpokes.map(lower), ...approvedSpokes.map(lower)]).filter((sp) => approved.has(sp) || liveCdp.has(sp));
+
+  // 2. Each Hub's asset count. The manifest lists every Hub of the release, also one added after the block being read
+  // (a later Hub has no code yet there): such a Hub is left out. A Hub the registry records must answer.
+  const counts = await some(client, candidateHubs.map((h) => hubCall(h, "getAssetCount")));
+  candidateHubs.forEach((h, i) => {
+    if (counts[i] === null && recorded.has(h)) throw new Error(`getAssetCount on recorded Hub ${h} reverted`);
+  });
+  const hubAddrs = candidateHubs.filter((_, i) => counts[i] !== null);
+  const assetCounts = counts.filter((c) => c !== null) as bigint[];
+
+  // Each Hub's registry record, each CDP Spoke's home Hub; the tier and application state may revert for a Hub the
+  // registry has not recorded.
+  const n = hubAddrs.length;
+  const required = await all(client, [...hubAddrs.map((h) => reg(registry, "isRecordedHub", [h])), ...cdpSpokes.map((sp) => reg(registry, "hubOf", [sp]))]);
   const optional = await some(client, [
     ...hubAddrs.map((h) => reg(registry, "hubTier", [h])),
     ...hubAddrs.map((h): ContractCall => ({ address: lens, abi: lensViewsAbi, functionName: "getApplicationState", args: [h] })),
@@ -97,12 +117,12 @@ export async function discover(client: ViewClient, dep: ChainDeployment): Promis
   const hubs: HubInfo[] = hubAddrs.map((hub, i) => ({
     hub,
     label: labels.get(hub) ?? null,
-    assetCount: Number(required[i] as bigint),
-    recorded: required[n + i] as boolean,
+    assetCount: Number(assetCounts[i]!),
+    recorded: required[i] as boolean,
     tier: optional[i] === null ? 0 : Number(optional[i]),
     applicationState: optional[n + i] === null ? null : Number(optional[n + i]),
   }));
-  const homeHubOf = new Map(cdpSpokes.map((sp, i) => [sp, lower(required[2 * n + i] as string)]));
+  const homeHubOf = new Map(cdpSpokes.map((sp, i) => [sp, lower(required[n + i] as string)]));
 
   // 3. Each Hub asset's underlying, configuration and Spoke count.
   const keys = hubs.flatMap((h) => Array.from({ length: h.assetCount }, (_, i) => ({ hub: h.hub, assetId: BigInt(i) })));
@@ -142,7 +162,7 @@ export async function discover(client: ViewClient, dep: ChainDeployment): Promis
   }));
   const coverage = new Set([...dep.coverageSpokes.map((c) => lower(c.address)), ...found.map((a) => a.coverageSpoke).filter((a) => a !== ZERO)]);
   const cdp = new Set(cdpSpokes);
-  const manifestLend = uniq(dep.lendSpokes.map(lower));
+  const manifestLend = manifestLendAll.filter((sp) => liveLend.has(sp));
 
   // 6. DAO deficit offsets: on an asset with a Coverage Spoke, each Spoke that is none of the known kinds answers
   // `FIRST_LOSS_LAYER()` with that Coverage Spoke; any other Spoke reverts or names another layer.

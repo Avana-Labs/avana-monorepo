@@ -74,6 +74,8 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
       client.readContract({ ...at, address: manifest.avana.collateralization.address, abi: collateralizationAbi, functionName: "getPending", args: [vaultToken] }),
     settlementReserve: (marketId: bigint) =>
       client.readContract({ ...at, address: manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "settlementReserve", args: [marketId] }),
+    /** The CDP Spokes the MarketRegistry approved (`getSpokes`); a manifest Spoke may not be approved yet. */
+    approvedSpokes: () => client.readContract({ ...at, address: manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "getSpokes" }),
 
     /** Registry and freeze status of this instance's helper (REQ-SWAP-105, Q-404). */
     async operatorStatus(helper: Address) {

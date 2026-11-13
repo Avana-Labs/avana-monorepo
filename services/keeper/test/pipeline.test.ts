@@ -5,7 +5,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Hex } from "viem";
-import { type PipelineDeps, type Simulation, runJob } from "../src/pipeline.ts";
+import { type PipelineDeps, type Simulation, describeCandidate, runJob } from "../src/pipeline.ts";
 import type { EffectiveMode, SafetyState } from "../src/safety/guards.ts";
 import type { BlockContext, Job, TxPlan } from "../src/types.ts";
 import type { ChainReader } from "../src/chain/reads.ts";
@@ -121,5 +121,10 @@ describe("runJob", () => {
     await runJob(two, context(IMPL), d);
     expect(lines[0]).toMatchObject({ subject: "bad", outcome: "skipped", reason: "rpc timeout" });
     expect(d.submit).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs an object candidate as JSON, not [object Object]", () => {
+    expect(describeCandidate({ kind: "market", marketId: 5n })).toBe('{"kind":"market","marketId":"5"}');
+    expect(describeCandidate("0xabc")).toBe("0xabc");
   });
 });
