@@ -8,77 +8,31 @@
 //
 // Usage, from contracts/:  node script/e2e/scenarios/run.ts --network anvil [--only <name>]
 
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { OCR2_ABI, transmit } from "./ocr2.ts";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { appendFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { type Address, type Hex, encodeFunctionData, keccak256, parseAbi, stringToBytes } from "viem";
 import {
-  type Address,
-  type Hex,
-  type PublicClient,
-  createPublicClient,
-  createWalletClient,
-  http,
-  keccak256,
-  parseAbi,
-  stringToBytes,
-} from "viem";
+  ACTORS,
+  type Outcome,
+  type Result,
+  type Scenario,
+  aave,
+  client,
+  config,
+  ctx,
+  arg,
+  manifest,
+  network,
+  out,
+  read,
+  send,
+  wallet,
+  world,
+} from "./context.ts";
+import { marketScenarios } from "./market.ts";
+import { OCR2_ABI, transmit } from "./ocr2.ts";
 
-const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-const arg = (n: string) => {
-  const i = process.argv.indexOf(`--${n}`);
-  return i === -1 ? undefined : process.argv[i + 1];
-};
-const network = arg("network") ?? "anvil";
 const only = arg("only");
-const rpc = process.env.RPC_ANVIL ?? "http://127.0.0.1:8545";
-const out = join(CONTRACTS, "deployments-local", network);
-const json = (f: string) => JSON.parse(readFileSync(join(out, f), "utf8")) as Record<string, any>;
-const manifest = json("manifest.json");
-const world = existsSync(join(out, "world.json")) ? json("world.json") : {};
-const aave = existsSync(join(out, "aave.json")) ? json("aave.json") : {};
-const config = JSON.parse(readFileSync(join(CONTRACTS, "script/deploy/config", `${network}.json`), "utf8"));
-
-const client = createPublicClient({ transport: http(rpc) }) as PublicClient;
-const wallet = createWalletClient({ transport: http(rpc) });
-
-type Outcome = "pass" | "fail" | "not-run";
-interface Result {
-  readonly name: string;
-  readonly outcome: Outcome;
-  readonly detail: string;
-  readonly numbers?: Record<string, string>;
-}
-interface Scenario {
-  readonly name: string;
-  readonly needs?: "market";
-  run(): Promise<{ ok: boolean; detail: string; numbers?: Record<string, string> }>;
-}
-
-/** Sends a transaction as `from` (unlocked) and waits; returns the receipt status and gas, or the revert. */
-async function send(from: Address, to: Address, abi: readonly unknown[], fn: string, args: readonly unknown[]) {
-  try {
-    const { request } = await client.simulateContract({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any });
-    // eth_estimateGas runs in the latest block's second; mined one second later, every Aave V4 Hub accrual writes its
-    // index and timestamp and costs more (Lend Spoke withdraw: 31,185 vs 35,837 gas, AaveV4.LendSpokeWithdrawGas
-    // integration test). The limit is padded so a call estimated in one block still fits in the next.
-    const estimate = await client.estimateContractGas({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any });
-    const gas = (estimate * 13n) / 10n + 25_000n;
-    const hash = await wallet.writeContract({ ...(request as any), account: from, chain: null, gas });
-    const r = await client.waitForTransactionReceipt({ hash });
-    if (r.status === "success") return { ok: true, gas: r.gasUsed, error: "" };
-    // Mined but reverted: replay the call at the block before to name the error.
-    const why = await client
-      .simulateContract({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any, blockNumber: r.blockNumber - 1n })
-      .then(() => "reverted on chain, succeeds one block earlier")
-      .catch((e: Error) => e.message.split("\n").slice(0, 2).join(" "));
-    return { ok: false, gas: r.gasUsed, error: `mined reverted (gas ${r.gasUsed}): ${why}` };
-  } catch (e) {
-    return { ok: false, gas: 0n, error: (e as Error).message.split("\n").slice(0, 3).join(" ") };
-  }
-}
-const read = (address: Address, abi: readonly unknown[], fn: string, args: readonly unknown[] = []) =>
-  client.readContract({ address, abi: abi as any, functionName: fn, args: args as any }) as Promise<any>;
 
 const ERC20 = parseAbi([
   "function mint(address,uint256)",
@@ -114,16 +68,6 @@ const TIMELOCK = parseAbi([
   "function isOperationPending(bytes32 id) view returns (bool)",
 ]);
 
-const ACTORS = {
-  deployer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  governanceSafe: config.governance.governanceSafe,
-  emergencyGuardian: config.governance.emergencyGuardian,
-  aaveProtocolGuardian: config.governance.aaveProtocolGuardian,
-  aaveExecutor: config.governance.aaveGovernanceExecutor,
-  lender: "0x1000000000000000000000000000000000000a11",
-  attacker: "0x1000000000000000000000000000000000000bad",
-} as Record<string, Address>;
-
 const hubs = (manifest.aave.hubs as { address: Address; label: string }[]) ?? [];
 const registry = manifest.avana.marketRegistry.address as Address;
 const timelock = manifest.avana.timelock.address as Address;
@@ -143,18 +87,18 @@ const scenarios: Scenario[] = [
           const assetId = await read(hub, HUB, "getAssetId", [token]);
           const reserveId = await read(lend, SPOKE, "getReserveId", [hub, assetId]);
           const amount = 1_000_000n * 10n ** BigInt(a.decimals);
-          const before = await read(hub, HUB, "getAddedAssets", [assetId]);
+          const before = (await read(hub, HUB, "getAddedAssets", [assetId])) as bigint;
           const steps = [
             await send(ACTORS.deployer!, token, ERC20, "mint", [ACTORS.lender, amount]),
             await send(ACTORS.lender!, token, ERC20, "approve", [lend, amount]),
             await send(ACTORS.lender!, lend, SPOKE, "supply", [reserveId, amount, ACTORS.lender]),
           ];
-          const after = await read(hub, HUB, "getAddedAssets", [assetId]);
+          const after = (await read(hub, HUB, "getAddedAssets", [assetId])) as bigint;
           // withdraw(amount) right after supply(amount) returns the whole amount; withdraw(max) is the fallback check.
           const exact = await send(ACTORS.lender!, lend, SPOKE, "withdraw", [reserveId, amount, ACTORS.lender]);
-          const balBefore = await read(token, ERC20, "balanceOf", [ACTORS.lender]);
+          const balBefore = (await read(token, ERC20, "balanceOf", [ACTORS.lender])) as bigint;
           const w = exact.ok ? exact : await send(ACTORS.lender!, lend, SPOKE, "withdraw", [reserveId, 2n ** 256n - 1n, ACTORS.lender]);
-          const bal = await read(token, ERC20, "balanceOf", [ACTORS.lender]);
+          const bal = (await read(token, ERC20, "balanceOf", [ACTORS.lender])) as bigint;
           const got = bal - balBefore + (exact.ok ? amount : 0n);
           numbers[`${h.label}.${a.symbol}`] =
             `added ${before} -> ${after}; withdraw(amount) ${exact.ok ? "ok" : exact.error.slice(0, 60)}; withdraw(max) ${w.ok ? "ok" : w.error}; received ${got} of ${amount}`;
@@ -188,7 +132,7 @@ const scenarios: Scenario[] = [
     name: "a role grant through the timelock can be cancelled only by the Aave governance executor",
     async run() {
       const role = keccak256(stringToBytes("APPLICATION_PAUSE_GUARDIAN"));
-      const payload = (await import("viem")).encodeFunctionData({ abi: REGISTRY, functionName: "grantRole", args: [role, ACTORS.attacker!] });
+      const payload = encodeFunctionData({ abi: REGISTRY, functionName: "grantRole", args: [role, ACTORS.attacker!] });
       const salt = keccak256(stringToBytes(`scenario.role-grant.${Date.now()}`)) as Hex;
       const args = [[registry], [0n], [payload], `0x${"00".repeat(32)}`, salt] as const;
       const s = await send(ACTORS.governanceSafe!, timelock, TIMELOCK, "scheduleBatch", [...args, 432_000n]);
@@ -224,15 +168,8 @@ const scenarios: Scenario[] = [
       return { ok, detail: ok ? "WETH/USD primary: -60 % by report, then 25 h stale" : "unexpected round data", numbers };
     },
   },
-  ...[
-    "LP pledges a Uniswap v3 position, borrows GHO, collects fees, repays and withdraws",
-    "LP pledges a Slipstream position, borrows USDC, removes liquidity, adds collateral",
-    "price paths: slow drift, 30/60/90 % crashes, depeg, feed staleness",
-    "keeper liquidates through LPVaultSwap on a Uniswap pool and on a Slipstream pool",
-    "self-liquidation attempt by the borrower",
-    "deficit after a 90 % crash and Coverage Spoke coverage",
-    "cross-Hub credit line borrow (off at launch: must revert)",
-  ].map((name): Scenario => ({ name, needs: "market", run: async () => ({ ok: false, detail: "" }) })),
+  // The seven market scenarios (market.ts), each with `needs: "market"`.
+  ...marketScenarios(ctx),
 ];
 
 async function main() {
