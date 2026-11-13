@@ -16,7 +16,7 @@
 //       -learn suffix) and any manifest with a failed or pending check.
 //   schema [--out <file>]
 //       Writes deployments/release-manifest.schema.json from schema.ts.
-//   upstream --rpc-env RPC_MAINNET
+//   check-aave-unmodified --rpc-env RPC_MAINNET
 //       Checks that the Aave V4 build Avana deploys on test networks (contracts/out-aave/, pinned a3ef63e) is the code
 //       the Aave DAO runs on Ethereum (upstream.ts): every Hub, Spoke, AaveOracle, rate strategy, configurator, the
 //       AccessManager, TreasurySpoke and LiquidationLogic, immutables and linked library addresses masked.
@@ -115,7 +115,7 @@ async function main() {
     case "schema":
       write(opt("out") ?? join(REPO, "deployments", "release-manifest.schema.json"), `${JSON.stringify(releaseManifestSchema, null, 2)}\n`);
       break;
-    case "upstream": {
+    case "check-aave-unmodified": {
       const checks = await verifyUpstream(client(), CONTRACTS);
       for (const c of checks) process.stdout.write(`${c.outcome.toUpperCase().padEnd(7)} ${c.name}${c.detail ? ` — ${c.detail}` : ""}\n`);
       const count = (o: string) => checks.filter((c) => c.outcome === o).length;
@@ -124,7 +124,7 @@ async function main() {
       break;
     }
     default:
-      throw new Error("usage: manifest <produce|verify|table|publish|schema|upstream> [options]; see the header of src/manifest/cli.ts");
+      throw new Error("usage: manifest <produce|verify|table|publish|schema|check-aave-unmodified> [options]; see the header of src/manifest/cli.ts");
   }
 }
 
