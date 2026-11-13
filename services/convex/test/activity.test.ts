@@ -78,6 +78,13 @@ describe("changelog and listing events", () => {
     expect(cdp.changes[0]).toMatchObject({ scope: "asset", key: `1:${CDP}:1`, parameter: "Draw cap", current: "4000000" });
   });
 
+  it("records a market's offboarding with the end of its 5-day notice", async () => {
+    const at = Date.UTC(2026, 10, 1);
+    const d = await decodeRecord(rec("MarketRegistry.MarketOffboarding", "0xeeee000000000000000000000000000000000001", { marketId: "4" }), at, res);
+    expect(d.log.marketKey).toBe("1:4");
+    expect(d.changes).toEqual([{ scope: "pool", key: "1:4", parameter: "Offboarding notice ends", previous: "—", current: "2026-11-06T00:00:00.000Z" }]);
+  });
+
   it("turns a timelock salt and execution into a listing operation", async () => {
     const salt = `0x${"ab".repeat(32)}`;
     const scheduled = await decodeRecord(rec("AvanaTimelock.CallSalt", "0xdddd000000000000000000000000000000000001", { id: `0x${"01".repeat(32)}`, salt }), 1_000, res);

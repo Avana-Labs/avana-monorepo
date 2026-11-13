@@ -44,7 +44,6 @@ ponder.on("MarketRegistry:MarketActivated", async ({ event, context }) => {
 
 for (const [name, status] of [
   ["MarketRegistrationCancelled", "Cancelled"],
-  ["MarketOffboarding", "Offboarding"],
   ["MarketClosed", "Closed"],
 ] as const) {
   ponder.on(`MarketRegistry:${name}`, async ({ event, context }) => {
@@ -52,6 +51,15 @@ for (const [name, status] of [
     await context.db.update(schema.market, { chainId: p.chainId, marketId: event.args.marketId }).set({ status, lastBlock: p.blockNumber });
   });
 }
+
+// Offboarding is one step: the notice starts at this block and its end, `offboardedAt + 5 days`, is the earliest time of
+// both the Aave DAO's one liquidation-threshold drop and `closeMarket`.
+ponder.on("MarketRegistry:MarketOffboarding", async ({ event, context }) => {
+  const p = await recordLog(event, context, "MarketRegistry.MarketOffboarding");
+  await context.db
+    .update(schema.market, { chainId: p.chainId, marketId: event.args.marketId })
+    .set({ status: "Offboarding", offboardedAt: p.blockTimestamp, lastBlock: p.blockNumber });
+});
 
 ponder.on("MarketRegistry:SettlementReserveSet", async ({ event, context }) => {
   const p = await recordLog(event, context, "MarketRegistry.SettlementReserveSet");
@@ -141,7 +149,6 @@ logOnly("MarketRegistry", [
   "StandbyRouteActivated",
   "StandbySwitchCancelled",
   "PriceRouteRestored",
-  "WindDownStepped",
   "IntegrationRegistered",
   "CoverageSpokeSet",
   "FlashSourceSet",

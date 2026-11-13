@@ -66,6 +66,9 @@ export interface Decoded {
 
 const a = (x: unknown): string => String(x).toLowerCase();
 
+/** `MarketRegistry.OFFBOARD_NOTICE_SECONDS`: 5 days from `setMarketOffboarding` to the threshold drop and the close. */
+export const OFFBOARD_NOTICE_SECONDS = 432_000;
+
 /** Decodes one record; `at` is its block's timestamp in milliseconds. */
 export async function decodeRecord(r: ExportRecord, at: number, res: Resolver): Promise<Decoded> {
   const args = r.args;
@@ -131,9 +134,11 @@ export async function decodeRecord(r: ExportRecord, at: number, res: Resolver): 
       if (key) await change("asset", key, "Draw cap", String(args.drawCap));
       return { log: { ...base, ...(key ? { spokeReserveKey: key } : {}) }, changes };
     }
-    case "MarketRegistry.WindDownStepped": {
+    case "MarketRegistry.MarketOffboarding": {
+      // One step: the notice ends `OFFBOARD_NOTICE_SECONDS` after this block, the earliest time of the Aave DAO's one
+      // liquidation-threshold drop and of `closeMarket`.
       const key = `${res.chainId}:${String(args.marketId)}`;
-      await change("pool", key, "Liquidation threshold (wind-down)", `${Number(args.liquidationThresholdBps) / 100}%`);
+      await change("pool", key, "Offboarding notice ends", new Date(at + OFFBOARD_NOTICE_SECONDS * 1_000).toISOString());
       return { log: { ...base, marketKey: key }, changes };
     }
     case "AaveHub.UpdateSpokeConfig": {
