@@ -172,3 +172,17 @@ Violated checks in this run: `FV-CTL-36`, `FV-CTL-112`, `FV-CTL-115`, `FV-CTL-13
 | Findings produced | None. The three violations before this run came from models that encoded removed rules; the spec and the code agree on each |
 | Spec state | Decisions through `Q-406`; 2.10 with `REQ-ORACLE-107` (`Q-405`); 2.8 `REQ-MREG-020` with the flash source's lender and `recordIntegrationContracts` (`REQ-MREG-035`); `Q-404` (no flash loan in a liquidation) |
 | Output | `results/run.log`, `results/<model>.json`, `results/quint.txt` |
+
+## FV-CTL-R12 — 2026-11-13 — speed limits on every page; served price after ORACLE-02
+
+| Item | Value |
+|---|---|
+| Date | 2026-11-13 |
+| What ran | Every model, after the speed-limit tighten selectors (`tightenMarketSpeedLimits`, `tightenDebtSpeedLimit`, `Q-411`) were named on 1.4 `REQ-ROLE-027`, 1.5, 2.9 `REQ-CONFIG-049`, 2.15 and 3.8 `MKT-027`. `fv_ctl_params.py`: `marketSpeedLimits` and `debtSpeedLimit` added to the `REQ-CONFIG-049` reading (`FV-CTL-58`, each must appear in the page text); `FV-CTL-153` passes, so `FV-CTL-F-26` is resolved. `fv_ctl_oracle.py`: `FV-CTL-63`, 67, 110–113 encode the served price of `SPEC-ORC-017` after `ORACLE-02` (Drifting serves fresh; a disagreement serves `min(lower, fresh)`), exact per state |
+| Command | `audit/formal-verification/control/run.sh` |
+| Tools | As in `FV-CTL-R11` |
+| Seeds and bounds | As in `FV-CTL-R5` |
+| Results | 175 checks over 10 modules, 0 Violated, 0 Unknown, no open finding; 6 Quint invariants with no violation in 10,000 samples; `check_ids.py`: 423 cited spec IDs, 0 undefined |
+| Exit code | 0 |
+| Findings produced | None; `FV-CTL-F-26` resolved |
+| Output | `results/run.log`, `results/<model>.json`, `results/quint.txt` |

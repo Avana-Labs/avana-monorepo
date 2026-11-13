@@ -11,9 +11,10 @@ stable, and the vault-token price is `price8 = isqrt(4 v0 v1) - 1`. The market i
 valid route (Cached until `failureStart + cachedWindow`, Expired after), Drifting when a token's routes
 disagree or the USD band, TWAP or clamp check fails, and Live otherwise.
 
-`latestAnswer()` serves by state (SPEC-ORC-017): the fresh price when Live, `min(fresh, A)` when Drifting with
-no disagreement, `min(lower, A)` during a disagreement (`lower` built from each token's lower route), the
-accepted price `A` when Cached and 1 when Expired. The DebtOracle applies the same leg, route and timer rules
+`latestAnswer()` serves by state (SPEC-ORC-017): the fresh price when Live or Drifting with no disagreement,
+`min(lower, fresh)` during a disagreement (`lower` built from each token's lower route; the floored `lower` can
+exceed `fresh` by a few units, so it is not assumed below it), the accepted price `A` when Cached and 1 when
+Expired; the accepted price enters only the Cached value. The DebtOracle applies the same leg, route and timer rules
 to one debt asset and serves the quote when Live, `max(p, b, A)` while its routes disagree, `A` when Cached and
 `ceil(A (10^4 + delta) / 10^4)` when Expired (SPEC-ORC-018). A price that cannot be trusted therefore only lowers
 health factors, and it never sizes a seizure or a repayment: those consumers require the price Live, agreeing
@@ -113,7 +114,9 @@ class Inp:
     def wf(self, s):
         """Facts every evaluation guarantees (REQ-ORACLE-002, SPEC-ORC-008/017, SPEC-ORC-013, SPEC-ORC-014)."""
         return z3.And(
-            self.now >= 1, self.p8 >= 1, self.low >= 1, self.low <= self.p8,  # FV-CTL-110, FV-CTL-73
+            # lower >= 1 (FV-CTL-110) and price8 >= 1 (FV-CTL-73); lower is NOT assumed <= price8: the floored
+            # composition can put price8(w) a few units above price8(v) (SPEC-ORC-017 example)
+            self.now >= 1, self.p8 >= 1, self.low >= 1,
             self.now >= s.cpat, self.now >= s.ats, self.now >= s.fs, self.now >= s.ds, self.now >= s.rec,
             z3.Implies(z3.Not(self.failed), z3.And(self.t0 <= self.now, self.t1 <= self.now, self.t0 >= 1,
                                                     self.t1 >= 1, self.tl0 >= 1, self.tl1 >= 1,
@@ -163,10 +166,11 @@ def served(s, i):  # SPEC-ORC-017 (value) and SPEC-ORC-012 (timestamp)
     st = state_of(s, i)
     active, expired = pause_windows(s, i)
     dis = z3.Or(active, expired)
+    # Expired 1; Cached A; a disagreement of a market that is not failed min(lower, fresh); Live or Drifting
+    # otherwise fresh; 1 in place of a result of 0. The accepted price enters only the Cached value.
     val = z3.If(st == EXPIRED, 1,
                 z3.If(st == CACHED, s.ans,
-                      z3.If(dis, zmin(i.low, s.ans),
-                            z3.If(st == DRIFTING, zmin(i.p8, s.ans), i.p8))))
+                      zmax(z3.IntVal(1), z3.If(dis, zmin(i.low, i.p8), i.p8))))
     ts = z3.If(i.failed, s.ats, z3.If(dis, zmin(i.tl0, i.tl1), zmin(i.t0, i.t1)))
     return val, ts
 
@@ -204,12 +208,12 @@ st0 = state_of(s0, i0)
 
 # ================================================================ served price and stored state
 # FV-CTL-63 verifies: INV-055, INV-087, REQ-ORACLE-020, SPEC-ORC-017, REQ-ORACLE-085, REQ-ORACLE-044, REQ-ORACLE-060
-prove("FV-CTL-63", "Served price by state (SPEC-ORC-017): fresh when Live, min(fresh, A) when Drifting without disagreement, min(lower, A) during a disagreement, A when Cached, 1 when Expired; served >= 1 always, <= A whenever not Live, <= fresh whenever not failed, <= price8 of getTokenPrices() and equal to it when Live or Cached; the accepted price and checkpoint stay >= 1 after every poke",
-      z3.And(sv >= 1, z3.Implies(st0 != LIVE, sv <= s0.ans), z3.Implies(z3.Not(i0.failed), sv <= i0.p8),
+prove("FV-CTL-63", "Served price by state (SPEC-ORC-017): fresh when Live, fresh when Drifting without disagreement, min(lower, fresh) during a disagreement, A when Cached, 1 when Expired; served >= 1 always, <= A whenever failed, <= fresh whenever not failed (even when the floored lower exceeds fresh), <= price8 of getTokenPrices() and equal to it when Live, Cached or Drifting without disagreement; the accepted price and checkpoint stay >= 1 after every poke",
+      z3.And(sv >= 1, z3.Implies(i0.failed, sv <= s0.ans), z3.Implies(z3.Not(i0.failed), sv <= i0.p8),
              z3.Implies(st0 == LIVE, sv == i0.p8), z3.Implies(st0 == CACHED, sv == s0.ans),
              z3.Implies(st0 == EXPIRED, sv == 1),
-             z3.Implies(z3.And(z3.Not(i0.failed), z3.Or(*pause_windows(s0, i0))), sv == zmin(i0.low, s0.ans)),
-             z3.Implies(z3.And(st0 == DRIFTING, z3.Not(z3.Or(*pause_windows(s0, i0)))), sv == zmin(i0.p8, s0.ans)),
+             z3.Implies(z3.And(z3.Not(i0.failed), z3.Or(*pause_windows(s0, i0))), sv == zmin(i0.low, i0.p8)),
+             z3.Implies(z3.And(st0 == DRIFTING, z3.Not(z3.Or(*pause_windows(s0, i0)))), sv == i0.p8),
              sv <= z3.If(i0.failed, s0.ans, i0.p8),
              z3.Implies(z3.Or(st0 == LIVE, st0 == CACHED), sv == z3.If(i0.failed, s0.ans, i0.p8)),
              inv(s1)),
@@ -256,9 +260,9 @@ after_same = [i_after_vc_false.now == i0.now, i_after_vc_false.D == i0.D, i_afte
               z3.Not(i_after_vc_false.vc)]
 act1, exp1 = pause_windows(s1, i_after_vc_false)
 # FV-CTL-67 verifies: SPEC-ORC-016, REQ-ORACLE-022, REQ-ORACLE-028, INV-059, REQ-ORACLE-018, REQ-ORACLE-084
-prove("FV-CTL-67", "After a poke a disagreeing market is Drifting, served at its lower routes and liquidation-paused; the first-observation time is set once per episode (per route version) and never moves; the pause lasts < disagreementPauseMax from it, then disagreementExpired holds until the routes agree",
+prove("FV-CTL-67", "After a poke a disagreeing market is Drifting, served at min(lower, fresh) and liquidation-paused; the first-observation time is set once per episode (per route version) and never moves; the pause lasts < disagreementPauseMax from it, then disagreementExpired holds until the routes agree",
       z3.And(z3.Implies(i0.D, z3.And(st0 == DRIFTING, liq_paused(s1, i_after_vc_false), z3.Or(act1, exp1),
-                                     served(s1, i_after_vc_false)[0] == zmin(i_after_vc_false.low, s1.ans))),
+                                     served(s1, i_after_vc_false)[0] == zmin(i_after_vc_false.low, i_after_vc_false.p8))),
              z3.Implies(z3.And(s0.ds != 0, s1.ds != 0, z3.Not(i0.vc)), s1.ds == s0.ds),
              z3.Implies(act1, i0.now < s1.ds + PMAX),
              z3.Implies(z3.And(i0.D, z3.Not(act1)), exp1)),
@@ -504,14 +508,15 @@ wq = [z3.If(both[0], cap_i(zmin(pr[0], pr[1]), 0), vq[0]), z3.If(both[1], cap_i(
 WW, VV, xa, xb, ya, yb, rr, ss, XX, YY, L2, H2 = z3.Ints("w0w1 v0v1 xa xb ya yb r s X Y L2 H2")
 pr_rng = [x >= 1 for x in pr] + [x <= MAXR for x in pr]
 # FV-CTL-110 verifies: SPEC-ORC-017, SPEC-ORC-008, REQ-ORACLE-086, INV-055
-prove_lemmas("FV-CTL-110", "Lower-route price (SPEC-ORC-017): with w_i = ceil_i(min(p_i, b_i)) when both routes are valid (else v_i), 1 <= w_i <= v_i, so w0 w1 <= v0 v1 and lower = isqrt(4 w0 w1) - 1 satisfies 1 <= lower <= fresh; served = min(lower, A) lies in [1, A]",
+prove_lemmas("FV-CTL-110", "Lower-route price (SPEC-ORC-017): with w_i = ceil_i(min(p_i, b_i)) when both routes are valid (else v_i), 1 <= w_i <= v_i, so w0 w1 <= v0 v1 and lower = isqrt(4 w0 w1) - 1 satisfies 1 <= lower <= fresh; served = min(lower, fresh) lies in [1, fresh]",
              [  # 1: per-token bounds of the lower-route valuation price
                  (z3.And([z3.And(wq[k] >= 1, wq[k] <= vq[k], vq[k] <= MAXR) for k in range(2)]), pr_rng),
                  # 2: products are monotone on positive integers
                  (xa * xb <= ya * yb, [xa >= 1, xb >= 1, xa <= ya, xb <= yb]),
                  # 3: isqrt is monotone
                  (rr <= ss, [rr >= 0, ss >= 0, rr * rr <= XX, XX <= YY, YY < (ss + 1) * (ss + 1)]),
-                 # 4: isqrt(4 w0 w1) >= 2 for w0 w1 >= 1, so lower >= 1; the served value is in [1, A]
+                 # 4: isqrt(4 w0 w1) >= 2 for w0 w1 >= 1, so lower >= 1; the served value min(lower, fresh) is in
+                 # [1, fresh] (A is the fresh price here: any fresh >= 1)
                  (z3.And(rr - 1 >= 1, zmin(rr - 1, A) >= 1, zmin(rr - 1, A) <= A),
                   [XX >= 4, rr >= 0, rr * rr <= XX, XX < (rr + 1) * (rr + 1), A >= 1])],
              verifies=["SPEC-ORC-017", "SPEC-ORC-008", "REQ-ORACLE-086", "INV-055"], targets=["T-66", "T-69"])
@@ -519,10 +524,10 @@ ex_w = (min(100_000_000, 100_000_000), min(100_000_000, 97_500_000))
 ex_lower = lp_sum(*ex_w)
 ex_fresh = lp_sum(100_000_000, 100_000_000)
 # FV-CTL-111 verifies: SPEC-ORC-017, INV-087, SPEC-ORC-008, SPEC-ORC-012
-expect("FV-CTL-111", "SPEC-ORC-017 example (full-range USDC/USDT, spacing 1, d = 6): A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give the composition (987,420, 1,012,739), lower = 197,483,855 and served 197,483,855; Cached serves 199,980,000; Expired serves 1; Drifting on a consistency deviation with fresh 199,999,600 (both tokens at $1) serves 199,980,000",
+expect("FV-CTL-111", "SPEC-ORC-017 example (full-range USDC/USDT, spacing 1, d = 6): A = 199,980,000; token1 routes 100,000,000 / 97,500,000 give the composition (987,420, 1,012,739), lower = 197,483,855 and served min(197,483,855, 199,999,600) = 197,483,855; Cached serves 199,980,000; Expired serves 1; Drifting on a consistency deviation with fresh 199,999,600 (both tokens at $1) serves 199,999,600, above A, and a top-up there is booked at min(199,999,600, 199,980,000) = 199,980,000",
        cl_full_range_composition(*ex_w) == (987_420, 1_012_739)
-       and ex_lower == 197_483_855 and min(ex_lower, 199_980_000) == 197_483_855
-       and ex_fresh == 199_999_600 and min(ex_fresh, 199_980_000) == 199_980_000,
+       and ex_lower == 197_483_855 and min(ex_lower, ex_fresh) == 197_483_855
+       and ex_fresh == 199_999_600 and ex_fresh > 199_980_000 and min(ex_fresh, 199_980_000) == 199_980_000,
        verifies=["SPEC-ORC-017", "INV-087", "SPEC-ORC-008", "SPEC-ORC-012"], targets=["T-66"],
        cex={"lower": ex_lower})
 
@@ -531,8 +536,8 @@ expect("FV-CTL-111", "SPEC-ORC-017 example (full-range USDC/USDT, spacing 1, d =
 s_v, i_v = St("view"), Inp("view")
 act_v, exp_v = pause_windows(s_v, i_v)
 # FV-CTL-112 verifies: SPEC-ORC-016, SPEC-ORC-017, REQ-ORACLE-086, REQ-ORACLE-022, INV-059
-prove("FV-CTL-112", "Whenever some token disagrees (REQ-ORACLE-008) and the market is not failed, pauseActive or disagreementExpired holds, so the market is served at its lower routes and liquidationPaused is true (REQ-ORACLE-086: 'While some token disagrees (SPEC-ORC-016 pauseActive or disagreementExpired)')",
-      z3.And(z3.Or(act_v, exp_v), liq_paused(s_v, i_v), served(s_v, i_v)[0] == zmin(i_v.low, s_v.ans)),
+prove("FV-CTL-112", "Whenever some token disagrees (REQ-ORACLE-008) and the market is not failed, pauseActive or disagreementExpired holds, so the market is served at min(lower, fresh) and liquidationPaused is true (REQ-ORACLE-086: 'While some token disagrees (SPEC-ORC-016 pauseActive or disagreementExpired)')",
+      z3.And(z3.Or(act_v, exp_v), liq_paused(s_v, i_v), served(s_v, i_v)[0] == zmin(i_v.low, i_v.p8)),
       assumptions=timers + [inv(s_v), i_v.wf(s_v), i_v.D, z3.Not(i_v.failed)],
       verifies=["SPEC-ORC-016", "SPEC-ORC-017", "REQ-ORACLE-086", "REQ-ORACLE-022", "INV-059"], targets=["T-68"],
       detail="Includes disagreementPauseMax = 0 (allowed: the bound is <= 3,600) with disagreeSince read as 0 (no "
@@ -542,12 +547,12 @@ prove("FV-CTL-112", "Whenever some token disagrees (REQ-ORACLE-008) and the mark
 
 # Stress values never size a seizure: LPVaultSwap seizes only when liquidationPaused is false.
 # FV-CTL-113 verifies: REQ-ORACLE-085, SPEC-ORC-016, SPEC-ORC-017, INV-087, REQ-SWAP-008
-prove("FV-CTL-113", "Expired serves exactly 1 (REQ-ORACLE-085) and Cached serves A; whenever the served price is one of the stress values (Cached A, Expired 1, a disagreement's lower routes), liquidationPaused is true, so no stress value sizes a seizure of this market",
+prove("FV-CTL-113", "Expired serves exactly 1 (REQ-ORACLE-085) and Cached serves A; whenever the served price is one of the stress values (Cached A, Expired 1, a disagreement's min(lower, fresh)), liquidationPaused is true, so no stress value sizes a seizure of this market: with liquidationPaused false the served price is exactly fresh",
       z3.And(z3.Implies(st0 == EXPIRED, z3.And(sv == 1, liq_paused(s0, i0))),
              z3.Implies(st0 == CACHED, z3.And(sv == s0.ans, liq_paused(s0, i0))),
              z3.Implies(z3.Or(*pause_windows(s0, i0)), liq_paused(s0, i0)),
              z3.Implies(z3.Not(liq_paused(s0, i0)),
-                        z3.Or(sv == i0.p8, z3.And(st0 == DRIFTING, sv == zmin(i0.p8, s0.ans))))),
+                        sv == i0.p8)),
       assumptions=timers + [inv(s0), i0.wf(s0)],
       verifies=["REQ-ORACLE-085", "SPEC-ORC-016", "SPEC-ORC-017", "INV-087", "REQ-SWAP-008"], targets=["T-66"])
 
