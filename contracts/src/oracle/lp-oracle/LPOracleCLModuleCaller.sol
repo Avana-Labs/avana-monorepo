@@ -35,7 +35,7 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
             abi.encode(_TIMELOCK, _CHAIN_BLOCK_TIME, _POKE_MIN_GAS_FLOOR, _POKE_MIN_GAS_CEILING, _HAS_SEQUENCER)
         );
         if (
-            moduleLogic.code.length == 0
+            moduleLogic == address(0) || moduleLogic.code.length == 0
                 || LPOracleCLModuleLogic(moduleLogic).MODULE_ID() != keccak256("avana.LPOracleCLModuleLogic.v1")
                 || LPOracleCLModuleLogic(moduleLogic).SLOT0_WORDS() != _SLOT0_WORDS
                 || LPOracleCLModuleLogic(moduleLogic).logicConfig() != config
@@ -159,11 +159,13 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
     /// @dev The delegatecall of `_module`: re-raises the module's revert data.
     function _delegate(
         bytes memory data
-    ) private returns (bytes memory ret) {
+    ) internal returns (bytes memory ret) {
         bool ok;
         // The module is this implementation's own code, fixed at construction; it runs in this proxy's storage.
+        // forge-lint: disable-start(controlled-delegatecall)
         // solhint-disable-next-line avoid-low-level-calls
         (ok, ret) = _MODULE_LOGIC.delegatecall(data);
+        // forge-lint: disable-end(controlled-delegatecall)
         if (ok) return ret;
         // Re-raises the module's revert data unchanged: `InsufficientGas` before a read, or none when the call itself
         // ran out of gas, which the implementation's entry point reports as `InsufficientGas` (`_forward`).

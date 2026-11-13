@@ -19,4 +19,9 @@ interface ILPOracleCL {
     /// @return report Range, oracle and clamped sqrt prices, TWAP and reference ticks, tolerance and cardinality.
     /// @custom:spec REQ-ORACLE-042, REQ-AMM-V3-005, REQ-AMM-SLIP-005
     function getClPriceState() external view returns (ClPriceStateView memory report);
+
+    /// @notice The module contract every logic contract of this implementation delegates its pricing hooks to.
+    /// @return moduleLogic The `LPOracleCLModuleLogic` fixed at deployment.
+    /// @custom:spec REQ-ORACLE-080
+    function MODULE_LOGIC() external view returns (address moduleLogic);
 }

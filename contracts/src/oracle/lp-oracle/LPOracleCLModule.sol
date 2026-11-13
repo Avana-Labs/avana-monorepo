@@ -69,8 +69,8 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         if (!shaped || pool.code.length == 0) return false;
         uint8[] storage decs = _s().tokenDecimals;
         if (decs[0] > CL_MAX_TOKEN_DECIMALS || decs[1] > CL_MAX_TOKEN_DECIMALS) return false;
-        (bool ok0, address t0) = _poolAddress(pool, IUniswapV3Pool.token0.selector, CONFIG_CALL_GAS);
-        (bool ok1, address t1) = _poolAddress(pool, IUniswapV3Pool.token1.selector, CONFIG_CALL_GAS);
+        (bool ok0, address t0) = _poolAddress(pool, abi.encodeCall(IUniswapV3Pool.token0, ()), CONFIG_CALL_GAS);
+        (bool ok1, address t1) = _poolAddress(pool, abi.encodeCall(IUniswapV3Pool.token1, ()), CONFIG_CALL_GAS);
         (bool okS, int24 spacing) = _tickSpacing(pool);
         if (!ok0 || !ok1 || !okS || t0 != tokens[0] || t1 != tokens[1]) return false;
         if (!ClPriceMath.isUsableRange(lower, upper, spacing)) return false;
@@ -223,10 +223,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     function _noRateTokens() internal view returns (bool) {
         Layout storage $ = _s();
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            $.integration,
-            CONFIG_CALL_GAS,
-            abi.encodeWithSelector(IAmmIntegrationHooks.rateProviders.selector, $.marketId),
-            4 * 32 + 1
+            $.integration, CONFIG_CALL_GAS, abi.encodeCall(IAmmIntegrationHooks.rateProviders, ($.marketId)), 4 * 32 + 1
         );
         if (!ok) return !_bound();
         return ret.length == 4 * 32 && _wordIs(ret, 0, 32) && _wordIs(ret, 32, 2) && _wordIs(ret, 64, 0)
@@ -248,7 +245,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
             _s().marketRegistry,
             CONFIG_CALL_GAS,
-            abi.encodeWithSelector(IMarketRegistryViews.marketOfLpOracle.selector, address(this)),
+            abi.encodeCall(IMarketRegistryViews.marketOfLpOracle, (address(this))),
             32
         );
         (bool okW, uint256 id) = LPOracleCalls.wordAt(ret, 0);
@@ -376,8 +373,8 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         if (uint256(poolRef) > type(uint160).max || index > 1) return (false, false, address(0));
         pool = address(uint160(uint256(poolRef)));
         if (pool.code.length == 0) return (false, false, pool);
-        (bool ok0, address t0) = _poolAddress(pool, IUniswapV3Pool.token0.selector, POOL_CALL_GAS);
-        (bool ok1, address t1) = _poolAddress(pool, IUniswapV3Pool.token1.selector, POOL_CALL_GAS);
+        (bool ok0, address t0) = _poolAddress(pool, abi.encodeCall(IUniswapV3Pool.token0, ()), POOL_CALL_GAS);
+        (bool ok1, address t1) = _poolAddress(pool, abi.encodeCall(IUniswapV3Pool.token1, ()), POOL_CALL_GAS);
         address[] storage tokens = _s().tokens;
         (address base, address other) = (tokens[index], tokens[1 - index]);
         paired = ok0 && ok1 && ((t0 == base && t1 == other) || (t0 == other && t1 == base));

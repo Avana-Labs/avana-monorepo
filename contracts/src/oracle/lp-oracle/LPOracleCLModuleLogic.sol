@@ -20,6 +20,11 @@ import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 /// deployed implementation cannot be swapped except by an upgrade. Each hook keeps the gas guard of every pool read
 /// (`SPEC-ORC-023`): a delegatecall forwards the caller's gas, and each read inside checks its own bound.
 /// @custom:spec REQ-ORACLE-080, REQ-ORACLE-103, REQ-ORACLE-104, REQ-ORACLE-105, REQ-ORACLE-106, SPEC-ORC-023
+// Its `logicConfig()` is the LPOracle logic contracts' chain-constant hash, not the ParameterStore's logic view.
+// Each function is a pricing hook that only the implementation's own logic contracts call, by delegatecall through
+// `LPOracleCLModuleCaller._module`, which encodes the call against this contract; no Avana interface declares them.
+// solhint-disable comprehensive-interface
+// forge-lint: disable-next-line(missing-inheritance)
 contract LPOracleCLModuleLogic is LPOracleCLModule {
     /// @notice Identifier the logic contracts check at construction.
     bytes32 public constant MODULE_ID = keccak256("avana.LPOracleCLModuleLogic.v1");

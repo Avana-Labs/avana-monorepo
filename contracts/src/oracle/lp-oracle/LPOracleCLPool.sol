@@ -106,9 +106,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
     ) internal view returns (bool ok, uint16 cardinality, bool unlocked) {
         uint256 length = uint256(_SLOT0_WORDS) * _W;
         bytes memory ret;
-        (ok, ret) = LPOracleCalls.staticRead(
-            pool, POOL_CALL_GAS, abi.encodeWithSelector(IUniswapV3Pool.slot0.selector), length + 1
-        );
+        (ok, ret) = LPOracleCalls.staticRead(pool, POOL_CALL_GAS, abi.encodeCall(IUniswapV3Pool.slot0, ()), length + 1);
         if (!ok || ret.length != length) return (false, 0, false);
         uint256 card = 0;
         uint256 flag = 0;
@@ -120,17 +118,20 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         (cardinality, unlocked) = (uint16(card), flag == 1);
     }
 
-    /// @dev One address word of `pool` (`token0()` or `token1()`), `ok` false for a failed or malformed read.
+    /// @dev One address word of `pool` (the answer to `data`: `token0()` or `token1()`), `ok` false for a failed or
+    /// malformed read.
     function _poolAddress(
         address pool,
-        bytes4 selector,
+        bytes memory data,
         uint256 callGas
     ) internal view returns (bool ok, address value) {
         bytes memory ret;
-        (ok, ret) = LPOracleCalls.staticRead(pool, callGas, abi.encodeWithSelector(selector), _W + 1);
+        (ok, ret) = LPOracleCalls.staticRead(pool, callGas, data, _W + 1);
         uint256 word = 0;
         if (ok && ret.length == _W) (ok, word) = LPOracleCalls.uintAt(ret, 0, type(uint160).max);
         else ok = false;
+        // casting to 'uint160' is safe because `uintAt` bounds `word` by type(uint160).max.
+        // forge-lint: disable-next-line(unsafe-typecast)
         value = address(uint160(word));
     }
 
@@ -139,9 +140,8 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         address pool
     ) internal view returns (bool ok, int24 spacing) {
         bytes memory ret;
-        (ok, ret) = LPOracleCalls.staticRead(
-            pool, CONFIG_CALL_GAS, abi.encodeWithSelector(IUniswapV3Pool.tickSpacing.selector), _W + 1
-        );
+        (ok, ret) =
+            LPOracleCalls.staticRead(pool, CONFIG_CALL_GAS, abi.encodeCall(IUniswapV3Pool.tickSpacing, ()), _W + 1);
         int256 value = 0;
         if (ok && ret.length == _W) (ok, value) = LPOracleCalls.intAt(ret, 0, 24);
         else ok = false;
@@ -164,7 +164,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         ago[0] = window;
         bytes memory ret;
         (ok, ret) = LPOracleCalls.staticRead(
-            pool, POOL_CALL_GAS, abi.encodeWithSelector(IUniswapV3Pool.observe.selector, ago), _OBSERVE_LENGTH + 1
+            pool, POOL_CALL_GAS, abi.encodeCall(IUniswapV3Pool.observe, (ago)), _OBSERVE_LENGTH + 1
         );
         if (!ok || ret.length != _OBSERVE_LENGTH || !_observeShape(ret)) return (false, 0);
         int256 c0 = 0;

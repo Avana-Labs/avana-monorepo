@@ -6,13 +6,11 @@ pragma solidity 0.8.28;
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {
-    LPOracleCLInitLogic,
-    LPOracleCLListingLogic,
-    LPOracleCLPokeLogic,
-    LPOracleCLViewLogic
-} from "../../../src/oracle/lp-oracle/LPOracleCLLogic.sol";
+import {LPOracleCLInitLogic} from "../../../src/oracle/lp-oracle/LPOracleCLInitLogic.sol";
+import {LPOracleCLListingLogic} from "../../../src/oracle/lp-oracle/LPOracleCLListingLogic.sol";
 import {LPOracleCLModuleLogic} from "../../../src/oracle/lp-oracle/LPOracleCLModuleLogic.sol";
+import {LPOracleCLPokeLogic} from "../../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
+import {LPOracleCLViewLogic} from "../../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
 import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";

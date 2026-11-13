@@ -52,7 +52,7 @@ contract LPOracleCL is LPOracle, LPOracleCLModule, ILPOracleCL {
         LPOracleCLPool(slot0Words)
     {
         if (
-            !_sameModule(logics.pokeLogic, slot0Words, moduleLogic)
+            moduleLogic == address(0) || !_sameModule(logics.pokeLogic, slot0Words, moduleLogic)
                 || !_sameModule(logics.initLogic, slot0Words, moduleLogic)
                 || !_sameModule(logics.listingLogic, slot0Words, moduleLogic)
                 || !_sameModule(logics.viewLogic, slot0Words, moduleLogic)
@@ -60,10 +60,8 @@ contract LPOracleCL is LPOracle, LPOracleCLModule, ILPOracleCL {
         _MODULE_LOGIC = moduleLogic;
     }
 
-    /// @notice The module contract every logic contract of this implementation delegates its pricing hooks to.
-    /// @return moduleLogic The `LPOracleCLModuleLogic` fixed at deployment.
-    /// @custom:spec REQ-ORACLE-080
-    function MODULE_LOGIC() external view returns (address moduleLogic) {
+    /// @inheritdoc ILPOracleCL
+    function MODULE_LOGIC() external view override returns (address moduleLogic) {
         moduleLogic = _MODULE_LOGIC;
     }
 

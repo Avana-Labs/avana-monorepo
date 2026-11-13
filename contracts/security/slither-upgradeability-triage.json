@@ -25,14 +25,6 @@
       "review": "Reviewed per call site, group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. initialize runs in the ERC1967Proxy constructor and rejects any timelock other than the immutable TIMELOCK."
     },
     {
-      "fingerprint": "d5db8888ac8cc58f",
-      "check": "initialize-target",
-      "file": "src/policy/risk-module/RiskModule.sol",
-      "function": "RiskModule.initialize(address)",
-      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-RISK-002, Q-226), and the implementation's constructor calls _disableInitializers. Covered by TEST-242 (initializeOnce, adminRolesOnlyTimelock).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
       "fingerprint": "b1ec8f783baf0c3b",
       "check": "initialize-target",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
@@ -55,6 +47,15 @@
       "reason": "Same as d5db8888ac8cc58f (fingerprint moved by the speed-limit edit): initialize runs atomically in the ERC1967Proxy constructor, and the implementation's constructor calls _disableInitializers. Covered by TEST-242.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
+    },
+    {
+      "fingerprint": "6f3f68a716916458",
+      "check": "initialize-target",
+      "file": "src/oracle/lp-oracle/LPOracleCL.sol",
+      "function": "LPOracle.initialize(InitParams)",
+      "reason": "Informational reminder that the proxy must be initialized: initialize(InitParams) runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-058), and the implementation's constructor (LPOracle, inherited by LPOracleCL) calls _disableInitializers (REQ-ORACLE-080). Covered by TEST-062 (test_TEST_062_initializersLocked, test_TEST_062_initializeChecks).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: same as the Josue-approved DebtOracle (2a1c646e4fe8715c), ParameterStore (0410eb7b4d80fdce) and MarketRegistry (44499e6d1cee9a4b) initialize-target entries; checked: LPOracle's constructor ends with _disableInitializers and the fixtures deploy the proxy with initialize in the ERC1967Proxy constructor."
     }
   ]
 }

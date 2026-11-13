@@ -40,7 +40,7 @@ library SpeedLimitMath {
             r.start = uint64(start + window);
             r.prev = w.curr;
         } else {
-            r = SpeedWindow(w.start, w.prev, w.curr);
+            r = SpeedWindow({start: w.start, prev: w.prev, curr: w.curr});
         }
     }
 
@@ -104,7 +104,7 @@ library SpeedLimitMath {
     ) internal pure returns (SpeedWindow memory w) {
         // curr + x <= prev + curr + x <= L <= max < 2^96 (REQ-PSTORE-035).
         // forge-lint: disable-next-line(unsafe-typecast)
-        w = SpeedWindow(r.start, r.prev, uint96(uint256(r.curr) + x));
+        w = SpeedWindow({start: r.start, prev: r.prev, curr: uint96(uint256(r.curr) + x)});
     }
 
     /// @notice When the next charges stop counting and how much: `start + window` with `prev`, else

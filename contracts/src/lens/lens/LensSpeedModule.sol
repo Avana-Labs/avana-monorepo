@@ -61,6 +61,6 @@ contract LensSpeedModule is LensBase, ILensSpeed {
     ) private pure returns (uint64) {
         if (a == 0) return b;
         if (b == 0) return a;
-        return uint64(Math.min(a, b));
+        return a < b ? a : b;
     }
 }

@@ -9,6 +9,8 @@ pragma solidity 0.8.28;
 /// fit one contract passes the same address for both. Every logic contract must report the implementation's chain
 /// constants (`logicConfig`).
 /// @custom:spec REQ-ORACLE-080, REQ-ORACLE-106
+// The struct's name keeps its LPOracle prefix, as every LPOracle type does.
+// forge-lint: disable-next-item(pascal-case-struct)
 struct LPOracleLogicSet {
     // Poke logic contract.
     address pokeLogic;

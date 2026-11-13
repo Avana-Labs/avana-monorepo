@@ -47,7 +47,8 @@ gas_reports = ["*"]
 # runs they fit. The base's test harness and fuzz target compile the same way; each AMM protocol's deployable LPOracle
 # files take the same restriction. The concentrated-liquidity implementation (LPOracleCL.sol) also runs its pricing
 # module in its own contract (LPOracleCLModuleLogic.sol, by delegatecall) and splits initialization from checkConfig
-# (LPOracleCLLogic.sol), so each of its contracts fits EIP-170 with the 1,024-byte margin at 200 runs.
+# (LPOracleCLInitLogic.sol, LPOracleCLListingLogic.sol); its four logic files (poke, listing, initialization, views) take
+# the same restriction, so each of its contracts fits EIP-170 with the 1,024-byte margin at 200 runs.
 # The concentrated-liquidity LPVaults carry the shared custody, binding and pricing base plus their AMM protocol's hooks;
 # at 10,000 runs the Slipstream LPVault is within about 140 bytes of EIP-170, and with the unit exponent of SPEC-ORC-005
 # (narrow 18/18-decimal ranges) it was 531 bytes over its 1,024-byte margin at 1,000 runs. At 200 runs both keep the
@@ -72,7 +73,10 @@ compilation_restrictions = [
   { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "test/utils/harness/LPOracleHarness.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/oracle/lp-oracle/LPOracleCL.sol", via_ir = false, optimizer_runs = 200 },
-  { paths = "src/oracle/lp-oracle/LPOracleCLLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLPokeLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLListingLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLInitLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleCLViewLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/oracle/lp-oracle/LPOracleCLModuleLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "test/invariant/echidna/LPOracleProperties.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
