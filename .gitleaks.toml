@@ -12,8 +12,3 @@ regexes = ['''^\s*"(src|test|script)/[A-Za-z0-9_./-]+\.sol": "[0-9a-f]{64}",?\s*
 description = "Spec traceability comments made only of a check ID and requirement IDs (for example `// TEST-166 verifies: REQ-ACCESS-060, REQ-ACCESS-010`), not credentials. Approved by Josue, 2026-11-13."
 regexTarget = "line"
 regexes = ['''^\s*//+\s*(?:@custom:spec|(?:TEST|PROP|MATH|HYP|QNT|SYM|SIM)-[A-Za-z0-9-]+ verifies:)\s+[A-Z]+(?:-[A-Za-z0-9]+)+(?:,\s*[A-Z]+(?:-[A-Za-z0-9]+)+)*\s*$''']
-
-[[allowlists]]
-description = "Ethereum addresses (0x and 40 hex digits) are public account and contract identifiers, not credentials: the generic-api-key rule matches them after keys such as `tokenMinter` or labels such as `AccessManagerEnumerable` in deploy configs and the Aave address list."
-regexTarget = "secret"
-regexes = ['''^0x[0-9a-fA-F]{40}$''']
