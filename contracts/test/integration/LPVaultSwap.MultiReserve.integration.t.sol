@@ -37,7 +37,7 @@ contract LPVaultSwapMultiReserveIntegrationTest is LPVaultSwapUnitBase {
     /// @notice Repaying USDC leaves the GHO debt unchanged and settles in USDC; repaying GHO leaves the USDC debt
     /// unchanged and settles in GHO; each raises the health factor.
     // TEST-104 verifies: REQ-SWAP-005, REQ-SWAP-088, INV-034
-    function test_eachReserveSettlesInItsOwnAsset() public {
+    function test_TEST_104_eachReserveSettlesInItsOwnAsset() public {
         uint256 ghoDebt = _debtOf(proxy, ghoReserveId);
         uint256 hf0 = _hf(proxy);
         LiquidationResult memory r1 = _liquidateAs(keeper, _params(proxy, 1000e6));
@@ -56,7 +56,7 @@ contract LPVaultSwapMultiReserveIntegrationTest is LPVaultSwapUnitBase {
 
     /// @notice A stale USDC DebtOracle blocks only USDC repayments: the GHO reserve of the same account settles.
     // TEST-226 verifies: REQ-SWAP-091, REQ-SWAP-110, Q-208
-    function test_staleOtherReserveBlocksNothing() public {
+    function test_TEST_226_staleOtherReserveBlocksNothing() public {
         usdcOracle.setState(PriceState.Expired, false);
         _expectLiquidateRevert(
             keeper,
@@ -71,7 +71,7 @@ contract LPVaultSwapMultiReserveIntegrationTest is LPVaultSwapUnitBase {
     /// asset with the debt asset conserved, the other reserve's debt untouched, and LPVaultSwap neutral in all three
     /// tokens and the vault token.
     // TEST-104 verifies: REQ-SWAP-005, SPEC-LIQ-010, INV-035
-    function testFuzz_alternatingReserves(
+    function testFuzz_TEST_104_alternatingReserves(
         uint256 usdcPart,
         uint256 ghoPart,
         bool ghoFirst
@@ -99,7 +99,7 @@ contract LPVaultSwapMultiReserveIntegrationTest is LPVaultSwapUnitBase {
     /// @notice Markets 4 and 5 share the routes, the Collateralization and the LPVault: a liquidation of a market-5
     /// account settles to the same figures whether or not market-4 accounts were liquidated first.
     // TEST-277 verifies: SPEC-LIQ-021, INV-097, PROP-084
-    function testFuzz_otherMarketHistoryChangesNothing(
+    function testFuzz_TEST_277_otherMarketHistoryChangesNothing(
         uint256 first,
         uint256 second
     ) public {

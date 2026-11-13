@@ -164,6 +164,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
     }
 
     // TEST-249 verifies: REQ-RISK-069, REQ-RISK-076, SPEC-CF-001, SPEC-CF-002
+    // TEST-225 verifies: REQ-RISK-069, REQ-RISK-076; shared: TEST-225's Aave-side CF and bonus changes by the Aave executor, each detected as its DriftReason
     // Sources: 2.7 REQ-RISK-069 example (CF 3,300 above 3,000; bonus 50 bps below 200; target 1.05e18)
     function test_TEST_249_riskConfiguration() public {
         _key(3300, 10_500, 0);

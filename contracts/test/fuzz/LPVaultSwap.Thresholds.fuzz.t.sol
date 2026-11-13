@@ -35,7 +35,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
 
     /// @notice `deadline ≥ block.timestamp` settles; `deadline < block.timestamp` reverts with the deadline.
     // TEST-174 verifies: REQ-SWAP-030, REQ-SWAP-074
-    function testFuzz_deadlineBoundary(
+    function testFuzz_TEST_174_deadlineBoundary(
         uint256 back,
         uint256 ahead
     ) public {
@@ -54,7 +54,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
 
     /// @notice `minPayout = keeperOut` settles with exactly that payout; `keeperOut + k` reverts `PayoutTooLow`.
     // TEST-174 verifies: REQ-SWAP-073, SPEC-LIQ-010
-    function testFuzz_minPayoutBoundary(
+    function testFuzz_TEST_174_minPayoutBoundary(
         uint256 debtToCover,
         uint256 extra
     ) public {
@@ -77,7 +77,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
     /// every leg meets its minimum and the recovery falls below the floor by a gap `g`: `maxShortfall = g` settles with
     /// `shortfall = g` pulled from the caller and `R + shortfall = minRec`; `g − 1` reverts `RecoveryBelowFloor`.
     // TEST-233 verifies: SPEC-LIQ-019, REQ-SWAP-026, REQ-SWAP-111
-    function testFuzz_maxShortfallBoundary(
+    function testFuzz_TEST_233_maxShortfallBoundary(
         uint256 debtToCover
     ) public {
         debtToCover = bound(debtToCover, 500e6, 6000e6);
@@ -107,7 +107,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
     /// @notice `debtToCover = 0` reverts `InvalidAmount`; a `minAmounts` vector of any length other than 0 or the
     /// market's two tokens reverts before any state changes.
     // TEST-174 verifies: REQ-SWAP-030, REQ-SWAP-077
-    function testFuzz_amountAndMinAmountsShape(
+    function testFuzz_TEST_174_amountAndMinAmountsShape(
         uint8 length
     ) public {
         LiquidationParams memory p = _params(proxy, 0);
@@ -131,7 +131,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
     /// @notice Per-token minimums at the release are honoured exactly: the amounts the unwind returns settle, one more
     /// on either token reverts in the release.
     // TEST-047 verifies: REQ-SWAP-016, REQ-SWAP-045
-    function testFuzz_minAmountsAtTheRelease(
+    function testFuzz_TEST_047_minAmountsAtTheRelease(
         uint256 debtToCover,
         bool second
     ) public {
@@ -154,7 +154,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
 
     /// @notice A frozen caller is refused with its own address whatever the parameters; unfreezing restores it.
     // TEST-229 verifies: REQ-SWAP-105, REQ-SWAP-109
-    function testFuzz_frozenCaller(
+    function testFuzz_TEST_229_frozenCaller(
         address caller
     ) public {
         vm.assume(caller != address(0) && caller.code.length == 0 && uint160(caller) > 0xffff);

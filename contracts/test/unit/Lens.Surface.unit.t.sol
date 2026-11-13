@@ -225,7 +225,7 @@ contract LensSurfaceUnitTest is LensFixture {
     // ─── Lock ───
 
     // TEST-060 verifies: REQ-LENS-006, REQ-LENS-021, REQ-LOCK-016, INV-054
-    // TEST-222 verifies: ATTACK-093
+    // TEST-222 verifies: ATTACK-093; shared: a re-entering pool-token hook runs while an Avana call holds the Lock, and every Lens view refuses Locked() then
     function test_TEST_060_everyViewRefusesWhileLocked() public {
         bytes[] memory calls = _allCalls();
         _holdLock();
@@ -242,7 +242,7 @@ contract LensSurfaceUnitTest is LensFixture {
     }
 
     // TEST-060 verifies: REQ-LENS-006, REQ-LENS-021
-    // TEST-222 verifies: ATTACK-093
+    // TEST-222 verifies: ATTACK-093; shared: a hook re-entering a Lens module directly mid-call, while the Lock is held, is refused Locked() too
     function test_TEST_060_modulesRefuseDirectlyWhileLocked() public {
         vm.prank(lpVaultSwap);
         lock.acquire();

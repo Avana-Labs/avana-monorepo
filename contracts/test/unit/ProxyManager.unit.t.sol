@@ -350,6 +350,36 @@ contract ProxyManagerUnitTest is AvanaTest {
         assertTrue(code.hasOpcode(0, at, 0xf5), "CREATE2 present (sanity of the scan)");
     }
 
+    /// @notice The PositionProxy has no initialize step: neither its creation code (the blob the ProxyManager embeds)
+    /// nor a deployed proxy's runtime code carries an `initialize`, `reinitializer` or `init` selector, the binding
+    /// is set by the constructor, and the creation code's hash is fixed in the ProxyManager.
+    // TEST-252 verifies: REQ-PROXY-004, REQ-PROXY-085, REQ-PROXY-050
+    // Sources: 5.1 TEST-252 (ProxyManager and PositionProxy part), Q-264
+    function test_TEST_252_noInitializerAndFixedCreationCodeHash() public {
+        bytes memory blob = type(PositionProxy).creationCode;
+        assertEq(manager.PROXY_CREATION_CODE_HASH(), keccak256(blob), "creation-code hash fixed");
+        assertTrue(address(manager).code.indexOf(blob) != type(uint256).max, "the embedded blob is that code");
+        vm.prank(adapter);
+        address proxy = manager.deployProxy(carol, spokeHub1, MARKET_A);
+        bytes memory runtime = proxy.code;
+        bytes4[6] memory inits = [
+            bytes4(keccak256("initialize()")),
+            bytes4(keccak256("initialize(address)")),
+            bytes4(keccak256("initialize(address,address,address,uint256)")),
+            bytes4(keccak256("init(address,address,uint256)")),
+            bytes4(keccak256("reinitialize(uint64)")),
+            bytes4(keccak256("upgradeToAndCall(address,bytes)"))
+        ];
+        for (uint256 i = 0; i < inits.length; ++i) {
+            assertFalse(blob.pushesSelector(0, blob.length, inits[i]), "initializer selector in the creation code");
+            assertFalse(runtime.pushesSelector(0, runtime.length, inits[i]), "initializer selector in the runtime code");
+        }
+        assertEq(IPositionProxy(proxy).WALLET(), carol, "binding set by the constructor");
+        assertEq(IPositionProxy(proxy).SPOKE(), spokeHub1, "spoke");
+        assertEq(IPositionProxy(proxy).MARKET_ID(), MARKET_A, "market");
+        assertEq(IPositionProxy(proxy).ADAPTER(), adapter, "adapter");
+    }
+
     /// @notice No ETH entry point: plain ETH and an unknown selector revert.
     // TEST-191 verifies: REQ-PROXY-050, REQ-PROXY-103
     function test_TEST_191_noEthAndNoFallback() public {

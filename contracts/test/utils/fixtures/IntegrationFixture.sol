@@ -18,6 +18,7 @@ import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
 import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
 import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleLogics.sol";
@@ -97,6 +98,11 @@ abstract contract IntegrationFixture is IntegrationMarkets {
     CollPoolToken internal weth;
     CollPoolToken internal wbtc;
     CollPoolToken internal meme;
+    IntegDebtOracleMock internal wethOracle;
+    CoverageSpoke internal wethCoverage;
+    uint256 internal wethAssetId;
+    uint256 internal wethReserveId;
+    address internal feedWethDebt = makeAddr("feed WETH/USD debt");
 
     VaultToken internal tokenB;
     address internal vtB;
@@ -302,6 +308,73 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         _recordCdpSpoke(SLIPSTREAM, slipSpoke, slipImpl, slipOracle, vaultSlip, type(uint256).max, type(uint256).max);
         vm.label(slipSpoke, "Aave.Spoke.SlipstreamStable");
         vm.label(address(vaultSlip), "LPVault(slipstream stand-in)");
+    }
+
+    /// @notice WETH as a non-GHO debt reserve of the Uniswap v3 CDP Spoke: a Hub asset with a 10,000 WETH line
+    /// through the Lend Spoke, the CDP reserve (draw cap 5,000 WETH) priced by a WETH DebtOracle (`IntegDebtOracleMock`
+    /// at $3,000, also its AaveOracle source), its record in the MarketRegistry, its own Coverage Spoke, a 0.0005 WETH
+    /// floor rounding allowance, primary and backup routes from USDC and USDT into WETH for the base markets at the
+    /// oracle rate, and 2,000 WETH idle on the Aave V3 Pool for the flash liquidation helper. Suites call it after
+    /// `_deployIntegration`; WETH is the launch markets' token when `_addLaunchMarkets` ran first.
+    function _addWethDebtReserve() internal {
+        if (address(weth) == address(0)) weth = _newToken("WETH", 18, 3000e8);
+        wethOracle = new IntegDebtOracleMock(address(weth), address(reg), address(store), feedWethDebt, 3000e8);
+        store.setBorrowAge(feedWethDebt, FEED_AGE);
+        IAaveV4Hub hubView = IAaveV4Hub(aave.hub);
+        uint40 maxCap = hubView.MAX_ALLOWED_SPOKE_CAP();
+        uint24 maxRp = hubView.MAX_RISK_PREMIUM_THRESHOLD();
+        vm.startPrank(aaveDao);
+        wethAssetId = ICollHubConfigurator(aave.hubConfigurator)
+            .addAssetWithDecimals(aave.hub, address(weth), 18, aave.treasurySpoke, 0, aave.irStrategy, _ir());
+        ICollHubConfigurator(aave.hubConfigurator)
+            .addSpoke(aave.hub, aave.lendSpoke, wethAssetId, CollHubSpokeConfig(maxCap, 0, maxRp, true, false));
+        uint256 lendReserve = ICollSpokeConfigurator(aave.spokeConfigurator)
+            .addReserve(
+                aave.lendSpoke,
+                aave.hub,
+                wethAssetId,
+                address(wethOracle),
+                CollSpokeReserveConfig(0, false, false, true, false),
+                CollSpokeDynamicReserveConfig(0, 10_000, 0)
+            );
+        wethReserveId = _listDebt(aave.cdpSpoke, wethAssetId, address(wethOracle), 5000);
+        vm.stopPrank();
+        weth.mint(daoTreasury, 10_000e18);
+        vm.startPrank(daoTreasury);
+        weth.approve(aave.lendSpoke, 10_000e18);
+        IAaveV4Spoke(aave.lendSpoke).supply(lendReserve, 10_000e18, daoTreasury);
+        vm.stopPrank();
+        wethCoverage = _coverageSpoke(address(weth), wethAssetId);
+        reg.setCoverageSpoke(aave.hub, address(weth), address(wethCoverage));
+        reg.setDebtReserve(
+            aave.cdpSpoke,
+            wethReserveId,
+            DebtReserveDef({
+                reserveId: wethReserveId,
+                asset: address(weth),
+                decimals: 18,
+                fundingHub: aave.hub,
+                hubAssetId: wethAssetId,
+                priceSource: address(wethOracle),
+                fixedPrice: false,
+                coverageSpoke: address(wethCoverage),
+                crossHub: false,
+                approved: true
+            })
+        );
+        store.setFloorRoundingAllowance(address(weth), 0.0005e18);
+        uint256[2] memory ids = [MARKET_ID, MARKET_B];
+        address[2] memory tokens = [address(usdc), address(usdt)];
+        for (uint256 i = 0; i < 2; ++i) {
+            for (uint256 j = 0; j < 2; ++j) {
+                address[2] memory r = _routes(tokens[j], address(weth));
+                reg.setRoute(ids[i], tokens[j], address(weth), 0, r[0], true);
+                reg.setRoute(ids[i], tokens[j], address(weth), 1, r[1], true);
+            }
+        }
+        _listOnV3(weth, 2000e18);
+        vm.label(address(wethOracle), "DebtOracleWETH(stand-in)");
+        vm.label(address(wethCoverage), "WethCoverageSpoke");
     }
 
     function _deployCoverage() private {

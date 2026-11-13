@@ -21,7 +21,7 @@ import {Test} from "forge-std/Test.sol";
 /// @dev Amounts are bounded to the listing ranges; the leg step runs on the real `LPVaultSwapSettlement` code through
 /// a harness with two pool tokens and minting routes. Fuzz twins: `testFuzz_TEST_078_*` and `testFuzz_TEST_081_*` on
 /// the full liquidation; the two floor checks time out on their division chain and have 10,000-run fuzz twins
-/// `testFuzz_PROP_059_floorCoversDebt*` (PROP-017 and PROP-048 prove their parts).
+/// `testFuzz_TEST_198_floorCoversDebt*` (PROP-017 and PROP-048 prove their parts).
 contract LPVaultSwapHalmosTest is Test {
     LPVaultSwapSettlementHarness internal harness;
     LVSHarnessRegistry internal registry;
@@ -109,7 +109,7 @@ contract LPVaultSwapHalmosTest is Test {
     /// @notice USDC debt, vault token of 6 decimals at $2.10, bonus 10,500, no flash term: for every repayment
     /// `D < 2^64` Aave's seizure `c = ⌊D × 10,500 × 10⁸ / (10⁴ × 2.1·10⁸)⌋` values to a floor that, with one vault unit,
     /// one debt unit, `U` and `ε`, covers `D`. TIMEOUT at the 60 s assertion budget (the division chain); its 10,000-run
-    /// fuzz twin is `testFuzz_PROP_059_floorCoversDebtUsdc`.
+    /// fuzz twin is `testFuzz_TEST_198_floorCoversDebtUsdc`.
     function check_PROP_059_floorCoversDebtUsdc(
         uint64 debt
     ) public pure {
@@ -118,7 +118,7 @@ contract LPVaultSwapHalmosTest is Test {
 
     // PROP-059 verifies: SPEC-LIQ-003, SPEC-LIQ-005, SPEC-LIQ-007, REQ-SWAP-012, INV-034, Q-235, Q-404
     /// @notice GHO debt (18 decimals, Aave's fixed $1.00 source), vault token of 6 decimals at $2.00, bonus 10,200.
-    /// TIMEOUT as above; fuzz twin `testFuzz_PROP_059_floorCoversDebtGho`.
+    /// TIMEOUT as above; fuzz twin `testFuzz_TEST_198_floorCoversDebtGho`.
     function check_PROP_059_floorCoversDebtGho(
         uint64 debt
     ) public pure {

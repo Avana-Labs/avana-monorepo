@@ -87,6 +87,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
 
     // TEST-028 verifies: REQ-ADAPTER-015, REQ-ADAPTER-016, REQ-ADAPTER-055, INV-024
     // Sources: 2.7 REQ-ADAPTER-016 (per-feed heartbeat plus margin, 88,200 s)
+    // TEST-250 verifies: REQ-ADAPTER-016; shared: TEST-250's feed cadence at the borrow gate, a borrow at age 88,200 s passes and at 88,201 s is refused
     function test_TEST_028_collateralPriceGates() public {
         oracle.setState(PriceState.Drifting, 1 << 3, false);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.PriceNotLive.selector, mid, PriceState.Drifting));

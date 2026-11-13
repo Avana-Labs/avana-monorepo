@@ -406,9 +406,23 @@ contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integra
 # Coverage builds without the optimizer and without via-IR so source maps stay exact. Fork,
 # differential, Halmos and invariant suites are excluded: coverage measures the unit, fuzz,
 # integration and hostile suites.
+# The default profile's compilation_restrictions would otherwise apply here too, and in a via-IR or optimized build
+# forge records a ternary as 0/0, the body of a single-statement `if` as 0 and a revert merged with an identical one as
+# 0, however often tests run them. Only files that do not compile without them keep a restriction: the DebtOracle files
+# need via-IR ("stack too deep" in the legacy pipeline), built here without the optimizer; the two AMM integrations need
+# the optimizer ("stack too deep" in ABI decoding without it), built here with the legacy pipeline.
 optimizer = false
 via_ir = false
 no_match_path = "test/{fork,differential,halmos,invariant}/**"
+additional_compiler_profiles = [
+  { name = "coverage-ir", optimizer = false, via_ir = true },
+  { name = "coverage-integrations", optimizer = true, via_ir = false, optimizer_runs = 200 },
+]
+compilation_restrictions = [
+  { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
+  { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+]
 
 [profile.coverage.fuzz]
 runs = 64

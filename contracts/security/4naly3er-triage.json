@@ -1128,7 +1128,7 @@
       "fingerprint": "4dd14cd1943b1f8e",
       "check": "Division by zero not prevented",
       "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
-      "reason": "bNet > 10^4 is checked on the line above (s = 0 otherwise), so the divisor is never 0 (SPEC-LIQ-003). Covered by SettlementMath.Properties.fuzz testFuzz_effectiveSlippage.",
+      "reason": "bNet > 10^4 is checked on the line above (s = 0 otherwise), so the divisor is never 0 (SPEC-LIQ-003). Covered by SettlementMath.Properties.fuzz testFuzz_TEST_198_effectiveSlippage.",
       "review": "Reviewed per call site (LPVaultSwap wave 1): checked against the cited rule and tests; approved pattern.",
       "approval": "pending review (approved pattern)"
     },

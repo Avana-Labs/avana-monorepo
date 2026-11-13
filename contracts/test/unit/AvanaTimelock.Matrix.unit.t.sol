@@ -516,6 +516,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     /// operation stays unexecuted; a direct call by any account other than the timelock reverts with the missing
     /// `APPLICATION_ADMIN` role.
     // TEST-063 verifies: REQ-ACCESS-011, REQ-ACCESS-053, REQ-ACCESS-054, REQ-ACCESS-100, REQ-ACCESS-121, SPEC-GOV-008
+    // TEST-045 verifies: REQ-ACCESS-053, REQ-ACCESS-054; shared: TEST-045's keeper registry through the real AvanaTimelock, addKeeper at the normal delay, removeKeeper at the short delay, KeeperFloor
     function test_TEST_063_lpVaultSwapKeeperRegistryThroughTimelock() public {
         ILPVaultSwap lvs = _realLPVaultSwap();
         address second = makeAddr("secondKeeper");
