@@ -31,7 +31,9 @@ export const file = (f: string) => (existsSync(join(out, f)) ? json(f) : undefin
 export const manifest = json("manifest.json");
 export const world = file("world.json") ?? {};
 export const aave = file("aave.json") ?? {};
-export const config = JSON.parse(readFileSync(join(CONTRACTS, "script/deploy/config", `${network}.json`), "utf8")) as Record<string, any>;
+export const config = JSON.parse(
+  readFileSync(process.env.AVANA_CONFIG ? join(CONTRACTS, process.env.AVANA_CONFIG) : join(CONTRACTS, "script/deploy/config", `${network}.json`), "utf8"),
+) as Record<string, any>;
 
 export const client = createPublicClient({ transport: http(rpc) }) as PublicClient;
 export const wallet = createWalletClient({ transport: http(rpc) }) as WalletClient;

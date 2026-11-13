@@ -25,7 +25,7 @@ export RPC_ANVIL="http://127.0.0.1:${PORT}"
 OUT="$CONTRACTS/deployments-local/anvil"
 LOG="$OUT/logs"
 STATUS="$OUT/e2e-status.json"
-STEPS="${E2E_STEPS:-deploy manifest services scenarios}"
+STEPS="${E2E_STEPS:-deploy day2 manifest services scenarios}"
 # E2E_RESUME=<step name> reloads the anvil state the last run saved (anvil-state.json) and runs the deploy steps from
 # that one on, keeping the earlier outputs: a failed step is fixed and rerun without redeploying the whole world.
 RESUME="${E2E_RESUME:-}"
@@ -84,16 +84,35 @@ skipped() { # step
   return 0
 }
 
+# PHASE prefixes the recorded name and the log of each step of a later phase (day2:, rerun:).
+PHASE=""
 run_script() { # step (a name of script/deploy/step.sh)
-  local step="$1"
-  skipped "$step" && return 0
+  local step="$1" name="$PHASE$1"
+  skipped "$name" && return 0
   if AVANA_NETWORK=anvil AVANA_RPC_URL="$RPC_ANVIL" AVANA_DEPLOYER="$DEPLOYER" AVANA_FORGE_FLAGS="$FRESH" \
-    script/deploy/step.sh "$step" > "$LOG/$step.log" 2>&1; then
-    record "$step" pass "$(grep -E 'BLOCKED|output' "$LOG/$step.log" | head -3 | tr '\n' ' ')"
+    script/deploy/step.sh "$step" > "$LOG/${name/:/-}.log" 2>&1; then
+    record "$name" pass "$(grep -E 'BLOCKED|output|nothing|no new' "$LOG/${name/:/-}.log" | head -3 | tr '\n' ' ')"
     return 0
   fi
-  record "$step" fail "see $LOG/$step.log: $(grep -E 'Error|revert' "$LOG/$step.log" | head -2 | tr '\n' ' ')"
+  record "$name" fail "see $LOG/${name/:/-}.log: $(grep -E 'Error|revert' "$LOG/${name/:/-}.log" | head -2 | tr '\n' ' ')"
   return 1
+}
+
+# A step run again with nothing new in the config must do nothing: no operation scheduled or executed, no AIP run, no
+# contract deployed, no funding.
+run_idle() { # step
+  local log="$LOG/rerun-$1.log"
+  skipped "rerun:$1" && return 0
+  if ! AVANA_NETWORK=anvil AVANA_RPC_URL="$RPC_ANVIL" AVANA_DEPLOYER="$DEPLOYER" AVANA_FORGE_FLAGS="$FRESH" \
+    script/deploy/step.sh "$1" > "$log" 2>&1; then
+    record "rerun:$1" fail "see $log: $(grep -E 'Error|revert' "$log" | head -2 | tr '\n' ' ')"
+    return 1
+  fi
+  if grep -qE 'scheduled as the governance Safe|executed by the governance executor|^  executed:|^  funded|^  (Hub|Spoke|LPOracle|price source [A-Z]+ 0x[0-9a-fA-F]+$)|^listing metadata 0x' "$log"; then
+    record "rerun:$1" fail "acted again with nothing new in the config: see $log"
+    return 1
+  fi
+  record "rerun:$1" pass "$(grep -E 'nothing|no new|already|earlier' "$log" | head -2 | tr '\n' ' ')"
 }
 
 # Multicall3 at its canonical address, as on every public network (external/multicall3/README.md); the code hash must
@@ -141,9 +160,10 @@ place_executor() {
 
 if [[ " $STEPS " == *" deploy "* ]]; then
   # A fresh deployment: no output of an earlier run may stand in for this one's.
-  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets,listing-metadata}.json \
+  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets,listing-metadata,config-day2}.json \
     "$OUT"/operation-*.json "$OUT"/aip-*.json
-  [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337 "$OUT/listing-content"
+  [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337 "$OUT/listing-content" &&
+    find "$LOG" -name '*.log' ! -name anvil.log -delete
   place_multicall3 &&
     run_script 00-factories &&
     run_script 01-aave-v4 &&
@@ -170,6 +190,43 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     run_script 09-listing-activate &&
     advance 43201 wait-listing-activate &&
     run_script 09-execute-listing-activate
+fi
+
+# Day 2: the operator's later changes (script/e2e/day2-additions.ts: a Hub with its Spokes, a lend asset, a borrowable
+# asset on a listed Spoke, a collateral token and two markets) through the same named steps, each acting only on what
+# the config adds; then every step once more, which must do nothing. Later steps read the day-2 config.
+if [[ " $STEPS " == *" day2 "* ]]; then
+  if node script/e2e/day2-additions.ts --network anvil > "$LOG/day2-config.log" 2>&1; then
+    export AVANA_CONFIG=deployments-local/anvil/config-day2.json
+    PHASE=day2:
+    run_script 01-aave-v4 &&
+      run_script 04-access-operations &&
+      advance 432001 day2:wait-access-operations &&
+      run_script 05-execute-access-operations &&
+      run_script 06-aave-deployment-aip &&
+      run_script 07-deploy-coverage-spokes &&
+      run_script 08-aave-loss-layers-aip &&
+      run_script 07-fund-coverage-spokes &&
+      run_script 09-listing-setup &&
+      advance 432001 day2:wait-listing-setup &&
+      run_script 09-execute-listing-setup &&
+      run_script 09-debt-oracles &&
+      run_script 10-aave-debt-reserves-aip &&
+      run_script 09-market-metadata &&
+      run_script 09-listing-markets &&
+      advance 432001 day2:wait-listing-markets &&
+      run_script 09-execute-listing-markets &&
+      run_script 10-aave-markets-aip &&
+      run_script 09-listing-activate &&
+      advance 43201 day2:wait-listing-activate &&
+      run_script 09-execute-listing-activate &&
+      for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-coverage-spokes 08-aave-loss-layers-aip \
+        07-fund-coverage-spokes 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
+        09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
+    PHASE=""
+  else
+    record day2-config fail "see $LOG/day2-config.log"
+  fi
 fi
 
 if [[ " $STEPS " == *" manifest "* ]]; then

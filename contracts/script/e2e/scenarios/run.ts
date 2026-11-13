@@ -83,6 +83,8 @@ const scenarios: Scenario[] = [
         const hub = aave.hubs[h.label].proxy as Address;
         const lend = aave.spokes[h.lendSpoke].proxy as Address;
         for (const a of assets) {
+          // An asset with `hubs` is only on those Hubs (06_AaveDeploymentPayload).
+          if (a.hubs && !a.hubs.includes(h.label)) continue;
           const token = world.tokens[a.symbol] as Address;
           const assetId = await read(hub, HUB, "getAssetId", [token]);
           const reserveId = await read(lend, SPOKE, "getReserveId", [hub, assetId]);

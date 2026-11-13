@@ -5,13 +5,13 @@
 // writes the chain's deployment row from the release manifest, imports the indexer's export to the finalized head,
 // samples the current values and waits for the listing metadata to load. Then every market of the manifest must have
 // its pool page, and every debt reserve its asset page, with the numbers read on chain and the text of the listing
-// metadata file the listing operation committed to (its salt).
+// metadata file its listing operation committed to (its salt; one file per listing operation, all read).
 //
 // Usage, from contracts/:  node script/e2e/convex-check.ts <manifest.json> <repo root>
 // Environment: RPC_ANVIL, E2E_EXPORT_URL, E2E_EXPORT_KEY_ID, E2E_EXPORT_SECRET, E2E_LISTING_CONTENT_URL.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 type Json = Record<string, any>;
@@ -75,11 +75,16 @@ async function main() {
   if (through <= 0) throw new Error("Convex imported no export page from the indexer");
   run("ingest/sampler:refresh", { chainId });
 
-  const metadata = JSON.parse(readFileSync(join(OUT, "listing-metadata.json"), "utf8")) as Json;
-  const file = JSON.parse(readFileSync(join(OUT, metadata.file), "utf8")) as Json;
+  // Every listing operation committed to its own metadata file (listing-content/<hash>.json, its salt): the first
+  // deployment's, then one per later listing. listing-metadata.json points only at the latest, or at none when the
+  // last 09-market-metadata found nothing new, so the check reads them all.
+  const dir = join(OUT, "listing-content");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
+  if (files.length === 0) throw new Error(`no listing metadata file in ${dir}`);
+  const entries = files.flatMap((f) => (JSON.parse(readFileSync(join(dir, f), "utf8")) as Json).entries as Json[]);
   const entry = (scope: string, key: string) => {
-    const e = (file.entries as Json[]).find((x) => x.scope === scope && x.key === key);
-    if (!e) throw new Error(`listing metadata has no ${scope} entry ${key}`);
+    const e = entries.find((x) => x.scope === scope && x.key === key);
+    if (!e) throw new Error(`no listing metadata file has a ${scope} entry ${key}`);
     return e;
   };
 
@@ -90,7 +95,17 @@ async function main() {
     content = run<Json | null>("marketContent:get", { scope: "pool", slug: first.slug });
     if (!content) await sleep(2000);
   }
-  if (!content) throw new Error(`no listing content loaded from ${env("E2E_LISTING_CONTENT_URL")}/${metadata.hash}.json`);
+  if (!content) throw new Error(`no listing content loaded from ${env("E2E_LISTING_CONTENT_URL")} for pool ${first.slug}`);
+  // Each later listing operation's file loads in its own scheduled action: wait for every entry's text.
+  const pending = () => entries.filter((e) => (e.scope === "pool" || e.scope === "asset") && !run<Json | null>("marketContent:get", { scope: e.scope, slug: e.slug }));
+  for (let i = 0; i < 30 && pending().length > 0; i++) await sleep(2000);
+  const missing = pending();
+  if (missing.length > 0) {
+    // The latest listing operation's record says whether its file loaded, was refused (and why) or was not found.
+    const latest = JSON.parse(readFileSync(join(OUT, "operation-listing-markets.json"), "utf8")) as Json;
+    const op = run<Json | null>("listing/load:operation", { chainId, operationId: latest.id });
+    process.stdout.write(`convex: listing operation ${latest.id} (salt ${latest.salt}): ${JSON.stringify(op)}\n`);
+  }
 
   const failures: string[] = [];
   const lines: string[] = [];
@@ -139,7 +154,9 @@ function pick(r: Json) {
 
 let cfg: Json | undefined;
 function config(): Json {
-  cfg ??= JSON.parse(readFileSync(join(repo, "contracts/script/deploy/config", `${manifest.network}.json`), "utf8")) as Json;
+  cfg ??= JSON.parse(
+    readFileSync(join(repo, "contracts", process.env.AVANA_CONFIG ?? `script/deploy/config/${manifest.network}.json`), "utf8"),
+  ) as Json;
   return cfg!;
 }
 
