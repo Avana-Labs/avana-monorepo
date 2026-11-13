@@ -620,6 +620,326 @@
       "reserveAdminRole": 501
     }
   },
+  "listing": {
+    "feed": {
+      "heartbeat": 86400,
+      "heartbeatMargin": 1800,
+      "driftBps": 10,
+      "maxAnswerCap": "1000000000000000000"
+    },
+    "hubDepositorUsdCap": "2000000",
+    "creditLineWhole": 50000000,
+    "tokens": [
+      {
+        "symbol": "USDC",
+        "isUsdStable": true,
+        "deviationBps": 25,
+        "collateralFactorBps": 9000,
+        "agreementToleranceBps": 150,
+        "secondToleranceBps": 150,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "stable",
+          "volatile"
+        ],
+        "address": "$world:.tokens.USDC",
+        "feeds": {
+          "primary": "$world:.feeds.USDC.primary",
+          "alternate": "$world:.feeds.USDC.alternate",
+          "standby": "$world:.feeds.USDC.standby",
+          "second": "$world:.feeds.USDC.second"
+        }
+      },
+      {
+        "symbol": "USDT",
+        "isUsdStable": true,
+        "deviationBps": 25,
+        "collateralFactorBps": 9000,
+        "agreementToleranceBps": 150,
+        "secondToleranceBps": 150,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "stable"
+        ],
+        "address": "$world:.tokens.USDT",
+        "feeds": {
+          "primary": "$world:.feeds.USDT.primary",
+          "alternate": "$world:.feeds.USDT.alternate",
+          "standby": "$world:.feeds.USDT.standby",
+          "second": "$world:.feeds.USDT.second"
+        }
+      },
+      {
+        "symbol": "WETH",
+        "isUsdStable": false,
+        "deviationBps": 50,
+        "collateralFactorBps": 8500,
+        "agreementToleranceBps": 200,
+        "secondToleranceBps": 200,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "volatile"
+        ],
+        "address": "$world:.tokens.WETH",
+        "feeds": {
+          "primary": "$world:.feeds.WETH.primary",
+          "alternate": "$world:.feeds.WETH.alternate",
+          "standby": "$world:.feeds.WETH.standby",
+          "second": "$world:.feeds.WETH.second"
+        }
+      }
+    ],
+    "debtAssets": [
+      {
+        "symbol": "GHO",
+        "fixedPrice": true,
+        "deviationBps": 25,
+        "floorRoundingAllowance": "1000000000000000000",
+        "address": "$world:.tokens.GHO",
+        "feeds": {
+          "primary": "$world:.feeds.GHO.primary"
+        }
+      },
+      {
+        "symbol": "USDC",
+        "fixedPrice": false,
+        "stressRiseBps": 500,
+        "floorRoundingAllowance": "1000000",
+        "debtOraclePokeMinGas": 1000000,
+        "address": "$world:.tokens.USDC",
+        "feeds": {
+          "primary": "$world:.feeds.USDC.primary"
+        }
+      }
+    ],
+    "spokes": [
+      {
+        "label": "uniV3Stable",
+        "hub": "stable",
+        "integrationId": 1,
+        "tier": 1,
+        "spoke": "$aave:.spokes.uniV3Stable.proxy"
+      },
+      {
+        "label": "uniV3Volatile",
+        "hub": "volatile",
+        "integrationId": 1,
+        "tier": 3,
+        "spoke": "$aave:.spokes.uniV3Volatile.proxy"
+      },
+      {
+        "label": "slipStable",
+        "hub": "stable",
+        "integrationId": 2,
+        "tier": 1,
+        "spoke": "$aave:.spokes.slipStable.proxy"
+      },
+      {
+        "label": "slipVolatile",
+        "hub": "volatile",
+        "integrationId": 2,
+        "tier": 3,
+        "spoke": "$aave:.spokes.slipVolatile.proxy"
+      }
+    ],
+    "debtReserves": [
+      {
+        "spoke": "uniV3Stable",
+        "symbol": "GHO"
+      },
+      {
+        "spoke": "uniV3Volatile",
+        "symbol": "GHO"
+      },
+      {
+        "spoke": "slipStable",
+        "symbol": "USDC"
+      },
+      {
+        "spoke": "slipVolatile",
+        "symbol": "USDC"
+      }
+    ],
+    "speedLimits": {
+      "window": 21600,
+      "borrowRateBps": 2500,
+      "pledgeRateBps": 2500,
+      "borrowMinUsd": 250000,
+      "borrowMaxUsd": 2500000,
+      "pledgeMinUsd": 1000000,
+      "pledgeMaxUsd": 10000000,
+      "debtRateBps": 2500,
+      "debtMinWhole": 500000,
+      "debtMaxWhole": 5000000
+    },
+    "markets": [
+      {
+        "name": "uni-USDC-USDT-100",
+        "integrationId": 1,
+        "spoke": "uniV3Stable",
+        "pool": "USDC-USDT-100",
+        "generation": 0,
+        "tickLower": -50,
+        "tickUpper": 50,
+        "collateralFactorBps": 3500,
+        "maxLiquidationBonus": 10500,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 250,
+        "slippageAllowanceMinBps": 30,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "USDT",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDC-100"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "uni-WETH-USDC-500",
+        "integrationId": 1,
+        "spoke": "uniV3Volatile",
+        "pool": "WETH-USDC-500",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3000,
+        "maxLiquidationBonus": 10800,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 100,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 300,
+        "slippageAllowanceMinBps": 50,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "WETH",
+            "asset": "GHO",
+            "primary": [
+              "GHO-WETH-3000"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDT-100"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "slip-USDC-USDT-cl1",
+        "integrationId": 2,
+        "spoke": "slipStable",
+        "pool": "USDC-USDT-cl1-g0",
+        "generation": 0,
+        "tickLower": -50,
+        "tickUpper": 50,
+        "collateralFactorBps": 3500,
+        "maxLiquidationBonus": 10500,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 250,
+        "slippageAllowanceMinBps": 30,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "USDT",
+            "asset": "USDC",
+            "primary": [
+              "USDC-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-500"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "slip-WETH-USDC-cl100",
+        "integrationId": 2,
+        "spoke": "slipVolatile",
+        "pool": "WETH-USDC-cl100-g0",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3000,
+        "maxLiquidationBonus": 10800,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 100,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 300,
+        "slippageAllowanceMinBps": 50,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "WETH",
+            "asset": "USDC",
+            "primary": [
+              "WETH-USDC-500"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "USDC-USDT-100"
+            ]
+          }
+        ]
+      }
+    ],
+    "pools": {
+      "GHO-USDC-100": "$world:.uniswapPools['GHO-USDC-100']",
+      "GHO-USDT-100": "$world:.uniswapPools['GHO-USDT-100']",
+      "GHO-WETH-3000": "$world:.uniswapPools['GHO-WETH-3000']",
+      "USDC-USDT-100": "$world:.uniswapPools['USDC-USDT-100']",
+      "USDC-USDT-500": "$world:.uniswapPools['USDC-USDT-500']",
+      "USDC-USDT-cl1-g0": "$world:.slipstreamPools['USDC-USDT-cl1-g0']",
+      "WETH-USDC-500": "$world:.uniswapPools['WETH-USDC-500']",
+      "WETH-USDC-cl100-g0": "$world:.slipstreamPools['WETH-USDC-cl100-g0']",
+      "WETH-USDT-500": "$world:.uniswapPools['WETH-USDT-500']"
+    },
+    "uniswapV3Factory": "$world:.uniswapV3Factory"
+  },
   "coverage": {
     "funder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
   }

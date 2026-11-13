@@ -26,10 +26,16 @@ OUT="$CONTRACTS/deployments-local/anvil"
 LOG="$OUT/logs"
 STATUS="$OUT/e2e-status.json"
 STEPS="${E2E_STEPS:-deploy manifest services scenarios}"
+# E2E_RESUME=<step name> reloads the anvil state the last run saved (anvil-state.json) and runs the deploy steps from
+# that one on, keeping the earlier outputs: a failed step is fixed and rerun without redeploying the whole world.
+RESUME="${E2E_RESUME:-}"
+# A resumed run reruns a step whose earlier broadcast stopped part-way: that record is archived, not continued.
+FRESH=""
+[ -n "$RESUME" ] && FRESH="--start-fresh"
 DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 SAFE=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 mkdir -p "$LOG"
-echo '{}' > "$STATUS"
+[ -n "$RESUME" ] && [ -f "$STATUS" ] || echo '{}' > "$STATUS"
 
 record() { # step outcome detail
   node -e 'const fs=require("fs");const [f,s,o,d]=process.argv.slice(1);const j=JSON.parse(fs.readFileSync(f));j[s]={outcome:o,detail:d};fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n")' "$STATUS" "$1" "$2" "$3"
@@ -42,7 +48,9 @@ need_file() { [ -e "$1" ]; }
 MISSING=""
 for t in anvil forge cast node; do need_tool "$t" || MISSING="$MISSING tool:$t"; done
 need_file "$REPO/node_modules/viem" || MISSING="$MISSING npm-workspace(npm ci)"
-for a in out/AvanaTimelock.sol/AvanaTimelock.json out-aave/HubInstance.sol/HubInstance.json \
+for a in out/AvanaTimelock.sol/AvanaTimelock.json out/AvanaAaveV4Payload.sol/AvanaAaveV4Payload.json \
+  out/AaveGovernanceExecutorStandIn.sol/AaveGovernanceExecutorStandIn.json out-aave/HubInstance.sol/HubInstance.json \
+  out-aave/AaveV4ConfigEngine.sol/AaveV4ConfigEngine.json \
   out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json out-univ3-periphery/NonfungiblePositionManager.sol/NonfungiblePositionManager.json \
   out-slipstream-v1/CLFactory.sol/CLFactory.json out-aerodrome/Voter.sol/Voter.json \
   out-aave-v3/AaveV3PoolBatch.sol/AaveV3PoolBatch.json \
@@ -63,18 +71,26 @@ trap cleanup EXIT
 # holds only the latest state while the indexer reads contracts at past blocks (BlockOutOfRangeError), and anvil's
 # --preserve-historical-states writes a 7 GB file for this world, so the services step runs only with the deploy step.
 STATE="$OUT/anvil-state.json"
-[[ " $STEPS " == *" deploy "* ]] && rm -f "$STATE"
+[[ " $STEPS " == *" deploy "* ]] && [ -z "$RESUME" ] && rm -f "$STATE"
 anvil --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
   --timestamp 1794500000 --state "$STATE" > "$LOG/anvil.log" 2>&1 &
 ANVIL_PID=$!
 for _ in $(seq 1 50); do cast block-number --rpc-url "$RPC_ANVIL" >/dev/null 2>&1 && break; sleep 0.2; done
 
+# While resuming, a step before the resume point is skipped (its earlier outcome stays in the status file).
+skipped() { # step
+  [ -z "$RESUME" ] && return 1
+  [ "$1" = "$RESUME" ] && { RESUME=""; return 1; }
+  return 0
+}
+
 run_script() { # step script sender [env...]
   local step="$1" script="$2" sender="$3"; shift 3
+  skipped "$step" && return 0
   # One script run deploys hundreds of contracts: lift the simulation's per-call gas cap (Foundry's gas_limit, 2^30
   # by default) as well as the block gas limit.
   if env FOUNDRY_GAS_LIMIT=30000000000 "$@" forge script "script/deploy/$script" --rpc-url "$RPC_ANVIL" --broadcast --unlocked --sender "$sender" \
-    --slow --non-interactive --disable-block-gas-limit --memory-limit 1073741824 > "$LOG/$step.log" 2>&1; then
+    --slow --non-interactive --disable-block-gas-limit --memory-limit 1073741824 $FRESH > "$LOG/$step.log" 2>&1; then
     record "$step" pass "$(grep -E 'BLOCKED|output' "$LOG/$step.log" | head -3 | tr '\n' ' ')"
     return 0
   fi
@@ -87,6 +103,7 @@ run_script() { # step script sender [env...]
 MULTICALL3=0xcA11bde05977b3631167028862bE2a173976CA11
 MULTICALL3_CODEHASH=0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891
 place_multicall3() {
+  skipped multicall3 && return 0
   cast rpc anvil_setCode "$MULTICALL3" "$(tr -d '\n' < external/multicall3/Multicall3.runtime.hex)" --rpc-url "$RPC_ANVIL" >/dev/null ||
     { record multicall3 fail "anvil_setCode refused"; return 1; }
   local h
@@ -99,19 +116,61 @@ place_multicall3() {
   fi
 }
 
+# The timelock delays pass on anvil by moving the clock; every feed then publishes a fresh round, as a live
+# Chainlink network does within its heartbeat, so the oracles read Live after each wait.
+advance() { # seconds name
+  skipped "$2" && return 0
+  cast rpc evm_increaseTime "$1" --rpc-url "$RPC_ANVIL" >/dev/null && cast rpc evm_mine --rpc-url "$RPC_ANVIL" >/dev/null &&
+    node script/e2e/refresh-feeds.ts --network anvil >> "$LOG/feeds.log" 2>&1 ||
+    { record "advance-$1" fail "see $LOG/feeds.log"; return 1; }
+}
+
+# Aave governance v3's executor at the network's Aave DAO account, as on Ethereum: Aave V4's deployment (01) makes that
+# account admin, and every Aave-side AIP then runs as `executeTransaction(payload, 0, "execute()", "", true)` from the
+# PayloadsController (a stand-in account here). The stand-in's owner sits in storage slot 0.
+place_executor() {
+  skipped aave-executor && return 0
+  local dao controller code
+  dao="$(node -e 'console.log(require("./script/deploy/config/anvil.json").aaveLocal.aaveDao)')"
+  controller="$(node -e 'console.log(require("./script/deploy/config/anvil.json").aaveLocal.payloadsController)')"
+  code="$(node -e 'console.log(require("./out/AaveGovernanceExecutorStandIn.sol/AaveGovernanceExecutorStandIn.json").deployedBytecode.object)')"
+  cast rpc anvil_setCode "$dao" "$code" --rpc-url "$RPC_ANVIL" >/dev/null &&
+    cast rpc anvil_setStorageAt "$dao" 0x0 "$(cast abi-encode 'f(address)' "$controller")" --rpc-url "$RPC_ANVIL" >/dev/null &&
+    [ "$(cast call "$dao" 'owner()(address)' --rpc-url "$RPC_ANVIL")" = "$(cast to-check-sum-address "$controller")" ] &&
+    record aave-executor pass "executor stand-in at $dao, owner $controller" ||
+    { record aave-executor fail "could not place the executor stand-in at $dao"; return 1; }
+}
+
 if [[ " $STEPS " == *" deploy "* ]]; then
   # A fresh deployment: no output of an earlier run may stand in for this one's.
-  rm -f "$OUT"/{aave,world,avana,coverage,manifest,aave-payload,scenarios}.json "$OUT"/operation-*.json
-  rm -rf broadcast/*/31337 cache/*.s.sol/31337
+  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets}.json \
+    "$OUT"/operation-*.json "$OUT"/aip-*.json
+  [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337
   place_multicall3 &&
     run_script 00-factories 00_Factories.s.sol "$DEPLOYER" &&
     run_script 01-aave-v4 01_DeployAaveV4.s.sol "$DEPLOYER" &&
+    place_executor &&
     run_script 02-world 02_DeployWorld.s.sol "$DEPLOYER" &&
     run_script 03-avana 03_DeployAvana.s.sol "$DEPLOYER" &&
     run_script 04-access 04_ConfigureAccess.s.sol "$SAFE" AVANA_SCHEDULE=1 &&
-    cast rpc evm_increaseTime 432001 --rpc-url "$RPC_ANVIL" >/dev/null && cast rpc evm_mine --rpc-url "$RPC_ANVIL" >/dev/null &&
+    advance 432001 timelock-wait-access &&
     run_script 05-execute 05_ExecuteOperations.s.sol "$DEPLOYER" &&
-    run_script 06-aave-payload 06_AaveDeploymentPayload.s.sol "$DEPLOYER"
+    run_script 06-aip-deployment 06_AaveDeploymentPayload.s.sol "$DEPLOYER" &&
+    run_script 07-coverage-deploy 07_DeployCoverageSpokes.s.sol "$DEPLOYER" AVANA_COVERAGE_STEP=deploy &&
+    run_script 08-aip-loss-layers 08_AaveLossLayersPayload.s.sol "$DEPLOYER" &&
+    run_script 07-coverage-fund 07_DeployCoverageSpokes.s.sol "$DEPLOYER" AVANA_COVERAGE_STEP=fund &&
+    run_script 09-listing-setup 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=setup AVANA_SCHEDULE=1 &&
+    advance 432001 timelock-wait-listing-setup &&
+    run_script 09-listing-setup-execute 05_ExecuteOperations.s.sol "$DEPLOYER" AVANA_OPERATIONS=listing-setup &&
+    run_script 09-listing-oracles 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=oracles &&
+    run_script 10-aip-debt-reserves 10_AaveListingPayload.s.sol "$DEPLOYER" AVANA_AAVE_STEP=debt &&
+    run_script 09-listing-markets 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=markets AVANA_SCHEDULE=1 &&
+    advance 432001 timelock-wait-listing-markets &&
+    run_script 09-listing-markets-execute 05_ExecuteOperations.s.sol "$DEPLOYER" AVANA_OPERATIONS=listing-markets &&
+    run_script 10-aip-markets 10_AaveListingPayload.s.sol "$DEPLOYER" AVANA_AAVE_STEP=vault-tokens &&
+    run_script 09-listing-activate 09_ListMarkets.s.sol "$DEPLOYER" AVANA_LISTING_STEP=activate AVANA_SCHEDULE=1 &&
+    advance 43201 timelock-wait-activation &&
+    run_script 09-listing-activate-execute 05_ExecuteOperations.s.sol "$DEPLOYER" AVANA_OPERATIONS=listing-activate
 fi
 
 if [[ " $STEPS " == *" manifest "* ]]; then

@@ -165,10 +165,12 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
             TestToken t = new TestToken(string.concat("Test ", sym), sym, dec, me);
             tokens[keccak256(bytes(sym))] = TokenInfo(address(t), dec, price);
             vm.serializeString("world", "tokens", vm.serializeAddress("tokens", sym, address(t)));
-            string[3] memory roles = ["primary", "alternate", "second"];
+            // Primary, alternate and standby price routes, and the oracle-network second source, each its own feed:
+            // the MarketRegistry refuses routes that share a feed and a second source inside a route.
+            string[4] memory roles = ["primary", "alternate", "standby", "second"];
             string memory fk = string.concat("feeds.", sym);
             string memory one;
-            for (uint256 j = 0; j < 3; ++j) {
+            for (uint256 j = 0; j < 4; ++j) {
                 (address proxy, address aggregator) =
                     _deployFeed(string.concat(sym, " / USD ", roles[j]), int256(price), 1, int192(int256(1e18)));
                 if (j == 0) primaryFeed[keccak256(bytes(sym))] = proxy;
