@@ -1,0 +1,14 @@
+{
+  "name": "freeze-address-back",
+  "description": "unfreezeAddress, only through the timelock (normal delay, DAO-only cancel)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "unfreezeAddress",
+      "args": {
+        "account": "0x1000000000000000000000000000000000000d01"
+      }
+    }
+  ]
+}

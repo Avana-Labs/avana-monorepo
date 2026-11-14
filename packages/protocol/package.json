@@ -3,10 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "Avana and Aave V4 ABIs generated from the Foundry build, with the ABI hash the services check against each release manifest; the release manifest schema, producer, verification and contract table.",
+  "description": "Avana and Aave V4 ABIs generated from the Foundry build, with the ABI hash the services check against each release manifest; contract addresses generated from the verified release manifests; AaveAdapter calldata builders; the release manifest schema, producer, verification and contract table.",
   "type": "module",
   "exports": {
     "./abis": "./src/abis/index.ts",
+    "./addresses": "./src/addresses/index.ts",
+    "./calldata": "./src/calldata/index.ts",
     "./manifest": "./src/manifest/index.ts"
   },
   "engines": {
@@ -15,6 +17,8 @@
   "scripts": {
     "generate": "node scripts/generate-abis.mjs",
     "check-abis": "node scripts/generate-abis.mjs --check",
+    "addresses": "node src/addresses/cli.ts",
+    "check-addresses": "node src/addresses/cli.ts --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "manifest": "node src/manifest/cli.ts"

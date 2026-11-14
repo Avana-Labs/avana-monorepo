@@ -8,7 +8,8 @@ type Json = Record<string, any>;
 export type Route = { token: string; asset: string; primary: string[]; backup: string[] };
 const MAX_HOPS = 3;
 
-/** Every simple path of pools from `from` to `to`, at most MAX_HOPS long, avoiding `banned`, shortest first. */
+/** Every simple path of pools from `from` to `to`, at most MAX_HOPS long, avoiding `banned`: shortest first, then the
+ *  deepest (the largest smallest pool, by the world's `usd`), so a liquidation swap avoids a thin pool when it can. */
 function paths(pools: readonly Json[], from: string, to: string, banned: ReadonlySet<string>): string[][] {
   const out: string[][] = [];
   const walk = (at: string, used: string[], seen: Set<string>) => {
@@ -24,7 +25,8 @@ function paths(pools: readonly Json[], from: string, to: string, banned: Readonl
     }
   };
   walk(from, [], new Set([from]));
-  return out.sort((x, y) => x.length - y.length);
+  const depth = (path: readonly string[]) => Math.min(...path.map((n) => Number(pools.find((p) => p.name === n)!.usd ?? 0)));
+  return out.sort((x, y) => x.length - y.length || depth(y) - depth(x));
 }
 
 /** The tokens a path of pools holds between hops (every token it reaches but the last). */

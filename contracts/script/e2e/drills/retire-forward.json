@@ -1,0 +1,14 @@
+{
+  "name": "retire-forward",
+  "description": "the growth market offboarded (timelock, short delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "setMarketOffboarding",
+      "args": {
+        "marketId": "market:uni-USDC-USDT-500-growth"
+      }
+    }
+  ]
+}

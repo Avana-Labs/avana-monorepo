@@ -1,0 +1,16 @@
+{
+  "name": "remove-debt-reserve-back",
+  "description": "enableDebtReserve with its recorded definition (timelock, normal delay)",
+  "via": "timelock",
+  "restores": "remove-debt-reserve-forward",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "enableDebtReserve",
+      "args": {
+        "spoke": "spoke:slipVolatile",
+        "def": "$prior"
+      }
+    }
+  ]
+}

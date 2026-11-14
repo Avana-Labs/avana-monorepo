@@ -64,7 +64,7 @@ export function AboutNewsSection({
                 <a
                   href={governanceUrl}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="shrink-0 text-[13px] font-medium text-sky-500 transition-colors hover:text-sky-400"
                 >
                   {t("View all")}
@@ -102,7 +102,7 @@ export function AboutNewsSection({
                     key={parameter.id}
                     href={parameter.href}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="group min-w-0 transition-colors"
                   >
                     {parameterContent}
@@ -166,7 +166,7 @@ export function AboutNewsSection({
                             <a
                               href={entry.href}
                               target="_blank"
-                              rel="noreferrer"
+                              rel="noopener noreferrer"
                               aria-label={t("View transaction")}
                               className="text-muted-foreground transition-colors hover:text-foreground"
                             >

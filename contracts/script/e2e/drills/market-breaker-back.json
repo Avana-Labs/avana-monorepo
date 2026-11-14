@@ -1,0 +1,15 @@
+{
+  "name": "market-breaker-back",
+  "description": "the Aave Protocol Guardian resets it",
+  "via": "direct",
+  "sender": "aaveProtocolGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "resetMarketBreaker",
+      "args": {
+        "marketId": "market:uni-USDC-USDT-100"
+      }
+    }
+  ]
+}

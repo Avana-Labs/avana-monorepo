@@ -188,7 +188,7 @@ export function DetailTransactionTable({
                             <a
                               href={row.walletHref}
                               target="_blank"
-                              rel="noreferrer"
+                              rel="noopener noreferrer"
                               className="block w-full truncate whitespace-nowrap text-foreground underline-offset-2 hover:underline"
                             >
                               {row.walletLabel ?? row.txHashShort}

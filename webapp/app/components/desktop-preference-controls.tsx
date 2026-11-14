@@ -175,7 +175,12 @@ export function DesktopPreferenceMenu({ initialOpen = false }: { initialOpen?: b
                   asChild
                   className="cursor-pointer rounded-[16px] px-3 py-2.5 text-[14px] text-foreground outline-none hover:bg-hover focus:bg-hover dark:text-white"
                 >
-                  <a href={href} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3">
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3"
+                  >
                     <span className="flex items-center gap-2.5">
                       <Icon className="h-4 w-4 text-muted-foreground dark:text-white/64" strokeWidth={1.8} />
                       <span>{t(label)}</span>

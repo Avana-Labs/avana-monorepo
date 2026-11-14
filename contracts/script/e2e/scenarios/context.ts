@@ -16,6 +16,7 @@ import {
   createWalletClient,
   http,
 } from "viem";
+import { RPC_TIMEOUT_MS } from "../refresh-feeds.ts";
 
 export const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 export const arg = (n: string) => {
@@ -35,8 +36,8 @@ export const config = JSON.parse(
   readFileSync(process.env.AVANA_CONFIG ? join(CONTRACTS, process.env.AVANA_CONFIG) : join(CONTRACTS, "script/deploy/config", `${network}.json`), "utf8"),
 ) as Record<string, any>;
 
-export const client = createPublicClient({ transport: http(rpc) }) as PublicClient;
-export const wallet = createWalletClient({ transport: http(rpc) }) as WalletClient;
+export const client = createPublicClient({ transport: http(rpc, { timeout: RPC_TIMEOUT_MS }) }) as PublicClient;
+export const wallet = createWalletClient({ transport: http(rpc, { timeout: RPC_TIMEOUT_MS }) }) as WalletClient;
 
 export type Outcome = "pass" | "fail" | "not-run";
 export interface Result {

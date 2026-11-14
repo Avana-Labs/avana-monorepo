@@ -1,0 +1,14 @@
+{
+  "name": "hub-freeze-forward",
+  "description": "freeze the stable Hub through the timelock (short delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "freeze",
+      "args": {
+        "hub": "hub:stable"
+      }
+    }
+  ]
+}

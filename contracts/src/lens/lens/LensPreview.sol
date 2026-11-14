@@ -143,8 +143,9 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         uint256 premium = IFlashSource(_registry().flashSource()).flashPremium(r.def.asset, debtRepaid);
         debtAssetToWallet = value > debtRepaid + premium ? value - debtRepaid - premium : 0;
         uint256 after_ = _healthAt(d, units, debtRepaid);
-        // While debt remains the AaveAdapter refuses a repayment that lowers the health factor.
-        if (after_ < a.healthFactor) return (0, 0, healthFactorAfter);
+        // While debt remains the AaveAdapter refuses a repayment that lowers the health factor, and the withdrawal of
+        // the units is an Aave collateral withdrawal, which refuses a health factor below 1 (`HealthFactorBelowThreshold`).
+        if (after_ < a.healthFactor || after_ < WAD_) return (0, 0, healthFactorAfter);
         healthFactorAfter = after_;
     }
 

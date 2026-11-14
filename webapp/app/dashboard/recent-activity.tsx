@@ -9,6 +9,7 @@ import type { PortfolioActivityRow } from "@/app/lib/data/providers/portfolio"
 import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
+import { openExternal } from "@/app/lib/safe-links"
 import { cn } from "@/lib/utils"
 
 const MASK = "••••"
@@ -209,7 +210,7 @@ export function RecentActivity({
     (txHash: string) => {
       if (!txHash) return
       const href = getTxnHref(txHash)
-      if (href) window.open(href, "_blank", "noopener,noreferrer")
+      openExternal(href)
     },
     [router],
   )

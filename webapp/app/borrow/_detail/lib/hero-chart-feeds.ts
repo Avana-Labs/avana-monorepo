@@ -6,6 +6,7 @@ import {
   type ChartValueFormat,
 } from "@/app/components/charts"
 import type { Series, TimeRangeId } from "@/app/lib/borrow-detail"
+import { isSafeExternalUrl } from "@/app/lib/safe-links"
 
 const RANGE_MAP = {
   "1D": "1D",
@@ -70,28 +71,9 @@ function addressFromExplorerUrl(url?: string): string | null {
   return url?.match(/0x[a-fA-F0-9]{40}/)?.[0] ?? null
 }
 
-export function resolveHeroContractAddress(id: string, explorerUrl?: string): string {
-  const fromExplorer = addressFromExplorerUrl(explorerUrl)
-  if (fromExplorer) return fromExplorer
-  const fallback = Array.from(id)
-    .map((char) => char.charCodeAt(0).toString(16).padStart(2, "0"))
-    .join("")
-    .padEnd(40, "0")
-    .slice(0, 40)
-  return `0x${fallback}`
-}
-
-export function formatHeroContractLabel(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
-}
-
-export function resolveHeroContractLabel(id: string, explorerUrl?: string): string {
-  return formatHeroContractLabel(resolveHeroContractAddress(id, explorerUrl))
-}
-
 /**
  * Seeded synthetic addresses are an 8-hex chunk repeated five times. They point at no
- * real contract, so the hero must not offer an explorer link or copy action for them.
+ * real contract, so a link that wraps one is never shown.
  */
 export function isPlaceholderHeroContractAddress(address?: string | null): boolean {
   const body = address?.match(/^0x([a-fA-F0-9]{40})$/)?.[1]
@@ -100,15 +82,9 @@ export function isPlaceholderHeroContractAddress(address?: string | null): boole
   return body.toLowerCase() === chunk.repeat(5)
 }
 
-/** The explorer URL only when it points at a real contract address; otherwise null. */
-export function contractExplorerHref(url?: string | null): string | null {
-  const address = addressFromExplorerUrl(url ?? undefined)
-  return url && address && !isPlaceholderHeroContractAddress(address) ? url : null
-}
-
-/** Unsafe only when the URL wraps a synthetic placeholder address (a fake explorer link). */
-export function isSafeHeroLink(url?: string | null): boolean {
-  if (!url) return false
+/** A hero link is shown only when it is an https URL that does not wrap a synthetic placeholder address. */
+export function isSafeHeroLink(url?: string | null): url is string {
+  if (!isSafeExternalUrl(url)) return false
   return !isPlaceholderHeroContractAddress(addressFromExplorerUrl(url))
 }
 

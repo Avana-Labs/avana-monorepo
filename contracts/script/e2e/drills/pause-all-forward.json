@@ -1,0 +1,15 @@
+{
+  "name": "pause-all-forward",
+  "description": "the Emergency Guardian pauses every Hub of the chain (General)",
+  "via": "direct",
+  "sender": "emergencyGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "pauseAll",
+      "args": {
+        "reason": "1"
+      }
+    }
+  ]
+}

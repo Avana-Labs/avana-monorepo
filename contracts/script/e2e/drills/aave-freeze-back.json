@@ -1,0 +1,16 @@
+{
+  "name": "aave-freeze-back",
+  "description": "AIP: unfreeze it",
+  "via": "aip",
+  "restores": "aave-freeze-forward",
+  "changes": [
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV3Stable",
+      "reserve": "collateral:uni-USDC-USDT-100",
+      "set": {
+        "frozen": "$prior"
+      }
+    }
+  ]
+}
