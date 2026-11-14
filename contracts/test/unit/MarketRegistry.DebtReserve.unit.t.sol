@@ -459,6 +459,47 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.enableDebtReserve(address(spoke2), d);
     }
 
+    // TEST-273 verifies: REQ-HUB-103, REQ-CONFIG-081, Q-378
+    // A foreign Spoke's draw cap (whole units) must fit its cross-Hub line (base units): one unit above the line
+    // reverts CrossHubCapExceeded(drawCap in base units, line); exactly the line passes.
+    function test_TEST_273_crossHubDrawCapWithinItsLine() public {
+        RegistryHubMock hub2 = new RegistryHubMock();
+        RegistrySpokeMock spoke2 = new RegistrySpokeMock();
+        RegistryAaveOracleMock oracle2 = new RegistryAaveOracleMock();
+        spoke2.setOracle(address(oracle2));
+        spoke2.setImplementation(address(spokeImpl));
+        oracle2.setSpoke(address(spoke2));
+        IAaveV4Spoke.Reserve memory r;
+        (r.underlying, r.hub, r.assetId, r.decimals) = (address(usdc), address(hub), uint16(USDC_ASSET), 6);
+        IAaveV4Spoke.ReserveConfig memory c;
+        c.borrowable = true;
+        IAaveV4Spoke.DynamicReserveConfig memory dyn;
+        spoke2.setReserve(USDC_RESERVE, r, c, dyn);
+        oracle2.setSource(USDC_RESERVE, address(usdcOracle));
+        vm.startPrank(address(timelock));
+        registry.recordHub(address(hub2), RiskTier.Correlated);
+        registry.deployCdpSpoke(
+            SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
+        );
+        registry.setCrossHubLinesEnabled(true);
+        registry.setCrossHubLine(address(hub), address(usdc), address(spoke2), 400_000e6);
+        vm.stopPrank();
+        DebtReserveDef memory d = _usdcDef();
+        d.crossHub = true;
+        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 400_001);
+        vm.prank(address(timelock));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IMarketRegistryHubs.CrossHubCapExceeded.selector, uint256(400_001e6), uint256(400_000e6)
+            )
+        );
+        registry.enableDebtReserve(address(spoke2), d);
+        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 400_000);
+        vm.prank(address(timelock));
+        registry.enableDebtReserve(address(spoke2), d);
+        assertTrue(registry.isApprovedDebtReserve(address(spoke2), USDC_RESERVE));
+    }
+
     // TEST-213 verifies: REQ-MREG-010, REQ-MREG-033, ATTACK-136, Q-233, Q-397, REQ-ACCESS-145
     // Sources: 5.1 TEST-213, TEST-185
     function test_TEST_213_removeOnlyWithNothingOwed() public {

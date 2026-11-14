@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Swap routes for the rehearsal's config generators: two Uniswap v3 paths of at most three pools (DexHops.MAX_HOPS) from
-// a token into an asset that share no pool and avoid the market's own pool, as the MarketRegistry requires, found by
-// search over the test world's pools.
+// a token into an asset that share no pool and no intermediate token but the asset and avoid the market's own pool, as
+// the MarketRegistry requires (REQ-ROUTE-003), found by search over the test world's pools.
 
 type Json = Record<string, any>;
 export type Route = { token: string; asset: string; primary: string[]; backup: string[] };
@@ -27,14 +27,29 @@ function paths(pools: readonly Json[], from: string, to: string, banned: Readonl
   return out.sort((x, y) => x.length - y.length);
 }
 
-/** A primary and a backup route from `token` into `asset` for the market on `ownPool`; throws when there is none. */
+/** The tokens a path of pools holds between hops (every token it reaches but the last). */
+function intermediates(pools: readonly Json[], from: string, path: readonly string[]): string[] {
+  const out: string[] = [];
+  let at = from;
+  for (const name of path.slice(0, -1)) {
+    const p = pools.find((x) => x.name === name)!;
+    at = p.a === at ? p.b : p.a;
+    out.push(at);
+  }
+  return out;
+}
+
+/** A primary and a backup route from `token` into `asset` for the market on `ownPool` that share no pool and no
+ *  intermediate token other than `asset` (REQ-ROUTE-003); throws when there is none. */
 export function routePair(config: Json, market: string, token: string, asset: string, ownPool: string): Route {
-  const all = paths(config.world.uniswapPools as Json[], token, asset, new Set([ownPool]));
+  const pools = config.world.uniswapPools as Json[];
+  const all = paths(pools, token, asset, new Set([ownPool]));
   for (const p of all) {
-    const b = all.find((q) => q.every((x) => !p.includes(x)));
+    const via = intermediates(pools, token, p).filter((t) => t !== asset);
+    const b = all.find((q) => q.every((x) => !p.includes(x)) && !intermediates(pools, token, q).some((t) => via.includes(t)));
     if (b) return { token, asset, primary: p, backup: b };
   }
-  throw new Error(`${market}: no two pool-disjoint routes from ${token} into ${asset} (found ${all.length} paths)`);
+  throw new Error(`${market}: no two routes from ${token} into ${asset} sharing no pool and no intermediate (found ${all.length} paths)`);
 }
 
 /** The world pool (Uniswap v3 or Slipstream) named `name`. */

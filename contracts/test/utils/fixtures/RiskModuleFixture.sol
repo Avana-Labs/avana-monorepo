@@ -386,7 +386,8 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         registry.setCoverageSpoke(address(hub2), address(tDai), address(daiCoverage));
         registry.recordCreditLine(address(hub2), address(tDai), 1_000_000);
         registry.setCrossHubLinesEnabled(true);
-        registry.setCrossHubLine(address(hub2), address(tDai), address(spoke), 1_000_000);
+        // Base units: 1,000,000 DAI, within the 4,000,000 DAI coverage and above the 500,000 DAI draw cap.
+        registry.setCrossHubLine(address(hub2), address(tDai), address(spoke), 1_000_000e18);
         vm.stopPrank();
         _listToken(address(tDai), "dai");
         _setRoutesInto(mid, address(tDai));

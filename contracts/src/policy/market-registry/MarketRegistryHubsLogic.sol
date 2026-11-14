@@ -240,6 +240,15 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         _checkCoverageSpoke(def);
         _checkFlashAndFee(def);
         uint256 cap = _drawCapOf(def.fundingHub, def.hubAssetId, spoke);
+        // REQ-HUB-103 (a): a foreign Spoke's draw cap stays within its cross-Hub line (`_checkFunding` has already
+        // required the line to be open), decided 2026-11-12. The draw cap is in whole asset units and the line in base
+        // units (it is bounded by the Coverage Spoke's balance); `def.decimals` is the token's own (`_checkAaveReserve`),
+        // and the unbounded cap 2^128 times 10^18 cannot overflow.
+        if (def.crossHub) {
+            uint256 capBase = cap * 10 ** uint256(def.decimals);
+            uint256 lineCap = l.crossHubLineCap[def.fundingHub][def.asset][spoke];
+            if (capBase > lineCap) revert IMarketRegistryHubs.CrossHubCapExceeded(capBase, lineCap);
+        }
         CreditLine storage cl = l.creditLines[def.fundingHub][def.asset];
         uint256 sum = cl.drawCapSum + cap;
         if (sum > cl.line) {

@@ -254,9 +254,29 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         // A transfer fee switched on would revert that leg, possibly in both slots at once (REQ-ROUTE-003, REQ-ROUTE-008).
         if (feeSwitch) revert InvalidRoute();
         address other = _s().routes[_slotKey(marketId, token, debtAsset, kind == _PRIMARY ? _BACKUP : _PRIMARY)].route;
-        if (other != address(0) && (other == route || _shareFeed(deps, ISettlementRoute(other).dependencies()))) {
-            revert InvalidRoute();
+        // REQ-ROUTE-003: the primary and the backup of a slot share no dependency and no intermediate token other than
+        // the debt asset (decided 2026-11-12), so one failing pool or token cannot stop both.
+        if (
+            other != address(0)
+                && (other == route
+                    || _shareFeed(deps, ISettlementRoute(other).dependencies())
+                    || _shareIntermediate(r.intermediates(), ISettlementRoute(other).intermediates(), debtAsset))
+        ) revert InvalidRoute();
+    }
+
+    /// @dev True when two routes' intermediate tokens share an address other than `debtAsset` (REQ-ROUTE-003).
+    function _shareIntermediate(
+        address[] memory a,
+        address[] memory b,
+        address debtAsset
+    ) private pure returns (bool) {
+        for (uint256 i = 0; i < a.length; ++i) {
+            if (a[i] == debtAsset) continue;
+            for (uint256 j = 0; j < b.length; ++j) {
+                if (a[i] == b[j]) return true;
+            }
         }
+        return false;
     }
 
     /// @dev The slot's keys: a market that is neither unknown, Cancelled nor Closed, one of its pool tokens, a debt

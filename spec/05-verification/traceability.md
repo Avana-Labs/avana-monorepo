@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3562 requirements · 121 verified · 0 failed · 1875 not run · 1566 unlinked · 0 changed — re-verify · 0 errors · 3470 warnings**
+**3562 requirements · 121 verified · 0 failed · 1876 not run · 1565 unlinked · 0 changed — re-verify · 0 errors · 3469 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -2341,7 +2341,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-HUB-100` | The bytecode check of `REQ-HUB-005` MUST (1) build the reference artifacts from the named … | — | — | — | — | — | Unlinked |
 | `REQ-HUB-101` | Each CDP Spoke's borrowable reserves MUST equal the MarketRegistry's debt-reserve set for … | — | — | — | — | — | Unlinked |
 | `REQ-HUB-102` | A non-GHO debt asset MUST become borrowable only when its funding path, caps, Aave price s… | — | — | — | — | — | Unlinked |
-| `REQ-HUB-103` | A debt reserve MUST record its funding Hub and asset (`getReserve(reserveId).hub` is the f… | — | `QNT-TOPO-05`, `QNT-TOPO-X1` | — | — | — | Unlinked |
+| `REQ-HUB-103` | A debt reserve MUST record its funding Hub and asset (`getReserve(reserveId).hub` is the f… | — | `QNT-TOPO-05`, `QNT-TOPO-X1` | — | `TEST-273`° | — | Not run |
 | `REQ-HUB-104` | The price ages of a non-GHO debt reserve MUST come from the feed definitions of its DebtOr… | — | — | — | — | `FeedDef`, `IParameterStoreViews` (decl.) | Unlinked |
 | `REQ-HUB-105` | The AaveOracle source of each non-GHO debt reserve MUST be its asset's DebtOracle (2.10): … | — | — | — | — | — | Unlinked |
 | `REQ-HUB-106` | Aave values every reserve at the price its source serves, so under a failing price the Spo… | — | — | — | — | — | Unlinked |
@@ -2943,7 +2943,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ROLE-117` | The Joint Configuration Safe of each chain (2-of-3: one Avana Labs, one Aave Labs and one … | — | — | — | `TEST-062`° | `AvanaRoles` | Not run |
 | `REQ-ROUTE-001` | A market can be activated only if, for every token of the market and every debt asset appr… | — | — | — | `TEST-054`°, `TEST-054`‡, `TEST-245`°, `TEST-245`‡ | — | Not run |
 | `REQ-ROUTE-002` | Route classes per token class (`Q-339`). For each (token, debt asset) pair the primary rou… | — | — | — | `TEST-054`°, `TEST-054`‡ | `DexHop`, `DexHops`, `DexPathRoute`, `IMarketRegistryRoutes` (decl.), `IPegModuleRoute` (decl.), `ISettlementRoute` (decl.), `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic`, `PegModuleRoute`, `PegModuleStep`, `WrapperStep`, `WrapperThenDexRoute` | Not run |
-| `REQ-ROUTE-003` | The backup route of a slot MUST share no entry of `dependencies()` with the primary of the… | — | — | `SIM-01C` | `TEST-054`°, `TEST-221`°, `TEST-221`‡ | `DexHops`, `DexPathRoute`, `ISettlementRoute` (decl.), `PegModuleRoute`, `PegModuleStep`, `SwapRouteBase`, `WrapperStep`, `WrapperThenDexRoute` | Not run |
+| `REQ-ROUTE-003` | The backup route of a slot MUST share no entry of `dependencies()` with the primary of the… | — | — | `SIM-01C` | `TEST-054`°, `TEST-054`‡, `TEST-221`°, `TEST-221`‡ | `DexHops`, `DexPathRoute`, `ISettlementRoute` (decl.), `PegModuleRoute`, `PegModuleStep`, `SwapRouteBase`, `WrapperStep`, `WrapperThenDexRoute` | Not run |
 | `REQ-ROUTE-004` | A route of a market MUST NOT call that market's own pool on any hop. The liquidation is re… | — | — | — | `TEST-054`°, `TEST-054`‡ | `DexPathRoute`, `ISettlementRoute` (decl.), `WrapperThenDexRoute` | Not run |
 | `REQ-ROUTE-005` | `setRoute` and `restoreRoute` MUST revert with `InvalidRoute` unless `route.tokenIn() == t… | — | — | — | `TEST-054`°, `TEST-054`‡, `TEST-221`‡ | `DexHops`, `DexPathRoute`, `IMarketRegistryRoutes` (decl.), `IMarketRegistryViews` (decl.), `IPegModuleRoute` (decl.), `ISettlementRoute` (decl.), `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic`, `PegModuleRoute`, `RouteConfig`, `SwapRouteBase`, `WrapperThenDexRoute` | Not run |
 | `REQ-ROUTE-006` | Each route slot has a published `routeDepthThreshold(marketId, token, debtAsset, kind)`, s… | `MATH-ST-103`, `MATH-ST-85` | — | — | `TEST-061`°, `TEST-064`° | — | Not run |

@@ -144,6 +144,28 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         assertTrue(usable);
     }
 
+    // TEST-054 verifies: REQ-ROUTE-003
+    // The primary and the backup of a slot share no intermediate token other than the debt asset: a backup through
+    // the primary's USDT hop is refused, one that shares only the debt asset (GHO) is accepted.
+    function test_TEST_054_backupSharesNoIntermediateButTheDebtAsset() public {
+        address usdcIn = address(usdc);
+        address[] memory primaryVia = new address[](2);
+        (primaryVia[0], primaryVia[1]) = (address(usdt), address(gho));
+        RegistryRouteMock primary = _routeWithDeps(usdcIn, address(gho), makeAddr("dexI1"), makeAddr("dexI2"));
+        primary.setIntermediates(primaryVia);
+        _set(usdcIn, address(gho), 0, address(primary));
+        address[] memory viaUsdt = new address[](1);
+        viaUsdt[0] = address(usdt);
+        RegistryRouteMock sharesUsdt = _routeWithDeps(usdcIn, address(gho), makeAddr("dexI3"), makeAddr("dexI4"));
+        sharesUsdt.setIntermediates(viaUsdt);
+        _expectInvalidRoute(usdcIn, address(gho), 1, address(sharesUsdt));
+        address[] memory viaGho = new address[](1);
+        viaGho[0] = address(gho);
+        RegistryRouteMock sharesDebtAsset = _routeWithDeps(usdcIn, address(gho), makeAddr("dexI5"), makeAddr("dexI6"));
+        sharesDebtAsset.setIntermediates(viaGho);
+        _set(usdcIn, address(gho), 1, address(sharesDebtAsset));
+    }
+
     // TEST-054 verifies: REQ-CONFIG-040, REQ-CONFIG-025, Q-187
     function test_TEST_054_backupAvoidsPegModules() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
