@@ -8,7 +8,7 @@ import { createServer } from "node:http";
 import { KMSClient } from "@aws-sdk/client-kms";
 import { type Address, type PublicClient, createPublicClient, http, parseAbiItem, webSocket } from "viem";
 import { awsKmsKey } from "./adapters/awsKms.ts";
-import { localKeySigner } from "./adapters/localKey.ts";
+import { localKeystoreSigner } from "./adapters/localKeystore.ts";
 import { logAlertSink } from "./adapters/logAlertSink.ts";
 import { monitorSink, teeSink } from "./adapters/monitorSink.ts";
 import { l1DataFee, paysL1DataFee } from "./chain/gas.ts";
@@ -49,7 +49,7 @@ const metrics = new Map(config.chains.map((c) => [c.chain.id, new ChainMetrics()
 createServer((req, res) => {
   if (req.url !== "/metrics") return void res.writeHead(404).end();
   const text = renderMetrics(
-    config.chains.map((c) => ({ chain: c.chain.key, mode: effectiveMode(config.mode, Boolean(c.kmsKeyId || c.localKey), safety), metrics: metrics.get(c.chain.id)! })),
+    config.chains.map((c) => ({ chain: c.chain.key, mode: effectiveMode(config.mode, Boolean(c.kmsKeyId || c.localKeystore), safety), metrics: metrics.get(c.chain.id)! })),
   );
   res.writeHead(200, { "content-type": "text/plain; version=0.0.4; charset=utf-8" }).end(text);
 }).listen(config.metricsPort);
@@ -107,8 +107,8 @@ for (const cfg of config.chains) {
   };
 
   const kms = cfg.kmsKeyId ? awsKmsKey(new KMSClient({}), cfg.kmsKeyId) : null;
-  // The KMS signer, or on the local rehearsal network only, a raw test key (config.ts refuses it elsewhere).
-  const signer = kms ? kmsSigner(kms, await kms.address()) : cfg.localKey ? localKeySigner(cfg.localKey) : null;
+  // The KMS signer, or on the local rehearsal network only, an encrypted keystore (config.ts refuses it elsewhere).
+  const signer = kms ? kmsSigner(kms, await kms.address()) : cfg.localKeystore ? await localKeystoreSigner(cfg.localKeystore) : null;
   const signerAddress = signer ? signer.address : null;
   const helperEntry = signerAddress
     ? cfg.manifest.avana.operatorHelpers.find((h) => h.signer.toLowerCase() === signerAddress.toLowerCase())

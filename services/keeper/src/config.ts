@@ -17,6 +17,7 @@ import {
 } from "@avana/services-common";
 import { ABI_HASH } from "@avana/protocol/abis";
 import { type StreamKey, parseStreamKey } from "./discovery/indexerStream.ts";
+import type { LocalKeystore } from "./adapters/localKeystore.ts";
 import { DISCOVERY_PAGE_SECONDS } from "./monitoring/discovery.ts";
 import { parseLargest } from "./monitoring/funding.ts";
 
@@ -29,8 +30,8 @@ export interface ChainConfig {
   readonly rpc: { readonly primary: string; readonly fallback: string; readonly ws: string; readonly privateSend: readonly string[] };
   /** Undefined runs this chain in observe-only mode whatever KEEPER_MODE says (unless a local rehearsal key is set). */
   readonly kmsKeyId: string | undefined;
-  /** A raw test key (KEEPER_LOCAL_KEY_ANVIL), accepted only on the `local` network set: the anvil rehearsal's drills. */
-  readonly localKey: `0x${string}` | undefined;
+  /** An encrypted keystore (KEEPER_LOCAL_KEYSTORE_ANVIL), accepted only on the `local` network set: the anvil drills. */
+  readonly localKeystore: LocalKeystore | undefined;
   /** Worst-case wei one transaction may cost (KEEPER_GAS_CEILING_WEI_<CHAIN>); required wherever a signer is set. */
   readonly gasCeilingWei: bigint | undefined;
   /** Largest single debtToCover the chain's caps allow, per debt asset (lower-case), base units: M-16 and M-17. */
@@ -66,16 +67,18 @@ export function discoveryPageSeconds(env: NodeJS.ProcessEnv): number {
 }
 
 /**
- * KEEPER_LOCAL_KEY_<CHAIN>: a 32-byte hex key, refused outside the `local` network set, so no published or test-network
- * keeper can sign with a raw key (Q-245).
+ * KEEPER_LOCAL_KEYSTORE_<CHAIN>: the path of an encrypted keystore (`cast wallet import`), with its password in the file
+ * KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE. Refused outside the `local` network set, so no published or test-network keeper
+ * signs with a local key (Q-245); no raw key is ever read from the environment.
  */
-export function localKey(env: NodeJS.ProcessEnv, chain: ChainInfo): `0x${string}` | undefined {
-  const name = `KEEPER_LOCAL_KEY_${chain.envSuffix}`;
-  const raw = optionalEnv(env, name);
-  if (raw === undefined) return undefined;
+export function localKeystore(env: NodeJS.ProcessEnv, chain: ChainInfo): LocalKeystore | undefined {
+  const name = `KEEPER_LOCAL_KEYSTORE_${chain.envSuffix}`;
+  const path = optionalEnv(env, name);
+  if (path === undefined) return undefined;
   if (chain.networkSet !== "local") throw new Error(`${name} is accepted only on the local network set; sign through the KMS`);
-  if (!/^0x[0-9a-fA-F]{64}$/.test(raw)) throw new Error(`${name} must be a 32-byte hex key`);
-  return raw as `0x${string}`;
+  const passwordFile = optionalEnv(env, "KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE");
+  if (passwordFile === undefined) throw new Error(`${name} needs KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE, the file holding its password`);
+  return { path, passwordFile };
 }
 
 /** A decimal wei amount; a missing or zero ceiling stops startup on a chain that can sign. */
@@ -109,7 +112,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
       privateSend: listEnv(env, rpcEnvName(chain, "PRIVATE")),
     },
     kmsKeyId: optionalEnv(env, `KEEPER_KMS_KEY_ID_${chain.envSuffix}`),
-    localKey: localKey(env, chain),
+    localKeystore: localKeystore(env, chain),
     gasCeilingWei: gasCeiling(env, `KEEPER_GAS_CEILING_WEI_${chain.envSuffix}`),
     largestDebtToCover: parseLargest(listEnv(env, `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`), `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`),
     gasDailySpendWei: gasCeiling(env, `KEEPER_GAS_DAILY_SPEND_WEI_${chain.envSuffix}`),
@@ -119,8 +122,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
   }));
   if (chains.length === 0) throw new Error(`no verified manifest for any ${set} chain`);
   for (const c of chains) {
-    const signs = Boolean(c.kmsKeyId || c.localKey);
-    if (c.kmsKeyId && c.localKey) throw new Error(`set KEEPER_KMS_KEY_ID_${c.chain.envSuffix} or KEEPER_LOCAL_KEY_${c.chain.envSuffix}, not both`);
+    const signs = Boolean(c.kmsKeyId || c.localKeystore);
+    if (c.kmsKeyId && c.localKeystore) throw new Error(`set KEEPER_KMS_KEY_ID_${c.chain.envSuffix} or KEEPER_LOCAL_KEYSTORE_${c.chain.envSuffix}, not both`);
     // No public-mempool fallback exists: a chain without a private endpoint cannot leave observe-only mode.
     if (mode === "active" && signs && c.rpc.privateSend.length === 0) {
       throw new Error(`${rpcEnvName(c.chain, "PRIVATE")} is empty; active mode sends only through private order flow`);
