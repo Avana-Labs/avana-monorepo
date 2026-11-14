@@ -55,6 +55,17 @@ contract VaultTokenUnitTest is VaultTokenFixture {
         }
     }
 
+    // TEST-023 verifies: REQ-VTOKEN-003, REQ-VTOKEN-038
+    function testFuzz_TEST_023_integrationIdIsTheConstructorValue(
+        uint32 id
+    ) public {
+        // The fixture's integration id is 1; any other non-zero id is returned as bound.
+        id = uint32(bound(id, 2, type(uint32).max));
+        VaultTokenBindings memory b = _bindings();
+        b.integrationId = id;
+        assertEq(new VaultToken(b).integrationId(), id);
+    }
+
     // TEST-023 verifies: REQ-VTOKEN-046, REQ-VTOKEN-038
     function test_TEST_023_constructorRefusesZeroIdsAndKey() public {
         VaultTokenBindings memory b = _bindings();
