@@ -277,6 +277,15 @@ HOSTILE_FLOW=(01-aave-v4 04-access-operations @432001 05-execute-access-operatio
   07-deploy-first-loss-reserves 08-aave-loss-layers-aip 07-fund-first-loss-reserves 09-listing-setup @432001
   09-execute-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata 09-listing-markets @432001
   09-execute-listing-markets 10-aave-markets-aip 09-listing-activate @43201 09-execute-listing-activate)
+# The outputs a hostile case may rewrite, kept and put back with tar (Git Bash on Windows has no rsync): every entry of
+# the output directory but the logs, the backup itself and the node's state; put back over a directory cleared of the
+# same entries, so a file a case added goes too. The case configs stay.
+keep_outputs() { # backup-dir
+  mkdir -p "$1" && tar -C "$OUT" --exclude ./logs --exclude ./.hostile-outputs --exclude ./anvil-state.json -cf - . | tar -C "$1" -xf -
+}
+restore_outputs() { # backup-dir
+  find "$OUT" -mindepth 1 -maxdepth 1 ! -name logs ! -name .hostile-outputs ! -name anvil-state.json ! -name 'config-hostile-*'     -exec rm -rf {} + && tar -C "$1" --exclude './config-hostile-*' -cf - . | tar -C "$OUT" -xf -
+}
 hostile() { # case refusal-regex
   local name="hostile:$1" cfg="deployments-local/anvil/config-hostile-$1.json" snap failed="" log="" st
   skipped "$name" && return 0
@@ -284,7 +293,7 @@ hostile() { # case refusal-regex
     { record "$name" fail "see $LOG/hostile-$1-config.log"; return 1; }
   # The steps also rewrite the deployment outputs (oracles, markets, operations, metadata): kept and put back.
   local bak="$OUT/.hostile-outputs"
-  rm -rf "$bak" && rsync -a --exclude logs --exclude .hostile-outputs --exclude anvil-state.json "$OUT/" "$bak/"
+  rm -rf "$bak" && keep_outputs "$bak"
   snap="$(cast rpc evm_snapshot --rpc-url "$RPC_ANVIL" | tr -d '"')"
   for st in "${HOSTILE_FLOW[@]}"; do
     if [[ "$st" == @* ]]; then
@@ -298,8 +307,7 @@ hostile() { # case refusal-regex
   done
   cast rpc evm_revert "$snap" --rpc-url "$RPC_ANVIL" >/dev/null && cast rpc evm_mine --rpc-url "$RPC_ANVIL" >/dev/null &&
     node script/e2e/refresh-feeds.ts --network anvil >> "$LOG/feeds.log" 2>&1
-  rsync -a --delete --exclude logs --exclude .hostile-outputs --exclude anvil-state.json --exclude 'config-hostile-*' "$bak/" "$OUT/" &&
-    rm -rf "$bak"
+  restore_outputs "$bak" && rm -rf "$bak"
   if [ -z "$failed" ]; then
     record "$name" fail "listed: no step refused it (REQ-ARCH-014); see $LOG/hostile-$1-*.log"
     return 1
