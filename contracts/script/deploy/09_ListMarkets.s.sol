@@ -366,7 +366,9 @@ contract ListMarkets is ListingBase {
             _add(
                 op,
                 address(registry),
-                abi.encodeCall(registry.recordCreditLine, (hub, _token(sym), _uint(".listing.creditLineWhole"))),
+                abi.encodeCall(
+                    registry.recordCreditLine, (hub, _token(sym), _debtAssetUint(sym, "creditLineWhole", ".listing"))
+                ),
                 "MR.recordCreditLine"
             );
         }
@@ -497,7 +499,7 @@ contract ListMarkets is ListingBase {
     }
 
     function _markets() private returns (Operation memory op) {
-        op = _newOperation("listing-markets", release, 200);
+        op = _newOperation("listing-markets", release, 400);
         uint256 first = registry.marketCount() + 1;
         uint256 n = _count(cfg, ".listing.markets");
         IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
@@ -779,8 +781,8 @@ contract ListMarkets is ListingBase {
             SpeedLimit memory s = SpeedLimit({
                 rateBps: uint16(_uint(".listing.speedLimits.debtRateBps")),
                 window: uint32(_uint(".listing.speedLimits.window")),
-                min: uint96(_uint(".listing.speedLimits.debtMinWhole") * unit),
-                max: uint96(_uint(".listing.speedLimits.debtMaxWhole") * unit)
+                min: uint96(_debtAssetUint(sym, "debtMinWhole", ".listing.speedLimits") * unit),
+                max: uint96(_debtAssetUint(sym, "debtMaxWhole", ".listing.speedLimits") * unit)
             });
             _add(
                 op,
@@ -803,6 +805,25 @@ contract ListMarkets is ListingBase {
                 "PS.setDebtAssetParams"
             );
         }
+    }
+
+    /// @notice A whole-token amount of debt asset `sym`: its own `listing.debtAssets[].<field>` when set, else
+    /// `<fallbackParent>.<field>`. The chain-wide credit line and (Hub, asset) speed-limit bounds count whole tokens, which
+    /// a token priced far from $1 (a meme coin at $0.00001, WBTC at $95,000) overrides.
+    function _debtAssetUint(
+        string memory sym,
+        string memory field,
+        string memory fallbackParent
+    ) private view returns (uint256) {
+        uint256 a = _count(cfg, ".listing.debtAssets");
+        for (uint256 i = 0; i < a; ++i) {
+            string memory k = _at("debtAssets", i);
+            if (!_eq(_str(string.concat(k, ".symbol")), sym)) continue;
+            string memory own = string.concat(k, ".", field);
+            if (vm.keyExistsJson(cfg, own)) return _uint(own);
+            break;
+        }
+        return _uint(string.concat(fallbackParent, ".", field));
     }
 
     function _debtAssetFixed(
