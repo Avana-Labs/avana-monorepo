@@ -18,6 +18,10 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 /// self-configuration operations at random delays; cancellers and strangers cancel; anyone executes; anyone cleans
 /// up; time moves 1 hour to 20 days. Ghosts record every success so the invariants can check timing and rights.
 contract TimelockHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     AvanaTimelock public immutable TL;
     address public immutable PS;
     address public immutable MR;
@@ -91,7 +95,9 @@ contract TimelockHandler is CommonBase, StdUtils {
             if (delay < required) ++scheduledBelowRequired;
             ops.push(Op(t, v, p, salt, block.timestamp, delay, required));
             ids.push(TL.hashOperationBatch(t, v, p, bytes32(0), salt));
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function execute(
@@ -99,7 +105,7 @@ contract TimelockHandler is CommonBase, StdUtils {
         address caller,
         bool jumpToReady
     ) external {
-        if (ops.length == 0) return;
+        if (ops.length == 0) revert Skipped();
         // Half the time, move to the operation's ready time first, so executions are reached.
         uint256 at = TL.getTimestamp(ids[idx % ops.length]);
         if (jumpToReady && at > block.timestamp) vm.warp(at);
@@ -110,7 +116,9 @@ contract TimelockHandler is CommonBase, StdUtils {
             ++executions;
             if (block.timestamp < readyAt) ++executedEarly;
             if (block.timestamp >= readyAt + TL.GRACE_PERIOD()) ++executedExpired;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function cancel(
@@ -118,7 +126,7 @@ contract TimelockHandler is CommonBase, StdUtils {
         uint8 who,
         address stranger
     ) external {
-        if (ids.length == 0) return;
+        if (ids.length == 0) revert Skipped();
         bytes32 id = ids[idx % ids.length];
         address caller = who % 5 == 4 ? stranger : cancellers[who % 5];
         bool roleChange = TL.isRoleChangeOperation(id);
@@ -130,13 +138,15 @@ contract TimelockHandler is CommonBase, StdUtils {
             if (!TL.hasRole(TL.CANCELLER_ROLE(), caller)) ++cancelledByNonCanceller;
             if (roleChange && !isDao) ++roleChangeCancelledByNonDao;
             if (restoring && !isDao) ++restoringCancelledByNonDao;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function cleanup(
         uint256 idx
     ) external {
-        if (ids.length == 0) return;
+        if (ids.length == 0) revert Skipped();
         try TL.cleanupExpiredOperation(ids[idx % ids.length]) {} catch {}
     }
 
@@ -149,6 +159,7 @@ contract TimelockHandler is CommonBase, StdUtils {
     function updateDelay(
         uint256 d
     ) external view {
+        // Only the timelock itself may call it: the refusal is the expected outcome.
         try TL.updateDelay(d) {
             revert("updateDelay succeeded");
         } catch {}

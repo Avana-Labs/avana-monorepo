@@ -15,6 +15,10 @@ import {Test} from "forge-std/Test.sol";
 /// borrow-side pre-checks against the real RiskModule and MarketRegistry. Every pre-check that passes is compared with
 /// an independent reading of the gates of 2.7; a pass while a gate is closed is a violation.
 contract RiskModuleHandler is Test {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     struct World {
         RiskModule rm;
         MarketRegistry registry;
@@ -89,7 +93,7 @@ contract RiskModuleHandler is Test {
     }
 
     function offboard() external {
-        if (_offboarding) return;
+        if (_offboarding) revert Skipped();
         _offboarding = true;
         vm.prank(address(w.rm.TIMELOCK()));
         w.registry.setMarketOffboarding(w.marketId);
@@ -125,7 +129,9 @@ contract RiskModuleHandler is Test {
             ++borrows;
             if (!clear) ++violations;
             if (keepers == 0) ++borrowsWithoutKeeper;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function withdraw() external {
@@ -133,7 +139,9 @@ contract RiskModuleHandler is Test {
         try w.rm.preWithdrawCheck(w.proxy) {
             ++withdrawals;
             if (!clear) ++violations;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     /// @dev Every gate of 2.7 Borrow-side checks, read independently of the RiskModule's code.

@@ -14,6 +14,10 @@ import {Test} from "forge-std/Test.sol";
 /// against the real ParameterStore (TEST-325). After each call the handler records whether a stored value changed and
 /// in which direction, so the suite can check that no call moved a value the wrong way for its role.
 contract ParameterStoreSpeedHandler is Test {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     IParameterStore internal store;
     address internal timelock;
     address internal safe;
@@ -89,7 +93,7 @@ contract ParameterStoreSpeedHandler is Test {
                     : abi.encodeCall(IParameterStoreSpeed.tightenMarketSpeedLimits, (marketId, v))
             );
         MarketSpeedLimits memory now_ = store.marketSpeedLimits(marketId);
-        if (!_changed(abi.encode(old), abi.encode(now_))) return;
+        if (!_changed(abi.encode(old), abi.encode(now_))) revert Skipped();
         ++writes;
         if (!ok) ++wrongDirection;
         if (who == stranger) ++strangerWrites;
@@ -122,7 +126,7 @@ contract ParameterStoreSpeedHandler is Test {
                     : abi.encodeCall(IParameterStoreSpeed.tightenDebtSpeedLimit, (hub, asset, v))
             );
         SpeedLimit memory now_ = store.debtSpeedLimit(hub, asset);
-        if (!_changed(abi.encode(old), abi.encode(now_))) return;
+        if (!_changed(abi.encode(old), abi.encode(now_))) revert Skipped();
         ++writes;
         if (!ok) ++wrongDirection;
         if (who == stranger) ++strangerWrites;
