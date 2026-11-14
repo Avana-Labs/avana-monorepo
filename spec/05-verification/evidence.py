@@ -82,9 +82,7 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "MockLPOracle": ("LPOracle",),
     "RegistryLPOracleMock": ("LPOracle",),
     "RiskLPOracleMock": ("LPOracle",),
-    "IntegLPOracleMock": ("LPOracle",),
     # DebtOracle
-    "IntegDebtOracleMock": ("DebtOracle",),
     "LVSDebtOracleMock": ("DebtOracle",),
     "LensDebtOracleMock": ("DebtOracle",),
     "RegistryDebtOracleMock": ("DebtOracle",),
@@ -110,7 +108,6 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "FreezeRegistryMock": ("MarketRegistry",),
     "GasMarketRegistry": ("MarketRegistry",),
     "HarnessMarketRegistry": ("MarketRegistry",),
-    "IntegRegistryMock": ("MarketRegistry",),
     "LVSMarketRegistryMock": ("MarketRegistry",),
     "LensRegistryMock": ("MarketRegistry",),
     "MockMarketRegistry": ("MarketRegistry",),
@@ -123,7 +120,6 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "RegistryParameterStoreMock": ("ParameterStore",),
     "RiskStoreMock": ("ParameterStore",),
     "MockFlashFeeCap": ("ParameterStore",),
-    "IntegStoreMock": ("ParameterStore",),
     # RiskModule
     "AdapterRiskModuleMock": ("RiskModule",),
     "CollRiskModuleMock": ("RiskModule",),
