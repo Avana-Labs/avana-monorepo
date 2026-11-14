@@ -1,0 +1,14 @@
+{
+  "name": "oracle-standby-back",
+  "description": "restorePriceRoute once the primary feed is healthy (timelock, normal delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "restorePriceRoute",
+      "args": {
+        "token": "token:USDC"
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "freeze-address-forward",
+  "description": "the Emergency Guardian freezes the drill borrower's wallet",
+  "via": "direct",
+  "sender": "emergencyGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "freezeAddress",
+      "args": {
+        "account": "0x1000000000000000000000000000000000000d01"
+      }
+    }
+  ]
+}

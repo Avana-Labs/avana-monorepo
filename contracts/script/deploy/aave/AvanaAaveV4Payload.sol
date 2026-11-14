@@ -19,6 +19,7 @@ struct AvanaAaveActions {
     IAaveV4ConfigEngine.ReserveConfigUpdate[] reserveConfigUpdates;
     IAaveV4ConfigEngine.LiquidationConfigUpdate[] liquidationConfigUpdates;
     AvanaPostCall[] postCalls;
+    IAaveV4ConfigEngine.AssetConfigUpdate[] assetConfigUpdates;
 }
 
 /// @notice One call `_postExecute` makes from the executor.
@@ -90,6 +91,10 @@ contract AvanaAaveV4Payload is AaveV4Payload {
 
     function hubAssetListings() public view override returns (IAaveV4ConfigEngine.AssetListing[] memory) {
         return actions().assetListings;
+    }
+
+    function hubAssetConfigUpdates() public view override returns (IAaveV4ConfigEngine.AssetConfigUpdate[] memory) {
+        return actions().assetConfigUpdates;
     }
 
     function hubSpokeToAssetsAdditions()

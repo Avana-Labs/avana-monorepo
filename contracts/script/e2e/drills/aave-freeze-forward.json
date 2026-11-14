@@ -1,0 +1,15 @@
+{
+  "name": "aave-freeze-forward",
+  "description": "AIP: freeze the vault-token reserve of uni-USDC-USDT-100 on uniV3Stable",
+  "via": "aip",
+  "changes": [
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV3Stable",
+      "reserve": "collateral:uni-USDC-USDT-100",
+      "set": {
+        "frozen": true
+      }
+    }
+  ]
+}

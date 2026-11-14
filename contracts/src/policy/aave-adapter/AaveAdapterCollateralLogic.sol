@@ -222,8 +222,12 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         // The borrower's own bound on what the call pays it (REQ-ADAPTER-080): each swap leg may fill anywhere above
         // its oracle minimum, so without it a sandwich could take up to the slippage allowance out of the leftover.
         if (debtAssetToWallet < p.minAssetOut) revert AssetOutBelowMinimum(debtAssetToWallet, p.minAssetOut);
-        // REQ-COLL-040: a repay with collateral that leaves no Aave borrow clears the indebted mark.
-        if (hfAfter == type(uint256).max) ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(b.proxy);
+        // REQ-COLL-040: a repay with collateral that leaves no Aave borrow clears the indebted mark, and, as after every
+        // other debt-free exit, the collateral cleanup runs (REQ-PROXY-089, REQ-PROXY-046).
+        if (hfAfter == type(uint256).max) {
+            ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(b.proxy);
+            _cleanup(b.proxy, b.spoke, b.reserveId);
+        }
         _clearSession();
         emit RepaidWithCollateral(
             msg.sender,

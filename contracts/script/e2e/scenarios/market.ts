@@ -95,11 +95,11 @@ const ERRORS = [
   ...aaveV4SpokeAbi,
   ...aaveV4HubAbi,
 ].filter((i: any) => i.type === "error") as readonly unknown[];
-const withErrors = (abi: readonly unknown[]) => [...abi, ...ERRORS] as readonly unknown[];
+export const withErrors = (abi: readonly unknown[]) => [...abi, ...ERRORS] as readonly unknown[];
 
 // ─── Constants ───
 
-const WAD = 10n ** 18n;
+export const WAD = 10n ** 18n;
 const RAY = 10n ** 27n;
 const ONE_USD = 100_000_000n;
 /** Gas for `poke()`: the LPOracle's and the DebtOracle's `pokeMinGas` is 1,000,000 at entry. */
@@ -120,7 +120,8 @@ const STALE_AFTER = 88_200;
 /** The symbols the four listed markets and their debt reserves read. */
 const MARKET_SYMBOLS = ["USDC", "USDT", "WETH", "GHO"] as const;
 
-// Scenario wallets, one per scenario (two for the keeper scenario).
+// Scenario wallets, one per scenario (two for the keeper scenario). The backward and emergency drills
+// (script/e2e/drills.ts) use the 0x…0d0n wallets, so the scenarios that run after them start fresh.
 const WALLETS = {
   uniswapLp: "0x1000000000000000000000000000000000000c01",
   slipstreamLp: "0x1000000000000000000000000000000000000c02",
@@ -138,7 +139,7 @@ const WALLETS = {
 // ─── Types ───
 
 /** One market of listing-markets.json. */
-interface Market {
+export interface Market {
   readonly name: string;
   readonly marketId: bigint;
   readonly integrationId: number;
@@ -158,7 +159,7 @@ interface Market {
   readonly vaultToken: Address;
 }
 
-interface Position {
+export interface Position {
   readonly tokenId: bigint;
   readonly key: Hex;
   readonly npm: Address;
@@ -166,7 +167,7 @@ interface Position {
   readonly amounts: readonly [bigint, bigint];
 }
 
-interface Account {
+export interface Account {
   readonly proxy: Address;
   readonly credited: bigint;
   readonly collateralReserveId: bigint;
@@ -174,14 +175,14 @@ interface Account {
 }
 
 /** Raised by a step whose failure ends the scenario; `run` turns it into a fail with the numbers so far. */
-class StepError extends Error {}
+export class StepError extends Error {}
 
 // ─── Small helpers ───
 
 const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-const pct = (x: bigint, bps: bigint) => (x * bps) / 10_000n;
-const fmt = (x: bigint, decimals: number) => formatUnits(x, decimals);
-const usd8 = (x: bigint) => `$${formatUnits(x, 8)}`;
+export const pct = (x: bigint, bps: bigint) => (x * bps) / 10_000n;
+export const fmt = (x: bigint, decimals: number) => formatUnits(x, decimals);
+export const usd8 = (x: bigint) => `$${formatUnits(x, 8)}`;
 const stateName = (s: number) => STATES[s] ?? `state ${s}`;
 
 function isqrt(n: bigint): bigint {
@@ -200,7 +201,7 @@ const sqrtPriceX96 = (p0: bigint, p1: bigint, d0: number, d1: number) =>
   isqrt((p0 * 10n ** BigInt(d1) * (1n << 192n)) / (p1 * 10n ** BigInt(d0)));
 
 /** The first revert reason viem decoded along an error's cause chain, else its first line. */
-function errorName(e: unknown): string {
+export function errorName(e: unknown): string {
   let cur: any = e;
   for (let i = 0; cur && i < 8; i++) {
     if (cur.data?.errorName) {
@@ -215,7 +216,7 @@ function errorName(e: unknown): string {
 
 // ─── The scenario environment ───
 
-class Env {
+export class Env {
   readonly ctx: ScenarioContext;
   readonly numbers: Record<string, string> = {};
   readonly adapter: Address;
@@ -679,7 +680,7 @@ class Env {
 }
 
 /** Runs a scenario body; a StepError or any other throw becomes a fail with the numbers gathered so far. */
-async function runWith(ctx: ScenarioContext, body: (e: Env) => Promise<{ ok: boolean; detail: string }>): Promise<ScenarioRun> {
+export async function runWith(ctx: ScenarioContext, body: (e: Env) => Promise<{ ok: boolean; detail: string }>): Promise<ScenarioRun> {
   let e: Env | undefined;
   try {
     e = new Env(ctx);

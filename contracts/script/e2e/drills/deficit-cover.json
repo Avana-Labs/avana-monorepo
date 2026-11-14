@@ -1,0 +1,17 @@
+{
+  "name": "deficit-cover",
+  "description": "P-09: the COVERAGE_ROLE holder covers the deficit from the volatile Hub's GHO First-Loss Reserve",
+  "via": "direct",
+  "sender": "emergencyGuardian",
+  "changes": [
+    {
+      "contract": "AvanaFirstLossReserve",
+      "function": "coverDeficit",
+      "args": {
+        "borrowSpoke": "spoke:uniV3Volatile",
+        "maxAmount": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      },
+      "target": "reserve:volatile:GHO"
+    }
+  ]
+}

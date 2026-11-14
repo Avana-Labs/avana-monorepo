@@ -4,12 +4,17 @@
 #
 # Local end-to-end rehearsal of an Avana deployment (deployments/README.md): a fresh anvil node, then every deploy step
 # in order, the first two timelock operations scheduled as the governance Safe and executed after the 5-day delay, the
-# release manifest produced and verified against the chain, the keeper and the indexer started on that manifest, and
-# the scenario runner. Each step is recorded in deployments-local/anvil/e2e-status.json as pass, fail or not-run
+# release manifest produced and verified against the chain, the keeper and the indexer started on that manifest, the
+# backward, emergency and rate drills (rehearsals 09 and 10, each reversed, then the manifest verified again), and the
+# scenario runner. Each step is recorded in deployments-local/anvil/e2e-status.json as pass, fail or not-run
 # (with the reason): a missing tool or build artifact is reported as not-run, never as a pass.
 #
 # Usage, from contracts/:   script/e2e/e2e-local.sh            (all steps)
 #                           E2E_STEPS="deploy manifest" script/e2e/e2e-local.sh
+#                           E2E_STEPS="deploy day2 exotic manifest services scenarios" script/e2e/e2e-local.sh
+# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets on the day-2 config, as two
+# releases recorded exotic:<step> and exotic2:<step>), the rerun of every step with nothing new (06, after day2 or
+# exotic), hostile (07, on the latest config), manifest, services and scenarios.
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
 # `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
 # the Chainlink OCR2 aggregator and proxy).
@@ -25,7 +30,7 @@ export RPC_ANVIL="http://127.0.0.1:${PORT}"
 OUT="$CONTRACTS/deployments-local/anvil"
 LOG="$OUT/logs"
 STATUS="$OUT/e2e-status.json"
-STEPS="${E2E_STEPS:-deploy day2 hostile manifest services scenarios}"
+STEPS="${E2E_STEPS:-deploy day2 exotic hostile manifest services drills scenarios}"
 # E2E_RESUME=<step name> reloads the anvil state the last run saved (anvil-state.json) and runs the deploy steps from
 # that one on, keeping the earlier outputs: a failed step is fixed and rerun without redeploying the whole world.
 RESUME="${E2E_RESUME:-}"
@@ -64,7 +69,15 @@ if [ -n "$MISSING" ]; then
 fi
 
 ANVIL_PID=""
-cleanup() { [ -n "$ANVIL_PID" ] && kill -INT "$ANVIL_PID" 2>/dev/null && wait "$ANVIL_PID" 2>/dev/null; [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null; true; }
+# INT lets anvil write its state file. Under Git Bash on Windows anvil ignores it, and waiting for it hung the run after
+# its last step: after 10 s it is killed (the state file then holds anvil's last periodic dump).
+stop_anvil() {
+  kill -INT "$ANVIL_PID" 2>/dev/null || return 0
+  for _ in $(seq 1 50); do kill -0 "$ANVIL_PID" 2>/dev/null || break; sleep 0.2; done
+  kill -0 "$ANVIL_PID" 2>/dev/null && kill -KILL "$ANVIL_PID" 2>/dev/null
+  wait "$ANVIL_PID" 2>/dev/null
+}
+cleanup() { [ -n "$ANVIL_PID" ] && stop_anvil; [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null; true; }
 trap cleanup EXIT
 # The chain state is saved to anvil-state.json when the node stops; a run without the deploy step reloads it, so the
 # manifest and scenario steps can be rerun on the same deployment (E2E_STEPS="manifest scenarios"). A reloaded node
@@ -72,6 +85,12 @@ trap cleanup EXIT
 # --preserve-historical-states writes a 7 GB file for this world, so the services step runs only with the deploy step.
 STATE="$OUT/anvil-state.json"
 [[ " $STEPS " == *" deploy "* ]] && [ -z "$RESUME" ] && rm -f "$STATE"
+# A node already answering on the port (one an earlier run left behind: on Windows the INT below does not always stop
+# anvil) would take this run's transactions on its old chain, and this run's anvil would fail to bind unnoticed.
+if cast block-number --rpc-url "$RPC_ANVIL" >/dev/null 2>&1; then
+  for s in $STEPS; do record "$s" not-run "a node already answers on port $PORT: stop it or set E2E_PORT"; done
+  exit 1
+fi
 anvil --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
   --timestamp 1794500000 --state "$STATE" > "$LOG/anvil.log" 2>&1 &
 ANVIL_PID=$!
@@ -196,10 +215,11 @@ fi
 # on what the config adds. Day 2 (script/e2e/day2-additions.ts: a Hub with its Spokes, a lend asset, a borrowable asset
 # on a listed Spoke, a collateral token and two markets), then the exotic pass (script/e2e/exotic-additions.ts: a Hub
 # lending a meme coin, a governance token, an 8-decimals token and USDC against meme, governance, WBTC-type and thin
-# pools on Uniswap v3 and Slipstream). After the last one, every step once more, which must do nothing. Later steps
-# read the last config.
-grow() { # phase generator config
-  node "$2" --network anvil > "$LOG/${1}config.log" 2>&1 || { record "${1}config" fail "see $LOG/${1}config.log"; return 1; }
+# pools on Uniswap v3 and Slipstream, five markets per release). After the last one, every step once more, which must do
+# nothing. Later steps read the last config.
+grow() { # phase "generator [args]" config
+  # shellcheck disable=SC2086 # the generator and its arguments, split on purpose
+  node $2 --network anvil > "$LOG/${1}config.log" 2>&1 || { record "${1}config" fail "see $LOG/${1}config.log"; return 1; }
   export AVANA_CONFIG="$3"
   PHASE="$1:"
   run_script 01-aave-v4 &&
@@ -228,17 +248,32 @@ grow() { # phase generator config
   return $ok
 }
 GREW=""
+GROW_FAILED=""
 if [[ " $STEPS " == *" day2 "* ]]; then
-  grow day2 script/e2e/day2-additions.ts deployments-local/anvil/config-day2.json && GREW=1
+  grow day2 script/e2e/day2-additions.ts deployments-local/anvil/config-day2.json && GREW=1 || GROW_FAILED=day2
 fi
 if [[ " $STEPS " == *" exotic "* ]]; then
-  if [ -f "$OUT/config-day2.json" ]; then
-    grow exotic script/e2e/exotic-additions.ts deployments-local/anvil/config-exotic.json && GREW=1
+  if [ -n "$GROW_FAILED" ]; then
+    record exotic not-run "the day2 phase failed"
+  elif [ -f "$OUT/config-day2.json" ]; then
+    # Two releases: one listing batch of all ten markets would not fit in a block (exotic-additions.ts).
+    { grow exotic "script/e2e/exotic-additions.ts --part 1" deployments-local/anvil/config-exotic.json &&
+      grow exotic2 "script/e2e/exotic-additions.ts --part 2" deployments-local/anvil/config-exotic.json && GREW=1; } ||
+      GROW_FAILED=exotic
   else
     record exotic not-run "needs the day-2 config (run day2 first)"
   fi
 fi
-if [ -n "$GREW" ]; then
+# A run that did not grow the config itself (resumed, or later steps only) reads the last config an earlier run wrote.
+if [ -z "${AVANA_CONFIG:-}" ]; then
+  for f in config-exotic config-day2; do
+    [ -f "$OUT/$f.json" ] && { export AVANA_CONFIG="deployments-local/anvil/$f.json"; break; }
+  done
+fi
+# After a failed phase the config holds additions not on chain yet: a rerun would act on them, so it waits for the fix.
+if [ -n "$GROW_FAILED" ]; then
+  record rerun not-run "the $GROW_FAILED phase failed: fix it and resume (E2E_RESUME) before every step runs again"
+elif [ -n "$GREW" ]; then
   for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-first-loss-reserves 08-aave-loss-layers-aip \
     07-fund-first-loss-reserves 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
     09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
@@ -251,6 +286,15 @@ HOSTILE_FLOW=(01-aave-v4 04-access-operations @432001 05-execute-access-operatio
   07-deploy-first-loss-reserves 08-aave-loss-layers-aip 07-fund-first-loss-reserves 09-listing-setup @432001
   09-execute-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata 09-listing-markets @432001
   09-execute-listing-markets 10-aave-markets-aip 09-listing-activate @43201 09-execute-listing-activate)
+# The outputs a hostile case may rewrite, kept and put back with tar (Git Bash on Windows has no rsync): every entry of
+# the output directory but the logs, the backup itself and the node's state; put back over a directory cleared of the
+# same entries, so a file a case added goes too. The case configs stay.
+keep_outputs() { # backup-dir
+  mkdir -p "$1" && tar -C "$OUT" --exclude ./logs --exclude ./.hostile-outputs --exclude ./anvil-state.json -cf - . | tar -C "$1" -xf -
+}
+restore_outputs() { # backup-dir
+  find "$OUT" -mindepth 1 -maxdepth 1 ! -name logs ! -name .hostile-outputs ! -name anvil-state.json ! -name 'config-hostile-*'     -exec rm -rf {} + && tar -C "$1" --exclude './config-hostile-*' -cf - . | tar -C "$OUT" -xf -
+}
 hostile() { # case refusal-regex
   local name="hostile:$1" cfg="deployments-local/anvil/config-hostile-$1.json" snap failed="" log="" st
   skipped "$name" && return 0
@@ -258,7 +302,7 @@ hostile() { # case refusal-regex
     { record "$name" fail "see $LOG/hostile-$1-config.log"; return 1; }
   # The steps also rewrite the deployment outputs (oracles, markets, operations, metadata): kept and put back.
   local bak="$OUT/.hostile-outputs"
-  rm -rf "$bak" && rsync -a --exclude logs --exclude .hostile-outputs --exclude anvil-state.json "$OUT/" "$bak/"
+  rm -rf "$bak" && keep_outputs "$bak"
   snap="$(cast rpc evm_snapshot --rpc-url "$RPC_ANVIL" | tr -d '"')"
   for st in "${HOSTILE_FLOW[@]}"; do
     if [[ "$st" == @* ]]; then
@@ -272,8 +316,7 @@ hostile() { # case refusal-regex
   done
   cast rpc evm_revert "$snap" --rpc-url "$RPC_ANVIL" >/dev/null && cast rpc evm_mine --rpc-url "$RPC_ANVIL" >/dev/null &&
     node script/e2e/refresh-feeds.ts --network anvil >> "$LOG/feeds.log" 2>&1
-  rsync -a --delete --exclude logs --exclude .hostile-outputs --exclude anvil-state.json --exclude 'config-hostile-*' "$bak/" "$OUT/" &&
-    rm -rf "$bak"
+  restore_outputs "$bak" && rm -rf "$bak"
   if [ -z "$failed" ]; then
     record "$name" fail "listed: no step refused it (REQ-ARCH-014); see $LOG/hostile-$1-*.log"
     return 1
@@ -324,6 +367,44 @@ if [[ " $STEPS " == *" services "* ]]; then
     esac
   else
     record services not-run "no manifest"
+  fi
+fi
+
+# Rehearsals 09 and 10 (script/e2e/drills.ts): each backward or emergency drill and each rate change runs its forward
+# change through `11-changes <file>` (script/e2e/drills/), checks on chain that it took effect, runs the backward
+# change and checks the action works again; each is recorded as drill:<name>. Then teardown repays and withdraws the
+# drill accounts and the manifest must still verify against the chain. E2E_DRILLS="caps hub-pause" runs only those
+# (between setup and teardown). They run after the services step, whose indexer reads the deployment's early blocks,
+# which anvil no longer serves once the drills have added a few thousand more.
+DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero market-breaker debt-breaker hub-freeze hub-pause pause-all freeze-address aave-freeze oracle-standby keeper-kill-switch deficit-coverage remove-debt-reserve offboard-close cancel-registration retire-spoke rate-aip rate-role}"
+drill() { # name
+  local name="drill:$1" log="$LOG/drill-$1.log" rc
+  skipped "$name" && return 0
+  node script/e2e/drills.ts --network anvil --drill "$1" > "$log" 2>&1
+  rc=$?
+  case $rc in
+    0) record "$name" pass "$(tail -1 "$log" | sed 's/^PASS //' | cut -c1-400)" ;;
+    3) record "$name" not-run "$(tail -1 "$log" | sed 's/^NOT-RUN //' | cut -c1-400)" ;;
+    *) record "$name" fail "see $log: $(tail -1 "$log" | sed 's/^FAIL //' | cut -c1-400)" ;;
+  esac
+}
+if [[ " $STEPS " == *" drills "* ]]; then
+  if [ -f "$OUT/manifest.json" ]; then
+    # The drills read the last release config (the markets the later phases added).
+    for c in config-exotic config-day2; do
+      [ -z "${AVANA_CONFIG:-}" ] && [ -f "$OUT/$c.json" ] && export AVANA_CONFIG="deployments-local/anvil/$c.json"
+    done
+    [ -z "$RESUME" ] && rm -rf "$OUT/drills"
+    drill setup
+    for d in $DRILL_LIST; do drill "$d"; done
+    drill teardown
+    if (cd "$REPO/packages/protocol" && node src/manifest/cli.ts verify --manifest "$OUT/manifest.json" --rpc-env RPC_ANVIL) > "$LOG/drills-verify.log" 2>&1; then
+      record drills:manifest-verify pass "after the drills: $(tail -1 "$LOG/drills-verify.log")"
+    else
+      record drills:manifest-verify fail "see $LOG/drills-verify.log: $(tail -1 "$LOG/drills-verify.log")"
+    fi
+  else
+    record drills not-run "no manifest (the drills run after the manifest step)"
   fi
 fi
 

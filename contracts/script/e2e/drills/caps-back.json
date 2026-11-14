@@ -1,0 +1,17 @@
+{
+  "name": "caps-back",
+  "description": "loosen the depositor cap back to its value, one x1.5 step per normal delay",
+  "via": "timelock",
+  "restores": "caps-forward",
+  "changes": [
+    {
+      "contract": "ParameterStore",
+      "function": "loosenDepositorUsdCap",
+      "args": {
+        "hub": "hub:stable",
+        "value": "$prior"
+      },
+      "steps": true
+    }
+  ]
+}

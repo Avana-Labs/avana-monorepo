@@ -1,0 +1,16 @@
+{
+  "name": "deficit-breaker-back",
+  "description": "the Aave Protocol Guardian resets the debt breaker once the reserve is refunded",
+  "via": "direct",
+  "sender": "aaveProtocolGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "resetDebtBreaker",
+      "args": {
+        "spoke": "spoke:uniV3Volatile",
+        "debtReserveId": "debtReserve:uniV3Volatile:GHO"
+      }
+    }
+  ]
+}

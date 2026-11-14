@@ -1,0 +1,16 @@
+{
+  "name": "rate-role-back",
+  "description": "the rate curve back under the same role",
+  "via": "rate-role",
+  "restores": "rate-role-forward",
+  "changes": [
+    {
+      "aave": "assetRates",
+      "hub": "hub:stable",
+      "asset": "token:GHO",
+      "set": {
+        "baseDrawnRate": "$prior"
+      }
+    }
+  ]
+}
