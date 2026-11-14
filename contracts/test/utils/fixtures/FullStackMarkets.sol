@@ -171,7 +171,14 @@ abstract contract FullStackMarkets is FullStackFixture {
     function _oracleConfig(
         uint256 id
     ) internal view returns (OracleConfig memory c) {
-        address[] memory toks = _poolTokens();
+        c = _oracleConfigFor(id, _poolTokens());
+    }
+
+    /// @dev `_oracleConfig` for a market of the pool tokens `toks` (pool order).
+    function _oracleConfigFor(
+        uint256 id,
+        address[] memory toks
+    ) internal view returns (OracleConfig memory c) {
         c.marketId = id;
         c.tokens = new TokenOracleConfig[](2);
         for (uint256 i = 0; i < 2; ++i) {
@@ -195,7 +202,7 @@ abstract contract FullStackMarkets is FullStackFixture {
 
     function _route(
         address[] memory feeds
-    ) private view returns (OracleRoute memory r) {
+    ) internal view returns (OracleRoute memory r) {
         r.legCount = uint8(feeds.length);
         for (uint256 i = 0; i < feeds.length; ++i) {
             FeedDef memory f = store.getFeed(feeds[i]);
@@ -329,7 +336,8 @@ abstract contract FullStackMarkets is FullStackFixture {
                 aaveAdapter: adapter,
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
-                tokenClassMask: 1 << 1,
+                // Stable (bit 1) and volatile (bit 3) Spokes: a route-DEX pool serves markets of either tier.
+                tokenClassMask: (1 << 1) | (1 << 3),
                 uniswapV3Factory: address(routeFactory),
                 slipstreamFactory: address(0),
                 curveFactory: address(0),
