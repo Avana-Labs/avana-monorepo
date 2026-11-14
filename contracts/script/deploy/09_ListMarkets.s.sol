@@ -489,7 +489,7 @@ contract ListMarkets is ListingBase {
     }
 
     function _markets() private returns (Operation memory op) {
-        op = _newOperation("listing-markets", release, 200);
+        op = _newOperation("listing-markets", release, 400);
         uint256 first = registry.marketCount() + 1;
         uint256 n = _count(cfg, ".listing.markets");
         IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
