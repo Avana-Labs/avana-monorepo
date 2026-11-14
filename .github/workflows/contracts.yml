@@ -153,6 +153,7 @@ jobs:
         run: |
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -162,6 +163,7 @@ jobs:
             contracts/out
             contracts/out-aave
             contracts/out-univ3
+            contracts/out-univ3-periphery
             contracts/cache
           retention-days: 7
 
@@ -335,6 +337,7 @@ jobs:
         run: |
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
 
       - name: Gas snapshots (test/gas against the committed snapshots/)
         # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
@@ -459,6 +462,7 @@ jobs:
         run: |
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
 
       - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
         env:
