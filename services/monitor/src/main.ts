@@ -39,9 +39,9 @@ function provider(c: ChainConfig, url: string): ProviderReads {
     snapshot: (b) => readChainSnapshot(pinned(client, b.number), c.deployment, { blockNumber: b.number, timestamp: b.timestamp }),
     views: (b) => pinned(client, b.number),
     rpc: (b): RawRpc => ({
-      getLogs: async (addresses, fromBlock, toBlock) => {
+      getLogs: async (addresses, topic0s, fromBlock, toBlock) => {
         if (toBlock > b.number) throw new Error(`logs past the round's block ${b.number}`);
-        const logs = await client.request({ method: "eth_getLogs", params: [{ address: [...addresses], fromBlock: toHex(fromBlock), toBlock: toHex(toBlock) }] });
+        const logs = await client.request({ method: "eth_getLogs", params: [{ address: [...addresses], topics: [[...topic0s]], fromBlock: toHex(fromBlock), toBlock: toHex(toBlock) }] });
         return logs.map((l) => ({ address: l.address, topics: l.topics as Hex[], data: l.data, blockNumber: BigInt(l.blockNumber!), transactionHash: l.transactionHash!, logIndex: Number(l.logIndex) }));
       },
       getStorageAt: async (address, slot) => (await client.getStorageAt({ address, slot, blockNumber: b.number })) ?? "0x",

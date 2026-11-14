@@ -66,11 +66,12 @@ export function provider(p: FakeProvider): ProviderReads {
     },
     views: () => views(p),
     rpc: (b) => ({
-      getLogs: async (addresses, from, to) => {
+      getLogs: async (addresses, topic0s, from, to) => {
         if (p.down) throw new Error("ECONNREFUSED");
         if (to > b.number) throw new Error("logs past the block");
         const set = new Set(addresses.map((a) => a.toLowerCase()));
-        return p.logs.filter((l) => set.has(l.address.toLowerCase()) && l.blockNumber >= from && l.blockNumber <= to);
+        const topics = new Set(topic0s.map((t) => t.toLowerCase()));
+        return p.logs.filter((l) => set.has(l.address.toLowerCase()) && topics.has((l.topics[0] ?? "").toLowerCase()) && l.blockNumber >= from && l.blockNumber <= to);
       },
       getStorageAt: async (address: Address, slot: Hex) => p.storage.get(`${address.toLowerCase()}:${slot}`) ?? `0x${"00".repeat(32)}`,
     }),

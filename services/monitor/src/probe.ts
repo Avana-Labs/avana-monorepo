@@ -20,7 +20,8 @@ export interface RawLog {
 
 /** Reads that a multicall cannot make, pinned to the context's block (logs up to it). */
 export interface RawRpc {
-  getLogs(addresses: readonly Address[], fromBlock: bigint, toBlock: bigint): Promise<RawLog[]>;
+  /** Logs of `addresses` whose first topic is one of `topic0s`, in [fromBlock, toBlock]. */
+  getLogs(addresses: readonly Address[], topic0s: readonly Hex[], fromBlock: bigint, toBlock: bigint): Promise<RawLog[]>;
   getStorageAt(address: Address, slot: Hex): Promise<Hex>;
 }
 
