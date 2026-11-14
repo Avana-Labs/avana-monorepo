@@ -418,6 +418,10 @@ contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integra
 # the optimizer ("stack too deep" in ABI decoding without it), built here with the legacy pipeline.
 optimizer = false
 via_ir = false
+# Unoptimized, instrumented code spends more gas per call than the ci profile's build: Cascade's 100-account setUp
+# ran out of the default 2^30 test gas limit (a DebtOracle poke then saw less than its 900,000 gas floor). Coverage
+# measures branches, not gas, so its limit is 2^32.
+gas_limit = 4294967296
 no_match_path = "test/{fork,differential,halmos,invariant}/**"
 additional_compiler_profiles = [
   { name = "coverage-ir", optimizer = false, via_ir = true },
