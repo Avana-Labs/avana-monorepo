@@ -201,7 +201,8 @@ contract DebtOracleUnitTest is DebtOracleFixture {
         assertEq(uint8(v.state), uint8(PriceState.Drifting));
         assertEq(v.primaryValue, 99_990_000);
         assertEq(v.alternateValue, 100_300_000);
-        assertEq(_served(), 100_300_000);
+        // The median max(min(p, b), A): the higher alternate alone does not raise the price (ORACLE-06).
+        assertEq(_served(), 99_995_000);
         assertTrue(v.liquidationPaused);
         assertFalse(v.borrowAllowed);
         assertTrue(v.reasons & (1 << 3) != 0);

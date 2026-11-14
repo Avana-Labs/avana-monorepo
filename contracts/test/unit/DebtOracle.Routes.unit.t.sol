@@ -150,23 +150,24 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
         assertEq(uint8(v.state), uint8(PriceState.Drifting));
         assertTrue(v.reasons & BIT_DISAGREE != 0);
         assertEq(v.deviationBps, 225);
-        assertEq(uint256(v.answer), 102_239_776);
+        assertEq(uint256(v.answer), 99_990_000, "the median max(min(p, b), A) = b = A");
         assertEq(uint8(v.routeUsed), uint8(RouteSlot.Primary));
     }
 
     /// @notice Review DO-01: while the routes disagree, the served timestamp, the age limits, the leg report and
-    /// `latestRoundData().updatedAt` follow the route whose value is served. Primary 0.9999 from `T0 - 100`, alternate
-    /// 1.03 published now: the alternate is served with its own timestamp, legs and limits (the hourly ETH/USD leg binds
-    /// at 5,400 s). With both routes below the accepted price, the accepted price is served with its own timestamp and
-    /// no route limits.
+    /// `latestRoundData().updatedAt` follow the route whose value is served, the lower one (`SPEC-ORC-018`). Primary
+    /// 1.035 from `now - 10`, alternate 1.01 published now: the alternate is served with its own timestamp, legs and
+    /// limits (the hourly ETH/USD leg binds at 5,400 s). With both routes below the accepted price, the accepted price
+    /// is served with its own timestamp and no route limits. With the primary the lower, it is served on its own legs.
     // TEST-219 verifies: REQ-ORACLE-093, SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-090, REQ-ORACLE-092
     function test_TEST_219_disagreementTimestampsFollowServedRoute() public {
         vm.warp(T0 + 50_000);
-        aEth.push(343_333_333_333_334, block.timestamp);
+        pUsd.push(103_500_000, block.timestamp - 10);
+        aEth.push(336_666_666_666_667, block.timestamp);
         ethUsd.republish(block.timestamp);
         DebtPriceView memory v = _view();
         assertEq(uint8(v.state), uint8(PriceState.Drifting));
-        assertEq(uint256(v.answer), 103_000_000, "served = max(p, b, A) = b");
+        assertEq(uint256(v.answer), 101_000_000, "served = max(min(p, b), A) = b");
         assertEq(v.servedUpdatedAt, block.timestamp, "the alternate's timestamp");
         assertEq(v.legFeeds[0], address(aEth));
         assertEq(v.legFeeds[1], address(ethUsd));
@@ -192,10 +193,11 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
         (,,, updatedAt,) = oracle.latestRoundData();
         assertEq(updatedAt, T0 - 100);
 
-        // The primary above both: the primary is served with its own timestamp and legs.
-        pUsd.push(103_500_000, block.timestamp - 10);
+        // The primary the lower and above A: the primary is served with its own timestamp and legs.
+        pUsd.push(100_500_000, block.timestamp - 10);
+        aEth.push(343_333_333_333_334, block.timestamp);
         v = _view();
-        assertEq(uint256(v.answer), 103_500_000);
+        assertEq(uint256(v.answer), 100_500_000);
         assertEq(v.servedUpdatedAt, block.timestamp - 10);
         assertEq(v.legFeeds[0], address(pUsd));
         assertEq(v.legFeeds[1], address(0));
@@ -429,5 +431,30 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
         assertTrue(v.reasons & BIT_SECOND != 0);
         assertFalse(v.borrowAllowed);
         assertFalse(v.liquidationPaused);
+    }
+
+    // TEST-230 verifies: SPEC-ORC-018, REQ-ORACLE-093, INV-087
+    // ORACLE-06: one faulty debt route cannot raise the debt price alone. The alternate jumps to 1.10 (ETH/USD
+    // misreporting) while the primary reads 0.9999: Drifting serves the median max(min(p, b), A) = 99,990,000 on the
+    // primary's legs, so no account holding the debt gets a lower health factor. A faulty primary at 1.10 is equally
+    // ignored. With both routes below A, A is still served.
+    function test_TEST_230_oneFaultyDebtRouteCannotRaiseThePrice() public {
+        ethUsd.push(int256(uint256(ETH_USD)) * 110 / 100, block.timestamp);
+        DebtPriceView memory v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Drifting), "the routes disagree");
+        assertGt(v.alternateValue, 109_000_000, "the alternate reads about 1.10");
+        assertEq(uint256(v.answer), 99_990_000, "the faulty alternate does not raise the price");
+        assertEq(v.legFeeds[0], address(pUsd), "served on the primary's legs");
+        ethUsd.push(ETH_USD, block.timestamp);
+        pUsd.push(110_000_000, block.timestamp);
+        v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Drifting));
+        assertEq(uint256(v.answer), v.alternateValue, "the faulty primary does not raise it either");
+        assertEq(v.legFeeds[0], address(aEth));
+        pUsd.push(95_000_000, block.timestamp);
+        ethUsd.push(int256(uint256(ETH_USD)) * 90 / 100, block.timestamp);
+        v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Drifting));
+        assertEq(uint256(v.answer), _accepted(), "never below the accepted price");
     }
 }

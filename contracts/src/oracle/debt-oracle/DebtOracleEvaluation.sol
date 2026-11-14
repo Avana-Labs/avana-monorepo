@@ -255,15 +255,17 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
 
     /// @dev Served price (`SPEC-ORC-018`), the route it comes from, its source timestamp and its age limits
     /// (`SPEC-ORC-012`, `SPEC-ORC-015`), and the alternate held to its borrow age (`REQ-ORACLE-090`). While the routes
-    /// disagree the served value is `max(p, b, A)`: its route is the alternate when `b > p`, else the primary, and when
-    /// `A` exceeds both, no route: the accepted timestamp is reported with age limits 0, as when failed.
+    /// disagree the served value is `max(min(p, b), A)`, the median of `p`, `b` and `A`: the routes disagree, so one of
+    /// them is wrong and the two alone cannot tell which, and one faulty route must not raise the debt price alone
+    /// (ORACLE-06); the debt still never counts below `A`. Its route is the lower route, and when `A` exceeds it, no
+    /// route: the accepted timestamp is reported with age limits 0, as when failed.
     /// @custom:spec SPEC-ORC-018, SPEC-ORC-012, SPEC-ORC-015, REQ-ORACLE-090, REQ-ORACLE-093, REQ-ORACLE-021, REQ-ORACLE-066
     function _serve(
         DebtEvaluation memory e
     ) internal view {
-        e.served = LPPriceMath.debtServedPrice(
-            e.state, e.quote, e.routes[0].value, e.routes[1].value, e.accepted, e.stressRiseBps
-        );
+        // Drifting passes the lower route as both route values, so `debtServedPrice` serves `max(min(p, b), A)`.
+        uint256 low = Math.min(e.routes[0].value, e.routes[1].value);
+        e.served = LPPriceMath.debtServedPrice(e.state, e.quote, low, low, e.accepted, e.stressRiseBps);
         e.servedRoute = _servedRoute(e);
         if (e.servedRoute == RouteSlot.None) {
             e.servedUpdatedAt = e.acceptedUpdatedAt;
@@ -287,8 +289,8 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         if (e.alternatePastBorrowAge) e.reasons |= R_ALTERNATE_PAST_BORROW_AGE;
     }
 
-    /// @dev The route the served value comes from: none when failed; while Drifting the route of `max(p, b)` (a tie
-    /// is impossible, the routes disagree), or none when `A > max(p, b)`; otherwise the quote's route.
+    /// @dev The route the served value comes from: none when failed; while Drifting the route of `min(p, b)` (a tie
+    /// is impossible, the routes disagree), or none when `A > min(p, b)`; otherwise the quote's route.
     /// @custom:spec SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018
     function _servedRoute(
         DebtEvaluation memory e
@@ -297,8 +299,8 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         if (e.state != PriceState.Drifting) return e.routeUsed;
         uint256 p = e.routes[0].value;
         uint256 b = e.routes[1].value;
-        if (e.accepted > Math.max(p, b)) return RouteSlot.None;
-        return b > p ? RouteSlot.Alternate : RouteSlot.Primary;
+        if (e.accepted > Math.min(p, b)) return RouteSlot.None;
+        return b < p ? RouteSlot.Alternate : RouteSlot.Primary;
     }
 
     /// @dev Sequencer gate (`SPEC-ORC-021`, `REQ-ORACLE-099`); a failed `sequencer()` read, or an uptime answer that is

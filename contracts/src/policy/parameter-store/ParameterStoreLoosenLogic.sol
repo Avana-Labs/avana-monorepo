@@ -82,6 +82,9 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         uint16 old = p.slippageAllowanceBps;
         if (value <= old) revert NotLooser();
         if (value >= BPS) revert OutOfBounds();
+        Market memory m = _REGISTRY.getMarket(marketId);
+        // LIQ-I1: an active market keeps the Avana fee intact at its smallest bonus (MarketRegistry activation bound).
+        if (_live(m.status) && !_feeBoundHolds(_minLb(m), value, _s().g.avanaFeeShareBps)) revert OutOfBounds();
         _step(value <= uint256(old) + SLIPPAGE_STEP_BPS, "slippageAllowanceBps", bytes32(marketId));
         _spaceLoosening("slippageAllowanceBps", bytes32(marketId));
         p.slippageAllowanceBps = value;

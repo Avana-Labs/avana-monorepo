@@ -10,6 +10,7 @@ import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @notice `poke()`: gas floor, failure timer, outage latch, recovery evidence, grace window, checkpoint and events.
 /// forge-config: default.isolate = false
@@ -233,5 +234,45 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         vm.expectEmit(address(oracle));
         emit ILPOracleEvents.FailureCleared(uint64(T0 + 60), uint64(T0 + 60));
         oracle.poke();
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-029, REQ-RISK-026, REQ-RISK-059, Q-182
+    // A fast leg's new round moves the accepted price while the slow leg's round (the oldest input) is unchanged, so
+    // the borrow bound follows a rally within one fast round; the timestamp stays the oldest leg's.
+    function test_TEST_042_acceptedFollowsFastLegAtSameOldestTimestamp() public {
+        (uint256 seeded, uint64 seededAt) = oracle.lastAcceptedPrice();
+        // Token A dips, then rallies back, on new rounds; token B (the oldest input) publishes nothing.
+        _pushTokenA(99_900_000, T0 + 1800);
+        oracle.poke();
+        (uint256 dipped,) = oracle.lastAcceptedPrice();
+        assertLt(dipped, seeded, "dip accepted");
+        _pushTokenA(int256(ONE), T0 + 3600);
+        oracle.poke();
+        assertEq(uint8(_state().state), uint8(PriceState.Live), "Live");
+        (uint256 accepted, uint64 at) = oracle.lastAcceptedPrice();
+        assertGt(accepted, dipped, "rally accepted before the slow leg publishes");
+        assertEq(int256(accepted), _state().freshAnswer, "accepted = fresh");
+        assertEq(at, seededAt, "timestamp stays the oldest leg's");
+        // Re-reading the same rounds writes nothing.
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        oracle.poke();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; ++i) {
+            assertTrue(
+                logs[i].topics[0] != ILPOracleEvents.PriceAccepted.selector, "no PriceAccepted for the same rounds"
+            );
+        }
+    }
+
+    function _pushTokenA(
+        int256 answer,
+        uint256 at
+    ) private {
+        vm.warp(at);
+        vm.roll(block.number + 1);
+        pA.push(answer, at);
+        aA.push(answer, at);
+        sA.push(answer, at);
     }
 }

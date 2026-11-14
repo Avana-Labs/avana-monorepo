@@ -28,6 +28,7 @@ contract RegistryParameterStoreMock {
     mapping(address => uint16) public minLiquidationBonus;
     mapping(bytes32 => bool) public livenessFails;
     uint16 public maxFlashFeeBps = 10;
+    uint16 public avanaFeeShareBps;
     uint16 public coverageRatioBps = 2000;
     bool public oracleConfigReverts;
 
@@ -77,6 +78,15 @@ contract RegistryParameterStoreMock {
         uint16 v
     ) external {
         coverageRatioBps = v;
+    }
+
+    function setFeeBoundInputs(
+        uint256 id,
+        uint16 slippageAllowanceBps,
+        uint16 feeShareBps
+    ) external {
+        _params[id].slippageAllowanceBps = slippageAllowanceBps;
+        avanaFeeShareBps = feeShareBps;
     }
 
     function setMarket(

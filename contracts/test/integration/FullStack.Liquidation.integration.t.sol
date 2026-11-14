@@ -126,7 +126,7 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
     /// for each, the MarketRegistry lists a usable primary route from that token into the repaid debt asset, so the
     /// whole amount is sold in one leg; a market whose routes leave one pool token without a route into a debt asset
     /// is refused at activation. The listed one-leg loss bound: in a constant-product route of depth `10 V`, one leg of
-    /// `V` loses 9.09 %, above the market's `slippageAllowanceBps` (250), so only a depth of at least `39 V` lists.
+    /// `V` loses 9.09 %, above the market's `slippageAllowanceBps` (195), so only a depth of at least `51 V` lists.
     // TEST-281 verifies: REQ-SWAP-021, REQ-SWAP-025, SPEC-LIQ-005, Q-250
     function test_TEST_281_oneSidedUnwindsHaveAOneLegRoute() public {
         address[] memory toks = _poolTokens();
@@ -152,6 +152,6 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
         MarketParams memory p = store.getMarketParams(mA);
         uint256 v = 1e18;
         assertGt(v * 1e4 / (10 * v + v), p.slippageAllowanceBps, "depth 10 V: one leg of V loses 9.09 %");
-        assertLe(v * 1e4 / (39 * v + v), p.slippageAllowanceBps, "depth 39 V keeps it within the allowance");
+        assertLe(v * 1e4 / (51 * v + v), p.slippageAllowanceBps, "depth 51 V keeps it within the allowance");
     }
 }

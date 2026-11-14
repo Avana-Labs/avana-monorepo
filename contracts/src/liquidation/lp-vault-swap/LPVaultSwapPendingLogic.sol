@@ -185,6 +185,11 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
 
     /// @dev Funds `Rt = R + carry` into the First-Loss Reserve when it is worth at least one Hub share, with an exact
     /// approval reset to 0 and the balance falling by exactly `Rt` (`FundingMismatch`); otherwise carries `Rt`.
+    /// A `fund` that reverts (no Coverage Spoke recorded, or a finite Hub add cap that is full) reverts the whole
+    /// settlement on purpose (LIQ-I3): the units stay pending and any caller retries once governance acts, while
+    /// carrying a larger `Rt` would leave LPVaultSwap holding more than one Hub share (`REQ-SWAP-070`). Neither case
+    /// arises from Avana's own configuration (the Coverage Spoke is write-once and required before a debt reserve is
+    /// enabled; its add cap is unlimited, `REQ-FLR-007`), and liquidation never calls this path.
     /// @custom:spec REQ-SWAP-070, REQ-SWAP-077, REQ-FLR-038
     function _fundCoverage(
         Pend memory c

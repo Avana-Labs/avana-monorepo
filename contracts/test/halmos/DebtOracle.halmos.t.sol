@@ -117,7 +117,9 @@ contract DebtOracleHalmosTest is Test {
                 expected = p;
             } else {
                 live = false;
-                expected = hi > A ? hi : A;
+                // One route is A, so the lower route is at most A and the median max(min(p, b), A) is A
+                // (`SPEC-ORC-018`).
+                expected = A;
             }
         } else if (pValid) {
             expected = p;
@@ -182,12 +184,12 @@ contract DebtOracleHalmosTest is Test {
             if (v.state == PriceState.Drifting) {
                 uint256 p = pAnswer;
                 uint256 b = bAnswer;
-                uint256 hi = p > b ? p : b;
-                if (A > hi) {
+                uint256 counted = p < b ? p : b;
+                if (A > counted) {
                     assert(v.servedUpdatedAt == T0 - 100);
                     assert(v.legFeeds[0] == address(0));
                     assert(v.borrowPriceMaxAge == 0 && v.liquidationPriceMaxAge == 0);
-                } else if (b > p) {
+                } else if (b == counted) {
                     assert(v.servedUpdatedAt == T0 - 50);
                     assert(v.legFeeds[0] == address(alternate));
                 } else {

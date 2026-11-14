@@ -50,7 +50,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         store.setMaxFlashFeeBps(6);
     }
 
-    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-015, REQ-CONFIG-041, Q-261, REQ-ACCESS-044, REQ-ACCESS-095
+    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-015, REQ-CONFIG-041, REQ-CONFIG-044, Q-261, REQ-ACCESS-044, REQ-ACCESS-095
     function test_TEST_245_floorRaiseRechecksLiveness() public {
         _activate();
         // f = 10: 10,200 × (10⁴ − s) ≥ 100,100,000 holds up to s = 186 (10,200 × 9,814 = 100,102,800).
@@ -61,12 +61,22 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         vm.warp(block.timestamp + 432_000);
         _tl();
         store.loosenSlippageAllowanceBps(M, 150);
+        // LIQ-I1 fee bound at minLB = 10,200: s ≤ ⌊(10⁴ − f) × 200 / 10,200⌋, 156 at f = 2,000, so 175 is refused; with
+        // the fee share at 0 the bound is 196.
         vm.warp(block.timestamp + 432_000);
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        store.loosenSlippageAllowanceBps(M, 175);
+        _tl();
+        store.setAvanaFeeShareBps(0);
         _tl();
         store.loosenSlippageAllowanceBps(M, 175);
         vm.warp(block.timestamp + 432_000);
         _tl();
-        store.loosenSlippageAllowanceBps(M, 200);
+        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        store.loosenSlippageAllowanceBps(M, 197);
+        _tl();
+        store.loosenSlippageAllowanceBps(M, 196);
         _tl();
         store.setSlippageAllowanceMinBps(M, 186);
         _tl();
@@ -75,7 +85,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         // The floor never exceeds the allowance.
         _tl();
         vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
-        store.setSlippageAllowanceMinBps(M, 201);
+        store.setSlippageAllowanceMinBps(M, 197);
         // Lowering the floor needs no check.
         spoke.setBonus(10_000, 0);
         _tl();
