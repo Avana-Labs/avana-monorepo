@@ -151,6 +151,7 @@ contract RegistryRiskModuleMock {
     mapping(uint256 => uint32) public liveBreakerReasons;
     mapping(bytes32 => uint32) internal _liveDebt;
     uint256 public driftChecks;
+    uint256 public driftMarket;
 
     error ConfigDrift();
 
@@ -158,6 +159,13 @@ contract RegistryRiskModuleMock {
         bool r
     ) external {
         driftReverts = r;
+    }
+
+    /// @notice Makes the drift check revert only when the checked ids include `marketId` (0: never).
+    function setDriftMarket(
+        uint256 marketId
+    ) external {
+        driftMarket = marketId;
     }
 
     function setSharesEqual(
@@ -196,9 +204,12 @@ contract RegistryRiskModuleMock {
 
     function checkAaveConfig(
         address,
-        uint256[] calldata
+        uint256[] calldata ids
     ) external view {
         if (driftReverts) revert ConfigDrift();
+        for (uint256 i = 0; i < ids.length; ++i) {
+            if (driftMarket != 0 && ids[i] == driftMarket) revert ConfigDrift();
+        }
     }
 
     function isHubSharesEqualAssets(
