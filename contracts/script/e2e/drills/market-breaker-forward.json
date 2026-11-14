@@ -1,0 +1,15 @@
+{
+  "name": "market-breaker-forward",
+  "description": "the Emergency Guardian trips the manual breaker of uni-USDC-USDT-100",
+  "via": "direct",
+  "sender": "emergencyGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "tripMarketBreaker",
+      "args": {
+        "marketId": "market:uni-USDC-USDT-100"
+      }
+    }
+  ]
+}

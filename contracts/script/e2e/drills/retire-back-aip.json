@@ -1,0 +1,43 @@
+{
+  "name": "retire-back-aip",
+  "description": "AIP: the draw caps back and the reserve unfrozen",
+  "via": "aip",
+  "restores": "retire-forward-aip",
+  "changes": [
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:growth",
+      "asset": "token:GHO",
+      "spoke": "spoke:uniV3Growth",
+      "set": {
+        "drawCap": "$prior"
+      }
+    },
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:growth",
+      "asset": "token:USDC",
+      "spoke": "spoke:uniV3Growth",
+      "set": {
+        "drawCap": "$prior"
+      }
+    },
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:growth",
+      "asset": "token:USDT",
+      "spoke": "spoke:uniV3Growth",
+      "set": {
+        "drawCap": "$prior"
+      }
+    },
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV3Growth",
+      "reserve": "collateral:uni-USDC-USDT-500-growth",
+      "set": {
+        "frozen": "$prior"
+      }
+    }
+  ]
+}

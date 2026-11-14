@@ -1,0 +1,17 @@
+{
+  "name": "rate-role-forward",
+  "description": "rehearsal 10: the same change under a delegated Aave rate role",
+  "via": "rate-role",
+  "changes": [
+    {
+      "aave": "assetRates",
+      "hub": "hub:stable",
+      "asset": "token:GHO",
+      "set": {
+        "baseDrawnRate": {
+          "add": 100
+        }
+      }
+    }
+  ]
+}

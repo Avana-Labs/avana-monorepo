@@ -1,0 +1,15 @@
+{
+  "name": "remove-debt-reserve-forward",
+  "description": "removeDebtReserve (timelock, normal delay): nothing is owed on it",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "removeDebtReserve",
+      "args": {
+        "spoke": "spoke:slipVolatile",
+        "reserveId": "debtReserve:slipVolatile:USDT"
+      }
+    }
+  ]
+}

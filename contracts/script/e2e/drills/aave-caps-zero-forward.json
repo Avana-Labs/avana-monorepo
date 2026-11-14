@@ -1,0 +1,16 @@
+{
+  "name": "aave-caps-zero-forward",
+  "description": "AIP: the GHO draw cap of the stable Hub's Uniswap CDP Spoke to 0",
+  "via": "aip",
+  "changes": [
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:stable",
+      "asset": "token:GHO",
+      "spoke": "spoke:uniV3Stable",
+      "set": {
+        "drawCap": 0
+      }
+    }
+  ]
+}

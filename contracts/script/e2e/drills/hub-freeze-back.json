@@ -1,0 +1,14 @@
+{
+  "name": "hub-freeze-back",
+  "description": "unfreeze it through the timelock (normal delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "unfreeze",
+      "args": {
+        "hub": "hub:stable"
+      }
+    }
+  ]
+}

@@ -4,8 +4,9 @@
 #
 # Local end-to-end rehearsal of an Avana deployment (deployments/README.md): a fresh anvil node, then every deploy step
 # in order, the first two timelock operations scheduled as the governance Safe and executed after the 5-day delay, the
-# release manifest produced and verified against the chain, the keeper and the indexer started on that manifest, and
-# the scenario runner. Each step is recorded in deployments-local/anvil/e2e-status.json as pass, fail or not-run
+# release manifest produced and verified against the chain, the backward, emergency and rate drills (rehearsals 09 and
+# 10, each reversed, then the manifest verified again), the keeper and the indexer started on that manifest, and the
+# scenario runner. Each step is recorded in deployments-local/anvil/e2e-status.json as pass, fail or not-run
 # (with the reason): a missing tool or build artifact is reported as not-run, never as a pass.
 #
 # Usage, from contracts/:   script/e2e/e2e-local.sh            (all steps)
@@ -25,7 +26,7 @@ export RPC_ANVIL="http://127.0.0.1:${PORT}"
 OUT="$CONTRACTS/deployments-local/anvil"
 LOG="$OUT/logs"
 STATUS="$OUT/e2e-status.json"
-STEPS="${E2E_STEPS:-deploy day2 hostile manifest services scenarios}"
+STEPS="${E2E_STEPS:-deploy day2 hostile manifest drills services scenarios}"
 # E2E_RESUME=<step name> reloads the anvil state the last run saved (anvil-state.json) and runs the deploy steps from
 # that one on, keeping the earlier outputs: a failed step is fixed and rerun without redeploying the whole world.
 RESUME="${E2E_RESUME:-}"
@@ -308,6 +309,41 @@ if [[ " $STEPS " == *" manifest "* ]]; then
     record manifest pass "$(tail -1 "$LOG/verify.log")"
   else
     record manifest fail "see $LOG/manifest.log and $LOG/verify.log: $(tail -1 "$LOG/verify.log" 2>/dev/null)"
+  fi
+fi
+
+# Rehearsals 09 and 10 (script/e2e/drills.ts): each backward or emergency drill and each rate change runs its forward
+# change through `11-changes <file>` (script/e2e/drills/), checks on chain that it took effect, runs the backward
+# change and checks the action works again; each is recorded as drill:<name>. Afterwards the manifest must still
+# verify against the chain. E2E_DRILLS="caps hub-pause" runs only those (after setup).
+DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero market-breaker debt-breaker hub-freeze hub-pause pause-all freeze-address aave-freeze oracle-standby keeper-kill-switch deficit-coverage remove-debt-reserve offboard-close cancel-registration retire-spoke rate-aip rate-role}"
+drill() { # name
+  local name="drill:$1" log="$LOG/drill-$1.log" rc
+  skipped "$name" && return 0
+  node script/e2e/drills.ts --network anvil --drill "$1" > "$log" 2>&1
+  rc=$?
+  case $rc in
+    0) record "$name" pass "$(tail -1 "$log" | sed 's/^PASS //' | cut -c1-400)" ;;
+    3) record "$name" not-run "$(tail -1 "$log" | sed 's/^NOT-RUN //' | cut -c1-400)" ;;
+    *) record "$name" fail "see $log: $(tail -1 "$log" | sed 's/^FAIL //' | cut -c1-400)" ;;
+  esac
+}
+if [[ " $STEPS " == *" drills "* ]]; then
+  if [ -f "$OUT/manifest.json" ]; then
+    # The drills read the last release config (the markets the later phases added).
+    for c in config-exotic config-day2; do
+      [ -z "${AVANA_CONFIG:-}" ] && [ -f "$OUT/$c.json" ] && export AVANA_CONFIG="deployments-local/anvil/$c.json"
+    done
+    [ -z "$RESUME" ] && rm -rf "$OUT/drills"
+    drill setup
+    for d in $DRILL_LIST; do drill "$d"; done
+    if (cd "$REPO/packages/protocol" && node src/manifest/cli.ts verify --manifest "$OUT/manifest.json" --rpc-env RPC_ANVIL) > "$LOG/drills-verify.log" 2>&1; then
+      record drills:manifest-verify pass "after the drills: $(tail -1 "$LOG/drills-verify.log")"
+    else
+      record drills:manifest-verify fail "see $LOG/drills-verify.log: $(tail -1 "$LOG/drills-verify.log")"
+    fi
+  else
+    record drills not-run "no manifest (the drills run after the manifest step)"
   fi
 fi
 

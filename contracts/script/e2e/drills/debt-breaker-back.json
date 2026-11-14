@@ -1,0 +1,16 @@
+{
+  "name": "debt-breaker-back",
+  "description": "the Aave Protocol Guardian resets it",
+  "via": "direct",
+  "sender": "aaveProtocolGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "resetDebtBreaker",
+      "args": {
+        "spoke": "spoke:uniV3Stable",
+        "debtReserveId": "debtReserve:uniV3Stable:GHO"
+      }
+    }
+  ]
+}

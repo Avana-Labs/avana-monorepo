@@ -1,0 +1,17 @@
+{
+  "name": "aave-caps-zero-back",
+  "description": "AIP: the draw cap back to its value",
+  "via": "aip",
+  "restores": "aave-caps-zero-forward",
+  "changes": [
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:stable",
+      "asset": "token:GHO",
+      "spoke": "spoke:uniV3Stable",
+      "set": {
+        "drawCap": "$prior"
+      }
+    }
+  ]
+}
