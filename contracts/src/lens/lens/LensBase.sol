@@ -229,7 +229,7 @@ abstract contract LensBase is ILensErrors {
     /// (`PriceAge`): `borrowFresh` the RiskModule's step (6) on the served route's timestamp and the DebtOracle's
     /// `borrowPriceMaxAge()`, `liquidationFresh` LPVaultSwap's rule on each leg's timestamp and the ParameterStore's
     /// `liquidationPriceMaxAge(feed)`.
-    /// @custom:spec REQ-LENS-030, Q-247, Q-248, REQ-RISK-061, REQ-SWAP-091
+    /// @custom:spec REQ-LENS-030, Q-247, Q-248, REQ-RISK-061, REQ-SWAP-008, REQ-SWAP-091
     function _debtView(
         address spoke,
         DebtReserveDef memory def
@@ -247,8 +247,7 @@ abstract contract LensBase is ILensErrors {
         IDebtOracle debtOracle = IDebtOracle(def.priceSource);
         OracleDebtView memory r = debtOracle.getPriceState();
         v.state = r.state;
-        // forge-lint: disable-next-line(unused-return)
-        (v.acceptedPrice,) = debtOracle.lastAcceptedPrice();
+        v.acceptedPrice = r.acceptedAnswer;
         // The age execution measures: the served route's source timestamp, read live (the accepted price's stored
         // timestamp only moves on a poke, which execution does first).
         v.updatedAt = r.servedUpdatedAt;
@@ -258,20 +257,16 @@ abstract contract LensBase is ILensErrors {
         // The oracle's own gates close borrowing (sequencer not ready, second source unconfirmed) and liquidation
         // (sequencer down, a serving alternate past its borrow age) while the state can still be Live and fresh.
         v.borrowFresh = named && PriceAge.debtBorrowable(r, debtOracle.borrowPriceMaxAge());
-        v.liquidationFresh = named && r.state == PriceState.Live && !r.liquidationPaused
-            && _legLiquidationFresh(r.legFeeds[0], r.legUpdatedAt[0])
-            && _legLiquidationFresh(r.legFeeds[1], r.legUpdatedAt[1]);
+        v.liquidationFresh = named && r.state == PriceState.Live && !r.liquidationPaused;
+        // LPVaultSwap's leg rule: an unused leg passes; a used one is within the ParameterStore's
+        // `liquidationPriceMaxAge(feed)`, a timestamp in the future counting age 0.
+        for (uint256 j = 0; j < 2 && v.liquidationFresh; ++j) {
+            address feed = r.legFeeds[j];
+            if (feed != address(0)) {
+                v.liquidationFresh = PriceAge.liquidationFresh(r.legUpdatedAt[j], _store().liquidationPriceMaxAge(feed));
+            }
+        }
         v.stressPriced = v.price > v.acceptedPrice;
-    }
-
-    /// @dev LPVaultSwap's leg rule: an unused leg passes; a used one is within the ParameterStore's
-    /// `liquidationPriceMaxAge(feed)`, a timestamp in the future counting age 0.
-    /// @custom:spec REQ-SWAP-008, REQ-SWAP-091
-    function _legLiquidationFresh(
-        address feed,
-        uint256 updatedAt
-    ) internal view returns (bool) {
-        return feed == address(0) || PriceAge.liquidationFresh(updatedAt, _store().liquidationPriceMaxAge(feed));
     }
 
     /// @dev `drawCap` headroom of `spoke` on one debt reserve's funding Hub asset, base units.

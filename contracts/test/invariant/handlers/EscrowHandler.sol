@@ -17,6 +17,10 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 /// switches on a fee charged to the sender of a claim; the issuer burns from the escrow (a seizure or a negative
 /// rebase). Ghosts record credits, claims, donations, burns and every forbidden success.
 contract EscrowHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     IPayoutEscrow public immutable ESCROW;
     PayoutDepositor public immutable SWAP;
     PayoutToken[2] internal tokens;
@@ -108,7 +112,7 @@ contract EscrowHandler is CommonBase, StdUtils {
         address stranger
     ) external {
         PayoutToken token = tokens[tokenSeed % 2];
-        if (ESCROW.claimable(address(token), stranger) != 0 || stranger == address(0)) return;
+        if (ESCROW.claimable(address(token), stranger) != 0 || stranger == address(0)) revert Skipped();
         vm.prank(stranger);
         try ESCROW.claim(address(token), stranger) {
             ++forbiddenSuccesses;
@@ -122,7 +126,7 @@ contract EscrowHandler is CommonBase, StdUtils {
         address outsider,
         uint256 amount
     ) external {
-        if (outsider == address(SWAP) || outsider == address(0) || outsider == address(ESCROW)) return;
+        if (outsider == address(SWAP) || outsider == address(0) || outsider == address(ESCROW)) revert Skipped();
         PayoutToken token = tokens[tokenSeed % 2];
         address account = accounts[accountSeed % 3];
         amount = bound(amount, 1, 1e27);

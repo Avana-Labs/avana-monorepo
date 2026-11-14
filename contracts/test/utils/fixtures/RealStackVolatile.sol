@@ -419,7 +419,7 @@ abstract contract RealStackVolatile is RealStackFlows {
     ) private {
         MarketParams memory mp;
         (mp.twapWindow, mp.consistencyToleranceBps, mp.slippageAllowanceBps, mp.slippageAllowanceMinBps) =
-        (1800, 50, 250, 30);
+        (1800, 50, 195, 30);
         (mp.poolRiskFactor, mp.minPledgeUsd) = (POOL_RISK_FACTOR, MIN_PLEDGE_USD);
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, mp);

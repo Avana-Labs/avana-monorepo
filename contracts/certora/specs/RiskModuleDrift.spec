@@ -18,7 +18,7 @@ methods {
     function _.getAssetConfig(uint256 assetId) external => readAssetConfig(assetId) expect IAaveV4Hub.AssetConfig;
     function preBorrowCheck(address, uint256, uint256) external;
     function preWithdrawCheck(address) external;
-    function pokeConfig(address) external returns (DriftReason);
+    function pokeConfig(address) external returns (RiskModule.DriftReason);
     function _.spokeImplementationStatus(address s) external => implStatusOf(s) expect (address, bytes32, bool);
     function _.SPOKE() external => proxySpokeOf(calledContract) expect address;
 }

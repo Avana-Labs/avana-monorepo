@@ -2343,6 +2343,15 @@
       "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
+    },
+    {
+      "fingerprint": "9cdc1e1a9f793dfd",
+      "check": "reentrancy-state-change",
+      "file": "src/policy/parameter-store/ParameterStoreLoosenLogic.sol",
+      "function": "ParameterStoreLoosenLogic.loosenSlippageAllowanceBps (market read)",
+      "reason": "MarketRegistry.getMarket and the Spoke reads of _minLb are views (STATICCALL), so nothing can re-enter; the market's status and smallest liquidation bonus must be read before the allowance is written, so that an active market keeps the Avana fee intact at that bonus (LIQ-I1, REQ-CONFIG-071). Covered by TEST-245 (floorRaiseRechecksLiveness: 175 bps refused at f = 2,000, admitted at f = 0).",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: the approved ParameterStoreListingLogic.setInitialMarketParams entry b5234e90fba60cdc (MarketRegistry.getMarket read before the parameters are written)"
     }
   ]
 }

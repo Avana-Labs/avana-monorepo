@@ -147,7 +147,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
     ) internal view {
         bool oneLeg = route.legCount == 1;
         bool decoded = true;
-        bool invalid = false;
+        bool anyInvalid = false;
         bool stale = false;
         route.updatedAt = type(uint64).max;
         route.staleFrom = type(uint64).max;
@@ -158,7 +158,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
                 decoded = false;
                 continue;
             }
-            if (leg.status == ReadStatus.Invalid) invalid = true;
+            if (leg.status == ReadStatus.Invalid) anyInvalid = true;
             if (leg.updatedAt < route.updatedAt) route.updatedAt = leg.updatedAt;
             if (leg.status == ReadStatus.Stale) {
                 stale = true;
@@ -177,7 +177,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         route.value = oneLeg
             ? LPPriceMath.routeValue(a.answer, a.pinnedDecimals)
             : LPPriceMath.routeValue(a.answer, a.pinnedDecimals, b.answer, b.pinnedDecimals);
-        if (invalid || route.value == 0 || route.value > LPPriceMath.MAX_ROUTE_ANSWER) {
+        if (anyInvalid || route.value == 0 || route.value > LPPriceMath.MAX_ROUTE_ANSWER) {
             route.status = ReadStatus.Invalid;
         } else if (stale) {
             route.status = ReadStatus.Stale;

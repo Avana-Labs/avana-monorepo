@@ -77,12 +77,15 @@ contract IntegrationInvariantTest is IntegrationFlows, HandlerReach {
     }
 
     // TEST-104 verifies: SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-022, REQ-SWAP-012, REQ-SWAP-042, REQ-SWAP-073, REQ-ADAPTER-070, INV-035, INV-038, INV-095
-    /// @notice Every settlement kept its postconditions; for a direct liquidation also on balances: the debt asset that
-    /// left the caller and the unwind reached the Hub, the fee recipient and the borrower, nothing appeared or
-    /// vanished, and the result reported those balance changes.
+    /// @notice Every settlement kept its postconditions, also on balances: the debt asset that left the caller and the
+    /// unwind reached the Hub, the fee recipient, the borrower and (through the public helper) the flash lender's
+    /// premium, nothing appeared or vanished, and the result (direct) or the helper's `FlashLiquidated` event reported
+    /// those balance changes.
     function invariant_TEST_104_everySettlementKeptItsPostconditions() public view {
         assertEq(handler.settlementBreaks(), 0, "a settlement broke a postcondition");
-        assertEq(handler.conservationBreaks(), 0, "debt asset in (caller + unwind) != out (Hub + fee + borrower)");
+        assertEq(
+            handler.conservationBreaks(), 0, "debt asset in (caller + unwind) != out (Hub + fee + borrower + lender)"
+        );
         assertEq(handler.reportBreaks(), 0, "the result does not report the balance changes");
     }
 
