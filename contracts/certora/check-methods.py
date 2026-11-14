@@ -42,7 +42,7 @@ INTERFACE_OF = {
     "PegModuleRoute": ["ISettlementRoute"],
     "DexPathRoute": ["ISettlementRoute"],
     "WrapperThenDexRoute": ["ISettlementRoute"],
-    "CoverageSpoke": ["ICoverageSpoke"],
+    "AvanaFirstLossReserve": ["IAvanaFirstLossReserve"],
     "AaveV3FlashSource": ["IFlashSource", "IAaveV3FlashLoanReceiver"],
     "LPOracleCL": ["ILPOracle", "ILPOracleCL"],
 }
@@ -55,7 +55,7 @@ ACCESS_CONTROL = {
 
 # Specs verified by no conf: the contract whose interface their unqualified entries bind to.
 SPEC_WITHOUT_CONF = {
-    "CoverageSpoke.spec": "CoverageSpoke",
+    "AvanaFirstLossReserve.spec": "AvanaFirstLossReserve",
 }
 
 ELEMENTARY = re.compile(r"^(u?int\d*|address|bool|bytes\d*|string)$")

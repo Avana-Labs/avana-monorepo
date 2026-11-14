@@ -5,7 +5,7 @@ circuit breakers, address freeze, debt reserves), ParameterStore values, vault t
 recipient check, proxy registry), Collateralization (records, credit, rescue units, exposure counters, reconcile,
 pending balance), LPVault (custody), AaveAdapter (pledge, borrow, repay, withdrawal, partial removal, re-credit,
 repay with collateral, backing check), RiskModule (checkPledge, pre-checks, rescue-excluded health check), the
-Coverage Spokes per debt asset and the PayoutEscrow (failed payouts only), on top of the Aave V4 and Uniswap v3
+First-Loss Reserves per debt asset and the PayoutEscrow (failed payouts only), on top of the Aave V4 and Uniswap v3
 models. LPVaultSwap lives in swap.py.
 
 Every public flow runs as one atomic transaction (`System.tx`): on any revert the whole state is restored, as on-chain.
@@ -123,7 +123,7 @@ class System(SwapMixin):
         self.coverage_in = {GHO: 0, USDC_DEBT: 0}
         self.route_haircut = {}           # (market, route) -> bps lost to a sandwich or a manipulated pool on the swap route
         self.last_legs = []
-        self.dust = {}                    # ghost: (token, holder) -> tokens sent to an Avana address by plain transfer       # ghost: GHO Coverage Spoke funding by settlePending
+        self.dust = {}                    # ghost: (token, holder) -> tokens sent to an Avana address by plain transfer       # ghost: GHO First-Loss Reserve funding by settlePending
         self.settlements = []
         self.deleverages = []
         self.events = []
@@ -135,7 +135,7 @@ class System(SwapMixin):
             sp.max_user_reserves = self.p.max_user_reserves
             self.spokes[name] = sp
         # --- debt assets on the Hub: Lend Spoke supply (DAO bootstrap, public lenders later) under its supply cap,
-        #     Coverage Spoke, Borrow Spoke draws within the credit line (Q-233, Q-236, Q-407)
+        #     First-Loss Reserve, Borrow Spoke draws within the credit line (Q-233, Q-236, Q-407)
         for asset, dec, curve in ((GHO, 18, self.p.gho_curve), (USDC_DEBT, 6, self.p.usdc_curve)):
             a = Asset(asset, dec, ir=curve)
             a.last_update = start
@@ -146,7 +146,7 @@ class System(SwapMixin):
             self.hub.assets[asset] = a
             self.ledger.mint(asset, HUB, self.p.bootstrap_supply[asset], f"{asset} DAO bootstrap supply (Lend Spoke)")
             self.hub.add(asset, LEND_SPOKE, self.p.bootstrap_supply[asset])
-            self.ledger.mint(asset, HUB, self.p.first_loss[asset], f"{asset} Coverage Spoke funding")
+            self.ledger.mint(asset, HUB, self.p.first_loss[asset], f"{asset} First-Loss Reserve funding")
             self.hub.add(asset, COV[asset], self.p.first_loss[asset])
         for name, sp in self.spokes.items():
             sp.add_reserve(Reserve(GHO_RID, GHO, GHO, 18, cf=0, borrowable=True))
@@ -886,7 +886,7 @@ class System(SwapMixin):
         need(pos.liquidity == liq, "LiquidityChanged")
         return dict(c0=c0, c1=c1, f0=f0, f1=f1)
 
-    # ------------------------------------------------------------------ deficit coverage (Coverage Spokes, Q-236)
+    # ------------------------------------------------------------------ deficit coverage (First-Loss Reserves, Q-236)
     def cover_deficit(self, asset=GHO, spoke=CDP, max_amount=U256):
         return self.tx(self._cover_deficit, asset, spoke, max_amount)
 

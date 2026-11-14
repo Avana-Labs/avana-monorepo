@@ -161,7 +161,7 @@ To run one row of 5.1: `forge test --match-test 'TEST_057_'`. Because the fork b
 
 ### Symbolic execution
 
-Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input: 148 checks in 26 files. The recorded runs ([`audit/halmos/`](audit/halmos/README.md)) include checks that time out (LPPriceMath, SettlementMath, CoverageSpoke); a check without a pass counts as not run. In CI each check runs in a job of its own in the slow security tier, with loops unrolled to 16, every night, on every release tag and by hand, with up to 6 hours (GitHub's maximum job time): Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
+Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input: 148 checks in 26 files. The recorded runs ([`audit/halmos/`](audit/halmos/README.md)) include checks that time out (LPPriceMath, SettlementMath, AvanaFirstLossReserve); a check without a pass counts as not run. In CI each check runs in a job of its own in the slow security tier, with loops unrolled to 16, every night, on every release tag and by hand, with up to 6 hours (GitHub's maximum job time): Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
 
 ```bash
 FOUNDRY_DYNAMIC_TEST_LINKING=false .venv/bin/halmos --root . --match-contract 'HalmosTest$' --loop 8 --solver-timeout-assertion 0
@@ -348,7 +348,7 @@ Three areas in [`audit/formal-verification/`](audit/formal-verification/) model 
 |---|---|---|
 | Control | Access control, the timelock, pause, gates, parameters, registry, oracle, upgrades, Lens, breakers, AMM listing | 175 properties verified, 0 violated; 6 Quint invariants with no violation in 10,000 samples; 422 cited spec IDs defined |
 | Custody | Collateralization, the vault token and factory, each LPVault, the Adapter's mint and burn paths, solvency | 532 checks verified, 0 violated, 0 vacuous; 2 Quint runs of 10,000 samples |
-| Liquidation | LPVaultSwap and SettlementMath, routes, flash funding, caller top-up, Coverage Spokes, PayoutEscrow | 277 checks passed, Quint checks at 2,000 traces × 25 steps |
+| Liquidation | LPVaultSwap and SettlementMath, routes, flash funding, caller top-up, First-Loss Reserves, PayoutEscrow | 277 checks passed, Quint checks at 2,000 traces × 25 steps |
 
 ```bash
 audit/formal-verification/control/run.sh

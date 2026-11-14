@@ -39,11 +39,11 @@ interface IAaveV4Hub {
     }
 
     /// @notice A Spoke added `amount` of asset `assetId` for `shares` added shares.
-    /// @dev Expected by the Coverage Spoke tests when a Coverage Spoke deposits.
+    /// @dev Expected by the First-Loss Reserve tests when a First-Loss Reserve deposits.
     event Add(uint256 indexed assetId, address indexed spoke, uint256 shares, uint256 amount);
 
     /// @notice Credits `amount` of asset `assetId`, already transferred to the Hub, to the calling Spoke.
-    /// @dev Called by the Coverage Spoke.
+    /// @dev Called by the First-Loss Reserve.
     /// @return Added shares.
     function add(
         uint256 assetId,
@@ -51,7 +51,7 @@ interface IAaveV4Hub {
     ) external returns (uint256);
 
     /// @notice Debits `amount` of asset `assetId` from the calling Spoke and sends it to `to`.
-    /// @dev Called by the Coverage Spoke.
+    /// @dev Called by the First-Loss Reserve.
     /// @return Removed shares.
     function remove(
         uint256 assetId,
@@ -60,7 +60,7 @@ interface IAaveV4Hub {
     ) external returns (uint256);
 
     /// @notice Burns up to `amount` of the calling Spoke's added asset to cancel `spoke`'s deficit in asset `assetId`.
-    /// @dev Called by the Coverage Spoke.
+    /// @dev Called by the First-Loss Reserve.
     /// @return Added shares burned.
     /// @return Deficit cancelled, in asset units.
     function eliminateDeficit(
@@ -76,7 +76,7 @@ interface IAaveV4Hub {
     ) external view returns (uint256);
 
     /// @notice Underlying token and decimals of asset `assetId`.
-    /// @dev Read by the Coverage Spoke.
+    /// @dev Read by the First-Loss Reserve.
     function getAssetUnderlyingAndDecimals(
         uint256 assetId
     ) external view returns (address, uint8);
@@ -94,7 +94,7 @@ interface IAaveV4Hub {
     ) external view returns (uint256);
 
     /// @notice Added shares that `assets` of asset `assetId` would mint now, rounded down.
-    /// @dev Read by LPVaultSwap's `settlePending`, which funds a Coverage Spoke only when the amount is worth at least
+    /// @dev Read by LPVaultSwap's `settlePending`, which funds a First-Loss Reserve only when the amount is worth at least
     /// one share and carries it otherwise (REQ-SWAP-070).
     function previewAddByAssets(
         uint256 assetId,
@@ -108,20 +108,20 @@ interface IAaveV4Hub {
     ) external view returns (uint256);
 
     /// @notice Amount of asset `assetId` held by the Hub and free to draw or remove.
-    /// @dev Read by the Coverage Spoke and Aave V4 integration tests.
+    /// @dev Read by the First-Loss Reserve and Aave V4 integration tests.
     function getAssetLiquidity(
         uint256 assetId
     ) external view returns (uint256);
 
     /// @notice Amount of asset `assetId` added by `spoke`.
-    /// @dev Read by the Coverage Spoke.
+    /// @dev Read by the First-Loss Reserve.
     function getSpokeAddedAssets(
         uint256 assetId,
         address spoke
     ) external view returns (uint256);
 
     /// @notice Added shares of asset `assetId` held by `spoke`.
-    /// @dev Read by the Coverage Spoke.
+    /// @dev Read by the First-Loss Reserve.
     function getSpokeAddedShares(
         uint256 assetId,
         address spoke
@@ -135,7 +135,7 @@ interface IAaveV4Hub {
     ) external view returns (uint256);
 
     /// @notice Deficit of `spoke` in asset `assetId`, in asset units scaled by 1e27.
-    /// @dev Read by the Coverage Spoke and the MarketRegistry.
+    /// @dev Read by the First-Loss Reserve and the MarketRegistry.
     function getSpokeDeficitRay(
         uint256 assetId,
         address spoke
@@ -154,7 +154,7 @@ interface IAaveV4Hub {
     ) external view returns (uint256);
 
     /// @notice Whether `spoke` is listed for asset `assetId`.
-    /// @dev Read by the Coverage Spoke.
+    /// @dev Read by the First-Loss Reserve.
     function isSpokeListed(
         uint256 assetId,
         address spoke

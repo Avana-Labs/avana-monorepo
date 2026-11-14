@@ -75,7 +75,7 @@ interface ILPVaultSwapEvents {
     event KeeperRemoved(address indexed keeper);
 
     /// @notice Emitted when `settlePending` completes: stranded vault tokens burned through the AaveAdapter, the
-    /// released pool tokens swapped into the market's settlement asset, and that asset added to the Coverage Spoke of the
+    /// released pool tokens swapped into the market's settlement asset, and that asset added to the First-Loss Reserve of the
     /// market's (funding Hub, settlement asset), or carried while it is worth less than one Hub share.
     /// @param caller The caller (any address).
     /// @param marketId The market.
@@ -85,7 +85,7 @@ interface ILPVaultSwapEvents {
     /// @param debtAsset The debt asset recovered.
     /// @param added `R`, settlement asset this call recovered.
     /// @param minPending Floor `R` had to meet (SPEC-LIQ-014), debt-asset base units.
-    /// @param coverageSpoke `MarketRegistry.coverageSpokeOf(fundingHub, debtAsset)`.
+    /// @param firstLossReserve `MarketRegistry.firstLossReserveOf(fundingHub, debtAsset)`.
     /// @param routeUsed Swap route used per pool token: 0 none, 1 primary, 2 backup.
     /// @param funded `Rt = R + carry` passed to `fund`, or 0 when the amount was carried.
     /// @param carried The carry of the settlement asset after the call (0 after a funding).
@@ -99,7 +99,7 @@ interface ILPVaultSwapEvents {
         address indexed debtAsset,
         uint256 added,
         uint256 minPending,
-        address coverageSpoke,
+        address firstLossReserve,
         uint8[] routeUsed,
         uint256 funded,
         uint256 carried

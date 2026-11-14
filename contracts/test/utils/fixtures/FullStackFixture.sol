@@ -19,7 +19,7 @@ import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.s
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {FullStackCoverageSpokeMock} from "../mocks/FullStackLPVaultMock.sol";
+import {FullStackAvanaFirstLossReserveMock} from "../mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {RegistryFlashSourceMock} from "../mocks/MarketRegistryMocks.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
@@ -44,8 +44,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// bps deviation and drift), GHO listed for monitoring and enabled as a fixed-price debt reserve, and USDC enabled as a
 /// debt reserve priced by its real DebtOracle (`debtStressRiseBps = 500`). Both debt assets are funded by the Hub
 /// through the Lend Spoke (1,000,000 each, draw caps 1,000,000, credit lines 2,000,000).
-/// @dev Markets come from `FullStackMarkets`. Stand-ins beyond `FullStackDeploy`, each named: the Coverage Spokes
-/// (`FullStackCoverageSpokeMock`, funded) and the flash source (`RegistryFlashSourceMock`, 5 bps); Chainlink feeds are
+/// @dev Markets come from `FullStackMarkets`. Stand-ins beyond `FullStackDeploy`, each named: the First-Loss Reserves
+/// (`FullStackAvanaFirstLossReserveMock`, funded) and the flash source (`RegistryFlashSourceMock`, 5 bps); Chainlink feeds are
 /// `OracleFeedMock`s and GHO's fixed price a `CollPriceSource`.
 abstract contract FullStackFixture is FullStackDeploy {
     uint32 internal constant FEED_AGE = 88_200;
@@ -229,7 +229,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         registry.listToken(address(gho), d);
         ghoPrice = new CollPriceSource(1e8);
         (ghoAssetId, ghoReserveId) = _addDebtAsset(gho, 18, address(ghoPrice));
-        FullStackCoverageSpokeMock cs = _coverage(address(gho), ghoAssetId);
+        FullStackAvanaFirstLossReserveMock cs = _coverage(address(gho), ghoAssetId);
         _enableDebt(
             DebtReserveDef({
                 reserveId: ghoReserveId,
@@ -239,7 +239,7 @@ abstract contract FullStackFixture is FullStackDeploy {
                 hubAssetId: ghoAssetId,
                 priceSource: address(ghoPrice),
                 fixedPrice: true,
-                coverageSpoke: address(cs),
+                firstLossReserve: address(cs),
                 crossHub: false,
                 approved: false
             }),
@@ -263,7 +263,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         usdcOracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
         vm.label(address(usdcOracle), "DebtOracle USDC");
         (usdcAssetId, usdcReserveId) = _addDebtAsset(usdc, 6, address(usdcOracle));
-        FullStackCoverageSpokeMock cs = _coverage(address(usdc), usdcAssetId);
+        FullStackAvanaFirstLossReserveMock cs = _coverage(address(usdc), usdcAssetId);
         _enableDebt(
             DebtReserveDef({
                 reserveId: usdcReserveId,
@@ -273,7 +273,7 @@ abstract contract FullStackFixture is FullStackDeploy {
                 hubAssetId: usdcAssetId,
                 priceSource: address(usdcOracle),
                 fixedPrice: false,
-                coverageSpoke: address(cs),
+                firstLossReserve: address(cs),
                 crossHub: false,
                 approved: false
             }),
@@ -328,11 +328,13 @@ abstract contract FullStackFixture is FullStackDeploy {
     function _coverage(
         address asset,
         uint256 assetId
-    ) private returns (FullStackCoverageSpokeMock cs) {
-        cs = new FullStackCoverageSpokeMock(aave.hub, asset, assetId, 100_000 * 10 ** ClTestToken(asset).decimals());
+    ) private returns (FullStackAvanaFirstLossReserveMock cs) {
+        cs = new FullStackAvanaFirstLossReserveMock(
+            aave.hub, asset, assetId, 100_000 * 10 ** ClTestToken(asset).decimals()
+        );
         cs.setFunded(1e40, false);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(aave.hub, asset, address(cs));
+        registry.setAvanaFirstLossReserve(aave.hub, asset, address(cs));
         registry.recordCreditLine(aave.hub, asset, CREDIT_LINE);
         vm.stopPrank();
     }

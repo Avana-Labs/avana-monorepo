@@ -8,7 +8,7 @@ pragma solidity 0.8.28;
 /// checks every `logicConfig()`, so a new logic contract is part of a new implementation and waits the normal delay.
 /// @custom:spec REQ-CONFIG-001, REQ-CONFIG-002
 struct MarketRegistryLogics {
-    // Hubs, integrations, Coverage Spokes, cross-Hub lines, the flash source, CDP Spokes and debt reserves.
+    // Hubs, integrations, First-Loss Reserves, cross-Hub lines, the flash source, CDP Spokes and debt reserves.
     address hubs;
     // Tokens, price sources and market listing.
     address listing;

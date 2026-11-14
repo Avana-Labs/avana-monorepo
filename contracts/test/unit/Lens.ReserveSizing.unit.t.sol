@@ -90,13 +90,13 @@ contract LensReserveSizingUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-FLR-041, REQ-FLR-040, SPEC-FLR-005
     function test_TEST_247_anotherAssetsReserveCountsNothing() public {
-        // Funding the USDC Coverage Spoke far above the GHO tail leaves the GHO ratio where it was.
+        // Funding the USDC First-Loss Reserve far above the GHO tail leaves the GHO ratio where it was.
         usdcCov.set(10_000_000e6, 10_000_000e6);
         TailCoverageView memory gho = lens.getTailCoverage(aave.hub, address(debt));
-        assertEq(gho.coverageSpoke, address(ghoCov), "GHO's own Coverage Spoke");
+        assertEq(gho.firstLossReserve, address(ghoCov), "GHO's own First-Loss Reserve");
         assertEq(gho.ratioBps, 7631, "unchanged by the USDC reserve");
         TailCoverageView memory usdcView = lens.getTailCoverage(aave.hub, address(usdc));
-        assertEq(usdcView.coverageSpoke, address(usdcCov), "USDC's own Coverage Spoke");
+        assertEq(usdcView.firstLossReserve, address(usdcCov), "USDC's own First-Loss Reserve");
         assertEq(usdcView.funded, 10_000_000e6, "the USDC reserve");
     }
 

@@ -174,9 +174,9 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     advance 432001 wait-access-operations &&
     run_script 05-execute-access-operations &&
     run_script 06-aave-deployment-aip &&
-    run_script 07-deploy-coverage-spokes &&
+    run_script 07-deploy-first-loss-reserves &&
     run_script 08-aave-loss-layers-aip &&
-    run_script 07-fund-coverage-spokes &&
+    run_script 07-fund-first-loss-reserves &&
     run_script 09-listing-setup &&
     advance 432001 wait-listing-setup &&
     run_script 09-execute-listing-setup &&
@@ -207,9 +207,9 @@ grow() { # phase generator config
     advance 432001 "${PHASE}wait-access-operations" &&
     run_script 05-execute-access-operations &&
     run_script 06-aave-deployment-aip &&
-    run_script 07-deploy-coverage-spokes &&
+    run_script 07-deploy-first-loss-reserves &&
     run_script 08-aave-loss-layers-aip &&
-    run_script 07-fund-coverage-spokes &&
+    run_script 07-fund-first-loss-reserves &&
     run_script 09-listing-setup &&
     advance 432001 "${PHASE}wait-listing-setup" &&
     run_script 09-execute-listing-setup &&
@@ -239,8 +239,8 @@ if [[ " $STEPS " == *" exotic "* ]]; then
   fi
 fi
 if [ -n "$GREW" ]; then
-  for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-coverage-spokes 08-aave-loss-layers-aip \
-    07-fund-coverage-spokes 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
+  for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-first-loss-reserves 08-aave-loss-layers-aip \
+    07-fund-first-loss-reserves 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
     09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
 fi
 
@@ -248,7 +248,7 @@ fi
 # snapshot, which is reverted afterwards, and must be refused at some step with the expected error. A case that lists
 # is a finding. Steps that pass before the refusal (the Aave side lists the asset, setup is scheduled) are reverted too.
 HOSTILE_FLOW=(01-aave-v4 04-access-operations @432001 05-execute-access-operations 06-aave-deployment-aip
-  07-deploy-coverage-spokes 08-aave-loss-layers-aip 07-fund-coverage-spokes 09-listing-setup @432001
+  07-deploy-first-loss-reserves 08-aave-loss-layers-aip 07-fund-first-loss-reserves 09-listing-setup @432001
   09-execute-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata 09-listing-markets @432001
   09-execute-listing-markets 10-aave-markets-aip 09-listing-activate @43201 09-execute-listing-activate)
 hostile() { # case refusal-regex

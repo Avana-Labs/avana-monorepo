@@ -280,7 +280,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
     }
 
     /// @dev The slot's keys: a market that is neither unknown, Cancelled nor Closed, one of its pool tokens, a debt
-    /// asset of its Spoke (an enabled reserve's asset, a listed token, or an asset with a Coverage Spoke on the home
+    /// asset of its Spoke (an enabled reserve's asset, a listed token, or an asset with a First-Loss Reserve on the home
     /// Hub, so routes can be set in the batch that enables the reserve), the kind and a non-zero route.
     function _checkSlot(
         uint256 marketId,
@@ -298,7 +298,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         if (!_isPoolToken(m.tokens, token)) revert TokenNotListed(token);
         if (
             !_isDebtAssetOf(m.spoke, debtAsset) && !l.tokens[debtAsset].listed
-                && l.coverageSpokeOf[l.spokes[m.spoke].hub][debtAsset] == address(0)
+                && l.firstLossReserveOf[l.spokes[m.spoke].hub][debtAsset] == address(0)
         ) revert TokenNotListed(debtAsset);
         if (kind > _BACKUP || route == address(0) || token == debtAsset) revert InvalidRoute();
     }

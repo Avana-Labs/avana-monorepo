@@ -50,9 +50,9 @@
     },
     {
       "check": "`decimals()` is not a part of the ERC-20 standard",
-      "reason": "Avana reads decimals() only from tokens it configures through a timelock operation or a deployment: listed tokens (the listing reverts if the call fails, REQ-CONFIG-050; MarketRegistry's credit-line coverage check reads a listed debt asset), the constructor checks of PegModuleRoute (its tokenOut) and CoverageSpoke (its Hub asset), the LPOracle's guarded static read, and oracle interfaces (Chainlink AggregatorV3, Aave V4 oracle and price feeds, Avana's LPOracle) where decimals() is part of the interface. A token without decimals() makes the configuring call revert (fail closed).",
+      "reason": "Avana reads decimals() only from tokens it configures through a timelock operation or a deployment: listed tokens (the listing reverts if the call fails, REQ-CONFIG-050; MarketRegistry's credit-line coverage check reads a listed debt asset), the constructor checks of PegModuleRoute (its tokenOut) and AvanaFirstLossReserve (its Hub asset), the LPOracle's guarded static read, and oracle interfaces (Chainlink AggregatorV3, Aave V4 oracle and price feeds, Avana's LPOracle) where decimals() is part of the interface. A token without decimals() makes the configuring call revert (fail closed).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Excluded detector. Checked 2026-11-11 repo-wide; the reason was incomplete and is corrected: besides listed tokens and oracle interfaces, decimals() is read in constructors of PegModuleRoute (tokenOut) and CoverageSpoke (Hub asset) and by MarketRegistry's credit-line coverage check, each of which reverts for a token without decimals() (fail closed)."
+      "review": "Excluded detector. Checked 2026-11-11 repo-wide; the reason was incomplete and is corrected: besides listed tokens and oracle interfaces, decimals() is read in constructors of PegModuleRoute (tokenOut) and AvanaFirstLossReserve (Hub asset) and by MarketRegistry's credit-line coverage check, each of which reverts for a token without decimals() (fail closed)."
     }
   ],
   "accepted": [
@@ -209,9 +209,9 @@
       "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
     },
     {
-      "fingerprint": "9535cf1c776bd1de",
+      "fingerprint": "adec94737668c663",
       "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "file": "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol",
       "reason": "Zero-value transfer not possible: amount == 0 reverts ZeroAmount at the top of fund.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."

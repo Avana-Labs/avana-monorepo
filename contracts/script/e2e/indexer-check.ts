@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // After the services smoke stops the indexer: reads its PGlite store (schema `e2e`) and checks that every Hub of the
-// manifest is recorded (`hub`, from MarketRegistry.HubRecorded) and that every Lend, CDP and Coverage Spoke of the
+// manifest is recorded (`hub`, from MarketRegistry.HubRecorded) and that every Lend, CDP and First-Loss Reserve of the
 // manifest is one of a Hub's Spokes (`hub_spoke`, from Hub.AddSpoke). Prints one line per kind and the CDP Spokes the
 // MarketRegistry approved (`cdp_spoke`, from SpokeApproved: none until an integration is registered, which waits for
 // the concentrated-liquidity LPOracle); exit 1 when a Hub or Spoke is missing.
@@ -24,7 +24,7 @@ const addr = (e: Entry | string) => (typeof e === "string" ? e : (e.address ?? e
 const hubs: string[] = (m.aave.hubs as Entry[]).map(addr);
 const lend: string[] = (m.aave.lendSpokes as Entry[]).map(addr);
 const cdp: string[] = (m.aave.borrowSpokes as Entry[]).map(addr);
-const coverage: string[] = Object.values((m.avana.coverageSpokes ?? {}) as Record<string, Entry | string>).map(addr);
+const coverage: string[] = Object.values((m.avana.firstLossReserves ?? {}) as Record<string, Entry | string>).map(addr);
 
 const { PGlite } = await import(pathToFileURL(join(servicesRoot, "node_modules/@electric-sql/pglite/dist/index.js")).href);
 const db = new PGlite(dataDir);
@@ -43,6 +43,6 @@ const line = (kind: string, want: string[], have: Set<string>) => {
 line("Hubs recorded", hubs, recorded);
 line("Lend Spokes on their Hubs", lend, spokes);
 line("CDP Spokes on their Hubs", cdp, spokes);
-line("Coverage Spokes on their Hubs", coverage, spokes);
+line("First-Loss Reserves on their Hubs", coverage, spokes);
 console.log(`indexer: CDP Spokes approved by the MarketRegistry ${cdp.filter((a) => approved.has(a)).length}/${cdp.length}`);
 process.exit(ok ? 0 : 1);

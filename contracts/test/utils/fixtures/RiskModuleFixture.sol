@@ -26,7 +26,11 @@ import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {RegistryAaveOracleMock, RegistrySpokeImplMock} from "../mocks/MarketRegistryAaveMocks.sol";
-import {RegistryCoverageSpokeMock, RegistryFeedMock, RegistryFlashSourceMock} from "../mocks/MarketRegistryMocks.sol";
+import {
+    RegistryAvanaFirstLossReserveMock,
+    RegistryFeedMock,
+    RegistryFlashSourceMock
+} from "../mocks/MarketRegistryMocks.sol";
 import {
     RiskAdapterMock,
     RiskCollateralizationMock,
@@ -203,7 +207,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         lpVault.setPoolTokens(toks, 18);
         flash = new RegistryFlashSourceMock(aaveV3Pool, address(lpVaultSwap));
         ghoSource = new RegistryFeedMock(8, 1e8);
-        ghoCoverage = new RegistryCoverageSpokeMock(address(hub), address(gho), GHO_ASSET);
+        ghoCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), GHO_ASSET);
         ghoCoverage.setFunded(4e24, false);
         vm.prank(address(timelock));
         factory.registerIntegration(V3, address(lpVault));
@@ -216,7 +220,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         registry.deployCdpSpoke(_spokeDef());
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
-        registry.setCoverageSpoke(address(hub), address(gho), address(ghoCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
         registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _setGhoReserve();
@@ -327,7 +331,8 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
     /// @dev Enables USDC as debt reserve 5 (asset 2), priced by its DebtOracle, with routes from USDT into USDC.
     function _enableUsdcDebt() internal {
         usdcOracle = new RiskDebtOracleMock(address(usdc), address(registry), address(store));
-        RegistryCoverageSpokeMock usdcCoverage = new RegistryCoverageSpokeMock(address(hub), address(usdc), USDC_ASSET);
+        RegistryAvanaFirstLossReserveMock usdcCoverage =
+            new RegistryAvanaFirstLossReserveMock(address(hub), address(usdc), USDC_ASSET);
         usdcCoverage.setFunded(2e12, false);
         hub.setAsset(address(usdc), USDC_ASSET);
         hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 500_000);
@@ -342,7 +347,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         aaveOracle.setSource(USDC_RESERVE, address(usdcOracle));
         store.setStressRise(address(usdc), 500);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(usdc), address(usdcCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
         registry.recordCreditLine(address(hub), address(usdc), 1_000_000);
         vm.stopPrank();
         _setRoute(mid, address(usdt), address(usdc), 0, "dexE");
@@ -355,7 +360,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             hubAssetId: USDC_ASSET,
             priceSource: address(usdcOracle),
             fixedPrice: false,
-            coverageSpoke: address(usdcCoverage),
+            firstLossReserve: address(usdcCoverage),
             crossHub: false,
             approved: false
         });
@@ -372,7 +377,8 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         hub2.setAsset(address(tDai), DAI_ASSET);
         hub2.setSpokeConfig(DAI_ASSET, address(spoke), 0, 500_000);
         hub2.setThreshold(DAI_ASSET, address(spoke), type(uint24).max);
-        RegistryCoverageSpokeMock daiCoverage = new RegistryCoverageSpokeMock(address(hub2), address(tDai), DAI_ASSET);
+        RegistryAvanaFirstLossReserveMock daiCoverage =
+            new RegistryAvanaFirstLossReserveMock(address(hub2), address(tDai), DAI_ASSET);
         daiCoverage.setFunded(4e24, false);
         IAaveV4Spoke.Reserve memory r;
         (r.underlying, r.hub, r.assetId, r.decimals) = (address(tDai), address(hub2), uint16(DAI_ASSET), 18);
@@ -383,7 +389,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         aaveOracle.setSource(DAI_RESERVE, address(daiSource));
         vm.startPrank(address(timelock));
         registry.recordHub(address(hub2), RiskTier.Stable);
-        registry.setCoverageSpoke(address(hub2), address(tDai), address(daiCoverage));
+        registry.setAvanaFirstLossReserve(address(hub2), address(tDai), address(daiCoverage));
         registry.recordCreditLine(address(hub2), address(tDai), 1_000_000);
         registry.setCrossHubLinesEnabled(true);
         // Base units: 1,000,000 DAI, within the 4,000,000 DAI coverage and above the 500,000 DAI draw cap.
@@ -399,7 +405,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             hubAssetId: DAI_ASSET,
             priceSource: address(daiSource),
             fixedPrice: true,
-            coverageSpoke: address(daiCoverage),
+            firstLossReserve: address(daiCoverage),
             crossHub: true,
             approved: false
         });

@@ -14,7 +14,7 @@ import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {MarketRegistryDebtChecksHarness} from "../utils/harness/MarketRegistryDebtChecksHarness.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryDebtOracleMock,
     RegistryFeedMock,
     RegistryLPOracleMock,
@@ -68,14 +68,14 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
         registry.setPriceSource(token, p, a, s);
     }
 
-    /// @dev The Aave reserve, AaveOracle source and funded Coverage Spoke of a new debt reserve of `asset`.
+    /// @dev The Aave reserve, AaveOracle source and funded First-Loss Reserve of a new debt reserve of `asset`.
     function _reserveFor(
         address asset,
         uint8 decimals,
         address source,
         bool fixedPrice
     ) internal returns (DebtReserveDef memory d) {
-        RegistryCoverageSpokeMock cs = new RegistryCoverageSpokeMock(address(hub), asset, NEW_ASSET);
+        RegistryAvanaFirstLossReserveMock cs = new RegistryAvanaFirstLossReserveMock(address(hub), asset, NEW_ASSET);
         cs.setFunded(1e13, false);
         hub.setAsset(asset, NEW_ASSET);
         IAaveV4Spoke.Reserve memory r;
@@ -86,7 +86,7 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
         spoke.setReserve(NEW_RESERVE, r, c, dyn);
         aaveOracle.setSource(NEW_RESERVE, source);
         vm.prank(address(timelock));
-        registry.setCoverageSpoke(address(hub), asset, address(cs));
+        registry.setAvanaFirstLossReserve(address(hub), asset, address(cs));
         d = DebtReserveDef({
             reserveId: NEW_RESERVE,
             asset: asset,
@@ -95,7 +95,7 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
             hubAssetId: NEW_ASSET,
             priceSource: source,
             fixedPrice: fixedPrice,
-            coverageSpoke: address(cs),
+            firstLossReserve: address(cs),
             crossHub: false,
             approved: false
         });

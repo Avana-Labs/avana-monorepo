@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {CoverageSpoke} from "../../../src/coverage/coverage-spoke/CoverageSpoke.sol";
+import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {AaveV3FlashSource} from "../../../src/flash/AaveV3FlashSource.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
@@ -56,7 +56,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @title LPVaultSwapFixture
 /// @notice The real LPVaultSwap (implementation, three logic contracts, ERC-1967 proxy, launch committed operator
 /// `keeper`) on the real local Aave V4 (Stable LP Hub, Uniswap v3 Stable CDP Spoke, Lend Spoke), with the real Lock,
-/// VaultTokenFactory and vault token, Collateralization, PositionProxies, PayoutEscrow, two Coverage Spokes (USDC and
+/// VaultTokenFactory and vault token, Collateralization, PositionProxies, PayoutEscrow, two First-Loss Reserves (USDC and
 /// GHO), `DexPathRoute` swap routes over pinned mock pools, and the `AaveV3FlashSource` over a mocked Aave V3.4 Pool.
 /// The AaveAdapter is `AaveAdapterMock` (written at the same time as LPVaultSwap); the MarketRegistry, ParameterStore,
 /// LPOracle, DebtOracle, LPVault and RiskModule are stand-ins whose state each test sets.
@@ -101,8 +101,8 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
     PayoutToken internal usdt;
     PayoutToken internal gho;
     VaultToken internal vt;
-    CoverageSpoke internal usdcCoverage;
-    CoverageSpoke internal ghoCoverage;
+    AvanaFirstLossReserve internal usdcCoverage;
+    AvanaFirstLossReserve internal ghoCoverage;
     MockAaveV3Pool internal v3Pool;
     MockAaveV3ACLManager internal acl;
     AaveV3FlashSource internal flashSource;
@@ -304,16 +304,16 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
     }
 
     function _deployCoverage() private {
-        usdcCoverage = _coverageSpoke(address(usdc), usdcAssetId, "UsdcCoverageSpoke");
-        ghoCoverage = _coverageSpoke(address(gho), ghoAssetId, "GhoCoverageSpoke");
+        usdcCoverage = _firstLossReserve(address(usdc), usdcAssetId, "UsdcAvanaFirstLossReserve");
+        ghoCoverage = _firstLossReserve(address(gho), ghoAssetId, "GhoAvanaFirstLossReserve");
     }
 
-    function _coverageSpoke(
+    function _firstLossReserve(
         address token,
         uint256 assetId,
         string memory label
-    ) private returns (CoverageSpoke cs) {
-        cs = new CoverageSpoke(aave.hub, token, assetId, aave.accessManager, 1_209_600);
+    ) private returns (AvanaFirstLossReserve cs) {
+        cs = new AvanaFirstLossReserve(aave.hub, token, assetId, aave.accessManager, 1_209_600);
         vm.label(address(cs), label);
         uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
         vm.prank(aaveDao);
@@ -345,8 +345,8 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
         registry.setDebtReserve(aave.cdpSpoke, usdcReserveId, _debtDef(usdcReserveId, address(usdc), 6, false), true);
         registry.setDebtReserve(aave.cdpSpoke, ghoReserveId, _debtDef(ghoReserveId, address(gho), 18, true), true);
         registry.setSettlementReserve(MARKET_ID, usdcReserveId);
-        registry.setCoverageSpoke(aave.hub, address(usdc), address(usdcCoverage));
-        registry.setCoverageSpoke(aave.hub, address(gho), address(ghoCoverage));
+        registry.setAvanaFirstLossReserve(aave.hub, address(usdc), address(usdcCoverage));
+        registry.setAvanaFirstLossReserve(aave.hub, address(gho), address(ghoCoverage));
         registry.setRecordedHub(aave.hub, true);
         store.setSlippage(MARKET_ID, uint16(SLIPPAGE_BPS));
         store.setFloorRoundingAllowance(address(usdc), FLOOR_ROUNDING_ALLOWANCE_USDC);
@@ -367,7 +367,7 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
         d.hubAssetId = asset == address(usdc) ? usdcAssetId : ghoAssetId;
         d.priceSource = fixedPrice ? address(ghoPrice) : address(usdcOracle);
         d.fixedPrice = fixedPrice;
-        d.coverageSpoke = asset == address(usdc) ? address(usdcCoverage) : address(ghoCoverage);
+        d.firstLossReserve = asset == address(usdc) ? address(usdcCoverage) : address(ghoCoverage);
         d.approved = true;
     }
 

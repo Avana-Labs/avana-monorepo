@@ -149,7 +149,7 @@ module avana {
     deficit: str -> int,
     deficitEver: str -> int,
     accrued: str -> int,
-    // Coverage Spokes (First-Loss Reserve per asset, Q-236)
+    // First-Loss Reserves (First-Loss Reserve per asset, Q-236)
     reserve: str -> int,
     reserveFundedEver: str -> int,
     coveredEver: str -> int,
@@ -1766,7 +1766,7 @@ module avana {
   // ===================================================== PENDING SETTLEMENT
   // LPVaultSwap.settlePending: open to anyone in every state; the Adapter burns the
   // unsettled vault tokens LPVaultSwap holds; Collateralization requires
-  // totalSupply + x ≤ credited + pending (Q-257); proceeds fund the GHO Coverage Spoke (Q-236).
+  // totalSupply + x ≤ credited + pending (Q-257); proceeds fund the GHO First-Loss Reserve (Q-236).
   pure def settlePendingX(st: St, m: str): int = imin(st.bal.get((m, "LPVAULTSWAP")), st.pending.get(m))
 
   pure def settlePendingOk(st: St, m: str): bool = {
@@ -2071,15 +2071,15 @@ module avana {
 
   action fundReserve(a: str, x: int): bool =
     go({ ...s, reserve: s.reserve.set(a, s.reserve.get(a) + x), reserveFundedEver: s.reserveFundedEver.set(a, s.reserveFundedEver.get(a) + x),
-         liq: s.liq.set(a, s.liq.get(a) + x) }, "fundCoverageSpoke", "AVANA", a, x)
+         liq: s.liq.set(a, s.liq.get(a) + x) }, "fundAvanaFirstLossReserve", "AVANA", a, x)
 
-  // the Coverage Spoke of asset a covers a deficit recorded in a (Q-236)
+  // the First-Loss Reserve of asset a covers a deficit recorded in a (Q-236)
   action coverDeficit(a: str, amt: int): bool = {
     val x = imin(amt, imin(s.deficit.get(a), s.reserve.get(a)))
     all {
       x > 0,
       go({ ...s, deficit: s.deficit.set(a, s.deficit.get(a) - x), reserve: s.reserve.set(a, s.reserve.get(a) - x),
-           coveredEver: s.coveredEver.set(a, s.coveredEver.get(a) + x) }, "coverageSpoke.coverDeficit", "DAO", a, x),
+           coveredEver: s.coveredEver.set(a, s.coveredEver.get(a) + x) }, "firstLossReserve.coverDeficit", "DAO", a, x),
     }
   }
 
@@ -2585,7 +2585,7 @@ module avana {
   // QNT-13 verifies: Q-223, Q-226, Q-229, REQ-ADAPTER-040, REQ-RISK-007
   // Hostile components stay inside their blast radius: no borrow beyond drawCap or below
   // Aave HF 1, no NFT to anyone but its depositor of record, only LPVaultSwap seizes, the
-  // Coverage Spokes move only by funding and DAO coverage, and no borrower action changes
+  // First-Loss Reserves move only by funding and DAO coverage, and no borrower action changes
   // another wallet's proxy except through the Adapter's own blast radius.
   val qnt13_hostileBounded = and {
     not(s.g.borrowOverCap), not(s.g.borrowBelowAave), not(s.g.nftMisdirected), not(s.g.nonOwnerAction),

@@ -4,7 +4,7 @@
 #
 # Starts the indexer and the keeper (observe mode) on a local rehearsal chain with the given release manifest and checks
 # that each one loaded it: the indexer reaches `/ready`, indexes from the manifest's start blocks to the chain head
-# (PGlite store, INDEXER_NETWORK_SET=local) and, once stopped, holds every Hub and every Lend, CDP and Coverage Spoke of
+# (PGlite store, INDEXER_NETWORK_SET=local) and, once stopped, holds every Hub and every Lend, CDP and First-Loss Reserve of
 # the manifest (indexer-check.ts); the keeper loads the manifest, reads its operator helper on chain, backfills the
 # AaveAdapter's proxies and serves `keeper_mode{chain="anvil",mode="observe"}` on its metrics port. Then a local Convex
 # deployment of services/convex (anonymous, no account) imports the indexer's export and samples the chain, and every

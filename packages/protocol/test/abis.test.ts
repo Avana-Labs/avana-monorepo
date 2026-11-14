@@ -34,9 +34,9 @@ describe("generated ABIs", () => {
     }
   });
 
-  it("carries the timelock and Coverage Spoke events their interfaces leave out", () => {
+  it("carries the timelock and First-Loss Reserve events their interfaces leave out", () => {
     const events = (abi: Abi) => abi.filter((i) => i.type === "event").map((i) => i.name);
     expect(events(abis.avanaTimelockAbi)).toEqual(expect.arrayContaining(["CallScheduled", "CallExecuted", "Cancelled", "RoleGranted"]));
-    expect(events(abis.coverageSpokeAbi)).toEqual(expect.arrayContaining(["BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"]));
+    expect(events(abis.firstLossReserveAbi)).toEqual(expect.arrayContaining(["BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"]));
   });
 });

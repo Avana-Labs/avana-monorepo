@@ -277,7 +277,7 @@ contract AaveAdapterAaveStatesIntegrationTest is IntegrationFlows {
         assertEq(weth.balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no WETH");
 
         uint256 deficit = IWethDeficitView(aave.hub).getSpokeDeficitRay(wethAssetId, aave.cdpSpoke) / 1e27;
-        assertLe(deficit, wethCoverage.fundedBalance(), "losses within the WETH Coverage Spoke");
+        assertLe(deficit, wethCoverage.fundedBalance(), "losses within the WETH First-Loss Reserve");
     }
 
     address internal stranger2 = makeAddr("flash caller");

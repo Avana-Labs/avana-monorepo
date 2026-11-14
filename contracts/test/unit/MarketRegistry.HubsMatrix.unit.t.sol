@@ -190,7 +190,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     }
 
     // TEST-273 verifies: REQ-CONFIG-081, ATTACK-163
-    // The total may equal the coverage exactly; one more unit is refused. A funding Hub with no Coverage Spoke for
+    // The total may equal the coverage exactly; one more unit is refused. A funding Hub with no First-Loss Reserve for
     // the asset has coverage 0, so it can open no line at all.
     function test_TEST_273_crossHubTotalAtTheCoverageExactly() public {
         vm.startPrank(address(timelock));

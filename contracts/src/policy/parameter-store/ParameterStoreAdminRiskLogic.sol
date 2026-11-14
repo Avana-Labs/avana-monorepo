@@ -242,7 +242,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
     /// @dev REQ-CONFIG-056: not the zero address, this store, the timelock, the MarketRegistry or any Avana contract
     /// it records: its immutables (AaveAdapter, Collateralization, ProxyManager, LPVaultSwap, VaultTokenFactory,
     /// RiskModule, Lock, PayoutEscrow, this store, the flash liquidation helper, the standard Spoke implementation),
-    /// the flash source, a Hub, a CDP Spoke, an LPVault, a vault token, an LPOracle, the Coverage Spoke or price source
+    /// the flash source, a Hub, a CDP Spoke, an LPVault, a vault token, an LPOracle, the First-Loss Reserve or price source
     /// of a debt reserve; not a contract that reports this chain's timelock as `TIMELOCK()` or the MarketRegistry as
     /// `MARKET_REGISTRY()`, or answers `logicConfig()` (every other Avana contract and logic contract); and not a
     /// PositionProxy: a contract whose `ADAPTER()` is the AaveAdapter, or whose `(WALLET(), SPOKE(), MARKET_ID())` the
@@ -286,7 +286,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
     // The walk reads the MarketRegistry's Spokes and debt reserves with view calls at execution of a governance setter;
     // its length is the registry's size, which only timelock operations grow.
     // forge-lint: disable-start(calls-loop)
-    /// @dev Whether `r` is the Coverage Spoke or the price source of a debt reserve of any CDP Spoke.
+    /// @dev Whether `r` is the First-Loss Reserve or the price source of a debt reserve of any CDP Spoke.
     function _isReserveContract(
         IMarketRegistry reg,
         address r
@@ -296,7 +296,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
             uint256[] memory ids = reg.getDebtReserveIds(spokes[s]);
             for (uint256 i = 0; i < ids.length; ++i) {
                 DebtReserveDef memory d = reg.getDebtReserve(spokes[s], ids[i]);
-                if (r == d.coverageSpoke || r == d.priceSource) found = true;
+                if (r == d.firstLossReserve || r == d.priceSource) found = true;
             }
         }
     }

@@ -22,8 +22,8 @@ import {ShapeKind} from "../../../src/types/ShapeKind.sol";
 import {MockMarketRegistry} from "../mocks/MockMarketRegistry.sol";
 import {
     MockAggregator,
+    MockAvanaFirstLossReserve,
     MockCollateralization,
-    MockCoverageSpoke,
     MockHub,
     MockIntegration,
     MockLPOracle,
@@ -53,7 +53,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
     MockPool internal pool;
     MockLPOracle internal lpOracle;
     MockVaultToken internal vaultToken;
-    MockCoverageSpoke internal coverage;
+    MockAvanaFirstLossReserve internal coverage;
     MockPriceSource internal ghoPrice;
     MockAggregator internal fUsdc;
     MockAggregator internal fUsdcAlt;
@@ -119,7 +119,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         pool = new MockPool();
         lpOracle = new MockLPOracle();
         vaultToken = new MockVaultToken();
-        coverage = new MockCoverageSpoke();
+        coverage = new MockAvanaFirstLossReserve();
         coverage.setMinimum(100_000e18);
         ghoPrice = new MockPriceSource();
         ghoPrice.setAnswer(1e8);
@@ -159,7 +159,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         d.fundingHub = address(hub);
         d.priceSource = address(ghoPrice);
         d.fixedPrice = true;
-        d.coverageSpoke = address(coverage);
+        d.firstLossReserve = address(coverage);
         d.approved = true;
         registry.setDebtReserve(address(spoke), d);
     }

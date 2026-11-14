@@ -60,7 +60,7 @@ Every run of this folder's checks, newest last.
 
 ## 2026-11-10/11 — first prover runs of the confs with merged implementations
 
-- **Scope**: the 16 confs whose implementation is merged: Lock, AvanaTimelock, ParameterStore, MarketRegistry, VaultToken, VaultTokenFactory, PositionProxy, ProxyManager, ProxyManagerIsolation, PayoutEscrow, CoverageSpoke, FlashSource, Collateralization, DexPathRoute, WrapperThenDexRoute, PegModuleRoute. No conf exists for AvanaRoles (a constants library). The confs of unwritten contracts (LPOracle, DebtOracle, LPVault and AMM integrations, RiskModule, RiskModuleDrift, AaveAdapter, AaveAdapterGates, LPVaultSwap, Hub) were not run.
+- **Scope**: the 16 confs whose implementation is merged: Lock, AvanaTimelock, ParameterStore, MarketRegistry, VaultToken, VaultTokenFactory, PositionProxy, ProxyManager, ProxyManagerIsolation, PayoutEscrow, AvanaFirstLossReserve, FlashSource, Collateralization, DexPathRoute, WrapperThenDexRoute, PegModuleRoute. No conf exists for AvanaRoles (a constants library). The confs of unwritten contracts (LPOracle, DebtOracle, LPVault and AMM integrations, RiskModule, RiskModuleDrift, AaveAdapter, AaveAdapterGates, LPVaultSwap, Hub) were not run.
 - **Tools**: certora-cli 8.20.3 (prover 8.20.3, cloud), Java 21 (Temurin, local type checking), solc 0.8.28. Every conf runs with `rule_sanity: basic`; a vacuous rule or a tautological invariant is reported as SANITY_FAIL.
 - **Commands** (from `contracts/`):
   - `.venv/bin/certoraRun certora/conf/<X>.conf --compilation_steps_only` for each conf: exit 0 for all 16 after the fixes below.
@@ -85,7 +85,7 @@ Job links: `https://prover.certora.com/output/6758641/<job>`.
 | ProxyManager | `195a664988f54afa9c5ddd05dd0e92e0` | all 4 | — | — | — |
 | ProxyManagerIsolation | `8da8ab97dc3d4df797db7b55bfd7125e` | all 4 | — | — | — |
 | PayoutEscrow | `3f8731c0a94045939591ca3eb7b4a5f7` | all 9 | — | — | — |
-| CoverageSpoke | `6c2c483a5deb4928b4a05800c9db65d0` | all 4 | — | — | — |
+| AvanaFirstLossReserve | `6c2c483a5deb4928b4a05800c9db65d0` | all 4 | — | — | — |
 | FlashSource | `ff2175f568234aca99b9fe4be2fbdecf` | all 9 | — | — | — |
 | DexPathRoute | `830e0ae334d84b7c912eb85e7bfad7fa` | all 6 | — | — | — |
 | PegModuleRoute | `5a933370372743d1ae44af2bedb59604` | all 6 | — | — | — |
@@ -103,7 +103,7 @@ Every change keeps the rule's meaning; where a rule was wrong against the spec i
 - VaultToken.spec `supplyChangesOnlyThroughAdapter`, `burnNeedsNoAllowanceAndLowersExactly`: counterexample with a balance above `totalSupply`, where OpenZeppelin's unchecked supply decrement wraps. Both now require the verified invariant `totalSupplyIsSumOfBalances`.
 - PositionProxy.spec `executeCallsOnlyTheNamedTarget`: added that `execute` calls the named target exactly once and sends no ETH (review finding).
 - ProxyManagerIsolation.spec `distinctAccountsHaveDistinctProxies`: the old rule asserted that distinct triples predict distinct addresses, which fails on a 160-bit truncation collision (the accepted assumption of `REQ-PROXY-055`). It now states `PROP-076`: a deployment whose predicted address already holds a proxy reverts, so two successful deployments never share an address. (A two-deployment form was vacuous in the prover's creation model at `dynamic_bound` 1 and 2.)
-- CoverageSpoke.spec `coverDeficitOnlyAllowlistedOwnAssetAndBounded`: the Hub view ghosts were havocked by the AccessManager's unresolved `canCall`, so `fundedBalance()` differed between the rule and the call; the ghosts are persistent (a STATICCALL cannot change the Hub).
+- AvanaFirstLossReserve.spec `coverDeficitOnlyAllowlistedOwnAssetAndBounded`: the Hub view ghosts were havocked by the AccessManager's unresolved `canCall`, so `fundedBalance()` differed between the rule and the call; the ghosts are persistent (a STATICCALL cannot change the Hub).
 - FlashSource.spec `executeOperationRevertsWithoutActiveContext`: counterexample with an open flash context in transient storage at rule start; every rule now starts with empty transient storage (`setup/TransientModel.spec`). `flashLoanWithinPremiumCap`: the cap ghost was read after the call, past unresolved calls; it is read before the call, where the source reads it.
 - SettlementRoute.spec: every rule starts with empty transient storage (the callback rule failed with a stale hop pool); new invariant `routeBindingsSet` (constructor check) required by `swapOnlyForLpVaultSwapUnderLock`, which failed with a zero AaveAdapter binding; peg-module and wrapper steps are summarised as paying their output (unresolved, they paid nothing, so every PegModuleRoute and WrapperThenDexRoute swap reverted and the swap rules were vacuous).
 - Collateralization.spec `settlePendingChecksBurnAndPaysOnlyLpVaultSwap`: compared the output length with the length of `pending[vt].amounts` and picked `k` past the market's tokens; it now states one amount per market token and picks `k` among them. `recreditAddsUncreditedLiveUnits`: the LPVault's `topUpPosition` was unresolved and havocked the ledger; it is summarised in the custody model (adds arbitrary liquidity to the held position).

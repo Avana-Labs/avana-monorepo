@@ -8,7 +8,7 @@ pragma solidity 0.8.28;
 /// vault-token balance of LPVaultSwap for the market; `settleableUnits = min(units, unsettledSeizedUnits)`, the units
 /// LPVaultSwap's `settlePending(marketId)` would settle; `settleable = settleableUnits > 0`; `valueDebt` is the oracle
 /// value of `units` in base units of `debtAsset` per `SPEC-LIQ-004` with `c = units`, the amount a settlement funds
-/// into `coverageSpoke`, the Coverage Spoke of the market's (Hub, debt asset).
+/// into `firstLossReserve`, the First-Loss Reserve of the market's (Hub, debt asset).
 /// @custom:spec REQ-LENS-026, Q-370
 struct PendingView {
     uint256 blockNumber;
@@ -20,6 +20,6 @@ struct PendingView {
     uint256 settleableUnits;
     bool settleable;
     address debtAsset;
-    address coverageSpoke;
+    address firstLossReserve;
     uint256 valueDebt;
 }

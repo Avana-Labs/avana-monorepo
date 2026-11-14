@@ -379,7 +379,7 @@ class SwapMixin:
         for t in (mk.t0, mk.t1):
             p["amounts"][t] -= outs[t]
             got[t] = self._send(t, COLL, SWAP, outs[t])
-        # the recovered value goes to the Coverage Spoke of the market's (Hub, debt asset); every modelled market
+        # the recovered value goes to the First-Loss Reserve of the market's (Hub, debt asset); every modelled market
         # settles pending units in GHO, its first debt reserve
         T, p_debt, dd = GHO, PGHO, DECIMALS[GHO]
         lp = self.leg_prices(mk)

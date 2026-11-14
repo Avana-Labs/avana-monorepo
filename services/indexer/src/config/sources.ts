@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // Chains and contract sources built from the verified manifests. Every address and start block comes from a
 // manifest; none is written in code. Contracts created after deployment (vault tokens, LPOracles, DebtOracles,
-// Coverage Spokes, recorded Hubs, approved CDP Spokes, Spokes a Hub adds) are followed through the event that
+// First-Loss Reserves, recorded Hubs, approved CDP Spokes, Spokes a Hub adds) are followed through the event that
 // announces them.
 
 import { factory } from "ponder";
@@ -97,12 +97,12 @@ export const debtOracleSource = () =>
     startBlock: registryStart(m),
   }));
 
-export const coverageSpokeSource = () =>
+export const firstLossReserveSource = () =>
   perChain((m) => ({
     address: factory({
       address: m.avana.marketRegistry.address,
-      event: factoryEvents.coverageSpokeSet,
-      parameter: "coverageSpoke",
+      event: factoryEvents.firstLossReserveSet,
+      parameter: "firstLossReserve",
     }),
     startBlock: registryStart(m),
   }));
@@ -119,7 +119,7 @@ export function deploymentOf(chainId: number): ChainDeployment {
     hubs: t.hubs.map((h) => ({ address: h.address, label: h.label })),
     lendSpokes: t.lendSpokes.map((s) => s.address),
     cdpSpokes: t.borrowSpokes.map((s) => s.address),
-    coverageSpokes: m.avana.coverageSpokes.map((c) => ({ address: c.address, asset: c.asset, hub: c.hub })),
+    firstLossReserves: m.avana.firstLossReserves.map((c) => ({ address: c.address, asset: c.asset, hub: c.hub })),
   };
 }
 

@@ -19,7 +19,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// implementation seized vault tokens and kept them; the next honest liquidation of the account reconciles them into
 /// Collateralization's pending balance; any address then calls `settlePending`, which burns the stranded units,
 /// releases the matching pool tokens, swaps them into the market's settlement asset at `s_P = min(slippage, 30)` and
-/// funds the Coverage Spoke of that asset's funding Hub, carrying an amount worth less than one Hub share. The caller
+/// funds the First-Loss Reserve of that asset's funding Hub, carrying an amount worth less than one Hub share. The caller
 /// supplies and receives nothing.
 /// forge-config: default.isolate = false
 contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
@@ -34,7 +34,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice Any address settles: the stranded 500 units are burned, the pending tokens released (pro rata of the
-    /// pending balance), the USDT swapped into USDC at its 30 bps minimum, and `R` added to the USDC Coverage Spoke of
+    /// pending balance), the USDT swapped into USDC at its 30 bps minimum, and `R` added to the USDC First-Loss Reserve of
     /// the Stable LP Hub through `fund`; the caller's balances do not change and LPVaultSwap's vault-token balance falls
     /// by exactly the units settled.
     // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-070, REQ-SWAP-092, REQ-SWAP-042, SPEC-LIQ-014, INV-042, Q-201, Q-211, Q-338
@@ -55,7 +55,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         assertEq(amounts[0], a0, "USDC released");
         assertEq(amounts[1], a1, "USDT released");
         assertEq(added, a0 + a1 * 9995 / 10_000, "R in USDC");
-        assertEq(usdcCoverage.fundedBalance(), coverageBefore + added, "Coverage Spoke funded with R");
+        assertEq(usdcCoverage.fundedBalance(), coverageBefore + added, "First-Loss Reserve funded with R");
         assertEq(vt.totalSupply(), supplyBefore - kept, "stranded units burned");
         assertEq(vt.balanceOf(address(lvs)), 0, "LPVaultSwap holds no vault token");
         assertEq(coll.getPending(address(vt)).units, 0, "pending cleared");
@@ -68,7 +68,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice The event carries the market, the units, the released amounts, the settlement asset, `R`, the pending
-    /// floor, the Coverage Spoke, the routes used, the amount funded and the carry after the call.
+    /// floor, the First-Loss Reserve, the routes used, the amount funded and the carry after the call.
     // TEST-170 verifies: REQ-SWAP-066, SPEC-LIQ-014
     function test_TEST_170_eventFields() public {
         (uint256 a0, uint256 a1) = _released(kept);
@@ -209,9 +209,9 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice The settlement reserve decides the asset: with GHO as the market's settlement reserve both pool tokens
-    /// are swapped into GHO and the GHO Coverage Spoke is funded; the USDC Coverage Spoke is never touched.
+    /// are swapped into GHO and the GHO First-Loss Reserve is funded; the USDC First-Loss Reserve is never touched.
     // TEST-280 verifies: REQ-SWAP-066, REQ-SWAP-070, Q-338
-    function test_TEST_280_pendingToOwnHubAssetCoverageSpoke() public {
+    function test_TEST_280_pendingToOwnHubAssetAvanaFirstLossReserve() public {
         registry.setSettlementReserve(MARKET_ID, ghoReserveId);
         uint256 usdcCov = usdcCoverage.fundedBalance();
         uint256 ghoCov = ghoCoverage.fundedBalance();
@@ -220,15 +220,15 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         (,, uint256 added) = lvs.settlePending(MARKET_ID, ghoReserveId);
         (uint256 a0, uint256 a1) = _released(kept);
         assertEq(added, (a0 + a1) * 1e12, "both legs into GHO at 1:1");
-        assertEq(ghoCoverage.fundedBalance(), ghoCov + added, "GHO Coverage Spoke funded");
-        assertEq(usdcCoverage.fundedBalance(), usdcCov, "USDC Coverage Spoke untouched");
+        assertEq(ghoCoverage.fundedBalance(), ghoCov + added, "GHO First-Loss Reserve funded");
+        assertEq(usdcCoverage.fundedBalance(), usdcCov, "USDC First-Loss Reserve untouched");
     }
 
-    /// @notice `fund` reverting (the Coverage Spoke halted on the Hub) reverts the whole settlement; the tokens stay
+    /// @notice `fund` reverting (the First-Loss Reserve halted on the Hub) reverts the whole settlement; the tokens stay
     /// pending and the stranded units stay at LPVaultSwap.
     // TEST-170 verifies: REQ-SWAP-070, REQ-SWAP-071
     function test_TEST_170_fundRevertKeepsPending() public {
-        registry.setCoverageSpoke(aave.hub, address(usdc), address(0xdead));
+        registry.setAvanaFirstLossReserve(aave.hub, address(usdc), address(0xdead));
         vm.expectRevert();
         lvs.settlePending(MARKET_ID, usdcReserveId);
         assertEq(coll.getPending(address(vt)).units, kept, "pending unchanged");
@@ -243,14 +243,14 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 
-    /// @notice The Coverage Spoke pull is checked as LPVaultSwap's balance falling by exactly `Rt` (REQ-SWAP-070): a
-    /// Coverage Spoke that takes nothing, one that takes `Rt - 1`, and one that takes `Rt` but sends 1 more back all
+    /// @notice The First-Loss Reserve pull is checked as LPVaultSwap's balance falling by exactly `Rt` (REQ-SWAP-070): a
+    /// First-Loss Reserve that takes nothing, one that takes `Rt - 1`, and one that takes `Rt` but sends 1 more back all
     /// revert `FundingMismatch` with the units still pending; the same contract taking exactly `Rt` is funded.
     // TEST-170 verifies: REQ-SWAP-070, REQ-SWAP-071
     function test_TEST_170_fundPullMismatch() public {
         PendingCoverageSkimmer skimmer = new PendingCoverageSkimmer(address(usdc));
         usdc.mint(address(skimmer), 1e6);
-        registry.setCoverageSpoke(aave.hub, address(usdc), address(skimmer));
+        registry.setAvanaFirstLossReserve(aave.hub, address(usdc), address(skimmer));
         PendingCoverageSkimmer.Mode[3] memory faulty = [
             PendingCoverageSkimmer.Mode.None, PendingCoverageSkimmer.Mode.OneShort, PendingCoverageSkimmer.Mode.Rebate
         ];
@@ -271,7 +271,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
 }
 
 /// @title PendingCoverageSkimmer
-/// @notice A Coverage Spoke stand-in for the `fund` pull check of `settlePending`: `fund(amount)` takes nothing
+/// @notice A First-Loss Reserve stand-in for the `fund` pull check of `settlePending`: `fund(amount)` takes nothing
 /// (`None`), `amount - 1` (`OneShort`), `amount` then sends `amount + 1` back (`Rebate`), or exactly `amount` (`Exact`).
 contract PendingCoverageSkimmer {
     using SafeERC20 for IERC20;

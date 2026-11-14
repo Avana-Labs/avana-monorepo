@@ -58,8 +58,8 @@ interface IMarketRegistryListing {
     /// reserves, REQ-MREG-007), its Aave reserve matches `def` (underlying, funding Hub, Hub asset ID, decimals), it is
     /// borrowable with collateral factor 0, the AaveOracle source equals `def.priceSource` (a
     /// fixed-price source with `fixedPrice`, else the asset's DebtOracle with `ASSET() == def.asset`,
-    /// `MARKET_REGISTRY() == address(this)`, `PARAMETER_STORE() == PARAMETER_STORE` and 8 decimals), `def.coverageSpoke`
-    /// is `coverageSpokeOf(def.fundingHub, def.asset)` and reports the same asset, Hub and Hub asset ID, the chain's IFlashSource can lend
+    /// `MARKET_REGISTRY() == address(this)`, `PARAMETER_STORE() == PARAMETER_STORE` and 8 decimals), `def.firstLossReserve`
+    /// is `firstLossReserveOf(def.fundingHub, def.asset)` and reports the same asset, Hub and Hub asset ID, the chain's IFlashSource can lend
     /// the asset (`maxFlashLoan > 0`, premium `phi` on amount `F` with `phi × 1e4 ≤ maxFlashFeeBps × F`) from a
     /// `LENDER()` that is no recorded Hub, and it is not already enabled; reverts `TransferFeeActive(asset)` unless the
     /// asset's transfer fee is 0 at listing (a probe that reads `basisPointsRate()`, `UsdtFeeRate` or
@@ -68,7 +68,7 @@ interface IMarketRegistryListing {
     /// fixed price also needs its three price routes (`InvalidDebtReserve("routes")` for a monitoring-only listing) and
     /// `debtStressRiseBps(asset) >= 100`. `def.crossHub` must equal `def.fundingHub != hubOf(spoke)`; a cross-Hub reserve also requires an open
     /// credit line (`CrossHubLineClosed`). Then reverts `LivenessBound` unless every Active or Offboarding market of the
-    /// Spoke has a usable swap route (or the asset among its pool tokens) for this asset. Marks the Coverage Spoke as
+    /// Spoke has a usable swap route (or the asset among its pool tokens) for this asset. Marks the First-Loss Reserve as
     /// protected from the address freeze. Emits `DebtReserveApproved`.
     /// @param spoke CDP Spoke.
     /// @param def Debt-reserve definition.

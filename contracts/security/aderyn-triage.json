@@ -193,18 +193,18 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "883341ec05617c7d",
+      "fingerprint": "a553a0a91c06c8c0",
       "check": "reentrancy-state-change",
-      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
-      "function": "CoverageSpoke.coverDeficit",
+      "file": "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol",
+      "function": "AvanaFirstLossReserve.coverDeficit",
       "reason": "The calls before the `totalCovered` write are the view reads `HUB.getSpokeDeficitRay` and `HUB.getSpokeAddedAssets` (through `fundedBalance()`), compiled as STATICCALL to the immutable Aave V4 Hub, so they cannot re-enter or change state; `totalCovered` needs the amount those reads determine (SPEC-FLR-001), and it is written before the one state-changing call, `HUB.eliminateDeficit` (REQ-FLR-006, REQ-FLR-018). The function is also non-reentrant (transient guard) and `restricted` to COVERAGE_ROLE. Covered by TEST-199, PROP-039, PROP-060.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "afe1bd4d6b6bec0b",
+      "fingerprint": "ab655b8e7a59f05d",
       "check": "reentrancy-state-change",
-      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
-      "function": "CoverageSpoke.setAllowedBorrowSpoke",
+      "file": "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol",
+      "function": "AvanaFirstLossReserve.setAllowedBorrowSpoke",
       "reason": "The call before the allowlist write is the view check `HUB.isSpokeListed(ASSET_ID, spoke)` required by REQ-FLR-017, a STATICCALL to the immutable Aave V4 Hub that cannot re-enter or change state; the function makes no state-changing external call, is non-reentrant (transient guard) and `restricted` to RESERVE_ADMIN_ROLE. Covered by TEST-288 allowlistRules, TEST-199.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -219,77 +219,77 @@
       "fingerprint": "365e56976529c6c1",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "8fa831f16a49b31c",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "c08cb2de9b7cb4e9",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "1229ef1bb4b426a4",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "d9cefb8605365730",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "fc6aabb569f3d045",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "2ee6f5a95ea3da8c",
+      "fingerprint": "acc909c6c0c92925",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "6946d210f5d46122",
+      "fingerprint": "b023d02c8fbae97f",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "1ba394a568554656",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryHubsLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "34d88cb3febac875",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "fingerprint": "e7d81a47eb4e1801",
       "check": "reentrancy-state-change",
       "file": "src/policy/market-registry/MarketRegistryWindDownLogic.sol",
-      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, Coverage Spoke, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
+      "reason": "The external calls before this write are view interfaces compiled to STATICCALL (Aave, ParameterStore, RiskModule, integration identity, First-Loss Reserve, flash source, ERC-20 decimals), which cannot re-enter or change state; the checks must read them before the record is written, and every write is reached only through a role-checked delegatecall from the registry.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -1357,7 +1357,7 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "60dc526aba6eff43",
+      "fingerprint": "60db8477926838dc",
       "check": "unchecked-return",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic._fundCoverage",
@@ -1999,20 +1999,20 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "06acd73bcbbd5343",
+      "fingerprint": "1419a04b8bbb6c7c",
       "check": "reentrancy-state-change",
-      "file": "src/coverage/deficit-offset-spoke/DeficitOffsetSpoke.sol",
-      "function": "constructor (DeficitOffsetSpoke)",
+      "file": "src/coverage/dao-deficit-offset/DaoDeficitOffset.sol",
+      "function": "constructor (DaoDeficitOffset)",
       "reason": "Constructor only: the calls before the immutable `_FIRST_LOSS_LAYER` is written are the first-loss layer's `HUB()`, `ASSET()` and `ASSET_ID()`, views compiled to STATICCALL that cannot change state, made to check REQ-FLR-047 and fail closed with FirstLossLayerMismatch; an immutable does not exist until the constructor returns. Covered by TEST-298 (constructorRejectsMismatchedLayer).",
       "approval": "pending review (approved pattern)",
-      "review": "DeficitOffsetSpoke (Q-410), new site; same shape as the UniswapV3Integration and Lens constructor entries (view-only calls before writes)."
+      "review": "DaoDeficitOffset (Q-410), new site; same shape as the UniswapV3Integration and Lens constructor entries (view-only calls before writes)."
     },
     {
-      "fingerprint": "feaed29377f9984b",
+      "fingerprint": "08db53d87c56836f",
       "check": "empty-block",
-      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
-      "function": "CoverageSpoke._beforeCover",
-      "reason": "The loss-order hook: the Avana Umbrella has no layer in front of it, so its hook accepts every call (REQ-FLR-048); DeficitOffsetSpoke._beforeCover overrides it with the FirstLossLayerNotExhausted check. An empty body is the specified behaviour, not a missing check. Covered by TEST-298 (offsetRefusedWhileAvanaLayerFunded; the deletion mutant of the hook call is killed) and TEST-128.",
+      "file": "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol",
+      "function": "AvanaFirstLossReserve._beforeCover",
+      "reason": "The loss-order hook: the Avana Umbrella has no layer in front of it, so its hook accepts every call (REQ-FLR-048); DaoDeficitOffset._beforeCover overrides it with the FirstLossLayerNotExhausted check. An empty body is the specified behaviour, not a missing check. Covered by TEST-298 (offsetRefusedWhileAvanaLayerFunded; the deletion mutant of the hook call is killed) and TEST-128.",
       "approval": "approved by pattern",
       "review": "group X (empty override of a variant hook): same shape as FlashLiquidator._checkLoanNeed and _checkOutlay."
     },

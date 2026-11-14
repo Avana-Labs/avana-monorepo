@@ -17,7 +17,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// flash premium bound; and repay-with-collateral sizing.
 /// @dev Internal library of LPVaultSwap (`Q-240`): pure functions, no storage, no external call. Each rounding goes
 /// against the caller: the seizure and leg values down, the pending value up (it raises the floor that protects the
-/// Coverage Spoke), slippage terms up, unit values up, Avana's fee down, the repay-with-collateral cap down. A zero
+/// First-Loss Reserve), slippage terms up, unit values up, Avana's fee down, the repay-with-collateral cap down. A zero
 /// price reverts with `ZeroCollateralPrice` or `ZeroDebtPrice`, decimals above 36 with `InvalidDecimals`, and a fee
 /// share above 10^4 with `InvalidFeeShare`. Products that the listing bounds keep below 2^256 use checked arithmetic
 /// (a value beyond the bound panics, so the liquidation reverts); the oracle-value products, whose operands can reach

@@ -338,7 +338,7 @@ module avana_tests {
 
   // QNT-T15 verifies: Q-098, Q-101, Q-134, Q-236
   // Sequential liquidation of a two-market account until Aave records the deficit; the
-  // GHO Coverage Spoke covers it; the zero-credit record is released to alice only.
+  // GHO First-Loss Reserve covers it; the zero-credit record is released to alice only.
   run sequentialLiquidationTest = aliceTwoMarkets
     .then(priceMove("mA", 1)).then(priceMove("mB", 1))
     .then(liquidate("k1", PA, "mA", "GHO", q0(BIG)))

@@ -145,8 +145,8 @@ describe("snapshot reader", () => {
     [`getSpokeCount:${HUB}:0`]: 1n,
     [`getSpokeAddress:${HUB}:0:0`]: FIXTURE_U,
     [`getSpoke:${HUB}:0:${FIXTURE_U}`]: { drawnShares: 0n, premiumShares: 0n, addedShares: 10n ** 22n, addCap: 100, drawCap: 0, active: true, halted: false, deficitRay: 0n },
-    [`coverageSpokeOf:${REGISTRY}:${HUB}:${fixtureHubAsset.underlying}`]: COV,
-    [`coverageSpokeOf:${REGISTRY}:${HUB}:${VT}`]: "0x0000000000000000000000000000000000000000",
+    [`firstLossReserveOf:${REGISTRY}:${HUB}:${fixtureHubAsset.underlying}`]: COV,
+    [`firstLossReserveOf:${REGISTRY}:${HUB}:${VT}`]: "0x0000000000000000000000000000000000000000",
     [`getReserveCount:${LEND}`]: 1n,
     [`ORACLE:${LEND}`]: ORACLE,
     [`getDebtReserves:${LENS}:${FIXTURE_U}`]: [{ spoke: FIXTURE_U, reserveId: 1n, asset: fixtureHubAsset.underlying, decimals: 6, price: 100_000_000n, fixedPrice: false, hub: HUB, hubAssetId: 1n, paused: false, frozen: false, borrowable: true, breakerReasons: 0, pauseState: 0 }],
@@ -169,7 +169,7 @@ describe("snapshot reader", () => {
     [`getSpokeAddress:${HUB}:1:1`]: COV,
     [`getSpokeAddress:${HUB}:1:2`]: FIXTURE_U,
     [`getInterestRateData:${IRS}:1`]: { optimalUsageRatio: 8_000, baseDrawnRate: 0, rateGrowthBeforeOptimal: 400, rateGrowthAfterOptimal: 6_000 },
-    [`getHubAssetExposure:${LENS}:${HUB}:${fixtureHubAsset.underlying}`]: { coverageSpoke: COV, fundedBalance: u(200_000), line: u(7_000_000), coverageBoundHolds: true, uncovered: 0n, priceAdj: 10n ** 6n, spokes: [{ spoke: FIXTURE_U, homeHub: HUB, kind: 1 }], deficitOffset: "0x0000000000000000000000000000000000000000", offsetFunded: 0n },
+    [`getHubAssetExposure:${LENS}:${HUB}:${fixtureHubAsset.underlying}`]: { firstLossReserve: COV, fundedBalance: u(200_000), line: u(7_000_000), coverageBoundHolds: true, uncovered: 0n, priceAdj: 10n ** 6n, spokes: [{ spoke: FIXTURE_U, homeHub: HUB, kind: 1 }], deficitOffset: "0x0000000000000000000000000000000000000000", offsetFunded: 0n },
     [`getBorrowSpeed:${LENS}:1:1`]: { market: window(10n ** 14n, 6n * 10n ** 13n, 1_200n), debt: window(u(500_000), 0n, 0n), availableNow: u(400_000), moreAt: 1_200n },
     [`LENS_MAX_PAGE:${LENS}`]: 200n,
     [`getMarkets:${LENS}:0:200`]: [market],
@@ -192,7 +192,7 @@ describe("snapshot reader", () => {
 
   it("reads one Hub asset, its slices, the CDP reserve and the market at one block", async () => {
     const { readChainSnapshot } = await import("../src/views/snapshot.ts");
-    const snap = await readChainSnapshot(client, { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs: [{ address: HUB, label: "Stable" }], lendSpokes: [LEND], cdpSpokes: [FIXTURE_U], coverageSpokes: [] }, { blockNumber: 77n, timestamp: 1_000 });
+    const snap = await readChainSnapshot(client, { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs: [{ address: HUB, label: "Stable" }], lendSpokes: [LEND], cdpSpokes: [FIXTURE_U], firstLossReserves: [] }, { blockNumber: 77n, timestamp: 1_000 });
     const asset = snap.hubAssets[0]!;
     expect(asset.priceUsd8).toBe("99990000");
     expect(asset.owed).toBe(u(3_000_000).toString());
@@ -239,7 +239,7 @@ describe("snapshot reader", () => {
       { address: HUB, label: "Stable" },
       { address: later, label: "growth" },
     ];
-    const dep: ChainDeployment = { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs, lendSpokes: [LEND, laterLend], cdpSpokes: [FIXTURE_U, laterCdp], coverageSpokes: [] };
+    const dep: ChainDeployment = { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs, lendSpokes: [LEND, laterLend], cdpSpokes: [FIXTURE_U, laterCdp], firstLossReserves: [] };
     const snap = await readChainSnapshot(client, dep, { blockNumber: 77n, timestamp: 1_000 });
     expect(snap.hubs.map((h) => [h.hub, h.lendSpokes, h.cdpSpokes])).toEqual([[HUB, [LEND], [FIXTURE_U]]]);
   });
@@ -247,6 +247,6 @@ describe("snapshot reader", () => {
   it("fails the whole snapshot when a required view reverts", async () => {
     const { readChainSnapshot } = await import("../src/views/snapshot.ts");
     const broken = { multicall: async (calls: readonly unknown[]) => calls.map(() => ({ status: "failure" as const, error: new Error("revert") })) };
-    await expect(readChainSnapshot(broken, { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs: [], lendSpokes: [LEND], cdpSpokes: [], coverageSpokes: [] }, { blockNumber: 1n, timestamp: 0 })).rejects.toThrow(/reverted/);
+    await expect(readChainSnapshot(broken, { chainId: 1, lens: LENS, marketRegistry: REGISTRY, hubs: [], lendSpokes: [LEND], cdpSpokes: [], firstLossReserves: [] }, { blockNumber: 1n, timestamp: 0 })).rejects.toThrow(/reverted/);
   });
 });

@@ -127,7 +127,7 @@ contract LensDeficitOffsetUnitTest is LensFixture {
     function test_TEST_247_noUmbrellaMeansNoOffset() public {
         _deficits();
         _offsetFunded(300_001);
-        reg.setCoverageSpoke(aave.hub, address(debt), address(0));
+        reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(0));
         HubAssetExposureView memory v = lens.getHubAssetExposure(aave.hub, address(debt));
         assertEq(v.deficitOffset, address(0), "nothing to stand behind");
         assertEq(v.offsetFunded, 0, "0");

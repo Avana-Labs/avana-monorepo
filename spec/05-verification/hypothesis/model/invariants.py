@@ -150,7 +150,7 @@ def check_all(s, solvency_check=False):
         check(a.deficit_ray == sum(sd.deficit_ray for sd in a.spokes.values()) >= 0, "HYP-08", "deficit bookkeeping")
         for c in COV.values():
             if c in a.spokes:
-                check(a.spokes[c].deficit_ray == 0 and a.spokes[c].drawn_shares == 0, "HYP-08", "Coverage Spoke drew")
+                check(a.spokes[c].deficit_ray == 0 and a.spokes[c].drawn_shares == 0, "HYP-08", "First-Loss Reserve drew")
         # HYP-98 verifies: SPEC-HUB-007, REQ-HUB-008, Q-408
         if a.ir is not None:
             base, before, after, _ = a.ir

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {ICoverageSpoke} from "../../coverage/coverage-spoke/ICoverageSpoke.sol";
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
@@ -25,11 +25,11 @@ import {RiskTier} from "./types/RiskTier.sol";
 import {SpokeDef} from "./types/SpokeDef.sol";
 
 /// @title MarketRegistryHubsLogic
-/// @notice Bodies of the Hub, AMM-integration registration, Coverage Spoke, cross-Hub line, flash source, CDP Spoke and debt
+/// @notice Bodies of the Hub, AMM-integration registration, First-Loss Reserve, cross-Hub line, flash source, CDP Spoke and debt
 /// reserve writes of the MarketRegistry. Normal delay.
 /// @dev Reached only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first; see
 /// `IMarketRegistryLogic`. Every external call is a view: these bodies read Aave, the integration, the factory, the
-/// Coverage Spokes, the flash source, the RiskModule and the ParameterStore, and write only the registry's storage.
+/// First-Loss Reserves, the flash source, the RiskModule and the ParameterStore, and write only the registry's storage.
 /// @custom:spec REQ-CONFIG-005, REQ-CONFIG-016, REQ-CONFIG-074, REQ-CONFIG-075, REQ-CONFIG-077, REQ-CONFIG-079, REQ-CONFIG-081, REQ-CONFIG-083, REQ-MREG-006, REQ-MREG-007, REQ-MREG-008, REQ-MREG-009, REQ-MREG-010, REQ-MREG-018, REQ-MREG-032, REQ-MREG-033, Q-312, Q-313, Q-378, Q-379, Q-386, Q-388
 // Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
 // implements; this contract inherits no piece, since each piece also declares functions another contract serves.
@@ -93,24 +93,25 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryHubs.IntegrationRegistered(integrationId, lpVault, pricing);
     }
 
-    /// @notice Body of `setCoverageSpoke`.
+    /// @notice Body of `setAvanaFirstLossReserve`.
     /// @custom:spec REQ-MREG-009, Q-379
-    function setCoverageSpoke(
+    function setAvanaFirstLossReserve(
         address hub,
         address asset,
-        address coverageSpoke
+        address firstLossReserve
     ) external {
         _onlyDelegated();
         Layout storage l = _s();
         if (l.hubTier[hub] == RiskTier.None) revert IMarketRegistryHubs.InvalidHub(hub);
         if (
-            coverageSpoke == address(0) || asset == address(0) || l.coverageSpokeOf[hub][asset] != address(0)
-                || ICoverageSpoke(coverageSpoke).HUB() != hub || ICoverageSpoke(coverageSpoke).ASSET() != asset
-                || ICoverageSpoke(coverageSpoke).ASSET_ID() != IAaveV4Hub(hub).getAssetId(asset)
-        ) revert IMarketRegistryHubs.InvalidCoverageSpoke(coverageSpoke);
-        l.coverageSpokeOf[hub][asset] = coverageSpoke;
-        l.knownCoverageSpoke[coverageSpoke] = true;
-        emit IMarketRegistryHubs.CoverageSpokeSet(hub, asset, coverageSpoke);
+            firstLossReserve == address(0) || asset == address(0) || l.firstLossReserveOf[hub][asset] != address(0)
+                || IAvanaFirstLossReserve(firstLossReserve).HUB() != hub
+                || IAvanaFirstLossReserve(firstLossReserve).ASSET() != asset
+                || IAvanaFirstLossReserve(firstLossReserve).ASSET_ID() != IAaveV4Hub(hub).getAssetId(asset)
+        ) revert IMarketRegistryHubs.InvalidAvanaFirstLossReserve(firstLossReserve);
+        l.firstLossReserveOf[hub][asset] = firstLossReserve;
+        l.knownAvanaFirstLossReserve[firstLossReserve] = true;
+        emit IMarketRegistryHubs.AvanaFirstLossReserveSet(hub, asset, firstLossReserve);
     }
 
     /// @notice Body of `setCrossHubLine`.
@@ -131,8 +132,8 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         uint256 old = l.crossHubLineCap[fundingHub][asset][spoke];
         uint256 total = l.crossHubLineTotal[fundingHub][asset] - old + cap;
         if (cap > old) {
-            address cs = l.coverageSpokeOf[fundingHub][asset];
-            uint256 coverage = cs == address(0) ? 0 : ICoverageSpoke(cs).fundedBalance();
+            address cs = l.firstLossReserveOf[fundingHub][asset];
+            uint256 coverage = cs == address(0) ? 0 : IAvanaFirstLossReserve(cs).fundedBalance();
             if (total > coverage) revert IMarketRegistryHubs.CrossHubCapExceeded(total, coverage);
         }
         l.crossHubLineCap[fundingHub][asset][spoke] = cap;
@@ -237,12 +238,12 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         _checkFunding(spoke, sp.hub, def);
         _checkAaveReserve(spoke, def);
         _checkPriceSource(spoke, def);
-        _checkCoverageSpoke(def);
+        _checkAvanaFirstLossReserve(def);
         _checkFlashAndFee(def);
         uint256 cap = _drawCapOf(def.fundingHub, def.hubAssetId, spoke);
         // REQ-HUB-103 (a): a foreign Spoke's draw cap stays within its cross-Hub line (`_checkFunding` has already
         // required the line to be open), decided 2026-11-12. The draw cap is in whole asset units and the line in base
-        // units (it is bounded by the Coverage Spoke's balance); `def.decimals` is the token's own (`_checkAaveReserve`),
+        // units (it is bounded by the First-Loss Reserve's balance); `def.decimals` is the token's own (`_checkAaveReserve`),
         // and the unbounded cap 2^128 times 10^18 cannot overflow.
         if (def.crossHub) {
             uint256 capBase = cap * 10 ** uint256(def.decimals);
@@ -263,11 +264,11 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         rec.hubAssetId = def.hubAssetId;
         rec.priceSource = def.priceSource;
         rec.fixedPrice = def.fixedPrice;
-        rec.coverageSpoke = def.coverageSpoke;
+        rec.firstLossReserve = def.firstLossReserve;
         rec.crossHub = def.crossHub;
         rec.approved = true;
         l.debtReserveIds[spoke].push(def.reserveId);
-        l.knownCoverageSpoke[def.coverageSpoke] = true;
+        l.knownAvanaFirstLossReserve[def.firstLossReserve] = true;
         l.knownPriceSource[def.priceSource] = true;
         l.isDebtAsset[def.asset] = true;
         l.recordedDrawCap[spoke][def.reserveId] = cap;
@@ -276,7 +277,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         // the record is written; a failure reverts the whole call.
         _checkMarketsLive(spoke, def.reserveId, def.asset);
         emit DebtReserveApproved(
-            spoke, def.reserveId, def.asset, def.fundingHub, def.hubAssetId, def.priceSource, def.coverageSpoke
+            spoke, def.reserveId, def.asset, def.fundingHub, def.hubAssetId, def.priceSource, def.firstLossReserve
         );
         emit IMarketRegistryCreditLines.CreditLineRecorded(def.fundingHub, def.asset, spoke, cap, sum);
     }

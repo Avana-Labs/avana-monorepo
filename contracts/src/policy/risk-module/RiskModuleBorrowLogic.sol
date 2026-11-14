@@ -268,7 +268,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
     }
 
     /// @dev Step (13), REQ-RISK-082: a reserve funded by another Hub than the market's needs cross-Hub lines on, the
-    /// registry's draw-cap sum within the funding Hub's line, and the line covered by its Coverage Spoke
+    /// registry's draw-cap sum within the funding Hub's line, and the line covered by its First-Loss Reserve
     /// (`creditLineCoverage`: `required <= funded`).
     function _creditLine(
         Scope memory s

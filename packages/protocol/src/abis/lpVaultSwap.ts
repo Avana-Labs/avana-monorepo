@@ -881,7 +881,7 @@ export const lpVaultSwapAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "coverageSpoke",
+        "name": "firstLossReserve",
         "type": "address",
         "indexed": false,
         "internalType": "address"

@@ -40,8 +40,8 @@ import {
 } from "../mocks/MarketRegistryAaveMocks.sol";
 import {
     RegistryAdapterMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryCollateralizationMock,
-    RegistryCoverageSpokeMock,
     RegistryFeedMock,
     RegistryFlashSourceMock,
     RegistryLPVaultMock,
@@ -54,7 +54,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 /// @title ParameterStoreRegistryFixture
 /// @notice The real ParameterStore and the real MarketRegistry wired to each other (each holds the other's proxy as
-/// an immutable), with settable mocks for the Aave reads, the LPVault, the Coverage Spoke and the price feeds. World
+/// an immutable), with settable mocks for the Aave reads, the LPVault, the First-Loss Reserve and the price feeds. World
 /// after `_setUpWorld`: the Stable LP Hub recorded, integration 1 registered, the CDP Spoke deployed, GHO listed and
 /// enabled as a fixed-price debt reserve funded by the Hub, and USDC and USDT listed with a one-leg primary, a
 /// two-leg alternate and a one-leg standby route whose feeds the store defines (25 bps each).
@@ -80,7 +80,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
     RegistryAaveOracleMock internal aaveOracle;
     RegistryLPVaultMock internal lpVault;
     RegistryFlashSourceMock internal flash;
-    RegistryCoverageSpokeMock internal ghoCoverage;
+    RegistryAvanaFirstLossReserveMock internal ghoCoverage;
     RegistryTokenMock internal usdc;
     RegistryTokenMock internal usdt;
     RegistryTokenMock internal gho;
@@ -208,7 +208,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         lpVault.setPoolTokens(toks, 18);
         flash = new RegistryFlashSourceMock(aaveV3Pool, address(lpVaultSwap));
         ghoSource = new RegistryFeedMock(8, 1e8);
-        ghoCoverage = new RegistryCoverageSpokeMock(address(hub), address(gho), GHO_ASSET);
+        ghoCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), GHO_ASSET);
         ghoCoverage.setFunded(4e24, false);
         vm.prank(address(timelock));
         factory.registerIntegration(V3, address(lpVault));
@@ -232,7 +232,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         );
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
-        registry.setCoverageSpoke(address(hub), address(gho), address(ghoCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
         registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _setGhoReserve();
@@ -263,7 +263,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
             hubAssetId: GHO_ASSET,
             priceSource: address(ghoSource),
             fixedPrice: true,
-            coverageSpoke: address(ghoCoverage),
+            firstLossReserve: address(ghoCoverage),
             crossHub: false,
             approved: false
         });

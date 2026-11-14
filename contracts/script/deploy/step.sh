@@ -17,10 +17,10 @@
 #   04-access-operations          writes, and on anvil schedules as the Safe, the guardian-roles and chain-wiring
 #   05-execute-access-operations  executes them once the timelock delay has passed
 #   06-aave-deployment-aip        AAVE  debt assets, Lend and CDP Spokes, bootstrap supply, FLASH_BORROWER
-#   07-deploy-coverage-spokes     the Avana Umbrella of each (Hub, debt asset)
+#   07-deploy-first-loss-reserves     the Avana Umbrella of each (Hub, debt asset)
 #   08-aave-loss-layers-aip       AAVE  DAO deficit offsets and both loss layers' roles, caps and minimums
-#   07-fund-coverage-spokes       Avana Labs funds each Umbrella to its minimum
-#   09-listing-setup              tokens, feeds, CDP Spokes, Coverage Spokes, credit lines (timelock, normal delay)
+#   07-fund-first-loss-reserves       Avana Labs funds each Umbrella to its minimum
+#   09-listing-setup              tokens, feeds, CDP Spokes, First-Loss Reserves, credit lines (timelock, normal delay)
 #   09-execute-listing-setup
 #   09-debt-oracles               GHO's fixed source and the DebtOracle of every other debt asset
 #   10-aave-debt-reserves-aip     AAVE  debt-reserve price sources, borrowable
@@ -60,9 +60,9 @@ case "$step" in
   04-access-operations) script=04_ConfigureAccess.s.sol; schedule=1 ;;
   05-execute-access-operations) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=guardian-roles,chain-wiring) ;;
   06-aave-deployment-aip) script=06_AaveDeploymentPayload.s.sol ;;
-  07-deploy-coverage-spokes) script=07_DeployCoverageSpokes.s.sol; envs+=(AVANA_COVERAGE_STEP=deploy) ;;
+  07-deploy-first-loss-reserves) script=07_DeployAvanaFirstLossReserves.s.sol; envs+=(AVANA_COVERAGE_STEP=deploy) ;;
   08-aave-loss-layers-aip) script=08_AaveLossLayersPayload.s.sol ;;
-  07-fund-coverage-spokes) script=07_DeployCoverageSpokes.s.sol; envs+=(AVANA_COVERAGE_STEP=fund) ;;
+  07-fund-first-loss-reserves) script=07_DeployAvanaFirstLossReserves.s.sol; envs+=(AVANA_COVERAGE_STEP=fund) ;;
   09-listing-setup) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=setup); schedule=1 ;;
   09-execute-listing-setup) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=listing-setup) ;;
   09-debt-oracles) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=oracles) ;;

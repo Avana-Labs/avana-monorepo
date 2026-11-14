@@ -18,7 +18,7 @@ interface IMarketRegistryRoutes {
     /// @notice Adds or changes the primary or backup swap route of a market's pool token into a debt asset.
     /// @dev Normal delay. Reverts `UnknownMarket` for an unknown, Cancelled or Closed market, `TokenNotListed` unless
     /// `token` is one of the market's pool tokens and `debtAsset` is the asset of an enabled debt reserve of the
-    /// market's CDP Spoke, a listed token, or an asset with a Coverage Spoke on the Spoke's home Hub (so the routes of a
+    /// market's CDP Spoke, a listed token, or an asset with a First-Loss Reserve on the Spoke's home Hub (so the routes of a
     /// debt reserve can be set in the batch that enables it), and `InvalidRoute` unless the market's integration has a
     /// finalized record of AMM protocol contracts whose key still matches it (REQ-MREG-035), `route.tokenIn() ==
     /// token`, `route.tokenOut() == debtAsset`, `route.LP_VAULT_SWAP() == LP_VAULT_SWAP`, no entry of

@@ -268,7 +268,7 @@ contract LensMarketUnitTest is LensFixture {
         assertEq(p.settleableUnits, 0, "nothing to settle");
         assertFalse(p.settleable, "not settleable");
         assertEq(p.debtAsset, address(debt), "settlement reserve's asset");
-        assertEq(p.coverageSpoke, address(ghoCov), "its Coverage Spoke");
+        assertEq(p.firstLossReserve, address(ghoCov), "its First-Loss Reserve");
         assertEq(p.valueDebt, 0, "no value");
     }
 
@@ -309,7 +309,7 @@ contract LensMarketUnitTest is LensFixture {
         reg.setSettlementReserve(MARKET_ID, usdcReserveId);
         PendingView memory p = lens.getPendingSettlement(vt);
         assertEq(p.debtAsset, address(usdc), "USDC settlement");
-        assertEq(p.coverageSpoke, address(usdcCov), "USDC Coverage Spoke");
+        assertEq(p.firstLossReserve, address(usdcCov), "USDC First-Loss Reserve");
         assertEq(p.valueDebt, seized * 1.8e8 * 1e6 / (1e6 * 0.9999e8), "valued at the larger debt price");
         lpo.setAnswer(true, 0);
         assertEq(lens.getPendingSettlement(vt).valueDebt, 0, "a zero price values 0, never reverts");

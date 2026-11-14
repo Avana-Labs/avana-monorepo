@@ -2358,7 +2358,7 @@ export const lensAbi = [
             "internalType": "address"
           },
           {
-            "name": "coverageSpoke",
+            "name": "firstLossReserve",
             "type": "address",
             "internalType": "address"
           },
@@ -3082,7 +3082,7 @@ export const lensAbi = [
             "internalType": "address"
           },
           {
-            "name": "coverageSpoke",
+            "name": "firstLossReserve",
             "type": "address",
             "internalType": "address"
           },
@@ -3494,7 +3494,7 @@ export const lensAbi = [
             "internalType": "address"
           },
           {
-            "name": "coverageSpoke",
+            "name": "firstLossReserve",
             "type": "address",
             "internalType": "address"
           },

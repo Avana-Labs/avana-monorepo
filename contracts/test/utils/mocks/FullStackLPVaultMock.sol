@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {IntegLPVaultMock} from "./IntegLPVaultMock.sol";
-import {RegistryCoverageSpokeMock} from "./MarketRegistryMocks.sol";
+import {RegistryAvanaFirstLossReserveMock} from "./MarketRegistryMocks.sol";
 
 /// @title FullStackLPVaultMock
 /// @notice `IntegLPVaultMock` (custody rules, unwind rates, depth) with the binding surface the real MarketRegistry
@@ -72,10 +72,10 @@ contract FullStackLPVaultMock is IntegLPVaultMock {
     }
 }
 
-/// @title FullStackCoverageSpokeMock
-/// @notice A Coverage Spoke as the MarketRegistry and the ParameterStore read it (`RegistryCoverageSpokeMock` plus the
+/// @title FullStackAvanaFirstLossReserveMock
+/// @notice A First-Loss Reserve as the MarketRegistry and the ParameterStore read it (`RegistryAvanaFirstLossReserveMock` plus the
 /// first-loss reserve minimum the ParameterStore bounds its breaker and speed settings by).
-contract FullStackCoverageSpokeMock is RegistryCoverageSpokeMock {
+contract FullStackAvanaFirstLossReserveMock is RegistryAvanaFirstLossReserveMock {
     uint256 public firstLossReserveMinimum;
 
     constructor(
@@ -83,7 +83,7 @@ contract FullStackCoverageSpokeMock is RegistryCoverageSpokeMock {
         address asset,
         uint256 assetId,
         uint256 minimum
-    ) RegistryCoverageSpokeMock(hub, asset, assetId) {
+    ) RegistryAvanaFirstLossReserveMock(hub, asset, assetId) {
         firstLossReserveMinimum = minimum;
     }
 }

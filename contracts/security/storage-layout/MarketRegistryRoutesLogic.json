@@ -610,7 +610,7 @@
           "type": "bool"
         },
         {
-          "path": "debtReserves[][].coverageSpoke",
+          "path": "debtReserves[][].firstLossReserve",
           "slot": "5",
           "offset": 0,
           "bytes": "20",
@@ -652,14 +652,14 @@
           "type": "uint256"
         },
         {
-          "path": "knownCoverageSpoke",
+          "path": "knownAvanaFirstLossReserve",
           "slot": "23",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => bool)"
         },
         {
-          "path": "knownCoverageSpoke[]",
+          "path": "knownAvanaFirstLossReserve[]",
           "slot": "0",
           "offset": 0,
           "bytes": "1",
@@ -694,21 +694,21 @@
           "type": "bool"
         },
         {
-          "path": "coverageSpokeOf",
+          "path": "firstLossReserveOf",
           "slot": "26",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => mapping(address => address))"
         },
         {
-          "path": "coverageSpokeOf[]",
+          "path": "firstLossReserveOf[]",
           "slot": "0",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => address)"
         },
         {
-          "path": "coverageSpokeOf[][]",
+          "path": "firstLossReserveOf[][]",
           "slot": "0",
           "offset": 0,
           "bytes": "20",

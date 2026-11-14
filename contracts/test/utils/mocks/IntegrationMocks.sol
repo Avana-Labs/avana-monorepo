@@ -42,7 +42,7 @@ contract IntegRegistryMock {
     mapping(bytes32 => uint32) public latched;
     mapping(bytes32 => uint64) public lastBreachAt;
     mapping(uint256 => uint256) public settlementReserve;
-    mapping(address => mapping(address => address)) public coverageSpokeOf;
+    mapping(address => mapping(address => address)) public firstLossReserveOf;
     address public payoutEscrow;
     address public flashSourceAddr;
     bool public implementationStale;
@@ -159,12 +159,12 @@ contract IntegRegistryMock {
         settlementReserve[marketId] = reserveId;
     }
 
-    function setCoverageSpoke(
+    function setAvanaFirstLossReserve(
         address hub,
         address asset,
         address spoke
     ) external {
-        coverageSpokeOf[hub][asset] = spoke;
+        firstLossReserveOf[hub][asset] = spoke;
     }
 
     function setPayoutEscrow(

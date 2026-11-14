@@ -595,7 +595,7 @@
             "additionalProperties": false
           }
         },
-        "coverageSpokes": {
+        "firstLossReserves": {
           "type": "array",
           "items": {
             "type": "object",
@@ -642,7 +642,7 @@
             "additionalProperties": false
           }
         },
-        "deficitOffsetSpokes": {
+        "daoDeficitOffsets": {
           "type": "array",
           "items": {
             "type": "object",
@@ -792,8 +792,8 @@
         "flashLiquidator",
         "operatorHelpers",
         "lpVaults",
-        "coverageSpokes",
-        "deficitOffsetSpokes",
+        "firstLossReserves",
+        "daoDeficitOffsets",
         "debtOracleImplementation",
         "clOracles",
         "proxyCreationCodeHash"

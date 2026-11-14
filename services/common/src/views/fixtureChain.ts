@@ -16,7 +16,7 @@ export interface FakeSlice {
   readonly addCap: number;
   readonly drawCap: number;
   readonly active?: boolean;
-  /** Set on a DAO deficit offset: the Coverage Spoke its `FIRST_LOSS_LAYER()` answers. */
+  /** Set on a DAO deficit offset: the First-Loss Reserve its `FIRST_LOSS_LAYER()` answers. */
   readonly firstLossLayer?: Address;
 }
 
@@ -30,8 +30,8 @@ export interface FakeAsset {
   readonly liquidity: bigint;
   readonly drawnRateRay: bigint;
   readonly slices: readonly FakeSlice[];
-  /** The registry's Coverage Spoke of (Hub, asset). */
-  readonly coverageSpoke?: Address;
+  /** The registry's First-Loss Reserve of (Hub, asset). */
+  readonly firstLossReserve?: Address;
 }
 
 export interface FakeHub {
@@ -108,8 +108,8 @@ function answer(c: FakeChain, call: ContractCall): unknown {
       }
       case "hubOf":
         return hubOf(args[0]);
-      case "coverageSpokeOf":
-        return c.hubs.find((h) => eq(args[0], h.hub))?.assets.find((a) => eq(args[1], a.underlying))?.coverageSpoke ?? ZERO;
+      case "firstLossReserveOf":
+        return c.hubs.find((h) => eq(args[0], h.hub))?.assets.find((a) => eq(args[1], a.underlying))?.firstLossReserve ?? ZERO;
       case "crossHubLineCap":
         return lines(args[0], args[1]).find((l) => eq(args[2], l.spoke))?.cap ?? 0n;
       case "crossHubLineTotal":
@@ -205,11 +205,11 @@ function answer(c: FakeChain, call: ContractCall): unknown {
       case "getHubAssetExposure": {
         const h = c.hubs.find((x) => eq(args[0], x.hub))!;
         const a = h.assets.find((x) => eq(args[1], x.underlying));
-        if (!a?.coverageSpoke) throw new CallFailed("NoCoverage");
+        if (!a?.firstLossReserve) throw new CallFailed("NoCoverage");
         const cdpOf = (sp: Address) => c.cdpSpokes.find((s) => s.spoke === sp);
-        const isOffset = (x: FakeSlice) => x.firstLossLayer === a.coverageSpoke;
+        const isOffset = (x: FakeSlice) => x.firstLossLayer === a.firstLossReserve;
         const kind = (x: FakeSlice) =>
-          cdpOf(x.spoke) ? 1 : x.spoke === a.coverageSpoke ? 2 : x.spoke === a.feeReceiver ? 3 : isOffset(x) ? 5 : c.lendSpokes.some((l) => l.spoke === x.spoke) ? 0 : 4;
+          cdpOf(x.spoke) ? 1 : x.spoke === a.firstLossReserve ? 2 : x.spoke === a.feeReceiver ? 3 : isOffset(x) ? 5 : c.lendSpokes.some((l) => l.spoke === x.spoke) ? 0 : 4;
         const spokes = a.slices.map((x) => ({
           spoke: x.spoke,
           homeHub: cdpOf(x.spoke)?.homeHub ?? ZERO,
@@ -229,8 +229,8 @@ function answer(c: FakeChain, call: ContractCall): unknown {
         }));
         const offsets = a.slices.filter(isOffset);
         return {
-          coverageSpoke: a.coverageSpoke,
-          fundedBalance: a.slices.find((x) => x.spoke === a.coverageSpoke)?.added ?? 0n,
+          firstLossReserve: a.firstLossReserve,
+          fundedBalance: a.slices.find((x) => x.spoke === a.firstLossReserve)?.added ?? 0n,
           line: 0n,
           coverageBoundHolds: true,
           uncovered: 0n,

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // The snapshot reader on a chain with several Hubs: every row is keyed by its Hub, two Lend Spokes on one Hub and a
 // third on another are read, a Hub-to-Hub credit line is reported, the Hub identities hold per Hub asset, and a Hub
-// the MarketRegistry records after start-up appears with its Lend Spoke, Coverage Spoke and CDP Spoke at the next read
+// the MarketRegistry records after start-up appears with its Lend Spoke, First-Loss Reserve and CDP Spoke at the next read
 // with the same deployment.
 
 import { describe, expect, it } from "vitest";
@@ -167,7 +167,7 @@ describe("a Hub recorded after start-up", () => {
     const c0 = after.hubAssets.find((a) => a.hub === HUB_C)!;
     expect([c0.assetId, c0.underlying, c0.added, c0.owed, c0.priceUsd8, c0.lend.spoke]).toEqual(["0", USDC, six(2_050_000), six(500_000), "100000000", LEND_C]);
     expect(after.slices.filter((s) => s.hub === HUB_C).map((s) => s.kind)).toEqual(["lend", "coverage", "deficitOffset", "feeReceiver", "cdp"]);
-    expect(c0.exposure).toMatchObject({ coverageSpoke: COV_C, fundedBalance: six(100_000), deficitOffset: OFFSET_C, offsetFunded: six(50_000) });
+    expect(c0.exposure).toMatchObject({ firstLossReserve: COV_C, fundedBalance: six(100_000), deficitOffset: OFFSET_C, offsetFunded: six(50_000) });
     expect(after.slices.find((s) => s.spoke === COV_C)!.kind).toBe("coverage");
     expect(reconcileHubAsset(c0, after.slices).balanceHolds).toBe(true);
     expect(after.spokeReserves.filter((r) => r.spoke === CDP_C).map((r) => [r.hub, r.assetId])).toEqual([[HUB_C, "0"]]);
@@ -179,13 +179,13 @@ describe("a Hub recorded after start-up", () => {
     expect(after.hubAssets.filter((a) => a.hub !== HUB_C)).toEqual(before.hubAssets);
   });
 
-  it("does not take the new Hub's Coverage Spoke for a Lend Spoke when the registry has not named it", async () => {
+  it("does not take the new Hub's First-Loss Reserve for a Lend Spoke when the registry has not named it", async () => {
     const later = fixtureHubsChain.later;
-    const chain: FakeChain = { ...later, hubs: later.hubs.map((h) => (h.hub !== HUB_C ? h : { ...h, assets: h.assets.map(({ coverageSpoke: _, ...a }) => a) })) };
+    const chain: FakeChain = { ...later, hubs: later.hubs.map((h) => (h.hub !== HUB_C ? h : { ...h, assets: h.assets.map(({ firstLossReserve: _, ...a }) => a) })) };
     const snap = await read(chain);
     expect(snap.hubs[2]!.lendSpokes).toEqual([LEND_C]);
     expect(kindOf(snap, COV_C)).toBe("other");
-    // Without a Coverage Spoke there is no layer for the offset to stand behind: it is not a Lend Spoke either.
+    // Without a First-Loss Reserve there is no layer for the offset to stand behind: it is not a Lend Spoke either.
     expect(kindOf(snap, OFFSET_C)).toBe("other");
   });
 });

@@ -44,7 +44,9 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         // Hubs logic.
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordHub, (alice, RiskTier.Stable)));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.registerIntegration, (2, alice, bob)));
-        b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setCoverageSpoke, (address(hub), alice, bob)));
+        b[k++] = Body(
+            logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setAvanaFirstLossReserve, (address(hub), alice, bob))
+        );
         b[k++] =
             Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setCrossHubLine, (address(hub), alice, bob, 0)));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setCrossHubLinesEnabled, (true)));

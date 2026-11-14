@@ -116,7 +116,7 @@ CONTRACTS: dict[str, tuple[list[str], list[str], list[str]]] = {
     ),
     "PayoutEscrow": (["18-payout-escrow.md"], ["PayoutEscrow", "payout escrow"], ["PayoutEscrow.spec"]),
     "LPVaultSwap": (["11-lpvaultswap.md"], ["LPVaultSwap"], ["LPVaultSwap.spec"]),
-    "CoverageSpoke": (["14-first-loss-reserve.md"], ["CoverageSpoke", "Coverage Spoke", "Coverage Spokes"], ["CoverageSpoke.spec"]),
+    "AvanaFirstLossReserve": (["14-first-loss-reserve.md"], ["AvanaFirstLossReserve", "First-Loss Reserve", "First-Loss Reserves"], ["AvanaFirstLossReserve.spec"]),
     "Lens": (["17-lens.md"], ["Lens", "LensSpeedModule"], []),
     "FlashLiquidator": (
         ["11-lpvaultswap.md#Flash liquidation helper"],

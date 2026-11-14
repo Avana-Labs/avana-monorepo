@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICoverageSpoke} from "../../coverage/coverage-spoke/ICoverageSpoke.sol";
-import {IDeficitOffsetSpoke} from "../../coverage/deficit-offset-spoke/IDeficitOffsetSpoke.sol";
+import {IDaoDeficitOffset} from "../../coverage/dao-deficit-offset/IDaoDeficitOffset.sol";
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -23,7 +23,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @title LensRisk
 /// @notice Risk views of the Lens: breaker status passed through from the RiskModule, address freezes, the cap-based
 /// tail coverage of each (funding Hub, debt asset) First-Loss Reserve, the uncovered deficit and the exposure of a
-/// (Hub, asset) pair across its Spokes, with both loss layers of the pair: the Coverage Spoke and the DAO deficit
+/// (Hub, asset) pair across its Spokes, with both loss layers of the pair: the First-Loss Reserve and the DAO deficit
 /// offset behind it.
 /// @dev Loops over the MarketRegistry's Spokes, their enabled debt reserves and its markets, and over the Spokes
 /// registered on a Hub asset, all bounded by governance listings.
@@ -85,11 +85,11 @@ abstract contract LensRisk is LensBase, ILensRisk {
         address[] memory spokes = _registry().getSpokes();
         bool[] memory draws = new bool[](spokes.length);
         (uint256 price, uint8 decimals) = _drawCaps(t, spokes, draws);
-        if (t.coverageSpoke == address(0)) revert UnknownDebtAsset(debtAsset);
-        t.funded = ICoverageSpoke(t.coverageSpoke).fundedBalance();
-        t.minimum = ICoverageSpoke(t.coverageSpoke).firstLossReserveMinimum();
+        if (t.firstLossReserve == address(0)) revert UnknownDebtAsset(debtAsset);
+        t.funded = IAvanaFirstLossReserve(t.firstLossReserve).fundedBalance();
+        t.minimum = IAvanaFirstLossReserve(t.firstLossReserve).firstLossReserveMinimum();
         t.fundedUsd = Math.mulDiv(t.funded, price, 10 ** decimals);
-        (t.deficitOffset, t.offsetFunded) = _offset(hub, IAaveV4Hub(hub).getAssetId(debtAsset), t.coverageSpoke);
+        (t.deficitOffset, t.offsetFunded) = _offset(hub, IAaveV4Hub(hub).getAssetId(debtAsset), t.firstLossReserve);
         Tails memory x = _tails(debtAsset, spokes, draws);
         for (uint256 j = 0; j < x.count; ++j) {
             uint256 tail = Math.mulDiv(x.usd[j], x.cf[j], 1e4, Math.Rounding.Ceil);
@@ -118,7 +118,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         _unlocked();
         (v.blockNumber, v.timestamp, v.hub, v.asset) = (block.number, block.timestamp, hub, asset);
         uint256 assetId;
-        (assetId, v.uncovered, v.coverageSpoke, v.fundedBalance, v.deficitOffset, v.offsetFunded) =
+        (assetId, v.uncovered, v.firstLossReserve, v.fundedBalance, v.deficitOffset, v.offsetFunded) =
             _exposure(hub, asset);
         // forge-lint: disable-next-line(unused-return)
         (v.line,) = _registry().creditLine(hub, asset);
@@ -136,7 +136,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
 
     // ------------------------------------------------------------------------------------------------------ internal
 
-    /// @dev Marks the Spokes with an enabled reserve of `t.debtAsset` funded by `t.hub`, sets the Coverage Spoke from
+    /// @dev Marks the Spokes with an enabled reserve of `t.debtAsset` funded by `t.hub`, sets the First-Loss Reserve from
     /// the first such reserve and `drawCapUsd`, and returns the asset's served price and decimals.
     /// @custom:spec REQ-LENS-034
     function _drawCaps(
@@ -152,8 +152,8 @@ abstract contract LensRisk is LensBase, ILensRisk {
                 DebtReserveDef memory def = _registry().getDebtReserve(spokes[i], ids[k]);
                 if (def.asset != t.debtAsset || def.fundingHub != t.hub) continue;
                 draws[i] = true;
-                if (t.coverageSpoke == address(0)) {
-                    t.coverageSpoke = def.coverageSpoke;
+                if (t.firstLossReserve == address(0)) {
+                    t.firstLossReserve = def.firstLossReserve;
                     price = IAaveV4Oracle(IAaveV4Spoke(spokes[i]).ORACLE()).getReservePrice(ids[k]);
                     decimals = def.decimals;
                 }
@@ -234,7 +234,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         return false;
     }
 
-    /// @dev `_deficit` with the pair's Coverage Spoke and its DAO deficit offset named.
+    /// @dev `_deficit` with the pair's First-Loss Reserve and its DAO deficit offset named.
     function _exposure(
         address hub,
         address asset
@@ -244,18 +244,18 @@ abstract contract LensRisk is LensBase, ILensRisk {
         returns (
             uint256 assetId,
             uint256 uncovered,
-            address coverageSpoke,
+            address firstLossReserve,
             uint256 funded,
             address offset,
             uint256 offsetFunded
         )
     {
         (assetId, uncovered, funded, offset, offsetFunded) = _deficit(hub, asset);
-        coverageSpoke = _registry().coverageSpokeOf(hub, asset);
+        firstLossReserve = _registry().firstLossReserveOf(hub, asset);
     }
 
     /// @dev The Hub asset of `asset`, the uncovered deficit `max(0, Σ ⌈deficitRay / 1e27⌉ − funded − offsetFunded)` over
-    /// every Spoke registered on it, the funded balance of `coverageSpokeOf(hub, asset)` (0 when none is set), and the
+    /// every Spoke registered on it, the funded balance of `firstLossReserveOf(hub, asset)` (0 when none is set), and the
     /// pair's DAO deficit offset with its added assets (`_offset`).
     /// @custom:spec REQ-LENS-042, REQ-FLR-046
     function _deficit(
@@ -269,27 +269,27 @@ abstract contract LensRisk is LensBase, ILensRisk {
             address s = IAaveV4Hub(hub).getSpokeAddress(assetId, i);
             deficit += Math.ceilDiv(IAaveV4Hub(hub).getSpokeDeficitRay(assetId, s), 1e27);
         }
-        address coverageSpoke = _registry().coverageSpokeOf(hub, asset);
-        if (coverageSpoke != address(0)) funded = ICoverageSpoke(coverageSpoke).fundedBalance();
-        (offset, offsetFunded) = _offset(hub, assetId, coverageSpoke);
+        address firstLossReserve = _registry().firstLossReserveOf(hub, asset);
+        if (firstLossReserve != address(0)) funded = IAvanaFirstLossReserve(firstLossReserve).fundedBalance();
+        (offset, offsetFunded) = _offset(hub, assetId, firstLossReserve);
         uint256 layers = funded + offsetFunded;
         uncovered = deficit > layers ? deficit - layers : 0;
     }
 
     /// @dev The DAO deficit offset of a pair: every Spoke listed on the Hub asset whose `FIRST_LOSS_LAYER()` returns
-    /// `coverageSpoke`, summing their added assets; `offset` is the first in the Hub's order (0 when none, or when the
-    /// pair has no Coverage Spoke).
+    /// `firstLossReserve`, summing their added assets; `offset` is the first in the Hub's order (0 when none, or when the
+    /// pair has no First-Loss Reserve).
     /// @custom:spec REQ-LENS-042, REQ-FLR-046
     function _offset(
         address hub,
         uint256 assetId,
-        address coverageSpoke
+        address firstLossReserve
     ) internal view returns (address offset, uint256 offsetFunded) {
-        if (coverageSpoke == address(0)) return (address(0), 0);
+        if (firstLossReserve == address(0)) return (address(0), 0);
         uint256 count = IAaveV4Hub(hub).getSpokeCount(assetId);
         for (uint256 i = 0; i < count; ++i) {
             address s = IAaveV4Hub(hub).getSpokeAddress(assetId, i);
-            if (!_standsBehind(s, coverageSpoke)) continue;
+            if (!_standsBehind(s, firstLossReserve)) continue;
             if (offset == address(0)) offset = s;
             offsetFunded += IAaveV4Hub(hub).getSpokeAddedAssets(assetId, s);
         }
@@ -303,7 +303,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         address spoke,
         address layer
     ) internal view returns (bool matches) {
-        bytes4 selector = IDeficitOffsetSpoke.FIRST_LOSS_LAYER.selector;
+        bytes4 selector = IDaoDeficitOffset.FIRST_LOSS_LAYER.selector;
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             let p := mload(0x40)
@@ -323,7 +323,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         // forge-lint: disable-next-line(unused-return)
         (address underlying,) = h.getAssetUnderlyingAndDecimals(assetId);
         address[3] memory roles = [
-            _registry().coverageSpokeOf(hub, underlying),
+            _registry().firstLossReserveOf(hub, underlying),
             h.getAssetConfig(assetId).feeReceiver,
             _registry().marketOfHubAsset(hub, assetId) == 0 ? address(0) : address(1)
         ];
@@ -335,8 +335,8 @@ abstract contract LensRisk is LensBase, ILensRisk {
     }
 
     /// @dev One Spoke's slice: configuration, owed split, deficit (rounded up), added assets and shares, drawn and
-    /// premium shares, and its kind from `roles` (Coverage Spoke, fee receiver, and a non-zero third entry for a
-    /// market's vault-token asset); a Spoke standing behind the Coverage Spoke is the DAO deficit offset.
+    /// premium shares, and its kind from `roles` (First-Loss Reserve, fee receiver, and a non-zero third entry for a
+    /// market's vault-token asset); a Spoke standing behind the First-Loss Reserve is the DAO deficit offset.
     /// @custom:spec REQ-LENS-059, REQ-HUB-015, REQ-FLR-046
     function _slice(
         address hub,

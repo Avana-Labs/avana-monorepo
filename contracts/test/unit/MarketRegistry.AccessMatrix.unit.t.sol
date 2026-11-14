@@ -58,7 +58,9 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         w = new Write[](41);
         w[0] = Write("recordHub", abi.encodeCall(registry.recordHub, (alice, RiskTier.Stable)), ADMIN);
         w[1] = Write("registerIntegration", abi.encodeCall(registry.registerIntegration, (2, alice, bob)), ADMIN);
-        w[2] = Write("setCoverageSpoke", abi.encodeCall(registry.setCoverageSpoke, (h, alice, bob)), ADMIN);
+        w[2] = Write(
+            "setAvanaFirstLossReserve", abi.encodeCall(registry.setAvanaFirstLossReserve, (h, alice, bob)), ADMIN
+        );
         w[3] = Write("setCrossHubLine", abi.encodeCall(registry.setCrossHubLine, (h, address(gho), sp, 0)), ADMIN);
         w[4] = Write("setCrossHubLinesEnabled", abi.encodeCall(registry.setCrossHubLinesEnabled, (true)), ADMIN);
         w[5] = Write("setFlashSource", abi.encodeCall(registry.setFlashSource, (address(flash))), ADMIN);

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title IParameterStoreCoverage
-/// @notice The chain's first-loss coverage ratio, the share of drawn capacity the Avana Umbrella (Coverage Spoke) of
+/// @notice The chain's first-loss coverage ratio, the share of drawn capacity the Avana Umbrella (First-Loss Reserve) of
 /// each (Hub, debt asset) must hold.
 /// @dev The MarketRegistry reads `coverageRatioBps()` for the coverage rule `fundedBalance × 10⁴ ≥ coverageRatioBps ×
 /// Σ drawCap × 10^dec` (`DEF-019`) at `enableDebtReserve`, `recordCreditLine` and every recorded `drawCap` raise.

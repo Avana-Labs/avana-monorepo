@@ -320,8 +320,9 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
                 || (mo != 0 && l.markets[mo].status != MarketStatus.Cancelled)
         ) return true;
         if (
-            l.hubTier[a] != RiskTier.None || l.spokes[a].approved || l.knownCoverageSpoke[a] || l.knownPriceSource[a]
-                || l.isDebtAsset[a] || l.integrationIdOf[a] != 0 || l.isPricing[a] || l.knownRoute[a]
+            l.hubTier[a] != RiskTier.None || l.spokes[a].approved || l.knownAvanaFirstLossReserve[a]
+                || l.knownPriceSource[a] || l.isDebtAsset[a] || l.integrationIdOf[a] != 0 || l.isPricing[a]
+                || l.knownRoute[a]
         ) return true;
         return IAaveAdapterViews(_AAVE_ADAPTER).walletOf(a) != address(0);
     }

@@ -100,7 +100,7 @@ contracts/
 │   │   └── lens/                   ILens and its pieces, LensConstants
 │   ├── types/                      structs and enums shared by several contracts, one per file
 │   └── interfaces/external/
-│       ├── aave/         Aave V4 Spoke (events and extSload in their own files), Hub, AaveOracle, price-feed interface, Coverage Spoke funding; Aave V3 Pool, flash-loan receiver, ACLManager
+│       ├── aave/         Aave V4 Spoke (events and extSload in their own files), Hub, AaveOracle, price-feed interface, First-Loss Reserve funding; Aave V3 Pool, flash-loan receiver, ACLManager
 │       ├── uniswap/      NonfungiblePositionManager, UniswapV3Factory, UniswapV3Pool, swap callback
 │       ├── aerodrome/    Slipstream NonfungiblePositionManager, CLFactory, CLPool, CLGauge
 │       ├── chainlink/    AggregatorV3, aggregator proxy, offchain aggregator bounds, sequencer-uptime feed
@@ -136,13 +136,13 @@ GHO and the other debt assets are reached through OpenZeppelin's `IERC20`. Flash
 | `flash/` | `IFlashSource` implementation over the Aave V3 Pool | Immutable; replaced by `setFlashSource` on LPVaultSwap | [2.11](../spec/02-contracts/11-lpvaultswap.md) | `REQ-FLASH-…`, `REQ-ARCH-210` |
 | `governance/timelock/`, `governance/roles/` | AvanaTimelock; AvanaRoles role IDs | Immutable | [2.15](../spec/02-contracts/15-governance-and-timelock.md), [1.4](../spec/01-architecture/04-permissions-and-roles.md) | `REQ-ACCESS-…`, `SPEC-GOV-…`, `REQ-ROLE-…` |
 | `lock/lock/` | Lock | Immutable | [2.16](../spec/02-contracts/16-lock.md) | `REQ-LOCK-…` |
-| `coverage/coverage-spoke/` | Avana Umbrella (Coverage Spoke), one per covered `(Hub, debt asset)` | Immutable; controlled by the Aave DAO through its AccessManager | [2.14](../spec/02-contracts/14-first-loss-reserve.md) | `REQ-FLR-…`, `SPEC-FLR-…` |
+| `coverage/first-loss-reserve/` | Avana Umbrella (First-Loss Reserve), one per covered `(Hub, debt asset)` | Immutable; controlled by the Aave DAO through its AccessManager | [2.14](../spec/02-contracts/14-first-loss-reserve.md) | `REQ-FLR-…`, `SPEC-FLR-…` |
 | `lens/lens/` | Lens | Immutable; a new Lens is a new deployment | [2.17](../spec/02-contracts/17-lens.md) | `REQ-LENS-…` |
 | `interfaces/external/` | Aave V4, Uniswap v3, Chainlink, GHO, Sky, Curve | External | [4.3](../spec/04-security/03-external-dependencies.md), [2.1](../spec/02-contracts/01-avana-hub-and-spokes.md) | `EXT-…` (in NatSpec) |
 
 The SettlementBudget ([2.13](../spec/02-contracts/13-settlement-budget.md)) is removed (`Q-397`): the liquidation caller pays any rounding gap, so it has no folder. Debt buy routes are removed too (`Q-379`): LPVaultSwap flash-borrows the debt asset itself.
 
-The First-Loss Reserve ([2.14](../spec/02-contracts/14-first-loss-reserve.md)) is a set of Coverage Spokes (Avana Umbrella), one per covered `(Hub, asset)`. Each is a supply-only Aave V4 Spoke that Avana writes in `coverage/coverage-spoke/` and the Aave DAO controls through its own AccessManager (`COVERAGE_ROLE`, `RESERVE_ADMIN_ROLE`); no Avana contract, multisig, timelock or keeper holds a role on it. LPVaultSwap's `settlePending` funds the Coverage Spoke of the market's (funding Hub, debt asset) with the value recovered from pending settlement, and the RiskModule and the Lens read its balance and minimum.
+The First-Loss Reserve ([2.14](../spec/02-contracts/14-first-loss-reserve.md)) is a set of First-Loss Reserves (Avana Umbrella), one per covered `(Hub, asset)`. Each is a supply-only Aave V4 Spoke that Avana writes in `coverage/first-loss-reserve/` and the Aave DAO controls through its own AccessManager (`COVERAGE_ROLE`, `RESERVE_ADMIN_ROLE`); no Avana contract, multisig, timelock or keeper holds a role on it. LPVaultSwap's `settlePending` funds the First-Loss Reserve of the market's (funding Hub, debt asset) with the value recovered from pending settlement, and the RiskModule and the Lens read its balance and minimum.
 
 ### File layout and size limits
 

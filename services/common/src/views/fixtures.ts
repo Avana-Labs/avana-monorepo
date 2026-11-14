@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Test data only. The rows below: one Ethereum Hub asset (USDC, 6 decimals) with a Lend Spoke, a Coverage Spoke, a fee
+// Test data only. The rows below: one Ethereum Hub asset (USDC, 6 decimals) with a Lend Spoke, a First-Loss Reserve, a fee
 // receiver and two CDP Spokes, U and X, at one block; two markets on U; and the debt each market backs. The numbers
 // are the worked example of services/README.md ("Scopes"): 10,000,000 added, 3,000,000 owed (U 1,000,000 and X
 // 2,000,000), 7,000,000 liquidity. U's slice rounds its owed amount up by one base unit, as the Hub does per Spoke.
@@ -47,7 +47,7 @@ export const fixtureHubAsset: HubAssetRow = {
   lend: { spoke: FIXTURE_LEND, reserveId: "0", paused: false, frozen: false },
   lendReserves: [{ spoke: FIXTURE_LEND, reserveId: "0", paused: false, frozen: false }],
   exposure: {
-    coverageSpoke: FIXTURE_COVERAGE,
+    firstLossReserve: FIXTURE_COVERAGE,
     fundedBalance: USDC(200_000),
     line: USDC(7_000_000),
     coverageBoundHolds: true,

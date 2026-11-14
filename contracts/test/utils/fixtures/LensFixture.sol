@@ -199,8 +199,8 @@ abstract contract LensFixture is CollateralizationFixture {
         );
         reg.setSettlementReserve(MARKET_ID, debtReserveId);
         reg.setFlashSource(address(flash));
-        reg.setCoverageSpoke(aave.hub, address(debt), address(ghoCov));
-        reg.setCoverageSpoke(aave.hub, address(usdc), address(usdcCov));
+        reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(ghoCov));
+        reg.setAvanaFirstLossReserve(aave.hub, address(usdc), address(usdcCov));
         reg.setCreditLine(aave.hub, address(debt), 2_000_000, 1_000_000, 0, 0);
         for (uint8 k = 0; k < 2; ++k) {
             reg.setRoute(MARKET_ID, address(usdc), address(debt), k, makeAddr("routeUsdcGho"), true);
@@ -236,7 +236,7 @@ abstract contract LensFixture is CollateralizationFixture {
         LensCoverageMock coverage
     ) internal view returns (DebtReserveDef memory d) {
         (d.reserveId, d.asset, d.decimals, d.fundingHub, d.hubAssetId) = (reserveId, asset, decimals, aave.hub, assetId);
-        (d.priceSource, d.fixedPrice, d.coverageSpoke) = (source, fixedPrice, address(coverage));
+        (d.priceSource, d.fixedPrice, d.firstLossReserve) = (source, fixedPrice, address(coverage));
     }
 
     // ─── Accounts ───

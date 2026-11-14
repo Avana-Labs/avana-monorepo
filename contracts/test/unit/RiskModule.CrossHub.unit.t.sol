@@ -7,7 +7,7 @@ import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMark
 import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
 import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
-import {RegistryCoverageSpokeMock} from "../utils/mocks/MarketRegistryMocks.sol";
+import {RegistryAvanaFirstLossReserveMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
 /// @title RiskModuleCrossHubUnitTest
 /// @notice `preBorrowCheck` of a debt reserve funded by another Hub than the market's: the cross-Hub switch and the
@@ -67,9 +67,9 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 
-    /// @dev DAI's Coverage Spoke, as the registry records it.
-    function _daiCoverage() internal view returns (RegistryCoverageSpokeMock) {
-        return RegistryCoverageSpokeMock(registry.getDebtReserve(address(spoke), DAI_RESERVE).coverageSpoke);
+    /// @dev DAI's First-Loss Reserve, as the registry records it.
+    function _daiCoverage() internal view returns (RegistryAvanaFirstLossReserveMock) {
+        return RegistryAvanaFirstLossReserveMock(registry.getDebtReserve(address(spoke), DAI_RESERVE).firstLossReserve);
     }
 
     /// @dev `⌈line × 10^18 × coverageRatioBps / 10^4⌉` for the 1,000,000 DAI line at 2,000 bps.

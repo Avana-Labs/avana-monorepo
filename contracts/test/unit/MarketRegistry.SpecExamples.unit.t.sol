@@ -15,7 +15,7 @@ import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
-import {RegistryCoverageSpokeMock, RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
+import {RegistryAvanaFirstLossReserveMock, RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
 /// @notice The worked examples of the MarketRegistry page, replayed on the real registry: the live-market count of
 /// REQ-MREG-031 and the relisting of a closed market's pool and shape on a second Stable Spoke of REQ-CONFIG-007.
@@ -103,10 +103,10 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         IAaveV4Spoke.DynamicReserveConfig memory d;
         spoke2.setReserve(0, r, c, d);
         oracle2.setSource(0, address(ghoSource));
-        RegistryCoverageSpokeMock cs2 = new RegistryCoverageSpokeMock(address(hub2), address(gho), 0);
+        RegistryAvanaFirstLossReserveMock cs2 = new RegistryAvanaFirstLossReserveMock(address(hub2), address(gho), 0);
         cs2.setFunded(4e24, false);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(address(hub2), address(gho), address(cs2));
+        registry.setAvanaFirstLossReserve(address(hub2), address(gho), address(cs2));
         registry.recordCreditLine(address(hub2), address(gho), 20_000_000);
         registry.enableDebtReserve(
             address(spoke2),

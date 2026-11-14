@@ -194,23 +194,23 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
   }
   const v3Pool = cfgAddr("aave.v3Pool");
 
-  // Coverage Spokes deployed by 06_AaveDeploymentPayload on test networks: "CoverageSpoke.<hub label>.<symbol>".
-  const coverageSpokes = [];
+  // First-Loss Reserves deployed by 06_AaveDeploymentPayload on test networks: "AvanaFirstLossReserve.<hub label>.<symbol>".
+  const firstLossReserves = [];
   if (existsSync(join(outDir, "coverage.json"))) {
     const tokens = (world?.tokens as Record<string, string>) ?? {};
     for (const [name, a] of Object.entries(outputs("coverage") as Record<string, string>)) {
       const [, hubLabel, symbol] = name.split(".");
       const hub = getAddress(((aaveOut?.hubs as Record<string, { proxy: string }>) ?? {})[hubLabel!]!.proxy);
-      coverageSpokes.push({ ...(await imm(a, "CoverageSpoke.sol:CoverageSpoke")), asset: getAddress(tokens[symbol!]!), hub });
+      firstLossReserves.push({ ...(await imm(a, "AvanaFirstLossReserve.sol:AvanaFirstLossReserve")), asset: getAddress(tokens[symbol!]!), hub });
     }
   }
-  const deficitOffsetSpokes = [];
+  const daoDeficitOffsets = [];
   if (existsSync(join(outDir, "deficit-offsets.json"))) {
     const tokens = (world?.tokens as Record<string, string>) ?? {};
     for (const [name, a] of Object.entries(outputs("deficit-offsets") as Record<string, string>)) {
       const [, hubLabel, symbol] = name.split(".");
       const hub = getAddress(((aaveOut?.hubs as Record<string, { proxy: string }>) ?? {})[hubLabel!]!.proxy);
-      deficitOffsetSpokes.push({ ...(await imm(a, "DeficitOffsetSpoke.sol:DeficitOffsetSpoke")), asset: getAddress(tokens[symbol!]!), hub });
+      daoDeficitOffsets.push({ ...(await imm(a, "DaoDeficitOffset.sol:DaoDeficitOffset")), asset: getAddress(tokens[symbol!]!), hub });
     }
   }
   const { markets, debtReserves } = await listedMarkets(client, outDir, config, outputs, imm);
@@ -294,8 +294,8 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
           kind: kinds[i]!,
         })),
       ),
-      coverageSpokes,
-      deficitOffsetSpokes,
+      firstLossReserves,
+      daoDeficitOffsets,
       debtOracleImplementation: await imm(avana.debtOracleImplementation, art("DebtOracle")),
       clOracles,
       proxyCreationCodeHash,

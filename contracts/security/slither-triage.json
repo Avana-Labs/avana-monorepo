@@ -147,11 +147,11 @@
       "function": "VaultTokenFactory._deployToken(VaultTokenBindings)"
     },
     {
-      "fingerprint": "8459d4ca08f0a108",
+      "fingerprint": "556c340f1e16b12a",
       "check": "timestamp",
-      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
-      "function": "CoverageSpoke.executeWithdrawal(uint256)",
-      "reason": "The withdrawal delay is defined on block.timestamp (SPEC-FLR-003: executable iff block.timestamp >= executableAt = requestTime + RESERVE_WITHDRAWAL_DELAY, 14 days). A validator's few-second timestamp drift cannot matter against a 1,209,600-second delay; the comparison is the specified rule. Covered by TEST-288 withdrawalWaitsFourteenDays (one second before and at executableAt) and CoverageSpokeProperties.execute.",
+      "file": "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol",
+      "function": "AvanaFirstLossReserve.executeWithdrawal(uint256)",
+      "reason": "The withdrawal delay is defined on block.timestamp (SPEC-FLR-003: executable iff block.timestamp >= executableAt = requestTime + RESERVE_WITHDRAWAL_DELAY, 14 days). A validator's few-second timestamp drift cannot matter against a 1,209,600-second delay; the comparison is the specified rule. Covered by TEST-288 withdrawalWaitsFourteenDays (one second before and at executableAt) and AvanaFirstLossReserveProperties.execute.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -1925,7 +1925,7 @@
       "check": "calls-loop",
       "file": "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol",
       "function": "ParameterStoreAdminRiskLogic._isReserveContract(IMarketRegistry,address)",
-      "reason": "MarketRegistry getSpokes, getDebtReserveIds and getDebtReserve views over every CDP Spoke's debt reserves when setFeeRecipient or initialize checks the recipient against each reserve's Coverage Spoke and price source (REQ-CONFIG-056). STATICCALL to the Avana registry only, at execution of a governance setter; the loop length is the registry's size, which only timelock operations grow, and a reverting callee makes the setter revert (fail closed). Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract).",
+      "reason": "MarketRegistry getSpokes, getDebtReserveIds and getDebtReserve views over every CDP Spoke's debt reserves when setFeeRecipient or initialize checks the recipient against each reserve's First-Loss Reserve and price source (REQ-CONFIG-056). STATICCALL to the Avana registry only, at execution of a governance setter; the loop length is the registry's size, which only timelock operations grow, and a reverting callee makes the setter revert (fail closed). Covered by TEST-062 (feeRecipientRefusesEveryAvanaContract).",
       "approval": "approved by pattern",
       "review": "Pattern: bounded loops (view calls only; lists that only timelock listings grow), as the ParameterStoreRisk._scanReserves entries."
     },
@@ -1965,11 +1965,11 @@
       }
     },
     {
-      "fingerprint": "c4f5145c3cf468f2",
+      "fingerprint": "19572b54a898e1cc",
       "check": "calls-loop",
-      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
-      "function": "CoverageSpoke._requireNoAllowlistedDeficit()",
-      "reason": "View calls of the instance's own immutable Hub (getSpokeAddress, getSpokeDeficitRay) per Spoke listed on the asset, stopping at the first allowlisted Spoke with a deficit; bounded by the Spokes the Aave DAO lists on the asset, STATICCALL only, and a reverting Hub only blocks the withdrawal, which stays Pending (REQ-FLR-026, REQ-FLR-045). Covered by TEST-293 (withdrawalWaitsForCoverage, allowlistRemovalLiftsTheBlock) and the CoverageSpoke Echidna execute assertion.",
+      "file": "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol",
+      "function": "AvanaFirstLossReserve._requireNoAllowlistedDeficit()",
+      "reason": "View calls of the instance's own immutable Hub (getSpokeAddress, getSpokeDeficitRay) per Spoke listed on the asset, stopping at the first allowlisted Spoke with a deficit; bounded by the Spokes the Aave DAO lists on the asset, STATICCALL only, and a reverting Hub only blocks the withdrawal, which stays Pending (REQ-FLR-026, REQ-FLR-045). Covered by TEST-293 (withdrawalWaitsForCoverage, allowlistRemovalLiftsTheBlock) and the AvanaFirstLossReserve Echidna execute assertion.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (view calls only)."
     },
@@ -1996,7 +1996,7 @@
       "check": "reentrancy-balance",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic._fundCoverage(LPVaultSwapPendingLogic.Pend)",
-      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the Coverage Spoke cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the Coverage Spoke funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
+      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the First-Loss Reserve cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the First-Loss Reserve funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
       "approval": "pending (Josue)"
     },
     {
@@ -2004,7 +2004,7 @@
       "check": "reentrancy-balance",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic.settlePending(uint256,uint256)",
-      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the Coverage Spoke cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the Coverage Spoke funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
+      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the First-Loss Reserve cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the First-Loss Reserve funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
       "approval": "pending (Josue)"
     },
     {
@@ -2012,7 +2012,7 @@
       "check": "reentrancy-balance",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._seize(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
-      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the Coverage Spoke cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the Coverage Spoke funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
+      "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the First-Loss Reserve cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the First-Loss Reserve funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
       "approval": "pending (Josue)"
     },
     {

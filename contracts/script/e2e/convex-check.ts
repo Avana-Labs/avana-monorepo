@@ -55,7 +55,7 @@ async function main() {
     hubs: manifest.aave.hubs.map((h: Json) => ({ address: h.address, label: h.label, tier: h.tier })),
     lendSpokes: manifest.aave.lendSpokes.map((s: Json) => s.address),
     cdpSpokes: manifest.aave.borrowSpokes.map((s: Json) => s.address),
-    coverageSpokes: manifest.avana.coverageSpokes.map((c: Json) => ({ address: c.address, asset: c.asset, hub: c.hub })),
+    firstLossReserves: manifest.avana.firstLossReserves.map((c: Json) => ({ address: c.address, asset: c.asset, hub: c.hub })),
     marketRegistry: manifest.avana.marketRegistry.address,
     timelock: manifest.avana.timelock.address,
     explorerUrl: "http://127.0.0.1:8545",

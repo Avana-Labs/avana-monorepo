@@ -11,7 +11,7 @@ import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryDebtOracleMock,
     RegistryLPOracleMock,
     RegistryTokenMock
@@ -26,14 +26,14 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
 
     RegistryTokenMock internal dai;
     RegistryDebtOracleMock internal daiOracle;
-    RegistryCoverageSpokeMock internal daiCoverage;
+    RegistryAvanaFirstLossReserveMock internal daiCoverage;
 
     function setUp() public {
         _setUpWorld();
         dai = new RegistryTokenMock(18);
         _listToken(address(dai), "dai");
         daiOracle = new RegistryDebtOracleMock(address(dai), address(registry), address(ps));
-        daiCoverage = new RegistryCoverageSpokeMock(address(hub), address(dai), DAI_ASSET);
+        daiCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), DAI_ASSET);
         daiCoverage.setFunded(1e30, false);
         hub.setAsset(address(dai), DAI_ASSET);
         hub.setSpokeConfig(DAI_ASSET, address(spoke), 0, 1_000_000);
@@ -46,7 +46,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         aaveOracle.setSource(DAI_RESERVE, address(daiOracle));
         ps.setStressRise(address(dai), 500);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(dai), address(daiCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
         registry.recordCreditLine(address(hub), address(dai), 2_000_000);
         vm.stopPrank();
     }
@@ -60,7 +60,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
             hubAssetId: DAI_ASSET,
             priceSource: address(daiOracle),
             fixedPrice: false,
-            coverageSpoke: address(daiCoverage),
+            firstLossReserve: address(daiCoverage),
             crossHub: false,
             approved: false
         });
@@ -137,7 +137,8 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
     // USDT slots into USDC are required.
     function test_TEST_054_poolTokenThatIsTheDebtAssetNeedsNoRoute() public {
         RegistryDebtOracleMock usdcOracle = new RegistryDebtOracleMock(address(usdc), address(registry), address(ps));
-        RegistryCoverageSpokeMock usdcCoverage = new RegistryCoverageSpokeMock(address(hub), address(usdc), 2);
+        RegistryAvanaFirstLossReserveMock usdcCoverage =
+            new RegistryAvanaFirstLossReserveMock(address(hub), address(usdc), 2);
         usdcCoverage.setFunded(1e30, false);
         hub.setAsset(address(usdc), 2);
         hub.setSpokeConfig(2, address(spoke), 0, 1000);
@@ -150,7 +151,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         aaveOracle.setSource(5, address(usdcOracle));
         ps.setStressRise(address(usdc), 500);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(usdc), address(usdcCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
         registry.recordCreditLine(address(hub), address(usdc), 1_000_000);
         registry.enableDebtReserve(
             address(spoke),

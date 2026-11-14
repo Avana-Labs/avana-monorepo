@@ -113,7 +113,7 @@ abstract contract DeployBase is DeployInputs {
     }
 
     /// @notice Whether `aavePayload.debtAssets[i]` is only lent (`lendOnly`): on the Lend Spoke, never borrowed by a CDP
-    /// Spoke, so it has no Coverage Spoke or deficit offset either.
+    /// Spoke, so it has no First-Loss Reserve or deficit offset either.
     function _assetLendOnly(
         string memory c,
         uint256 i

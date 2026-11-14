@@ -46,7 +46,7 @@ export function contractTable(m: ReleaseManifest, explorer: string | undefined =
   imm("Avana", "FlashLiquidator", a.flashLiquidator);
   a.operatorHelpers.forEach((h, i) => imm("Avana", `OperatorFlashLiquidator ${i} (signer ${h.signer})`, h));
   a.lpVaults.forEach((v) => imm("Avana", `LPVault ${v.integrationId} (${v.kind})`, v));
-  a.coverageSpokes.forEach((c) => imm("Avana", `Coverage Spoke (${c.asset})`, c));
+  a.firstLossReserves.forEach((c) => imm("Avana", `First-Loss Reserve (${c.asset})`, c));
   imm("Avana", "Lens", a.lens);
   a.lensModules.forEach((x, i) => imm("Avana", `Lens module ${i}`, x));
   imm("Avana", "LensAaveSizing", a.lensAaveSizing);

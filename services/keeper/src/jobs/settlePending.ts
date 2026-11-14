@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // Pending settlement: when Collateralization holds pending seized units for a market (SeizureReconciled,
 // getPending), call LPVaultSwap.settlePending(marketId, settlementReserve(marketId)) once the market's price passes
-// the liquidation gates. It pays the caller nothing; the proceeds fund the market's Coverage Spoke. It is sent from
+// the liquidation gates. It pays the caller nothing; the proceeds fund the market's First-Loss Reserve. It is sent from
 // the signer directly: no funding is needed, so no helper is involved.
 
 import { encodeFunctionData } from "viem";

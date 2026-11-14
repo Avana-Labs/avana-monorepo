@@ -226,7 +226,7 @@ computed('MATH-AR-51b', 'SPEC-HUB-003 example (creditLineGho 2,000,000)',
           ('largest borrow that passes', 96_525, 2_000_000 - (1_900_000 + 3_000 + 475))])
 
 # MATH-AR-51c..e  SPEC-HUB-003 with public lending (Q-407): supply and borrow are bounded separately.
-# sup = Lend Spoke supply (DAO bootstrap + public lenders) plus Coverage Spoke supply, drw = drawn, liq = idle.
+# sup = Lend Spoke supply (DAO bootstrap + public lenders) plus First-Loss Reserve supply, drw = drawn, liq = idle.
 sup, drw, liq, a51, w51 = Ints('supplied drawn liquidity amount withdrawal')
 hub = [sup >= 0, drw >= 0, liq >= 0, liq + drw == sup]
 # MATH-AR-51 verifies: SPEC-HUB-003, REQ-HUB-017, REQ-HUB-019, REQ-ARCH-211
@@ -236,7 +236,7 @@ prove('MATH-AR-51d', 'a withdrawal admitted only when amount <= idle liquidity k
       hub + [w51 > 0, w51 <= liq], drw <= sup - w51)
 # MATH-AR-51e (the residual beyond the loss layers, Q-410) is in ar15_loss_layers.py.
 computed('MATH-AR-51f', 'REQ-ARCH-211 / TEST-297 example: idle liquidity a lender can withdraw now',
-         [('supplied: 1,000,000 DAO + 500,000 public + 300,000 Coverage Spoke', 1_800_000, 1_000_000 + 500_000 + 300_000),
+         [('supplied: 1,000,000 DAO + 500,000 public + 300,000 First-Loss Reserve', 1_800_000, 1_000_000 + 500_000 + 300_000),
           ('idle = supplied - drawn 1,600,000', 200_000, 1_800_000 - 1_600_000),
           ('the public lender withdraws at most min(500,000, idle)', 200_000, min(500_000, 1_800_000 - 1_600_000))])
 

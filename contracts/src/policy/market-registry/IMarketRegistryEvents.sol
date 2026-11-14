@@ -31,7 +31,7 @@ interface IMarketRegistryEvents {
     /// @param fundingHub Hub that funds the reserve.
     /// @param hubAssetId Hub asset identifier.
     /// @param priceSource AaveOracle price source.
-    /// @param coverageSpoke Coverage Spoke of (fundingHub, asset).
+    /// @param firstLossReserve First-Loss Reserve of (fundingHub, asset).
     /// @custom:spec REQ-MREG-006
     event DebtReserveApproved(
         address indexed spoke,
@@ -40,7 +40,7 @@ interface IMarketRegistryEvents {
         address fundingHub,
         uint256 hubAssetId,
         address priceSource,
-        address coverageSpoke
+        address firstLossReserve
     );
 
     /// @notice Emitted by `removeDebtReserve`.

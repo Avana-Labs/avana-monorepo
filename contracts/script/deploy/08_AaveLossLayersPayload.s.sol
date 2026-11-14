@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICoverageSpoke} from "../../src/coverage/coverage-spoke/ICoverageSpoke.sol";
-import {ICoverageSpokeAdmin} from "../../src/coverage/coverage-spoke/ICoverageSpokeAdmin.sol";
+import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {IAvanaFirstLossReserveAdmin} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveAdmin.sol";
 import {
     AFlags,
     ARoleMembership,
@@ -47,7 +47,7 @@ interface ILayerFunding {
 
 /// @title AaveLossLayersPayload
 /// @notice The Aave DAO's loss-layer AIP (2.14, `REQ-FLR-007`, `REQ-FLR-046`, `REQ-FLR-047`): the DAO-side deployment of
-/// one `DeficitOffsetSpoke` behind each Avana Umbrella (Coverage Spoke, deployed by Avana in `07_DeployCoverageSpokes`
+/// one `DaoDeficitOffset` behind each Avana Umbrella (First-Loss Reserve, deployed by Avana in `07_DeployAvanaFirstLossReserves`
 /// and named here by address), then one Aave V4 payload on the config engine that
 /// - grants `HUB_DEFICIT_ELIMINATOR_ROLE` to both layers, labels the loss-layer roles and maps `coverDeficit` to
 ///   `COVERAGE_ROLE` (the Emergency Guardian and the Aave Protocol Guardian) and the reserve administration to
@@ -151,15 +151,15 @@ contract AaveLossLayersPayload is AavePayloads {
         string memory ak = string.concat(".aavePayload.debtAssets[", vm.toString(i), "]");
         string memory label = vm.parseJsonString(cfg, string.concat(hk, ".label"));
         string memory symbol = vm.parseJsonString(cfg, string.concat(ak, ".symbol"));
-        address cs = vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", label, ".", symbol, "']"));
+        address cs = vm.parseJsonAddress(coverage, string.concat("$['AvanaFirstLossReserve.", label, ".", symbol, "']"));
         uint256 unit = 10 ** vm.parseJsonUint(cfg, string.concat(ak, ".decimals"));
         string[] memory cdps = vm.parseJsonStringArray(cfg, string.concat(hk, ".cdpSpokes"));
         {
-            ICoverageSpoke c = ICoverageSpoke(cs);
+            IAvanaFirstLossReserve c = IAvanaFirstLossReserve(cs);
             if (IAaveListedViews(c.HUB()).isSpokeListed(c.ASSET_ID(), cs)) {
                 address done = execute
-                    ? _recorded("deficit-offsets", string.concat("$['DeficitOffsetSpoke.", label, ".", symbol, "']"))
-                    : _addr(cfg, string.concat(ak, ".deficitOffsetSpokes.", label));
+                    ? _recorded("deficit-offsets", string.concat("$['DaoDeficitOffset.", label, ".", symbol, "']"))
+                    : _addr(cfg, string.concat(ak, ".daoDeficitOffsets.", label));
                 _allowNewSpokes(b, cs, cdps);
                 _allowNewSpokes(b, done, cdps);
                 return false;
@@ -168,24 +168,24 @@ contract AaveLossLayersPayload is AavePayloads {
         isNew = true;
         address dos;
         if (execute) {
-            ICoverageSpoke c = ICoverageSpoke(cs);
+            IAvanaFirstLossReserve c = IAvanaFirstLossReserve(cs);
             bytes memory initCode = bytes.concat(
-                _artifact("DeficitOffsetSpoke.sol", "DeficitOffsetSpoke"),
+                _artifact("DaoDeficitOffset.sol", "DaoDeficitOffset"),
                 abi.encode(c.HUB(), c.ASSET(), c.ASSET_ID(), am, uint256(1_209_600), cs)
             );
             vm.broadcast(deployer);
-            dos = _deploy(string.concat("DeficitOffsetSpoke.", label, ".", symbol), initCode);
-            offsetsJson = vm.serializeAddress("offsets", string.concat("DeficitOffsetSpoke.", label, ".", symbol), dos);
-            console2.log("DeficitOffsetSpoke", label, symbol, dos);
+            dos = _deploy(string.concat("DaoDeficitOffset.", label, ".", symbol), initCode);
+            offsetsJson = vm.serializeAddress("offsets", string.concat("DaoDeficitOffset.", label, ".", symbol), dos);
+            console2.log("DaoDeficitOffset", label, symbol, dos);
         } else {
-            dos = _addr(cfg, string.concat(ak, ".deficitOffsetSpokes.", label));
+            dos = _addr(cfg, string.concat(ak, ".daoDeficitOffsets.", label));
         }
         _layer(b, cs, cdps, vm.parseJsonUint(cfg, string.concat(ak, ".coverageMinimum")) * unit, 0);
         uint256 offset = vm.parseJsonUint(cfg, string.concat(ak, ".offsetMinimum")) * unit;
         _layer(b, dos, cdps, offset, offset);
         if (execute && offset != 0) {
             // Test-network faucet: the DAO treasury's offset funding reaches the executor before the AIP runs.
-            ILayerFunding asset = ILayerFunding(ICoverageSpoke(cs).ASSET());
+            ILayerFunding asset = ILayerFunding(IAvanaFirstLossReserve(cs).ASSET());
             vm.broadcast(_addr(cfg, ".aavePayload.tokenMinter"));
             asset.mint(executor, offset);
         }
@@ -200,17 +200,17 @@ contract AaveLossLayersPayload is AavePayloads {
         uint256 minimum,
         uint256 fund
     ) private view {
-        ICoverageSpoke c = ICoverageSpoke(layer);
+        IAvanaFirstLossReserve c = IAvanaFirstLossReserve(layer);
         address hub = c.HUB();
         _grant(b, HUB_DEFICIT_ELIMINATOR_ROLE, layer);
         bytes4[] memory cover = new bytes4[](1);
-        cover[0] = ICoverageSpoke.coverDeficit.selector;
+        cover[0] = IAvanaFirstLossReserve.coverDeficit.selector;
         bytes4[] memory admin = new bytes4[](5);
-        admin[0] = ICoverageSpokeAdmin.setAllowedBorrowSpoke.selector;
-        admin[1] = ICoverageSpokeAdmin.setFirstLossReserveMinimum.selector;
-        admin[2] = ICoverageSpokeAdmin.requestWithdrawal.selector;
-        admin[3] = ICoverageSpokeAdmin.cancelWithdrawal.selector;
-        admin[4] = ICoverageSpokeAdmin.executeWithdrawal.selector;
+        admin[0] = IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke.selector;
+        admin[1] = IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum.selector;
+        admin[2] = IAvanaFirstLossReserveAdmin.requestWithdrawal.selector;
+        admin[3] = IAvanaFirstLossReserveAdmin.cancelWithdrawal.selector;
+        admin[4] = IAvanaFirstLossReserveAdmin.executeWithdrawal.selector;
         _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, layer, cover, coverageRole));
         _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, layer, admin, reserveAdminRole));
         ASpokeToAssetsAddition memory add;
@@ -231,12 +231,12 @@ contract AaveLossLayersPayload is AavePayloads {
         _spokeToAssets(b, add);
         for (uint256 s = 0; s < cdps.length; ++s) {
             address spoke = _cdp(cdps[s]);
-            _postCall(b, layer, abi.encodeCall(ICoverageSpokeAdmin.setAllowedBorrowSpoke, (spoke, true)));
+            _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke, (spoke, true)));
         }
-        _postCall(b, layer, abi.encodeCall(ICoverageSpokeAdmin.setFirstLossReserveMinimum, (minimum)));
+        _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum, (minimum)));
         if (fund != 0) {
             _postCall(b, c.ASSET(), abi.encodeCall(ILayerFunding.approve, (layer, fund)));
-            _postCall(b, layer, abi.encodeCall(ICoverageSpoke.fund, (fund)));
+            _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserve.fund, (fund)));
         }
     }
 
@@ -249,7 +249,7 @@ contract AaveLossLayersPayload is AavePayloads {
         for (uint256 s = 0; s < cdps.length; ++s) {
             address spoke = _cdp(cdps[s]);
             if (ILossLayerViews(layer).allowedBorrowSpoke(spoke)) continue;
-            _postCall(b, layer, abi.encodeCall(ICoverageSpokeAdmin.setAllowedBorrowSpoke, (spoke, true)));
+            _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke, (spoke, true)));
         }
     }
 

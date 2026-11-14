@@ -313,30 +313,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "coverageSpokeOf",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "coverageSpoke",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "creditLine",
     "inputs": [
       {
@@ -617,7 +593,7 @@ export const marketRegistryAbi = [
             "internalType": "bool"
           },
           {
-            "name": "coverageSpoke",
+            "name": "firstLossReserve",
             "type": "address",
             "internalType": "address"
           },
@@ -649,6 +625,30 @@ export const marketRegistryAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "firstLossReserveOf",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "firstLossReserve",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -772,7 +772,7 @@ export const marketRegistryAbi = [
             "internalType": "bool"
           },
           {
-            "name": "coverageSpoke",
+            "name": "firstLossReserve",
             "type": "address",
             "internalType": "address"
           },
@@ -2024,7 +2024,7 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "setCoverageSpoke",
+    "name": "setAvanaFirstLossReserve",
     "inputs": [
       {
         "name": "hub",
@@ -2037,7 +2037,7 @@ export const marketRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "coverageSpoke",
+        "name": "firstLossReserve",
         "type": "address",
         "internalType": "address"
       }
@@ -2463,6 +2463,31 @@ export const marketRegistryAbi = [
   },
   {
     "type": "event",
+    "name": "AvanaFirstLossReserveSet",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "asset",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "firstLossReserve",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "BreakerLatched",
     "inputs": [
       {
@@ -2506,31 +2531,6 @@ export const marketRegistryAbi = [
         "name": "caller",
         "type": "address",
         "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CoverageSpokeSet",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "coverageSpoke",
-        "type": "address",
-        "indexed": false,
         "internalType": "address"
       }
     ],
@@ -2695,7 +2695,7 @@ export const marketRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "coverageSpoke",
+        "name": "firstLossReserve",
         "type": "address",
         "indexed": false,
         "internalType": "address"
@@ -3526,6 +3526,27 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
+    "name": "AvanaFirstLossReserveMismatch",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "firstLossReserve",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "CannotUnfreezeWhilePaused",
     "inputs": []
   },
@@ -3582,27 +3603,6 @@ export const marketRegistryAbi = [
       },
       {
         "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "CoverageSpokeMismatch",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "coverageSpoke",
         "type": "address",
         "internalType": "address"
       }
@@ -3726,10 +3726,10 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidCoverageSpoke",
+    "name": "InvalidAvanaFirstLossReserve",
     "inputs": [
       {
-        "name": "coverageSpoke",
+        "name": "firstLossReserve",
         "type": "address",
         "internalType": "address"
       }

@@ -40,7 +40,7 @@ interface DecodedReserveConfig {
   frozen: boolean;
 }
 interface DecodedExposure {
-  coverageSpoke: Address;
+  firstLossReserve: Address;
   fundedBalance: bigint;
   line: bigint;
   coverageBoundHolds: boolean;
@@ -249,7 +249,7 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
         ? "lend"
         : cdpSet.has(spoke) || homeHub !== ZERO
           ? "cdp"
-          : topo.coverage.has(spoke) || (exposure != null && lower(exposure.coverageSpoke) === spoke)
+          : topo.coverage.has(spoke) || (exposure != null && lower(exposure.firstLossReserve) === spoke)
             ? "coverage"
             : t.info.deficitOffsets.includes(spoke)
               ? "deficitOffset"
@@ -337,7 +337,7 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       lendReserves: t.reserves,
       exposure: exposure
         ? {
-            coverageSpoke: lower(exposure.coverageSpoke),
+            firstLossReserve: lower(exposure.firstLossReserve),
             fundedBalance: s(exposure.fundedBalance),
             line: s(exposure.line),
             coverageBoundHolds: exposure.coverageBoundHolds,

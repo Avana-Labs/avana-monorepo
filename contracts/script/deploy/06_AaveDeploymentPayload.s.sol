@@ -66,7 +66,7 @@ interface ILendSpoke {
 /// - `AvanaBootstrapSupply` (test networks): the DAO treasury's bootstrap supply of each Lend Spoke, from the executor.
 /// - `AvanaFlashBorrowers` (Aave V3): `FLASH_BORROWER` for Avana's flash source and the public flash liquidation helper.
 /// @dev On Ethereum and Base the script writes the payloads' actions only (`aip-<name>.json`) for the AIP author; on
-/// test networks it deploys and executes them as the PayloadsController stand-in. Coverage Spokes and the DAO
+/// test networks it deploys and executes them as the PayloadsController stand-in. First-Loss Reserves and the DAO
 /// deficit offsets are registered by their own AIP (`08_AaveLossLayersPayload`) once they are deployed.
 contract AaveDeploymentPayload is AavePayloads {
     string internal cfg;

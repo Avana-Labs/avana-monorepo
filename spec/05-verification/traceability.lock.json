@@ -775,7 +775,8 @@
     "checks": [
       "TEST-027",
       "TEST-030",
-      "TEST-114"
+      "TEST-114",
+      "TEST-133"
     ]
   },
   "ATTACK-107": {
@@ -920,7 +921,8 @@
   "ATTACK-125": {
     "hash": "6f05c0e01613e19b",
     "checks": [
-      "TEST-188"
+      "TEST-188",
+      "TEST-189"
     ]
   },
   "ATTACK-126": {
@@ -1143,6 +1145,7 @@
     "hash": "66f0bdd6279f4a8c",
     "checks": [
       "PROP-083",
+      "TEST-217",
       "TEST-266",
       "TEST-279"
     ]
@@ -1280,6 +1283,7 @@
   "ATTACK-173": {
     "hash": "74e9c3a3e69bed38",
     "checks": [
+      "TEST-211",
       "TEST-273",
       "TEST-280"
     ]
@@ -1547,7 +1551,7 @@
     ]
   },
   "BOR-005": {
-    "hash": "71c374c7c8614456",
+    "hash": "ae1a9fdfab0084ef",
     "checks": [
       "IAaveAdapterUser"
     ]
@@ -1876,7 +1880,7 @@
     ]
   },
   "DEF-002": {
-    "hash": "9ad67d3d1a534f5f",
+    "hash": "5b499b5c8d8ab664",
     "checks": []
   },
   "DEF-003": {
@@ -1891,14 +1895,14 @@
     "checks": []
   },
   "DEF-005": {
-    "hash": "5e2da6b1dcb1be7e",
+    "hash": "a1cfa98a1e99c755",
     "checks": [
       "FV-LIQ-05",
       "MATH-ST-50"
     ]
   },
   "DEF-006": {
-    "hash": "63679cbcbaf2b74c",
+    "hash": "94815ff283e77a7a",
     "checks": [
       "FV-LIQ-05",
       "FV-LIQ-06",
@@ -1908,23 +1912,24 @@
       "MATH-ST-48",
       "MATH-ST-49",
       "MATH-ST-89",
-      "QNT-30"
+      "QNT-30",
+      "TEST-282"
     ]
   },
   "DEF-007": {
-    "hash": "b74408948d77096e",
+    "hash": "0fc298276752aeab",
     "checks": [
       "TEST-298"
     ]
   },
   "DEF-008": {
-    "hash": "4e85cfb27fc56c33",
+    "hash": "276c3c83b1ba6fd9",
     "checks": [
       "FV-LIQ-05"
     ]
   },
   "DEF-009": {
-    "hash": "20a12b4fbd386232",
+    "hash": "ab4d4ab0319812d0",
     "checks": [
       "FV-LIQ-05"
     ]
@@ -1934,13 +1939,13 @@
     "checks": []
   },
   "DEF-011": {
-    "hash": "eaeea22f72ab2441",
+    "hash": "f291db5a84c38817",
     "checks": [
       "MATH-CAP-10"
     ]
   },
   "DEF-012": {
-    "hash": "81984cf3021dc306",
+    "hash": "06a0f2b3820f6e17",
     "checks": []
   },
   "DEF-013": {
@@ -1962,7 +1967,7 @@
     ]
   },
   "DEF-015": {
-    "hash": "2b8eb800d8bdb49e",
+    "hash": "cd8fd61f076784ae",
     "checks": [
       "FV-LIQ-06",
       "MATH-ST-67",
@@ -1973,18 +1978,18 @@
     ]
   },
   "DEF-016": {
-    "hash": "8828d64a195931a2",
+    "hash": "36909e63b1a2c996",
     "checks": []
   },
   "DEF-017": {
-    "hash": "fdab1d3f1757c9de",
+    "hash": "907aaff6285ccdeb",
     "checks": [
       "FV-LIQ-05",
       "FV-LIQ-06"
     ]
   },
   "DEF-018": {
-    "hash": "4c31192e1ddf8082",
+    "hash": "85145d833d82afca",
     "checks": [
       "FV-LIQ-05",
       "FV-LIQ-06",
@@ -1993,7 +1998,7 @@
     ]
   },
   "DEF-019": {
-    "hash": "2e3296a1be59a55f",
+    "hash": "b7a24ae26a2ed4a4",
     "checks": [
       "MATH-AR-29",
       "MATH-AR-30",
@@ -2006,13 +2011,13 @@
     "checks": []
   },
   "DEF-021": {
-    "hash": "b873d432390c4e78",
+    "hash": "009339083da40f14",
     "checks": [
       "TEST-247"
     ]
   },
   "DEF-022": {
-    "hash": "e50fbbd6d8b94055",
+    "hash": "3c037e842146791e",
     "checks": []
   },
   "DEF-023": {
@@ -2054,7 +2059,7 @@
     ]
   },
   "DEF-F-005": {
-    "hash": "08c0219e6c9ad030",
+    "hash": "a266d17ba66776e6",
     "checks": []
   },
   "DEF-F-006": {
@@ -2062,7 +2067,7 @@
     "checks": []
   },
   "DEF-F-007": {
-    "hash": "79257ee3efc4f134",
+    "hash": "7019fa10bd53703d",
     "checks": [
       "FV-LIQ-05"
     ]
@@ -2072,7 +2077,7 @@
     "checks": []
   },
   "DEF-F-009": {
-    "hash": "4dd42895caba2729",
+    "hash": "23c4f233437ed35a",
     "checks": []
   },
   "DEF-F-010": {
@@ -2096,7 +2101,7 @@
     ]
   },
   "DEF-POST-002": {
-    "hash": "abb7aab874a1b144",
+    "hash": "4c2879100d983908",
     "checks": [
       "FV-LIQ-05",
       "HYP-33",
@@ -2118,7 +2123,7 @@
     ]
   },
   "DEF-POST-005": {
-    "hash": "5cbf26ccac0d31df",
+    "hash": "ef0cea54398e5471",
     "checks": []
   },
   "DEP-001": {
@@ -2599,7 +2604,7 @@
     "checks": []
   },
   "EMG-028": {
-    "hash": "560a6dffd633c688",
+    "hash": "fb834ce39a22358f",
     "checks": []
   },
   "EMG-029": {
@@ -2717,7 +2722,7 @@
     "checks": []
   },
   "EMG-052": {
-    "hash": "bfd0cf98865d3367",
+    "hash": "33e9f67475904608",
     "checks": []
   },
   "EMG-053": {
@@ -2889,7 +2894,7 @@
     ]
   },
   "EMG-090": {
-    "hash": "e4c4565caeeaf022",
+    "hash": "7ad71aa8d75e12e3",
     "checks": []
   },
   "EMG-091": {
@@ -3344,7 +3349,7 @@
     "checks": []
   },
   "INV-001": {
-    "hash": "935134587626b326",
+    "hash": "a704910b0bad35c5",
     "checks": [
       "FV-CUS-01",
       "FV-CUS-26",
@@ -3462,7 +3467,10 @@
       "QNT-TOPO-03",
       "TEST-010",
       "TEST-011",
+      "TEST-084",
+      "TEST-116",
       "TEST-151",
+      "TEST-215",
       "TEST-265",
       "TEST-279",
       "TEST-291"
@@ -3499,7 +3507,12 @@
       "QNT-35",
       "QNT-T14",
       "TEST-015",
+      "TEST-018",
+      "TEST-084",
       "TEST-130",
+      "TEST-154",
+      "TEST-209",
+      "TEST-215",
       "TEST-291"
     ]
   },
@@ -3601,6 +3614,7 @@
       "TEST-089",
       "TEST-130",
       "TEST-188",
+      "TEST-189",
       "TEST-190",
       "VaultToken"
     ]
@@ -3619,12 +3633,14 @@
       "QNT-TOPO-02B",
       "QNT-TOPO-03",
       "SYM-16",
+      "TEST-056",
       "TEST-090",
       "TEST-109",
       "TEST-150",
       "TEST-180",
       "TEST-189",
-      "TEST-209"
+      "TEST-209",
+      "TEST-268"
     ]
   },
   "INV-014": {
@@ -3701,17 +3717,19 @@
       "IPositionProxy",
       "PROP-083",
       "TEST-010",
+      "TEST-011",
       "TEST-030",
       "TEST-108",
       "TEST-114",
       "TEST-116",
+      "TEST-133",
       "TEST-171",
       "TEST-264",
       "TEST-265"
     ]
   },
   "INV-018": {
-    "hash": "5655553ac0ac0cc0",
+    "hash": "002b82fafc97f935",
     "checks": [
       "FV-CTL-11",
       "QNT-28",
@@ -3837,7 +3855,9 @@
       "HYP-22",
       "QNT-25",
       "QNT-T22",
-      "TEST-012"
+      "TEST-012",
+      "TEST-043",
+      "TEST-157"
     ]
   },
   "INV-027": {
@@ -3873,6 +3893,8 @@
       "MATH-UO-28",
       "PROP-030",
       "TEST-013",
+      "TEST-097",
+      "TEST-215",
       "TEST-272"
     ]
   },
@@ -3911,8 +3933,10 @@
       "QNT-T18",
       "TEST-049",
       "TEST-055",
+      "TEST-104",
       "TEST-160",
-      "TEST-174"
+      "TEST-174",
+      "TEST-230"
     ]
   },
   "INV-031": {
@@ -3927,7 +3951,8 @@
       "PROP-074",
       "QNT-24",
       "QNT-T12",
-      "TEST-042"
+      "TEST-042",
+      "TEST-105"
     ]
   },
   "INV-032": {
@@ -3956,7 +3981,10 @@
       "MATH-ST-35",
       "QNT-11",
       "QNT-T17",
-      "TEST-091"
+      "TEST-091",
+      "TEST-130",
+      "TEST-215",
+      "TEST-223"
     ]
   },
   "INV-034": {
@@ -3991,6 +4019,7 @@
       "TEST-078",
       "TEST-104",
       "TEST-198",
+      "TEST-217",
       "TEST-232",
       "TEST-233"
     ]
@@ -4023,7 +4052,7 @@
     ]
   },
   "INV-036": {
-    "hash": "14ad2da3371a2c47",
+    "hash": "48ac40f99d3ae3df",
     "checks": [
       "FV-LIQ-01",
       "HYP-30",
@@ -4149,9 +4178,9 @@
     ]
   },
   "INV-042": {
-    "hash": "f3ba638f128b9d22",
+    "hash": "22143b9993e6fa09",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-08",
       "HYP-08",
@@ -4169,6 +4198,9 @@
       "TEST-002",
       "TEST-094",
       "TEST-128",
+      "TEST-152",
+      "TEST-153",
+      "TEST-154",
       "TEST-170",
       "TEST-199",
       "TEST-293"
@@ -4194,6 +4226,7 @@
       "QNT-T28",
       "TEST-029",
       "TEST-075",
+      "TEST-089",
       "TEST-099",
       "TEST-132",
       "TEST-162",
@@ -4247,6 +4280,7 @@
       "TEST-193",
       "TEST-195",
       "TEST-218",
+      "TEST-223",
       "TEST-228",
       "TEST-229"
     ]
@@ -4352,7 +4386,7 @@
     ]
   },
   "INV-053": {
-    "hash": "1266ad71c04363d9",
+    "hash": "48d731bbce8cd192",
     "checks": [
       "FV-CTL-10",
       "FV-CTL-11",
@@ -4405,6 +4439,7 @@
       "TEST-036",
       "TEST-038",
       "TEST-105",
+      "TEST-215",
       "TEST-217",
       "TEST-219",
       "TEST-230"
@@ -4421,7 +4456,7 @@
     ]
   },
   "INV-057": {
-    "hash": "a1ede15f0774fc1a",
+    "hash": "c432b74a4535d23a",
     "checks": [
       "FV-CTL-99",
       "HYP-07",
@@ -4433,11 +4468,12 @@
       "QNT-TOPO-05",
       "QNT-TOPO-T04",
       "QNT-TOPO-T05",
+      "TEST-103",
       "TEST-274"
     ]
   },
   "INV-058": {
-    "hash": "2d38a1e959fc5fd1",
+    "hash": "8eae1a872f7377af",
     "checks": [
       "CollateralizationLedger",
       "FV-CUS-20",
@@ -4474,8 +4510,10 @@
       "QNT-T18",
       "TEST-044",
       "TEST-049",
+      "TEST-104",
       "TEST-157",
       "TEST-159",
+      "TEST-215",
       "TEST-219"
     ]
   },
@@ -4543,6 +4581,7 @@
       "PROP-076",
       "ProxyManager",
       "QNT-TOPO-10P",
+      "TEST-011",
       "TEST-025",
       "TEST-089",
       "TEST-190",
@@ -4634,6 +4673,7 @@
       "HYP-77",
       "MATH-AR-45",
       "PROP-062",
+      "TEST-097",
       "TEST-196",
       "TEST-235"
     ]
@@ -4647,13 +4687,14 @@
       "MATH-ST-70",
       "PROP-059",
       "TEST-048",
+      "TEST-054",
       "TEST-092"
     ]
   },
   "INV-071": {
-    "hash": "6b34c38fd5c4bb38",
+    "hash": "4735e3c5269d4029",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "HYP-33",
       "PROP-060",
@@ -4663,6 +4704,7 @@
       "TEST-094",
       "TEST-128",
       "TEST-199",
+      "TEST-211",
       "TEST-293"
     ]
   },
@@ -4679,6 +4721,7 @@
       "TEST-049",
       "TEST-095",
       "TEST-201",
+      "TEST-215",
       "TEST-226"
     ]
   },
@@ -4692,7 +4735,7 @@
     ]
   },
   "INV-074": {
-    "hash": "7b4570d70332d411",
+    "hash": "08a06461671822e9",
     "checks": [
       "HYP-70",
       "HYP-92",
@@ -4710,7 +4753,9 @@
       "QNT-TOPO-T14",
       "QNT-TOPO-T15",
       "QNT-TOPO-X2",
-      "SIM-02F"
+      "SIM-02F",
+      "TEST-215",
+      "TEST-226"
     ]
   },
   "INV-076": {
@@ -4764,10 +4809,11 @@
     ]
   },
   "INV-079": {
-    "hash": "0d1d85484f3772bc",
+    "hash": "4f1ef6be4d2b712c",
     "checks": [
       "HYP-74",
-      "HYP-91"
+      "HYP-91",
+      "TEST-211"
     ]
   },
   "INV-080": {
@@ -4867,7 +4913,7 @@
     ]
   },
   "INV-085": {
-    "hash": "a9c936d11677ae58",
+    "hash": "271f72f3adce3e1a",
     "checks": [
       "FV-CTL-104",
       "FV-CTL-105",
@@ -4914,7 +4960,9 @@
       "PROP-074",
       "TEST-037",
       "TEST-044",
+      "TEST-104",
       "TEST-105",
+      "TEST-215",
       "TEST-219",
       "TEST-230"
     ]
@@ -5002,10 +5050,11 @@
     ]
   },
   "INV-094": {
-    "hash": "84d8c0d3b0a2d292",
+    "hash": "547a3d4dd9cd9df4",
     "checks": [
       "QNT-TOPO-05",
-      "QNT-TOPO-X1"
+      "QNT-TOPO-X1",
+      "TEST-274"
     ]
   },
   "INV-095": {
@@ -5045,6 +5094,7 @@
       "MATH-CAP-09",
       "MATH-CH-01",
       "MATH-ST-108",
+      "TEST-011",
       "TEST-102",
       "TEST-123",
       "TEST-269"
@@ -5078,10 +5128,10 @@
     ]
   },
   "INV-100": {
-    "hash": "bf3ff220fa373d8a",
+    "hash": "9aecbab9492e1185",
     "checks": [
-      "DeficitOffsetSpoke",
-      "IDeficitOffsetSpoke",
+      "DaoDeficitOffset",
+      "IDaoDeficitOffset",
       "MATH-AR-51",
       "TEST-298",
       "TEST-299"
@@ -5155,7 +5205,7 @@
     "checks": []
   },
   "LIQ-012": {
-    "hash": "91d47d24a1fdcef8",
+    "hash": "337dccaa416c0d3f",
     "checks": []
   },
   "LIQ-013": {
@@ -5409,7 +5459,7 @@
     "checks": []
   },
   "LIQ-049": {
-    "hash": "325b6f83c24296a7",
+    "hash": "43b4b5b956c32958",
     "checks": []
   },
   "LIQ-050": {
@@ -5458,13 +5508,13 @@
     ]
   },
   "LIQ-058": {
-    "hash": "6f00444ebb1e4908",
+    "hash": "ff306671330002d6",
     "checks": [
       "FV-LIQ-06"
     ]
   },
   "LIQ-059": {
-    "hash": "37af4bf66703eaad",
+    "hash": "936f88889aa66f87",
     "checks": [
       "QNT-15",
       "QNT-37"
@@ -5521,7 +5571,8 @@
     "hash": "106b3c06216a4f7d",
     "checks": [
       "FV-LIQ-06",
-      "MATH-ST-93"
+      "MATH-ST-93",
+      "TEST-282"
     ]
   },
   "LIQ-069": {
@@ -5555,7 +5606,7 @@
     ]
   },
   "LIQ-074": {
-    "hash": "350581c7e929591d",
+    "hash": "81393947989b6ed8",
     "checks": []
   },
   "LIQ-075": {
@@ -5751,7 +5802,7 @@
     "checks": []
   },
   "LIQ-F-026": {
-    "hash": "2d474deb62c071fd",
+    "hash": "6953007a7dd8ab7d",
     "checks": []
   },
   "LIQ-F-027": {
@@ -6102,7 +6153,7 @@
     ]
   },
   "MKT-023": {
-    "hash": "5267157cce937f9a",
+    "hash": "ea39c292ff4d1e60",
     "checks": []
   },
   "MKT-024": {
@@ -6132,11 +6183,11 @@
     "checks": []
   },
   "MKT-030": {
-    "hash": "a88128b49e392c98",
+    "hash": "168429b7c71b65db",
     "checks": []
   },
   "MKT-031": {
-    "hash": "23422da232421942",
+    "hash": "c14c199c043ab2f5",
     "checks": []
   },
   "MKT-032": {
@@ -6199,7 +6250,7 @@
     ]
   },
   "MKT-044": {
-    "hash": "447d2d6fe5ab370c",
+    "hash": "7a3d21185499a39b",
     "checks": []
   },
   "MKT-045": {
@@ -6309,7 +6360,7 @@
     "checks": []
   },
   "MKT-066": {
-    "hash": "b9ea066d59de7031",
+    "hash": "3c2d033602261a0b",
     "checks": []
   },
   "MKT-F-001": {
@@ -6421,7 +6472,7 @@
     "checks": []
   },
   "MKT-POST-005": {
-    "hash": "2281b13fea09a351",
+    "hash": "69f638a37539f4aa",
     "checks": []
   },
   "MKT-POST-006": {
@@ -6461,7 +6512,7 @@
     "checks": []
   },
   "Q-003": {
-    "hash": "cdce4e0ba9ea6ce1",
+    "hash": "83c4b236c1fd136c",
     "checks": []
   },
   "Q-004": {
@@ -6622,7 +6673,7 @@
     "checks": []
   },
   "Q-035": {
-    "hash": "c0615cc0d99e379d",
+    "hash": "ec6a901211c53816",
     "checks": []
   },
   "Q-036": {
@@ -6709,6 +6760,7 @@
       "QNT-15",
       "QNT-16",
       "QNT-T03",
+      "TEST-035",
       "TEST-199"
     ]
   },
@@ -6801,6 +6853,7 @@
       "PegModuleRoute",
       "SIM-01C",
       "TEST-119",
+      "TEST-120",
       "TEST-290",
       "WrapperThenDexRoute"
     ]
@@ -6890,7 +6943,7 @@
     ]
   },
   "Q-070": {
-    "hash": "6aa914002bd804c1",
+    "hash": "92b7e572f4e18f37",
     "checks": [
       "HYP-08",
       "HYP-32",
@@ -7000,7 +7053,8 @@
       "PegModuleRoute",
       "SIM-01C",
       "SIM-06A",
-      "SIM-06B"
+      "SIM-06B",
+      "TEST-119"
     ]
   },
   "Q-085": {
@@ -7150,9 +7204,9 @@
     ]
   },
   "Q-101": {
-    "hash": "6ea68e46528f8dd7",
+    "hash": "89b7348420e0e682",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "HYP-08",
       "HYP-32",
       "HYP-33",
@@ -7179,7 +7233,7 @@
     ]
   },
   "Q-102": {
-    "hash": "23a201bbe1a63965",
+    "hash": "a9fb33120406ea56",
     "checks": [
       "TEST-199",
       "TEST-293"
@@ -7319,7 +7373,8 @@
       "QNT-14",
       "QNT-15",
       "QNT-T21",
-      "TEST-028"
+      "TEST-028",
+      "TEST-035"
     ]
   },
   "Q-119": {
@@ -7567,16 +7622,17 @@
     "checks": [
       "MATH-AR-23",
       "SYM-52",
-      "SYM-54"
+      "SYM-54",
+      "TEST-111"
     ]
   },
   "Q-142": {
-    "hash": "986afe8dd9347177",
+    "hash": "d936a85ec31d294b",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "HYP-08",
       "HYP-33",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "MATH-ST-46",
       "MATH-ST-47",
       "MATH-ST-49",
@@ -7868,7 +7924,8 @@
       "SIM-05A",
       "SIM-05B",
       "SIM-05C",
-      "SIM-07C"
+      "SIM-07C",
+      "TEST-076"
     ]
   },
   "Q-170": {
@@ -8054,7 +8111,8 @@
       "HYP-71",
       "SIM-01C",
       "TEST-054",
-      "TEST-119"
+      "TEST-119",
+      "TEST-120"
     ]
   },
   "Q-188": {
@@ -8084,7 +8142,7 @@
     ]
   },
   "Q-190": {
-    "hash": "d1ab83a3b10768d2",
+    "hash": "b36c6663c91b3224",
     "checks": [
       "HYP-29",
       "HYP-30",
@@ -8136,7 +8194,8 @@
       "MATH-ST-76",
       "SIM-02B",
       "SIM-08D",
-      "SYM-155"
+      "SYM-155",
+      "TEST-169"
     ]
   },
   "Q-193": {
@@ -8231,6 +8290,7 @@
       "TEST-049",
       "TEST-157",
       "TEST-159",
+      "TEST-163",
       "TEST-171"
     ]
   },
@@ -8288,7 +8348,8 @@
     "hash": "49daa41192773c61",
     "checks": [
       "PROP-050",
-      "QNT-T13"
+      "QNT-T13",
+      "TEST-169"
     ]
   },
   "Q-203": {
@@ -8298,7 +8359,9 @@
       "PROP-031",
       "PROP-046",
       "QNT-19",
-      "QNT-T04"
+      "QNT-T04",
+      "TEST-035",
+      "TEST-156"
     ]
   },
   "Q-204": {
@@ -8371,14 +8434,14 @@
     ]
   },
   "Q-211": {
-    "hash": "dd36191501b123b0",
+    "hash": "03f9446df7d9582f",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "HYP-57",
       "HYP-58",
       "HYP-74",
+      "IAvanaFirstLossReserve",
       "ICollateralizationSeizure",
-      "ICoverageSpoke",
       "ILPVaultSwap",
       "ILPVaultSwapEvents",
       "ILPVaultSwapLiquidation",
@@ -8447,7 +8510,8 @@
       "TEST-032",
       "TEST-061",
       "TEST-173",
-      "TEST-179"
+      "TEST-179",
+      "TEST-221"
     ]
   },
   "Q-215": {
@@ -8522,7 +8586,7 @@
     ]
   },
   "Q-223": {
-    "hash": "a920524852cc0135",
+    "hash": "b5e3b2ec22a81492",
     "checks": [
       "AaveAdapter",
       "FV-CTL-47",
@@ -8633,7 +8697,7 @@
     ]
   },
   "Q-226": {
-    "hash": "344e88cab3e39fa3",
+    "hash": "f586b411c4c4d4be",
     "checks": [
       "AaveAdapter",
       "ClLPVaultBase",
@@ -8673,6 +8737,9 @@
       "TEST-023",
       "TEST-024",
       "TEST-062",
+      "TEST-132",
+      "TEST-133",
+      "TEST-168",
       "TEST-190",
       "TEST-242",
       "TEST-247",
@@ -8803,6 +8870,9 @@
       "QNT-T27",
       "RiskModule",
       "RiskModuleConstants",
+      "TEST-132",
+      "TEST-133",
+      "TEST-156",
       "TokenPriceView"
     ]
   },
@@ -8857,7 +8927,7 @@
     ]
   },
   "Q-233": {
-    "hash": "883514d56e8da14c",
+    "hash": "ec8ca47d7135a2e8",
     "checks": [
       "DebtReserveDef",
       "HYP-94",
@@ -8869,6 +8939,7 @@
       "QNT-31",
       "TEST-047",
       "TEST-185",
+      "TEST-202",
       "TEST-213"
     ]
   },
@@ -8893,6 +8964,7 @@
       "QNT-T20",
       "QNT-T43",
       "TEST-122",
+      "TEST-202",
       "TEST-203"
     ]
   },
@@ -8923,13 +8995,14 @@
       "QNT-T38",
       "TEST-069",
       "TEST-123",
-      "TEST-198"
+      "TEST-198",
+      "TEST-202"
     ]
   },
   "Q-236": {
-    "hash": "a0a95193659e3588",
+    "hash": "30811f9431933733",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "DebtReserveDef",
       "HYP-08",
       "HYP-31",
@@ -8937,7 +9010,7 @@
       "HYP-58",
       "HYP-70",
       "HYP-87",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "ILPVaultSwapEvents",
       "ILPVaultSwapLiquidation",
       "ILensMarket",
@@ -8985,6 +9058,7 @@
       "QNT-55",
       "TEST-049",
       "TEST-062",
+      "TEST-117",
       "TEST-185",
       "TEST-202",
       "TEST-230",
@@ -8992,7 +9066,7 @@
     ]
   },
   "Q-239": {
-    "hash": "9d4138dffb8890ea",
+    "hash": "0f2b16f852a5d84d",
     "checks": [
       "HYP-93"
     ]
@@ -9021,12 +9095,14 @@
       "SettlementMath",
       "TEST-040",
       "TEST-062",
+      "TEST-163",
+      "TEST-164",
       "TEST-171",
       "TEST-250"
     ]
   },
   "Q-241": {
-    "hash": "8f72eecef964e1a9",
+    "hash": "62e605ec52f208ff",
     "checks": [
       "AccountGateStatus",
       "AccountView",
@@ -9039,7 +9115,7 @@
       "HYP-91",
       "HYP-96",
       "IAaveAdapterUser",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "ILPOracle",
       "ILPOracleEvents",
       "ILPVaultSwap",
@@ -9086,7 +9162,7 @@
     ]
   },
   "Q-242": {
-    "hash": "51788fdfca82863e",
+    "hash": "56b0ab72b8e2d945",
     "checks": [
       "AccountView",
       "AvanaRoles",
@@ -9099,7 +9175,7 @@
       "IAaveAdapterCollateral",
       "IAaveAdapterErrors",
       "IAaveAdapterUser",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "ILPVaultSwap",
       "ILPVaultSwapAdmin",
       "ILPVaultSwapErrors",
@@ -9146,7 +9222,7 @@
     "checks": []
   },
   "Q-244": {
-    "hash": "7f86e70a40dedbf0",
+    "hash": "f6465e2163c92e78",
     "checks": [
       "ILensRisk"
     ]
@@ -9341,7 +9417,8 @@
       "SIM-06E",
       "TEST-198",
       "TEST-218",
-      "TEST-233"
+      "TEST-233",
+      "TEST-234"
     ]
   },
   "Q-252": {
@@ -9557,7 +9634,8 @@
       "QNT-12",
       "QNT-T01",
       "QNT-T14",
-      "TEST-011"
+      "TEST-011",
+      "TEST-252"
     ]
   },
   "Q-259": {
@@ -9627,7 +9705,8 @@
       "QNT-T03",
       "QNT-T09",
       "TEST-018",
-      "TEST-213"
+      "TEST-213",
+      "TEST-226"
     ]
   },
   "Q-261": {
@@ -9896,7 +9975,7 @@
     ]
   },
   "Q-278": {
-    "hash": "d3278c33a6ee567b",
+    "hash": "a879c474c6ee97a7",
     "checks": [
       "HYP-70",
       "HYP-71",
@@ -9940,11 +10019,11 @@
     "checks": []
   },
   "Q-283": {
-    "hash": "86a1c83768b876ad",
+    "hash": "14011b3f95de6396",
     "checks": []
   },
   "Q-284": {
-    "hash": "9073c878cbd3b13d",
+    "hash": "6b7800c77a2cb81b",
     "checks": []
   },
   "Q-285": {
@@ -9952,7 +10031,7 @@
     "checks": []
   },
   "Q-286": {
-    "hash": "329351dbc254dd8a",
+    "hash": "dc5ae575a7883239",
     "checks": [
       "TEST-293"
     ]
@@ -9970,7 +10049,7 @@
     "checks": []
   },
   "Q-290": {
-    "hash": "702c2c8c341dbbf1",
+    "hash": "47a29dbe1c1f3c89",
     "checks": [
       "TEST-199"
     ]
@@ -10122,7 +10201,7 @@
     "checks": []
   },
   "Q-312": {
-    "hash": "95801d0693d654bf",
+    "hash": "cb1adee3b379153b",
     "checks": [
       "MarketRegistryHubsLogic",
       "TEST-027",
@@ -10363,7 +10442,7 @@
     ]
   },
   "Q-338": {
-    "hash": "e0c56520152e72cc",
+    "hash": "afab194348cb1de1",
     "checks": [
       "IMarketRegistryWindDown",
       "LPVaultSwapPendingLogic",
@@ -10447,7 +10526,7 @@
     ]
   },
   "Q-348": {
-    "hash": "f6587446617b8092",
+    "hash": "5663245a02112dfd",
     "checks": []
   },
   "Q-349": {
@@ -10470,7 +10549,7 @@
     "checks": []
   },
   "Q-353": {
-    "hash": "0184ad9d2e9bd0a6",
+    "hash": "cdb3a103b2c7e423",
     "checks": [
       "IParameterStoreCoverage",
       "TEST-247",
@@ -10512,7 +10591,7 @@
     ]
   },
   "Q-358": {
-    "hash": "4130ba08e42fcddd",
+    "hash": "95763849eda4b7c2",
     "checks": [
       "HYP-83",
       "IMarketRegistryWindDown",
@@ -10523,7 +10602,7 @@
     ]
   },
   "Q-359": {
-    "hash": "c5bc03f50494dc17",
+    "hash": "b656aac82bbe0dee",
     "checks": [
       "PROP-002",
       "TEST-266"
@@ -10541,7 +10620,8 @@
     "hash": "36cb8ae43b42a5c4",
     "checks": [
       "PROP-084",
-      "TEST-118"
+      "TEST-118",
+      "TEST-268"
     ]
   },
   "Q-363": {
@@ -10550,7 +10630,9 @@
   },
   "Q-364": {
     "hash": "83937bba569cc27d",
-    "checks": []
+    "checks": [
+      "TEST-117"
+    ]
   },
   "Q-365": {
     "hash": "302873b95fad8078",
@@ -10568,7 +10650,7 @@
     "checks": []
   },
   "Q-368": {
-    "hash": "8b0133e42954377a",
+    "hash": "88642c31ec0d8ec1",
     "checks": []
   },
   "Q-369": {
@@ -10715,7 +10797,7 @@
     ]
   },
   "Q-378": {
-    "hash": "76013b5889116a2d",
+    "hash": "4bf8d8573fde7afb",
     "checks": [
       "AvanaRoles",
       "BackingView",
@@ -10739,7 +10821,7 @@
     ]
   },
   "Q-379": {
-    "hash": "10c651bad8b26c4a",
+    "hash": "be80937eac5a3df3",
     "checks": [
       "DeleverageRequest",
       "IAaveAdapterCollateral",
@@ -10883,6 +10965,7 @@
       "MATH-ST-110",
       "MarketRegistry",
       "MarketRegistryHubsLogic",
+      "PROP-096",
       "TEST-285"
     ]
   },
@@ -11030,12 +11113,12 @@
   "Q-399": {
     "hash": "26ab6028b926c4a1",
     "checks": [
+      "AvanaFirstLossReserve",
       "Breaker",
-      "CoverageSpoke",
       "HYP-80",
       "HYP-86",
+      "IAvanaFirstLossReserve",
       "IAvanaTimelockViews",
-      "ICoverageSpoke",
       "IMarketRegistryBreakers",
       "IMarketRegistryErrors",
       "IMarketRegistrySafetyEvents",
@@ -11115,7 +11198,7 @@
     ]
   },
   "Q-402": {
-    "hash": "2378751cb7b681e7",
+    "hash": "3038b1ab303ee607",
     "checks": [
       "ParameterStoreLoosenLogic",
       "TEST-228"
@@ -11215,13 +11298,13 @@
     "checks": []
   },
   "Q-407": {
-    "hash": "a90703d4098982f0",
+    "hash": "186025fa493bed4d",
     "checks": [
       "HYP-97"
     ]
   },
   "Q-408": {
-    "hash": "3b8e54c3cbd258bf",
+    "hash": "49b48e1b9a323c21",
     "checks": [
       "HYP-98"
     ]
@@ -11231,11 +11314,11 @@
     "checks": []
   },
   "Q-410": {
-    "hash": "292d7d462697c362",
+    "hash": "657d3fa0fd89cfd0",
     "checks": [
-      "CoverageSpoke",
-      "DeficitOffsetSpoke",
-      "IDeficitOffsetSpoke",
+      "AvanaFirstLossReserve",
+      "DaoDeficitOffset",
+      "IDaoDeficitOffset",
       "SYM-193",
       "TEST-247",
       "TEST-298",
@@ -12021,7 +12104,7 @@
     ]
   },
   "REQ-ACCESS-052": {
-    "hash": "88a39b7dc8f99ce2",
+    "hash": "de855cf2585a4e37",
     "checks": [
       "TEST-174"
     ]
@@ -12271,7 +12354,7 @@
     ]
   },
   "REQ-ACCESS-083": {
-    "hash": "62bc46d32e7bb8d2",
+    "hash": "4a62e22c2c309814",
     "checks": [
       "TEST-130",
       "TEST-195",
@@ -12810,7 +12893,7 @@
     ]
   },
   "REQ-ACCESS-145": {
-    "hash": "2ebb427dfbc32e47",
+    "hash": "2c868204965848f1",
     "checks": [
       "TEST-062",
       "TEST-063",
@@ -12827,6 +12910,8 @@
       "TEST-063",
       "TEST-064",
       "TEST-067",
+      "TEST-196",
+      "TEST-244",
       "TEST-278"
     ]
   },
@@ -12853,7 +12938,8 @@
       "TEST-193",
       "TEST-194",
       "TEST-195",
-      "TEST-210"
+      "TEST-210",
+      "TEST-215"
     ]
   },
   "REQ-ACCESS-149": {
@@ -12974,7 +13060,7 @@
     ]
   },
   "REQ-ACCESS-157": {
-    "hash": "b67724d7c6e1b732",
+    "hash": "a6a381d2b6807b20",
     "checks": [
       "AvanaRoles",
       "FV-CTL-04",
@@ -13137,7 +13223,7 @@
     ]
   },
   "REQ-ACCESS-175": {
-    "hash": "721d0f803faad5a8",
+    "hash": "2e388fd3e2947308",
     "checks": [
       "TEST-062",
       "TEST-063",
@@ -13349,7 +13435,8 @@
       "IRiskModuleViews",
       "RiskModule",
       "RiskModuleBorrowLogic",
-      "TEST-018"
+      "TEST-018",
+      "TEST-132"
     ]
   },
   "REQ-ADAPTER-010": {
@@ -13412,6 +13499,8 @@
       "IRiskModuleErrors",
       "RiskModuleBorrowLogic",
       "TEST-028",
+      "TEST-043",
+      "TEST-157",
       "TEST-276"
     ]
   },
@@ -13424,6 +13513,7 @@
       "IRiskModuleErrors",
       "RiskModuleBorrowLogic",
       "TEST-028",
+      "TEST-250",
       "TEST-276"
     ]
   },
@@ -13741,7 +13831,7 @@
     ]
   },
   "REQ-ADAPTER-041": {
-    "hash": "c6aa4e1a3c1ce7f0",
+    "hash": "01a0f61d0b07df34",
     "checks": [
       "AaveAdapter",
       "IAaveAdapter",
@@ -13776,6 +13866,7 @@
       "IAaveAdapterViews",
       "TEST-012",
       "TEST-162",
+      "TEST-168",
       "TEST-192",
       "TEST-273"
     ]
@@ -13830,6 +13921,7 @@
       "TEST-099",
       "TEST-107",
       "TEST-132",
+      "TEST-133",
       "TEST-151",
       "TEST-162",
       "TEST-193",
@@ -13876,6 +13968,7 @@
     "checks": [
       "AaveAdapter",
       "IAaveAdapter",
+      "TEST-011",
       "TEST-203",
       "TEST-269"
     ]
@@ -13953,7 +14046,8 @@
       "RiskModuleBorrowLogic",
       "TEST-028",
       "TEST-155",
-      "TEST-158"
+      "TEST-158",
+      "TEST-169"
     ]
   },
   "REQ-ADAPTER-062": {
@@ -13961,6 +14055,7 @@
     "checks": [
       "IRiskModuleErrors",
       "TEST-158",
+      "TEST-169",
       "TEST-201"
     ]
   },
@@ -13998,9 +14093,11 @@
       "IAaveAdapterUser",
       "IAaveAdapterViews",
       "TEST-010",
+      "TEST-011",
       "TEST-012",
       "TEST-030",
-      "TEST-061"
+      "TEST-061",
+      "TEST-133"
     ]
   },
   "REQ-ADAPTER-066": {
@@ -14015,6 +14112,7 @@
       "IAaveAdapterUser",
       "IAaveAdapterViews",
       "TEST-010",
+      "TEST-011",
       "TEST-025",
       "TEST-026",
       "TEST-061",
@@ -14101,6 +14199,7 @@
       "TEST-099",
       "TEST-100",
       "TEST-104",
+      "TEST-131",
       "TEST-151",
       "TEST-170",
       "TEST-208",
@@ -14199,6 +14298,7 @@
       "AaveAdapterUserLogic",
       "IAaveAdapterErrors",
       "IAaveAdapterUser",
+      "TEST-011",
       "TEST-012"
     ]
   },
@@ -14365,6 +14465,7 @@
       "TEST-208",
       "TEST-213",
       "TEST-223",
+      "TEST-226",
       "TEST-229",
       "TEST-237",
       "TEST-239",
@@ -14478,6 +14579,7 @@
       "AaveAdapter",
       "TEST-012",
       "TEST-030",
+      "TEST-133",
       "TEST-192"
     ]
   },
@@ -14642,6 +14744,7 @@
       "SlipstreamIntegration",
       "TEST-010",
       "TEST-011",
+      "TEST-116",
       "TEST-265",
       "TEST-266"
     ]
@@ -14662,7 +14765,8 @@
       "MATH-AMM-V3-PRICE-06",
       "PROP-083",
       "TEST-010",
-      "TEST-011"
+      "TEST-011",
+      "TEST-217"
     ]
   },
   "REQ-AMM-CORE-007": {
@@ -14677,7 +14781,9 @@
       "ILPVaultErrors",
       "TEST-016",
       "TEST-056",
+      "TEST-116",
       "TEST-208",
+      "TEST-217",
       "TEST-237"
     ]
   },
@@ -14698,6 +14804,7 @@
       "MATH-AMM-V2-PRICE-03",
       "MATH-AMM-V3-PRICE-01",
       "RiskMetadata",
+      "TEST-047",
       "TEST-058",
       "TEST-264",
       "TEST-265"
@@ -14715,6 +14822,7 @@
       "TEST-016",
       "TEST-108",
       "TEST-222",
+      "TEST-223",
       "TEST-264",
       "TEST-265",
       "UniswapV3Integration",
@@ -14731,7 +14839,9 @@
       "MarketDef",
       "PoolKeying",
       "TEST-017",
+      "TEST-020",
       "TEST-091",
+      "TEST-223",
       "TEST-264",
       "VaultTokenFactory"
     ]
@@ -14749,6 +14859,7 @@
       "ILPVaultErrors",
       "IntegrationCapabilities",
       "TEST-017",
+      "TEST-116",
       "TEST-238"
     ]
   },
@@ -14942,8 +15053,8 @@
       "ILPOracleCL",
       "ISlipstreamIntegration",
       "LPOracleCL",
-      "LPOracleCLLogic",
       "LPOracleCLModule",
+      "LPOracleCLViewLogic",
       "SlipstreamIntegration",
       "TEST-265",
       "TEST-279"
@@ -15186,6 +15297,7 @@
       "LPOracleCLModuleLogic",
       "LPOracleCLPool",
       "TEST-011",
+      "TEST-116",
       "TEST-306",
       "UniswapV3Integration"
     ]
@@ -15216,8 +15328,8 @@
       "ILPOracleCL",
       "IUniswapV3Integration",
       "LPOracleCL",
-      "LPOracleCLLogic",
       "LPOracleCLModule",
+      "LPOracleCLViewLogic",
       "MATH-AMM-V3-PRICE-01",
       "MATH-AMM-V3-PRICE-03",
       "MATH-AMM-V3-PRICE-04",
@@ -15258,6 +15370,7 @@
       "HYP-AMM-V3-PRICE-04",
       "MATH-AMM-V3-PRICE-05",
       "TEST-264",
+      "TEST-265",
       "UniswapV3Integration"
     ]
   },
@@ -15357,11 +15470,11 @@
     "checks": []
   },
   "REQ-ARCH-010": {
-    "hash": "456baf11f0147d07",
+    "hash": "bb427aef21df68f4",
     "checks": []
   },
   "REQ-ARCH-011": {
-    "hash": "c64db6715cb22e03",
+    "hash": "4916b431ab10af29",
     "checks": []
   },
   "REQ-ARCH-012": {
@@ -15436,7 +15549,7 @@
     "checks": []
   },
   "REQ-ARCH-029": {
-    "hash": "231ff60e34397150",
+    "hash": "7a4443df0dde9c7a",
     "checks": []
   },
   "REQ-ARCH-030": {
@@ -15474,7 +15587,7 @@
     "checks": []
   },
   "REQ-ARCH-038": {
-    "hash": "03e804d9a62224ea",
+    "hash": "42e5a944b7d565ed",
     "checks": []
   },
   "REQ-ARCH-039": {
@@ -15482,7 +15595,7 @@
     "checks": []
   },
   "REQ-ARCH-040": {
-    "hash": "653699f38fc48eac",
+    "hash": "abac527e83660967",
     "checks": []
   },
   "REQ-ARCH-041": {
@@ -15616,7 +15729,7 @@
     "checks": []
   },
   "REQ-ARCH-073": {
-    "hash": "52826899a3d274c8",
+    "hash": "353d045ab3b2b8e4",
     "checks": []
   },
   "REQ-ARCH-074": {
@@ -15792,11 +15905,11 @@
     "checks": []
   },
   "REQ-ARCH-117": {
-    "hash": "4a1c8e2b64bd5ed6",
+    "hash": "d1b090ce88d022b4",
     "checks": []
   },
   "REQ-ARCH-118": {
-    "hash": "15c0abffa54e80f8",
+    "hash": "b44a9dd6d9f3f840",
     "checks": []
   },
   "REQ-ARCH-119": {
@@ -15856,7 +15969,7 @@
     "checks": []
   },
   "REQ-ARCH-133": {
-    "hash": "a335be83a27da8f0",
+    "hash": "96c566ccc2bf7e31",
     "checks": []
   },
   "REQ-ARCH-134": {
@@ -15880,7 +15993,7 @@
     "checks": []
   },
   "REQ-ARCH-139": {
-    "hash": "3ae474ff467322cb",
+    "hash": "b56fc75dcd4a78ad",
     "checks": []
   },
   "REQ-ARCH-140": {
@@ -15900,7 +16013,7 @@
     "checks": []
   },
   "REQ-ARCH-144": {
-    "hash": "76ae410a265205f8",
+    "hash": "1f0943daf73e4932",
     "checks": []
   },
   "REQ-ARCH-145": {
@@ -15936,7 +16049,7 @@
     "checks": []
   },
   "REQ-ARCH-152": {
-    "hash": "052a55c78309b939",
+    "hash": "1f6308e6cf620119",
     "checks": []
   },
   "REQ-ARCH-153": {
@@ -16000,11 +16113,11 @@
     "checks": []
   },
   "REQ-ARCH-180": {
-    "hash": "b627d1eab6518d8e",
+    "hash": "de9e6e671e667174",
     "checks": []
   },
   "REQ-ARCH-181": {
-    "hash": "ae2cd14df80ab20e",
+    "hash": "4bbac3554a77a2bc",
     "checks": []
   },
   "REQ-ARCH-182": {
@@ -16048,7 +16161,7 @@
     "checks": []
   },
   "REQ-ARCH-192": {
-    "hash": "bdc41c699bf0ba6c",
+    "hash": "5fb28b94a024a2b6",
     "checks": []
   },
   "REQ-ARCH-193": {
@@ -16080,7 +16193,7 @@
     "checks": []
   },
   "REQ-ARCH-200": {
-    "hash": "1666ada9078fd5b3",
+    "hash": "c20b86c8e9969a29",
     "checks": []
   },
   "REQ-ARCH-201": {
@@ -16116,7 +16229,7 @@
     "checks": []
   },
   "REQ-ARCH-209": {
-    "hash": "4c569406e6a9fd33",
+    "hash": "53f9f43ac568be59",
     "checks": []
   },
   "REQ-ARCH-210": {
@@ -16124,7 +16237,7 @@
     "checks": []
   },
   "REQ-ARCH-211": {
-    "hash": "183a93624ae4af92",
+    "hash": "ab4cbdbba574d5a3",
     "checks": [
       "HYP-97",
       "MATH-AR-51",
@@ -16181,7 +16294,7 @@
     ]
   },
   "REQ-BUDGET-011": {
-    "hash": "27c49558b8c16244",
+    "hash": "79ff0dacee154f52",
     "checks": []
   },
   "REQ-BUDGET-012": {
@@ -16320,6 +16433,7 @@
       "ICollateralization",
       "ICollateralizationViews",
       "TEST-108",
+      "TEST-133",
       "TEST-171"
     ]
   },
@@ -16340,7 +16454,8 @@
       "TEST-018",
       "TEST-097",
       "TEST-152",
-      "TEST-171"
+      "TEST-171",
+      "TEST-252"
     ]
   },
   "REQ-COLL-004": {
@@ -16362,7 +16477,8 @@
       "ICollateralization",
       "ICollateralizationAdapter",
       "ICollateralizationErrors",
-      "TEST-011"
+      "TEST-011",
+      "TEST-089"
     ]
   },
   "REQ-COLL-006": {
@@ -16496,6 +16612,7 @@
       "MATH-UO-40",
       "SYM-118",
       "TEST-057",
+      "TEST-072",
       "TEST-235",
       "TEST-236",
       "TEST-238"
@@ -16594,6 +16711,9 @@
       "MATH-AMM-V3-PRICE-06",
       "TEST-010",
       "TEST-011",
+      "TEST-116",
+      "TEST-264",
+      "TEST-265",
       "TEST-279"
     ]
   },
@@ -16618,6 +16738,8 @@
       "TEST-013",
       "TEST-097",
       "TEST-153",
+      "TEST-163",
+      "TEST-164",
       "TEST-208",
       "TEST-272"
     ]
@@ -17050,6 +17172,7 @@
       "ParameterStoreListingLogic",
       "ParameterStoreOracle",
       "ParameterStoreViews",
+      "TEST-071",
       "TEST-250"
     ]
   },
@@ -17102,6 +17225,7 @@
       "TEST-061",
       "TEST-062",
       "TEST-064",
+      "TEST-139",
       "TEST-225",
       "TEST-242",
       "TEST-250"
@@ -17568,7 +17692,7 @@
     ]
   },
   "REQ-CONFIG-056": {
-    "hash": "47cf426d5e4d96c8",
+    "hash": "4edd897195989790",
     "checks": [
       "IParameterStoreAdmin",
       "IParameterStoreErrors",
@@ -17589,6 +17713,7 @@
       "ParameterStore",
       "ParameterStoreViews",
       "TEST-062",
+      "TEST-168",
       "TEST-278"
     ]
   },
@@ -17722,6 +17847,7 @@
       "ParameterStoreLoosenLogic",
       "ParameterStoreTightenLogic",
       "ParameterStoreViews",
+      "TEST-054",
       "TEST-061",
       "TEST-062",
       "TEST-064"
@@ -17767,7 +17893,7 @@
     ]
   },
   "REQ-CONFIG-074": {
-    "hash": "cc8be2e670169688",
+    "hash": "dda04939b34c5036",
     "checks": [
       "IAaveV4ExtSload",
       "IMarketRegistryApprovals",
@@ -17822,7 +17948,7 @@
     ]
   },
   "REQ-CONFIG-078": {
-    "hash": "5dcb5f585dd8e93f",
+    "hash": "67acb72967dab09b",
     "checks": [
       "MarketRegistry",
       "MarketRegistryListingLogic",
@@ -17833,7 +17959,7 @@
     ]
   },
   "REQ-CONFIG-079": {
-    "hash": "55a274fdf7984e7d",
+    "hash": "8f14d00dedec367f",
     "checks": [
       "IMarketRegistryListing",
       "MarketRegistry",
@@ -17863,7 +17989,7 @@
     ]
   },
   "REQ-CONFIG-081": {
-    "hash": "c1d93a9e4f02c33e",
+    "hash": "d2a93e25cb0b998e",
     "checks": [
       "FV-CTL-160",
       "HubAssetExposureView",
@@ -17924,7 +18050,8 @@
       "PayoutEscrow",
       "TEST-173",
       "TEST-177",
-      "TEST-179"
+      "TEST-179",
+      "TEST-221"
     ]
   },
   "REQ-ESCROW-003": {
@@ -17939,7 +18066,8 @@
       "PayoutEscrow",
       "TEST-061",
       "TEST-173",
-      "TEST-179"
+      "TEST-179",
+      "TEST-221"
     ]
   },
   "REQ-ESCROW-004": {
@@ -17956,7 +18084,8 @@
       "TEST-061",
       "TEST-173",
       "TEST-177",
-      "TEST-179"
+      "TEST-179",
+      "TEST-221"
     ]
   },
   "REQ-ESCROW-005": {
@@ -18039,7 +18168,8 @@
       "IPayoutEscrow",
       "PROP-052",
       "PayoutEscrow",
-      "TEST-179"
+      "TEST-179",
+      "TEST-221"
     ]
   },
   "REQ-ESCROW-012": {
@@ -18060,7 +18190,8 @@
       "PROP-052",
       "PayoutEscrow",
       "TEST-177",
-      "TEST-179"
+      "TEST-179",
+      "TEST-221"
     ]
   },
   "REQ-ESCROW-014": {
@@ -18226,6 +18357,7 @@
       "LPVaultSwapDeleverageLogic",
       "MATH-ST-110",
       "MarketRegistryHubsLogic",
+      "PROP-096",
       "TEST-032",
       "TEST-046",
       "TEST-239",
@@ -18273,34 +18405,34 @@
     ]
   },
   "REQ-FLR-001": {
-    "hash": "2b9388a954ea020a",
+    "hash": "212dbbfc36d504be",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpoke",
-      "ICoverageSpokeViews",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveViews",
       "TEST-293"
     ]
   },
   "REQ-FLR-002": {
-    "hash": "6dbca46b3a1274df",
+    "hash": "5e36248a142be6d6",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpokeAdmin",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
       "TEST-062",
       "TEST-293"
     ]
   },
   "REQ-FLR-003": {
-    "hash": "e82b96d69b4f7bdf",
+    "hash": "ac88fd6d533dda39",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-293"
     ]
   },
   "REQ-FLR-004": {
-    "hash": "d3f7b605f9634f77",
+    "hash": "9db8e3ad1d0cb2e7",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "PROP-060",
       "TEST-128",
@@ -18308,11 +18440,11 @@
     ]
   },
   "REQ-FLR-005": {
-    "hash": "31d209ed2ed46270",
+    "hash": "510892d129174439",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpoke",
-      "ICoverageSpokeErrors",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveErrors",
       "PROP-060",
       "TEST-080",
       "TEST-293"
@@ -18321,12 +18453,12 @@
   "REQ-FLR-006": {
     "hash": "220754ee031f2fca",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-293"
     ]
   },
   "REQ-FLR-007": {
-    "hash": "9def5d4367e08381",
+    "hash": "f960cc0b82eee702",
     "checks": [
       "TEST-002",
       "TEST-293"
@@ -18335,28 +18467,28 @@
   "REQ-FLR-008": {
     "hash": "e84952d2ee3ea27b",
     "checks": [
-      "CoverageSpoke",
-      "DeficitOffsetSpoke",
-      "ICoverageSpoke",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "AvanaFirstLossReserve",
+      "DaoDeficitOffset",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "TEST-002",
       "TEST-293",
       "TEST-298"
     ]
   },
   "REQ-FLR-009": {
-    "hash": "aa9471b43cfff29c",
+    "hash": "14dc9150a006f01b",
     "checks": []
   },
   "REQ-FLR-010": {
-    "hash": "be7220532700ccad",
+    "hash": "2b23e21cc4b42c37",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "PROP-060",
       "TEST-177",
       "TEST-293",
@@ -18364,40 +18496,40 @@
     ]
   },
   "REQ-FLR-011": {
-    "hash": "c1821fc066ef014a",
+    "hash": "a0819da1589a8fbc",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpoke",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserve",
       "TEST-199",
       "TEST-293"
     ]
   },
   "REQ-FLR-012": {
-    "hash": "2f81a5ef75656ae5",
+    "hash": "5e4f388723f24fc4",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-128",
       "TEST-293"
     ]
   },
   "REQ-FLR-013": {
-    "hash": "7cb488a3c6c818d6",
+    "hash": "75f4b91063e33e02",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
-      "ICoverageSpokeAdmin",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
       "TEST-293"
     ]
   },
   "REQ-FLR-014": {
     "hash": "11ba456bbbd0cf29",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-06",
-      "ICoverageSpoke",
-      "ICoverageSpokeAdmin",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
       "TEST-199",
       "TEST-293"
     ]
@@ -18405,7 +18537,7 @@
   "REQ-FLR-015": {
     "hash": "fc5de0be182f2c74",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "TEST-293"
     ]
@@ -18413,12 +18545,12 @@
   "REQ-FLR-016": {
     "hash": "91b96081560f3eff",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
-      "ICoverageSpokeAdmin",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "PROP-039",
       "TEST-062",
       "TEST-094",
@@ -18429,12 +18561,12 @@
     ]
   },
   "REQ-FLR-017": {
-    "hash": "b88478635c7bf8f4",
+    "hash": "3a6951aa46712f07",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpokeAdmin",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "TEST-199",
       "TEST-293"
     ]
@@ -18442,11 +18574,11 @@
   "REQ-FLR-018": {
     "hash": "de5f91f96eeccec4",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "MATH-ST-114",
       "PROP-039",
       "TEST-094",
@@ -18457,10 +18589,10 @@
   "REQ-FLR-019": {
     "hash": "3123daa25290da97",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-08",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "PROP-039",
       "TEST-094",
       "TEST-128",
@@ -18471,35 +18603,36 @@
   "REQ-FLR-020": {
     "hash": "52e847dde5218fce",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-199"
     ]
   },
   "REQ-FLR-021": {
-    "hash": "62bd8863da4e066a",
+    "hash": "f4e496fbfa4da6d3",
     "checks": [
       "FV-LIQ-05",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
+      "TEST-199",
       "TEST-228"
     ]
   },
   "REQ-FLR-022": {
-    "hash": "baf5f731c392066f",
+    "hash": "77a4e2e7ef0bcb64",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-199",
       "TEST-298"
     ]
   },
   "REQ-FLR-023": {
-    "hash": "ba4cceec3e1a2315",
+    "hash": "f1495d729cbc89fb",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
-      "ICoverageSpokeAdmin",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "TEST-062",
       "TEST-293",
       "Withdrawal"
@@ -18508,11 +18641,11 @@
   "REQ-FLR-024": {
     "hash": "0fd8f7ad48866e86",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
-      "ICoverageSpokeAdmin",
-      "ICoverageSpokeErrors",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
+      "IAvanaFirstLossReserveErrors",
       "TEST-062",
       "TEST-293",
       "Withdrawal"
@@ -18521,12 +18654,12 @@
   "REQ-FLR-025": {
     "hash": "a2cc1d2d813ea2b1",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
-      "ICoverageSpokeAdmin",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "TEST-062",
       "TEST-293",
       "TEST-298",
@@ -18536,8 +18669,8 @@
   "REQ-FLR-026": {
     "hash": "1a4c84f9fed81437",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpokeErrors",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserveErrors",
       "TEST-293",
       "TEST-298"
     ]
@@ -18545,7 +18678,7 @@
   "REQ-FLR-027": {
     "hash": "caa8385869d250cf",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "MATH-AR-51",
       "SYM-193",
@@ -18562,9 +18695,9 @@
   "REQ-FLR-029": {
     "hash": "d7173512531a7a52",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpokeErrors",
+      "IAvanaFirstLossReserveErrors",
       "PROP-039",
       "TEST-094",
       "TEST-128",
@@ -18575,9 +18708,9 @@
   "REQ-FLR-030": {
     "hash": "2e6180dc8ac449e1",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpokeErrors",
+      "IAvanaFirstLossReserveErrors",
       "PROP-039",
       "TEST-094",
       "TEST-199",
@@ -18587,9 +18720,9 @@
   "REQ-FLR-031": {
     "hash": "551d54c30d3809fc",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "PROP-039",
       "TEST-094",
       "TEST-128",
@@ -18600,7 +18733,7 @@
   "REQ-FLR-032": {
     "hash": "ddb447debe8ab4a6",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "TEST-062",
       "TEST-199",
@@ -18610,34 +18743,34 @@
   "REQ-FLR-033": {
     "hash": "9b403ea6bd3d183b",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpokeAdmin",
-      "ICoverageSpokeErrors",
+      "IAvanaFirstLossReserveAdmin",
+      "IAvanaFirstLossReserveErrors",
       "TEST-293"
     ]
   },
   "REQ-FLR-034": {
     "hash": "92d779aead3b5b35",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
-      "ICoverageSpokeAdmin",
+      "IAvanaFirstLossReserveAdmin",
       "TEST-293"
     ]
   },
   "REQ-FLR-035": {
-    "hash": "344b7278b8b4139c",
+    "hash": "4e0fbe5d0af6e25c",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-199",
       "TEST-293"
     ]
   },
   "REQ-FLR-036": {
-    "hash": "fec8997552379b94",
+    "hash": "c20985b2dac6c9a2",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-199",
       "TEST-293",
       "TEST-298"
@@ -18646,17 +18779,17 @@
   "REQ-FLR-037": {
     "hash": "c47964af1a2ad1fb",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-293"
     ]
   },
   "REQ-FLR-038": {
-    "hash": "94a080429bbd1fcd",
+    "hash": "160bc788dc2d3ca9",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-06",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "ILPVaultSwapLiquidation",
       "LPVaultSwapPendingLogic",
       "TEST-170",
@@ -18664,20 +18797,20 @@
     ]
   },
   "REQ-FLR-039": {
-    "hash": "1f3419e2921ee5b8",
+    "hash": "e13cf5e19a3e923e",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpoke",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserve",
       "TEST-002"
     ]
   },
   "REQ-FLR-040": {
-    "hash": "0bd5d7fbc47843a7",
+    "hash": "41815d738b63b4dd",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-08",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "PROP-060",
       "TEST-094",
       "TEST-128",
@@ -18688,19 +18821,19 @@
     ]
   },
   "REQ-FLR-041": {
-    "hash": "8f3ca9257419c252",
+    "hash": "4f43a101d5dec99a",
     "checks": [
       "FV-LIQ-05",
       "FV-LIQ-06",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "MATH-ST-91",
       "TEST-247"
     ]
   },
   "REQ-FLR-042": {
-    "hash": "2e3553a273526ede",
+    "hash": "8d91ac6f14f2d789",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "TEST-094",
       "TEST-128",
       "TEST-199",
@@ -18708,7 +18841,7 @@
     ]
   },
   "REQ-FLR-043": {
-    "hash": "7f5f76af80b35dba",
+    "hash": "b323cda86e3d5e46",
     "checks": [
       "FV-CTL-160",
       "MarketRegistryHubsLogic",
@@ -18716,7 +18849,7 @@
     ]
   },
   "REQ-FLR-044": {
-    "hash": "416a79c07d61c3ea",
+    "hash": "dc352e2fdc472955",
     "checks": [
       "TEST-293"
     ]
@@ -18724,18 +18857,18 @@
   "REQ-FLR-045": {
     "hash": "25242056cf9aec42",
     "checks": [
-      "CoverageSpoke",
-      "ICoverageSpokeErrors",
+      "AvanaFirstLossReserve",
+      "IAvanaFirstLossReserveErrors",
       "TEST-293",
       "TEST-298"
     ]
   },
   "REQ-FLR-046": {
-    "hash": "555ecb25b68919ad",
+    "hash": "e199f925617bfca3",
     "checks": [
-      "DeficitOffsetSpoke",
+      "DaoDeficitOffset",
       "HubAssetExposureView",
-      "IDeficitOffsetSpoke",
+      "IDaoDeficitOffset",
       "ILensRisk",
       "LensRisk",
       "SpokeKind",
@@ -18745,19 +18878,19 @@
     ]
   },
   "REQ-FLR-047": {
-    "hash": "0c9912a82fc0a742",
+    "hash": "944995e92e4506f3",
     "checks": [
-      "DeficitOffsetSpoke",
-      "IDeficitOffsetSpoke",
+      "DaoDeficitOffset",
+      "IDaoDeficitOffset",
       "TEST-298"
     ]
   },
   "REQ-FLR-048": {
     "hash": "780a1bf9aa40eff0",
     "checks": [
-      "CoverageSpoke",
-      "DeficitOffsetSpoke",
-      "IDeficitOffsetSpoke",
+      "AvanaFirstLossReserve",
+      "DaoDeficitOffset",
+      "IDaoDeficitOffset",
       "MATH-AR-51",
       "TEST-298",
       "TEST-299"
@@ -18766,8 +18899,8 @@
   "REQ-FLR-049": {
     "hash": "106fc18427b98425",
     "checks": [
-      "DeficitOffsetSpoke",
-      "IDeficitOffsetSpoke",
+      "DaoDeficitOffset",
+      "IDaoDeficitOffset",
       "TEST-298",
       "TEST-299"
     ]
@@ -18775,8 +18908,8 @@
   "REQ-FLR-050": {
     "hash": "8b42d87818b10122",
     "checks": [
-      "DeficitOffsetSpoke",
-      "IDeficitOffsetSpoke",
+      "DaoDeficitOffset",
+      "IDaoDeficitOffset",
       "TEST-298"
     ]
   },
@@ -18793,6 +18926,7 @@
       "PROP-036",
       "TEST-174",
       "TEST-288",
+      "TEST-289",
       "TEST-290",
       "TEST-292"
     ]
@@ -18814,6 +18948,7 @@
       "TEST-205",
       "TEST-285",
       "TEST-288",
+      "TEST-289",
       "TEST-292"
     ]
   },
@@ -18868,6 +19003,7 @@
       "TEST-046",
       "TEST-052",
       "TEST-174",
+      "TEST-289",
       "TEST-292"
     ]
   },
@@ -19010,6 +19146,7 @@
       "TEST-046",
       "TEST-174",
       "TEST-285",
+      "TEST-289",
       "TEST-292"
     ]
   },
@@ -19020,7 +19157,8 @@
       "IFlashLiquidator",
       "IFlashLiquidatorErrors",
       "TEST-174",
-      "TEST-176"
+      "TEST-176",
+      "TEST-289"
     ]
   },
   "REQ-HELPER-015": {
@@ -19050,15 +19188,15 @@
     "checks": []
   },
   "REQ-HUB-002": {
-    "hash": "d2326d84f6e3943c",
+    "hash": "d1eb8fb5205eec5a",
     "checks": []
   },
   "REQ-HUB-003": {
-    "hash": "f97faf19d087ef2b",
+    "hash": "9e4efd26c296230c",
     "checks": []
   },
   "REQ-HUB-004": {
-    "hash": "b159e175fa45a33f",
+    "hash": "353432f88877999d",
     "checks": []
   },
   "REQ-HUB-005": {
@@ -19070,7 +19208,7 @@
     "checks": []
   },
   "REQ-HUB-007": {
-    "hash": "add17a5faeb915b2",
+    "hash": "9e8e3a270fc558a7",
     "checks": []
   },
   "REQ-HUB-008": {
@@ -19082,7 +19220,7 @@
     ]
   },
   "REQ-HUB-009": {
-    "hash": "599b3ab0587cec3b",
+    "hash": "4ebccafd6be9c1b3",
     "checks": [
       "MATH-AR-75",
       "SYM-192"
@@ -19109,7 +19247,7 @@
     "checks": []
   },
   "REQ-HUB-015": {
-    "hash": "464253c5fa1482ca",
+    "hash": "65d87520030a6040",
     "checks": [
       "LensRisk",
       "SpokeKind"
@@ -19120,7 +19258,7 @@
     "checks": []
   },
   "REQ-HUB-017": {
-    "hash": "cd569f9bbd5580f3",
+    "hash": "859b9a800dfd9344",
     "checks": [
       "HYP-97",
       "MATH-AR-51"
@@ -19145,7 +19283,7 @@
     ]
   },
   "REQ-HUB-021": {
-    "hash": "8c31e8e5921d6811",
+    "hash": "ba4e411cc83a09e7",
     "checks": []
   },
   "REQ-HUB-022": {
@@ -19182,7 +19320,9 @@
   },
   "REQ-HUB-030": {
     "hash": "cc64ffb56cefdfd5",
-    "checks": []
+    "checks": [
+      "TEST-111"
+    ]
   },
   "REQ-HUB-031": {
     "hash": "59375d13c03aadf5",
@@ -19239,7 +19379,7 @@
     "checks": []
   },
   "REQ-HUB-044": {
-    "hash": "113ac92b99afde51",
+    "hash": "edd9fca53d635aba",
     "checks": []
   },
   "REQ-HUB-045": {
@@ -19297,7 +19437,7 @@
     "checks": []
   },
   "REQ-HUB-058": {
-    "hash": "b2511e507fe57d46",
+    "hash": "790d3d4af1126a11",
     "checks": []
   },
   "REQ-HUB-059": {
@@ -19317,7 +19457,7 @@
     "checks": []
   },
   "REQ-HUB-063": {
-    "hash": "7b87e70b668d3db8",
+    "hash": "792a1f7b414444f1",
     "checks": []
   },
   "REQ-HUB-064": {
@@ -19401,7 +19541,7 @@
     "checks": []
   },
   "REQ-HUB-084": {
-    "hash": "c226d463486d5a72",
+    "hash": "c7620aa42126d803",
     "checks": []
   },
   "REQ-HUB-085": {
@@ -19422,14 +19562,16 @@
   },
   "REQ-HUB-089": {
     "hash": "6bbc6ef26159b7c6",
-    "checks": []
+    "checks": [
+      "TEST-111"
+    ]
   },
   "REQ-HUB-090": {
     "hash": "a7424837b6d58481",
     "checks": []
   },
   "REQ-HUB-091": {
-    "hash": "ee5b2694c7f4b7c6",
+    "hash": "abeac8e4f1285fce",
     "checks": []
   },
   "REQ-HUB-092": {
@@ -19483,15 +19625,16 @@
     "checks": []
   },
   "REQ-HUB-102": {
-    "hash": "a4c087b9781c5c98",
+    "hash": "d24cbe8626b1e71b",
     "checks": []
   },
   "REQ-HUB-103": {
-    "hash": "e1ff5cfe2ba53455",
+    "hash": "3cb20950e159105b",
     "checks": [
       "FV-CTL-160",
       "QNT-TOPO-05",
-      "QNT-TOPO-X1"
+      "QNT-TOPO-X1",
+      "TEST-273"
     ]
   },
   "REQ-HUB-104": {
@@ -19820,7 +19963,8 @@
       "LiquidationPreview",
       "SYM-140",
       "TEST-069",
-      "TEST-205"
+      "TEST-205",
+      "TEST-247"
     ]
   },
   "REQ-LENS-018": {
@@ -19833,6 +19977,7 @@
       "LensMarketModule",
       "SYM-140",
       "TEST-218",
+      "TEST-230",
       "TEST-247"
     ]
   },
@@ -19933,7 +20078,7 @@
     ]
   },
   "REQ-LENS-026": {
-    "hash": "11bf65a27a9d3b2e",
+    "hash": "27d6de83d97360cd",
     "checks": [
       "FV-LIQ-06",
       "ILensMarket",
@@ -20063,7 +20208,7 @@
     ]
   },
   "REQ-LENS-034": {
-    "hash": "cc7d76001c01fa65",
+    "hash": "a8d497894af442a9",
     "checks": [
       "FV-LIQ-05",
       "FV-LIQ-06",
@@ -20073,6 +20218,7 @@
       "LensRisk",
       "LensRiskModule",
       "SYM-140",
+      "TEST-225",
       "TEST-247",
       "TailCoverageView"
     ]
@@ -20111,7 +20257,7 @@
     ]
   },
   "REQ-LENS-037": {
-    "hash": "1ae61f1f19df4b21",
+    "hash": "6547c331ee2d0a05",
     "checks": [
       "AccountView",
       "DebtPosition",
@@ -20175,7 +20321,7 @@
     ]
   },
   "REQ-LENS-042": {
-    "hash": "c518626ae349ac7f",
+    "hash": "268f6a7252b6047f",
     "checks": [
       "HubAssetExposureView",
       "ILensRisk",
@@ -20186,7 +20332,7 @@
     ]
   },
   "REQ-LENS-043": {
-    "hash": "20e4b5493a95a1c4",
+    "hash": "db76ec63d785b532",
     "checks": [
       "HubAssetExposureView",
       "ILensRisk",
@@ -20379,7 +20525,7 @@
     ]
   },
   "REQ-LENS-059": {
-    "hash": "2ebbd0408b32fa82",
+    "hash": "2d7019cf2717210e",
     "checks": [
       "HubAssetExposureView",
       "HubAssetView",
@@ -20481,6 +20627,7 @@
       "TEST-060",
       "TEST-152",
       "TEST-170",
+      "TEST-222",
       "TEST-239"
     ]
   },
@@ -20571,6 +20718,7 @@
       "PROP-037",
       "TEST-028",
       "TEST-060",
+      "TEST-222",
       "TEST-236"
     ]
   },
@@ -20787,7 +20935,7 @@
     ]
   },
   "REQ-MREG-006": {
-    "hash": "192a9fd43ea4c2a8",
+    "hash": "5ec8461832d3fbc8",
     "checks": [
       "DebtReserveDef",
       "FV-CTL-83",
@@ -20830,7 +20978,7 @@
     ]
   },
   "REQ-MREG-009": {
-    "hash": "af9160afc68a254b",
+    "hash": "6caf2974bc6ce9ca",
     "checks": [
       "DebtReserveDef",
       "IMarketRegistryHubs",
@@ -20928,7 +21076,7 @@
     ]
   },
   "REQ-MREG-018": {
-    "hash": "d4f3bedea525f536",
+    "hash": "f9bc189025e3cbbd",
     "checks": [
       "IMarketRegistryErrors",
       "IMarketRegistryListing",
@@ -20953,7 +21101,7 @@
     ]
   },
   "REQ-MREG-020": {
-    "hash": "bb53fdd39ce646c6",
+    "hash": "f396f2a67873e0a2",
     "checks": [
       "FV-CTL-93",
       "IFlashLiquidator",
@@ -21060,6 +21208,7 @@
       "TEST-066",
       "TEST-204",
       "TEST-228",
+      "TEST-234",
       "TEST-252"
     ]
   },
@@ -21194,7 +21343,7 @@
     ]
   },
   "REQ-MREG-033": {
-    "hash": "4b53315ab27568da",
+    "hash": "23751e5bc8349e91",
     "checks": [
       "IMarketRegistryWindDown",
       "LPVaultSwapPendingLogic",
@@ -21336,6 +21485,8 @@
     "checks": [
       "OracleConfig",
       "TEST-040",
+      "TEST-157",
+      "TEST-168",
       "TokenOracleConfig"
     ]
   },
@@ -21394,6 +21545,7 @@
       "LPOracleEval",
       "LPPriceMath",
       "TEST-036",
+      "TEST-217",
       "TEST-266",
       "TEST-305"
     ]
@@ -21437,6 +21589,7 @@
       "LPOracleCLModuleLogic",
       "LPOracleCLPool",
       "PROP-025",
+      "TEST-041",
       "TEST-306"
     ]
   },
@@ -21511,7 +21664,8 @@
       "LPOracleEval",
       "TEST-006",
       "TEST-039",
-      "TEST-040"
+      "TEST-040",
+      "TEST-043"
     ]
   },
   "REQ-ORACLE-019": {
@@ -21637,12 +21791,15 @@
       "ILPOracle",
       "ILPOracleLogic",
       "LPOracle",
-      "LPOracleCLLogic",
+      "LPOracleCLPokeLogic",
       "LPOracleEval",
       "LPOraclePoke",
       "LPOraclePokeLogic",
       "LPOracleTypes",
-      "TEST-042"
+      "TEST-042",
+      "TEST-116",
+      "TEST-265",
+      "TEST-306"
     ]
   },
   "REQ-ORACLE-027": {
@@ -21676,7 +21833,9 @@
       "PROP-049",
       "TEST-042",
       "TEST-159",
+      "TEST-163",
       "TEST-219",
+      "TEST-231",
       "TEST-294"
     ]
   },
@@ -21709,6 +21868,7 @@
       "LPOraclePoke",
       "TEST-042",
       "TEST-219",
+      "TEST-252",
       "TEST-294"
     ]
   },
@@ -21802,7 +21962,8 @@
     "hash": "0b0db6f6d971ffa3",
     "checks": [
       "ILPOracle",
-      "TEST-159"
+      "TEST-159",
+      "TEST-163"
     ]
   },
   "REQ-ORACLE-037": {
@@ -21885,9 +22046,9 @@
       "ILPOracleCL",
       "LPOracle",
       "LPOracleCL",
-      "LPOracleCLLogic",
       "LPOracleCLModule",
       "LPOracleCLModuleLogic",
+      "LPOracleCLViewLogic",
       "LPOracleEval",
       "LPOracleTypes",
       "LPOracleViewLogic",
@@ -21958,7 +22119,8 @@
       "ILPOracleCL",
       "ILPOracleLogic",
       "LPOracle",
-      "LPOracleCLLogic",
+      "LPOracleCLInitLogic",
+      "LPOracleCLListingLogic",
       "LPOracleCLModule",
       "LPOracleCLModuleLogic",
       "LPOracleConfig",
@@ -21969,7 +22131,8 @@
       "TEST-219",
       "TEST-250",
       "TEST-294",
-      "TEST-306"
+      "TEST-306",
+      "TEST-332"
     ]
   },
   "REQ-ORACLE-047": {
@@ -21985,7 +22148,8 @@
       "TEST-062",
       "TEST-139",
       "TEST-219",
-      "TEST-306"
+      "TEST-306",
+      "TEST-332"
     ]
   },
   "REQ-ORACLE-048": {
@@ -22015,6 +22179,7 @@
       "OracleLeg",
       "ParameterStoreListingLogic",
       "TEST-070",
+      "TEST-071",
       "TEST-219",
       "TEST-250",
       "TEST-305"
@@ -22083,6 +22248,7 @@
       "MATH-UO-56",
       "SYM-171",
       "TEST-139",
+      "TEST-264",
       "TEST-306"
     ]
   },
@@ -22093,7 +22259,8 @@
       "ILPOracle",
       "LPOracleListing",
       "TEST-036",
-      "TEST-219"
+      "TEST-219",
+      "TEST-250"
     ]
   },
   "REQ-ORACLE-057": {
@@ -22109,7 +22276,7 @@
       "ILPOracleLogic",
       "InitParams",
       "LPOracle",
-      "LPOracleCLLogic",
+      "LPOracleCLInitLogic",
       "LPOracleCLModule",
       "LPOracleConfig",
       "LPOracleEval",
@@ -22129,7 +22296,7 @@
       "ILPOracleEvents",
       "ILPOracleLogic",
       "LPOracle",
-      "LPOracleCLLogic",
+      "LPOracleCLInitLogic",
       "LPOracleConfig",
       "LPOracleEval",
       "LPOracleListingLogic",
@@ -22250,7 +22417,9 @@
       "TEST-040",
       "TEST-105",
       "TEST-219",
-      "TEST-231"
+      "TEST-226",
+      "TEST-231",
+      "TEST-250"
     ]
   },
   "REQ-ORACLE-069": {
@@ -22270,13 +22439,17 @@
   "REQ-ORACLE-071": {
     "hash": "11d1dbad4553d664",
     "checks": [
+      "TEST-006",
+      "TEST-039",
       "TEST-040"
     ]
   },
   "REQ-ORACLE-072": {
     "hash": "2029c3b901643281",
     "checks": [
-      "TEST-040"
+      "TEST-039",
+      "TEST-040",
+      "TEST-279"
     ]
   },
   "REQ-ORACLE-073": {
@@ -22291,7 +22464,8 @@
     "hash": "d82f1f00fe71938b",
     "checks": [
       "ILPOracleErrors",
-      "TEST-042"
+      "TEST-042",
+      "TEST-163"
     ]
   },
   "REQ-ORACLE-075": {
@@ -22356,14 +22530,18 @@
       "FV-CTL-86",
       "FV-CTL-88",
       "ILPOracle",
+      "ILPOracleCL",
       "ILPOracleErrors",
       "ILPOracleLogic",
       "ILPOracleRouter",
       "LPOracle",
       "LPOracleCL",
-      "LPOracleCLLogic",
+      "LPOracleCLInitLogic",
+      "LPOracleCLListingLogic",
       "LPOracleCLModuleCaller",
       "LPOracleCLModuleLogic",
+      "LPOracleCLPokeLogic",
+      "LPOracleCLViewLogic",
       "LPOracleLogicBase",
       "LPOracleLogicSet",
       "LPOracleStorage",
@@ -22412,9 +22590,11 @@
       "PriceStateView",
       "QNT-22",
       "SIM-01E",
+      "TEST-044",
       "TEST-105",
       "TEST-157",
       "TEST-219",
+      "TEST-226",
       "TEST-231"
     ]
   },
@@ -22501,6 +22681,7 @@
       "ILPOracle",
       "LPOracleRecovery",
       "TEST-042",
+      "TEST-219",
       "TEST-220"
     ]
   },
@@ -22595,6 +22776,7 @@
       "MATH-UO-75",
       "PROP-074",
       "TEST-105",
+      "TEST-201",
       "TEST-219",
       "TEST-230",
       "TEST-276"
@@ -22623,6 +22805,7 @@
       "SIM-02G",
       "SIM-02I",
       "TEST-040",
+      "TEST-157",
       "TEST-219",
       "TEST-231",
       "TEST-250",
@@ -22772,7 +22955,8 @@
     "hash": "644e115e028700ac",
     "checks": [
       "LPOracle",
-      "TEST-062"
+      "TEST-062",
+      "TEST-284"
     ]
   },
   "REQ-ORACLE-102": {
@@ -22800,10 +22984,10 @@
       "ILPOracleEvents",
       "IntegrationCapabilities",
       "LPOracleCL",
-      "LPOracleCLLogic",
       "LPOracleCLModule",
       "LPOracleCLModuleCaller",
       "LPOracleCLModuleLogic",
+      "LPOracleCLPokeLogic",
       "LPOracleCLPool",
       "LPOracleEval",
       "LPOraclePoke",
@@ -22822,12 +23006,16 @@
       "TEST-037",
       "TEST-040",
       "TEST-042",
+      "TEST-044",
+      "TEST-116",
       "TEST-139",
       "TEST-217",
       "TEST-219",
       "TEST-250",
       "TEST-251",
+      "TEST-265",
       "TEST-266",
+      "TEST-283",
       "TEST-305",
       "TEST-306"
     ]
@@ -22838,11 +23026,11 @@
       "ClLPVaultMarkets",
       "ClPriceMath",
       "LPOracleCL",
-      "LPOracleCLLogic",
       "LPOracleCLModule",
       "LPOracleCLModuleCaller",
       "LPOracleCLModuleLogic",
       "LPOracleCLPool",
+      "LPOracleCLViewLogic",
       "MATH-UO-11",
       "PROP-025",
       "TEST-279",
@@ -22909,15 +23097,23 @@
   },
   "REQ-ORACLE-108": {
     "hash": "435a76efe38f5283",
-    "checks": []
+    "checks": [
+      "TEST-010"
+    ]
   },
   "REQ-ORACLE-109": {
     "hash": "f13d8f7422a9b3de",
-    "checks": []
+    "checks": [
+      "TEST-043",
+      "TEST-049"
+    ]
   },
   "REQ-ORACLE-110": {
     "hash": "2b84c7f9ea9ffaaa",
-    "checks": []
+    "checks": [
+      "TEST-049",
+      "TEST-230"
+    ]
   },
   "REQ-PROXY-001": {
     "hash": "ede172afbeccdc1d",
@@ -22961,7 +23157,8 @@
       "PositionProxy",
       "ProxyManager",
       "TEST-025",
-      "TEST-190"
+      "TEST-190",
+      "TEST-252"
     ]
   },
   "REQ-PROXY-005": {
@@ -23006,7 +23203,8 @@
       "IPositionProxy",
       "TEST-031",
       "TEST-172",
-      "TEST-187"
+      "TEST-187",
+      "TEST-189"
     ]
   },
   "REQ-PROXY-009": {
@@ -23094,7 +23292,7 @@
     ]
   },
   "REQ-PROXY-017": {
-    "hash": "a573733b84bb785c",
+    "hash": "f12887f2ce968960",
     "checks": [
       "AaveAdapterUserLogic",
       "IAaveAdapterErrors",
@@ -23134,6 +23332,7 @@
       "TEST-028",
       "TEST-068",
       "TEST-095",
+      "TEST-106",
       "TEST-114",
       "TEST-158",
       "TEST-213"
@@ -23279,6 +23478,7 @@
       "QNT-14",
       "TEST-029",
       "TEST-061",
+      "TEST-089",
       "TEST-099",
       "TEST-158",
       "TEST-192",
@@ -23457,7 +23657,9 @@
       "IAaveAdapterErrors",
       "IAaveAdapterViews",
       "TEST-010",
-      "TEST-060"
+      "TEST-060",
+      "TEST-189",
+      "TEST-222"
     ]
   },
   "REQ-PROXY-049": {
@@ -23480,7 +23682,8 @@
       "ProxyManager",
       "TEST-089",
       "TEST-190",
-      "TEST-191"
+      "TEST-191",
+      "TEST-252"
     ]
   },
   "REQ-PROXY-051": {
@@ -23618,6 +23821,7 @@
     "hash": "b82b12a58e8569b9",
     "checks": [
       "IAaveAdapterErrors",
+      "TEST-011",
       "TEST-012",
       "TEST-018",
       "TEST-027",
@@ -23734,7 +23938,8 @@
     "hash": "05cdc4cc3dd3f5fb",
     "checks": [
       "IAaveAdapterErrors",
-      "TEST-060"
+      "TEST-060",
+      "TEST-222"
     ]
   },
   "REQ-PROXY-077": {
@@ -23817,7 +24022,8 @@
       "ProxyManager",
       "TEST-025",
       "TEST-089",
-      "TEST-190"
+      "TEST-190",
+      "TEST-252"
     ]
   },
   "REQ-PROXY-086": {
@@ -24086,6 +24292,7 @@
       "ParameterStoreOracle",
       "TEST-061",
       "TEST-064",
+      "TEST-138",
       "TEST-250",
       "TEST-272"
     ]
@@ -24111,6 +24318,7 @@
       "TEST-061",
       "TEST-062",
       "TEST-064",
+      "TEST-196",
       "TEST-225",
       "TEST-250"
     ]
@@ -24214,6 +24422,7 @@
       "ParameterStoreForwardAdmin",
       "ParameterStoreListingLogic",
       "ParameterStoreStorage",
+      "TEST-138",
       "TEST-250",
       "TEST-272"
     ]
@@ -24256,7 +24465,7 @@
     ]
   },
   "REQ-PSTORE-016": {
-    "hash": "e09b46d05a181049",
+    "hash": "50413f726dde6b75",
     "checks": [
       "FV-CTL-132",
       "FV-CTL-61",
@@ -24532,7 +24741,7 @@
     ]
   },
   "REQ-PSTORE-032": {
-    "hash": "5fdbf2e0030245aa",
+    "hash": "2d1783cdf2c2b418",
     "checks": [
       "IParameterStoreCoverage",
       "MATH-CAP-10",
@@ -24734,7 +24943,8 @@
       "IRiskModuleChecks",
       "IRiskModuleErrors",
       "RiskModulePledgeLogic",
-      "TEST-012"
+      "TEST-012",
+      "TEST-072"
     ]
   },
   "REQ-RISK-014": {
@@ -24770,7 +24980,9 @@
       "IRiskModuleChecks",
       "IRiskModuleErrors",
       "RiskModulePledgeLogic",
-      "TEST-012"
+      "TEST-012",
+      "TEST-043",
+      "TEST-157"
     ]
   },
   "REQ-RISK-018": {
@@ -24810,6 +25022,7 @@
       "RiskModulePledgeLogic",
       "TEST-013",
       "TEST-070",
+      "TEST-097",
       "TEST-272"
     ]
   },
@@ -24866,6 +25079,7 @@
       "RiskModulePledgeLogic",
       "TEST-010",
       "TEST-013",
+      "TEST-070",
       "TEST-164",
       "TEST-230"
     ]
@@ -24950,6 +25164,7 @@
     "hash": "adc28d78bae834d7",
     "checks": [
       "TEST-035",
+      "TEST-168",
       "TEST-228"
     ]
   },
@@ -24964,7 +25179,8 @@
     "hash": "8dc72eb225c9b22c",
     "checks": [
       "TEST-035",
-      "TEST-065"
+      "TEST-065",
+      "TEST-168"
     ]
   },
   "REQ-RISK-038": {
@@ -25086,14 +25302,16 @@
     "hash": "df8d3f9438518d45",
     "checks": [
       "IRiskModuleErrors",
-      "TEST-012"
+      "TEST-012",
+      "TEST-043"
     ]
   },
   "REQ-RISK-049": {
     "hash": "5bec0b652b35809f",
     "checks": [
       "IRiskModuleErrors",
-      "TEST-012"
+      "TEST-012",
+      "TEST-157"
     ]
   },
   "REQ-RISK-050": {
@@ -25176,7 +25394,10 @@
       "RiskModulePledgeLogic",
       "RiskModulePreview",
       "TEST-034",
+      "TEST-070",
       "TEST-071",
+      "TEST-072",
+      "TEST-097",
       "TEST-196",
       "TEST-235"
     ]
@@ -25188,7 +25409,8 @@
       "IRiskModuleViews",
       "RiskModule",
       "RiskModulePledgeLogic",
-      "TEST-171"
+      "TEST-171",
+      "TEST-322"
     ]
   },
   "REQ-RISK-059": {
@@ -25234,6 +25456,7 @@
       "RiskModuleBorrowLogic",
       "TEST-028",
       "TEST-158",
+      "TEST-169",
       "TEST-201"
     ]
   },
@@ -25272,7 +25495,7 @@
     ]
   },
   "REQ-RISK-065": {
-    "hash": "b9b80cdaf2a8845e",
+    "hash": "9618f31ce1c4c24a",
     "checks": [
       "AccountGateStatus",
       "FV-CTL-103",
@@ -25377,6 +25600,7 @@
       "RiskModuleDriftLogic",
       "RiskModuleMath",
       "TEST-033",
+      "TEST-225",
       "TEST-249",
       "TEST-268"
     ]
@@ -25458,6 +25682,7 @@
       "IRiskModuleErrors",
       "RiskModule",
       "TEST-033",
+      "TEST-225",
       "TEST-249"
     ]
   },
@@ -25516,7 +25741,7 @@
     ]
   },
   "REQ-RISK-082": {
-    "hash": "07e80695a264de77",
+    "hash": "334fea81b8b41516",
     "checks": [
       "FV-CTL-160",
       "IMarketRegistryCreditLines",
@@ -25840,7 +26065,7 @@
     "checks": []
   },
   "REQ-ROLE-024": {
-    "hash": "7814a0f82f5fafe9",
+    "hash": "e04c99c8a8bdb43b",
     "checks": []
   },
   "REQ-ROLE-025": {
@@ -25973,7 +26198,7 @@
     "checks": []
   },
   "REQ-ROLE-056": {
-    "hash": "a18568e65048699e",
+    "hash": "db667f4cf839613e",
     "checks": []
   },
   "REQ-ROLE-057": {
@@ -25989,11 +26214,11 @@
     "checks": []
   },
   "REQ-ROLE-060": {
-    "hash": "e8e1cd1be936e293",
+    "hash": "7e49605a18075016",
     "checks": []
   },
   "REQ-ROLE-061": {
-    "hash": "ed871050a8c6ddf0",
+    "hash": "52af0986fc22e2c6",
     "checks": []
   },
   "REQ-ROLE-062": {
@@ -26017,7 +26242,7 @@
     "checks": []
   },
   "REQ-ROLE-067": {
-    "hash": "eedc5cc735749cbd",
+    "hash": "185aabcc7008858c",
     "checks": []
   },
   "REQ-ROLE-068": {
@@ -26159,7 +26384,7 @@
     "checks": []
   },
   "REQ-ROLE-097": {
-    "hash": "1edd23b287d5d8df",
+    "hash": "ba92f80076157b11",
     "checks": []
   },
   "REQ-ROLE-098": {
@@ -26211,7 +26436,7 @@
     ]
   },
   "REQ-ROLE-107": {
-    "hash": "d6bfc64cab12b78f",
+    "hash": "8302c018dc356a72",
     "checks": [
       "FV-CTL-04"
     ]
@@ -26748,6 +26973,7 @@
       "LPVaultSwapLiquidationLogic",
       "TEST-045",
       "TEST-100",
+      "TEST-168",
       "TEST-174"
     ]
   },
@@ -26766,6 +26992,7 @@
       "TEST-060",
       "TEST-093",
       "TEST-170",
+      "TEST-222",
       "TEST-270"
     ]
   },
@@ -26784,6 +27011,8 @@
       "TEST-053",
       "TEST-055",
       "TEST-100",
+      "TEST-168",
+      "TEST-228",
       "TEST-239"
     ]
   },
@@ -26796,7 +27025,8 @@
       "LPVaultSwap",
       "LPVaultSwapLiquidationLogic",
       "LPVaultSwapSettlement",
-      "TEST-055"
+      "TEST-055",
+      "TEST-213"
     ]
   },
   "REQ-SWAP-005": {
@@ -26812,7 +27042,9 @@
       "MATH-ST-59",
       "MATH-ST-99",
       "TEST-055",
-      "TEST-104"
+      "TEST-104",
+      "TEST-245",
+      "TEST-278"
     ]
   },
   "REQ-SWAP-006": {
@@ -26824,7 +27056,8 @@
       "ILPVaultSwapLiquidation",
       "LPVaultSwapLiquidationLogic",
       "TEST-055",
-      "TEST-170"
+      "TEST-170",
+      "TEST-278"
     ]
   },
   "REQ-SWAP-007": {
@@ -26836,6 +27069,7 @@
       "LPVaultSwapLiquidationLogic",
       "LPVaultSwapSettlement",
       "TEST-055",
+      "TEST-056",
       "TEST-205"
     ]
   },
@@ -26852,9 +27086,13 @@
       "LPVaultSwapSettlement",
       "LensLiquidation",
       "LensPrice",
+      "TEST-043",
+      "TEST-044",
       "TEST-049",
       "TEST-050",
       "TEST-069",
+      "TEST-104",
+      "TEST-157",
       "TEST-205",
       "TEST-230",
       "TEST-239",
@@ -26875,6 +27113,7 @@
       "MATH-ST-107",
       "ParameterStoreViews",
       "TEST-049",
+      "TEST-064",
       "TEST-069",
       "TEST-247"
     ]
@@ -26967,7 +27206,8 @@
       "LPVaultSwap",
       "LPVaultSwapLiquidationLogic",
       "TEST-047",
-      "TEST-055"
+      "TEST-055",
+      "TEST-056"
     ]
   },
   "REQ-SWAP-016": {
@@ -27034,7 +27274,9 @@
       "LPVaultSwapLiquidationLogic",
       "TEST-047",
       "TEST-055",
-      "TEST-151"
+      "TEST-056",
+      "TEST-151",
+      "TEST-208"
     ]
   },
   "REQ-SWAP-021": {
@@ -27044,6 +27286,7 @@
       "LPVaultSwapLiquidationLogic",
       "LPVaultSwapSettlement",
       "PROP-059",
+      "TEST-071",
       "TEST-161",
       "TEST-232",
       "TEST-281"
@@ -27060,8 +27303,10 @@
       "PROP-059",
       "RouteMode",
       "TEST-047",
+      "TEST-054",
       "TEST-119",
       "TEST-174",
+      "TEST-197",
       "TEST-205",
       "TEST-232",
       "TEST-239"
@@ -27103,6 +27348,7 @@
       "SYM-48",
       "SettlementMath",
       "TEST-174",
+      "TEST-197",
       "TEST-198",
       "TEST-232",
       "TEST-233",
@@ -27242,6 +27488,7 @@
       "LPVaultSwapImmutables",
       "LPVaultSwapStorage",
       "TEST-098",
+      "TEST-168",
       "TEST-242"
     ]
   },
@@ -27332,9 +27579,11 @@
       "ILPVaultSwap",
       "ILPVaultSwapLiquidation",
       "TEST-048",
+      "TEST-050",
       "TEST-051",
       "TEST-053",
       "TEST-055",
+      "TEST-070",
       "TEST-072",
       "TEST-080",
       "TEST-092",
@@ -27342,12 +27591,13 @@
       "TEST-104",
       "TEST-170",
       "TEST-174",
+      "TEST-197",
       "TEST-215",
       "TEST-232"
     ]
   },
   "REQ-SWAP-043": {
-    "hash": "11ffef5091964343",
+    "hash": "3e7fa9dbe8b2c616",
     "checks": [
       "FV-LIQ-03",
       "FV-LIQ-04",
@@ -27474,7 +27724,8 @@
     "checks": [
       "FV-LIQ-07",
       "ILPVaultSwapLiquidation",
-      "TEST-048"
+      "TEST-048",
+      "TEST-072"
     ]
   },
   "REQ-SWAP-056": {
@@ -27574,11 +27825,12 @@
       "ILPVaultSwapErrors",
       "LPVaultSwap",
       "TEST-098",
-      "TEST-162"
+      "TEST-162",
+      "TEST-192"
     ]
   },
   "REQ-SWAP-066": {
-    "hash": "61dd141a8dbf8538",
+    "hash": "e490e00862a43f93",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-03",
@@ -27592,7 +27844,12 @@
       "QNT-37",
       "QNT-T09",
       "TEST-060",
+      "TEST-152",
+      "TEST-153",
+      "TEST-154",
       "TEST-170",
+      "TEST-213",
+      "TEST-228",
       "TEST-280"
     ]
   },
@@ -27623,7 +27880,7 @@
     ]
   },
   "REQ-SWAP-070": {
-    "hash": "ca71bafe4a2a32d1",
+    "hash": "5bac4f81bcccab71",
     "checks": [
       "FV-LIQ-03",
       "FV-LIQ-06",
@@ -27732,6 +27989,7 @@
       "TEST-060",
       "TEST-098",
       "TEST-170",
+      "TEST-173",
       "TEST-174",
       "TEST-179",
       "TEST-242",
@@ -27740,7 +27998,7 @@
     ]
   },
   "REQ-SWAP-077": {
-    "hash": "1c3fc7bb138b2648",
+    "hash": "7243a48adad40155",
     "checks": [
       "FV-LIQ-03",
       "HYP-69",
@@ -27810,6 +28068,7 @@
       "IPayoutEscrow",
       "LPVaultSwapSettlement",
       "PayoutEscrow",
+      "TEST-173",
       "TEST-179",
       "TEST-286"
     ]
@@ -27833,7 +28092,9 @@
       "TEST-090",
       "TEST-109",
       "TEST-180",
-      "TEST-215"
+      "TEST-189",
+      "TEST-215",
+      "TEST-268"
     ]
   },
   "REQ-SWAP-085": {
@@ -27856,7 +28117,7 @@
     ]
   },
   "REQ-SWAP-087": {
-    "hash": "ba7c0a0b2eeedca7",
+    "hash": "2b8ee9c6c4a543cf",
     "checks": [
       "ILPVaultSwapErrors",
       "ILPVaultSwapLiquidation",
@@ -27881,10 +28142,12 @@
       "PROP-059",
       "TEST-047",
       "TEST-048",
+      "TEST-054",
       "TEST-059",
       "TEST-078",
       "TEST-104",
       "TEST-123",
+      "TEST-197",
       "TEST-239",
       "TEST-289"
     ]
@@ -27902,6 +28165,7 @@
       "PROP-059",
       "SettlementReport",
       "TEST-048",
+      "TEST-054",
       "TEST-198",
       "TEST-240"
     ]
@@ -27928,10 +28192,13 @@
       "LPVaultSwapLiquidationLogic",
       "LPVaultSwapSettlement",
       "TEST-049",
+      "TEST-104",
       "TEST-170",
+      "TEST-201",
       "TEST-202",
       "TEST-205",
       "TEST-226",
+      "TEST-230",
       "TEST-239"
     ]
   },
@@ -27944,7 +28211,10 @@
       "LPVaultSwapLiquidationLogic",
       "LPVaultSwapPendingLogic",
       "TEST-092",
-      "TEST-170"
+      "TEST-152",
+      "TEST-170",
+      "TEST-189",
+      "TEST-208"
     ]
   },
   "REQ-SWAP-093": {
@@ -27982,6 +28252,7 @@
       "ILPVaultSwapErrors",
       "LPVaultSwapSettlement",
       "TEST-049",
+      "TEST-201",
       "TEST-205"
     ]
   },
@@ -28307,7 +28578,7 @@
     ]
   },
   "REQ-SWAP-123": {
-    "hash": "707614de6b29ca2d",
+    "hash": "ba6eddedc00c7aad",
     "checks": [
       "IMarketRegistryErrors",
       "MATH-ST-112",
@@ -28348,7 +28619,9 @@
       "ClLPVaultCustody",
       "ILPVault",
       "TEST-010",
-      "TEST-015"
+      "TEST-015",
+      "TEST-264",
+      "TEST-265"
     ]
   },
   "REQ-VAULT-004": {
@@ -28366,7 +28639,10 @@
     "checks": [
       "ClLPVaultBase",
       "ILPVault",
-      "TEST-162"
+      "TEST-018",
+      "TEST-099",
+      "TEST-162",
+      "TEST-193"
     ]
   },
   "REQ-VAULT-006": {
@@ -28452,6 +28728,7 @@
       "ILPVaultErrors",
       "TEST-010",
       "TEST-011",
+      "TEST-116",
       "TEST-186"
     ]
   },
@@ -28474,6 +28751,7 @@
       "ICollateralizationViews",
       "TEST-010",
       "TEST-013",
+      "TEST-163",
       "TEST-171"
     ]
   },
@@ -28486,6 +28764,7 @@
       "ICollateralizationAdapter",
       "ICollateralizationErrors",
       "TEST-013",
+      "TEST-164",
       "TEST-235",
       "TEST-238"
     ]
@@ -28937,6 +29216,7 @@
       "ClLPVaultCustody",
       "IAmmIntegration",
       "ICollateralizationSeizure",
+      "TEST-047",
       "TEST-058",
       "TEST-091",
       "TEST-177"
@@ -28971,6 +29251,8 @@
       "ICollateralizationSeizure",
       "Pending",
       "TEST-151",
+      "TEST-152",
+      "TEST-153",
       "TEST-237"
     ]
   },
@@ -29000,8 +29282,10 @@
       "IAmmIntegration",
       "ICollateralizationUser",
       "ILPVaultErrors",
+      "TEST-010",
       "TEST-017",
-      "TEST-091"
+      "TEST-091",
+      "TEST-130"
     ]
   },
   "REQ-VAULT-065": {
@@ -29157,7 +29441,8 @@
       "IClIntegration",
       "ILPVaultErrors",
       "ILPVaultEvents",
-      "TEST-015"
+      "TEST-015",
+      "TEST-252"
     ]
   },
   "REQ-VAULT-079": {
@@ -29167,7 +29452,9 @@
       "FV-CUS-11",
       "ILPVault",
       "ILPVaultErrors",
-      "TEST-015"
+      "TEST-015",
+      "TEST-020",
+      "TEST-270"
     ]
   },
   "REQ-VAULT-080": {
@@ -29288,6 +29575,8 @@
       "PROP-037",
       "TEST-028",
       "TEST-060",
+      "TEST-164",
+      "TEST-222",
       "TEST-236"
     ]
   },
@@ -29309,7 +29598,8 @@
       "IClIntegration",
       "ILPVault",
       "TEST-015",
-      "TEST-016"
+      "TEST-016",
+      "TEST-084"
     ]
   },
   "REQ-VAULT-094": {
@@ -29358,7 +29648,11 @@
     "checks": [
       "ClLPVaultCustody",
       "ILPVault",
-      "TEST-162"
+      "TEST-099",
+      "TEST-130",
+      "TEST-154",
+      "TEST-162",
+      "TEST-215"
     ]
   },
   "REQ-VAULT-099": {
@@ -29403,7 +29697,9 @@
     "hash": "67ad8aa99711eeee",
     "checks": [
       "ILPVaultErrors",
-      "TEST-011"
+      "TEST-011",
+      "TEST-252",
+      "TEST-264"
     ]
   },
   "REQ-VAULT-104": {
@@ -29469,6 +29765,7 @@
       "ICollateralizationErrors",
       "MATH-UO-39",
       "TEST-013",
+      "TEST-072",
       "TEST-238"
     ]
   },
@@ -29543,7 +29840,8 @@
       "FV-CUS-12",
       "ICollateralizationErrors",
       "ICollateralizationSeizure",
-      "PROP-013"
+      "PROP-013",
+      "TEST-057"
     ]
   },
   "REQ-VAULT-118": {
@@ -29625,7 +29923,8 @@
       "FV-CTL-97",
       "FV-CUS-24",
       "ICollateralizationErrors",
-      "TEST-060"
+      "TEST-060",
+      "TEST-222"
     ]
   },
   "REQ-VAULT-126": {
@@ -29694,6 +29993,7 @@
       "FV-CUS-31",
       "FV-CUS-32",
       "ICollateralizationAdapter",
+      "TEST-085",
       "TEST-150",
       "TEST-154"
     ]
@@ -29779,7 +30079,7 @@
     ]
   },
   "REQ-VAULT-139": {
-    "hash": "fe5e32d89011a0df",
+    "hash": "fb068bf15b4b64d8",
     "checks": [
       "CollateralizationPending",
       "FV-CUS-08",
@@ -29871,7 +30171,8 @@
       "FV-CUS-08",
       "IAmmIntegration",
       "ICollateralizationSeizure",
-      "TEST-177"
+      "TEST-177",
+      "TEST-239"
     ]
   },
   "REQ-VAULT-147": {
@@ -29886,7 +30187,9 @@
       "PROP-083",
       "TEST-010",
       "TEST-011",
+      "TEST-060",
       "TEST-116",
+      "TEST-252",
       "TEST-265"
     ]
   },
@@ -29897,7 +30200,9 @@
       "IAmmIntegration",
       "ILPVaultErrors",
       "ILPVaultEvents",
-      "TEST-016"
+      "TEST-016",
+      "TEST-060",
+      "TEST-239"
     ]
   },
   "REQ-VAULT-149": {
@@ -29910,8 +30215,15 @@
       "ILPVaultErrors",
       "ILPVaultEvents",
       "MATH-AMM-V3-PRICE-01",
+      "TEST-047",
       "TEST-058",
+      "TEST-060",
       "TEST-116",
+      "TEST-150",
+      "TEST-154",
+      "TEST-215",
+      "TEST-218",
+      "TEST-239",
       "TEST-265"
     ]
   },
@@ -29950,7 +30262,14 @@
       "IAmmIntegration",
       "ILPVault",
       "TEST-015",
-      "TEST-016"
+      "TEST-016",
+      "TEST-018",
+      "TEST-020",
+      "TEST-084",
+      "TEST-150",
+      "TEST-195",
+      "TEST-209",
+      "TEST-223"
     ]
   },
   "REQ-VAULT-153": {
@@ -29967,7 +30286,9 @@
       "ClLPVaultCustody",
       "ILPVault",
       "TEST-010",
-      "TEST-080"
+      "TEST-080",
+      "TEST-153",
+      "TEST-221"
     ]
   },
   "REQ-VAULT-155": {
@@ -30075,7 +30396,8 @@
     "hash": "9bd2d20b550e0d72",
     "checks": [
       "ClLPVaultCustody",
-      "TEST-080"
+      "TEST-080",
+      "TEST-221"
     ]
   },
   "REQ-VAULT-165": {
@@ -30083,7 +30405,10 @@
     "checks": [
       "ClLPVaultCustody",
       "FV-CUS-42",
-      "TEST-015"
+      "TEST-015",
+      "TEST-060",
+      "TEST-166",
+      "TEST-270"
     ]
   },
   "REQ-VAULT-166": {
@@ -30160,7 +30485,8 @@
   "REQ-VAULT-176": {
     "hash": "a83346e0d88d7003",
     "checks": [
-      "MATH-UO-78"
+      "MATH-UO-78",
+      "TEST-055"
     ]
   },
   "REQ-VTOKEN-001": {
@@ -30169,6 +30495,7 @@
       "IVaultToken",
       "PROP-055",
       "TEST-023",
+      "TEST-133",
       "VaultToken"
     ]
   },
@@ -30186,6 +30513,7 @@
       "IVaultToken",
       "PROP-055",
       "TEST-023",
+      "TEST-133",
       "VaultToken",
       "VaultTokenBindings"
     ]
@@ -30230,6 +30558,7 @@
     "checks": [
       "IVaultToken",
       "PROP-009",
+      "TEST-089",
       "TEST-130",
       "TEST-188",
       "VaultToken"
@@ -30283,6 +30612,7 @@
       "IVaultToken",
       "PROP-008",
       "TEST-022",
+      "TEST-133",
       "VaultToken"
     ]
   },
@@ -30552,6 +30882,7 @@
       "FV-CUS-10",
       "IVaultToken",
       "PROP-009",
+      "TEST-089",
       "TEST-188",
       "VaultToken"
     ]
@@ -30820,6 +31151,7 @@
       "TEST-010",
       "TEST-011",
       "TEST-013",
+      "TEST-072",
       "TEST-186"
     ]
   },
@@ -30862,6 +31194,7 @@
       "TEST-010",
       "TEST-013",
       "TEST-097",
+      "TEST-164",
       "TEST-235",
       "TEST-236"
     ]
@@ -30986,12 +31319,17 @@
       "SYM-112",
       "SYM-136",
       "SYM-138",
+      "TEST-047",
       "TEST-058",
       "TEST-074",
       "TEST-091",
       "TEST-116",
+      "TEST-150",
       "TEST-177",
+      "TEST-217",
+      "TEST-218",
       "TEST-237",
+      "TEST-239",
       "TEST-264",
       "TEST-265"
     ]
@@ -31229,7 +31567,7 @@
     ]
   },
   "SPEC-BRK-003": {
-    "hash": "924c07f7a6aec781",
+    "hash": "4ce5fbc3723d0c32",
     "checks": [
       "FV-CTL-108",
       "HYP-80",
@@ -31248,7 +31586,7 @@
     ]
   },
   "SPEC-BRK-004": {
-    "hash": "d07234ad2edd2310",
+    "hash": "ca1489f6c2c04dee",
     "checks": [
       "FV-CTL-108",
       "FV-CTL-108-EX",
@@ -31348,6 +31686,7 @@
       "TEST-010",
       "TEST-070",
       "TEST-071",
+      "TEST-072",
       "TEST-164",
       "TEST-196",
       "TEST-230",
@@ -31474,7 +31813,7 @@
     ]
   },
   "SPEC-CAP-007": {
-    "hash": "3a23ad15a7875912",
+    "hash": "df22539d3ffdc93b",
     "checks": [
       "FV-LIQ-05",
       "MATH-AR-29",
@@ -31493,7 +31832,7 @@
     ]
   },
   "SPEC-CAP-008": {
-    "hash": "b35ef80c55f4c2dd",
+    "hash": "2533ece9413a7c82",
     "checks": [
       "FV-LIQ-05",
       "ILensRisk",
@@ -31502,6 +31841,7 @@
       "MATH-AR-52",
       "MATH-ST-91",
       "SYM-156",
+      "TEST-225",
       "TEST-247",
       "TailCoverageView"
     ]
@@ -31519,7 +31859,7 @@
     ]
   },
   "SPEC-CAP-010": {
-    "hash": "dbeae9f5e8d65c16",
+    "hash": "1f3eb9fd7d389ff4",
     "checks": [
       "FV-CTL-160",
       "IMarketRegistryCreditLines",
@@ -31614,6 +31954,7 @@
       "SYM-65",
       "SYM-67",
       "TEST-028",
+      "TEST-076",
       "TEST-249"
     ]
   },
@@ -31699,13 +32040,13 @@
     ]
   },
   "SPEC-FLR-001": {
-    "hash": "531245b904909571",
+    "hash": "fbaf7a9927e5e1a3",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-06",
       "FV-LIQ-08",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "MATH-ST-114",
       "MATH-ST-46",
       "MATH-ST-47",
@@ -31717,16 +32058,18 @@
       "TEST-094",
       "TEST-128",
       "TEST-199",
+      "TEST-211",
+      "TEST-282",
       "TEST-298"
     ]
   },
   "SPEC-FLR-002": {
     "hash": "3c24a351884521ae",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-06",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "MATH-ST-47",
       "MATH-ST-62",
       "MATH-ST-89",
@@ -31738,13 +32081,13 @@
   "SPEC-FLR-003": {
     "hash": "2a1dae702ee67878",
     "checks": [
-      "CoverageSpoke",
+      "AvanaFirstLossReserve",
       "FV-LIQ-05",
       "FV-LIQ-06",
-      "ICoverageSpoke",
-      "ICoverageSpokeAdmin",
-      "ICoverageSpokeErrors",
-      "ICoverageSpokeViews",
+      "IAvanaFirstLossReserve",
+      "IAvanaFirstLossReserveAdmin",
+      "IAvanaFirstLossReserveErrors",
+      "IAvanaFirstLossReserveViews",
       "MATH-ST-61",
       "MATH-ST-89",
       "TEST-293",
@@ -31767,18 +32110,19 @@
     "checks": [
       "FV-LIQ-05",
       "FV-LIQ-06",
-      "ICoverageSpoke",
+      "IAvanaFirstLossReserve",
       "MATH-ST-77",
       "MATH-ST-78",
       "MATH-ST-91",
+      "TEST-225",
       "TEST-247"
     ]
   },
   "SPEC-FLR-006": {
     "hash": "f1ccc441ed6e2ac0",
     "checks": [
-      "DeficitOffsetSpoke",
-      "IDeficitOffsetSpoke",
+      "DaoDeficitOffset",
+      "IDaoDeficitOffset",
       "SYM-193",
       "TEST-298",
       "TEST-299"
@@ -31910,7 +32254,8 @@
       "MATH-GOV-12",
       "SYM-145",
       "TEST-063",
-      "TEST-098"
+      "TEST-098",
+      "TEST-244"
     ]
   },
   "SPEC-GOV-009": {
@@ -32043,7 +32388,7 @@
     ]
   },
   "SPEC-HUB-003": {
-    "hash": "00b5b19f5331ca56",
+    "hash": "df00b2f073e4e6e7",
     "checks": [
       "FV-CTL-160",
       "MATH-AR-51"
@@ -32091,7 +32436,8 @@
       "SYM-68",
       "SYM-69",
       "SYM-70",
-      "SYM-71"
+      "SYM-71",
+      "TEST-076"
     ]
   },
   "SPEC-HUB-006": {
@@ -32137,7 +32483,8 @@
       "SYM-10",
       "SYM-16",
       "SYM-63",
-      "SYM-67"
+      "SYM-67",
+      "TEST-076"
     ]
   },
   "SPEC-LIQ-001": {
@@ -32217,10 +32564,13 @@
       "SettlementMath",
       "SettlementReport",
       "TEST-050",
+      "TEST-064",
       "TEST-069",
+      "TEST-070",
       "TEST-078",
       "TEST-113",
-      "TEST-198"
+      "TEST-198",
+      "TEST-245"
     ]
   },
   "SPEC-LIQ-004": {
@@ -32309,14 +32659,19 @@
       "TEST-048",
       "TEST-051",
       "TEST-069",
+      "TEST-070",
+      "TEST-071",
       "TEST-072",
       "TEST-078",
       "TEST-081",
       "TEST-161",
+      "TEST-197",
       "TEST-198",
       "TEST-205",
       "TEST-216",
+      "TEST-217",
       "TEST-232",
+      "TEST-245",
       "TEST-246",
       "TEST-281"
     ]
@@ -32395,6 +32750,7 @@
       "SettlementMath",
       "SettlementReport",
       "TEST-051",
+      "TEST-070",
       "TEST-078",
       "TEST-198",
       "TEST-233"
@@ -32518,7 +32874,7 @@
       "MATH-ST-27",
       "MATH-ST-31",
       "SYM-23",
-      "TEST-072"
+      "TEST-050"
     ]
   },
   "SPEC-LIQ-013": {
@@ -32537,7 +32893,7 @@
     ]
   },
   "SPEC-LIQ-014": {
-    "hash": "3181f6e142449275",
+    "hash": "62de66924bcb4b3d",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-03",
@@ -32592,6 +32948,7 @@
       "TEST-198",
       "TEST-239",
       "TEST-267",
+      "TEST-289",
       "TEST-292"
     ]
   },
@@ -32677,12 +33034,15 @@
       "SIM-06C",
       "SYM-48",
       "SettlementMath",
+      "TEST-050",
       "TEST-053",
-      "TEST-072",
+      "TEST-069",
+      "TEST-071",
       "TEST-161",
       "TEST-170",
       "TEST-174",
       "TEST-198",
+      "TEST-217",
       "TEST-227",
       "TEST-232",
       "TEST-233",
@@ -32743,6 +33103,7 @@
       "SettlementMath",
       "SettlementReport",
       "TEST-078",
+      "TEST-161",
       "TEST-174",
       "TEST-198",
       "TEST-233",
@@ -32929,6 +33290,7 @@
       "TEST-139",
       "TEST-264",
       "TEST-305",
+      "TEST-306",
       "TEST-332"
     ]
   },
@@ -32962,6 +33324,7 @@
       "TEST-266",
       "TEST-279",
       "TEST-305",
+      "TEST-306",
       "TEST-332"
     ]
   },
@@ -33041,7 +33404,8 @@
       "TEST-079",
       "TEST-279",
       "TEST-305",
-      "TEST-306"
+      "TEST-306",
+      "TEST-332"
     ]
   },
   "SPEC-ORC-010": {
@@ -33063,6 +33427,7 @@
       "SIM-03A",
       "SYM-128",
       "SYM-33",
+      "TEST-041",
       "TEST-079",
       "TEST-264",
       "TEST-265",
@@ -33153,6 +33518,7 @@
       "TEST-105",
       "TEST-219",
       "TEST-231",
+      "TEST-250",
       "TEST-276",
       "TEST-294"
     ]
@@ -33274,6 +33640,7 @@
       "TEST-038",
       "TEST-039",
       "TEST-044",
+      "TEST-105",
       "TEST-219",
       "TEST-230",
       "TEST-294",
@@ -33306,6 +33673,7 @@
       "TEST-037",
       "TEST-070",
       "TEST-105",
+      "TEST-201",
       "TEST-219",
       "TEST-230",
       "TEST-247"
@@ -33448,6 +33816,7 @@
       "TEST-037",
       "TEST-038",
       "TEST-042",
+      "TEST-062",
       "TEST-219",
       "TEST-275"
     ]
@@ -33730,6 +34099,7 @@
     "hash": "5305f1adb222c249",
     "checks": [
       "ClLPVaultMarkets",
+      "ClUnitMath",
       "FV-CUS-22",
       "HYP-44",
       "IVaultTokenFactory",
@@ -33743,6 +34113,7 @@
       "TEST-024",
       "TEST-264",
       "TEST-265",
+      "TEST-332",
       "VaultToken",
       "VaultTokenFactory"
     ]
@@ -33752,6 +34123,7 @@
     "checks": [
       "ClLPVaultBase",
       "ClLPVaultMarkets",
+      "ClUnitMath",
       "HYP-44",
       "IClIntegration",
       "IVaultToken",
@@ -33763,6 +34135,7 @@
       "SYM-25",
       "TEST-022",
       "TEST-264",
+      "TEST-332",
       "VaultToken"
     ]
   },
@@ -33869,7 +34242,7 @@
     ]
   },
   "WDR-007": {
-    "hash": "bb74bf93eb4f9c70",
+    "hash": "3453375d84a0986c",
     "checks": [
       "IAaveAdapterUser",
       "IRiskModuleChecks",
@@ -33995,7 +34368,7 @@
     "checks": []
   },
   "WDR-030": {
-    "hash": "c33fe6a4598ac9d5",
+    "hash": "86174590b3f130ae",
     "checks": [
       "IAaveAdapterSettlement"
     ]

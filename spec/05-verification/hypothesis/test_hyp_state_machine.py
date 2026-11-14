@@ -665,7 +665,7 @@ class AvanaMachine(RuleBasedStateMachine):
         if ok:
             # HYP-58 verifies: Q-201, Q-211, Q-236
             assert s.pending[m]["units"] == p0 - r["units"] and r["gho"] >= r["min_pending"], "HYP-58 pending"
-            assert s.funded_balance(GHO) >= cov0 + r["gho"] - 1, "HYP-58 proceeds not in the GHO Coverage Spoke"
+            assert s.funded_balance(GHO) >= cov0 + r["gho"] - 1, "HYP-58 proceeds not in the GHO First-Loss Reserve"
 
     @rule(w=st.sampled_from(WALLETS), m=st.integers(0, 2), frac=st.integers(5, 100), orphan=st.booleans())
     def hostile_seizure(self, w, m, frac, orphan):

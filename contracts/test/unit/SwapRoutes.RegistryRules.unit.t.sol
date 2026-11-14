@@ -12,7 +12,7 @@ import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketReg
 import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryDebtOracleMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
@@ -255,7 +255,8 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         _noFeeSwitch(address(dai));
         _listToken(address(dai), "dai");
         RegistryDebtOracleMock daiOracle = new RegistryDebtOracleMock(address(dai), address(registry), address(ps));
-        RegistryCoverageSpokeMock daiCoverage = new RegistryCoverageSpokeMock(address(hub), address(dai), DAI_ASSET);
+        RegistryAvanaFirstLossReserveMock daiCoverage =
+            new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), DAI_ASSET);
         daiCoverage.setFunded(1e30, false);
         hub.setAsset(address(dai), DAI_ASSET);
         hub.setSpokeConfig(DAI_ASSET, address(spoke), 0, 1_000_000);
@@ -268,7 +269,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         aaveOracle.setSource(DAI_RESERVE, address(daiOracle));
         ps.setStressRise(address(dai), 500);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(dai), address(daiCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
         registry.recordCreditLine(address(hub), address(dai), 2_000_000);
         vm.stopPrank();
         def = DebtReserveDef({
@@ -279,7 +280,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
             hubAssetId: DAI_ASSET,
             priceSource: address(daiOracle),
             fixedPrice: false,
-            coverageSpoke: address(daiCoverage),
+            firstLossReserve: address(daiCoverage),
             crossHub: false,
             approved: false
         });

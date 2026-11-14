@@ -217,11 +217,11 @@ abstract contract MarketRegistryViews is
 
     /// @inheritdoc IMarketRegistryHubs
     /// @custom:spec REQ-MREG-009
-    function coverageSpokeOf(
+    function firstLossReserveOf(
         address hub,
         address asset
-    ) external view override returns (address coverageSpoke) {
-        coverageSpoke = _s().coverageSpokeOf[hub][asset];
+    ) external view override returns (address firstLossReserve) {
+        firstLossReserve = _s().firstLossReserveOf[hub][asset];
     }
 
     /// @inheritdoc IMarketRegistryHubs

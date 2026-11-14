@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {CoverageSpoke} from "../../../src/coverage/coverage-spoke/CoverageSpoke.sol";
+import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {AaveV3FlashSource} from "../../../src/flash/AaveV3FlashSource.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
@@ -49,7 +49,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// contracts), LPVaultSwap (router and three logic contracts, launch keeper), the RiskModule (router and five logic
 /// contracts), each behind its ERC-1967 proxy, the Lens (entry point, nine modules and Aave's sizing), the public flash
 /// liquidation helper, Collateralization, Lock, VaultTokenFactory, the vault tokens, ProxyManager and PositionProxies,
-/// PayoutEscrow, a Coverage Spoke per debt asset, the AaveV3FlashSource and `DexPathRoute` swap routes. Nothing
+/// PayoutEscrow, a First-Loss Reserve per debt asset, the AaveV3FlashSource and `DexPathRoute` swap routes. Nothing
 /// between the borrower's wallet and the Spoke is a stand-in.
 /// @dev Stand-ins, each named: the MarketRegistry and the ParameterStore (`IntegRegistryMock`, `IntegStoreMock`: one
 /// record set every reader shares), each market's LPOracle and the USDC DebtOracle (`IntegLPOracleMock`,
@@ -89,8 +89,8 @@ abstract contract IntegrationFixture is IntegrationMarkets {
     IntegLPOracleMock internal lpoB;
     IntegLPVaultMock internal vault;
     IntegLPVaultMock internal vaultSlip;
-    CoverageSpoke internal usdcCoverage;
-    CoverageSpoke internal ghoCoverage;
+    AvanaFirstLossReserve internal usdcCoverage;
+    AvanaFirstLossReserve internal ghoCoverage;
     MockAaveV3Pool internal v3Pool;
     AaveV3FlashSource internal flashSource;
     MockCLPool internal usdtUsdcPool;
@@ -99,7 +99,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
     CollPoolToken internal wbtc;
     CollPoolToken internal meme;
     IntegDebtOracleMock internal wethOracle;
-    CoverageSpoke internal wethCoverage;
+    AvanaFirstLossReserve internal wethCoverage;
     uint256 internal wethAssetId;
     uint256 internal wethReserveId;
     address internal feedWethDebt = makeAddr("feed WETH/USD debt");
@@ -164,8 +164,8 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         reg.setRecordedHub(aave.hub, true);
         reg.setPayoutEscrow(address(escrow));
         reg.setFlashSource(address(flashSource));
-        reg.setCoverageSpoke(aave.hub, address(usdc), address(usdcCoverage));
-        reg.setCoverageSpoke(aave.hub, address(debt), address(ghoCoverage));
+        reg.setAvanaFirstLossReserve(aave.hub, address(usdc), address(usdcCoverage));
+        reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(ghoCoverage));
         store.setFloorRoundingAllowance(address(usdc), FLOOR_ROUNDING_ALLOWANCE_USDC);
         store.setFloorRoundingAllowance(address(debt), FLOOR_ROUNDING_ALLOWANCE_GHO);
         store.setFeeRecipient(feeRecipient);
@@ -312,7 +312,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
 
     /// @notice WETH as a non-GHO debt reserve of the Uniswap v3 CDP Spoke: a Hub asset with a 10,000 WETH line
     /// through the Lend Spoke, the CDP reserve (draw cap 5,000 WETH) priced by a WETH DebtOracle (`IntegDebtOracleMock`
-    /// at $3,000, also its AaveOracle source), its record in the MarketRegistry, its own Coverage Spoke, a 0.0005 WETH
+    /// at $3,000, also its AaveOracle source), its record in the MarketRegistry, its own First-Loss Reserve, a 0.0005 WETH
     /// floor rounding allowance, primary and backup routes from USDC and USDT into WETH for the base markets at the
     /// oracle rate, and 2,000 WETH idle on the Aave V3 Pool for the flash liquidation helper. Suites call it after
     /// `_deployIntegration`; WETH is the launch markets' token when `_addLaunchMarkets` ran first.
@@ -344,8 +344,8 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         weth.approve(aave.lendSpoke, 10_000e18);
         IAaveV4Spoke(aave.lendSpoke).supply(lendReserve, 10_000e18, daoTreasury);
         vm.stopPrank();
-        wethCoverage = _coverageSpoke(address(weth), wethAssetId);
-        reg.setCoverageSpoke(aave.hub, address(weth), address(wethCoverage));
+        wethCoverage = _firstLossReserve(address(weth), wethAssetId);
+        reg.setAvanaFirstLossReserve(aave.hub, address(weth), address(wethCoverage));
         reg.setDebtReserve(
             aave.cdpSpoke,
             wethReserveId,
@@ -357,7 +357,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
                 hubAssetId: wethAssetId,
                 priceSource: address(wethOracle),
                 fixedPrice: false,
-                coverageSpoke: address(wethCoverage),
+                firstLossReserve: address(wethCoverage),
                 crossHub: false,
                 approved: true
             })
@@ -374,22 +374,23 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         }
         _listOnV3(weth, 2000e18);
         vm.label(address(wethOracle), "DebtOracleWETH(stand-in)");
-        vm.label(address(wethCoverage), "WethCoverageSpoke");
+        vm.label(address(wethCoverage), "WethAvanaFirstLossReserve");
     }
 
     function _deployCoverage() private {
-        usdcCoverage = _coverageSpoke(address(usdc), usdcAssetId);
-        ghoCoverage = _coverageSpoke(address(debt), ghoAssetId);
+        usdcCoverage = _firstLossReserve(address(usdc), usdcAssetId);
+        ghoCoverage = _firstLossReserve(address(debt), ghoAssetId);
         (usdcCoverageAddr, ghoCoverageAddr) = (address(usdcCoverage), address(ghoCoverage));
     }
 
-    function _coverageSpoke(
+    function _firstLossReserve(
         address asset,
         uint256 assetId
-    ) private returns (CoverageSpoke cs) {
-        cs = CoverageSpoke(
+    ) private returns (AvanaFirstLossReserve cs) {
+        cs = AvanaFirstLossReserve(
             deployCode(
-                "CoverageSpoke.sol:CoverageSpoke", abi.encode(aave.hub, asset, assetId, aave.accessManager, 1_209_600)
+                "AvanaFirstLossReserve.sol:AvanaFirstLossReserve",
+                abi.encode(aave.hub, asset, assetId, aave.accessManager, 1_209_600)
             )
         );
         uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
@@ -543,7 +544,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         vm.label(address(vault), "LPVault(uniswap-v3 stand-in)");
         vm.label(address(flashSource), "AaveV3FlashSource");
         vm.label(address(v3Pool), "AaveV3Pool(mock)");
-        vm.label(address(usdcCoverage), "UsdcCoverageSpoke");
-        vm.label(address(ghoCoverage), "GhoCoverageSpoke");
+        vm.label(address(usdcCoverage), "UsdcAvanaFirstLossReserve");
+        vm.label(address(ghoCoverage), "GhoAvanaFirstLossReserve");
     }
 }

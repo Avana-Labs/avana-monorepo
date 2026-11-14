@@ -86,7 +86,7 @@ contract MarketRegistry is UUPSUpgradeable, MarketRegistryRouter, IMarketRegistr
 
     /// @inheritdoc IMarketRegistryHubs
     /// @custom:spec REQ-MREG-009, Q-379
-    function setCoverageSpoke(
+    function setAvanaFirstLossReserve(
         address,
         address,
         address

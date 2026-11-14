@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {CoverageSpoke} from "../../src/coverage/coverage-spoke/CoverageSpoke.sol";
+import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
@@ -54,9 +54,9 @@ contract HostileLiquidatorImpl is UUPSUpgradeable {
 
 /// @title LPVaultSwapHostileIntegrationTest
 /// @notice A hostile LPVaultSwap installed through the timelock on the full local stack (the real AaveAdapter,
-/// Collateralization, RiskModule, Lock, vault token, PositionProxies, ProxyManager, PayoutEscrow, Coverage Spokes and
+/// Collateralization, RiskModule, Lock, vault token, PositionProxies, ProxyManager, PayoutEscrow, First-Loss Reserves and
 /// Aave V4): what it cannot do (TEST-131), the C-QNT-1 regression through the borrower's exits and the honest
-/// pending settlement into the Coverage Spoke (TEST-154), the Adapter's seized-unit burn (TEST-208), each record's
+/// pending settlement into the First-Loss Reserve (TEST-154), the Adapter's seized-unit burn (TEST-208), each record's
 /// proxy (TEST-089) and coverage of each asset's own deficits only (TEST-211).
 /// forge-config: default.isolate = false
 contract LPVaultSwapHostileIntegrationTest is IntegrationFlows {
@@ -150,9 +150,9 @@ contract LPVaultSwapHostileIntegrationTest is IntegrationFlows {
     /// about 315 units and keeps them. The borrower repays and withdraws NFT 42 (the shortfall reconciled into pending,
     /// NFT 42 back with its remaining liquidity), then NFT 7 (all 800 units); the honest LPVaultSwap restored through the
     /// timelock settles the pending units, after which the market's vault-token supply is 0 and the USDC recovered
-    /// has gone to the USDC Coverage Spoke. No position stays in custody.
+    /// has gone to the USDC First-Loss Reserve. No position stays in custody.
     // TEST-154 verifies: REQ-SWAP-066, REQ-VAULT-129, REQ-VAULT-131, INV-001, INV-042, Q-201
-    function test_TEST_154_cQnt1ThroughTheExitsAndTheCoverageSpoke() public {
+    function test_TEST_154_cQnt1ThroughTheExitsAndTheAvanaFirstLossReserve() public {
         address vtAddr = _vtAddr(MARKET_ID);
         IntegLPVaultLike lpv = IntegLPVaultLike(address(markets[MARKET_ID].vault));
         _setPrice(MARKET_ID, 250_000_000);
@@ -180,7 +180,7 @@ contract LPVaultSwapHostileIntegrationTest is IntegrationFlows {
         assertEq(IERC20(vtAddr).totalSupply(), 0, "market supply 0");
         assertEq(coll.getPending(vtAddr).units, 0, "nothing pending");
         assertGt(added, 0, "USDC recovered");
-        assertEq(usdcCoverage.fundedBalance(), funded + added, "recovered USDC funds the Coverage Spoke");
+        assertEq(usdcCoverage.fundedBalance(), funded + added, "recovered USDC funds the First-Loss Reserve");
     }
 
     /// @notice The Adapter's seized-unit burn: any caller other than LPVaultSwap, and LPVaultSwap without the Lock,
@@ -239,8 +239,8 @@ contract LPVaultSwapHostileIntegrationTest is IntegrationFlows {
         assertTrue(IVaultToken(_vtAddr(MARKET_B)).isValidProxy(p2), "valid in market B");
     }
 
-    /// @notice Each Coverage Spoke covers only deficits of its own `(Hub, asset)`: an account owing USDC and GHO is
-    /// liquidated to exhaustion so the CDP Spoke records a deficit in both assets; the USDC Coverage Spoke's cover lowers
+    /// @notice Each First-Loss Reserve covers only deficits of its own `(Hub, asset)`: an account owing USDC and GHO is
+    /// liquidated to exhaustion so the CDP Spoke records a deficit in both assets; the USDC First-Loss Reserve's cover lowers
     /// the USDC deficit and leaves the GHO deficit exactly unchanged.
     // TEST-211 verifies: SPEC-FLR-001, INV-079, ATTACK-173
     function test_TEST_211_coverageReducesOnlyItsOwnAssetsDeficit() public {
@@ -269,9 +269,9 @@ contract LPVaultSwapHostileIntegrationTest is IntegrationFlows {
         address cs
     ) internal {
         bytes4[] memory cover = new bytes4[](1);
-        cover[0] = CoverageSpoke.coverDeficit.selector;
+        cover[0] = AvanaFirstLossReserve.coverDeficit.selector;
         bytes4[] memory admin = new bytes4[](1);
-        admin[0] = CoverageSpoke.setAllowedBorrowSpoke.selector;
+        admin[0] = AvanaFirstLossReserve.setAllowedBorrowSpoke.selector;
         IAccessManager m = IAccessManager(aave.accessManager);
         vm.startPrank(aaveDao);
         m.setTargetFunctionRole(cs, cover, 500);
@@ -280,7 +280,7 @@ contract LPVaultSwapHostileIntegrationTest is IntegrationFlows {
         m.grantRole(501, aaveGovernanceExecutor, 0);
         vm.stopPrank();
         vm.prank(aaveGovernanceExecutor);
-        CoverageSpoke(cs).setAllowedBorrowSpoke(aave.cdpSpoke, true);
+        AvanaFirstLossReserve(cs).setAllowedBorrowSpoke(aave.cdpSpoke, true);
     }
 }
 

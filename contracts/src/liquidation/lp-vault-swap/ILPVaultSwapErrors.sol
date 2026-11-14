@@ -59,7 +59,7 @@ interface ILPVaultSwapErrors {
     error GraceHealthFactor();
 
     /// @notice The caller funding `Kf` measured by balance delta is outside `0 < Kf <= debtToCover`, a shortfall pull
-    /// delivered a different amount, or a Coverage Spoke `fund` did not lower the balance by exactly the amount funded.
+    /// delivered a different amount, or a First-Loss Reserve `fund` did not lower the balance by exactly the amount funded.
     /// @custom:spec REQ-SWAP-011, REQ-SWAP-070, REQ-SWAP-098, REQ-SWAP-112
     error FundingMismatch();
 

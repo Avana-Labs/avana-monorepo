@@ -5,7 +5,7 @@
 // At start-up the manifest names Hub A ("Stable", tier 1) and Hub B ("Core", tier 2), three Lend Spokes (A and A2 on
 // Hub A, B on Hub B) and two CDP Spokes (CDP A at home on Hub A, CDP B on Hub B). CDP A also draws USDC from Hub B
 // through a Hub-to-Hub credit line. Later the MarketRegistry records Hub C (tier 3) with its own Lend Spoke, Coverage
-// Spoke, CDP Spoke and the DAO deficit offset behind that Coverage Spoke, none of which the manifest names; the reader
+// Spoke, CDP Spoke and the DAO deficit offset behind that First-Loss Reserve, none of which the manifest names; the reader
 // must find all four and must not read the offset, supply-only like a Lend Spoke, as one.
 //
 // Amounts (whole tokens): Hub A USDC 10,000,000 added (Lend A 9,000,000, Lend A2 800,000, Coverage 200,000), 3,000,000
@@ -63,7 +63,7 @@ const hubA: FakeHub = {
     asset({
       underlying: USDC,
       feeReceiver: FEE_A,
-      coverageSpoke: COV_A,
+      firstLossReserve: COV_A,
       drawn: six(2_990_000),
       premium: six(10_000),
       liquidity: six(7_000_000),
@@ -117,7 +117,7 @@ const hubC: FakeHub = {
     asset({
       underlying: USDC,
       feeReceiver: FEE_C,
-      coverageSpoke: COV_C,
+      firstLossReserve: COV_C,
       drawn: six(500_000),
       liquidity: six(1_550_000),
       slices: [
@@ -203,5 +203,5 @@ export const fixtureHubsDeployment: ChainDeployment = {
   ],
   lendSpokes: [LEND_A, LEND_A2, LEND_B],
   cdpSpokes: [CDP_A, CDP_B],
-  coverageSpokes: [{ address: COV_A, asset: USDC, hub: HUB_A }],
+  firstLossReserves: [{ address: COV_A, asset: USDC, hub: HUB_A }],
 };

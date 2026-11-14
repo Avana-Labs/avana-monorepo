@@ -19,7 +19,7 @@ import {IntegrationFlows} from "../utils/fixtures/IntegrationFlows.sol";
 /// units of a seizure (simulated by a direct `liquidationCall` from LPVaultSwap's address, which the vault token admits
 /// as the only seizure recipient). The next honest liquidation through the real LPVaultSwap, or the borrower's
 /// withdrawal through the real AaveAdapter, reconciles them into Collateralization's pending balance; `settlePending`
-/// by any caller burns them through the real Adapter's `burnSeized`, unwinds them and funds the Coverage Spoke of the
+/// by any caller burns them through the real Adapter's `burnSeized`, unwinds them and funds the First-Loss Reserve of the
 /// market's (Hub, settlement asset). The Lens's pending and backing views are checked at each step.
 /// forge-config: default.isolate = false
 contract LiquidationPendingIntegrationTest is IntegrationFlows {
@@ -60,10 +60,10 @@ contract LiquidationPendingIntegrationTest is IntegrationFlows {
         PendingView memory pv = lens.getPendingSettlement(vt);
         assertEq(pv.units, kept, "Lens: pending units");
         assertTrue(pv.settleable, "Lens: settleable");
-        assertEq(pv.coverageSpoke, address(usdcCoverage), "Lens: the settlement asset's Coverage Spoke");
+        assertEq(pv.firstLossReserve, address(usdcCoverage), "Lens: the settlement asset's First-Loss Reserve");
         assertTrue(lens.checkBacking(vt).supplyEqualsCredited, "Lens: supply = credited + pending");
 
-        // Any caller, under Paused, with the pool tokens swapped into USDC and added to the Coverage Spoke.
+        // Any caller, under Paused, with the pool tokens swapped into USDC and added to the First-Loss Reserve.
         reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
         uint256 supplyBefore = token.totalSupply();
         uint256 fundedBefore = usdcCoverage.fundedBalance();
@@ -75,7 +75,7 @@ contract LiquidationPendingIntegrationTest is IntegrationFlows {
         assertEq(supplyBefore - token.totalSupply(), kept, "burned by the real Adapter");
         assertEq(coll.getPending(vt).units, 0, "pending cleared");
         assertGt(added, 0, "proceeds recovered");
-        assertApproxEqAbs(usdcCoverage.fundedBalance(), fundedBefore + added, 1, "added to the Coverage Spoke");
+        assertApproxEqAbs(usdcCoverage.fundedBalance(), fundedBefore + added, 1, "added to the First-Loss Reserve");
         assertEq(usdc.balanceOf(lpVaultSwap) + usdt.balanceOf(lpVaultSwap) + token.balanceOf(lpVaultSwap), 0, "empty");
         BackingView memory b = lens.checkBacking(vt);
         assertTrue(b.supplyEqualsCredited, "Lens: backed");

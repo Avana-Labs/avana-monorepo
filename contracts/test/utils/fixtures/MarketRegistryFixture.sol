@@ -33,8 +33,8 @@ import {
 } from "../mocks/MarketRegistryAaveMocks.sol";
 import {
     RegistryAdapterMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryCollateralizationMock,
-    RegistryCoverageSpokeMock,
     RegistryFeedMock,
     RegistryFlashSourceMock,
     RegistryLPOracleMock,
@@ -50,9 +50,9 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @title MarketRegistryFixture
 /// @notice The real MarketRegistry (six logic contracts, implementation, ERC-1967 proxy) with the real
 /// VaultTokenFactory and VaultTokens, and settable mocks for the other neighbours (ParameterStore views,
-/// RiskModule, LPVault, LPOracle, routes, flash source, Coverage Spoke) and for the Aave reserve reads.
+/// RiskModule, LPVault, LPOracle, routes, flash source, First-Loss Reserve) and for the Aave reserve reads.
 /// @dev World after `_setUpWorld`: the Stable LP Hub recorded (Stable tier), integration 1 registered, the CDP Spoke
-/// recorded, the GHO Coverage Spoke funded, a 20,000,000 GHO credit line, the flash source set, GHO listed (issuer probe
+/// recorded, the GHO First-Loss Reserve funded, a 20,000,000 GHO credit line, the flash source set, GHO listed (issuer probe
 /// None) and enabled as debt reserve 0 (fixed price, same Hub), USDC and USDT listed with three routes each. `_listMarket` lists the USDC/USDT
 /// `[-50, 50]` market; `_activate` makes it Active with routes into GHO.
 abstract contract MarketRegistryFixture is TimelockFixture {
@@ -79,7 +79,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
     RegistryAaveOracleMock internal aaveOracle;
     RegistryLPVaultMock internal lpVault;
     RegistryFlashSourceMock internal flash;
-    RegistryCoverageSpokeMock internal ghoCoverage;
+    RegistryAvanaFirstLossReserveMock internal ghoCoverage;
     RegistryTokenMock internal usdc;
     RegistryTokenMock internal usdt;
     RegistryTokenMock internal gho;
@@ -189,7 +189,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         lpVault.setPoolTokens(toks, 18);
         flash = new RegistryFlashSourceMock(aaveV3Pool, address(lpVaultSwap));
         ghoSource = new RegistryFeedMock(8, 1e8);
-        ghoCoverage = new RegistryCoverageSpokeMock(address(hub), address(gho), GHO_ASSET);
+        ghoCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), GHO_ASSET);
         ghoCoverage.setFunded(4e24, false);
 
         _beforeIntegrationRegistered();
@@ -204,7 +204,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         registry.deployCdpSpoke(_spokeDef());
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
-        registry.setCoverageSpoke(address(hub), address(gho), address(ghoCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
         registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _setGhoReserve();
@@ -281,7 +281,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
             hubAssetId: GHO_ASSET,
             priceSource: address(ghoSource),
             fixedPrice: true,
-            coverageSpoke: address(ghoCoverage),
+            firstLossReserve: address(ghoCoverage),
             crossHub: false,
             approved: false
         });

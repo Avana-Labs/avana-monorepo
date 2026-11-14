@@ -48,9 +48,9 @@ struct SpokeDraw {
 /// `uncovered` is `ILensRisk.uncoveredDeficit(hub, asset)`; `priceAdj` is the deficit-adjusted share price
 /// `floor((A - uncovered) × 10^dec / Sh)` with `A` the Hub's added assets and `Sh` its added shares of the asset (0 when
 /// no share exists), asset base units per whole share. `spokes` lists every Spoke registered on the Hub's asset.
-/// `blockNumber` and `timestamp` are the block read (REQ-LENS-005). `fundedBalance` is the Coverage Spoke's (the first
+/// `blockNumber` and `timestamp` are the block read (REQ-LENS-005). `fundedBalance` is the First-Loss Reserve's (the first
 /// loss layer, which the coverage bound tests); `deficitOffset` is the pair's DAO deficit offset (the first listed Spoke
-/// whose `FIRST_LOSS_LAYER()` is `coverageSpoke`, 0 when none) and `offsetFunded` the added assets of every such Spoke,
+/// whose `FIRST_LOSS_LAYER()` is `firstLossReserve`, 0 when none) and `offsetFunded` the added assets of every such Spoke,
 /// the second loss layer, which `uncovered` subtracts too.
 /// @custom:spec REQ-LENS-043, REQ-LENS-042, REQ-LENS-005, REQ-CONFIG-081, REQ-FLR-046
 struct HubAssetExposureView {
@@ -58,7 +58,7 @@ struct HubAssetExposureView {
     uint256 timestamp;
     address hub;
     address asset;
-    address coverageSpoke;
+    address firstLossReserve;
     uint256 fundedBalance;
     uint256 line;
     bool coverageBoundHolds;

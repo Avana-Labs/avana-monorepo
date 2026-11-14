@@ -85,7 +85,7 @@ The position managers' own events (`IncreaseLiquidity`, `DecreaseLiquidity`, `Co
 | LPVaultSwap | `FlashLoanUsed(uint256 marketId idx, address flashSource idx, address asset idx, uint256 amount, uint256 premium)` | log | M |
 | LPVaultSwap | `RouteFailed(uint256 marketId idx, address token idx, address route, bytes4 errorSelector)` | log | K M (`M-10`) |
 | LPVaultSwap | `ResidueReturned(address caller idx, address token idx, uint256 amount, bool escrowed)` | log | M |
-| LPVaultSwap | `PendingSettlementForwarded(address caller idx, uint256 marketId idx, address vaultToken, uint256 units, uint256[] amounts, address debtAsset idx, uint256 added, uint256 minPending, address coverageSpoke, uint8[] routeUsed, uint256 funded, uint256 carried)` | log | K C M |
+| LPVaultSwap | `PendingSettlementForwarded(address caller idx, uint256 marketId idx, address vaultToken, uint256 units, uint256[] amounts, address debtAsset idx, uint256 added, uint256 minPending, address firstLossReserve, uint8[] routeUsed, uint256 funded, uint256 carried)` | log | K C M |
 | LPVaultSwap | `Deleveraged(address proxy idx, uint256 marketId idx, uint256 debtReserveId idx, uint128 units, uint256 debtRepaid, uint256 recovered, uint256 flashPremium, uint256 debtAssetOut)` | log | C |
 | LPVaultSwap | `KeeperAdded(address keeper idx)`, `KeeperRemoved(address keeper idx)` | `committed_operator` | K M |
 | PayoutEscrow | `RemainderEscrowed(address token idx, address account idx, uint256 amount)` | `escrow_credit` + | C M (`M-25` when `account` is `feeRecipient`) |
@@ -122,7 +122,7 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | `MarketRegistrationCancelled(uint256 marketId)`, `MarketClosed(uint256 marketId idx)` | `market.status` | K C M |
 | `MarketOffboarding(uint256 marketId)` | `market.status` Offboarding, `market.offboardedAt` (block time; the notice ends at `offboardedAt + 5 days`, the earliest time of the Aave DAO's one threshold drop to `windDownState(marketId).targetLtBps` and of `closeMarket`) | K C M |
 | `SettlementReserveSet(uint256 marketId idx, uint256 debtReserveId)` | `market.settlementReserveId` | K |
-| `DebtReserveApproved(address spoke idx, uint256 reserveId idx, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address coverageSpoke)` | `debt_reserve`; starts the DebtOracle source | K C M |
+| `DebtReserveApproved(address spoke idx, uint256 reserveId idx, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address firstLossReserve)` | `debt_reserve`; starts the DebtOracle source | K C M |
 | `DebtReserveRemoved(address spoke idx, uint256 reserveId idx)` | `debt_reserve.approved` | K C M |
 | `SpokeApproved(address spoke idx, address hub idx, uint32 integrationId idx, address implementation, address aaveOracle)` | `cdp_spoke`; starts the `AaveSpokeApproved` source | C M (`M-20`) |
 | `HubRecorded(address hub idx, uint8 tier)` | `hub`; starts the `AaveHubRecorded` source | C M |
@@ -139,7 +139,7 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | `BreakerReset(BreakerScope scope idx, bytes32 key idx, address caller idx)` | `breaker` cleared | K C M |
 | `GateBreached(bytes32 key idx, uint32 reasons, uint64 at)` | log | M (`M-08`) |
 | `StandbyRouteActivated(address token idx, RouteSlot slot, address caller idx)`, `StandbySwitchCancelled(address token idx, address caller idx)`, `PriceRouteRestored(address token idx)` | log | K M (`M-24`) |
-| `IntegrationRegistered`, `CoverageSpokeSet` (starts the Coverage Spoke source), `FlashSourceSet`, `SpokeCodeHashApproved`, `IntegrationContractsRecorded` | log | M |
+| `IntegrationRegistered`, `AvanaFirstLossReserveSet` (starts the First-Loss Reserve source), `FlashSourceSet`, `SpokeCodeHashApproved`, `IntegrationContractsRecorded` | log | M |
 
 ## ParameterStore and RiskModule
 
@@ -166,7 +166,7 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 
 An operation's expiry emits no event: `expiresAt = readyAt + GRACE_PERIOD` (14 days, `REQ-ACCESS-108`), and `readyAt = block timestamp of CallScheduled + delay`.
 
-## Coverage Spokes
+## First-Loss Reserves
 
 | Event | Updates | Used by |
 |---|---|---|
@@ -212,8 +212,8 @@ The `SeriesSampler` block source runs once an hour of block time (300 blocks on 
 
 | Scope (`series_point.scopeKind`) | Key | Reads | Metrics |
 |---|---|---|---|
-| `hubAsset` | `chainId:hub:assetId` | MarketRegistry `getHubs`, `getSpokes`, `hubOf`, `isRecordedHub`, `hubTier`, `coverageSpokeOf`; Hub `getAssetCount`, `getAssetUnderlyingAndDecimals`, `getAssetConfig`, `getSpokeCount`, `getSpokeAddress`, `getSpoke` (discovery of every Hub, Hub asset and Spoke); every Lend Spoke's `getReserveCount`, `getReserve`, `getReserveConfig`, its `ORACLE().getReservePrice`; Hub `getAddedAssets`, `getAddedShares`, `getAssetOwed`, `getAssetLiquidity`, `getAssetDeficitRay`, `getAssetAccruedFees`, `getAssetDrawnRate`, `getAssetDrawnIndex`, `getAssetConfig`; the rate strategy's `getInterestRateData`; `Lens.getHubAssetExposure` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
-| `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getSpokeAddedAssets`, `getSpokeTotalOwed`; `FIRST_LOSS_LAYER()` of each Spoke of an asset with a Coverage Spoke that is none of the known kinds (finds the DAO deficit offset) | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
+| `hubAsset` | `chainId:hub:assetId` | MarketRegistry `getHubs`, `getSpokes`, `hubOf`, `isRecordedHub`, `hubTier`, `firstLossReserveOf`; Hub `getAssetCount`, `getAssetUnderlyingAndDecimals`, `getAssetConfig`, `getSpokeCount`, `getSpokeAddress`, `getSpoke` (discovery of every Hub, Hub asset and Spoke); every Lend Spoke's `getReserveCount`, `getReserve`, `getReserveConfig`, its `ORACLE().getReservePrice`; Hub `getAddedAssets`, `getAddedShares`, `getAssetOwed`, `getAssetLiquidity`, `getAssetDeficitRay`, `getAssetAccruedFees`, `getAssetDrawnRate`, `getAssetDrawnIndex`, `getAssetConfig`; the rate strategy's `getInterestRateData`; `Lens.getHubAssetExposure` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
+| `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getSpokeAddedAssets`, `getSpokeTotalOwed`; `FIRST_LOSS_LAYER()` of each Spoke of an asset with a First-Loss Reserve that is none of the known kinds (finds the DAO deficit offset) | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
 | `creditLine` | `chainId:fundingHub:assetId:spoke` | MarketRegistry `crossHubLineCap`, `crossHubLineTotal`, `crossHubLinesEnabled`, for every CDP Spoke drawing on a Hub other than its home Hub | `cap`, `total`, `enabled` (1 or 0); the draw is the `hubAssetSpoke` series of the same Spoke |
 | `market` | `chainId:marketId` | `Lens.getMarkets`, Spoke `getReserve` (collateral risk), Hub `getAssetUnderlyingAndDecimals` (vault-token decimals); `Lens.getBorrowSpeed(marketId, debtReserveId)` per debt reserve and `Lens.getPledgeSpeed(marketId)` (read for the current rows, not charted) | `suppliedUnits`, `acceptedPrice`, `suppliedUsd8`, `marketHeadroomUsd8`, `debtUsd8`, `borrowers` |
 | `marketReserve` | `chainId:marketId:spoke:reserveId` | `Spoke.getUserDebt(reserveId, proxy)` of every attributed account of the market | `debt`, `borrowers` |
@@ -247,7 +247,7 @@ These values change with time, interest or prices and emit no event, or emit onl
 | Speed limits (BOR-024) | `Lens.getBorrowSpeed(marketId, debtReserveId)` ("available to borrow now", "more from"), `Lens.getPledgeSpeed(marketId)`, through the snapshot reader | C |
 | Account previews and sizing | `Lens.getPositionFees`, `getAccountFees`, `previewBorrowAfter`, `previewRepayAfter`, `previewPledgeAfter`, `previewWithdrawAfter`, `previewMaxWithdraw`, `previewDeleverageTo`, `previewCloseAccount`, `getHubAsset` (`@avana/services-common/views`, `appViews.ts`) | browser |
 | Hub utilization and draw caps | `Hub.getAssetLiquidity`, `getAddedAssets`, `getSpokeTotalOwed`, `getSpokeConfig` | M (`M-18`, `M-19`) |
-| Coverage Spoke balance | `CoverageSpoke.totalFunded()`, `totalCovered()`, `totalWithdrawn()` | M (`M-13`) |
+| First-Loss Reserve balance | `AvanaFirstLossReserve.totalFunded()`, `totalCovered()`, `totalWithdrawn()` | M (`M-13`) |
 | Timelock expiry | `AvanaTimelock.getTimestamp(id)` plus `GRACE_PERIOD()` | M (`M-22`) |
 | Implementations and code | `eth_getStorageAt(proxy, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc)`; `keccak256(eth_getCode(address))` | K (`Q-219`) M (`M-26`) |
 | Safes | `getOwners()`, `getThreshold()`, guard and module slots | M (`M-23`) |

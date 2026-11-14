@@ -16,7 +16,7 @@ import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryDebtOracleMock,
     RegistryFeedMock,
     RegistryTetherMock,
@@ -28,14 +28,14 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
     uint256 internal constant USDC_RESERVE = 5;
     uint256 internal constant USDC_ASSET = 2;
     RegistryDebtOracleMock internal usdcOracle;
-    RegistryCoverageSpokeMock internal usdcCoverage;
+    RegistryAvanaFirstLossReserveMock internal usdcCoverage;
     uint256 internal marketId;
 
     function setUp() public {
         _setUpWorld();
         (marketId,,) = _activeMarket();
         usdcOracle = new RegistryDebtOracleMock(address(usdc), address(registry), address(ps));
-        usdcCoverage = new RegistryCoverageSpokeMock(address(hub), address(usdc), USDC_ASSET);
+        usdcCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(usdc), USDC_ASSET);
         usdcCoverage.setFunded(2e12, false);
         hub.setAsset(address(usdc), USDC_ASSET);
         hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 500_000);
@@ -48,7 +48,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         aaveOracle.setSource(USDC_RESERVE, address(usdcOracle));
         ps.setStressRise(address(usdc), 500);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(usdc), address(usdcCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
         registry.recordCreditLine(address(hub), address(usdc), 1_000_000);
         vm.stopPrank();
     }
@@ -62,7 +62,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
             hubAssetId: USDC_ASSET,
             priceSource: address(usdcOracle),
             fixedPrice: false,
-            coverageSpoke: address(usdcCoverage),
+            firstLossReserve: address(usdcCoverage),
             crossHub: false,
             approved: false
         });
@@ -110,11 +110,11 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         assertEq(ids[1], USDC_RESERVE);
         DebtReserveDef memory rec = registry.getDebtReserve(address(spoke), USDC_RESERVE);
         assertTrue(rec.approved);
-        assertEq(rec.coverageSpoke, address(usdcCoverage));
+        assertEq(rec.firstLossReserve, address(usdcCoverage));
         (uint256 line, uint256 sum) = registry.creditLine(address(hub), address(usdc));
         assertEq(line, 1_000_000);
         assertEq(sum, 500_000);
-        // The DebtOracle and the Coverage Spoke are now protected from the address freeze.
+        // The DebtOracle and the First-Loss Reserve are now protected from the address freeze.
         vm.prank(emergencyGuardian);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, address(usdcOracle)));
         registry.freezeAddress(address(usdcOracle));
@@ -143,7 +143,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
             hubAssetId: assetId,
             priceSource: address(fixedSource),
             fixedPrice: true,
-            coverageSpoke: address(0),
+            firstLossReserve: address(0),
             crossHub: false,
             approved: false
         });
@@ -235,13 +235,13 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
     }
 
     // TEST-185 verifies: REQ-MREG-006, REQ-CONFIG-081, REQ-MREG-009
-    function test_TEST_185_coverageSpokeChecks() public {
+    function test_TEST_185_firstLossReserveChecks() public {
         DebtReserveDef memory d = _usdcDef();
-        d.coverageSpoke = address(ghoCoverage);
+        d.firstLossReserve = address(ghoCoverage);
         vm.prank(address(timelock));
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CoverageSpokeMismatch.selector,
+                IMarketRegistryCreditLines.AvanaFirstLossReserveMismatch.selector,
                 address(hub),
                 address(usdc),
                 address(ghoCoverage)
@@ -277,7 +277,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.listToken(address(usdtLike), td);
         DebtReserveDef memory d = _usdcDef();
         RegistryDebtOracleMock o = new RegistryDebtOracleMock(address(usdtLike), address(registry), address(ps));
-        RegistryCoverageSpokeMock cs = new RegistryCoverageSpokeMock(address(hub), address(usdtLike), 3);
+        RegistryAvanaFirstLossReserveMock cs = new RegistryAvanaFirstLossReserveMock(address(hub), address(usdtLike), 3);
         cs.setFunded(1e13, false);
         hub.setAsset(address(usdtLike), 3);
         IAaveV4Spoke.Reserve memory r;
@@ -289,8 +289,8 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         aaveOracle.setSource(6, address(o));
         ps.setStressRise(address(usdtLike), 500);
         vm.prank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(usdtLike), address(cs));
-        (d.reserveId, d.asset, d.hubAssetId, d.priceSource, d.coverageSpoke) =
+        registry.setAvanaFirstLossReserve(address(hub), address(usdtLike), address(cs));
+        (d.reserveId, d.asset, d.hubAssetId, d.priceSource, d.firstLossReserve) =
         (6, address(usdtLike), 3, address(o), address(cs));
         usdtLike.setFee(1, false);
         vm.prank(address(timelock));

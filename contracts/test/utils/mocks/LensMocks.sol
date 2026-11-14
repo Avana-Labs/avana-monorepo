@@ -38,7 +38,7 @@ contract LensRegistryMock {
     mapping(address => PauseReason) public pauseReason;
     mapping(address => bool) public isFrozenAddress;
     address[] internal _spokes;
-    mapping(address => mapping(address => address)) public coverageSpokeOf;
+    mapping(address => mapping(address => address)) public firstLossReserveOf;
     mapping(address => mapping(address => uint256[4])) internal _lines;
     bool public crossHubLinesEnabled;
     mapping(uint256 => uint256) public settlementReserve;
@@ -121,12 +121,12 @@ contract LensRegistryMock {
         hubOf[spoke] = hub;
     }
 
-    function setCoverageSpoke(
+    function setAvanaFirstLossReserve(
         address hub,
         address asset,
         address spoke
     ) external {
-        coverageSpokeOf[hub][asset] = spoke;
+        firstLossReserveOf[hub][asset] = spoke;
     }
 
     function setCreditLine(
@@ -647,7 +647,7 @@ contract LensDebtOracleMock {
     }
 }
 
-/// @notice A Coverage Spoke's funded balance and First-Loss Reserve minimum.
+/// @notice A First-Loss Reserve's funded balance and First-Loss Reserve minimum.
 contract LensCoverageMock {
     uint256 public fundedBalance;
     uint256 public firstLossReserveMinimum;

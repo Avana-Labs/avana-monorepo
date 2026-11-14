@@ -83,7 +83,7 @@ contract AvanaAaveV4Roles {
         AaveV4SpokeConfiguratorRolesProcedure.grantSpokeConfiguratorAllRoles(accessManager, spokeConfiguratorAdmin);
     }
 
-    /// @notice Grants one Hub role, for example `HUB_DEFICIT_ELIMINATOR_ROLE` (103) to a Coverage Spoke.
+    /// @notice Grants one Hub role, for example `HUB_DEFICIT_ELIMINATOR_ROLE` (103) to a First-Loss Reserve.
     function grantHubRole(
         address accessManager,
         uint64 role,

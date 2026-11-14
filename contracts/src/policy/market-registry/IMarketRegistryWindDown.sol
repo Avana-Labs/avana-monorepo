@@ -64,7 +64,7 @@ interface IMarketRegistryWindDown {
 
     /// @notice The debt reserve of the market's CDP Spoke into whose asset pending settlement converts.
     /// @dev Set by `listCollateralMarket` to the first debt reserve enabled on the Spoke; LPVaultSwap's `settlePending`
-    /// pays the proceeds to that reserve's `coverageSpokeOf(fundingHub, asset)`.
+    /// pays the proceeds to that reserve's `firstLossReserveOf(fundingHub, asset)`.
     /// @param marketId The market.
     /// @return debtReserveId The settlement debt reserve.
     /// @custom:spec REQ-MREG-033, Q-338

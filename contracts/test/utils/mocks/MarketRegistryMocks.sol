@@ -449,9 +449,9 @@ contract RegistryDebtOracleMock {
     }
 }
 
-/// @title RegistryCoverageSpokeMock
-/// @notice A Coverage Spoke as the MarketRegistry sees it.
-contract RegistryCoverageSpokeMock {
+/// @title RegistryAvanaFirstLossReserveMock
+/// @notice A First-Loss Reserve as the MarketRegistry sees it.
+contract RegistryAvanaFirstLossReserveMock {
     address public HUB;
     address public ASSET;
     uint256 public ASSET_ID;

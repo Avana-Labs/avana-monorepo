@@ -41,4 +41,4 @@ npm run dev         # local, against Anvil or a fork
 npm run start -- --schema avana_<release>
 ```
 
-Factory sources (vault tokens, LPOracles, DebtOracles, Coverage Spokes) take their announcing event from the generated ABIs (`factoryEvents` in `src/config/abis.ts`), so a changed event signature fails the typecheck or the tests instead of leaving a source that matches no log.
+Factory sources (vault tokens, LPOracles, DebtOracles, First-Loss Reserves) take their announcing event from the generated ABIs (`factoryEvents` in `src/config/abis.ts`), so a changed event signature fails the typecheck or the tests instead of leaving a source that matches no log.

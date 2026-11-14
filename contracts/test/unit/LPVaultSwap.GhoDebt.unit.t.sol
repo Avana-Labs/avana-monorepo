@@ -14,7 +14,7 @@ import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 /// source, REQ-SWAP-088): both pool tokens are swapped into GHO, every figure is in 18-decimal GHO units, the caller
 /// funds and is paid in GHO, the fee goes to `feeRecipient` and any borrower surplus to the wallet in GHO; a top-up
 /// closes a floor the routes miss; a pending balance of a market whose settlement reserve is GHO funds the GHO
-/// Coverage Spoke. Each figure is checked against the independent model of the base suite.
+/// First-Loss Reserve. Each figure is checked against the independent model of the base suite.
 /// forge-config: default.isolate = false
 contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     address internal proxy;
@@ -201,7 +201,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice A market whose settlement reserve is GHO: the pending balance left by an earlier seizure is released,
-    /// both tokens are swapped into GHO and `R` funds the GHO Coverage Spoke; the caller receives nothing.
+    /// both tokens are swapped into GHO and `R` funds the GHO First-Loss Reserve; the caller receives nothing.
     // TEST-280 verifies: REQ-SWAP-066, REQ-SWAP-070, Q-338
     function test_TEST_280_pendingIntoGhoCoverage() public {
         (address bobProxy,) = _bobAccount();

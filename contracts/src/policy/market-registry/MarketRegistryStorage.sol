@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICoverageSpoke} from "../../coverage/coverage-spoke/ICoverageSpoke.sol";
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {Market} from "../../types/Market.sol";
@@ -30,7 +30,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 /// six logic contracts.
 /// @dev All mutable state sits in one ERC-7201 namespace, `avana.storage.MarketRegistry`, owned by the registry proxy;
 /// a logic contract reads and writes it only while the registry delegatecalls it. The immutables are the per-chain
-/// Avana addresses of `MarketRegistryImmutables`; Hubs, integrations, Spokes, debt assets, Coverage Spokes and the
+/// Avana addresses of `MarketRegistryImmutables`; Hubs, integrations, Spokes, debt assets, First-Loss Reserves and the
 /// flash source are records, so a new one needs no upgrade (REQ-CONFIG-005).
 /// @custom:spec REQ-CONFIG-001, REQ-CONFIG-002, REQ-CONFIG-005, REQ-CONFIG-014, Q-226, Q-313
 // ParameterStore feed-definition reads in loops over a route's one or two feeds and a market's tokens; views only.
@@ -88,10 +88,10 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         address flashSource;
         mapping(address spoke => mapping(uint256 reserveId => DebtReserveDef)) debtReserves;
         mapping(address spoke => uint256[]) debtReserveIds;
-        mapping(address coverageSpoke => bool) knownCoverageSpoke;
+        mapping(address firstLossReserve => bool) knownAvanaFirstLossReserve;
         mapping(address priceSource => bool) knownPriceSource;
         mapping(address asset => bool) isDebtAsset;
-        mapping(address hub => mapping(address asset => address)) coverageSpokeOf;
+        mapping(address hub => mapping(address asset => address)) firstLossReserveOf;
         mapping(address hub => mapping(address asset => CreditLine)) creditLines;
         mapping(address spoke => mapping(uint256 reserveId => uint256)) recordedDrawCap;
         mapping(address hub => mapping(address asset => mapping(address spoke => uint256))) crossHubLineCap;
@@ -385,7 +385,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
 
     /// @dev REQ-CONFIG-081 coverage of a line: `required = ⌈line × 10^dec × coverageRatioBps / 10^4⌉` base units (the
     /// smallest balance that passes `line × 10^dec × coverageRatioBps ≤ fundedBalance × 10^4`) and `funded`, the asset
-    /// balance of `coverageSpokeOf(hub, asset)` (0 when the pair has none). A line of 0 needs nothing. A line so large
+    /// balance of `firstLossReserveOf(hub, asset)` (0 when the pair has none). A line of 0 needs nothing. A line so large
     /// that `line × 10^dec × coverageRatioBps` would not fit 256 bits requires `type(uint256).max`, which no balance
     /// meets, so the test fails closed instead of overflowing.
     function _coverage(
@@ -394,15 +394,15 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         uint256 line
     ) internal view returns (uint256 required, uint256 funded) {
         if (line == 0) return (0, 0);
-        address cs = _s().coverageSpokeOf[hub][asset];
-        funded = cs == address(0) ? 0 : ICoverageSpoke(cs).fundedBalance();
+        address cs = _s().firstLossReserveOf[hub][asset];
+        funded = cs == address(0) ? 0 : IAvanaFirstLossReserve(cs).fundedBalance();
         uint256 k = 10 ** uint256(IERC20Metadata(asset).decimals())
             * IParameterStoreCoverage(_PARAMETER_STORE).coverageRatioBps();
         if (k != 0 && line > (type(uint256).max - _BPS) / k) return (type(uint256).max, funded);
         required = (line * k + _BPS - 1) / _BPS;
     }
 
-    /// @dev Reverts `CoverageBelowRatio` unless the Coverage Spoke of `(hub, asset)` covers `line` (REQ-CONFIG-081).
+    /// @dev Reverts `CoverageBelowRatio` unless the First-Loss Reserve of `(hub, asset)` covers `line` (REQ-CONFIG-081).
     function _requireCovered(
         address hub,
         address asset,

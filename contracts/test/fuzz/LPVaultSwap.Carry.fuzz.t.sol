@@ -10,7 +10,7 @@ import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 /// @notice The sub-share carry of pending settlement fuzzed (2.11 REQ-SWAP-070, REQ-FLR-038): for any number of
 /// settlements whose `R` the Hub would mint no share for (`previewAddByAssets(R + carry) = 0`), the amount is kept as
 /// LPVaultSwap's carry for that market, never funded and never paid out; the first settlement whose `R + carry` buys at
-/// least one share funds exactly `R + carry` into the Coverage Spoke and clears the carry; residues of every
+/// least one share funds exactly `R + carry` into the First-Loss Reserve and clears the carry; residues of every
 /// settlement go to `feeRecipient`, never to the caller.
 /// forge-config: default.isolate = false
 /// forge-config: default.fuzz.runs = 128

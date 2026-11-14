@@ -76,7 +76,7 @@ ponder.on("MarketRegistry:DebtReserveApproved", async ({ event, context }) => {
     fundingHub: a.fundingHub,
     hubAssetId: a.hubAssetId,
     priceSource: a.priceSource,
-    coverageSpoke: a.coverageSpoke,
+    firstLossReserve: a.firstLossReserve,
     approved: true,
     lastBlock: p.blockNumber,
   };
@@ -150,7 +150,7 @@ logOnly("MarketRegistry", [
   "StandbySwitchCancelled",
   "PriceRouteRestored",
   "IntegrationRegistered",
-  "CoverageSpokeSet",
+  "AvanaFirstLossReserveSet",
   "FlashSourceSet",
   "SpokeCodeHashApproved",
   "IntegrationContractsRecorded",
