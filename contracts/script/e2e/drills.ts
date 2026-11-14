@@ -23,6 +23,7 @@ import {
   aaveAdapterAbi,
   aaveV4HubAbi,
   aaveV4SpokeAbi,
+  collateralizationAbi,
   firstLossReserveAbi,
   marketRegistryAbi,
   parameterStoreAbi,
@@ -169,6 +170,12 @@ class Checks {
     if (ok) this.passed.push(`${label} refused ${p.error.replace(/\(.*$/, "")}`);
     this.lines.push(`${ok ? "ok  " : "FAIL"} ${label}: ${p.ok ? "WORKS (expected a refusal)" : `refused ${p.error}`}${ok ? "" : ` (expected /${want.source}/)`}`);
     if (!ok && !this.failed) this.failed = p.ok ? `${label} still works after the forward change` : `${label} refused with ${p.error.slice(0, 120)}, expected /${want.source}/`;
+  }
+
+  /** A finding the drill works around through the documented path; it shows in the detail and does not fail it. */
+  note(text: string) {
+    this.lines.push(`NOTE ${text}`);
+    this.passed.push(`NOTE ${text}`);
   }
 
   that(label: string, ok: boolean, detail: string) {
@@ -467,6 +474,18 @@ const DRILLS: Record<string, Drill> = {
       const debt = await e.debt(m, s.borrower.account);
       await e.mint(m.debtAsset, s.borrower.owner, debt * 2n + 10n ** 18n);
       await e.must("repay all", s.borrower.owner, e.adapter, aaveAdapterAbi, "repay", [s.borrower.owner, m.marketId, s.borrower.account.debtReserveId, debt * 2n + 10n ** 18n, true, await e.deadline()]);
+      // Finding: a repay sent with an estimated gas limit leaves the indebted mark set. Its `markDebtFree` reads
+      // `getUserAccountData`, whose LPOracle price read reverts `InsufficientGas` (about 442,000 gas needed) while
+      // about 434,000 are left; Collateralization treats that as a failed read (its starvation floor is 50,000) and
+      // keeps the mark, so closeMarket reverts MarketHasDebt until anyone calls refreshDebtMark (REQ-COLL-040).
+      const coll = e.ctx.manifest.avana.collateralization.address as Address;
+      const cleared = (await e.read(coll, collateralizationAbi, "getMarketDebtFree", [m.vaultToken])) as boolean;
+      if (!cleared) {
+        c.note("repay-all at an estimated gas limit left the indebted mark set (LPOracle InsufficientGas inside markDebtFree); cleared by refreshDebtMark");
+        await e.gasFor(W.anyone);
+        await e.must("refreshDebtMark by anyone", W.anyone, e.adapter, aaveAdapterAbi, "refreshDebtMark", [s.borrower.account.proxy]);
+      }
+      c.that("forward: market debt-free after repay", Boolean(await e.read(coll, collateralizationAbi, "getMarketDebtFree", [m.vaultToken])), `getMarketDebtFree after repay ${cleared}`);
       await wait(e, 5 * 86_400 + 1);
       await e.gasFor(W.anyone);
       await e.must("closeMarket by anyone", W.anyone, e.registry, marketRegistryAbi, "closeMarket", [m.marketId]);
