@@ -251,16 +251,16 @@ library RiskModuleMath {
         uint256 debtRay
     ) internal pure returns (uint256 hfEx) {
         if (e == 0 || debtRay == 0) return hf;
-        uint256 sub;
+        uint256 rescueHf;
         if (debtRay >= WAD * RAY) {
             // The quotient is at most `e`, so it fits.
-            sub = Math.mulDiv(e, WAD * RAY, debtRay, Math.Rounding.Ceil);
+            rescueHf = Math.mulDiv(e, WAD * RAY, debtRay, Math.Rounding.Ceil);
         } else {
             (bool ok, uint256 p) = Math.tryMul(e, WAD * RAY);
             if (!ok) return 0;
-            sub = Math.ceilDiv(p, debtRay);
+            rescueHf = Math.ceilDiv(p, debtRay);
         }
-        hfEx = hf > sub ? hf - sub : 0;
+        hfEx = hf > rescueHf ? hf - rescueHf : 0;
     }
 
     /// @notice `max(1e18, hardHealthFloor, minHealthFactor)` (REQ-RISK-059, REQ-RISK-068).
