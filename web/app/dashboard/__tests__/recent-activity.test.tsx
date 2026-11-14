@@ -57,9 +57,9 @@ describe("RecentActivity whole-row navigation", () => {
             makeRow({
               id: "sim-1",
               txHash: "sim-abc",
-              kind: "stake",
-              product: "umbrella",
-              primaryLabel: "Staked WETH",
+              kind: "supply",
+              product: "lend",
+              primaryLabel: "Supplied WETH",
               secondaryLabel: "3.4747 WETH",
               amountUsd: 6700,
             }),
@@ -68,10 +68,10 @@ describe("RecentActivity whole-row navigation", () => {
       </DisplayPreferencesProvider>,
     )
     const view = within(container)
-    expect(view.getByText("Staked WETH")).toBeInTheDocument()
-    expect(view.getByText(/Stake · 3\.4747 WETH ·/)).toBeInTheDocument()
+    expect(view.getByText("Supplied WETH")).toBeInTheDocument()
+    expect(view.getByText(/Supply · 3\.4747 WETH ·/)).toBeInTheDocument()
     expect(view.getByText("-$6.7K")).toBeInTheDocument()
-    expect(view.queryByText("Umbrella")).not.toBeInTheDocument()
+    expect(view.queryByText("Lend")).not.toBeInTheDocument()
     expect(view.queryByText("Confirmed")).not.toBeInTheDocument()
     expect(view.queryByText(/sim-abc/)).not.toBeInTheDocument()
     expect(view.queryByText("Product")).not.toBeInTheDocument()

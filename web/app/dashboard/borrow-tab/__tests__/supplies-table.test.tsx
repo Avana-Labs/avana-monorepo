@@ -84,12 +84,12 @@ describe("SuppliesPanel column scope", () => {
     // The desktop table exposes the spoke-scoped credit columns. "Borrow Power"
     // and the health factor here reflect the whole spoke, not the $2 in this row.
     expect(view.getAllByText(/^BORROW POWER$/).length).toBeGreaterThan(0)
-    // The column is "Risk" — a combined health-factor + liquidation cell modelled on the
-    // Multiply tab (the same table renders on phones).
+    // The column is "Risk" — a combined health-factor + liquidation cell (the same table
+    // renders on phones).
     expect(view.getAllByText(/^RISK$/).length).toBeGreaterThan(0)
     // Liquidation value comes from the SAME field the My Debts table reads
     // (liquidationThresholdUsd), so the two tables never disagree. It is labelled
-    // "Liq." with an (i) that explains it is a USD figure (vs Multiply's per-token price).
+    // "Liq." with an (i) that explains it is a USD figure, not a per-token price.
     expect(container.textContent).toMatch(/Liq\./)
     expect(container.textContent).toMatch(/4,100/)
     // No per-position "Max Borrow" label is shown that would imply the borrow

@@ -123,8 +123,8 @@ export function buildBorrowBalanceMetrics(
       ? ((metrics.annualYieldEarnedUsd6 - metrics.annualBorrowCostUsd6) * WAD) / netPositionValueUsd6
       : 0n
 
-  // Interest Owed as a per-position display, accrued from each debt's own `openedAt` (the way
-  // Multiply's Interest Earned works), NOT the engine index. The index only advances while the app
+  // Interest Owed as a per-position display, accrued from each debt's own `openedAt`, NOT the
+  // engine index. The index only advances while the app
   // computes on read and shares one account clock, so any action reset every loan's interest to ~0.
   // Debt × its borrow rate × (now − openedAt). The engine's index-based debt VALUE (health factor,
   // borrow power) is deliberately left untouched — this is the display/ticker figure only.

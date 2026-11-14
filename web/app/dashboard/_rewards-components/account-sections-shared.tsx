@@ -42,9 +42,9 @@ function formatAvailableAmount(value: number, symbol: string) {
   return `${value.toLocaleString("en-US", { maximumFractionDigits })} ${symbol}`
 }
 
-/** Per-row CTA for an available balance (Deposit on lend, Multiply on multiply, …). */
+/** Per-row CTA for an available balance (e.g. Deposit on Lend). */
 type AvailableRowAction = {
-  /** ActionIcon label, e.g. "deposit" | "multiply". */
+  /** ActionIcon label, e.g. "deposit". */
   icon: string
   /** Already-translated button text. */
   label: string
@@ -91,7 +91,7 @@ export function ProductAvailableCard({
   allowedAssetIds?: ReadonlySet<string>
   /** Already-translated heading (translate at the call site so i18n parity can see the key). */
   title: string
-  /** Optional per-row CTA (e.g. Deposit / Multiply). */
+  /** Optional per-row CTA (e.g. Deposit). */
   action?: AvailableRowAction
 }) {
   const { t } = useTranslation()

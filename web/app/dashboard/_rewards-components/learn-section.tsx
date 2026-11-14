@@ -11,8 +11,8 @@ type LearnCard = {
 }
 
 /**
- * "Learn Avana" explainer cards — the full-card teaching layout used by
- * "Learn Umbrella" (icon + title + body, no links). Copy is drawn from the Avana
+ * "Learn Avana" explainer cards — a full-card teaching layout (icon + title + body, no
+ * links). Copy is drawn from the Avana
  * FAQ topics (keep your LP position, borrowing power, drawdowns, isolated risk,
  * repay/close) plus a product overview. Kept as plain (English) copy — long-form
  * teaching content; only the section heading is localized.

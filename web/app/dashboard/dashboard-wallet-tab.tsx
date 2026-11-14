@@ -420,7 +420,7 @@ export function DashboardWalletTab({ walletId, balances }: { walletId: string; b
           <WalletMetric
             label={t("Wallet Value")}
             value={m(exact(totalWalletUsd))}
-            description="Live value of your free, unallocated wallet funds — everything not committed to Lend, Borrow, or Multiply."
+            description="Live value of your free, unallocated wallet funds — everything not committed to Lend or Borrow."
           />
           <WalletMetric
             label={t("Unrealized P/L")}

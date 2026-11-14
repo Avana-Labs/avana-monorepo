@@ -4,7 +4,7 @@
  */
 
 type PortfolioApyLeg = {
-  /** Net equity USD attributed to this product (collateral − debt for borrow/multiply). */
+  /** Net equity USD attributed to this product (collateral − debt for borrow). */
   equityUsd: number
   /** Product Net APY in percent units (e.g. 5.2 means 5.2%). */
   netApyPct: number
