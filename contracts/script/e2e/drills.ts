@@ -390,7 +390,7 @@ const DRILLS: Record<string, Drill> = {
       await new Promise((r) => setTimeout(r, 300));
       c.that("before: keeper active", effectiveMode("active", true, state) === "active" && blockingReason("active", state, 31337) === null, "mode active, nothing blocks a submission");
       const noCert = await new Promise<string>((resolve) => {
-        const req = request({ host: "127.0.0.1", port, method: "POST", path: "/halt", rejectUnauthorized: false }, (res) => resolve(`status ${res.statusCode}`));
+        const req = request({ host: "127.0.0.1", port, method: "POST", path: "/halt", ca: readFileSync(join(work, "cert.pem")), servername: "localhost" }, (res) => resolve(`status ${res.statusCode}`));
         req.on("error", (err) => resolve(`refused: ${err.message.split("\n")[0]}`));
         req.end();
       });
