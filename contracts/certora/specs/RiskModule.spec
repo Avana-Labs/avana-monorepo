@@ -572,8 +572,8 @@ rule minimumPledgeUsesAcceptedPrice(address depositor, address proxy, uint256 ma
     uint8 d = mDecimals(marketId);
     require d <= 18;
     uint256 accepted;
-    uint64 at;
-    accepted, at = oracleLastAccepted(o);
+    uint64 acceptedAt;
+    accepted, acceptedAt = oracleLastAccepted(o);
     mathint pledgeUsd = (to_mathint(L) * to_mathint(accepted)) / 10^d;
     mathint minUsd = to_mathint(psMinPledgeUsd(marketId));
     mathint rescueMin = to_mathint(RESCUE_MIN_PLEDGE_USD());
@@ -607,8 +607,8 @@ rule remainingRecordAtLeastMinimum(uint256 marketId, uint128 remaining) {
     uint8 d = mDecimals(marketId);
     require d <= 18;
     uint256 accepted;
-    uint64 at;
-    accepted, at = oracleLastAccepted(o);
+    uint64 acceptedAt;
+    accepted, acceptedAt = oracleLastAccepted(o);
 
     checkRemainingRecord(e, marketId, remaining);
 

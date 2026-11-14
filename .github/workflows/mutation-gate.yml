@@ -8,7 +8,8 @@ name: mutation-gate
 #   one run, and more, since a group never skips lines another group left uncaught);
 # - gambit: Gambit expression mutants, one job per contract (at most 20 mutants of 5 minutes each);
 # - necessist: Necessist, one job per test file;
-# - certora-mutate: certoraMutate, one job per Certora conf; without the CERTORAKEY secret each job passes with a
+# - certora-mutate: certoraMutate, one job per Certora conf, only while the repository variable CERTORA_ENABLED is
+#   `true` (paused since 2026-11-13); without the CERTORAKEY secret each job passes with a
 #   warning and runs nothing.
 # `mutation-summary` passes only when every job passed.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
@@ -53,6 +54,8 @@ defaults:
 jobs:
   plan:
     name: plan the jobs
+    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
+    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -78,6 +81,8 @@ jobs:
 
   build:
     name: Aave V4 and Uniswap v3 builds
+    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
+    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     # The mutation jobs' isolated copies link out-aave/ and out-univ3/, which the Aave V4 and Uniswap v3 fixtures
     # deploy from (vm.getCode).
     runs-on: ubuntu-24.04
@@ -484,8 +489,10 @@ jobs:
     # mutant's result. Needs the CERTORAKEY secret: without it the job reports "not run" and fails, since this workflow
     # runs only when the mutation gate is due. At most six run at a time, the number of Certora jobs the account keeps
     # open at once.
+    # Paused since 2026-11-13 (Josue): runs only when the repository variable CERTORA_ENABLED is `true`; otherwise the
+    # job is skipped, which mutation-summary accepts.
     needs: plan
-    if: needs.plan.outputs.confs != '[]'
+    if: vars.CERTORA_ENABLED == 'true' && needs.plan.outputs.confs != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -572,7 +579,7 @@ jobs:
     # by its `if` (the selected layers hold no such target); with the plan and the build passed, skipped can mean
     # nothing else.
     name: mutation-summary
-    if: always()
+    if: always() && (github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true')
     needs: [plan, build, mutate-statements, mutate-operators, mutate-others, gambit, necessist, certora-mutate]
     runs-on: ubuntu-24.04
     timeout-minutes: 5

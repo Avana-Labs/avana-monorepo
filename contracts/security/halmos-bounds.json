@@ -1,0 +1,165 @@
+{
+  "bounded": [
+    {
+      "contract": "CollateralizationHalmosTest",
+      "check": "check_PROP_028_exitChargeIndependentOfSplit",
+      "timeout": 18000,
+      "reason": "PROP-028: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "CoverageSpokeHalmosTest",
+      "check": "check_PROP_039_coverDeficitBoundedAndAllowlisted",
+      "timeout": 18000,
+      "reason": "PROP-039: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). The recorded run of 2026-11-10 (audit/halmos/) also timed out on the RAY division.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "CoverageSpokeHalmosTest",
+      "check": "check_PROP_039_coverDeficitLive",
+      "timeout": 18000,
+      "reason": "PROP-039: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). The recorded run of 2026-11-10 (audit/halmos/) also timed out on the RAY division.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "DebtOracleHalmosTest",
+      "check": "check_PROP_074_driftingTimestampFollowsAlternate",
+      "timeout": 18000,
+      "reason": "PROP-074: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "DebtOracleHalmosTest",
+      "check": "check_PROP_074_driftingTimestampFollowsPrimaryOrAccepted",
+      "timeout": 18000,
+      "reason": "PROP-074: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "LPOracleCLHalmosTest",
+      "check": "check_PROP_025_meanTickRoundsTowardNegativeInfinity",
+      "timeout": 18000,
+      "reason": "PROP-025: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "LPOracleCLHalmosTest",
+      "check": "check_PROP_025_oracleSqrtIsTickable",
+      "timeout": 18000,
+      "reason": "PROP-025: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "LPPriceMathHalmosTest",
+      "check": "check_PROP_023_price8PositiveAndBelowExact_18_18",
+      "timeout": 18000,
+      "reason": "PROP-023: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it ended [TIMEOUT] after 1,113 s at the 60 s assertion limit.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "LPPriceMathHalmosTest",
+      "check": "check_PROP_023_price8PositiveAndBelowExact_18_6",
+      "timeout": 18000,
+      "reason": "PROP-023: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "LPPriceMathHalmosTest",
+      "check": "check_PROP_023_price8PositiveAndBelowExact_6_6",
+      "timeout": 18000,
+      "reason": "PROP-023: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "LPPriceMathHalmosTest",
+      "check": "check_PROP_024_valuationSymmetricInTokenOrder",
+      "timeout": 18000,
+      "reason": "PROP-024: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it ended [TIMEOUT] after 182 s at the 60 s assertion limit.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "PegModuleRouteHalmosTest",
+      "check": "check_PROP_044_litePsmGemAmtLargestNoOverflow",
+      "timeout": 18000,
+      "reason": "PROP-044: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "PegModuleRouteHalmosTest",
+      "check": "check_PROP_068_swapDeliversAtLeastMinOut",
+      "timeout": 18000,
+      "reason": "PROP-068: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "RiskModuleHalmosTest",
+      "check": "check_PROP_030_chargeCoversFloor",
+      "timeout": 18000,
+      "reason": "PROP-030: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "RiskModuleHalmosTest",
+      "check": "check_PROP_067_requiredIsMaximum",
+      "timeout": 18000,
+      "reason": "PROP-067: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "RiskModuleHalmosTest",
+      "check": "check_PROP_067_rescueValueRoundsUp",
+      "timeout": 18000,
+      "reason": "PROP-067: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "SettlementMathHalmosTest",
+      "check": "check_PROP_015_gapSettlesWithoutRevert",
+      "timeout": 18000,
+      "reason": "PROP-015: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it reached the 240 s wall clock of that run.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "SettlementMathHalmosTest",
+      "check": "check_PROP_018_minRecoveryRounding",
+      "timeout": 18000,
+      "reason": "PROP-018: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "SettlementMathHalmosTest",
+      "check": "check_PROP_018_unitAndPendingValues",
+      "timeout": 18000,
+      "reason": "PROP-018: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it reached the 240 s wall clock of that run.",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "SettlementMathHalmosTest",
+      "check": "check_PROP_048_floorWithRoundingTerms",
+      "timeout": 18000,
+      "reason": "PROP-048: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "SettlementMathHalmosTest",
+      "check": "check_PROP_069_feeMonotoneInValue",
+      "timeout": 18000,
+      "reason": "PROP-069: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "SpeedLimitMathHalmosTest",
+      "check": "check_PROP_111_ownChargesNeverRaiseTheLimit",
+      "timeout": 18000,
+      "reason": "PROP-111: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    },
+    {
+      "contract": "SpeedLimitMathHalmosTest",
+      "check": "check_PROP_112_usdChargeIsTheCeiling",
+      "timeout": 18000,
+      "reason": "PROP-112: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]).",
+      "approval": "approved (Josue, 2026-11-13)"
+    }
+  ]
+}

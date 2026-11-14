@@ -224,7 +224,7 @@ jobs:
     # The topology simulator runs of quint/topology_run.sh (1,000 traces x 25 steps per check), which
     # run_all.sh --nightly adds to the quick path.
     name: quint topology simulator (topology_run.sh)
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     defaults:
@@ -274,7 +274,7 @@ jobs:
         working-directory: ${{ runner.temp }}
         env:
           RESULTS: ${{ toJSON(needs) }}
-          LONG: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+          LONG: ${{ (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
           MAIN_ONLY: '["quint-topology"]'
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'

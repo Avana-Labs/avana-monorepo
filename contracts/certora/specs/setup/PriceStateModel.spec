@@ -123,8 +123,8 @@ function oracleTokenPrices(address o) returns (uint256, uint256, uint64, AccessC
 
 function oracleLastAccepted(address o) returns (uint256, uint64) {
     require pvAccepted[o] >= 1 && pvAccepted[o] <= max_uint256;
-    uint64 at;
-    return (require_uint256(pvAccepted[o]), at);
+    uint64 acceptedAt;
+    return (require_uint256(pvAccepted[o]), acceptedAt);
 }
 
 // Which oracle addresses are DebtOracles (fixed per address); `latestAnswer()` serves per the oracle's kind.
