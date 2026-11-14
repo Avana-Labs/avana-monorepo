@@ -8,7 +8,8 @@ name: services
 # codegen where the package defines it (the indexer), the package's typecheck script (tsc --noEmit) and its test
 # script (vitest run). The `@avana/` scope is not registered on the public registry, so each such dependency must be a
 # `file:` or `workspace:` link and the lock file must record it as a link; otherwise the job fails before installing.
-# The gate job passes only when every package job passed.
+# A second job per service builds its image (services/Dockerfile) and checks it starts. The gate job passes only
+# when every package and image job passed.
 # Tool versions are pinned: Node by .nvmrc, every action by commit SHA (the release tag in the trailing comment),
 # every direct dependency by exact version and every transitive one by the lock file.
 
@@ -21,6 +22,7 @@ on:
       - "package-lock.json"
       - ".nvmrc"
       - ".github/workflows/services.yml"
+      - ".dockerignore"
   push:
     branches: [main]
     paths:
@@ -30,6 +32,7 @@ on:
       - "package-lock.json"
       - ".nvmrc"
       - ".github/workflows/services.yml"
+      - ".dockerignore"
   workflow_dispatch:
 
 concurrency:
@@ -97,11 +100,54 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: npm run test --if-present
 
+  image:
+    # services/Dockerfile: each long-running service's image builds from the lock file, starts its runtime as the
+    # node user, and compose.yaml parses. The base images are pinned by digest in those files.
+    name: image ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [indexer, keeper, monitor]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build -f services/Dockerfile --target "${{ matrix.target }}" -t "avana/${{ matrix.target }}:ci" .
+
+      - name: Runtime starts as the node user
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          user=$(docker run --rm "avana/$TARGET:ci" id -un)
+          [ "$user" = node ] || { echo "::error::runs as $user, not node"; exit 1; }
+          if [ "$TARGET" = indexer ]; then
+            docker run --rm "avana/$TARGET:ci" npx --no-install ponder --version
+          else
+            docker run --rm "avana/$TARGET:ci" npx --no-install tsx --version
+            # With no configuration the service must refuse to start (non-zero exit), not crash on a missing module.
+            set +e
+            out=$(docker run --rm "avana/$TARGET:ci" 2>&1); code=$?
+            set -e
+            echo "$out" | tail -5
+            if [ "$code" -eq 0 ]; then echo "::error::started with no configuration"; exit 1; fi
+            if echo "$out" | grep -qE "ERR_MODULE_NOT_FOUND|Cannot find (module|package)"; then echo "::error::missing module in the image"; exit 1; fi
+          fi
+
+      - name: compose.yaml parses
+        if: matrix.target == 'monitor'
+        run: |
+          for s in indexer keeper monitor; do cp "services/$s/.env.example" "services/$s/.env"; done
+          POSTGRES_PASSWORD=ci KEEPER_TLS_DIR=/tmp docker compose -f services/compose.yaml config -q
+
   gate:
-    # The one check branch protection requires: it passes only when every package job passed.
+    # The one check branch protection requires: it passes only when every package and image job passed.
     name: services-gate
     if: always()
-    needs: [check]
+    needs: [check, image]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

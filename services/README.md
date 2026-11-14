@@ -77,6 +77,19 @@ export RPC_ANVIL=http://127.0.0.1:8545 RPC_ANVIL_FALLBACK=http://127.0.0.1:8545 
 
 `contracts/script/e2e/services-smoke.sh <manifest>` runs both on a manifest with throwaway kill-switch certificates and checks that the indexer reaches `/ready` and the keeper serves its metrics in observe mode. It then starts a fresh local Convex deployment of `services/convex` (`CONVEX_AGENT_MODE=anonymous npx convex dev`, no account), points it at the indexer's export and at the rehearsal's listing metadata files (`contracts/deployments-local/<network>/listing-content/`, served as `LISTING_CONTENT_URL`), writes the deployment row from the manifest, imports the export and samples the chain; every listed market's pool page and every debt reserve's asset page must then show its on-chain numbers and the text of the listing metadata file its listing operation committed to. The manifest is produced and verified with `npm run manifest` in `packages/protocol` ([`deployments/README.md`](../deployments/README.md)); the services check its ABI hash against `@avana/protocol` and refuse a mismatch.
 
+## Containers
+
+[`Dockerfile`](Dockerfile) builds one image per long-running service from the repository root (`--target indexer`, `keeper` or `monitor`): the workspace's locked dependencies and the TypeScript sources, run as the `node` user with tsx or Ponder, as in CI. No secret, manifest or state is baked in: configuration comes from each service's `.env.example` names, manifests and certificates from read-only mounts, state files from a `/data` volume. Convex is not containerized: `services/convex` deploys to Convex, which runs short functions only, so the indexer (a Ponder process with PostgreSQL), the keeper (a loop every block with KMS signing and a mutual-TLS kill switch) and the monitor (a loop every interval that must keep paging when the app stack is down) run on their own hosts.
+
+[`compose.yaml`](compose.yaml) runs PostgreSQL, the indexer, one keeper and the monitor on one host, for a testnet or a rehearsal against a remote RPC:
+
+```bash
+cp services/indexer/.env.example services/indexer/.env   # and the keeper's and the monitor's; AVANA_MANIFEST=/manifests/<file>
+POSTGRES_PASSWORD=... KEEPER_TLS_DIR=/path/to/keeper-tls docker compose -f services/compose.yaml up --build
+```
+
+Ports are published on 127.0.0.1 only: the indexer on 42069 (export, `/health`, `/ready`), the keeper's kill switch on 9443 and metrics on 9464, the monitor on 9470. Production runs each service on its own host, with the standby keeper on another cloud (see Keeper, Operations).
+
 ## Indexer (`indexer/`)
 
 ### Events
