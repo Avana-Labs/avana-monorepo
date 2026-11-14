@@ -200,7 +200,7 @@ abstract contract RealStackVolatile is RealStackFlows {
         uint8 dec,
         address source,
         bool fixedPrice
-    ) private returns (uint256 assetId, uint256 reserveId) {
+    ) internal returns (uint256 assetId, uint256 reserveId) {
         (assetId, reserveId) = _volatileAaveDebt(asset, dec, source);
         uint256 whole = 10 ** dec;
         address cs = _volatileFirstLoss(asset, assetId, whole);

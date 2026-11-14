@@ -340,12 +340,13 @@ jobs:
 
       - run: forge soldeer install
 
-      - name: Build Aave V4 artifacts for the fixture
-        # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
-        run: |
-          FOUNDRY_PROFILE=aave forge build
-          FOUNDRY_PROFILE=univ3 forge build
-          FOUNDRY_PROFILE=univ3-periphery forge build
+      - name: Download the build
+        # The build job's full output and cache. Building only test/gas/ here would compile some contracts only under
+        # their extra compiler profiles, and the fixtures' name-based deployCode would then match two artifacts.
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
 
       - name: Gas snapshots (test/gas against the committed snapshots/)
         # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
@@ -471,6 +472,9 @@ jobs:
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
           FOUNDRY_PROFILE=univ3-periphery forge build
+          FOUNDRY_PROFILE=slipstream-v1 forge build
+          FOUNDRY_PROFILE=slipstream-main forge build
+          FOUNDRY_PROFILE=aerodrome forge build
 
       - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
         env:
