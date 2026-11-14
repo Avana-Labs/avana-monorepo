@@ -43,6 +43,8 @@ contract MockMarketRegistry {
     /// @dev `getRoute` answers only once a suite turns it on (the flash helper's suites); every other suite keeps the
     /// registry without route reads, so a contract that tries the read takes its failure path as before.
     bool public routeReads;
+    /// @dev `priceRouteVersion` per token; 0 unless a suite sets one.
+    mapping(address => uint64) internal _priceRouteVersion;
 
     function setRouteReads(
         bool on
@@ -262,10 +264,18 @@ contract MockMarketRegistry {
         return (_primary[token], _alternate[token], RouteSlot.None);
     }
 
-    /// @notice Route version read by the LPOracle on every evaluation; this mock never changes routes after setup.
+    /// @notice Route version read by the LPOracle on every evaluation; this mock never changes routes after setup, so
+    /// the version stays 0 unless a test sets one (to tell it apart from the words next to it in a view).
     function priceRouteVersion(
-        address
+        address token
     ) external view virtual returns (uint64) {
-        return 0;
+        return _priceRouteVersion[token];
+    }
+
+    function setPriceRouteVersion(
+        address token,
+        uint64 version
+    ) external {
+        _priceRouteVersion[token] = version;
     }
 }
