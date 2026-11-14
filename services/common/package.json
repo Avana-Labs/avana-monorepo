@@ -19,6 +19,7 @@
     "node": ">=22.12"
   },
   "dependencies": {
+    "@avana/protocol": "file:../../packages/protocol",
     "viem": "2.57.11"
   },
   "devDependencies": {

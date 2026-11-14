@@ -10,26 +10,34 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ABI_HASH } from "@avana/protocol/abis";
+import { sampleManifest } from "@avana/protocol/manifest/sample";
 import { chainById, rpcEnvName } from "@avana/services-common";
 
 const SEPOLIA = 11_155_111;
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
-const up = (n: number, startBlock: number) => ({ address: addr(n), implementation: addr(n + 0x1000), startBlock });
-const im = (n: number, startBlock: number) => ({ address: addr(n), codeHash: `0x${"00".repeat(32)}`, startBlock });
+const hash = `0x${"00".repeat(32)}`;
+const up = (n: number, startBlock: number) => ({ address: addr(n), codeHash: hash, implementation: addr(n + 0x1000), implementationCodeHash: hash, implementationArtifact: "X.sol:X", logics: [], startBlock });
+const im = (n: number, startBlock: number) => ({ address: addr(n), codeHash: hash, startBlock, artifact: null });
 
+// A complete manifest (the services validate it against the release schema) with the Hubs, Spokes and contracts
+// these tests follow.
+const sample = sampleManifest();
 const manifest = {
+  ...sample,
   chainId: SEPOLIA,
   release: "v1.0.0-test",
   abiHash: ABI_HASH,
   avana: {
+    ...sample.avana,
     lens: im(0x10, 120),
     marketRegistry: up(0x11, 100),
     vaultTokenFactory: im(0x12, 100),
     firstLossReserves: [{ ...im(0x41, 130), asset: addr(0x51), hub: addr(0x21) }],
   },
   aave: {
+    ...sample.aave,
     hubs: [{ ...up(0x21, 90), label: "Stable LP", tier: 1 }, { ...up(0x22, 95), label: "Core", tier: 2 }, { ...up(0x23, 97), label: "Growth", tier: 3 }],
-    borrowSpokes: [up(0x31, 110), up(0x32, 111)],
+    borrowSpokes: [{ ...up(0x31, 110), label: "Stable LP Uniswap v3" }, { ...up(0x32, 111), label: "Core Slipstream" }],
     lendSpokes: [{ ...up(0x33, 125), label: "Stable LP" }, { ...up(0x34, 140), label: "Core" }, { ...up(0x35, 150), label: "Growth" }],
   },
 };

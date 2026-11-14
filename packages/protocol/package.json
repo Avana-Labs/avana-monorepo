@@ -7,7 +7,9 @@
   "type": "module",
   "exports": {
     "./abis": "./src/abis/index.ts",
-    "./manifest": "./src/manifest/index.ts"
+    "./manifest": "./src/manifest/index.ts",
+    "./manifest/schema": "./src/manifest/schema.ts",
+    "./manifest/sample": "./src/manifest/sample.ts"
   },
   "engines": {
     "node": ">=22.12"
