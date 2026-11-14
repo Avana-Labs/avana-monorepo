@@ -234,3 +234,7 @@ export function eventsProbe(): Probe<EventsInput> {
     },
   };
 }
+
+/** For the ABI check: every event the probe reads, and how many of them the ABIs give a topic for. */
+export const EVENT_NAMES: readonly string[] = Object.keys(EVENTS);
+export const TOPIC_COUNT = new Set(TOPICS.values()).size;
