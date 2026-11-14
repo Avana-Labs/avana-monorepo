@@ -35,7 +35,7 @@ import z3
 
 from common import HERE, exhaustive, expect, finish, prove, witness
 
-SPEC = HERE.parents[2] / "spec"
+SPEC = HERE.parents[3] / "docs" / "spec"
 GOV = SPEC / "02-contracts/15-governance-and-timelock.md"
 
 

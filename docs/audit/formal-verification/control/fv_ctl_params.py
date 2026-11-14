@@ -46,7 +46,7 @@ import z3
 
 from common import HERE, exhaustive, expect, finish, open_finding, prove, witness, zmax, zmin
 
-SPEC = HERE.parents[2] / "spec"
+SPEC = HERE.parents[3] / "docs" / "spec"
 
 
 def spec_text(rel):
@@ -490,7 +490,7 @@ P15 = {"routeDepthThreshold" if n == "routeDepthThresholdUsd" else n for n in P1
 # 1.4: REQ-ROLE-027 covers "the tighten selector of each Tighten / Loosen or Tighten / Structural parameter in 1.5"
 # plus its named list; REQ-ROLE-088/090/091/112 name further tighten selectors at the short delay.
 ROLES = "01-architecture/04-permissions-and-roles.md"
-_SRC = HERE.parents[2] / "contracts" / "src"
+_SRC = HERE.parents[3] / "contracts" / "src"
 _compiled = lambda files: {m for f in files for m in re.findall(r"function (tighten[A-Z]\w*)\s*\(", f.read_text())}
 SEL_SB_SRC = _compiled(sorted(_SRC.rglob("ISettlementBudget*.sol")))
 P14 = set(P15)

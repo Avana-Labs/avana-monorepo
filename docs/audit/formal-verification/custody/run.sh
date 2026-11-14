@@ -7,9 +7,9 @@
 #   QUINT_SAMPLES=n ./run.sh   change the Quint sample count
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$(cd "$HERE/../../.." && pwd)"
-PY="$ROOT/spec/05-verification/.venv/bin/python"
-QUINT="$ROOT/spec/05-verification/node_modules/.bin/quint"
+ROOT="$(cd "$HERE/../../../.." && pwd)"
+PY="$ROOT/docs/spec/05-verification/.venv/bin/python"
+QUINT="$ROOT/docs/spec/05-verification/node_modules/.bin/quint"
 SAMPLES="${QUINT_SAMPLES:-10000}"
 cd "$HERE"
 fail=0

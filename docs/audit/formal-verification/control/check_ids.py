@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fails if any spec ID cited by an FV-CTL check (tag line or verifies list) is not defined in the spec.
-Uses the definition rules of spec/05-verification/trace.py."""
+Uses the definition rules of docs/spec/05-verification/trace.py."""
 import importlib.util
 import json
 import re
@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location("trace", HERE.parents[2] / "spec/05-verification/trace.py")
+spec = importlib.util.spec_from_file_location("trace", HERE.parents[3] / "docs/spec/05-verification/trace.py")
 trace = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(trace)
 defined = trace.collect_requirements([])

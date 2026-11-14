@@ -118,7 +118,7 @@ prove("FV-CTL-03", "Every Adapter upgrade is a timelock operation every cancelle
 #    Principals: R:<role>, A:<immutable address>, K:active keepers, ANY.
 # ----------------------------------------------------------------------------------------------
 import re as _re
-SPEC = HERE.parents[2] / "spec"
+SPEC = HERE.parents[3] / "docs" / "spec"
 
 
 def _line(rel, marker):

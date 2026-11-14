@@ -43,13 +43,13 @@ from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CONTRACTS = ROOT / "contracts"
 TEST_DIR = CONTRACTS / "test"
 SRC_DIR = CONTRACTS / "src"
 CERTORA = CONTRACTS / "certora"
 RUNS_MD = CERTORA / "RUNS.md"
-HALMOS_LOGS = ROOT / "audit" / "halmos" / "results"
+HALMOS_LOGS = ROOT / "docs" / "audit" / "halmos" / "results"
 
 CHECK_ID = r"(?:TEST|PROP)-[A-Z0-9]+(?:-[A-Z0-9]+)*"
 TAG = re.compile(rf"({CHECK_ID})\s+verifies:\s*(.*)$")

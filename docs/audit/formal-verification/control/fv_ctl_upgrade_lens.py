@@ -35,7 +35,7 @@ import z3
 
 from common import HERE, exhaustive, expect, finish, open_finding, prove, witness
 
-SPEC = HERE.parents[2] / "spec"
+SPEC = HERE.parents[3] / "docs" / "spec"
 
 MAXV = 2**64 - 1  # OpenZeppelin Initializable: _disableInitializers sets type(uint64).max
 
@@ -210,7 +210,7 @@ prove("FV-CTL-148", "The Lens paging rules give checkRecordBacking one outcome f
 # SettlementMath.flashPremiumWithinCap, is read from contracts/src and modelled branch by branch.
 import re as _re
 
-_SRC78 = HERE.parents[2] / "contracts" / "src"
+_SRC78 = HERE.parents[3] / "contracts" / "src"
 
 
 def _rule(rel, rid):

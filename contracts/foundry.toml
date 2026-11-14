@@ -446,15 +446,15 @@ isolate = true
 gas_snapshot_check = true
 
 [profile.governance]
-# Governance operation fork tests (governance/README.md, Operations): read and write the before/after
-# snapshots of each operation folder under ../governance/operations/.
+# Governance operation fork tests (docs/governance/README.md, Operations): read and write the before/after
+# snapshots of each operation folder under ../docs/governance/operations/.
 match_path = "test/governance/**"
 fs_permissions = [
   { access = "read", path = "./out" },
   { access = "read", path = "./out-aave" },
   { access = "read", path = "../deployments" },
   { access = "read-write", path = "./deployments-local" },
-  { access = "read-write", path = "../governance/operations" },
+  { access = "read-write", path = "../docs/governance/operations" },
 ]
 
 [rpc_endpoints]

@@ -22,21 +22,21 @@ or failed (with --results), a TEST tag placed on another row's test, or a Foundr
 `invariant_TEST_NNN_<name>` (TEST-008; Halmos `check_*` and hevm `prove*` functions are not Foundry tests).
 
 ID kinds
-  Requirements (defined in spec/01-04 as the first `ID` of a list item, table row or heading):
+  Requirements (defined in docs/spec/01-04 as the first `ID` of a list item, table row or heading):
     REQ-<CONTRACT>-NNN   contract rule (REQ-FLASH-NNN flash source, REQ-CHAIN-NNN per-chain rules)
     INV-NNN              global invariant
     REQ-AMM-CORE-NNN, SPEC-AMM-CORE-NNN      rules and formulas every AMM integration meets
     REQ-/SPEC-/INV-/ATTACK-AMM-<P>-NNN       one AMM protocol's integration, <P> in AMM below
     SPEC-<AREA>-NNN      formula / math rule      ATTACK-NNN    attack scenario
     <FLOW>-NNN, <FLOW>-F-NNN, <FLOW>-POST-NNN     operation step / failure / postcondition
-    Q-NNN                design decision (spec/04-security/04-design-decisions.md)
+    Q-NNN                design decision (docs/spec/04-security/04-design-decisions.md)
   Checks and implementation (defined and linked with a `verifies:` tag in the model file; a spec rule
   may also cite a defined check, e.g. "Checked by: MATH-AR-03", which links it to that rule):
     MATH-* (Z3)  SYM-* (SymPy)  QNT-* (Quint)  HYP-* (Hypothesis)  SIM-* (simulation)
     TEST-* (Foundry)  PROP-* (Certora / Halmos / SMTChecker)
     Solidity: `/// @custom:spec REQ-VAULT-001, INV-003` in contracts/src.
   A check may also name a design-review finding it closes (AMMN-RT-01, defined in
-  audit/design-review/amm-neutral/); those links are listed apart from the requirement matrix.
+  docs/audit/design-review/amm-neutral/); those links are listed apart from the requirement matrix.
   ATTACK-* entries name their checks in the `| Checks |` row under their heading.
 
 Implementation evidence (evidence.py). A TEST-*/PROP-* tag counts for a row only when it sits in the comment block
@@ -70,8 +70,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import evidence as ev  # noqa: E402  (tag placement, stand-ins and run results; beside this file)
 
-ROOT = Path(__file__).resolve().parents[2]
-SPEC = ROOT / "spec"
+ROOT = Path(__file__).resolve().parents[3]
+SPEC = ROOT / "docs" / "spec"
 VERIF = SPEC / "05-verification"
 LOCK = VERIF / "traceability.lock.json"
 OUT = VERIF / "traceability.md"
@@ -96,9 +96,9 @@ SOL_TAG = re.compile(rf"@custom:spec\s+((?:{REQ_ID})(?:\s*,\s*{REQ_ID})*)")
 SPLIT = re.compile(TARGET)
 
 REQ_DIRS = ["01-architecture", "02-contracts", "03-operations", "04-security"]
-CHECK_GLOBS = ["spec/05-verification/**/*.py", "spec/05-verification/**/*.qnt",
+CHECK_GLOBS = ["docs/spec/05-verification/**/*.py", "docs/spec/05-verification/**/*.qnt",
                "contracts/test/**/*.sol", "contracts/certora/**/*", "contracts/src/**/*.sol",
-               "audit/formal-verification/**/*.py", "audit/formal-verification/**/*.qnt"]
+               "docs/audit/formal-verification/**/*.py", "docs/audit/formal-verification/**/*.qnt"]
 SKIP = {".venv", "node_modules", "__pycache__", ".hypothesis"}
 
 # Verification methods an AMM integration carries before it may be listed. Check IDs name the
@@ -114,7 +114,7 @@ AMM_MANIFEST = VERIF / "amm-integrations.json"                # {"V3": {"status"
 AMM_STATUS = ("draft", "review", "listed")
 PASS = {"proved", "computed", "holds", "pass"}
 FINDINGS = VERIF / "03-audit-findings.md"
-REVIEW = ROOT / "audit" / "design-review" / "amm-neutral"
+REVIEW = ROOT / "docs" / "audit" / "design-review" / "amm-neutral"
 
 
 FOUNDRY_TEST_FN = re.compile(r"^\s*function\s+((?:test|invariant)\w*)\s*\(")
@@ -326,7 +326,7 @@ def check_amm(reqs: dict, links: dict, findings: dict[str, str], errors: list[st
 
 
 def review_findings() -> dict[str, str]:
-    """AMMN-* design-review findings defined in audit/design-review/amm-neutral/."""
+    """AMMN-* design-review findings defined in docs/audit/design-review/amm-neutral/."""
     found: dict[str, str] = {}
     for path in sorted(REVIEW.glob("*.md")):
         for n, line in enumerate(path.read_text().splitlines(), 1):
@@ -464,7 +464,7 @@ def main() -> int:
     run = ("Run results: " + ", ".join(str(p) for p in args.results) + ".") if args.results else (
         "No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test "
         "counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or "
-        "audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix "
+        "docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix "
         "from the run's results.")
     out.write_text(newline="\n", data=
         "# Requirement Traceability\n\n"
@@ -491,7 +491,7 @@ def main() -> int:
         "| Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |\n"
         "|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n"
         + ("\n## Design-review findings closed by checks\n\n"
-           "Checks that name an `AMMN-*` finding of `audit/design-review/amm-neutral/` they close. A finding listed "
+           "Checks that name an `AMMN-*` finding of `docs/audit/design-review/amm-neutral/` they close. A finding listed "
            "here still needs the spec rule that fixes it.\n\n"
            "| Finding | Checks |\n|---|---|\n"
            + "\n".join(f"| `{fid}` | {', '.join(sorted({'`' + c['id'] + '`' for c in closed[fid]}))} |"

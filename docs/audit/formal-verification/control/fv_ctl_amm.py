@@ -38,7 +38,7 @@ import z3
 
 from common import HERE, exhaustive, expect, finish, open_finding, prove, witness
 
-SPEC = HERE.parents[2] / "spec"
+SPEC = HERE.parents[3] / "docs" / "spec"
 
 
 def page(rel):

@@ -130,7 +130,7 @@ PROTECTED_KINDS = {  # REQ-MREG-020 (AMM-neutral design: debt assets, the IFlash
     "IntegrationLPVault", "IntegrationPricing", "RecordedIntegrationContract", "RecordedRoute", "RegisteredProxy"}
 # Each kind must be named in REQ-MREG-020 as it reads now (phrases of the page). The recorded AMM contracts are the
 # position managers and factories, or the singleton, an integration's LPVault pins (recordIntegrationContracts).
-_mreg020 = next(l_ for l_ in (HERE.parents[2] / "spec/02-contracts/08-market-registry.md").read_text().splitlines()
+_mreg020 = next(l_ for l_ in (HERE.parents[3] / "docs/spec/02-contracts/08-market-registry.md").read_text().splitlines()
                 if l_.startswith("- `REQ-MREG-020`"))
 _PHRASE = {"DebtAsset(listed)": "every listed debt asset", "IFlashSource": "the IFlashSource",
            "FlashSourceLender": "its `LENDER()` (the Aave V3 Pool behind the source, read live at the freeze",
@@ -145,7 +145,7 @@ _unnamed = [k for k, ph in _PHRASE.items() if ph not in _mreg020]
 if "(its position managers and factories, or its singleton)" not in _mreg020:
     _unnamed.append("RecordedIntegrationContract (position managers and factories, or singleton)")
 # The protected set the code enforces: each kind's condition in MarketRegistrySafetyLogic._isProtected.
-_safety = (HERE.parents[2] / "contracts/src/policy/market-registry/MarketRegistrySafetyLogic.sol").read_text()
+_safety = (HERE.parents[3] / "contracts/src/policy/market-registry/MarketRegistrySafetyLogic.sol").read_text()
 _isprot = _safety[_safety.index("function _isProtected("):]
 _isprot = _isprot[:_isprot.index("\n    }\n")]
 _CODE_COND = {

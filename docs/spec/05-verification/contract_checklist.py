@@ -22,15 +22,15 @@ or rule is tagged with that TEST/PROP id and (for a TEST id) its function name c
 test whose code deploys or calls X's real contract (exercise_names, evidence.exercises).
 
 Usage, from the repository root:
-    spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --list
-    spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py Lock [--out FILE] [--check]
+    docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py --list
+    docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py Lock [--out FILE] [--check]
         [--results PATH ... | --links-only]
-    spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --all [--check] [--out-dir DIR]
+    docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py --all [--check] [--out-dir DIR]
         [--summary FILE] [--results PATH ... | --links-only]
-    spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --uncovered [--check] ...
+    docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py --uncovered [--check] ...
 
 --results takes `forge test --json-file` output, Halmos logs and certora result files (or folders of them); recorded
-prover results (contracts/certora/RUNS.md) and Halmos logs (audit/halmos/results/) are always read. --check exits 1
+prover results (contracts/certora/RUNS.md) and Halmos logs (docs/audit/halmos/results/) are always read. --check exits 1
 when a row in scope is not verified. With --links-only (no run results, the check of models.yml), --check exits 1
 only on unlinked and failed rows; "not run" is then expected and reported. --check without either is refused.
 

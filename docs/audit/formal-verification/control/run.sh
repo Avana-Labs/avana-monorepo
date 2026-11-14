@@ -4,9 +4,9 @@
 # open finding (common.open_finding) prints as [OPN] with its counterexample and does not fail the run.
 set -uo pipefail
 cd "$(dirname "$0")"
-ROOT="$(cd ../../.. && pwd)"
-PY="$ROOT/spec/05-verification/.venv/bin/python"
-QUINT="$ROOT/spec/05-verification/node_modules/.bin/quint"
+ROOT="$(cd ../../../.. && pwd)"
+PY="$ROOT/docs/spec/05-verification/.venv/bin/python"
+QUINT="$ROOT/docs/spec/05-verification/node_modules/.bin/quint"
 status=0
 mkdir -p results
 for f in fv_ctl_access.py fv_ctl_timelock.py fv_ctl_pause.py fv_ctl_gates.py fv_ctl_params.py fv_ctl_registry.py \

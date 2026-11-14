@@ -6,9 +6,9 @@
 #   QNT_SAMPLES (default 10000) and QNT_STEPS (default 25) set the Quint simulation size.
 set -uo pipefail
 cd "$(dirname "$0")"
-ROOT=../../..
-PY="$ROOT/spec/05-verification/.venv/bin/python"
-QUINT="$ROOT/spec/05-verification/node_modules/.bin/quint"
+ROOT=../../../..
+PY="$ROOT/docs/spec/05-verification/.venv/bin/python"
+QUINT="$ROOT/docs/spec/05-verification/node_modules/.bin/quint"
 SAMPLES=${QNT_SAMPLES:-10000}
 STEPS=${QNT_STEPS:-25}
 fail=0

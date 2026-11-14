@@ -1,16 +1,16 @@
 """Run the Avana 1,000-user simulation against the final spec (decisions Q-001 to Q-278).
 
-Deployment-topology comparison (design review, audit/design-review/topology-options.md):
+Deployment-topology comparison (design review, docs/audit/design-review/topology-options.md):
 
-    spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --topology --seeds 8 --jobs 8
+    docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --topology --seeds 8 --jobs 8
 
 runs every topology (T1, T2, T3) in every scenario of avana_sim/world.py SCENARIOS (eth-crash only
 for T3, the only topology with a WETH market) for 40 days per run, and writes summary JSON files and
 aggregate.md to results/topology/.
 
-    spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py                 # base + variants
-    spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --extra-seeds 4  # + 4 more base seeds
-    spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base
+    docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py                 # base + variants
+    docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --extra-seeds 4  # + 4 more base seeds
+    docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base
 
 Writes summary-<variant>-<seed>.json and tables-<variant>-<seed>.md to
 results/final-spec/ (the run of 2026-11-09 against decisions up to Q-240 stays in
