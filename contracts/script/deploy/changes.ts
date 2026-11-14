@@ -327,8 +327,12 @@ async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
   const value = call.args[call.args.length - 1] as bigint;
   const current = (await read(STORE, parameterStoreAbi as Abi, cap.view, scope)) as bigint;
   if (kind === "tighten") {
-    if (value === 0n) throw new Refused(`${call.label}: the ParameterStore refuses a zero cap (OutOfBounds); the lowest is 1 (8-decimal USD), and a cap at 1 takes ${stepsBetween(1n, current)} loosenings of ×1.5, one per normal delay, to come back`);
+    if (value === 0n) {
+      throw new Refused(`${call.label}: the ParameterStore refuses a zero cap (OutOfBounds); to stop new exposure use a breaker, a pause or an Aave cap of 0`);
+    }
     if (value >= current) throw new Refused(`${call.label}: not stricter than the current ${current} (NotStricter)`);
+    // A loosening moves at most ×1.5 (⌊1 × 1.5⌋ = 1), so a cap at 1 can never be raised again: refused here.
+    if (value < 2n) throw new Refused(`${call.label}: a cap of 1 (8-decimal USD) can never be loosened again (one step of ×1.5 from 1 is 1); use at least 2`);
     if (cap.view === "marketUsdCap") {
       const slice = (await read(STORE, parameterStoreAbi as Abi, "topUpSliceUsd", scope)) as bigint;
       if (value < slice) throw new Refused(`${call.label}: below the market's topUpSliceUsd ${slice} (OutOfBounds)`);
@@ -363,7 +367,12 @@ async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
 
 function stepsBetween(from: bigint, to: bigint): number {
   let n = 0;
-  for (let v = from; v < to; n++) v = (v * 3n) / 2n || 1n;
+  // ⌊1.5 v⌋ stays at 1 for v = 1; the contract's step check (`value × 10⁴ ≤ v × 15,000`) then allows only v itself.
+  for (let v = from; v < to; n++) {
+    const next = (v * 3n) / 2n;
+    if (next <= v) return Number.POSITIVE_INFINITY;
+    v = next;
+  }
   return n;
 }
 

@@ -265,7 +265,7 @@ const DRILLS: Record<string, Drill> = {
     await e.settle();
     c.works("before: 300k pledge", await pledgeProbe(e, s));
     const zero = changes("caps-zero.json", log);
-    c.that("a zero cap is refused before anything is sent", zero.code === 2 && /zero cap/.test(zero.text), zero.text.split("\n").pop() ?? "");
+    c.that("a zero cap is refused before anything is sent", zero.code === 2 && /zero cap/.test(zero.text), zero.text.split("\n").find((l) => /REFUSED/.test(l)) ?? `exit ${zero.code}`);
     mustApply("caps-forward.json", log);
     c.refused("forward: 300k pledge above the 200k depositor cap", await pledgeProbe(e, s), /CapExceeded/);
     c.works("forward: borrow by an existing account", await borrowProbe(e, s.borrower));
@@ -609,7 +609,7 @@ const DRILLS: Record<string, Drill> = {
   // Rehearsal 10: the same change under a delegated Aave rate role, when the DAO grants one.
   async "rate-role"(_e, c, log) {
     const r = changes("rate-role-forward.json", log);
-    if (r.code === 3) throw new NotRun(r.text.split("\n").pop()!.replace(/^NOT AVAILABLE: /, ""));
+    if (r.code === 3) throw new NotRun((r.text.split("\n").find((l) => /^NOT AVAILABLE/.test(l)) ?? "not available").replace(/^NOT AVAILABLE: /, ""));
     if (r.code !== 0) throw new StepError(`rate-role forward exited ${r.code}`);
     mustApply("rate-role-back.json", log);
     c.that("rate role", true, "forward and backward applied");
