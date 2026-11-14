@@ -6,7 +6,9 @@
 import { ABI_HASH } from "@avana/protocol/abis";
 import { type ChainInfo, type NetworkSet, type ServiceManifest, aaveTopology, chainsOf, intEnv, listEnv, loadManifest, optionalEnv, requireEnv, rpcEnvName } from "@avana/services-common";
 import type { ChainDeployment } from "@avana/services-common/views";
+import type { Address } from "viem";
 import type { KeeperInstance } from "./keeper.ts";
+import type { CoreHubGho, FrontendConfig, SafeConfig } from "./probes/external.ts";
 import { RECIPIENTS, type Recipient, type RoutingTable, checkRouting } from "./routing.ts";
 
 export type ChannelConfig =
@@ -32,6 +34,12 @@ export interface MonitorConfig {
   readonly statusToken: string;
   readonly keeperInstances: readonly KeeperInstance[];
   readonly keeperTokens: ReadonlyMap<string, string>;
+  /** The governance Safes watched on each chain (M-23). */
+  readonly safes: ReadonlyMap<number, readonly SafeConfig[]>;
+  /** The Core Hub's GHO asset each chain's Avana Hubs are compared with (M-29). */
+  readonly coreHubGho: ReadonlyMap<number, CoreHubGho>;
+  /** The frontend checked on one chain's round (M-27); null when not configured. */
+  readonly frontend: (FrontendConfig & { readonly chainId: number }) | null;
 }
 
 /** `MONITOR_ROUTE_ON_CALL` for `onCall`, `MONITOR_ROUTE_RISK_PROVIDERS` for `riskProviders`. */
@@ -94,6 +102,34 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
   });
   const keeperTokens = new Map(keeperInstances.map((i) => [i.name, requireEnv(env, `MONITOR_KEEPER_TOKEN_${envSuffix(i.name)}`)]));
 
+  const chainOf = (key: string | undefined, name: string, spec: string) => {
+    const c = chains.find((x) => x.chain.key === key);
+    if (!c) throw new Error(`${name} entry ${spec} names no configured chain`);
+    return c.chain.id;
+  };
+  const address = (a: string | undefined, name: string, spec: string) => {
+    if (!a || !/^0x[0-9a-fA-F]{40}$/.test(a)) throw new Error(`${name} entry ${spec} has no valid address`);
+    return a.toLowerCase() as Address;
+  };
+  const safes = new Map<number, SafeConfig[]>();
+  for (const spec of listEnv(env, "MONITOR_SAFES")) {
+    const [label, key, a] = spec.split(":");
+    const id = chainOf(key, "MONITOR_SAFES", spec);
+    safes.set(id, [...(safes.get(id) ?? []), { label: label || a!, address: address(a, "MONITOR_SAFES", spec) }]);
+  }
+  const coreHubGho = new Map<number, CoreHubGho>();
+  for (const spec of listEnv(env, "MONITOR_CORE_HUB_GHO")) {
+    const [key, hub, assetId] = spec.split(":");
+    if (!assetId || !/^\d+$/.test(assetId)) throw new Error(`MONITOR_CORE_HUB_GHO entry ${spec} is not chain:hub:assetId`);
+    coreHubGho.set(chainOf(key, "MONITOR_CORE_HUB_GHO", spec), { hub: address(hub, "MONITOR_CORE_HUB_GHO", spec), assetId: BigInt(assetId) });
+  }
+  const frontendUrl = optionalEnv(env, "MONITOR_FRONTEND_URL");
+  if (frontendUrl && !frontendUrl.startsWith("https://")) throw new Error("MONITOR_FRONTEND_URL must be https");
+  const frontendChain = optionalEnv(env, "MONITOR_FRONTEND_CHAIN") ?? chains[0]!.chain.key;
+  const frontend = frontendUrl
+    ? { url: frontendUrl, expectedSha256: optionalEnv(env, "MONITOR_FRONTEND_SHA256") ?? null, chainId: chainOf(frontendChain, "MONITOR_FRONTEND_CHAIN", frontendChain) }
+    : null;
+
   return {
     chains,
     intervalSeconds: optionalEnv(env, "MONITOR_INTERVAL_SECONDS") ? intEnv(env, "MONITOR_INTERVAL_SECONDS") : 12,
@@ -104,5 +140,8 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     statusToken: requireEnv(env, "MONITOR_STATUS_TOKEN"),
     keeperInstances,
     keeperTokens,
+    safes,
+    coreHubGho,
+    frontend,
   };
 }

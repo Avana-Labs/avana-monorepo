@@ -137,6 +137,19 @@ describe("loadConfig", () => {
     expect(() => load({ ...base, MONITOR_ROUTE_SIGNERS: "sms" })).toThrow(/signers -> sms/);
   });
 
+  it("reads the Safes, the Core Hub GHO asset and the frontend, and refuses malformed entries", () => {
+    const safe = "0x00000000000000000000000000000000000005AF";
+    const c = load({ ...base, MONITOR_SAFES: `governance:mainnet:${safe}`, MONITOR_CORE_HUB_GHO: `mainnet:${safe}:3`, MONITOR_FRONTEND_URL: "https://app.example", MONITOR_FRONTEND_SHA256: "ab" });
+    expect(c.safes.get(1)).toEqual([{ label: "governance", address: safe.toLowerCase() }]);
+    expect(c.coreHubGho.get(1)).toEqual({ hub: safe.toLowerCase(), assetId: 3n });
+    expect(c.frontend).toEqual({ url: "https://app.example", expectedSha256: "ab", chainId: 1 });
+    expect(load(base).frontend).toBeNull();
+    expect(() => load({ ...base, MONITOR_SAFES: "g:base:0x1" })).toThrow(/no configured chain/);
+    expect(() => load({ ...base, MONITOR_SAFES: "g:mainnet:0x1" })).toThrow(/no valid address/);
+    expect(() => load({ ...base, MONITOR_CORE_HUB_GHO: `mainnet:${safe}:x` })).toThrow(/chain:hub:assetId/);
+    expect(() => load({ ...base, MONITOR_FRONTEND_URL: "http://app.example" })).toThrow(/https/);
+  });
+
   it("refuses a plain-http webhook, an unknown channel kind, a keeper without token and a manifest of another set", () => {
     expect(() => load({ ...base, MONITOR_CHANNEL_OPS_URL: "http://hooks.example/ops" })).toThrow(/https/);
     expect(() => load({ ...base, MONITOR_CHANNELS: "ops:sms" })).toThrow(/kind sms/);
