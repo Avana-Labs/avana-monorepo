@@ -6,7 +6,9 @@ pragma solidity 0.8.28;
 import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {DriftReason} from "../../src/types/DriftReason.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {IntegrationFlows} from "../utils/fixtures/IntegrationFlows.sol";
 
@@ -15,7 +17,8 @@ import {IntegrationFlows} from "../utils/fixtures/IntegrationFlows.sol";
 /// applies the RiskModule's debt-price rule to the reserve being borrowed, not only to the reserves the account
 /// already owes on; and the Lens measures a debt price's age as execution does: the borrow side on the served route's
 /// timestamp against the DebtOracle's `borrowPriceMaxAge()`, the liquidation side on each leg's timestamp against the
-/// ParameterStore's `liquidationPriceMaxAge(feed)`, both bounds inclusive (age == max passes, max + 1 fails).
+/// ParameterStore's `liquidationPriceMaxAge(feed)`, both bounds inclusive (age == max passes, max + 1 fails). The rest
+/// of the RiskModule's gates of a reserve not yet owed (its routes, its record) follow the borrow as well.
 /// @dev Alice: 10,000 vault tokens at $2.10 and no debt, so USDC is not yet in her RiskModule scope.
 /// forge-config: default.isolate = false
 contract LensPriceGatesIntegrationTest is IntegrationFlows {
@@ -49,6 +52,20 @@ contract LensPriceGatesIntegrationTest is IntegrationFlows {
     ) internal view returns (bytes memory) {
         return
             abi.encodeWithSelector(IRiskModuleErrors.DebtPriceTooOld.selector, usdcReserveId, address(usdcOracle), age);
+    }
+
+    /// @dev Both swap routes of `token` into `asset` usable or not.
+    function _setRoutes(
+        address token,
+        address asset,
+        bool usable
+    ) internal {
+        reg.setRouteUsable(MARKET_ID, token, asset, 0, usable);
+        reg.setRouteUsable(MARKET_ID, token, asset, 1, usable);
+    }
+
+    function _borrowAllowed() internal view returns (bool) {
+        return rm.getAccountGateStatus(proxy).borrowAllowed;
     }
 
     function _debtView() internal view returns (DebtPriceView memory) {
@@ -136,5 +153,63 @@ contract LensPriceGatesIntegrationTest is IntegrationFlows {
         assertTrue(p.pricesUsable, "max: usable");
         _liquidateAs(keeper, p.params);
         assertLt(_debtOf(bobProxy, usdcReserveId), 18_000e6, "liquidated at the boundary");
+    }
+
+    // TEST-247 verifies: REQ-LENS-035, REQ-RISK-060, REQ-RISK-062, REQ-ADAPTER-010
+    /// @notice No usable route from USDT into USDC. Alice owes nothing on USDC, so the account-wide status leaves USDC
+    /// out of scope and reports borrowing open; the borrow puts USDC in scope and reverts `DebtLiquidationHalted`, and
+    /// the preview is 0. The backup route reopens both.
+    function test_TEST_247_borrowMaxRefusesAHaltedRouteOfTheBorrowedReserve() public {
+        _setRoutes(address(usdt), address(usdc), false);
+        assertTrue(_borrowAllowed(), "the account-wide status does not see the USDC routes");
+        assertEq(_previewUsdc(), 0, "halted: the preview refuses");
+        _borrowUsdc(1e6, abi.encodeWithSelector(IRiskModuleErrors.DebtLiquidationHalted.selector, usdcReserveId));
+        reg.setRouteUsable(MARKET_ID, address(usdt), address(usdc), 1, true);
+        uint256 amount = _previewUsdc();
+        assertGt(amount, 0, "the backup route reopens it");
+        _borrowUsdc(amount, "");
+        assertEq(_debtOf(proxy, usdcReserveId), amount, "the previewed maximum executes");
+    }
+
+    // TEST-247 verifies: REQ-LENS-035, REQ-RISK-060, REQ-RISK-062, REQ-ADAPTER-010
+    /// @notice The borrowed reserve's asset counts as a debt asset of the account. Alice owes GHO and USDC has no route
+    /// into GHO: the account-wide status and a GHO borrow refuse, but a USDC borrow makes USDC a debt asset, which needs
+    /// no route of its own, and executes. The preview follows the borrow, not the status.
+    function test_TEST_247_borrowMaxCountsTheBorrowedAssetAsADebtAsset() public {
+        _borrowVia(alice, MARKET_ID, debtReserveId, 1000e18);
+        _setRoutes(address(usdc), address(debt), false);
+        assertFalse(_borrowAllowed(), "the account-wide status refuses");
+        assertEq(lens.previewBorrowMax(alice, MARKET_ID, debtReserveId, _deadline()), 0, "a GHO borrow: 0");
+        uint256 nonce = adapterC.borrowNonce(proxy);
+        uint256 deadline = _deadline();
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.DebtLiquidationHalted.selector, debtReserveId));
+        vm.prank(alice);
+        adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, deadline, 0, nonce);
+        uint256 amount = _previewUsdc();
+        assertGt(amount, 0, "a USDC borrow: open");
+        _borrowUsdc(amount, "");
+        assertEq(_debtOf(proxy, usdcReserveId), amount, "the previewed maximum executes");
+    }
+
+    // TEST-247 verifies: REQ-LENS-035, REQ-RISK-060, REQ-RISK-061
+    /// @notice The USDC reserve's record no longer matches the Spoke (another Hub asset id). Alice owes nothing on it,
+    /// yet the account-wide status already refuses: the drift step checks every enabled debt reserve's record. The
+    /// borrow reverts `ConfigDrift(DebtReserveMismatch)` from its scope step and the preview is 0. The record restored
+    /// reopens both.
+    function test_TEST_247_borrowMaxRefusesADriftedRecordOfTheBorrowedReserve() public {
+        address spoke = _spokeOf(proxy);
+        DebtReserveDef memory d = reg.getDebtReserve(spoke, usdcReserveId);
+        ++d.hubAssetId;
+        reg.setDebtReserve(spoke, usdcReserveId, d);
+        assertFalse(_borrowAllowed(), "the drift step sees the USDC record");
+        assertEq(_previewUsdc(), 0, "drifted: the preview refuses");
+        _borrowUsdc(
+            1e6, abi.encodeWithSelector(IRiskModuleErrors.ConfigDrift.selector, 0, DriftReason.DebtReserveMismatch)
+        );
+        --d.hubAssetId;
+        reg.setDebtReserve(spoke, usdcReserveId, d);
+        uint256 amount = _previewUsdc();
+        assertGt(amount, 0, "restored: open");
+        _borrowUsdc(amount, "");
     }
 }

@@ -114,6 +114,24 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
+    "name": "checkBorrowGate",
+    "inputs": [
+      {
+        "name": "proxy",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "checkPledge",
     "inputs": [
       {

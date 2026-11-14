@@ -68,9 +68,10 @@ interface IAaveAdapterCollateral {
     /// with reason `MintPathSuspect` (under `Paused(General)` it stays open: it only reduces debt, AMMN-FLOW-26);
     /// the RiskModule's `SequencerDown()` while the chain's sequencer gate is Down; `IntegrationMismatch`;
     /// `UnknownDebtReserve`; `NothingToRepay` if the reserve's debt is 0; no address-freeze read (open to a frozen
-    /// wallet, Q-356); read `hfBefore`, the backing gap and supplied shares; open the
-    /// transient session; call `LP_VAULT_SWAP.deleverage(DeleverageRequest)`, which flash-borrows the debt asset through
-    /// the chain's IFlashSource and calls back `deleverageRepay` then `deleverageRelease`; `NoDeleverageSession` unless
+    /// wallet, Q-356); read the backing gap and supplied shares; open the
+    /// transient session; call `LP_VAULT_SWAP.deleverage(DeleverageRequest)`, which pokes the market's LPOracle and the
+    /// reserve's DebtOracle, flash-borrows the debt asset through the chain's IFlashSource and calls back
+    /// `deleverageRepay` (which reads `hfBefore` before it repays) then `deleverageRelease`; `NoDeleverageSession` unless
     /// both ran (the session also binds the hash of `minAmounts`, an empty array normalised to one zero per market
     /// token, as LPVaultSwap passes it to `deleverageRelease`); `UnitsMismatch` unless supplied shares fell by
     /// `units`; while debt remains,

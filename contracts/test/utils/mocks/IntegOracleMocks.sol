@@ -17,10 +17,37 @@ contract IntegLPOracleMock is RiskLPOracleMock {
         address amm
     ) RiskLPOracleMock(id, amm) {}
 
+    /// @notice The price the next `poke()` serves (8 decimals; 0 for none).
+    int256 public answerOnPoke;
+
     /// @notice Sets the served and accepted price (8 decimals).
     function setAnswer(
         int256 answer
     ) external {
+        _setAnswer(answer);
+    }
+
+    /// @notice The next `poke()` moves the market to Live at `answer`, as the poke that clears a token-decimals mark
+    /// turns the served accepted price (Cached) into the fresh price (REQ-ORACLE-107); views serve the current price
+    /// until then.
+    function setAnswerOnPoke(
+        int256 answer
+    ) external {
+        answerOnPoke = answer;
+    }
+
+    function poke() public override returns (PriceState) {
+        if (answerOnPoke != 0) {
+            _setAnswer(answerOnPoke);
+            (_pv.state, _pv.reasons, _pv.borrowAllowed) = (PriceState.Live, 0, true);
+            answerOnPoke = 0;
+        }
+        return super.poke();
+    }
+
+    function _setAnswer(
+        int256 answer
+    ) internal {
         _pv.answer = answer;
         _pv.acceptedAnswer = answer;
         _pv.freshAnswer = answer;

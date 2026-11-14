@@ -182,7 +182,8 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
 
     // ─── Repay with collateral ───
 
-    /// @dev The account and the values a repay with collateral reads before it calls LPVaultSwap.
+    /// @dev The account and the values a repay with collateral reads before it calls LPVaultSwap; `healthFactor` is the
+    /// session's `hfBefore`, which `deleverageRepay` reads after LPVaultSwap's pokes.
     struct Before {
         address proxy;
         address spoke;
@@ -251,7 +252,9 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
     }
 
     /// @dev The gates of a repay with collateral in the order of REQ-ADAPTER-080, then the reads before the session:
-    /// health factor, backing gap and supplied shares. Reads no breaker and no freeze.
+    /// backing gap and supplied shares. Reads no breaker and no freeze. The health factor before is not read here: a
+    /// poke by LPVaultSwap can move the price Aave reads within the block (the LPOracle verifies token decimals only in
+    /// `poke()`, REQ-ORACLE-107), so `deleverageRepay` reads it after the pokes, at the prices `hfAfter` is read at.
     function _repayWithCollateralGates(
         RepayWithCollateralParams calldata p
     ) private view returns (Before memory b) {
@@ -269,7 +272,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         }
         IAaveV4Spoke sp = IAaveV4Spoke(b.spoke);
         if (sp.getUserTotalDebt(p.debtReserveId, b.proxy) == 0) revert NothingToRepay(p.debtReserveId);
-        b.healthFactor = sp.getUserAccountData(b.proxy).healthFactor;
         b.reserveId = _reserveIdOf(b.vaultToken);
         b.gap = _gap(b.vaultToken);
         b.shares = sp.getUserSuppliedShares(b.reserveId, b.proxy);
@@ -286,6 +288,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
     ) private view returns (uint256 hfAfter) {
         (,,,,,, uint256 steps) = _session();
         if (steps != STEP_REPAID | STEP_RELEASED) revert NoDeleverageSession();
+        b.healthFactor = _hfBefore();
         IAaveV4Spoke sp = IAaveV4Spoke(b.spoke);
         uint256 sharesAfter = sp.getUserSuppliedShares(b.reserveId, b.proxy);
         uint256 fell = b.shares > sharesAfter ? b.shares - sharesAfter : 0;

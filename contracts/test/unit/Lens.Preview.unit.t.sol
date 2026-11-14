@@ -113,15 +113,21 @@ contract LensPreviewUnitTest is LensFixture {
         assertGt(_weighted(aliceProxy), 16_000e26, "Aave counts them");
     }
 
-    // TEST-247 verifies: REQ-LENS-035, REQ-ADAPTER-038
+    /// @notice The Lens applies the AaveAdapter's own pause and freeze gates and the RiskModule's `checkBorrowGate` (the
+    /// mock refuses with a refused status or a debt breaker on the reserve).
+    // TEST-247 verifies: REQ-LENS-035, REQ-RISK-060
     function test_TEST_247_borrowGateClosedReturnsZero() public {
         rm.setGate(aliceProxy, false, false, PauseState.None);
-        _assertBorrowZero("borrow not allowed");
-        rm.setGate(aliceProxy, true, true, PauseState.None);
-        _assertBorrowZero("status unavailable");
-        rm.setGate(aliceProxy, true, false, PauseState.Frozen);
-        _assertBorrowZero("Frozen");
+        _assertBorrowZero("the RiskModule's gate refuses");
         rm.setGate(aliceProxy, true, false, PauseState.None);
+        reg.setPause(aave.hub, PauseState.Frozen, PauseReason.None);
+        _assertBorrowZero("Frozen");
+        reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
+        _assertBorrowZero("Paused");
+        reg.setPause(aave.hub, PauseState.None, PauseReason.None);
+        reg.setFrozen(alice, true);
+        _assertBorrowZero("frozen wallet");
+        reg.setFrozen(alice, false);
         rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 32, type(uint64).max);
         _assertBorrowZero("debt breaker on the reserve");
         assertGt(lens.previewBorrowMax(alice, MARKET_ID, usdcReserveId, block.timestamp), 0, "the other reserve");
@@ -139,8 +145,10 @@ contract LensPreviewUnitTest is LensFixture {
         lens.previewBorrowMax(alice, MARKET_ID, 99, block.timestamp);
     }
 
+    /// @notice A reserve funded by another Hub: the AaveAdapter refuses the borrow unless that Hub is in None too, and
+    /// so does the preview (the cross-Hub line itself is the RiskModule's gate, `checkBorrowGate`).
     // TEST-247 verifies: REQ-LENS-035, REQ-RISK-082
-    function test_TEST_247_borrowCrossHubLineGate() public {
+    function test_TEST_247_borrowFundingHubPauseGate() public {
         address hub2 = makeAddr("fundingHub2");
         vm.etch(hub2, hex"00");
         DebtReserveDef memory d = reg.getDebtReserve(aave.cdpSpoke, debtReserveId);
@@ -152,13 +160,9 @@ contract LensPreviewUnitTest is LensFixture {
             abi.encodeWithSignature("getSpokeConfig(uint256,address)"),
             abi.encode(0, type(uint40).max, 0, true, false)
         );
-        _assertBorrowZero("cross-Hub lines disabled");
-        reg.setCrossHubLinesEnabled(true);
-        reg.setCreditLine(hub2, address(debt), 1000, 1001, 0, 0);
-        _assertBorrowZero("draw caps above the line");
-        reg.setCreditLine(hub2, address(debt), 1000, 1000, 50, 49);
-        _assertBorrowZero("line not covered");
-        reg.setCreditLine(hub2, address(debt), 1000, 1000, 50, 50);
+        reg.setPause(hub2, PauseState.Paused, PauseReason.General);
+        _assertBorrowZero("funding Hub paused");
+        reg.setPause(hub2, PauseState.None, PauseReason.None);
         assertGt(lens.previewBorrowMax(alice, MARKET_ID, debtReserveId, block.timestamp), 0, "every gate passes");
         vm.clearMockedCalls();
     }
