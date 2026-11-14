@@ -27,7 +27,7 @@
 #   script/check-coverage.sh --update        run coverage, raise minimums to the measured values (never lowers them,
 #                                            never writes one below the floor)
 # Environment: COVERAGE_JOBS (default 2), COVERAGE_NO_MATCH_TEST (default
-# 'exactCycleCost|WithinBudget|worstCasePoke|worstCaseDebtOraclePoke|sixteenRecords|marketCountCalibration|noStateChangingOpcode').
+# 'exactCycleCost|WithinBudget|worstCasePoke|worstCaseDebtOraclePoke|sixteenRecordsOneDebt|sixteenRecordsFourDebts|marketCountCalibration|noStateChangingOpcode').
 
 set -uo pipefail
 
@@ -54,7 +54,7 @@ if [ -z "$lcov" ]; then
   lcov="$OUT/lcov.info"
   rm -f "$lcov"
   FOUNDRY_PROFILE=coverage forge coverage --report lcov --report summary --report-file "$lcov" \
-    -j "${COVERAGE_JOBS:-2}" --no-match-test "${COVERAGE_NO_MATCH_TEST:-exactCycleCost|WithinBudget|worstCasePoke|worstCaseDebtOraclePoke|sixteenRecords|marketCountCalibration|noStateChangingOpcode}" \
+    -j "${COVERAGE_JOBS:-2}" --no-match-test "${COVERAGE_NO_MATCH_TEST:-exactCycleCost|WithinBudget|worstCasePoke|worstCaseDebtOraclePoke|sixteenRecordsOneDebt|sixteenRecordsFourDebts|marketCountCalibration|noStateChangingOpcode}" \
     --no-match-coverage '^(test|script|dependencies)/' >"$OUT/run.log" 2>&1
   rc=$?
   grep -E '^Ran [0-9]+ test suites|^\[FAIL|Encountered' "$OUT/run.log" || true
