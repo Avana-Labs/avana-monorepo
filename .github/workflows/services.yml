@@ -3,7 +3,7 @@ name: services
 # The off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor and packages/protocol (the ABIs
 # and ABI hash the services are built against). They form one npm workspace whose root is the repository's
 # package.json, with one package-lock.json beside it. Every pull request and push to main that changes one of them, the
-# workspace manifests or this file runs one job per package: refuse an `@avana/` dependency that would come from the
+# workspace manifests, deployments/ or this file runs one job per package: refuse an `@avana/` dependency that would come from the
 # public registry, install the whole workspace with npm ci from the lock file (lifecycle scripts never run), then Ponder
 # codegen where the package defines it (the indexer), the package's typecheck script (tsc --noEmit) and its test
 # script (vitest run). The `@avana/` scope is not registered on the public registry, so each such dependency must be a
@@ -17,6 +17,7 @@ on:
     paths:
       - "services/**"
       - "packages/protocol/**"
+      - "deployments/**"
       - "package.json"
       - "package-lock.json"
       - ".nvmrc"
@@ -26,6 +27,7 @@ on:
     paths:
       - "services/**"
       - "packages/protocol/**"
+      - "deployments/**"
       - "package.json"
       - "package-lock.json"
       - ".nvmrc"
@@ -92,6 +94,13 @@ jobs:
       - name: Typecheck
         working-directory: ${{ matrix.package }}
         run: npm run typecheck
+
+      - name: Generated address library is current (packages/protocol)
+        # src/addresses/generated.ts is written from deployments/verified/ by `npm run addresses -w packages/protocol`;
+        # a published manifest is committed together with the regenerated file.
+        if: matrix.package == 'packages/protocol'
+        working-directory: ${{ matrix.package }}
+        run: npm run check-addresses
 
       - name: Test
         working-directory: ${{ matrix.package }}
