@@ -25,7 +25,7 @@ export interface KeeperAlertLine {
   readonly detail?: Readonly<Record<string, string>>;
 }
 
-interface Held {
+export interface Held {
   readonly signal: SignalId;
   level: "warn" | "page";
   lastBlock: bigint;
@@ -72,6 +72,16 @@ export class KeeperFeed {
   }
 
   /** Records the block an instance has processed; never moves backwards. */
+  /** Held alerts and heartbeats, for the state file. The monitor's start block is not kept: a restart counts afresh. */
+  save(): { held: Map<string, Held>; heartbeat: Map<string, bigint> } {
+    return { held: new Map(this.#held), heartbeat: new Map(this.#heartbeat) };
+  }
+
+  restore(saved: { held: ReadonlyMap<string, Held>; heartbeat: ReadonlyMap<string, bigint> }): void {
+    for (const [k, h] of saved.held) this.#held.set(k, { ...h });
+    for (const [k, b] of saved.heartbeat) this.#heartbeat.set(k, b);
+  }
+
   heartbeat(instance: KeeperInstance, block: bigint): void {
     const last = this.#heartbeat.get(instance.name);
     if (last === undefined || block > last) this.#heartbeat.set(instance.name, block);

@@ -30,6 +30,8 @@ export interface MonitorConfig {
   readonly channels: readonly ChannelConfig[];
   readonly routing: RoutingTable;
   readonly incidentLogPath: string;
+  /** The state file (state.ts) that carries open alerts and probe state across restarts. */
+  readonly statePath: string;
   readonly port: number;
   readonly statusToken: string;
   readonly keeperInstances: readonly KeeperInstance[];
@@ -136,6 +138,7 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     channels,
     routing,
     incidentLogPath: requireEnv(env, "MONITOR_INCIDENT_LOG"),
+    statePath: requireEnv(env, "MONITOR_STATE_PATH"),
     port: optionalEnv(env, "MONITOR_PORT") ? intEnv(env, "MONITOR_PORT") : 9470,
     statusToken: requireEnv(env, "MONITOR_STATUS_TOKEN"),
     keeperInstances,

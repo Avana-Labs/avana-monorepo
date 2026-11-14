@@ -17,6 +17,7 @@ import type { RawRpc } from "./probe.ts";
 import { probesFor } from "./probes.ts";
 import { type Channel, logChannel, pagerDutyChannel, webhookChannel } from "./notify/channels.ts";
 import { monitorServer } from "./server.ts";
+import { apply, collect, fileStateStore } from "./state.ts";
 
 const out = (o: unknown) => process.stdout.write(`${JSON.stringify(o)}\n`);
 const fatal = (kind: string) => (err: unknown) => {
@@ -82,9 +83,25 @@ monitorServer({ keeperTokens: config.keeperTokens, statusToken: config.statusTok
 }).listen(config.port);
 out({ type: "monitor.start", chains: config.chains.map((c) => c.chain.key), channels: config.channels.map((c) => `${c.name}:${c.kind}`), keeperInstances: config.keeperInstances.map((i) => i.name) });
 
+const probesByChain = new Map(config.chains.map((c) => [c.chain.id, probesFor(c, config)]));
+const store = fileStateStore(config.statePath);
+const saved = store.load();
+if (saved) {
+  apply({ book, feed, probes: probesByChain }, saved);
+  out({ type: "monitor.restored", savedAt: saved.savedAt, openAlerts: book.open().length });
+}
+/** Written after every round, so a restart neither re-sends open alerts nor skips events. */
+const persist = () => {
+  try {
+    store.save(collect({ book, feed, probes: probesByChain }, Math.floor(Date.now() / 1_000)));
+  } catch (err) {
+    out({ type: "monitor.stateNotSaved", error: err instanceof Error ? err.message : String(err) });
+  }
+};
+
 for (const c of config.chains) {
   const reads = chainReads(c);
-  const probes = probesFor(c, config);
+  const probes = probesByChain.get(c.chain.id)!;
   let running = false;
   const tick = async () => {
     if (running) return; // a slow round is not overlapped by the next one
@@ -96,6 +113,7 @@ for (const c of config.chains) {
     } catch (err) {
       out({ type: "monitor.roundFailed", chain: c.chain.key, error: err instanceof Error ? err.message : String(err) });
     } finally {
+      persist();
       running = false;
     }
   };

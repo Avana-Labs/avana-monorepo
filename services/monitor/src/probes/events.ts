@@ -220,6 +220,16 @@ export function eventsProbe(): Probe<EventsInput> {
       return out;
     },
 
+    // The next block to read, so a restart catches up on what happened while the monitor was down, and the hour's
+    // route failures and seizures.
+    save: () => ({ next, routeFailures: new Map(routeFailures), seized: new Map(seized) }),
+    restore(s) {
+      const saved = s as { next: bigint | null; routeFailures: Map<string, number[]>; seized: Map<string, { t: number; units: bigint }[]> };
+      next = saved.next;
+      for (const [k, v] of saved.routeFailures) routeFailures.set(k, [...v]);
+      for (const [k, v] of saved.seized) seized.set(k, [...v]);
+    },
+
     evidence(input, subject) {
       if (subject.startsWith("log:")) {
         const l = input.logs.find((x) => logSubject(x) === subject);

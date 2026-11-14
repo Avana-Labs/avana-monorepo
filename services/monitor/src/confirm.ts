@@ -36,5 +36,18 @@ export function rowsFor(snap: ChainSnapshot, subject: string): string | null {
 
 /** The snapshot rules as a probe: the round's snapshot is its input, its rows are the evidence. */
 export function snapshotProbe(memory: SnapshotMemory = new SnapshotMemory()): Probe<ChainSnapshot> {
-  return { name: "snapshot", read: async (ctx) => ctx.snapshot, evaluate: (snap) => evaluateSnapshot(snap, memory), evidence: rowsFor };
+  return {
+    name: "snapshot",
+    read: async (ctx) => ctx.snapshot,
+    evaluate: (snap) => evaluateSnapshot(snap, memory),
+    evidence: rowsFor,
+    // The previous snapshot (change events), the hour windows and how long each deficit has been uncovered.
+    save: () => ({ previous: memory.previous, history: memory.history.save(), uncoveredSince: new Map(memory.uncoveredSince) }),
+    restore: (s) => {
+      const saved = s as { previous: ChainSnapshot | null; history: Map<string, { t: number; v: bigint }[]>; uncoveredSince: Map<string, number> };
+      memory.previous = saved.previous;
+      memory.history.restore(saved.history);
+      for (const [k, t] of saved.uncoveredSince) memory.uncoveredSince.set(k, t);
+    },
+  };
 }

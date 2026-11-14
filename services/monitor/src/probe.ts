@@ -43,6 +43,10 @@ export interface Probe<I = unknown> {
   evaluate(input: I, block: ReadContext["block"]): Finding[];
   /** The raw values a subject was judged from, as text; null when none. */
   evidence(input: I, subject: string): string | null;
+  /** The state to keep across a restart (state.ts); omitted by a stateless probe. */
+  save?(): unknown;
+  /** Restores what `save` returned before the first round. */
+  restore?(state: unknown): void;
 }
 
 /** Stable text of a value with bigints, for evidence comparison. */

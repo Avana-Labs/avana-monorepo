@@ -38,6 +38,14 @@ export class History {
   }
 
   /** Forgets keys not seen in the latest evaluation (a delisted market, a removed Spoke). */
+  save(): Map<string, { t: number; v: bigint }[]> {
+    return new Map([...this.#samples].map(([k, xs]) => [k, xs.map((x) => ({ ...x }))]));
+  }
+
+  restore(saved: ReadonlyMap<string, readonly { t: number; v: bigint }[]>): void {
+    for (const [k, xs] of saved) this.#samples.set(k, xs.map((x) => ({ ...x })));
+  }
+
   retain(keys: ReadonlySet<string>): void {
     for (const k of this.#samples.keys()) if (!keys.has(k)) this.#samples.delete(k);
   }

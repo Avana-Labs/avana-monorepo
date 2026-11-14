@@ -80,6 +80,8 @@ export function safesProbe(safes: readonly SafeConfig[]): Probe<ReadonlyMap<stri
       }
       return out;
     },
+    save: () => new Map(last),
+    restore: (s) => (s as Map<string, SafeState>).forEach((v, k) => last.set(k, v)),
     evidence: (input, subject) => {
       const v = input.get(subject.slice("safe:".length));
       return v ? text(v) : null;
@@ -115,6 +117,8 @@ export function issuerProbe(): Probe<ReadonlyMap<string, IssuerProbe>> {
       }
       return out;
     },
+    save: () => new Map(last),
+    restore: (s) => (s as Map<string, IssuerProbe>).forEach((v, k) => last.set(k, v)),
     evidence: (input, subject) => {
       const v = input.get(subject.slice("token:".length));
       return v ? text(v) : null;
@@ -197,5 +201,9 @@ export function frontendProbe(cfg: FrontendConfig, deps: FrontendDeps): Probe<Fr
       return out;
     },
     evidence: (input) => text(input),
+    save: () => last,
+    restore: (s) => {
+      last = s as FrontendRead | null;
+    },
   };
 }
