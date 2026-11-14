@@ -23,6 +23,23 @@ npm run dev --workspace @avana/web   # http://localhost:3000
 
 The app imports the Convex API from `../services/convex/convex` (the `@/convex/*` path alias in `tsconfig.json` and `vitest.config.ts`). Run `npx convex dev` in `services/convex` against your own deployment, or point `NEXT_PUBLIC_CONVEX_URL` at an existing one.
 
+### Local Convex with fixture data
+
+A local Convex backend needs no Convex account. From the repository root:
+
+```sh
+cd services/convex
+CONVEX_AGENT_MODE=anonymous npx convex dev --once --typecheck disable --codegen disable   # first run: writes .env.local (http://127.0.0.1:3210)
+npx convex env set SIWE_JWT_ISSUER http://localhost:3000
+npx convex env set CONVEX_RATE_LIMIT_SECRET <secret>
+npx convex dev --typecheck disable --codegen disable                                       # keep running
+cd ../..
+node webapp/scripts/local-convex-seed.ts                                                    # fixture deployment, tokens and chain snapshot
+git checkout -- services/convex/convex/_generated                                           # the CLI rewrites api.js at start-up
+```
+
+`local-convex-seed.ts` refuses any deployment that is not on 127.0.0.1 or localhost. It loads the services' fixture chain (`@avana/services-common/fixtures`): three Hubs of different tiers, their Lend and CDP Spokes, Hub assets, Spoke reserves and two markets, through the same `deployments:setDeployment` and `ingest/apply:applySnapshot` mutations the indexer export uses, and the USDC, USDT and GHO names and symbols through `listing/store:store`. On the first run the CLI may also add `services/convex/.gitignore` and `services/convex/convex/tsconfig.json`; delete them. Then set `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_URL` to `http://127.0.0.1:3210`, `NEXT_PUBLIC_CONVEX_SITE_URL` to `http://127.0.0.1:3211` and `CONVEX_RATE_LIMIT_SECRET` to the same secret in `webapp/.env.local`, and run the app.
+
 ## Environment
 
 Every variable is listed with a comment in [`.env.example`](.env.example). `next build` succeeds with all of them empty.
