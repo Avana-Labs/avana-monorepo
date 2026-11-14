@@ -24,11 +24,13 @@ const env = (n: string) => {
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Json;
 const OUT = dirname(manifestPath);
 const CONVEX_DIR = join(repo, "services/convex");
-const CONVEX = join(repo, "node_modules/.bin/convex");
+// The CLI's own entry point, run with this node: node_modules/.bin/convex is a shell script, which Windows cannot run
+// (and its convex.cmd would need a shell, which mangles the JSON arguments).
+const CONVEX = join(repo, "node_modules/convex", JSON.parse(readFileSync(join(repo, "node_modules/convex/package.json"), "utf8")).bin.convex);
 
 /** One `convex` CLI call on the local deployment; `run` answers with the function's JSON result. */
 function convex(args: string[]): string {
-  return execFileSync(CONVEX, args, { cwd: CONVEX_DIR, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  return execFileSync(process.execPath, [CONVEX, ...args], { cwd: CONVEX_DIR, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 function run<T>(fn: string, args: Json = {}): T {
   const out = convex(["run", fn, JSON.stringify(args)]).trim();
