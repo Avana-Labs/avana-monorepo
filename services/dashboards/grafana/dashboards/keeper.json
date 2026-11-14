@@ -1,7 +1,7 @@
 {
   "uid": "avana-keeper",
   "title": "Avana keeper",
-  "description": "The liquidation keeper (services/keeper): mode, processed head, discovery, open alerts. Panels marked planned read metrics the keeper does not export yet.",
+  "description": "The liquidation keeper (services/keeper): mode, processed head, discovery, open alerts.",
   "tags": [
     "avana"
   ],
@@ -274,8 +274,8 @@
     {
       "id": 4,
       "type": "timeseries",
-      "title": "Last processed head (planned)",
-      "description": "keeper_head_block. Planned keeper metric: empty until the keeper exports it.",
+      "title": "Last processed head",
+      "description": "keeper_head_block: the last head the keeper processed.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -337,8 +337,8 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "Blocks behind the indexer (planned)",
-      "description": "The indexer's synced block less the keeper's last processed head. keeper_head_block is a planned keeper metric: empty until the keeper exports it.",
+      "title": "Blocks behind the indexer",
+      "description": "The indexer's synced block less the keeper's last processed head.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -400,8 +400,8 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Discovered accounts (planned)",
-      "description": "keeper_accounts: accounts the keeper watches per chain. Planned keeper metric: empty until the keeper exports it.",
+      "title": "Discovered accounts",
+      "description": "keeper_discovered_accounts: accounts the keeper watches per chain.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -418,7 +418,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "keeper_accounts{chain=~\"$chain\"}",
+          "expr": "keeper_discovered_accounts{chain=~\"$chain\"}",
           "legendFormat": "{{chain}}",
           "refId": "A"
         }
@@ -464,8 +464,8 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Accounts only one discovery source holds (planned)",
-      "description": "keeper_discovery_one_sided: accounts the indexer stream and the RPC logs disagree on. Planned keeper metric: empty until the keeper exports it.",
+      "title": "Accounts only one discovery source holds",
+      "description": "keeper_discovery_one_sided: accounts the indexer stream and the RPC logs disagree on. By source (only: indexer or rpc).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -482,7 +482,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "keeper_discovery_one_sided{chain=~\"$chain\"}",
+          "expr": "sum by (chain, only) (keeper_discovery_one_sided{chain=~\"$chain\"})",
           "legendFormat": "{{chain}}",
           "refId": "A"
         }
@@ -535,8 +535,8 @@
     {
       "id": 8,
       "type": "table",
-      "title": "Open alerts at the keeper (planned)",
-      "description": "keeper_open_alerts. Planned keeper metric: empty until the keeper exports it.",
+      "title": "Open alerts at the keeper",
+      "description": "keeper_alerts_open: alerts the keeper raised at its last processed head, by signal and level.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -553,7 +553,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (chain, signal, level) (keeper_open_alerts{chain=~\"$chain\"}) > 0",
+          "expr": "sum by (chain, signal, level) (keeper_alerts_open{chain=~\"$chain\"}) > 0",
           "legendFormat": "",
           "refId": "A",
           "format": "table",

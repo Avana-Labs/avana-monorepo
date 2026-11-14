@@ -569,7 +569,7 @@
       "id": 9,
       "type": "timeseries",
       "title": "Blocks behind the monitor's head",
-      "description": "The head the monitor's last round read less the indexer's synced block and the keeper's last processed block, per chain. Heads are read at different moments, so a block or two either way is noise. keeper_head_block is a planned keeper metric: empty until the keeper exports it.",
+      "description": "The head the monitor's last round read less the indexer's synced block and the keeper's last processed block, per chain. Heads are read at different moments, so a block or two either way is noise.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

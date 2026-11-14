@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The catalog matches services/README.md (one row per signal, M-01 to M-29, each with a responder and a playbook),
+// The catalog matches services/README.md (one row per signal, M-01 to M-30, each with a responder and a playbook),
 // and the level helpers treat the limits exactly.
 
 import { readFileSync } from "node:fs";
@@ -11,8 +11,8 @@ import { SIGNALS, maxLevel, ratioLevel, signal, thresholdLevel } from "../src/si
 const README = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
 
 describe("signal catalog", () => {
-  it("lists M-01 to M-29 once each, in order", () => {
-    expect(SIGNALS.map((s) => s.id)).toEqual(Array.from({ length: 29 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`));
+  it("lists M-01 to M-30 once each, in order", () => {
+    expect(SIGNALS.map((s) => s.id)).toEqual(Array.from({ length: 30 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`));
   });
 
   it("has every signal of the services README table and names its playbook", () => {
@@ -23,6 +23,10 @@ describe("signal catalog", () => {
 
   it("names at least one responder for every signal", () => {
     for (const s of SIGNALS) expect(s.responders.length).toBeGreaterThan(0);
+  });
+
+  it("takes M-30, the keeper's discovery mismatch, from the keeper feed to its on-call engineer", () => {
+    expect(signal("M-30")).toMatchObject({ source: "keeper", responders: ["keeperOnCall"], playbook: "P-08 (EMG-082)" });
   });
 
   it("refuses an unknown signal", () => {
