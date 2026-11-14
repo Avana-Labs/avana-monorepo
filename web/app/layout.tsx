@@ -17,8 +17,7 @@ import { Web3ProviderBoundary } from "./lib/web3/web3-provider-boundary"
 import { PageLoadingBar } from "./components/page-loading-bar"
 import { ScrollResetOnNavigate } from "./components/scroll-reset-on-navigate"
 import { ConditionalSiteChrome } from "./components/conditional-site-chrome"
-import { SandboxGate } from "./components/sandbox/sandbox-gate"
-import { ONBOARDED_COOKIE } from "./components/sandbox/onboarded-cookie"
+import { TransactAccessProvider } from "./components/transact-access-provider"
 import { CurrencyDisplayBoundary } from "./components/currency-display-boundary"
 import { ProductRuntimeProviders } from "./components/product-runtime-providers"
 import { isLighthouseAuditMode } from "./lib/test-mode"
@@ -151,11 +150,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const sessionJwt = jar.get("avana_siwe")?.value
   const verified = sessionJwt ? verifySiweSessionJwt(sessionJwt) : null
   const serverSession = verified ? { wallet: verified.wallet } : null
-  // Wallet that last finished onboarding on this browser (set by the gate checker). Only honoured
-  // when it names the verified session wallet, so the product is server-rendered for returning
-  // users while a different/new wallet still waits for Convex behind the skeleton.
-  const onboardedCookie = jar.get(ONBOARDED_COOKIE)?.value?.toLowerCase()
-  const onboardedWallet = serverSession && onboardedCookie === serverSession.wallet ? onboardedCookie : undefined
 
   return (
     <html
@@ -197,11 +191,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       <PageLoadingBar />
                     </Suspense>
                     <ScrollResetOnNavigate />
-                    <SandboxGate onboardedWallet={onboardedWallet}>
+                    <TransactAccessProvider>
                       <ProductRuntimeProviders initialTokenPrices={initialTokenPrices}>
                         <CurrencyDisplayBoundary>{children}</CurrencyDisplayBoundary>
                       </ProductRuntimeProviders>
-                    </SandboxGate>
+                    </TransactAccessProvider>
                   </ConditionalSiteChrome>
                 </Web3ProviderBoundary>
               </WalletGateProvider>

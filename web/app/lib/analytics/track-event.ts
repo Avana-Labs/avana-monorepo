@@ -5,7 +5,7 @@ import { track } from "@vercel/analytics"
  * and referrer there). Never send wallet addresses or amounts — only coarse labels.
  */
 export type AnalyticsEvent =
-  "get_started_click" | "get_started_signed_in" | "onboarding_completed" | "transaction_success" | "ask_ai_question"
+  "get_started_click" | "get_started_signed_in" | "transaction_success" | "ask_ai_question"
 
 export function trackEvent(name: AnalyticsEvent, properties?: Record<string, string | number | boolean>) {
   try {

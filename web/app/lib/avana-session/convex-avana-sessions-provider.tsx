@@ -31,54 +31,6 @@ import {
   type PositionRevisionSummary,
 } from "./optimistic-revision"
 
-type EnsureWalletFixture = (args: { wallet: string }) => Promise<unknown>
-
-export function useEnsureWalletFixtures({
-  walletId,
-  ensurePortfolioSnapshot,
-  ensureUmbrellaFixtures,
-  retryDelayMs = 1_000,
-  maxAttempts = 3,
-}: {
-  walletId: string
-  ensurePortfolioSnapshot: EnsureWalletFixture
-  ensureUmbrellaFixtures: EnsureWalletFixture
-  retryDelayMs?: number
-  maxAttempts?: number
-}) {
-  const ensuredWalletRef = useRef<string | null>(null)
-  const attemptsByWalletRef = useRef(new Map<string, number>())
-  const [ensureAttempt, setEnsureAttempt] = useState(0)
-
-  useEffect(() => {
-    if (ensuredWalletRef.current === walletId) return
-    let cancelled = false
-    let retryTimer: ReturnType<typeof setTimeout> | undefined
-    ensuredWalletRef.current = walletId
-    const attempt = (attemptsByWalletRef.current.get(walletId) ?? 0) + 1
-    attemptsByWalletRef.current.set(walletId, attempt)
-    void (async () => {
-      try {
-        await ensurePortfolioSnapshot({ wallet: walletId })
-        await ensureUmbrellaFixtures({ wallet: walletId })
-        attemptsByWalletRef.current.delete(walletId)
-      } catch {
-        if (cancelled || ensuredWalletRef.current !== walletId) return
-        if (attempt >= maxAttempts) return
-        ensuredWalletRef.current = null
-        retryTimer = setTimeout(
-          () => setEnsureAttempt((currentAttempt) => currentAttempt + 1),
-          retryDelayMs * 2 ** (attempt - 1),
-        )
-      }
-    })()
-    return () => {
-      cancelled = true
-      if (retryTimer) clearTimeout(retryTimer)
-    }
-  }, [ensureAttempt, ensurePortfolioSnapshot, ensureUmbrellaFixtures, maxAttempts, retryDelayMs, walletId])
-}
-
 export function useWalletHydrationScope(walletId: string) {
   const revisionScopeRef = useRef<{ walletId: string; revisions: Map<string, number> } | null>(null)
   if (revisionScopeRef.current?.walletId !== walletId) {
@@ -125,8 +77,6 @@ export function ConvexWalletHydrators({
   const borrow = useBorrowSessionContext()
   const lend = useLendSessionContext()
   const swap = useSwapSessionContext()
-  const ensurePortfolioSnapshot = useMutation(api.sandbox.transactions.ensurePortfolioSnapshot)
-  const ensureUmbrellaFixtures = useMutation(api.sandbox.umbrella.ensureTestWalletFixtures)
   const walletArgs = scope.walletSession ? { wallet: walletId } : "skip"
   const balances = useQuery(api.sandbox.transactions.getSessionBalances, walletArgs)
   const transactions = useQuery(api.sandbox.transactions.getSessionTransactions, walletArgs)
@@ -145,13 +95,6 @@ export function ConvexWalletHydrators({
     borrow: borrow.transactionHistory,
     lend: lend.transactionHistory,
   }
-  // Seed the wallet snapshot (idempotent). Umbrella fixtures only on umbrella/dashboard.
-  const noopEnsure = useCallback(async () => undefined, [])
-  useEnsureWalletFixtures({
-    walletId,
-    ensurePortfolioSnapshot: scope.walletSession ? ensurePortfolioSnapshot : noopEnsure,
-    ensureUmbrellaFixtures: noopEnsure,
-  })
 
   // Each product session rehydrates only when its own inputs change. The 10-minute LP reprice
   // rewrites `productBalances.borrow` for every wallet holding borrow collateral; one shared

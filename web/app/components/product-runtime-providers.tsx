@@ -19,7 +19,6 @@ const PRODUCT_RUNTIME_ROUTES = [
   "/swap",
   "/dashboard",
   "/sandbox",
-  "/onboarding",
   "/ask",
 ]
 
