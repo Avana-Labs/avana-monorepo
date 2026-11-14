@@ -7,6 +7,7 @@ import type { Provenance } from "@avana/services-common";
 import type { Context } from "ponder:registry";
 import schema from "ponder:schema";
 import type { Hex } from "viem";
+import { partiesOf } from "./history.ts";
 
 /** The fields of a Ponder log event the indexer reads. */
 export interface LogEventLike {
@@ -46,6 +47,7 @@ export function normaliseArgs(value: unknown): unknown {
  */
 export async function recordLog(event: LogEventLike, context: Context, kind: string): Promise<Provenance & { readonly fresh: boolean }> {
   const p = provenance(event, context);
+  const args = normaliseArgs(event.args);
   const inserted = await context.db
     .insert(schema.eventLog)
     .values({
@@ -57,8 +59,16 @@ export async function recordLog(event: LogEventLike, context: Context, kind: str
       blockTimestamp: p.blockTimestamp,
       address: event.log.address.toLowerCase() as Hex,
       kind,
-      args: normaliseArgs(event.args),
+      args,
     })
     .onConflictDoNothing();
+  // The addresses the log names, for the wallet history; written with the row, so a replay changes nothing either.
+  const parties = partiesOf(args);
+  if (inserted !== null && parties.length > 0) {
+    await context.db
+      .insert(schema.logParty)
+      .values(parties.map((party) => ({ chainId: p.chainId, party, txHash: p.txHash, logIndex: p.logIndex, blockNumber: p.blockNumber })))
+      .onConflictDoNothing();
+  }
   return { ...p, fresh: inserted !== null };
 }
