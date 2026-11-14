@@ -17,6 +17,10 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 /// @notice Actor handler of the TEST-212 suite: proposers schedule short, normal, mixed, role-change, restoring and
 /// self-configuration operations at random delays; cancellers and strangers cancel; anyone executes; anyone cleans
 /// up; time moves 1 hour to 20 days. Ghosts record every success so the invariants can check timing and rights.
+/// @dev Steered execution: with `jumpToReady`, the handler looks from `idx` for an operation still pending and not
+/// expired, moves to its ready time and executes it as the executor (the governance multisig, `proposers[0]` in the
+/// fixture) while public execution is off; without it, a random operation by a random caller at the current time, so
+/// early, expired, done and unauthorised executions keep being tried.
 contract TimelockHandler is CommonBase, StdUtils {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
     /// campaign's success count, so the metrics show the calls that did real work.
@@ -106,9 +110,12 @@ contract TimelockHandler is CommonBase, StdUtils {
         bool jumpToReady
     ) external {
         if (ops.length == 0) revert Skipped();
-        // Half the time, move to the operation's ready time first, so executions are reached.
-        uint256 at = TL.getTimestamp(ids[idx % ops.length]);
-        if (jumpToReady && at > block.timestamp) vm.warp(at);
+        if (jumpToReady) {
+            idx = _live(idx);
+            uint256 at = TL.getTimestamp(ids[idx % ops.length]);
+            if (at > block.timestamp) vm.warp(at);
+            if (!TL.publicExecution()) caller = proposers[0];
+        }
         Op storage op = ops[idx % ops.length];
         uint256 readyAt = TL.getTimestamp(ids[idx % ops.length]);
         vm.prank(caller);
@@ -119,6 +126,20 @@ contract TimelockHandler is CommonBase, StdUtils {
         } catch {
             revert Skipped();
         }
+    }
+
+    /// @dev From `idx`, the first operation still pending (scheduled, not done) and not past its grace period; `idx`
+    /// itself when there is none.
+    function _live(
+        uint256 idx
+    ) internal view returns (uint256) {
+        uint256 n = ops.length;
+        for (uint256 j = 0; j < n; ++j) {
+            uint256 k = (idx + j) % n;
+            uint256 at = TL.getTimestamp(ids[k]);
+            if (at > 1 && (block.timestamp < at || block.timestamp - at < TL.GRACE_PERIOD())) return k;
+        }
+        return idx % n;
     }
 
     function cancel(
