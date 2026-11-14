@@ -10,6 +10,10 @@
 #
 # Usage, from contracts/:   script/e2e/e2e-local.sh            (all steps)
 #                           E2E_STEPS="deploy manifest" script/e2e/e2e-local.sh
+#                           E2E_STEPS="deploy day2 exotic manifest services scenarios" script/e2e/e2e-local.sh
+# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets, on the day-2 config), the
+# rerun of every step with nothing new (06, after day2 or exotic), hostile (07, on the latest config), manifest, services
+# and scenarios.
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
 # `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
 # the Chainlink OCR2 aggregator and proxy).
@@ -25,7 +29,7 @@ export RPC_ANVIL="http://127.0.0.1:${PORT}"
 OUT="$CONTRACTS/deployments-local/anvil"
 LOG="$OUT/logs"
 STATUS="$OUT/e2e-status.json"
-STEPS="${E2E_STEPS:-deploy day2 hostile manifest services scenarios}"
+STEPS="${E2E_STEPS:-deploy day2 exotic hostile manifest services scenarios}"
 # E2E_RESUME=<step name> reloads the anvil state the last run saved (anvil-state.json) and runs the deploy steps from
 # that one on, keeping the earlier outputs: a failed step is fixed and rerun without redeploying the whole world.
 RESUME="${E2E_RESUME:-}"
@@ -237,6 +241,12 @@ if [[ " $STEPS " == *" exotic "* ]]; then
   else
     record exotic not-run "needs the day-2 config (run day2 first)"
   fi
+fi
+# A run that did not grow the config itself (resumed, or later steps only) reads the last config an earlier run wrote.
+if [ -z "${AVANA_CONFIG:-}" ]; then
+  for f in config-exotic config-day2; do
+    [ -f "$OUT/$f.json" ] && { export AVANA_CONFIG="deployments-local/anvil/$f.json"; break; }
+  done
 fi
 if [ -n "$GREW" ]; then
   for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-first-loss-reserves 08-aave-loss-layers-aip \
