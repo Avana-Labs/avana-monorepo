@@ -1,0 +1,17 @@
+{
+  "name": "rate-aip-forward",
+  "description": "rehearsal 10: an AIP raises the base drawn rate of GHO on the stable Hub by 100 bps",
+  "via": "aip",
+  "changes": [
+    {
+      "aave": "assetRates",
+      "hub": "hub:stable",
+      "asset": "token:GHO",
+      "set": {
+        "baseDrawnRate": {
+          "add": 100
+        }
+      }
+    }
+  ]
+}

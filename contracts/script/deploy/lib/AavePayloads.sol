@@ -137,6 +137,18 @@ struct ATargetFunctionRoleUpdate {
     uint64 roleId;
 }
 
+/// @notice ABI mirror of `IAaveV4ConfigEngine.AssetConfigUpdate` (rate curve, fee and reinvestment of a Hub asset).
+struct AAssetConfigUpdate {
+    address hubConfigurator;
+    address hub;
+    address underlying;
+    uint256 liquidityFee;
+    address feeReceiver;
+    address irStrategy;
+    AInterestRateData irData;
+    address reinvestmentController;
+}
+
 struct APostCall {
     address target;
     bytes data;
@@ -154,6 +166,7 @@ struct AActions {
     AReserveConfigUpdate[] reserveConfigUpdates;
     ALiquidationConfigUpdate[] liquidationConfigUpdates;
     APostCall[] postCalls;
+    AAssetConfigUpdate[] assetConfigUpdates;
 }
 
 /// @notice The Hub limits a payload builder reads.
@@ -216,7 +229,7 @@ abstract contract AavePayloads is DeployBase {
 
     struct Builder {
         AActions a;
-        uint256[10] n;
+        uint256[11] n;
     }
 
     function _newBuilder() internal pure returns (Builder memory b) {
@@ -230,6 +243,7 @@ abstract contract AavePayloads is DeployBase {
         b.a.reserveConfigUpdates = new AReserveConfigUpdate[](CAPACITY);
         b.a.liquidationConfigUpdates = new ALiquidationConfigUpdate[](CAPACITY);
         b.a.postCalls = new APostCall[](CAPACITY);
+        b.a.assetConfigUpdates = new AAssetConfigUpdate[](CAPACITY);
     }
 
     function _roleMembership(
@@ -326,10 +340,10 @@ abstract contract AavePayloads is DeployBase {
         Builder memory b
     ) internal pure returns (AActions memory a) {
         a = b.a;
-        uint256[10] memory n = b.n;
+        uint256[11] memory n = b.n;
         assembly ("memory-safe") {
             // Each field of `a` is a pointer to an array whose first word is its length.
-            for { let i := 0 } lt(i, 10) { i := add(i, 1) } {
+            for { let i := 0 } lt(i, 11) { i := add(i, 1) } {
                 mstore(mload(add(a, mul(i, 0x20))), mload(add(n, mul(i, 0x20))))
             }
         }

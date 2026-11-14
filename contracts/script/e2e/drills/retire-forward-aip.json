@@ -1,0 +1,42 @@
+{
+  "name": "retire-forward-aip",
+  "description": "EMG-061: AIP: every draw cap of the growth Hub's CDP Spoke to 0 and its market's reserve frozen",
+  "via": "aip",
+  "changes": [
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:growth",
+      "asset": "token:GHO",
+      "spoke": "spoke:uniV3Growth",
+      "set": {
+        "drawCap": 0
+      }
+    },
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:growth",
+      "asset": "token:USDC",
+      "spoke": "spoke:uniV3Growth",
+      "set": {
+        "drawCap": 0
+      }
+    },
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:growth",
+      "asset": "token:USDT",
+      "spoke": "spoke:uniV3Growth",
+      "set": {
+        "drawCap": 0
+      }
+    },
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV3Growth",
+      "reserve": "collateral:uni-USDC-USDT-500-growth",
+      "set": {
+        "frozen": true
+      }
+    }
+  ]
+}

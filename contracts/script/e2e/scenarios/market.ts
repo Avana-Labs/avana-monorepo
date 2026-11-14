@@ -95,7 +95,7 @@ const ERRORS = [
   ...aaveV4SpokeAbi,
   ...aaveV4HubAbi,
 ].filter((i: any) => i.type === "error") as readonly unknown[];
-const withErrors = (abi: readonly unknown[]) => [...abi, ...ERRORS] as readonly unknown[];
+export const withErrors = (abi: readonly unknown[]) => [...abi, ...ERRORS] as readonly unknown[];
 
 // ─── Constants ───
 
@@ -120,7 +120,8 @@ const STALE_AFTER = 88_200;
 /** The symbols the four listed markets and their debt reserves read. */
 const MARKET_SYMBOLS = ["USDC", "USDT", "WETH", "GHO"] as const;
 
-// Scenario wallets, one per scenario (two for the keeper scenario).
+// Scenario wallets, one per scenario (two for the keeper scenario). The backward and emergency drills
+// (script/e2e/drills.ts) use the 0x…0d0n wallets, so the scenarios that run after them start fresh.
 const WALLETS = {
   uniswapLp: "0x1000000000000000000000000000000000000c01",
   slipstreamLp: "0x1000000000000000000000000000000000000c02",
@@ -198,7 +199,7 @@ const sqrtPriceX96 = (p0: bigint, p1: bigint, d0: number, d1: number) =>
   isqrt((p0 * 10n ** BigInt(d1) * (1n << 192n)) / (p1 * 10n ** BigInt(d0)));
 
 /** The first revert reason viem decoded along an error's cause chain, else its first line. */
-function errorName(e: unknown): string {
+export function errorName(e: unknown): string {
   let cur: any = e;
   for (let i = 0; cur && i < 8; i++) {
     if (cur.data?.errorName) {

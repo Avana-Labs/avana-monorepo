@@ -1,0 +1,16 @@
+{
+  "name": "caps-forward",
+  "description": "the Joint Configuration Safe (risk steward) tightens the stable Hub's depositor cap to $200,000 at once",
+  "via": "direct",
+  "sender": "jointConfigSafe",
+  "changes": [
+    {
+      "contract": "ParameterStore",
+      "function": "tightenDepositorUsdCap",
+      "args": {
+        "hub": "hub:stable",
+        "value": "20000000000000"
+      }
+    }
+  ]
+}

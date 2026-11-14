@@ -1,0 +1,15 @@
+{
+  "name": "retire-forward-debt",
+  "description": "removeDebtReserve (timelock, normal delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "removeDebtReserve",
+      "args": {
+        "spoke": "spoke:uniV3Growth",
+        "reserveId": "debtReserve:uniV3Growth:GHO"
+      }
+    }
+  ]
+}
