@@ -202,8 +202,9 @@ fi
 # lending a meme coin, a governance token, an 8-decimals token and USDC against meme, governance, WBTC-type and thin
 # pools on Uniswap v3 and Slipstream). After the last one, every step once more, which must do nothing. Later steps
 # read the last config.
-grow() { # phase generator config
-  node "$2" --network anvil > "$LOG/${1}config.log" 2>&1 || { record "${1}config" fail "see $LOG/${1}config.log"; return 1; }
+grow() { # phase "generator [args]" config
+  # shellcheck disable=SC2086 # the generator and its arguments, split on purpose
+  node $2 --network anvil > "$LOG/${1}config.log" 2>&1 || { record "${1}config" fail "see $LOG/${1}config.log"; return 1; }
   export AVANA_CONFIG="$3"
   PHASE="$1:"
   run_script 01-aave-v4 &&
@@ -240,7 +241,10 @@ if [[ " $STEPS " == *" exotic "* ]]; then
   if [ -n "$GROW_FAILED" ]; then
     record exotic not-run "the day2 phase failed"
   elif [ -f "$OUT/config-day2.json" ]; then
-    grow exotic script/e2e/exotic-additions.ts deployments-local/anvil/config-exotic.json && GREW=1 || GROW_FAILED=exotic
+    # Two releases: one listing batch of all ten markets would not fit in a block (exotic-additions.ts).
+    { grow exotic "script/e2e/exotic-additions.ts --part 1" deployments-local/anvil/config-exotic.json &&
+      grow exotic2 "script/e2e/exotic-additions.ts --part 2" deployments-local/anvil/config-exotic.json && GREW=1; } ||
+      GROW_FAILED=exotic
   else
     record exotic not-run "needs the day-2 config (run day2 first)"
   fi

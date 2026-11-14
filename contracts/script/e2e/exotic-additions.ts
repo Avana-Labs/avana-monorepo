@@ -15,8 +15,11 @@
 // Each market's collateral factor is min(token collateral factors) x its pool risk factor (SPEC-CF-001); its slippage
 // allowance is the largest the fee bound allows at its minimum liquidation bonus (LIQ-I1); its routes, from each pool
 // token into each asset its Spoke lends, are found by search (routes.ts).
+// The pass is two releases: executing one listing batch of all ten markets takes about 80M gas, above a block (60M on
+// the rehearsal's anvil, less on Ethereum), so `--part 1` lists the Hub, the assets and the first five markets and
+// `--part 2` (the default) adds the other five. Both write config-exotic.json; the second is the whole pass.
 //
-// Usage, from contracts/:  node script/e2e/exotic-additions.ts --network anvil
+// Usage, from contracts/:  node script/e2e/exotic-additions.ts --network anvil [--part 1|2]
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -25,8 +28,13 @@ import { type Route, addRoutePools, poolOf, routePair } from "./routes.ts";
 
 type Json = Record<string, any>;
 const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const i = process.argv.indexOf("--network");
-const network = i === -1 ? "anvil" : process.argv[i + 1]!;
+const arg = (n: string, d: string) => {
+  const i = process.argv.indexOf(n);
+  return i === -1 ? d : process.argv[i + 1]!;
+};
+const network = arg("--network", "anvil");
+const part = Number(arg("--part", "2"));
+if (part !== 1 && part !== 2) throw new Error(`--part ${part}: 1 or 2`);
 const OUT = join(CONTRACTS, "deployments-local", network);
 const c = JSON.parse(readFileSync(join(OUT, "config-day2.json"), "utf8")) as Json;
 
@@ -235,7 +243,9 @@ const MARKETS: MarketSpec[] = [
 ];
 const uniTemplate = marketTemplate("uni-WETH-USDC-500");
 const slipTemplate = marketTemplate("slip-WETH-USDC-cl100");
-for (const s of MARKETS) {
+/** Markets per release: a listing batch of five executes in about 40M gas. */
+const LISTED = part === 1 ? MARKETS.slice(0, 5) : MARKETS;
+for (const s of LISTED) {
   const p = poolOf(c, s.pool)!;
   const slip = s.spoke === SLIP;
   const name = `${slip ? "slip" : "uni"}-${s.pool}`;
@@ -285,4 +295,4 @@ for (const m of c.listing.markets as Json[]) {
 
 const out = join(OUT, "config-exotic.json");
 writeFileSync(out, `${JSON.stringify(c, null, 2)}\n`);
-process.stdout.write(`exotic config ${out}: ${MARKETS.length} markets, ${DEBT_ASSETS.length} new debt assets\n`);
+process.stdout.write(`exotic config ${out} (part ${part}): ${LISTED.length} markets, ${DEBT_ASSETS.length} new debt assets\n`);
