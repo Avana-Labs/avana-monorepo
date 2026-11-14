@@ -12,7 +12,7 @@ LP collateral is easier to support now than it was a few years ago. AMMs are mor
 Protocol Overview
 Avana is a lending protocol built for LP collateral.
 Liquidity providers on Uniswap, Balancer, Curve, or Aerodrome can deposit supported positions, keep them active in the pool, and borrow against them through market-specific risk settings.
-Fluid is the closest comparison, but it takes a different path. Fluid turns debt and collateral into its own liquidity layer. Avana works the other way around: it takes LP positions that already exist across AMMs and makes them usable as collateral without replacing the underlying rails. Avana starts with Borrow Markets, then adds Lend Markets and Multiply Markets later. Each market keeps its own risk settings, so the first version stays focused and the risk model stays easy to tune.
+Fluid is the closest comparison, but it takes a different path. Fluid turns debt and collateral into its own liquidity layer. Avana works the other way around: it takes LP positions that already exist across AMMs and makes them usable as collateral without replacing the underlying rails. Avana starts with Borrow Markets and Lend Markets. Each market keeps its own risk settings, so the first version stays focused and the risk model stays easy to tune.
 Protocol Specification
 At a high level, Avana works through three steps.
 First, a user deposits an LP position into Avana. This can be any pool position from supported AMMs such as Uniswap, Balancer, Curve Finance, or Aerodrome Finance, depending on the phase and supported markets.
