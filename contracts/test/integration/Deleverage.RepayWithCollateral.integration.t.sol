@@ -28,7 +28,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// tokens ($3,000 at the oracle) repays what the Lens previews (the oracle value less the market's slippage allowance
 /// and loan-fee room); the wallet's rest differs from the preview's (valued at `R = V`) by exactly `V - R`, what the
 /// real unwind and route pools recovered below the oracle value. `TEST-287` (a transfer fee on the debt asset) is in
-/// `Deleverage.RepayWithCollateral.FeeOnTransfer` on the stand-in fixture: the real stack's debt assets have no fee.
+/// `Deleverage.RepayWithCollateral.FeeOnTransfer`, on a debt asset whose issuer can switch on a fee.
 /// forge-config: default.isolate = false
 contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
     uint128 internal constant RELEASE = 1500e6;
