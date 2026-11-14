@@ -7,6 +7,7 @@
 // views the Lens itself reads; appViews.ts holds the Lens views the app reads per account or Hub asset.
 
 import { aaveOracleAbi, hubViewsAbi, lensViewsAbi, rateStrategyAbi, registryViewsAbi, spokeViewsAbi } from "./abi.ts";
+import { type HubAssetView, lensAppViewsAbi } from "./appViews.ts";
 import { type ContractCall, type ViewClient, ZERO, all, lower, s, some, uniq } from "./client.ts";
 import { type HubAssetInfo, discover } from "./discovery.ts";
 import { deficitFromRay, supplyRateRay, utilizationBps } from "./math.ts";
@@ -202,35 +203,28 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
   });
   const lendAssets = [...grouped.values()];
 
-  // 3. Hub totals of each lend asset.
+  // 3. Hub totals of each lend asset in one Lens call (`getHubAsset`: added, owed split, liquidity, deficit rounded up,
+  // accrued fees, drawn rate, all at this block), and the Hub's drawn index, which the view does not carry.
   const hubReads = await all(
     client,
     lendAssets.flatMap(({ info: a }) => [
-      hubCall(a.hub, "getAddedAssets", [a.assetId]),
-      hubCall(a.hub, "getAddedShares", [a.assetId]),
-      hubCall(a.hub, "getAssetOwed", [a.assetId]),
-      hubCall(a.hub, "getAssetLiquidity", [a.assetId]),
-      hubCall(a.hub, "getAssetDeficitRay", [a.assetId]),
-      hubCall(a.hub, "getAssetAccruedFees", [a.assetId]),
-      hubCall(a.hub, "getAssetDrawnRate", [a.assetId]),
+      { address: lens, abi: lensAppViewsAbi, functionName: "getHubAsset", args: [a.hub, a.assetId] },
       hubCall(a.hub, "getAssetDrawnIndex", [a.assetId]),
     ]),
   );
-  const PER_ASSET = 8;
   const totals = lendAssets.map((la, i) => {
-    const r = hubReads.slice(i * PER_ASSET, (i + 1) * PER_ASSET);
-    const [drawn, premium] = r[2] as [bigint, bigint];
+    const v = hubReads[i * 2] as HubAssetView;
     return {
       ...la,
-      added: r[0] as bigint,
-      addedShares: r[1] as bigint,
-      drawn,
-      premium,
-      liquidity: r[3] as bigint,
-      deficit: deficitFromRay(r[4] as bigint),
-      accruedFees: r[5] as bigint,
-      drawnRate: r[6] as bigint,
-      drawnIndex: r[7] as bigint,
+      added: v.added,
+      addedShares: v.addedShares,
+      drawn: v.drawn,
+      premium: v.premium,
+      liquidity: v.liquidity,
+      deficit: v.deficit,
+      accruedFees: v.accruedFees,
+      drawnRate: v.drawnRateRay,
+      drawnIndex: hubReads[i * 2 + 1] as bigint,
     };
   });
 
