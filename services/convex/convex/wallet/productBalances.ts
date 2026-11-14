@@ -10,11 +10,10 @@ import { query } from "../_generated/server";
 export interface ProductBalances {
   readonly lend: readonly { marketId: string; assetId: string; symbol: string; amount: number; valueUsd: number; state: "available" | "deposited"; updatedAt: number }[];
   readonly borrow: readonly { marketId?: string; assetId?: string; poolId?: string; symbol: string; amount: number; valueUsd: number; unitPriceUsd?: number; ltvPct?: number; state: "poolAvailable" | "collateral" | "debt" | "claimableFees" }[];
-  readonly multiply: readonly never[];
   readonly liquid: readonly { assetId: string; symbol: string; amount: number; valueUsd: number; state: "available" }[];
 }
 
 export const listForWallet = query({
   args: { wallet: v.string() },
-  handler: async (): Promise<ProductBalances> => ({ lend: [], borrow: [], multiply: [], liquid: [] }),
+  handler: async (): Promise<ProductBalances> => ({ lend: [], borrow: [], liquid: [] }),
 });
