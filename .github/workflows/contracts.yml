@@ -8,8 +8,8 @@ name: contracts
 # profile at full depth (10,000 runs at depth 100) in 20 shards: each file of test/invariant/ is one campaign, and a
 # campaign over 30 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every
 # night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep invariant campaign, fork tests, the FFI
-# differential suite, SMTChecker and Certora, one target per job, each at most 4 hours (a deep invariant file at most
-# 6): `plan` lists the invariant files, SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one
+# differential suite, SMTChecker and Certora (paused unless the repository variable CERTORA_ENABLED is `true`), one
+# target per job, each at most 4 hours (a deep invariant file at most 6): `plan` lists the invariant files, SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one
 # gets its own job on the next run. Halmos runs in the slow security tier, one job per check at loop 16. The slow
 # security tier (security-slow.yml), the per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) run on the
 # same nightly, release and manual schedule. An upgrade is scheduled from a release tag, so every long check has run
@@ -683,10 +683,12 @@ jobs:
 
   certora:
     # One job per conf of certora/conf. At most six run at a time, the number of Certora jobs the account keeps open
-    # at once.
+    # at once. Paused since 2026-11-13 (Josue): the prover runs only when the repository variable CERTORA_ENABLED is
+    # `true`; otherwise the job is skipped and the gate lists it as paused, not failed. The offline methods check of the
+    # fast security tier (`cvl`) still runs on every pull request.
     name: Certora ${{ matrix.conf }}
     needs: [build, plan]
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
+    if: vars.CERTORA_ENABLED == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -1036,20 +1038,23 @@ jobs:
           RESULTS: ${{ toJSON(needs) }}
           LONG: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
           HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
+          CERTORA: ${{ vars.CERTORA_ENABLED == 'true' }}
         run: |
           long='["plan","invariant","fork","differential","smtchecker","certora"]'
-          report=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" '
+          report=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson certora "$CERTORA" '
             to_entries[] | .key as $k | .value as $v
-            | if ($long | index($k)) and ($due | not) and $v.result == "skipped" then "\($k): not due (long check; runs nightly, on release tags and by hand)"
+            | if $k == "certora" and ($certora | not) and $v.result == "skipped" then "\($k): paused (repository variable CERTORA_ENABLED is not true)"
+              elif ($long | index($k)) and ($due | not) and $v.result == "skipped" then "\($k): not due (long check; runs nightly, on release tags and by hand)"
               elif $k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true" then "\($k): NOT RUN (\($v.outputs.reason // "no reason given"))"
               else "\($k): \($v.result)" end')
           echo "$report"
           { echo '### Gate'; echo '```'; echo "$report"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          bad=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson hotfix "$HOTFIX" '
+          bad=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson hotfix "$HOTFIX" --argjson certora "$CERTORA" '
             [to_entries[] | .key as $k | .value as $v
              | select(
                  ($v.result != "success"
                    and ((($v.result == "skipped") and ($long | index($k)) and ($due | not))
+                        or ($k == "certora" and ($certora | not) and $v.result == "skipped")
                         or ($k == "hotfix" and $v.result == "skipped")
                         or ($k == "hotfix-plan" and ($hotfix | not) and $v.result == "skipped")) == false)
                  or ($k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true"))

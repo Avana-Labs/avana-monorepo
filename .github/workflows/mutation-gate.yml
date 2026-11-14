@@ -8,7 +8,8 @@ name: mutation-gate
 #   one run, and more, since a group never skips lines another group left uncaught);
 # - gambit: Gambit expression mutants, one job per contract (at most 20 mutants of 5 minutes each);
 # - necessist: Necessist, one job per test file;
-# - certora-mutate: certoraMutate, one job per Certora conf; without the CERTORAKEY secret each job passes with a
+# - certora-mutate: certoraMutate, one job per Certora conf, only while the repository variable CERTORA_ENABLED is
+#   `true` (paused since 2026-11-13); without the CERTORAKEY secret each job passes with a
 #   warning and runs nothing.
 # `mutation-summary` passes only when every job passed.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
@@ -484,8 +485,10 @@ jobs:
     # mutant's result. Needs the CERTORAKEY secret: without it the job reports "not run" and fails, since this workflow
     # runs only when the mutation gate is due. At most six run at a time, the number of Certora jobs the account keeps
     # open at once.
+    # Paused since 2026-11-13 (Josue): runs only when the repository variable CERTORA_ENABLED is `true`; otherwise the
+    # job is skipped, which mutation-summary accepts.
     needs: plan
-    if: needs.plan.outputs.confs != '[]'
+    if: vars.CERTORA_ENABLED == 'true' && needs.plan.outputs.confs != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
