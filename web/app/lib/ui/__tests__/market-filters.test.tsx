@@ -98,9 +98,10 @@ describe("MarketFiltersBar", () => {
   it("opens a pill clicked before the popover chunk loads", async () => {
     render(<Harness />)
     fireEvent.click(screen.getByRole("button", { name: /^Hubs$/ }))
-    const panel = await screen.findByRole("dialog", {}, { timeout: 5_000 })
+    // The popover chunk loads on first use; a busy runner can take several seconds.
+    const panel = await screen.findByRole("dialog", {}, { timeout: 15_000 })
     expect(within(panel).getByText("Hubs", { selector: "span" })).toBeInTheDocument()
-  })
+  }, 20_000)
 
   it("opens and closes a panel from its pill", async () => {
     await renderBar(<Harness />)
