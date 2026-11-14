@@ -43,6 +43,7 @@ Every job implements `Job` (`types.ts`) and runs through `runJob` (`pipeline.ts`
 | Build | Calldata, deadline, reservations and the code-check targets | `jobs/*.build` |
 | Code check | ERC-1967 slot of every upgradeable target, runtime code hash of every immutable one, against the manifest; a mismatch moves the instance to observe-only and pages `M-26` | `safety/guards.ts` |
 | Simulate | `eth_call` and `estimateGas` at `latest` from the signer; a failing simulation is logged with its decoded revert and never sent | `runtime/submitter.ts` |
+| Confirm | A liquidation's account read again on the fallback provider at `B`; not below HF 1 there (or not readable) skips it as `hfNotConfirmed` | `runtime/chainLoop.ts` (`confirm`) |
 | Guards | Kill switch, mode, code mismatch, frozen helper; observe-only logs the call it would send | `safety/guards.ts` |
 | Send | Nonce under the lock, KMS signature, private endpoints only | `chain/nonce.ts`, `chain/signer.ts`, `chain/submit.ts` |
 
@@ -62,7 +63,7 @@ The set is the union of the indexer stream and RPC logs read over both providers
 2. HF < 1 with collateral above 0, in this instance's shard or past the takeover window (`shard.ts`).
 3. Market gate from `Lens.getPriceState`, then the largest-value debt reserve whose price passes.
 4. `Lens.previewLiquidation(proxy, debtReserveId, B.timestamp + 3 blocks)`; the preview's gates decide.
-5. Funding split between the flash loan and inventory, the top-up bound, then one `eth_call` of `flashLiquidate` with `minPayout = 0` at `B` to measure the net result, and the request's `minPayout` from it (99 % of a profit, or at most 101 % of a loss).
+5. Funding split between the flash loan and inventory, the top-up bound, then one `eth_call` of `flashLiquidate` with `minPayout = 0` at `B` to measure the net result, and the request's `minPayout` from it (99 % of a profit, or at most 101 % of a loss). The call is inventory-only (`flashAmount = 0`, which only the operator helper accepts; the Safe prefunds `debtToCover + maxShortfall`, no premium, no top-up) when the Aave V3 Pool's implementation is not the manifest's (flash funding stops, paged once as `M-26`; the Pool then leaves the call's code-check targets), when a route of the market into the debt asset draws on the reserve the loan would borrow (a `dependencies()` entry that is its aToken, or whose `asset()` or `aToken()` is), or when the loan would round to zero (no idle liquidity, a dust repayment).
 6. No swap calldata: the helper calls `LPVaultSwap.liquidate`, which holds the routes.
 
 ## Fees, retries and errors

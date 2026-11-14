@@ -50,6 +50,7 @@ export interface ChainLoopDeps {
 export function chainLoop(d: ChainLoopDeps) {
   const book = new PokeBook();
   const hints = new Map<string, RetryHint>();
+  let poolMismatchPaged = false;
   let previous: Head | null = null;
   const reverts = new RevertWindow(BigInt(blocksFor(d.cfg.chain, 3_600)));
   const alert = (signal: `M-${string}`, level: "warn" | "page", subject: string, detail: Readonly<Record<string, string>>) => {
@@ -82,6 +83,11 @@ export function chainLoop(d: ChainLoopDeps) {
       hints,
       alert,
       stopHelper: (chainId) => d.safety.frozenHelperChains.add(chainId),
+      onPoolMismatch: (_chainId, m) => {
+        if (poolMismatchPaged) return;
+        poolMismatchPaged = true;
+        alert("M-26", "page", m.address, { expected: m.expected, found: m.found, note: "Aave V3 Pool implementation changed: flash funding stopped, inventory only" });
+      },
     }),
     settlePendingJob(),
     oraclePokeJob(book),
@@ -99,6 +105,19 @@ export function chainLoop(d: ChainLoopDeps) {
       const a = d.cache.ofChain(chainId).find((x) => plan.subject.endsWith(x.proxy));
       if (plan.job === "liquidation" && a) a.pendingTx = hash;
       return hash;
+    },
+    // services/README.md, Submission > Simulation: the candidate's health factor is confirmed on the second provider
+    // before signing; the fallback read is pinned to the same block as the decision.
+    confirm: async (ctx, plan) => {
+      if (plan.job !== "liquidation") return null;
+      const a = d.cache.ofChain(chainId).find((x) => plan.subject === `${chainId}:${x.spoke}:${x.proxy}`);
+      if (!a) return "hfNotConfirmed";
+      try {
+        const hf = (await createChainReader(d.fallback, d.cfg.manifest, ctx.blockNumber).accountData([a])).get(a.proxy)?.healthFactor;
+        return hf !== undefined && hf < 10n ** 18n ? null : "hfNotConfirmed";
+      } catch {
+        return "hfNotConfirmed";
+      }
     },
     page: (signal, detail) =>
       void d.alerts.send({ signal: signal as `M-${string}`, level: "page", chainId, blockNumber: previous?.number ?? 0n, subject: detail.address ?? "", detail }),

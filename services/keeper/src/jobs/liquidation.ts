@@ -38,6 +38,8 @@ export interface LiquidationDeps {
   alert(signal: `M-${string}`, level: "warn" | "page", subject: string, detail: Readonly<Record<string, string>>): void;
   /** Stops submissions from this instance's helper on this chain (REQ-SWAP-105). */
   stopHelper(chainId: number): void;
+  /** The Aave V3 Pool's implementation is not the manifest's: flash funding stops on the chain (paged once, M-26). */
+  onPoolMismatch(chainId: number, mismatch: { address: Address; expected: Address; found: Address }): void;
 }
 
 export interface FlashRequest {
@@ -104,17 +106,30 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
     async build(ctx, { account, market, reserve, preview, deadline }) {
       const subject = `${ctx.config.chain.id}:${account.spoke}:${account.proxy}`;
       const debtToCover = preview.params.debtToCover;
-      const { max: idle } = await ctx.reader.flashQuote(d.helper.address, reserve.asset, debtToCover);
-      const split = R.splitFunding(debtToCover, idle);
-      if (!split) throw new Error(`no flash liquidity for ${reserve.asset}; inventory-only path required`);
-      const { premium } = await ctx.reader.flashQuote(d.helper.address, reserve.asset, split.flashAmount);
-      const maxTopUp = R.topUpBound({
-        premium,
-        expectedCallerLoss: preview.expectedCallerLoss,
-        expectedNetPayout: preview.expectedNetPayout,
-        expectedDebtRepaid: preview.expectedDebtRepaid,
-        maxTopUpBps: d.helper.maxTopUpBps,
-      });
+      // A change of the Aave V3 Pool's implementation stops flash funding only: every call goes through inventory until
+      // a verified manifest records the new Pool code (services/README.md, Safety controls > Code check).
+      const pool = ctx.config.manifest.aave.v3Pool;
+      const poolFound = await ctx.reader.implementationOf(pool.address);
+      const poolKnown = poolFound.toLowerCase() === pool.implementation.toLowerCase();
+      if (!poolKnown) d.onPoolMismatch(ctx.config.chain.id, { address: pool.address, expected: pool.implementation, found: poolFound });
+      // No flash loan from a reserve one of the market's routes into this asset draws on (an ERC-4626 wrapper or
+      // static aToken of its aToken): the loan would take the liquidity the route's leg needs.
+      const draws = poolKnown ? await ctx.reader.routeDraws(pool.address, market.routes.map((r) => r.address), reserve.asset) : null;
+      const sameReserve = draws !== null && R.routeDrawsOnReserve(draws.deps, draws.aToken);
+      const flashUsable = poolKnown && !sameReserve;
+      const idle = flashUsable ? (await ctx.reader.flashQuote(d.helper.address, reserve.asset, debtToCover)).max : 0n;
+      const split = R.fundingPlan(debtToCover, idle, flashUsable);
+      const premium = split.inventoryOnly ? 0n : (await ctx.reader.flashQuote(d.helper.address, reserve.asset, split.flashAmount)).premium;
+      // With no loan nothing is owed after LPVaultSwap returns, so the helper pulls no top-up (REQ-HELPER-003).
+      const maxTopUp = split.inventoryOnly
+        ? 0n
+        : R.topUpBound({
+            premium,
+            expectedCallerLoss: preview.expectedCallerLoss,
+            expectedNetPayout: preview.expectedNetPayout,
+            expectedDebtRepaid: preview.expectedDebtRepaid,
+            maxTopUpBps: d.helper.maxTopUpBps,
+          });
       const params = { ...preview.params, routeMode: R.routeMode(preview.routeUsable), minAmounts: [], deadline, minPayout: 0n, maxShortfall: 0n };
       // Failure reasons a larger bound cures (RecoveryBelowFloor, TopUpExceeded): a hint from an earlier block widens
       // the request at once, and the same revert in this build's own simulation widens it and simulates once more.
@@ -123,6 +138,9 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
       const earlier = d.hints.get(subject);
       d.hints.delete(subject);
       if (earlier) bounds = widen(bounds, earlier, cap) ?? bounds;
+      // The inventory-only call's shortfall budget is prefunded with the repayment; it never takes a top-up.
+      const fit = (b: typeof bounds) => (split.inventoryOnly ? { ...b, maxTopUp: 0n } : b);
+      bounds = fit(bounds);
       const draftOf = (b: typeof bounds): FlashRequest => ({
         params: { ...params, maxShortfall: b.maxShortfall },
         flashAmount: split.flashAmount,
@@ -141,7 +159,7 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
         const wider = hint ? widen(bounds, hint, cap) : null;
         if (!wider) throw new RevertError(revert, subject);
         if (hint?.shortfall) d.alert("M-10", "warn", subject, { reason: revert.name, retry: "maxShortfall", maxShortfall: wider.maxShortfall.toString(10) });
-        bounds = wider;
+        bounds = fit(wider);
         draft = draftOf(bounds);
         try {
           net = await d.simulateNet(ctx, draft);
@@ -160,8 +178,8 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
         data: encodeFunctionData({ abi: flashLiquidatorAbi, functionName: "flashLiquidate", args: [request] }),
         deadline,
         reservations: [{ asset: reserve.asset, amount: split.inventoryAmount + pull }],
-        targets: liquidationTargets(ctx.config.manifest, market, reserve, d.helper.address),
-        params: { ...request, debtReserveId: reserve.debtReserveId, healthFactor: preview.healthFactor },
+        targets: liquidationTargets(ctx.config.manifest, market, reserve, d.helper.address, !split.inventoryOnly),
+        params: { ...request, debtReserveId: reserve.debtReserveId, healthFactor: preview.healthFactor, inventoryOnly: split.inventoryOnly, sameReserve },
       };
       return plan;
     },
@@ -204,8 +222,11 @@ function reservesOf(m: ServiceManifest, spoke: Address): ManifestDebtReserve[] {
   return m.debtReserves.filter((r) => r.spoke.toLowerCase() === spoke.toLowerCase());
 }
 
-/** Every contract the call reaches, as listed in services/README.md (Safety controls > Code check). */
-export function liquidationTargets(m: ServiceManifest, market: ManifestMarket, reserve: ManifestDebtReserve, helper: Address): CodeTarget[] {
+/**
+ * Every contract the call reaches, as listed in services/README.md (Safety controls > Code check). The Aave V3 Pool
+ * is a target only of a flash-funded call: an inventory-only call never reaches it.
+ */
+export function liquidationTargets(m: ServiceManifest, market: ManifestMarket, reserve: ManifestDebtReserve, helper: Address, flash = true): CodeTarget[] {
   const up = (x: { address: Address; implementation: Address }): CodeTarget => ({ kind: "upgradeable", address: x.address, implementation: x.implementation });
   const im = (x: { address: Address; codeHash: `0x${string}` }): CodeTarget => ({ kind: "immutable", address: x.address, codeHash: x.codeHash });
   const helperEntry = m.avana.operatorHelpers.find((h) => h.address.toLowerCase() === helper.toLowerCase());
@@ -217,6 +238,6 @@ export function liquidationTargets(m: ServiceManifest, market: ManifestMarket, r
     up(spoke), up(market.lpOracle), ...(reserve.debtOracle ? [up(reserve.debtOracle)] : []),
     im(helperEntry), im(m.avana.proxyManager), im(lpVault), im(m.avana.collateralization), im(market.vaultToken), im(m.avana.payoutEscrow),
     im(m.avana.lock), im(m.avana.lens), ...market.routes.map(im),
-    up(m.aave.v3Pool),
+    ...(flash ? [up(m.aave.v3Pool)] : []),
   ];
 }

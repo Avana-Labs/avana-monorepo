@@ -30,7 +30,9 @@ export type SkipReason =
   | "codeMismatch"
   | "halted"
   | "observeOnly"
-  | "insufficientInventory";
+  | "insufficientInventory"
+  /** The second provider does not read the account below HF 1 at the decision block (or cannot read it). */
+  | "hfNotConfirmed";
 
 /** Everything a decision in block `blockNumber` may read; every read goes through `reader`, pinned to that block. */
 export interface BlockContext {
