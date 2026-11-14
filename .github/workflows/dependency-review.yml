@@ -1,7 +1,7 @@
 name: dependency-review
 
 # Fails a pull request that adds an npm or pip dependency with a known vulnerability of moderate severity or above
-# (contracts/package-lock.json, spec/05-verification/package-lock.json and the requirements*.txt files). Soldeer
+# (contracts/package-lock.json, docs/spec/05-verification/package-lock.json and the requirements*.txt files). Soldeer
 # dependencies in contracts/soldeer.lock are pinned by checksum and reviewed by hand; GitHub's dependency graph does not
 # read that file.
 

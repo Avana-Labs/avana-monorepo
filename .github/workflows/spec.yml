@@ -4,7 +4,7 @@
 name: spec
 
 # Spec-stage verification: Z3, SymPy, simulations, Hypothesis, Quint and the traceability check
-# (trace.py), split into the parts of spec/05-verification/run_all.sh, one job each, run in parallel.
+# (trace.py), split into the parts of docs/spec/05-verification/run_all.sh, one job each, run in parallel.
 #
 # - `trace` runs on every pull request and push to main that touches the paths below, and on every manual run:
 #   the licence-header check, `run_all.sh trace` (fails on a duplicate ID, a link to an undefined ID or an
@@ -19,7 +19,7 @@ name: spec
 on:
   pull_request:
     paths:
-      - "spec/**"
+      - "docs/spec/**"
       - "contracts/src/**"
       - "contracts/test/**"
       - "contracts/certora/**"
@@ -28,7 +28,7 @@ on:
     branches: [main]
     tags: ["v*"]
     paths:
-      - "spec/**"
+      - "docs/spec/**"
       - "contracts/src/**"
       - "contracts/test/**"
       - "contracts/certora/**"
@@ -63,7 +63,7 @@ jobs:
       - name: List the model parts
         continue-on-error: true
         id: parts
-        working-directory: spec/05-verification
+        working-directory: docs/spec/05-verification
         run: |
           parts=$(./run_all.sh --list | grep -vx trace | jq -R . | jq -cs .)
           echo "parts: $parts"
@@ -81,7 +81,7 @@ jobs:
         part: ${{ fromJSON(needs.plan.outputs.parts) }}
     defaults:
       run:
-        working-directory: spec/05-verification
+        working-directory: docs/spec/05-verification
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         continue-on-error: true
@@ -92,14 +92,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: spec/05-verification/requirements.txt
+          cache-dependency-path: docs/spec/05-verification/requirements.txt
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         continue-on-error: true
         if: matrix.part == 'quint'
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: spec/05-verification/package-lock.json
+          cache-dependency-path: docs/spec/05-verification/package-lock.json
 
       - name: Install pinned tools
         continue-on-error: true
@@ -122,7 +122,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: spec/05-verification
+        working-directory: docs/spec/05-verification
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         continue-on-error: true
@@ -133,11 +133,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: spec/05-verification/requirements.txt
+          cache-dependency-path: docs/spec/05-verification/requirements.txt
 
       - name: Licence headers (spec-stage scripts and the Solidity they check)
         continue-on-error: true
-        run: ../../contracts/script/check-licence.sh
+        run: ../../../contracts/script/check-licence.sh
 
       - name: Install pinned tools
         continue-on-error: true

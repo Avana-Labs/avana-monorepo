@@ -11,7 +11,7 @@ Code from these projects is ported into files in this repository. Each such file
 - Version: v3-core `5ea68a77cb541c6b3812df783be71ba8c081e25f`, v3-periphery `24ccf014fe7f81d74a14c1689d6fdf123f280e45`.
 - Copyright: (c) 2021 Uniswap Labs.
 - Licence: GPL-2.0-or-later. `TickMath.sol`, `LiquidityAmounts.sol` and `OracleLibrary.sol` are GPL-2.0-or-later at these commits; `Tick.sol` and `SqrtPriceMath.sol` were BUSL-1.1 until the v3-core change date of 2023-04-01 and are GPL-2.0-or-later since.
-- Used in: the Python ports in `contracts/test/differential/reference/avana_reference.py`, `spec/05-verification/z3/units-oracle/_common.py` and `spec/05-verification/hypothesis/model/uniswap.py`, which check Avana's code and specification and are not deployed. No Solidity file ports v3 code: `ClPriceMath.sol` was GPL-2.0-or-later until 2026-11-13 and is now BUSL-1.1, its tick math taken from v4-core (below) and the rest written from Avana's specification.
+- Used in: the Python ports in `contracts/test/differential/reference/avana_reference.py`, `docs/spec/05-verification/z3/units-oracle/_common.py` and `docs/spec/05-verification/hypothesis/model/uniswap.py`, which check Avana's code and specification and are not deployed. No Solidity file ports v3 code: `ClPriceMath.sol` was GPL-2.0-or-later until 2026-11-13 and is now BUSL-1.1, its tick math taken from v4-core (below) and the rest written from Avana's specification.
 - Licence text: [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt).
 
 ### Uniswap v4-core
@@ -27,7 +27,7 @@ Code from these projects is ported into files in this repository. Each such file
 - Version: `a3ef63ea6415d25237a9775bf66e76e9993561c2` (`aave/aave-v4`).
 - Copyright: (c) Aave Labs.
 - Licence: the Aave V4 licence (SPDX `LicenseRef-BUSL`): use in a test environment only, no production use of the work or a derivative, a representation that the user has not contributed to a competing lending product in the prior four years, the licence to be reproduced in each copy or derivative; Change License MIT.
-- Used in: the Python reference models `spec/05-verification/hypothesis/model/aave.py`, `spec/05-verification/hypothesis/model/mathlib.py`, `spec/05-verification/z3/aave-risk/_v4ref.py` and `audit/formal-verification/liquidation/aave_ref.py`, which reproduce the Hub, Spoke, liquidation and math-library arithmetic to check Avana's specification and tests. None of them is deployed.
+- Used in: the Python reference models `docs/spec/05-verification/hypothesis/model/aave.py`, `docs/spec/05-verification/hypothesis/model/mathlib.py`, `docs/spec/05-verification/z3/aave-risk/_v4ref.py` and `docs/audit/formal-verification/liquidation/aave_ref.py`, which reproduce the Hub, Spoke, liquidation and math-library arithmetic to check Avana's specification and tests. None of them is deployed.
 - Licence text: [`LICENSES/LicenseRef-BUSL-AaveV4.md`](LICENSES/LicenseRef-BUSL-AaveV4.md) (a copy of `LICENSE` at the pinned commit).
 
 ## Third-party interfaces
@@ -65,79 +65,79 @@ Installed by Soldeer into `contracts/dependencies/` (not committed), declared in
 
 ## Packages
 
-Installed from the lock files, not committed. TypeScript packages are bundled into the builds of `services/` and of the web app (`web/`); Python and Node packages under `contracts/` and `spec/05-verification/` run the checks only.
+Installed from the lock files, not committed. TypeScript packages are bundled into the builds of `services/` and of the web app (`webapp/`); Python and Node packages under `contracts/` and `docs/spec/05-verification/` run the checks only.
 
 | Package | Version | Licence | Where |
 |---|---|---|---|
-| viem | 2.57.11 | MIT | `services/common`, `services/indexer`, `services/keeper`, `services/convex`, `packages/protocol`, `web/` |
+| viem | 2.57.11 | MIT | `services/common`, `services/indexer`, `services/keeper`, `services/convex`, `packages/protocol`, `webapp/` |
 | ponder | 0.18.2 | MIT | `services/indexer` |
 | hono | 4.13.13 | MIT | `services/indexer` |
-| typescript | 6.0.3 | Apache-2.0 | `services/`, `web/` (build) |
-| @types/node | 22.20.5 | MIT | `services/`, `web/` (build) |
-| vitest | 5.1.0 | MIT | `services/common`, `services/indexer`, `services/keeper`, `services/convex`, `packages/protocol`, `web/` (tests) |
+| typescript | 6.0.3 | Apache-2.0 | `services/`, `webapp/` (build) |
+| @types/node | 22.20.5 | MIT | `services/`, `webapp/` (build) |
+| vitest | 5.1.0 | MIT | `services/common`, `services/indexer`, `services/keeper`, `services/convex`, `packages/protocol`, `webapp/` (tests) |
 | @aws-sdk/client-kms | 3.1156.0 | Apache-2.0 | `services/keeper` (signer keys held in AWS KMS) |
 | tsx | 4.23.15 | MIT | `services/keeper` (runs the TypeScript entry point) |
 | solhint | 6.2.5 | MIT | `contracts/package.json` |
 | @openzeppelin/upgrades-core | 1.47.0 | MIT | `contracts/package.json` (storage-layout check) |
-| @informalsystems/quint | 0.22.4 | Apache-2.0 | `spec/05-verification/package.json` |
-| z3-solver | 4.13.0.0 | MIT | `spec/05-verification/requirements.txt` |
-| sympy | 1.13.3 | BSD-3-Clause | `spec/05-verification/requirements.txt` |
+| @informalsystems/quint | 0.22.4 | Apache-2.0 | `docs/spec/05-verification/package.json` |
+| z3-solver | 4.13.0.0 | MIT | `docs/spec/05-verification/requirements.txt` |
+| sympy | 1.13.3 | BSD-3-Clause | `docs/spec/05-verification/requirements.txt` |
 | mpmath | 1.3.0 | BSD-3-Clause | dependency of sympy |
-| hypothesis | 6.112.5 | MPL-2.0 | `spec/05-verification/requirements.txt` |
-| pytest | 8.3.3 | MIT | `spec/05-verification/requirements.txt` |
-| convex | 1.50.0 | Apache-2.0 | `services/convex`, `web/` |
-| @assistant-ui/react | 0.15.15 | MIT | `web/` |
-| @convex-dev/agent | 0.7.0 | Apache-2.0 | `web/`, `services/convex` (Ask AI) |
-| @emotion/is-prop-valid | 1.4.0 | MIT | `web/` |
-| @hugeicons/core-free-icons | 4.2.3 | MIT | `web/` |
-| @hugeicons/react | 1.1.9 | MIT | `web/` |
-| @radix-ui/react-accordion | 1.2.20 | MIT | `web/` |
-| @radix-ui/react-dialog | 1.1.23 | MIT | `web/` |
-| @radix-ui/react-dropdown-menu | 2.1.24 | MIT | `web/` |
-| @radix-ui/react-select | 2.3.7 | MIT | `web/` |
-| @radix-ui/react-slot | 1.3.3 | MIT | `web/` |
-| @radix-ui/react-switch | 1.3.7 | MIT | `web/` |
-| @sentry/nextjs | 10.78.0 | MIT | `web/` |
-| @tanstack/react-query | 5.101.4 | MIT | `web/` |
-| @vercel/analytics | 2.0.1 | MIT | `web/` |
-| @vercel/speed-insights | 2.0.0 | Apache-2.0 | `web/` |
-| class-variance-authority | 0.7.1 | Apache-2.0 | `web/` |
-| clsx | 2.1.1 | MIT | `web/` |
-| connectkit | 1.9.2 | BSD-2-Clause | `web/` |
-| framer-motion | 12.43.0 | MIT | `web/` |
-| lucide-react | 1.33.0 | ISC | `web/` |
-| next | 16.4.5 | MIT | `web/` |
-| radix-ui | 1.6.7 | MIT | `web/` |
-| react | 18.3.1 | MIT | `web/` |
-| react-dom | 18.3.1 | MIT | `web/` |
-| react-markdown | 10.1.0 | MIT | `web/` |
-| remark-gfm | 4.0.1 | MIT | `web/` |
-| tailwind-merge | 2.6.1 | MIT | `web/` |
-| tailwindcss-animate | 1.0.7 | MIT | `web/` |
-| wagmi | 2.19.5 | MIT | `web/` |
-| web-vitals | 4.2.4 | Apache-2.0 | `web/` |
-| zod | 4.6.7 | MIT | `web/`, `services/convex` (Ask AI) |
-| @eslint/js | 10.0.1 | MIT | `web/` (build, tests) |
-| @next/bundle-analyzer | 16.4.5 | MIT | `web/` (build, tests) |
-| @next/eslint-plugin-next | 16.4.5 | MIT | `web/` (build, tests) |
-| @playwright/test | 1.62.1 | Apache-2.0 | `web/` (build, tests) |
-| @testing-library/dom | 10.4.1 | MIT | `web/` (build, tests) |
-| @testing-library/jest-dom | 6.9.1 | MIT | `web/` (build, tests) |
-| @testing-library/react | 16.3.2 | MIT | `web/` (build, tests) |
-| @testing-library/user-event | 14.6.1 | MIT | `web/` (build, tests) |
-| @types/react | 18.3.31 | MIT | `web/` (build, tests) |
-| @types/react-dom | 18.3.7 | MIT | `web/` (build, tests) |
-| @vitejs/plugin-react | 6.0.5 | MIT | `web/` (build, tests) |
-| eslint | 10.8.0 | MIT | `web/` (build, tests) |
-| eslint-config-prettier | 10.1.8 | MIT | `web/` (build, tests) |
-| globals | 17.8.0 | MIT | `web/` (build, tests) |
-| jsdom | 29.1.1 | MIT | `web/` (build, tests) |
-| lighthouse | 13.4.1 | Apache-2.0 | `web/` (build, tests) |
-| postcss | 8.5.32 | MIT | `web/` (build, tests) |
-| prettier | 3.9.6 | MIT | `web/` (build, tests) |
-| tailwindcss | 3.4.19 | MIT | `web/` (build, tests) |
-| typescript-eslint | 8.65.0 | MIT | `web/` (build, tests) |
-| @rolldown/binding-linux-x64-gnu | 1.2.1 | MIT | `web/` (Linux build binding) |
+| hypothesis | 6.112.5 | MPL-2.0 | `docs/spec/05-verification/requirements.txt` |
+| pytest | 8.3.3 | MIT | `docs/spec/05-verification/requirements.txt` |
+| convex | 1.50.0 | Apache-2.0 | `services/convex`, `webapp/` |
+| @assistant-ui/react | 0.15.15 | MIT | `webapp/` |
+| @convex-dev/agent | 0.7.0 | Apache-2.0 | `webapp/`, `services/convex` (Ask AI) |
+| @emotion/is-prop-valid | 1.4.0 | MIT | `webapp/` |
+| @hugeicons/core-free-icons | 4.2.3 | MIT | `webapp/` |
+| @hugeicons/react | 1.1.9 | MIT | `webapp/` |
+| @radix-ui/react-accordion | 1.2.20 | MIT | `webapp/` |
+| @radix-ui/react-dialog | 1.1.23 | MIT | `webapp/` |
+| @radix-ui/react-dropdown-menu | 2.1.24 | MIT | `webapp/` |
+| @radix-ui/react-select | 2.3.7 | MIT | `webapp/` |
+| @radix-ui/react-slot | 1.3.3 | MIT | `webapp/` |
+| @radix-ui/react-switch | 1.3.7 | MIT | `webapp/` |
+| @sentry/nextjs | 10.78.0 | MIT | `webapp/` |
+| @tanstack/react-query | 5.101.4 | MIT | `webapp/` |
+| @vercel/analytics | 2.0.1 | MIT | `webapp/` |
+| @vercel/speed-insights | 2.0.0 | Apache-2.0 | `webapp/` |
+| class-variance-authority | 0.7.1 | Apache-2.0 | `webapp/` |
+| clsx | 2.1.1 | MIT | `webapp/` |
+| connectkit | 1.9.2 | BSD-2-Clause | `webapp/` |
+| framer-motion | 12.43.0 | MIT | `webapp/` |
+| lucide-react | 1.33.0 | ISC | `webapp/` |
+| next | 16.4.5 | MIT | `webapp/` |
+| radix-ui | 1.6.7 | MIT | `webapp/` |
+| react | 18.3.1 | MIT | `webapp/` |
+| react-dom | 18.3.1 | MIT | `webapp/` |
+| react-markdown | 10.1.0 | MIT | `webapp/` |
+| remark-gfm | 4.0.1 | MIT | `webapp/` |
+| tailwind-merge | 2.6.1 | MIT | `webapp/` |
+| tailwindcss-animate | 1.0.7 | MIT | `webapp/` |
+| wagmi | 2.19.5 | MIT | `webapp/` |
+| web-vitals | 4.2.4 | Apache-2.0 | `webapp/` |
+| zod | 4.6.7 | MIT | `webapp/`, `services/convex` (Ask AI) |
+| @eslint/js | 10.0.1 | MIT | `webapp/` (build, tests) |
+| @next/bundle-analyzer | 16.4.5 | MIT | `webapp/` (build, tests) |
+| @next/eslint-plugin-next | 16.4.5 | MIT | `webapp/` (build, tests) |
+| @playwright/test | 1.62.1 | Apache-2.0 | `webapp/` (build, tests) |
+| @testing-library/dom | 10.4.1 | MIT | `webapp/` (build, tests) |
+| @testing-library/jest-dom | 6.9.1 | MIT | `webapp/` (build, tests) |
+| @testing-library/react | 16.3.2 | MIT | `webapp/` (build, tests) |
+| @testing-library/user-event | 14.6.1 | MIT | `webapp/` (build, tests) |
+| @types/react | 18.3.31 | MIT | `webapp/` (build, tests) |
+| @types/react-dom | 18.3.7 | MIT | `webapp/` (build, tests) |
+| @vitejs/plugin-react | 6.0.5 | MIT | `webapp/` (build, tests) |
+| eslint | 10.8.0 | MIT | `webapp/` (build, tests) |
+| eslint-config-prettier | 10.1.8 | MIT | `webapp/` (build, tests) |
+| globals | 17.8.0 | MIT | `webapp/` (build, tests) |
+| jsdom | 29.1.1 | MIT | `webapp/` (build, tests) |
+| lighthouse | 13.4.1 | Apache-2.0 | `webapp/` (build, tests) |
+| postcss | 8.5.32 | MIT | `webapp/` (build, tests) |
+| prettier | 3.9.6 | MIT | `webapp/` (build, tests) |
+| tailwindcss | 3.4.19 | MIT | `webapp/` (build, tests) |
+| typescript-eslint | 8.65.0 | MIT | `webapp/` (build, tests) |
+| @rolldown/binding-linux-x64-gnu | 1.2.1 | MIT | `webapp/` (Linux build binding) |
 | @ai-sdk/openai | 4.0.44 | Apache-2.0 | `services/convex` (Ask AI) |
 | @convex-dev/rag | 0.7.6 | Apache-2.0 | `services/convex` (Ask AI) |
 | @convex-dev/rate-limiter | 0.3.2 | Apache-2.0 | `services/convex` (Ask AI) |
@@ -147,7 +147,7 @@ Installed from the lock files, not committed. TypeScript packages are bundled in
 
 ## Tools installed at run time
 
-Downloaded by [`contracts/script/install-security-tools.sh`](contracts/script/install-security-tools.sh) (or, for heimdall, by the command in [`tools/heimdall/README.md`](tools/heimdall/README.md)) into ignored folders. None is copied into the repository or into a build output; each runs under its own licence.
+Downloaded by [`contracts/script/install-security-tools.sh`](contracts/script/install-security-tools.sh) (or, for heimdall, by the command in [`contracts/tools/heimdall/README.md`](contracts/tools/heimdall/README.md)) into ignored folders. None is copied into the repository or into a build output; each runs under its own licence.
 
 | Tool | Version | Licence | Where |
 |---|---|---|---|
@@ -164,7 +164,7 @@ Downloaded by [`contracts/script/install-security-tools.sh`](contracts/script/in
 | Aderyn | 0.6.8 | GPL-3.0 | `contracts/tools/bin/` |
 | Necessist | 4.1.0 | AGPL-3.0 | `contracts/tools/bin/` |
 | 4naly3er | commit `8a9d1ebb7d362bc94f036fa9123d0977c6cb7436` | GPL-3.0 | `contracts/tools/4naly3er/` |
-| heimdall-rs | 0.9.3 | MIT | `tools/heimdall/bin/` |
+| heimdall-rs | 0.9.3 | MIT | `contracts/tools/heimdall/bin/` |
 | Eclipse Temurin JDK (for the Certora Prover) | 21.0.13 | GPL-2.0 with the Classpath Exception | installed separately; not part of the repository |
 | Foundry | 1.9.0 | MIT OR Apache-2.0 | installed with `foundryup` |
 | Solidity compiler | 0.8.28 | GPL-3.0 | installed by Foundry |

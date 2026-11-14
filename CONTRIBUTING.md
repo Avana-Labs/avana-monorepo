@@ -1,6 +1,6 @@
 # Contributing
 
-Avana's contracts are written from the specification in [`spec/`](spec/). When code and specification disagree, the specification changes first, through the change control in [`spec/README.md`](spec/README.md#traceability-and-change-control), and the code follows in the same pull request. Every pull request completes the checklist in [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md), and [`.github/CODEOWNERS`](.github/CODEOWNERS) names the reviewers of each path.
+Avana's contracts are written from the specification in [`docs/spec/`](docs/spec/). When code and specification disagree, the specification changes first, through the change control in [`docs/spec/README.md`](docs/spec/README.md#traceability-and-change-control), and the code follows in the same pull request. Every pull request completes the checklist in [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md), and [`.github/CODEOWNERS`](.github/CODEOWNERS) names the reviewers of each path.
 
 ## Security reports
 
@@ -67,13 +67,13 @@ A real finding is fixed. A false positive, or a surviving Gambit mutant whose ch
 From the repository root:
 
 ```bash
-spec/05-verification/run_all.sh             # Z3, SymPy, Hypothesis, Quint, simulations, trace.py
-audit/formal-verification/control/run.sh
-audit/formal-verification/custody/run.sh
-audit/formal-verification/liquidation/run.sh
+docs/spec/05-verification/run_all.sh             # Z3, SymPy, Hypothesis, Quint, simulations, trace.py
+docs/audit/formal-verification/control/run.sh
+docs/audit/formal-verification/custody/run.sh
+docs/audit/formal-verification/liquidation/run.sh
 ```
 
-A changed formula is written on its spec page and checked by a Z3 model in `spec/05-verification/z3/` in the same pull request; after re-running the checks of a changed requirement, `cd spec/05-verification && .venv/bin/python trace.py --accept <ID>` records it.
+A changed formula is written on its spec page and checked by a Z3 model in `docs/spec/05-verification/z3/` in the same pull request; after re-running the checks of a changed requirement, `cd docs/spec/05-verification && .venv/bin/python trace.py --accept <ID>` records it.
 
 ## Licence of contributions
 

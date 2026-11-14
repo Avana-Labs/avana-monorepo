@@ -130,7 +130,7 @@ contract GvPrice {
 /// @notice Worked examples of the specification recomputed on the pinned Aave V4 release deployed by the fixture: the
 /// standard CDP Spoke Avana deploys (`SpokeInstance` with the real `LiquidationLogic`) and the Stable LP Hub. Each
 /// expected integer is the value the exact-integer model of the Aave V4 arithmetic
-/// (`spec/05-verification/z3/aave-risk/_v4ref.py`) gives for the example; the comments carry the rounded figure the
+/// (`docs/spec/05-verification/z3/aave-risk/_v4ref.py`) gives for the example; the comments carry the rounded figure the
 /// example states. Collateral is a plain 18-decimal token at $10 (6 decimals at $2 for `LIQ-068`), debt an 18-decimal
 /// asset at the fixed $1 GHO price; no time passes, so the drawn index stays 1 RAY, and every collateral reserve has
 /// collateral risk 0, so no premium accrues.

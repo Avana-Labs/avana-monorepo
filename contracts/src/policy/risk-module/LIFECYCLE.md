@@ -61,5 +61,5 @@ Setup (Base market 3, from 3.1 `DEP-029` and 3.2 `BOR-022`): $2.00 per whole vau
 
 ## Spec
 
-- [2.7 Risk Module](../../../../spec/02-contracts/07-risk-module.md): `REQ-RISK-006`–`REQ-RISK-025` (pledge), `REQ-RISK-066`, `REQ-RISK-070`, `REQ-RISK-078`, `REQ-RISK-082`, `REQ-RISK-088`, `REQ-RISK-090`, `REQ-RISK-091`, `REQ-ADAPTER-038`, `REQ-ADAPTER-063`, `SPEC-CAP-001`–`SPEC-CAP-005`, `SPEC-CAP-011`–`SPEC-CAP-013`, `REQ-RISK-092`–`REQ-RISK-099`, `SPEC-BRK-004`–`SPEC-BRK-008`.
-- Flows: [3.1](../../../../spec/03-operations/01-deposit.md) `DEP-029`, [3.2](../../../../spec/03-operations/02-borrow.md) `BOR-011`, `BOR-017`, `BOR-022`, `BOR-023`, `BOR-024`, [3.6](../../../../spec/03-operations/06-emergency-operations.md) circuit breakers.
+- [2.7 Risk Module](../../../../docs/spec/02-contracts/07-risk-module.md): `REQ-RISK-006`–`REQ-RISK-025` (pledge), `REQ-RISK-066`, `REQ-RISK-070`, `REQ-RISK-078`, `REQ-RISK-082`, `REQ-RISK-088`, `REQ-RISK-090`, `REQ-RISK-091`, `REQ-ADAPTER-038`, `REQ-ADAPTER-063`, `SPEC-CAP-001`–`SPEC-CAP-005`, `SPEC-CAP-011`–`SPEC-CAP-013`, `REQ-RISK-092`–`REQ-RISK-099`, `SPEC-BRK-004`–`SPEC-BRK-008`.
+- Flows: [3.1](../../../../docs/spec/03-operations/01-deposit.md) `DEP-029`, [3.2](../../../../docs/spec/03-operations/02-borrow.md) `BOR-011`, `BOR-017`, `BOR-022`, `BOR-023`, `BOR-024`, [3.6](../../../../docs/spec/03-operations/06-emergency-operations.md) circuit breakers.
