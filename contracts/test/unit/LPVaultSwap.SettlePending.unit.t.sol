@@ -235,6 +235,23 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         assertEq(vt.balanceOf(address(lvs)), kept, "units still held");
     }
 
+    /// @notice LIQ-I3: with no Coverage Spoke recorded, or one whose `fund` reverts (a full add cap), `settlePending`
+    /// reverts as a whole: the units stay pending and retryable, nothing is carried beyond one Hub share, and
+    /// liquidation does not depend on it: the account is still liquidated while the settlement is stuck.
+    // TEST-170 verifies: REQ-SWAP-070, REQ-SWAP-071, REQ-SWAP-003, REQ-FLR-037
+    function test_TEST_170_stuckSettlementDoesNotBlockLiquidation() public {
+        registry.setCoverageSpoke(aave.hub, address(usdc), address(0));
+        vm.expectRevert();
+        lvs.settlePending(MARKET_ID, usdcReserveId);
+        assertEq(coll.getPending(address(vt)).units, kept, "pending unchanged");
+        assertEq(usdc.balanceOf(address(lvs)), 0, "nothing carried");
+        _liquidateAs(keeper, _params(proxy, 100e6));
+        assertEq(coll.getPending(address(vt)).units, kept, "still pending after the liquidation");
+        registry.setCoverageSpoke(aave.hub, address(usdc), address(usdcCoverage));
+        (uint256 units,,) = lvs.settlePending(MARKET_ID, usdcReserveId);
+        assertEq(units, kept, "settles once the Coverage Spoke is back");
+    }
+
     /// @notice The settlement asset's DebtOracle must be Live (REQ-SWAP-091 applied to the settlement reserve).
     // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-091
     function test_TEST_170_settlementReserveDebtPriceGate() public {
