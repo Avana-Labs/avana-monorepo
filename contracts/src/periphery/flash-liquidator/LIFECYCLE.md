@@ -44,5 +44,5 @@ Uniswap v3 on Ethereum (Bob, USDC debt, 3.5 `LIQ-069`), through the public helpe
 
 ## Spec
 
-- [2.11 Flash liquidation helper](../../../../spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper): `REQ-HELPER-001`–`REQ-HELPER-016`, `SPEC-LIQ-015`, `SPEC-LIQ-019`, `REQ-SWAP-012`, `REQ-SWAP-105`, `REQ-FLASH-010`.
-- Flow: [3.5 Flash-funded calls](../../../../spec/03-operations/05-liquidation.md#flash-funded-calls) `LIQ-036`–`LIQ-040`, `LIQ-083`, `LIQ-084`.
+- [2.11 Flash liquidation helper](../../../../docs/spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper): `REQ-HELPER-001`–`REQ-HELPER-016`, `SPEC-LIQ-015`, `SPEC-LIQ-019`, `REQ-SWAP-012`, `REQ-SWAP-105`, `REQ-FLASH-010`.
+- Flow: [3.5 Flash-funded calls](../../../../docs/spec/03-operations/05-liquidation.md#flash-funded-calls) `LIQ-036`–`LIQ-040`, `LIQ-083`, `LIQ-084`.

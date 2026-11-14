@@ -42,5 +42,5 @@ Setup (Base: the Aerodrome Slipstream LPVault as integration 2 and market 3 on t
 
 ## Spec
 
-- [2.4 Vault Tokens](../../../../spec/02-contracts/04-vault-tokens.md): `REQ-VTOKEN-019`–`REQ-VTOKEN-024`, `REQ-VTOKEN-035`–`REQ-VTOKEN-038`, `REQ-VTOKEN-044`–`REQ-VTOKEN-046`, `REQ-VTOKEN-049`, `REQ-VTOKEN-050`, `REQ-AMM-CORE-001`, `SPEC-UNIT-001`.
-- Flow: [3.8 Market lifecycle](../../../../spec/03-operations/08-market-lifecycle.md) `MKT-007`.
+- [2.4 Vault Tokens](../../../../docs/spec/02-contracts/04-vault-tokens.md): `REQ-VTOKEN-019`–`REQ-VTOKEN-024`, `REQ-VTOKEN-035`–`REQ-VTOKEN-038`, `REQ-VTOKEN-044`–`REQ-VTOKEN-046`, `REQ-VTOKEN-049`, `REQ-VTOKEN-050`, `REQ-AMM-CORE-001`, `SPEC-UNIT-001`.
+- Flow: [3.8 Market lifecycle](../../../../docs/spec/03-operations/08-market-lifecycle.md) `MKT-007`.

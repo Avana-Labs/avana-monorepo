@@ -46,5 +46,5 @@ Setup (Base market 3, Aerodrome Slipstream USDC/USDT, tick spacing 1, exact rang
 
 ## Spec
 
-- [2.2 LP Vault](../../../../spec/02-contracts/02-lp-vault.md): `REQ-VAULT-010`, `REQ-VAULT-031`, `REQ-VAULT-064`–`REQ-VAULT-066`, `REQ-AMM-CORE-007`, `REQ-AMM-CORE-011`, `SPEC-BACK-008`.
-- [2.19 AMM Integration Interface](../../../../spec/02-contracts/19-amm-integration-interface.md), [2.20 Uniswap v3](../../../../spec/02-contracts/20-uniswap-v3-integration.md), [2.21 Aerodrome Slipstream](../../../../spec/02-contracts/21-aerodrome-slipstream-integration.md).
+- [2.2 LP Vault](../../../../docs/spec/02-contracts/02-lp-vault.md): `REQ-VAULT-010`, `REQ-VAULT-031`, `REQ-VAULT-064`–`REQ-VAULT-066`, `REQ-AMM-CORE-007`, `REQ-AMM-CORE-011`, `SPEC-BACK-008`.
+- [2.19 AMM Integration Interface](../../../../docs/spec/02-contracts/19-amm-integration-interface.md), [2.20 Uniswap v3](../../../../docs/spec/02-contracts/20-uniswap-v3-integration.md), [2.21 Aerodrome Slipstream](../../../../docs/spec/02-contracts/21-aerodrome-slipstream-integration.md).

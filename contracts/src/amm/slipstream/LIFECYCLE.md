@@ -49,5 +49,5 @@ Setup (Base market 3, USDC/USDT, tick spacing 1 on the Gauges V3 generation (ind
 
 ## Spec
 
-- [2.21 Aerodrome Slipstream Integration](../../../../spec/02-contracts/21-aerodrome-slipstream-integration.md): `REQ-AMM-SLIP-001`–`REQ-AMM-SLIP-020`, `SPEC-AMM-SLIP-001` (pool identity), key encoding `bytes32((uint256(generation) << 248) | tokenId)`.
-- Flows: [3.1](../../../../spec/03-operations/01-deposit.md) `DEP-029`, [3.5](../../../../spec/03-operations/05-liquidation.md) `LIQ-089`, [3.7](../../../../spec/03-operations/07-collect-fees.md) `FEE-009`.
+- [2.21 Aerodrome Slipstream Integration](../../../../docs/spec/02-contracts/21-aerodrome-slipstream-integration.md): `REQ-AMM-SLIP-001`–`REQ-AMM-SLIP-020`, `SPEC-AMM-SLIP-001` (pool identity), key encoding `bytes32((uint256(generation) << 248) | tokenId)`.
+- Flows: [3.1](../../../../docs/spec/03-operations/01-deposit.md) `DEP-029`, [3.5](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-089`, [3.7](../../../../docs/spec/03-operations/07-collect-fees.md) `FEE-009`.
