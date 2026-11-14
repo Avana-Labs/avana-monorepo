@@ -33,7 +33,7 @@
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
       {"src": "src/policy/aave-adapter", "tests": "test/unit/AaveAdapter*"},
       {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes}.*"},
-      {"src": "src/coverage/coverage-spoke", "tests": "test/unit/CoverageSpoke*"}
+      {"src": "src/coverage/coverage-spoke", "tests": "test/unit/{CoverageSpoke,DeficitOffsetSpoke}*"}
     ],
     "2.6": [
       {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz}/FlashLiquidator.*"},
