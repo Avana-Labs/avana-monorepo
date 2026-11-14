@@ -10,7 +10,7 @@ import {console} from "forge-std/console.sol";
 /// @title HandlerReach
 /// @notice Measures what an invariant suite's handler actually does, so a campaign that passes because every call
 /// reverted or returned early shows up as a failing test. It replays `runs` fixed-seed sequences of `depth` calls to
-/// the handler's targeted selectors from the suite's set-up state, each call with three pseudo-random words, and counts
+/// the handler's targeted selectors from the suite's set-up state, each call with pseudo-random arguments (`_calldata`), and counts
 /// per selector the calls that succeeded, the calls the handler skipped (its named no-op error) and the calls that
 /// failed; after each run the suite reports which of its target states the run reached. The suite then asserts a
 /// floor on each selector's success rate and on each target's reach, and the logs give the table (`forge test -vv`).
@@ -27,6 +27,24 @@ abstract contract HandlerReach is CommonBase {
 
     /// @dev The target states one run reached; called at the end of each replayed run, before the state is reset.
     function _reached() internal view virtual returns (bool[] memory);
+
+    /// @dev The call for `selector` from `seed`: five pseudo-random words, so any handler action of up to five
+    /// `uint256` parameters decodes. A suite whose actions take other types (a `bool` must be 0 or 1) overrides it.
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure virtual returns (bytes memory) {
+        return abi.encodeWithSelector(
+            selector, _word(seed, 1), _word(seed, 2), _word(seed, 3), _word(seed, 4), _word(seed, 5)
+        );
+    }
+
+    function _word(
+        uint256 seed,
+        uint256 i
+    ) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encode(seed, i)));
+    }
 
     function _replay(
         address handler,
@@ -47,16 +65,7 @@ abstract contract HandlerReach is CommonBase {
             for (uint256 i = 0; i < depth; ++i) {
                 seed = uint256(keccak256(abi.encode(seed)));
                 uint256 k = seed % n;
-                (bool ok, bytes memory ret) = handler.call(
-                    abi.encodeWithSelector(
-                        selectors[k],
-                        uint256(keccak256(abi.encode(seed, 1))),
-                        uint256(keccak256(abi.encode(seed, 2))),
-                        uint256(keccak256(abi.encode(seed, 3))),
-                        uint256(keccak256(abi.encode(seed, 4))),
-                        uint256(keccak256(abi.encode(seed, 5)))
-                    )
-                );
+                (bool ok, bytes memory ret) = handler.call(_calldata(selectors[k], seed));
                 // A call that reverted inside `startPrank` leaves the prank on; end it before the next call.
                 (VmSafe.CallerMode mode,,) = vm.readCallers();
                 if (mode != VmSafe.CallerMode.None) vm.stopPrank();
@@ -73,14 +82,14 @@ abstract contract HandlerReach is CommonBase {
         vm.resumeGasMetering();
     }
 
-    /// @dev Logs the table and asserts that every selector succeeds in at least `minOkPct` % of its calls and every
-    /// target is reached in at least `minReachPct` % of the runs.
+    /// @dev Logs the table and asserts that selector `k` succeeds in at least `minOkPct[k]` % of its calls and target
+    /// `t` is reached in at least `minReachPct[t]` % of the runs.
     function _check(
         Reach memory r,
         string[] memory names,
         string[] memory targetNames,
-        uint256 minOkPct,
-        uint256 minReachPct
+        uint256[] memory minOkPct,
+        uint256[] memory minReachPct
     ) internal pure {
         console.log("action: calls / ok / skipped / failed");
         for (uint256 k = 0; k < names.length; ++k) {
@@ -93,10 +102,21 @@ abstract contract HandlerReach is CommonBase {
         }
         for (uint256 k = 0; k < names.length; ++k) {
             uint256 calls = r.ok[k] + r.skipped[k] + r.failed[k];
-            require(calls != 0 && r.ok[k] * 100 >= calls * minOkPct, string.concat("low success: ", names[k]));
+            require(calls != 0 && r.ok[k] * 100 >= calls * minOkPct[k], string.concat("low success: ", names[k]));
         }
         for (uint256 t = 0; t < targetNames.length; ++t) {
-            require(r.reached[t] * 100 >= r.runs * minReachPct, string.concat("low reach: ", targetNames[t]));
+            require(r.reached[t] * 100 >= r.runs * minReachPct[t], string.concat("low reach: ", targetNames[t]));
+        }
+    }
+
+    /// @dev `n` copies of `pct`, for `_check`'s floors.
+    function _floors(
+        uint256 n,
+        uint256 pct
+    ) internal pure returns (uint256[] memory floors) {
+        floors = new uint256[](n);
+        for (uint256 t = 0; t < n; ++t) {
+            floors[t] = pct;
         }
     }
 

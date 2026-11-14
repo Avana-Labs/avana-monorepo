@@ -154,7 +154,7 @@ contract CollateralizationLedgerInvariantTest is CollateralizationFixture, Handl
         targets[2] = "pending settlement";
         targets[3] = "zero-credit release";
         Reach memory r = _replay(address(handler), _actions(), CollateralizationHandler.Skipped.selector, 32, 50, 4);
-        _check(r, names, targets, 30, 75);
+        _check(r, names, targets, _floors(names.length, 30), _floors(targets.length, 75));
     }
 
     function _reached() internal view override returns (bool[] memory hit) {

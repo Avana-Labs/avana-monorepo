@@ -90,7 +90,7 @@ contract CollateralizationInvariantTest is CollateralizationFixture, HandlerReac
         targets[1] = "kept seizure";
         targets[2] = "pending settlement";
         Reach memory r = _replay(address(handler), _actions(), CollateralizationHandler.Skipped.selector, 32, 50, 3);
-        _check(r, names, targets, 30, 75);
+        _check(r, names, targets, _floors(names.length, 30), _floors(targets.length, 75));
     }
 
     function _reached() internal view override returns (bool[] memory hit) {
