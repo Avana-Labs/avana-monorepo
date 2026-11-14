@@ -21,7 +21,7 @@ describe("aggregateNetValueUsd", () => {
   it("keeps debt rows negative (productBalances encodes debt as negative valueUsd)", () => {
     const rows = [
       row({ assetId: "usdc", amount: 1000, valueUsd: 1000, sourceType: "wallet" }),
-      row({ assetId: "usdc", amount: 250, valueUsd: -250, sourceType: "multiply_debt" }),
+      row({ assetId: "usdc", amount: 250, valueUsd: -250, sourceType: "borrow_debt" }),
     ]
     // 1000 asset − 250 debt = 750 (debt magnitude re-priced live but stays negative).
     expect(aggregateNetValueUsd(rows, priceFor)).toBeCloseTo(750, 6)
@@ -35,19 +35,6 @@ describe("aggregateNetValueUsd", () => {
   it("falls back to stored value when a token is unpriced by the oracle", () => {
     const rows = [row({ assetId: "wbtc", amount: 1, valueUsd: 60000 })]
     expect(aggregateNetValueUsd(rows, priceFor)).toBeCloseTo(60000, 6)
-  })
-
-  it("does not multiply a Multiply available USD budget by its token price", () => {
-    const rows = [
-      row({
-        assetId: "wsteth",
-        amount: 41_666.67,
-        valueUsd: 41_666.67,
-        sourceType: "multiply_available",
-      }),
-    ]
-
-    expect(aggregateNetValueUsd(rows, () => 2_982.18)).toBeCloseTo(41_666.67, 6)
   })
 
   it("is empty-safe", () => {

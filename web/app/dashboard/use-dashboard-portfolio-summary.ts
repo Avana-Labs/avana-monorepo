@@ -14,17 +14,16 @@ import { sumWalletValueUsd } from "@/app/dashboard/dashboard-wallet-tab"
 import { blendEquityWeightedNetApyPct, resolveDashboardNetApyPct } from "@/app/dashboard/portfolio-headline-metrics"
 
 type DashboardPortfolioSummary = {
-  /** Net Portfolio Value (Assets − Debt), aggregated across products. Umbrella excluded. */
+  /** Net Portfolio Value (Assets − Debt), aggregated across products. */
   netValueUsd: number
-  /** Value-weighted blended Net APY. Umbrella excluded. */
+  /** Value-weighted blended Net APY. */
   netApyPct: number
   /** Wallet-accessible funds, including returned available product balances (same scope as the Wallet tab). */
   walletBalanceUsd: number
 }
 
 /**
- * Global Net Value = signed sum of the wallet's product balances, debt rows negative.
- * Umbrella is never in productBalances, so it is excluded by construction. The product
+ * Global Net Value = signed sum of the wallet's product balances, debt rows negative. The product
  * tabs re-derive their own nets client-side from the same source, so they reconcile but
  * are not identical; the `hero == Σ product nets` invariant is pinned by
  * dashboard-net-value-parity.test.ts.
@@ -43,8 +42,8 @@ const AMOUNT_USD_PEG_TOLERANCE = 0.05
 /**
  * True when `row.amount` can be trusted as a token quantity and repriced live.
  *
- * Some writers store USD in `amount` instead of a token count: the multiply debt row
- * writes `amount: debtValueUsd`, and `adjustProductBalanceUsd` uses `priceUsd = 1` when it
+ * Some writers store USD in `amount` instead of a token count: a debt row can carry
+ * `amount: debtValueUsd`, and `adjustProductBalanceUsd` uses `priceUsd = 1` when it
  * CREATES a row, so a first deposit into a market lands USD there. Repricing those as
  * `amount × livePrice` multiplies the position by the token price (1 AAVE lend deposit
  * contributed $14,443). The stored `valueUsd` is correct in those cases, so fall back to it.
@@ -72,9 +71,6 @@ function amountIsTokenDenominated(amount: number, valueUsd: number, livePriceUsd
  * already applies this rule on the Wallet tab — Net Value read the raw rows and did not, so a
  * lend withdrawal (which credits BOTH `walletLiquidBalances` and the lend `available` bucket)
  * permanently inflated the headline by the withdrawn amount.
- *
- * `multiply_available` is deliberately absent: it is a separate equity budget allocated to
- * Multiply, not a mirror of a liquid row.
  */
 const LIQUID_MIRROR_SOURCE_TYPES = new Set(["lend_available", "borrow_collateral_unpledged"])
 

@@ -119,8 +119,8 @@ export const SWAP_ASSETS: SwapAsset[] = [
     maximumSwapAmount: 500,
   },
   {
-    // Multiply collateral surfaced by the wallet/product balance feed. Metadata-only so it
-    // resolves correctly in shared dashboard tables without making WSTETH a swap route.
+    // Collateral surfaced by the wallet/product balance feed. Metadata-only so it resolves
+    // correctly in shared dashboard tables without making WSTETH a swap route.
     id: "wsteth",
     chainId: SWAP_CHAIN_ID,
     symbol: "WSTETH",

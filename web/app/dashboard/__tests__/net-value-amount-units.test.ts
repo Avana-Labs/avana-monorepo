@@ -23,11 +23,6 @@ describe("aggregateNetValueUsd — token-vs-USD amount units", () => {
     expect(aggregateNetValueUsd(rows, priceFor)).toBeCloseTo(AAVE, 6)
   })
 
-  it("does not reprice a multiply debt row whose amount holds USD", () => {
-    const rows = [row({ assetId: "eth", amount: 30_000, valueUsd: -30_000, sourceType: "multiply_debt" })]
-    expect(aggregateNetValueUsd(rows, priceFor)).toBeCloseTo(-30_000, 6)
-  })
-
   it("does not reprice a borrow debt row whose amount holds USD", () => {
     const rows = [row({ assetId: "eth", amount: 2_000, valueUsd: -2_000, sourceType: "borrow_debt" })]
     expect(aggregateNetValueUsd(rows, priceFor)).toBeCloseTo(-2_000, 6)
@@ -59,15 +54,6 @@ describe("aggregateNetValueUsd — token-vs-USD amount units", () => {
   it("still counts a lend available bucket with no matching liquid row", () => {
     const rows = [row({ assetId: "gho", amount: 3, valueUsd: 3, sourceType: "lend_available" })]
     expect(aggregateNetValueUsd(rows, priceFor)).toBeCloseTo(3, 6)
-  })
-
-  it("keeps multiply_available (separate equity budget) even beside a liquid row", () => {
-    const rows = [
-      row({ assetId: "wsteth", amount: 2, valueUsd: 7_000 }),
-      row({ assetId: "wsteth", amount: 41_666.67, valueUsd: 41_666.67, sourceType: "multiply_available" }),
-    ]
-    // Liquid repriced (no WSTETH price here → stored $7,000) plus the untouched budget.
-    expect(aggregateNetValueUsd(rows, priceFor)).toBeCloseTo(7_000 + 41_666.67, 6)
   })
 
   it("does not double a sub-$10 token row whose amount holds USD (LDO/CRV/ARB/EURC hole)", () => {

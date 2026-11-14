@@ -100,7 +100,7 @@ describe("swap amount validation", () => {
   })
 
   it("uses only eligible wallet balance for Max", () => {
-    expect(getMaxSwapInputAmount(balance({ assetId: "eth", amount: 3, sourceType: "multiply_active" }), context)).toBe(
+    expect(getMaxSwapInputAmount(balance({ assetId: "eth", amount: 3, sourceType: "protocol_locked" }), context)).toBe(
       0,
     )
   })

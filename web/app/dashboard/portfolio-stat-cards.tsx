@@ -4,8 +4,7 @@
  * Dashboard summary section: a personalized greeting with an eye (numbers) toggle over
  * three stat cards — Wallet Balance (live from Convex), Net Value, and Net
  * APY. Cards live in a snap-scroll carousel: on desktop the row fits (arrows
- * hide themselves), on mobile the row overflows and arrows appear — same
- * pattern as UmbrellaCooldown.
+ * hide themselves), on mobile the row overflows and arrows appear.
  */
 
 import { useMemo, useState, type PointerEvent } from "react"
@@ -81,8 +80,8 @@ function formatValue(value: number, format: ValueFormat): string {
 /**
  * The three "Your Dashboard" cards from useDashboardPortfolioSummary:
  *  - Wallet Balance — wallet-accessible funds (liquid wallet rows plus returned available product balances).
- *  - Net Value — live-priced productBalances aggregate (wallet + lend + borrow + multiply; umbrella excluded).
- *  - Net APY — equity-weighted blend of live Lend / Borrow / Multiply session Net APYs.
+ *  - Net Value — live-priced productBalances aggregate (wallet + lend + borrow).
+ *  - Net APY — equity-weighted blend of live Lend / Borrow session Net APYs.
  * No fabricated deltas: a card shows a delta only when a real basis exists (none yet).
  */
 function useStatCards(): StatCard[] {
