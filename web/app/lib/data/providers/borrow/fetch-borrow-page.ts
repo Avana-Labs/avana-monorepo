@@ -5,7 +5,6 @@ import type { BorrowPageData } from "./types"
 
 const borrowPageSchema = z.object({
   walletId: z.string(),
-  borrowSessionSeed: z.string(),
   poolCatalog: z.array(z.object({ id: z.string(), name: z.string() }).passthrough()),
   heroMetrics: z.object({
     totalTvlUsd: z.number(),
