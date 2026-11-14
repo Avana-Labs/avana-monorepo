@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 
 const repoRoot = path.resolve(__dirname, "..", "..")
 
-// These helpers read the private SIWE JWK to self-mint valid sandbox tokens; they
+// These helpers read the private SIWE JWK to self-mint valid Convex tokens; they
 // must never be committed. Guard against reintroduction (#138).
 const bannedScripts = ["_qa-mint.mjs", "_qa-seed.mjs"]
 

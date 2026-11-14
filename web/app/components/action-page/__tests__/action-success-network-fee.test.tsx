@@ -1,7 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ActionSuccessUi } from "@/app/lib/action-system/contracts"
-import { SANDBOX_NETWORK_FEE_USD } from "@/app/lib/action-system/formatters"
 
 // Capture the network fee the success stage hands to the receipt without depending
 // on currency formatting.
@@ -66,6 +65,5 @@ describe("ActionSuccessStage network fee", () => {
     )
     const fee = screen.getByTestId("net-fee").textContent
     expect(fee).toBe("0.24")
-    expect(fee).not.toBe(String(SANDBOX_NETWORK_FEE_USD))
   })
 })

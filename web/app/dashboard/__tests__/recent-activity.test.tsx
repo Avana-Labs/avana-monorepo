@@ -169,7 +169,7 @@ describe("RecentActivity amount sign convention (#F2)", () => {
               product: "onboarding",
               kind: "claim",
               amountUsd: 1_000_000,
-              primaryLabel: "Sandbox portfolio funded",
+              primaryLabel: "Portfolio funded",
               secondaryLabel: "Onboarding grant",
             }),
           ]}

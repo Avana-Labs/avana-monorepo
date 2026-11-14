@@ -58,7 +58,7 @@ describe("AskAIPageClient rich parts", () => {
           financialResults: [
             {
               kind: "borrow_capacity",
-              dataProvenance: "sandbox",
+              dataProvenance: "connected_wallet",
               payload: {
                 kind: "borrow_capacity",
                 title: "Borrow capacity",
@@ -89,7 +89,7 @@ describe("AskAIPageClient rich parts", () => {
 
   const portfolioPayload = {
     walletRequired: false,
-    dataProvenance: "sandbox",
+    dataProvenance: "connected_wallet",
     totals: {
       lendNetValueUsd: 300152.89,
       borrowNetValueUsd: 346584.5,
@@ -113,7 +113,9 @@ describe("AskAIPageClient rich parts", () => {
     partsMock.mockReturnValue([
       {
         messageId: "a1",
-        parts: { financialResults: [{ kind: "portfolio", dataProvenance: "sandbox", payload: portfolioPayload }] },
+        parts: {
+          financialResults: [{ kind: "portfolio", dataProvenance: "connected_wallet", payload: portfolioPayload }],
+        },
       },
     ])
     render(<AskAIPageClient />)

@@ -88,7 +88,6 @@ export default tseslint.config(
                 "@/app/lib/convex-seed/*",
                 "@/app/lib/data/mock/*",
                 "@/app/lib/data/catalog/*",
-                "@/app/lib/sandbox-tx",
                 "@/app/lib/deterministic",
                 "@/app/lib/*-engine",
                 "@/app/lib/*-engine/*",

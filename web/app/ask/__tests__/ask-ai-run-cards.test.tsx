@@ -22,7 +22,7 @@ const base: PositionSnapshotInput = {
   lastUpdatedAt: 1_700_000_000_000,
 }
 const ctx = buildPositionContext(base, 1_700_000_100_000)
-const opts = { queryText: "am I safe?", provenance: "sandbox" }
+const opts = { queryText: "am I safe?", provenance: "connected_wallet" }
 
 describe("AskAiRunCards", () => {
   it("renders a risk run with native cards, the health factor, and defensive actions", () => {

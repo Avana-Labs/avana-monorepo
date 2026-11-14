@@ -244,7 +244,7 @@ export function createAaveModelTools(deps: Dependencies) {
     }),
     read_aave_preview: tool({
       description:
-        "Simulate an Aave supply, borrow, withdraw or repay against the authenticated on-chain wallet. Amount is in token main units. Never prepares a transaction or applies Avana sandbox balances to Aave.",
+        "Simulate an Aave supply, borrow, withdraw or repay against the authenticated on-chain wallet. Amount is in token main units. Never prepares a transaction or applies Avana balances to Aave.",
       inputSchema: selectionSchema.extend({
         action: z.enum(["supply", "borrow", "withdraw", "repay"]),
         amount: z

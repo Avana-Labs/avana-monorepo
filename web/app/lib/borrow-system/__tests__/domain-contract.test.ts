@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 import type {
   ProductionReadAdapter,
   ActionResult,
-  SandboxReadAdapter,
   SyntheticTransactionReceipt,
   TransactionHistoryItem,
   TransactionIntent,
@@ -84,7 +83,7 @@ describe("borrow system contracts", () => {
       timestamp: receipt.timestamp,
     }
 
-    const sandboxResult: ActionResult = {
+    const actionResult: ActionResult = {
       preview,
       receipt,
       result,
@@ -95,31 +94,10 @@ describe("borrow system contracts", () => {
     expect(preview.intent.id).toBe(intent.id)
     expect(receipt.simulated).toBe(true)
     expect(historyItem.kind).toBe("borrow")
-    expect(sandboxResult.result.hash).toBe("sim_123")
+    expect(actionResult.result.hash).toBe("sim_123")
   })
 
-  it("defines read adapter contracts for sandbox and production modes", () => {
-    const sandboxReadAdapter: SandboxReadAdapter = {
-      mode: "sandbox",
-      readWalletSnapshot: async () => ({
-        walletId: "wallet-1",
-        transactionHistory: [],
-        creditSnapshot: {
-          collateralValueUsd6: 0n,
-          borrowCapacityUsd6: 0n,
-          availableBorrowCapacityUsd6: 0n,
-          totalBorrowedUsd6: 0n,
-          currentLtvWad: 0n,
-          healthFactorWad: null,
-        },
-      }),
-      readMarkets: async () => [],
-      readBorrowPage: async () => ({}) as BorrowPageData,
-      readPortfolioBorrow: async () => ({}) as PortfolioBorrowTabData,
-      readPoolDetail: async () => null as PoolDetail | null,
-      readAssetDetail: async () => null as AssetDetail | null,
-    }
-
+  it("defines the production read adapter contract", () => {
     const productionReadAdapter: ProductionReadAdapter = {
       mode: "production",
       readWalletSnapshot: async () => ({
@@ -141,7 +119,6 @@ describe("borrow system contracts", () => {
       readAssetDetail: async () => null as AssetDetail | null,
     }
 
-    expect(sandboxReadAdapter.mode).toBe("sandbox")
     expect(productionReadAdapter.mode).toBe("production")
   })
 })

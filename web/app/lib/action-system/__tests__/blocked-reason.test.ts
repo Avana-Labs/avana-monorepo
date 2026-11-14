@@ -36,7 +36,7 @@ describe("humanizeBlockedReason", () => {
   })
 
   it("maps backend auth/rate-limit codes to plain copy (issue #143)", () => {
-    const unauth = humanizeBlockedReason("UNAUTHENTICATED: connect a wallet and sign in to use the sandbox.")
+    const unauth = humanizeBlockedReason("UNAUTHENTICATED: connect a wallet and sign in.")
     expect(unauth).toBe("Your session has expired. Reconnect your wallet and sign in to continue.")
     expect(unauth).not.toMatch(/UNAUTHENTICATED/)
 
@@ -44,7 +44,7 @@ describe("humanizeBlockedReason", () => {
     expect(mismatch).toBe("This action doesn't match your connected wallet. Reconnect the right wallet and try again.")
     expect(mismatch).not.toMatch(/WALLET_MISMATCH/)
 
-    const rate = humanizeBlockedReason("RATE_LIMITED: more than 60 sandbox transactions in the last hour.")
+    const rate = humanizeBlockedReason("RATE_LIMITED: more than 60 writes in the last hour.")
     expect(rate).toBe("You're doing that a bit too fast. Wait a moment and try again.")
     expect(rate).not.toMatch(/RATE_LIMITED/)
   })
@@ -66,12 +66,12 @@ describe("humanizeBlockedReason", () => {
   })
 })
 
-// Prod 2026-09-23: a failed borrow showed "[CONVEX M(sandbox/transactions:recordTransaction)]
+// Prod 2026-09-23: a failed borrow showed "[CONVEX M(wallet/profiles:update)]
 // [Request ID: 14e5d54127067663] Server Error Called by client" on the action page.
 describe("actionErrorMessage", () => {
   it("never shows the raw Convex failure string", () => {
     const error = new Error(
-      "[CONVEX M(sandbox/transactions:recordTransaction)] [Request ID: 14e5d54127067663] Server Error Called by client",
+      "[CONVEX M(wallet/profiles:update)] [Request ID: 14e5d54127067663] Server Error Called by client",
     )
     const out = actionErrorMessage(error, "Transaction was cancelled")
     expect(out).not.toMatch(/CONVEX|Request ID|Server Error/)

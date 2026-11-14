@@ -17,7 +17,7 @@ describe("transaction adapter contracts", () => {
     }
 
     const adapter: TransactionAdapter = {
-      mode: "sandbox",
+      mode: "production",
       async previewTransaction(nextIntent) {
         const preview: TransactionPreview = {
           intent: nextIntent,

@@ -35,7 +35,7 @@ const run = buildRiskRun(
     },
     2,
   ),
-  { queryText: "am I safe?", provenance: "sandbox" },
+  { queryText: "am I safe?", provenance: "connected_wallet" },
 )
 
 function seedModeRunMessage() {
