@@ -12,6 +12,7 @@ import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/Li
 import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
 import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
 import {IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
+import {IFlashLiquidatorEvents} from "../../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
 import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterErrors} from "../../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
@@ -29,6 +30,7 @@ import {MockCLPool} from "../../utils/mocks/SwapRouteMocks.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @title IntegrationHandler
 /// @notice Actions of the integration invariant suite on the deployed stack, every one through a real entry point:
@@ -74,7 +76,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         address[] ghoSources;
     }
 
-    /// @dev The debt asset held by every address a direct liquidation can move it between.
+    /// @dev The debt asset held by every address a liquidation can move it between (direct or through the helper).
     struct Held {
         uint256 caller;
         uint256 lvs;
@@ -86,6 +88,10 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         uint256 escrow;
         uint256 sources;
         uint256 parked;
+        // The flash lender's aToken (the helper's loan and premium) and the helper with its PayoutEscrow credit.
+        uint256 lender;
+        uint256 helper;
+        uint256 helperEscrowed;
     }
 
     Env internal env;
@@ -98,9 +104,11 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     /// @notice Liquidations through the public flash liquidation helper that completed.
     uint256 public helperLiquidations;
     uint256 public settlementBreaks;
-    /// @notice Direct liquidations whose debt-asset balances do not balance (TEST-104 on balances).
+    /// @notice Liquidations (direct or through the helper) whose debt-asset balances do not balance (TEST-104 on
+    /// balances).
     uint256 public conservationBreaks;
-    /// @notice Direct liquidations whose result does not report the balance changes.
+    /// @notice Liquidations whose result (direct) or `FlashLiquidated` event (helper) does not report the balance
+    /// changes.
     uint256 public reportBreaks;
     uint256 public livenessFailures;
     uint256 public exitFailures;
@@ -318,7 +326,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         if (backupOnly) p.params.routeMode = RouteMode.BackupOnly;
         p.params.maxShortfall = p.params.debtToCover / 20;
         address caller = env.callers[callerSeed % env.callers.length];
-        if (viaHelper) _viaHelper(caller, p, open, gho ? env.gho : env.usdc);
+        if (viaHelper) _viaHelper(caller, wallet, p, open, gho ? env.gho : env.usdc);
         else _direct(caller, wallet, p, open, gho ? env.gho : env.usdc);
     }
 
@@ -384,6 +392,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
 
     function _viaHelper(
         address caller,
+        address wallet,
         LiquidationPreview memory p,
         bool open,
         CollPoolToken asset
@@ -395,10 +404,13 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         FlashLiquidationRequest memory q = FlashLiquidationRequest({
             params: p.params, flashAmount: f, maxPremium: (f * 5 + 9999) / 10_000, maxTopUp: f, minPayout: 0
         });
+        Held memory before = _held(asset, caller, wallet);
+        vm.recordLogs();
         vm.prank(caller);
-        try IFlashLiquidator(env.helper).flashLiquidate(q) {
+        try IFlashLiquidator(env.helper).flashLiquidate(q) returns (uint256 payout) {
             ++liquidations;
             ++helperLiquidations;
+            _checkHelperBalances(before, _held(asset, caller, wallet), q, payout, vm.getRecordedLogs());
         } catch (bytes memory err) {
             if (open) _livenessFailed(err);
         }
@@ -440,6 +452,9 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         b.walletEscrowed = env.escrow.claimable(address(asset), wallet);
         b.escrow = asset.balanceOf(address(env.escrow));
         b.parked = asset.balanceOf(env.coll);
+        b.lender = asset.balanceOf(env.v3Pool.getReserveAToken(address(asset)));
+        b.helper = asset.balanceOf(env.helper);
+        b.helperEscrowed = env.escrow.claimable(address(asset), env.helper);
         address[] memory sources = asset == env.gho ? env.ghoSources : env.usdcSources;
         for (uint256 i = 0; i < sources.length; ++i) {
             b.sources += asset.balanceOf(sources[i]);
@@ -464,13 +479,73 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         int256 escrowed = int256(a.feeEscrowed + a.walletEscrowed) - int256(b.feeEscrowed + b.walletEscrowed);
         if (
             callerIn + recovered != toHub + toFee + toBorrower || a.lvs != b.lvs || parked < 0
-                || int256(a.escrow) - int256(b.escrow) != escrowed
+                || int256(a.escrow) - int256(b.escrow) != escrowed || a.lender != b.lender || a.helper != b.helper
+                || a.helperEscrowed != b.helperEscrowed
         ) ++conservationBreaks;
         if (
             toHub != int256(r.debtRepaid) || toFee != int256(r.avanaFee) || toBorrower != int256(r.borrowerSurplus)
                 || recovered != int256(r.recovered)
                 || -callerIn != int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall)
         ) ++reportBreaks;
+    }
+
+    /// @dev TEST-104 on balances through the public helper: the debt asset that left the caller (prefund and top-up,
+    /// less the payout) and the sources equals what reached the Hub, the fee recipient, the borrower, Collateralization
+    /// and the flash lender (the premium); the helper and LPVaultSwap end where they started (a helper credit left in
+    /// the PayoutEscrow counts as held by the caller's side). `FlashLiquidated` reports the premium the lender kept, the
+    /// payout the caller received and the top-up it paid.
+    function _checkHelperBalances(
+        Held memory b,
+        Held memory a,
+        FlashLiquidationRequest memory q,
+        uint256 payout,
+        Vm.Log[] memory logs
+    ) internal {
+        int256 callerIn = int256(b.caller) - int256(a.caller);
+        int256 toLender = int256(a.lender) - int256(b.lender);
+        _checkHelperConservation(b, a, callerIn, toLender);
+        (bool found, uint256 premium, uint256 topUp, uint256 reportedPayout) = _flashLiquidated(logs);
+        uint256 prefund = q.params.debtToCover - q.flashAmount + q.params.maxShortfall;
+        if (
+            !found || reportedPayout != payout || int256(premium) != toLender || premium > q.maxPremium
+                || topUp > q.maxTopUp || callerIn != int256(prefund + topUp) - int256(payout)
+        ) ++reportBreaks;
+    }
+
+    function _checkHelperConservation(
+        Held memory b,
+        Held memory a,
+        int256 callerIn,
+        int256 toLender
+    ) internal {
+        int256 parked = int256(a.parked) - int256(b.parked);
+        int256 recovered = int256(b.sources) - int256(a.sources) - parked;
+        int256 toHub = int256(a.hub) - int256(b.hub);
+        int256 toFee = int256(a.fee + a.feeEscrowed) - int256(b.fee + b.feeEscrowed);
+        int256 toBorrower = int256(a.wallet + a.walletEscrowed) - int256(b.wallet + b.walletEscrowed);
+        int256 toHelper = int256(a.helperEscrowed) - int256(b.helperEscrowed);
+        int256 escrowed = int256(a.feeEscrowed + a.walletEscrowed + a.helperEscrowed)
+            - int256(b.feeEscrowed + b.walletEscrowed + b.helperEscrowed);
+        if (
+            callerIn + recovered != toHub + toFee + toBorrower + toLender + toHelper || a.lvs != b.lvs
+                || a.helper != b.helper || parked < 0 || toLender < 0 || toHelper < 0
+                || int256(a.escrow) - int256(b.escrow) != escrowed
+        ) ++conservationBreaks;
+    }
+
+    /// @dev The premium, top-up and payout of the helper's `FlashLiquidated` event in `logs`.
+    function _flashLiquidated(
+        Vm.Log[] memory logs
+    ) internal view returns (bool found, uint256 premium, uint256 topUp, uint256 payout) {
+        for (uint256 i = 0; i < logs.length; ++i) {
+            if (
+                logs[i].emitter == env.helper && logs[i].topics.length != 0
+                    && logs[i].topics[0] == IFlashLiquidatorEvents.FlashLiquidated.selector
+            ) {
+                (, premium,, topUp, payout) = abi.decode(logs[i].data, (uint256, uint256, uint256, uint256, uint256));
+                return (true, premium, topUp, payout);
+            }
+        }
     }
 
     function settlePending(
