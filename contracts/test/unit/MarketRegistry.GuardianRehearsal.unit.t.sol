@@ -14,7 +14,7 @@ import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol
 /// lifted, the Hub is frozen again and a signer set holding only the freeze role cannot unfreeze while a pause guardian
 /// can, and a canceller cancels a queued timelock operation. Normal operation is restored at the end.
 /// @dev The guardians are the fixture's addresses standing in for their Safes; the fork run of the deployed Safes'
-/// payloads, and the Aave Spoke configurator's `freezeReserve` and `pauseReserve`, are the launch rehearsal itself.
+/// payloads, and the Aave Spoke configurator's `freezeReserve` and `pauseReserve`, are the rehearsal itself.
 contract MarketRegistryGuardianRehearsalUnitTest is MarketRegistryFixture {
     address internal freezeOnly = makeAddr("freezeOnlySignerSet");
 

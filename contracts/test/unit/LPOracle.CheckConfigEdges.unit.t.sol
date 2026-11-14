@@ -10,7 +10,7 @@ import {OracleRoute} from "../../src/types/OracleRoute.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 
-/// @notice `checkConfig` on inputs the launch configuration never exercises (2.10 `REQ-ORACLE-046` to
+/// @notice `checkConfig` on inputs the default configuration never exercises (2.10 `REQ-ORACLE-046` to
 /// `REQ-ORACLE-056`): a two-leg route's value range, a proxy whose aggregator cannot be read, an unreadable agreement
 /// margin, a second source with no source, a pricing module that cannot value the listing or the shocked quotes, an
 /// unreadable registry and a registered market with another token count.

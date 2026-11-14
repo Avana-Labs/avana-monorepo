@@ -136,6 +136,6 @@ contract LPOracleSeedChecksUnitTest is LPOracleFixture {
         assertEq(ret, _mismatch(MARKET), "unreadable token decimals");
         tokenB.setMode(OracleTokenMock.decimals.selector, ReadMode.Normal);
         (bool ok,) = _deploy(_params());
-        assertTrue(ok, "the launch parameters deploy");
+        assertTrue(ok, "the default parameters deploy");
     }
 }

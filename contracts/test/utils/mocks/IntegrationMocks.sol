@@ -330,7 +330,7 @@ contract IntegRegistryMock {
 }
 
 /// @notice One ParameterStore stand-in for the integration world: the RiskModule's views (`RiskStoreMock`) plus the
-/// settlement values LPVaultSwap reads and the sizing values the Lens reads, at the launch values of 2.11.
+/// settlement values LPVaultSwap reads and the sizing values the Lens reads, at the default values of 2.11.
 contract IntegStoreMock is RiskStoreMock {
     mapping(address => uint256) public floorRoundingAllowance;
     mapping(address => uint32) internal _liquidationAge;

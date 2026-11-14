@@ -40,7 +40,7 @@ interface IParameterStoreSpeed {
     );
 
     /// @notice A market's speed limits.
-    /// @dev Example at launch: `{21,600, 2,500, 2,500, 250,000e8, 2,500,000e8, 1,000,000e8, 10,000,000e8}`.
+    /// @dev Example: `{21,600, 2,500, 2,500, 250,000e8, 2,500,000e8, 1,000,000e8, 10,000,000e8}`.
     /// @param marketId The market.
     /// @return limits All zero when never written.
     /// @custom:spec REQ-PSTORE-035
@@ -49,7 +49,7 @@ interface IParameterStoreSpeed {
     ) external view returns (MarketSpeedLimits memory limits);
 
     /// @notice A (funding Hub, debt asset)'s borrow-speed limit, in base units of the asset.
-    /// @dev Example at launch for GHO: `{2,500, 21,600, 500,000e18, 5,000,000e18}`.
+    /// @dev Example for GHO: `{2,500, 21,600, 500,000e18, 5,000,000e18}`.
     /// @param hub The funding Hub.
     /// @param asset The debt asset.
     /// @return limit All zero when never written.

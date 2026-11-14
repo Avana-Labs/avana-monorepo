@@ -168,7 +168,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
     // Sources: 5.1 TEST-270 (LPVault part)
     /// @notice An EOA, a PositionProxy address, another LPVault, a hostile contract and the two Lock members themselves
     /// can move nothing through the LPVault, with the Lock free or held; `returnStray` runs only for the timelock, only
-    /// for a position with no custody entry and never under the Lock. A market bound after launch takes a pledge,
+    /// for a position with no custody entry and never under the Lock. A market bound later takes a pledge,
     /// a seizure removal and a return with the same Lock and the same two members.
     function test_TEST_270_noOtherCallerMovesValueAndALaterMarketUsesTheSameLock() public {
         (bytes32 key, uint128 units) = _cPledge(MKT_A, bob, 1e12);
@@ -209,7 +209,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         assertFalse(ok, "Lock held by LPVaultSwap");
     }
 
-    /// @dev A market bound after launch takes a pledge, a seizure removal and a return with the same Lock and members.
+    /// @dev A market bound later takes a pledge, a seizure removal and a return with the same Lock and members.
     function _laterMarketUsesTheSameLock() internal {
         Core memory c = _cCore();
         (address member0, address member1) = (c.lock.AAVE_ADAPTER(), c.lock.LP_VAULT_SWAP());

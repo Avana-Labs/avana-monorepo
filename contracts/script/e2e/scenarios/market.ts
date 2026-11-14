@@ -3,7 +3,7 @@
 // Market scenarios of the local rehearsal, on the markets listed by script/deploy/09_ListMarkets.s.sol
 // (deployments-local/<network>/listing-markets.json): an LP's whole life on a Uniswap v3 and on a Slipstream market,
 // LPOracle price paths, keeper liquidations through LPVaultSwap, a self-liquidation attempt, a deficit covered by the
-// First-Loss Reserve, and the cross-Hub credit line switch (off at launch). Each scenario uses its own wallet, starts from
+// First-Loss Reserve, and the cross-Hub credit line switch (off by default). Each scenario uses its own wallet, starts from
 // the world's configured feed prices and leaves them restored. Prices move only by signed OCR2 rounds
 // (refresh-feeds.ts); pools move only by swaps through the world's routers.
 
@@ -1266,7 +1266,7 @@ async function deficitCoverage(e: Env) {
   return { ok, detail: ok ? `deficit of ${fmt(covered, d)} ${e.sym(m.debtAsset)} covered by ${key}, ${burned} Hub shares burned` : "deficit not fully covered, or the First-Loss Reserve's shares did not fall by the shares burned" };
 }
 
-// ─── 7. Cross-Hub credit line (off at launch) ───
+// ─── 7. Cross-Hub credit line (off by default) ───
 
 async function crossHubLine(e: Env) {
   const m = e.market("uni-USDC-USDT-100");
@@ -1322,6 +1322,6 @@ export function marketScenarios(ctx: ScenarioContext): Scenario[] {
     s("keeper liquidates through LPVaultSwap on a Uniswap pool and on a Slipstream pool", keeperLiquidations),
     s("self-liquidation attempt by the borrower", selfLiquidation),
     s("deficit after a 90 % crash and First-Loss Reserve coverage", deficitCoverage),
-    s("cross-Hub credit line borrow (off at launch: must revert)", crossHubLine),
+    s("cross-Hub credit line borrow (off by default: must revert)", crossHubLine),
   ];
 }

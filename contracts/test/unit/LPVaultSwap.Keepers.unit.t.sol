@@ -14,7 +14,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @title LPVaultSwapKeepersUnitTest
 /// @notice The committed-operator registry (2.11 REQ-SWAP-032 to REQ-SWAP-038, REQ-SWAP-065, REQ-SWAP-069,
 /// REQ-SWAP-107, REQ-SWAP-117; 2.15 REQ-ACCESS-011, REQ-ACCESS-053, REQ-ACCESS-054, REQ-ACCESS-100, REQ-ACCESS-121,
-/// SPEC-GOV-008): `initialize` registers the launch operators; `addKeeper` and `removeKeeper` need `APPLICATION_ADMIN`
+/// SPEC-GOV-008): `initialize` registers the initial operators; `addKeeper` and `removeKeeper` need `APPLICATION_ADMIN`
 /// (the timelock), refuse zero, duplicate, unregistered and frozen addresses, cap the list at `MAX_KEEPERS = 32` and
 /// keep at least `KEEPER_FLOOR = 1` active (unfrozen) operator; `activeKeeperCount` excludes frozen operators; the
 /// registry gates no liquidation.
@@ -40,9 +40,9 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         return address(uint160(0x10000 + i));
     }
 
-    /// @notice The launch registry holds Avana's keeper; the constants are 1 and 32.
+    /// @notice The initial registry holds Avana's keeper; the constants are 1 and 32.
     // TEST-098 verifies: REQ-SWAP-032, REQ-SWAP-034, REQ-ACCESS-011, INV-048
-    function test_TEST_098_launchRegistry() public view {
+    function test_TEST_098_initialRegistry() public view {
         assertEq(lvs.KEEPER_FLOOR(), 1, "keeperFloor");
         assertEq(lvs.MAX_KEEPERS(), 32, "MAX_KEEPERS");
         assertEq(lvs.approvedKeeperCount(), 1, "one operator");
@@ -191,7 +191,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         assertTrue(lvs.isApprovedKeeper(_keeperN(1)), "re-added through addKeeper");
     }
 
-    /// @notice `initialize` refuses fewer than `KEEPER_FLOOR` and more than `MAX_KEEPERS` launch operators, zero and
+    /// @notice `initialize` refuses fewer than `KEEPER_FLOOR` and more than `MAX_KEEPERS` initial operators, zero and
     /// duplicate operators, and a zero timelock; it runs once.
     // TEST-098 verifies: REQ-SWAP-032, REQ-SWAP-034, REQ-SWAP-040
     // TEST-242 verifies: REQ-SWAP-040

@@ -7,7 +7,7 @@ pragma solidity 0.8.28;
 /// @notice Parameters that differ by chain: the block time, the L2 sequencer-uptime check and each feed's heartbeat
 /// margin. Avana has no minimum debt on any chain (`Q-381`): a borrower may borrow any amount, and Avana's own keepers
 /// liquidate every account and pay its gas, so no liquidation depends on a keeper's profit.
-/// @dev Every setter requires `APPLICATION_ADMIN` (the chain's timelock, normal delay unless noted). Launch values:
+/// @dev Every setter requires `APPLICATION_ADMIN` (the chain's timelock, normal delay unless noted). Example values:
 ///
 /// | Parameter | Ethereum | Base |
 /// |---|---|---|
@@ -75,7 +75,8 @@ interface IParameterStoreChain {
     /// @notice Heartbeat margin of a feed, written by `setFeed` with the rest of its `FeedDef`.
     /// @dev A feed is fresh while its age is at most its own heartbeat plus this margin: Chainlink stablecoin feeds have
     /// heartbeats of 82,800 to 86,400 s, so one fixed age bound for every feed would either reject them most of the day
-    /// or accept stale volatile feeds (AMMN-INT-01). Launch 1,800 s per feed; at most `MAX_HEARTBEAT_MARGIN` (3,600 s).
+    /// or accept stale volatile feeds (AMMN-INT-01). For example 1,800 s per feed; at most `MAX_HEARTBEAT_MARGIN`
+    /// (3,600 s).
     /// @param feed Chainlink aggregator proxy.
     /// @return margin Seconds.
     /// @custom:spec REQ-CONFIG-023, SPEC-ORC-019, Q-322

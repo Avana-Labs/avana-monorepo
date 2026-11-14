@@ -21,7 +21,7 @@ import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterS
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleAdmin} from "../../src/policy/risk-module/IRiskModuleAdmin.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
-import {TimelockLaunchLists} from "../utils/fixtures/TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -77,18 +77,18 @@ contract AvanaTimelockUnitTest is TimelockFixture {
 
     // TEST-194 verifies: REQ-ACCESS-140, REQ-ACCESS-017, REQ-ACCESS-030, SPEC-GOV-003, Q-228, Q-262, REQ-ACCESS-114, REQ-ACCESS-067
     // Sources: 5.1 TEST-194, 2.15
-    function test_TEST_194_constantsAndLaunchValues() public view {
+    function test_TEST_194_constantsAndInitialValues() public view {
         assertEq(timelock.SHORT_DELAY(), 43_200);
         assertEq(timelock.MIN_NORMAL_DELAY(), 345_600);
         assertEq(timelock.MAX_DELAY(), 432_000);
         assertEq(timelock.GRACE_PERIOD(), 1_209_600);
         assertEq(timelock.getMinDelay(), 43_200, "getMinDelay");
         assertEq(timelock.normalDelay(), 432_000, "normalDelay");
-        assertTrue(timelock.publicExecution(), "public execution at launch");
+        assertTrue(timelock.publicExecution(), "public execution on");
     }
 
     // TEST-242 verifies: REQ-ACCESS-001, REQ-ACCESS-004, REQ-ACCESS-005, REQ-ACCESS-006, REQ-ACCESS-007, REQ-ACCESS-013, REQ-ACCESS-027, REQ-ACCESS-153, REQ-ACCESS-160, INV-084
-    function test_TEST_242_launchRolesAndSelfAdmin() public view {
+    function test_TEST_242_initialRolesAndSelfAdmin() public view {
         bytes32 admin = timelock.DEFAULT_ADMIN_ROLE();
         assertTrue(timelock.hasRole(admin, address(timelock)), "self admin");
         assertFalse(timelock.hasRole(admin, address(this)), "deployer admin");
@@ -115,13 +115,14 @@ contract AvanaTimelockUnitTest is TimelockFixture {
     }
 
     // TEST-244 verifies: REQ-ACCESS-141, REQ-ACCESS-142, REQ-ACCESS-155, INV-090, Q-262
-    function test_TEST_244_shortEligibleIsTheLaunchList() public view {
-        SelectorPair[] memory launch =
-            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
-        assertEq(launch.length, 34);
-        for (uint256 i; i < launch.length; ++i) {
-            assertTrue(timelock.isShortEligible(launch[i].target, launch[i].selector), "eligible");
-            assertTrue(timelock.isShortDelaySelector(launch[i].target, launch[i].selector), "listed at launch");
+    function test_TEST_244_shortEligibleIsTheShortDelayList() public view {
+        SelectorPair[] memory shortList = TimelockShortDelayLists.shortEligible(
+            address(parameterStore), address(marketRegistry), address(lpVaultSwap)
+        );
+        assertEq(shortList.length, 34);
+        for (uint256 i; i < shortList.length; ++i) {
+            assertTrue(timelock.isShortEligible(shortList[i].target, shortList[i].selector), "eligible");
+            assertTrue(timelock.isShortDelaySelector(shortList[i].target, shortList[i].selector), "listed");
         }
         assertTrue(
             timelock.isShortEligible(
@@ -137,7 +138,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
     }
 
     // TEST-244 verifies: REQ-ACCESS-156, SPEC-GOV-005, Q-263
-    function test_TEST_244_daoOnlyCancelSetIsTheLaunchSet() public view {
+    function test_TEST_244_daoOnlyCancelSetIsTheConstructorSet() public view {
         assertTrue(
             timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistryRoutes.restoreRoute.selector)
         );

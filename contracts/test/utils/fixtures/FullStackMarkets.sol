@@ -230,7 +230,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, p);
         store.setInitialMarketCaps(id, 1_000_000e8, 100_000e8, 1e8);
-        // Launch speed limits (IParameterStoreSpeed example): 6-hour window, 25 % per window.
+        // Default speed limits (IParameterStoreSpeed example): 6-hour window, 25 % per window.
         store.loosenMarketSpeedLimits(
             id, MarketSpeedLimits(21_600, 2500, 2500, 250_000e8, 2_500_000e8, 1_000_000e8, 10_000_000e8)
         );

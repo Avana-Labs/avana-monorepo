@@ -122,7 +122,7 @@ Avana's keeper liquidates every Avana account whose health factor falls below 1,
 - It calls LPVaultSwap, receives `keeperOut`, repays the flash principal and premium from it (pulling at most the top-up bound from its payer when `keeperOut` falls short), reverts unless the net payout meets the request's `minPayout`, and only after `flashLoan` returns sends the rest to its recipient.
 - It has no swap step. The unwind and the swap routes stay in LPVaultSwap, so the keeper never builds swap calldata.
 
-One public helper instance serves any address. Each keeper instance has its own operator helper, bound at deployment to that instance's signer and funding Safe, which refuses every caller except its signer and bounds each top-up. LPVaultSwap sees the helper as its caller, so the per-instance helper addresses are what the registry lists as Avana's committed operator; registration changes no call. The Pool premium is 5 bps at launch, and 0 if Aave grants the helper `FLASH_BORROWER`. LPVaultSwap's own flash source serves only a borrower's `deleverage`.
+One public helper instance serves any address. Each keeper instance has its own operator helper, bound at deployment to that instance's signer and funding Safe, which refuses every caller except its signer and bounds each top-up. LPVaultSwap sees the helper as its caller, so the per-instance helper addresses are what the registry lists as Avana's committed operator; registration changes no call. The Pool premium is 5 bps, and 0 if Aave grants the helper `FLASH_BORROWER`. LPVaultSwap's own flash source serves only a borrower's `deleverage`.
 
 ### Duties
 
@@ -245,7 +245,7 @@ The keeper and the indexer use the contracts' variable names, `RPC_<CHAIN>`, wit
 
 Each instance exposes metrics on a port separate from the kill switch: blocks behind head, scan time per block, accounts below HF 1 with their age, in-flight transactions, simulation failures by revert reason, inclusion delay in blocks, replacements and cancellations, gas wallet balance, free and reserved inventory per debt asset, Pool idle liquidity per debt asset, the code-check result and the mode (active, observe-only, halted). Logs are structured and shipped off the host; the failure log of duty 6 is published from them. The monitoring service turns these into the alerts `M-09` (accounts below HF 1 not liquidated), `M-10` (liquidation reverts and route failures), `M-16` (keeper debt-asset float), `M-17` (keeper gas and Pool liquidity) and `M-26` (code-check mismatch). An instance that stops reporting for 3 blocks pages its on-call engineer.
 
-### Tests before launch
+### Tests before deployment
 
 - `TEST-140` observe-only mode with fork replay; `TEST-141` sizing and submission from `previewLiquidation`; `TEST-142` the liquidate-every-account duty on a fork depeg, dust accounts included; `TEST-143` reorg replay; `TEST-149` the ABI-hash check ([5.1](../spec/05-verification/01-test-requirements.md)).
 - Fork tests of the helper against the deployed Aave V3 Pool: flash-funded, inventory-funded and split calls; a payout below the flash repayment beyond the top-up bound reverts; a net payout below the request's `minPayout` reverts; a call from anyone but the bound signer reverts; the callback refuses a foreign caller, initiator, asset, amount, calldata, a premium above the bound and a second callback in the same transaction.

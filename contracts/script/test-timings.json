@@ -363,7 +363,7 @@
   "test/unit/MarketRegistry.Hubs.unit.t.sol": 0.0,
   "test/unit/MarketRegistry.HubsMatrix.unit.t.sol": 14.8,
   "test/unit/MarketRegistry.IntegrationRecord.unit.t.sol": 0.0,
-  "test/unit/MarketRegistry.LaunchListing.unit.t.sol": 0.0,
+  "test/unit/MarketRegistry.ListingShapes.unit.t.sol": 0.0,
   "test/unit/MarketRegistry.Lifecycle.unit.t.sol": 13.7,
   "test/unit/MarketRegistry.Listing.unit.t.sol": 0.0,
   "test/unit/MarketRegistry.ListingBounds.unit.t.sol": 0.0,

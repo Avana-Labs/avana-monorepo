@@ -27,7 +27,7 @@ sequenceDiagram
 
 ## Walkthrough
 
-Setup (Ethereum; proposers: the 4-of-7 governance multisig and the Aave governance executor; `normalDelay` 432,000 s at launch).
+Setup (Ethereum; proposers: the 4-of-7 governance multisig and the Aave governance executor; `normalDelay` 432,000 s).
 
 1. **Multisig → `schedule`(ParameterStore, `tightenMarketUsdCap(1, 4,000,000e8)`, delay 43,200).** [`requiredDelay`](IAvanaTimelockViews.sol#L79) is [`SHORT_DELAY`](IAvanaTimelockViews.sol#L13) because the selector is on the short-delay list ([`isShortDelaySelector`](IAvanaTimelockViews.sol#L35)). Error: [`DelayBelowRequired`](IAvanaTimelockErrors.sol#L15) for a shorter delay.
 2. **Multisig → `schedule`(LPVaultSwap, `addKeeper(K2)`, delay 432,000).** Not on the short list, so it waits [`normalDelay`](IAvanaTimelockViews.sol#L29) = 5 days, long enough for every borrower to exit first.

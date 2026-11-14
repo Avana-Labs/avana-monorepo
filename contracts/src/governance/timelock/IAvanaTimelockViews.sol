@@ -24,7 +24,7 @@ interface IAvanaTimelockViews {
     /// @custom:spec REQ-ACCESS-140, SPEC-GOV-002, SPEC-GOV-013
     function GRACE_PERIOD() external view returns (uint256);
 
-    /// @notice Current normal delay, seconds (432,000 at launch).
+    /// @notice Current normal delay, seconds (initial value 432,000).
     /// @custom:spec REQ-ACCESS-140, SPEC-GOV-003
     function normalDelay() external view returns (uint256);
 
@@ -39,7 +39,7 @@ interface IAvanaTimelockViews {
 
     /// @notice Whether `(target, selector)` is in the immutable `SHORT_ELIGIBLE` set, the only pairs the short-delay
     /// list may ever hold.
-    /// @dev The constructor fixes the set equal to the launch short-delay list, each pair with its target's deployed
+    /// @dev The constructor fixes the set equal to the short-delay list, each pair with its target's deployed
     /// address on the chain. ParameterStore: every tighten-only setter, namely `tightenHardHealthFloor`,
     /// `tightenSlippageAllowanceBps`, `tightenFloorRoundingAllowance`, `tightenBorrowPriceMaxAge`,
     /// `tightenConsistencyToleranceBps`, `tightenFeedAgreementToleranceBps`, `tightenPoolRiskFactor`,

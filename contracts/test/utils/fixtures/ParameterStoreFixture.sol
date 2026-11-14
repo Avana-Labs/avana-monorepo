@@ -33,12 +33,12 @@ import {
     MockVaultToken
 } from "../mocks/ParameterStoreMocks.sol";
 import {TimelockFixture} from "./TimelockFixture.sol";
-import {TimelockLaunchLists} from "./TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "./TimelockShortDelayLists.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title ParameterStoreFixture
-/// @notice The real AvanaTimelock (launch short-delay list naming the ParameterStore proxy), the ParameterStore
-/// proxy over its implementation and five logic contracts, initialized with the launch values of 1.5, and a mocked
+/// @notice The real AvanaTimelock (short-delay list naming the ParameterStore proxy), the ParameterStore
+/// proxy over its implementation and five logic contracts, initialized with the default values of 1.5, and a mocked
 /// MarketRegistry with one Hub, one CDP Spoke, one GHO debt reserve and market 1 (USDC/USDT, concentrated
 /// liquidity, `Registered`). `_listMarket` runs the market's listing writes as the timelock.
 abstract contract ParameterStoreFixture is TimelockFixture {
@@ -76,8 +76,8 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         timelock = _newTimelock(
             NORMAL_DELAY,
             true,
-            TimelockLaunchLists.shortEligible(predicted, makeAddr("registryTarget"), makeAddr("swapTarget")),
-            TimelockLaunchLists.daoOnlyCancel(makeAddr("registryTarget"), makeAddr("swapTarget"))
+            TimelockShortDelayLists.shortEligible(predicted, makeAddr("registryTarget"), makeAddr("swapTarget")),
+            TimelockShortDelayLists.daoOnlyCancel(makeAddr("registryTarget"), makeAddr("swapTarget"))
         );
         address tl = address(timelock);
         logics = ParameterStoreLogics({
@@ -89,7 +89,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         });
         implementation = new ParameterStore(tl, address(registry), BLOCK_TIME, hasSequencer, logics);
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _launchGlobals(), 0, 10_000))
+            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 0, 10_000))
         );
         require(address(proxy) == predicted, "prediction");
         store = IParameterStore(address(proxy));
@@ -97,7 +97,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         _deployWorld();
     }
 
-    function _launchGlobals() internal view returns (GlobalParams memory g) {
+    function _defaultGlobals() internal view returns (GlobalParams memory g) {
         g.cachedWindow = 3600;
         g.disagreementPauseMax = 3600;
         g.usdBandLow = 0.9e8;
@@ -186,7 +186,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         d.maxAnswerCap = type(int256).max;
     }
 
-    function _launchMarketParams() internal pure returns (MarketParams memory p) {
+    function _defaultMarketParams() internal pure returns (MarketParams memory p) {
         p.twapWindow = 1800;
         p.consistencyToleranceBps = 50;
         p.slippageAllowanceBps = 100;
@@ -207,7 +207,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         store.setFeed(address(fUsdtAlt), _feedDef(86_400, 1800));
         store.setTokenCollateralFactorBps(usdc, 7800);
         store.setTokenCollateralFactorBps(usdt, 7500);
-        store.setInitialMarketParams(M, _launchMarketParams());
+        store.setInitialMarketParams(M, _defaultMarketParams());
         store.setInitialMarketCaps(M, 5_000_000e8, 500_000e8, 1e8);
         store.setInitialHubCaps(address(hub), 1_000_000e8);
         store.setInitialTokenCap(address(hub), usdc, 20_000_000e8);

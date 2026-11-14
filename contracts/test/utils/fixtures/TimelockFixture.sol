@@ -10,13 +10,13 @@ import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTa
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
 import {AvanaTest} from "../AvanaTest.sol";
 import {CallRecorder} from "../mocks/CallRecorder.sol";
-import {TimelockLaunchLists} from "./TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "./TimelockShortDelayLists.sol";
 
 /// @title TimelockFixture
-/// @notice Deploys the AvanaTimelock with the launch configuration of `REQ-ACCESS-027`: `admin = address(0)`,
+/// @notice Deploys the AvanaTimelock with the configuration of `REQ-ACCESS-027`: `admin = address(0)`,
 /// proposers the governance multisig and the Aave governance executor, executor the governance multisig, cancellers
 /// the four of the role table, the Aave governance executor as DAO canceller, `normalDelay = 432,000`, public
-/// execution on, and the launch short-delay list and DAO-only cancel set for the ParameterStore, MarketRegistry and
+/// execution on, and the short-delay list and DAO-only cancel set for the ParameterStore, MarketRegistry and
 /// LPVaultSwap. The three targets are `CallRecorder`s that accept and record every call.
 abstract contract TimelockFixture is AvanaTest {
     AvanaTimelock internal timelock;
@@ -42,8 +42,10 @@ abstract contract TimelockFixture is AvanaTest {
         timelock = _newTimelock(
             NORMAL_DELAY,
             true,
-            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap)),
-            TimelockLaunchLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap))
+            TimelockShortDelayLists.shortEligible(
+                address(parameterStore), address(marketRegistry), address(lpVaultSwap)
+            ),
+            TimelockShortDelayLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap))
         );
         vm.label(address(timelock), "AvanaTimelock");
     }
@@ -100,7 +102,7 @@ abstract contract TimelockFixture is AvanaTest {
     }
 
     /// @dev The governed targets the given lists name (the first pair of each owner), the fixture's otherwise, so a
-    /// suite that lists the launch pairs on its own contracts deploys a timelock bound to them.
+    /// suite that lists the short-delay pairs on its own contracts deploys a timelock bound to them.
     function _targetsOf(
         SelectorPair[] memory shortEligible,
         SelectorPair[] memory daoOnly

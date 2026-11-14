@@ -12,7 +12,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// local Aave V4 with the real Collateralization, and the event inventory of every Adapter action (TEST-061).
 /// @dev The bounds are generous ceilings over the values measured on this fixture (noted next to each), so a change
 /// that makes a flow grow with the record count, or loop over unbounded data, fails here. The oracles are stand-ins, so
-/// the fork calibration of TEST-269 (cold LPOracle reads, real unwinds) stays a separate launch measurement.
+/// the fork calibration of TEST-269 (cold LPOracle reads, real unwinds) stays a separate measurement.
 /// forge-config: default.isolate = false
 contract AaveAdapterRecordsGasTest is AaveAdapterFixture {
     uint128 internal constant SMALL = 1_000_000_000; // 1,000 vault tokens, $2,000 each record

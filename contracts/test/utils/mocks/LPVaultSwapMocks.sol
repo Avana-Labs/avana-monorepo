@@ -132,7 +132,7 @@ contract LVSMarketRegistryMock {
 }
 
 /// @title LVSParameterStoreMock
-/// @notice ParameterStore stand-in with the getters LPVaultSwap and the flash source read, at the launch values of 1.5
+/// @notice ParameterStore stand-in with the getters LPVaultSwap and the flash source read, at the default values of 1.5
 /// unless a test changes them.
 contract LVSParameterStoreMock {
     mapping(uint256 marketId => MarketParams) internal _params;

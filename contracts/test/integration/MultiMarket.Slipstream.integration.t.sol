@@ -31,7 +31,7 @@ contract MultiMarketSlipstreamIntegrationTest is IntegrationFlows {
 
     function setUp() public {
         _deployIntegration();
-        _addLaunchMarkets();
+        _addMultiAmmMarkets();
         uint32 slip = SLIPSTREAM;
         cases.push(Case(SLIP_ETH_USDC, makeAddr("slipEthGho"), 10e18, cdp[slip].ghoReserveId, 38_000e18));
         cases.push(Case(SLIP_USDC_USDT, makeAddr("slipStable"), 10_000e6, cdp[slip].usdcReserveId, 18_000e6));

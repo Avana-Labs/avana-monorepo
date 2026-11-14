@@ -36,7 +36,7 @@ import {AaveV4Fixture} from "./AaveV4Fixture.sol";
 import {ClPoolFixture, ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {LPOracleCLDeployer} from "./LPOracleCLFixture.sol";
 import {ParameterStoreFixture} from "./ParameterStoreFixture.sol";
-import {TimelockLaunchLists} from "./TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "./TimelockShortDelayLists.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -218,8 +218,8 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture, Cl
         timelock = _newTimelock(
             NORMAL_DELAY,
             true,
-            TimelockLaunchLists.shortEligible(predicted, makeAddr("registryTarget"), makeAddr("swapTarget")),
-            TimelockLaunchLists.daoOnlyCancel(makeAddr("registryTarget"), makeAddr("swapTarget"))
+            TimelockShortDelayLists.shortEligible(predicted, makeAddr("registryTarget"), makeAddr("swapTarget")),
+            TimelockShortDelayLists.daoOnlyCancel(makeAddr("registryTarget"), makeAddr("swapTarget"))
         );
         address t = address(timelock);
         address r = address(registry);
@@ -232,7 +232,7 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture, Cl
         });
         implementation = new ParameterStore(t, r, BLOCK_TIME, hasSequencer, logics);
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (t, _launchGlobals(), 0, 10_000))
+            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (t, _defaultGlobals(), 0, 10_000))
         );
         require(address(proxy) == predicted, "prediction");
         store = IParameterStore(address(proxy));
@@ -281,7 +281,7 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture, Cl
         }
         store.setTokenCollateralFactorBps(usdc, 7800);
         store.setTokenCollateralFactorBps(usdt, 7500);
-        store.setInitialMarketParams(M, _launchMarketParams());
+        store.setInitialMarketParams(M, _defaultMarketParams());
         SecondSource memory empty;
         store.setSecondSource(usdc, _secondSource(address(legs[10])), empty);
         store.setSecondSource(usdt, _secondSource(address(legs[11])), empty);

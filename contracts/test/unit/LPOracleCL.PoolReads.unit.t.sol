@@ -201,7 +201,7 @@ contract LPOracleCLPoolReadsTest is LPOracleCLFixture {
             _deployClMarket(_ethUsdc());
         }
         assertLt(token0.decimals(), token1.decimals(), "lower-decimals token is token0");
-        assertEq(oracle.checkConfig(_config()) & (1 << (SHIFT + 4)), 0, "launch prices: clear");
+        assertEq(oracle.checkConfig(_config()) & (1 << (SHIFT + 4)), 0, "default prices: clear");
         _setPrices(price0, 100);
         uint256 raw = price0 * 10 ** token1.decimals() / (price1 * 10 ** token0.decimals());
         assertGe(raw * 100 * 100, 1 << 64, "shocked ratio passes 2^64");

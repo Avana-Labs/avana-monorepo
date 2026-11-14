@@ -311,7 +311,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         registry.setMarket(2, m);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.setInitialMarketParams(2, _launchMarketParams());
+        store.setInitialMarketParams(2, _defaultMarketParams());
     }
 
     // TEST-250 verifies: REQ-PSTORE-009, REQ-PSTORE-013, REQ-CONFIG-054

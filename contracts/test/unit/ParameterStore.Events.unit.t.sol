@@ -165,7 +165,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
 
     // TEST-061 verifies: REQ-PSTORE-004, REQ-PSTORE-005
     function test_TEST_061_initialMarketParamsEmitEveryField() public {
-        MarketParams memory p = _launchMarketParams();
+        MarketParams memory p = _defaultMarketParams();
         p.twapWindow = 3600;
         p.consistencyToleranceBps = 40;
         p.slippageAllowanceBps = 90;

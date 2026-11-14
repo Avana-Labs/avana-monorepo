@@ -102,7 +102,7 @@ contract LPPriceMathUnitTest is AvanaTest {
 
     // TEST-250 verifies: SPEC-ORC-019, REQ-ORACLE-054, Q-322
     // Sources: SYM-166, SYM-135, MATH-UO-50c
-    function test_TEST_250_feedMaxAgeLaunchFeeds() public view {
+    function test_TEST_250_feedMaxAgeListedFeeds() public view {
         assertEq(m.feedMaxAge(82_800, 1800), 84_600, "Ethereum USDC/USD");
         assertEq(m.feedMaxAge(86_400, 1800), 88_200, "USDT/USD, GHO/USD, Base stables");
         assertEq(m.feedMaxAge(3600, 1800), 5400, "ETH/USD");

@@ -10,7 +10,7 @@ import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParamete
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @title ParameterStoreTimelockRowsUnitTest
-/// @notice The real ParameterStore driven through the real AvanaTimelock (launch short-delay list naming the store):
+/// @notice The real ParameterStore driven through the real AvanaTimelock (short-delay list naming the store):
 /// the `minPledgeUsd` setters' delays and rules (TEST-196) and the store selectors of the timelock's short list
 /// resolving on the deployed store (TEST-244).
 contract ParameterStoreTimelockRowsUnitTest is ParameterStoreFixture {

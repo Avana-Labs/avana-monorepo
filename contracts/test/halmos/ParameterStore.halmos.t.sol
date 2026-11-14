@@ -32,7 +32,7 @@ import {Test} from "forge-std/Test.sol";
 /// `minPledgeUsd` only rises through `tightenMinPledgeUsd` and only falls through `loosenMinPledgeUsd`, within
 /// `[0, 100_000e8]`; the grace setters stay inside the global liveness bounds.
 /// @dev The store runs behind its proxy with its five logic contracts; the timelock is a fixed address (no loosening
-/// under test reads `normalDelay`). Market 1 is written in `setUp` with the launch values of 1.5 (twapWindow 0 on an
+/// under test reads `normalDelay`). Market 1 is written in `setUp` with the default values of 1.5 (twapWindow 0 on an
 /// integration without a time-weighted price, so no feed is needed). Each check is one symbolic value per setter.
 contract ParameterStoreHalmosTest is Test {
     address internal constant TIMELOCK = address(0x7173);

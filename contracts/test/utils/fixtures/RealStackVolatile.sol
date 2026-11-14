@@ -173,7 +173,7 @@ abstract contract RealStackVolatile is RealStackFlows {
 
     /// @dev `asset` on the Volatile Hub lent through the Lend Spoke (1,000,000 whole tokens), its borrowable reserve on
     /// the Volatile Spoke priced by `source`, a real First-Loss Reserve (100,000 whole tokens) and credit line on the
-    /// Hub, and the reserve enabled in the MarketRegistry with the asset's launch speed limit on the Hub.
+    /// Hub, and the reserve enabled in the MarketRegistry with the asset's default speed limit on the Hub.
     function _volatileDebt(
         ClTestToken asset,
         uint8 dec,

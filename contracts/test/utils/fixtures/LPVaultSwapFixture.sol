@@ -54,7 +54,7 @@ import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessMana
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title LPVaultSwapFixture
-/// @notice The real LPVaultSwap (implementation, three logic contracts, ERC-1967 proxy, launch committed operator
+/// @notice The real LPVaultSwap (implementation, three logic contracts, ERC-1967 proxy, initial committed operator
 /// `keeper`) on the real local Aave V4 (Stable LP Hub, Uniswap v3 Stable CDP Spoke, Lend Spoke), with the real Lock,
 /// VaultTokenFactory and vault token, Collateralization, PositionProxies, PayoutEscrow, two First-Loss Reserves (USDC and
 /// GHO), `DexPathRoute` swap routes over pinned mock pools, and the `AaveV3FlashSource` over a mocked Aave V3.4 Pool.
@@ -63,7 +63,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @dev Market 4: USDC/USDT (6 decimals each), vault token of 6 decimals priced by the LPOracle stand-in at $2.10
 /// (USDC $1.00, USDT $0.9995 as leg prices). Debt reserves on the CDP Spoke: USDC (DebtOracle, the market's settlement
 /// reserve) and GHO (fixed $1.00 source). Each unwound unit pays `USDC_RATE` and `USDT_RATE` raw units per 1e6 units.
-/// Routes into USDC: USDT primary and backup at 0.9995; into GHO: USDC and USDT at 1:1 (decimals scaled). Launch
+/// Routes into USDC: USDT primary and backup at 0.9995; into GHO: USDC and USDT at 1:1 (decimals scaled). Default
 /// parameters: `slippageAllowanceBps = 100`, `ε` 1 USDC and 1 GHO, `avanaFeeShareBps = 2,000`, `maxShortfallBps =
 /// 1,000`, `maxFlashFeeBps = 10`, Pool premium 5 bps.
 abstract contract LPVaultSwapFixture is AaveV4Fixture {

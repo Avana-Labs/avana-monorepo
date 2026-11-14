@@ -19,7 +19,7 @@ import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 /// parameter changes, gate precedence and the views.
 /// @dev World: the RiskModule fixture with USDC enabled as debt reserve 5 and the account in debt (HF 1.5). The CDP
 /// Spoke owes the Hub 1,000,000 GHO and 2,400,000 USDC, both at $1.00 unless a test sets another price, so the
-/// market's base is $3,400,000. Launch parameters: τ = 21,600 s, 2,500 bps, $250,000 .. $2,500,000 (borrow),
+/// market's base is $3,400,000. Example parameters: τ = 21,600 s, 2,500 bps, $250,000 .. $2,500,000 (borrow),
 /// $1,000,000 .. $10,000,000 (pledge); USDC (Hub, asset) 2,500 bps within 500,000 .. 5,000,000 USDC.
 contract RiskModuleSpeedUnitTest is RiskModuleFixture {
     uint256 internal constant TAU = 21_600;
@@ -35,12 +35,12 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         hub.setOwed(GHO_ASSET, address(spoke), 1_000_000e18, 0);
         hub.setOwed(USDC_ASSET, address(spoke), 2_400_000e6, 0);
         aaveOracle.setPrice(USDC_RESERVE, 1e8);
-        store.setMarketSpeed(mid, _launchMarket());
+        store.setMarketSpeed(mid, _defaultMarketSpeed());
         store.setDebtSpeed(address(hub), address(usdc), SpeedLimit(2500, uint32(TAU), 500_000e6, 5_000_000e6));
         store.setDebtSpeed(address(hub), address(gho), SpeedLimit(2500, uint32(TAU), 500_000e18, 5_000_000e18));
     }
 
-    function _launchMarket() internal pure returns (MarketSpeedLimits memory) {
+    function _defaultMarketSpeed() internal pure returns (MarketSpeedLimits memory) {
         return
             MarketSpeedLimits(
                 uint32(TAU), 2500, 2500, 250_000 * 1e8, 2_500_000 * 1e8, 1_000_000 * 1e8, 10_000_000 * 1e8
@@ -199,7 +199,7 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         store.setMarketSpeed(mid, MarketSpeedLimits(0, 0, 0, 0, 0, 0, 0));
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BorrowSpeedExceeded.selector, mid, 0, uint64(0)));
         _borrowAsAdapter(USDC_RESERVE, 1);
-        store.setMarketSpeed(mid, _launchMarket());
+        store.setMarketSpeed(mid, _defaultMarketSpeed());
         store.setDebtSpeed(address(hub), address(usdc), SpeedLimit(0, 0, 0, 0));
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -217,7 +217,7 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
     function test_TEST_321_tighteningRefusesUntilRolloverAndLooseningAdmitsAtOnce() public {
         uint256 t0 = block.timestamp;
         _borrowAsAdapter(USDC_RESERVE, 400_000e6);
-        MarketSpeedLimits memory tight = _launchMarket();
+        MarketSpeedLimits memory tight = _defaultMarketSpeed();
         (tight.borrowMinUsd, tight.borrowMaxUsd) = (0, 300_000 * 1e8);
         store.setMarketSpeed(mid, tight);
         assertEq(_marketView().available, 0, "used above the new L");
@@ -229,7 +229,7 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         vm.warp(t0 + 2 * TAU);
         _borrowAsAdapter(USDC_RESERVE, 1);
         // The large-borrow path: a loosening of L_max admits at once.
-        MarketSpeedLimits memory loose = _launchMarket();
+        MarketSpeedLimits memory loose = _defaultMarketSpeed();
         loose.borrowRateBps = 10_000;
         (loose.borrowMinUsd, loose.borrowMaxUsd) = (10_000_000 * 1e8, 10_000_000 * 1e8);
         store.setMarketSpeed(mid, loose);

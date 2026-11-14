@@ -259,7 +259,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         assertEq(_cManager(stray).ownerOf(_cTokenId(stray)), carol, "sent to the recipient governance named");
     }
 
-    /// @notice The AvanaTimelock with the launch roles, normal delay and public execution, and no short-delay or
+    /// @notice The AvanaTimelock with the initial roles, normal delay and public execution, and no short-delay or
     /// DAO-only selectors.
     function _cTimelock() internal returns (AvanaTimelock) {
         address[] memory proposers = new address[](2);

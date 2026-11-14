@@ -46,7 +46,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @title IntegrationFixture
 /// @notice The Avana stack deployed together on the real local Aave V4 (Stable LP Hub, Lend Spoke and one standard
 /// CDP Spoke per AMM integration: "uniswap-v3-stable" and "slipstream-stable"): the AaveAdapter (router and four logic
-/// contracts), LPVaultSwap (router and three logic contracts, launch keeper), the RiskModule (router and five logic
+/// contracts), LPVaultSwap (router and three logic contracts, initial keeper), the RiskModule (router and five logic
 /// contracts), each behind its ERC-1967 proxy, the Lens (entry point, nine modules and Aave's sizing), the public flash
 /// liquidation helper, Collateralization, Lock, VaultTokenFactory, the vault tokens, ProxyManager and PositionProxies,
 /// PayoutEscrow, a First-Loss Reserve per debt asset, the AaveV3FlashSource and `DexPathRoute` swap routes. Nothing
@@ -57,9 +57,9 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// per AMM integration (`IntegLPVaultMock`), the pools behind the routes and the Aave V3 Pool. The reviewed
 /// RiskModule runs every pledge charge and gate (Collateralization's `checkPledge`), borrow, withdrawal and health check.
 /// Base markets (Uniswap v3): 4 and 5, USDC/USDT, 6-decimal vault tokens at $2.10, CF 80 %, bonus 5 % at HF <= 0.95.
-/// `_addLaunchMarkets` adds WETH/USDC, WBTC/WETH and a thin MEME/WETH pool on Uniswap v3 and USDC/USDT and WETH/USDC on
-/// Slipstream (pool tokens of 6, 8 and 18 decimals). Debt reserves on each CDP Spoke: GHO (18 decimals, fixed $1.00)
-/// and USDC (the pools' own USDC, DebtOracle at $1.00), settlement reserve USDC. Launch values: slippage 100 bps,
+/// `_addMultiAmmMarkets` adds WETH/USDC, WBTC/WETH and a thin MEME/WETH pool on Uniswap v3 and USDC/USDT and WETH/USDC
+/// on Slipstream (pool tokens of 6, 8 and 18 decimals). Debt reserves on each CDP Spoke: GHO (18 decimals, fixed $1.00)
+/// and USDC (the pools' own USDC, DebtOracle at $1.00), settlement reserve USDC. Default values: slippage 100 bps,
 /// floor rounding 1 USDC and 1 GHO, fee share 2,000 bps, `maxShortfallBps` 1,000, flash premium 5 bps.
 /// Suites set `isolate = false` when a test reads state between calls of one flow.
 abstract contract IntegrationFixture is IntegrationMarkets {
@@ -220,10 +220,10 @@ abstract contract IntegrationFixture is IntegrationMarkets {
         (cf, 10_500, -600, 600, 5_000_000);
     }
 
-    /// @notice The multi-AMM launch set: on Uniswap v3 WETH/USDC (18/6), WBTC/WETH (8/18) and a thin MEME/WETH pool
+    /// @notice The multi-AMM market set: on Uniswap v3 WETH/USDC (18/6), WBTC/WETH (8/18) and a thin MEME/WETH pool
     /// (18/18, its own depth of 1,000,000 vault tokens), on Slipstream USDC/USDT and WETH/USDC. Per whole vault token:
     /// 1 WETH + 3,000 USDC ($6,000), 0.05 WBTC + 1 WETH ($6,000), 1,000 MEME + 0.1 WETH ($600).
-    function _addLaunchMarkets() internal {
+    function _addMultiAmmMarkets() internal {
         weth = _newToken("WETH", 18, 3000e8);
         wbtc = _newToken("WBTC", 8, 60_000e8);
         meme = _newToken("MEME", 18, 30_000_000);
@@ -315,7 +315,7 @@ abstract contract IntegrationFixture is IntegrationMarkets {
     /// at $3,000, also its AaveOracle source), its record in the MarketRegistry, its own First-Loss Reserve, a 0.0005 WETH
     /// floor rounding allowance, primary and backup routes from USDC and USDT into WETH for the base markets at the
     /// oracle rate, and 2,000 WETH idle on the Aave V3 Pool for the flash liquidation helper. Suites call it after
-    /// `_deployIntegration`; WETH is the launch markets' token when `_addLaunchMarkets` ran first.
+    /// `_deployIntegration`; WETH is the multi-AMM markets' token when `_addMultiAmmMarkets` ran first.
     function _addWethDebtReserve() internal {
         if (address(weth) == address(0)) weth = _newToken("WETH", 18, 3000e8);
         wethOracle = new IntegDebtOracleMock(address(weth), address(reg), address(store), feedWethDebt, 3000e8);

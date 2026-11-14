@@ -23,9 +23,9 @@ import {
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
 
-/// @notice The launch listing shapes: a fixed-price debt asset listed with its monitoring feed only (REQ-CONFIG-021),
+/// @notice The listing shapes: a fixed-price debt asset listed with its monitoring feed only (REQ-CONFIG-021),
 /// and the combined USDT issuer probe at every MarketRegistry reader (REQ-MREG-027, REQ-ROUTE-008, REQ-MREG-006).
-contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
+contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
     uint256 internal constant NEW_RESERVE = 6;
     uint256 internal constant NEW_ASSET = 3;
     /// @dev A second fixed-price debt asset (GHO-like), listed with its monitoring feed only.
@@ -150,7 +150,7 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
     // ─── Fixed-price debt asset: monitoring feed only ───
 
     // TEST-139 verifies: REQ-CONFIG-021, REQ-CONFIG-017, REQ-MREG-006, REQ-MREG-008, REQ-MREG-027, REQ-ACCESS-171
-    // Sources: Launch configuration decision 2026-11-11 (GHO listing)
+    // Sources: Configuration decision 2026-11-11 (GHO listing)
     /// @notice A fixed-price debt asset lists with its monitoring feed alone, after that feed's leg checks, and is
     /// enabled as a fixed-price debt reserve. Fails without the exemption in `listToken` (the listing reverts
     /// `routeLength`).
@@ -220,7 +220,7 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
     }
 
     // TEST-139 verifies: REQ-CONFIG-021, REQ-CONFIG-017, REQ-CONFIG-029, REQ-CONFIG-027
-    // Sources: Launch configuration decision 2026-11-11 (GHO listing)
+    // Sources: Configuration decision 2026-11-11 (GHO listing)
     /// @notice A monitoring-only token, a fixed-price debt reserve included, is refused as a pool token of a new market
     /// until `setPriceSource` gives it three routes. Fails without the route check in `_checkTokens` (the first
     /// registration succeeds).
@@ -284,7 +284,7 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
     }
 
     // TEST-221 verifies: REQ-ROUTE-008, REQ-ROUTE-005, REQ-MREG-027
-    // Sources: Launch configuration decision 2026-11-11 (USDT probe)
+    // Sources: Configuration decision 2026-11-11 (USDT probe)
     /// @notice A route paying a token with the combined probe into an exact-amount input is refused in either slot,
     /// exactly as for `UsdtFeeRate`; a `PausedFlag` token there is accepted. Fails if the route check reads only
     /// `UsdtFeeRate`.
@@ -312,7 +312,7 @@ contract MarketRegistryLaunchListingUnitTest is MarketRegistryFixture {
     }
 
     // TEST-287 verifies: REQ-MREG-006, REQ-SWAP-123, REQ-MREG-027, Q-390
-    // Sources: Launch configuration decision 2026-11-11 (USDT probe)
+    // Sources: Configuration decision 2026-11-11 (USDT probe)
     /// @notice A debt asset with the combined probe is refused while its fee reads above 0 or the fee read reverts,
     /// exactly as for `UsdtFeeRate`; the pause read is no enablement check for either kind (the mock answers no
     /// `paused()`), so the reserve is enabled once the fee reads 0. Fails if enablement reads only `UsdtFeeRate`.

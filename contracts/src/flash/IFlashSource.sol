@@ -9,14 +9,14 @@ pragma solidity 0.8.28;
 /// caller without the debt asset borrows through the flash liquidation helper (REQ-SWAP-012, Q-404).
 /// @dev One implementation per chain, replaceable through the chain's timelock (`MarketRegistry.setFlashSource`);
 /// LPVaultSwap reads its address from `MarketRegistry.flashSource()` and the implementation reads `maxFlashFeeBps()`
-/// from the ParameterStore before each loan. The launch implementation (AaveV3FlashSource) calls the Aave V3 Pool `flashLoan` with one asset and
+/// from the ParameterStore before each loan. The AaveV3FlashSource implementation calls the Aave V3 Pool `flashLoan` with one asset and
 /// `interestRateModes = [0]` on Ethereum and on Base; Aave V4 has no flash loans. With the ACLManager
 /// `FLASH_BORROWER` role the premium is 0; without it the source quotes `ceil(amount * FLASHLOAN_PREMIUM_TOTAL / 1e4)`
 /// and the V3.4 Pool charges half-up (`percentMul`), never above the quote, so the ceiling quote is the binding gate.
 /// Example: 2,000,000 USDC at 5 bps without the role: premium = 1,000 USDC; with the role: 0. The flash source may not
 /// borrow from any Hub registered on the chain: borrowing from the liquidated market's Hub would draw on the liquidity
 /// the liquidation is restoring. Every implementation reports through `LENDER()` the pool or Hub that holds the
-/// liquidity it lends (the Aave V3 Pool at launch; for a flash Spoke on an Aave V4 Hub, that Hub, not the Spoke), and
+/// liquidity it lends (an Aave V3 Pool; for a flash Spoke on an Aave V4 Hub, that Hub, not the Spoke), and
 /// the source is refused when `MarketRegistry.isRecordedHub(LENDER())`, both in `setFlashSource` and by LPVaultSwap on
 /// every `deleverage` (AMMN N1, Q-386). When `maxFlashLoan` is below the repayment, `deleverage` reverts and the borrower
 /// repays from its own funds.
@@ -117,7 +117,7 @@ interface IFlashSource {
     ) external view returns (uint256 premium);
 
     /// @notice Returns the pool or Hub the loan draws from, never an intermediate contract: the chain's Aave V3 Pool
-    /// for the launch implementation; for a flash Spoke on an Aave V4 Hub, that Hub, not the Spoke.
+    /// for AaveV3FlashSource; for a flash Spoke on an Aave V4 Hub, that Hub, not the Spoke.
     /// @dev `MarketRegistry.setFlashSource` reverts `InvalidRoute` and LPVaultSwap reverts `FlashSourceIsHub` on every
     /// flash call when `MarketRegistry.isRecordedHub(LENDER())`.
     /// @return lender Constructor immutable.

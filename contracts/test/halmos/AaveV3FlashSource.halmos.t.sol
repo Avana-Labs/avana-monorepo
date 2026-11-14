@@ -122,7 +122,7 @@ contract AaveV3FlashSourceHalmosTest is Test {
         assert(_is(ret, IFlashSource.FlashSourceIsHub.selector));
     }
 
-    /// @notice A completed loan, for every amount at the launch rate (5 bps) and cap (10 bps), was within the idle
+    /// @notice A completed loan, for every amount at the default rate (5 bps) and cap (10 bps), was within the idle
     /// liquidity and left the source with no balance and no allowance.
     // PROP-080 verifies: REQ-FLASH-001, REQ-FLASH-002, REQ-FLASH-003, INV-095, Q-335
     function check_PROP_080_completedLoanLeavesSourceEmpty(

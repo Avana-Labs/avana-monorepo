@@ -41,8 +41,8 @@ interface ILPVaultSwapViews {
     function getKeepers() external view returns (address[] memory keepers);
 
     /// @notice Minimum number of active committed operators `removeKeeper` leaves (implementation immutable
-    /// `keeperFloor = 1`, Avana's keeper at launch). New borrowing halts only when 0 active committed operators remain
-    /// on the chain (Q-400).
+    /// for example `keeperFloor = 1`, Avana's keeper). New borrowing halts only when 0 active committed operators
+    /// remain on the chain (Q-400).
     /// @return floor Keeper floor.
     /// @custom:spec REQ-SWAP-034, Q-400
     function KEEPER_FLOOR() external view returns (uint256 floor);

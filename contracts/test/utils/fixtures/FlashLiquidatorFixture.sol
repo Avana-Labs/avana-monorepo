@@ -20,7 +20,7 @@ import {ParameterStoreFixture} from "./ParameterStoreFixture.sol";
 
 /// @title FlashLiquidatorFixture
 /// @notice The public flash liquidation helper and an operator helper over a mocked Aave V3.4 Pool (5 bps premium
-/// charged half-up, virtual accounting, 18,000,000 USDC idle), the real ParameterStore (`maxFlashFeeBps` launch value
+/// charged half-up, virtual accounting, 18,000,000 USDC idle), the real ParameterStore (`maxFlashFeeBps` default value
 /// 10), the mocked MarketRegistry (market 7 = USDC/USDT on the fixture's CDP Spoke, debt reserve 3 = USDC) and a mocked
 /// LPVaultSwap that settles under the real Lock and escrows refused residues in the real PayoutEscrow.
 /// @dev The outcome is the routed example of 2.11 (3.5 `LIQ-069`): `D = 1,950`, `R = 2,040.3`, `A = 19.5` USDC, so

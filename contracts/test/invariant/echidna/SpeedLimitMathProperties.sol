@@ -11,7 +11,7 @@ import {SpeedWindow} from "../../../src/policy/risk-module/types/SpeedWindow.sol
 /// window charged by random amounts at random times against a fixed limit, with a log of the last charges so the
 /// interval bound is checked after every transaction.
 /// @dev Times advance through `block.timestamp` (the fuzzers jump up to 14 days per call); the log keeps the last 32
-/// passing charges, enough for any interval of τ at the charge rate the cap allows. The window length is the launch τ.
+/// passing charges, enough for any interval of τ at the charge rate the cap allows. The window length is the default τ.
 contract SpeedLimitMathProperties {
     uint256 internal constant TAU = 21_600;
     uint256 internal constant LIM = 1_000_000e8;
