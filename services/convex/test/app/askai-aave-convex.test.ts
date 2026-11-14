@@ -54,14 +54,14 @@ describe("Aave Convex integration", () => {
     )
     expect(await t.query(internal.askAITools.aaveWalletForTurn, { turnId: await gateTurn("running") })).toBe(wallet)
 
-    // Every turn-scoped read shares the same gate, including the newly exposed
-    // engine snapshot.
+    // Every turn-scoped read shares the same gate, including the engine snapshot, which answers
+    // that wallet positions are not available yet.
     await expect(
       t.query(internal.askAITools.engineSnapshotForTurn, { turnId: await gateTurn("queued") }),
     ).rejects.toThrow("not running")
     expect(
       await t.query(internal.askAITools.engineSnapshotForTurn, { turnId: await gateTurn("running") }),
-    ).toMatchObject({ wallet })
+    ).toMatchObject({ unavailable: true })
   })
 
   it("derives price moves instead of shipping raw history", async () => {
