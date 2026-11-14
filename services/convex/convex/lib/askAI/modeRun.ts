@@ -155,7 +155,7 @@ export function buildReturnsRun(
 
 // Leverage questions are a risk question, not a returns question: net carry with
 // leverage is dominated by liquidation risk, so a Returns run would be misleading.
-const LEVERAGE_PATTERN = /\b(leverage|leveraged|lever|loop|looping|multiply|fold(?:ing)?|recursive)\b/i
+const LEVERAGE_PATTERN = /\b(leverage|leveraged|lever|loop|looping|fold(?:ing)?|recursive)\b/i
 
 type ModeRoute = { mode: AskAiMode; rerouted: boolean }
 

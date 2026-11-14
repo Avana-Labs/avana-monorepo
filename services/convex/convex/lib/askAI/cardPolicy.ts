@@ -17,22 +17,19 @@ const WHATS_IN =
   /\bwhat(?:'s|\s+is|\s+are)?\s+(?:in\s+my\s+(?:portfolio|wallet|account)|my\s+(?:positions|holdings))\b/i
 const WHAT_DO_I_HOLD = /\bwhat\s+do\s+i\s+(?:hold|own|have)\b/i
 const ALL_POSITIONS = /\ball\s+(?:of\s+)?my\s+(?:positions|holdings|assets|balances)\b/i
-const UMBRELLA = /\bumbrella\b/i
 
 export type PortfolioCardDecision = {
   show: boolean
-  /** Umbrella rows (with their Cooldown / Status columns) only when Umbrella is in the question. */
-  includeUmbrella: boolean
 }
 
 export function portfolioCardFor(question: string | undefined): PortfolioCardDecision {
   const text = (question ?? "").trim()
-  if (!text) return { show: false, includeUmbrella: false }
+  if (!text) return { show: false }
   const show =
     SHOW_HOLDINGS.test(text) ||
     BREAKDOWN.test(text) ||
     WHATS_IN.test(text) ||
     WHAT_DO_I_HOLD.test(text) ||
     ALL_POSITIONS.test(text)
-  return { show, includeUmbrella: show && (UMBRELLA.test(text) || ALL_POSITIONS.test(text)) }
+  return { show }
 }

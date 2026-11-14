@@ -5,7 +5,7 @@ import { portfolioCardFor } from "../../convex/lib/askAI/cardPolicy"
 
 describe("portfolioCardFor", () => {
   it.each([
-    "What is my exact net value and the four canonical component values? Show the numbers that reconcile to the total.",
+    "What is my exact net value and the three canonical component values? Show the numbers that reconcile to the total.",
     "What is my net value?",
     "How much do I have in Lend?",
     "What's my biggest position?",
@@ -23,12 +23,6 @@ describe("portfolioCardFor", () => {
     "What's in my portfolio?",
     "What do I hold?",
   ])("shows the table: %s", (question) => {
-    expect(portfolioCardFor(question)).toEqual({ show: true, includeUmbrella: false })
-  })
-
-  it("adds Umbrella rows only when Umbrella or all positions are asked for", () => {
-    expect(portfolioCardFor("Show my positions including Umbrella").includeUmbrella).toBe(true)
-    expect(portfolioCardFor("Show all my positions").includeUmbrella).toBe(true)
-    expect(portfolioCardFor("Show my portfolio").includeUmbrella).toBe(false)
+    expect(portfolioCardFor(question)).toEqual({ show: true })
   })
 })

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 import { describe, expect, test } from "vitest"
-import { ASK_AI_AGENT_INSTRUCTIONS, focusPortfolioPayload } from "../../convex/askAIAgent"
+import { ASK_AI_AGENT_INSTRUCTIONS } from "../../convex/askAIAgent"
 import { ASK_AI_CONFIG } from "../../convex/lib/askAI/config"
 
 describe("Ask AI Agent configuration", () => {
@@ -31,21 +31,5 @@ describe("Ask AI Agent configuration", () => {
     expect(ASK_AI_CONFIG.streamThrottleMs).toBeLessThanOrEqual(250)
     expect(ASK_AI_AGENT_INSTRUCTIONS).toContain("Talk like a real person who genuinely cares")
     expect(ASK_AI_AGENT_INSTRUCTIONS).toContain("turn it into a fun next step")
-  })
-
-  test("keeps the wallet requirement when an Umbrella answer focuses the portfolio payload", () => {
-    expect(
-      focusPortfolioPayload(
-        {
-          walletRequired: true,
-          message: "Connect your wallet to analyze your personal Avana positions.",
-        },
-        "Do I have any Umbrella on cooldown?",
-      ),
-    ).toMatchObject({
-      walletRequired: true,
-      message: "Connect your wallet to analyze your personal Avana positions.",
-      focus: "umbrella",
-    })
   })
 })

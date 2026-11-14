@@ -5,9 +5,7 @@
  *
  * `requireWallet` (walletAuth.ts) proves ownership but does NOT bound how fast a
  * wallet may write, so the append-only / state mutations that guard on it alone (onboarding steps,
- * rewards save/claim) had no ceiling on write volume. The high-traffic execution
- * path (recordTransaction / recordSwap) already caps itself at MAX_TX_PER_HOUR, and umbrella /
- * liquidation carry their own hourly caps — this fills the gap for the rest.
+ * rewards save/claim) had no ceiling on write volume. This throttle bounds them.
  *
  * Backed by the shared @convex-dev/rate-limiter component (its own storage — no schema table), so the
  * counter is correct across Convex instances. The bucket is per identity KEY (wallet or Ask AI

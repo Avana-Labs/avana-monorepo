@@ -102,7 +102,7 @@ live("Ask AI live Luna evaluations", () => {
             inputSchema: z.object({}),
             execute: async () => {
               calls.push("read_portfolio")
-              return { totals: { umbrellaUsd: 19_720, liquidUsd: 69_670 }, asOf: Date.now() }
+              return { totals: { lendNetValueUsd: 19_720, liquidNetValueUsd: 69_670 }, asOf: Date.now() }
             },
           }),
           read_borrow_capacity: tool({

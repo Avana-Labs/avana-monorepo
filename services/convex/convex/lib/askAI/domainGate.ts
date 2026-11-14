@@ -38,12 +38,12 @@ type DomainResult = {
 /**
  * The vocabulary people actually use for "the money and positions I hold here",
  * including the words the product itself puts on screen (the read_portfolio
- * tool, the dashboard's "Net Value" headline, LOOP/Multiply). Kept as one source
+ * tool, the dashboard's "Net Value" headline). Kept as one source
  * string so the position patterns and the `classifyAskAIDomain` safety net can
  * never drift apart.
  */
 const HOLDINGS_WORDS =
-  "portfolio|dashboard|net ?(?:value|worth)|total ?(?:value|balance)|balances?|holdings?|positions?|funds?|assets?|collateral|debts?|loans?|borrows?|borrowings?|borrowed|deposits?|deposited|supplied|supplying|lent|lending|staked?|staking|umbrella|cooldown|withdrawals?|withdraw|unstake|equity|exposure|allocation|pn ?l|p&l|profits?|(?<!impermanent )loss(?:es)?|gains?|returns?|earnings?|earning|earned|interest|yields?|leveraged?|loops?|looping|multiply|ltv|health ?factor|liquidat\\w*|buffer|margin|headroom|capacity|credit|invested|investments?|capital|account|wallets?|money|cash|rewards?" +
+  "portfolio|dashboard|net ?(?:value|worth)|total ?(?:value|balance)|balances?|holdings?|positions?|funds?|assets?|collateral|debts?|loans?|borrows?|borrowings?|borrowed|deposits?|deposited|supplied|supplying|lent|lending|staked?|staking|cooldown|withdrawals?|withdraw|unstake|equity|exposure|allocation|pn ?l|p&l|profits?|(?<!impermanent )loss(?:es)?|gains?|returns?|earnings?|earning|earned|interest|yields?|leveraged?|loops?|looping|ltv|health ?factor|liquidat\\w*|buffer|margin|headroom|capacity|credit|invested|investments?|capital|account|wallets?|money|cash|rewards?" +
   // Web3-native ways of naming the same thing.
   "|bags?|stack|book|notional|size|position size|collateral ?ratio|borrow ?power|supply ?balance|debt ?balance|a ?tokens?|receipt ?tokens?|lp ?tokens?|shares?|principal|apy ?earned|interest ?earned|accrued|claimable|unclaimed|vested|locked|unlocked|idle|deployed|dry ?powder|roi|apy i(?:'m)? ?(?:getting|earning)|points?|airdrops?|emissions|incentives"
 

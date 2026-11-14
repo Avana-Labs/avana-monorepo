@@ -219,10 +219,9 @@ describe("routeAskAITurn (per-turn tool + cost routing)", () => {
     "what have I lent?",
     "my supply balance",
     "my borrow power",
-    // staking / umbrella
+    // staking
     "my staked amount",
     "my staking rewards",
-    "my umbrella position",
     "my cooldown",
     "when can I withdraw?",
     "can I unstake?",
@@ -240,12 +239,11 @@ describe("routeAskAITurn (per-turn tool + cost routing)", () => {
     "my roi",
     "my claimable rewards",
     "my points",
-    // multiply / loop
+    // leverage / loop
     "my leverage",
     "my loop",
     "how's my loop doing?",
     "the debt on my loop",
-    "my multiply position",
     "my ltv",
     // risk framing
     "Will I make it with this loop?",
@@ -365,10 +363,10 @@ describe("routeAskAITurn (per-turn tool + cost routing)", () => {
 
   it.each([
     "How long is my cooldown until I withdraw?",
-    "Do I have any Umbrella on cooldown?",
+    "Do I have anything on cooldown?",
     "When can I unstake my GHO?",
-    "Is my Umbrella withdrawal window open?",
-  ])("routes the personal Umbrella question through one portfolio read: %s", (prompt) => {
+    "Is my withdrawal window open?",
+  ])("routes the personal cooldown question through one portfolio read: %s", (prompt) => {
     expect(routeAskAITurn(prompt)).toMatchObject({
       intent: "position",
       tools: ["read_portfolio"],

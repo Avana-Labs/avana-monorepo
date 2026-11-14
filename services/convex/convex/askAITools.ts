@@ -13,14 +13,14 @@ const toCents = (usd: number) => Math.round(usd * 100) / 100
 
 /**
  * Rounds every `*Usd` total to the cent, then rebuilds Net Value from the ROUNDED components so
- * "Lend + Borrow + Liquid + Multiply = Net value" still adds up exactly in what the user reads.
+ * "Lend + Borrow + Liquid = Net value" still adds up exactly in what the user reads.
  */
 export function toCentsTotals<T extends Record<string, unknown>>(totals: T): T {
   const rounded: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(totals)) {
     rounded[key] = key.endsWith("Usd") && typeof value === "number" && Number.isFinite(value) ? toCents(value) : value
   }
-  const parts = ["lendNetValueUsd", "borrowNetValueUsd", "multiplyNetValueUsd", "liquidNetValueUsd"] as const
+  const parts = ["lendNetValueUsd", "borrowNetValueUsd", "liquidNetValueUsd"] as const
   if (parts.every((key) => typeof rounded[key] === "number")) {
     rounded.netValueUsd = toCents(parts.reduce((sum, key) => sum + (rounded[key] as number), 0))
   }
@@ -83,7 +83,6 @@ export const portfolioForTurn = internalQuery({
 })
 
 const engineSnapshotArgs = {
-  multiplyShockPct: v.optional(v.number()),
   lendProjectionDays: v.optional(v.number()),
 }
 

@@ -29,7 +29,7 @@ export type PositionConstituent = {
 /** Raw, already-decoded inputs for one position. `buildPositionContext` turns this into an immutable snapshot. */
 export type PositionSnapshotInput = {
   positionId: string
-  product: "borrow" | "multiply" | "lend" | "umbrella"
+  product: "borrow" | "lend"
   collateralValueUsd: number
   debtValueUsd: number
   maxLtvPct: number
