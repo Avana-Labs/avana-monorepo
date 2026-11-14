@@ -11,9 +11,9 @@
 # Usage, from contracts/:   script/e2e/e2e-local.sh            (all steps)
 #                           E2E_STEPS="deploy manifest" script/e2e/e2e-local.sh
 #                           E2E_STEPS="deploy day2 exotic manifest services scenarios" script/e2e/e2e-local.sh
-# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets, on the day-2 config), the
-# rerun of every step with nothing new (06, after day2 or exotic), hostile (07, on the latest config), manifest, services
-# and scenarios.
+# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets on the day-2 config, as two
+# releases recorded exotic:<step> and exotic2:<step>), the rerun of every step with nothing new (06, after day2 or
+# exotic), hostile (07, on the latest config), manifest, services and scenarios.
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
 # `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
 # the Chainlink OCR2 aggregator and proxy).
@@ -200,8 +200,8 @@ fi
 # on what the config adds. Day 2 (script/e2e/day2-additions.ts: a Hub with its Spokes, a lend asset, a borrowable asset
 # on a listed Spoke, a collateral token and two markets), then the exotic pass (script/e2e/exotic-additions.ts: a Hub
 # lending a meme coin, a governance token, an 8-decimals token and USDC against meme, governance, WBTC-type and thin
-# pools on Uniswap v3 and Slipstream). After the last one, every step once more, which must do nothing. Later steps
-# read the last config.
+# pools on Uniswap v3 and Slipstream, five markets per release). After the last one, every step once more, which must do
+# nothing. Later steps read the last config.
 grow() { # phase "generator [args]" config
   # shellcheck disable=SC2086 # the generator and its arguments, split on purpose
   node $2 --network anvil > "$LOG/${1}config.log" 2>&1 || { record "${1}config" fail "see $LOG/${1}config.log"; return 1; }
