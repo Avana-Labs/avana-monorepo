@@ -1,4 +1,0 @@
-# Findings gitleaks reports in commits that history keeps; each line is commit:file:rule:line. The code no longer
-# contains these values: signers load from encrypted keystores. Add a line here only for a finding in an old commit.
-18f8855a659bd87c3fd8484f82b9465e22bbb873:contracts/script/e2e/scenarios/market.ts:generic-api-key:1317
-abbf40187ecb2c25bba52b59653f7db69542faeb:services/keeper/test/localKey.test.ts:generic-api-key:12
