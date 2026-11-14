@@ -15,7 +15,6 @@ describe("processingNarrationScript", () => {
     ["Deposit", "Minting your yield position"],
     ["Withdraw", "Unwinding your supplied position"],
     ["Multiply", "Locking in your leverage"],
-    ["Deleverage", "Unwinding part of your loop"],
     ["Swap", "Connecting to the swap router"],
   ]
 

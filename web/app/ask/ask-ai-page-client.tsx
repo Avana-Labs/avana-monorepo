@@ -78,29 +78,6 @@ const healthFactor = (value: unknown): string | null =>
 const metricOf = (label: string, value: string | null, after?: string | null): AskAIMetric | null =>
   value == null ? null : after != null ? { label, value, after } : { label, value }
 
-const dateTime = (value: unknown): string | null =>
-  typeof value === "number" && Number.isFinite(value)
-    ? new Date(value).toLocaleString([], {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : null
-
-function umbrellaStatus(row: Record<string, unknown>) {
-  const status = typeof row.lifecycleStatus === "string" ? row.lifecycleStatus : "active"
-  const cooldownEnd = dateTime(row.cooldownEndsAt)
-  const windowEnd = dateTime(row.withdrawalWindowEndsAt)
-  if (status === "coolingDown" || status === "partiallyCooling")
-    return cooldownEnd ? `Cooling until ${cooldownEnd}` : "Cooling"
-  if (status === "readyToUnstake") return windowEnd ? `Ready until ${windowEnd}` : "Ready to unstake"
-  if (status === "cooldownExpired") return "Withdrawal window expired"
-  if (status === "slashed") return "Slashed"
-  if (status === "closed") return "Closed"
-  return "Active"
-}
-
 // A financial tool result renders only when its verbatim payload already matches
 // the card's display shape. Anything else is skipped — never fabricated.
 function toFinancialResultCard(payload: unknown): AskAIFinancialResult | null {
@@ -133,7 +110,6 @@ function toFinancialResultCard(payload: unknown): AskAIFinancialResult | null {
 function buildFinancialCard(
   kind: string | undefined,
   payload: unknown,
-  options: { includeUmbrella?: boolean } = {},
 ): AskAIFinancialResult | null {
   if (kind?.startsWith("aave_")) return buildAaveCard(kind, payload)
   const shaped = toFinancialResultCard(payload)
@@ -159,9 +135,6 @@ function buildFinancialCard(
   switch (kind) {
     case "portfolio": {
       const t = asObject(p.totals)
-      const umbrellaFocused = p.focus === "umbrella"
-      // Umbrella rows (and their Cooldown / Status columns) only when the question is about Umbrella.
-      const showUmbrella = umbrellaFocused || options.includeUmbrella === true
       const rowsFor = (key: string) => (Array.isArray(p[key]) ? p[key].map(asObject) : null)
       const amountOf = (row: Record<string, unknown>) => {
         if (typeof row.valueUsd === "number" && Number.isFinite(row.valueUsd)) return row.valueUsd
@@ -173,7 +146,6 @@ function buildFinancialCard(
         rows.reduce((sum, row) => sum + (row.state === "debt" ? -amountOf(row) : amountOf(row)), 0)
       const rawLend = rowsFor("lend")
       const rawBorrow = rowsFor("borrow")
-      const rawMultiply = rowsFor("multiply")
       const rawLiquid = rowsFor("liquid")
       const liquidAssetIds = new Set((rawLiquid ?? []).map((row) => String(row.assetId ?? "")))
       const canonicalFromRows = {
@@ -195,88 +167,22 @@ function buildFinancialCard(
                     ),
                 ),
               ),
-        multiply: rawMultiply == null ? undefined : signedSum(rawMultiply.filter((row) => row.state !== "collateral")),
         liquid: rawLiquid == null ? undefined : signedSum(rawLiquid),
       }
-      const productRows = (
-        umbrellaFocused
-          ? []
-          : [
-              // Equity, not gross exposure, so these rows add up to the Net
-              // value headline. `*Usd` counts debt as an asset (see the
-              // netUsd note in convex/askAITools.ts).
-              ["Lend", usd(t.lendNetValueUsd ?? canonicalFromRows.lend ?? t.lendNetUsd ?? t.lendUsd)],
-              ["Borrow", usd(t.borrowNetValueUsd ?? canonicalFromRows.borrow ?? t.borrowNetUsd ?? t.borrowUsd)],
-              [
-                "Multiply",
-                usd(t.multiplyNetValueUsd ?? canonicalFromRows.multiply ?? t.multiplyNetUsd ?? t.multiplyUsd),
-              ],
-              ["Liquid", usd(t.liquidNetValueUsd ?? canonicalFromRows.liquid ?? t.liquidNetUsd ?? t.liquidUsd)],
-            ]
-      ).flatMap(([product, value], index) =>
-        value
-          ? [
-              {
-                id: `product-${index}`,
-                cells: showUmbrella ? [product ?? "", "All positions", value, "", ""] : [product ?? "", value],
-              },
-            ]
-          : [],
+      // Equity, not gross exposure, so these rows add up to the Net value headline.
+      const productRows = [
+        ["Lend", usd(t.lendNetValueUsd ?? canonicalFromRows.lend ?? t.lendNetUsd ?? t.lendUsd)],
+        ["Borrow", usd(t.borrowNetValueUsd ?? canonicalFromRows.borrow ?? t.borrowNetUsd ?? t.borrowUsd)],
+        ["Liquid", usd(t.liquidNetValueUsd ?? canonicalFromRows.liquid ?? t.liquidNetUsd ?? t.liquidUsd)],
+      ].flatMap(([product, value], index) =>
+        value ? [{ id: `product-${index}`, cells: [product ?? "", value] }] : [],
       )
-      const umbrellaRows =
-        showUmbrella && Array.isArray(p.umbrella)
-          ? p.umbrella.flatMap((position, index) => {
-              const row = asObject(position)
-              const value = usd(
-                typeof row.suppliedUsd6 === "string" ? Number(row.suppliedUsd6) / 1_000_000 : row.suppliedUsd,
-              )
-              if (!value) return []
-              const cooldown = usd(
-                typeof row.cooldownAmountUsd6 === "string"
-                  ? Number(row.cooldownAmountUsd6) / 1_000_000
-                  : row.cooldownUsd,
-              )
-              return [
-                {
-                  id: `umbrella-${index}`,
-                  cells: umbrellaFocused
-                    ? [
-                        String(row.marketSlug ?? row.marketId ?? `Position ${index + 1}`),
-                        value,
-                        cooldown ?? "$0.00",
-                        umbrellaStatus(row),
-                      ]
-                    : [
-                        "Umbrella",
-                        String(row.marketSlug ?? row.marketId ?? `Position ${index + 1}`),
-                        value,
-                        cooldown ?? "$0.00",
-                        umbrellaStatus(row),
-                      ],
-                },
-              ]
-            })
-          : []
       return table(
         "portfolio",
-        umbrellaFocused ? "Your Umbrella positions" : "Your Avana portfolio",
-        umbrellaFocused
-          ? ["Position", "Value", "Cooldown", "Status"]
-          : showUmbrella
-            ? ["Product", "Position", "Value", "Cooldown", "Status"]
-            : ["Product", "Value"],
-        [...productRows, ...umbrellaRows],
-        (umbrellaFocused
-          ? [
-              metricOf("Total Umbrella", usd(t.umbrellaUsd)),
-              metricOf("On cooldown", usd(asObject(p.umbrellaCooldownSummary).coolingUsd)),
-              metricOf("Ready to unstake", usd(asObject(p.umbrellaCooldownSummary).readyUsd)),
-            ]
-          : // Lead with the figure the question actually asks for. Umbrella is
-            // excluded from Net Value (it is not part of productBalances), so it
-            // stays a separate metric rather than the headline.
-            [metricOf("Net value", usd(t.netValueUsd)), metricOf("Umbrella", usd(t.umbrellaUsd))]
-        ).filter((metric): metric is AskAIMetric => metric !== null),
+        "Your Avana portfolio",
+        ["Product", "Value"],
+        productRows,
+        [metricOf("Net value", usd(t.netValueUsd))].filter((metric): metric is AskAIMetric => metric !== null),
       )
     }
     case "engine_snapshot": {
@@ -286,10 +192,7 @@ function buildFinancialCard(
       return compact("position_risk", "Engine projection", [
         metricOf(days ? `Projected yield (${days}d)` : "Projected yield", usd(sum.lendProjectedYieldUsd)),
         metricOf("Earned so far", usd(sum.lendEarnedUsd)),
-        metricOf("Weakest health factor", healthFactor(sum.multiplyWeakestHealthFactor)),
         metricOf("Lend principal", usd(sum.lendPrincipalUsd)),
-        metricOf("Multiply equity", usd(sum.multiplyEquityUsd)),
-        metricOf("Umbrella earned", usd(sum.umbrellaEarnedUsd)),
       ])
     }
     case "borrow_capacity": {
@@ -506,8 +409,8 @@ function persistedAssistantParts(messageId: string, text: string, rich?: Persist
     // The portfolio table appears only when the question asks to see holdings; a plain
     // question ("what is my net value") is answered in the text alone.
     const portfolioCard = entry.kind === "portfolio" ? portfolioCardFor(question) : null
-    if (portfolioCard && !portfolioCard.show && asObject(entry.payload).focus !== "umbrella") continue
-    const card = buildFinancialCard(entry.kind, entry.payload, { includeUmbrella: portfolioCard?.includeUmbrella })
+    if (portfolioCard && !portfolioCard.show) continue
+    const card = buildFinancialCard(entry.kind, entry.payload)
     if (card) parts.push({ type: "data", name: "financial-result", data: card })
   }
   // Deterministic mode-run cards render only when the flag is on, so a stray persisted

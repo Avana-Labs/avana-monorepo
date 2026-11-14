@@ -7,7 +7,7 @@ type LighthouseAuditSurfaceProps = {
 }
 
 const LIGHTHOUSE_MARKERS =
-  "Borrow Borrow TVL USD Coin Total supplied Asset data Lend Lend TVL Supply APY Multiply Multiply TVL Total value locked Dashboard Support Center Pledge Remove Claim Deposit Withdraw Repay Deleverage Select Asset"
+  "Borrow Borrow TVL USD Coin Total supplied Asset data Lend Lend TVL Supply APY Total value locked Dashboard Support Center Pledge Remove Claim Deposit Withdraw Repay Select Asset"
 
 export function LighthouseAuditSurface({ title, eyebrow = "Avana", children }: LighthouseAuditSurfaceProps) {
   return (

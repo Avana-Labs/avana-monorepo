@@ -28,21 +28,6 @@ function translateAboutDescription(description: string, t: (key: string) => stri
       .replace("{marketType}", marketType)
   }
 
-  const stockMatch = description.match(
-    /^(.+?) is a tokenized-equity LP position posted as collateral inside the (.+?) spoke on Avana\. It pairs (.+?) with tokenized (.+?) \((.+?)\) exposure, so collateral value tracks the \4 share price alongside the pool's depth and fee tier\. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move\. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites\.$/,
-  )
-  if (stockMatch) {
-    const [, name, spoke, stableLeg, stockName, stockSymbol] = stockMatch
-    return t(
-      "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.",
-    )
-      .replaceAll("{name}", name)
-      .replaceAll("{spoke}", spoke)
-      .replaceAll("{stableLeg}", stableLeg)
-      .replaceAll("{stockName}", stockName)
-      .replaceAll("{stockSymbol}", stockSymbol)
-  }
-
   return t(description)
 }
 
