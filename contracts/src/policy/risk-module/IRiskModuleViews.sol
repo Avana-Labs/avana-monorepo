@@ -33,6 +33,19 @@ interface IRiskModuleViews {
         address proxy
     ) external view returns (AccountGateStatus memory status);
 
+    /// @notice The RiskModule's gates of a borrow of `debtReserveId` by `proxy`, as `preBorrowCheck` runs them, without
+    /// the pokes, on the stored oracle state; reverts with the first failing gate.
+    /// @dev Unlike `getAccountGateStatus().borrowAllowed`, the borrowed reserve is in the debt scope: its record
+    /// (`ConfigDrift(DebtReserveMismatch)`), pause, price source and price, its routes (`DebtLiquidationHalted`), its
+    /// debt breaker and its cross-Hub line are checked, and its asset counts as a debt asset of the account.
+    /// @param proxy The account.
+    /// @param debtReserveId The reserve borrowed.
+    /// @custom:spec REQ-RISK-060, REQ-RISK-061, REQ-RISK-062
+    function checkBorrowGate(
+        address proxy,
+        uint256 debtReserveId
+    ) external view;
+
     /// @notice USD of collateral at the oracle price that restores the account to `rescueHealthFactor` (1.10).
     /// @dev SPEC-CAP-003, rounded up; 0 when the account has no debt, is at or above the gate, or `CF_m = 0`.
     /// @param proxy The account; collateral is valued in the proxy's market.

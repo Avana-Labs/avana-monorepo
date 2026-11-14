@@ -10,9 +10,9 @@ interface ILensPreview {
     /// @notice Returns the protocol maximum borrow: the largest borrow that keeps the rescue-excluded health factor at or
     /// above `H0 * (1 + rate * (deadline - now)) * 1.005` once the debt has grown until `deadline`, with
     /// `H0 = max(1e18, hardHealthFloor(marketId))`: Aave's HF 1.00 unless the market's optional hard floor is set.
-    /// @dev Rounds down; capped by the reserve's `drawCap` headroom; 0 when the account's borrow gate fails (price, breaker,
-    /// pause, freeze, drift) or the borrowed reserve fails the RiskModule's debt-reserve step (paused, unexpected source,
-    /// or a DebtOracle price not Live, closed by the oracle or older than its `borrowPriceMaxAge()`).
+    /// @dev Rounds down; capped by the reserve's `drawCap` headroom; 0 when the market's or the funding Hub is not None,
+    /// the wallet is frozen, or the RiskModule's `checkBorrowGate(proxy, debtReserveId)` reverts (the borrow's gates on
+    /// the stored oracle state, with the borrowed reserve in scope: price, breaker, drift, routes, credit line).
     /// @param wallet The borrower wallet.
     /// @param marketId The account's market (one PositionProxy per wallet and market).
     /// @param debtReserveId The debt reserve to borrow.

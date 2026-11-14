@@ -351,6 +351,7 @@ contract LensRiskModuleMock {
     mapping(uint256 => uint64) internal _marketReopens;
     mapping(address => mapping(uint256 => uint32)) internal _debtReasons;
     mapping(address => mapping(uint256 => uint64)) internal _debtReopens;
+    mapping(uint256 => uint32) internal _debtBreakerOn;
 
     function setGate(
         address proxy,
@@ -376,6 +377,7 @@ contract LensRiskModuleMock {
         uint64 reopensAt
     ) external {
         (_debtReasons[spoke][id], _debtReopens[spoke][id]) = (reasons, reopensAt);
+        _debtBreakerOn[id] = reasons;
     }
 
     function getAccountGateStatus(
@@ -392,6 +394,17 @@ contract LensRiskModuleMock {
         if (st.statusUnavailable) return st;
         (st.spokeApproved, st.borrowAllowed, st.withdrawWithDebtAllowed) = (true, g.borrowAllowed, g.borrowAllowed);
         st.pauseState = g.pauseState;
+    }
+
+    /// @notice The RiskModule's gates of a borrow: refused when the account's status is unset, unavailable or not
+    /// `borrowAllowed`, or a debt breaker is set on the reserve for any Spoke the mock knows (`setDebtBreaker`).
+    function checkBorrowGate(
+        address proxy,
+        uint256 debtReserveId
+    ) external view {
+        Gate memory g = _gates[proxy];
+        require(g.set && !g.unavailable && g.borrowAllowed, "gate");
+        require(_debtBreakerOn[debtReserveId] == 0, "debt breaker");
     }
 
     PledgePreview internal _pledge;

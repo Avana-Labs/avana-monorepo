@@ -359,6 +359,15 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
+    /// @custom:spec REQ-RISK-060, REQ-RISK-061, REQ-RISK-062
+    function checkBorrowGate(
+        address proxy,
+        uint256 debtReserveId
+    ) external view override {
+        IRiskModuleBorrowLogic(_BORROW_LOGIC).gate(proxy, debtReserveId, true);
+    }
+
+    /// @inheritdoc IRiskModuleViews
     /// @custom:spec SPEC-CAP-009, REQ-RISK-077
     function debtValueUsd(
         address proxy

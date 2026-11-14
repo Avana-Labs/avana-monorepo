@@ -15,14 +15,12 @@ import {BreakerReasons} from "../../policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
 import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
 import {RiskModuleMath} from "../../policy/risk-module/RiskModuleMath.sol";
-import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {Market} from "../../types/Market.sol";
 import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {LensConstants} from "./LensConstants.sol";
 import {LensDeleverage} from "./LensDeleverage.sol";
-import {DebtPriceView} from "./types/DebtPriceView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensPreview
@@ -165,7 +163,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         b.def = _debtReserve(b.m.spoke, debtReserveId);
         bool deployed;
         (b.proxy, deployed) = _proxy(wallet, marketId, b.m.spoke);
-        if (!deployed || !_borrowGate(b)) return (0, 0);
+        if (!deployed || !_borrowGate(b, wallet)) return (0, 0);
         IAaveV4Spoke.UserAccountData memory a = IAaveV4Spoke(b.m.spoke).getUserAccountData(b.proxy);
         uint256 e = _rescueExclusion(b);
         uint256 w = Math.mulDiv(a.avgCollateralFactor, a.totalCollateralValue, WAD_);
@@ -208,37 +206,22 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         if (amount > b.headroom) amount = b.headroom;
     }
 
-    /// @dev The account's borrow gate as the AaveAdapter applies it: the RiskModule's `borrowAllowed`, no pause, a
-    /// computable status, the borrowed reserve's own step (6), no debt breaker on the reserve and its cross-Hub credit
-    /// line (REQ-RISK-082).
-    /// @custom:spec REQ-LENS-035, REQ-ADAPTER-038, REQ-RISK-061, REQ-RISK-082
+    /// @dev The borrow's gates as the AaveAdapter applies them: the market's Hub and the reserve's funding Hub in None,
+    /// the wallet not frozen, then the RiskModule's gates of this borrow (`checkBorrowGate`): the gates of
+    /// `preBorrowCheck` on the stored oracle state with the borrowed reserve in the debt scope, so its record, pause,
+    /// price, routes, debt breaker and cross-Hub line are checked as execution checks them, and its asset counts as a
+    /// debt asset of the account for the route rule (REQ-RISK-061, REQ-RISK-062, REQ-RISK-082).
+    /// @custom:spec REQ-LENS-035, REQ-RISK-060, REQ-RISK-061, REQ-RISK-062, REQ-RISK-082
     function _borrowGate(
-        Borrow memory b
+        Borrow memory b,
+        address wallet
     ) internal view returns (bool open) {
-        AccountGateStatus memory st = IRiskModuleViews(_RISK_MODULE).getAccountGateStatus(b.proxy);
-        if (!st.borrowAllowed || st.pauseState != PauseState.None || st.statusUnavailable) return false;
-        if (!_borrowedReserveOpen(b)) return false;
-        // forge-lint: disable-next-line(unused-return)
-        (uint32 reasons,) = IRiskModuleViews(_RISK_MODULE).getDebtBreakerStatus(b.m.spoke, b.def.reserveId);
-        if (reasons != 0) return false;
-        address fundingHub = b.def.fundingHub;
-        if (fundingHub == b.m.hub) return true;
-        if (!_registry().crossHubLinesEnabled()) return false;
-        (uint256 line, uint256 sum) = _registry().creditLine(fundingHub, b.def.asset);
-        (uint256 required, uint256 funded) = _registry().creditLineCoverage(fundingHub, b.def.asset);
-        open = sum <= line && required <= funded;
-    }
-
-    /// @dev The RiskModule's step (6) for the borrowed reserve (REQ-RISK-061), which `getAccountGateStatus` covers only
-    /// for the reserves the account already owes on: the Aave reserve not paused, its AaveOracle source the recorded
-    /// one, and for a DebtOracle source the borrow-side price rule (`PriceAge.debtBorrowable`, through `_debtView`).
-    /// @custom:spec REQ-LENS-035, REQ-RISK-061
-    function _borrowedReserveOpen(
-        Borrow memory b
-    ) internal view returns (bool) {
-        if (IAaveV4Spoke(b.m.spoke).getReserveConfig(b.def.reserveId).paused) return false;
-        DebtPriceView memory v = _debtView(b.m.spoke, b.def);
-        return v.source == b.def.priceSource && v.borrowFresh;
+        if (_registry().pauseState(b.m.hub) != PauseState.None) return false;
+        if (_registry().pauseState(b.def.fundingHub) != PauseState.None) return false;
+        if (_registry().isFrozenAddress(wallet)) return false;
+        try IRiskModuleViews(_RISK_MODULE).checkBorrowGate(b.proxy, b.def.reserveId) {
+            open = true;
+        } catch {}
     }
 
     /// @dev SPEC-CF-005 rescue exclusion `E` of the account, Aave value units.
