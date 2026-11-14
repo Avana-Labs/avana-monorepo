@@ -14,7 +14,7 @@
 // deployments-local/<network>/drills/<name>.json with its checks.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { request } from "node:https";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
@@ -514,9 +514,11 @@ const DRILLS: Record<string, Drill> = {
     cfg.listing.markets = [...cfg.listing.markets, drillMarket];
     const drillConfig = "deployments-local/anvil/config-drill-relist.json";
     writeFileSync(join(CONTRACTS, drillConfig), `${JSON.stringify(cfg, null, 2)}\n`);
-    const bak = join(out, ".drill-outputs");
+    // The listing steps rewrite the deployment outputs (markets, oracles, operations, metadata): kept beside the
+    // output folder and put back afterwards, with any file the drill added removed.
+    const bak = `${out}.drill-outputs`;
     rmSync(bak, { recursive: true, force: true });
-    cpSync(out, bak, { recursive: true, filter: (p) => !/[\\/](logs|anvil-state\.json|\.drill-outputs|\.hostile-outputs)$/.test(p) });
+    cpSync(out, bak, { recursive: true, filter: (p) => !/[\\/](logs|anvil-state\.json|drills|\.hostile-outputs)$/.test(p) });
     const snap = await snapshot(e);
     const env = { AVANA_CONFIG: drillConfig };
     const run = (step: string) => {
@@ -562,8 +564,7 @@ const DRILLS: Record<string, Drill> = {
       }
     } finally {
       await revertTo(e, snap);
-      cpSync(bak, out, { recursive: true });
-      rmSync(bak, { recursive: true, force: true });
+      restoreOutputs(bak);
       rmSync(join(CONTRACTS, drillConfig), { force: true });
       c.lines.push("chain reverted to the snapshot taken before the drill; deployment outputs restored");
     }
@@ -637,6 +638,20 @@ const DRILLS: Record<string, Drill> = {
     c.that("rate role", true, "forward and backward applied");
   },
 };
+
+/** Puts the saved deployment outputs back and removes the files the drill added (the drill records stay). */
+function restoreOutputs(bak: string) {
+  for (const dir of ["", "listing-content"]) {
+    const here = join(out, dir);
+    if (!existsSync(here)) continue;
+    for (const f of readdirSync(here, { withFileTypes: true })) {
+      if (!f.isFile() || f.name === "anvil-state.json" || /^(changes-|operation-changes-|aip-changes-|e2e-status)/.test(f.name)) continue;
+      if (!existsSync(join(bak, dir, f.name))) rmSync(join(here, f.name), { force: true });
+    }
+  }
+  cpSync(bak, out, { recursive: true });
+  rmSync(bak, { recursive: true, force: true });
+}
 
 /** The config the last release step used (the rehearsal exports it as AVANA_CONFIG). */
 function currentConfig(): string {

@@ -43,6 +43,13 @@ interface ISpokeImplementationRead {
     function ORACLE() external view returns (address);
 }
 
+/// @notice The vault-token views a relisting reads.
+interface IRelistedToken {
+    function marketId() external view returns (uint256);
+    function lpOracle() external view returns (address);
+    function decimals() external view returns (uint8);
+}
+
 /// @title ListMarkets
 /// @notice The listing of the network's collateral markets (3.8 `MKT-018`…`MKT-026`, `MKT-044`, `MKT-055`), in the
 /// steps the contracts require, each a timelock operation the governance Safe schedules (with `AVANA_SCHEDULE=1` on
@@ -57,7 +64,8 @@ interface ISpokeImplementationRead {
 ///   other debt asset, initialised in its deploying transaction once the asset is listed (`DebtOracle.initialize` reads
 ///   its routes). `10_AaveListingPayload` (`debt`) then names them as the reserves' price sources and makes the
 ///   approved reserves borrowable.
-/// - `markets` (normal delay): Avana operators deploy each market's LPOracle proxy and swap routes; the batch enables
+/// - `markets` (normal delay): Avana operators deploy each market's LPOracle proxy and swap routes (a cancelled market
+///   of the config is relisted under its reserved ID with its first vault token and LPOracle); the batch enables
 ///   the debt reserves (`enableDebtReserve`, the debt asset's settlement parameters and, on the first reserve of a
 ///   (Hub, asset), `loosenDebtSpeedLimit`), then per market `deployVaultToken`, `listCollateralMarket`,
 ///   `setInitialMarketParams`, `setInitialMarketCaps`, `loosenMarketSpeedLimits` and the primary and backup route of
@@ -509,16 +517,24 @@ contract ListMarkets is ListingBase {
         for (uint256 i = 0; i < n; ++i) {
             // A market already listed (any status but Cancelled) keeps its ID; the new ones take the next IDs in
             // config order, as the registry requires.
-            if (registry.marketOfKey(_marketKeyOf(f, i)) != 0) continue;
-            Mkt memory m = _market(i, next++);
+            bytes32 marketKey = _marketKeyOf(f, i);
+            if (registry.marketOfKey(marketKey) != 0) continue;
+            // A cancelled market of this (Spoke, market key) is relisted under its reserved ID with the vault token
+            // and LPOracle of its first listing (REQ-MREG-030): the factory writes a token once per pair.
+            address token = f.tokenOf(_spokeAddr(_str(string.concat(_at("markets", i), ".spoke"))), marketKey);
+            Mkt memory m = token == address(0) ? _market(i, next++, address(0)) : _market(i, 0, token);
             _checkCollateralFactor(m);
-            _deployLpOracle(m);
-            m.vaultToken = f.predictAddress(m.spoke, f.marketKeyOf(m.integrationId, m.pool, bytes32(0), m.shape));
-            address[] memory routes = _listMarket(op, m, f);
+            if (token == address(0)) {
+                _deployLpOracle(m);
+                m.vaultToken = f.predictAddress(m.spoke, marketKey);
+            } else {
+                console2.log("relisting cancelled market", m.marketId, m.vaultToken);
+            }
+            address[] memory routes = _listMarket(op, m, f, token == address(0));
             json = vm.serializeString(out, string.concat("market", vm.toString(m.marketId)), _marketJson(m, routes));
         }
         if (op.targets.length != 0) op.salt = _listingMetadataHash(first);
-        if (next != first) vm.writeJson(json, _outputPath("listing-markets"));
+        if (op.targets.length != 0) vm.writeJson(json, _outputPath("listing-markets"));
     }
 
     /// @notice Refuses a market whose `collateralFactorBps` (the vault token's Aave collateral factor, set by step 10's
@@ -604,12 +620,15 @@ contract ListMarkets is ListingBase {
         require(keccak256(vm.readFileBinary(file)) == hash, "listing metadata file does not hash to its name");
     }
 
+    /// @param vaultToken The vault token of a cancelled market being relisted (its ID, LPOracle and decimals are the
+    /// first listing's), or `address(0)` for a new market with ID `marketId`.
     function _market(
         uint256 i,
-        uint256 marketId
+        uint256 marketId,
+        address vaultToken
     ) private returns (Mkt memory m) {
         m.key = _at("markets", i);
-        m.marketId = marketId;
+        m.marketId = vaultToken == address(0) ? marketId : IRelistedToken(vaultToken).marketId();
         m.integrationId = uint32(_uint(string.concat(m.key, ".integrationId")));
         m.spokeLabel = _str(string.concat(m.key, ".spoke"));
         m.spoke = _spokeAddr(m.spokeLabel);
@@ -623,6 +642,14 @@ contract ListMarkets is ListingBase {
             ? abi.encode(_uint(string.concat(m.key, ".generation")), p0, p1)
             : abi.encode(p0, p1);
         m.lpVault = vm.parseJsonAddressArray(avanaJson, ".lpVaults")[idx];
+        m.debtAsset = _debtAssetOf(m.spokeLabel);
+        if (vaultToken != address(0)) {
+            // A relisting: the integration keeps the reserved ID's binding, which listCollateralMarket checks.
+            (m.vaultToken, m.lpOracle) = (vaultToken, IRelistedToken(vaultToken).lpOracle());
+            m.decimals = IRelistedToken(vaultToken).decimals();
+            m.unitExp = IClIntegration(m.lpVault).unitExponent(m.marketId);
+            return m;
+        }
         // The vault-token decimals `d` and the pool's unit exponent `k` the LPVault's `bindMarket` derives inside
         // `listCollateralMarket`, read by a simulated binding that is reverted: `deployVaultToken` earlier in the batch
         // must name the same `d`, and the market's LPOracle the same `k` (SPEC-ORC-005, `CL_CHECK_UNIT_EXP`).
@@ -632,7 +659,6 @@ contract ListMarkets is ListingBase {
             IAmmIntegration(m.lpVault).bindMarket(m.marketId, m.pool, bytes32(0), m.shape, m.integrationData);
         m.unitExp = IClIntegration(m.lpVault).unitExponent(m.marketId);
         vm.revertToState(snap);
-        m.debtAsset = _debtAssetOf(m.spokeLabel);
     }
 
     function _integrationIndex(
@@ -809,15 +835,18 @@ contract ListMarkets is ListingBase {
     function _listMarket(
         Operation memory op,
         Mkt memory m,
-        IVaultTokenFactory f
+        IVaultTokenFactory f,
+        bool deployToken
     ) private returns (address[] memory routes) {
         string memory id = vm.toString(m.marketId);
-        _add(
-            op,
-            address(f),
-            _vaultTokenCall(m, string.concat("Avana LP ", _str(string.concat(m.key, ".name")), " market ", id), id),
-            "VTF.deployVaultToken"
-        );
+        if (deployToken) {
+            _add(
+                op,
+                address(f),
+                _vaultTokenCall(m, string.concat("Avana LP ", _str(string.concat(m.key, ".name")), " market ", id), id),
+                "VTF.deployVaultToken"
+            );
+        }
         MarketDef memory d = MarketDef({
             hub: m.hub,
             spoke: m.spoke,
