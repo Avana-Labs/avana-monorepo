@@ -346,6 +346,9 @@ jobs:
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
           FOUNDRY_PROFILE=univ3-periphery forge build
+          FOUNDRY_PROFILE=slipstream-v1 forge build
+          FOUNDRY_PROFILE=slipstream-main forge build
+          FOUNDRY_PROFILE=aerodrome forge build
 
       - name: Gas snapshots (test/gas against the committed snapshots/)
         # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
@@ -471,6 +474,9 @@ jobs:
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
           FOUNDRY_PROFILE=univ3-periphery forge build
+          FOUNDRY_PROFILE=slipstream-v1 forge build
+          FOUNDRY_PROFILE=slipstream-main forge build
+          FOUNDRY_PROFILE=aerodrome forge build
 
       - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
         env:
