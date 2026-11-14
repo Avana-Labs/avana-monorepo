@@ -1,0 +1,35 @@
+{
+  "name": "pause-all-back",
+  "description": "every Hub unpaused in one timelock operation (normal delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "unpause",
+      "args": {
+        "hub": "hub:stable"
+      }
+    },
+    {
+      "contract": "MarketRegistry",
+      "function": "unpause",
+      "args": {
+        "hub": "hub:correlated"
+      }
+    },
+    {
+      "contract": "MarketRegistry",
+      "function": "unpause",
+      "args": {
+        "hub": "hub:volatile"
+      }
+    },
+    {
+      "contract": "MarketRegistry",
+      "function": "unpause",
+      "args": {
+        "hub": "hub:growth"
+      }
+    }
+  ]
+}

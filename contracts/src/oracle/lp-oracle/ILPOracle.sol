@@ -77,10 +77,10 @@ interface ILPOracle is IAaveV4PriceFeed, IAccessControl, ILPOracleEvents, ILPOra
     ) external;
 
     /// @notice Served price: USD value of one whole vault token, 8 decimals, always >= 1.
-    /// @dev SPEC-ORC-017: the fresh `price8` when Live; `min(fresh, accepted)` when Drifting with no disagreement;
-    /// `min(price8 from each token's lower route, capped, accepted)` while some token disagrees; the accepted price when
-    /// Cached; 1 when Expired. Never above the accepted price unless Live. Read by the AaveOracle for health factor and
-    /// seizure sizing; LPVaultSwap never seizes a Cached, Expired or disagreeing market, so the stress values only lower
+    /// @dev SPEC-ORC-017: the fresh `price8` when Live or Drifting with no disagreement; `min(price8 from each token's
+    /// lower route, capped, fresh)` while some token disagrees; the accepted price when Cached; 1 when Expired. The
+    /// accepted price enters only the Cached value. Read by the AaveOracle for health factor and seizure sizing;
+    /// LPVaultSwap never seizes a Cached, Expired or disagreeing market, so the stress values only lower
     /// the account's health factor. Never reverts except `InsufficientGas`.
     /// @return answer Served price.
     /// @custom:spec REQ-ORACLE-020, REQ-ORACLE-085, REQ-ORACLE-086, REQ-ORACLE-060, REQ-ORACLE-061, SPEC-ORC-008, SPEC-ORC-012, SPEC-ORC-017, Q-247

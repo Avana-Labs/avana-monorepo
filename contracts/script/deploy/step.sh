@@ -31,6 +31,12 @@
 #   09-listing-activate           LPOracles poked, activateMarket (timelock, short delay)
 #   09-execute-listing-activate
 #
+# Changes to a live deployment (deploy recipe B8), any time after the first deployment:
+#   11-changes <file>             a JSON list of changes, each checked against its on-chain limit, run as one timelock
+#                                 operation, one guardian or risk-steward call, one AAVE AIP, or under a delegated Aave
+#                                 role (script/deploy/changes.ts; the format is at its top). Exit 2: refused by a limit
+#                                 check; 3: not available on this deployment (a role Aave has not granted)
+#
 # Signing: on anvil every sender is unlocked (anvil --auto-impersonate): the deployer is AVANA_DEPLOYER (default the
 # first anvil account) and the Safe, the Aave executor's PayloadsController and the faucet come from the network
 # config. Elsewhere AVANA_SIGNER_FLAGS gives forge's signer flags (for example `--account deployer --sender 0x…`),
@@ -43,6 +49,11 @@ step="${1:?usage: script/deploy/step.sh <step>; the steps are listed at the top 
 : "${AVANA_RPC_URL:?set AVANA_RPC_URL}"
 CONFIG="${AVANA_CONFIG:-script/deploy/config/$AVANA_NETWORK.json}"
 config() { node -e 'const c=require(process.argv[1]);console.log(process.argv[2].split(".").reduce((o,k)=>o[k],c))' "./$CONFIG" "$1"; }
+
+# Not a forge script: an operator's changes (deploy recipe B8), from a changes file.
+if [ "$step" = 11-changes ]; then
+  exec env AVANA_NETWORK="$AVANA_NETWORK" AVANA_RPC_URL="$AVANA_RPC_URL" node script/deploy/changes.ts "${2:?usage: step.sh 11-changes <file>}"
+fi
 
 # Not a forge script: the listing metadata file, written from the config's page text and the chain's IDs.
 if [ "$step" = 09-market-metadata ]; then

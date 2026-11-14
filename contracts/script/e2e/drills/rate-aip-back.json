@@ -1,0 +1,16 @@
+{
+  "name": "rate-aip-back",
+  "description": "an AIP puts the rate curve back",
+  "via": "aip",
+  "restores": "rate-aip-forward",
+  "changes": [
+    {
+      "aave": "assetRates",
+      "hub": "hub:stable",
+      "asset": "token:GHO",
+      "set": {
+        "baseDrawnRate": "$prior"
+      }
+    }
+  ]
+}

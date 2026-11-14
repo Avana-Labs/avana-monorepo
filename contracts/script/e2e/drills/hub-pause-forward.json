@@ -1,0 +1,16 @@
+{
+  "name": "hub-pause-forward",
+  "description": "the Emergency Guardian pauses the stable Hub (General)",
+  "via": "direct",
+  "sender": "emergencyGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "pause",
+      "args": {
+        "hub": "hub:stable",
+        "reason": "1"
+      }
+    }
+  ]
+}

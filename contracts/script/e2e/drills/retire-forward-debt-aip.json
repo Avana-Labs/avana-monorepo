@@ -1,0 +1,15 @@
+{
+  "name": "retire-forward-debt-aip",
+  "description": "AIP: the Spoke's GHO reserve no longer borrowable",
+  "via": "aip",
+  "changes": [
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV3Growth",
+      "reserve": "debtReserve:uniV3Growth:GHO",
+      "set": {
+        "borrowable": false
+      }
+    }
+  ]
+}

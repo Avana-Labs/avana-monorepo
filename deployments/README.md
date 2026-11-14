@@ -17,7 +17,7 @@ Local rehearsals (anvil) write their outputs and manifests to `contracts/deploym
 
 ## Stages
 
-1. **Local (anvil).** `contracts/script/e2e/e2e-local.sh` deploys the whole world on a fresh anvil node: Avana's own Aave V4 (three Hubs, CDP Spokes per AMM protocol and risk tier, Lend Spokes), Uniswap v3, Aerodrome Slipstream, test tokens and movable feeds, dozens of pools, then Avana, its first two timelock operations, the manifest and its verification, the keeper and the indexer, and the scenarios. Each step is recorded as pass, fail or not-run in `contracts/deployments-local/anvil/e2e-status.json`.
+1. **Local (anvil).** `contracts/script/e2e/e2e-local.sh` deploys the whole world on a fresh anvil node: Avana's own Aave V4 (three Hubs, CDP Spokes per AMM protocol and risk tier, Lend Spokes), Uniswap v3, Aerodrome Slipstream, test tokens and movable feeds, dozens of pools, then Avana, its first two timelock operations, the later releases (day 2, and rehearsal 08's exotic pools and borrowable assets: `contracts/script/e2e/day2-additions.ts`, `exotic-additions.ts`), every step again with nothing new, the hostile tokens refused, the manifest and its verification, the keeper and the indexer, and the scenarios. Each step is recorded as pass, fail or not-run in `contracts/deployments-local/anvil/e2e-status.json`.
 2. **Sepolia.** Avana redeploys its own Aave V4, Uniswap v3 and Aerodrome Slipstream with `AVANA_NETWORK=sepolia`; the deployer signs with a keystore account or a Ledger, and the governance Safe signs the timelock operations from the JSON files the scripts write.
 3. **Ethereum and Base.** Aave V4 is the Aave DAO's: steps 01, 02 and the execution of 06 do not run; `03_DeployAvana` reads the DAO's addresses from `contracts/script/deploy/config/<network>.json`, and `06_AaveDeploymentPayload` writes the AIP draft only.
 
@@ -38,7 +38,7 @@ npm run manifest -- verify --manifest ../../deployments/sepolia/v1.0.0.json --rp
 npm run manifest -- publish --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
 ```
 
-A check is pending, not passed, while the operation that completes it has not executed (for example the guardian roles before the `guardian-roles` operation) or while a contract is not deployed (the concentrated-liquidity LPOracle implementation). `publish` refuses a manifest with any failed or pending check. The live-configuration checks of `TEST-135` (reserve flags, caps, credit lines, First-Loss Reserve funding) extend `verify` as markets are listed.
+A check is pending, not passed, while the operation that completes it has not executed (for example the guardian roles before the `guardian-roles` operation) or while a contract is not deployed (the concentrated-liquidity LPOracle implementation). `publish` refuses a manifest with any failed or pending check. A newly verified manifest is committed together with the regenerated address library of `@avana/protocol` (`npm run addresses -w packages/protocol`, which writes `packages/protocol/src/addresses/generated.ts` from `verified/`); the `services` workflow fails while that file is stale. The live-configuration checks of `TEST-135` (reserve flags, caps, credit lines, First-Loss Reserve funding) extend `verify` as markets are listed.
 
 ## Test-network stand-ins
 

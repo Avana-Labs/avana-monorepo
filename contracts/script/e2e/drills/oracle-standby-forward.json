@@ -1,0 +1,16 @@
+{
+  "name": "oracle-standby-forward",
+  "description": "P-02: the Emergency Guardian puts USDC's listed standby route in its primary slot",
+  "via": "direct",
+  "sender": "emergencyGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "useStandbyRoute",
+      "args": {
+        "token": "token:USDC",
+        "slot": "1"
+      }
+    }
+  ]
+}

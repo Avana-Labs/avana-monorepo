@@ -1,0 +1,15 @@
+{
+  "name": "caps-zero",
+  "description": "tighten the stable Hub's depositor cap to 0: the ParameterStore's floor refuses it",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "ParameterStore",
+      "function": "tightenDepositorUsdCap",
+      "args": {
+        "hub": "hub:stable",
+        "value": "0"
+      }
+    }
+  ]
+}

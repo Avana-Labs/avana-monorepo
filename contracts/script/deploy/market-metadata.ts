@@ -8,7 +8,8 @@
 //
 // Only what the listing adds gets a page: the config's markets not listed yet, which take the IDs after
 // `MarketRegistry.marketCount()` in config order (the rule `09-listing-markets` applies; it refuses a file written for
-// other IDs), and the debt reserves not enabled yet. With nothing new, no file is written.
+// other IDs) or, for a cancelled market relisted, its reserved ID, and the debt reserves not enabled yet. With nothing
+// new, no file is written.
 //
 // Outputs, under deployments-local/<network>/:
 //   listing-content/<hash>.json   the file, published at <LISTING_CONTENT_URL>/<hash>.json
@@ -58,6 +59,8 @@ const abi = parseAbi([
   "function isApprovedDebtReserve(address spoke, uint256 reserveId) view returns (bool)",
   "function marketKeyOf(uint32 integrationId, address pool, bytes32 poolId, (uint8 kind, int24 tickLower, int24 tickUpper) shape) view returns (bytes32)",
   "function tickSpacing() view returns (int24)",
+  "function tokenOf(address spoke, bytes32 marketKey) view returns (address)",
+  "function marketId() view returns (uint256)",
   "function getAssetId(address underlying) view returns (uint256)",
   "function getReserveId(address hub, uint256 assetId) view returns (uint256)",
 ]);
@@ -116,11 +119,15 @@ async function main() {
   const entries: Json[] = [];
   let next = firstMarketId;
   for (const [i, m] of (config.listing.markets as Json[]).entries()) {
-    const listed = await client.readContract({ address: registry, abi, functionName: "marketOfKey", args: [await marketKey(factory, m)] });
+    const key = await marketKey(factory, m);
+    const listed = await client.readContract({ address: registry, abi, functionName: "marketOfKey", args: [key] });
     if (listed !== 0n) continue;
+    // A cancelled market is relisted under its reserved ID (its vault token names it); a new one takes the next ID.
+    const token = await client.readContract({ address: factory, abi, functionName: "tokenOf", args: [spokeOf(m.spoke).spoke, key] });
+    const id = /^0x0{40}$/i.test(token) ? next++ : await client.readContract({ address: token, abi, functionName: "marketId" });
     entries.push({
       scope: "pool",
-      key: String(next++),
+      key: String(id),
       ...text(`listing.markets[${i}]`, m.content),
       stats: [
         { label: "Collateral factor", value: pct(m.collateralFactorBps) },

@@ -1,0 +1,16 @@
+{
+  "name": "remove-debt-reserve-back-aip",
+  "description": "AIP: USDT borrowable again",
+  "via": "aip",
+  "restores": "remove-debt-reserve-forward-aip",
+  "changes": [
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:slipVolatile",
+      "reserve": "debtReserve:slipVolatile:USDT",
+      "set": {
+        "borrowable": "$prior"
+      }
+    }
+  ]
+}

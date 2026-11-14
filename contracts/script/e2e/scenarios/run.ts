@@ -29,6 +29,7 @@ import {
   wallet,
   world,
 } from "./context.ts";
+import { exoticScenarios } from "./exotic.ts";
 import { marketScenarios } from "./market.ts";
 import { OCR2_ABI, transmit } from "./ocr2.ts";
 
@@ -172,6 +173,8 @@ const scenarios: Scenario[] = [
   },
   // The seven market scenarios (market.ts), each with `needs: "market"`.
   ...marketScenarios(ctx),
+  // The exotic pass's two (exotic.ts), when its markets are listed.
+  ...exoticScenarios(ctx),
 ];
 
 async function main() {

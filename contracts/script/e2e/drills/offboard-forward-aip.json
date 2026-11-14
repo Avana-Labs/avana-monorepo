@@ -1,0 +1,15 @@
+{
+  "name": "offboard-forward-aip",
+  "description": "AIP: the paired Aave freeze of the market's vault-token reserve",
+  "via": "aip",
+  "changes": [
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV3Stable",
+      "reserve": "collateral:uni-USDC-USDT-100",
+      "set": {
+        "frozen": true
+      }
+    }
+  ]
+}
