@@ -41,7 +41,7 @@ describe("checkSiweMessage", () => {
     const base = message()
     for (const bad of [
       `${base}\nNonce: other`,
-      base.replace("\n", "\r\n"),
+      base.replaceAll("\n", "\r\n"),
       `${base}\n`,
       `${base}\nIssued At: ${ISSUED}`,
       base.replace("Version: 1", "Version: 2"),
