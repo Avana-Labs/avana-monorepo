@@ -268,25 +268,6 @@ test.describe("Lend pages", () => {
   })
 })
 
-// ─── Multiply ────────────────────────────────────────────────────────────────
-
-test.describe("Multiply pages", () => {
-  test("browse multiply main", async ({ page }, testInfo) => {
-    const viewport = testInfo.project.name
-    await browseRoute(page, viewport, "/multiply", { clickTabs: true })
-
-    const marketLink = page.locator("a[href*='/multiply/markets/']").first()
-    if (await marketLink.isVisible().catch(() => false)) {
-      const href = await marketLink.getAttribute("href")
-      await marketLink.click({ force: true })
-      await page.waitForLoadState("networkidle")
-      await browseRoute(page, viewport, href ?? "/multiply")
-    }
-
-    await toggleTheme(page, viewport, "/multiply")
-  })
-})
-
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 test.describe("Dashboard", () => {

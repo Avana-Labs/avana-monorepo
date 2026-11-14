@@ -30,14 +30,12 @@ export const LIGHTHOUSE_NUMERIC_BUDGETS = {
 
 /**
  * Lighthouse must verify that an audit reached the intended application surface.
- * Without this, the client-side sandbox gate can make every route score the same
- * onboarding screen while appearing to audit Borrow, Lend, or Multiply.
+ * Without this, an error or loading screen could score in place of the
+ * route while appearing to audit Borrow, Lend, or Swap.
  */
 export const LIGHTHOUSE_ROUTE_MARKERS = Object.fromEntries([
   ...routeConfig.primaryRoutes.map(({ route, marker }) => [route, marker]),
   ...routeConfig.actionRoutes.map(({ path, marker }) => [path, marker]),
 ])
-
-export const LIGHTHOUSE_ONBOARDING_MARKER = "This risk-free Avana Sandbox lets you borrow against practice LP positions"
 
 export const CHROME_FLAGS = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu"

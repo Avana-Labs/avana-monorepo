@@ -7,7 +7,7 @@ import { expect, test, type Page } from "@playwright/test"
  * scroll under the pinned column instead of the whole row sliding away.
  */
 
-const PATHS = ["/borrow", "/lend", "/multiply"] as const
+const PATHS = ["/borrow", "/lend"] as const
 
 async function visibleTables(page: Page) {
   await page.locator("table tbody tr").first().waitFor({ state: "visible" })

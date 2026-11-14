@@ -69,16 +69,11 @@ const publicBypassFlags = [
   "NEXT_PUBLIC_DEV_OPEN_GATE",
   "NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE",
   "NEXT_PUBLIC_LIGHTHOUSE_AUDIT_MODE",
-  // Sandbox dev-controls (umbrella time-warp / deficit / slash). Both the server
-  // flag and its client mirror must stay off in CI/deploy builds.
-  "SANDBOX_DEV_CONTROLS",
-  "NEXT_PUBLIC_SANDBOX_DEV_CONTROLS",
 ]
 
 if (process.env.VERCEL || process.env.CI) {
   for (const key of publicBypassFlags) {
-    // Flags are enabled with "1" (open-gate/playwright/lighthouse) or "true"
-    // (sandbox dev-controls). Either value is a failure in CI/deploy builds.
+    // Flags are enabled with "1" or "true". Either value is a failure in CI/deploy builds.
     if (process.env[key] === "1" || process.env[key] === "true") {
       fail(`Public bypass flag must not be enabled in CI/deploy builds: ${key}`)
     }

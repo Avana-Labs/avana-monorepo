@@ -30,17 +30,14 @@ const BASE_URL = (process.env.BASE_URL || "http://localhost:3000").replace(/\/+$
 const RUNS = Math.max(1, Number(process.env.RUNS || 2))
 const WARMUP = process.env.WARMUP !== "0"
 
-/** Routes Instant Paint cares about most (subset of config/performance-routes.json + umbrella). */
+/** Routes Instant Paint cares about most (subset of config/performance-routes.json). */
 const ROUTES = [
   { route: "/borrow", label: "borrow-catalog" },
   { route: "/borrow/markets/uni-v3-bluechip-weth-usdc", label: "borrow-market-detail" },
   { route: "/borrow/assets/usdc", label: "borrow-asset-detail" },
   { route: "/lend", label: "lend-catalog" },
   { route: "/lend/markets/usdc", label: "lend-market-detail" },
-  { route: "/multiply", label: "multiply-catalog" },
-  { route: "/multiply/markets/aave-gho", label: "multiply-market-detail" },
   { route: "/dashboard", label: "dashboard" },
-  { route: "/umbrella", label: "umbrella" },
 ]
 
 function median(nums) {

@@ -6,8 +6,6 @@ import {
   getNavigationTimingBudget,
 } from "./fixtures/route-budgets"
 
-const ONBOARDING_COPY = "This risk-free Avana Sandbox lets you borrow against practice LP positions"
-
 const PRIMARY_ROUTES = ROUTE_HERO_SELECTORS.filter((entry) => LIGHTHOUSE_ROUTES.includes(entry.route))
 
 for (const { route, heroText, heroRole } of PRIMARY_ROUTES) {
@@ -21,7 +19,6 @@ for (const { route, heroText, heroRole } of PRIMARY_ROUTES) {
 
     await page.goto(route, { waitUntil: "domcontentloaded", timeout: 60_000 })
 
-    await expect(page.getByText(ONBOARDING_COPY, { exact: false })).toHaveCount(0)
 
     const domContentLoadedMs = Date.now() - startedAt
     expect(
@@ -47,7 +44,6 @@ for (const { name, path } of ACTION_LIGHTHOUSE_ROUTES) {
     test.setTimeout(45_000)
     const startedAt = Date.now()
     await page.goto(path, { waitUntil: "domcontentloaded", timeout: 60_000 })
-    await expect(page.getByText(ONBOARDING_COPY, { exact: false })).toHaveCount(0)
     expect(Date.now() - startedAt).toBeLessThanOrEqual(4_000)
     await expect(page.getByTestId("action-page-shell")).toBeVisible({ timeout: 10_000 })
   })

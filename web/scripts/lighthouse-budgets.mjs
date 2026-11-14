@@ -7,7 +7,6 @@ import { URL } from "node:url"
 import {
   CHROME_FLAGS,
   LIGHTHOUSE_CATEGORY_BUDGETS,
-  LIGHTHOUSE_ONBOARDING_MARKER,
   LIGHTHOUSE_NUMERIC_BUDGETS,
   LIGHTHOUSE_ROUTE_MARKERS,
   LIGHTHOUSE_ROUTES,
@@ -99,9 +98,6 @@ async function assertRouteContent(route) {
 
   if (!response.ok) {
     throw new Error(`${route} returned ${response.status} during the Lighthouse preflight`)
-  }
-  if (html.includes(LIGHTHOUSE_ONBOARDING_MARKER)) {
-    throw new Error(`${route} rendered the onboarding gate instead of the audited application surface`)
   }
   if (expectedMarker && !html.includes(expectedMarker)) {
     throw new Error(`${route} did not render its expected marker: ${expectedMarker}`)

@@ -20,15 +20,12 @@ const KiB = 1024
 export const ROUTE_BUDGETS = {
   "lend/page": 430 * KiB, // 414
   "borrow/page": 430 * KiB, // 416
-  "multiply/page": 280 * KiB, // 266
   "dashboard/page": 460 * KiB, // 443
   "swap/page": 430 * KiB, // 414
-  "umbrella/page": 455 * KiB, // 441
   "ask/page": 245 * KiB, // 230
   "lend/markets/[marketId]/page": 485 * KiB, // 467
   "borrow/markets/[marketId]/page": 490 * KiB, // 475
   "borrow/assets/[assetId]/page": 495 * KiB, // 480
-  "multiply/markets/[marketId]/page": 485 * KiB, // 467
   "actions/[product]/[kind]/page": 465 * KiB, // 451
 }
 

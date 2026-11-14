@@ -20,13 +20,9 @@ const pages = [
   "/",
   "/borrow",
   "/lend",
-  "/multiply",
-  "/borrow/markets/uni-v2-wbtc-usdc",
   "/lend/markets/usdc",
-  "/multiply/markets/wsteth-eth",
   "/borrow/markets/uni-v3-bluechip-weth-usdc",
   "/lend/markets/gho",
-  "/multiply/markets/eth-gho",
 ]
 
 const latencies = []
