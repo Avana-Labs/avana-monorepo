@@ -3,7 +3,7 @@
 // Market scenarios of the local rehearsal, on the markets listed by script/deploy/09_ListMarkets.s.sol
 // (deployments-local/<network>/listing-markets.json): an LP's whole life on a Uniswap v3 and on a Slipstream market,
 // LPOracle price paths, keeper liquidations through LPVaultSwap, a self-liquidation attempt, a deficit covered by the
-// First-Loss Reserve, and the cross-Hub credit line switch (off at launch). Each scenario uses its own wallet, starts from
+// First-Loss Reserve, and the cross-Hub credit line switch (off by default). Each scenario uses its own wallet, starts from
 // the world's configured feed prices and leaves them restored. Prices move only by signed OCR2 rounds
 // (refresh-feeds.ts); pools move only by swaps through the world's routers.
 
@@ -132,6 +132,8 @@ const WALLETS = {
   swapper: "0x1000000000000000000000000000000000000c0a",
   lender: "0x1000000000000000000000000000000000000c0b",
   poker: "0x1000000000000000000000000000000000000c0f",
+  drillUniswap: "0x1000000000000000000000000000000000000c11",
+  drillSlipstream: "0x1000000000000000000000000000000000000c12",
 } as const satisfies Record<string, Address>;
 
 // ─── Types ───
@@ -1267,7 +1269,7 @@ async function deficitCoverage(e: Env) {
   return { ok, detail: ok ? `deficit of ${fmt(covered, d)} ${e.sym(m.debtAsset)} covered by ${key}, ${burned} Hub shares burned` : "deficit not fully covered, or the First-Loss Reserve's shares did not fall by the shares burned" };
 }
 
-// ─── 7. Cross-Hub credit line (off at launch) ───
+// ─── 7. Cross-Hub credit line (off by default) ───
 
 async function crossHubLine(e: Env) {
   const m = e.market("uni-USDC-USDT-100");
@@ -1310,6 +1312,184 @@ async function crossHubLine(e: Env) {
 
 // ─── Export ───
 
+// ─── 8. Keeper failover drill: every primary stopped, the standby liquidates within the M-09 window ───
+
+/** Anvil's published test account #7, which the rehearsal binds the operator helper to (its key is public). */
+const DRILL_SIGNER_KEY = "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356";
+const BLOCK_SECONDS = 12;
+/** M-09 warns at 60 s and pages at 300 s: the standby acts from 60 s on and must have liquidated before 300 s. */
+const STANDBY_AFTER_BLOCKS = 60 / BLOCK_SECONDS;
+const PAGE_AFTER_BLOCKS = 300 / BLOCK_SECONDS;
+
+/**
+ * services/README.md: "a failover drill: stopping every primary lets the standby liquidate each
+ * account within the M-09 warning window". Two accounts (a Uniswap v3 and a Slipstream market) fall below HF 1 with no
+ * primary running; only a standby keeper runs, in active mode, signing with the operator helper's test key on anvil
+ * (KEEPER_LOCAL_KEY_ANVIL, refused on every other network set). Blocks are mined 12 s apart. Pass: neither account is
+ * liquidated before the standby's 60 s, and both are by 300 s (the M-09 page).
+ */
+async function failoverDrill(e: Env) {
+  const { spawn, execFileSync } = await import("node:child_process");
+  const { mkdtempSync, writeFileSync: write, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join: joinPath, resolve } = await import("node:path");
+  const n = e.numbers;
+  const um = e.market("uni-WETH-USDC-500");
+  const sm = e.market("slip-WETH-USDC-cl100");
+  const helper = e.ctx.manifest.avana.operatorHelpers[0] as { address: Address; signer: Address; fundingSafe: Address };
+  n.helper = `${helper.address} signer ${helper.signer} Safe ${helper.fundingSafe}`;
+
+  await e.setWeth(10_000n, [um.lpOracle, sm.lpOracle]);
+  n.settle = await e.settle();
+  // `since`: the first block whose state has the account below HF 1; `minedAt`: the block that includes its liquidation.
+  const accounts: { m: Market; a: Account; label: string; since: bigint | null; minedAt: bigint | null }[] = [];
+  for (const [m, w, label] of [
+    [um, WALLETS.drillUniswap, "uniswap"],
+    [sm, WALLETS.drillSlipstream, "slipstream"],
+  ] as const) {
+    const p = await e.mintPosition(m, w, 50_000n);
+    const a = await e.pledge(m, w, p);
+    const max = await e.maxBorrow(m, w, a);
+    const amount = pct(max, 9_700n);
+    n[`${label}.liquidity`] = await e.ensureLiquidity(m, amount);
+    await e.borrow(m, w, a, amount, WAD);
+    accounts.push({ m, a, label, since: null, minedAt: null });
+  }
+
+  // The funding Safe holds each debt asset and lets the helper pull it (inventory, top-ups, shortfall budgets).
+  await e.gasFor(helper.signer, helper.fundingSafe);
+  for (const m of [um, sm]) {
+    const big = 1_000_000n * 10n ** BigInt(e.dec(m.debtAsset));
+    await e.mint(m.debtAsset, helper.fundingSafe, big);
+    await e.approve(helper.fundingSafe, m.debtAsset, helper.address, maxUint256);
+  }
+
+  // The standby keeper, alone: active, standby role, no shard; the indexer is not running, so it discovers the
+  // accounts from RPC logs (its stream failure is logged once and does not stop it).
+  const repo = resolve(e.ctx.out, "../../..");
+  const dir = mkdtempSync(joinPath(tmpdir(), "keeper-drill-"));
+  const rpcUrl = process.env.RPC_ANVIL ?? "http://127.0.0.1:8545";
+  execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost", "-keyout", joinPath(dir, "key.pem"), "-out", joinPath(dir, "cert.pem")], {
+    stdio: "ignore",
+    env: { ...process.env, MSYS2_ARG_CONV_EXCL: "/CN=" },
+  });
+  const metricsPort = Number(process.env.E2E_DRILL_METRICS_PORT ?? 9484);
+  const env = {
+    ...process.env,
+    KEEPER_NETWORK_SET: "local",
+    KEEPER_MODE: "active",
+    KEEPER_ROLE: "standby",
+    AVANA_MANIFEST: joinPath(e.ctx.out, "manifest.json"),
+    RPC_ANVIL: rpcUrl,
+    RPC_ANVIL_FALLBACK: rpcUrl,
+    RPC_ANVIL_WS: rpcUrl.replace(/^http/, "ws"),
+    RPC_ANVIL_PRIVATE: rpcUrl,
+    KEEPER_LOCAL_KEY_ANVIL: DRILL_SIGNER_KEY,
+    KEEPER_GAS_CEILING_WEI_ANVIL: String(10n ** 18n),
+    KEEPER_GAS_DAILY_SPEND_WEI_ANVIL: String(10n ** 16n),
+    KEEPER_KILL_SWITCH_PORT: String(metricsPort + 1),
+    KEEPER_KILL_SWITCH_TLS_CERT: joinPath(dir, "cert.pem"),
+    KEEPER_KILL_SWITCH_TLS_KEY: joinPath(dir, "key.pem"),
+    KEEPER_KILL_SWITCH_CLIENT_CA: joinPath(dir, "cert.pem"),
+    KEEPER_HALT_STATE_PATH: joinPath(dir, "halt"),
+    KEEPER_METRICS_PORT: String(metricsPort),
+    KEEPER_INDEXER_URL: "http://127.0.0.1:9",
+    KEEPER_INDEXER_KEY: `drill:${Buffer.alloc(32, 7).toString("base64")}`,
+  };
+  const log: string[] = [];
+  const keeper = spawn(joinPath(repo, "node_modules/.bin/tsx"), ["src/main.ts"], { cwd: joinPath(repo, "services/keeper"), env, shell: process.platform === "win32" });
+  keeper.stdout.on("data", (d: Buffer) => log.push(...d.toString().split("\n").filter(Boolean)));
+  keeper.stderr.on("data", (d: Buffer) => log.push(...d.toString().split("\n").filter(Boolean)));
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  try {
+    let mode = "";
+    for (let i = 0; i < 90 && !mode.includes('mode="active"'); i++) {
+      await sleep(2_000);
+      mode = await fetch(`http://127.0.0.1:${metricsPort}/metrics`).then((r) => r.text()).catch(() => "");
+      if (log.some((l) => l.includes('"keeper.fatal"'))) break;
+    }
+    n.keeper = mode.trim() || `not up: ${log.filter((l) => l.includes("fatal") || l.includes("Error")).slice(0, 2).join(" ")}`;
+    if (!mode.includes('mode="active"')) return { ok: false, detail: `standby keeper did not reach active mode: ${n.keeper}` };
+
+    // WETH falls so both accounts land near HF 0.85.
+    let hfMax = 0n;
+    for (const x of accounts) {
+      const hf = await e.healthFactor(x.m, x.a);
+      if (hf > hfMax) hfMax = hf;
+    }
+    const bps = Env.crashBpsFor(hfMax, 85n * 10n ** 16n, 7_000n);
+    const beforeCrash = await e.ctx.client.getBlockNumber();
+    await e.setWeth(bps, [um.lpOracle, sm.lpOracle]);
+    // The crash is several transactions, each mined in its own block: each account's clock starts at the first block
+    // whose state has it below HF 1, as the keeper measures it.
+    const afterCrash = await e.ctx.client.getBlockNumber();
+    for (const x of accounts) {
+      for (let b = beforeCrash + 1n; b <= afterCrash && x.since === null; b++) {
+        const d = (await e.ctx.client.readContract({ address: x.m.spoke, abi: aaveV4SpokeAbi, functionName: "getUserAccountData", args: [x.a.proxy], blockNumber: b })) as { healthFactor: bigint };
+        if (d.healthFactor < WAD) x.since = b;
+      }
+      n[`${x.label}.since`] = String(x.since);
+    }
+    const debtAtCrash = await Promise.all(accounts.map((x) => e.debt(x.m, x.a)));
+    for (const [i, x] of accounts.entries()) n[`${x.label}.atCrash`] = `HF ${fmt(await e.healthFactor(x.m, x.a), 18)}, debt ${fmt(debtAtCrash[i]!, e.dec(x.m.debtAsset))}`;
+
+    // Blocks 12 s apart, mined only here: with automine on, each keeper transaction would mine its own block and
+    // start the next pass, and a breaker poke due every block (REQ-RISK-091) would then mine blocks without end.
+    // The keeper's transactions wait in the mempool for the next block, as on a real chain.
+    await e.rpc("evm_setAutomine", [false]);
+    for (let b = 1; b <= PAGE_AFTER_BLOCKS && accounts.some((x) => x.minedAt === null); b++) {
+      if (keeper.exitCode !== null) {
+        n.exited = `keeper exited (${keeper.exitCode}) before block +${b}: ${log.filter((l) => l.includes('"keeper.fatal"')).join(" ").slice(0, 300)}`;
+        break;
+      }
+      await e.advance(BLOCK_SECONDS);
+      await sleep(4_000);
+      // Only this loop mines, so a liquidation seen now is in the block just mined.
+      const head = await e.ctx.client.getBlockNumber();
+      for (const [i, x] of accounts.entries()) {
+        if (x.minedAt === null && (await e.debt(x.m, x.a)) < debtAtCrash[i]!) x.minedAt = head;
+      }
+    }
+  } finally {
+    keeper.kill();
+    await e.rpc("evm_setAutomine", [true]).catch(() => undefined);
+    rmSync(dir, { recursive: true, force: true });
+    // The whole keeper log, kept for reading after a failure.
+    n.log = joinPath(tmpdir(), `keeper-drill-${Date.now()}.log`);
+    write(n.log, log.map((l) => `${l}\n`).join(""));
+  }
+
+  const sent = log.filter((l) => l.includes('"outcome":"sent"')).length;
+  const included = log.filter((l) => l.includes('"outcome":"included"')).length;
+  n.attempts = `sent ${sent}, included ${included}, skipped ${log.filter((l) => l.includes('"outcome":"skipped"')).length}, simulation failures ${log.filter((l) => l.includes('"outcome":"simulationFailed"')).length}`;
+  const detail: string[] = [];
+  let ok = true;
+  // A transaction sent at head h is mined at h + 1 at the earliest: a standby that waits its 5 blocks from `since` is
+  // mined at since + 6 or later, and one that acts by the M-09 page (since + 25) is mined by since + 26.
+  for (const x of accounts) {
+    const hf = await e.healthFactor(x.m, x.a);
+    const age = x.since !== null && x.minedAt !== null ? Number(x.minedAt - x.since) : null;
+    n[`${x.label}.after`] = `below HF 1 from block ${x.since}, liquidation mined at ${x.minedAt ?? "never"}${age === null ? "" : ` (+${age} blocks)`}, HF ${fmt(hf, 18)}`;
+    if (x.since === null) {
+      ok = false;
+      detail.push(`${x.label}: never below HF 1 after the crash`);
+    } else if (age === null) {
+      ok = false;
+      detail.push(`${x.label}: not liquidated within ${PAGE_AFTER_BLOCKS} blocks (300 s)`);
+    } else if (age <= STANDBY_AFTER_BLOCKS) {
+      ok = false;
+      detail.push(`${x.label}: the standby acted ${age - 1} blocks after HF 1, before its 60 s`);
+    } else if (age > PAGE_AFTER_BLOCKS + 1) {
+      ok = false;
+      detail.push(`${x.label}: liquidated ${age} blocks after HF 1, past the M-09 page`);
+    } else {
+      detail.push(`${x.label}: sent ${(age - 1) * BLOCK_SECONDS} s after HF 1, mined at +${age * BLOCK_SECONDS} s`);
+    }
+  }
+  if (!ok) detail.push(`keeper log tail: ${log.slice(-3).join(" | ").slice(0, 600)}`);
+  return { ok, detail: detail.join("; ") };
+}
+
 export function marketScenarios(ctx: ScenarioContext): Scenario[] {
   const s = (name: string, body: (e: Env) => Promise<{ ok: boolean; detail: string }>): Scenario => ({
     name,
@@ -1323,6 +1503,7 @@ export function marketScenarios(ctx: ScenarioContext): Scenario[] {
     s("keeper liquidates through LPVaultSwap on a Uniswap pool and on a Slipstream pool", keeperLiquidations),
     s("self-liquidation attempt by the borrower", selfLiquidation),
     s("deficit after a 90 % crash and First-Loss Reserve coverage", deficitCoverage),
-    s("cross-Hub credit line borrow (off at launch: must revert)", crossHubLine),
+    s("cross-Hub credit line borrow (off by default: must revert)", crossHubLine),
+    s("keeper failover drill: with every primary stopped the standby liquidates within the M-09 window", failoverDrill),
   ];
 }

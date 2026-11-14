@@ -27,6 +27,25 @@ export const eventLog = onchainTable(
   }),
 );
 
+/**
+ * Every address a log's arguments name, one row per (log, address), written with the log row. The wallet history
+ * (`/export/v1/history`) finds a wallet's and its proxies' logs here instead of searching `event_log.args`.
+ */
+export const logParty = onchainTable(
+  "log_party",
+  (t) => ({
+    chainId: t.integer().notNull(),
+    party: t.hex().notNull(),
+    txHash: t.hex().notNull(),
+    logIndex: t.integer().notNull(),
+    blockNumber: t.bigint().notNull(),
+  }),
+  (table) => ({
+    pk: primaryKey({ columns: [table.chainId, table.party, table.txHash, table.logIndex] }),
+    partyIdx: index().on(table.chainId, table.party, table.blockNumber),
+  }),
+);
+
 /** Last block the indexer finished per chain, written by the `Progress:block` handler at the realtime head. */
 export const chainProgress = onchainTable("chain_progress", (t) => ({
   chainId: t.integer().primaryKey(),

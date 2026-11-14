@@ -26,8 +26,10 @@ export interface ChainConfig {
   readonly chain: ChainInfo;
   readonly manifest: ServiceManifest;
   readonly rpc: { readonly primary: string; readonly fallback: string; readonly ws: string; readonly privateSend: readonly string[] };
-  /** Undefined runs this chain in observe-only mode whatever KEEPER_MODE says. */
+  /** Undefined runs this chain in observe-only mode whatever KEEPER_MODE says (unless a local rehearsal key is set). */
   readonly kmsKeyId: string | undefined;
+  /** A raw test key (KEEPER_LOCAL_KEY_ANVIL), accepted only on the `local` network set: the anvil rehearsal's drills. */
+  readonly localKey: `0x${string}` | undefined;
   /** Worst-case wei one transaction may cost (KEEPER_GAS_CEILING_WEI_<CHAIN>); required wherever a signer is set. */
   readonly gasCeilingWei: bigint | undefined;
   /** Largest single debtToCover the chain's caps allow, per debt asset (lower-case), base units: M-16 and M-17. */
@@ -49,6 +51,19 @@ export interface KeeperConfig {
   readonly indexerUrl: string;
   /** The keeper's key for the indexer stream, one of the indexer's INDEXER_EXPORT_KEYS (id:base64secret). */
   readonly indexerKey: StreamKey;
+}
+
+/**
+ * KEEPER_LOCAL_KEY_<CHAIN>: a 32-byte hex key, refused outside the `local` network set, so no published or test-network
+ * keeper can sign with a raw key (Q-245).
+ */
+export function localKey(env: NodeJS.ProcessEnv, chain: ChainInfo): `0x${string}` | undefined {
+  const name = `KEEPER_LOCAL_KEY_${chain.envSuffix}`;
+  const raw = optionalEnv(env, name);
+  if (raw === undefined) return undefined;
+  if (chain.networkSet !== "local") throw new Error(`${name} is accepted only on the local network set; sign through the KMS`);
+  if (!/^0x[0-9a-fA-F]{64}$/.test(raw)) throw new Error(`${name} must be a 32-byte hex key`);
+  return raw as `0x${string}`;
 }
 
 /** A decimal wei amount; a missing or zero ceiling stops startup on a chain that can sign. */
@@ -82,6 +97,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
       privateSend: listEnv(env, rpcEnvName(chain, "PRIVATE")),
     },
     kmsKeyId: optionalEnv(env, `KEEPER_KMS_KEY_ID_${chain.envSuffix}`),
+    localKey: localKey(env, chain),
     gasCeilingWei: gasCeiling(env, `KEEPER_GAS_CEILING_WEI_${chain.envSuffix}`),
     largestDebtToCover: parseLargest(listEnv(env, `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`), `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`),
     gasDailySpendWei: gasCeiling(env, `KEEPER_GAS_DAILY_SPEND_WEI_${chain.envSuffix}`),
@@ -91,14 +107,16 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
   }));
   if (chains.length === 0) throw new Error(`no verified manifest for any ${set} chain`);
   for (const c of chains) {
+    const signs = Boolean(c.kmsKeyId || c.localKey);
+    if (c.kmsKeyId && c.localKey) throw new Error(`set KEEPER_KMS_KEY_ID_${c.chain.envSuffix} or KEEPER_LOCAL_KEY_${c.chain.envSuffix}, not both`);
     // No public-mempool fallback exists: a chain without a private endpoint cannot leave observe-only mode.
-    if (mode === "active" && c.kmsKeyId && c.rpc.privateSend.length === 0) {
+    if (mode === "active" && signs && c.rpc.privateSend.length === 0) {
       throw new Error(`${rpcEnvName(c.chain, "PRIVATE")} is empty; active mode sends only through private order flow`);
     }
     // A signer without a fee ceiling could drain its gas wallet on a fault: refused at startup.
-    if (c.kmsKeyId && c.gasCeilingWei === undefined) throw new Error(`KEEPER_GAS_CEILING_WEI_${c.chain.envSuffix} is required with a signer`);
+    if (signs && c.gasCeilingWei === undefined) throw new Error(`KEEPER_GAS_CEILING_WEI_${c.chain.envSuffix} is required with a signer`);
     // M-17's gas level needs a spend to compare with before 7 days are measured.
-    if (c.kmsKeyId && c.gasDailySpendWei === undefined) throw new Error(`KEEPER_GAS_DAILY_SPEND_WEI_${c.chain.envSuffix} is required with a signer`);
+    if (signs && c.gasDailySpendWei === undefined) throw new Error(`KEEPER_GAS_DAILY_SPEND_WEI_${c.chain.envSuffix} is required with a signer`);
   }
 
   const shard = role === "standby" ? null : { index: intEnv(env, "KEEPER_SHARD"), count: intEnv(env, "KEEPER_SHARD_COUNT") };
