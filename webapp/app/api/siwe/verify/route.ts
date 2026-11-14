@@ -1,12 +1,6 @@
 import { cookies } from "next/headers"
-import type { Address, Hex } from "viem"
-import {
-  extractSiweAddress,
-  extractSiweChainId,
-  extractSiweDomain,
-  extractSiweNonce,
-  extractSiweUri,
-} from "@/app/lib/siwe/message"
+import type { Hex } from "viem"
+import { checkSiweMessage } from "@/app/lib/siwe/verify-message"
 import { mintSiweSessionJwt, resolveIssuer } from "@/app/lib/siwe/jwt"
 import { verifySiweSignature } from "@/app/lib/siwe/signature"
 import { TARGET_CHAIN_ID } from "@/app/lib/web3/target-chain"
@@ -35,46 +29,21 @@ export async function POST(req: Request) {
     return Response.json({ error: "message and signature are required" }, { status: 400 })
   }
 
-  const address = extractSiweAddress(message)
-  const nonce = extractSiweNonce(message)
-  if (!address || !nonce) {
-    return Response.json({ error: "malformed SIWE message" }, { status: 400 })
-  }
-
-  // Bind the signature to THIS origin. EIP-4361 puts the domain/URI in the signed
-  // payload precisely so a signature phished for another site cannot be relayed here.
-  // The client signs with domain = window.location.host, so it must equal our host.
+  // Bind the signature to THIS origin, the nonce issued to this browser, the app's chain and
+  // the message's time window. EIP-4361 puts the domain/URI in the signed payload so a
+  // signature phished for another site cannot be relayed here; the client signs with
+  // domain = window.location.host.
   const host = req.headers.get("host")
-  const domain = extractSiweDomain(message)
-  if (!domain || (host && domain !== host)) {
-    return Response.json({ error: "SIWE domain does not match this origin" }, { status: 401 })
-  }
-  const uri = extractSiweUri(message)
-  if (uri) {
-    try {
-      const uriHost = new URL(uri).host
-      if (host && uriHost !== host) {
-        return Response.json({ error: "SIWE URI does not match this origin" }, { status: 401 })
-      }
-    } catch {
-      return Response.json({ error: "malformed SIWE URI" }, { status: 400 })
-    }
-  }
-
-  // Bind to the app's target network (mainnet-only wagmi config). Defense-in-depth: a message
-  // signed for a different chain is not accepted here.
-  if (extractSiweChainId(message) !== TARGET_CHAIN_ID) {
-    return Response.json({ error: "SIWE chain does not match this app" }, { status: 401 })
-  }
-
   const jar = await cookies()
   const expectedNonce = jar.get("siwe-nonce")?.value
-  if (!expectedNonce || expectedNonce !== nonce) {
-    return Response.json({ error: "invalid or expired nonce" }, { status: 401 })
-  }
+  if (!host) return Response.json({ error: "missing host" }, { status: 400 })
+  if (!expectedNonce) return Response.json({ error: "invalid or expired nonce" }, { status: 401 })
+  const checked = checkSiweMessage(message, { host, nonce: expectedNonce, chainId: TARGET_CHAIN_ID })
+  if (!checked.ok) return Response.json({ error: checked.error }, { status: checked.status })
+  const { address } = checked
 
   const signatureIsValid = await verifySiweSignature({
-    address: address as Address,
+    address,
     message,
     signature: signature as Hex,
   })

@@ -57,6 +57,18 @@ export default defineConfig({
           exclude: sharedExclude,
         },
       },
+      {
+        // Field tests against a local services/convex seeded by scripts/local-convex-seed.ts. They skip
+        // unless AVANA_LOCAL_CONVEX_URL is set (`npm run test:local-convex`).
+        extends: true,
+        test: {
+          name: "local-convex",
+          environment: "node",
+          include: ["tests/local-convex/**/*.test.ts"],
+          exclude: sharedExclude,
+          testTimeout: 60_000,
+        },
+      },
     ],
   },
 })
