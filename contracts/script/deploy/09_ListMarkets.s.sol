@@ -866,12 +866,15 @@ contract ListMarkets is ListingBase {
             "PS.setInitialMarketParams"
         );
         _add(op, address(store), _marketCapsCall(m), "PS.setInitialMarketCaps");
-        _add(
-            op,
-            address(store),
-            abi.encodeCall(store.loosenMarketSpeedLimits, (m.marketId, _speedLimits())),
-            "PS.loosenMarketSpeedLimits"
-        );
+        // A relisted market kept its speed limits; loosening to the same values reverts NotLooser.
+        if (keccak256(abi.encode(store.marketSpeedLimits(m.marketId))) != keccak256(abi.encode(_speedLimits()))) {
+            _add(
+                op,
+                address(store),
+                abi.encodeCall(store.loosenMarketSpeedLimits, (m.marketId, _speedLimits())),
+                "PS.loosenMarketSpeedLimits"
+            );
+        }
         routes = _routes(op, m);
     }
 
