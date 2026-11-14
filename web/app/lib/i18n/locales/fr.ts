@@ -5,17 +5,12 @@ import type { TranslationDictionary } from "../types"
 const dict: TranslationDictionary = {
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "Déposez une garantie, empruntez contre elle, redéposez le capital emprunté et répétez jusqu'à votre limite de risque.",
-  "Browse Multiply Page": "Parcourir la page Multiplier",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":
     "Transformez vos positions de pool de liquidité en garantie et empruntez contre elles ici, sans quitter le pool.",
   "Browse Borrow Page": "Parcourir la page Emprunter",
   "Supply capital into Hub-connected lending markets and earn from LP-backed borrower demand.":
     "Fournissez du capital aux marchés de prêt connectés au Hub et gagnez grâce à la demande des emprunteurs adossée aux LP.",
   "Browse Lend Page": "Parcourir la page Prêter",
-  "Coinbase & Robinhood Stocks": "Actions Coinbase & Robinhood",
-  "Tokenized equities — deposit stock tokens to earn lending yield":
-    "Actions tokenisées — déposez des tokens d'actions pour générer un rendement de prêt",
-  "Tokenized-equity concentrated LP positions": "Positions LP concentrées d'actions tokenisées",
   "Paxos USD stablecoin": "Stablecoin USD de Paxos",
   "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.":
     "{name} est une position LP d'actions tokenisées déposée en garantie dans le spoke {spoke} sur Avana. Elle associe {stableLeg} à une exposition {stockName} ({stockSymbol}) tokenisée, de sorte que la valeur de la garantie suit le cours de l'action {stockName} en fonction de la profondeur et du palier de frais du pool. Avana ancre la capacité d'emprunt au LTV maximal du spoke, liant le crédit à l'ampleur des variations de la garantie en actions tokenisées. Cette page est la source unique de vérité sur ce qu'est le pool, le capital qu'il peut supporter en toute sécurité et le risque de baisse assumé par le protocole.",
@@ -49,7 +44,6 @@ const dict: TranslationDictionary = {
   Continue: "Continuer",
   Cancel: "Annuler",
   Back: "Retour",
-  "Fund my sandbox": "Financer mon bac à sable",
   "Continue to allocation": "Continuer vers l'allocation",
   "Share on X first": "Partager sur X d'abord",
   "I posted it": "Je l'ai publié",
@@ -155,13 +149,8 @@ const dict: TranslationDictionary = {
   "Highest APY": "APY le plus élevé",
   "Most Available": "Plus grande disponibilité",
   "Collateral A-Z": "Garantie A-Z",
-  "Search loops": "Rechercher des boucles",
   "Sort by": "Trier par",
-  "Sort loops": "Trier les boucles",
   Trending: "Tendances",
-  "Highest max-leverage APY markets in the sandbox catalog.":
-    "Marchés au meilleur APY à effet de levier maximal du catalogue sandbox.",
-  "No loops in this category yet.": "Aucune boucle dans cette catégorie pour l'instant.",
   COLLATERAL: "GARANTIE",
   BORROWABLE: "EMPRUNTABLE",
   "MAX APY": "APY MAX",
@@ -242,18 +231,13 @@ const dict: TranslationDictionary = {
   Health: "Santé",
   Debt: "Dette",
   "Approved credit": "Crédit approuvé",
-  "Multiply value": "Valeur multipliée",
   "Average APY": "APY moyen",
   Earned: "Gagné",
   "Open positions": "Positions ouvertes",
   "Net carry": "Carry net",
-  "Increase loop": "Augmenter la boucle",
-  "Unwind loop": "Dénouer la boucle",
   "Weighted average APY across supplied assets in the wallet.":
     "APY moyen pondéré sur les actifs fournis dans le portefeuille.",
   "Total yield already accrued by the portfolio.": "Rendement total déjà accumulé par le portefeuille.",
-  "Open multiply positions in the wallet profile.": "Positions multiply ouvertes dans le profil du portefeuille.",
-  "Average realized carry across the current multiply book.": "Carry réalisé moyen sur le carnet multiply actuel.",
   "Portfolio quick actions": "Actions rapides du portefeuille",
   "Lending Opportunities": "Opportunités de prêt",
   "View markets": "Voir les marchés",
@@ -273,7 +257,6 @@ const dict: TranslationDictionary = {
   "The address may be wrong or the page may have moved.":
     "L'adresse est peut-être incorrecte ou la page a été déplacée.",
   "Helpful links": "Liens utiles",
-  "Avana sandbox": "Bac à sable Avana",
   "Sign in with the wallet that created this transaction to view its receipt.":
     "Connectez-vous avec le portefeuille ayant créé cette transaction pour voir son reçu.",
   "We couldn't load this receipt right now.": "Nous n'avons pas pu charger ce reçu pour le moment.",
@@ -285,7 +268,6 @@ const dict: TranslationDictionary = {
   "Available Credit": "Crédit disponible",
   "Outstanding Loans": "Prêts en cours",
   "Total Liquidity": "Liquidité totale",
-  "Loop Markets": "Marchés en boucle",
   "Avg Max APY": "APY max. moyen",
   "Avg Max Leverage": "Levier max. moyen",
   "Total TVL": "TVL total",
@@ -332,12 +314,9 @@ const dict: TranslationDictionary = {
   "How can we help?": "Comment pouvons-nous aider ?",
   "Include what you were trying to do, what happened, and any transaction or market details that may help.":
     "Indiquez ce que vous tentiez de faire, ce qui s’est passé et tout détail de transaction ou de marché utile.",
-  "Leveraged loop": "Boucle à effet de levier",
   "No assets in your wallet": "Aucun actif dans votre portefeuille",
   "No deposited position found for this market.": "Aucune position déposée pour ce marché.",
   "No deposits found": "Aucun dépôt trouvé",
-  "No multiply positions yet. Open a loop to leverage your collateral.":
-    "Aucune position multiply pour l’instant. Ouvrez une boucle pour lever votre garantie.",
   "read more": "lire plus",
   "Recommended articles": "Articles recommandés",
   "Request received": "Demande reçue",
@@ -371,7 +350,6 @@ const dict: TranslationDictionary = {
   "Your progress": "Votre progression",
   "{completed}/{total} completed": "{completed}/{total} terminé",
   "{label} amount": "Montant {label}",
-  "{label} multiplier": "Multiplicateur {label}",
   "{name} ({symbol}) is a single-asset supply market on Avana. Suppliers earn the supply APY{rewardsClause} from borrower interest, net of the reserve factor. Yield tracks utilization, so the page focuses on the live supply rate, the supply/utilization mix, and the latest risk posture for this {marketType} market.":
     "{name} ({symbol}) est un marché d'approvisionnement mono-actif sur Avana. Les fournisseurs perçoivent l'APY d'approvisionnement{rewardsClause} issu des intérêts des emprunteurs, net du facteur de réserve. Le rendement suit l'utilisation, la page se concentre donc sur le taux d'approvisionnement en direct, la répartition approvisionnement/utilisation et la dernière posture de risque pour ce marché {marketType}.",
   "{percent}% of liq. max": "{percent}% du max de liq.",
@@ -392,8 +370,6 @@ const dict: TranslationDictionary = {
   Portfolio: "Positions",
   "Quick actions": "Actions rapides",
   "My Deposits": "Mes dépôts",
-  "My Loops": "Mes boucles",
-  "Available to loop": "Disponible pour boucler",
   "Scroll table left": "Faire défiler le tableau vers la gauche",
   "Scroll table right": "Faire défiler le tableau vers la droite",
   "Total Fees earned": "Total des frais gagnés",
@@ -434,11 +410,7 @@ const dict: TranslationDictionary = {
   GOOD: "BON",
   "Health Factor": "Facteur de santé",
   "I read it": "J'ai lu",
-  "In this sandbox, every transaction is simulated — use previews to learn before sizing up.":
-    "Dans ce bac à sable, chaque transaction est simulée — servez-vous des aperçus pour apprendre avant d'augmenter les montants.",
   "Invite link": "Lien d'invitation",
-  "Keep health factor headroom and treat rewards as practice, not production yield.":
-    "Gardez une marge sur le facteur de santé et traitez les récompenses comme un exercice, pas un rendement réel.",
   "Lend {name}": "Prêter {name}",
   "Lend actions": "Actions de prêt",
   "Leverage options": "Options de levier",
@@ -456,8 +428,6 @@ const dict: TranslationDictionary = {
   Min: "Min",
   "More information": "Plus d'informations",
   "More information about {topic}": "Plus d'informations sur {topic}",
-  "Multiply {name}": "Multiplier {name}",
-  "Multiply actions": "Actions de multiplication",
   "My Borrows": "Mes emprunts",
   "My LP Collaterals": "Mes garanties LP",
   "No activity matches the current filters.": "Aucune activité ne correspond aux filtres actuels.",
@@ -468,17 +438,14 @@ const dict: TranslationDictionary = {
   "No rewards ready": "Aucune récompense prête",
   "Nothing borrowed yet": "Rien d'emprunté pour l'instant",
   "Nothing supplied yet": "Rien d'approvisionné pour l'instant",
-  "Open a looped position in {name}.": "Ouvrir une position à levier dans {name}.",
   "Open preferences": "Ouvrir les préférences",
   Opened: "Ouvert",
   "Overall quest completion progress": "Progression globale des quêtes",
   Pending: "En attente",
-  "Pin a sandbox market": "Épingler un marché bac à sable",
   "Pool actions": "Actions sur le pool",
   "Portfolio views": "Vues du portefeuille",
   Preferences: "Préférences",
   "Preview {product}": "Aperçu de {product}",
-  "Preview a sandbox trade": "Aperçu d'une transaction bac à sable",
   "Price chart": "Graphique des prix",
   "Processing…": "Traitement…",
   "Progress: {progress} / {target}": "Progression : {progress} / {target}",
@@ -496,7 +463,6 @@ const dict: TranslationDictionary = {
   "Run a real preview in the session — nothing executes on-chain.":
     "Lancez un vrai aperçu dans la session — rien ne s'exécute on-chain.",
   Safe: "Sûr",
-  "Sandbox risk primer": "Introduction au risque du bac à sable",
   "Scope Health Factor": "Facteur de santé du périmètre",
   Search: "Rechercher",
   "Search assets": "Rechercher des actifs",
@@ -544,8 +510,6 @@ const dict: TranslationDictionary = {
     "Le problème vient de notre côté, pas de votre portefeuille. Réessayez et faites-nous savoir si cela persiste.",
   "Back to borrow": "Retour à l'emprunt",
   "Back to lend": "Retour au prêt",
-  "Back to multiply": "Retour au multiply",
-  "Back to Umbrella": "Retour à Protection",
   "Back to rewards": "Retour aux récompenses",
   Loading: "Chargement",
   "Loading…": "Chargement…",
@@ -562,10 +526,8 @@ const dict: TranslationDictionary = {
   "Mobile menu": "Menu mobile",
   "Close menu": "Fermer le menu",
   "Mobile navigation": "Navigation mobile",
-  "Sandbox wallet": "Portefeuille bac à sable",
   "This workspace uses a built-in demo wallet. There is no external wallet connection yet.":
     "Cet espace de travail utilise un portefeuille de démonstration intégré. Il n'y a pas encore de connexion à un portefeuille externe.",
-  "Sandbox active": "Bac à sable actif",
   Connected: "Connecté",
   Copied: "Copié",
   "Copy address": "Copier l'adresse",
@@ -584,12 +546,9 @@ const dict: TranslationDictionary = {
   "Lending Positions": "Positions de prêt",
   "Lending Performance": "Performance du prêt",
   "Lend Rewards": "Récompenses de prêt",
-  "Multiply Overview": "Aperçu du Multiply",
   "Debt & Risk": "Dette et risque",
-  "Position size, multiplier, and current net yield": "Taille de la position, multiplicateur et rendement net actuel",
   "Borrowed balance, health factor, and liquidation threshold":
     "Solde emprunté, facteur de santé et seuil de liquidation",
-  "No active Multiply debt": "Aucune dette Multiply active",
   "Loading your portfolio": "Chargement de votre portefeuille",
   "We couldn't load your portfolio": "Impossible de charger votre portefeuille",
   "The live portfolio fetch kept failing. Try again to re-run the client fetch without leaving the dashboard.":
@@ -602,9 +561,7 @@ const dict: TranslationDictionary = {
   "Asset analytics": "Analyses d'actif",
   "Pool analytics": "Analyses de pool",
   "Lend market analytics": "Analyses du marché de prêt",
-  "Multiply market analytics": "Analyses du marché multiply",
   "General FAQs": "FAQ générales",
-  "Multiply FAQs": "FAQ multiply",
   "BTC Pools": "Pools BTC",
   "ETH Pools": "Pools ETH",
   "Forex Pools": "Pools Forex",
@@ -615,11 +572,6 @@ const dict: TranslationDictionary = {
   "Forex Based": "Basé sur Forex",
   "Utility Based": "Basé sur l'utilité",
   "Smart Lend": "Prêt intelligent",
-  "BTC Loops": "Boucles BTC",
-  "ETH Loops": "Boucles ETH",
-  "Forex Loops": "Boucles Forex",
-  "Utility Loops": "Boucles utilitaires",
-  "Smart Loops": "Boucles intelligentes",
   Watch: "Surveiller",
   "At risk": "À risque",
   Unknown: "Inconnu",
@@ -634,110 +586,40 @@ const dict: TranslationDictionary = {
   Referrals: "Parrainages",
   "Rewards actions": "Actions de récompenses",
   "No quests here yet — check back soon.": "Pas encore de quêtes ici — revenez bientôt.",
-  "Boot your sandbox wallet": "Démarrez votre portefeuille sandbox",
   "Spin up your profile": "Créez votre profil",
-  "Read the sandbox risk primer": "Lisez le guide des risques du sandbox",
   "Pin a market to your watchlist": "Épinglez un marché à votre liste de suivi",
   "Preview your first trade": "Prévisualisez votre première transaction",
-  "Make your first sandbox lend": "Effectuez votre premier prêt sandbox",
-  "Open your first sandbox borrow": "Ouvrez votre premier emprunt sandbox",
-  "Open your first sandbox multiply": "Ouvrez votre premier Multiply sandbox",
-  "Repay a sandbox loan": "Remboursez un prêt sandbox",
-  "Deleverage a sandbox position": "Réduisez le levier d'une position sandbox",
   "Claim your first AVA reward": "Réclamez votre première récompense AVA",
-  "Sandbox cool-down": "Pause sandbox",
-  "Lend $500 in the sandbox": "Prêtez 500 $ dans le sandbox",
-  "Borrow $200 in the sandbox": "Empruntez 200 $ dans le sandbox",
-  "Launch a multiply position": "Lancez une position Multiply",
   "Tour all three products": "Découvrez les trois produits",
-  "Curve sandbox tour": "Visite du sandbox Curve",
-  "Uniswap v4 sandbox tour": "Visite du sandbox Uniswap v4",
   "Risk check-in (5 min)": "Point sur les risques (5 min)",
-  "Multiply mindfulness (3 min)": "Pleine conscience Multiply (3 min)",
-  "3 borrow / repay loops": "3 boucles emprunt / remboursement",
   "2 deleverage drills": "2 exercices de réduction de levier",
-  "Explore 3 sandbox markets": "Explorez 3 marchés sandbox",
   "Claim 3 quest rewards": "Réclamez 3 récompenses de quête",
-  "3-day sandbox streak": "Série de 3 jours dans le sandbox",
-  "Grow sandbox portfolio by $1K": "Augmentez votre portefeuille sandbox de 1 000 $",
-  "Open 3 sandbox positions": "Ouvrez 3 positions sandbox",
-  "Copy your sandbox invite link": "Copiez votre lien d'invitation sandbox",
-  "Send your first sandbox invite": "Envoyez votre première invitation sandbox",
-  "Fund a referred sandbox wallet": "Approvisionnez un portefeuille sandbox parrainé",
-  "Activate 3 sandbox friends": "Activez 3 amis sandbox",
   "Grow crew to 5 actives": "Portez votre équipe à 5 membres actifs",
-  "Referral sandbox hits $500": "Le sandbox de parrainage atteint 500 $",
   "Referral streak (2 activations)": "Série de parrainage (2 activations)",
-  "Sandbox ambassador": "Ambassadeur du sandbox",
   "Your Avana session is live — this quest unlocks automatically when you land.":
     "Votre session Avana est active — cette quête se débloque automatiquement à votre arrivée.",
-  "We create a demo wallet profile so every product sandbox shares the same session.":
-    "Nous créons un profil de portefeuille démo afin que chaque sandbox de produit partage la même session.",
   "Open the 60-second LP risk briefing before you simulate any position.":
     "Ouvrez le briefing de 60 secondes sur les risques LP avant de simuler une position.",
-  "Pick one Borrow, Lend, or Multiply market to track in your sandbox.":
-    "Choisissez un marché Borrow, Lend ou Multiply à suivre dans votre sandbox.",
-  "Run a real sandbox preview on Borrow, Lend, or Multiply — no funds move.":
-    "Lancez un véritable aperçu sandbox sur Borrow, Lend ou Multiply — aucun fonds ne bouge.",
   "Deposit into any Lend market. Your live session records the quest automatically.":
     "Déposez dans n'importe quel marché Lend. Votre session en direct enregistre la quête automatiquement.",
   "Borrow against LP collateral on the Borrow page — the quest completes on success.":
     "Empruntez contre une garantie LP sur la page Borrow — la quête se termine en cas de succès.",
-  "Create a Multiply position in the sandbox and let the session bridge log it.":
-    "Créez une position Multiply dans le sandbox et laissez le pont de session l'enregistrer.",
-  "Repay any borrow position you opened — a healthy loop in the demo world.":
-    "Remboursez toute position d'emprunt que vous avez ouverte — une boucle saine dans le monde démo.",
-  "Reduce any Multiply position to practice risk management.":
-    "Réduisez toute position Multiply pour vous exercer à la gestion des risques.",
   "Complete any other quest, then claim it to unlock this milestone.":
     "Terminez n'importe quelle autre quête, puis réclamez-la pour débloquer ce jalon.",
   "Explore Avana for 2 minutes after your first login, then come back to claim.":
     "Explorez Avana pendant 2 minutes après votre première connexion, puis revenez réclamer.",
-  "Stack sandbox lend deposits until you reach $500 supplied.":
-    "Cumulez des dépôts de prêt sandbox jusqu'à atteindre 500 $ fournis.",
   "Open borrow positions totaling $200 across any collateral pool.":
     "Ouvrez des positions d'emprunt totalisant 200 $ sur n'importe quel pool de garantie.",
-  "Open any Multiply position in the sandbox — size is up to you.":
-    "Ouvrez n'importe quelle position Multiply dans le sandbox — la taille est à votre choix.",
-  "Complete one action in Lend, Borrow, and Multiply.": "Réalisez une action dans Lend, Borrow et Multiply.",
-  "Visit the Curve-style borrow market tour and mark it complete.":
-    "Visitez la visite du marché d'emprunt de style Curve et marquez-la comme terminée.",
-  "Walk through the Uniswap v4 sandbox market and check it off.":
-    "Parcourez le marché sandbox Uniswap v4 et cochez-le.",
-  "Stay in the sandbox for 5 minutes after login, then claim this patience badge.":
-    "Restez dans le sandbox pendant 5 minutes après la connexion, puis réclamez ce badge de patience.",
-  "Take a 3-minute breather after login before claiming this calm-multiply quest.":
-    "Faites une pause de 3 minutes après la connexion avant de réclamer cette quête multiply zen.",
-  "Repay sandbox loans three times to practice healthy borrow cycles.":
-    "Remboursez des prêts sandbox trois fois pour pratiquer des cycles d'emprunt sains.",
-  "Deleverage Multiply positions twice to complete this risk drill.":
-    "Réduisez le levier de positions Multiply deux fois pour terminer cet exercice de risque.",
   "Complete tours on three different market pages across Avana.":
     "Terminez les visites sur trois pages de marché différentes dans Avana.",
   "Claim AVA from three separate quests to build your rewards streak.":
     "Réclamez des AVA de trois quêtes distinctes pour bâtir votre série de récompenses.",
   "Check in on three separate days after your first login.":
     "Connectez-vous trois jours distincts après votre première connexion.",
-  "Lend, borrow, or multiply until your combined sandbox volume hits $1,000.":
-    "Prêtez, empruntez ou multipliez jusqu'à ce que votre volume sandbox combiné atteigne 1 000 $.",
-  "Hold three open positions across Lend, Borrow, or Multiply.":
-    "Détenez trois positions ouvertes dans Lend, Borrow ou Multiply.",
   "Generate and copy a referral link you can share with friends.":
     "Générez et copiez un lien de parrainage que vous pouvez partager avec vos amis.",
-  "Simulate inviting a friend wallet into your Avana sandbox crew.":
-    "Simulez l'invitation d'un portefeuille ami dans votre équipe sandbox Avana.",
   "Mark one invited friend as funded after they try a product action.":
     "Marquez un ami invité comme approvisionné après qu'il a essayé une action produit.",
-  "Three referred wallets complete a product action in your sandbox network.":
-    "Trois portefeuilles parrainés réalisent une action produit dans votre réseau sandbox.",
-  "Five referred wallets complete a product action in your sandbox network.":
-    "Cinq portefeuilles parrainés réalisent une action produit dans votre réseau sandbox.",
-  "Your referred crew reaches $500 in combined sandbox volume.":
-    "Votre équipe parrainée atteint 500 $ de volume sandbox combiné.",
-  "Activate two sandbox referrals to keep your invite momentum going.":
-    "Activez deux parrainages sandbox pour maintenir l'élan de vos invitations.",
-  "Activate five friends in your sandbox referral network.":
-    "Activez cinq amis dans votre réseau de parrainage sandbox.",
   "Filter by category": "Filtrer par catégorie",
   "ETH volatility": "Volatilité de l'ETH",
   "Liquidity depth": "Profondeur de liquidité",
@@ -799,8 +681,6 @@ const dict: TranslationDictionary = {
     "Positions LP WBTC/WETH acceptées comme collatéral dans le spoke Bluechip.",
   "Pool onboarded": "Pool intégré",
   "Dual-oracle": "Double oracle",
-  "WETH/DAI LP positions accepted as collateral in the Uniswap v2 spoke.":
-    "Positions LP WETH/DAI acceptées comme collatéral dans le spoke Uniswap v2.",
   Onboarded: "Intégré",
   "Parameters refreshed": "Paramètres actualisés",
   "Full-range USDC/USDT liquidity accepted in the Stable spoke at up to 78% LTV.":
@@ -818,8 +698,6 @@ const dict: TranslationDictionary = {
     "σ réalisée 30d ≈ 58% annualisée — le principal contributeur à la perte impermanente.",
   "$4.1M of 2% depth across all tiers — ample for liquidations.":
     "4,1 M$ de profondeur à 2% sur tous les paliers — amplement suffisant pour les liquidations.",
-  "30-minute TWAP can lag during sharp moves; mitigated by kink in the risk curve.":
-    "Le TWAP de 30 minutes peut être en retard lors de mouvements brusques ; atténué par un point d'inflexion dans la courbe de risque.",
   "Uniswap v3 core + NonFungiblePositionManager, both heavily audited and live for 4 years.":
     "Cœur Uniswap v3 + NonFungiblePositionManager, tous deux fortement audités et en service depuis 4 ans.",
   "Rolling 90d IL averages 23bps per week for the 0.30% tier.":
@@ -836,9 +714,6 @@ const dict: TranslationDictionary = {
   "$2.6M of 2% depth.": "2,6 M$ de profondeur à 2%.",
   "BTC/ETH is highly correlated — IL is usually <15bps/week.":
     "BTC/ETH est fortement corrélé — l'IL est généralement <15bps/semaine.",
-  "WETH/DAI is a standard Uniswap v2 ETH/stable pair and a straightforward LP structure for collateral evaluation. The Uniswap v2 spoke admits it under conservative parameters because the pair still carries ETH volatility, while the stable quote side keeps the market easy to reason about.":
-    "WETH/DAI est une paire ETH/stable Uniswap v2 standard et une structure LP simple à évaluer comme collatéral. Le spoke Uniswap v2 l'admet selon des paramètres prudents car la paire porte encore la volatilité de l'ETH, tandis que la jambe de cotation stable rend le marché facile à appréhender.",
-  "Added to the Uniswap v2 LPs.": "Ajouté aux LP Uniswap v2.",
   "Quarterly risk review — no changes to LTV.": "Revue de risque trimestrielle — aucun changement de LTV.",
   "USDC and USDT both trade at parity and the pool is overwhelmingly used for order-routing, stability-seeking flow, and tight-spread execution. The Stable spoke admits it with a high LTV because peg-risk is shared, depth is enormous, and the pool behaves more like cash infrastructure than a typical volatile LP. That makes it a natural fit for users who want borrowing power while keeping the underlying collateral profile simple to reason about.":
     "L'USDC et l'USDT s'échangent tous deux à parité et le pool est massivement utilisé pour le routage d'ordres, les flux en quête de stabilité et l'exécution à spread serré. Le spoke Stable l'admet avec une LTV élevée car le risque de peg est partagé, la profondeur est énorme et le pool se comporte davantage comme une infrastructure de liquidités qu'un LP volatil typique. Cela en fait un choix naturel pour les utilisateurs qui veulent du pouvoir d'emprunt tout en gardant un profil de collatéral sous-jacent simple à appréhender.",
@@ -884,13 +759,9 @@ const dict: TranslationDictionary = {
     "ETH natif — le principal actif d'emprunt volatil pour le carry directionnel sur collatéral LP.",
   "Mainnet launch": "Lancement sur mainnet",
   "The Merge": "The Merge",
-  "Wrapped ETH is the canonical ERC-20 used by Uniswap/Balancer/Aerodrome pools.":
-    "L'ETH wrappé est l'ERC-20 canonique utilisé par les pools Uniswap/Balancer/Aerodrome.",
   "Wrapped BTC exposure — borrowed to short BTC against blue-chip LPs.":
     "Exposition BTC wrappé — emprunté pour vendre à découvert le BTC contre des LP blue-chip.",
   Listed: "Listé",
-  "USDC is Circle's regulated, fully-backed USD stablecoin and the main unit of account for this market. It anchors the protocol's conservative borrow curves, acts as the default settlement asset for LP carry strategies, and serves as the reference point for risk pricing across stablecoin routes. In practice, that makes it the most common asset for users who want cash-like exposure with on-chain mobility.":
-    "L'USDC est le stablecoin USD réglementé et entièrement adossé de Circle, et la principale unité de compte de ce marché. Il ancre les courbes d'emprunt prudentes du protocole, sert d'actif de règlement par défaut pour les stratégies de carry LP et de point de référence pour la tarification du risque sur les routes de stablecoins. En pratique, cela en fait l'actif le plus courant pour les utilisateurs qui veulent une exposition proche des liquidités avec une mobilité on-chain.",
   "USDC listed day-1 with 80% borrow cap.": "USDC listé dès le premier jour avec un plafond d'emprunt de 80%.",
   "Simulated 2023-style de-peg; guardrails paused borrows for 18m.":
     "Dépeg de type 2023 simulé ; les garde-fous ont suspendu les emprunts pendant 18m.",
@@ -1004,37 +875,24 @@ const dict: TranslationDictionary = {
   Curve: "Curve",
   Balancer: "Balancer",
   Aerodrome: "Aerodrome",
-  "Uniswap v2 LPs": "LP Uniswap v2",
   "Uniswap v3 Stable LPs": "LP Stable Uniswap v3",
   "Uniswap v3 Blue-Chip LPs": "LP Blue-Chip Uniswap v3",
   "Uniswap v3 Governance & DAO LPs": "LP Gouvernance & DAO Uniswap v3",
-  "Curve Stable LPs": "LP Stable Curve",
-  "Curve Correlated LPs": "LP Corrélés Curve",
-  "Curve Crypto LPs": "LP Crypto Curve",
-  "Balancer Stable LPs": "LP Stable Balancer",
-  "Balancer Correlated LPs": "LP Corrélés Balancer",
-  "Balancer Weighted LPs": "LP Pondérés Balancer",
-  "Balancer Boosted LPs": "LP Boosted Balancer",
-  "Balancer reCLAMM LPs": "LP reCLAMM Balancer",
   "Aerodrome Basic Stable LPs": "LP Basic Stable Aerodrome",
   "Aerodrome Basic Volatile LPs": "LP Basic Volatile Aerodrome",
   "Aerodrome Slipstream Blue-Chip LPs": "LP Slipstream Blue-Chip Aerodrome",
   Stablecoin: "Stablecoin",
   "MakerDAO stablecoin": "Stablecoin MakerDAO",
-  "Curve native stablecoin": "Stablecoin natif de Curve",
   "Aave native stablecoin": "Stablecoin natif d'Aave",
   "Circle EUR stablecoin": "Stablecoin EUR de Circle",
   "ERC-20 wrapped ETH": "ETH wrappé ERC-20",
   "Native asset": "Actif natif",
   "ERC-20 wrapped BTC": "BTC wrappé ERC-20",
-  "Coinbase wrapped BTC": "BTC wrappé par Coinbase",
   "Liquid staking receipt": "Reçu de staking liquide",
   "Rebase-less stETH wrapper": "Wrapper stETH sans rebase",
   "rETH liquid staking": "Staking liquide rETH",
-  "Coinbase liquid staking": "Staking liquide Coinbase",
   "Aave governance token": "Token de gouvernance Aave",
   "Uniswap governance token": "Token de gouvernance Uniswap",
-  "Curve governance token": "Token de gouvernance Curve",
   "Constant-product LP tokens": "Tokens LP à produit constant",
   "Concentrated-liquidity LP positions": "Positions LP à liquidité concentrée",
   "StableSwap LP tokens": "Tokens LP StableSwap",
@@ -1062,42 +920,25 @@ const dict: TranslationDictionary = {
   "Authenticated sessions stay locked until Convex confirms access.":
     "Les sessions authentifiées restent verrouillées jusqu'à ce que Convex confirme l'accès.",
   "You're all set.": "Tout est prêt.",
-  "Your Avana sandbox is ready.": "Votre environnement de test Avana est prêt.",
-  "You've already claimed your practice funds. Jump back into the dashboard to keep exploring.":
-    "Vous avez déjà réclamé vos fonds d'entraînement. Retournez au tableau de bord pour continuer à explorer.",
   "Reading your wallet history": "Lecture de l'historique de votre portefeuille",
-  "Checking sandbox eligibility": "Vérification de l'éligibilité à l'environnement de test",
   "Selecting markets to fund": "Sélection des marchés à financer",
-  "Sizing your practice portfolio": "Dimensionnement de votre portefeuille d'entraînement",
-  "Minting your practice funds": "Création de vos fonds d'entraînement",
   "Opening LP & lending positions": "Ouverture des positions de LP et de prêt",
-  "Building your multiply loops": "Création de vos boucles de multiplication",
-  "Finalizing your sandbox": "Finalisation de votre environnement de test",
   "One moment.": "Un instant.",
   "Analyzing your wallet…": "Analyse de votre portefeuille…",
   "Hang tight.": "Patientez un instant.",
-  "Funding your sandbox…": "Financement de votre environnement de test…",
   "Liquid assets": "Actifs liquides",
   "Hold & swap tokens": "Conservez et échangez des tokens",
   "LP collateral": "Garantie LP",
   "Borrow against LP": "Empruntez avec votre LP",
   Lending: "Prêt",
   "Supply to earn": "Fournissez pour gagner",
-  "Leverage loops": "Boucles de levier",
   "You'll get": "Vous obtiendrez",
-  "A full practice portfolio": "Un portefeuille d'entraînement complet",
   "Claiming allocation…": "Réclamation de votre allocation…",
   "Claim your allocation": "Réclamez votre allocation",
-  "Welcome to the Avana Sandbox": "Bienvenue dans l'environnement de test Avana",
-  "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.":
-    "Cet environnement de test Avana, sans risque, vous permet d'emprunter avec des positions de LP d'entraînement, de prêter et de créer des boucles de stratégies avec des fonds d'entraînement. Aucun actif réel. Aucune signature de portefeuille. Juste un moyen rapide de comprendre le fonctionnement d'Avana avant de passer à l'application réelle.",
-  "Unlimited practice funds": "Fonds d’essai illimités",
   "No transactions yet": "Aucune transaction pour le moment",
   "No transactions to sign": "Aucune transaction à signer",
   "No real assets involved": "Aucun actif réel",
   "Connect a wallet.": "Connectez un portefeuille.",
-  "We'll set up your sandbox and scope it to your address.":
-    "Nous configurerons votre environnement de test et l'associerons à votre adresse.",
   "By connecting your wallet, you agree to the": "En connectant votre portefeuille, vous acceptez les",
   "Terms & Conditions": "Conditions générales",
   and: "et",
@@ -1106,25 +947,13 @@ const dict: TranslationDictionary = {
   "Your wallet is on the waitlist.": "Votre portefeuille est sur la liste d'attente.",
   "wallets onboarded.": "portefeuilles intégrés.",
   "Wallet connected.": "Portefeuille connecté.",
-  "Fund your sandbox to start exploring.": "Financez votre environnement de test pour commencer à explorer.",
-  "Every wallet gets sandbox funds to practice with, spread across markets so you can try every flow risk-free.":
-    "Chaque portefeuille reçoit des fonds d'entraînement répartis sur les marchés pour que vous puissiez tester chaque parcours sans risque.",
   "You're eligible.": "Vous êtes éligible.",
-  "Your practice portfolio is ready.": "Votre portefeuille d'entraînement est prêt.",
-  "sandbox seats remain.": "places restantes dans l'environnement de test.",
   "Tell your network about Avana.": "Parlez d'Avana à votre réseau.",
   "Post the prepared message on X.": "Publiez le message préparé sur X.",
   "Open X": "Ouvrir X",
   Skip: "Passer",
   "Here's what you'll get.": "Voici ce que vous obtiendrez.",
-  "Practice funds across assets, LP collateral, lending, and multiply.":
-    "Des fonds d'entraînement répartis sur plusieurs actifs, garantie LP, prêt et multiplication.",
   "The allocation cap was reached.": "Le plafond d'allocation a été atteint.",
-  "Your Avana sandbox is ready to explore.": "Votre environnement de test Avana est prêt à être exploré.",
-  "Your practice funds are now in your wallet. Jump into the dashboard to start exploring.":
-    "Vos fonds d'entraînement sont maintenant dans votre portefeuille. Accédez au tableau de bord pour commencer à explorer.",
-  "Sandbox onboarding requires a Convex connection. Set":
-    "L'intégration à l'environnement de test nécessite une connexion Convex. Définissez",
   "to continue.": "pour continuer.",
   Confirmed: "Confirmé",
   Receipt: "Reçu",
@@ -1162,7 +991,6 @@ const dict: TranslationDictionary = {
   "Settling your balance": "Règlement de votre solde",
   "Freeing up your borrowing power": "Libération de votre capacité d'emprunt",
   "Opening your base position": "Ouverture de votre position de base",
-  "Multiplying your collateral": "Bouclage de votre garantie",
   "Reading your leveraged position": "Lecture de votre position à effet de levier",
   "Unwinding part of your loop": "Dénouement d'une partie de votre boucle",
   "Repaying borrowed funds": "Remboursement des fonds empruntés",
@@ -1196,7 +1024,6 @@ const dict: TranslationDictionary = {
   Strategy: "Stratégie",
   "A Beginner's Guide to LP Collateral": "Guide du débutant sur la garantie LP",
   "What LP Collateral Makes Possible": "Ce que la garantie LP rend possible",
-  "Thinking Clearly About Yield Looping": "Penser clairement au yield looping",
   "How to Hedge an LP Position": "Comment couvrir une position LP",
   "Making LP Collateral Usable": "Rendre la garantie LP utilisable",
   "Avana and the Next Step for Liquidity Providers": "Avana et la prochaine étape pour les fournisseurs de liquidité",
@@ -1209,25 +1036,17 @@ const dict: TranslationDictionary = {
   "Which DEXs do you use the most?": "Quels DEXs utilisez-vous le plus ?",
   "Select all that apply": "Sélectionnez tout ce qui s'applique",
   "Last step.": "Dernière étape.",
-  "Let's fund your sandbox.": "Alimentons votre bac à sable.",
-  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.":
-    "Nous répartirons des fonds d'entraînement sur les marchés pour que vous puissiez prêter, emprunter et faire du looping sans aucun risque.",
   "Good news, you're in.": "Bonne nouvelle, vous êtes des nôtres.",
   of: "sur",
-  "sandbox seats already claimed.": "places de bac à sable déjà réservées.",
-  "Your sandbox is live.": "Votre bac à sable est actif.",
   "Everything's funded and waiting. Dive in whenever you're ready.":
     "Tout est financé et prêt. Lancez-vous dès que vous le souhaitez.",
   "Connect an EVM wallet.": "Connectez un portefeuille EVM.",
-  "We can't reach the sandbox right now.": "Nous ne parvenons pas à joindre le bac à sable pour le moment.",
   "Please try again in a moment.": "Veuillez réessayer dans un instant.",
   "Your session is safe. This is a temporary connection issue, not your wallet.":
     "Votre session est en sécurité. Il s'agit d'un problème de connexion temporaire, pas de votre portefeuille.",
   "Something went wrong.": "Une erreur s'est produite.",
   "We couldn't load this page.": "Nous n'avons pas pu charger cette page.",
   "APY breakdown": "Ventilation de l'APY",
-  "Active Umbrella capital currently available to absorb eligible deficits for this asset.":
-    "Capital Umbrella actif actuellement disponible pour absorber les déficits éligibles de cet actif.",
   "Active staker capital": "Capital actif des stakers",
   "Additional rewards used to attract coverage capital, especially during bootstrap periods or when coverage is below target.":
     "Récompenses supplémentaires pour attirer du capital de couverture, surtout au démarrage ou lorsque la couverture est sous l'objectif.",
@@ -1246,29 +1065,17 @@ const dict: TranslationDictionary = {
   "Liquidation recapture": "Récupération liée aux liquidations",
   "Local deductible": "Franchise locale",
   "Target coverage": "Couverture cible",
-  "The Hub asset this Umbrella market protects. Deficits from any eligible Spoke borrowing this reserve can be covered by this market.":
-    "L'actif du Hub protégé par ce marché Umbrella. Ce marché peut couvrir les déficits de tout emprunt Spoke éligible de cette réserve.",
-  "The amount of Umbrella capital currently deposited and available to absorb deficits for this covered reserve. Capital in cooldown is no longer counted as fully available protection.":
-    "Capital Umbrella actuellement déposé et disponible pour absorber les déficits de cette réserve couverte. Le capital en cooldown ne compte plus comme protection pleinement disponible.",
   "The amount of staked capital currently in the cooldown period before it can be withdrawn. A larger cooling balance means less protection may remain available if those funds exit.":
     "Montant de capital staké en cooldown avant son retrait. Un solde plus important en cooldown peut réduire la protection disponible si ces fonds sortent.",
   "The core staking yield paid for providing protection capital to this surface.":
     "Rendement de staking de base versé pour fournir du capital de protection à cette surface.",
   "The portion of yield supported by liquidation-linked economics generated by this reserve-per-Spoke surface, such as liquidation fees or SVR.":
     "Part du rendement issue de l'économie liée aux liquidations de cette surface réserve-par-Spoke, comme les frais de liquidation ou le SVR.",
-  "The staking rewards you have earned for providing Umbrella coverage. Rewards may include protocol incentives and other compensation for taking slashing and lockup risk.":
-    "Récompenses de staking gagnées en fournissant une couverture Umbrella. Elles peuvent inclure des incitations du protocole et une compensation du risque de slashing et de blocage.",
-  "Umbrella surface details": "Détails de la surface Umbrella",
   "View {symbol} surface details": "Voir les détails de la surface {symbol}",
-  "The rewards currently earned by this Umbrella position, allocated across the underlying APY sources.":
-    "Récompenses actuellement gagnées par cette position Umbrella, réparties entre les sources d'APY sous-jacentes.",
-  "The estimated annual yield for keeping Umbrella capital available as coverage for this market.":
-    "Rendement annuel estimé pour conserver du capital Umbrella disponible comme couverture de ce marché.",
   "Est. annual rewards": "Récompenses annuelles estimées",
   "Based on amount entered": "Selon le montant saisi",
   "Slashable stake": "Stake exposé au slashing",
   "Market staked": "Stake du marché",
-  "Umbrella APY": "APY Umbrella",
   "Umbrella market": "Marché Umbrella",
   "Cooled stake": "Stake en cooldown",
   "Start cooldown": "Démarrer le cooldown",
@@ -1276,8 +1083,6 @@ const dict: TranslationDictionary = {
   "Coverage is defined for a specific Hub reserve and covers eligible deficits from every Spoke borrowing that reserve, including credit-line draws.":
     "La couverture est définie pour une réserve Hub précise et couvre les déficits éligibles de chaque Spoke qui emprunte cette réserve, y compris les tirages sur ligne de crédit.",
   "First-loss protection": "Protection de première perte",
-  "The Deficit Offset absorbs the first layer of loss. Only the residual deficit beyond that offset can reach staked Umbrella coverage.":
-    "L'offset de déficit absorbe la première couche de pertes. Seul le déficit résiduel au-delà de cet offset peut atteindre la couverture Umbrella stakée.",
   "Independent underwriting": "Souscription indépendante",
   "Target liquidity and reward emissions reflect reserve risk, economics, opportunity cost, and the slashing and lockup risk accepted by coverage providers.":
     "La liquidité cible et les émissions de récompenses reflètent le risque de la réserve, son économie, le coût d'opportunité et les risques de slashing et de blocage acceptés par les fournisseurs de couverture.",
@@ -1292,7 +1097,6 @@ const dict: TranslationDictionary = {
   "Includes active stake and cooldown": "Inclut le stake actif et le cooldown",
   "Amount Avana covers first before user-staked coverage is exposed. Stakers only take losses once realized deficits exceed this offset.":
     "Montant qu'Avana couvre en premier avant d'exposer la couverture stakée par les utilisateurs. Les stakers ne subissent des pertes que lorsque les déficits réalisés dépassent cet offset.",
-  "Close umbrella actions": "Fermer les actions de protection",
   Cooldown: "Cooldown",
   Cooling: "En cooldown",
   Coverage: "Couvert",
@@ -1304,19 +1108,13 @@ const dict: TranslationDictionary = {
   "Desired amount of user-staked coverage for this asset.":
     "Montant souhaité de couverture stakée par les utilisateurs pour cet actif.",
   "Dynamic rewards": "Récompenses dynamiques",
-  "Each Umbrella stake token covers deficits for its matching borrowed asset on the same network.":
-    "Chaque jeton de stake Protection couvre les déficits de l'actif emprunté correspondant sur le même réseau.",
-  "Emissions adjust against target liquidity, and each staked asset can earn multiple reward tokens.":
-    "Les émissions s'ajustent en fonction de la liquidité cible, et chaque actif staké peut générer plusieurs jetons de récompense.",
   "Estimated annual staking yield paid to stakers of this asset.":
     "Rendement annuel estimé du staking versé aux stakers de cet actif.",
   "In cooldown": "En cooldown",
   "Isolated slashing": "Slashing isolé",
   "Learn Umbrella": "En savoir plus sur la protection",
-  "Umbrella Overview": "Vue d’ensemble d’Umbrella",
   "Module assets": "Actifs du module",
   More: "Plus",
-  "More umbrella actions": "Plus d'actions de protection",
   "Next cooldown": "Prochain cooldown",
   "Next market risk": "Prochain risque de marché",
   "Once cooldown finishes, users can unstake during the withdrawal window before cooldown has to be restarted.":
@@ -1328,10 +1126,6 @@ const dict: TranslationDictionary = {
   Restart: "Redémarrer",
   "Restart cooldown": "Redémarrer le cooldown",
   Stake: "Stake",
-  "Stake in umbrella": "Staker dans Protection",
-  "Unstake from umbrella": "Unstaker de Protection",
-  "Stake, claim rewards, start cooldown, or unstake from the umbrella safety module.":
-    "Stakez, réclamez des récompenses, démarrez un cooldown ou retirez votre stake du module de sécurité Protection.",
   "Stake, claim, cooldown, unstake": "Staker, réclamer, cooldown, retirer",
   "Start cooldown before withdrawing. During cooldown, the position keeps earning incentives and remains slashable.":
     "Démarrez le cooldown avant le retrait. Pendant le cooldown, la position continue à gagner des incitations et reste exposée au slashing.",
@@ -1341,20 +1135,13 @@ const dict: TranslationDictionary = {
   "Total user-staked capital available to absorb losses for this asset.":
     "Capital total staké par les utilisateurs disponible pour absorber les pertes sur cet actif.",
   Umbrella: "Protection",
-  "Umbrella Cooldown": "Cooldown Protection",
-  "Umbrella actions": "Actions de protection",
-  "Umbrella activity": "Activité de protection",
   "Umbrella positions": "Positions de protection",
-  "Umbrella positions are split by asset and network, so each stake token has its own risk and reward profile.":
-    "Les positions de protection sont séparées par actif et par réseau : chaque jeton de stake a donc son propre profil de risque et de récompense.",
   Unstake: "Retirer",
   "Unstake window": "Fenêtre de retrait",
   "Weighted APY": "APY pondéré",
   "Withdrawal ready": "Prêt à retirer",
   "Withdrawal window": "Fenêtre de retrait",
-  "You have no Umbrella positions yet.": "Vous n'avez encore aucune position de protection.",
   "Your Umbrella": "Votre Protection",
-  "Your Umbrella stake": "Votre stake Protection",
   "After cooldown completes, there is a short window to unstake. If it expires, cooldown must be started again.":
     "Une fois le cooldown terminé, une courte fenêtre permet de retirer. Si elle expire, le cooldown doit être redémarré.",
   "base {base} + reward {reward}": "base {base} + récompense {reward}",
@@ -1383,8 +1170,6 @@ const dict: TranslationDictionary = {
   "{amount} cooling": "{amount} en refroidissement",
   "{count} assets": "{count} actifs",
   "{count} rewards": "{count} récompenses",
-  "{name} ({symbol}) / {borrowName} ({borrow}) is a leveraged multiply market on Avana. Supply {symbol} as collateral to loop into {borrow} exposure, up to {leverage}, in a route dedicated to leveraged positions rather than LP collateral pools. Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this {marketType} market. Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.":
-    "{name} ({symbol}) / {borrowName} ({borrow}) est un marché Multiply à effet de levier sur Avana. Apportez {symbol} en garantie pour boucler une exposition à {borrow}, jusqu'à {leverage}, via une route dédiée aux positions à effet de levier plutôt qu'aux pools de garantie LP. Les rendements nets suivent l'écart apport/emprunt, l'utilisation et le multiplicateur choisi, si bien que les résultats du bouclage peuvent varier à mesure que les taux et la liquidité disponible se rééquilibrent. La page se concentre sur la limite de levier en direct, le mix apport/emprunt, la liquidité disponible et la posture de risque la plus récente de ce marché {marketType}. Les utilisateurs doivent surveiller le facteur de garantie, le seuil de liquidation, le coût d'emprunt et la liquidité disponible, car ces paramètres influent à la fois sur les rendements du bouclage et sur la rapidité avec laquelle une position peut être dénouée en conditions de tension.",
   "30 Days": "30 jours",
   "90 Days": "90 jours",
   "A position is near liquidation (health factor {hf}).":
@@ -1421,7 +1206,6 @@ const dict: TranslationDictionary = {
   Dark: "Sombre",
   "Dashboard tabs": "Onglets du tableau de bord",
   Dismiss: "Ignorer",
-  "Explore Umbrella": "Explorer Protection",
   "Express actions": "Actions express",
   Fees: "Frais",
   "Fees Earned": "Frais gagnés",
@@ -1450,8 +1234,6 @@ const dict: TranslationDictionary = {
   "Loading wallet position": "Chargement de la position du portefeuille",
   "Long, short, and net USD per token across every product.":
     "Long, short et net en USD par token sur tous les produits.",
-  "LOOP APY": "APY DU LOOP",
-  "Loop market": "Marché loop",
   "LP APR": "APR LP",
   "Pool APR": "APR du pool",
   "Live value of this collateral, and the LP trading fees it earns.":
@@ -1459,27 +1241,19 @@ const dict: TranslationDictionary = {
   "Market-wide liquidation activity and near-liquidation exposure over the last 24 hours.":
     "Activité de liquidation à l'échelle du marché et exposition proche de la liquidation sur les dernières 24 heures.",
   "Minimum received": "Minimum reçu",
-  "Multiply Balance": "Solde Multiply",
-  "Multiply Exposure": "Exposition Multiply",
-  "Multiply Health": "Santé Multiply",
-  "Multiply Rewards": "Récompenses Multiply",
   "Multiply TVL": "TVL Multiply",
   "My Collaterals": "Mes garanties",
   "My Debts": "Mes dettes",
-  "Net Portfolio Value = Assets − Debt. Assets: wallet balances, lending supplied, borrow collateral, any borrowed funds you still hold, your Multiply position value, and Umbrella staked + rewards. Debt: borrow loans and Multiply borrowing. Borrowing doesn't change this number — the cash you receive is an asset that offsets the new debt.":
-    "Valeur nette du portefeuille = Actifs − Dette. Actifs : soldes du portefeuille, montants prêtés, garanties d'emprunt, tout fonds emprunté que vous détenez encore, la valeur de votre position Multiply et les montants stakés + récompenses Protection. Dette : prêts d'emprunt et emprunt Multiply. Emprunter ne change pas ce chiffre — les liquidités reçues sont un actif qui compense la nouvelle dette.",
   Network: "Réseau",
   No: "Non",
   "No active loans. Borrow against your collateral to get started.":
     "Aucun prêt actif. Empruntez contre votre garantie pour commencer.",
-  "No active Multiply positions": "Aucune position Multiply active",
   "No assets found.": "Aucun actif trouvé.",
   "No collateral deposited yet. Supply an asset to start backing loans.":
     "Aucune garantie déposée pour l'instant. Apportez un actif pour commencer à garantir des prêts.",
   "No liquidity pools yet. Provide liquidity to start earning trading fees.":
     "Aucun pool de liquidité pour l'instant. Fournissez de la liquidité pour commencer à gagner des frais de trading.",
   "No supplied position to withdraw": "Aucune position apportée à retirer",
-  "No Umbrella positions yet.": "Aucune position de protection pour l'instant.",
   "No wallet balances found.": "Aucun solde de portefeuille trouvé.",
   NONE: "AUCUN",
   now: "maintenant",
@@ -1510,8 +1284,6 @@ const dict: TranslationDictionary = {
   "Repay or add collateral to reduce your liquidation risk.":
     "Remboursez ou ajoutez de la garantie pour réduire votre risque de liquidation.",
   "Review risk": "Examiner le risque",
-  "Negative net APY: borrow costs exceed supply yield. Review before opening this loop.":
-    "APY net négatif : les coûts d'emprunt dépassent le rendement du supply. Vérifiez avant d'ouvrir cette boucle.",
   "Review swap": "Vérifier le swap",
   "Rewards Earned": "Récompenses gagnées",
   "Scenario price": "Prix du scénario",
@@ -1583,7 +1355,6 @@ const dict: TranslationDictionary = {
   pools: "pools",
   Pools: "Pools",
   Position: "Position",
-  Sandbox: "Sandbox",
   Short: "Short",
   Source: "Source",
   Swap: "Échanger",
@@ -1606,19 +1377,14 @@ const dict: TranslationDictionary = {
   "Collateral price move": "Variation du prix de la garantie",
   "Debt change amount": "Montant de variation de la dette",
   "Drop buffer": "Marge de baisse",
-  "Equity value at this leverage, by scenario.": "Valeur des fonds propres à ce levier, par scénario.",
-  "Estimate on {equity} equity. Assumes rates hold; leverage amplifies both gains and losses.":
-    "Estimation sur {equity} de fonds propres. Suppose des taux stables ; le levier amplifie gains et pertes.",
   "Estimate. Variable rate — actual cost will differ.": "Estimation. Taux variable — le coût réel différera.",
   Horizon: "Durée",
   "Lend Outlook": "Perspectives de prêt",
-  "Leverage multiplier": "Multiplicateur de levier",
   Liquidated: "Liquidé",
   "Liquidation price": "Prix de liquidation",
   "Liquidation prices": "Prix de liquidation (par actif)",
   "Move collateral prices or your debt and watch health factor respond.":
     "Faites varier les prix de la garantie ou votre dette et observez la réaction du facteur de santé.",
-  "Multiply Outlook": "Perspectives Multiply",
   Next: "Suivant",
   "Price sensitivity": "Sensibilité au prix",
   "Projected interest cost": "Coût d'intérêt projeté",
@@ -1677,32 +1443,16 @@ const dict: TranslationDictionary = {
     "Facteur de santé, et la valeur de la garantie à laquelle cette position est liquidée. En dessous de 1.0, la liquidation est déclenchée.",
   "The collateral you supply and the asset you borrow against it to build leverage.":
     "La garantie que vous fournissez et l'actif que vous empruntez contre elle pour créer un effet de levier.",
-  "Your own capital in the loop (exposure minus debt). Exposure is your total leveraged position.":
-    "Votre capital propre dans la boucle (exposition moins dette). L'exposition est votre position totale à effet de levier.",
   "Net yield after borrow costs, on your capital. The figure below is interest earned so far, ticking live.":
     "Rendement net après les coûts d'emprunt, sur votre capital. Le chiffre ci-dessous correspond aux intérêts gagnés jusqu'à présent, qui s'actualise en direct.",
-  "Health factor, and the collateral price at which this loop is liquidated. Below 1.0 triggers liquidation.":
-    "Facteur de santé, et le prix de la garantie auquel cette boucle est liquidée. En dessous de 1.0, la liquidation est déclenchée.",
-  "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)":
-    "Carry net gagné sur vos boucles Multiply, qui s'accumule en direct (rendement du supply moins coût d'emprunt)",
   "Average APY across your staked positions, weighted by value.":
     "APY moyen sur vos positions stakées, pondéré par la valeur.",
   "Additional amount you can borrow against your pledged collateral within Avana credit limits":
     "Montant supplémentaire que vous pouvez emprunter contre votre garantie nantie, dans les limites de crédit d'Avana",
   "Amount an active loan can lose before reaching liquidation; unavailable when you have no debt":
     "Montant qu'un prêt actif peut perdre avant d'atteindre la liquidation ; indisponible si vous n'avez aucune dette",
-  "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.":
-    "Valeur de liquidation combinée divisée par la dette Multiply totale. Plus la valeur est élevée, plus c'est sûr ; en dessous de 1, risque de liquidation.",
-  "Equity-weighted net APY after supply yield and borrow cost":
-    "APY net pondéré par les fonds propres, après rendement du supply et coût d'emprunt",
-  "Exposure, return, and liquidation risk for each active loop":
-    "Exposition, rendement et risque de liquidation pour chaque boucle active",
-  "Gross Multiply exposure after looping across all positions":
-    "Exposition Multiply brute après bouclage sur l'ensemble des positions",
   "Interest earned as a percentage of principal you supplied":
     "Intérêts gagnés en pourcentage du capital que vous avez fourni",
-  "Portfolio leverage as position value divided by equity":
-    "Levier du portefeuille, soit la valeur de la position divisée par les fonds propres",
   "Projected earnings at current rates": "Gains projetés aux taux actuels",
   "Supply interest accruing in real time across your lending positions (excludes protocol rewards)":
     "Intérêts d'apport qui s'accumulent en direct sur vos positions de prêt (hors récompenses du protocole)",
@@ -1838,7 +1588,6 @@ const dict: TranslationDictionary = {
     "Part des fonds fournis actuellement empruntée. Une utilisation élevée augmente les taux et peut retarder les retraits.",
   "The liquidity pool you can pledge as collateral to borrow against.":
     "Le pool de liquidité que tu peux déposer en collatéral pour emprunter.",
-  "The maximum leverage available on this loop.": "Le levier maximal disponible sur cette boucle.",
   "The most you can borrow as a share of your collateral value.":
     "Le maximum que tu peux emprunter en proportion de la valeur de ton collatéral.",
   "The token you can borrow against your collateral.": "Le token que tu peux emprunter contre ton collatéral.",
@@ -1860,7 +1609,6 @@ const dict: TranslationDictionary = {
   "Clear {facet} filter": "Effacer le filtre {facet}",
   "Filter by": "Filtrer par",
   Hubs: "Pôles",
-  "No loops match these filters.": "Aucune boucle ne correspond à ces filtres.",
   "No matches": "Aucun résultat",
   "Search chains": "Rechercher des chaînes",
   "Search hubs": "Rechercher des hubs",
@@ -1870,7 +1618,6 @@ const dict: TranslationDictionary = {
   Volatile: "Volatil",
   Chains: "Chaînes",
   Other: "Autres",
-  Stocks: "Actions",
   "Filter markets": "Filtrer les marchés",
 }
 

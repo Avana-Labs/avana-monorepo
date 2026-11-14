@@ -408,7 +408,7 @@ export default defineSchema({
   // FX, support requests, wallet preferences, the SIWE route rate limiter and Ask AI. ----
 
   /**
-   * Real token spot prices — the ONE place the sandbox reads live market data
+   * Real token spot prices — the ONE place the app reads live market data
    * (`convex/prices.ts refreshPrices`, from DefiLlama). Supply/borrow/TVL stay
    * simulated. One row per lowercase base symbol.
    */
@@ -515,7 +515,7 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_created_at", ["createdAt"]),
 
-  /** Permanent wallet identity and display preferences, independent of Sandbox onboarding. */
+  /** Permanent wallet identity and display preferences, independent of sign-in. */
   walletProfiles: defineTable({
     /** Lowercased, derived from the authenticated identity. */
     wallet: v.string(),

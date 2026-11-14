@@ -133,7 +133,7 @@ export async function fetchLendSupplyBorrow(slug: string) {
   }
 }
 
-/** Recent market transactions (sandbox first, seeded walletEvents fallback). */
+/** Recent market transactions (app transactions first, then chain events). */
 export async function fetchLendRecentTransactions(slug: string) {
   const client = convexClient()
   if (!client) return null

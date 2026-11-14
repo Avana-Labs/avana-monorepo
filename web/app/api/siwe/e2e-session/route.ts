@@ -1,4 +1,4 @@
-import { mintSiweSessionJwt, resolveIssuer, verifySandboxJwt, verifySiweSessionJwt } from "@/app/lib/siwe/jwt"
+import { mintSiweSessionJwt, resolveIssuer, verifyConvexJwt, verifySiweSessionJwt } from "@/app/lib/siwe/jwt"
 import { allowsLocalE2E, isIsolatedE2EStaging } from "@/app/lib/siwe/e2e-policy"
 import { cookies } from "next/headers"
 import { assertSameOrigin, clientKey, rateLimitShared } from "../../_lib/request-guards"
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic"
  * - Playwright test mode is on (local suite), OR
  * - `x-avana-e2e-secret` matches `AVANA_E2E_SESSION_SECRET` (staging action lifecycles).
  *
- * Accepts either `{ wallet }` or `{ token }` (sandbox/session JWT used only to extract wallet).
+ * Accepts either `{ wallet }` or `{ token }` (Convex/session JWT used only to extract wallet).
  * Never returns a Convex access JWT in the body — clients must call `/api/siwe/token`.
  */
 export async function POST(req: Request) {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
   let wallet = typeof body.wallet === "string" ? body.wallet.toLowerCase() : ""
   if (!wallet && typeof body.token === "string") {
-    const verified = verifySiweSessionJwt(body.token) ?? verifySandboxJwt(body.token)
+    const verified = verifySiweSessionJwt(body.token) ?? verifyConvexJwt(body.token)
     wallet = verified?.wallet ?? ""
   }
   if (!/^0x[0-9a-f]{40}$/.test(wallet)) {

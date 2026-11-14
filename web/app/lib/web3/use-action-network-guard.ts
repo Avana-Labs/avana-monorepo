@@ -15,7 +15,7 @@ type ActionNetworkGuard = {
 /**
  * Submit-time network gate for action pages — the single source action clients use to
  * hard-block submission until the wallet is on the target chain (the wrong-network banner
- * itself is display-only). Inert in headless/test mode so sandbox flows are unaffected.
+ * itself is display-only). Inert in headless/test mode so test flows are unaffected.
  */
 export function useActionNetworkGuard(): ActionNetworkGuard {
   // Reads the wagmi-free context (fed by the mounted wallet provider), so the borrow client

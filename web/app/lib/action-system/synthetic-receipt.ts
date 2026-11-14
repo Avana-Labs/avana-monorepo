@@ -3,7 +3,7 @@
  *
  * The synthetic ledger doesn't record a block number or gas fee, but a receipt looks
  * bare without them. Deriving from the hash keeps these stable across revisits and
- * identical between the inline success stage and the `/sandbox/transactions/[hash]`
+ * identical between the inline success stage and the transaction permalink
  * permalink for the same transaction. No Date.now()/Math.random(), so it's pure.
  */
 function hashSeed(hash: string, salt: number): number {

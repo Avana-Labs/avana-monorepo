@@ -184,7 +184,7 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
 
   const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0]
   const currentCurrency = CURRENCY_OPTIONS.find((option) => option.code === currency) ?? CURRENCY_OPTIONS[0]
-  const currentNetwork = "Sandbox"
+  const currentNetwork = "Local"
   const lightModeEnabled = mounted ? resolvedTheme === "light" : false
   const isVisible = open && isShown
   const isSelectorSheetOpen = view !== "root"
@@ -517,7 +517,7 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
             className="flex w-full items-center justify-between gap-4 rounded-radius-lg px-3 py-4 text-start"
             onClick={closeSelectorSheet}
           >
-            <span className="text-[1.15rem] font-medium leading-tight text-foreground">{t("Sandbox")}</span>
+            <span className="text-[1.15rem] font-medium leading-tight text-foreground">{t("Local")}</span>
             <Check className="h-6 w-6 text-brand" />
           </button>
         </li>

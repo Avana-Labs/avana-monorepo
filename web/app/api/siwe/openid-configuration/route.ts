@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic"
 
 /**
  * OIDC discovery doc. Convex fetches `${domain}/.well-known/openid-configuration`
- * (rewritten here) to discover the JWKS and verify sandbox JWTs.
+ * (rewritten here) to discover the JWKS and verify the app's JWTs.
  */
 export async function GET(req: Request) {
   const origin = new URL(req.url).origin

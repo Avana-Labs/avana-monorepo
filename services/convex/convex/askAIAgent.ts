@@ -264,7 +264,7 @@ const FINANCIAL_TOOL_KINDS = {
 } as const
 
 type FinancialToolName = keyof typeof FINANCIAL_TOOL_KINDS
-type DataProvenance = "sandbox" | "connected_wallet" | "onchain"
+type DataProvenance = "connected_wallet" | "onchain"
 
 // Matches the persisted `sources` validator in askAI.completeGeneratedTurn.
 type AskAISource = {
@@ -441,7 +441,7 @@ export const generateTurn = internalAction({
               : {}),
             payload,
             modelContext,
-            ...(provenance === "sandbox" || provenance === "connected_wallet" || provenance === "onchain"
+            ...(provenance === "connected_wallet" || provenance === "onchain"
               ? { dataProvenance: provenance }
               : {}),
           }
@@ -647,7 +647,7 @@ export const generateTurn = internalAction({
                 ? (output as { dataProvenance?: unknown }).dataProvenance
                 : undefined
             const dataProvenance: DataProvenance | undefined =
-              provenance === "sandbox" || provenance === "connected_wallet" || provenance === "onchain"
+              provenance === "connected_wallet" || provenance === "onchain"
                 ? provenance
                 : undefined
             return [{ kind, ...(dataProvenance ? { dataProvenance } : {}), payload: output }]

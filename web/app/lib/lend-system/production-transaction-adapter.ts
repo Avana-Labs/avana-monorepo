@@ -1,6 +1,6 @@
 import type { LendAction } from "@/app/lib/lend-system/model"
 import type {
-  LendSandboxActionResult,
+  LendActionResult,
   LendTransactionAdapter,
   LendTransactionIntent,
   LendTransactionPreview,
@@ -20,7 +20,7 @@ const EMPTY_METRICS = {
 
 type ProductionLendTransactionAdapterOptions = Partial<{
   previewTransaction: (intent: LendTransactionIntent) => Promise<LendTransactionPreview>
-  executeTransaction: (intent: LendTransactionIntent) => Promise<LendSandboxActionResult>
+  executeTransaction: (intent: LendTransactionIntent) => Promise<LendActionResult>
   now: () => number
   generateId: (prefix: string) => string
 }>
@@ -65,7 +65,7 @@ export class ProductionLendTransactionAdapter implements LendTransactionAdapter 
     }
   }
 
-  async executeTransaction(intent: LendTransactionIntent): Promise<LendSandboxActionResult> {
+  async executeTransaction(intent: LendTransactionIntent): Promise<LendActionResult> {
     if (!this.source.executeTransaction) throw new Error(TRANSACTIONS_UNAVAILABLE)
     return this.source.executeTransaction(intent)
   }

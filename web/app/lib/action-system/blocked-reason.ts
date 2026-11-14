@@ -8,7 +8,7 @@ const GENERIC_BLOCKED_MESSAGE = "This action can't be completed right now. Try a
 type ReasonRule = { match: RegExp; message: string }
 
 const REASON_RULES: ReasonRule[] = [
-  // Backend error codes (convex/sandbox/auth.ts + transactions.ts) are thrown with an
+  // Backend error codes (services/convex walletAuth.ts) are thrown with an
   // uppercase CODE: prefix and must never reach users verbatim.
   {
     match: /\bUNAUTHENTICATED\b/i,

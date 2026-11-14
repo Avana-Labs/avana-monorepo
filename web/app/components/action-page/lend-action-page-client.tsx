@@ -404,7 +404,7 @@ export function LendActionPageClient({
               liveAccrual: true,
             })
 
-      const simulated = session.readAdapter.mode === "sandbox"
+      const simulated = false
       const result = await runActionSubmitFlow({
         simulated,
         needsAllowance: kind === "deposit",

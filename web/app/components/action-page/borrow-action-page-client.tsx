@@ -1041,7 +1041,7 @@ export function BorrowActionPageClient({
         })
       }
 
-      const simulated = session.readAdapter.mode === "sandbox"
+      const simulated = false
       const result = await runActionSubmitFlow({
         simulated,
         needsAllowance: false,
@@ -1155,7 +1155,7 @@ export function BorrowActionPageClient({
   const shellDensity = sidebar ? "sidebar" : isHomeLayout ? "home" : "default"
   // Require a collateral pool before the borrow-asset picker opens, so the asset
   // list is always scoped to the selected market (wallet-connection gating is
-  // already enforced upstream by the sandbox/connect onboarding flow).
+  // already enforced upstream by the connect flow).
   const borrowNeedsCollateral = isHomeLayout && kind === "borrow" && !activeMarketId
   const useDialogAssetPicker = kind === "borrow" || kind === "repay"
   const pickerTokens = kind === "borrow" ? borrowTokens : kind === "repay" ? repayTokens : undefined

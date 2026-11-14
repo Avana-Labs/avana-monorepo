@@ -1,4 +1,4 @@
-import { mintSandboxJwt, resolveIssuer } from "@/app/lib/siwe/jwt"
+import { mintConvexJwt, resolveIssuer } from "@/app/lib/siwe/jwt"
 import { shouldUseOpenGateSession, TEST_MODE_WALLET_ADDRESS } from "@/app/lib/test-mode"
 import { assertSameOrigin, clientKey, rateLimitShared } from "../../_lib/request-guards"
 
@@ -19,7 +19,7 @@ function isLoopbackIssuer(issuer: string) {
 }
 
 /**
- * Dev/open-gate only: mint a sandbox JWT for TEST_MODE_WALLET_ADDRESS so Convex
+ * Dev/open-gate only: mint a Convex JWT for TEST_MODE_WALLET_ADDRESS so Convex
  * wallet queries/mutations authenticate without a real SIWE signature.
  *
  * Hard-refuses in production builds (shouldUseOpenGateSession is structurally false
@@ -55,6 +55,6 @@ export async function POST(req: Request) {
   }
 
   const wallet = TEST_MODE_WALLET_ADDRESS.toLowerCase()
-  const token = mintSandboxJwt(wallet, issuer)
+  const token = mintConvexJwt(wallet, issuer)
   return Response.json({ token, wallet, issuer })
 }

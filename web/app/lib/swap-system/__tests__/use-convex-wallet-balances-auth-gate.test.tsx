@@ -19,7 +19,7 @@ afterEach(() => {
 })
 
 describe("auth-gated wallet reads", () => {
-  // These queries call requireSandboxWallet, which throws when unauthenticated — and useQuery
+  // These queries call requireWallet, which throws when unauthenticated — and useQuery
   // re-throws into render, which crashed the dashboard before the JWT was attached.
   it("skips every wallet query until Convex has authenticated", () => {
     renderHook(() => {

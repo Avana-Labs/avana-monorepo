@@ -44,7 +44,7 @@ const appOrigin = resolveAppOrigin()
 const wagmiConfig = createConfig(
   getDefaultConfig({
     appName: "Avana",
-    appDescription: "Practice DeFi borrowing, lending, and looping in a live sandbox.",
+    appDescription: "Borrow against LP positions, lend and swap on Avana.",
     appUrl: appOrigin,
     appIcon: `${appOrigin}/avana-icon.png`,
     walletConnectProjectId,

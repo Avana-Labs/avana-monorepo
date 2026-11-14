@@ -5,17 +5,12 @@ import type { TranslationDictionary } from "../types"
 const dict: TranslationDictionary = {
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "Teminat yatırın, karşılığında borçlanın, borç aldığınız sermayeyi yeniden yatırın ve risk limitinize kadar tekrarlayın.",
-  "Browse Multiply Page": "Çoğalt sayfasına git",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":
     "Likidite havuzu pozisyonlarınızı teminata dönüştürün ve havuzdan çıkmadan burada onlara karşı borçlanın.",
   "Browse Borrow Page": "Borçlan sayfasına git",
   "Supply capital into Hub-connected lending markets and earn from LP-backed borrower demand.":
     "Hub'a bağlı borç verme piyasalarına sermaye sağlayın ve LP destekli borçlanan talebinden kazanç elde edin.",
   "Browse Lend Page": "Borç ver sayfasına git",
-  "Coinbase & Robinhood Stocks": "Coinbase & Robinhood Hisseleri",
-  "Tokenized equities — deposit stock tokens to earn lending yield":
-    "Tokenlaştırılmış hisse senetleri — borç verme getirisi kazanmak için hisse tokenları yatırın",
-  "Tokenized-equity concentrated LP positions": "Tokenlaştırılmış hisse senetlerinden yoğunlaştırılmış LP pozisyonları",
   "Paxos USD stablecoin": "Paxos USD stablecoin",
   "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.":
     "{name}, Avana'daki {spoke} spoke'una teminat olarak yatırılan tokenlaştırılmış hisse senedi LP pozisyonudur. {stableLeg} ile tokenlaştırılmış {stockName} ({stockSymbol}) pozisyonunu eşleştirir; böylece teminat değeri, havuzun derinliği ve ücret kademesiyle birlikte {stockName} hisse fiyatını takip eder. Avana, borçlanma gücünü spoke'un maksimum LTV'sine sabitleyerek krediyi tokenlaştırılmış hisse teminatının ne kadar sert hareket edebileceğine bağlar. Bu sayfa; havuzun ne olduğu, güvenle destekleyebileceği sermaye miktarı ve protokolün üstlendiği düşüş riski hakkında tek doğruluk kaynağıdır.",
@@ -49,16 +44,11 @@ const dict: TranslationDictionary = {
   Continue: "Devam et",
   Cancel: "İptal",
   Back: "Geri",
-  "Welcome to the Avana Sandbox.": "Avana Sandbox'a hoş geldiniz.",
   "A risk-free space to test the app and learn how it works.":
     "Uygulamayı test etmek ve nasıl çalıştığını öğrenmek için risksiz bir alan.",
-  "Borrow against LP, lend, and loop positions with practice funds. When you're ready, switch to the real world. Have fun exploring.":
-    "Deneme bakiyesiyle LP pozisyonlarına karşı borç alın, varlık ödünç verin ve döngü pozisyonlarını deneyin. Hazır olduğunuzda gerçek dünyaya geçin. Keşfetmenin keyfini çıkarın.",
-  "Unlimited practice funds": "Sınırsız deneme bakiyesi",
   "Risk-free exploration": "Risksiz keşif",
   "No real assets involved": "Gerçek varlık kullanılmaz",
   "Fast — no transactions to sign": "Hızlı — imzalanacak işlem yok",
-  "Fund my sandbox": "Sandbox bakiyemi yükle",
   "Continue to allocation": "Dağıtıma devam et",
   "Share on X first": "Önce X'te paylaş",
   "I posted it": "Paylaştım",
@@ -166,13 +156,8 @@ const dict: TranslationDictionary = {
   "Highest APY": "En yüksek APY",
   "Most Available": "En çok mevcut",
   "Collateral A-Z": "Teminat A-Z",
-  "Search loops": "Döngülerde ara",
   "Sort by": "Sıralama ölçütü",
-  "Sort loops": "Döngüleri sırala",
   Trending: "Öne çıkanlar",
-  "Highest max-leverage APY markets in the sandbox catalog.":
-    "Sandbox kataloğundaki en yüksek maksimum kaldıraç APY piyasaları.",
-  "No loops in this category yet.": "Bu kategoride henüz döngü yok.",
   COLLATERAL: "TEMİNAT",
   BORROWABLE: "ÖDÜNÇ ALINABİLİR",
   "MAX APY": "MAKS. APY",
@@ -251,19 +236,13 @@ const dict: TranslationDictionary = {
   Health: "Sağlık",
   Debt: "Borç",
   "Approved credit": "Onaylanan kredi",
-  "Multiply value": "Çarpan değeri",
   "Average APY": "Ortalama APY",
   Earned: "Kazanılan",
   "Open positions": "Açık pozisyonlar",
   "Net carry": "Net taşıma getirisi",
-  "Increase loop": "Döngüyü artır",
-  "Unwind loop": "Döngüyü çöz",
   "Weighted average APY across supplied assets in the wallet.":
     "Cüzdandaki sağlanan varlıkların ağırlıklı ortalama APY'si.",
   "Total yield already accrued by the portfolio.": "Portföyün halihazırda biriktirdiği toplam getiri.",
-  "Open multiply positions in the wallet profile.": "Cüzdan profilindeki açık çarpan pozisyonları.",
-  "Average realized carry across the current multiply book.":
-    "Mevcut çarpan defterinde gerçekleşen ortalama taşıma getirisi.",
   "Portfolio quick actions": "Portföy hızlı işlemleri",
   "Lending Opportunities": "Borç verme fırsatları",
   "View markets": "Piyasaları görüntüle",
@@ -282,7 +261,6 @@ const dict: TranslationDictionary = {
   "This page isn't available.": "Bu sayfa kullanılamıyor.",
   "The address may be wrong or the page may have moved.": "Adres yanlış olabilir veya sayfa taşınmış olabilir.",
   "Helpful links": "Faydalı bağlantılar",
-  "Avana sandbox": "Avana korumalı alanı",
   "Sign in with the wallet that created this transaction to view its receipt.":
     "Makbuzunu görüntülemek için bu işlemi oluşturan cüzdanla oturum açın.",
   "We couldn't load this receipt right now.": "Bu makbuzu şu anda yükleyemedik.",
@@ -294,7 +272,6 @@ const dict: TranslationDictionary = {
   "Available Credit": "Kullanılabilir Kredi",
   "Outstanding Loans": "Ödenmemiş Krediler",
   "Total Liquidity": "Toplam Likidite",
-  "Loop Markets": "Döngü Piyasaları",
   "Avg Max APY": "Ort. Maks. APY",
   "Avg Max Leverage": "Ort. Maks. Kaldıraç",
   "Total TVL": "Toplam TVL",
@@ -341,12 +318,9 @@ const dict: TranslationDictionary = {
   "How can we help?": "Nasıl yardımcı olabiliriz?",
   "Include what you were trying to do, what happened, and any transaction or market details that may help.":
     "Ne yapmaya çalıştığınızı, ne olduğunu ve yardımcı olabilecek işlem veya piyasa ayrıntılarını ekleyin.",
-  "Leveraged loop": "Kaldıraçlı döngü",
   "No assets in your wallet": "Cüzdanınızda varlık yok",
   "No deposited position found for this market.": "Bu piyasa için yatırılmış pozisyon bulunamadı.",
   "No deposits found": "Yatırım bulunamadı",
-  "No multiply positions yet. Open a loop to leverage your collateral.":
-    "Henüz multiply pozisyonu yok. Teminatınıza kaldıraç uygulamak için bir döngü açın.",
   "read more": "daha fazla oku",
   "Recommended articles": "Önerilen makaleler",
   "Request received": "Talep alındı",
@@ -380,7 +354,6 @@ const dict: TranslationDictionary = {
   "Your progress": "İlerlemeniz",
   "{completed}/{total} completed": "{completed}/{total} tamamlandı",
   "{label} amount": "{label} tutarı",
-  "{label} multiplier": "{label} çarpanı",
   "{name} ({symbol}) is a single-asset supply market on Avana. Suppliers earn the supply APY{rewardsClause} from borrower interest, net of the reserve factor. Yield tracks utilization, so the page focuses on the live supply rate, the supply/utilization mix, and the latest risk posture for this {marketType} market.":
     "{name} ({symbol}), Avana üzerinde tek varlıklı bir arz piyasasıdır. Arz edenler, rezerv faktörü düşüldükten sonra borçlanan faizinden arz APY'sini{rewardsClause} kazanır. Getiri kullanım oranını izler; bu nedenle sayfa canlı arz oranına, arz/kullanım dengesine ve bu {marketType} piyasasının en güncel risk durumuna odaklanır.",
   "{percent}% of liq. max": "Likidasyon maks. %{percent}",
@@ -402,8 +375,6 @@ const dict: TranslationDictionary = {
   Portfolio: "Portföy",
   "Quick actions": "Hızlı işlemler",
   "My Deposits": "Mevduatlarım",
-  "My Loops": "Döngülerim",
-  "Available to loop": "Döngü için kullanılabilir",
   "Scroll table left": "Tabloyu sola kaydır",
   "Scroll table right": "Tabloyu sağa kaydır",
   "Total Fees earned": "Kazanılan toplam ücret",
@@ -444,11 +415,7 @@ const dict: TranslationDictionary = {
   GOOD: "İYİ",
   "Health Factor": "Sağlık Faktörü",
   "I read it": "Okudum",
-  "In this sandbox, every transaction is simulated — use previews to learn before sizing up.":
-    "Bu korumalı alanda her işlem simüle edilir — büyük adımlar atmadan önce önizlemelerle öğrenin.",
   "Invite link": "Davet bağlantısı",
-  "Keep health factor headroom and treat rewards as practice, not production yield.":
-    "Sağlık faktörü payını koruyun ve ödülleri gerçek getiri değil, alıştırma olarak görün.",
   "Lend {name}": "{name} ödünç ver",
   "Lend actions": "Ödünç verme işlemleri",
   "Leverage options": "Kaldıraç seçenekleri",
@@ -466,8 +433,6 @@ const dict: TranslationDictionary = {
   Min: "Min",
   "More information": "Daha fazla bilgi",
   "More information about {topic}": "{topic} hakkında daha fazla bilgi",
-  "Multiply {name}": "{name} çarpanla",
-  "Multiply actions": "Çarpan işlemleri",
   "My Borrows": "Borçlarım",
   "My LP Collaterals": "LP Teminatlarım",
   "No activity matches the current filters.": "Mevcut filtrelerle eşleşen etkinlik yok.",
@@ -478,17 +443,14 @@ const dict: TranslationDictionary = {
   "No rewards ready": "Hazır ödül yok",
   "Nothing borrowed yet": "Henüz borçlanma yok",
   "Nothing supplied yet": "Henüz arz yok",
-  "Open a looped position in {name}.": "{name} üzerinde döngülü bir pozisyon aç.",
   "Open preferences": "Tercihleri aç",
   Opened: "Açıldı",
   "Overall quest completion progress": "Genel görev tamamlanma ilerlemesi",
   Pending: "Beklemede",
-  "Pin a sandbox market": "Korumalı alan piyasasını sabitle",
   "Pool actions": "Havuz işlemleri",
   "Portfolio views": "Portföy görünümleri",
   Preferences: "Tercihler",
   "Preview {product}": "{product} önizle",
-  "Preview a sandbox trade": "Korumalı alan işlemini önizle",
   "Price chart": "Fiyat grafiği",
   "Processing…": "İşleniyor…",
   "Progress: {progress} / {target}": "İlerleme: {progress} / {target}",
@@ -506,7 +468,6 @@ const dict: TranslationDictionary = {
   "Run a real preview in the session — nothing executes on-chain.":
     "Oturumda gerçek bir önizleme çalıştırın — zincir üzerinde hiçbir şey yürütülmez.",
   Safe: "Güvenli",
-  "Sandbox risk primer": "Korumalı alan risk rehberi",
   "Scope Health Factor": "Sağlık Faktörünü İncele",
   Search: "Ara",
   "Search assets": "Varlık ara",
@@ -554,8 +515,6 @@ const dict: TranslationDictionary = {
     "Bu bizim tarafımızda, cüzdanınızda değil. Tekrar deneyin ve sorun devam ederse bize bildirin.",
   "Back to borrow": "Borç almaya dön",
   "Back to lend": "Borç vermeye dön",
-  "Back to multiply": "Multiply'e dön",
-  "Back to Umbrella": "Koruma'ya dön",
   "Back to rewards": "Ödüllere dön",
   Loading: "Yükleniyor",
   "Loading…": "Yükleniyor…",
@@ -572,10 +531,8 @@ const dict: TranslationDictionary = {
   "Mobile menu": "Mobil menü",
   "Close menu": "Menüyü kapat",
   "Mobile navigation": "Mobil gezinme",
-  "Sandbox wallet": "Sandbox cüzdanı",
   "This workspace uses a built-in demo wallet. There is no external wallet connection yet.":
     "Bu çalışma alanı yerleşik bir demo cüzdanı kullanır. Henüz harici bir cüzdan bağlantısı yoktur.",
-  "Sandbox active": "Sandbox etkin",
   Connected: "Bağlı",
   Copied: "Kopyalandı",
   "Copy address": "Adresi kopyala",
@@ -594,11 +551,8 @@ const dict: TranslationDictionary = {
   "Lending Positions": "Borç Verme Pozisyonları",
   "Lending Performance": "Borç Verme Performansı",
   "Lend Rewards": "Borç Verme Ödülleri",
-  "Multiply Overview": "Multiply Genel Bakışı",
   "Debt & Risk": "Borç ve Risk",
-  "Position size, multiplier, and current net yield": "Pozisyon büyüklüğü, çarpan ve mevcut net getiri",
   "Borrowed balance, health factor, and liquidation threshold": "Borç bakiyesi, sağlık faktörü ve likidasyon eşiği",
-  "No active Multiply debt": "Aktif Multiply borcu yok",
   "Loading your portfolio": "Portföyünüz yükleniyor",
   "We couldn't load your portfolio": "Portföyünüzü yükleyemedik",
   "The live portfolio fetch kept failing. Try again to re-run the client fetch without leaving the dashboard.":
@@ -611,9 +565,7 @@ const dict: TranslationDictionary = {
   "Asset analytics": "Varlık analizi",
   "Pool analytics": "Havuz analizi",
   "Lend market analytics": "Borç verme piyasası analizi",
-  "Multiply market analytics": "Multiply piyasası analizi",
   "General FAQs": "Genel SSS",
-  "Multiply FAQs": "Multiply SSS",
   "BTC Pools": "BTC Havuzları",
   "ETH Pools": "ETH Havuzları",
   "Forex Pools": "Forex Havuzları",
@@ -624,11 +576,6 @@ const dict: TranslationDictionary = {
   "Forex Based": "Forex Bazlı",
   "Utility Based": "Fayda Bazlı",
   "Smart Lend": "Akıllı Ödünç Verme",
-  "BTC Loops": "BTC Döngüleri",
-  "ETH Loops": "ETH Döngüleri",
-  "Forex Loops": "Forex Döngüleri",
-  "Utility Loops": "Fayda Döngüleri",
-  "Smart Loops": "Akıllı Döngüler",
   Watch: "İzle",
   "At risk": "Risk altında",
   Unknown: "Bilinmiyor",
@@ -643,108 +590,39 @@ const dict: TranslationDictionary = {
   Referrals: "Davetler",
   "Rewards actions": "Ödül işlemleri",
   "No quests here yet — check back soon.": "Burada henüz görev yok — yakında tekrar kontrol edin.",
-  "Boot your sandbox wallet": "Sandbox cüzdanını başlat",
   "Spin up your profile": "Profilini oluştur",
-  "Read the sandbox risk primer": "Sandbox risk kılavuzunu oku",
   "Pin a market to your watchlist": "Bir piyasayı izleme listene sabitle",
   "Preview your first trade": "İlk işlemini önizle",
-  "Make your first sandbox lend": "İlk sandbox ödünç vermeni yap",
-  "Open your first sandbox borrow": "İlk sandbox borçlanmanı aç",
-  "Open your first sandbox multiply": "İlk sandbox Multiply işlemini aç",
-  "Repay a sandbox loan": "Bir sandbox kredisini geri öde",
-  "Deleverage a sandbox position": "Bir sandbox pozisyonunun kaldıracını azalt",
   "Claim your first AVA reward": "İlk AVA ödülünü talep et",
-  "Sandbox cool-down": "Sandbox soğuma süresi",
-  "Lend $500 in the sandbox": "Sandbox'ta 500 $ ödünç ver",
-  "Borrow $200 in the sandbox": "Sandbox'ta 200 $ borçlan",
-  "Launch a multiply position": "Bir Multiply pozisyonu başlat",
   "Tour all three products": "Üç ürünün tamamını gez",
-  "Curve sandbox tour": "Curve sandbox turu",
-  "Uniswap v4 sandbox tour": "Uniswap v4 sandbox turu",
   "Risk check-in (5 min)": "Risk kontrolü (5 dk)",
-  "Multiply mindfulness (3 min)": "Multiply farkındalığı (3 dk)",
-  "3 borrow / repay loops": "3 borçlanma / geri ödeme döngüsü",
   "2 deleverage drills": "2 kaldıraç azaltma alıştırması",
-  "Explore 3 sandbox markets": "3 sandbox piyasasını keşfet",
   "Claim 3 quest rewards": "3 görev ödülünü talep et",
-  "3-day sandbox streak": "3 günlük sandbox serisi",
-  "Grow sandbox portfolio by $1K": "Sandbox portföyünü 1.000 $ büyüt",
-  "Open 3 sandbox positions": "3 sandbox pozisyonu aç",
-  "Copy your sandbox invite link": "Sandbox davet bağlantını kopyala",
-  "Send your first sandbox invite": "İlk sandbox davetini gönder",
-  "Fund a referred sandbox wallet": "Davet edilen bir sandbox cüzdanına fon aktar",
-  "Activate 3 sandbox friends": "3 sandbox arkadaşını aktifleştir",
   "Grow crew to 5 actives": "Ekibini 5 aktif üyeye çıkar",
-  "Referral sandbox hits $500": "Davet sandbox'ı 500 $'a ulaşır",
   "Referral streak (2 activations)": "Davet serisi (2 aktivasyon)",
-  "Sandbox ambassador": "Sandbox elçisi",
   "Your Avana session is live — this quest unlocks automatically when you land.":
     "Avana oturumun aktif — bu görev sen geldiğinde otomatik olarak açılır.",
-  "We create a demo wallet profile so every product sandbox shares the same session.":
-    "Her ürün sandbox'ının aynı oturumu paylaşması için bir demo cüzdan profili oluştururuz.",
   "Open the 60-second LP risk briefing before you simulate any position.":
     "Herhangi bir pozisyonu simüle etmeden önce 60 saniyelik LP risk brifingini aç.",
-  "Pick one Borrow, Lend, or Multiply market to track in your sandbox.":
-    "Sandbox'ında takip etmek için bir Borrow, Lend veya Multiply piyasası seç.",
-  "Run a real sandbox preview on Borrow, Lend, or Multiply — no funds move.":
-    "Borrow, Lend veya Multiply üzerinde gerçek bir sandbox önizlemesi çalıştır — hiçbir fon hareket etmez.",
   "Deposit into any Lend market. Your live session records the quest automatically.":
     "Herhangi bir Lend piyasasına yatır. Canlı oturumun görevi otomatik olarak kaydeder.",
   "Borrow against LP collateral on the Borrow page — the quest completes on success.":
     "Borrow sayfasında LP teminatı karşılığında borçlan — görev başarıyla tamamlanır.",
-  "Create a Multiply position in the sandbox and let the session bridge log it.":
-    "Sandbox'ta bir Multiply pozisyonu oluştur ve oturum köprüsünün kaydetmesine izin ver.",
-  "Repay any borrow position you opened — a healthy loop in the demo world.":
-    "Açtığın herhangi bir borçlanma pozisyonunu geri öde — demo dünyasında sağlıklı bir döngü.",
-  "Reduce any Multiply position to practice risk management.":
-    "Risk yönetimini uygulamak için herhangi bir Multiply pozisyonunu azalt.",
   "Complete any other quest, then claim it to unlock this milestone.":
     "Başka herhangi bir görevi tamamla, ardından bu dönüm noktasını açmak için onu talep et.",
   "Explore Avana for 2 minutes after your first login, then come back to claim.":
     "İlk girişinden sonra Avana'yı 2 dakika keşfet, ardından talep etmek için geri dön.",
-  "Stack sandbox lend deposits until you reach $500 supplied.":
-    "500 $ arz edene kadar sandbox ödünç verme yatırımlarını üst üste ekle.",
   "Open borrow positions totaling $200 across any collateral pool.":
     "Herhangi bir teminat havuzunda toplam 200 $ değerinde borçlanma pozisyonları aç.",
-  "Open any Multiply position in the sandbox — size is up to you.":
-    "Sandbox'ta herhangi bir Multiply pozisyonu aç — büyüklük sana kalmış.",
-  "Complete one action in Lend, Borrow, and Multiply.": "Lend, Borrow ve Multiply üzerinde birer işlem tamamla.",
-  "Visit the Curve-style borrow market tour and mark it complete.":
-    "Curve tarzı borçlanma piyasası turunu ziyaret et ve tamamlandı olarak işaretle.",
-  "Walk through the Uniswap v4 sandbox market and check it off.":
-    "Uniswap v4 sandbox piyasasını baştan sona incele ve işaretle.",
-  "Stay in the sandbox for 5 minutes after login, then claim this patience badge.":
-    "Girişten sonra 5 dakika sandbox'ta kal, ardından bu sabır rozetini talep et.",
-  "Take a 3-minute breather after login before claiming this calm-multiply quest.":
-    "Bu sakin-multiply görevini talep etmeden önce girişten sonra 3 dakika mola ver.",
-  "Repay sandbox loans three times to practice healthy borrow cycles.":
-    "Sağlıklı borçlanma döngülerini uygulamak için sandbox kredilerini üç kez geri öde.",
-  "Deleverage Multiply positions twice to complete this risk drill.":
-    "Bu risk alıştırmasını tamamlamak için Multiply pozisyonlarının kaldıracını iki kez azalt.",
   "Complete tours on three different market pages across Avana.":
     "Avana'daki üç farklı piyasa sayfasında turları tamamla.",
   "Claim AVA from three separate quests to build your rewards streak.":
     "Ödül serini oluşturmak için üç ayrı görevden AVA talep et.",
   "Check in on three separate days after your first login.": "İlk girişinden sonra üç ayrı günde giriş yap.",
-  "Lend, borrow, or multiply until your combined sandbox volume hits $1,000.":
-    "Toplam sandbox hacmin 1.000 $'a ulaşana kadar ödünç ver, borçlan veya multiply yap.",
-  "Hold three open positions across Lend, Borrow, or Multiply.":
-    "Lend, Borrow veya Multiply üzerinde üç açık pozisyon tut.",
   "Generate and copy a referral link you can share with friends.":
     "Arkadaşlarınla paylaşabileceğin bir davet bağlantısı oluştur ve kopyala.",
-  "Simulate inviting a friend wallet into your Avana sandbox crew.":
-    "Bir arkadaş cüzdanını Avana sandbox ekibine davet etmeyi simüle et.",
   "Mark one invited friend as funded after they try a product action.":
     "Davet ettiğin bir arkadaşı, bir ürün işlemi denedikten sonra fonlanmış olarak işaretle.",
-  "Three referred wallets complete a product action in your sandbox network.":
-    "Davet edilen üç cüzdan, sandbox ağında bir ürün işlemi tamamlar.",
-  "Five referred wallets complete a product action in your sandbox network.":
-    "Davet edilen beş cüzdan, sandbox ağında bir ürün işlemi tamamlar.",
-  "Your referred crew reaches $500 in combined sandbox volume.":
-    "Davet ettiğin ekip, toplam sandbox hacminde 500 $'a ulaşır.",
-  "Activate two sandbox referrals to keep your invite momentum going.":
-    "Davet ivmeni sürdürmek için iki sandbox davetini aktifleştir.",
-  "Activate five friends in your sandbox referral network.": "Sandbox davet ağında beş arkadaşını aktifleştir.",
   "Filter by category": "Kategoriye göre filtrele",
   "ETH volatility": "ETH volatilitesi",
   "Liquidity depth": "Likidite derinliği",
@@ -806,8 +684,6 @@ const dict: TranslationDictionary = {
     "WBTC/WETH LP pozisyonları Bluechip spoke'ta teminat olarak kabul edildi.",
   "Pool onboarded": "Havuz dahil edildi",
   "Dual-oracle": "Çift oracle",
-  "WETH/DAI LP positions accepted as collateral in the Uniswap v2 spoke.":
-    "WETH/DAI LP pozisyonları Uniswap v2 spoke'ta teminat olarak kabul edildi.",
   Onboarded: "Dahil edildi",
   "Parameters refreshed": "Parametreler yenilendi",
   "Full-range USDC/USDT liquidity accepted in the Stable spoke at up to 78% LTV.":
@@ -825,8 +701,6 @@ const dict: TranslationDictionary = {
     "30d gerçekleşen σ ≈ 58% yıllıklandırılmış — impermanent loss'a en büyük tek katkı.",
   "$4.1M of 2% depth across all tiers — ample for liquidations.":
     "Tüm kademelerde 2% derinlikte $4.1M — likidasyonlar için fazlasıyla yeterli.",
-  "30-minute TWAP can lag during sharp moves; mitigated by kink in the risk curve.":
-    "30 dakikalık TWAP keskin hareketlerde gecikebilir; risk eğrisindeki kink ile hafifletilir.",
   "Uniswap v3 core + NonFungiblePositionManager, both heavily audited and live for 4 years.":
     "Uniswap v3 core + NonFungiblePositionManager, her ikisi de kapsamlı şekilde denetlenmiş ve 4 yıldır aktif.",
   "Rolling 90d IL averages 23bps per week for the 0.30% tier.":
@@ -843,9 +717,6 @@ const dict: TranslationDictionary = {
   "$2.6M of 2% depth.": "2% derinlikte $2.6M.",
   "BTC/ETH is highly correlated — IL is usually <15bps/week.":
     "BTC/ETH yüksek korelasyonludur — IL genellikle <15bps/hafta.",
-  "WETH/DAI is a standard Uniswap v2 ETH/stable pair and a straightforward LP structure for collateral evaluation. The Uniswap v2 spoke admits it under conservative parameters because the pair still carries ETH volatility, while the stable quote side keeps the market easy to reason about.":
-    "WETH/DAI, standart bir Uniswap v2 ETH/stable çiftidir ve teminat değerlendirmesi için basit bir LP yapısıdır. Uniswap v2 spoke bunu tutucu parametreler altında kabul eder; çünkü çift hâlâ ETH volatilitesi taşırken, stabil kote tarafı piyasayı anlaması kolay tutar.",
-  "Added to the Uniswap v2 LPs.": "Uniswap v2 LP'lerine eklendi.",
   "Quarterly risk review — no changes to LTV.": "Üç aylık risk incelemesi — LTV'de değişiklik yok.",
   "USDC and USDT both trade at parity and the pool is overwhelmingly used for order-routing, stability-seeking flow, and tight-spread execution. The Stable spoke admits it with a high LTV because peg-risk is shared, depth is enormous, and the pool behaves more like cash infrastructure than a typical volatile LP. That makes it a natural fit for users who want borrowing power while keeping the underlying collateral profile simple to reason about.":
     "USDC ve USDT'nin ikisi de parite üzerinden işlem görür ve havuz büyük ölçüde emir yönlendirme, istikrar arayan akış ve dar spread'li yürütme için kullanılır. Stable spoke bunu yüksek bir LTV ile kabul eder; çünkü peg riski paylaşılır, derinlik muazzamdır ve havuz tipik bir volatil LP'den çok nakit altyapısı gibi davranır. Bu da onu, temel teminat profilini anlaması basit tutarken borçlanma gücü isteyen kullanıcılar için doğal bir seçim yapar.",
@@ -891,13 +762,9 @@ const dict: TranslationDictionary = {
     "Native ETH — LP teminatı üzerinde yönlü carry için birincil volatil borçlanma varlığı.",
   "Mainnet launch": "Mainnet lansmanı",
   "The Merge": "The Merge",
-  "Wrapped ETH is the canonical ERC-20 used by Uniswap/Balancer/Aerodrome pools.":
-    "Wrapped ETH, Uniswap/Balancer/Aerodrome havuzları tarafından kullanılan kanonik ERC-20'dir.",
   "Wrapped BTC exposure — borrowed to short BTC against blue-chip LPs.":
     "Wrapped BTC maruziyeti — blue-chip LP'lere karşı BTC short etmek için borç alınır.",
   Listed: "Listelendi",
-  "USDC is Circle's regulated, fully-backed USD stablecoin and the main unit of account for this market. It anchors the protocol's conservative borrow curves, acts as the default settlement asset for LP carry strategies, and serves as the reference point for risk pricing across stablecoin routes. In practice, that makes it the most common asset for users who want cash-like exposure with on-chain mobility.":
-    "USDC, Circle'ın düzenlenmiş, tam teminatlı USD stablecoin'idir ve bu piyasa için ana hesap birimidir. Protokolün tutucu borçlanma eğrilerini sabitler, LP carry stratejileri için varsayılan takas varlığı olarak işlev görür ve stablecoin rotaları genelinde risk fiyatlaması için referans noktası olarak hizmet eder. Pratikte bu, onu zincir üstü hareketlilikle nakde benzer maruziyet isteyen kullanıcılar için en yaygın varlık yapar.",
   "USDC listed day-1 with 80% borrow cap.": "USDC, 80% borçlanma tavanı ile ilk gün listelendi.",
   "Simulated 2023-style de-peg; guardrails paused borrows for 18m.":
     "2023 tarzı de-peg simüle edildi; korkuluklar borçlanmaları 18m duraklattı.",
@@ -1009,37 +876,24 @@ const dict: TranslationDictionary = {
   Curve: "Curve",
   Balancer: "Balancer",
   Aerodrome: "Aerodrome",
-  "Uniswap v2 LPs": "Uniswap v2 LP'leri",
   "Uniswap v3 Stable LPs": "Uniswap v3 Stable LP'leri",
   "Uniswap v3 Blue-Chip LPs": "Uniswap v3 Blue-Chip LP'leri",
   "Uniswap v3 Governance & DAO LPs": "Uniswap v3 Governance & DAO LP'leri",
-  "Curve Stable LPs": "Curve Stable LP'leri",
-  "Curve Correlated LPs": "Curve Correlated LP'leri",
-  "Curve Crypto LPs": "Curve Crypto LP'leri",
-  "Balancer Stable LPs": "Balancer Stable LP'leri",
-  "Balancer Correlated LPs": "Balancer Correlated LP'leri",
-  "Balancer Weighted LPs": "Balancer Weighted LP'leri",
-  "Balancer Boosted LPs": "Balancer Boosted LP'leri",
-  "Balancer reCLAMM LPs": "Balancer reCLAMM LP'leri",
   "Aerodrome Basic Stable LPs": "Aerodrome Basic Stable LP'leri",
   "Aerodrome Basic Volatile LPs": "Aerodrome Basic Volatile LP'leri",
   "Aerodrome Slipstream Blue-Chip LPs": "Aerodrome Slipstream Blue-Chip LP'leri",
   Stablecoin: "Stablecoin",
   "MakerDAO stablecoin": "MakerDAO stablecoin",
-  "Curve native stablecoin": "Curve native stablecoin",
   "Aave native stablecoin": "Aave native stablecoin",
   "Circle EUR stablecoin": "Circle EUR stablecoin",
   "ERC-20 wrapped ETH": "ERC-20 wrapped ETH",
   "Native asset": "Native varlık",
   "ERC-20 wrapped BTC": "ERC-20 wrapped BTC",
-  "Coinbase wrapped BTC": "Coinbase wrapped BTC",
   "Liquid staking receipt": "Liquid staking makbuzu",
   "Rebase-less stETH wrapper": "Rebase'siz stETH wrapper",
   "rETH liquid staking": "rETH liquid staking",
-  "Coinbase liquid staking": "Coinbase liquid staking",
   "Aave governance token": "Aave governance token",
   "Uniswap governance token": "Uniswap governance token",
-  "Curve governance token": "Curve governance token",
   "Constant-product LP tokens": "Constant-product LP token'ları",
   "Concentrated-liquidity LP positions": "Yoğunlaştırılmış likidite LP pozisyonları",
   "StableSwap LP tokens": "StableSwap LP token'ları",
@@ -1056,39 +910,24 @@ const dict: TranslationDictionary = {
   "Authenticated sessions stay locked until Convex confirms access.":
     "Convex erişimi onaylayana kadar kimliği doğrulanmış oturumlar kilitli kalır.",
   "You're all set.": "Her şey hazır.",
-  "Your Avana sandbox is ready.": "Avana test ortamınız hazır.",
-  "You've already claimed your practice funds. Jump back into the dashboard to keep exploring.":
-    "Alıştırma fonlarınızı zaten aldınız. Keşfetmeye devam etmek için panele geri dönün.",
   "Reading your wallet history": "Cüzdan geçmişiniz okunuyor",
-  "Checking sandbox eligibility": "Test ortamı uygunluğu kontrol ediliyor",
   "Selecting markets to fund": "Fonlanacak piyasalar seçiliyor",
-  "Sizing your practice portfolio": "Alıştırma portföyünüz boyutlandırılıyor",
-  "Minting your practice funds": "Alıştırma fonlarınız oluşturuluyor",
   "Opening LP & lending positions": "LP ve borç verme pozisyonları açılıyor",
-  "Building your multiply loops": "Çarpım döngüleriniz oluşturuluyor",
-  "Finalizing your sandbox": "Test ortamınız tamamlanıyor",
   "One moment.": "Bir dakika.",
   "Analyzing your wallet…": "Cüzdanınız analiz ediliyor…",
   "Hang tight.": "Biraz bekleyin.",
-  "Funding your sandbox…": "Test ortamınız fonlanıyor…",
   "Liquid assets": "Likit varlıklar",
   "Hold & swap tokens": "Token tut ve takas et",
   "LP collateral": "LP teminatı",
   "Borrow against LP": "LP karşılığında borç al",
   Lending: "Borç verme",
   "Supply to earn": "Kazanmak için arz et",
-  "Leverage loops": "Kaldıraç döngüleri",
   "You'll get": "Elde edeceğiniz",
-  "A full practice portfolio": "Tam bir alıştırma portföyü",
   "Claiming allocation…": "Tahsis alınıyor…",
   "Claim your allocation": "Tahsisinizi alın",
-  "Welcome to the Avana Sandbox": "Avana Test Ortamına Hoş Geldiniz",
-  "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.":
-    "Bu risksiz Avana Test Ortamı, test fonlarını kullanarak alıştırma LP pozisyonları karşılığında borç almanıza, borç vermenize ve stratejileri döngüye almanıza olanak tanır. Gerçek varlık yok. Cüzdan imzası yok. Sadece canlı uygulamaya geçmeden önce Avana'nın nasıl çalıştığını anlamanın hızlı bir yolu.",
   "No transactions yet": "Henüz işlem yok",
   "No transactions to sign": "İmzalanacak işlem yok",
   "Connect a wallet.": "Bir cüzdan bağlayın.",
-  "We'll set up your sandbox and scope it to your address.": "Test ortamınızı kurup adresinize özel hale getireceğiz.",
   "By connecting your wallet, you agree to the": "Cüzdanınızı bağlayarak şunları kabul etmiş olursunuz:",
   "Terms & Conditions": "Şartlar ve Koşullar",
   and: "ve",
@@ -1097,25 +936,13 @@ const dict: TranslationDictionary = {
   "Your wallet is on the waitlist.": "Cüzdanınız bekleme listesinde.",
   "wallets onboarded.": "cüzdan kuruldu.",
   "Wallet connected.": "Cüzdan bağlandı.",
-  "Fund your sandbox to start exploring.": "Keşfetmeye başlamak için test ortamınızı fonlayın.",
-  "Every wallet gets sandbox funds to practice with, spread across markets so you can try every flow risk-free.":
-    "Her cüzdan, her akışı risksiz deneyebilmeniz için piyasalara dağıtılmış alıştırma amaçlı test fonları alır.",
   "You're eligible.": "Uygunsunuz.",
-  "Your practice portfolio is ready.": "Alıştırma portföyünüz hazır.",
-  "sandbox seats remain.": "test ortamı kontenjanı kaldı.",
   "Tell your network about Avana.": "Ağınıza Avana'dan bahsedin.",
   "Post the prepared message on X.": "Hazırlanan mesajı X'te paylaşın.",
   "Open X": "X'i aç",
   Skip: "Atla",
   "Here's what you'll get.": "İşte elde edecekleriniz.",
-  "Practice funds across assets, LP collateral, lending, and multiply.":
-    "Varlıklar, LP teminatı, borç verme ve çarpma genelinde alıştırma fonları.",
   "The allocation cap was reached.": "Tahsis sınırına ulaşıldı.",
-  "Your Avana sandbox is ready to explore.": "Avana test ortamınız keşfedilmeye hazır.",
-  "Your practice funds are now in your wallet. Jump into the dashboard to start exploring.":
-    "Alıştırma fonlarınız artık cüzdanınızda. Keşfetmeye başlamak için panele geçin.",
-  "Sandbox onboarding requires a Convex connection. Set":
-    "Test ortamı kurulumu bir Convex bağlantısı gerektirir. Devam etmek için",
   "to continue.": "ayarlayın.",
   Confirmed: "Onaylandı",
   Receipt: "Makbuz",
@@ -1139,7 +966,6 @@ const dict: TranslationDictionary = {
   Strategy: "Strateji",
   "A Beginner's Guide to LP Collateral": "LP teminatı için yeni başlayanlar kılavuzu",
   "What LP Collateral Makes Possible": "LP teminatının mümkün kıldıkları",
-  "Thinking Clearly About Yield Looping": "Getiri döngüsü hakkında net düşünmek",
   "How to Hedge an LP Position": "Bir LP pozisyonu nasıl hedge edilir",
   "Making LP Collateral Usable": "LP teminatını kullanılabilir hale getirmek",
   "Avana and the Next Step for Liquidity Providers": "Avana ve likidite sağlayıcıları için sonraki adım",
@@ -1152,25 +978,17 @@ const dict: TranslationDictionary = {
   "Which DEXs do you use the most?": "En çok hangi DEX'leri kullanıyorsunuz?",
   "Select all that apply": "Geçerli olanların tümünü seçin",
   "Last step.": "Son adım.",
-  "Let's fund your sandbox.": "Sandbox'ınıza fon yükleyelim.",
-  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.":
-    "Deneme bakiyenizi piyasalara dağıtacağız; böylece sıfır riskle borç verebilir, borç alabilir ve döngü kurabilirsiniz.",
   "Good news, you're in.": "Güzel haber, artık aramızdasınız.",
   of: "/",
-  "sandbox seats already claimed.": "sandbox koltuğu şimdiden alındı.",
-  "Your sandbox is live.": "Sandbox'ınız aktif.",
   "Everything's funded and waiting. Dive in whenever you're ready.":
     "Her şey yüklendi ve sizi bekliyor. Hazır olduğunuzda dalın.",
   "Connect an EVM wallet.": "Bir EVM cüzdanı bağlayın.",
-  "We can't reach the sandbox right now.": "Sandbox'a şu anda ulaşamıyoruz.",
   "Please try again in a moment.": "Lütfen birazdan tekrar deneyin.",
   "Your session is safe. This is a temporary connection issue, not your wallet.":
     "Oturumunuz güvende. Bu, cüzdanınızla değil, geçici bir bağlantı sorunuyla ilgili.",
   "Something went wrong.": "Bir şeyler ters gitti.",
   "We couldn't load this page.": "Bu sayfayı yükleyemedik.",
   "APY breakdown": "APY dökümü",
-  "Active Umbrella capital currently available to absorb eligible deficits for this asset.":
-    "Bu varlığın uygun açıklarını karşılamak için şu anda kullanılabilir aktif Umbrella sermayesi.",
   "Active staker capital": "Aktif staker sermayesi",
   "Additional rewards used to attract coverage capital, especially during bootstrap periods or when coverage is below target.":
     "Özellikle başlangıç dönemlerinde veya kapsam hedefin altındayken koruma sermayesi çekmek için kullanılan ek ödüller.",
@@ -1189,29 +1007,17 @@ const dict: TranslationDictionary = {
   "Liquidation recapture": "Likidasyon geri kazanımı",
   "Local deductible": "Yerel muafiyet",
   "Target coverage": "Hedef kapsam",
-  "The Hub asset this Umbrella market protects. Deficits from any eligible Spoke borrowing this reserve can be covered by this market.":
-    "Bu Umbrella piyasasının koruduğu Hub varlığı. Bu rezervden borçlanan uygun Spoke'ların açıkları bu piyasa tarafından karşılanabilir.",
-  "The amount of Umbrella capital currently deposited and available to absorb deficits for this covered reserve. Capital in cooldown is no longer counted as fully available protection.":
-    "Kapsanan rezervin açıklarını karşılamak için şu anda yatırılmış ve kullanılabilir Umbrella sermayesi. Cooldown'daki sermaye artık tamamen kullanılabilir koruma sayılmaz.",
   "The amount of staked capital currently in the cooldown period before it can be withdrawn. A larger cooling balance means less protection may remain available if those funds exit.":
     "Çekilebilmeden önce cooldown döneminde bulunan stake sermayesi. Cooldown bakiyesi büyüdükçe bu fonlar çıkarsa daha az koruma kalabilir.",
   "The core staking yield paid for providing protection capital to this surface.":
     "Bu kapsama yüzeyine koruma sermayesi sağlamak için ödenen temel stake getirisi.",
   "The portion of yield supported by liquidation-linked economics generated by this reserve-per-Spoke surface, such as liquidation fees or SVR.":
     "Bu rezerv-başına-Spoke yüzeyinin oluşturduğu likidasyon bağlantılı ekonomiyle desteklenen getiri bölümü; örneğin likidasyon ücretleri veya SVR.",
-  "The staking rewards you have earned for providing Umbrella coverage. Rewards may include protocol incentives and other compensation for taking slashing and lockup risk.":
-    "Umbrella kapsamı sağladığınız için kazandığınız stake ödülleri. Ödüller protokol teşviklerini ve slash ile kilitlenme riskine karşı diğer telafileri içerebilir.",
-  "Umbrella surface details": "Umbrella yüzey ayrıntıları",
   "View {symbol} surface details": "{symbol} yüzey ayrıntılarını görüntüle",
-  "The rewards currently earned by this Umbrella position, allocated across the underlying APY sources.":
-    "Bu Umbrella pozisyonunun şu anda kazandığı ve temel APY kaynaklarına dağıtılan ödüller.",
-  "The estimated annual yield for keeping Umbrella capital available as coverage for this market.":
-    "Umbrella sermayesini bu piyasa için kapsam olarak kullanılabilir tutmanın tahmini yıllık getirisi.",
   "Est. annual rewards": "Tahmini yıllık ödüller",
   "Based on amount entered": "Girilen tutara göre",
   "Slashable stake": "Slash edilebilir stake",
   "Market staked": "Piyasa stake'i",
-  "Umbrella APY": "Umbrella APY",
   "Umbrella market": "Umbrella piyasası",
   "Cooled stake": "Cooldown'daki stake",
   "Start cooldown": "Cooldown başlat",
@@ -1219,8 +1025,6 @@ const dict: TranslationDictionary = {
   "Coverage is defined for a specific Hub reserve and covers eligible deficits from every Spoke borrowing that reserve, including credit-line draws.":
     "Kapsam belirli bir Hub rezervi için tanımlanır ve kredi hattı çekimleri dahil, bu rezervden borçlanan her uygun Spoke'un açıklarını kapsar.",
   "First-loss protection": "İlk zarar koruması",
-  "The Deficit Offset absorbs the first layer of loss. Only the residual deficit beyond that offset can reach staked Umbrella coverage.":
-    "Açık mahsubu ilk zarar katmanını karşılar. Yalnızca bu mahsup tutarını aşan kalan açık stake edilmiş Umbrella kapsamına ulaşabilir.",
   "Independent underwriting": "Bağımsız risk değerlendirmesi",
   "Target liquidity and reward emissions reflect reserve risk, economics, opportunity cost, and the slashing and lockup risk accepted by coverage providers.":
     "Hedef likidite ve ödül emisyonları rezerv riskini, ekonomiyi, fırsat maliyetini ve kapsam sağlayıcılarının kabul ettiği slash ve kilitlenme riskini yansıtır.",
@@ -1235,7 +1039,6 @@ const dict: TranslationDictionary = {
   "Includes active stake and cooldown": "Aktif stake ve cooldown dahildir",
   "Amount Avana covers first before user-staked coverage is exposed. Stakers only take losses once realized deficits exceed this offset.":
     "Kullanıcıların stake ettiği teminatın açığa çıkmasından önce Avana'nın öncelikle karşıladığı tutar. Stake sahipleri, yalnızca gerçekleşen açık bu ofseti aştığında zarar yazar.",
-  "Close umbrella actions": "Koruma işlemlerini kapat",
   Cooldown: "Cooldown",
   Cooling: "Cooldown'da",
   Coverage: "Kapsam",
@@ -1247,19 +1050,13 @@ const dict: TranslationDictionary = {
   "Desired amount of user-staked coverage for this asset.":
     "Bu varlık için hedeflenen kullanıcı stake teminatı miktarı.",
   "Dynamic rewards": "Dinamik ödüller",
-  "Each Umbrella stake token covers deficits for its matching borrowed asset on the same network.":
-    "Her Koruma stake tokenı, aynı ağdaki eşleşen ödünç alınmış varlığın açığını karşılar.",
-  "Emissions adjust against target liquidity, and each staked asset can earn multiple reward tokens.":
-    "Emisyonlar hedef likiditeye göre ayarlanır ve stake edilen her varlık birden çok ödül tokenı kazanabilir.",
   "Estimated annual staking yield paid to stakers of this asset.":
     "Bu varlığın stake sahiplerine ödenen tahmini yıllık staking getirisi.",
   "In cooldown": "Cooldown'da",
   "Isolated slashing": "İzole slashing",
   "Learn Umbrella": "Koruma hakkında",
-  "Umbrella Overview": "Umbrella Genel Bakış",
   "Module assets": "Modül varlıkları",
   More: "Daha fazla",
-  "More umbrella actions": "Daha fazla Koruma işlemi",
   "Next cooldown": "Sonraki cooldown",
   "Next market risk": "Sonraki piyasa riski",
   "Once cooldown finishes, users can unstake during the withdrawal window before cooldown has to be restarted.":
@@ -1271,10 +1068,6 @@ const dict: TranslationDictionary = {
   Restart: "Yeniden başlat",
   "Restart cooldown": "Cooldown'ı yeniden başlat",
   Stake: "Stake",
-  "Stake in umbrella": "Koruma'da stake et",
-  "Unstake from umbrella": "Koruma'dan unstake et",
-  "Stake, claim rewards, start cooldown, or unstake from the umbrella safety module.":
-    "Koruma güvenlik modülünde stake et, ödül al, cooldown başlat veya stake'i geri çek.",
   "Stake, claim, cooldown, unstake": "Stake, al, cooldown, geri çek",
   "Start cooldown before withdrawing. During cooldown, the position keeps earning incentives and remains slashable.":
     "Çekimden önce cooldown'ı başlat. Cooldown sırasında pozisyon teşvik kazanmaya devam eder ve slashing'e açık kalır.",
@@ -1284,20 +1077,13 @@ const dict: TranslationDictionary = {
   "Total user-staked capital available to absorb losses for this asset.":
     "Bu varlığın zararını karşılamak üzere kullanılabilir toplam kullanıcı stake sermayesi.",
   Umbrella: "Koruma",
-  "Umbrella Cooldown": "Koruma Cooldown",
-  "Umbrella actions": "Koruma işlemleri",
-  "Umbrella activity": "Koruma etkinliği",
   "Umbrella positions": "Koruma pozisyonları",
-  "Umbrella positions are split by asset and network, so each stake token has its own risk and reward profile.":
-    "Koruma pozisyonları varlık ve ağa göre ayrılır; bu nedenle her stake tokenı kendine özgü risk ve ödül profiline sahiptir.",
   Unstake: "Unstake",
   "Unstake window": "Geri çekme penceresi",
   "Weighted APY": "Ağırlıklı APY",
   "Withdrawal ready": "Çekime hazır",
   "Withdrawal window": "Çekim penceresi",
-  "You have no Umbrella positions yet.": "Henüz Koruma pozisyonunuz yok.",
   "Your Umbrella": "Korumanız",
-  "Your Umbrella stake": "Koruma stake'iniz",
   "After cooldown completes, there is a short window to unstake. If it expires, cooldown must be started again.":
     "Cooldown bittikten sonra geri çekmek için kısa bir pencere vardır. Süresi dolarsa cooldown yeniden başlatılmalıdır.",
   "base {base} + reward {reward}": "temel {base} + ödül {reward}",
@@ -1327,8 +1113,6 @@ const dict: TranslationDictionary = {
   "{count} assets": "{count} varlık",
   "{count} positions": "{count} pozisyon",
   "{count} rewards": "{count} ödül",
-  "{name} ({symbol}) / {borrowName} ({borrow}) is a leveraged multiply market on Avana. Supply {symbol} as collateral to loop into {borrow} exposure, up to {leverage}, in a route dedicated to leveraged positions rather than LP collateral pools. Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this {marketType} market. Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.":
-    "{name} ({symbol}) / {borrowName} ({borrow}), Avana'daki kaldıraçlı bir multiply pazarıdır. LP teminat havuzları yerine kaldıraçlı pozisyonlara ayrılmış bir rotada, {leverage} değerine kadar {borrow} maruziyetine loop yapmak için {symbol} varlığını teminat olarak sağlayın. Net getiriler tedarik/borç farkını, kullanımı ve seçilen çarpanı izler; bu nedenle faizler ve mevcut likidite yeniden dengelendikçe loop sonuçları değişebilir. Bu sayfa, bu {marketType} pazarı için anlık kaldıraç limitine, tedarik/borç bileşimine, mevcut likiditeye ve en güncel risk duruşuna odaklanır. Teminat faktörü, likidasyon eşiği, borçlanma maliyeti ve mevcut likidite hem loop getirilerini hem de stresli koşullarda bir pozisyonun ne kadar hızlı kapatılabileceğini etkilediğinden kullanıcılar bunları izlemelidir.",
   "{progress}/{target} {currency}": "{progress}/{target} {currency} tamamlandı",
   "1D": "1D",
   "30 Days": "30 Gün",
@@ -1370,7 +1154,6 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "Kontrol paneli sekmeleri",
   Date: "Tarih",
   Dismiss: "Kapat",
-  "Explore Umbrella": "Koruma'yı keşfet",
   Explorer: "Gezgin",
   "Express actions": "Hızlı işlemler",
   Fees: "Ücretler",
@@ -1403,8 +1186,6 @@ const dict: TranslationDictionary = {
   "Loading wallet position": "Cüzdan pozisyonu yükleniyor",
   Long: "Long",
   "Long, short, and net USD per token across every product.": "Tüm ürünlerde token başına long, short ve net USD.",
-  "LOOP APY": "LOOP APY",
-  "Loop market": "Loop pazarı",
   "LP APR": "LP APR",
   "Pool APR": "Havuz APR",
   "Live value of this collateral, and the LP trading fees it earns.":
@@ -1413,21 +1194,14 @@ const dict: TranslationDictionary = {
   "Market-wide liquidation activity and near-liquidation exposure over the last 24 hours.":
     "Son 24 saatteki pazar genelindeki likidasyon etkinliği ve likidasyona yakın maruziyet.",
   "Minimum received": "Alınan minimum",
-  "Multiply Balance": "Multiply Bakiyesi",
-  "Multiply Exposure": "Multiply Maruziyeti",
-  "Multiply Health": "Multiply Sağlığı",
-  "Multiply Rewards": "Multiply Ödülleri",
   "Multiply TVL": "Multiply TVL",
   "My Collaterals": "Teminatlarım",
   "My Debts": "Borçlarım",
   Net: "Net",
-  "Net Portfolio Value = Assets − Debt. Assets: wallet balances, lending supplied, borrow collateral, any borrowed funds you still hold, your Multiply position value, and Umbrella staked + rewards. Debt: borrow loans and Multiply borrowing. Borrowing doesn't change this number — the cash you receive is an asset that offsets the new debt.":
-    "Net Portföy Değeri = Varlıklar − Borç. Varlıklar: cüzdan bakiyeleri, ödünç verilen tedarik, borç teminatı, hâlâ elinizde tuttuğunuz ödünç alınan fonlar, Multiply pozisyon değeriniz ve Koruma stake + ödüller. Borç: borç kredileri ve Multiply borçlanması. Borç almak bu sayıyı değiştirmez — aldığınız nakit, yeni borcu dengeleyen bir varlıktır.",
   Network: "Ağ",
   No: "Hayır",
   "No active loans. Borrow against your collateral to get started.":
     "Aktif kredi yok. Başlamak için teminatınızla borç alın.",
-  "No active Multiply positions": "Aktif Multiply pozisyonu yok",
   "No assets found.": "Varlık bulunamadı.",
   "No collateral deposited yet. Supply an asset to start backing loans.":
     "Henüz teminat yatırılmadı. Kredileri desteklemeye başlamak için bir varlık sağlayın.",
@@ -1435,7 +1209,6 @@ const dict: TranslationDictionary = {
     "Henüz likidite havuzu yok. İşlem ücreti kazanmaya başlamak için likidite sağlayın.",
   "No results found": "Sonuç bulunamadı",
   "No supplied position to withdraw": "Çekilecek tedarik pozisyonu yok",
-  "No Umbrella positions yet.": "Henüz Koruma pozisyonu yok.",
   "No wallet balances found.": "Cüzdan bakiyesi bulunamadı.",
   NONE: "YOK",
   now: "şimdi",
@@ -1472,11 +1245,8 @@ const dict: TranslationDictionary = {
   "Repay or add collateral to reduce your liquidation risk.":
     "Likidasyon riskinizi azaltmak için geri ödeyin veya teminat ekleyin.",
   "Review risk": "Riski incele",
-  "Negative net APY: borrow costs exceed supply yield. Review before opening this loop.":
-    "Negatif net getiri: borç maliyetleri tedarik getirisini aşıyor. Bu döngüyü açmadan önce inceleyin.",
   "Review swap": "Takası incele",
   "Rewards Earned": "Kazanılan Ödüller",
-  Sandbox: "Sandbox",
   "Scenario price": "Senaryo fiyatı",
   "Ask AI": "AI'ya sor",
   "Search Avana": "Avana'da ara",
@@ -1554,19 +1324,14 @@ const dict: TranslationDictionary = {
   "Collateral price move": "Teminat fiyat hareketi",
   "Debt change amount": "Borç değişim tutarı",
   "Drop buffer": "Düşüş tamponu",
-  "Equity value at this leverage, by scenario.": "Bu kaldıraçta öz sermaye değeri, senaryoya göre.",
-  "Estimate on {equity} equity. Assumes rates hold; leverage amplifies both gains and losses.":
-    "{equity} öz sermaye üzerinden tahmin. Oranların sabit kaldığı varsayılır; kaldıraç hem kazancı hem kaybı büyütür.",
   "Estimate. Variable rate — actual cost will differ.": "Tahmin. Değişken oran — gerçek maliyet farklı olacaktır.",
   Horizon: "Ufuk",
   "Lend Outlook": "Borç verme görünümü",
-  "Leverage multiplier": "Kaldıraç çarpanı",
   Liquidated: "Tasfiye edildi",
   "Liquidation price": "Tasfiye fiyatı",
   "Liquidation prices": "Tasfiye fiyatları",
   "Move collateral prices or your debt and watch health factor respond.":
     "Teminat fiyatlarını veya borcunuzu değiştirin ve sağlık faktörünün tepkisini izleyin.",
-  "Multiply Outlook": "Multiply görünümü",
   Next: "İleri",
   "Price sensitivity": "Fiyat duyarlılığı",
   "Projected interest cost": "Öngörülen faiz maliyeti",
@@ -1625,31 +1390,15 @@ const dict: TranslationDictionary = {
     "Sağlık faktörü ve bu pozisyonun likide edildiği teminat değeri. 1.0'ın altı likidasyonu tetikler.",
   "The collateral you supply and the asset you borrow against it to build leverage.":
     "Sağladığınız teminat ve bu teminat karşılığında kaldıraç oluşturmak için borç aldığınız varlık.",
-  "Your own capital in the loop (exposure minus debt). Exposure is your total leveraged position.":
-    "Döngüdeki kendi sermayeniz (maruziyet eksi borç). Maruziyet, toplam kaldıraçlı pozisyonunuzdur.",
   "Net yield after borrow costs, on your capital. The figure below is interest earned so far, ticking live.":
     "Sermayeniz üzerinden, borç maliyetlerinden sonraki net getiri. Aşağıdaki rakam, şimdiye kadar kazanılan ve canlı olarak artan faizdir.",
-  "Health factor, and the collateral price at which this loop is liquidated. Below 1.0 triggers liquidation.":
-    "Sağlık faktörü ve bu döngünün likide edildiği teminat fiyatı. 1.0'ın altı likidasyonu tetikler.",
-  "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)":
-    "Multiply döngüleriniz genelinde kazanılan, canlı olarak biriken net taşıma getirisi (tedarik getirisi eksi borçlanma maliyeti)",
   "Average APY across your staked positions, weighted by value.":
     "Stake edilen pozisyonlarınızın değere göre ağırlıklı ortalama APY'si.",
   "Additional amount you can borrow against your pledged collateral within Avana credit limits":
     "Avana kredi limitleri dahilinde, teminat olarak verdiğiniz varlığa karşılık borç alabileceğiniz ek tutar",
   "Amount an active loan can lose before reaching liquidation; unavailable when you have no debt":
     "Aktif bir kredinin tasfiyeye ulaşmadan önce kaybedebileceği tutar; borcunuz olmadığında kullanılamaz",
-  "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.":
-    "Toplam likidasyon değerinin toplam Multiply borcuna bölümü. Ne kadar yüksekse o kadar güvenlidir; 1'in altında likidasyon riski vardır.",
-  "Equity-weighted net APY after supply yield and borrow cost":
-    "Tedarik getirisi ve borçlanma maliyeti sonrası öz sermaye ağırlıklı net APY",
-  "Exposure, return, and liquidation risk for each active loop":
-    "Her aktif döngü için maruziyet, getiri ve likidasyon riski",
-  "Gross Multiply exposure after looping across all positions":
-    "Tüm pozisyonlarda döngü yaptıktan sonraki brüt Multiply maruziyeti",
   "Interest earned as a percentage of principal you supplied": "Sağladığınız anaparanın yüzdesi olarak kazanılan faiz",
-  "Portfolio leverage as position value divided by equity":
-    "Pozisyon değerinin öz sermayeye bölümü olarak portföy kaldıracı",
   "Projected earnings at current rates": "Mevcut oranlarla tahmini kazanç",
   "Supply interest accruing in real time across your lending positions (excludes protocol rewards)":
     "Ödünç verme pozisyonlarınız genelinde canlı olarak biriken tedarik faizi (protokol ödülleri hariç)",
@@ -1785,7 +1534,6 @@ const dict: TranslationDictionary = {
     "Sağlanan fonların şu anda borç verilen payı. Yüksek kullanım faizleri artırır ve çekimleri geciktirebilir.",
   "The liquidity pool you can pledge as collateral to borrow against.":
     "Borç almak için teminat olarak yatırabileceğin likidite havuzu.",
-  "The maximum leverage available on this loop.": "Bu döngüde kullanılabilecek maksimum kaldıraç.",
   "The most you can borrow as a share of your collateral value.":
     "Teminat değerinin payı olarak alabileceğin en yüksek borç.",
   "The token you can borrow against your collateral.": "Teminatına karşılık borç alabileceğin token.",
@@ -1807,7 +1555,6 @@ const dict: TranslationDictionary = {
   "Clear {facet} filter": "{facet} filtresini temizle",
   "Filter by": "Filtrele",
   Hubs: "Hub'lar",
-  "No loops match these filters.": "Bu filtrelerle eşleşen döngü yok.",
   "No matches": "Sonuç yok",
   "Search chains": "Ağ ara",
   "Search hubs": "Hub ara",
@@ -1817,7 +1564,6 @@ const dict: TranslationDictionary = {
   Volatile: "Volatil",
   Chains: "Ağlar",
   Other: "Diğer",
-  Stocks: "Hisseler",
   "Filter markets": "Piyasaları filtrele",
 }
 

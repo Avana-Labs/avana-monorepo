@@ -118,21 +118,19 @@ export function buildAaveCard(kind: string, payload: unknown): AskAIFinancialRes
   }
   if (kind === "aave_positions") {
     const metrics = metricsIn(data.summary, "Aave on-chain")
-    const totals = aaveObject(aaveObject(data.avanaSandbox).totals)
+    const totals = aaveObject(aaveObject(data.avana).totals)
     for (const [key, label] of [
       ["lendUsd", "Lend"],
       ["borrowUsd", "Borrow balance"],
-      ["multiplyUsd", "Multiply"],
-      ["umbrellaUsd", "Umbrella"],
     ]) {
       if (aaveNumber(totals[key]) !== undefined)
-        metrics.push({ label: `Avana sandbox ${label}`, value: dollars(totals[key]) })
+        metrics.push({ label: `Avana ${label}`, value: dollars(totals[key]) })
     }
     return metrics.length
       ? {
           ...base,
           kind: "portfolio",
-          title: data.avanaSandbox ? "Your Aave vs Avana" : "Your Aave positions (on-chain)",
+          title: data.avana ? "Your Aave vs Avana" : "Your Aave positions (on-chain)",
           metrics,
         }
       : null

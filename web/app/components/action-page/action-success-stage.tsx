@@ -6,7 +6,6 @@ import { ActionFooter } from "@/app/components/action-page/action-amount-card"
 import { TransactionReceipt, type TransactionReceiptData } from "@/app/components/action-page/transaction-receipt"
 import { syntheticBlockFromHash } from "@/app/lib/action-system/synthetic-receipt"
 import { avanaPlatformFeeUsd } from "@/app/lib/action-system/formatters"
-import { IS_DEV_SHORTCUT_MODE } from "@/app/lib/test-mode"
 
 export function ActionSuccessStage({
   success,
@@ -28,10 +27,8 @@ export function ActionSuccessStage({
 
   const symbol = receipt?.amountLabel.split(" ").slice(-1)[0] ?? "Asset"
 
-  // Only link the hash to its permalink when that page can actually resolve it (live
-  // Convex). In dev-shortcut mode the synthetic hash isn't persisted, so it renders as
-  // plain text instead of dead-ending — same guard the receipt page relies on.
-  const hashHref = hash && !IS_DEV_SHORTCUT_MODE ? `/sandbox/transactions/${encodeURIComponent(hash)}` : null
+  // Transactions have no permalink page yet, so the hash renders as plain text.
+  const hashHref: string | null = null
 
   const data: TransactionReceiptData = {
     title: success.title,

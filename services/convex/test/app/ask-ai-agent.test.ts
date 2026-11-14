@@ -172,7 +172,7 @@ describe("Ask AI generated-turn lifecycle", () => {
       richParts: {
         sources: [{ domain: "avana", title: "Docs", locator: "L1" }],
         usage: { inputTokens: 5, outputTokens: 7, totalTokens: 12 },
-        financialResults: [{ kind: "portfolio", dataProvenance: "sandbox", payload: { netValueUsd: 100 } }],
+        financialResults: [{ kind: "portfolio", dataProvenance: "connected_wallet", payload: { netValueUsd: 100 } }],
         retrievalChunks: [{ title: "Docs", locator: "L1", text: "How Avana values LP collateral", score: 0.91 }],
       },
     })
@@ -184,7 +184,7 @@ describe("Ask AI generated-turn lifecycle", () => {
         .unique(),
     )
     expect(parts?.parts).toMatchObject({
-      financialResults: [{ kind: "portfolio", dataProvenance: "sandbox", payload: { netValueUsd: 100 } }],
+      financialResults: [{ kind: "portfolio", dataProvenance: "connected_wallet", payload: { netValueUsd: 100 } }],
       retrievalChunks: [{ title: "Docs", locator: "L1", text: "How Avana values LP collateral", score: 0.91 }],
     })
   })

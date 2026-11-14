@@ -5,17 +5,12 @@ import type { TranslationDictionary } from "../types"
 const dict: TranslationDictionary = {
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "Setor jaminan, pinjam dengan jaminan itu, setor ulang modal pinjaman, dan ulangi hingga batas risiko Anda.",
-  "Browse Multiply Page": "Buka halaman Kalikan",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":
     "Ubah posisi liquidity pool Anda menjadi jaminan dan pinjam dengan jaminan itu di sini, tanpa keluar dari pool.",
   "Browse Borrow Page": "Buka halaman Pinjam",
   "Supply capital into Hub-connected lending markets and earn from LP-backed borrower demand.":
     "Sediakan modal ke pasar pinjaman yang terhubung dengan Hub dan dapatkan dari permintaan peminjam yang didukung LP.",
   "Browse Lend Page": "Buka halaman Pinjamkan",
-  "Coinbase & Robinhood Stocks": "Saham Coinbase & Robinhood",
-  "Tokenized equities — deposit stock tokens to earn lending yield":
-    "Saham tertokenisasi — setor token saham untuk memperoleh imbal hasil pinjaman",
-  "Tokenized-equity concentrated LP positions": "Posisi LP terkonsentrasi dari saham tertokenisasi",
   "Paxos USD stablecoin": "Stablecoin USD Paxos",
   "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.":
     "{name} adalah posisi LP saham tertokenisasi yang disetor sebagai jaminan di spoke {spoke} pada Avana. Posisi ini memasangkan {stableLeg} dengan eksposur {stockName} ({stockSymbol}) tertokenisasi, sehingga nilai jaminan mengikuti harga saham {stockName} bersama kedalaman dan tingkat biaya pool. Avana menambatkan daya pinjam ke LTV maksimum spoke, mengaitkan kredit dengan seberapa tajam jaminan saham tertokenisasi dapat bergerak. Halaman ini adalah sumber kebenaran tunggal tentang apa itu pool, berapa banyak modal yang dapat didukungnya dengan aman, dan risiko penurunan yang ditanggung protokol.",
@@ -49,7 +44,6 @@ const dict: TranslationDictionary = {
   Continue: "Lanjutkan",
   Cancel: "Batal",
   Back: "Kembali",
-  "Fund my sandbox": "Danai sandbox saya",
   "Continue to allocation": "Lanjut ke alokasi",
   "Share on X first": "Bagikan di X dulu",
   "I posted it": "Sudah saya posting",
@@ -155,13 +149,8 @@ const dict: TranslationDictionary = {
   "Highest APY": "APY tertinggi",
   "Most Available": "Paling tersedia",
   "Collateral A-Z": "Jaminan A-Z",
-  "Search loops": "Cari loop",
   "Sort by": "Urutkan berdasarkan",
-  "Sort loops": "Urutkan loop",
   Trending: "Tren",
-  "Highest max-leverage APY markets in the sandbox catalog.":
-    "Pasar dengan APY leverage maksimum tertinggi di katalog sandbox.",
-  "No loops in this category yet.": "Belum ada loop di kategori ini.",
   COLLATERAL: "JAMINAN",
   BORROWABLE: "DAPAT DIPINJAM",
   "MAX APY": "APY MAKS",
@@ -245,18 +234,13 @@ const dict: TranslationDictionary = {
   Health: "Kesehatan",
   Debt: "Utang",
   "Approved credit": "Kredit yang disetujui",
-  "Multiply value": "Nilai multiply",
   "Average APY": "APY rata-rata",
   Earned: "Diperoleh",
   "Open positions": "Posisi terbuka",
   "Net carry": "Carry bersih",
-  "Increase loop": "Tingkatkan loop",
-  "Unwind loop": "Lepas loop",
   "Weighted average APY across supplied assets in the wallet.":
     "APY rata-rata tertimbang di seluruh aset yang dipasok di dompet.",
   "Total yield already accrued by the portfolio.": "Total imbal hasil yang sudah terakumulasi oleh portofolio.",
-  "Open multiply positions in the wallet profile.": "Posisi multiply terbuka di profil dompet.",
-  "Average realized carry across the current multiply book.": "Rata-rata carry terealisasi di buku multiply saat ini.",
   "Portfolio quick actions": "Tindakan cepat portofolio",
   "Lending Opportunities": "Peluang pemberian pinjaman",
   "View markets": "Lihat pasar",
@@ -275,7 +259,6 @@ const dict: TranslationDictionary = {
   "This page isn't available.": "Halaman ini tidak tersedia.",
   "The address may be wrong or the page may have moved.": "Alamatnya mungkin salah atau halaman telah dipindahkan.",
   "Helpful links": "Tautan bermanfaat",
-  "Avana sandbox": "Sandbox Avana",
   "Sign in with the wallet that created this transaction to view its receipt.":
     "Masuk dengan dompet yang membuat transaksi ini untuk melihat tanda terimanya.",
   "We couldn't load this receipt right now.": "Kami tidak dapat memuat tanda terima ini saat ini.",
@@ -287,7 +270,6 @@ const dict: TranslationDictionary = {
   "Available Credit": "Kredit Tersedia",
   "Outstanding Loans": "Pinjaman Terutang",
   "Total Liquidity": "Total Likuiditas",
-  "Loop Markets": "Pasar Loop",
   "Avg Max APY": "Rata-rata APY Maks.",
   "Avg Max Leverage": "Rata-rata Leverage Maks.",
   "Total TVL": "Total TVL",
@@ -334,12 +316,9 @@ const dict: TranslationDictionary = {
   "How can we help?": "Ada yang bisa kami bantu?",
   "Include what you were trying to do, what happened, and any transaction or market details that may help.":
     "Sertakan apa yang ingin Anda lakukan, apa yang terjadi, dan detail transaksi atau pasar yang mungkin membantu.",
-  "Leveraged loop": "Loop dengan leverage",
   "No assets in your wallet": "Tidak ada aset di dompet Anda",
   "No deposited position found for this market.": "Tidak ada posisi setoran untuk pasar ini.",
   "No deposits found": "Tidak ada setoran ditemukan",
-  "No multiply positions yet. Open a loop to leverage your collateral.":
-    "Belum ada posisi multiply. Buka loop untuk memberi leverage jaminan Anda.",
   "read more": "baca selengkapnya",
   "Recommended articles": "Artikel yang direkomendasikan",
   "Request received": "Permintaan diterima",
@@ -373,7 +352,6 @@ const dict: TranslationDictionary = {
   "Your progress": "Progres Anda",
   "{completed}/{total} completed": "{completed}/{total} selesai",
   "{label} amount": "Jumlah {label}",
-  "{label} multiplier": "Pengganda {label}",
   "{name} ({symbol}) is a single-asset supply market on Avana. Suppliers earn the supply APY{rewardsClause} from borrower interest, net of the reserve factor. Yield tracks utilization, so the page focuses on the live supply rate, the supply/utilization mix, and the latest risk posture for this {marketType} market.":
     "{name} ({symbol}) adalah pasar suplai aset tunggal di Avana. Penyuplai memperoleh APY suplai{rewardsClause} dari bunga peminjam, dikurangi faktor cadangan. Imbal hasil mengikuti utilisasi, jadi halaman ini berfokus pada tingkat suplai langsung, komposisi suplai/utilisasi, dan postur risiko terbaru untuk pasar {marketType} ini.",
   "{percent}% of liq. max": "{percent}% dari maks. likuidasi",
@@ -394,8 +372,6 @@ const dict: TranslationDictionary = {
   Portfolio: "Portofolio",
   "Quick actions": "Tindakan cepat",
   "My Deposits": "Deposit saya",
-  "My Loops": "Loop saya",
-  "Available to loop": "Tersedia untuk loop",
   "Scroll table left": "Gulir tabel ke kiri",
   "Scroll table right": "Gulir tabel ke kanan",
   "Total Fees earned": "Total biaya yang diperoleh",
@@ -436,11 +412,7 @@ const dict: TranslationDictionary = {
   GOOD: "BAIK",
   "Health Factor": "Health Factor",
   "I read it": "Sudah saya baca",
-  "In this sandbox, every transaction is simulated — use previews to learn before sizing up.":
-    "Di sandbox ini, setiap transaksi disimulasikan — gunakan pratinjau untuk belajar sebelum memperbesar posisi.",
   "Invite link": "Tautan undangan",
-  "Keep health factor headroom and treat rewards as practice, not production yield.":
-    "Jaga kelonggaran health factor dan perlakukan hadiah sebagai latihan, bukan imbal hasil produksi.",
   "Lend {name}": "Pinjamkan {name}",
   "Lend actions": "Aksi lend",
   "Leverage options": "Opsi leverage",
@@ -458,8 +430,6 @@ const dict: TranslationDictionary = {
   Min: "Min",
   "More information": "Informasi lebih lanjut",
   "More information about {topic}": "Informasi lebih lanjut tentang {topic}",
-  "Multiply {name}": "Multiply {name}",
-  "Multiply actions": "Aksi multiply",
   "My Borrows": "Pinjaman Saya",
   "My LP Collaterals": "Jaminan LP Saya",
   "No activity matches the current filters.": "Tidak ada aktivitas yang cocok dengan filter saat ini.",
@@ -470,17 +440,14 @@ const dict: TranslationDictionary = {
   "No rewards ready": "Tidak ada hadiah yang siap",
   "Nothing borrowed yet": "Belum ada yang dipinjam",
   "Nothing supplied yet": "Belum ada yang disuplai",
-  "Open a looped position in {name}.": "Buka posisi berulang di {name}.",
   "Open preferences": "Buka preferensi",
   Opened: "Dibuka",
   "Overall quest completion progress": "Progres penyelesaian quest keseluruhan",
   Pending: "Tertunda",
-  "Pin a sandbox market": "Sematkan pasar sandbox",
   "Pool actions": "Aksi pool",
   "Portfolio views": "Tampilan portofolio",
   Preferences: "Preferensi",
   "Preview {product}": "Pratinjau {product}",
-  "Preview a sandbox trade": "Pratinjau perdagangan sandbox",
   "Price chart": "Grafik harga",
   "Processing…": "Memproses…",
   "Progress: {progress} / {target}": "Progres: {progress} / {target}",
@@ -498,7 +465,6 @@ const dict: TranslationDictionary = {
   "Run a real preview in the session — nothing executes on-chain.":
     "Jalankan pratinjau nyata dalam sesi — tidak ada yang dieksekusi on-chain.",
   Safe: "Aman",
-  "Sandbox risk primer": "Panduan risiko sandbox",
   "Scope Health Factor": "Health Factor Cakupan",
   Search: "Cari",
   "Search assets": "Cari aset",
@@ -546,8 +512,6 @@ const dict: TranslationDictionary = {
     "Ini masalah di sisi kami, bukan dompet Anda. Coba lagi, dan beri tahu kami jika terus terjadi.",
   "Back to borrow": "Kembali ke Pinjam",
   "Back to lend": "Kembali ke Pinjamkan",
-  "Back to multiply": "Kembali ke Multiply",
-  "Back to Umbrella": "Kembali ke Proteksi",
   "Back to rewards": "Kembali ke Hadiah",
   Loading: "Memuat",
   "Loading…": "Memuat…",
@@ -564,10 +528,8 @@ const dict: TranslationDictionary = {
   "Mobile menu": "Menu seluler",
   "Close menu": "Tutup menu",
   "Mobile navigation": "Navigasi seluler",
-  "Sandbox wallet": "Dompet sandbox",
   "This workspace uses a built-in demo wallet. There is no external wallet connection yet.":
     "Ruang kerja ini menggunakan dompet demo bawaan. Belum ada koneksi dompet eksternal.",
-  "Sandbox active": "Sandbox aktif",
   Connected: "Terhubung",
   Copied: "Disalin",
   "Copy address": "Salin alamat",
@@ -586,12 +548,9 @@ const dict: TranslationDictionary = {
   "Lending Positions": "Posisi Pinjaman",
   "Lending Performance": "Kinerja Pinjaman",
   "Lend Rewards": "Hadiah Pinjaman",
-  "Multiply Overview": "Ikhtisar Multiply",
   "Debt & Risk": "Utang & Risiko",
-  "Position size, multiplier, and current net yield": "Ukuran posisi, pengali, dan imbal hasil bersih saat ini",
   "Borrowed balance, health factor, and liquidation threshold":
     "Saldo pinjaman, faktor kesehatan, dan ambang likuidasi",
-  "No active Multiply debt": "Tidak ada utang Multiply aktif",
   "Loading your portfolio": "Memuat portofolio Anda",
   "We couldn't load your portfolio": "Kami tidak dapat memuat portofolio Anda",
   "The live portfolio fetch kept failing. Try again to re-run the client fetch without leaving the dashboard.":
@@ -604,9 +563,7 @@ const dict: TranslationDictionary = {
   "Asset analytics": "Analitik aset",
   "Pool analytics": "Analitik pool",
   "Lend market analytics": "Analitik pasar pinjaman",
-  "Multiply market analytics": "Analitik pasar Multiply",
   "General FAQs": "FAQ Umum",
-  "Multiply FAQs": "FAQ Multiply",
   "BTC Pools": "Pool BTC",
   "ETH Pools": "Pool ETH",
   "Forex Pools": "Pool Forex",
@@ -617,11 +574,6 @@ const dict: TranslationDictionary = {
   "Forex Based": "Berbasis Forex",
   "Utility Based": "Berbasis Utilitas",
   "Smart Lend": "Lend Pintar",
-  "BTC Loops": "Loop BTC",
-  "ETH Loops": "Loop ETH",
-  "Forex Loops": "Loop Forex",
-  "Utility Loops": "Loop Utilitas",
-  "Smart Loops": "Loop Pintar",
   Watch: "Pantau",
   "At risk": "Berisiko",
   Unknown: "Tidak diketahui",
@@ -636,107 +588,39 @@ const dict: TranslationDictionary = {
   Referrals: "Referral",
   "Rewards actions": "Tindakan hadiah",
   "No quests here yet — check back soon.": "Belum ada misi di sini — cek lagi nanti.",
-  "Boot your sandbox wallet": "Nyalakan dompet sandbox Anda",
   "Spin up your profile": "Siapkan profil Anda",
-  "Read the sandbox risk primer": "Baca panduan risiko sandbox",
   "Pin a market to your watchlist": "Sematkan pasar ke daftar pantauan Anda",
   "Preview your first trade": "Pratinjau perdagangan pertama Anda",
-  "Make your first sandbox lend": "Lakukan Lend sandbox pertama Anda",
-  "Open your first sandbox borrow": "Buka Borrow sandbox pertama Anda",
-  "Open your first sandbox multiply": "Buka Multiply sandbox pertama Anda",
-  "Repay a sandbox loan": "Bayar kembali pinjaman sandbox",
-  "Deleverage a sandbox position": "Kurangi leverage posisi sandbox",
   "Claim your first AVA reward": "Klaim hadiah AVA pertama Anda",
-  "Sandbox cool-down": "Pendinginan sandbox",
-  "Lend $500 in the sandbox": "Lend $500 di sandbox",
-  "Borrow $200 in the sandbox": "Borrow $200 di sandbox",
-  "Launch a multiply position": "Luncurkan posisi Multiply",
   "Tour all three products": "Jelajahi ketiga produk",
-  "Curve sandbox tour": "Tur sandbox Curve",
-  "Uniswap v4 sandbox tour": "Tur sandbox Uniswap v4",
   "Risk check-in (5 min)": "Pemeriksaan risiko (5 mnt)",
-  "Multiply mindfulness (3 min)": "Ketenangan Multiply (3 mnt)",
-  "3 borrow / repay loops": "3 loop borrow / bayar kembali",
   "2 deleverage drills": "2 latihan kurangi leverage",
-  "Explore 3 sandbox markets": "Jelajahi 3 pasar sandbox",
   "Claim 3 quest rewards": "Klaim 3 hadiah misi",
-  "3-day sandbox streak": "Rentetan sandbox 3 hari",
-  "Grow sandbox portfolio by $1K": "Tumbuhkan portofolio sandbox sebesar $1K",
-  "Open 3 sandbox positions": "Buka 3 posisi sandbox",
-  "Copy your sandbox invite link": "Salin tautan undangan sandbox Anda",
-  "Send your first sandbox invite": "Kirim undangan sandbox pertama Anda",
-  "Fund a referred sandbox wallet": "Danai dompet sandbox rujukan",
-  "Activate 3 sandbox friends": "Aktifkan 3 teman sandbox",
   "Grow crew to 5 actives": "Tumbuhkan kru menjadi 5 aktif",
-  "Referral sandbox hits $500": "Sandbox rujukan mencapai $500",
   "Referral streak (2 activations)": "Rentetan rujukan (2 aktivasi)",
-  "Sandbox ambassador": "Duta sandbox",
   "Your Avana session is live — this quest unlocks automatically when you land.":
     "Sesi Avana Anda aktif — misi ini terbuka otomatis saat Anda tiba.",
-  "We create a demo wallet profile so every product sandbox shares the same session.":
-    "Kami membuat profil dompet demo agar setiap sandbox produk berbagi sesi yang sama.",
   "Open the 60-second LP risk briefing before you simulate any position.":
     "Buka pengarahan risiko LP 60 detik sebelum Anda mensimulasikan posisi apa pun.",
-  "Pick one Borrow, Lend, or Multiply market to track in your sandbox.":
-    "Pilih satu pasar Borrow, Lend, atau Multiply untuk dilacak di sandbox Anda.",
-  "Run a real sandbox preview on Borrow, Lend, or Multiply — no funds move.":
-    "Jalankan pratinjau sandbox nyata di Borrow, Lend, atau Multiply — tidak ada dana yang berpindah.",
   "Deposit into any Lend market. Your live session records the quest automatically.":
     "Setorkan ke pasar Lend mana pun. Sesi langsung Anda mencatat misi secara otomatis.",
   "Borrow against LP collateral on the Borrow page — the quest completes on success.":
     "Pinjam dengan jaminan LP di halaman Borrow — misi selesai saat berhasil.",
-  "Create a Multiply position in the sandbox and let the session bridge log it.":
-    "Buat posisi Multiply di sandbox dan biarkan jembatan sesi mencatatnya.",
-  "Repay any borrow position you opened — a healthy loop in the demo world.":
-    "Bayar kembali posisi borrow apa pun yang Anda buka — loop yang sehat di dunia demo.",
-  "Reduce any Multiply position to practice risk management.":
-    "Kurangi posisi Multiply apa pun untuk melatih manajemen risiko.",
   "Complete any other quest, then claim it to unlock this milestone.":
     "Selesaikan misi lain apa pun, lalu klaim untuk membuka tonggak ini.",
   "Explore Avana for 2 minutes after your first login, then come back to claim.":
     "Jelajahi Avana selama 2 menit setelah login pertama Anda, lalu kembali untuk klaim.",
-  "Stack sandbox lend deposits until you reach $500 supplied.":
-    "Kumpulkan setoran lend sandbox hingga Anda mencapai $500 yang dipasok.",
   "Open borrow positions totaling $200 across any collateral pool.":
     "Buka posisi borrow dengan total $200 di seluruh pool jaminan mana pun.",
-  "Open any Multiply position in the sandbox — size is up to you.":
-    "Buka posisi Multiply apa pun di sandbox — ukurannya terserah Anda.",
-  "Complete one action in Lend, Borrow, and Multiply.": "Selesaikan satu tindakan di Lend, Borrow, dan Multiply.",
-  "Visit the Curve-style borrow market tour and mark it complete.":
-    "Kunjungi tur pasar borrow gaya Curve dan tandai selesai.",
-  "Walk through the Uniswap v4 sandbox market and check it off.":
-    "Telusuri pasar sandbox Uniswap v4 dan centang sebagai selesai.",
-  "Stay in the sandbox for 5 minutes after login, then claim this patience badge.":
-    "Tetap di sandbox selama 5 menit setelah login, lalu klaim lencana kesabaran ini.",
-  "Take a 3-minute breather after login before claiming this calm-multiply quest.":
-    "Ambil jeda 3 menit setelah login sebelum mengklaim misi multiply-tenang ini.",
-  "Repay sandbox loans three times to practice healthy borrow cycles.":
-    "Bayar kembali pinjaman sandbox tiga kali untuk melatih siklus borrow yang sehat.",
-  "Deleverage Multiply positions twice to complete this risk drill.":
-    "Kurangi leverage posisi Multiply dua kali untuk menyelesaikan latihan risiko ini.",
   "Complete tours on three different market pages across Avana.":
     "Selesaikan tur di tiga halaman pasar berbeda di seluruh Avana.",
   "Claim AVA from three separate quests to build your rewards streak.":
     "Klaim AVA dari tiga misi berbeda untuk membangun rentetan hadiah Anda.",
   "Check in on three separate days after your first login.": "Masuk di tiga hari berbeda setelah login pertama Anda.",
-  "Lend, borrow, or multiply until your combined sandbox volume hits $1,000.":
-    "Lend, borrow, atau multiply hingga total volume sandbox Anda mencapai $1,000.",
-  "Hold three open positions across Lend, Borrow, or Multiply.":
-    "Tahan tiga posisi terbuka di Lend, Borrow, atau Multiply.",
   "Generate and copy a referral link you can share with friends.":
     "Buat dan salin tautan rujukan yang dapat Anda bagikan dengan teman.",
-  "Simulate inviting a friend wallet into your Avana sandbox crew.":
-    "Simulasikan mengundang dompet teman ke dalam kru sandbox Avana Anda.",
   "Mark one invited friend as funded after they try a product action.":
     "Tandai satu teman yang diundang sebagai didanai setelah mereka mencoba tindakan produk.",
-  "Three referred wallets complete a product action in your sandbox network.":
-    "Tiga dompet rujukan menyelesaikan tindakan produk di jaringan sandbox Anda.",
-  "Five referred wallets complete a product action in your sandbox network.":
-    "Lima dompet rujukan menyelesaikan tindakan produk di jaringan sandbox Anda.",
-  "Your referred crew reaches $500 in combined sandbox volume.": "Kru rujukan Anda mencapai total volume sandbox $500.",
-  "Activate two sandbox referrals to keep your invite momentum going.":
-    "Aktifkan dua rujukan sandbox untuk menjaga momentum undangan Anda.",
-  "Activate five friends in your sandbox referral network.": "Aktifkan lima teman di jaringan rujukan sandbox Anda.",
   "Filter by category": "Filter berdasarkan kategori",
   "ETH volatility": "Volatilitas ETH",
   "Liquidity depth": "Kedalaman likuiditas",
@@ -798,8 +682,6 @@ const dict: TranslationDictionary = {
     "Posisi LP WBTC/WETH diterima sebagai jaminan di spoke Bluechip.",
   "Pool onboarded": "Pool di-onboard",
   "Dual-oracle": "Dual-oracle",
-  "WETH/DAI LP positions accepted as collateral in the Uniswap v2 spoke.":
-    "Posisi LP WETH/DAI diterima sebagai jaminan di spoke Uniswap v2.",
   Onboarded: "Di-onboard",
   "Parameters refreshed": "Parameter disegarkan",
   "Full-range USDC/USDT liquidity accepted in the Stable spoke at up to 78% LTV.":
@@ -817,8 +699,6 @@ const dict: TranslationDictionary = {
     "σ realisasi 30d ≈ 58% disetahunkan — kontributor tunggal terbesar terhadap impermanent loss.",
   "$4.1M of 2% depth across all tiers — ample for liquidations.":
     "Kedalaman 2% senilai $4.1M di seluruh tier — cukup untuk likuidasi.",
-  "30-minute TWAP can lag during sharp moves; mitigated by kink in the risk curve.":
-    "TWAP 30 menit dapat tertinggal saat pergerakan tajam; dimitigasi oleh kink pada kurva risiko.",
   "Uniswap v3 core + NonFungiblePositionManager, both heavily audited and live for 4 years.":
     "Uniswap v3 core + NonFungiblePositionManager, keduanya banyak diaudit dan aktif selama 4 tahun.",
   "Rolling 90d IL averages 23bps per week for the 0.30% tier.":
@@ -834,9 +714,6 @@ const dict: TranslationDictionary = {
   "$2.6M of 2% depth.": "Kedalaman 2% senilai $2.6M.",
   "BTC/ETH is highly correlated — IL is usually <15bps/week.":
     "BTC/ETH sangat berkorelasi — IL biasanya <15bps/minggu.",
-  "WETH/DAI is a standard Uniswap v2 ETH/stable pair and a straightforward LP structure for collateral evaluation. The Uniswap v2 spoke admits it under conservative parameters because the pair still carries ETH volatility, while the stable quote side keeps the market easy to reason about.":
-    "WETH/DAI adalah pasangan ETH/stable Uniswap v2 standar dan struktur LP yang sederhana untuk evaluasi jaminan. Spoke Uniswap v2 mengakuinya di bawah parameter konservatif karena pasangan ini masih membawa volatilitas ETH, sementara sisi kuotasi stabil menjaga pasar mudah dipahami.",
-  "Added to the Uniswap v2 LPs.": "Ditambahkan ke LP Uniswap v2.",
   "Quarterly risk review — no changes to LTV.": "Tinjauan risiko triwulanan — tidak ada perubahan pada LTV.",
   "USDC and USDT both trade at parity and the pool is overwhelmingly used for order-routing, stability-seeking flow, and tight-spread execution. The Stable spoke admits it with a high LTV because peg-risk is shared, depth is enormous, and the pool behaves more like cash infrastructure than a typical volatile LP. That makes it a natural fit for users who want borrowing power while keeping the underlying collateral profile simple to reason about.":
     "USDC dan USDT keduanya diperdagangkan pada paritas dan pool ini secara luar biasa digunakan untuk order-routing, aliran pencari stabilitas, dan eksekusi spread ketat. Spoke Stable mengakuinya dengan LTV tinggi karena risiko peg bersama, kedalaman sangat besar, dan pool berperilaku lebih seperti infrastruktur tunai daripada LP volatil biasa. Itu menjadikannya cocok secara alami bagi pengguna yang menginginkan daya pinjam sambil menjaga profil jaminan yang mendasari tetap sederhana untuk dipahami.",
@@ -881,13 +758,9 @@ const dict: TranslationDictionary = {
     "ETH native — aset pinjaman volatil utama untuk carry terarah pada jaminan LP.",
   "Mainnet launch": "Peluncuran mainnet",
   "The Merge": "The Merge",
-  "Wrapped ETH is the canonical ERC-20 used by Uniswap/Balancer/Aerodrome pools.":
-    "Wrapped ETH adalah ERC-20 kanonik yang digunakan oleh pool Uniswap/Balancer/Aerodrome.",
   "Wrapped BTC exposure — borrowed to short BTC against blue-chip LPs.":
     "Eksposur wrapped BTC — dipinjam untuk short BTC terhadap LP blue-chip.",
   Listed: "Terdaftar",
-  "USDC is Circle's regulated, fully-backed USD stablecoin and the main unit of account for this market. It anchors the protocol's conservative borrow curves, acts as the default settlement asset for LP carry strategies, and serves as the reference point for risk pricing across stablecoin routes. In practice, that makes it the most common asset for users who want cash-like exposure with on-chain mobility.":
-    "USDC adalah stablecoin USD Circle yang teregulasi dan didukung penuh serta unit hitung utama untuk pasar ini. Ia menjangkar kurva pinjaman konservatif protokol, bertindak sebagai aset penyelesaian default untuk strategi carry LP, dan berfungsi sebagai titik referensi untuk penetapan harga risiko di seluruh rute stablecoin. Dalam praktiknya, itu menjadikannya aset paling umum bagi pengguna yang menginginkan eksposur seperti tunai dengan mobilitas on-chain.",
   "USDC listed day-1 with 80% borrow cap.": "USDC terdaftar hari-1 dengan batas pinjam 80%.",
   "Simulated 2023-style de-peg; guardrails paused borrows for 18m.":
     "Mensimulasikan de-peg gaya 2023; pengaman menjeda pinjaman selama 18m.",
@@ -999,37 +872,24 @@ const dict: TranslationDictionary = {
   Curve: "Curve",
   Balancer: "Balancer",
   Aerodrome: "Aerodrome",
-  "Uniswap v2 LPs": "LP Uniswap v2",
   "Uniswap v3 Stable LPs": "LP Stable Uniswap v3",
   "Uniswap v3 Blue-Chip LPs": "LP Blue-Chip Uniswap v3",
   "Uniswap v3 Governance & DAO LPs": "LP Governance & DAO Uniswap v3",
-  "Curve Stable LPs": "LP Stable Curve",
-  "Curve Correlated LPs": "LP Correlated Curve",
-  "Curve Crypto LPs": "LP Crypto Curve",
-  "Balancer Stable LPs": "LP Stable Balancer",
-  "Balancer Correlated LPs": "LP Correlated Balancer",
-  "Balancer Weighted LPs": "LP Weighted Balancer",
-  "Balancer Boosted LPs": "LP Boosted Balancer",
-  "Balancer reCLAMM LPs": "LP reCLAMM Balancer",
   "Aerodrome Basic Stable LPs": "LP Basic Stable Aerodrome",
   "Aerodrome Basic Volatile LPs": "LP Basic Volatile Aerodrome",
   "Aerodrome Slipstream Blue-Chip LPs": "LP Slipstream Blue-Chip Aerodrome",
   Stablecoin: "Stablecoin",
   "MakerDAO stablecoin": "Stablecoin MakerDAO",
-  "Curve native stablecoin": "Stablecoin native Curve",
   "Aave native stablecoin": "Stablecoin native Aave",
   "Circle EUR stablecoin": "Stablecoin EUR Circle",
   "ERC-20 wrapped ETH": "Wrapped ETH ERC-20",
   "Native asset": "Aset native",
   "ERC-20 wrapped BTC": "Wrapped BTC ERC-20",
-  "Coinbase wrapped BTC": "Wrapped BTC Coinbase",
   "Liquid staking receipt": "Bukti liquid staking",
   "Rebase-less stETH wrapper": "Wrapper stETH tanpa rebase",
   "rETH liquid staking": "Liquid staking rETH",
-  "Coinbase liquid staking": "Liquid staking Coinbase",
   "Aave governance token": "Token governance Aave",
   "Uniswap governance token": "Token governance Uniswap",
-  "Curve governance token": "Token governance Curve",
   "Constant-product LP tokens": "Token LP constant-product",
   "Concentrated-liquidity LP positions": "Posisi LP likuiditas terkonsentrasi",
   "StableSwap LP tokens": "Token LP StableSwap",
@@ -1057,42 +917,25 @@ const dict: TranslationDictionary = {
   "Authenticated sessions stay locked until Convex confirms access.":
     "Sesi terautentikasi tetap terkunci hingga Convex mengonfirmasi akses.",
   "You're all set.": "Semua sudah siap.",
-  "Your Avana sandbox is ready.": "Sandbox Avana Anda sudah siap.",
-  "You've already claimed your practice funds. Jump back into the dashboard to keep exploring.":
-    "Anda sudah mengklaim dana latihan Anda. Kembali ke dasbor untuk terus menjelajah.",
   "Reading your wallet history": "Membaca riwayat dompet Anda",
-  "Checking sandbox eligibility": "Memeriksa kelayakan sandbox",
   "Selecting markets to fund": "Memilih pasar untuk didanai",
-  "Sizing your practice portfolio": "Menyusun ukuran portofolio latihan Anda",
-  "Minting your practice funds": "Mencetak dana latihan Anda",
   "Opening LP & lending positions": "Membuka posisi LP & pinjaman",
-  "Building your multiply loops": "Membangun loop multiply Anda",
-  "Finalizing your sandbox": "Menyelesaikan sandbox Anda",
   "One moment.": "Sebentar.",
   "Analyzing your wallet…": "Menganalisis dompet Anda…",
   "Hang tight.": "Mohon tunggu.",
-  "Funding your sandbox…": "Mendanai sandbox Anda…",
   "Liquid assets": "Aset likuid",
   "Hold & swap tokens": "Simpan & tukar token",
   "LP collateral": "Jaminan LP",
   "Borrow against LP": "Pinjam dengan jaminan LP",
   Lending: "Pinjaman",
   "Supply to earn": "Suplai untuk mendapatkan imbal hasil",
-  "Leverage loops": "Loop leverage",
   "You'll get": "Anda akan mendapatkan",
-  "A full practice portfolio": "Portofolio latihan lengkap",
   "Claiming allocation…": "Mengklaim alokasi…",
   "Claim your allocation": "Klaim alokasi Anda",
-  "Welcome to the Avana Sandbox": "Selamat datang di Sandbox Avana",
-  "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.":
-    "Sandbox Avana bebas risiko ini memungkinkan Anda meminjam dengan jaminan posisi LP latihan, memberi pinjaman, dan mengulang strategi menggunakan dana sandbox. Tanpa aset nyata. Tanpa tanda tangan dompet. Sekadar cara cepat memahami cara kerja Avana sebelum beralih ke aplikasi langsung.",
-  "Unlimited practice funds": "Dana latihan tanpa batas",
   "No transactions yet": "Belum ada transaksi",
   "No transactions to sign": "Tidak ada transaksi untuk ditandatangani",
   "No real assets involved": "Tanpa aset nyata",
   "Connect a wallet.": "Hubungkan dompet.",
-  "We'll set up your sandbox and scope it to your address.":
-    "Kami akan menyiapkan sandbox Anda dan membatasinya untuk alamat Anda.",
   "By connecting your wallet, you agree to the": "Dengan menghubungkan dompet Anda, Anda menyetujui",
   "Terms & Conditions": "Syarat & Ketentuan",
   and: "dan",
@@ -1101,24 +944,13 @@ const dict: TranslationDictionary = {
   "Your wallet is on the waitlist.": "Dompet Anda ada dalam daftar tunggu.",
   "wallets onboarded.": "dompet telah diorientasi.",
   "Wallet connected.": "Dompet terhubung.",
-  "Fund your sandbox to start exploring.": "Danai sandbox Anda untuk mulai menjelajah.",
-  "Every wallet gets sandbox funds to practice with, spread across markets so you can try every flow risk-free.":
-    "Setiap dompet mendapatkan dana sandbox untuk berlatih, tersebar di berbagai pasar sehingga Anda dapat mencoba setiap alur tanpa risiko.",
   "You're eligible.": "Anda memenuhi syarat.",
-  "Your practice portfolio is ready.": "Portofolio latihan Anda sudah siap.",
-  "sandbox seats remain.": "kursi sandbox tersisa.",
   "Tell your network about Avana.": "Beri tahu jaringan Anda tentang Avana.",
   "Post the prepared message on X.": "Kirim pesan yang telah disiapkan di X.",
   "Open X": "Buka X",
   Skip: "Lewati",
   "Here's what you'll get.": "Inilah yang akan Anda dapatkan.",
-  "Practice funds across assets, LP collateral, lending, and multiply.":
-    "Dana latihan yang tersebar di aset, jaminan LP, pinjaman, dan multiply.",
   "The allocation cap was reached.": "Batas alokasi telah tercapai.",
-  "Your Avana sandbox is ready to explore.": "Sandbox Avana Anda siap untuk dijelajahi.",
-  "Your practice funds are now in your wallet. Jump into the dashboard to start exploring.":
-    "Dana latihan Anda kini ada di dompet Anda. Masuk ke dasbor untuk mulai menjelajah.",
-  "Sandbox onboarding requires a Convex connection. Set": "Orientasi sandbox memerlukan koneksi Convex. Atur",
   "to continue.": "untuk melanjutkan.",
   Confirmed: "Dikonfirmasi",
   Receipt: "Bukti transaksi",
@@ -1141,7 +973,6 @@ const dict: TranslationDictionary = {
   Strategy: "Strategi",
   "A Beginner's Guide to LP Collateral": "Panduan pemula untuk jaminan LP",
   "What LP Collateral Makes Possible": "Apa yang dimungkinkan oleh jaminan LP",
-  "Thinking Clearly About Yield Looping": "Berpikir jernih tentang yield looping",
   "How to Hedge an LP Position": "Cara melindungi posisi LP",
   "Making LP Collateral Usable": "Membuat jaminan LP dapat digunakan",
   "Avana and the Next Step for Liquidity Providers": "Avana dan langkah berikutnya bagi penyedia likuiditas",
@@ -1154,25 +985,17 @@ const dict: TranslationDictionary = {
   "Which DEXs do you use the most?": "DEX mana yang paling sering Anda gunakan?",
   "Select all that apply": "Pilih semua yang sesuai",
   "Last step.": "Langkah terakhir.",
-  "Let's fund your sandbox.": "Mari isi dana sandbox Anda.",
-  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.":
-    "Kami akan menyebar dana latihan ke berbagai pasar agar Anda bisa memberi pinjaman, meminjam, dan loop tanpa risiko.",
   "Good news, you're in.": "Kabar baik, Anda sudah masuk.",
   of: "dari",
-  "sandbox seats already claimed.": "kursi sandbox sudah diklaim.",
-  "Your sandbox is live.": "Sandbox Anda aktif.",
   "Everything's funded and waiting. Dive in whenever you're ready.":
     "Semuanya sudah didanai dan menunggu. Mulai kapan pun Anda siap.",
   "Connect an EVM wallet.": "Hubungkan dompet EVM.",
-  "We can't reach the sandbox right now.": "Kami tidak dapat menjangkau sandbox saat ini.",
   "Please try again in a moment.": "Silakan coba lagi sebentar.",
   "Your session is safe. This is a temporary connection issue, not your wallet.":
     "Sesi Anda aman. Ini masalah koneksi sementara, bukan dompet Anda.",
   "Something went wrong.": "Terjadi kesalahan.",
   "We couldn't load this page.": "Kami tidak dapat memuat halaman ini.",
   "APY breakdown": "Rincian APY",
-  "Active Umbrella capital currently available to absorb eligible deficits for this asset.":
-    "Modal Umbrella aktif yang saat ini tersedia untuk menyerap defisit yang memenuhi syarat pada aset ini.",
   "Active staker capital": "Modal staker aktif",
   "Additional rewards used to attract coverage capital, especially during bootstrap periods or when coverage is below target.":
     "Imbalan tambahan untuk menarik modal perlindungan, terutama selama periode bootstrap atau saat perlindungan di bawah target.",
@@ -1191,29 +1014,17 @@ const dict: TranslationDictionary = {
   "Liquidation recapture": "Pemulihan likuidasi",
   "Local deductible": "Deductible lokal",
   "Target coverage": "Perlindungan target",
-  "The Hub asset this Umbrella market protects. Deficits from any eligible Spoke borrowing this reserve can be covered by this market.":
-    "Aset Hub yang dilindungi pasar Umbrella ini. Defisit dari pinjaman Spoke yang memenuhi syarat atas reserve ini dapat ditanggung oleh pasar ini.",
-  "The amount of Umbrella capital currently deposited and available to absorb deficits for this covered reserve. Capital in cooldown is no longer counted as fully available protection.":
-    "Jumlah modal Umbrella yang saat ini disetor dan tersedia untuk menyerap defisit reserve yang dilindungi. Modal dalam cooldown tidak lagi dihitung sebagai perlindungan yang sepenuhnya tersedia.",
   "The amount of staked capital currently in the cooldown period before it can be withdrawn. A larger cooling balance means less protection may remain available if those funds exit.":
     "Jumlah modal yang di-stake dan sedang dalam periode cooldown sebelum dapat ditarik. Saldo cooling yang lebih besar dapat menyisakan lebih sedikit perlindungan jika dana tersebut keluar.",
   "The core staking yield paid for providing protection capital to this surface.":
     "Imbal hasil staking dasar yang dibayarkan untuk menyediakan modal perlindungan pada permukaan ini.",
   "The portion of yield supported by liquidation-linked economics generated by this reserve-per-Spoke surface, such as liquidation fees or SVR.":
     "Bagian imbal hasil yang didukung ekonomi terkait likuidasi dari permukaan reserve-per-Spoke ini, seperti biaya likuidasi atau SVR.",
-  "The staking rewards you have earned for providing Umbrella coverage. Rewards may include protocol incentives and other compensation for taking slashing and lockup risk.":
-    "Imbalan staking yang Anda peroleh karena menyediakan perlindungan Umbrella. Imbalan dapat mencakup insentif protokol dan kompensasi lain atas risiko slashing dan lockup.",
-  "Umbrella surface details": "Detail permukaan Umbrella",
   "View {symbol} surface details": "Lihat detail permukaan {symbol}",
-  "The rewards currently earned by this Umbrella position, allocated across the underlying APY sources.":
-    "Imbalan yang saat ini diperoleh posisi Umbrella ini, dialokasikan ke sumber APY yang mendasarinya.",
-  "The estimated annual yield for keeping Umbrella capital available as coverage for this market.":
-    "Perkiraan imbal hasil tahunan untuk menjaga modal Umbrella tersedia sebagai perlindungan bagi pasar ini.",
   "Est. annual rewards": "Perkiraan imbalan tahunan",
   "Based on amount entered": "Berdasarkan jumlah yang dimasukkan",
   "Slashable stake": "Stake yang dapat di-slash",
   "Market staked": "Stake pasar",
-  "Umbrella APY": "APY Umbrella",
   "Umbrella market": "Pasar Umbrella",
   "Cooled stake": "Stake dalam cooldown",
   "Start cooldown": "Mulai cooldown",
@@ -1221,8 +1032,6 @@ const dict: TranslationDictionary = {
   "Coverage is defined for a specific Hub reserve and covers eligible deficits from every Spoke borrowing that reserve, including credit-line draws.":
     "Perlindungan ditetapkan untuk reserve Hub tertentu dan mencakup defisit yang memenuhi syarat dari setiap Spoke yang meminjam reserve tersebut, termasuk penarikan credit line.",
   "First-loss protection": "Perlindungan first-loss",
-  "The Deficit Offset absorbs the first layer of loss. Only the residual deficit beyond that offset can reach staked Umbrella coverage.":
-    "Offset Defisit menyerap lapisan kerugian pertama. Hanya defisit sisa di atas offset tersebut yang dapat mencapai perlindungan Umbrella yang di-stake.",
   "Independent underwriting": "Underwriting independen",
   "Target liquidity and reward emissions reflect reserve risk, economics, opportunity cost, and the slashing and lockup risk accepted by coverage providers.":
     "Likuiditas target dan emisi imbalan mencerminkan risiko reserve, ekonomi, biaya peluang, serta risiko slashing dan lockup yang diterima penyedia perlindungan.",
@@ -1237,7 +1046,6 @@ const dict: TranslationDictionary = {
   "Includes active stake and cooldown": "Termasuk stake aktif dan cooldown",
   "Amount Avana covers first before user-staked coverage is exposed. Stakers only take losses once realized deficits exceed this offset.":
     "Jumlah yang ditutup Avana terlebih dahulu sebelum cakupan yang di-stake pengguna terekspos. Staker hanya menanggung kerugian setelah defisit riil melebihi offset ini.",
-  "Close umbrella actions": "Tutup tindakan Proteksi",
   Cooldown: "Cooldown",
   Cooling: "Sedang cooldown",
   Coverage: "Cakupan",
@@ -1249,19 +1057,13 @@ const dict: TranslationDictionary = {
   "Desired amount of user-staked coverage for this asset.":
     "Jumlah cakupan yang di-stake pengguna yang diinginkan untuk aset ini.",
   "Dynamic rewards": "Reward dinamis",
-  "Each Umbrella stake token covers deficits for its matching borrowed asset on the same network.":
-    "Setiap token stake Proteksi menutupi defisit aset pinjaman yang sesuai pada jaringan yang sama.",
-  "Emissions adjust against target liquidity, and each staked asset can earn multiple reward tokens.":
-    "Emisi menyesuaikan terhadap likuiditas target, dan setiap aset yang di-stake dapat memperoleh beberapa token reward.",
   "Estimated annual staking yield paid to stakers of this asset.":
     "Estimasi imbal hasil staking tahunan yang dibayarkan kepada staker aset ini.",
   "In cooldown": "Sedang cooldown",
   "Isolated slashing": "Slashing terisolasi",
   "Learn Umbrella": "Pelajari Proteksi",
-  "Umbrella Overview": "Ikhtisar Umbrella",
   "Module assets": "Aset modul",
   More: "Lainnya",
-  "More umbrella actions": "Tindakan Proteksi lainnya",
   "Next cooldown": "Cooldown berikutnya",
   "Next market risk": "Risiko pasar berikutnya",
   "Once cooldown finishes, users can unstake during the withdrawal window before cooldown has to be restarted.":
@@ -1273,10 +1075,6 @@ const dict: TranslationDictionary = {
   Restart: "Mulai ulang",
   "Restart cooldown": "Mulai ulang cooldown",
   Stake: "Stake",
-  "Stake in umbrella": "Stake di Proteksi",
-  "Unstake from umbrella": "Unstake dari Proteksi",
-  "Stake, claim rewards, start cooldown, or unstake from the umbrella safety module.":
-    "Stake, klaim reward, mulai cooldown, atau unstake dari modul keamanan Proteksi.",
   "Stake, claim, cooldown, unstake": "Stake, klaim, cooldown, unstake",
   "Start cooldown before withdrawing. During cooldown, the position keeps earning incentives and remains slashable.":
     "Mulai cooldown sebelum menarik. Selama cooldown, posisi tetap memperoleh insentif dan masih dapat di-slashing.",
@@ -1286,20 +1084,13 @@ const dict: TranslationDictionary = {
   "Total user-staked capital available to absorb losses for this asset.":
     "Total modal yang di-stake pengguna yang tersedia untuk menyerap kerugian aset ini.",
   Umbrella: "Proteksi",
-  "Umbrella Cooldown": "Cooldown Proteksi",
-  "Umbrella actions": "Tindakan Proteksi",
-  "Umbrella activity": "Aktivitas Proteksi",
   "Umbrella positions": "Posisi Proteksi",
-  "Umbrella positions are split by asset and network, so each stake token has its own risk and reward profile.":
-    "Posisi Proteksi dipisahkan per aset dan jaringan, sehingga setiap token stake memiliki profil risiko dan reward-nya sendiri.",
   Unstake: "Unstake",
   "Unstake window": "Jendela unstake",
   "Weighted APY": "APY tertimbang",
   "Withdrawal ready": "Siap ditarik",
   "Withdrawal window": "Jendela penarikan",
-  "You have no Umbrella positions yet.": "Anda belum memiliki posisi Proteksi.",
   "Your Umbrella": "Proteksi Anda",
-  "Your Umbrella stake": "Stake Proteksi Anda",
   "After cooldown completes, there is a short window to unstake. If it expires, cooldown must be started again.":
     "Setelah cooldown selesai, ada jendela singkat untuk unstake. Jika kedaluwarsa, cooldown harus dimulai ulang.",
   "base {base} + reward {reward}": "dasar {base} + reward {reward}",
@@ -1328,8 +1119,6 @@ const dict: TranslationDictionary = {
   "{count} assets": "{count} aset",
   "{count} positions": "{count} posisi",
   "{count} rewards": "{count} hadiah",
-  "{name} ({symbol}) / {borrowName} ({borrow}) is a leveraged multiply market on Avana. Supply {symbol} as collateral to loop into {borrow} exposure, up to {leverage}, in a route dedicated to leveraged positions rather than LP collateral pools. Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this {marketType} market. Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.":
-    "{name} ({symbol}) / {borrowName} ({borrow}) adalah pasar multiply dengan leverage di Avana. Pasok {symbol} sebagai jaminan untuk melakukan loop ke eksposur {borrow}, hingga {leverage}, melalui jalur yang khusus untuk posisi leverage alih-alih pool jaminan LP. Imbal hasil bersih mengikuti selisih pasok/pinjam, utilisasi, dan pengali yang dipilih, sehingga hasil loop dapat berubah seiring penyeimbangan ulang suku bunga dan likuiditas yang tersedia. Halaman ini berfokus pada batas leverage langsung, komposisi pasok/pinjam, likuiditas yang tersedia, dan postur risiko terbaru untuk pasar {marketType} ini. Pengguna sebaiknya memperhatikan faktor jaminan, ambang likuidasi, biaya pinjam, dan likuiditas yang tersedia karena faktor-faktor tersebut memengaruhi baik hasil loop maupun seberapa cepat posisi dapat ditutup dalam kondisi tertekan.",
   "{progress}/{target} {currency}": "{progress}/{target} {currency} tercapai",
   "1D": "1D",
   "30 Days": "30 Hari",
@@ -1369,7 +1158,6 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "Tab dasbor",
   Date: "Tanggal",
   Dismiss: "Tutup",
-  "Explore Umbrella": "Jelajahi Proteksi",
   Explorer: "Explorer",
   "Express actions": "Aksi ekspres",
   Fees: "Biaya",
@@ -1402,8 +1190,6 @@ const dict: TranslationDictionary = {
   Long: "Long",
   "Long, short, and net USD per token across every product.":
     "Long, short, dan USD bersih per token di seluruh produk.",
-  "LOOP APY": "APY LOOP",
-  "Loop market": "Pasar loop",
   "LP APR": "LP APR",
   "Pool APR": "APR Pool",
   "Live value of this collateral, and the LP trading fees it earns.":
@@ -1412,28 +1198,20 @@ const dict: TranslationDictionary = {
   "Market-wide liquidation activity and near-liquidation exposure over the last 24 hours.":
     "Aktivitas likuidasi seluruh pasar dan eksposur mendekati likuidasi selama 24 jam terakhir.",
   "Minimum received": "Minimum diterima",
-  "Multiply Balance": "Saldo Multiply",
-  "Multiply Exposure": "Eksposur Multiply",
-  "Multiply Health": "Kesehatan Multiply",
-  "Multiply Rewards": "Imbalan Multiply",
   "Multiply TVL": "TVL Multiply",
   "My Collaterals": "Jaminan Saya",
   "My Debts": "Utang Saya",
   Net: "Bersih",
-  "Net Portfolio Value = Assets − Debt. Assets: wallet balances, lending supplied, borrow collateral, any borrowed funds you still hold, your Multiply position value, and Umbrella staked + rewards. Debt: borrow loans and Multiply borrowing. Borrowing doesn't change this number — the cash you receive is an asset that offsets the new debt.":
-    "Nilai Portofolio Bersih = Aset − Utang. Aset: saldo dompet, pasokan simpanan, jaminan pinjaman, dana pinjaman yang masih Anda pegang, nilai posisi Multiply Anda, serta Proteksi yang di-stake + imbalan. Utang: pinjaman borrow dan pinjaman Multiply. Meminjam tidak mengubah angka ini — uang yang Anda terima adalah aset yang mengimbangi utang baru.",
   Network: "Jaringan",
   No: "Tidak",
   "No active loans. Borrow against your collateral to get started.":
     "Tidak ada pinjaman aktif. Pinjam dengan jaminan Anda untuk memulai.",
-  "No active Multiply positions": "Tidak ada posisi Multiply aktif",
   "No assets found.": "Aset tidak ditemukan.",
   "No collateral deposited yet. Supply an asset to start backing loans.":
     "Belum ada jaminan yang disetor. Pasok aset untuk mulai menjamin pinjaman.",
   "No liquidity pools yet. Provide liquidity to start earning trading fees.":
     "Belum ada kumpulan likuiditas. Sediakan likuiditas untuk mulai memperoleh biaya trading.",
   "No supplied position to withdraw": "Tidak ada posisi pasokan untuk ditarik",
-  "No Umbrella positions yet.": "Belum ada posisi Proteksi.",
   "No wallet balances found.": "Tidak ada saldo dompet ditemukan.",
   NONE: "TIDAK ADA",
   now: "sekarang",
@@ -1468,11 +1246,8 @@ const dict: TranslationDictionary = {
   "Repay or add collateral to reduce your liquidation risk.":
     "Bayar kembali atau tambah jaminan untuk mengurangi risiko likuidasi Anda.",
   "Review risk": "Tinjau risiko",
-  "Negative net APY: borrow costs exceed supply yield. Review before opening this loop.":
-    "APY bersih negatif: biaya pinjaman melebihi hasil supply. Tinjau sebelum membuka loop ini.",
   "Review swap": "Tinjau swap",
   "Rewards Earned": "Imbalan Diperoleh",
-  Sandbox: "Sandbox",
   "Scenario price": "Harga skenario",
   "Search collateral pools, assets to borrow, and assets to lend.":
     "Cari pool jaminan, aset untuk dipinjam, dan aset untuk disimpan.",
@@ -1548,20 +1323,15 @@ const dict: TranslationDictionary = {
   "Collateral price move": "Pergerakan harga agunan",
   "Debt change amount": "Jumlah perubahan utang",
   "Drop buffer": "Buffer penurunan",
-  "Equity value at this leverage, by scenario.": "Nilai ekuitas pada leverage ini, per skenario.",
-  "Estimate on {equity} equity. Assumes rates hold; leverage amplifies both gains and losses.":
-    "Perkiraan atas ekuitas {equity}. Mengasumsikan suku bunga tetap; leverage memperbesar keuntungan dan kerugian.",
   "Estimate. Variable rate — actual cost will differ.":
     "Perkiraan. Suku bunga variabel — biaya sebenarnya akan berbeda.",
   Horizon: "Jangka waktu",
   "Lend Outlook": "Prospek pinjamkan",
-  "Leverage multiplier": "Pengali leverage",
   Liquidated: "Terlikuidasi",
   "Liquidation price": "Harga likuidasi",
   "Liquidation prices": "Harga likuidasi per aset",
   "Move collateral prices or your debt and watch health factor respond.":
     "Ubah harga agunan atau utang Anda dan lihat respons faktor kesehatan.",
-  "Multiply Outlook": "Prospek Multiply",
   Next: "Berikutnya",
   "Price sensitivity": "Sensitivitas harga",
   "Projected interest cost": "Perkiraan biaya bunga",
@@ -1620,31 +1390,16 @@ const dict: TranslationDictionary = {
     "Faktor kesehatan, dan nilai jaminan saat posisi ini dilikuidasi. Di bawah 1.0 memicu likuidasi.",
   "The collateral you supply and the asset you borrow against it to build leverage.":
     "Jaminan yang Anda pasok dan aset yang Anda pinjam dengannya untuk membangun leverage.",
-  "Your own capital in the loop (exposure minus debt). Exposure is your total leveraged position.":
-    "Modal Anda sendiri dalam loop (eksposur dikurangi utang). Eksposur adalah total posisi leverage Anda.",
   "Net yield after borrow costs, on your capital. The figure below is interest earned so far, ticking live.":
     "Imbal hasil bersih setelah biaya pinjaman, atas modal Anda. Angka di bawah adalah bunga yang diperoleh sejauh ini, terus bertambah secara langsung.",
-  "Health factor, and the collateral price at which this loop is liquidated. Below 1.0 triggers liquidation.":
-    "Faktor kesehatan, dan harga jaminan saat loop ini dilikuidasi. Di bawah 1.0 memicu likuidasi.",
-  "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)":
-    "Carry bersih yang diperoleh di seluruh loop Multiply Anda, terus terakumulasi secara langsung (imbal hasil suplai dikurangi biaya pinjaman)",
   "Average APY across your staked positions, weighted by value.":
     "APY rata-rata di seluruh posisi yang di-stake, tertimbang berdasarkan nilai.",
   "Additional amount you can borrow against your pledged collateral within Avana credit limits":
     "Jumlah tambahan yang dapat Anda pinjam dengan jaminan yang telah Anda berikan, dalam batas kredit Avana",
   "Amount an active loan can lose before reaching liquidation; unavailable when you have no debt":
     "Jumlah yang bisa hilang dari pinjaman aktif sebelum mencapai likuidasi; tidak tersedia jika Anda tidak memiliki utang",
-  "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.":
-    "Nilai likuidasi gabungan dibagi total utang Multiply. Semakin tinggi semakin aman; di bawah 1 berisiko likuidasi.",
-  "Equity-weighted net APY after supply yield and borrow cost":
-    "APY bersih tertimbang ekuitas setelah imbal hasil suplai dan biaya pinjaman",
-  "Exposure, return, and liquidation risk for each active loop":
-    "Eksposur, return, dan risiko likuidasi untuk setiap loop aktif",
-  "Gross Multiply exposure after looping across all positions":
-    "Eksposur Multiply kotor setelah melakukan loop di seluruh posisi",
   "Interest earned as a percentage of principal you supplied":
     "Bunga yang diperoleh sebagai persentase dari pokok yang Anda pasok",
-  "Portfolio leverage as position value divided by equity": "Leverage portofolio sebagai nilai posisi dibagi ekuitas",
   "Projected earnings at current rates": "Perkiraan pendapatan pada suku bunga saat ini",
   "Supply interest accruing in real time across your lending positions (excludes protocol rewards)":
     "Bunga pasokan yang terus terkumpul secara langsung di seluruh posisi simpanan Anda (tidak termasuk imbalan protokol)",
@@ -1781,7 +1536,6 @@ const dict: TranslationDictionary = {
     "Porsi dana yang disuplai yang sedang dipinjam. Penggunaan lebih tinggi menaikkan suku bunga dan bisa menunda penarikan.",
   "The liquidity pool you can pledge as collateral to borrow against.":
     "Pool likuiditas yang bisa kamu jaminkan sebagai kolateral untuk meminjam.",
-  "The maximum leverage available on this loop.": "Leverage maksimum yang tersedia pada loop ini.",
   "The most you can borrow as a share of your collateral value.":
     "Jumlah maksimum yang bisa kamu pinjam sebagai porsi dari nilai kolateralmu.",
   "The token you can borrow against your collateral.": "Token yang bisa kamu pinjam dengan jaminan kolateralmu.",
@@ -1803,7 +1557,6 @@ const dict: TranslationDictionary = {
   "Clear {facet} filter": "Hapus filter {facet}",
   "Filter by": "Filter menurut",
   Hubs: "Hub",
-  "No loops match these filters.": "Tidak ada loop yang cocok dengan filter ini.",
   "No matches": "Tidak ada hasil",
   "Search chains": "Cari jaringan",
   "Search hubs": "Cari hub",
@@ -1813,7 +1566,6 @@ const dict: TranslationDictionary = {
   Volatile: "Volatil",
   Chains: "Jaringan",
   Other: "Lainnya",
-  Stocks: "Saham",
   "Filter markets": "Filter pasar",
 }
 

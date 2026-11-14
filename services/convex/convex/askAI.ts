@@ -734,7 +734,7 @@ export const completeGeneratedTurn = internalMutation({
               ),
               // Supplied by Lane D on the tool result; optional until it ships.
               dataProvenance: v.optional(
-                v.union(v.literal("sandbox"), v.literal("connected_wallet"), v.literal("onchain")),
+                v.union(v.literal("connected_wallet"), v.literal("onchain")),
               ),
               // The tool's structured result verbatim; genuinely arbitrary shape.
               payload: v.any(),

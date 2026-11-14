@@ -56,7 +56,7 @@ function ensureOpenGateToken(): Promise<OpenGateTokenResponse> {
 }
 
 /**
- * Open-gate bootstrap: ensure sessionStorage has a live sandbox JWT for the
+ * Open-gate bootstrap: ensure sessionStorage has a live Convex JWT for the
  * shared dev wallet so ConvexProviderWithAuth can authenticate wallet queries.
  * No-ops when open-gate is off or a valid non-loopback token already exists.
  */

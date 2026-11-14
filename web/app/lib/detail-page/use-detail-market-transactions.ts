@@ -22,7 +22,7 @@ type ConvexDetailTx = {
   counterpartyLabel?: string
   walletLabel?: string
   txHashShort: string
-  source?: "sandbox" | "seed"
+  source?: "wallet" | "seed"
 }
 
 export function useDetailMarketTransactions({
@@ -46,7 +46,7 @@ export function useDetailMarketTransactions({
     if (convexRows === undefined) {
       return mergeTransactionRows(sessionRows, [], seedRows, limit)
     }
-    // The query already returns all users' sandbox activity when it exists and
+    // The query already returns all users' activity when it exists and
     // seeded walletEvents only as a fallback, so map whatever it chose.
     const fromConvex = convexRows.map(mapConvexRow)
     if (fromConvex.length > 0) {

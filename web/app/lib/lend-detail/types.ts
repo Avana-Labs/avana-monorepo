@@ -14,7 +14,7 @@
  *   engagement                                  ← walletEvents (getForLend)
  *   risk                                        ← lendRiskAssessments (lend.riskAssessment.getRisk)
  *   about / faqs                                ← lendMarketContent (lend.content.getContent)
- *   transactions                                ← sandbox txs / walletEvents (getRecentTransactions scope:"lend")
+ *   transactions                                ← app txs / walletEvents (getRecentTransactions scope:"lend")
  */
 
 import type { ChartFeed } from "@/app/components/charts"

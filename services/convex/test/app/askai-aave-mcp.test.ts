@@ -70,7 +70,7 @@ function setup(name: Parameters<typeof createAaveModelTools>[0]["allowedTool"], 
     prompt,
     wallet: async () => (authenticated ? wallet : undefined),
     avanaPortfolio: async () => ({ totals: { lendUsd: 20 } }),
-    knowledge: async () => ({ text: "Avana sandbox documentation" }),
+    knowledge: async () => ({ text: "Avana documentation" }),
   })
   return { fetcher, tools, calls: () => fetcher.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).params) }
 }

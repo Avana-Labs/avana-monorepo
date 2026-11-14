@@ -5,17 +5,12 @@ import type { TranslationDictionary } from "../types"
 const dict: TranslationDictionary = {
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "担保を預け入れ、それを元に借り入れ、借りた資金を再度供給し、リスク上限まで繰り返します。",
-  "Browse Multiply Page": "マルチプライページを見る",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":
     "流動性プールのポジションを担保に変え、プールから出ることなくここで借り入れできます。",
   "Browse Borrow Page": "借りるページを見る",
   "Supply capital into Hub-connected lending markets and earn from LP-backed borrower demand.":
     "Hub に接続された貸付マーケットに資金を供給し、LP に裏付けられた借り手需要から収益を得られます。",
   "Browse Lend Page": "貸すページを見る",
-  "Coinbase & Robinhood Stocks": "Coinbase・Robinhood 株式",
-  "Tokenized equities — deposit stock tokens to earn lending yield":
-    "トークン化株式 — 株式トークンを預け入れてレンディング利回りを獲得",
-  "Tokenized-equity concentrated LP positions": "トークン化株式の集中 LP ポジション",
   "Paxos USD stablecoin": "Paxos USD ステーブルコイン",
   "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.":
     "{name} は、Avana の {spoke} スポークに担保として預け入れられたトークン化株式の LP ポジションです。{stableLeg} とトークン化された {stockName}（{stockSymbol}）エクスポージャーを組み合わせるため、担保価値はプールの深さや手数料ティアとともに {stockName} の株価に連動します。Avana は借入能力をスポークの最大 LTV に固定し、トークン化株式担保がどれだけ急激に変動しうるかに信用を結び付けます。このページは、プールの内容、安全に支えられる資本規模、プロトコルが引き受ける下振れリスクについての唯一の信頼できる情報源です。",
@@ -49,7 +44,6 @@ const dict: TranslationDictionary = {
   Continue: "続ける",
   Cancel: "キャンセル",
   Back: "戻る",
-  "Fund my sandbox": "サンドボックスに入金",
   "Continue to allocation": "配分へ進む",
   "Share on X first": "まず X で共有",
   "I posted it": "投稿しました",
@@ -154,13 +148,8 @@ const dict: TranslationDictionary = {
   "Highest APY": "最高 APY",
   "Most Available": "利用可能量が最大",
   "Collateral A-Z": "担保 A-Z",
-  "Search loops": "ループを検索",
   "Sort by": "並べ替え",
-  "Sort loops": "ループを並べ替え",
   Trending: "トレンド",
-  "Highest max-leverage APY markets in the sandbox catalog.":
-    "サンドボックスカタログで最大レバレッジ APY が最も高いマーケット。",
-  "No loops in this category yet.": "このカテゴリにはまだループがありません。",
   COLLATERAL: "担保",
   BORROWABLE: "借入可能",
   "MAX APY": "最大 APY",
@@ -239,17 +228,12 @@ const dict: TranslationDictionary = {
   Health: "ヘルス",
   Debt: "負債",
   "Approved credit": "承認済みクレジット",
-  "Multiply value": "マルチプライ価値",
   "Average APY": "平均APY",
   Earned: "獲得済み",
   "Open positions": "オープンポジション",
   "Net carry": "ネットキャリー",
-  "Increase loop": "ループを増やす",
-  "Unwind loop": "ループを解消する",
   "Weighted average APY across supplied assets in the wallet.": "ウォレット内の供給資産の加重平均APY。",
   "Total yield already accrued by the portfolio.": "ポートフォリオがすでに獲得した合計利回り。",
-  "Open multiply positions in the wallet profile.": "ウォレットプロフィール内のオープンなマルチプライポジション。",
-  "Average realized carry across the current multiply book.": "現在のマルチプライブックにおける平均実現キャリー。",
   "Portfolio quick actions": "ポートフォリオのクイックアクション",
   "Lending Opportunities": "レンディング機会",
   "View markets": "マーケットを見る",
@@ -269,7 +253,6 @@ const dict: TranslationDictionary = {
   "The address may be wrong or the page may have moved.":
     "アドレスが間違っているか、ページが移動された可能性があります。",
   "Helpful links": "便利なリンク",
-  "Avana sandbox": "Avana サンドボックス",
   "Sign in with the wallet that created this transaction to view its receipt.":
     "この取引の領収書を表示するには、その取引を作成したウォレットでサインインしてください。",
   "We couldn't load this receipt right now.": "現在この領収書を読み込めませんでした。",
@@ -281,7 +264,6 @@ const dict: TranslationDictionary = {
   "Available Credit": "利用可能なクレジット",
   "Outstanding Loans": "未返済ローン",
   "Total Liquidity": "流動性合計",
-  "Loop Markets": "ループ市場",
   "Avg Max APY": "平均最大APY",
   "Avg Max Leverage": "平均最大レバレッジ",
   "Total TVL": "TVL合計",
@@ -328,12 +310,9 @@ const dict: TranslationDictionary = {
   "How can we help?": "どのようなお困りですか？",
   "Include what you were trying to do, what happened, and any transaction or market details that may help.":
     "何をしようとしていたか、何が起きたか、参考になる取引やマーケットの情報を含めてください。",
-  "Leveraged loop": "レバレッジループ",
   "No assets in your wallet": "ウォレットに資産がありません",
   "No deposited position found for this market.": "このマーケットの入金ポジションが見つかりません。",
   "No deposits found": "入金が見つかりません",
-  "No multiply positions yet. Open a loop to leverage your collateral.":
-    "Multiplyポジションはまだありません。ループを開いて担保にレバレッジをかけましょう。",
   "read more": "もっと見る",
   "Recommended articles": "おすすめ記事",
   "Request received": "リクエストを受け付けました",
@@ -367,7 +346,6 @@ const dict: TranslationDictionary = {
   "Your progress": "あなたの進捗",
   "{completed}/{total} completed": "{completed}/{total} 完了",
   "{label} amount": "{label}の金額",
-  "{label} multiplier": "{label}の倍率",
   "{name} ({symbol}) is a single-asset supply market on Avana. Suppliers earn the supply APY{rewardsClause} from borrower interest, net of the reserve factor. Yield tracks utilization, so the page focuses on the live supply rate, the supply/utilization mix, and the latest risk posture for this {marketType} market.":
     "{name}（{symbol}）は Avana の単一資産サプライマーケットです。供給者は借り手の利息から、準備率を差し引いた供給 APY{rewardsClause} を獲得します。利回りは利用率に連動するため、このページではライブの供給レート、供給/利用率の構成、そしてこの{marketType}マーケットの最新のリスク状況に焦点を当てています。",
   "{percent}% of liq. max": "清算上限の {percent}%",
@@ -388,8 +366,6 @@ const dict: TranslationDictionary = {
   Portfolio: "ポートフォリオ",
   "Quick actions": "クイックアクション",
   "My Deposits": "マイ預入",
-  "My Loops": "マイループ",
-  "Available to loop": "ループに使用可能",
   "Scroll table left": "表を左にスクロール",
   "Scroll table right": "表を右にスクロール",
   "Total Fees earned": "獲得手数料合計",
@@ -430,11 +406,7 @@ const dict: TranslationDictionary = {
   GOOD: "良好",
   "Health Factor": "ヘルスファクター",
   "I read it": "読みました",
-  "In this sandbox, every transaction is simulated — use previews to learn before sizing up.":
-    "このサンドボックスでは、すべての取引がシミュレーションです。規模を拡大する前にプレビューで学びましょう。",
   "Invite link": "招待リンク",
-  "Keep health factor headroom and treat rewards as practice, not production yield.":
-    "ヘルスファクターに余裕を持たせ、報酬は本番の利回りではなく練習として扱いましょう。",
   "Lend {name}": "{name} を貸す",
   "Lend actions": "貸出の操作",
   "Leverage options": "レバレッジオプション",
@@ -452,8 +424,6 @@ const dict: TranslationDictionary = {
   Min: "最小",
   "More information": "詳細情報",
   "More information about {topic}": "{topic} の詳細情報",
-  "Multiply {name}": "{name} を倍加",
-  "Multiply actions": "倍加の操作",
   "My Borrows": "マイ借入",
   "My LP Collaterals": "マイ LP 担保",
   "No activity matches the current filters.": "現在のフィルターに一致するアクティビティはありません。",
@@ -464,17 +434,14 @@ const dict: TranslationDictionary = {
   "No rewards ready": "請求可能な報酬なし",
   "Nothing borrowed yet": "まだ借入がありません",
   "Nothing supplied yet": "まだ供給がありません",
-  "Open a looped position in {name}.": "{name} でループポジションを開く。",
   "Open preferences": "設定を開く",
   Opened: "開設済み",
   "Overall quest completion progress": "クエスト全体の達成状況",
   Pending: "保留中",
-  "Pin a sandbox market": "サンドボックスマーケットをピン留め",
   "Pool actions": "プールの操作",
   "Portfolio views": "ポートフォリオビュー",
   Preferences: "設定",
   "Preview {product}": "{product} をプレビュー",
-  "Preview a sandbox trade": "サンドボックス取引をプレビュー",
   "Price chart": "価格チャート",
   "Processing…": "処理中…",
   "Progress: {progress} / {target}": "進捗：{progress} / {target}",
@@ -492,7 +459,6 @@ const dict: TranslationDictionary = {
   "Run a real preview in the session — nothing executes on-chain.":
     "セッションで実際のプレビューを実行 — オンチェーンでは何も実行されません。",
   Safe: "安全",
-  "Sandbox risk primer": "サンドボックスリスク入門",
   "Scope Health Factor": "ヘルスファクターの範囲",
   Search: "検索",
   "Search assets": "資産を検索",
@@ -539,8 +505,6 @@ const dict: TranslationDictionary = {
     "これは当社側の問題であり、お客様のウォレットの問題ではありません。もう一度お試しいただき、問題が続く場合はお知らせください。",
   "Back to borrow": "借入に戻る",
   "Back to lend": "貸出に戻る",
-  "Back to multiply": "マルチプライに戻る",
-  "Back to Umbrella": "アンブレラに戻る",
   "Back to rewards": "リワードに戻る",
   Loading: "読み込み中",
   "Loading…": "読み込み中…",
@@ -557,10 +521,8 @@ const dict: TranslationDictionary = {
   "Mobile menu": "モバイルメニュー",
   "Close menu": "メニューを閉じる",
   "Mobile navigation": "モバイルナビゲーション",
-  "Sandbox wallet": "サンドボックスウォレット",
   "This workspace uses a built-in demo wallet. There is no external wallet connection yet.":
     "このワークスペースは組み込みのデモウォレットを使用しています。外部ウォレットとの接続はまだありません。",
-  "Sandbox active": "サンドボックス有効",
   Connected: "接続済み",
   Copied: "コピーしました",
   "Copy address": "アドレスをコピー",
@@ -579,11 +541,8 @@ const dict: TranslationDictionary = {
   "Lending Positions": "貸出ポジション",
   "Lending Performance": "貸出パフォーマンス",
   "Lend Rewards": "貸出リワード",
-  "Multiply Overview": "ループ概要",
   "Debt & Risk": "債務とリスク",
-  "Position size, multiplier, and current net yield": "ポジション規模、倍率、現在の純利回り",
   "Borrowed balance, health factor, and liquidation threshold": "借入残高、ヘルスファクター、清算しきい値",
-  "No active Multiply debt": "有効なMultiply債務はありません",
   "Loading your portfolio": "ポートフォリオを読み込んでいます",
   "We couldn't load your portfolio": "ポートフォリオを読み込めませんでした",
   "The live portfolio fetch kept failing. Try again to re-run the client fetch without leaving the dashboard.":
@@ -596,9 +555,7 @@ const dict: TranslationDictionary = {
   "Asset analytics": "資産アナリティクス",
   "Pool analytics": "プールアナリティクス",
   "Lend market analytics": "貸出マーケットアナリティクス",
-  "Multiply market analytics": "マルチプライマーケットアナリティクス",
   "General FAQs": "一般的なFAQ",
-  "Multiply FAQs": "マルチプライFAQ",
   "BTC Pools": "BTCプール",
   "ETH Pools": "ETHプール",
   "Forex Pools": "Forexプール",
@@ -609,11 +566,6 @@ const dict: TranslationDictionary = {
   "Forex Based": "Forexベース",
   "Utility Based": "ユーティリティベース",
   "Smart Lend": "スマートレンド",
-  "BTC Loops": "BTCループ",
-  "ETH Loops": "ETHループ",
-  "Forex Loops": "Forexループ",
-  "Utility Loops": "ユーティリティループ",
-  "Smart Loops": "スマートループ",
   Watch: "ウォッチ",
   "At risk": "リスクあり",
   Unknown: "不明",
@@ -628,110 +580,40 @@ const dict: TranslationDictionary = {
   Referrals: "リファラル",
   "Rewards actions": "報酬アクション",
   "No quests here yet — check back soon.": "ここにはまだクエストがありません — また後で確認してください。",
-  "Boot your sandbox wallet": "サンドボックスウォレットを起動する",
   "Spin up your profile": "プロフィールを立ち上げる",
-  "Read the sandbox risk primer": "サンドボックスのリスク入門を読む",
   "Pin a market to your watchlist": "マーケットをウォッチリストにピン留めする",
   "Preview your first trade": "初めての取引をプレビューする",
-  "Make your first sandbox lend": "初めてのサンドボックスレンドを行う",
-  "Open your first sandbox borrow": "初めてのサンドボックスボローを開く",
-  "Open your first sandbox multiply": "初めてのサンドボックスマルチプライを開く",
-  "Repay a sandbox loan": "サンドボックスローンを返済する",
-  "Deleverage a sandbox position": "サンドボックスポジションをデレバレッジする",
   "Claim your first AVA reward": "初めてのAVAリワードを請求する",
-  "Sandbox cool-down": "サンドボックスのクールダウン",
-  "Lend $500 in the sandbox": "サンドボックスで$500レンドする",
-  "Borrow $200 in the sandbox": "サンドボックスで$200ボローする",
-  "Launch a multiply position": "マルチプライポジションを立ち上げる",
   "Tour all three products": "3つのプロダクトすべてを巡る",
-  "Curve sandbox tour": "Curveサンドボックスツアー",
-  "Uniswap v4 sandbox tour": "Uniswap v4サンドボックスツアー",
   "Risk check-in (5 min)": "リスクチェックイン（5分）",
-  "Multiply mindfulness (3 min)": "マルチプライマインドフルネス（3分）",
-  "3 borrow / repay loops": "3回のボロー／返済ループ",
   "2 deleverage drills": "2回のデレバレッジ演習",
-  "Explore 3 sandbox markets": "3つのサンドボックスマーケットを探索する",
   "Claim 3 quest rewards": "3つのクエストリワードを請求する",
-  "3-day sandbox streak": "3日間のサンドボックス連続記録",
-  "Grow sandbox portfolio by $1K": "サンドボックスポートフォリオを$1K増やす",
-  "Open 3 sandbox positions": "3つのサンドボックスポジションを開く",
-  "Copy your sandbox invite link": "サンドボックス招待リンクをコピーする",
-  "Send your first sandbox invite": "初めてのサンドボックス招待を送る",
-  "Fund a referred sandbox wallet": "紹介したサンドボックスウォレットに資金を入れる",
-  "Activate 3 sandbox friends": "3人のサンドボックスフレンドをアクティブにする",
   "Grow crew to 5 actives": "クルーを5人のアクティブメンバーに増やす",
-  "Referral sandbox hits $500": "紹介サンドボックスが$500に到達",
   "Referral streak (2 activations)": "紹介の連続記録（2回のアクティベーション）",
-  "Sandbox ambassador": "サンドボックスアンバサダー",
   "Your Avana session is live — this quest unlocks automatically when you land.":
     "Avanaセッションが有効です — 到着すると、このクエストは自動的にアンロックされます。",
-  "We create a demo wallet profile so every product sandbox shares the same session.":
-    "すべてのプロダクトサンドボックスが同じセッションを共有できるよう、デモウォレットプロフィールを作成します。",
   "Open the 60-second LP risk briefing before you simulate any position.":
     "ポジションをシミュレートする前に、60秒のLPリスクブリーフィングを開いてください。",
-  "Pick one Borrow, Lend, or Multiply market to track in your sandbox.":
-    "Borrow、Lend、またはMultiplyのマーケットから1つを選んで、サンドボックスで追跡しましょう。",
-  "Run a real sandbox preview on Borrow, Lend, or Multiply — no funds move.":
-    "Borrow、Lend、またはMultiplyで実際のサンドボックスプレビューを実行 — 資金は動きません。",
   "Deposit into any Lend market. Your live session records the quest automatically.":
     "任意のLendマーケットに預け入れます。ライブセッションがクエストを自動的に記録します。",
   "Borrow against LP collateral on the Borrow page — the quest completes on success.":
     "BorrowページでLP担保を使ってボローします — 成功するとクエストが完了します。",
-  "Create a Multiply position in the sandbox and let the session bridge log it.":
-    "サンドボックスでMultiplyポジションを作成し、セッションブリッジに記録させましょう。",
-  "Repay any borrow position you opened — a healthy loop in the demo world.":
-    "開いた任意のボローポジションを返済します — デモ世界での健全なループです。",
-  "Reduce any Multiply position to practice risk management.":
-    "任意のMultiplyポジションを縮小して、リスク管理を練習しましょう。",
   "Complete any other quest, then claim it to unlock this milestone.":
     "他の任意のクエストを完了してから請求すると、このマイルストーンがアンロックされます。",
   "Explore Avana for 2 minutes after your first login, then come back to claim.":
     "初回ログイン後、2分間Avanaを探索してから戻って請求してください。",
-  "Stack sandbox lend deposits until you reach $500 supplied.":
-    "供給額が$500に達するまで、サンドボックスのレンド預け入れを積み重ねましょう。",
   "Open borrow positions totaling $200 across any collateral pool.":
     "任意の担保プールで合計$200のボローポジションを開きます。",
-  "Open any Multiply position in the sandbox — size is up to you.":
-    "サンドボックスで任意のMultiplyポジションを開きます — サイズはお任せです。",
-  "Complete one action in Lend, Borrow, and Multiply.": "Lend、Borrow、Multiplyでそれぞれ1つのアクションを完了します。",
-  "Visit the Curve-style borrow market tour and mark it complete.":
-    "Curveスタイルのボローマーケットツアーを訪れて、完了としてマークしましょう。",
-  "Walk through the Uniswap v4 sandbox market and check it off.":
-    "Uniswap v4サンドボックスマーケットを歩き、チェックを付けましょう。",
-  "Stay in the sandbox for 5 minutes after login, then claim this patience badge.":
-    "ログイン後5分間サンドボックスに留まってから、この忍耐バッジを請求しましょう。",
-  "Take a 3-minute breather after login before claiming this calm-multiply quest.":
-    "ログイン後、3分間の休憩を取ってから、この穏やかなマルチプライクエストを請求しましょう。",
-  "Repay sandbox loans three times to practice healthy borrow cycles.":
-    "健全なボローサイクルを練習するため、サンドボックスローンを3回返済しましょう。",
-  "Deleverage Multiply positions twice to complete this risk drill.":
-    "Multiplyポジションを2回デレバレッジして、このリスク演習を完了しましょう。",
   "Complete tours on three different market pages across Avana.":
     "Avana全体で3つの異なるマーケットページのツアーを完了しましょう。",
   "Claim AVA from three separate quests to build your rewards streak.":
     "3つの別々のクエストからAVAを請求して、リワードの連続記録を築きましょう。",
   "Check in on three separate days after your first login.":
     "初回ログイン後、3日間の異なる日にチェックインしましょう。",
-  "Lend, borrow, or multiply until your combined sandbox volume hits $1,000.":
-    "合計サンドボックス取引量が$1,000に達するまで、レンド、ボロー、またはマルチプライしましょう。",
-  "Hold three open positions across Lend, Borrow, or Multiply.":
-    "Lend、Borrow、またはMultiplyで3つのオープンポジションを保有しましょう。",
   "Generate and copy a referral link you can share with friends.":
     "友達と共有できる紹介リンクを生成してコピーしましょう。",
-  "Simulate inviting a friend wallet into your Avana sandbox crew.":
-    "Avanaサンドボックスクルーへ友達のウォレットを招待するシミュレーションを行いましょう。",
   "Mark one invited friend as funded after they try a product action.":
     "招待した友達1人がプロダクトアクションを試したら、資金投入済みとしてマークしましょう。",
-  "Three referred wallets complete a product action in your sandbox network.":
-    "3つの紹介ウォレットがサンドボックスネットワークでプロダクトアクションを完了します。",
-  "Five referred wallets complete a product action in your sandbox network.":
-    "5つの紹介ウォレットがサンドボックスネットワークでプロダクトアクションを完了します。",
-  "Your referred crew reaches $500 in combined sandbox volume.":
-    "紹介したクルーの合計サンドボックス取引量が$500に達します。",
-  "Activate two sandbox referrals to keep your invite momentum going.":
-    "招待の勢いを保つため、2つのサンドボックス紹介をアクティブにしましょう。",
-  "Activate five friends in your sandbox referral network.":
-    "サンドボックス紹介ネットワークで5人の友達をアクティブにしましょう。",
   "Filter by category": "カテゴリーで絞り込む",
   "ETH volatility": "ETHボラティリティ",
   "Liquidity depth": "流動性の深さ",
@@ -793,8 +675,6 @@ const dict: TranslationDictionary = {
     "WBTC/WETHのLPポジションをBluechipスポークの担保として受け入れます。",
   "Pool onboarded": "プールをオンボード",
   "Dual-oracle": "デュアルオラクル",
-  "WETH/DAI LP positions accepted as collateral in the Uniswap v2 spoke.":
-    "WETH/DAIのLPポジションをUniswap v2スポークの担保として受け入れます。",
   Onboarded: "オンボード済み",
   "Parameters refreshed": "パラメータを更新",
   "Full-range USDC/USDT liquidity accepted in the Stable spoke at up to 78% LTV.":
@@ -812,8 +692,6 @@ const dict: TranslationDictionary = {
     "30d実現σ ≈ 年率58% — インパーマネントロスの最大の要因です。",
   "$4.1M of 2% depth across all tiers — ample for liquidations.":
     "全ティア合計で410万ドルの2%デプス — 清算には十分です。",
-  "30-minute TWAP can lag during sharp moves; mitigated by kink in the risk curve.":
-    "30分TWAPは急激な変動時に遅れることがあり、リスクカーブのキンクで緩和されます。",
   "Uniswap v3 core + NonFungiblePositionManager, both heavily audited and live for 4 years.":
     "Uniswap v3コア + NonFungiblePositionManagerで、いずれも入念に監査され4年間稼働しています。",
   "Rolling 90d IL averages 23bps per week for the 0.30% tier.":
@@ -829,9 +707,6 @@ const dict: TranslationDictionary = {
   "Chainlink feed + 30m TWAP with deviation guardrails.": "Chainlinkフィード + 30分TWAP、乖離ガードレール付き。",
   "$2.6M of 2% depth.": "260万ドルの2%デプス。",
   "BTC/ETH is highly correlated — IL is usually <15bps/week.": "BTC/ETHは高い相関があり、ILは通常週あたり<15bpsです。",
-  "WETH/DAI is a standard Uniswap v2 ETH/stable pair and a straightforward LP structure for collateral evaluation. The Uniswap v2 spoke admits it under conservative parameters because the pair still carries ETH volatility, while the stable quote side keeps the market easy to reason about.":
-    "WETH/DAIは標準的なUniswap v2のETH/ステーブルペアであり、担保評価においてわかりやすいLP構造です。Uniswap v2スポークはこれを保守的なパラメータで受け入れます。これは、このペアが依然としてETHのボラティリティを抱える一方で、安定したクオート側がマーケットを理解しやすく保つためです。",
-  "Added to the Uniswap v2 LPs.": "Uniswap v2 LPsに追加しました。",
   "Quarterly risk review — no changes to LTV.": "四半期リスクレビュー — LTVに変更なし。",
   "USDC and USDT both trade at parity and the pool is overwhelmingly used for order-routing, stability-seeking flow, and tight-spread execution. The Stable spoke admits it with a high LTV because peg-risk is shared, depth is enormous, and the pool behaves more like cash infrastructure than a typical volatile LP. That makes it a natural fit for users who want borrowing power while keeping the underlying collateral profile simple to reason about.":
     "USDCとUSDTはいずれも等価で取引され、このプールは主にオーダールーティング、安定性を求めるフロー、そして狭いスプレッドでの執行に使われます。Stableスポークはこれを高いLTVで受け入れます。これは、ペッグリスクが共有され、デプスが巨大で、プールが典型的なボラティリティのあるLPよりも現金インフラのように振る舞うためです。これにより、原資産の担保プロファイルを理解しやすく保ちながら借入余力を求めるユーザーにとって自然な選択肢となります。",
@@ -877,13 +752,9 @@ const dict: TranslationDictionary = {
     "ネイティブETH — LP担保でのディレクショナルキャリーのための主要なボラティリティのある借入資産。",
   "Mainnet launch": "メインネットローンチ",
   "The Merge": "The Merge",
-  "Wrapped ETH is the canonical ERC-20 used by Uniswap/Balancer/Aerodrome pools.":
-    "Wrapped ETHはUniswap/Balancer/Aerodromeのプールで使われる標準的なERC-20です。",
   "Wrapped BTC exposure — borrowed to short BTC against blue-chip LPs.":
     "Wrapped BTCのエクスポージャー — ブルーチップLPに対してBTCをショートするために借り入れられます。",
   Listed: "上場",
-  "USDC is Circle's regulated, fully-backed USD stablecoin and the main unit of account for this market. It anchors the protocol's conservative borrow curves, acts as the default settlement asset for LP carry strategies, and serves as the reference point for risk pricing across stablecoin routes. In practice, that makes it the most common asset for users who want cash-like exposure with on-chain mobility.":
-    "USDCはCircleの規制対応済みで完全に裏付けされた米ドルステーブルコインであり、このマーケットの主要な計算単位です。プロトコルの保守的な借入カーブを支え、LPキャリー戦略のデフォルト決済資産として機能し、ステーブルコインルート全体のリスクプライシングの基準点として役立ちます。実際には、これにより、オンチェーンでの機動性を伴う現金のようなエクスポージャーを求めるユーザーにとって最も一般的な資産となっています。",
   "USDC listed day-1 with 80% borrow cap.": "USDCは初日に80%の借入上限で上場しました。",
   "Simulated 2023-style de-peg; guardrails paused borrows for 18m.":
     "2023年型のデペッグをシミュレーション。ガードレールが18分間借入を一時停止しました。",
@@ -995,37 +866,24 @@ const dict: TranslationDictionary = {
   Curve: "Curve",
   Balancer: "Balancer",
   Aerodrome: "Aerodrome",
-  "Uniswap v2 LPs": "Uniswap v2 LPs",
   "Uniswap v3 Stable LPs": "Uniswap v3 Stable LPs",
   "Uniswap v3 Blue-Chip LPs": "Uniswap v3 Blue-Chip LPs",
   "Uniswap v3 Governance & DAO LPs": "Uniswap v3 Governance & DAO LPs",
-  "Curve Stable LPs": "Curve Stable LPs",
-  "Curve Correlated LPs": "Curve Correlated LPs",
-  "Curve Crypto LPs": "Curve Crypto LPs",
-  "Balancer Stable LPs": "Balancer Stable LPs",
-  "Balancer Correlated LPs": "Balancer Correlated LPs",
-  "Balancer Weighted LPs": "Balancer Weighted LPs",
-  "Balancer Boosted LPs": "Balancer Boosted LPs",
-  "Balancer reCLAMM LPs": "Balancer reCLAMM LPs",
   "Aerodrome Basic Stable LPs": "Aerodrome Basic Stable LPs",
   "Aerodrome Basic Volatile LPs": "Aerodrome Basic Volatile LPs",
   "Aerodrome Slipstream Blue-Chip LPs": "Aerodrome Slipstream Blue-Chip LPs",
   Stablecoin: "ステーブルコイン",
   "MakerDAO stablecoin": "MakerDAOステーブルコイン",
-  "Curve native stablecoin": "Curveネイティブステーブルコイン",
   "Aave native stablecoin": "Aaveネイティブステーブルコイン",
   "Circle EUR stablecoin": "Circle EURステーブルコイン",
   "ERC-20 wrapped ETH": "ERC-20 wrapped ETH",
   "Native asset": "ネイティブ資産",
   "ERC-20 wrapped BTC": "ERC-20 wrapped BTC",
-  "Coinbase wrapped BTC": "Coinbase wrapped BTC",
   "Liquid staking receipt": "リキッドステーキングレシート",
   "Rebase-less stETH wrapper": "リベースなしのstETHラッパー",
   "rETH liquid staking": "rETHリキッドステーキング",
-  "Coinbase liquid staking": "Coinbaseリキッドステーキング",
   "Aave governance token": "Aaveガバナンストークン",
   "Uniswap governance token": "Uniswapガバナンストークン",
-  "Curve governance token": "Curveガバナンストークン",
   "Constant-product LP tokens": "コンスタントプロダクトLPトークン",
   "Concentrated-liquidity LP positions": "集中流動性LPポジション",
   "StableSwap LP tokens": "StableSwap LPトークン",
@@ -1053,41 +911,25 @@ const dict: TranslationDictionary = {
   "Authenticated sessions stay locked until Convex confirms access.":
     "Convex がアクセスを確認するまで、認証済みセッションはロックされたままです。",
   "You're all set.": "準備が完了しました。",
-  "Your Avana sandbox is ready.": "Avana サンドボックスの準備が整いました。",
-  "You've already claimed your practice funds. Jump back into the dashboard to keep exploring.":
-    "練習用資金はすでに受け取り済みです。ダッシュボードに戻って、引き続き試してみましょう。",
   "Reading your wallet history": "ウォレットの履歴を読み込んでいます",
-  "Checking sandbox eligibility": "サンドボックスの利用資格を確認しています",
   "Selecting markets to fund": "資金を配分する市場を選択しています",
-  "Sizing your practice portfolio": "練習用ポートフォリオの規模を調整しています",
-  "Minting your practice funds": "練習用資金を発行しています",
   "Opening LP & lending positions": "LP とレンディングのポジションを開設しています",
-  "Building your multiply loops": "レバレッジループを構築しています",
-  "Finalizing your sandbox": "サンドボックスを仕上げています",
   "One moment.": "少々お待ちください。",
   "Analyzing your wallet…": "ウォレットを分析しています…",
   "Hang tight.": "もう少しお待ちください。",
-  "Funding your sandbox…": "サンドボックスに資金を投入しています…",
   "Liquid assets": "流動資産",
   "Hold & swap tokens": "トークンを保有・スワップ",
   "LP collateral": "LP 担保",
   "Borrow against LP": "LP を担保に借り入れ",
   Lending: "レンディング",
   "Supply to earn": "預け入れて収益を得る",
-  "Leverage loops": "レバレッジループ",
   "You'll get": "受け取れるもの",
-  "A full practice portfolio": "充実した練習用ポートフォリオ",
   "Claiming allocation…": "割り当てを受け取っています…",
   "Claim your allocation": "割り当てを受け取る",
-  "Welcome to the Avana Sandbox": "Avana サンドボックスへようこそ",
-  "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.":
-    "このリスクのない Avana サンドボックスでは、サンドボックス資金を使って、練習用の LP ポジションを担保にした借り入れ、レンディング、ループ戦略を試せます。実際の資産は使いません。ウォレットの署名も不要です。本番アプリに切り替える前に、Avana の仕組みを手早く理解できます。",
-  "Unlimited practice funds": "無制限の練習資金",
   "No transactions yet": "まだ取引がありません",
   "No transactions to sign": "署名するトランザクションなし",
   "No real assets involved": "実資産は不使用",
   "Connect a wallet.": "ウォレットを接続してください。",
-  "We'll set up your sandbox and scope it to your address.": "サンドボックスを設定し、あなたのアドレスに紐づけます。",
   "By connecting your wallet, you agree to the": "ウォレットを接続することで、以下に同意したものとみなされます:",
   "Terms & Conditions": "利用規約",
   and: "および",
@@ -1096,25 +938,13 @@ const dict: TranslationDictionary = {
   "Your wallet is on the waitlist.": "あなたのウォレットはウェイトリストに登録されました。",
   "wallets onboarded.": "件のウォレットが登録済みです。",
   "Wallet connected.": "ウォレットを接続しました。",
-  "Fund your sandbox to start exploring.": "サンドボックスに資金を投入して、体験を始めましょう。",
-  "Every wallet gets sandbox funds to practice with, spread across markets so you can try every flow risk-free.":
-    "どのウォレットにも練習用のサンドボックス資金が配られ、複数の市場に分散されるため、あらゆる操作をリスクなく試せます。",
   "You're eligible.": "利用資格があります。",
-  "Your practice portfolio is ready.": "練習用ポートフォリオの準備が整いました。",
-  "sandbox seats remain.": "件のサンドボックス枠が残っています。",
   "Tell your network about Avana.": "Avana をあなたのネットワークに知らせましょう。",
   "Post the prepared message on X.": "用意されたメッセージを X に投稿してください。",
   "Open X": "X を開く",
   Skip: "スキップ",
   "Here's what you'll get.": "受け取れる内容は次のとおりです。",
-  "Practice funds across assets, LP collateral, lending, and multiply.":
-    "さまざまな資産、LP 担保、レンディング、レバレッジにわたる練習用資金。",
   "The allocation cap was reached.": "割り当ての上限に達しました。",
-  "Your Avana sandbox is ready to explore.": "Avana サンドボックスの準備が整い、体験できる状態になりました。",
-  "Your practice funds are now in your wallet. Jump into the dashboard to start exploring.":
-    "練習用資金がウォレットに届きました。ダッシュボードに移動して、体験を始めましょう。",
-  "Sandbox onboarding requires a Convex connection. Set":
-    "サンドボックスのオンボーディングには Convex 接続が必要です。次を設定してください:",
   "to continue.": "続けるには。",
   Confirmed: "確認済み",
   Receipt: "取引記録",
@@ -1151,7 +981,6 @@ const dict: TranslationDictionary = {
   "Settling your balance": "残高を精算しています",
   "Freeing up your borrowing power": "借入可能額を解放しています",
   "Opening your base position": "ベースポジションを開設しています",
-  "Multiplying your collateral": "担保をループしています",
   "Reading your leveraged position": "レバレッジポジションを読み込んでいます",
   "Unwinding part of your loop": "ループの一部を解消しています",
   "Repaying borrowed funds": "借り入れた資金を返済しています",
@@ -1185,7 +1014,6 @@ const dict: TranslationDictionary = {
   Strategy: "戦略",
   "A Beginner's Guide to LP Collateral": "LP担保の初心者ガイド",
   "What LP Collateral Makes Possible": "LP担保が可能にすること",
-  "Thinking Clearly About Yield Looping": "イールドループを明確に考える",
   "How to Hedge an LP Position": "LPポジションのヘッジ方法",
   "Making LP Collateral Usable": "LP担保を使えるようにする",
   "Avana and the Next Step for Liquidity Providers": "Avanaと流動性提供者の次のステップ",
@@ -1198,25 +1026,17 @@ const dict: TranslationDictionary = {
   "Which DEXs do you use the most?": "よく使う DEX はどれですか？",
   "Select all that apply": "該当するものをすべて選択",
   "Last step.": "最後のステップです。",
-  "Let's fund your sandbox.": "サンドボックスに入金しましょう。",
-  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.":
-    "練習用の資金を各マーケットに配分し、リスクゼロで貸す・借りる・ループができるようにします。",
   "Good news, you're in.": "朗報です、ご参加いただけます。",
   of: "/",
-  "sandbox seats already claimed.": "件のサンドボックス枠がすでに取得されています。",
-  "Your sandbox is live.": "サンドボックスが有効になりました。",
   "Everything's funded and waiting. Dive in whenever you're ready.":
     "入金も準備も完了しています。いつでも始められます。",
   "Connect an EVM wallet.": "EVM ウォレットを接続してください。",
-  "We can't reach the sandbox right now.": "現在サンドボックスに接続できません。",
   "Please try again in a moment.": "しばらくしてからもう一度お試しください。",
   "Your session is safe. This is a temporary connection issue, not your wallet.":
     "セッションは安全です。これは一時的な接続の問題であり、お客様のウォレットの問題ではありません。",
   "Something went wrong.": "問題が発生しました。",
   "We couldn't load this page.": "このページを読み込めませんでした。",
   "APY breakdown": "APYの内訳",
-  "Active Umbrella capital currently available to absorb eligible deficits for this asset.":
-    "この資産の対象となる不足額を吸収できる、現在利用可能なUmbrellaの有効資本。",
   "Active staker capital": "有効なステーカー資本",
   "Additional rewards used to attract coverage capital, especially during bootstrap periods or when coverage is below target.":
     "カバレッジ資本を集めるための追加報酬。特に立ち上げ期間やカバレッジが目標未達のときに付与されます。",
@@ -1235,29 +1055,17 @@ const dict: TranslationDictionary = {
   "Liquidation recapture": "清算回収",
   "Local deductible": "ローカル免責額",
   "Target coverage": "目標カバレッジ",
-  "The Hub asset this Umbrella market protects. Deficits from any eligible Spoke borrowing this reserve can be covered by this market.":
-    "このUmbrella市場が保護するHub資産。この市場は、このリザーブを借りる対象Spokeで発生した不足額をカバーできます。",
-  "The amount of Umbrella capital currently deposited and available to absorb deficits for this covered reserve. Capital in cooldown is no longer counted as fully available protection.":
-    "このカバー対象リザーブの不足額を吸収できる、現在預け入れられたUmbrella資本。クールダウン中の資本は完全に利用可能な保護とはみなされません。",
   "The amount of staked capital currently in the cooldown period before it can be withdrawn. A larger cooling balance means less protection may remain available if those funds exit.":
     "引き出し前のクールダウン期間にあるステーク資本。クールダウン残高が大きいほど、資金が退出した際に残る保護が少なくなる可能性があります。",
   "The core staking yield paid for providing protection capital to this surface.":
     "このカバレッジ面に保護資本を提供することで得られる基本ステーキング利回り。",
   "The portion of yield supported by liquidation-linked economics generated by this reserve-per-Spoke surface, such as liquidation fees or SVR.":
     "このリザーブ単位のSpokeカバレッジ面で生じる、清算手数料やSVRなど清算関連の経済活動に支えられた利回りの部分。",
-  "The staking rewards you have earned for providing Umbrella coverage. Rewards may include protocol incentives and other compensation for taking slashing and lockup risk.":
-    "Umbrellaのカバレッジ提供で獲得したステーキング報酬。プロトコルのインセンティブや、スラッシングとロックアップのリスクへの補償が含まれる場合があります。",
-  "Umbrella surface details": "Umbrellaカバレッジ面の詳細",
   "View {symbol} surface details": "{symbol}カバレッジ面の詳細を見る",
-  "The rewards currently earned by this Umbrella position, allocated across the underlying APY sources.":
-    "このUmbrellaポジションが現在獲得している報酬。基盤となるAPYの提供元に配分されています。",
-  "The estimated annual yield for keeping Umbrella capital available as coverage for this market.":
-    "この市場のカバレッジとしてUmbrella資本を利用可能に保つ場合の推定年利。",
   "Est. annual rewards": "推定年間報酬",
   "Based on amount entered": "入力額に基づく",
   "Slashable stake": "スラッシング対象ステーク",
   "Market staked": "市場ステーク額",
-  "Umbrella APY": "Umbrella APY",
   "Umbrella market": "Umbrella市場",
   "Cooled stake": "クールダウン中のステーク",
   "Start cooldown": "クールダウンを開始",
@@ -1265,8 +1073,6 @@ const dict: TranslationDictionary = {
   "Coverage is defined for a specific Hub reserve and covers eligible deficits from every Spoke borrowing that reserve, including credit-line draws.":
     "カバレッジは特定のHubリザーブごとに定義され、そのリザーブを借り入れる各Spokeの対象不足額（クレジットラインからの引き出しを含む）をカバーします。",
   "First-loss protection": "ファーストロス保護",
-  "The Deficit Offset absorbs the first layer of loss. Only the residual deficit beyond that offset can reach staked Umbrella coverage.":
-    "不足額オフセットが最初の損失層を吸収します。そのオフセットを超える残余不足額だけが、ステークされたUmbrellaカバレッジに達します。",
   "Independent underwriting": "独立した引受評価",
   "Target liquidity and reward emissions reflect reserve risk, economics, opportunity cost, and the slashing and lockup risk accepted by coverage providers.":
     "目標流動性と報酬配分は、リザーブのリスク、経済性、機会費用、そしてカバレッジ提供者が受け入れるスラッシングとロックアップのリスクを反映します。",
@@ -1281,7 +1087,6 @@ const dict: TranslationDictionary = {
   "Includes active stake and cooldown": "アクティブなステークとクールダウンを含む",
   "Amount Avana covers first before user-staked coverage is exposed. Stakers only take losses once realized deficits exceed this offset.":
     "ユーザーがステークしたカバレッジがさらされる前に、Avana がまずカバーする金額。ステーカーは、実現した不足額がこのオフセットを超えたときにのみ損失を負担します。",
-  "Close umbrella actions": "アンブレラのアクションを閉じる",
   Cooldown: "クールダウン",
   Cooling: "クールダウン中",
   Coverage: "カバレッジ",
@@ -1293,19 +1098,13 @@ const dict: TranslationDictionary = {
   "Desired amount of user-staked coverage for this asset.":
     "このアセットに対する、ユーザーがステークするカバレッジの目標額。",
   "Dynamic rewards": "ダイナミック報酬",
-  "Each Umbrella stake token covers deficits for its matching borrowed asset on the same network.":
-    "各アンブレラステークトークンは、同一ネットワーク上で対応する借入アセットの不足額をカバーします。",
-  "Emissions adjust against target liquidity, and each staked asset can earn multiple reward tokens.":
-    "エミッションはターゲット流動性に応じて調整され、各ステーク済みアセットは複数の報酬トークンを獲得できます。",
   "Estimated annual staking yield paid to stakers of this asset.":
     "このアセットのステーカーに支払われる年間ステーキング利回りの推定値。",
   "In cooldown": "クールダウン中",
   "Isolated slashing": "分離型スラッシング",
   "Learn Umbrella": "アンブレラについて学ぶ",
-  "Umbrella Overview": "Umbrellaの概要",
   "Module assets": "モジュールアセット",
   More: "その他",
-  "More umbrella actions": "その他のアンブレラアクション",
   "Next cooldown": "次のクールダウン",
   "Next market risk": "次のマーケットリスク",
   "Once cooldown finishes, users can unstake during the withdrawal window before cooldown has to be restarted.":
@@ -1317,10 +1116,6 @@ const dict: TranslationDictionary = {
   Restart: "再開",
   "Restart cooldown": "クールダウンを再開",
   Stake: "ステーク",
-  "Stake in umbrella": "アンブレラにステーク",
-  "Unstake from umbrella": "アンブレラからアンステーク",
-  "Stake, claim rewards, start cooldown, or unstake from the umbrella safety module.":
-    "アンブレラセーフティモジュールでステーク、報酬の請求、クールダウン開始、アンステークを行えます。",
   "Stake, claim, cooldown, unstake": "ステーク・請求・クールダウン・アンステーク",
   "Start cooldown before withdrawing. During cooldown, the position keeps earning incentives and remains slashable.":
     "引き出す前にクールダウンを開始してください。クールダウン中もポジションはインセンティブを獲得し続け、スラッシングの対象となります。",
@@ -1330,20 +1125,13 @@ const dict: TranslationDictionary = {
   "Total user-staked capital available to absorb losses for this asset.":
     "このアセットの損失を吸収するために利用可能な、ユーザーがステークした資本の合計。",
   Umbrella: "アンブレラ",
-  "Umbrella Cooldown": "アンブレラクールダウン",
-  "Umbrella actions": "アンブレラアクション",
-  "Umbrella activity": "アンブレラのアクティビティ",
   "Umbrella positions": "アンブレラポジション",
-  "Umbrella positions are split by asset and network, so each stake token has its own risk and reward profile.":
-    "アンブレラポジションはアセットとネットワークで分割されるため、各ステークトークンは独自のリスクと報酬プロファイルを持ちます。",
   Unstake: "解除",
   "Unstake window": "アンステークウィンドウ",
   "Weighted APY": "加重 APY",
   "Withdrawal ready": "引き出し可能",
   "Withdrawal window": "引き出しウィンドウ",
-  "You have no Umbrella positions yet.": "アンブレラポジションはまだありません。",
   "Your Umbrella": "あなたのアンブレラ",
-  "Your Umbrella stake": "あなたのアンブレラステーク",
   "After cooldown completes, there is a short window to unstake. If it expires, cooldown must be started again.":
     "クールダウン完了後、アンステーク可能な短いウィンドウがあります。期限が切れると、クールダウンを再度開始する必要があります。",
   "base {base} + reward {reward}": "ベース {base} + 報酬 {reward}",
@@ -1374,8 +1162,6 @@ const dict: TranslationDictionary = {
   "{count} assets": "{count} 資産",
   "{count} positions": "{count} ポジション",
   "{count} rewards": "{count} 件のリワード",
-  "{name} ({symbol}) / {borrowName} ({borrow}) is a leveraged multiply market on Avana. Supply {symbol} as collateral to loop into {borrow} exposure, up to {leverage}, in a route dedicated to leveraged positions rather than LP collateral pools. Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this {marketType} market. Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.":
-    "{name}（{symbol}）/ {borrowName}（{borrow}）は Avana のレバレッジ型マルチプライ市場です。{symbol} を担保として供給すると、LP 担保プールではなくレバレッジポジション専用のルートで、最大 {leverage} まで {borrow} エクスポージャーへループできます。純リターンは供給/借入スプレッド、利用率、選択した倍率に連動するため、金利と利用可能な流動性のリバランスに応じてループ結果は変動します。本ページは、この {marketType} 市場のライブのレバレッジ上限、供給/借入の構成、利用可能な流動性、そして最新のリスク状況に焦点を当てています。担保係数、清算しきい値、借入コスト、利用可能な流動性は、ループのリターンと、ストレス時にポジションをどれだけ早く解消できるかの両方に影響するため、ユーザーはこれらに注意すべきです。",
   "{progress}/{target} {currency}": "{progress}/{target} {currency} 達成",
   "1D": "1D",
   "30 Days": "30日間",
@@ -1415,7 +1201,6 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "ダッシュボードタブ",
   Date: "日付",
   Dismiss: "閉じる",
-  "Explore Umbrella": "アンブレラを見る",
   "Express actions": "エクスプレス操作",
   Fees: "手数料",
   "Fees Earned": "獲得手数料",
@@ -1447,8 +1232,6 @@ const dict: TranslationDictionary = {
   Long: "ロング",
   "Long, short, and net USD per token across every product.":
     "全プロダクトにわたるトークンごとのロング・ショート・ネットの USD。",
-  "LOOP APY": "ループ APY",
-  "Loop market": "ループ市場",
   "LP APR": "LP APR",
   "Pool APR": "プール APR",
   "Live value of this collateral, and the LP trading fees it earns.":
@@ -1457,28 +1240,20 @@ const dict: TranslationDictionary = {
   "Market-wide liquidation activity and near-liquidation exposure over the last 24 hours.":
     "過去 24 時間の市場全体の清算活動と清算間近のエクスポージャー。",
   "Minimum received": "最小受取額",
-  "Multiply Balance": "マルチプライ残高",
-  "Multiply Exposure": "マルチプライエクスポージャー",
-  "Multiply Health": "マルチプライヘルス",
-  "Multiply Rewards": "マルチプライリワード",
   "Multiply TVL": "マルチプライ TVL",
   "My Collaterals": "マイ担保",
   "My Debts": "マイ負債",
   Net: "ネット",
-  "Net Portfolio Value = Assets − Debt. Assets: wallet balances, lending supplied, borrow collateral, any borrowed funds you still hold, your Multiply position value, and Umbrella staked + rewards. Debt: borrow loans and Multiply borrowing. Borrowing doesn't change this number — the cash you receive is an asset that offsets the new debt.":
-    "純ポートフォリオ価値 = 資産 − 負債。資産：ウォレット残高、貸出供給分、借入担保、まだ保有している借入資金、マルチプライポジションの価値、アンブレラのステーク分 + リワード。負債：借入ローンとマルチプライの借入。借入をしてもこの数値は変わりません — 受け取る現金は新たな負債を相殺する資産だからです。",
   Network: "ネットワーク",
   No: "いいえ",
   "No active loans. Borrow against your collateral to get started.":
     "アクティブなローンはありません。担保を使って借入を始めましょう。",
-  "No active Multiply positions": "アクティブなマルチプライポジションはありません",
   "No assets found.": "資産が見つかりません。",
   "No collateral deposited yet. Supply an asset to start backing loans.":
     "まだ担保が入金されていません。資産を供給してローンの裏付けを始めましょう。",
   "No liquidity pools yet. Provide liquidity to start earning trading fees.":
     "まだ流動性プールがありません。流動性を提供して取引手数料を得始めましょう。",
   "No supplied position to withdraw": "引き出せる供給ポジションがありません",
-  "No Umbrella positions yet.": "アンブレラポジションはまだありません。",
   "No wallet balances found.": "ウォレット残高が見つかりません。",
   NONE: "なし",
   now: "現在",
@@ -1512,11 +1287,8 @@ const dict: TranslationDictionary = {
   "Repay or add collateral to reduce your liquidation risk.":
     "清算リスクを減らすには、返済するか担保を追加してください。",
   "Review risk": "リスクを確認",
-  "Negative net APY: borrow costs exceed supply yield. Review before opening this loop.":
-    "ネット APY がマイナスです。借入コストが供給利回りを上回っています。このループを開く前にご確認ください。",
   "Review swap": "スワップを確認",
   "Rewards Earned": "獲得リワード",
-  Sandbox: "サンドボックス",
   "Scenario price": "シナリオ価格",
   "Search collateral pools, assets to borrow, and assets to lend.": "担保プール、借入資産、貸出資産を検索。",
   "Select a position to preview.": "プレビューするポジションを選択してください。",
@@ -1591,19 +1363,14 @@ const dict: TranslationDictionary = {
   "Collateral price move": "担保価格の変動",
   "Debt change amount": "負債変更額",
   "Drop buffer": "下落バッファ",
-  "Equity value at this leverage, by scenario.": "このレバレッジでのエクイティ価値（シナリオ別）。",
-  "Estimate on {equity} equity. Assumes rates hold; leverage amplifies both gains and losses.":
-    "{equity} のエクイティに基づく見積もり。金利は一定と仮定。レバレッジは利益も損失も拡大します。",
   "Estimate. Variable rate — actual cost will differ.": "見積もり。変動金利 — 実際のコストは異なります。",
   Horizon: "期間",
   "Lend Outlook": "貸出アウトルック",
-  "Leverage multiplier": "レバレッジ倍率",
   Liquidated: "清算済み",
   "Liquidation price": "清算価格",
   "Liquidation prices": "清算価格（各担保）",
   "Move collateral prices or your debt and watch health factor respond.":
     "担保価格や負債を動かして、ヘルスファクターの反応を確認しましょう。",
-  "Multiply Outlook": "Multiply アウトルック",
   Next: "次へ",
   "Price sensitivity": "価格感応度",
   "Projected interest cost": "予想利息コスト",
@@ -1659,30 +1426,14 @@ const dict: TranslationDictionary = {
     "ヘルスファクターと、このポジションが清算される担保価値。1.0を下回ると清算されます。",
   "The collateral you supply and the asset you borrow against it to build leverage.":
     "レバレッジを構築するために供給する担保と、それを担保に借り入れる資産。",
-  "Your own capital in the loop (exposure minus debt). Exposure is your total leveraged position.":
-    "ループにおけるエクイティ（エクスポージャーから負債を差し引いた額）。エクスポージャーは、レバレッジをかけたポジションの合計です。",
   "Net yield after borrow costs, on your capital. The figure below is interest earned so far, ticking live.":
     "エクイティに対する、借入コスト差引後のネット利回り。下の数値はこれまでに獲得した利息で、リアルタイムで増加します。",
-  "Health factor, and the collateral price at which this loop is liquidated. Below 1.0 triggers liquidation.":
-    "ヘルスファクターと、このループが清算される担保価格。1.0を下回ると清算されます。",
-  "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)":
-    "リアルタイムで発生する、Multiplyのループ全体で獲得したネットキャリー（供給利回りから借入コストを差し引いた額）",
   "Average APY across your staked positions, weighted by value.": "ステークポジション全体の加重平均APY。",
   "Additional amount you can borrow against your pledged collateral within Avana credit limits":
     "Avanaの信用枠内で、差し入れた担保に対してさらに借り入れ可能な金額",
   "Amount an active loan can lose before reaching liquidation; unavailable when you have no debt":
     "アクティブなローンが清算に達するまでに失いうる金額で、負債がない場合は利用できません",
-  "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.":
-    "合算清算価値をMultiplyの総負債で割った値。高いほど安全、1未満は清算リスクがあります。",
-  "Equity-weighted net APY after supply yield and borrow cost":
-    "供給利回りと借入コストを反映した、エクイティ加重ネットAPY",
-  "Exposure, return, and liquidation risk for each active loop":
-    "各アクティブループのエクスポージャー、リターン、清算リスク",
-  "Gross Multiply exposure after looping across all positions":
-    "すべてのポジションでループした後のMultiplyの総エクスポージャー",
   "Interest earned as a percentage of principal you supplied": "供給した元本に対する割合で示した獲得利息",
-  "Portfolio leverage as position value divided by equity":
-    "ポジション価値をエクイティで割ったポートフォリオレバレッジ",
   "Projected earnings at current rates": "現在の金利に基づく予想収益",
   "Supply interest accruing in real time across your lending positions (excludes protocol rewards)":
     "貸出ポジション全体でリアルタイムに発生する供給利息（プロトコル報酬を除く）",
@@ -1814,7 +1565,6 @@ const dict: TranslationDictionary = {
     "供給資金のうち現在貸し出されている割合。利用率が高いと金利が上がり、引き出しが遅れることがあります。",
   "The liquidity pool you can pledge as collateral to borrow against.":
     "担保として預け入れ、借入に使える流動性プール。",
-  "The maximum leverage available on this loop.": "このループで利用できる最大レバレッジ。",
   "The most you can borrow as a share of your collateral value.": "担保価値に対して借りられる最大の割合。",
   "The token you can borrow against your collateral.": "担保を使って借りられるトークン。",
   "The token you can supply to earn yield.": "供給して利回りを得られるトークン。",
@@ -1835,7 +1585,6 @@ const dict: TranslationDictionary = {
   "Clear {facet} filter": "{facet}フィルターをクリア",
   "Filter by": "絞り込み",
   Hubs: "ハブ",
-  "No loops match these filters.": "条件に一致するループはありません。",
   "No matches": "該当なし",
   "Search chains": "チェーンを検索",
   "Search hubs": "ハブを検索",
@@ -1845,7 +1594,6 @@ const dict: TranslationDictionary = {
   Volatile: "ボラタイル",
   Chains: "チェーン",
   Other: "その他",
-  Stocks: "株式",
   "Filter markets": "マーケットを絞り込む",
 }
 

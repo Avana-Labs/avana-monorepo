@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { ProductionLendTransactionAdapter } from "@/app/lib/lend-system/production-transaction-adapter"
-import type { LendSandboxActionResult, LendTransactionPreview } from "@/app/lib/lend-system/contracts"
+import type { LendActionResult, LendTransactionPreview } from "@/app/lib/lend-system/contracts"
 
 describe("ProductionLendTransactionAdapter", () => {
   it("creates non-simulated intents and delegates preview/execute to injected production handlers", async () => {
@@ -36,7 +36,7 @@ describe("ProductionLendTransactionAdapter", () => {
       },
     }
 
-    const result: LendSandboxActionResult = {
+    const result: LendActionResult = {
       preview,
       receipt: {
         id: "tx-live",

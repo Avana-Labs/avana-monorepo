@@ -5,7 +5,7 @@ import { useConvexAuth } from "convex/react"
 /**
  * Args for an auth-required Convex query, or "skip" until Convex has authenticated.
  *
- * Wallet-scoped reads call requireSandboxWallet, which THROWS for an unauthenticated request,
+ * Wallet-scoped reads call requireWallet, which THROWS for an unauthenticated request,
  * and useQuery re-throws that during render — taking the page to its error boundary. That
  * happens whenever a wallet id is known before the JWT is attached: the local fallback session
  * while auth mints, a token refresh, or Playwright test mode against a real backend.

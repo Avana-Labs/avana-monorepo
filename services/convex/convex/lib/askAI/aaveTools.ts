@@ -203,7 +203,7 @@ export function createAaveModelTools(deps: Dependencies) {
     }),
     read_aave_positions: tool({
       description:
-        "Read the authenticated wallet's real on-chain Aave summary, positions, activity or v4 history. Keep Avana sandbox balances separate.",
+        "Read the authenticated wallet's real on-chain Aave summary, positions, activity or v4 history. Keep Avana balances separate.",
       inputSchema: walletSchema,
       execute: (input) =>
         run("read_aave_positions", () =>
@@ -223,7 +223,7 @@ export function createAaveModelTools(deps: Dependencies) {
                 summary,
                 details,
                 ...(history ? { history } : {}),
-                ...(avana ? { avanaSandbox: avana } : {}),
+                ...(avana ? { avana } : {}),
               }),
               dataProvenance: "onchain",
             }

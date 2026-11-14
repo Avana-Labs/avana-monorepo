@@ -29,7 +29,7 @@ const fixtures = [
   },
   {
     prompt:
-      "What is my exact net value in the Avana sandbox? Give the component values and the final total, with no rounding.",
+      "What is my exact net value on Avana? Give the component values and the final total, with no rounding.",
     expectedTool: "read_portfolio",
     required: /(?:net value|component|total)/i,
   },

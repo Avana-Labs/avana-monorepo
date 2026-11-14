@@ -11,7 +11,7 @@ function normalizeBorrowAccount(account: BorrowAccountState): BorrowAccountState
   }
 }
 
-/** Repair persisted sandbox sessions that predate rewardPositions on accounts. */
+/** Repair persisted sessions that predate rewardPositions on accounts. */
 export function normalizeBorrowSystemState(state: BorrowSystemState): BorrowSystemState {
   const accounts: BorrowSystemState["accounts"] = {}
   for (const [walletId, account] of Object.entries(state.accounts)) {

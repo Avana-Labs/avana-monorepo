@@ -84,13 +84,13 @@ describe("widget builders", () => {
   })
 
   it("record the snapshot and fee window in the assumptions widget", () => {
-    const widget = buildAssumptionsWidget(ctx, { provenance: "sandbox" })
+    const widget = buildAssumptionsWidget(ctx, { provenance: "connected_wallet" })
     expect(widget).toMatchObject({
       type: "assumptions",
       snapshotId: ctx.snapshotId,
       asOf: ctx.asOf,
       feeWindowDays: FEE_WINDOW_DAYS,
-      provenance: "sandbox",
+      provenance: "connected_wallet",
     })
   })
 })

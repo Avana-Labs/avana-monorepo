@@ -103,7 +103,6 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   "Preview {product}",
   "Product",
   "Risk",
-  "Sandbox",
   "See on Etherscan",
   "Short",
   "Source",

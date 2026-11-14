@@ -363,7 +363,7 @@ export type AllocationRow = {
 /**
  * Row used by the detail-page activity tables.
  *
- * @convex-source Prefer sandbox `transactions` by `marketSlug`; fall back to
+ * @convex-source Prefer app `transactions` by `marketSlug`; fall back to
  *   seeded `walletEvents` when no live rows exist. `amountLabel` pre-formats
  *   `amountUsd` (sign based on `kind` is a UI concern).
  * @convex-query  `markets.getRecentTransactions({ scope, slug, limit })`
@@ -385,8 +385,8 @@ export type TxHistoryRow = {
   walletLabel?: string
   walletHref?: string
   txHashShort: string
-  /** Live sandbox row vs seeded theater history. */
-  source?: "sandbox" | "seed"
+  /** Row recorded by the app vs read from the chain ("seed"). */
+  source?: "wallet" | "seed"
 }
 
 export type AssetDetailHero = {

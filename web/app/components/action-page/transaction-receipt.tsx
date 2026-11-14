@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 
 /**
  * The single receipt design, shared by the inline success stage and the standalone
- * `/sandbox/transactions/[hash]` permalink so there is exactly one "receipt" in the app.
+ * transaction permalink so there is exactly one "receipt" in the app.
  *
  * Everything localizes: labels flow through `ActionInfoRow` -> `t()`, and the fiat
  * figures (Value, Avana Platform Fee) format through `useCurrency`, so both react live to the

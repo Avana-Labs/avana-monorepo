@@ -8,20 +8,18 @@ export const dynamic = "force-static"
 const BODY = `# Avana
 
 Avana is a DeFi application on Aave v4 for borrowing against liquidity-provider (LP) positions,
-lending, multiply (looping) strategies, and swaps. The default experience is a risk-free sandbox;
-connecting a wallet is optional.
+lending, and swaps. Connecting a wallet is optional for browsing markets.
 
 ## When to use Avana
-Use Avana when a user wants to unlock liquidity from Uniswap, Curve, or Balancer LP tokens without
-unwinding them; borrow against LP collateral while the position keeps earning trading fees; lend
-assets to earn yield; run leveraged (multiply) LP strategies; or ask questions about live Aave
-v3/v4 markets. Avana is not a custodian and does not move real user funds without a connected wallet.
+Use Avana when a user wants to borrow against concentrated-liquidity LP positions without
+unwinding them, keep earning trading fees on that collateral, lend assets to earn yield, or ask
+questions about live Aave v3/v4 markets. Avana is not a custodian and never moves user funds
+without a transaction the user signs in their own wallet.
 
 ## Main pages
 - [Home](${SITE_URL}/)
 - [Borrow](${SITE_URL}/borrow)
 - [Lend](${SITE_URL}/lend)
-- [Multiply](${SITE_URL}/multiply)
 - [Swap](${SITE_URL}/swap)
 - [Ask AI](${SITE_URL}/ask)
 - [Dashboard](${SITE_URL}/dashboard)

@@ -197,7 +197,7 @@ export function convexSubscribe(data) {
       opened = true
       // Optional enrichment: the Convex Sync protocol expects a Connect frame here
       // followed by a ModifyQuerySet subscribing to concrete queries (e.g.
-      // api.sandbox.prices.subscribe). We don't ship those frames because their
+      // api.tokenPrices subscriptions). We don't ship those frames because their
       // shape is deployment-specific; opening the socket + holding it is already
       // a stronger signal than the HTTP scenario, which never exercises WS at all.
       // Callers with a canned Connect frame can send it here.

@@ -5,17 +5,12 @@ import type { TranslationDictionary } from "../types"
 const dict: TranslationDictionary = {
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "Внесите залог, займите под него, снова внесите заёмный капитал и повторяйте до вашего лимита риска.",
-  "Browse Multiply Page": "Открыть страницу Мультиплай",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":
     "Превратите свои позиции в пуле ликвидности в залог и занимайте под них здесь, не выходя из пула.",
   "Browse Borrow Page": "Открыть страницу Заём",
   "Supply capital into Hub-connected lending markets and earn from LP-backed borrower demand.":
     "Предоставляйте капитал в подключённые к Hub кредитные рынки и зарабатывайте на спросе заёмщиков, обеспеченном LP.",
   "Browse Lend Page": "Открыть страницу Ленд",
-  "Coinbase & Robinhood Stocks": "Акции Coinbase и Robinhood",
-  "Tokenized equities — deposit stock tokens to earn lending yield":
-    "Токенизированные акции — вносите токены акций, чтобы получать доход от кредитования",
-  "Tokenized-equity concentrated LP positions": "Концентрированные LP-позиции токенизированных акций",
   "Paxos USD stablecoin": "Стейблкоин Paxos USD",
   "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.":
     "{name} — это LP-позиция токенизированных акций, размещённая в качестве обеспечения в споуке {spoke} на Avana. Она сочетает {stableLeg} с токенизированной экспозицией {stockName} ({stockSymbol}), поэтому стоимость обеспечения отслеживает цену акции {stockName} наряду с глубиной пула и уровнем комиссий. Avana привязывает кредитную способность к максимальному LTV споука, увязывая кредит с тем, насколько резко может двигаться обеспечение в токенизированных акциях. Эта страница — единый источник истины о том, что представляет собой пул, какой капитал он может безопасно поддерживать и какой риск убытков берёт на себя протокол.",
@@ -49,7 +44,6 @@ const dict: TranslationDictionary = {
   Continue: "Продолжить",
   Cancel: "Отмена",
   Back: "Назад",
-  "Fund my sandbox": "Пополнить песочницу",
   "Continue to allocation": "Перейти к распределению",
   "Share on X first": "Сначала поделиться в X",
   "I posted it": "Я опубликовал",
@@ -155,13 +149,8 @@ const dict: TranslationDictionary = {
   "Highest APY": "Наибольший APY",
   "Most Available": "Наибольшая доступность",
   "Collateral A-Z": "Обеспечение А-Я",
-  "Search loops": "Поиск циклов",
   "Sort by": "Сортировать по",
-  "Sort loops": "Сортировать циклы",
   Trending: "В тренде",
-  "Highest max-leverage APY markets in the sandbox catalog.":
-    "Рынки с наибольшим APY при максимальном плече в каталоге песочницы.",
-  "No loops in this category yet.": "В этой категории пока нет циклов.",
   COLLATERAL: "ОБЕСПЕЧЕНИЕ",
   BORROWABLE: "ДОСТУПНО В ЗАЁМ",
   "MAX APY": "МАКС. APY",
@@ -244,19 +233,13 @@ const dict: TranslationDictionary = {
   Health: "Здоровье",
   Debt: "Долг",
   "Approved credit": "Одобренный кредит",
-  "Multiply value": "Стоимость с плечом",
   "Average APY": "Средняя доходность (APY)",
   Earned: "Заработано",
   "Open positions": "Открытые позиции",
   "Net carry": "Чистый carry",
-  "Increase loop": "Увеличить цикл",
-  "Unwind loop": "Свернуть цикл",
   "Weighted average APY across supplied assets in the wallet.":
     "Средневзвешенная доходность (APY) по предоставленным активам в кошельке.",
   "Total yield already accrued by the portfolio.": "Общий доход, уже начисленный портфелем.",
-  "Open multiply positions in the wallet profile.": "Открытые позиции с плечом в профиле кошелька.",
-  "Average realized carry across the current multiply book.":
-    "Средний реализованный carry по текущей книге позиций с плечом.",
   "Portfolio quick actions": "Быстрые действия портфеля",
   "Lending Opportunities": "Возможности кредитования",
   "View markets": "Посмотреть рынки",
@@ -275,7 +258,6 @@ const dict: TranslationDictionary = {
   "This page isn't available.": "Эта страница недоступна.",
   "The address may be wrong or the page may have moved.": "Адрес может быть неверным, или страница была перемещена.",
   "Helpful links": "Полезные ссылки",
-  "Avana sandbox": "Песочница Avana",
   "Sign in with the wallet that created this transaction to view its receipt.":
     "Войдите с помощью кошелька, создавшего эту транзакцию, чтобы просмотреть её квитанцию.",
   "We couldn't load this receipt right now.": "Сейчас не удалось загрузить эту квитанцию.",
@@ -287,7 +269,6 @@ const dict: TranslationDictionary = {
   "Available Credit": "Доступный кредит",
   "Outstanding Loans": "Непогашенные займы",
   "Total Liquidity": "Общая ликвидность",
-  "Loop Markets": "Циклические рынки",
   "Avg Max APY": "Средн. макс. APY",
   "Avg Max Leverage": "Средн. макс. плечо",
   "Total TVL": "Общий TVL",
@@ -334,12 +315,9 @@ const dict: TranslationDictionary = {
   "How can we help?": "Чем можем помочь?",
   "Include what you were trying to do, what happened, and any transaction or market details that may help.":
     "Укажите, что вы пытались сделать, что произошло, а также детали транзакции или рынка, которые могут помочь.",
-  "Leveraged loop": "Кредитное плечо",
   "No assets in your wallet": "Нет активов в кошельке",
   "No deposited position found for this market.": "Для этого рынка не найдено позиций с депозитом.",
   "No deposits found": "Депозиты не найдены",
-  "No multiply positions yet. Open a loop to leverage your collateral.":
-    "Пока нет позиций multiply. Откройте цикл, чтобы использовать плечо на залоге.",
   "read more": "подробнее",
   "Recommended articles": "Рекомендуемые статьи",
   "Request received": "Запрос получен",
@@ -373,7 +351,6 @@ const dict: TranslationDictionary = {
   "Your progress": "Ваш прогресс",
   "{completed}/{total} completed": "{completed}/{total} выполнено",
   "{label} amount": "Сумма {label}",
-  "{label} multiplier": "Множитель {label}",
   "{name} ({symbol}) is a single-asset supply market on Avana. Suppliers earn the supply APY{rewardsClause} from borrower interest, net of the reserve factor. Yield tracks utilization, so the page focuses on the live supply rate, the supply/utilization mix, and the latest risk posture for this {marketType} market.":
     "{name} ({symbol}) — рынок поставки одного актива на Avana. Поставщики получают APY поставки{rewardsClause} из процентов заёмщиков за вычетом резервного фактора. Доходность зависит от загрузки, поэтому страница отражает текущую ставку поставки, соотношение поставки/загрузки и последнюю оценку риска для рынка {marketType}.",
   "{percent}% of liq. max": "{percent}% от макс. ликв.",
@@ -394,8 +371,6 @@ const dict: TranslationDictionary = {
   Portfolio: "Портфель",
   "Quick actions": "Быстрые действия",
   "My Deposits": "Мои депозиты",
-  "My Loops": "Мои лупы",
-  "Available to loop": "Доступно для лупа",
   "Scroll table left": "Прокрутить таблицу влево",
   "Scroll table right": "Прокрутить таблицу вправо",
   "Total Fees earned": "Всего заработанных комиссий",
@@ -436,11 +411,7 @@ const dict: TranslationDictionary = {
   GOOD: "ХОРОШО",
   "Health Factor": "Фактор здоровья",
   "I read it": "Прочитано",
-  "In this sandbox, every transaction is simulated — use previews to learn before sizing up.":
-    "В этой песочнице каждая транзакция симулируется — используйте предпросмотр, чтобы учиться перед увеличением объёмов.",
   "Invite link": "Ссылка-приглашение",
-  "Keep health factor headroom and treat rewards as practice, not production yield.":
-    "Сохраняйте запас фактора здоровья и относитесь к наградам как к практике, а не к реальной доходности.",
   "Lend {name}": "Одолжить {name}",
   "Lend actions": "Действия по кредитованию",
   "Leverage options": "Варианты плеча",
@@ -458,8 +429,6 @@ const dict: TranslationDictionary = {
   Min: "Мин",
   "More information": "Подробнее",
   "More information about {topic}": "Подробнее о {topic}",
-  "Multiply {name}": "Умножить {name}",
-  "Multiply actions": "Действия умножения",
   "My Borrows": "Мои займы",
   "My LP Collaterals": "Мои LP-обеспечения",
   "No activity matches the current filters.": "Нет активности по текущим фильтрам.",
@@ -470,17 +439,14 @@ const dict: TranslationDictionary = {
   "No rewards ready": "Нет готовых наград",
   "Nothing borrowed yet": "Пока ничего не занято",
   "Nothing supplied yet": "Пока ничего не поставлено",
-  "Open a looped position in {name}.": "Открыть зациклённую позицию в {name}.",
   "Open preferences": "Открыть настройки",
   Opened: "Открыто",
   "Overall quest completion progress": "Общий прогресс выполнения квестов",
   Pending: "В ожидании",
-  "Pin a sandbox market": "Закрепить рынок песочницы",
   "Pool actions": "Действия с пулом",
   "Portfolio views": "Виды портфеля",
   Preferences: "Настройки",
   "Preview {product}": "Предпросмотр {product}",
-  "Preview a sandbox trade": "Предпросмотр сделки в песочнице",
   "Price chart": "График цены",
   "Processing…": "Обработка…",
   "Progress: {progress} / {target}": "Прогресс: {progress} / {target}",
@@ -498,7 +464,6 @@ const dict: TranslationDictionary = {
   "Run a real preview in the session — nothing executes on-chain.":
     "Запустите реальный предпросмотр в сессии — ничего не выполняется в блокчейне.",
   Safe: "Безопасно",
-  "Sandbox risk primer": "Основы риска в песочнице",
   "Scope Health Factor": "Область фактора здоровья",
   Search: "Поиск",
   "Search assets": "Поиск активов",
@@ -546,8 +511,6 @@ const dict: TranslationDictionary = {
     "Это проблема на нашей стороне, а не с вашим кошельком. Попробуйте снова и сообщите нам, если это повторится.",
   "Back to borrow": "Назад к займам",
   "Back to lend": "Назад к депозитам",
-  "Back to multiply": "Назад к мультипликатору",
-  "Back to Umbrella": "Назад к Защите",
   "Back to rewards": "Назад к наградам",
   Loading: "Загрузка",
   "Loading…": "Загрузка…",
@@ -564,10 +527,8 @@ const dict: TranslationDictionary = {
   "Mobile menu": "Мобильное меню",
   "Close menu": "Закрыть меню",
   "Mobile navigation": "Мобильная навигация",
-  "Sandbox wallet": "Тестовый кошелёк",
   "This workspace uses a built-in demo wallet. There is no external wallet connection yet.":
     "Это рабочее пространство использует встроенный демо-кошелёк. Внешнее подключение кошелька пока отсутствует.",
-  "Sandbox active": "Песочница активна",
   Connected: "Подключено",
   Copied: "Скопировано",
   "Copy address": "Копировать адрес",
@@ -586,11 +547,8 @@ const dict: TranslationDictionary = {
   "Lending Positions": "Позиции по депозитам",
   "Lending Performance": "Показатели депозитов",
   "Lend Rewards": "Награды по депозитам",
-  "Multiply Overview": "Обзор мультипликатора",
   "Debt & Risk": "Долг и риск",
-  "Position size, multiplier, and current net yield": "Размер позиции, мультипликатор и текущая чистая доходность",
   "Borrowed balance, health factor, and liquidation threshold": "Заёмный баланс, фактор здоровья и порог ликвидации",
-  "No active Multiply debt": "Нет активного долга Multiply",
   "Loading your portfolio": "Загрузка вашего портфеля",
   "We couldn't load your portfolio": "Не удалось загрузить ваш портфель",
   "The live portfolio fetch kept failing. Try again to re-run the client fetch without leaving the dashboard.":
@@ -603,9 +561,7 @@ const dict: TranslationDictionary = {
   "Asset analytics": "Аналитика актива",
   "Pool analytics": "Аналитика пула",
   "Lend market analytics": "Аналитика кредитного рынка",
-  "Multiply market analytics": "Аналитика рынка мультипликатора",
   "General FAQs": "Общие вопросы FAQ",
-  "Multiply FAQs": "Вопросы FAQ по мультипликатору",
   "BTC Pools": "Пулы BTC",
   "ETH Pools": "Пулы ETH",
   "Forex Pools": "Форекс-пулы",
@@ -616,11 +572,6 @@ const dict: TranslationDictionary = {
   "Forex Based": "На основе форекс",
   "Utility Based": "На основе утилити",
   "Smart Lend": "Умное кредитование",
-  "BTC Loops": "Циклы BTC",
-  "ETH Loops": "Циклы ETH",
-  "Forex Loops": "Форекс-циклы",
-  "Utility Loops": "Утилитарные циклы",
-  "Smart Loops": "Умные циклы",
   Watch: "Наблюдение",
   "At risk": "В зоне риска",
   Unknown: "Неизвестно",
@@ -635,110 +586,39 @@ const dict: TranslationDictionary = {
   Referrals: "Рефералы",
   "Rewards actions": "Действия с наградами",
   "No quests here yet — check back soon.": "Здесь пока нет заданий — загляните позже.",
-  "Boot your sandbox wallet": "Запустите свой кошелёк в песочнице",
   "Spin up your profile": "Создайте свой профиль",
-  "Read the sandbox risk primer": "Прочитайте вводный курс по рискам песочницы",
   "Pin a market to your watchlist": "Закрепите рынок в списке отслеживания",
   "Preview your first trade": "Просмотрите свою первую сделку",
-  "Make your first sandbox lend": "Совершите своё первое кредитование в песочнице",
-  "Open your first sandbox borrow": "Откройте свой первый заём в песочнице",
-  "Open your first sandbox multiply": "Откройте своё первое умножение в песочнице",
-  "Repay a sandbox loan": "Погасите заём в песочнице",
-  "Deleverage a sandbox position": "Уменьшите плечо позиции в песочнице",
   "Claim your first AVA reward": "Получите свою первую награду AVA",
-  "Sandbox cool-down": "Пауза в песочнице",
-  "Lend $500 in the sandbox": "Одолжите $500 в песочнице",
-  "Borrow $200 in the sandbox": "Займите $200 в песочнице",
-  "Launch a multiply position": "Запустите позицию умножения",
   "Tour all three products": "Пройдите обзор всех трёх продуктов",
-  "Curve sandbox tour": "Обзор песочницы Curve",
-  "Uniswap v4 sandbox tour": "Обзор песочницы Uniswap v4",
   "Risk check-in (5 min)": "Проверка рисков (5 мин)",
-  "Multiply mindfulness (3 min)": "Осознанность при умножении (3 мин)",
-  "3 borrow / repay loops": "3 цикла заём / погашение",
   "2 deleverage drills": "2 упражнения по снижению плеча",
-  "Explore 3 sandbox markets": "Изучите 3 рынка в песочнице",
   "Claim 3 quest rewards": "Получите 3 награды за задания",
-  "3-day sandbox streak": "3-дневная серия в песочнице",
-  "Grow sandbox portfolio by $1K": "Увеличьте портфель в песочнице на $1K",
-  "Open 3 sandbox positions": "Откройте 3 позиции в песочнице",
-  "Copy your sandbox invite link": "Скопируйте свою пригласительную ссылку в песочнице",
-  "Send your first sandbox invite": "Отправьте своё первое приглашение в песочнице",
-  "Fund a referred sandbox wallet": "Пополните приглашённый кошелёк в песочнице",
-  "Activate 3 sandbox friends": "Активируйте 3 друзей в песочнице",
   "Grow crew to 5 actives": "Увеличьте команду до 5 активных участников",
-  "Referral sandbox hits $500": "Реферальная песочница достигает $500",
   "Referral streak (2 activations)": "Реферальная серия (2 активации)",
-  "Sandbox ambassador": "Амбассадор песочницы",
   "Your Avana session is live — this quest unlocks automatically when you land.":
     "Ваша сессия Avana активна — это задание разблокируется автоматически, когда вы зайдёте.",
-  "We create a demo wallet profile so every product sandbox shares the same session.":
-    "Мы создаём профиль демо-кошелька, чтобы песочница каждого продукта использовала одну и ту же сессию.",
   "Open the 60-second LP risk briefing before you simulate any position.":
     "Откройте 60-секундный брифинг по рискам LP, прежде чем моделировать любую позицию.",
-  "Pick one Borrow, Lend, or Multiply market to track in your sandbox.":
-    "Выберите один рынок — Заём, Кредитование или Умножение — для отслеживания в песочнице.",
-  "Run a real sandbox preview on Borrow, Lend, or Multiply — no funds move.":
-    "Запустите настоящий предпросмотр в песочнице для Заёма, Кредитования или Умножения — средства не перемещаются.",
   "Deposit into any Lend market. Your live session records the quest automatically.":
     "Внесите средства на любой рынок Кредитования. Ваша активная сессия автоматически засчитывает задание.",
   "Borrow against LP collateral on the Borrow page — the quest completes on success.":
     "Возьмите заём под залог LP на странице Заём — задание завершается при успехе.",
-  "Create a Multiply position in the sandbox and let the session bridge log it.":
-    "Создайте позицию Умножения в песочнице и позвольте мосту сессии её зафиксировать.",
-  "Repay any borrow position you opened — a healthy loop in the demo world.":
-    "Погасите любую открытую позицию заёма — здоровый цикл в демо-мире.",
-  "Reduce any Multiply position to practice risk management.":
-    "Уменьшите любую позицию Умножения, чтобы попрактиковаться в управлении рисками.",
   "Complete any other quest, then claim it to unlock this milestone.":
     "Выполните любое другое задание, затем получите за него награду, чтобы разблокировать эту веху.",
   "Explore Avana for 2 minutes after your first login, then come back to claim.":
     "Изучайте Avana в течение 2 минут после первого входа, затем вернитесь за наградой.",
-  "Stack sandbox lend deposits until you reach $500 supplied.":
-    "Накапливайте депозиты кредитования в песочнице, пока не достигнете $500 предоставленных средств.",
   "Open borrow positions totaling $200 across any collateral pool.":
     "Откройте позиции заёма на общую сумму $200 в любом залоговом пуле.",
-  "Open any Multiply position in the sandbox — size is up to you.":
-    "Откройте любую позицию Умножения в песочнице — размер на ваше усмотрение.",
-  "Complete one action in Lend, Borrow, and Multiply.":
-    "Выполните по одному действию в Кредитовании, Заёме и Умножении.",
-  "Visit the Curve-style borrow market tour and mark it complete.":
-    "Посетите обзор рынка заёмов в стиле Curve и отметьте его как завершённый.",
-  "Walk through the Uniswap v4 sandbox market and check it off.":
-    "Пройдите по рынку песочницы Uniswap v4 и отметьте его.",
-  "Stay in the sandbox for 5 minutes after login, then claim this patience badge.":
-    "Оставайтесь в песочнице 5 минут после входа, затем получите этот значок терпения.",
-  "Take a 3-minute breather after login before claiming this calm-multiply quest.":
-    "Сделайте 3-минутную передышку после входа, прежде чем получить это задание на спокойное умножение.",
-  "Repay sandbox loans three times to practice healthy borrow cycles.":
-    "Погасите займы в песочнице три раза, чтобы отработать здоровые циклы заимствования.",
-  "Deleverage Multiply positions twice to complete this risk drill.":
-    "Дважды снизьте плечо позиций Умножения, чтобы завершить это упражнение по рискам.",
   "Complete tours on three different market pages across Avana.":
     "Пройдите обзоры на трёх разных страницах рынков в Avana.",
   "Claim AVA from three separate quests to build your rewards streak.":
     "Получите AVA за три отдельных задания, чтобы построить серию наград.",
   "Check in on three separate days after your first login.": "Заходите в три разных дня после вашего первого входа.",
-  "Lend, borrow, or multiply until your combined sandbox volume hits $1,000.":
-    "Кредитуйте, занимайте или умножайте, пока ваш совокупный объём в песочнице не достигнет $1,000.",
-  "Hold three open positions across Lend, Borrow, or Multiply.":
-    "Удерживайте три открытые позиции в Кредитовании, Заёме или Умножении.",
   "Generate and copy a referral link you can share with friends.":
     "Сгенерируйте и скопируйте реферальную ссылку, которой можно поделиться с друзьями.",
-  "Simulate inviting a friend wallet into your Avana sandbox crew.":
-    "Смоделируйте приглашение кошелька друга в вашу команду песочницы Avana.",
   "Mark one invited friend as funded after they try a product action.":
     "Отметьте одного приглашённого друга как пополнившего счёт после того, как он попробует действие с продуктом.",
-  "Three referred wallets complete a product action in your sandbox network.":
-    "Три приглашённых кошелька выполняют действие с продуктом в вашей сети песочницы.",
-  "Five referred wallets complete a product action in your sandbox network.":
-    "Пять приглашённых кошельков выполняют действие с продуктом в вашей сети песочницы.",
-  "Your referred crew reaches $500 in combined sandbox volume.":
-    "Ваша приглашённая команда достигает $500 совокупного объёма в песочнице.",
-  "Activate two sandbox referrals to keep your invite momentum going.":
-    "Активируйте два реферала в песочнице, чтобы поддержать импульс приглашений.",
-  "Activate five friends in your sandbox referral network.":
-    "Активируйте пять друзей в вашей реферальной сети песочницы.",
   "Filter by category": "Фильтр по категории",
   "ETH volatility": "Волатильность ETH",
   "Liquidity depth": "Глубина ликвидности",
@@ -800,8 +680,6 @@ const dict: TranslationDictionary = {
     "Позиции LP WBTC/WETH принимаются как залог в споке Bluechip.",
   "Pool onboarded": "Пул подключён",
   "Dual-oracle": "Двойной оракул",
-  "WETH/DAI LP positions accepted as collateral in the Uniswap v2 spoke.":
-    "Позиции LP WETH/DAI принимаются как залог в споке Uniswap v2.",
   Onboarded: "Подключено",
   "Parameters refreshed": "Параметры обновлены",
   "Full-range USDC/USDT liquidity accepted in the Stable spoke at up to 78% LTV.":
@@ -819,8 +697,6 @@ const dict: TranslationDictionary = {
     "30d реализованная σ ≈ 58% в годовом выражении — крупнейший фактор непостоянных потерь.",
   "$4.1M of 2% depth across all tiers — ample for liquidations.":
     "$4.1M из 2% глубины по всем уровням — достаточно для ликвидаций.",
-  "30-minute TWAP can lag during sharp moves; mitigated by kink in the risk curve.":
-    "30-минутный TWAP может отставать при резких движениях; смягчается изломом в кривой риска.",
   "Uniswap v3 core + NonFungiblePositionManager, both heavily audited and live for 4 years.":
     "Ядро Uniswap v3 + NonFungiblePositionManager, оба тщательно проаудированы и работают 4 года.",
   "Rolling 90d IL averages 23bps per week for the 0.30% tier.":
@@ -836,9 +712,6 @@ const dict: TranslationDictionary = {
   "$2.6M of 2% depth.": "$2.6M из 2% глубины.",
   "BTC/ETH is highly correlated — IL is usually <15bps/week.":
     "BTC/ETH сильно коррелированы — IL обычно <15bps/неделю.",
-  "WETH/DAI is a standard Uniswap v2 ETH/stable pair and a straightforward LP structure for collateral evaluation. The Uniswap v2 spoke admits it under conservative parameters because the pair still carries ETH volatility, while the stable quote side keeps the market easy to reason about.":
-    "WETH/DAI — стандартная пара ETH/стейбл на Uniswap v2 и простая структура LP для оценки залога. Спок Uniswap v2 допускает её при консервативных параметрах, потому что пара всё ещё несёт волатильность ETH, тогда как стабильная котируемая сторона делает рынок лёгким для понимания.",
-  "Added to the Uniswap v2 LPs.": "Добавлено в LP Uniswap v2.",
   "Quarterly risk review — no changes to LTV.": "Квартальный обзор рисков — без изменений LTV.",
   "USDC and USDT both trade at parity and the pool is overwhelmingly used for order-routing, stability-seeking flow, and tight-spread execution. The Stable spoke admits it with a high LTV because peg-risk is shared, depth is enormous, and the pool behaves more like cash infrastructure than a typical volatile LP. That makes it a natural fit for users who want borrowing power while keeping the underlying collateral profile simple to reason about.":
     "USDC и USDT оба торгуются по паритету, и пул преимущественно используется для маршрутизации ордеров, потоков в поисках стабильности и исполнения с узким спредом. Спок Stable допускает его с высоким LTV, потому что риск депега разделён, глубина огромна, а пул ведёт себя скорее как денежная инфраструктура, чем как типичный волатильный LP. Это делает его естественным выбором для пользователей, которым нужна заёмная способность при сохранении простого для понимания профиля базового залога.",
@@ -884,13 +757,9 @@ const dict: TranslationDictionary = {
     "Нативный ETH — основной волатильный заёмный актив для направленного carry на залоге LP.",
   "Mainnet launch": "Запуск в Mainnet",
   "The Merge": "The Merge",
-  "Wrapped ETH is the canonical ERC-20 used by Uniswap/Balancer/Aerodrome pools.":
-    "Wrapped ETH — канонический ERC-20, используемый пулами Uniswap/Balancer/Aerodrome.",
   "Wrapped BTC exposure — borrowed to short BTC against blue-chip LPs.":
     "Экспозиция Wrapped BTC — заимствуется для шорта BTC против blue-chip LP.",
   Listed: "В листинге",
-  "USDC is Circle's regulated, fully-backed USD stablecoin and the main unit of account for this market. It anchors the protocol's conservative borrow curves, acts as the default settlement asset for LP carry strategies, and serves as the reference point for risk pricing across stablecoin routes. In practice, that makes it the most common asset for users who want cash-like exposure with on-chain mobility.":
-    "USDC — регулируемый, полностью обеспеченный USD-стейблкоин от Circle и основная расчётная единица этого рынка. Он якорит консервативные заёмные кривые протокола, служит расчётным активом по умолчанию для carry-стратегий LP и является точкой отсчёта для ценообразования риска по маршрутам стейблкоинов. На практике это делает его самым распространённым активом для пользователей, которым нужна экспозиция, подобная наличным, с ончейн-мобильностью.",
   "USDC listed day-1 with 80% borrow cap.": "USDC в листинге с первого дня с лимитом займа 80%.",
   "Simulated 2023-style de-peg; guardrails paused borrows for 18m.":
     "Смоделирован депег в стиле 2023; защитные механизмы приостановили займы на 18m.",
@@ -1003,37 +872,24 @@ const dict: TranslationDictionary = {
   Curve: "Curve",
   Balancer: "Balancer",
   Aerodrome: "Aerodrome",
-  "Uniswap v2 LPs": "Uniswap v2 LP",
   "Uniswap v3 Stable LPs": "Uniswap v3 Stable LP",
   "Uniswap v3 Blue-Chip LPs": "Uniswap v3 Blue-Chip LP",
   "Uniswap v3 Governance & DAO LPs": "Uniswap v3 Governance & DAO LP",
-  "Curve Stable LPs": "Curve Stable LP",
-  "Curve Correlated LPs": "Curve Correlated LP",
-  "Curve Crypto LPs": "Curve Crypto LP",
-  "Balancer Stable LPs": "Balancer Stable LP",
-  "Balancer Correlated LPs": "Balancer Correlated LP",
-  "Balancer Weighted LPs": "Balancer Weighted LP",
-  "Balancer Boosted LPs": "Balancer Boosted LP",
-  "Balancer reCLAMM LPs": "Balancer reCLAMM LP",
   "Aerodrome Basic Stable LPs": "Aerodrome Basic Stable LP",
   "Aerodrome Basic Volatile LPs": "Aerodrome Basic Volatile LP",
   "Aerodrome Slipstream Blue-Chip LPs": "Aerodrome Slipstream Blue-Chip LP",
   Stablecoin: "Стейблкоин",
   "MakerDAO stablecoin": "Стейблкоин MakerDAO",
-  "Curve native stablecoin": "Нативный стейблкоин Curve",
   "Aave native stablecoin": "Нативный стейблкоин Aave",
   "Circle EUR stablecoin": "EUR-стейблкоин Circle",
   "ERC-20 wrapped ETH": "ERC-20 wrapped ETH",
   "Native asset": "Нативный актив",
   "ERC-20 wrapped BTC": "ERC-20 wrapped BTC",
-  "Coinbase wrapped BTC": "Coinbase wrapped BTC",
   "Liquid staking receipt": "Квитанция liquid staking",
   "Rebase-less stETH wrapper": "Обёртка stETH без ребейза",
   "rETH liquid staking": "rETH liquid staking",
-  "Coinbase liquid staking": "Coinbase liquid staking",
   "Aave governance token": "Токен управления Aave",
   "Uniswap governance token": "Токен управления Uniswap",
-  "Curve governance token": "Токен управления Curve",
   "Constant-product LP tokens": "LP-токены constant-product",
   "Concentrated-liquidity LP positions": "Позиции LP концентрированной ликвидности",
   "StableSwap LP tokens": "LP-токены StableSwap",
@@ -1064,42 +920,25 @@ const dict: TranslationDictionary = {
   "Authenticated sessions stay locked until Convex confirms access.":
     "Аутентифицированные сессии остаются заблокированными, пока Convex не подтвердит доступ.",
   "You're all set.": "Всё готово.",
-  "Your Avana sandbox is ready.": "Ваша песочница Avana готова.",
-  "You've already claimed your practice funds. Jump back into the dashboard to keep exploring.":
-    "Вы уже получили тренировочные средства. Вернитесь на панель управления, чтобы продолжить изучение.",
   "Reading your wallet history": "Чтение истории кошелька",
-  "Checking sandbox eligibility": "Проверка доступа к песочнице",
   "Selecting markets to fund": "Выбор рынков для финансирования",
-  "Sizing your practice portfolio": "Расчёт тренировочного портфеля",
-  "Minting your practice funds": "Создание тренировочных средств",
   "Opening LP & lending positions": "Открытие LP- и кредитных позиций",
-  "Building your multiply loops": "Создание циклов Multiply",
-  "Finalizing your sandbox": "Завершение настройки песочницы",
   "One moment.": "Одну минуту.",
   "Analyzing your wallet…": "Анализ вашего кошелька…",
   "Hang tight.": "Подождите немного.",
-  "Funding your sandbox…": "Пополнение вашей песочницы…",
   "Liquid assets": "Ликвидные активы",
   "Hold & swap tokens": "Хранение и обмен токенов",
   "LP collateral": "Залог LP",
   "Borrow against LP": "Заём под LP",
   Lending: "Кредитование",
   "Supply to earn": "Внесите, чтобы заработать",
-  "Leverage loops": "Циклы с кредитным плечом",
   "You'll get": "Вы получите",
-  "A full practice portfolio": "Полный тренировочный портфель",
   "Claiming allocation…": "Получение распределения…",
   "Claim your allocation": "Получить распределение",
-  "Welcome to the Avana Sandbox": "Добро пожаловать в песочницу Avana",
-  "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.":
-    "Безрисковая песочница Avana позволяет брать займы под тренировочные LP-позиции, кредитовать и зацикливать стратегии, используя средства песочницы. Никаких реальных активов. Никаких подписей кошелька. Просто быстрый способ понять, как работает Avana, прежде чем перейти в рабочее приложение.",
-  "Unlimited practice funds": "Неограниченные учебные средства",
   "No transactions yet": "Пока нет транзакций",
   "No transactions to sign": "Никаких транзакций для подписи",
   "No real assets involved": "Без реальных активов",
   "Connect a wallet.": "Подключите кошелёк.",
-  "We'll set up your sandbox and scope it to your address.":
-    "Мы настроим вашу песочницу и привяжем её к вашему адресу.",
   "By connecting your wallet, you agree to the": "Подключая кошелёк, вы соглашаетесь с",
   "Terms & Conditions": "Условиями использования",
   and: "и",
@@ -1108,24 +947,13 @@ const dict: TranslationDictionary = {
   "Your wallet is on the waitlist.": "Ваш кошелёк в списке ожидания.",
   "wallets onboarded.": "кошельков подключено.",
   "Wallet connected.": "Кошелёк подключён.",
-  "Fund your sandbox to start exploring.": "Пополните песочницу, чтобы начать изучение.",
-  "Every wallet gets sandbox funds to practice with, spread across markets so you can try every flow risk-free.":
-    "Каждый кошелёк получает средства песочницы для практики, распределённые по рынкам, чтобы вы могли безрисково опробовать каждый сценарий.",
   "You're eligible.": "Вы соответствуете требованиям.",
-  "Your practice portfolio is ready.": "Ваш тренировочный портфель готов.",
-  "sandbox seats remain.": "мест в песочнице осталось.",
   "Tell your network about Avana.": "Расскажите своей сети об Avana.",
   "Post the prepared message on X.": "Опубликуйте подготовленное сообщение в X.",
   "Open X": "Открыть X",
   Skip: "Пропустить",
   "Here's what you'll get.": "Вот что вы получите.",
-  "Practice funds across assets, LP collateral, lending, and multiply.":
-    "Тренировочные средства в активах, залоге LP, кредитовании и Multiply.",
   "The allocation cap was reached.": "Лимит распределения достигнут.",
-  "Your Avana sandbox is ready to explore.": "Ваша песочница Avana готова к изучению.",
-  "Your practice funds are now in your wallet. Jump into the dashboard to start exploring.":
-    "Ваши тренировочные средства теперь в кошельке. Перейдите на панель управления, чтобы начать изучение.",
-  "Sandbox onboarding requires a Convex connection. Set": "Онбординг в песочницу требует подключения Convex. Задайте",
   "to continue.": "чтобы продолжить.",
   Confirmed: "Подтверждено",
   Receipt: "Квитанция",
@@ -1149,7 +977,6 @@ const dict: TranslationDictionary = {
   Strategy: "Стратегия",
   "A Beginner's Guide to LP Collateral": "Руководство для начинающих по LP-обеспечению",
   "What LP Collateral Makes Possible": "Что делает возможным LP-обеспечение",
-  "Thinking Clearly About Yield Looping": "Ясное мышление о зацикливании доходности",
   "How to Hedge an LP Position": "Как хеджировать LP-позицию",
   "Making LP Collateral Usable": "Как сделать LP-обеспечение пригодным для использования",
   "Avana and the Next Step for Liquidity Providers": "Avana и следующий шаг для поставщиков ликвидности",
@@ -1162,25 +989,17 @@ const dict: TranslationDictionary = {
   "Which DEXs do you use the most?": "Какими DEXs вы пользуетесь чаще всего?",
   "Select all that apply": "Выберите все подходящие варианты",
   "Last step.": "Последний шаг.",
-  "Let's fund your sandbox.": "Пополним вашу песочницу.",
-  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.":
-    "Мы распределим тренировочные средства по рынкам, чтобы вы могли давать в долг, брать в долг и зацикливать без риска.",
   "Good news, you're in.": "Хорошие новости, вы в деле.",
   of: "из",
-  "sandbox seats already claimed.": "мест в песочнице уже занято.",
-  "Your sandbox is live.": "Ваша песочница готова.",
   "Everything's funded and waiting. Dive in whenever you're ready.":
     "Всё пополнено и ждёт вас. Начинайте, когда будете готовы.",
   "Connect an EVM wallet.": "Подключите кошелёк EVM.",
-  "We can't reach the sandbox right now.": "Сейчас не удаётся подключиться к песочнице.",
   "Please try again in a moment.": "Пожалуйста, повторите попытку через мгновение.",
   "Your session is safe. This is a temporary connection issue, not your wallet.":
     "Ваша сессия в безопасности. Это временная проблема с подключением, а не с вашим кошельком.",
   "Something went wrong.": "Что-то пошло не так.",
   "We couldn't load this page.": "Не удалось загрузить эту страницу.",
   "APY breakdown": "Структура APY",
-  "Active Umbrella capital currently available to absorb eligible deficits for this asset.":
-    "Активный капитал Umbrella, доступный сейчас для покрытия допустимых дефицитов этого актива.",
   "Active staker capital": "Активный капитал стейкеров",
   "Additional rewards used to attract coverage capital, especially during bootstrap periods or when coverage is below target.":
     "Дополнительные награды для привлечения капитала покрытия, особенно на этапе запуска или при покрытии ниже цели.",
@@ -1199,29 +1018,17 @@ const dict: TranslationDictionary = {
   "Liquidation recapture": "Возврат от ликвидаций",
   "Local deductible": "Локальная франшиза",
   "Target coverage": "Целевое покрытие",
-  "The Hub asset this Umbrella market protects. Deficits from any eligible Spoke borrowing this reserve can be covered by this market.":
-    "Актив Hub, который защищает этот рынок Umbrella. Рынок может покрывать дефициты от любого допустимого займа Spoke из этого резерва.",
-  "The amount of Umbrella capital currently deposited and available to absorb deficits for this covered reserve. Capital in cooldown is no longer counted as fully available protection.":
-    "Объём капитала Umbrella, внесённого сейчас и доступного для покрытия дефицитов защищённого резерва. Капитал на кулдауне больше не считается полностью доступной защитой.",
   "The amount of staked capital currently in the cooldown period before it can be withdrawn. A larger cooling balance means less protection may remain available if those funds exit.":
     "Объём застейканного капитала на кулдауне до вывода. Чем больше этот баланс, тем меньше защиты может остаться при выходе средств.",
   "The core staking yield paid for providing protection capital to this surface.":
     "Базовая доходность стейкинга за предоставление защитного капитала этой поверхности.",
   "The portion of yield supported by liquidation-linked economics generated by this reserve-per-Spoke surface, such as liquidation fees or SVR.":
     "Часть доходности, поддержанная экономикой ликвидаций этой поверхности для каждого резерва Spoke, например комиссиями ликвидации или SVR.",
-  "The staking rewards you have earned for providing Umbrella coverage. Rewards may include protocol incentives and other compensation for taking slashing and lockup risk.":
-    "Награды за стейкинг, полученные за предоставление покрытия Umbrella. Они могут включать стимулы протокола и другую компенсацию за риск слешинга и блокировки.",
-  "Umbrella surface details": "Подробности поверхности Umbrella",
   "View {symbol} surface details": "Подробнее о поверхности {symbol}",
-  "The rewards currently earned by this Umbrella position, allocated across the underlying APY sources.":
-    "Награды, которые сейчас приносит эта позиция Umbrella, распределённые между базовыми источниками APY.",
-  "The estimated annual yield for keeping Umbrella capital available as coverage for this market.":
-    "Оценочная годовая доходность за поддержание капитала Umbrella доступным как покрытие этого рынка.",
   "Est. annual rewards": "Оценочные годовые награды",
   "Based on amount entered": "На основе введённой суммы",
   "Slashable stake": "Стейк под риском слешинга",
   "Market staked": "Стейк рынка",
-  "Umbrella APY": "APY Umbrella",
   "Umbrella market": "Рынок Umbrella",
   "Cooled stake": "Стейк на кулдауне",
   "Start cooldown": "Начать кулдаун",
@@ -1229,8 +1036,6 @@ const dict: TranslationDictionary = {
   "Coverage is defined for a specific Hub reserve and covers eligible deficits from every Spoke borrowing that reserve, including credit-line draws.":
     "Покрытие определяется для конкретного резерва Hub и включает допустимые дефициты от каждого Spoke, занимающего этот резерв, включая выборки по кредитной линии.",
   "First-loss protection": "Защита первых убытков",
-  "The Deficit Offset absorbs the first layer of loss. Only the residual deficit beyond that offset can reach staked Umbrella coverage.":
-    "Офсет дефицита поглощает первый слой убытков. Только остаточный дефицит сверх офсета может затронуть застейканное покрытие Umbrella.",
   "Independent underwriting": "Независимая оценка риска",
   "Target liquidity and reward emissions reflect reserve risk, economics, opportunity cost, and the slashing and lockup risk accepted by coverage providers.":
     "Целевая ликвидность и эмиссия наград отражают риск резерва, экономику, альтернативную стоимость, а также риски слешинга и блокировки, принимаемые поставщиками покрытия.",
@@ -1245,7 +1050,6 @@ const dict: TranslationDictionary = {
   "Includes active stake and cooldown": "Включает активный стейк и период ожидания",
   "Amount Avana covers first before user-staked coverage is exposed. Stakers only take losses once realized deficits exceed this offset.":
     "Сумма, которую Avana покрывает первой, прежде чем задействуется застейканное пользователями покрытие. Стейкеры несут убытки, только когда реализованные дефициты превышают этот офсет.",
-  "Close umbrella actions": "Закрыть действия Защиты",
   Cooldown: "Кулдаун",
   Cooling: "На кулдауне",
   Coverage: "Покрытие",
@@ -1257,19 +1061,13 @@ const dict: TranslationDictionary = {
   "Desired amount of user-staked coverage for this asset.":
     "Желаемая сумма застейканного пользователями покрытия для этого актива.",
   "Dynamic rewards": "Динамические награды",
-  "Each Umbrella stake token covers deficits for its matching borrowed asset on the same network.":
-    "Каждый стейк-токен Защиты покрывает дефицит соответствующего заёмного актива в той же сети.",
-  "Emissions adjust against target liquidity, and each staked asset can earn multiple reward tokens.":
-    "Эмиссия подстраивается под целевую ликвидность, и каждый застейканный актив может зарабатывать несколько токенов наград.",
   "Estimated annual staking yield paid to stakers of this asset.":
     "Ориентировочная годовая доходность стейкинга, выплачиваемая стейкерам этого актива.",
   "In cooldown": "На кулдауне",
   "Isolated slashing": "Изолированный слэшинг",
   "Learn Umbrella": "Узнать о Защите",
-  "Umbrella Overview": "Обзор Umbrella",
   "Module assets": "Активы модуля",
   More: "Ещё",
-  "More umbrella actions": "Ещё действия Защиты",
   "Next cooldown": "Следующий кулдаун",
   "Next market risk": "Следующий рыночный риск",
   "Once cooldown finishes, users can unstake during the withdrawal window before cooldown has to be restarted.":
@@ -1281,10 +1079,6 @@ const dict: TranslationDictionary = {
   Restart: "Перезапуск",
   "Restart cooldown": "Перезапустить кулдаун",
   Stake: "Стейк",
-  "Stake in umbrella": "Стейкать в Защите",
-  "Unstake from umbrella": "Анстейк из Защиты",
-  "Stake, claim rewards, start cooldown, or unstake from the umbrella safety module.":
-    "Стейкайте, клеймите награды, запускайте кулдаун или анстейкайте из модуля безопасности Защиты.",
   "Stake, claim, cooldown, unstake": "Стейкать, забирать, кулдаун, выводить",
   "Start cooldown before withdrawing. During cooldown, the position keeps earning incentives and remains slashable.":
     "Запустите кулдаун перед выводом. Во время кулдауна позиция продолжает получать поощрения и остаётся подверженной слэшингу.",
@@ -1294,20 +1088,13 @@ const dict: TranslationDictionary = {
   "Total user-staked capital available to absorb losses for this asset.":
     "Общий капитал, застейканный пользователями и доступный для поглощения убытков этого актива.",
   Umbrella: "Защита",
-  "Umbrella Cooldown": "Кулдаун Защиты",
-  "Umbrella actions": "Действия Защиты",
-  "Umbrella activity": "Активность Защиты",
   "Umbrella positions": "Позиции Защиты",
-  "Umbrella positions are split by asset and network, so each stake token has its own risk and reward profile.":
-    "Позиции Защиты разделены по активу и сети, поэтому у каждого стейк-токена свой профиль риска и награды.",
   Unstake: "Анстейк",
   "Unstake window": "Окно вывода",
   "Weighted APY": "Взвешенный APY",
   "Withdrawal ready": "Готово к выводу",
   "Withdrawal window": "Окно вывода",
-  "You have no Umbrella positions yet.": "У вас пока нет позиций Защиты.",
   "Your Umbrella": "Ваша Защита",
-  "Your Umbrella stake": "Ваш стейк в Защите",
   "After cooldown completes, there is a short window to unstake. If it expires, cooldown must be started again.":
     "После завершения кулдауна открывается короткое окно для вывода. Если оно истечёт, кулдаун придётся запускать заново.",
   "base {base} + reward {reward}": "база {base} + награда {reward}",
@@ -1337,8 +1124,6 @@ const dict: TranslationDictionary = {
   "{count} assets": "{count} активов",
   "{count} positions": "{count} позиций",
   "{count} rewards": "{count} наград",
-  "{name} ({symbol}) / {borrowName} ({borrow}) is a leveraged multiply market on Avana. Supply {symbol} as collateral to loop into {borrow} exposure, up to {leverage}, in a route dedicated to leveraged positions rather than LP collateral pools. Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this {marketType} market. Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.":
-    "{name} ({symbol}) / {borrowName} ({borrow}) — рынок Multiply с плечом на Avana. Внесите {symbol} как залог, чтобы через циклы получить экспозицию на {borrow}, вплоть до {leverage}, по маршруту, выделенному для позиций с плечом, а не для пулов LP-залога. Чистая доходность зависит от спреда поставки/займа, загрузки и выбранного множителя, поэтому результаты циклов могут меняться при перебалансировке ставок и доступной ликвидности. Страница отражает текущий лимит плеча, соотношение поставки/займа, доступную ликвидность и последнюю оценку риска для рынка {marketType}. Пользователям стоит следить за коэффициентом залога, порогом ликвидации, стоимостью займа и доступной ликвидностью, поскольку эти параметры влияют и на доходность циклов, и на то, насколько быстро позицию можно свернуть в стрессовых условиях.",
   "{progress}/{target} {currency}": "{progress}/{target} {currency} выполнено",
   "1D": "1D",
   "30 Days": "30 дней",
@@ -1376,7 +1161,6 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "Вкладки панели",
   Date: "Дата",
   Dismiss: "Скрыть",
-  "Explore Umbrella": "Открыть Защиту",
   Explorer: "Обозреватель",
   "Express actions": "Быстрые действия",
   Fees: "Комиссии",
@@ -1409,8 +1193,6 @@ const dict: TranslationDictionary = {
   Long: "Лонг",
   "Long, short, and net USD per token across every product.":
     "Лонг, шорт и чистая позиция в USD по каждому токену во всех продуктах.",
-  "LOOP APY": "APY ЦИКЛА",
-  "Loop market": "Циклический рынок",
   "LP APR": "LP APR",
   "Pool APR": "APR пула",
   "Live value of this collateral, and the LP trading fees it earns.":
@@ -1419,28 +1201,20 @@ const dict: TranslationDictionary = {
   "Market-wide liquidation activity and near-liquidation exposure over the last 24 hours.":
     "Активность ликвидаций по всему рынку и позиции у грани ликвидации за последние 24 часа.",
   "Minimum received": "Минимум к получению",
-  "Multiply Balance": "Баланс Multiply",
-  "Multiply Exposure": "Экспозиция Multiply",
-  "Multiply Health": "Здоровье Multiply",
-  "Multiply Rewards": "Награды Multiply",
   "Multiply TVL": "TVL Multiply",
   "My Collaterals": "Мои залоги",
   "My Debts": "Мои долги",
   Net: "Чистая",
-  "Net Portfolio Value = Assets − Debt. Assets: wallet balances, lending supplied, borrow collateral, any borrowed funds you still hold, your Multiply position value, and Umbrella staked + rewards. Debt: borrow loans and Multiply borrowing. Borrowing doesn't change this number — the cash you receive is an asset that offsets the new debt.":
-    "Чистая стоимость портфеля = Активы − Долг. Активы: балансы кошелька, средства в кредитовании, залог по займам, любые занятые средства, которые вы ещё держите, стоимость вашей позиции Multiply, а также застейканное вЗащита+ награды. Долг: займы и заимствование в Multiply. Заём не меняет это число — полученные средства являются активом, который компенсирует новый долг.",
   Network: "Сеть",
   No: "Нет",
   "No active loans. Borrow against your collateral to get started.":
     "Нет активных займов. Возьмите заём под залог, чтобы начать.",
-  "No active Multiply positions": "Нет активных позиций Multiply",
   "No assets found.": "Активы не найдены.",
   "No collateral deposited yet. Supply an asset to start backing loans.":
     "Залог ещё не внесён. Внесите актив, чтобы обеспечивать займы.",
   "No liquidity pools yet. Provide liquidity to start earning trading fees.":
     "Пулов ликвидности пока нет. Предоставьте ликвидность, чтобы зарабатывать на торговых комиссиях.",
   "No supplied position to withdraw": "Нет внесённой позиции для вывода",
-  "No Umbrella positions yet.": "Пока нет позиций Защиты.",
   "No wallet balances found.": "Балансы кошелька не найдены.",
   NONE: "НЕТ",
   now: "сейчас",
@@ -1475,11 +1249,8 @@ const dict: TranslationDictionary = {
   "Repay or add collateral to reduce your liquidation risk.":
     "Погасите долг или добавьте залог, чтобы снизить риск ликвидации.",
   "Review risk": "Оценить риск",
-  "Negative net APY: borrow costs exceed supply yield. Review before opening this loop.":
-    "Отрицательный чистый APY: затраты на займ превышают доходность поставки. Оцените риск перед открытием этого цикла.",
   "Review swap": "Проверить своп",
   "Rewards Earned": "Заработанные награды",
-  Sandbox: "Песочница",
   "Scenario price": "Цена сценария",
   "Search collateral pools, assets to borrow, and assets to lend.":
     "Поиск залоговых пулов, активов для займа и активов для депозита.",
@@ -1553,20 +1324,15 @@ const dict: TranslationDictionary = {
   "Collateral price move": "Изменение цены залога",
   "Debt change amount": "Сумма изменения долга",
   "Drop buffer": "Запас на падение",
-  "Equity value at this leverage, by scenario.": "Стоимость собственного капитала при этом плече, по сценариям.",
-  "Estimate on {equity} equity. Assumes rates hold; leverage amplifies both gains and losses.":
-    "Оценка на {equity} собственного капитала. Предполагает неизменные ставки; плечо усиливает и прибыль, и убытки.",
   "Estimate. Variable rate — actual cost will differ.":
     "Оценка. Плавающая ставка — фактическая стоимость будет отличаться.",
   Horizon: "Горизонт",
   "Lend Outlook": "Прогноз по кредитованию",
-  "Leverage multiplier": "Множитель плеча",
   Liquidated: "Ликвидировано",
   "Liquidation price": "Цена ликвидации",
   "Liquidation prices": "Цены ликвидации",
   "Move collateral prices or your debt and watch health factor respond.":
     "Меняйте цены залога или долг и наблюдайте за реакцией фактора здоровья.",
-  "Multiply Outlook": "Multiply: прогноз",
   Next: "Далее",
   "Price sensitivity": "Чувствительность к цене",
   "Projected interest cost": "Прогнозируемые процентные расходы",
@@ -1627,32 +1393,16 @@ const dict: TranslationDictionary = {
     "Фактор здоровья и стоимость залога, при которой эта позиция ликвидируется. Ниже 1.0 приводит к ликвидации.",
   "The collateral you supply and the asset you borrow against it to build leverage.":
     "Залог, который вы предоставляете, и актив, который вы занимаете под него, чтобы нарастить плечо.",
-  "Your own capital in the loop (exposure minus debt). Exposure is your total leveraged position.":
-    "Ваш собственный капитал в цикле (экспозиция минус долг). Экспозиция — это ваша общая позиция с плечом.",
   "Net yield after borrow costs, on your capital. The figure below is interest earned so far, ticking live.":
     "Чистая доходность на ваш капитал после затрат на займ. Значение ниже показывает проценты, начисленные на данный момент, и обновляется в реальном времени.",
-  "Health factor, and the collateral price at which this loop is liquidated. Below 1.0 triggers liquidation.":
-    "Фактор здоровья и цена залога, при которой этот цикл ликвидируется. Ниже 1.0 приводит к ликвидации.",
-  "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)":
-    "Чистый carry, заработанный по вашим циклам Multiply, начисляемый в реальном времени (доходность поставки минус затраты на займ)",
   "Average APY across your staked positions, weighted by value.":
     "Средняя доходность (APY) по вашим позициям в стейкинге, взвешенная по стоимости.",
   "Additional amount you can borrow against your pledged collateral within Avana credit limits":
     "Дополнительная сумма, которую вы можете занять под внесённое вами обеспечение в пределах кредитных лимитов Avana",
   "Amount an active loan can lose before reaching liquidation; unavailable when you have no debt":
     "Сумма, которую может потерять активный займ, прежде чем наступит ликвидация; недоступно, если у вас нет долга",
-  "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.":
-    "Совокупная ликвидационная стоимость, делённая на общий долг Multiply. Чем выше, тем безопаснее; ниже 1 — риск ликвидации.",
-  "Equity-weighted net APY after supply yield and borrow cost":
-    "Чистый APY, взвешенный по собственному капиталу, с учётом доходности поставки и стоимости займа",
-  "Exposure, return, and liquidation risk for each active loop":
-    "Экспозиция, доходность и риск ликвидации по каждому активному циклу",
-  "Gross Multiply exposure after looping across all positions":
-    "Валовая экспозиция Multiply после зацикливания по всем позициям",
   "Interest earned as a percentage of principal you supplied":
     "Проценты, заработанные в процентах от основной суммы, которую вы предоставили",
-  "Portfolio leverage as position value divided by equity":
-    "Плечо портфеля — стоимость позиции, делённая на собственный капитал",
   "Projected earnings at current rates": "Прогнозируемый доход при текущих ставках",
   "Supply interest accruing in real time across your lending positions (excludes protocol rewards)":
     "Проценты по депозитам, начисляемые в реальном времени по вашим кредитным позициям (без учёта наград протокола)",
@@ -1790,7 +1540,6 @@ const dict: TranslationDictionary = {
     "Доля предоставленных средств, которая сейчас занята. Высокое использование повышает ставки и может задержать вывод.",
   "The liquidity pool you can pledge as collateral to borrow against.":
     "Пул ликвидности, который можно внести в залог, чтобы брать займы.",
-  "The maximum leverage available on this loop.": "Максимальное плечо, доступное для этой петли.",
   "The most you can borrow as a share of your collateral value.":
     "Максимум, который можно занять, как доля стоимости вашего залога.",
   "The token you can borrow against your collateral.": "Токен, который можно занять под ваш залог.",
@@ -1813,7 +1562,6 @@ const dict: TranslationDictionary = {
   "Clear {facet} filter": "Сбросить фильтр «{facet}»",
   "Filter by": "Фильтр",
   Hubs: "Хабы",
-  "No loops match these filters.": "Нет петель, подходящих под эти фильтры.",
   "No matches": "Ничего не найдено",
   "Search chains": "Поиск сетей",
   "Search hubs": "Поиск хабов",
@@ -1823,7 +1571,6 @@ const dict: TranslationDictionary = {
   Volatile: "Волатильные",
   Chains: "Сети",
   Other: "Другое",
-  Stocks: "Акции",
   "Filter markets": "Фильтр рынков",
 }
 

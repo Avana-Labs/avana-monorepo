@@ -1,6 +1,6 @@
 import type { BorrowAction } from "@/app/lib/borrow-system/model"
 import type {
-  SandboxActionResult,
+  ActionResult,
   TransactionActionType,
   TransactionAdapter,
   TransactionIntent,
@@ -21,7 +21,7 @@ const EMPTY_METRICS = {
 
 export type ProductionBorrowTransactionSource = Partial<{
   previewTransaction: (intent: TransactionIntent) => Promise<TransactionPreview>
-  executeTransaction: (intent: TransactionIntent) => Promise<SandboxActionResult>
+  executeTransaction: (intent: TransactionIntent) => Promise<ActionResult>
   now: () => number
   generateId: (prefix: string) => string
 }>
@@ -82,7 +82,7 @@ export class ProductionTransactionAdapter implements TransactionAdapter {
     }
   }
 
-  async executeTransaction(intent: TransactionIntent): Promise<SandboxActionResult> {
+  async executeTransaction(intent: TransactionIntent): Promise<ActionResult> {
     if (!this.source.executeTransaction) throw new Error(TRANSACTIONS_UNAVAILABLE)
     return this.source.executeTransaction(intent)
   }

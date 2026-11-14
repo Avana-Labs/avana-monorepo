@@ -120,7 +120,7 @@ function verifyWalletJwt(
 }
 
 /** Verify a short-lived Convex bearer token minted by this app. */
-export function verifySandboxJwt(token: string): { wallet: string; exp: number } | null {
+export function verifyConvexJwt(token: string): { wallet: string; exp: number } | null {
   return verifyWalletJwt(token, { audience: CONVEX_AUDIENCE, scope: "wallet" })
 }
 
@@ -130,7 +130,7 @@ export function verifySiweSessionJwt(token: string): { wallet: string; exp: numb
 }
 
 /** Mint a wallet identity after SIWE verification. */
-export function mintSandboxJwt(wallet: string, issuer: string): string {
+export function mintConvexJwt(wallet: string, issuer: string): string {
   const normalized = wallet.toLowerCase()
   return mintJwt({ sub: normalized, wallet: normalized, scope: "wallet" }, issuer, {
     audience: CONVEX_AUDIENCE,

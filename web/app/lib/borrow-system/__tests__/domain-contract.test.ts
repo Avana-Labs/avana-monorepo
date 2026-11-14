@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type {
   ProductionReadAdapter,
-  SandboxActionResult,
+  ActionResult,
   SandboxReadAdapter,
   SyntheticTransactionReceipt,
   TransactionHistoryItem,
@@ -84,7 +84,7 @@ describe("borrow system contracts", () => {
       timestamp: receipt.timestamp,
     }
 
-    const sandboxResult: SandboxActionResult = {
+    const sandboxResult: ActionResult = {
       preview,
       receipt,
       result,

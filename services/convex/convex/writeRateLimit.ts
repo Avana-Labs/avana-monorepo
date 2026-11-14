@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 /**
- * Per-identity write throttle for sandbox mutations.
+ * Per-identity write throttle for wallet mutations.
  *
- * `requireWallet` (convex/sandbox/auth.ts) proves ownership but does NOT bound how fast a
+ * `requireWallet` (walletAuth.ts) proves ownership but does NOT bound how fast a
  * wallet may write, so the append-only / state mutations that guard on it alone (onboarding steps,
  * rewards save/claim) had no ceiling on write volume. The high-traffic execution
  * path (recordTransaction / recordSwap) already caps itself at MAX_TX_PER_HOUR, and umbrella /
@@ -37,7 +37,7 @@ export async function consumeWriteBudget(ctx: MutationCtx, key: string): Promise
     allowed = true
   }
   if (!allowed) {
-    throw codedError("RATE_LIMITED: too many sandbox writes in a short window; please retry shortly.")
+    throw codedError("RATE_LIMITED: too many writes in a short window; please retry shortly.")
   }
 }
 

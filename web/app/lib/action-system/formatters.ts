@@ -63,12 +63,6 @@ export function formatActionNetworkFee(value: number) {
   return `~ ${formatActionUsd(value)}`
 }
 
-/**
- * The single canonical sandbox network-fee estimate (USD). Preview and receipt must both read
- * this one number, or the estimate and the recorded fee drift apart.
- */
-export const SANDBOX_NETWORK_FEE_USD = 0.03
-
 /** Avana interface fee: 15 bps of the transaction's USD value (see the fee tooltip). */
 export const AVANA_PLATFORM_FEE_BPS = 15
 

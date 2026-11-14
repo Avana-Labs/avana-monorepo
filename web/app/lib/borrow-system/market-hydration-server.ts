@@ -130,7 +130,7 @@ export async function fetchAssetContractAddresses(assetSlug: string): Promise<Co
   )
 }
 
-/** Recent market transactions (sandbox first, seeded walletEvents fallback). */
+/** Recent market transactions (app transactions first, then chain events). */
 export async function fetchRecentTransactions(scope: "pool" | "asset", slug: string) {
   const client = convexClient()
   if (!client) return null

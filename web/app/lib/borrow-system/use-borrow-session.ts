@@ -9,7 +9,7 @@ import {
 } from "@/app/lib/borrow-system/market-hydration"
 import type {
   BaseReadAdapter,
-  SandboxActionResult,
+  ActionResult,
   SyntheticTransactionReceipt,
   TransactionAdapter,
   TransactionHistoryItem,
@@ -76,7 +76,7 @@ export function useBorrowSession({
     [transactionAdapter],
   )
   const executeTransaction = useCallback(
-    async (intent: TransactionIntent): Promise<SandboxActionResult> => {
+    async (intent: TransactionIntent): Promise<ActionResult> => {
       setIsPending(true)
       try {
         return await transactionAdapter.executeTransaction(intent)

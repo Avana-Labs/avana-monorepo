@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react"
 import type { LendAction, LendSystemState } from "@/app/lib/lend-system/model"
 import type {
   LendReadAdapter,
-  LendSandboxActionResult,
+  LendActionResult,
   LendTransactionAdapter,
   LendTransactionHistoryItem,
   LendTransactionIntent,
@@ -53,7 +53,7 @@ export function useLendSession({
     [transactionAdapter],
   )
   const executeTransaction = useCallback(
-    async (intent: LendTransactionIntent): Promise<LendSandboxActionResult> => {
+    async (intent: LendTransactionIntent): Promise<LendActionResult> => {
       setIsPending(true)
       try {
         return await transactionAdapter.executeTransaction(intent)

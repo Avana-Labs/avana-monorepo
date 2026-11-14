@@ -31,7 +31,7 @@ const base: PositionSnapshotInput = {
 const ctxSafe = buildPositionContext(base, 1_700_000_100_000) // HF 1.625
 const ctxRisky = buildPositionContext({ ...base, debtValueUsd: 5_000 }, 1_700_000_100_000) // HF 1.3
 
-const opts = { queryText: "am I safe?", provenance: "sandbox" }
+const opts = { queryText: "am I safe?", provenance: "connected_wallet" }
 
 describe("defensive-action engine", () => {
   it("computes the repay needed to reach a target health factor", () => {

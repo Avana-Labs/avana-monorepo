@@ -63,7 +63,7 @@ export type LendTransactionHistoryItem = {
   hash: string
 }
 
-export type LendSandboxActionResult = {
+export type LendActionResult = {
   preview: LendTransactionPreview
   receipt: LendTransactionResult
   historyItem: LendTransactionHistoryItem
@@ -90,7 +90,7 @@ export type LendWalletReadSnapshot = {
 }
 
 export type LendReadAdapter = {
-  mode: "sandbox" | "production"
+  mode: "production"
   readWalletSnapshot(walletId: string): Promise<LendWalletReadSnapshot>
   readMarkets(): Promise<LendMarket[]>
   readLendPage(walletId: string): Promise<LendPageData>
@@ -98,8 +98,8 @@ export type LendReadAdapter = {
 }
 
 export type LendTransactionAdapter = {
-  mode: "sandbox" | "production"
+  mode: "production"
   createIntent(action: LendAction): LendTransactionIntent
   previewTransaction(intent: LendTransactionIntent): Promise<LendTransactionPreview>
-  executeTransaction(intent: LendTransactionIntent): Promise<LendSandboxActionResult>
+  executeTransaction(intent: LendTransactionIntent): Promise<LendActionResult>
 }

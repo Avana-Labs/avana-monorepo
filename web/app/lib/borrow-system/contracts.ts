@@ -70,7 +70,7 @@ export type TransactionHistoryItem = {
   hash: string
 }
 
-export type SandboxActionResult = {
+export type ActionResult = {
   preview: TransactionPreview
   receipt: SyntheticTransactionReceipt
   result: TransactionResult
@@ -85,7 +85,7 @@ export type WalletReadSnapshot = {
 }
 
 export type BaseReadAdapter = {
-  mode: "sandbox" | "production"
+  mode: "production"
   readWalletSnapshot(walletId: string): Promise<WalletReadSnapshot>
   readMarkets(): Promise<BorrowMarketRecord[]>
   readBorrowPage(walletId: string): Promise<BorrowPageData>
@@ -94,17 +94,13 @@ export type BaseReadAdapter = {
   readAssetDetail(assetId: string): Promise<AssetDetail | null>
 }
 
-export type SandboxReadAdapter = BaseReadAdapter & {
-  mode: "sandbox"
-}
-
 export type ProductionReadAdapter = BaseReadAdapter & {
   mode: "production"
 }
 
 export type TransactionAdapter = {
-  mode: "sandbox" | "production"
+  mode: "production"
   createIntent(action: BorrowAction): TransactionIntent
   previewTransaction(intent: TransactionIntent): Promise<TransactionPreview>
-  executeTransaction(intent: TransactionIntent): Promise<SandboxActionResult>
+  executeTransaction(intent: TransactionIntent): Promise<ActionResult>
 }

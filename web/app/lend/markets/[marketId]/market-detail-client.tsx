@@ -36,7 +36,7 @@ type Props = {
   detail: LendMarketDetail
 }
 
-/** Map a wallet's own sandbox lend actions into detail transaction rows. */
+/** Map a wallet's own lend actions into detail transaction rows. */
 function mapSessionRows(
   history: ReturnType<typeof useLendSessionContext>["transactionHistory"],
   marketId: string,

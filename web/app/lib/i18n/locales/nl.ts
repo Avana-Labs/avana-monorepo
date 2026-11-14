@@ -5,17 +5,12 @@ import type { TranslationDictionary } from "../types"
 const dict: TranslationDictionary = {
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "Zet onderpand in, leen daartegen, stort het geleende kapitaal opnieuw in en herhaal tot je risicolimiet.",
-  "Browse Multiply Page": "Naar de pagina Vermenigvuldigen",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":
     "Zet je liquiditeitspool-posities om in onderpand en leen hier tegen ze, zonder de pool te verlaten.",
   "Browse Borrow Page": "Naar de pagina Lenen",
   "Supply capital into Hub-connected lending markets and earn from LP-backed borrower demand.":
     "Lever kapitaal aan Hub-verbonden leenmarkten en verdien aan de door LP gedekte vraag van leners.",
   "Browse Lend Page": "Naar de pagina Uitlenen",
-  "Coinbase & Robinhood Stocks": "Coinbase & Robinhood-aandelen",
-  "Tokenized equities — deposit stock tokens to earn lending yield":
-    "Getokeniseerde aandelen — stort aandelentokens om uitleenrendement te verdienen",
-  "Tokenized-equity concentrated LP positions": "Geconcentreerde LP-posities van getokeniseerde aandelen",
   "Paxos USD stablecoin": "Paxos USD-stablecoin",
   "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.":
     "{name} is een LP-positie van getokeniseerde aandelen die als onderpand in de {spoke}-spoke op Avana is gestort. Het combineert {stableLeg} met getokeniseerde blootstelling aan {stockName} ({stockSymbol}), zodat de onderpandwaarde de aandelenkoers van {stockName} volgt, samen met de diepte en het tariefniveau van de pool. Avana koppelt de leencapaciteit aan de maximale LTV van de spoke en bindt krediet aan hoe sterk getokeniseerd aandelenonderpand kan bewegen. Deze pagina is de enige bron van waarheid over wat de pool is, hoeveel kapitaal deze veilig kan dragen en welk neerwaarts risico het protocol draagt.",
@@ -49,7 +44,6 @@ const dict: TranslationDictionary = {
   Continue: "Doorgaan",
   Cancel: "Annuleren",
   Back: "Terug",
-  "Fund my sandbox": "Mijn sandbox financieren",
   "Continue to allocation": "Doorgaan naar toewijzing",
   "Share on X first": "Eerst delen op X",
   "I posted it": "Ik heb het geplaatst",
@@ -155,13 +149,8 @@ const dict: TranslationDictionary = {
   "Highest APY": "Hoogste APY",
   "Most Available": "Meest beschikbaar",
   "Collateral A-Z": "Onderpand A-Z",
-  "Search loops": "Loops zoeken",
   "Sort by": "Sorteren op",
-  "Sort loops": "Loops sorteren",
   Trending: "Trending",
-  "Highest max-leverage APY markets in the sandbox catalog.":
-    "Markten met de hoogste APY bij maximale hefboom in de sandbox-catalogus.",
-  "No loops in this category yet.": "Nog geen loops in deze categorie.",
   COLLATERAL: "ONDERPAND",
   BORROWABLE: "LEENBAAR",
   "MAX APY": "MAX. APY",
@@ -241,19 +230,13 @@ const dict: TranslationDictionary = {
   Health: "Gezondheid",
   Debt: "Schuld",
   "Approved credit": "Goedgekeurd krediet",
-  "Multiply value": "Multiply-waarde",
   "Average APY": "Gemiddelde APY",
   Earned: "Verdiend",
   "Open positions": "Open posities",
   "Net carry": "Netto carry",
-  "Increase loop": "Loop verhogen",
-  "Unwind loop": "Loop afbouwen",
   "Weighted average APY across supplied assets in the wallet.":
     "Gewogen gemiddelde APY over de verstrekte activa in de wallet.",
   "Total yield already accrued by the portfolio.": "Totaal rendement dat de portefeuille al heeft opgebouwd.",
-  "Open multiply positions in the wallet profile.": "Open multiply-posities in het walletprofiel.",
-  "Average realized carry across the current multiply book.":
-    "Gemiddeld gerealiseerde carry over het huidige multiply-boek.",
   "Portfolio quick actions": "Snelle acties voor portefeuille",
   "Lending Opportunities": "Uitleenmogelijkheden",
   "View markets": "Markten bekijken",
@@ -272,7 +255,6 @@ const dict: TranslationDictionary = {
   "This page isn't available.": "Deze pagina is niet beschikbaar.",
   "The address may be wrong or the page may have moved.": "Het adres is mogelijk onjuist of de pagina is verplaatst.",
   "Helpful links": "Handige links",
-  "Avana sandbox": "Avana-sandbox",
   "Sign in with the wallet that created this transaction to view its receipt.":
     "Meld u aan met de wallet die deze transactie heeft aangemaakt om het bewijs te bekijken.",
   "We couldn't load this receipt right now.": "We konden dit bewijs op dit moment niet laden.",
@@ -284,7 +266,6 @@ const dict: TranslationDictionary = {
   "Available Credit": "Beschikbaar krediet",
   "Outstanding Loans": "Uitstaande leningen",
   "Total Liquidity": "Totale liquiditeit",
-  "Loop Markets": "Loop-markten",
   "Avg Max APY": "Gem. max. APY",
   "Avg Max Leverage": "Gem. max. hefboom",
   "Total TVL": "Totale TVL",
@@ -331,12 +312,9 @@ const dict: TranslationDictionary = {
   "How can we help?": "Hoe kunnen we helpen?",
   "Include what you were trying to do, what happened, and any transaction or market details that may help.":
     "Vermeld wat je probeerde te doen, wat er gebeurde en eventuele transactie- of marktgegevens die kunnen helpen.",
-  "Leveraged loop": "Hefboomlus",
   "No assets in your wallet": "Geen assets in je wallet",
   "No deposited position found for this market.": "Geen gestorte positie gevonden voor deze markt.",
   "No deposits found": "Geen stortingen gevonden",
-  "No multiply positions yet. Open a loop to leverage your collateral.":
-    "Nog geen multiply-posities. Open een loop om je onderpand te hefbomen.",
   "read more": "meer lezen",
   "Recommended articles": "Aanbevolen artikelen",
   "Request received": "Verzoek ontvangen",
@@ -371,7 +349,6 @@ const dict: TranslationDictionary = {
   "Your progress": "Je voortgang",
   "{completed}/{total} completed": "{completed}/{total} voltooid",
   "{label} amount": "{label}-bedrag",
-  "{label} multiplier": "{label}-multiplier",
   "{name} ({symbol}) is a single-asset supply market on Avana. Suppliers earn the supply APY{rewardsClause} from borrower interest, net of the reserve factor. Yield tracks utilization, so the page focuses on the live supply rate, the supply/utilization mix, and the latest risk posture for this {marketType} market.":
     "{name} ({symbol}) is een single-asset supply-markt op Avana. Verstrekkers verdienen de supply-APY{rewardsClause} uit leningrente, na aftrek van de reservefactor. Het rendement volgt de benutting, dus deze pagina richt zich op het actuele supply-tarief, de supply/benutting-verhouding en de laatste risicohouding van deze {marketType}-markt.",
   "{percent}% of liq. max": "{percent}% van liq.-max",
@@ -392,8 +369,6 @@ const dict: TranslationDictionary = {
   Portfolio: "Portefeuille",
   "Quick actions": "Snelle acties",
   "My Deposits": "Mijn stortingen",
-  "My Loops": "Mijn loops",
-  "Available to loop": "Beschikbaar om te loopen",
   "Scroll table left": "Tabel naar links scrollen",
   "Scroll table right": "Tabel naar rechts scrollen",
   "Total Fees earned": "Totaal verdiende kosten",
@@ -434,11 +409,7 @@ const dict: TranslationDictionary = {
   GOOD: "GOED",
   "Health Factor": "Health Factor",
   "I read it": "Ik heb het gelezen",
-  "In this sandbox, every transaction is simulated — use previews to learn before sizing up.":
-    "In deze sandbox wordt elke transactie gesimuleerd — gebruik previews om te leren voordat je opschaalt.",
   "Invite link": "Uitnodigingslink",
-  "Keep health factor headroom and treat rewards as practice, not production yield.":
-    "Houd marge in je health factor en beschouw beloningen als oefening, niet als echte opbrengst.",
   "Lend {name}": "Uitlenen {name}",
   "Lend actions": "Uitleen-acties",
   "Leverage options": "Hefboomopties",
@@ -456,8 +427,6 @@ const dict: TranslationDictionary = {
   Min: "Min",
   "More information": "Meer informatie",
   "More information about {topic}": "Meer informatie over {topic}",
-  "Multiply {name}": "Multiply {name}",
-  "Multiply actions": "Multiply-acties",
   "My Borrows": "Mijn leningen",
   "My LP Collaterals": "Mijn LP-onderpanden",
   "No activity matches the current filters.": "Geen activiteit komt overeen met de huidige filters.",
@@ -468,17 +437,14 @@ const dict: TranslationDictionary = {
   "No rewards ready": "Geen beloningen klaar",
   "Nothing borrowed yet": "Nog niets geleend",
   "Nothing supplied yet": "Nog niets verstrekt",
-  "Open a looped position in {name}.": "Open een gehefboomde positie in {name}.",
   "Open preferences": "Open voorkeuren",
   Opened: "Geopend",
   "Overall quest completion progress": "Algehele voortgang van de quest",
   Pending: "In behandeling",
-  "Pin a sandbox market": "Pin een sandbox-markt",
   "Pool actions": "Pool-acties",
   "Portfolio views": "Portfolio-weergaven",
   Preferences: "Voorkeuren",
   "Preview {product}": "Preview {product}",
-  "Preview a sandbox trade": "Preview een sandbox-trade",
   "Price chart": "Prijsgrafiek",
   "Processing…": "Bezig met verwerken…",
   "Progress: {progress} / {target}": "Voortgang: {progress} / {target}",
@@ -496,7 +462,6 @@ const dict: TranslationDictionary = {
   "Run a real preview in the session — nothing executes on-chain.":
     "Voer een echte preview uit in de sessie — er wordt niets on-chain uitgevoerd.",
   Safe: "Veilig",
-  "Sandbox risk primer": "Sandbox-risico-inleiding",
   "Scope Health Factor": "Health Factor bekijken",
   Search: "Zoeken",
   "Search assets": "Assets zoeken",
@@ -544,8 +509,6 @@ const dict: TranslationDictionary = {
     "Dit ligt aan onze kant, niet aan je wallet. Probeer het opnieuw en laat het ons weten als het blijft gebeuren.",
   "Back to borrow": "Terug naar lenen",
   "Back to lend": "Terug naar uitlenen",
-  "Back to multiply": "Terug naar multiply",
-  "Back to Umbrella": "Terug naar Protectie",
   "Back to rewards": "Terug naar beloningen",
   Loading: "Laden",
   "Loading…": "Laden…",
@@ -562,10 +525,8 @@ const dict: TranslationDictionary = {
   "Mobile menu": "Mobiel menu",
   "Close menu": "Menu sluiten",
   "Mobile navigation": "Mobiele navigatie",
-  "Sandbox wallet": "Sandbox-wallet",
   "This workspace uses a built-in demo wallet. There is no external wallet connection yet.":
     "Deze workspace gebruikt een ingebouwde demo-wallet. Er is nog geen externe walletverbinding.",
-  "Sandbox active": "Sandbox actief",
   Connected: "Verbonden",
   Copied: "Gekopieerd",
   "Copy address": "Adres kopiëren",
@@ -584,11 +545,8 @@ const dict: TranslationDictionary = {
   "Lending Positions": "Uitleenposities",
   "Lending Performance": "Uitleenprestaties",
   "Lend Rewards": "Uitleenbeloningen",
-  "Multiply Overview": "Multiply-overzicht",
   "Debt & Risk": "Schuld en risico",
-  "Position size, multiplier, and current net yield": "Positiegrootte, multiplier en huidig nettorendement",
   "Borrowed balance, health factor, and liquidation threshold": "Geleend saldo, gezondheidsfactor en liquidatiedrempel",
-  "No active Multiply debt": "Geen actieve Multiply-schuld",
   "Loading your portfolio": "Je portfolio laden",
   "We couldn't load your portfolio": "We konden je portfolio niet laden",
   "The live portfolio fetch kept failing. Try again to re-run the client fetch without leaving the dashboard.":
@@ -601,9 +559,7 @@ const dict: TranslationDictionary = {
   "Asset analytics": "Activa-analyse",
   "Pool analytics": "Pool-analyse",
   "Lend market analytics": "Uitleenmarktanalyse",
-  "Multiply market analytics": "Multiply-marktanalyse",
   "General FAQs": "Algemene FAQ",
-  "Multiply FAQs": "Multiply-FAQ",
   "BTC Pools": "BTC-pools",
   "ETH Pools": "ETH-pools",
   "Forex Pools": "Forex-pools",
@@ -614,11 +570,6 @@ const dict: TranslationDictionary = {
   "Forex Based": "Forex-gebaseerd",
   "Utility Based": "Utility-gebaseerd",
   "Smart Lend": "Slim uitlenen",
-  "BTC Loops": "BTC-loops",
-  "ETH Loops": "ETH-loops",
-  "Forex Loops": "Forex-loops",
-  "Utility Loops": "Utility-loops",
-  "Smart Loops": "Slimme loops",
   Watch: "Volgen",
   "At risk": "Risicovol",
   Unknown: "Onbekend",
@@ -633,108 +584,39 @@ const dict: TranslationDictionary = {
   Referrals: "Verwijzingen",
   "Rewards actions": "Beloningsacties",
   "No quests here yet — check back soon.": "Nog geen quests hier — kom snel terug.",
-  "Boot your sandbox wallet": "Start je sandbox-wallet op",
   "Spin up your profile": "Zet je profiel op",
-  "Read the sandbox risk primer": "Lees de sandbox-risicogids",
   "Pin a market to your watchlist": "Zet een markt op je volglijst",
   "Preview your first trade": "Bekijk een voorbeeld van je eerste trade",
-  "Make your first sandbox lend": "Doe je eerste sandbox-uitlening",
-  "Open your first sandbox borrow": "Open je eerste sandbox-lening",
-  "Open your first sandbox multiply": "Open je eerste sandbox-multiply",
-  "Repay a sandbox loan": "Betaal een sandbox-lening terug",
-  "Deleverage a sandbox position": "Bouw de hefboom van een sandbox-positie af",
   "Claim your first AVA reward": "Claim je eerste AVA-beloning",
-  "Sandbox cool-down": "Sandbox-afkoeling",
-  "Lend $500 in the sandbox": "Leen $500 uit in de sandbox",
-  "Borrow $200 in the sandbox": "Leen $200 in de sandbox",
-  "Launch a multiply position": "Start een multiply-positie",
   "Tour all three products": "Verken alle drie de producten",
-  "Curve sandbox tour": "Curve sandbox-tour",
-  "Uniswap v4 sandbox tour": "Uniswap v4 sandbox-tour",
   "Risk check-in (5 min)": "Risico-check-in (5 min)",
-  "Multiply mindfulness (3 min)": "Multiply-mindfulness (3 min)",
-  "3 borrow / repay loops": "3 leen-/terugbetaal-loops",
   "2 deleverage drills": "2 hefboomafbouw-oefeningen",
-  "Explore 3 sandbox markets": "Verken 3 sandbox-markten",
   "Claim 3 quest rewards": "Claim 3 quest-beloningen",
-  "3-day sandbox streak": "3-daagse sandbox-reeks",
-  "Grow sandbox portfolio by $1K": "Laat je sandbox-portefeuille met $1K groeien",
-  "Open 3 sandbox positions": "Open 3 sandbox-posities",
-  "Copy your sandbox invite link": "Kopieer je sandbox-uitnodigingslink",
-  "Send your first sandbox invite": "Verstuur je eerste sandbox-uitnodiging",
-  "Fund a referred sandbox wallet": "Financier een doorverwezen sandbox-wallet",
-  "Activate 3 sandbox friends": "Activeer 3 sandbox-vrienden",
   "Grow crew to 5 actives": "Laat je crew groeien tot 5 actieven",
-  "Referral sandbox hits $500": "Referral-sandbox bereikt $500",
   "Referral streak (2 activations)": "Referral-reeks (2 activaties)",
-  "Sandbox ambassador": "Sandbox-ambassadeur",
   "Your Avana session is live — this quest unlocks automatically when you land.":
     "Je Avana-sessie is live — deze quest wordt automatisch ontgrendeld wanneer je binnenkomt.",
-  "We create a demo wallet profile so every product sandbox shares the same session.":
-    "We maken een demo-walletprofiel aan zodat elke productsandbox dezelfde sessie deelt.",
   "Open the 60-second LP risk briefing before you simulate any position.":
     "Open de LP-risicobriefing van 60 seconden voordat je een positie simuleert.",
-  "Pick one Borrow, Lend, or Multiply market to track in your sandbox.":
-    "Kies één Borrow-, Lend- of Multiply-markt om te volgen in je sandbox.",
-  "Run a real sandbox preview on Borrow, Lend, or Multiply — no funds move.":
-    "Voer een echte sandbox-preview uit op Borrow, Lend of Multiply — er worden geen fondsen verplaatst.",
   "Deposit into any Lend market. Your live session records the quest automatically.":
     "Stort in een willekeurige Lend-markt. Je live sessie registreert de quest automatisch.",
   "Borrow against LP collateral on the Borrow page — the quest completes on success.":
     "Leen tegen LP-onderpand op de Borrow-pagina — de quest wordt voltooid bij succes.",
-  "Create a Multiply position in the sandbox and let the session bridge log it.":
-    "Maak een Multiply-positie aan in de sandbox en laat de session bridge deze registreren.",
-  "Repay any borrow position you opened — a healthy loop in the demo world.":
-    "Betaal een leenpositie terug die je hebt geopend — een gezonde loop in de demowereld.",
-  "Reduce any Multiply position to practice risk management.":
-    "Verklein een Multiply-positie om risicobeheer te oefenen.",
   "Complete any other quest, then claim it to unlock this milestone.":
     "Voltooi een andere quest en claim deze om deze mijlpaal te ontgrendelen.",
   "Explore Avana for 2 minutes after your first login, then come back to claim.":
     "Verken Avana 2 minuten na je eerste login en kom dan terug om te claimen.",
-  "Stack sandbox lend deposits until you reach $500 supplied.":
-    "Stapel sandbox-lend-stortingen tot je $500 aan aanbod bereikt.",
   "Open borrow positions totaling $200 across any collateral pool.":
     "Open leenposities van in totaal $200 over willekeurige onderpandpools.",
-  "Open any Multiply position in the sandbox — size is up to you.":
-    "Open een willekeurige Multiply-positie in de sandbox — de omvang bepaal je zelf.",
-  "Complete one action in Lend, Borrow, and Multiply.": "Voltooi één actie in Lend, Borrow en Multiply.",
-  "Visit the Curve-style borrow market tour and mark it complete.":
-    "Bezoek de borrow-markttour in Curve-stijl en markeer deze als voltooid.",
-  "Walk through the Uniswap v4 sandbox market and check it off.":
-    "Doorloop de Uniswap v4 sandbox-markt en vink deze af.",
-  "Stay in the sandbox for 5 minutes after login, then claim this patience badge.":
-    "Blijf 5 minuten in de sandbox na het inloggen en claim dan deze geduldsbadge.",
-  "Take a 3-minute breather after login before claiming this calm-multiply quest.":
-    "Neem 3 minuten pauze na het inloggen voordat je deze rustige-multiply-quest claimt.",
-  "Repay sandbox loans three times to practice healthy borrow cycles.":
-    "Betaal sandbox-leningen drie keer terug om gezonde leencycli te oefenen.",
-  "Deleverage Multiply positions twice to complete this risk drill.":
-    "Bouw twee keer de hefboom van Multiply-posities af om deze risico-oefening te voltooien.",
   "Complete tours on three different market pages across Avana.":
     "Voltooi tours op drie verschillende marktpagina's in Avana.",
   "Claim AVA from three separate quests to build your rewards streak.":
     "Claim AVA uit drie afzonderlijke quests om je beloningsreeks op te bouwen.",
   "Check in on three separate days after your first login.": "Check in op drie afzonderlijke dagen na je eerste login.",
-  "Lend, borrow, or multiply until your combined sandbox volume hits $1,000.":
-    "Leen uit, leen of multiply tot je gecombineerde sandbox-volume $1.000 bereikt.",
-  "Hold three open positions across Lend, Borrow, or Multiply.":
-    "Houd drie open posities aan in Lend, Borrow of Multiply.",
   "Generate and copy a referral link you can share with friends.":
     "Genereer en kopieer een referral-link die je met vrienden kunt delen.",
-  "Simulate inviting a friend wallet into your Avana sandbox crew.":
-    "Simuleer het uitnodigen van een vriend-wallet in je Avana sandbox-crew.",
   "Mark one invited friend as funded after they try a product action.":
     "Markeer één uitgenodigde vriend als gefinancierd nadat ze een productactie hebben geprobeerd.",
-  "Three referred wallets complete a product action in your sandbox network.":
-    "Drie doorverwezen wallets voltooien een productactie in je sandbox-netwerk.",
-  "Five referred wallets complete a product action in your sandbox network.":
-    "Vijf doorverwezen wallets voltooien een productactie in je sandbox-netwerk.",
-  "Your referred crew reaches $500 in combined sandbox volume.":
-    "Je doorverwezen crew bereikt $500 aan gecombineerd sandbox-volume.",
-  "Activate two sandbox referrals to keep your invite momentum going.":
-    "Activeer twee sandbox-referrals om je uitnodigingsmomentum vast te houden.",
-  "Activate five friends in your sandbox referral network.": "Activeer vijf vrienden in je sandbox-referralnetwerk.",
   "Filter by category": "Filter op categorie",
   "ETH volatility": "ETH-volatiliteit",
   "Liquidity depth": "Liquiditeitsdiepte",
@@ -796,8 +678,6 @@ const dict: TranslationDictionary = {
     "WBTC/WETH LP-posities geaccepteerd als onderpand in de Bluechip-spoke.",
   "Pool onboarded": "Pool toegevoegd",
   "Dual-oracle": "Dubbele oracle",
-  "WETH/DAI LP positions accepted as collateral in the Uniswap v2 spoke.":
-    "WETH/DAI LP-posities geaccepteerd als onderpand in de Uniswap v2-spoke.",
   Onboarded: "Toegevoegd",
   "Parameters refreshed": "Parameters vernieuwd",
   "Full-range USDC/USDT liquidity accepted in the Stable spoke at up to 78% LTV.":
@@ -815,8 +695,6 @@ const dict: TranslationDictionary = {
     "30d gerealiseerde σ ≈ 58% geannualiseerd — de grootste afzonderlijke bijdrage aan impermanent loss.",
   "$4.1M of 2% depth across all tiers — ample for liquidations.":
     "$4.1M aan 2% diepte over alle tiers — ruim voldoende voor liquidaties.",
-  "30-minute TWAP can lag during sharp moves; mitigated by kink in the risk curve.":
-    "30-minuten TWAP kan achterlopen bij scherpe bewegingen; gemitigeerd door een knik in de risicocurve.",
   "Uniswap v3 core + NonFungiblePositionManager, both heavily audited and live for 4 years.":
     "Uniswap v3 core + NonFungiblePositionManager, beide grondig geaudit en 4 jaar live.",
   "Rolling 90d IL averages 23bps per week for the 0.30% tier.":
@@ -832,9 +710,6 @@ const dict: TranslationDictionary = {
   "$2.6M of 2% depth.": "$2.6M aan 2% diepte.",
   "BTC/ETH is highly correlated — IL is usually <15bps/week.":
     "BTC/ETH is sterk gecorreleerd — IL is doorgaans <15bps/week.",
-  "WETH/DAI is a standard Uniswap v2 ETH/stable pair and a straightforward LP structure for collateral evaluation. The Uniswap v2 spoke admits it under conservative parameters because the pair still carries ETH volatility, while the stable quote side keeps the market easy to reason about.":
-    "WETH/DAI is een standaard Uniswap v2 ETH/stable-paar en een eenvoudige LP-structuur voor onderpandbeoordeling. De Uniswap v2-spoke laat het toe onder conservatieve parameters omdat het paar nog steeds ETH-volatiliteit draagt, terwijl de stabiele quote-kant de markt eenvoudig te doorgronden houdt.",
-  "Added to the Uniswap v2 LPs.": "Toegevoegd aan de Uniswap v2-LP's.",
   "Quarterly risk review — no changes to LTV.": "Kwartaal-risicobeoordeling — geen wijzigingen aan LTV.",
   "USDC and USDT both trade at parity and the pool is overwhelmingly used for order-routing, stability-seeking flow, and tight-spread execution. The Stable spoke admits it with a high LTV because peg-risk is shared, depth is enormous, and the pool behaves more like cash infrastructure than a typical volatile LP. That makes it a natural fit for users who want borrowing power while keeping the underlying collateral profile simple to reason about.":
     "USDC en USDT handelen beide op pariteit en de pool wordt overwegend gebruikt voor order-routing, stabiliteitszoekende flow en uitvoering met krappe spread. De Stable-spoke laat het toe met een hoge LTV omdat peg-risico gedeeld wordt, de diepte enorm is en de pool zich meer gedraagt als kas-infrastructuur dan als een typische volatiele LP. Dat maakt het een natuurlijke keuze voor gebruikers die leencapaciteit willen terwijl het onderliggende onderpandprofiel eenvoudig te doorgronden blijft.",
@@ -880,13 +755,9 @@ const dict: TranslationDictionary = {
     "Native ETH — het primaire volatiele leen-asset voor directionele carry op LP-onderpand.",
   "Mainnet launch": "Mainnet-lancering",
   "The Merge": "The Merge",
-  "Wrapped ETH is the canonical ERC-20 used by Uniswap/Balancer/Aerodrome pools.":
-    "Wrapped ETH is de canonieke ERC-20 die wordt gebruikt door Uniswap/Balancer/Aerodrome-pools.",
   "Wrapped BTC exposure — borrowed to short BTC against blue-chip LPs.":
     "Wrapped BTC-blootstelling — geleend om BTC te shorten tegen blue-chip LP's.",
   Listed: "Genoteerd",
-  "USDC is Circle's regulated, fully-backed USD stablecoin and the main unit of account for this market. It anchors the protocol's conservative borrow curves, acts as the default settlement asset for LP carry strategies, and serves as the reference point for risk pricing across stablecoin routes. In practice, that makes it the most common asset for users who want cash-like exposure with on-chain mobility.":
-    "USDC is Circle's gereguleerde, volledig gedekte USD-stablecoin en de belangrijkste rekeneenheid voor deze markt. Het verankert de conservatieve leencurves van het protocol, fungeert als het standaard-settlement-asset voor LP-carry-strategieën en dient als het referentiepunt voor risicoprijzing over stablecoin-routes. In de praktijk maakt dat het het meest gebruikte asset voor gebruikers die kas-achtige blootstelling met on-chain-mobiliteit willen.",
   "USDC listed day-1 with 80% borrow cap.": "USDC genoteerd op dag 1 met 80% leenplafond.",
   "Simulated 2023-style de-peg; guardrails paused borrows for 18m.":
     "Gesimuleerde de-peg in 2023-stijl; beveiligingen pauzeerden leningen gedurende 18m.",
@@ -1001,37 +872,24 @@ const dict: TranslationDictionary = {
   Curve: "Curve",
   Balancer: "Balancer",
   Aerodrome: "Aerodrome",
-  "Uniswap v2 LPs": "Uniswap v2-LP's",
   "Uniswap v3 Stable LPs": "Uniswap v3 Stable-LP's",
   "Uniswap v3 Blue-Chip LPs": "Uniswap v3 Blue-Chip-LP's",
   "Uniswap v3 Governance & DAO LPs": "Uniswap v3 Governance & DAO-LP's",
-  "Curve Stable LPs": "Curve Stable-LP's",
-  "Curve Correlated LPs": "Curve Correlated-LP's",
-  "Curve Crypto LPs": "Curve Crypto-LP's",
-  "Balancer Stable LPs": "Balancer Stable-LP's",
-  "Balancer Correlated LPs": "Balancer Correlated-LP's",
-  "Balancer Weighted LPs": "Balancer Weighted-LP's",
-  "Balancer Boosted LPs": "Balancer Boosted-LP's",
-  "Balancer reCLAMM LPs": "Balancer reCLAMM-LP's",
   "Aerodrome Basic Stable LPs": "Aerodrome Basic Stable-LP's",
   "Aerodrome Basic Volatile LPs": "Aerodrome Basic Volatile-LP's",
   "Aerodrome Slipstream Blue-Chip LPs": "Aerodrome Slipstream Blue-Chip-LP's",
   Stablecoin: "Stablecoin",
   "MakerDAO stablecoin": "MakerDAO-stablecoin",
-  "Curve native stablecoin": "Curve native stablecoin",
   "Aave native stablecoin": "Aave native stablecoin",
   "Circle EUR stablecoin": "Circle EUR-stablecoin",
   "ERC-20 wrapped ETH": "ERC-20 wrapped ETH",
   "Native asset": "Native asset",
   "ERC-20 wrapped BTC": "ERC-20 wrapped BTC",
-  "Coinbase wrapped BTC": "Coinbase wrapped BTC",
   "Liquid staking receipt": "Liquid-staking-bewijs",
   "Rebase-less stETH wrapper": "Rebase-loze stETH-wrapper",
   "rETH liquid staking": "rETH liquid staking",
-  "Coinbase liquid staking": "Coinbase liquid staking",
   "Aave governance token": "Aave-governancetoken",
   "Uniswap governance token": "Uniswap-governancetoken",
-  "Curve governance token": "Curve-governancetoken",
   "Constant-product LP tokens": "Constant-product LP-tokens",
   "Concentrated-liquidity LP positions": "Geconcentreerde-liquiditeit LP-posities",
   "StableSwap LP tokens": "StableSwap LP-tokens",
@@ -1059,41 +917,25 @@ const dict: TranslationDictionary = {
   "Authenticated sessions stay locked until Convex confirms access.":
     "Geverifieerde sessies blijven vergrendeld totdat Convex de toegang bevestigt.",
   "You're all set.": "Je bent helemaal klaar.",
-  "Your Avana sandbox is ready.": "Je Avana-sandbox is klaar.",
-  "You've already claimed your practice funds. Jump back into the dashboard to keep exploring.":
-    "Je hebt je oefengeld al geclaimd. Ga terug naar het dashboard om verder te ontdekken.",
   "Reading your wallet history": "Je wallet-geschiedenis wordt gelezen",
-  "Checking sandbox eligibility": "Sandbox-geschiktheid wordt gecontroleerd",
   "Selecting markets to fund": "Markten om te financieren worden geselecteerd",
-  "Sizing your practice portfolio": "Je oefenportfolio wordt afgestemd",
-  "Minting your practice funds": "Je oefengeld wordt aangemaakt",
   "Opening LP & lending positions": "LP- en lending-posities worden geopend",
-  "Building your multiply loops": "Je multiply-loops worden opgebouwd",
-  "Finalizing your sandbox": "Je sandbox wordt afgerond",
   "One moment.": "Een moment.",
   "Analyzing your wallet…": "Je wallet wordt geanalyseerd…",
   "Hang tight.": "Even geduld.",
-  "Funding your sandbox…": "Je sandbox wordt gefinancierd…",
   "Liquid assets": "Liquide assets",
   "Hold & swap tokens": "Tokens houden & swappen",
   "LP collateral": "LP-onderpand",
   "Borrow against LP": "Lenen tegen LP",
   Lending: "Lending",
   "Supply to earn": "Storten om te verdienen",
-  "Leverage loops": "Leverage-loops",
   "You'll get": "Je krijgt",
-  "A full practice portfolio": "Een volledig oefenportfolio",
   "Claiming allocation…": "Toewijzing wordt geclaimd…",
   "Claim your allocation": "Claim je toewijzing",
-  "Welcome to the Avana Sandbox": "Welkom bij de Avana-sandbox",
-  "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.":
-    "In deze risicovrije Avana-sandbox kun je lenen tegen oefen-LP-posities, uitlenen en strategieën loopen met sandboxgeld. Geen echte assets. Geen wallet-handtekeningen. Gewoon een snelle manier om te begrijpen hoe Avana werkt voordat je naar de live app overschakelt.",
-  "Unlimited practice funds": "Onbeperkt oefengeld",
   "No transactions yet": "Nog geen transacties",
   "No transactions to sign": "Geen transacties om te ondertekenen",
   "No real assets involved": "Geen echte activa",
   "Connect a wallet.": "Verbind een wallet.",
-  "We'll set up your sandbox and scope it to your address.": "We stellen je sandbox in en beperken deze tot je adres.",
   "By connecting your wallet, you agree to the": "Door je wallet te verbinden ga je akkoord met de",
   "Terms & Conditions": "Algemene Voorwaarden",
   and: "en het",
@@ -1102,24 +944,13 @@ const dict: TranslationDictionary = {
   "Your wallet is on the waitlist.": "Je wallet staat op de wachtlijst.",
   "wallets onboarded.": "wallets geonboard.",
   "Wallet connected.": "Wallet verbonden.",
-  "Fund your sandbox to start exploring.": "Financier je sandbox om te beginnen met ontdekken.",
-  "Every wallet gets sandbox funds to practice with, spread across markets so you can try every flow risk-free.":
-    "Elke wallet krijgt sandboxgeld om mee te oefenen, verdeeld over markten zodat je elke flow risicovrij kunt uitproberen.",
   "You're eligible.": "Je komt in aanmerking.",
-  "Your practice portfolio is ready.": "Je oefenportfolio is klaar.",
-  "sandbox seats remain.": "sandbox-plaatsen over.",
   "Tell your network about Avana.": "Vertel je netwerk over Avana.",
   "Post the prepared message on X.": "Plaats het voorbereide bericht op X.",
   "Open X": "X openen",
   Skip: "Overslaan",
   "Here's what you'll get.": "Dit krijg je.",
-  "Practice funds across assets, LP collateral, lending, and multiply.":
-    "Oefengeld verdeeld over assets, LP-onderpand, lending en multiply.",
   "The allocation cap was reached.": "De toewijzingslimiet is bereikt.",
-  "Your Avana sandbox is ready to explore.": "Je Avana-sandbox is klaar om te ontdekken.",
-  "Your practice funds are now in your wallet. Jump into the dashboard to start exploring.":
-    "Je oefengeld staat nu in je wallet. Ga naar het dashboard om te beginnen met ontdekken.",
-  "Sandbox onboarding requires a Convex connection. Set": "Sandbox-onboarding vereist een Convex-verbinding. Stel",
   "to continue.": "in om door te gaan.",
   Confirmed: "Bevestigd",
   Receipt: "Transactiebewijs",
@@ -1143,7 +974,6 @@ const dict: TranslationDictionary = {
   Strategy: "Strategie",
   "A Beginner's Guide to LP Collateral": "Een beginnersgids voor LP-onderpand",
   "What LP Collateral Makes Possible": "Wat LP-onderpand mogelijk maakt",
-  "Thinking Clearly About Yield Looping": "Helder nadenken over yield looping",
   "How to Hedge an LP Position": "Hoe een LP-positie af te dekken",
   "Making LP Collateral Usable": "LP-onderpand bruikbaar maken",
   "Avana and the Next Step for Liquidity Providers": "Avana en de volgende stap voor liquiditeitsverschaffers",
@@ -1156,24 +986,16 @@ const dict: TranslationDictionary = {
   "Which DEXs do you use the most?": "Welke DEXs gebruik je het meest?",
   "Select all that apply": "Selecteer alles wat van toepassing is",
   "Last step.": "Laatste stap.",
-  "Let's fund your sandbox.": "Laten we je sandbox voorzien van geld.",
-  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.":
-    "We verdelen oefengeld over de markten zodat je zonder risico kunt uitlenen, lenen en loopen.",
   "Good news, you're in.": "Goed nieuws, je bent binnen.",
   of: "van",
-  "sandbox seats already claimed.": "sandboxplekken al geclaimd.",
-  "Your sandbox is live.": "Je sandbox is live.",
   "Everything's funded and waiting. Dive in whenever you're ready.":
     "Alles staat klaar en is gevuld. Duik erin wanneer je zover bent.",
   "Connect an EVM wallet.": "Verbind een EVM-Wallet.",
-  "We can't reach the sandbox right now.": "We kunnen de sandbox op dit moment niet bereiken.",
   "Please try again in a moment.": "Probeer het over een moment opnieuw.",
   "Your session is safe. This is a temporary connection issue, not your wallet.":
     "Je sessie is veilig. Dit is een tijdelijk verbindingsprobleem, niet je Wallet.",
   "We couldn't load this page.": "We konden deze pagina niet laden.",
   "APY breakdown": "APY-opbouw",
-  "Active Umbrella capital currently available to absorb eligible deficits for this asset.":
-    "Actief Umbrella-kapitaal dat momenteel beschikbaar is om in aanmerking komende tekorten van dit asset op te vangen.",
   "Active staker capital": "Actief stakerkapitaal",
   "Additional rewards used to attract coverage capital, especially during bootstrap periods or when coverage is below target.":
     "Extra beloningen om beschermingskapitaal aan te trekken, vooral tijdens de opstart of wanneer de dekking onder het doel ligt.",
@@ -1192,29 +1014,17 @@ const dict: TranslationDictionary = {
   "Liquidation recapture": "Liquidatie-terugwinning",
   "Local deductible": "Lokale eigen-risicodrempel",
   "Target coverage": "Doeldekking",
-  "The Hub asset this Umbrella market protects. Deficits from any eligible Spoke borrowing this reserve can be covered by this market.":
-    "Het Hub-asset dat deze Umbrella-markt beschermt. Tekorten uit elke in aanmerking komende Spoke-lening van deze reserve kunnen door deze markt worden gedekt.",
-  "The amount of Umbrella capital currently deposited and available to absorb deficits for this covered reserve. Capital in cooldown is no longer counted as fully available protection.":
-    "De hoeveelheid Umbrella-kapitaal die momenteel is gestort en beschikbaar is om tekorten van deze gedekte reserve op te vangen. Kapitaal in cooldown telt niet langer als volledig beschikbare bescherming.",
   "The amount of staked capital currently in the cooldown period before it can be withdrawn. A larger cooling balance means less protection may remain available if those funds exit.":
     "De hoeveelheid gestaket kapitaal in de cooldownperiode voordat het kan worden opgenomen. Een groter cooldownsaldo kan betekenen dat er minder bescherming overblijft als die middelen vertrekken.",
   "The core staking yield paid for providing protection capital to this surface.":
     "De basis-stakingopbrengst voor het leveren van beschermingskapitaal aan deze surface.",
   "The portion of yield supported by liquidation-linked economics generated by this reserve-per-Spoke surface, such as liquidation fees or SVR.":
     "Het deel van de opbrengst dat wordt ondersteund door liquidatiegerelateerde economie van deze reserve-per-Spoke-surface, zoals liquidatiekosten of SVR.",
-  "The staking rewards you have earned for providing Umbrella coverage. Rewards may include protocol incentives and other compensation for taking slashing and lockup risk.":
-    "De stakingbeloningen die je hebt verdiend door Umbrella-dekking te leveren. Beloningen kunnen protocolincentives en andere compensatie voor slashing- en lockuprisico omvatten.",
-  "Umbrella surface details": "Details van Umbrella-surface",
   "View {symbol} surface details": "Details van {symbol}-surface bekijken",
-  "The rewards currently earned by this Umbrella position, allocated across the underlying APY sources.":
-    "De beloningen die deze Umbrella-positie momenteel verdient, verdeeld over de onderliggende APY-bronnen.",
-  "The estimated annual yield for keeping Umbrella capital available as coverage for this market.":
-    "De geschatte jaarlijkse opbrengst voor het beschikbaar houden van Umbrella-kapitaal als dekking voor deze markt.",
   "Est. annual rewards": "Geschatte jaarlijkse beloningen",
   "Based on amount entered": "Gebaseerd op ingevoerd bedrag",
   "Slashable stake": "Slashbare stake",
   "Market staked": "Gestaket in markt",
-  "Umbrella APY": "Umbrella APY",
   "Umbrella market": "Umbrella-markt",
   "Cooled stake": "Stake in cooldown",
   "Start cooldown": "Cooldown starten",
@@ -1222,8 +1032,6 @@ const dict: TranslationDictionary = {
   "Coverage is defined for a specific Hub reserve and covers eligible deficits from every Spoke borrowing that reserve, including credit-line draws.":
     "Dekking wordt gedefinieerd voor een specifieke Hub-reserve en dekt in aanmerking komende tekorten van elke Spoke die uit die reserve leent, inclusief opnames uit kredietlijnen.",
   "First-loss protection": "First-loss-bescherming",
-  "The Deficit Offset absorbs the first layer of loss. Only the residual deficit beyond that offset can reach staked Umbrella coverage.":
-    "De tekort-offset absorbeert de eerste verlieslaag. Alleen het resterende tekort boven die offset kan de gestakete Umbrella-dekking bereiken.",
   "Independent underwriting": "Onafhankelijke risicobeoordeling",
   "Target liquidity and reward emissions reflect reserve risk, economics, opportunity cost, and the slashing and lockup risk accepted by coverage providers.":
     "Doelliquiditeit en beloningsuitgifte weerspiegelen reserverisico, economie, opportuniteitskosten en het slashing- en lockuprisico dat dekkingsaanbieders accepteren.",
@@ -1238,7 +1046,6 @@ const dict: TranslationDictionary = {
   "Includes active stake and cooldown": "Inclusief actieve stake en cooldown",
   "Amount Avana covers first before user-staked coverage is exposed. Stakers only take losses once realized deficits exceed this offset.":
     "Bedrag dat Avana eerst dekt voordat door gebruikers gestakete dekking wordt blootgesteld. Stakers dragen pas verlies wanneer gerealiseerde tekorten deze offset overschrijden.",
-  "Close umbrella actions": "Protectie-acties sluiten",
   Cooldown: "Cooldown",
   Cooling: "In cooldown",
   Coverage: "Dekking",
@@ -1250,19 +1057,13 @@ const dict: TranslationDictionary = {
   "Desired amount of user-staked coverage for this asset.":
     "Gewenste hoeveelheid door gebruikers gestakete dekking voor dit asset.",
   "Dynamic rewards": "Dynamische beloningen",
-  "Each Umbrella stake token covers deficits for its matching borrowed asset on the same network.":
-    "Elk Protectie-staketoken dekt tekorten voor het bijbehorende geleende asset op hetzelfde netwerk.",
-  "Emissions adjust against target liquidity, and each staked asset can earn multiple reward tokens.":
-    "Emissies passen zich aan de doelliquiditeit aan, en elk gestaket asset kan meerdere beloningstokens verdienen.",
   "Estimated annual staking yield paid to stakers of this asset.":
     "Geschatte jaarlijkse staking-opbrengst uitbetaald aan stakers van dit asset.",
   "In cooldown": "In cooldown",
   "Isolated slashing": "Geïsoleerde slashing",
   "Learn Umbrella": "Meer over Protectie",
-  "Umbrella Overview": "Umbrella-overzicht",
   "Module assets": "Module-assets",
   More: "Meer",
-  "More umbrella actions": "Meer Protectie-acties",
   "Next cooldown": "Volgende cooldown",
   "Next market risk": "Volgend marktrisico",
   "Once cooldown finishes, users can unstake during the withdrawal window before cooldown has to be restarted.":
@@ -1274,10 +1075,6 @@ const dict: TranslationDictionary = {
   Restart: "Opnieuw",
   "Restart cooldown": "Cooldown opnieuw starten",
   Stake: "Stake",
-  "Stake in umbrella": "Staken in Protectie",
-  "Unstake from umbrella": "Unstaken uit Protectie",
-  "Stake, claim rewards, start cooldown, or unstake from the umbrella safety module.":
-    "Stake, claim beloningen, start de cooldown of unstake uit de Protectie-veiligheidsmodule.",
   "Stake, claim, cooldown, unstake": "Staken, claimen, cooldown, unstaken",
   "Start cooldown before withdrawing. During cooldown, the position keeps earning incentives and remains slashable.":
     "Start de cooldown voordat je opneemt. Tijdens de cooldown blijft de positie incentives verdienen en blijft ze onderworpen aan slashing.",
@@ -1287,20 +1084,13 @@ const dict: TranslationDictionary = {
   "Total user-staked capital available to absorb losses for this asset.":
     "Totaal door gebruikers gestaket kapitaal beschikbaar om verliezen op dit asset op te vangen.",
   Umbrella: "Protectie",
-  "Umbrella Cooldown": "Protectie-cooldown",
-  "Umbrella actions": "Protectie-acties",
-  "Umbrella activity": "Protectie-activiteit",
   "Umbrella positions": "Protectie-posities",
-  "Umbrella positions are split by asset and network, so each stake token has its own risk and reward profile.":
-    "Protectie-posities zijn opgesplitst per asset en netwerk, dus elk staketoken heeft zijn eigen risico- en beloningsprofiel.",
   Unstake: "Unstake",
   "Unstake window": "Unstake-venster",
   "Weighted APY": "Gewogen APY",
   "Withdrawal ready": "Klaar om op te nemen",
   "Withdrawal window": "Opnamevenster",
-  "You have no Umbrella positions yet.": "Je hebt nog geen Protectie-posities.",
   "Your Umbrella": "Jouw Protectie",
-  "Your Umbrella stake": "Jouw Protectie-stake",
   "After cooldown completes, there is a short window to unstake. If it expires, cooldown must be started again.":
     "Na afloop van de cooldown is er een kort venster om te unstaken. Verloopt dat, dan moet de cooldown opnieuw worden gestart.",
   "base {base} + reward {reward}": "basis {base} + beloning {reward}",
@@ -1330,8 +1120,6 @@ const dict: TranslationDictionary = {
   "{count} assets": "{count} activa",
   "{count} positions": "{count} posities",
   "{count} rewards": "{count} beloningen",
-  "{name} ({symbol}) / {borrowName} ({borrow}) is a leveraged multiply market on Avana. Supply {symbol} as collateral to loop into {borrow} exposure, up to {leverage}, in a route dedicated to leveraged positions rather than LP collateral pools. Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this {marketType} market. Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.":
-    "{name} ({symbol}) / {borrowName} ({borrow}) is een hefboom-Multiply-markt op Avana. Lever {symbol} als onderpand om tot {leverage} een loop-positie in {borrow} op te bouwen, via een route die bedoeld is voor hefboomposities in plaats van LP-onderpandpools. De netto-opbrengsten volgen de supply/borrow-spread, de benutting en de gekozen multiplier, dus loop-resultaten kunnen veranderen naarmate rentes en beschikbare liquiditeit opnieuw in balans komen. De pagina richt zich op de actuele hefboomlimiet, de supply/borrow-mix, de beschikbare liquiditeit en de meest recente risicopositie van deze {marketType}-markt. Gebruikers moeten letten op de onderpandfactor, de liquidatiedrempel, de leenkosten en de beschikbare liquiditeit, omdat die factoren zowel de loop-opbrengsten beïnvloeden als hoe snel een positie kan worden afgebouwd onder stressomstandigheden.",
   "30 Days": "30 dagen",
   "90 Days": "90 dagen",
   "A position is near liquidation (health factor {hf}).":
@@ -1370,7 +1158,6 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "Dashboard-tabbladen",
   Date: "Datum",
   Dismiss: "Sluiten",
-  "Explore Umbrella": "Protectie verkennen",
   "Express actions": "Express-acties",
   Fees: "Kosten",
   "Fees Earned": "Verdiende kosten",
@@ -1399,8 +1186,6 @@ const dict: TranslationDictionary = {
   "Loading wallet position": "Walletpositie laden",
   "Long, short, and net USD per token across every product.":
     "Long, short en netto in USD per token over alle producten.",
-  "LOOP APY": "LOOP-APY",
-  "Loop market": "Loop-markt",
   "LP APR": "LP-APR",
   "Pool APR": "Pool-APR",
   "Live value of this collateral, and the LP trading fees it earns.":
@@ -1408,28 +1193,20 @@ const dict: TranslationDictionary = {
   "Market-wide liquidation activity and near-liquidation exposure over the last 24 hours.":
     "Marktbrede liquidatieactiviteit en bijna-liquidatie-exposure over de afgelopen 24 uur.",
   "Minimum received": "Minimaal ontvangen",
-  "Multiply Balance": "Multiply-saldo",
-  "Multiply Exposure": "Multiply-exposure",
-  "Multiply Health": "Multiply-gezondheid",
-  "Multiply Rewards": "Multiply-beloningen",
   "Multiply TVL": "Multiply-TVL",
   "My Collaterals": "Mijn onderpanden",
   "My Debts": "Mijn schulden",
   Net: "Netto",
-  "Net Portfolio Value = Assets − Debt. Assets: wallet balances, lending supplied, borrow collateral, any borrowed funds you still hold, your Multiply position value, and Umbrella staked + rewards. Debt: borrow loans and Multiply borrowing. Borrowing doesn't change this number — the cash you receive is an asset that offsets the new debt.":
-    "Netto-portefeuillewaarde = Activa − Schuld. Activa: walletsaldi, uitgeleende bedragen, leenonderpand, geleende middelen die je nog aanhoudt, de waarde van je Multiply-positie en gestakete tegoeden + Protectie-beloningen. Schuld: leningen en Multiply-leningen. Lenen verandert dit getal niet — het geld dat je ontvangt is een activum dat de nieuwe schuld compenseert.",
   Network: "Netwerk",
   No: "Nee",
   "No active loans. Borrow against your collateral to get started.":
     "Geen actieve leningen. Leen tegen je onderpand om te beginnen.",
-  "No active Multiply positions": "Geen actieve Multiply-posities",
   "No assets found.": "Geen activa gevonden.",
   "No collateral deposited yet. Supply an asset to start backing loans.":
     "Nog geen onderpand gestort. Lever een asset om leningen te dekken.",
   "No liquidity pools yet. Provide liquidity to start earning trading fees.":
     "Nog geen liquiditeitspools. Verstrek liquiditeit om handelskosten te gaan verdienen.",
   "No supplied position to withdraw": "Geen geleverde positie om op te nemen",
-  "No Umbrella positions yet.": "Nog geen Protectie-posities.",
   "No wallet balances found.": "Geen walletsaldi gevonden.",
   NONE: "GEEN",
   now: "nu",
@@ -1459,8 +1236,6 @@ const dict: TranslationDictionary = {
   "Repay or add collateral to reduce your liquidation risk.":
     "Betaal af of voeg onderpand toe om je liquidatierisico te verlagen.",
   "Review risk": "Risico bekijken",
-  "Negative net APY: borrow costs exceed supply yield. Review before opening this loop.":
-    "Negatieve netto-APY: leenkosten overschrijden supply-rendement. Beoordeel voordat u deze loop opent.",
   "Review swap": "Swap controleren",
   "Rewards Earned": "Verdiende beloningen",
   "Scenario price": "Scenarioprijs",
@@ -1528,7 +1303,6 @@ const dict: TranslationDictionary = {
   Parameter: "Parameter",
   pools: "pools",
   Pools: "Pools",
-  Sandbox: "Sandbox",
   Short: "Short",
   Swap: "Ruilen",
   Tokens: "Tokens",
@@ -1551,19 +1325,14 @@ const dict: TranslationDictionary = {
   "Collateral price move": "Prijsbeweging onderpand",
   "Debt change amount": "Bedrag schuldwijziging",
   "Drop buffer": "Dalingsbuffer",
-  "Equity value at this leverage, by scenario.": "Eigenvermogenswaarde bij deze hefboom, per scenario.",
-  "Estimate on {equity} equity. Assumes rates hold; leverage amplifies both gains and losses.":
-    "Schatting op {equity} eigen vermogen. Gaat uit van gelijkblijvende rentes; hefboom versterkt winst én verlies.",
   "Estimate. Variable rate — actual cost will differ.": "Schatting. Variabele rente — de werkelijke kosten wijken af.",
   Horizon: "Looptijd",
   "Lend Outlook": "Uitleen-vooruitzicht",
-  "Leverage multiplier": "Hefboomvermenigvuldiger",
   Liquidated: "Geliquideerd",
   "Liquidation price": "Liquidatieprijs",
   "Liquidation prices": "Liquidatieprijzen",
   "Move collateral prices or your debt and watch health factor respond.":
     "Wijzig de onderpandprijzen of je schuld en zie hoe de gezondheidsfactor reageert.",
-  "Multiply Outlook": "Multiply-vooruitzicht",
   Next: "Volgende",
   "Price sensitivity": "Prijsgevoeligheid",
   "Projected interest cost": "Verwachte rentekosten",
@@ -1624,32 +1393,16 @@ const dict: TranslationDictionary = {
     "Gezondheidsfactor, en de onderpandwaarde waarbij deze positie wordt geliquideerd. Onder 1.0 volgt liquidatie.",
   "The collateral you supply and the asset you borrow against it to build leverage.":
     "Het onderpand dat je verstrekt en het asset dat je ertegen leent om hefboom op te bouwen.",
-  "Your own capital in the loop (exposure minus debt). Exposure is your total leveraged position.":
-    "Je eigen kapitaal in de loop (blootstelling minus schuld). Blootstelling is je totale hefboompositie.",
   "Net yield after borrow costs, on your capital. The figure below is interest earned so far, ticking live.":
     "Nettorendement na leenkosten, op je kapitaal. Het cijfer hieronder is de tot nu toe verdiende rente, die live oploopt.",
-  "Health factor, and the collateral price at which this loop is liquidated. Below 1.0 triggers liquidation.":
-    "Gezondheidsfactor, en de onderpandprijs waarbij deze loop wordt geliquideerd. Onder 1.0 volgt liquidatie.",
-  "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)":
-    "Netto carry verdiend over je Multiply-loops, die in real time oploopt (supply-rendement minus leenkosten)",
   "Average APY across your staked positions, weighted by value.":
     "Gemiddelde APY over je gestakete posities, gewogen naar waarde.",
   "Additional amount you can borrow against your pledged collateral within Avana credit limits":
     "Extra bedrag dat je kunt lenen tegen je verpande onderpand binnen de Avana-kredietlimieten",
   "Amount an active loan can lose before reaching liquidation; unavailable when you have no debt":
     "Bedrag dat een actieve lening kan verliezen voordat liquidatie volgt; niet beschikbaar als je geen schuld hebt",
-  "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.":
-    "Gecombineerde liquidatiewaarde gedeeld door totale Multiply-schuld. Hoger is veiliger; onder 1 is er risico op liquidatie.",
-  "Equity-weighted net APY after supply yield and borrow cost":
-    "Netto-APY gewogen naar eigen vermogen, na supply-rendement en leenkosten",
-  "Exposure, return, and liquidation risk for each active loop":
-    "Blootstelling, rendement en liquidatierisico voor elke actieve loop",
-  "Gross Multiply exposure after looping across all positions":
-    "Bruto Multiply-blootstelling na looping over alle posities",
   "Interest earned as a percentage of principal you supplied":
     "Rente verdiend als percentage van de hoofdsom die je hebt verstrekt",
-  "Portfolio leverage as position value divided by equity":
-    "Portefeuillehefboom als positiewaarde gedeeld door eigen vermogen",
   "Projected earnings at current rates": "Geprojecteerde opbrengsten tegen de huidige rentes",
   "Supply interest accruing in real time across your lending positions (excludes protocol rewards)":
     "Supply-rente die in real time oploopt over je uitleenposities (exclusief protocolbeloningen)",
@@ -1786,7 +1539,6 @@ const dict: TranslationDictionary = {
     "Aandeel van de verstrekte middelen dat nu is uitgeleend. Hogere benutting verhoogt de rente en kan opnames vertragen.",
   "The liquidity pool you can pledge as collateral to borrow against.":
     "De liquiditeitspool die je als onderpand kunt inzetten om tegen te lenen.",
-  "The maximum leverage available on this loop.": "De maximale hefboom die beschikbaar is voor deze loop.",
   "The most you can borrow as a share of your collateral value.":
     "Het maximum dat je kunt lenen als aandeel van je onderpandwaarde.",
   "The token you can borrow against your collateral.": "Het token dat je tegen je onderpand kunt lenen.",
@@ -1809,7 +1561,6 @@ const dict: TranslationDictionary = {
   "Clear {facet} filter": "{facet}-filter wissen",
   "Filter by": "Filteren op",
   Hubs: "Knooppunten",
-  "No loops match these filters.": "Geen loops voldoen aan deze filters.",
   "No matches": "Geen resultaten",
   "Search chains": "Chains zoeken",
   "Search hubs": "Hubs zoeken",
@@ -1819,7 +1570,6 @@ const dict: TranslationDictionary = {
   Volatile: "Volatiel",
   Chains: "Chains",
   Other: "Overig",
-  Stocks: "Aandelen",
   "Filter markets": "Markten filteren",
 }
 

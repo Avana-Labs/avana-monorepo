@@ -36,7 +36,7 @@ import { preferencesTriggerClassName } from "./desktop-preference-trigger"
 type PreferencesView = "root" | "language" | "currency" | "network"
 
 const NETWORK_OPTIONS = [
-  { code: "Sandbox", label: "Sandbox", unavailable: false },
+  { code: "Local", label: "Local", unavailable: false },
   { code: "Ethereum", label: "Ethereum", unavailable: true },
   { code: "Avalanche", label: "Avalanche", unavailable: true },
   { code: "Base", label: "Base", unavailable: true },

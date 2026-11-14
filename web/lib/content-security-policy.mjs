@@ -1,6 +1,6 @@
 /* global process, URL */
 // No `node:` imports: this module is bundled into the Edge middleware runtime, whose dev
-// (turbopack) sandbox rejects native modules like `node:process`. `process.env` and `URL` are
+// (turbopack) runtime rejects native modules like `node:process`. `process.env` and `URL` are
 // available as globals in both the Edge and Node runtimes, so we use them directly.
 
 /**

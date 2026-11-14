@@ -1,5 +1,5 @@
 /**
- * localStorage helpers that never throw. Sandbox session persistence runs on
+ * localStorage helpers that never throw. Session persistence runs on
  * every action and on hydrate; a single corrupt/old value or a quota / private-mode
  * error must degrade gracefully instead of crashing the page.
  */

@@ -5,17 +5,12 @@ import type { TranslationDictionary } from "../types"
 const dict: TranslationDictionary = {
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "कोलैटरल जमा करें, उसके बदले उधार लें, उधार ली गई पूंजी फिर से जमा करें, और अपनी जोखिम सीमा तक दोहराएँ।",
-  "Browse Multiply Page": "मल्टिप्लाई पेज देखें",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":
     "अपनी लिक्विडिटी पूल पोज़िशन को कोलैटरल में बदलें और पूल छोड़े बिना यहीं उनके बदले उधार लें।",
   "Browse Borrow Page": "उधार लें पेज देखें",
   "Supply capital into Hub-connected lending markets and earn from LP-backed borrower demand.":
     "Hub से जुड़े लेंडिंग मार्केट में पूंजी सप्लाई करें और LP-समर्थित उधारकर्ता मांग से कमाएँ।",
   "Browse Lend Page": "उधार दें पेज देखें",
-  "Coinbase & Robinhood Stocks": "Coinbase और Robinhood स्टॉक्स",
-  "Tokenized equities — deposit stock tokens to earn lending yield":
-    "टोकनयुक्त इक्विटी — उधार प्रतिफल कमाने के लिए स्टॉक टोकन जमा करें",
-  "Tokenized-equity concentrated LP positions": "टोकनयुक्त इक्विटी की संकेंद्रित LP पोज़िशन",
   "Paxos USD stablecoin": "Paxos USD स्टेबलकॉइन",
   "{name} is a tokenized-equity LP position posted as collateral inside the {spoke} spoke on Avana. It pairs {stableLeg} with tokenized {stockName} ({stockSymbol}) exposure, so collateral value tracks the {stockName} share price alongside the pool's depth and fee tier. Avana anchors borrow power to the spoke's max LTV, keeping credit tied to how sharply tokenized-equity collateral can move. This page is the single source of truth for what the pool is, how much capital it can safely support, and the downside the protocol underwrites.":
     "{name} एक टोकनयुक्त-इक्विटी LP पोज़िशन है जिसे Avana पर {spoke} स्पोक के भीतर संपार्श्विक के रूप में जमा किया गया है। यह {stableLeg} को टोकनयुक्त {stockName} ({stockSymbol}) एक्सपोज़र के साथ जोड़ती है, इसलिए संपार्श्विक मूल्य पूल की गहराई और शुल्क स्तर के साथ-साथ {stockName} के शेयर मूल्य का अनुसरण करता है। Avana उधार क्षमता को स्पोक के अधिकतम LTV से जोड़ता है, जिससे क्रेडिट इस बात से बंधा रहता है कि टोकनयुक्त इक्विटी संपार्श्विक कितनी तेज़ी से बदल सकता है। यह पृष्ठ इस बारे में एकमात्र विश्वसनीय स्रोत है कि पूल क्या है, यह सुरक्षित रूप से कितनी पूँजी का समर्थन कर सकता है, और प्रोटोकॉल किस गिरावट जोखिम को वहन करता है।",
@@ -48,16 +43,11 @@ const dict: TranslationDictionary = {
   Continue: "जारी रखें",
   Cancel: "रद्द करें",
   Back: "वापस",
-  "Welcome to the Avana Sandbox.": "Avana सैंडबॉक्स में आपका स्वागत है।",
   "A risk-free space to test the app and learn how it works.":
     "ऐप को आज़माने और उसके काम करने का तरीका सीखने के लिए जोखिम-मुक्त स्थान।",
-  "Borrow against LP, lend, and loop positions with practice funds. When you're ready, switch to the real world. Have fun exploring.":
-    "अभ्यास निधि से LP पोज़िशन के विरुद्ध उधार लें, लेंड करें और लूप पोज़िशन आज़माएँ। तैयार होने पर वास्तविक दुनिया में जाएँ। खोजने का आनंद लें।",
-  "Unlimited practice funds": "असीमित अभ्यास निधि",
   "Risk-free exploration": "जोखिम-मुक्त अभ्यास",
   "No real assets involved": "कोई वास्तविक संपत्ति शामिल नहीं",
   "Fast — no transactions to sign": "तेज़ — हस्ताक्षर के लिए कोई लेनदेन नहीं",
-  "Fund my sandbox": "मेरे सैंडबॉक्स में निधि जोड़ें",
   "Continue to allocation": "आवंटन पर जारी रखें",
   "Share on X first": "पहले X पर साझा करें",
   "I posted it": "मैंने पोस्ट कर दिया",
@@ -164,13 +154,8 @@ const dict: TranslationDictionary = {
   "Highest APY": "सर्वाधिक APY",
   "Most Available": "सर्वाधिक उपलब्ध",
   "Collateral A-Z": "कोलैटरल A-Z",
-  "Search loops": "लूप खोजें",
   "Sort by": "इसके अनुसार क्रमबद्ध करें",
-  "Sort loops": "लूप क्रमबद्ध करें",
   Trending: "ट्रेंडिंग",
-  "Highest max-leverage APY markets in the sandbox catalog.":
-    "सैंडबॉक्स कैटलॉग में सर्वाधिक मैक्स-लीवरेज APY वाले मार्केट।",
-  "No loops in this category yet.": "इस श्रेणी में अभी कोई लूप नहीं है।",
   COLLATERAL: "कोलैटरल",
   BORROWABLE: "उधार-योग्य",
   "MAX APY": "अधिकतम APY",
@@ -250,18 +235,13 @@ const dict: TranslationDictionary = {
   Health: "स्वास्थ्य",
   Debt: "ऋण",
   "Approved credit": "स्वीकृत क्रेडिट",
-  "Multiply value": "मल्टिप्लाई मूल्य",
   "Average APY": "औसत APY",
   Earned: "अर्जित",
   "Open positions": "खुली पोज़िशन",
   "Net carry": "शुद्ध कैरी",
-  "Increase loop": "लूप बढ़ाएँ",
-  "Unwind loop": "लूप समाप्त करें",
   "Weighted average APY across supplied assets in the wallet.":
     "वॉलेट में आपूर्ति की गई परिसंपत्तियों में भारित औसत APY।",
   "Total yield already accrued by the portfolio.": "पोर्टफोलियो द्वारा पहले से संचित कुल प्रतिफल।",
-  "Open multiply positions in the wallet profile.": "वॉलेट प्रोफ़ाइल में खुली मल्टिप्लाई पोज़िशन।",
-  "Average realized carry across the current multiply book.": "वर्तमान मल्टिप्लाई बुक में औसत वसूल किया गया कैरी।",
   "Portfolio quick actions": "पोर्टफोलियो त्वरित कार्रवाइयाँ",
   "Lending Opportunities": "उधार देने के अवसर",
   "View markets": "बाज़ार देखें",
@@ -281,7 +261,6 @@ const dict: TranslationDictionary = {
   "The address may be wrong or the page may have moved.":
     "पता गलत हो सकता है या पेज को स्थानांतरित कर दिया गया हो सकता है।",
   "Helpful links": "उपयोगी लिंक",
-  "Avana sandbox": "Avana सैंडबॉक्स",
   "Sign in with the wallet that created this transaction to view its receipt.":
     "इसकी रसीद देखने के लिए उस वॉलेट से साइन इन करें जिसने यह लेन-देन बनाया था।",
   "We couldn't load this receipt right now.": "हम अभी यह रसीद लोड नहीं कर सके।",
@@ -293,7 +272,6 @@ const dict: TranslationDictionary = {
   "Available Credit": "उपलब्ध क्रेडिट",
   "Outstanding Loans": "बकाया ऋण",
   "Total Liquidity": "कुल तरलता",
-  "Loop Markets": "लूप मार्केट",
   "Avg Max APY": "औसत अधिकतम APY",
   "Avg Max Leverage": "औसत अधिकतम लीवरेज",
   "Total TVL": "कुल TVL",
@@ -340,12 +318,9 @@ const dict: TranslationDictionary = {
   "How can we help?": "हम कैसे मदद करें?",
   "Include what you were trying to do, what happened, and any transaction or market details that may help.":
     "बताएँ कि आप क्या करना चाहते थे, क्या हुआ, और कोई transaction या market विवरण जो मददगार हो।",
-  "Leveraged loop": "लीवरेज लूप",
   "No assets in your wallet": "आपके wallet में कोई asset नहीं",
   "No deposited position found for this market.": "इस market के लिए कोई जमा पोज़िशन नहीं मिली।",
   "No deposits found": "कोई जमा नहीं मिला",
-  "No multiply positions yet. Open a loop to leverage your collateral.":
-    "अभी कोई multiply पोज़िशन नहीं। अपने collateral को leverage करने के लिए loop खोलें।",
   "read more": "और पढ़ें",
   "Recommended articles": "सुझाए गए लेख",
   "Request received": "अनुरोध प्राप्त हुआ",
@@ -379,7 +354,6 @@ const dict: TranslationDictionary = {
   "Your progress": "आपकी प्रगति",
   "{completed}/{total} completed": "{completed}/{total} पूर्ण",
   "{label} amount": "{label} राशि",
-  "{label} multiplier": "{label} मल्टीप्लायर",
   "{name} ({symbol}) is a single-asset supply market on Avana. Suppliers earn the supply APY{rewardsClause} from borrower interest, net of the reserve factor. Yield tracks utilization, so the page focuses on the live supply rate, the supply/utilization mix, and the latest risk posture for this {marketType} market.":
     "{name} ({symbol}) Avana पर एक सिंगल-एसेट सप्लाई मार्केट है। सप्लायर्स रिज़र्व फैक्टर घटाकर, उधारकर्ता ब्याज से सप्लाई APY{rewardsClause} कमाते हैं। यील्ड यूटिलाइज़ेशन पर निर्भर करती है, इसलिए यह पेज लाइव सप्लाई रेट, सप्लाई/यूटिलाइज़ेशन मिक्स और इस {marketType} मार्केट की नवीनतम रिस्क स्थिति पर केंद्रित है।",
   "{percent}% of liq. max": "liq. अधिकतम का {percent}%",
@@ -400,8 +374,6 @@ const dict: TranslationDictionary = {
   Portfolio: "पोर्टफोलियो",
   "Quick actions": "त्वरित क्रियाएँ",
   "My Deposits": "मेरी जमा राशि",
-  "My Loops": "मेरे लूप",
-  "Available to loop": "लूप के लिए उपलब्ध",
   "Scroll table left": "तालिका को बाईं ओर स्क्रॉल करें",
   "Scroll table right": "तालिका को दाईं ओर स्क्रॉल करें",
   "Total Fees earned": "कुल अर्जित शुल्क",
@@ -442,11 +414,7 @@ const dict: TranslationDictionary = {
   GOOD: "अच्छा",
   "Health Factor": "हेल्थ फैक्टर",
   "I read it": "मैंने पढ़ा",
-  "In this sandbox, every transaction is simulated — use previews to learn before sizing up.":
-    "इस सैंडबॉक्स में हर लेन-देन सिमुलेटेड है — बड़ा करने से पहले सीखने के लिए प्रीव्यू का उपयोग करें।",
   "Invite link": "आमंत्रण लिंक",
-  "Keep health factor headroom and treat rewards as practice, not production yield.":
-    "हेल्थ फैक्टर में गुंजाइश रखें और रिवॉर्ड्स को अभ्यास मानें, वास्तविक यील्ड नहीं।",
   "Lend {name}": "{name} लेंड करें",
   "Lend actions": "लेंड कार्रवाइयाँ",
   "Leverage options": "लेवरेज विकल्प",
@@ -464,8 +432,6 @@ const dict: TranslationDictionary = {
   Min: "न्यूनतम",
   "More information": "अधिक जानकारी",
   "More information about {topic}": "{topic} के बारे में अधिक जानकारी",
-  "Multiply {name}": "{name} मल्टीप्लाई करें",
-  "Multiply actions": "मल्टीप्लाई कार्रवाइयाँ",
   "My Borrows": "मेरे उधार",
   "My LP Collaterals": "मेरे LP कोलैटरल",
   "No activity matches the current filters.": "कोई भी गतिविधि वर्तमान फ़िल्टर से मेल नहीं खाती।",
@@ -476,17 +442,14 @@ const dict: TranslationDictionary = {
   "No rewards ready": "कोई रिवॉर्ड तैयार नहीं",
   "Nothing borrowed yet": "अभी तक कुछ उधार नहीं लिया",
   "Nothing supplied yet": "अभी तक कुछ सप्लाई नहीं किया",
-  "Open a looped position in {name}.": "{name} में लूप्ड पोज़िशन खोलें।",
   "Open preferences": "प्राथमिकताएँ खोलें",
   Opened: "खोला गया",
   "Overall quest completion progress": "कुल क्वेस्ट पूर्णता प्रगति",
   Pending: "लंबित",
-  "Pin a sandbox market": "सैंडबॉक्स मार्केट पिन करें",
   "Pool actions": "पूल कार्रवाइयाँ",
   "Portfolio views": "पोर्टफ़ोलियो व्यू",
   Preferences: "प्राथमिकताएँ",
   "Preview {product}": "{product} प्रीव्यू करें",
-  "Preview a sandbox trade": "सैंडबॉक्स ट्रेड प्रीव्यू करें",
   "Price chart": "प्राइस चार्ट",
   "Processing…": "प्रोसेस हो रहा है…",
   "Progress: {progress} / {target}": "प्रगति: {progress} / {target}",
@@ -504,7 +467,6 @@ const dict: TranslationDictionary = {
   "Run a real preview in the session — nothing executes on-chain.":
     "सेशन में एक वास्तविक प्रीव्यू चलाएँ — ऑन-चेन कुछ भी निष्पादित नहीं होता।",
   Safe: "सुरक्षित",
-  "Sandbox risk primer": "सैंडबॉक्स रिस्क प्राइमर",
   "Scope Health Factor": "स्कोप हेल्थ फैक्टर",
   Search: "खोजें",
   "Search assets": "एसेट खोजें",
@@ -551,8 +513,6 @@ const dict: TranslationDictionary = {
     "यह हमारी ओर से है, आपके वॉलेट की ओर से नहीं। फिर से प्रयास करें, और अगर यह बार-बार होता रहे तो हमें बताएं।",
   "Back to borrow": "बॉरो पर वापस जाएं",
   "Back to lend": "लेंड पर वापस जाएं",
-  "Back to multiply": "मल्टिप्लाई पर वापस जाएं",
-  "Back to Umbrella": "सुरक्षा पर वापस जाएँ",
   "Back to rewards": "रिवॉर्ड्स पर वापस जाएं",
   Loading: "लोड हो रहा है",
   "Loading…": "लोड हो रहा है…",
@@ -569,10 +529,8 @@ const dict: TranslationDictionary = {
   "Mobile menu": "मोबाइल मेन्यू",
   "Close menu": "मेन्यू बंद करें",
   "Mobile navigation": "मोबाइल नेविगेशन",
-  "Sandbox wallet": "सैंडबॉक्स वॉलेट",
   "This workspace uses a built-in demo wallet. There is no external wallet connection yet.":
     "यह वर्कस्पेस एक बिल्ट-इन डेमो वॉलेट का उपयोग करता है। अभी तक कोई बाहरी वॉलेट कनेक्शन नहीं है।",
-  "Sandbox active": "सैंडबॉक्स सक्रिय",
   Connected: "कनेक्टेड",
   Copied: "कॉपी किया गया",
   "Copy address": "एड्रेस कॉपी करें",
@@ -591,11 +549,8 @@ const dict: TranslationDictionary = {
   "Lending Positions": "लेंडिंग पोज़िशन",
   "Lending Performance": "लेंडिंग प्रदर्शन",
   "Lend Rewards": "लेंडिंग रिवॉर्ड्स",
-  "Multiply Overview": "लूपिंग अवलोकन",
   "Debt & Risk": "ऋण और जोखिम",
-  "Position size, multiplier, and current net yield": "पोज़िशन का आकार, गुणक और मौजूदा शुद्ध यील्ड",
   "Borrowed balance, health factor, and liquidation threshold": "उधार शेष, हेल्थ फैक्टर और लिक्विडेशन सीमा",
-  "No active Multiply debt": "कोई सक्रिय Multiply ऋण नहीं",
   "Loading your portfolio": "आपका पोर्टफोलियो लोड हो रहा है",
   "We couldn't load your portfolio": "हम आपका पोर्टफोलियो लोड नहीं कर सके",
   "The live portfolio fetch kept failing. Try again to re-run the client fetch without leaving the dashboard.":
@@ -608,9 +563,7 @@ const dict: TranslationDictionary = {
   "Asset analytics": "एसेट एनालिटिक्स",
   "Pool analytics": "पूल एनालिटिक्स",
   "Lend market analytics": "लेंड मार्केट एनालिटिक्स",
-  "Multiply market analytics": "मल्टिप्लाई मार्केट एनालिटिक्स",
   "General FAQs": "सामान्य FAQ",
-  "Multiply FAQs": "मल्टिप्लाई FAQ",
   "BTC Pools": "BTC पूल",
   "ETH Pools": "ETH पूल",
   "Forex Pools": "Forex पूल",
@@ -621,11 +574,6 @@ const dict: TranslationDictionary = {
   "Forex Based": "Forex आधारित",
   "Utility Based": "यूटिलिटी आधारित",
   "Smart Lend": "स्मार्ट लेंड",
-  "BTC Loops": "BTC लूप",
-  "ETH Loops": "ETH लूप",
-  "Forex Loops": "Forex लूप",
-  "Utility Loops": "यूटिलिटी लूप",
-  "Smart Loops": "स्मार्ट लूप",
   Watch: "देखें",
   "At risk": "जोखिम में",
   Unknown: "अज्ञात",
@@ -640,109 +588,40 @@ const dict: TranslationDictionary = {
   Referrals: "रेफ़रल",
   "Rewards actions": "रिवॉर्ड क्रियाएँ",
   "No quests here yet — check back soon.": "यहाँ अभी कोई क्वेस्ट नहीं — जल्द ही फिर देखें।",
-  "Boot your sandbox wallet": "अपना सैंडबॉक्स वॉलेट बूट करें",
   "Spin up your profile": "अपनी प्रोफ़ाइल तैयार करें",
-  "Read the sandbox risk primer": "सैंडबॉक्स जोखिम प्राइमर पढ़ें",
   "Pin a market to your watchlist": "किसी मार्केट को अपनी वॉचलिस्ट में पिन करें",
   "Preview your first trade": "अपना पहला ट्रेड प्रीव्यू करें",
-  "Make your first sandbox lend": "अपना पहला सैंडबॉक्स लेंड करें",
-  "Open your first sandbox borrow": "अपना पहला सैंडबॉक्स बॉरो खोलें",
-  "Open your first sandbox multiply": "अपनी पहली सैंडबॉक्स मल्टीप्लाई खोलें",
-  "Repay a sandbox loan": "सैंडबॉक्स लोन चुकाएं",
-  "Deleverage a sandbox position": "सैंडबॉक्स पोज़िशन को डिलीवरेज करें",
   "Claim your first AVA reward": "अपना पहला AVA रिवॉर्ड क्लेम करें",
-  "Sandbox cool-down": "सैंडबॉक्स कूल-डाउन",
-  "Lend $500 in the sandbox": "सैंडबॉक्स में $500 लेंड करें",
-  "Borrow $200 in the sandbox": "सैंडबॉक्स में $200 बॉरो करें",
-  "Launch a multiply position": "एक मल्टीप्लाई पोज़िशन लॉन्च करें",
   "Tour all three products": "तीनों उत्पादों का दौरा करें",
-  "Curve sandbox tour": "Curve सैंडबॉक्स टूर",
-  "Uniswap v4 sandbox tour": "Uniswap v4 सैंडबॉक्स टूर",
   "Risk check-in (5 min)": "जोखिम चेक-इन (5 मिनट)",
-  "Multiply mindfulness (3 min)": "मल्टीप्लाई माइंडफुलनेस (3 मिनट)",
-  "3 borrow / repay loops": "3 बॉरो / रीपे लूप",
   "2 deleverage drills": "2 डिलीवरेज ड्रिल",
-  "Explore 3 sandbox markets": "3 सैंडबॉक्स मार्केट एक्सप्लोर करें",
   "Claim 3 quest rewards": "3 क्वेस्ट रिवॉर्ड क्लेम करें",
-  "3-day sandbox streak": "3-दिन की सैंडबॉक्स स्ट्रीक",
-  "Grow sandbox portfolio by $1K": "सैंडबॉक्स पोर्टफोलियो को $1K तक बढ़ाएं",
-  "Open 3 sandbox positions": "3 सैंडबॉक्स पोज़िशन खोलें",
-  "Copy your sandbox invite link": "अपना सैंडबॉक्स इनवाइट लिंक कॉपी करें",
-  "Send your first sandbox invite": "अपना पहला सैंडबॉक्स इनवाइट भेजें",
-  "Fund a referred sandbox wallet": "किसी रेफर किए गए सैंडबॉक्स वॉलेट को फंड करें",
-  "Activate 3 sandbox friends": "3 सैंडबॉक्स मित्रों को सक्रिय करें",
   "Grow crew to 5 actives": "क्रू को 5 सक्रिय सदस्यों तक बढ़ाएं",
-  "Referral sandbox hits $500": "रेफरल सैंडबॉक्स $500 तक पहुंचे",
   "Referral streak (2 activations)": "रेफरल स्ट्रीक (2 सक्रियण)",
-  "Sandbox ambassador": "सैंडबॉक्स एंबेसडर",
   "Your Avana session is live — this quest unlocks automatically when you land.":
     "आपका Avana सेशन लाइव है — जैसे ही आप पहुंचते हैं यह क्वेस्ट स्वतः अनलॉक हो जाता है।",
-  "We create a demo wallet profile so every product sandbox shares the same session.":
-    "हम एक डेमो वॉलेट प्रोफ़ाइल बनाते हैं ताकि हर प्रोडक्ट सैंडबॉक्स एक ही सेशन साझा करे।",
   "Open the 60-second LP risk briefing before you simulate any position.":
     "किसी भी पोज़िशन का सिमुलेशन करने से पहले 60-सेकंड की LP जोखिम ब्रीफिंग खोलें।",
-  "Pick one Borrow, Lend, or Multiply market to track in your sandbox.":
-    "अपने सैंडबॉक्स में ट्रैक करने के लिए एक Borrow, Lend, या Multiply मार्केट चुनें।",
-  "Run a real sandbox preview on Borrow, Lend, or Multiply — no funds move.":
-    "Borrow, Lend, या Multiply पर एक वास्तविक सैंडबॉक्स प्रीव्यू चलाएं — कोई फंड नहीं हिलता।",
   "Deposit into any Lend market. Your live session records the quest automatically.":
     "किसी भी Lend मार्केट में जमा करें। आपका लाइव सेशन क्वेस्ट को स्वतः रिकॉर्ड करता है।",
   "Borrow against LP collateral on the Borrow page — the quest completes on success.":
     "Borrow पेज पर LP कोलैटरल के विरुद्ध बॉरो करें — सफलता पर क्वेस्ट पूरा हो जाता है।",
-  "Create a Multiply position in the sandbox and let the session bridge log it.":
-    "सैंडबॉक्स में एक Multiply पोज़िशन बनाएं और सेशन ब्रिज को इसे लॉग करने दें।",
-  "Repay any borrow position you opened — a healthy loop in the demo world.":
-    "आपके द्वारा खोली गई किसी भी बॉरो पोज़िशन को चुकाएं — डेमो दुनिया में एक स्वस्थ लूप।",
-  "Reduce any Multiply position to practice risk management.":
-    "जोखिम प्रबंधन का अभ्यास करने के लिए किसी भी Multiply पोज़िशन को कम करें।",
   "Complete any other quest, then claim it to unlock this milestone.":
     "कोई भी अन्य क्वेस्ट पूरा करें, फिर इस माइलस्टोन को अनलॉक करने के लिए इसे क्लेम करें।",
   "Explore Avana for 2 minutes after your first login, then come back to claim.":
     "अपने पहले लॉगिन के बाद 2 मिनट तक Avana एक्सप्लोर करें, फिर क्लेम करने के लिए वापस आएं।",
-  "Stack sandbox lend deposits until you reach $500 supplied.":
-    "जब तक आप $500 आपूर्ति तक न पहुंच जाएं तब तक सैंडबॉक्स लेंड जमा जोड़ते रहें।",
   "Open borrow positions totaling $200 across any collateral pool.":
     "किसी भी कोलैटरल पूल में कुल $200 की बॉरो पोज़िशन खोलें।",
-  "Open any Multiply position in the sandbox — size is up to you.":
-    "सैंडबॉक्स में कोई भी Multiply पोज़िशन खोलें — आकार आप पर निर्भर है।",
-  "Complete one action in Lend, Borrow, and Multiply.": "Lend, Borrow, और Multiply में एक-एक कार्य पूरा करें।",
-  "Visit the Curve-style borrow market tour and mark it complete.":
-    "Curve-शैली के बॉरो मार्केट टूर पर जाएं और इसे पूर्ण चिह्नित करें।",
-  "Walk through the Uniswap v4 sandbox market and check it off.":
-    "Uniswap v4 सैंडबॉक्स मार्केट से गुज़रें और इसे चेक ऑफ करें।",
-  "Stay in the sandbox for 5 minutes after login, then claim this patience badge.":
-    "लॉगिन के बाद 5 मिनट तक सैंडबॉक्स में रहें, फिर यह धैर्य बैज क्लेम करें।",
-  "Take a 3-minute breather after login before claiming this calm-multiply quest.":
-    "इस शांत-मल्टीप्लाई क्वेस्ट को क्लेम करने से पहले लॉगिन के बाद 3-मिनट का ब्रेक लें।",
-  "Repay sandbox loans three times to practice healthy borrow cycles.":
-    "स्वस्थ बॉरो चक्रों का अभ्यास करने के लिए सैंडबॉक्स लोन तीन बार चुकाएं।",
-  "Deleverage Multiply positions twice to complete this risk drill.":
-    "इस जोखिम ड्रिल को पूरा करने के लिए Multiply पोज़िशन को दो बार डिलीवरेज करें।",
   "Complete tours on three different market pages across Avana.":
     "Avana के तीन अलग-अलग मार्केट पेजों पर टूर पूरे करें।",
   "Claim AVA from three separate quests to build your rewards streak.":
     "अपनी रिवॉर्ड स्ट्रीक बनाने के लिए तीन अलग-अलग क्वेस्ट से AVA क्लेम करें।",
   "Check in on three separate days after your first login.":
     "अपने पहले लॉगिन के बाद तीन अलग-अलग दिनों में चेक इन करें।",
-  "Lend, borrow, or multiply until your combined sandbox volume hits $1,000.":
-    "जब तक आपका संयुक्त सैंडबॉक्स वॉल्यूम $1,000 तक न पहुंच जाए तब तक लेंड, बॉरो, या मल्टीप्लाई करें।",
-  "Hold three open positions across Lend, Borrow, or Multiply.": "Lend, Borrow, या Multiply में तीन खुली पोज़िशन रखें।",
   "Generate and copy a referral link you can share with friends.":
     "एक रेफरल लिंक जेनरेट करें और कॉपी करें जिसे आप मित्रों के साथ साझा कर सकें।",
-  "Simulate inviting a friend wallet into your Avana sandbox crew.":
-    "अपने Avana सैंडबॉक्स क्रू में एक मित्र वॉलेट को आमंत्रित करने का सिमुलेशन करें।",
   "Mark one invited friend as funded after they try a product action.":
     "एक आमंत्रित मित्र द्वारा प्रोडक्ट कार्य आज़माने के बाद उसे फंडेड चिह्नित करें।",
-  "Three referred wallets complete a product action in your sandbox network.":
-    "आपके सैंडबॉक्स नेटवर्क में तीन रेफर किए गए वॉलेट एक प्रोडक्ट कार्य पूरा करते हैं।",
-  "Five referred wallets complete a product action in your sandbox network.":
-    "आपके सैंडबॉक्स नेटवर्क में पांच रेफर किए गए वॉलेट एक प्रोडक्ट कार्य पूरा करते हैं।",
-  "Your referred crew reaches $500 in combined sandbox volume.":
-    "आपका रेफर किया गया क्रू संयुक्त सैंडबॉक्स वॉल्यूम में $500 तक पहुंचता है।",
-  "Activate two sandbox referrals to keep your invite momentum going.":
-    "अपनी इनवाइट गति बनाए रखने के लिए दो सैंडबॉक्स रेफरल सक्रिय करें।",
-  "Activate five friends in your sandbox referral network.":
-    "अपने सैंडबॉक्स रेफरल नेटवर्क में पांच मित्रों को सक्रिय करें।",
   "Filter by category": "श्रेणी के अनुसार फ़िल्टर करें",
   "ETH volatility": "ETH अस्थिरता",
   "Liquidity depth": "तरलता गहराई",
@@ -804,8 +683,6 @@ const dict: TranslationDictionary = {
     "Bluechip स्पोक में संपार्श्विक के रूप में स्वीकृत WBTC/WETH LP पोज़िशन।",
   "Pool onboarded": "पूल ऑनबोर्ड किया गया",
   "Dual-oracle": "डुअल-ऑरेकल",
-  "WETH/DAI LP positions accepted as collateral in the Uniswap v2 spoke.":
-    "Uniswap v2 स्पोक में संपार्श्विक के रूप में स्वीकृत WETH/DAI LP पोज़िशन।",
   Onboarded: "ऑनबोर्ड किया गया",
   "Parameters refreshed": "पैरामीटर रीफ्रेश किए गए",
   "Full-range USDC/USDT liquidity accepted in the Stable spoke at up to 78% LTV.":
@@ -823,8 +700,6 @@ const dict: TranslationDictionary = {
     "30d वसूली गई σ ≈ 58% वार्षिकीकृत — इम्परमानेंट लॉस में सबसे बड़ा एकल योगदानकर्ता।",
   "$4.1M of 2% depth across all tiers — ample for liquidations.":
     "सभी टियर में 2% गहराई का $4.1M — परिसमापन के लिए पर्याप्त।",
-  "30-minute TWAP can lag during sharp moves; mitigated by kink in the risk curve.":
-    "30-मिनट TWAP तेज़ मूव्स के दौरान पिछड़ सकता है; जोखिम कर्व में किंक द्वारा कम किया गया।",
   "Uniswap v3 core + NonFungiblePositionManager, both heavily audited and live for 4 years.":
     "Uniswap v3 core + NonFungiblePositionManager, दोनों भारी रूप से ऑडिट किए गए और 4 साल से लाइव।",
   "Rolling 90d IL averages 23bps per week for the 0.30% tier.":
@@ -840,9 +715,6 @@ const dict: TranslationDictionary = {
   "$2.6M of 2% depth.": "2% गहराई का $2.6M।",
   "BTC/ETH is highly correlated — IL is usually <15bps/week.":
     "BTC/ETH अत्यधिक सहसंबंधित है — IL आमतौर पर <15bps/सप्ताह।",
-  "WETH/DAI is a standard Uniswap v2 ETH/stable pair and a straightforward LP structure for collateral evaluation. The Uniswap v2 spoke admits it under conservative parameters because the pair still carries ETH volatility, while the stable quote side keeps the market easy to reason about.":
-    "WETH/DAI एक मानक Uniswap v2 ETH/स्थिर जोड़ी है और संपार्श्विक मूल्यांकन के लिए एक सीधी-सादी LP संरचना है। Uniswap v2 स्पोक इसे रूढ़िवादी पैरामीटर के तहत स्वीकार करता है क्योंकि जोड़ी अभी भी ETH अस्थिरता वहन करती है, जबकि स्थिर कोट पक्ष बाज़ार को समझने में आसान रखता है।",
-  "Added to the Uniswap v2 LPs.": "Uniswap v2 LPs में जोड़ा गया।",
   "Quarterly risk review — no changes to LTV.": "त्रैमासिक जोखिम समीक्षा — LTV में कोई बदलाव नहीं।",
   "USDC and USDT both trade at parity and the pool is overwhelmingly used for order-routing, stability-seeking flow, and tight-spread execution. The Stable spoke admits it with a high LTV because peg-risk is shared, depth is enormous, and the pool behaves more like cash infrastructure than a typical volatile LP. That makes it a natural fit for users who want borrowing power while keeping the underlying collateral profile simple to reason about.":
     "USDC और USDT दोनों समता पर ट्रेड करते हैं और पूल का अत्यधिक उपयोग ऑर्डर-रूटिंग, स्थिरता-चाहने वाले प्रवाह और टाइट-स्प्रेड निष्पादन के लिए किया जाता है। Stable स्पोक इसे उच्च LTV के साथ स्वीकार करता है क्योंकि पेग-जोखिम साझा है, गहराई विशाल है, और पूल एक सामान्य अस्थिर LP की तुलना में नकद अवसंरचना जैसा अधिक व्यवहार करता है। इससे यह उन उपयोगकर्ताओं के लिए एक स्वाभाविक विकल्प बन जाता है जो अंतर्निहित संपार्श्विक प्रोफ़ाइल को समझने में सरल रखते हुए उधार शक्ति चाहते हैं।",
@@ -888,13 +760,9 @@ const dict: TranslationDictionary = {
     "नेटिव ETH — LP संपार्श्विक पर दिशात्मक कैरी के लिए प्राथमिक अस्थिर उधार संपत्ति।",
   "Mainnet launch": "Mainnet लॉन्च",
   "The Merge": "The Merge",
-  "Wrapped ETH is the canonical ERC-20 used by Uniswap/Balancer/Aerodrome pools.":
-    "Wrapped ETH, Uniswap/Balancer/Aerodrome पूल द्वारा उपयोग किया जाने वाला कैनोनिकल ERC-20 है।",
   "Wrapped BTC exposure — borrowed to short BTC against blue-chip LPs.":
     "Wrapped BTC एक्सपोज़र — blue-chip LPs के विरुद्ध BTC शॉर्ट करने के लिए उधार लिया गया।",
   Listed: "सूचीबद्ध",
-  "USDC is Circle's regulated, fully-backed USD stablecoin and the main unit of account for this market. It anchors the protocol's conservative borrow curves, acts as the default settlement asset for LP carry strategies, and serves as the reference point for risk pricing across stablecoin routes. In practice, that makes it the most common asset for users who want cash-like exposure with on-chain mobility.":
-    "USDC, Circle का विनियमित, पूर्ण-समर्थित USD स्थिरकॉइन है और इस बाज़ार के लिए मुख्य लेखा इकाई है। यह प्रोटोकॉल के रूढ़िवादी उधार कर्व को स्थिर करता है, LP कैरी रणनीतियों के लिए डिफ़ॉल्ट निपटान संपत्ति के रूप में कार्य करता है, और स्थिरकॉइन मार्गों में जोखिम मूल्य निर्धारण के लिए संदर्भ बिंदु के रूप में कार्य करता है। व्यवहार में, यह इसे उन उपयोगकर्ताओं के लिए सबसे आम संपत्ति बनाता है जो ऑन-चेन गतिशीलता के साथ नकद-जैसा एक्सपोज़र चाहते हैं।",
   "USDC listed day-1 with 80% borrow cap.": "USDC पहले दिन 80% उधार सीमा के साथ सूचीबद्ध।",
   "Simulated 2023-style de-peg; guardrails paused borrows for 18m.":
     "2023-शैली डी-पेग सिम्युलेट किया गया; गार्डरेल ने 18m तक उधार रोके।",
@@ -1005,37 +873,24 @@ const dict: TranslationDictionary = {
   Curve: "Curve",
   Balancer: "Balancer",
   Aerodrome: "Aerodrome",
-  "Uniswap v2 LPs": "Uniswap v2 LPs",
   "Uniswap v3 Stable LPs": "Uniswap v3 स्टेबल LPs",
   "Uniswap v3 Blue-Chip LPs": "Uniswap v3 ब्लू-चिप LPs",
   "Uniswap v3 Governance & DAO LPs": "Uniswap v3 गवर्नेंस & DAO LPs",
-  "Curve Stable LPs": "Curve स्टेबल LPs",
-  "Curve Correlated LPs": "Curve कोरिलेटेड LPs",
-  "Curve Crypto LPs": "Curve क्रिप्टो LPs",
-  "Balancer Stable LPs": "Balancer स्टेबल LPs",
-  "Balancer Correlated LPs": "Balancer कोरिलेटेड LPs",
-  "Balancer Weighted LPs": "Balancer वेटेड LPs",
-  "Balancer Boosted LPs": "Balancer बूस्टेड LPs",
-  "Balancer reCLAMM LPs": "Balancer reCLAMM LPs",
   "Aerodrome Basic Stable LPs": "Aerodrome बेसिक स्टेबल LPs",
   "Aerodrome Basic Volatile LPs": "Aerodrome बेसिक वोलाटाइल LPs",
   "Aerodrome Slipstream Blue-Chip LPs": "Aerodrome Slipstream ब्लू-चिप LPs",
   Stablecoin: "स्थिरकॉइन",
   "MakerDAO stablecoin": "MakerDAO स्थिरकॉइन",
-  "Curve native stablecoin": "Curve नेटिव स्थिरकॉइन",
   "Aave native stablecoin": "Aave नेटिव स्थिरकॉइन",
   "Circle EUR stablecoin": "Circle EUR स्थिरकॉइन",
   "ERC-20 wrapped ETH": "ERC-20 रैप्ड ETH",
   "Native asset": "नेटिव संपत्ति",
   "ERC-20 wrapped BTC": "ERC-20 रैप्ड BTC",
-  "Coinbase wrapped BTC": "Coinbase रैप्ड BTC",
   "Liquid staking receipt": "लिक्विड स्टेकिंग रसीद",
   "Rebase-less stETH wrapper": "रीबेस-रहित stETH रैपर",
   "rETH liquid staking": "rETH लिक्विड स्टेकिंग",
-  "Coinbase liquid staking": "Coinbase लिक्विड स्टेकिंग",
   "Aave governance token": "Aave गवर्नेंस टोकन",
   "Uniswap governance token": "Uniswap गवर्नेंस टोकन",
-  "Curve governance token": "Curve गवर्नेंस टोकन",
   "Constant-product LP tokens": "कॉन्स्टेंट-प्रोडक्ट LP टोकन",
   "Concentrated-liquidity LP positions": "सांद्रित-तरलता LP पोज़िशन",
   "StableSwap LP tokens": "StableSwap LP टोकन",
@@ -1052,40 +907,24 @@ const dict: TranslationDictionary = {
   "Authenticated sessions stay locked until Convex confirms access.":
     "जब तक Convex एक्सेस की पुष्टि नहीं करता, प्रमाणित सत्र लॉक रहते हैं।",
   "You're all set.": "आप पूरी तरह तैयार हैं।",
-  "Your Avana sandbox is ready.": "आपका Avana सैंडबॉक्स तैयार है।",
-  "You've already claimed your practice funds. Jump back into the dashboard to keep exploring.":
-    "आप पहले ही अपने अभ्यास फंड क्लेम कर चुके हैं। एक्सप्लोर करते रहने के लिए डैशबोर्ड पर वापस जाएँ।",
   "Reading your wallet history": "आपका वॉलेट इतिहास पढ़ा जा रहा है",
-  "Checking sandbox eligibility": "सैंडबॉक्स पात्रता जाँची जा रही है",
   "Selecting markets to fund": "फंड करने के लिए मार्केट चुने जा रहे हैं",
-  "Sizing your practice portfolio": "आपका अभ्यास पोर्टफ़ोलियो तैयार किया जा रहा है",
-  "Minting your practice funds": "आपके अभ्यास फंड बनाए जा रहे हैं",
   "Opening LP & lending positions": "LP और लेंडिंग पोज़िशन खोली जा रही हैं",
-  "Building your multiply loops": "आपके मल्टिप्लाई लूप बनाए जा रहे हैं",
-  "Finalizing your sandbox": "आपका सैंडबॉक्स अंतिम रूप दिया जा रहा है",
   "One moment.": "एक क्षण।",
   "Analyzing your wallet…": "आपका वॉलेट विश्लेषित किया जा रहा है…",
   "Hang tight.": "थोड़ा रुकें।",
-  "Funding your sandbox…": "आपका सैंडबॉक्स फंड किया जा रहा है…",
   "Liquid assets": "लिक्विड एसेट",
   "Hold & swap tokens": "टोकन होल्ड करें और स्वैप करें",
   "LP collateral": "LP कोलैटरल",
   "Borrow against LP": "LP के बदले उधार लें",
   Lending: "लेंडिंग",
   "Supply to earn": "कमाने के लिए सप्लाई करें",
-  "Leverage loops": "लीवरेज लूप",
   "You'll get": "आपको मिलेगा",
-  "A full practice portfolio": "एक पूर्ण अभ्यास पोर्टफ़ोलियो",
   "Claiming allocation…": "आवंटन क्लेम किया जा रहा है…",
   "Claim your allocation": "अपना आवंटन क्लेम करें",
-  "Welcome to the Avana Sandbox": "Avana सैंडबॉक्स में आपका स्वागत है",
-  "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.":
-    "यह जोखिम-मुक्त Avana सैंडबॉक्स आपको सैंडबॉक्स फंड का उपयोग करके अभ्यास LP पोज़िशन के बदले उधार लेने, लेंड करने और स्ट्रैटेजी लूप करने देता है। कोई वास्तविक एसेट नहीं। कोई वॉलेट सिग्नेचर नहीं। बस लाइव ऐप पर जाने से पहले यह समझने का एक तेज़ तरीका कि Avana कैसे काम करता है।",
   "No transactions yet": "अभी तक कोई लेनदेन नहीं",
   "No transactions to sign": "साइन करने के लिए कोई ट्रांज़ैक्शन नहीं",
   "Connect a wallet.": "एक वॉलेट कनेक्ट करें।",
-  "We'll set up your sandbox and scope it to your address.":
-    "हम आपका सैंडबॉक्स सेट अप करेंगे और उसे आपके पते तक सीमित रखेंगे।",
   "By connecting your wallet, you agree to the": "अपना वॉलेट कनेक्ट करके, आप सहमत होते हैं",
   "Terms & Conditions": "नियम और शर्तें",
   and: "और",
@@ -1094,25 +933,13 @@ const dict: TranslationDictionary = {
   "Your wallet is on the waitlist.": "आपका वॉलेट प्रतीक्षा-सूची में है।",
   "wallets onboarded.": "वॉलेट ऑनबोर्ड हुए।",
   "Wallet connected.": "वॉलेट कनेक्ट हो गया।",
-  "Fund your sandbox to start exploring.": "एक्सप्लोर करना शुरू करने के लिए अपना सैंडबॉक्स फंड करें।",
-  "Every wallet gets sandbox funds to practice with, spread across markets so you can try every flow risk-free.":
-    "हर वॉलेट को अभ्यास के लिए सैंडबॉक्स फंड मिलते हैं, जो मार्केट में फैले होते हैं ताकि आप हर फ़्लो को जोखिम-मुक्त आज़मा सकें।",
   "You're eligible.": "आप पात्र हैं।",
-  "Your practice portfolio is ready.": "आपका अभ्यास पोर्टफ़ोलियो तैयार है।",
-  "sandbox seats remain.": "सैंडबॉक्स सीटें शेष हैं।",
   "Tell your network about Avana.": "अपने नेटवर्क को Avana के बारे में बताएँ।",
   "Post the prepared message on X.": "तैयार संदेश को X पर पोस्ट करें।",
   "Open X": "X खोलें",
   Skip: "छोड़ें",
   "Here's what you'll get.": "यह रहा जो आपको मिलेगा।",
-  "Practice funds across assets, LP collateral, lending, and multiply.":
-    "एसेट, LP कोलैटरल, लेंडिंग और मल्टिप्लाई में फैले अभ्यास फंड।",
   "The allocation cap was reached.": "आवंटन सीमा पूरी हो गई।",
-  "Your Avana sandbox is ready to explore.": "आपका Avana सैंडबॉक्स एक्सप्लोर करने के लिए तैयार है।",
-  "Your practice funds are now in your wallet. Jump into the dashboard to start exploring.":
-    "आपके अभ्यास फंड अब आपके वॉलेट में हैं। एक्सप्लोर करना शुरू करने के लिए डैशबोर्ड पर जाएँ।",
-  "Sandbox onboarding requires a Convex connection. Set":
-    "सैंडबॉक्स ऑनबोर्डिंग के लिए Convex कनेक्शन आवश्यक है। सेट करें",
   "to continue.": "जारी रखने के लिए।",
   Confirmed: "पुष्टि हुई",
   Receipt: "रसीद",
@@ -1134,7 +961,6 @@ const dict: TranslationDictionary = {
   Strategy: "रणनीति",
   "A Beginner's Guide to LP Collateral": "LP कोलैटरल के लिए शुरुआती गाइड",
   "What LP Collateral Makes Possible": "LP कोलैटरल क्या संभव बनाता है",
-  "Thinking Clearly About Yield Looping": "यील्ड लूपिंग के बारे में स्पष्ट रूप से सोचना",
   "How to Hedge an LP Position": "LP पोज़िशन को हेज कैसे करें",
   "Making LP Collateral Usable": "LP कोलैटरल को उपयोगी बनाना",
   "Avana and the Next Step for Liquidity Providers": "Avana और लिक्विडिटी प्रदाताओं के लिए अगला कदम",
@@ -1147,25 +973,17 @@ const dict: TranslationDictionary = {
   "Which DEXs do you use the most?": "आप किन DEXs का सबसे ज़्यादा उपयोग करते हैं?",
   "Select all that apply": "जो भी लागू हों, सभी चुनें",
   "Last step.": "आख़िरी चरण।",
-  "Let's fund your sandbox.": "चलिए आपके सैंडबॉक्स को फंड करते हैं।",
-  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.":
-    "हम अभ्यास फंड को मार्केट में फैला देंगे ताकि आप बिना किसी जोखिम के लेंड, बॉरो और लूप कर सकें।",
   "Good news, you're in.": "अच्छी ख़बर, आप शामिल हो गए।",
   of: "में से",
-  "sandbox seats already claimed.": "सैंडबॉक्स सीटें पहले ही क्लेम हो चुकी हैं।",
-  "Your sandbox is live.": "आपका सैंडबॉक्स लाइव है।",
   "Everything's funded and waiting. Dive in whenever you're ready.":
     "सब कुछ फंडेड है और आपका इंतज़ार कर रहा है। जब भी तैयार हों, शुरू हो जाइए।",
   "Connect an EVM wallet.": "एक EVM वॉलेट कनेक्ट करें।",
-  "We can't reach the sandbox right now.": "हम अभी सैंडबॉक्स तक नहीं पहुँच पा रहे हैं।",
   "Please try again in a moment.": "कृपया थोड़ी देर में फिर से प्रयास करें।",
   "Your session is safe. This is a temporary connection issue, not your wallet.":
     "आपका सेशन सुरक्षित है। यह एक अस्थायी कनेक्शन समस्या है, आपके वॉलेट की नहीं।",
   "Something went wrong.": "कुछ गलत हो गया।",
   "We couldn't load this page.": "हम यह पेज लोड नहीं कर सके।",
   "APY breakdown": "APY का विवरण",
-  "Active Umbrella capital currently available to absorb eligible deficits for this asset.":
-    "इस एसेट के योग्य घाटे को अवशोषित करने के लिए वर्तमान में उपलब्ध सक्रिय Umbrella पूंजी।",
   "Active staker capital": "सक्रिय स्टेकर पूंजी",
   "Additional rewards used to attract coverage capital, especially during bootstrap periods or when coverage is below target.":
     "कवरेज पूंजी आकर्षित करने के लिए अतिरिक्त रिवॉर्ड्स, खासकर बूटस्ट्रैप अवधि में या जब कवरेज लक्ष्य से कम हो।",
@@ -1184,29 +1002,17 @@ const dict: TranslationDictionary = {
   "Liquidation recapture": "लिक्विडेशन रिकैप्चर",
   "Local deductible": "स्थानीय डिडक्टिबल",
   "Target coverage": "लक्षित कवरेज",
-  "The Hub asset this Umbrella market protects. Deficits from any eligible Spoke borrowing this reserve can be covered by this market.":
-    "यह Umbrella मार्केट जिस Hub एसेट की सुरक्षा करता है। इस रिज़र्व से उधार लेने वाले योग्य Spoke के घाटे इस मार्केट से कवर किए जा सकते हैं।",
-  "The amount of Umbrella capital currently deposited and available to absorb deficits for this covered reserve. Capital in cooldown is no longer counted as fully available protection.":
-    "इस कवर किए गए रिज़र्व के घाटे को अवशोषित करने के लिए वर्तमान में जमा और उपलब्ध Umbrella पूंजी। कूलडाउन की पूंजी को पूरी तरह उपलब्ध सुरक्षा नहीं माना जाता।",
   "The amount of staked capital currently in the cooldown period before it can be withdrawn. A larger cooling balance means less protection may remain available if those funds exit.":
     "निकासी से पहले कूलडाउन में मौजूद स्टेक की गई पूंजी। कूलडाउन बैलेंस जितना बड़ा होगा, धन निकलने पर उतनी कम सुरक्षा उपलब्ध रह सकती है।",
   "The core staking yield paid for providing protection capital to this surface.":
     "इस कवरेज सतह को सुरक्षा पूंजी देने पर मिलने वाली मूल स्टेकिंग यील्ड।",
   "The portion of yield supported by liquidation-linked economics generated by this reserve-per-Spoke surface, such as liquidation fees or SVR.":
     "इस रिज़र्व-प्रति-Spoke सतह से उत्पन्न लिक्विडेशन-संबंधी अर्थव्यवस्था द्वारा समर्थित यील्ड का हिस्सा, जैसे लिक्विडेशन फीस या SVR।",
-  "The staking rewards you have earned for providing Umbrella coverage. Rewards may include protocol incentives and other compensation for taking slashing and lockup risk.":
-    "Umbrella कवरेज देने के लिए अर्जित आपकी स्टेकिंग रिवॉर्ड्स। इनमें प्रोटोकॉल इंसेंटिव और स्लैशिंग व लॉकअप जोखिम की अन्य क्षतिपूर्ति शामिल हो सकती है।",
-  "Umbrella surface details": "Umbrella कवरेज सतह का विवरण",
   "View {symbol} surface details": "{symbol} कवरेज सतह का विवरण देखें",
-  "The rewards currently earned by this Umbrella position, allocated across the underlying APY sources.":
-    "इस Umbrella पोज़िशन से वर्तमान में अर्जित रिवॉर्ड्स, जिन्हें अंतर्निहित APY स्रोतों में बांटा गया है।",
-  "The estimated annual yield for keeping Umbrella capital available as coverage for this market.":
-    "इस मार्केट के लिए Umbrella पूंजी को कवरेज के रूप में उपलब्ध रखने की अनुमानित वार्षिक यील्ड।",
   "Est. annual rewards": "अनुमानित वार्षिक रिवॉर्ड्स",
   "Based on amount entered": "दर्ज राशि पर आधारित",
   "Slashable stake": "स्लैश योग्य स्टेक",
   "Market staked": "मार्केट स्टेक",
-  "Umbrella APY": "Umbrella APY",
   "Umbrella market": "Umbrella मार्केट",
   "Cooled stake": "कूलडाउन वाला स्टेक",
   "Start cooldown": "कूलडाउन शुरू करें",
@@ -1214,8 +1020,6 @@ const dict: TranslationDictionary = {
   "Coverage is defined for a specific Hub reserve and covers eligible deficits from every Spoke borrowing that reserve, including credit-line draws.":
     "कवरेज एक खास Hub रिज़र्व के लिए तय होती है और उस रिज़र्व से उधार लेने वाले हर योग्य Spoke के घाटे, जिसमें क्रेडिट-लाइन ड्रॉ भी शामिल हैं, को कवर करती है।",
   "First-loss protection": "फर्स्ट-लॉस सुरक्षा",
-  "The Deficit Offset absorbs the first layer of loss. Only the residual deficit beyond that offset can reach staked Umbrella coverage.":
-    "घाटा ऑफसेट नुकसान की पहली परत को अवशोषित करता है। केवल ऑफसेट से अधिक बचा घाटा ही स्टेक्ड Umbrella कवरेज तक पहुंच सकता है।",
   "Independent underwriting": "स्वतंत्र अंडरराइटिंग",
   "Target liquidity and reward emissions reflect reserve risk, economics, opportunity cost, and the slashing and lockup risk accepted by coverage providers.":
     "लक्षित लिक्विडिटी और रिवॉर्ड एमिशन रिज़र्व जोखिम, अर्थव्यवस्था, अवसर लागत और कवरेज प्रदाताओं द्वारा स्वीकार किए गए स्लैशिंग व लॉकअप जोखिम को दर्शाते हैं।",
@@ -1230,7 +1034,6 @@ const dict: TranslationDictionary = {
   "Includes active stake and cooldown": "सक्रिय स्टेक और कूलडाउन शामिल है",
   "Amount Avana covers first before user-staked coverage is exposed. Stakers only take losses once realized deficits exceed this offset.":
     "वह राशि जिसे Avana पहले कवर करती है, इससे पहले कि उपयोगकर्ता-स्टेक्ड कवरेज उजागर हो। स्टेकर तभी नुकसान उठाते हैं जब वास्तविक घाटा इस ऑफ़सेट से अधिक हो जाए।",
-  "Close umbrella actions": "सुरक्षा क्रियाएँ बंद करें",
   Cooldown: "कूलडाउन",
   Cooling: "कूलिंग में",
   Coverage: "कवरेज",
@@ -1241,19 +1044,13 @@ const dict: TranslationDictionary = {
   "Deficit Offset": "घाटा ऑफ़सेट",
   "Desired amount of user-staked coverage for this asset.": "इस एसेट के लिए उपयोगकर्ता-स्टेक्ड कवरेज की वांछित राशि।",
   "Dynamic rewards": "डायनामिक रिवॉर्ड्स",
-  "Each Umbrella stake token covers deficits for its matching borrowed asset on the same network.":
-    "प्रत्येक सुरक्षा स्टेक टोकन उसी नेटवर्क पर संबंधित उधार एसेट के घाटे को कवर करता है।",
-  "Emissions adjust against target liquidity, and each staked asset can earn multiple reward tokens.":
-    "एमिशन लक्ष्य लिक्विडिटी के अनुसार समायोजित होते हैं, और प्रत्येक स्टेक्ड एसेट कई रिवॉर्ड टोकन कमा सकता है।",
   "Estimated annual staking yield paid to stakers of this asset.":
     "इस एसेट के स्टेकर्स को दी जाने वाली अनुमानित वार्षिक स्टेकिंग यील्ड।",
   "In cooldown": "कूलडाउन में",
   "Isolated slashing": "पृथक स्लैशिंग",
   "Learn Umbrella": "सुरक्षा के बारे में जानें",
-  "Umbrella Overview": "Umbrella अवलोकन",
   "Module assets": "मॉड्यूल एसेट्स",
   More: "और",
-  "More umbrella actions": "और सुरक्षा क्रियाएँ",
   "Next cooldown": "अगला कूलडाउन",
   "Next market risk": "अगला मार्केट जोखिम",
   "Once cooldown finishes, users can unstake during the withdrawal window before cooldown has to be restarted.":
@@ -1265,10 +1062,6 @@ const dict: TranslationDictionary = {
   Restart: "पुनः प्रारंभ",
   "Restart cooldown": "कूलडाउन दोबारा शुरू करें",
   Stake: "स्टेक",
-  "Stake in umbrella": "सुरक्षा में स्टेक करें",
-  "Unstake from umbrella": "सुरक्षा से अनस्टेक करें",
-  "Stake, claim rewards, start cooldown, or unstake from the umbrella safety module.":
-    "सुरक्षा मॉड्यूल में स्टेक करें, रिवॉर्ड क्लेम करें, कूलडाउन शुरू करें, या अनस्टेक करें।",
   "Stake, claim, cooldown, unstake": "स्टेक, क्लेम, कूलडाउन, अनस्टेक",
   "Start cooldown before withdrawing. During cooldown, the position keeps earning incentives and remains slashable.":
     "विदड्रॉ करने से पहले कूलडाउन शुरू करें। कूलडाउन के दौरान पोज़िशन प्रोत्साहन कमाना जारी रखती है और स्लैश की जा सकती है।",
@@ -1278,20 +1071,13 @@ const dict: TranslationDictionary = {
   "Total user-staked capital available to absorb losses for this asset.":
     "इस एसेट के नुकसान अवशोषित करने के लिए उपलब्ध कुल उपयोगकर्ता-स्टेक्ड पूंजी।",
   Umbrella: "सुरक्षा",
-  "Umbrella Cooldown": "सुरक्षा कूलडाउन",
-  "Umbrella actions": "सुरक्षा क्रियाएँ",
-  "Umbrella activity": "सुरक्षा गतिविधि",
   "Umbrella positions": "सुरक्षा पोज़िशन",
-  "Umbrella positions are split by asset and network, so each stake token has its own risk and reward profile.":
-    "सुरक्षा पोज़िशन एसेट और नेटवर्क के अनुसार अलग-अलग होती हैं, इसलिए प्रत्येक स्टेक टोकन का अपना जोखिम और रिवॉर्ड प्रोफ़ाइल होता है।",
   Unstake: "अनस्टेक",
   "Unstake window": "अनस्टेक विंडो",
   "Weighted APY": "भारित APY",
   "Withdrawal ready": "विदड्रॉ के लिए तैयार",
   "Withdrawal window": "विदड्रॉअल विंडो",
-  "You have no Umbrella positions yet.": "आपके पास अभी तक कोई सुरक्षा पोज़िशन नहीं है।",
   "Your Umbrella": "आपकी सुरक्षा",
-  "Your Umbrella stake": "आपका सुरक्षा स्टेक",
   "After cooldown completes, there is a short window to unstake. If it expires, cooldown must be started again.":
     "कूलडाउन पूरा होने के बाद अनस्टेक करने के लिए एक छोटी विंडो होती है। यदि यह समाप्त हो जाए, तो कूलडाउन दोबारा शुरू करना होगा।",
   "base {base} + reward {reward}": "आधार {base} + रिवॉर्ड {reward}",
@@ -1320,8 +1106,6 @@ const dict: TranslationDictionary = {
   "{count} assets": "{count} एसेट",
   "{count} positions": "{count} पोज़िशन",
   "{count} rewards": "{count} रिवॉर्ड्स",
-  "{name} ({symbol}) / {borrowName} ({borrow}) is a leveraged multiply market on Avana. Supply {symbol} as collateral to loop into {borrow} exposure, up to {leverage}, in a route dedicated to leveraged positions rather than LP collateral pools. Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this {marketType} market. Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.":
-    "{name} ({symbol}) / {borrowName} ({borrow}) Avana पर एक लीवरेज्ड मल्टिप्लाई मार्केट है। {borrow} एक्सपोज़र में {leverage} तक लूप करने के लिए {symbol} को कोलैटरल के रूप में सप्लाई करें, यह मार्ग LP कोलैटरल पूल के बजाय लीवरेज्ड पोज़िशनों के लिए समर्पित है। नेट रिटर्न सप्लाई/उधार स्प्रेड, उपयोग और चयनित मल्टीप्लायर पर निर्भर करता है, इसलिए दरों और उपलब्ध लिक्विडिटी के पुनर्संतुलन के साथ लूपिंग परिणाम बदल सकते हैं। यह पेज लाइव लीवरेज सीमा, सप्लाई/उधार मिश्रण, उपलब्ध लिक्विडिटी और इस {marketType} मार्केट की नवीनतम जोखिम स्थिति पर केंद्रित है। उपयोगकर्ताओं को कोलैटरल फैक्टर, लिक्विडेशन थ्रेशोल्ड, उधार लागत और उपलब्ध लिक्विडिटी पर ध्यान देना चाहिए क्योंकि ये इनपुट लूपिंग रिटर्न और तनावपूर्ण स्थितियों में पोज़िशन कितनी जल्दी बंद की जा सकती है, दोनों को प्रभावित करते हैं।",
   "{progress}/{target} {currency}": "{progress}/{target} {currency} पूर्ण",
   "1D": "1D",
   "30 Days": "30 दिन",
@@ -1364,7 +1148,6 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "डैशबोर्ड टैब",
   Date: "तारीख",
   Dismiss: "खारिज करें",
-  "Explore Umbrella": "सुरक्षा एक्सप्लोर करें",
   Explorer: "एक्सप्लोरर",
   "Express actions": "एक्सप्रेस क्रियाएँ",
   Fees: "शुल्क",
@@ -1397,8 +1180,6 @@ const dict: TranslationDictionary = {
   "Loading wallet position": "वॉलेट पोज़िशन लोड हो रही है",
   Long: "लॉन्ग",
   "Long, short, and net USD per token across every product.": "हर उत्पाद में प्रति टोकन लॉन्ग, शॉर्ट और नेट USD।",
-  "LOOP APY": "लूप APY",
-  "Loop market": "लूप मार्केट",
   "LP APR": "LP APR",
   "Pool APR": "पूल APR",
   "Live value of this collateral, and the LP trading fees it earns.":
@@ -1407,21 +1188,14 @@ const dict: TranslationDictionary = {
   "Market-wide liquidation activity and near-liquidation exposure over the last 24 hours.":
     "पिछले 24 घंटों में मार्केट-व्यापी लिक्विडेशन गतिविधि और लिक्विडेशन के करीब एक्सपोज़र।",
   "Minimum received": "न्यूनतम प्राप्त",
-  "Multiply Balance": "मल्टिप्लाई बैलेंस",
-  "Multiply Exposure": "मल्टिप्लाई एक्सपोज़र",
-  "Multiply Health": "मल्टिप्लाई हेल्थ",
-  "Multiply Rewards": "मल्टिप्लाई रिवॉर्ड्स",
   "Multiply TVL": "मल्टिप्लाई TVL",
   "My Collaterals": "मेरे कोलैटरल",
   "My Debts": "मेरे ऋण",
   Net: "नेट",
-  "Net Portfolio Value = Assets − Debt. Assets: wallet balances, lending supplied, borrow collateral, any borrowed funds you still hold, your Multiply position value, and Umbrella staked + rewards. Debt: borrow loans and Multiply borrowing. Borrowing doesn't change this number — the cash you receive is an asset that offsets the new debt.":
-    "नेट पोर्टफोलियो मूल्य = एसेट − ऋण। एसेट: वॉलेट बैलेंस, लेंडिंग में सप्लाई, उधार कोलैटरल, कोई भी उधार लिया गया फंड जो अब भी आपके पास है, आपकी मल्टिप्लाई पोज़िशन का मूल्य, और सुरक्षा में स्टेक किया गया + रिवॉर्ड्स। ऋण: उधार लोन और मल्टिप्लाई उधार। उधार लेना इस संख्या को नहीं बदलता — आपको जो नकद मिलता है वह एक एसेट है जो नए ऋण की भरपाई करता है।",
   Network: "नेटवर्क",
   No: "नहीं",
   "No active loans. Borrow against your collateral to get started.":
     "कोई सक्रिय ऋण नहीं। शुरू करने के लिए अपने कोलैटरल के विरुद्ध उधार लें।",
-  "No active Multiply positions": "कोई सक्रिय मल्टिप्लाई पोज़िशन नहीं",
   "No assets found.": "कोई एसेट नहीं मिला।",
   "No collateral deposited yet. Supply an asset to start backing loans.":
     "अभी तक कोई कोलैटरल जमा नहीं। ऋणों को समर्थन देने के लिए एक एसेट सप्लाई करें।",
@@ -1429,7 +1203,6 @@ const dict: TranslationDictionary = {
     "अभी तक कोई लिक्विडिटी पूल नहीं। ट्रेडिंग शुल्क कमाना शुरू करने के लिए लिक्विडिटी प्रदान करें।",
   "No results found": "कोई परिणाम नहीं मिला",
   "No supplied position to withdraw": "निकालने के लिए कोई सप्लाई की गई पोज़िशन नहीं",
-  "No Umbrella positions yet.": "अभी तक कोई सुरक्षा पोज़िशन नहीं।",
   "No wallet balances found.": "कोई वॉलेट बैलेंस नहीं मिला।",
   NONE: "कोई नहीं",
   now: "अभी",
@@ -1464,11 +1237,8 @@ const dict: TranslationDictionary = {
   "Repay or add collateral to reduce your liquidation risk.":
     "अपने लिक्विडेशन जोखिम को कम करने के लिए चुकाएँ या कोलैटरल जोड़ें।",
   "Review risk": "जोखिम की समीक्षा करें",
-  "Negative net APY: borrow costs exceed supply yield. Review before opening this loop.":
-    "नकारात्मक नेट APY: उधार लागत आपूर्ति यील्ड से अधिक है। यह लूप खोलने से पहले समीक्षा करें।",
   "Review swap": "स्वैप की समीक्षा करें",
   "Rewards Earned": "अर्जित रिवॉर्ड्स",
-  Sandbox: "सैंडबॉक्स",
   "Scenario price": "परिदृश्य मूल्य",
   "Ask AI": "AI से पूछें",
   "Search Avana": "Avana खोजें",
@@ -1545,19 +1315,14 @@ const dict: TranslationDictionary = {
   "Collateral price move": "कोलैटरल मूल्य में बदलाव",
   "Debt change amount": "कर्ज़ परिवर्तन राशि",
   "Drop buffer": "गिरावट बफर",
-  "Equity value at this leverage, by scenario.": "इस लीवरेज पर इक्विटी मूल्य, परिदृश्य के अनुसार।",
-  "Estimate on {equity} equity. Assumes rates hold; leverage amplifies both gains and losses.":
-    "{equity} इक्विटी पर अनुमान। दरें स्थिर मानी गई हैं; लीवरेज लाभ और हानि दोनों बढ़ाता है।",
   "Estimate. Variable rate — actual cost will differ.": "अनुमान। परिवर्तनीय दर — वास्तविक लागत भिन्न होगी।",
   Horizon: "अवधि",
   "Lend Outlook": "उधार देने का आउटलुक",
-  "Leverage multiplier": "लीवरेज गुणक",
   Liquidated: "परिसमापित",
   "Liquidation price": "परिसमापन मूल्य",
   "Liquidation prices": "परिसमापन मूल्य (सभी)",
   "Move collateral prices or your debt and watch health factor respond.":
     "कोलैटरल मूल्य या अपना कर्ज़ बदलें और देखें हेल्थ फैक्टर कैसे प्रतिक्रिया करता है।",
-  "Multiply Outlook": "Multiply आउटलुक",
   Next: "अगला",
   "Price sensitivity": "मूल्य संवेदनशीलता",
   "Projected interest cost": "अनुमानित ब्याज लागत",
@@ -1616,32 +1381,16 @@ const dict: TranslationDictionary = {
     "हेल्थ फैक्टर, और वह कोलैटरल मूल्य जिस पर यह पोज़िशन लिक्विडेट हो जाती है। 1.0 से नीचे जाने पर लिक्विडेशन शुरू हो जाता है।",
   "The collateral you supply and the asset you borrow against it to build leverage.":
     "वह कोलैटरल जो आप आपूर्ति करते हैं और वह एसेट जिसे आप लीवरेज बनाने के लिए इसके विरुद्ध उधार लेते हैं।",
-  "Your own capital in the loop (exposure minus debt). Exposure is your total leveraged position.":
-    "लूप में आपकी अपनी पूंजी (एक्सपोज़र घटाकर ऋण)। एक्सपोज़र आपकी कुल लीवरेज्ड पोज़िशन है।",
   "Net yield after borrow costs, on your capital. The figure below is interest earned so far, ticking live.":
     "आपकी पूंजी पर, उधार लागत के बाद शुद्ध यील्ड। नीचे दिया गया आंकड़ा अब तक अर्जित ब्याज है, जो लाइव अपडेट होता रहता है।",
-  "Health factor, and the collateral price at which this loop is liquidated. Below 1.0 triggers liquidation.":
-    "हेल्थ फैक्टर, और वह कोलैटरल कीमत जिस पर यह लूप लिक्विडेट हो जाता है। 1.0 से नीचे जाने पर लिक्विडेशन शुरू हो जाता है।",
-  "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)":
-    "आपके Multiply लूप में अर्जित शुद्ध कैरी, जो वास्तविक समय में संचित होती है (आपूर्ति यील्ड घटाकर उधार लागत)",
   "Average APY across your staked positions, weighted by value.":
     "आपकी स्टेक्ड पोज़िशनों में औसत APY, मूल्य के अनुसार भारित।",
   "Additional amount you can borrow against your pledged collateral within Avana credit limits":
     "Avana क्रेडिट सीमा के भीतर, आपके गिरवी रखे गए कोलैटरल के विरुद्ध आप जितनी अतिरिक्त राशि उधार ले सकते हैं",
   "Amount an active loan can lose before reaching liquidation; unavailable when you have no debt":
     "सक्रिय ऋण के लिक्विडेशन तक पहुंचने से पहले वह जितनी राशि गंवा सकता है; कोई ऋण न होने पर अनुपलब्ध",
-  "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.":
-    "संयुक्त लिक्विडेशन मूल्य को कुल Multiply ऋण से भाग देकर। अधिक होना सुरक्षित है; 1 से नीचे लिक्विडेशन का जोखिम है।",
-  "Equity-weighted net APY after supply yield and borrow cost":
-    "आपूर्ति यील्ड और उधार लागत के बाद इक्विटी-भारित शुद्ध APY",
-  "Exposure, return, and liquidation risk for each active loop":
-    "प्रत्येक सक्रिय लूप के लिए एक्सपोज़र, रिटर्न और लिक्विडेशन जोखिम",
-  "Gross Multiply exposure after looping across all positions":
-    "सभी पोज़िशनों में लूपिंग के बाद सकल Multiply एक्सपोज़र",
   "Interest earned as a percentage of principal you supplied":
     "आपके द्वारा आपूर्ति किए गए मूलधन के प्रतिशत के रूप में अर्जित ब्याज",
-  "Portfolio leverage as position value divided by equity":
-    "पोज़िशन मूल्य को इक्विटी से भाग देकर प्राप्त पोर्टफोलियो लीवरेज",
   "Projected earnings at current rates": "मौजूदा दरों पर अनुमानित आय",
   "Supply interest accruing in real time across your lending positions (excludes protocol rewards)":
     "आपकी लेंडिंग पोज़िशनों में वास्तविक समय में संचित हो रहा सप्लाई ब्याज (प्रोटोकॉल रिवॉर्ड्स को छोड़कर)",
@@ -1779,7 +1528,6 @@ const dict: TranslationDictionary = {
     "सप्लाई किए गए फ़ंड का वह हिस्सा जो अभी उधार दिया गया है। अधिक उपयोग से दरें बढ़ती हैं और निकासी में देरी हो सकती है।",
   "The liquidity pool you can pledge as collateral to borrow against.":
     "वह लिक्विडिटी पूल जिसे आप उधार लेने के लिए कोलैटरल के रूप में गिरवी रख सकते हैं।",
-  "The maximum leverage available on this loop.": "इस लूप पर उपलब्ध अधिकतम लीवरेज।",
   "The most you can borrow as a share of your collateral value.":
     "आपके कोलैटरल मूल्य के हिस्से के रूप में आप अधिकतम कितना उधार ले सकते हैं।",
   "The token you can borrow against your collateral.": "वह टोकन जिसे आप अपने कोलैटरल के बदले उधार ले सकते हैं।",
@@ -1802,7 +1550,6 @@ const dict: TranslationDictionary = {
   "Filter by": "इसके अनुसार फ़िल्टर करें",
   Hubs: "हब",
   Markets: "मार्केट",
-  "No loops match these filters.": "इन फ़िल्टर से कोई लूप मेल नहीं खाता।",
   "No matches": "कोई परिणाम नहीं",
   "Search chains": "चेन खोजें",
   "Search hubs": "हब खोजें",
@@ -1812,7 +1559,6 @@ const dict: TranslationDictionary = {
   Volatile: "अस्थिर",
   Chains: "चेन",
   Other: "अन्य",
-  Stocks: "स्टॉक",
   "Filter markets": "मार्केट फ़िल्टर करें",
 }
 

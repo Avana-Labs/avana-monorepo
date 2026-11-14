@@ -1,6 +1,6 @@
 /**
  * Personalized empty-state greeting for Ask AI.
- * Uses the onboarding display name (`sandboxProfiles.preferences.name`) when present,
+ * Uses the onboarding display name (`walletProfiles` display name) when present,
  * plus the user's local clock for time-of-day tone.
  */
 
