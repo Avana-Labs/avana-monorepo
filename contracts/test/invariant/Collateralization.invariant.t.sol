@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollWorld, CollateralizationHandler} from "./handlers/CollateralizationHandler.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title CollateralizationInvariantTest
 /// @notice Backing and per-proxy ledger invariants on the real Collateralization, the real Lock, the real vault token
@@ -17,7 +18,7 @@ import {CollWorld, CollateralizationHandler} from "./handlers/CollateralizationH
 /// account credits sum to the market total; pending units plus unreconciled kept units equal what LPVaultSwap holds.
 /// @dev Each handler call is one transaction: a member's Lock session spans several calls the handler makes.
 /// forge-config: default.isolate = false
-contract CollateralizationInvariantTest is CollateralizationFixture {
+contract CollateralizationInvariantTest is CollateralizationFixture, HandlerReach {
     CollateralizationHandler internal handler;
 
     function setUp() public {
@@ -37,17 +38,9 @@ contract CollateralizationInvariantTest is CollateralizationFixture {
             marketId: MARKET_ID
         });
         handler = new CollateralizationHandler(world, [aliceProxy, bobProxy], [alice, bob]);
+        handler.seedAccounts();
         targetContract(address(handler));
-        bytes4[] memory actions = new bytes4[](8);
-        actions[0] = CollateralizationHandler.pledge.selector;
-        actions[1] = CollateralizationHandler.withdraw.selector;
-        actions[2] = CollateralizationHandler.borrow.selector;
-        actions[3] = CollateralizationHandler.repay.selector;
-        actions[4] = CollateralizationHandler.setPrice.selector;
-        actions[5] = CollateralizationHandler.liquidate.selector;
-        actions[6] = CollateralizationHandler.seizeAndKeep.selector;
-        actions[7] = CollateralizationHandler.settlePending.selector;
-        targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+        targetSelector(FuzzSelector({addr: address(handler), selectors: _actions()}));
     }
 
     // TEST-083 verifies: INV-001, SPEC-BACK-009
@@ -77,5 +70,45 @@ contract CollateralizationInvariantTest is CollateralizationFixture {
     function invariant_TEST_153_pendingBackedByKeptUnits() public view {
         uint256 unreconciled = handler.unreconciled(aliceProxy) + handler.unreconciled(bobProxy);
         assertEq(coll.getPending(vt).units + unreconciled, handler.keptHeld(), "pending + unreconciled = kept");
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice The handler does real work: over 32 fixed-seed runs of 50 calls from this suite's set-up state, every
+    /// action succeeds in at least 30 % of its calls and every target state is reached in at least 75 % of the runs.
+    function test_TEST_082_handlerReach() public {
+        string[] memory names = new string[](8);
+        names[0] = "pledge";
+        names[1] = "withdraw";
+        names[2] = "borrow";
+        names[3] = "repay";
+        names[4] = "setPrice";
+        names[5] = "liquidate";
+        names[6] = "seizeAndKeep";
+        names[7] = "settlePending";
+        string[] memory targets = new string[](3);
+        targets[0] = "honest liquidation";
+        targets[1] = "kept seizure";
+        targets[2] = "pending settlement";
+        Reach memory r = _replay(address(handler), _actions(), CollateralizationHandler.Skipped.selector, 32, 50, 3);
+        _check(r, names, targets, _floors(names.length, 30), _floors(targets.length, 75));
+    }
+
+    function _reached() internal view override returns (bool[] memory hit) {
+        hit = new bool[](3);
+        hit[0] = handler.honestLiquidations() != 0;
+        hit[1] = handler.keptSeizures() != 0;
+        hit[2] = handler.pendingSettlements() != 0;
+    }
+
+    function _actions() internal pure returns (bytes4[] memory actions) {
+        actions = new bytes4[](8);
+        actions[0] = CollateralizationHandler.pledge.selector;
+        actions[1] = CollateralizationHandler.withdraw.selector;
+        actions[2] = CollateralizationHandler.borrow.selector;
+        actions[3] = CollateralizationHandler.repay.selector;
+        actions[4] = CollateralizationHandler.setPrice.selector;
+        actions[5] = CollateralizationHandler.liquidate.selector;
+        actions[6] = CollateralizationHandler.seizeAndKeep.selector;
+        actions[7] = CollateralizationHandler.settlePending.selector;
     }
 }
