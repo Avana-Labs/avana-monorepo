@@ -299,6 +299,13 @@
           "offset": 0,
           "bytes": "20",
           "type": "uint160"
+        },
+        {
+          "path": "unitExp",
+          "slot": "2",
+          "offset": 20,
+          "bytes": "1",
+          "type": "uint8"
         }
       ]
     }
