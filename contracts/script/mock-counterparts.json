@@ -63,7 +63,8 @@
       "mocks": [
         "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3Pool",
         "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3ACLManager",
-        "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3AddressesProvider"
+        "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3AddressesProvider",
+        "invariant/echidna/FlashLiquidatorProperties.sol:FlashLiquidatorPoolStandIn"
       ]
     },
     "gho-gsm": {
