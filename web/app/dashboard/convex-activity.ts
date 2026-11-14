@@ -1,13 +1,11 @@
 import type { PortfolioActivityRow } from "@/app/lib/data/providers/portfolio"
 import type { PortfolioActivityKind, PortfolioActivityProduct } from "@/app/lib/data/providers/portfolio/records"
-import { formatMultiplyActivityMarketLabel } from "@/app/lib/multiply-system/market-labels"
 import { buildDefaultRewardsCatalog } from "@/app/lib/rewards-engine/catalog"
 
 const PRODUCTS = new Set<PortfolioActivityProduct>([
   "borrow",
   "pool",
   "lend",
-  "multiply",
   "onboarding",
   "rewards",
   "swap",
@@ -64,8 +62,6 @@ function mapProduct(product: string): PortfolioActivityProduct {
 
 function mapKind(kind: string): PortfolioActivityKind {
   if (kind === "deposit") return "supply"
-  if (kind === "multiply") return "open"
-  if (kind === "deleverage") return "reduce"
   if (KINDS.has(kind as PortfolioActivityKind)) return kind as PortfolioActivityKind
   return "rebalance"
 }
@@ -90,21 +86,13 @@ export function mapConvexActivityItemsToRows(items: ConvexActivityItem[]): Portf
     const isOnboardingClaim = item.product === "onboarding" && item.kind === "onboardingClaim"
     const product = legacyUmbrellaKind ? "umbrella" : mapProduct(item.product)
     const kind = isStarterAssetGrant || isOnboardingClaim ? "claim" : mapKind(legacyUmbrellaKind ?? item.kind)
-    const multiplyMarketLabel =
-      product === "multiply" ? formatMultiplyActivityMarketLabel(item.marketSlug ?? undefined) : null
     const primaryLabel = isOnboardingClaim
       ? "Sandbox portfolio funded"
       : isStarterAssetGrant
         ? item.marketSlug
           ? `${item.marketSlug.toUpperCase()} sandbox funds`
           : "Sandbox asset grant"
-        : product === "multiply"
-          ? kind === "open"
-            ? "Multiply"
-            : kind === "close"
-              ? "Close position"
-              : "Deleverage"
-          : item.marketSlug
+        : item.marketSlug
             ? item.marketSlug
             : product === "rewards"
               ? (rewardTaskTitle(item.claimedTaskIds) ?? "Avana rewards")
@@ -115,9 +103,7 @@ export function mapConvexActivityItemsToRows(items: ConvexActivityItem[]): Portf
       ? "Onboarding grant"
       : isStarterAssetGrant
         ? "Sandbox funds received"
-        : product === "multiply"
-          ? (multiplyMarketLabel ?? "Multiply")
-          : product === "rewards" && item.kind === "claim"
+        : product === "rewards" && item.kind === "claim"
             ? `${item.amountUsd} AVA claimed`
             : titleCase(legacyUmbrellaKind ?? item.kind)
     return {

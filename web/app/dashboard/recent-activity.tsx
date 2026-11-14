@@ -13,7 +13,6 @@ import { formatCompactUsd } from "@/app/lib/borrow-sim"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { cn } from "@/lib/utils"
-import { getMultiplyActivityMarketSymbols } from "@/app/lib/multiply-system/market-labels"
 import {
   mapConvexActivityItemsToRows,
   mergeActivityRows,
@@ -60,7 +59,7 @@ function firstLogoCandidate(candidates: Array<string | undefined>) {
  * Resolve the row's token symbol for the icon. Rewards → AVA. Otherwise we prefer the
  * row's real market/asset data (`marketId`, which encodes the underlying token — "gho",
  * "wsteth", "wbtc-weth-…") and only accept a candidate that maps to an actual logo, so
- * label words that are NOT tokens ("multiply", "claim") can never leak through as a
+ * label words that are NOT tokens ("claim") can never leak through as a
  * letter-circle fallback. Ends on ETH — a real logo — so a row always shows a logo.
  */
 export function inferActivityTokenSymbol(row: PortfolioActivityRow): string {
@@ -68,10 +67,8 @@ export function inferActivityTokenSymbol(row: PortfolioActivityRow): string {
 
   const secondary = row.secondaryLabel.replace(/\s+claimed$/i, "").trim()
   const marketId = row.marketId?.trim()
-  const multiplySymbols = row.product === "multiply" ? getMultiplyActivityMarketSymbols(marketId) : null
   const scopedAsset = marketId?.includes(":") ? marketId.split(":").at(-1) : undefined
   const candidates = [
-    multiplySymbols?.collateralSymbol,
     // A scoped asset id (`aero-slipstream-bluechip:usdc`) identifies the traded
     // token exactly. Checking the whole slug first used to select AERO from the
     // venue prefix, so USDC debt rows rendered with the Aerodrome logo.

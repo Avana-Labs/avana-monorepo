@@ -43,12 +43,6 @@ export default function NotFound() {
                 Lend
               </Link>
               <Link
-                href="/multiply"
-                className="text-sm font-medium text-foreground transition hover:text-brand-readable"
-              >
-                Multiply
-              </Link>
-              <Link
                 href="/dashboard"
                 className="text-sm font-medium text-foreground transition hover:text-brand-readable"
               >

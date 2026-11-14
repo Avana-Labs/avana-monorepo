@@ -6,13 +6,12 @@
  * (rewards / swap / umbrella) only mount on their own surfaces (or dashboard).
  */
 export type ProductRuntimeScope = {
-  /** Wallet session + product-balance hydration (borrow/lend/multiply/swap/home). */
+  /** Wallet session + product-balance hydration (borrow/lend/swap/home). */
   walletSession: boolean
-  /** Public market snapshot hydrate for borrow / lend / multiply catalogs. */
+  /** Public market snapshot hydrate for borrow / lend markets. */
   marketSnapshots: boolean
   hydrateBorrowMarkets: boolean
   hydrateLendMarkets: boolean
-  hydrateMultiplyMarkets: boolean
   swapTransactions: boolean
   rewards: boolean
   umbrella: boolean
@@ -24,7 +23,6 @@ const IDLE: ProductRuntimeScope = {
   marketSnapshots: false,
   hydrateBorrowMarkets: false,
   hydrateLendMarkets: false,
-  hydrateMultiplyMarkets: false,
   swapTransactions: false,
   rewards: false,
   umbrella: false,
@@ -57,15 +55,6 @@ export function resolveProductRuntimeScope(pathname: string | null | undefined):
     }
   }
 
-  if (pathPrefix(pathname, "/multiply") || pathPrefix(pathname, "/actions/multiply")) {
-    return {
-      ...IDLE,
-      walletSession: true,
-      marketSnapshots: true,
-      hydrateMultiplyMarkets: true,
-    }
-  }
-
   if (pathPrefix(pathname, "/swap") || pathPrefix(pathname, "/actions/swap")) {
     return {
       ...IDLE,
@@ -83,8 +72,7 @@ export function resolveProductRuntimeScope(pathname: string | null | undefined):
   }
 
   if (pathPrefix(pathname, "/dashboard")) {
-    // Consolidated portfolio surface: hydrate B/L/M sessions + the Multiply market
-    // snapshots used by the market-scoped Available card, plus rewards/umbrella remotes.
+    // Consolidated portfolio surface: hydrate the Borrow/Lend sessions plus rewards/umbrella remotes.
     // Borrow markets too: without the live LP price the Borrow tab valued collateral at the
     // catalog estimate (cbBTC/USDC $37.5K vs $48.6K elsewhere). Swap history remains off here.
     return {
@@ -92,7 +80,6 @@ export function resolveProductRuntimeScope(pathname: string | null | undefined):
       walletSession: true,
       marketSnapshots: true,
       hydrateBorrowMarkets: true,
-      hydrateMultiplyMarkets: true,
       rewards: true,
       umbrella: true,
       ensureUmbrellaFixtures: true,

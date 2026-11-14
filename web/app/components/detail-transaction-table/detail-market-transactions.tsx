@@ -6,7 +6,6 @@ import {
   BORROW_ASSET_KIND_CONFIG,
   BORROW_POOL_KIND_CONFIG,
   LEND_KIND_CONFIG,
-  MULTIPLY_KIND_CONFIG,
   type DetailTransactionPreset,
   type TransactionKindConfig,
 } from "@/app/components/detail-transaction-table/kind-configs"
@@ -14,7 +13,7 @@ import type { DetailTransactionRow } from "@/app/lib/detail-page/transaction-his
 import { enrichDetailTransactionRow } from "@/app/lib/detail-page/transaction-history"
 import { useDetailMarketTransactions } from "@/app/lib/detail-page/use-detail-market-transactions"
 
-type Scope = "asset" | "pool" | "lend" | "multiply"
+type Scope = "asset" | "pool" | "lend"
 
 type Props = {
   scope: Scope
@@ -79,4 +78,4 @@ export function DetailMarketTransactions({
   )
 }
 
-export { BORROW_ASSET_KIND_CONFIG, BORROW_POOL_KIND_CONFIG, LEND_KIND_CONFIG, MULTIPLY_KIND_CONFIG }
+export { BORROW_ASSET_KIND_CONFIG, BORROW_POOL_KIND_CONFIG, LEND_KIND_CONFIG }

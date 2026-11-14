@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { cn } from "@/lib/utils"
 
-type HowItWorksTopic = "umbrella" | "lend" | "borrow" | "multiply"
+type HowItWorksTopic = "umbrella" | "lend" | "borrow"
 
 type HowItWorksSection = { heading: string; body: string }
 type HowItWorksContent = {
@@ -86,25 +86,6 @@ const HOW_IT_WORKS: Record<HowItWorksTopic, HowItWorksContent> = {
       {
         heading: "Interest & repayment",
         body: "Interest accrues on your debt at a variable rate. You can repay part or all of the loan at any time, and add or withdraw collateral to manage your health factor.",
-      },
-    ],
-  },
-  multiply: {
-    title: "How Multiply works",
-    intro:
-      "Multiply builds a leveraged position in one step: it supplies your collateral, borrows against it, and re-supplies — looping to give you amplified exposure to the collateral asset.",
-    sections: [
-      {
-        heading: "Leverage, in one action",
-        body: "Instead of manually looping supply-and-borrow, Multiply sets your target leverage and opens the whole position at once. Higher leverage means larger exposure from the same equity.",
-      },
-      {
-        heading: "Net APY",
-        body: "Your return is the collateral's yield minus the cost of the borrowed leg, applied across the leveraged size. Leverage amplifies this both ways — if borrow cost exceeds yield, leverage works against you.",
-      },
-      {
-        heading: "Liquidation risk",
-        body: "A leveraged position has a tighter liquidation buffer: smaller price moves affect your health factor more. You can deleverage, add collateral, or close the position at any time.",
       },
     ],
   },

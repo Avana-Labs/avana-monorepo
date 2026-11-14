@@ -8,11 +8,9 @@ import { api } from "@/convex/_generated/api"
 import type { SwapQuote, SwapQuoteRequest } from "@/app/lib/swap-system/quote-provider"
 import type { SandboxActionResult } from "@/app/lib/borrow-system/contracts"
 import type { LendSandboxActionResult, LendTransactionResult } from "@/app/lib/lend-system/contracts"
-import type { MultiplySandboxActionResult, MultiplyTransactionResult } from "@/app/lib/multiply-system/contracts"
 import {
   borrowResultToRecordArgs,
   lendResultToRecordArgs,
-  multiplyResultToRecordArgs,
   swapRecordToRecordSwapArgs,
 } from "@/app/lib/sandbox-tx/persistence"
 import type { SwapTransactionRecord } from "@/app/lib/swap-system/transaction-adapter"
@@ -21,7 +19,6 @@ import {
   AvanaSessionsProvider,
   useBorrowSessionContext,
   useLendSessionContext,
-  useMultiplySessionContext,
   useSwapSessionContext,
 } from "./avana-sessions-provider"
 import { ConvexMarketSnapshotHydrators } from "./convex-market-snapshot-hydrators"
@@ -128,7 +125,6 @@ export function ConvexWalletHydrators({
 }) {
   const borrow = useBorrowSessionContext()
   const lend = useLendSessionContext()
-  const multiply = useMultiplySessionContext()
   const swap = useSwapSessionContext()
   const ensurePortfolioSnapshot = useMutation(api.sandbox.transactions.ensurePortfolioSnapshot)
   const ensureUmbrellaFixtures = useMutation(api.sandbox.umbrella.ensureTestWalletFixtures)
@@ -145,12 +141,10 @@ export function ConvexWalletHydrators({
   const historiesRef = useRef({
     borrow: borrow.transactionHistory,
     lend: lend.transactionHistory,
-    multiply: multiply.transactionHistory,
   })
   historiesRef.current = {
     borrow: borrow.transactionHistory,
     lend: lend.transactionHistory,
-    multiply: multiply.transactionHistory,
   }
   // Seed the wallet snapshot (idempotent). Umbrella fixtures only on umbrella/dashboard.
   const noopEnsure = useCallback(async () => undefined, [])
@@ -162,16 +156,15 @@ export function ConvexWalletHydrators({
 
   // Each product session rehydrates only when its own inputs change. The 10-minute LP reprice
   // rewrites `productBalances.borrow` for every wallet holding borrow collateral; one shared
-  // effect made that rebuild the lend and multiply sessions too (and re-render their trees).
+  // effect made that rebuild the lend session too (and re-render their trees).
   const liquidRows = useContentStable(productBalances?.liquid)
   const borrowRows = useContentStable(productBalances?.borrow)
   const lendRows = useContentStable(productBalances?.lend)
-  const multiplyRows = useContentStable(productBalances?.multiply)
   const productSession = useMemo(() => {
     if (!session || !liquidRows) return undefined
-    type HydratablePosition = (typeof session.positions)[number] & { product: "borrow" | "lend" | "multiply" }
+    type HydratablePosition = (typeof session.positions)[number] & { product: "borrow" | "lend" }
     type HydratableTransaction = (typeof session.transactions)[number] & {
-      product: "borrow" | "lend" | "multiply" | "rewards" | "swap"
+      product: "borrow" | "lend" | "rewards" | "swap"
     }
     return {
       ...session,
@@ -193,8 +186,8 @@ export function ConvexWalletHydrators({
   }, [session, liquidRows])
   const canApplyHydration = useCallback(() => {
     if (!session) return false
-    const { borrow: borrowHistory, lend: lendHistory, multiply: multiplyHistory } = historiesRef.current
-    const pending = pendingHydrationIntentIds([...borrowHistory, ...lendHistory, ...multiplyHistory], Date.now())
+    const { borrow: borrowHistory, lend: lendHistory } = historiesRef.current
+    const pending = pendingHydrationIntentIds([...borrowHistory, ...lendHistory], Date.now())
     return shouldApplyHydration(session, pending)
   }, [session])
 
@@ -230,26 +223,11 @@ export function ConvexWalletHydrators({
     })
   }, [lend.hydrateWalletData, canApplyHydration, productSession, lendRows])
 
+  // Declared after the hydrators so it runs after them in the same commit.
   useEffect(() => {
-    if (!productSession || !multiplyRows || !canApplyHydration()) return
-    multiply.hydrateWalletData({
-      ...productSession,
-      multiplyBalances: multiplyRows.map((row) => ({
-        marketId: row.marketId,
-        assetId: row.assetId,
-        symbol: row.symbol,
-        amount: row.amount,
-        valueUsd: row.valueUsd,
-        state: row.state,
-      })),
-    })
-  }, [multiply.hydrateWalletData, canApplyHydration, productSession, multiplyRows])
-
-  // Declared after the three hydrators so it runs after them in the same commit.
-  useEffect(() => {
-    if (!session || !productSession || !borrowRows || !lendRows || !multiplyRows || !canApplyHydration()) return
+    if (!session || !productSession || !borrowRows || !lendRows || !canApplyHydration()) return
     onWalletHydrated(session.positions)
-  }, [onWalletHydrated, canApplyHydration, session, productSession, borrowRows, lendRows, multiplyRows])
+  }, [onWalletHydrated, canApplyHydration, session, productSession, borrowRows, lendRows])
 
   useEffect(() => {
     if (productBalances?.liquid && productBalances.liquid.length > 0) {
@@ -323,24 +301,6 @@ export function ConvexAvanaSessionsProvider({ walletId, children }: { walletId: 
     },
     [recordTransaction, revisions, walletId],
   )
-  const persistMultiplyTransaction = useCallback(
-    async (result: MultiplySandboxActionResult): Promise<MultiplyTransactionResult> => {
-      const { args, key } = withExpectedRevision(multiplyResultToRecordArgs(result, walletId), "multiply", revisions)
-      const persisted = await recordTransaction(args)
-      if (persisted.receipt.status === "success") trackEvent("transaction_success", { product: "multiply" })
-      if (persisted.revision != null) seedRevisionFromReceipt(revisions, key, persisted.revision)
-      else advanceRevisionOnSuccess(revisions, key, persisted.idempotent)
-      return {
-        id: String(persisted.receipt.id),
-        hash: persisted.receipt.hash,
-        status: persisted.receipt.status,
-        actionType: result.receipt.actionType,
-        simulated: persisted.receipt.simulated,
-        timestamp: persisted.receipt.timestamp,
-      }
-    },
-    [recordTransaction, revisions, walletId],
-  )
   const persistRewardsState = useCallback(
     (args: { stateJson: string; expectedRevision?: number }) =>
       saveRewardsState({ wallet: walletId, stateJson: args.stateJson, expectedRevision: args.expectedRevision }),
@@ -399,7 +359,6 @@ export function ConvexAvanaSessionsProvider({ walletId, children }: { walletId: 
       // rewards saveState on `/` → `/dashboard`.
       persistBorrowTransaction={scope.walletSession ? persistBorrowTransaction : undefined}
       persistLendTransaction={scope.walletSession ? persistLendTransaction : undefined}
-      persistMultiplyTransaction={scope.walletSession ? persistMultiplyTransaction : undefined}
       persistSwapTransaction={scope.swapTransactions ? persistSwapTransaction : undefined}
       serverGetSwapQuote={scope.swapTransactions ? serverGetSwapQuote : undefined}
       remoteSwapTransactions={remoteSwapTransactions}

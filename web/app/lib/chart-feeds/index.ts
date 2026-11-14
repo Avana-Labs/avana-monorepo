@@ -90,27 +90,6 @@ export function getPoolHeroFeed(poolId: string): ChartFeed {
 }
 
 // ---------------------------------------------------------------------------
-// Multiply — market (TVL)
-// ---------------------------------------------------------------------------
-
-/** @swap-to-api Replace with `GET /multiply/markets/{marketId}/chart`. */
-export function getMultiplyMarketHeroFeed(marketId: string): ChartFeed {
-  const seed = hashString(`multiply:${marketId}`)
-  const base = 2_000_000 + (seed % 280) * 150_000
-  const variance = base * 0.065
-  const pct = (seed % 1_100) / 100 - 5.5
-
-  return {
-    headlineValue: formatChartValue("usdCompact", base),
-    headlineDelta: `${Math.abs(pct).toFixed(2)}%`,
-    deltaTone: deltaTone(pct),
-    headlineMeta: todayLabel(),
-    rangeData: buildRangeData(base, variance),
-    valueFormat: "usdCompact",
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Lend — market (total supplied)
 // ---------------------------------------------------------------------------
 

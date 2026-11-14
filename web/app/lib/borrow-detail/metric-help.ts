@@ -30,7 +30,6 @@ const METRIC_HELP_BY_LABEL: Readonly<Record<string, string>> = {
   "reserve factor": "Share of borrower interest directed to the protocol reserve instead of suppliers.",
   profitability: "Estimated max return on equity at this market's public max multiplier.",
   "net apy": "Estimated net APY at this market's public max multiplier.",
-  "max multiplier": "Maximum public leverage this multiply market allows.",
   "liquidation ltv": "Loan-to-value at which the position becomes eligible for liquidation.",
 }
 

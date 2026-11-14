@@ -14,7 +14,7 @@
 
 const warned = new Set<string>()
 
-export function warnLiveFallback(product: "borrow" | "lend" | "multiply", slug: string, field: string): void {
+export function warnLiveFallback(product: "borrow" | "lend", slug: string, field: string): void {
   if (process.env.NODE_ENV !== "development") return
   const key = `${product}:${slug}:${field}`
   if (warned.has(key)) return

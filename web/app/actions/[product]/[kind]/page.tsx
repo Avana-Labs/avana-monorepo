@@ -28,11 +28,6 @@ const ACTION_TITLES: Record<ActionProduct, Partial<Record<ActionKind, string>>> 
     deposit: "Lend deposit",
     withdraw: "Lend withdraw",
   },
-  multiply: {
-    multiply: "Multiply",
-    deleverage: "Deleverage",
-    close: "Close position",
-  },
   rewards: {
     claim: "Claim rewards",
   },
@@ -83,7 +78,6 @@ export default async function ActionPage({ params, searchParams }: PageProps) {
       initialAssetId={readParam(query.asset)}
       initialMarketId={readParam(query.market)}
       initialAmount={readParam(query.amount)}
-      initialMultiplier={readParam(query.multiplier)}
       initialPositionId={readParam(query.position)}
       initialDebtId={readParam(query.debt)}
     />

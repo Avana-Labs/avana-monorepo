@@ -54,7 +54,7 @@ export function buildWebSiteSchema() {
     "@type": "WebSite",
     name: "Avana",
     url: SITE_URL,
-    description: "Borrow against LP positions, lend, and multiply liquidity on Avana.",
+    description: "Borrow against LP positions and lend on Avana.",
   }
 }
 

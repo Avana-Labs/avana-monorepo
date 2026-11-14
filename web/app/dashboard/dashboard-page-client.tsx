@@ -39,7 +39,6 @@ import {
 } from "@/app/dashboard/swap-activity"
 import { mapTransactionHistoryToActivityRows } from "@/app/lib/borrow-system/read-model"
 import { buildLendActivityHistory } from "@/app/lib/lend-system/read-model"
-import { formatMultiplyActivityMarketLabel } from "@/app/lib/multiply-system/market-labels"
 import { ActionIcon } from "@/app/components/action-icon"
 import { detailSectionStackClass, MobileDetailActionBar } from "@/app/components/detail-page-primitives"
 import { primaryCtaClass } from "@/app/components/action-page/action-cta"
@@ -56,15 +55,14 @@ import { RewardsPromoContent, RewardsQuestSection } from "@/app/dashboard/_rewar
 import { MerklRewardsSection } from "@/app/dashboard/_rewards-components/merkl-rewards-section"
 import Link from "next/link"
 
-type DashboardPromoTabId = Extract<RewardsPromoTabId, "getting-started" | "lend" | "borrow" | "multiply" | "referrals">
-type DashboardAccountTabId = Extract<RewardsPromoTabId, "lend" | "borrow" | "multiply">
+type DashboardPromoTabId = Extract<RewardsPromoTabId, "getting-started" | "lend" | "borrow" | "referrals">
+type DashboardAccountTabId = Extract<RewardsPromoTabId, "lend" | "borrow">
 type DashboardTabId = "wallet" | DashboardAccountTabId | "rewards"
 
 const DASHBOARD_TABS: readonly { id: DashboardTabId; label: string }[] = [
   { id: "wallet", label: "Wallet" },
   { id: "lend", label: "Lend" },
   { id: "borrow", label: "Borrow" },
-  { id: "multiply", label: "Multiply" },
   { id: "rewards", label: "Rewards" },
 ]
 
@@ -72,7 +70,6 @@ const CURATED_REWARD_TASK_IDS: Record<DashboardPromoTabId, readonly string[]> = 
   "getting-started": ["connect-wallet", "review-risk-basics", "run-first-simulation"],
   lend: ["first-lend-deposit", "favorite-market", "supply-5k-lend"],
   borrow: ["first-borrow", "first-repay", "use-curve-position"],
-  multiply: ["first-multiply", "first-deleverage", "use-uniswap-v4-position"],
   referrals: ["share-referral-link", "invite-first-wallet", "bring-3-active-users"],
 }
 
@@ -81,7 +78,6 @@ function resolveDashboardTab(tab: string | null): DashboardTabId {
     case "wallet":
     case "lend":
     case "borrow":
-    case "multiply":
     case "rewards":
       return tab
     case "referrals":
@@ -246,7 +242,6 @@ function DashboardRewardsTab({
     { id: "getting-started", title: "Getting Started" },
     { id: "lend", title: "Lend Rewards" },
     { id: "borrow", title: "Borrow Rewards" },
-    { id: "multiply", title: "Multiply Rewards" },
     { id: "referrals", title: "Referral Rewards" },
   ]
 
@@ -403,7 +398,7 @@ export function DashboardPageClient({ pageData: _pageData }: { pageData?: Reward
   }, [])
 
   const handleSimulate = useCallback(
-    async (product: "borrow" | "lend" | "multiply") => {
+    async (product: "borrow" | "lend") => {
       if (product === "lend") {
         const marketId = "gho"
         const intent = avana.lend.createIntent({
@@ -414,7 +409,7 @@ export function DashboardPageClient({ pageData: _pageData }: { pageData?: Reward
           walletBalance: getWalletBalanceForLendMarket(avana.lend.state, walletId, { marketId }),
         })
         await avana.lend.previewTransaction(intent)
-      } else if (product === "borrow") {
+      } else {
         const pool = avana.borrow.collateralPools[0]
         const asset = pool ? avana.borrow.getBorrowableAssetsForMarket(pool.id)[0] : undefined
         if (!pool || !asset) throw new Error("Borrow sandbox is not ready")
@@ -427,20 +422,11 @@ export function DashboardPageClient({ pageData: _pageData }: { pageData?: Reward
           at: Date.now(),
         })
         await avana.borrow.previewTransaction(intent)
-      } else {
-        const intent = avana.multiply.createIntent({
-          type: "multiply",
-          walletId,
-          marketId: "eth-usdt",
-          collateralAmount: 500,
-          selectedMultiplier: 2,
-        })
-        await avana.multiply.previewTransaction(intent)
       }
       await recordSimulation(product)
       reloadSnapshot()
     },
-    [avana.borrow, avana.lend, avana.multiply, recordSimulation, reloadSnapshot, walletId],
+    [avana.borrow, avana.lend, recordSimulation, reloadSnapshot, walletId],
   )
 
   const handleTaskAction = useCallback(
@@ -553,19 +539,6 @@ export function DashboardPageClient({ pageData: _pageData }: { pageData?: Reward
   // composite hash/action/market identity, so distinct same-hash actions remain visible.
   const combinedActivityRows = [
     ...mapTransactionHistoryToActivityRows(avana.borrow.transactionHistory, avana.borrow.state.markets),
-    ...avana.multiply.transactionHistory.map((item) => ({
-      id: item.id,
-      at: new Date(item.timestamp).toISOString(),
-      product: "multiply" as const,
-      kind:
-        item.kind === "multiply" ? ("open" as const) : item.kind === "close" ? ("close" as const) : ("reduce" as const),
-      status: item.status === "success" ? ("confirmed" as const) : ("failed" as const),
-      amountUsd: item.kind === "multiply" ? item.amountUsd : -item.amountUsd,
-      primaryLabel: item.kind === "multiply" ? "Multiply" : item.kind === "close" ? "Close position" : "Deleverage",
-      secondaryLabel: `${formatMultiplyActivityMarketLabel(item.marketId)} · ${item.multiplierBefore.toFixed(2)}x → ${item.multiplierAfter.toFixed(2)}x`,
-      txHash: item.hash,
-      marketId: item.marketId,
-    })),
     ...buildLendActivityHistory(avana.lend.walletId, avana.lend.transactionHistory, avana.lend.state),
     ...swapActivityRows,
     ...buildUmbrellaActivityRows(umbrella.transactionHistory),

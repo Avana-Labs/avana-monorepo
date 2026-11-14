@@ -5,10 +5,8 @@ import { useMarketLiquidity } from "@/app/lib/convex/market-liquidity-provider"
 import { useRewardsSession } from "@/app/lib/rewards-system"
 import type { SandboxActionResult } from "@/app/lib/borrow-system/contracts"
 import type { LendSandboxActionResult, LendTransactionResult } from "@/app/lib/lend-system/contracts"
-import type { MultiplySandboxActionResult, MultiplyTransactionResult } from "@/app/lib/multiply-system/contracts"
 import { useBorrowSession } from "@/app/lib/borrow-system/use-borrow-session"
 import { useLendSession } from "@/app/lib/lend-system/use-lend-session"
-import { useMultiplySession } from "@/app/lib/multiply-system/use-multiply-session"
 import { useSwapSession, type DurableSwapTransaction } from "@/app/lib/swap-system/use-swap-session"
 import {
   useUmbrellaSession,
@@ -23,14 +21,12 @@ import {
   AvanaSessionsContext,
   BorrowSessionContext,
   LendSessionContext,
-  MultiplySessionContext,
   RewardsSessionContext,
   SwapSessionContext,
   UmbrellaSessionContext,
 } from "./avana-sessions-context"
 
 export type BorrowSession = ReturnType<typeof useBorrowSession>
-export type MultiplySession = ReturnType<typeof useMultiplySession>
 export type LendSession = ReturnType<typeof useLendSession>
 export type RewardsSession = ReturnType<typeof useRewardsSession>
 export type SwapSession = ReturnType<typeof useSwapSession>
@@ -43,13 +39,11 @@ function usd6ToNumber(value: bigint) {
 function useRewardsEventBridge({
   walletId,
   borrow,
-  multiply,
   lend,
   rewards,
 }: {
   walletId: string
   borrow: BorrowSession
-  multiply: MultiplySession
   lend: LendSession
   rewards: RewardsSession
 }) {
@@ -89,25 +83,6 @@ function useRewardsEventBridge({
       }
     }
   }, [borrow.transactionHistory, rewards, walletId])
-
-  useEffect(() => {
-    for (const item of multiply.transactionHistory) {
-      const bridgeId = `multiply:${item.id}`
-      if (seenIdsRef.current.has(bridgeId)) break // newest-first: older items already bridged
-      if (item.status !== "success") continue
-      seenIdsRef.current.add(bridgeId)
-
-      void rewards.recordActivityEvent({
-        id: bridgeId,
-        wallet: walletId,
-        product: "multiply",
-        type: item.kind === "multiply" ? "multiply_opened" : "multiply_deleveraged",
-        amountUsd: item.amountUsd,
-        marketId: item.marketId,
-        timestamp: item.timestamp,
-      })
-    }
-  }, [multiply.transactionHistory, rewards, walletId])
 
   useEffect(() => {
     for (const item of lend.transactionHistory) {
@@ -179,7 +154,6 @@ export type AvanaSessions = {
   walletAddress: string
   sandboxMode: true
   borrow: BorrowSession
-  multiply: MultiplySession
   lend: LendSession
   rewards: RewardsSession
   swap: SwapSession
@@ -193,7 +167,6 @@ export function AvanaSessionsProvider({
   children,
   persistBorrowTransaction,
   persistLendTransaction,
-  persistMultiplyTransaction,
   persistSwapTransaction,
   serverGetSwapQuote,
   remoteSwapTransactions,
@@ -217,7 +190,6 @@ export function AvanaSessionsProvider({
     timestamp: number
   }>
   persistLendTransaction?: (result: LendSandboxActionResult) => Promise<LendTransactionResult>
-  persistMultiplyTransaction?: (result: MultiplySandboxActionResult) => Promise<MultiplyTransactionResult>
   persistSwapTransaction?: (record: SwapTransactionRecord) => void | Promise<unknown>
   serverGetSwapQuote?: (request: SwapQuoteRequest) => Promise<SwapQuote>
   remoteSwapTransactions?: DurableSwapTransaction[]
@@ -247,12 +219,6 @@ export function AvanaSessionsProvider({
     persistState: persistLocalState,
     persistTransaction: persistBorrowTransaction,
     getLiquidityDeltas,
-  })
-  const multiply = useMultiplySession({
-    walletId: avana.walletId,
-    sessionSeed: avana.multiplySessionSeed,
-    persistState: persistLocalState,
-    persistTransaction: persistMultiplyTransaction,
   })
   const lend = useLendSession({
     walletId: avana.walletId,
@@ -288,10 +254,6 @@ export function AvanaSessionsProvider({
     () => (authoritativeWalletPending ? { ...borrow, isHydrated: false } : borrow),
     [authoritativeWalletPending, borrow],
   )
-  const visibleMultiply = useMemo(
-    () => (authoritativeWalletPending ? { ...multiply, isHydrated: false } : multiply),
-    [authoritativeWalletPending, multiply],
-  )
   const visibleLend = useMemo(
     () => (authoritativeWalletPending ? { ...lend, isHydrated: false } : lend),
     [authoritativeWalletPending, lend],
@@ -301,7 +263,7 @@ export function AvanaSessionsProvider({
     [authoritativeWalletPending, swap],
   )
   // Umbrella hydrates on its OWN Convex query (remoteUmbrellaState) and reads no
-  // borrow/lend/multiply/swap balances, so it must NOT wait on wallet-wide hydration
+  // borrow/lend/swap balances, so it must NOT wait on wallet-wide hydration
   // (authoritativeWalletPending) — that only stalled the umbrella page at the skeleton
   // after its own data had already arrived. Its `isHydrated` re-keys on walletId, so a
   // wallet switch still re-suspends to the skeleton (no stale/other-wallet flash).
@@ -314,8 +276,7 @@ export function AvanaSessionsProvider({
   useRewardsEventBridge({
     walletId: avana.walletId,
     borrow,
-    multiply,
-    lend,
+      lend,
     rewards,
   })
 
@@ -327,7 +288,6 @@ export function AvanaSessionsProvider({
       walletAddress: avana.walletAddress,
       sandboxMode: avana.sandboxMode,
       borrow: visibleBorrow,
-      multiply: visibleMultiply,
       lend: visibleLend,
       rewards: visibleRewards,
       swap: visibleSwap,
@@ -338,7 +298,6 @@ export function AvanaSessionsProvider({
       avana.walletAddress,
       avana.sandboxMode,
       visibleBorrow,
-      visibleMultiply,
       visibleLend,
       visibleRewards,
       visibleSwap,
@@ -358,7 +317,6 @@ export function AvanaSessionsProvider({
     <AvanaSessionsContext.Provider value={value}>
       <AvanaIdentityContext.Provider value={identity}>
         <BorrowSessionContext.Provider value={visibleBorrow}>
-          <MultiplySessionContext.Provider value={visibleMultiply}>
             <LendSessionContext.Provider value={visibleLend}>
               <RewardsSessionContext.Provider value={visibleRewards}>
                 <SwapSessionContext.Provider value={visibleSwap}>
@@ -366,7 +324,6 @@ export function AvanaSessionsProvider({
                 </SwapSessionContext.Provider>
               </RewardsSessionContext.Provider>
             </LendSessionContext.Provider>
-          </MultiplySessionContext.Provider>
         </BorrowSessionContext.Provider>
       </AvanaIdentityContext.Provider>
     </AvanaSessionsContext.Provider>
@@ -379,7 +336,6 @@ export {
   useBorrowSessionContext,
   useBorrowSessionContextOptional,
   useLendSessionContext,
-  useMultiplySessionContext,
   useOptionalAvanaSessions,
   useRewardsSessionContext,
   useSwapSessionContext,

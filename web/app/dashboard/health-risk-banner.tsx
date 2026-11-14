@@ -6,13 +6,13 @@ import { healthFactorBand } from "@/app/lib/health/health-factor-bands"
 import { formatHealthFactor } from "@/app/lib/data/borrow-domain"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 
-type HealthRiskProduct = "borrow" | "multiply"
+type HealthRiskProduct = "borrow"
 
 /**
  * Proactive, dismissible banner shown inside the matching product tab, directly
  * beneath its health heading, when a position lands in the shared `danger` or
  * `watch` band. It deep-links to the action that reduces risk for that product —
- * Repay for borrow, Deleverage for multiply. All tones come from the shared health
+ * Repay for borrow. All tones come from the shared health
  * band (no invented colours) so it reads consistently with the HF bars elsewhere.
  */
 export function HealthRiskBanner({
@@ -29,8 +29,8 @@ export function HealthRiskBanner({
   if (dismissed) return null
   if (band.id !== "danger" && band.id !== "watch") return null
 
-  const href = product === "multiply" ? "/actions/multiply/deleverage" : "/actions/borrow/repay"
-  const actionLabel = product === "multiply" ? t("Deleverage") : t("Repay")
+  const href = product === "borrow" ? "/actions/borrow/repay" : "/borrow"
+  const actionLabel = t("Repay")
 
   return (
     <div

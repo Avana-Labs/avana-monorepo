@@ -9,19 +9,10 @@ import type { UserAssetBalance } from "@/app/lib/swap-system"
 import { buildDashboardWalletBalanceRows, selectDashboardWalletValueRows } from "@/app/lib/swap-system"
 import { useConvexProductWalletBalances } from "@/app/lib/swap-system/use-convex-wallet-balances"
 import { useCanonicalPriceFor } from "@/app/lib/prices/token-prices-context"
-import {
-  useBorrowSessionContext,
-  useLendSessionContext,
-  useMultiplySessionContext,
-} from "@/app/lib/avana-session/avana-sessions-provider"
+import { useBorrowSessionContext, useLendSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
 import { useHasMounted } from "@/app/lib/ui/use-has-mounted"
-import { buildPortfolioMultiplyData } from "@/app/lib/multiply-system/read-model"
 import { buildPortfolioLendData } from "@/app/lib/lend-system/read-model"
-import {
-  buildBorrowBalanceMetrics,
-  buildLendDashboardMetrics,
-  buildMultiplyBalanceMetrics,
-} from "@/app/dashboard/dashboard-tab-metrics"
+import { buildBorrowBalanceMetrics, buildLendDashboardMetrics } from "@/app/dashboard/dashboard-tab-metrics"
 import { sumWalletValueUsd } from "@/app/dashboard/dashboard-wallet-tab"
 import { blendEquityWeightedNetApyPct, resolveDashboardNetApyPct } from "@/app/dashboard/portfolio-headline-metrics"
 
@@ -120,7 +111,7 @@ export function aggregateNetValueUsd(
 
 /**
  * Your Dashboard headlines: Wallet Balance (wallet-accessible), Net Value (all products),
- * and Net APY (equity-weighted blend of Lend / Borrow / Multiply session metrics).
+ * and Net APY (equity-weighted blend of Lend / Borrow session metrics).
  */
 export function useDashboardPortfolioSummary(walletId: string | undefined): DashboardPortfolioSummary {
   const hasMounted = useHasMounted()
@@ -132,7 +123,6 @@ export function useDashboardPortfolioSummary(walletId: string | undefined): Dash
   )
   const borrowSession = useBorrowSessionContext()
   const lendSession = useLendSessionContext()
-  const multiplySession = useMultiplySessionContext()
 
   const walletRows = selectDashboardWalletValueRows(
     buildDashboardWalletBalanceRows({
@@ -152,8 +142,8 @@ export function useDashboardPortfolioSummary(walletId: string | undefined): Dash
     // Interest each product has earned (+) or owes (−) since its positions opened. The
     // productBalances aggregate values every position at its PRINCIPAL basis (seed USD, or
     // amount × live price for repriced legs) and never folds in the accrued yield/cost, so the
-    // headline sat below the tabs by exactly this net carry — Lend "Interest Earned", Multiply's
-    // net loop carry, minus Borrow "Interest Owed". These are the same figures the tabs already
+    // headline sat below the tabs by exactly this net carry — Lend "Interest Earned" minus Borrow
+    // "Interest Owed". These are the same figures the tabs already
     // compute from each position's openedAt; crediting them on read (never a stored rate, matching
     // every other dashboard metric) makes Net Value reflect earnings instead of frozen principal.
     let netAccruedInterestUsd = 0
@@ -182,20 +172,8 @@ export function useDashboardPortfolioSummary(walletId: string | undefined): Dash
       // ignore
     }
 
-    try {
-      const multiplyTab = buildPortfolioMultiplyData(walletId, multiplySession.state, [], priceFor)
-      const multiply = buildMultiplyBalanceMetrics(multiplySession.state, walletId, multiplyTab)
-      if (multiply.netValueUsd > 0) {
-        legs.push({ equityUsd: multiply.netValueUsd, netApyPct: multiply.netApyPct })
-      }
-      // Already the NET loop carry (supply yield − borrow cost); can be negative.
-      netAccruedInterestUsd += multiply.interestEarnedUsd
-    } catch {
-      // ignore
-    }
-
     return { netApyPct: blendEquityWeightedNetApyPct(legs), netAccruedInterestUsd }
-  }, [borrowSession.state, hasMounted, lendSession.state, multiplySession.state, priceFor, walletId])
+  }, [borrowSession.state, hasMounted, lendSession.state, walletId])
 
   return {
     walletBalanceUsd,

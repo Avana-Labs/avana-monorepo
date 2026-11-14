@@ -518,58 +518,6 @@ function LendPageSkeleton() {
   )
 }
 
-function MultiplyPageSkeleton() {
-  return (
-    <Page mainClassName="px-4 py-8">
-      <div data-testid="multiply-page-skeleton">
-        <ProductMetricStripSkeleton />
-
-        <section className="mt-[41px]">
-          <div className="flex items-center justify-between gap-3">
-            <Skeleton className="h-7 w-24 rounded-xs" />
-            <div className="flex items-center gap-2.5">
-              <Skeleton className="hidden h-9 w-28 rounded-full md:block" />
-              <Skeleton className="size-9 rounded-full" />
-              <Skeleton className="size-9 rounded-full" />
-            </div>
-          </div>
-          <div
-            className="-mx-4 mt-5 flex h-[104px] gap-3 overflow-hidden pl-4 sm:-mx-6 sm:pl-6"
-            data-testid="multiply-skeleton-carousel"
-          >
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Surface key={`multiply-trending-${index}`} className="h-[104px] w-[372px] shrink-0 p-5">
-                <div className="flex h-full items-center gap-3">
-                  <div className="relative h-16 w-24 shrink-0">
-                    <Skeleton className="absolute left-0 top-0 size-16 rounded-full" />
-                    <Skeleton className="absolute left-8 top-0 size-16 rounded-full" />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-4 w-28 rounded-xs" />
-                    <Skeleton className="h-3 w-20 rounded-xs" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="ml-auto h-4 w-14 rounded-xs" />
-                    <Skeleton className="ml-auto h-3 w-16 rounded-xs" />
-                  </div>
-                </div>
-              </Surface>
-            ))}
-          </div>
-
-          <div className="mt-11">
-            <MarketFiltersSkeleton testId="multiply-skeleton-filters" searchWidth="w-[280px]" padded={false} />
-          </div>
-
-          <div className="mt-[68px]">
-            <MarketGroupSkeleton testId="multiply-skeleton" paired columns={8} rowCount={4} />
-          </div>
-        </section>
-      </div>
-    </Page>
-  )
-}
-
 function MarketFiltersSkeleton({
   testId,
   searchWidth,
@@ -761,10 +709,6 @@ function LendMarketDetailSkeleton() {
   return <DetailPageSkeleton testId="lend-market-detail-skeleton" paired={false} />
 }
 
-function MultiplyMarketDetailSkeleton() {
-  return <DetailPageSkeleton testId="multiply-market-detail-skeleton" paired />
-}
-
 /**
  * Route-aware content skeleton, rendered BELOW the persistent site header (which sits
  * above the session/auth gates) so a skeleton never swaps the whole page. Falls back to
@@ -789,10 +733,8 @@ export function RouteContentSkeleton() {
     return <BorrowAssetDetailSkeleton />
   }
   if (pathname.startsWith("/lend/markets/")) return <LendMarketDetailSkeleton />
-  if (pathname.startsWith("/multiply/markets/")) return <MultiplyMarketDetailSkeleton />
   if (pathname === "/borrow") return <BorrowPageSkeleton />
   if (pathname === "/lend") return <LendPageSkeleton />
-  if (pathname === "/multiply") return <MultiplyPageSkeleton />
   if (pathname === "/") return <HomeWorkspaceSkeleton />
   if (pathname === "/umbrella" || pathname.startsWith("/umbrella/")) return <UmbrellaPageSkeleton />
   if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {

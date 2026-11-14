@@ -9,7 +9,6 @@ import { LEND_ASSET_GROUPS } from "@/app/lib/data/catalog/lend"
 import { resolveLendMarketId } from "@/app/lib/lend-system/catalog"
 import { BORROW_POOL_CATALOG, type BorrowPoolRow } from "@/app/lib/data/borrow-domain"
 import { borrowMarketDetailPath } from "@/app/lib/borrow-routes"
-import { MULTIPLY_MARKET_ROWS } from "@/app/lib/data/catalog/multiply"
 import { categorizeMarket, type MarketCategory } from "@/app/lib/markets/category"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { buildSparklineLinePath, getSparklineColor } from "@/app/lib/sparkline"
@@ -174,33 +173,6 @@ function borrowColumns(): PanelColumn[] {
   }))
 }
 
-// Group loop markets by their collateral's family; show a few of the populated buckets.
-function multiplyColumns(): PanelColumn[] {
-  const order: MarketCategory[] = ["eth", "btc", "forex", "utility", "smart"]
-  const byCategory = new Map<MarketCategory, Array<(typeof MULTIPLY_MARKET_ROWS)[number]>>()
-  for (const row of MULTIPLY_MARKET_ROWS) {
-    const category = categorizeMarket(row.protocol)
-    const bucket = byCategory.get(category) ?? []
-    bucket.push(row)
-    byCategory.set(category, bucket)
-  }
-  return order
-    .filter((category) => (byCategory.get(category)?.length ?? 0) > 0)
-    .slice(0, 3)
-    .map((category) => ({
-      title: CATEGORY_TITLE[category],
-      viewAllHref: `/multiply?category=${category}#markets`,
-      rows: (byCategory.get(category) ?? []).slice(0, 3).map((row) => ({
-        symbol: row.protocol,
-        symbol2: row.asset,
-        label: `${row.protocol}/${row.asset}`,
-        metric: row.apy,
-        metricTone: row.apy.trim().startsWith("-") ? ("negative" as const) : ("positive" as const),
-        href: row.href,
-      })),
-    }))
-}
-
 function usePanelConfig(menuId: DesktopMenuId): PanelConfig | null {
   const { t } = useTranslation()
   if (menuId === "lend") {
@@ -221,17 +193,6 @@ function usePanelConfig(menuId: DesktopMenuId): PanelConfig | null {
       browseLabel: t("Browse Borrow Page"),
       metricLabel: t("APR"),
       columns: borrowColumns(),
-    }
-  }
-  if (menuId === "multiply") {
-    return {
-      tagline: t(
-        "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.",
-      ),
-      browseHref: "/multiply",
-      browseLabel: t("Browse Multiply Page"),
-      metricLabel: t("Net APY"),
-      columns: multiplyColumns(),
     }
   }
   return null

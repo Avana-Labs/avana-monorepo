@@ -5,7 +5,6 @@ import { isValidAction, normalizeActionKind } from "@/app/lib/action-system/cont
 import { ActionNotFound } from "@/app/components/action-page/action-not-found"
 import { BorrowActionPageClient } from "@/app/components/action-page/borrow-action-page-client"
 import { LendActionPageClient } from "@/app/components/action-page/lend-action-page-client"
-import { MultiplyActionPageClient } from "@/app/components/action-page/multiply-action-page-client"
 import { RewardsActionPageClient } from "@/app/components/action-page/rewards-action-page-client"
 import { UmbrellaActionPageClient } from "@/app/components/action-page/umbrella-action-page-client"
 
@@ -16,7 +15,6 @@ export function ActionPageClient({
   initialAssetId,
   initialMarketId,
   initialAmount,
-  initialMultiplier,
   initialPositionId,
   initialDebtId,
 }: {
@@ -26,14 +24,13 @@ export function ActionPageClient({
   initialAssetId?: string
   initialMarketId?: string
   initialAmount?: string
-  initialMultiplier?: string
   initialPositionId?: string
   initialDebtId?: string
 }) {
   if (!isValidAction(product, kind)) {
     const fallbackHref =
       closeHref ??
-      (product === "lend" || product === "multiply" || product === "borrow" || product === "umbrella"
+      (product === "lend" || product === "borrow" || product === "umbrella"
         ? `/${product}`
         : "/")
     return <ActionNotFound closeHref={fallbackHref} />
@@ -63,18 +60,6 @@ export function ActionPageClient({
         initialAssetId={initialAssetId}
         initialMarketId={initialMarketId}
         initialAmount={initialAmount}
-      />
-    )
-  }
-
-  if (product === "multiply") {
-    return (
-      <MultiplyActionPageClient
-        kind={kind as "multiply" | "deleverage" | "close"}
-        closeHref={closeHref ?? "/multiply"}
-        initialMarketId={initialMarketId}
-        initialAmount={initialAmount}
-        initialMultiplier={initialMultiplier}
       />
     )
   }

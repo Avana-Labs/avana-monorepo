@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowUpRightStack, CircleArrowOutDownRight, EnteringGeoFence, Repeat2 } from "@/app/components/icons"
+import { CircleArrowOutDownRight, EnteringGeoFence, Repeat2 } from "@/app/components/icons"
 import { actionPagePath } from "@/app/lib/action-system/contracts"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { Button } from "@/components/ui/button"
@@ -12,10 +12,10 @@ function withReturn(href: string) {
   return `${href}${href.includes("?") ? "&" : "?"}return=${encodeURIComponent(RETURN_HREF)}`
 }
 
-export type DashboardQuickActionsTab = "wallet" | "lend" | "borrow" | "multiply" | "rewards"
+export type DashboardQuickActionsTab = "wallet" | "lend" | "borrow" | "rewards"
 
-/** Primary dashboard entry actions. Position-management actions such as Repay,
- * Withdraw, and Deleverage stay contextual to their position rows. */
+/** Primary dashboard entry actions. Position-management actions such as Repay
+ * and Withdraw stay contextual to their position rows. */
 export function DashboardQuickActions(_: { activeTab?: DashboardQuickActionsTab }) {
   const { t } = useTranslation()
 
@@ -31,12 +31,6 @@ export function DashboardQuickActions(_: { activeTab?: DashboardQuickActionsTab 
       label: t("Borrow"),
       icon: CircleArrowOutDownRight,
       href: withReturn(actionPagePath("borrow", "borrow")),
-    },
-    {
-      id: "multiply",
-      label: t("Multiply"),
-      icon: ArrowUpRightStack,
-      href: withReturn(actionPagePath("multiply", "multiply")),
     },
     {
       id: "swap",

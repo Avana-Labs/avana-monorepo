@@ -8,16 +8,10 @@ import { useAmountDisplayPreferences } from "@/app/components/display-preference
 import { formatUsdExact } from "@/app/lib/borrow-sim"
 import { formatHealthFactor } from "@/app/lib/data/borrow-domain"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import type { BorrowBalanceMetrics, LendBalanceMetrics, MultiplyBalanceMetrics } from "./dashboard-tab-metrics"
+import type { BorrowBalanceMetrics, LendBalanceMetrics } from "./dashboard-tab-metrics"
 import { formatPercent } from "@/app/lib/format"
 
 const MASK = "••••"
-
-function formatLeverage(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "—"
-  // "x" like every other leverage figure ("2.00x leverage", "Max 5.00x").
-  return `${value.toFixed(2)}x`
-}
 
 type MetricItem = {
   label: string
@@ -161,87 +155,6 @@ export function DashboardCreditOverviewSection({
   )
 }
 
-/** Wallet-level Multiply Balance, aggregated across every Multiply position on the wallet. */
-export function DashboardMultiplyBalanceSection({
-  title,
-  metrics,
-  hideHeading = false,
-}: {
-  title: string
-  metrics: MultiplyBalanceMetrics
-  hideHeading?: boolean
-}) {
-  const { showDollarAmounts } = useAmountDisplayPreferences()
-  const { t } = useTranslation()
-  const m = (value: string) => (showDollarAmounts ? value : MASK)
-  const hfLabel = formatHealthFactor(metrics.healthFactor)
-
-  const items: MetricItem[] = [
-    {
-      label: t("Net Value"),
-      value: m(formatUsdExact(metrics.netValueUsd)),
-      description: t("Total value of your positions minus outstanding loans"),
-    },
-    {
-      label: t("Gross Exposure"),
-      value: m(formatUsdExact(metrics.positionValueUsd)),
-      description: t("Gross Multiply exposure after looping across all positions"),
-    },
-    {
-      label: t("Total Borrowed"),
-      value: m(formatUsdExact(metrics.totalBorrowedUsd)),
-      description: t("Current outstanding loan balance"),
-    },
-    {
-      label: t("Leverage"),
-      value: showDollarAmounts ? formatLeverage(metrics.leverageX) : MASK,
-      description: t("Portfolio leverage as position value divided by equity"),
-    },
-    {
-      label: t("Health Factor"),
-      value: showDollarAmounts ? hfLabel : MASK,
-      description: t(
-        "Combined liquidation value divided by total Multiply debt. Higher is safer; below 1 risks liquidation.",
-      ),
-    },
-    {
-      label: t("Liquidation Buffer"),
-      value: m(formatUsdExact(metrics.liquidationBufferUsd)),
-      description: t("Distance from liquidation based on current collateral value"),
-    },
-    {
-      label: t("Net APY"),
-      value: showDollarAmounts ? formatPercent(metrics.netApyPct) : MASK,
-      description: t("Equity-weighted net APY after supply yield and borrow cost"),
-    },
-    {
-      label: t("Interest Earned"),
-      tone: metrics.interestEarnedUsd < 0 ? "down" : "up",
-      value: showDollarAmounts ? (
-        <LiveInterestEarnedUsd
-          anchorMs={metrics.accrualSinceMs}
-          ratePerYearUsd={metrics.interestPerYearUsd}
-          baseUsd={metrics.interestEarnedUsd}
-          fractionDigits={2}
-        />
-      ) : (
-        MASK
-      ),
-      description: t(
-        "Net carry earned across your Multiply loops, accruing in real time (supply yield minus borrow cost)",
-      ),
-    },
-  ]
-
-  return (
-    <section className="space-y-4 pb-3">
-      {hideHeading ? null : (
-        <h2 className="text-[20px] font-medium tracking-[-0.01em] text-foreground md:text-[20px]">{title}</h2>
-      )}
-      <MetricGrid labelOnTop metrics={items} />
-    </section>
-  )
-}
 
 /**
  * Wallet-level Lend Balance across every active Lend position. Rewards stay on the

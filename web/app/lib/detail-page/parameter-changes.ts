@@ -29,7 +29,7 @@ export type ParameterAnchor = {
   value: string
 }
 
-export type ProductKind = "borrow-pool" | "borrow-asset" | "lend" | "multiply"
+export type ProductKind = "borrow-pool" | "borrow-asset" | "lend"
 
 export type BuildParameterChangelogInput = {
   slug: string

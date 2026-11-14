@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api"
  * would re-serialize the result into the RSC payload). `null` with no deployment URL (CI/Lighthouse),
  * so the grid falls back to the server-built static stats.
  */
-type QuickStatsScope = "asset" | "pool" | "lend" | "multiply"
+type QuickStatsScope = "asset" | "pool" | "lend"
 export type QuickStatsPreload = Preloaded<typeof api.markets.getQuickStats>
 
 export async function preloadDetailQuickStats(scope: QuickStatsScope, slug: string): Promise<QuickStatsPreload | null> {

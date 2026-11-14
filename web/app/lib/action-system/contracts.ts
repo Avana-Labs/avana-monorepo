@@ -1,12 +1,11 @@
-export type ActionProduct = "borrow" | "lend" | "multiply" | "rewards" | "umbrella"
+export type ActionProduct = "borrow" | "lend" | "rewards" | "umbrella"
 
 export type BorrowActionKind = "borrow" | "repay" | "supply" | "remove" | "claim" | "pledge"
 export type LendActionKind = "deposit" | "withdraw"
-export type MultiplyActionKind = "multiply" | "deleverage" | "close"
 export type RewardsActionKind = "claim"
 export type UmbrellaActionKind = "stake" | "claim" | "cooldown" | "unstake"
 
-export type ActionKind = BorrowActionKind | LendActionKind | MultiplyActionKind | RewardsActionKind | UmbrellaActionKind
+export type ActionKind = BorrowActionKind | LendActionKind | RewardsActionKind | UmbrellaActionKind
 
 export type ActionPageMode = "page" | "overlay" | "embedded"
 
@@ -49,7 +48,6 @@ export type ActionRiskLevel = "safe" | "warning" | "danger"
 
 export type ActionPreviewUi = {
   quoteId?: string
-  loopCount?: number
   executionSteps?: Array<{ id: string; label: string }>
   allowed: boolean
   amountLabel: string
@@ -171,29 +169,6 @@ export const ACTION_DESCRIPTORS: Record<ActionProduct, Partial<Record<ActionKind
       primaryVerb: "Withdraw",
     },
   },
-  multiply: {
-    multiply: {
-      product: "multiply",
-      kind: "multiply",
-      title: "Multiply",
-      subtitle: "Configure and review your leverage.",
-      primaryVerb: "Multiply",
-    },
-    deleverage: {
-      product: "multiply",
-      kind: "deleverage",
-      title: "Deleverage",
-      subtitle: "Configure and review your unwind.",
-      primaryVerb: "Deleverage",
-    },
-    close: {
-      product: "multiply",
-      kind: "close",
-      title: "Close position",
-      subtitle: "Review the full unwind and collateral withdrawal.",
-      primaryVerb: "Close",
-    },
-  },
   rewards: {
     claim: {
       product: "rewards",
@@ -253,7 +228,6 @@ export function isValidActionProduct(product: string): product is ActionProduct 
   return (
     product === "borrow" ||
     product === "lend" ||
-    product === "multiply" ||
     product === "rewards" ||
     product === "umbrella"
   )
@@ -273,15 +247,11 @@ export function actionPagePath(product: ActionProduct, kind: ActionKind, params?
 const ACTION_CLOSE_HREF: Record<ActionProduct, string> = {
   borrow: "/borrow",
   lend: "/lend",
-  multiply: "/multiply",
   rewards: "/dashboard",
   umbrella: "/umbrella",
 }
 
 function normalizeReturnHref(returnHref: string) {
-  if (returnHref.startsWith("/multiply/market/") && !returnHref.startsWith("/multiply/markets/")) {
-    return returnHref.replace("/multiply/market/", "/multiply/markets/")
-  }
   if (returnHref.startsWith("/borrow/pool/") && !returnHref.startsWith("/borrow/markets/")) {
     return returnHref.replace("/borrow/pool/", "/borrow/markets/")
   }

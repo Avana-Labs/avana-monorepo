@@ -177,10 +177,6 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
       label: "Borrow",
     },
     {
-      href: "/multiply",
-      label: "Multiply",
-    },
-    {
       href: "/dashboard",
       label: "Dashboard",
     },

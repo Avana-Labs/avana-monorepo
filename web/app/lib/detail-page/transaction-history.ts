@@ -9,10 +9,8 @@ import {
   tokenAmountFromUsd,
 } from "@/app/lib/detail-page/transaction-display"
 import type { TxHistoryRow } from "@/app/lib/borrow-detail"
-import type { MultiplyTxHistoryRow } from "@/app/lib/multiply-detail"
 import type { LendTransactionHistoryItem } from "@/app/lib/lend-system/contracts"
 import type { TransactionHistoryItem } from "@/app/lib/borrow-system/contracts"
-import type { MultiplyTransactionHistoryItem } from "@/app/lib/multiply-system/contracts"
 
 /** Shared row shape for detail-page transaction tables. */
 export type DetailTransactionRow = {
@@ -58,15 +56,6 @@ export function scopedAssetKeysMatch(left: string | undefined, right: string | u
   if (a === b) return true
   if (a.includes(":") === b.includes(":")) return false
   return a.slice(a.lastIndexOf(":") + 1) === b.slice(b.lastIndexOf(":") + 1)
-}
-
-export function mapMultiplyHistoryKind(kind: string): string {
-  if (kind === "multiply" || kind === "open") return "open"
-  if (kind === "close" || kind === "liquidation") return "close"
-  if (kind === "deleverage" || kind === "reduce" || kind === "repay" || kind === "withdraw") return "reduce"
-  if (kind === "borrow" || kind === "supply" || kind === "deposit" || kind === "add") return "add"
-  if (kind === "claim" || kind === "rewards" || kind === "interest") return "interest"
-  return "rebalance"
 }
 
 export function formatRelativeTime(iso: string, language: LanguageCode = "EN") {
@@ -124,23 +113,6 @@ export function mapBorrowTxRow(row: TxHistoryRow): DetailTransactionRow {
     token0AmountLabel: row.token0AmountLabel,
     token1AmountLabel: row.token1AmountLabel,
     tokenSymbol: row.tokenSymbol,
-    tokenSymbolSecondary: row.tokenSymbolSecondary,
-    counterpartyLabel: row.counterpartyLabel,
-    walletLabel: row.walletLabel,
-    walletHref: row.walletHref,
-    txHashShort: row.txHashShort,
-  }
-}
-
-export function mapMultiplyTxRow(row: MultiplyTxHistoryRow): DetailTransactionRow {
-  return {
-    id: row.id,
-    at: row.at,
-    timeLabel: row.timeLabel,
-    kind: row.kind,
-    amountLabel: row.amountLabel,
-    tokenAmountLabel: row.tokenAmountLabel ?? inferTokenAmountFromLabel(row.amountLabel),
-    tokenSymbol: row.tokenSymbol ?? inferSymbolFromCounterparty(row.counterpartyLabel),
     tokenSymbolSecondary: row.tokenSymbolSecondary,
     counterpartyLabel: row.counterpartyLabel,
     walletLabel: row.walletLabel,
@@ -232,48 +204,6 @@ export function mapBorrowSessionRows(
         txHashShort: item.hash.slice(0, 10),
       }
     })
-}
-
-export function mapMultiplySessionRows(
-  history: MultiplyTransactionHistoryItem[],
-  marketId: string,
-  collateralSymbol: string,
-  borrowableSymbol: string,
-  walletAddress?: string,
-): DetailTransactionRow[] {
-  const now = Date.now()
-  return history
-    .filter((item) => detailMarketKeysMatch(item.marketId, marketId))
-    .map((item) => {
-      const usd = item.amountUsd
-      const tokenQty = usd / seedPriceUsdForSymbol(collateralSymbol)
-      return {
-        id: item.id,
-        at: new Date(item.timestamp).toISOString(),
-        timeLabel: formatRelativeAge(now - item.timestamp),
-        kind: mapMultiplyHistoryKind(item.kind),
-        amountLabel: formatCompactUsd(usd),
-        amountUsd: usd,
-        tokenAmountLabel: formatDetailTokenAmount(tokenQty),
-        tokenSymbol: collateralSymbol,
-        tokenSymbolSecondary: borrowableSymbol,
-        counterpartyLabel: `${collateralSymbol}/${borrowableSymbol}`,
-        walletLabel: formatWalletLabel(walletAddress),
-        txHashShort: item.hash.slice(0, 10),
-      }
-    })
-}
-
-function inferTokenAmountFromLabel(label: string): string | undefined {
-  if (label.includes("→")) return label.split("→").pop()?.trim()
-  const numeric = label.replace(/[^0-9.KMx]/gi, "").trim()
-  return numeric || undefined
-}
-
-function inferSymbolFromCounterparty(label?: string): string | undefined {
-  if (!label) return undefined
-  const token = label.split(/[\s/]/)[0]
-  return token && /^[A-Za-z0-9.+-]+$/.test(token) ? token : undefined
 }
 
 export function enrichDetailTransactionRow(

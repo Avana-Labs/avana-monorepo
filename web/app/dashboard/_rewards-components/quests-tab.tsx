@@ -25,7 +25,6 @@ import { UnderlineTabStrip } from "@/app/components/tab-primitives"
 import { Card } from "@/components/ui/card"
 import { LendAccountSection } from "./lend-account-section"
 import { BorrowAccountSection } from "./borrow-account-section"
-import { MultiplyAccountSection } from "./multiply-account-section"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 
 const QUEST_ICON_MAP: Record<RewardsQuestIconId, typeof Wallet> = {
@@ -162,7 +161,6 @@ function RewardsPromoPanel({
       const hash = window.location.hash.slice(1)
       if (hash === "dashboard-borrow-account") setActivePromoTab("borrow")
       if (hash === "dashboard-lend-account") setActivePromoTab("lend")
-      if (hash === "dashboard-multiply-account") setActivePromoTab("multiply")
     }
 
     activateFromHash()
@@ -205,15 +203,12 @@ export function RewardsPromoContent({
       ? t("Lend Rewards")
       : activePromoTab === "borrow"
         ? t("Borrow Rewards")
-        : activePromoTab === "multiply"
-          ? t("Multiply Rewards")
-          : null
+        : null
 
   return (
     <div className={detailSectionStackClass}>
       {activePromoTab === "lend" ? <LendAccountSection returnHref={returnHref} /> : null}
       {activePromoTab === "borrow" ? <BorrowAccountSection returnHref={returnHref} /> : null}
-      {activePromoTab === "multiply" ? <MultiplyAccountSection returnHref={returnHref} /> : null}
 
       {showRewards && activeQuests.length > 0 ? (
         <RewardsQuestSection title={rewardsSectionTitle} quests={activeQuests} onTaskAction={onTaskAction} />

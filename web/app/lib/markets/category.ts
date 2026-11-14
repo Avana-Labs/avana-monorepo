@@ -91,7 +91,7 @@ export function categorizeMarket(symbol: string | null | undefined): MarketCateg
 export type CategoryChip = { id: "all" | MarketCategory; label: string }
 
 /** Chip rows per product, labelled to the user's spec. `all` is always first. */
-export const CATEGORY_CHIPS: Record<"lend" | "borrow" | "multiply", CategoryChip[]> = {
+export const CATEGORY_CHIPS: Record<"lend" | "borrow", CategoryChip[]> = {
   lend: [
     { id: "all", label: "All" },
     { id: "btc", label: "BTC Based" },
@@ -107,14 +107,6 @@ export const CATEGORY_CHIPS: Record<"lend" | "borrow" | "multiply", CategoryChip
     { id: "forex", label: "Forex Pools" },
     { id: "utility", label: "Utility Pools" },
     { id: "smart", label: "Smart Pools" },
-  ],
-  multiply: [
-    { id: "all", label: "All" },
-    { id: "btc", label: "BTC Loops" },
-    { id: "eth", label: "ETH Loops" },
-    { id: "forex", label: "Forex Loops" },
-    { id: "utility", label: "Utility Loops" },
-    { id: "smart", label: "Smart Loops" },
   ],
 }
 

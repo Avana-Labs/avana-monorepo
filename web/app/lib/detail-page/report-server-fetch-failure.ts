@@ -5,7 +5,7 @@
  * visible in the server logs. Keep the log to one line with no payload.
  */
 export type ServerFetchContext = {
-  product?: "borrow" | "lend" | "multiply"
+  product?: "borrow" | "lend"
   route?: string
   slug?: string
   query?: string

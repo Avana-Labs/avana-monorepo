@@ -1,11 +1,9 @@
 import { accrueBorrowSystemState, calculateCreditMetrics, clampNetApyWad, usd6ToNumber } from "@/app/lib/credit-engine"
 import type { BorrowSystemState } from "@/app/lib/credit-engine"
-import type { MultiplySystemState } from "@/app/lib/multiply-engine"
-import { multiplyNetApyFraction } from "@/app/lib/multiply-system/read-model"
 import { lendNetApyPct } from "@/app/lib/lend-system/read-model"
 import type { DebtRowContext, SupplyRowContext } from "@/app/lib/data/borrow-position-types"
 import type { BorrowSnapshot } from "@/app/dashboard/borrow-hero-state"
-import type { PortfolioLendTabData, PortfolioMultiplyTabData } from "@/app/lib/data/providers/portfolio"
+import type { PortfolioLendTabData } from "@/app/lib/data/providers/portfolio"
 
 type DashboardOverviewMetrics = {
   netValueUsd: number
@@ -44,26 +42,6 @@ export type BorrowBalanceMetrics = {
    */
   interestOwedPerYearUsd?: number
   accrualSinceMs?: number
-}
-
-/** Canonical wallet-level Multiply Balance snapshot (8 product metrics). */
-export type MultiplyBalanceMetrics = {
-  netValueUsd: number
-  positionValueUsd: number
-  totalBorrowedUsd: number
-  leverageX: number
-  netApyPct: number
-  healthFactor: number | null
-  liquidationBufferUsd: number
-  riskPremiumPct: number
-  /**
-   * Net carry earned so far (Σ equity × netApy × elapsed), its yearly rate (Σ equity × netApy),
-   * and the snapshot moment it is accrued to — together they drive the live Interest Earned
-   * counter. Can be negative when a loop's borrow cost outweighs its supply yield.
-   */
-  interestEarnedUsd: number
-  interestPerYearUsd: number
-  accrualSinceMs: number
 }
 
 const WAD = 10n ** 18n
@@ -185,115 +163,6 @@ function weightedAverage(values: Array<{ weight: number; value: number }>) {
   const totalWeight = values.reduce((sum, entry) => sum + entry.weight, 0)
   if (totalWeight <= 0) return 0
   return values.reduce((sum, entry) => sum + entry.weight * entry.value, 0) / totalWeight
-}
-
-/**
- * Single aggregation pass for Multiply Balance.
- * Position Value = gross loop collateral (Σ collateralValueUsd).
- * Leverage = Position Value / Net Value (1× when equity ≤ 0).
- * Health Factor = combined (Σ coll×LT) / Σ debt — not min/average of position HFs.
- */
-export function buildMultiplyBalanceMetrics(
-  state: MultiplySystemState,
-  walletId: string,
-  tabData: PortfolioMultiplyTabData,
-): MultiplyBalanceMetrics {
-  const positions = Object.values(state.positions).filter((position) => position.walletId === walletId)
-  const positionValueUsd = tabData.creditLines.totalCollateralUsd
-  const totalBorrowedUsd = tabData.creditLines.totalBorrowedUsd
-  const netValueUsd = positionValueUsd - totalBorrowedUsd
-  const liquidationBufferUsd = Math.max(0, tabData.creditLines.liquidationThresholdUsd - totalBorrowedUsd)
-
-  const riskPremiumPct =
-    positions.length === 0
-      ? 0
-      : weightedAverage(
-          positions.map((position) => {
-            const market = state.markets[position.marketId]
-            const borrowApy = market?.economics.borrowApy ?? 0
-            const collateralFactor = market?.risk.collateralFactor ?? 0.75
-            return {
-              weight: position.debtValueUsd,
-              value: borrowApy * (1 - collateralFactor) * 100,
-            }
-          }),
-        )
-
-  const netApyPct = multiplyNetApyFraction(positions) * 100
-  const leverageX = netValueUsd > 0 ? positionValueUsd / netValueUsd : positions.length > 0 ? 1 : 0
-  const healthFactor = totalBorrowedUsd > 0 ? tabData.creditLines.liquidationThresholdUsd / totalBorrowedUsd : null
-
-  // Net carry: each loop earns equity × netApy per year, accrued from when it opened. The rate and
-  // the amount-so-far come from the same per-position terms, so the live counter and the headline
-  // Net APY never disagree. netApy is the value revalueMultiplyPosition recomputed from economics.
-  const now = Date.now()
-  let interestPerYearUsd = 0
-  let interestEarnedUsd = 0
-  for (const position of positions) {
-    const equityUsd = Math.max(0, position.collateralValueUsd - position.debtValueUsd)
-    interestPerYearUsd += equityUsd * position.netApy
-    interestEarnedUsd += equityUsd * position.netApy * (Math.max(0, now - position.openedAt) / YEAR_MS)
-  }
-
-  return {
-    netValueUsd,
-    positionValueUsd,
-    totalBorrowedUsd,
-    leverageX,
-    netApyPct,
-    healthFactor,
-    liquidationBufferUsd,
-    riskPremiumPct,
-    interestEarnedUsd,
-    interestPerYearUsd,
-    accrualSinceMs: now,
-  }
-}
-
-/** Per-loop Net APY plus the terms that drive its live carry counter. */
-export type MultiplyPositionLiveApy = {
-  netApyPct: number
-  ratePerYearUsd: number
-  baseUsd: number
-  accrualSinceMs: number
-}
-
-/**
- * Per-market Net APY + live-carry terms, derived from the SAME `state.positions` the Multiply
- * Balance headline reads, so a per-row figure in the My Loops table can never disagree
- * with the headline. Keyed by marketId; multiple positions in one market aggregate (equity-weighted
- * APY, summed carry). `baseUsd` is the carry accrued to `accrualSinceMs` (now); the row's live
- * counter ticks up from there at `ratePerYearUsd`, exactly as {@link buildMultiplyBalanceMetrics}.
- */
-export function buildMultiplyPositionLiveApyByMarket(
-  state: MultiplySystemState,
-  walletId: string,
-): Map<string, MultiplyPositionLiveApy> {
-  const now = Date.now()
-  const byMarket = new Map<string, { equityUsd: number; ratePerYearUsd: number; baseUsd: number }>()
-  for (const position of Object.values(state.positions)) {
-    if (position.walletId !== walletId) continue
-    const equityUsd = Math.max(0, position.collateralValueUsd - position.debtValueUsd)
-    if (equityUsd <= 0) continue
-    const ratePerYearUsd = equityUsd * position.netApy
-    const baseUsd = ratePerYearUsd * (Math.max(0, now - position.openedAt) / YEAR_MS)
-    const prev = byMarket.get(position.marketId) ?? { equityUsd: 0, ratePerYearUsd: 0, baseUsd: 0 }
-    byMarket.set(position.marketId, {
-      equityUsd: prev.equityUsd + equityUsd,
-      ratePerYearUsd: prev.ratePerYearUsd + ratePerYearUsd,
-      baseUsd: prev.baseUsd + baseUsd,
-    })
-  }
-  const result = new Map<string, MultiplyPositionLiveApy>()
-  for (const [marketId, agg] of byMarket) {
-    result.set(marketId, {
-      netApyPct: agg.equityUsd > 0 ? (agg.ratePerYearUsd / agg.equityUsd) * 100 : 0,
-      ratePerYearUsd: agg.ratePerYearUsd,
-      baseUsd: agg.baseUsd,
-      accrualSinceMs: now,
-    })
-  }
-  return result
 }
 
 export function buildLendDashboardMetrics(data: PortfolioLendTabData) {

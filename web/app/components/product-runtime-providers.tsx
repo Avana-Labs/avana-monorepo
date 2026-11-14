@@ -16,7 +16,6 @@ const PRODUCT_RUNTIME_ROUTES = [
   "/actions",
   "/borrow",
   "/lend",
-  "/multiply",
   "/swap",
   "/dashboard",
   "/sandbox",

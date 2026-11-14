@@ -12,7 +12,6 @@ export const SITE_STATIC_ROUTES: SiteRoute[] = [
   { route: "", priority: 1.0, indexable: true },
   { route: "/borrow", priority: 0.9, indexable: true },
   { route: "/lend", priority: 0.85, indexable: true },
-  { route: "/multiply", priority: 0.85, indexable: true },
   { route: "/swap", priority: 0.82 },
   { route: "/dashboard", priority: 0.72 },
   { route: "/support-center", priority: 0.45 },

@@ -3,7 +3,7 @@
  * Must stay client-safe (no `server-only`) — both server builders and the client
  * `QuickStatsGrid` import it.
  */
-export type QuickStatsProduct = "borrow" | "lend" | "multiply"
+export type QuickStatsProduct = "borrow" | "lend"
 
 export const QUICK_STAT_ALIASES: Record<QuickStatsProduct, Record<string, string[]>> = {
   // Borrow covers both pool and asset scopes (shared map).
@@ -16,10 +16,6 @@ export const QUICK_STAT_ALIASES: Record<QuickStatsProduct, Record<string, string
     available: ["available"],
   },
   lend: {
-    supplyApy: ["supplyApy"],
-    borrowApy: ["borrowApy"],
-  },
-  multiply: {
     supplyApy: ["supplyApy"],
     borrowApy: ["borrowApy"],
   },

@@ -2,15 +2,13 @@
 
 import { useCallback, useMemo } from "react"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import {
-  MULTIPLY_ACTION_MIN_LEVERAGE,
-  MULTIPLY_ACTION_SLIDER_MAX,
-  MULTIPLY_ACTION_SLIDER_STEP,
-} from "@/app/lib/multiply-system/leverage-limits"
 import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
 
 const SCALE_TICK_COUNT = 5
+const DEFAULT_MIN = 1
+const DEFAULT_MAX = 9.99
+const DEFAULT_STEP = 0.01
 
 /** Pill / live value — up to 2 decimals, trim trailing zeros (1x, 6.7x, 9.99x). */
 function formatMultiplier(value: number) {
@@ -77,9 +75,9 @@ function buildScaleTicks(min: number, max: number, count = SCALE_TICK_COUNT): nu
 export function ActionLeverageRuler({
   value,
   onChange,
-  min = MULTIPLY_ACTION_MIN_LEVERAGE,
-  max = MULTIPLY_ACTION_SLIDER_MAX,
-  step = MULTIPLY_ACTION_SLIDER_STEP,
+  min = DEFAULT_MIN,
+  max = DEFAULT_MAX,
+  step = DEFAULT_STEP,
   label = "Multiplier",
   valueSuffix,
   subvalue,

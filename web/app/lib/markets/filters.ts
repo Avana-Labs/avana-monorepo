@@ -67,13 +67,12 @@ export function hubForSymbols(symbols: readonly string[]): HubId {
 
 // ----- Markets ---------------------------------------------------------------
 
-const categoryOptions = (product: "lend" | "multiply"): ReadonlyArray<FilterOption<MarketCategory>> =>
+const categoryOptions = (product: "lend"): ReadonlyArray<FilterOption<MarketCategory>> =>
   CATEGORY_CHIPS[product]
     .filter((chip): chip is { id: MarketCategory; label: string } => chip.id !== "all")
     .map((chip) => ({ id: chip.id, label: chip.label }))
 
 export const LEND_MARKET_OPTIONS = categoryOptions("lend")
-export const MULTIPLY_MARKET_OPTIONS = categoryOptions("multiply")
 
 export type BorrowMarketId =
   | "uniswap-v2"
@@ -109,22 +108,6 @@ export function borrowMarketForSpoke(spoke: string): BorrowMarketId | null {
   if (spoke.startsWith("aero-")) return "aerodrome-slipstream"
   if (spoke.startsWith("bal-")) return "balancer"
   return null
-}
-
-/**
- * Multiply loop categories, matching the old chip semantics: BTC/ETH/Utility when either leg is
- * in that family, Forex when both legs are stablecoins, Smart for same-family (correlated) loops.
- */
-export function loopCategories(collateral: string, borrow: string): MarketCategory[] {
-  const a = categorizeMarket(collateral)
-  const b = categorizeMarket(borrow)
-  const categories = new Set<MarketCategory>()
-  if (a === "btc" || b === "btc") categories.add("btc")
-  if (a === "eth" || b === "eth") categories.add("eth")
-  if (a === "forex" && b === "forex") categories.add("forex")
-  if (a === "utility" || b === "utility") categories.add("utility")
-  if (a === b && (a === "eth" || a === "forex" || a === "btc")) categories.add("smart")
-  return [...categories]
 }
 
 // ----- Assets ----------------------------------------------------------------
@@ -228,15 +211,6 @@ export function lendFilterItem(symbol: string): FilterableItem {
     hub: hubForSymbols([symbol]),
     markets: [categorizeMarket(symbol)],
     assets: [symbol.toUpperCase()],
-  }
-}
-
-export function multiplyFilterItem(collateral: string, borrow: string): FilterableItem {
-  return {
-    chains: MARKET_CHAINS,
-    hub: hubForSymbols([collateral, borrow]),
-    markets: loopCategories(collateral, borrow),
-    assets: [collateral.toUpperCase(), borrow.toUpperCase()],
   }
 }
 

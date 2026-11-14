@@ -6,11 +6,11 @@ import { api } from "@/convex/_generated/api"
 /**
  * Server-side cashflow preload. The page reads it with `readPreloadedCashflow` and merges it
  * into `detail` on the server; the token is not passed to client components (it would
- * re-serialize the result into the RSC payload). All four product queries share the `{ slug }` args and
+ * re-serialize the result into the RSC payload). All three product queries share the `{ slug }` args and
  * return shape, so the pool query's `Preloaded` type stands in for all of them. `null` when
  * no deployment URL is configured.
  */
-type CashflowScope = "asset" | "pool" | "lend" | "multiply"
+type CashflowScope = "asset" | "pool" | "lend"
 export type CashflowPreload = Preloaded<typeof api.borrow.cashflow.getBreakdownForPool>
 
 export async function preloadDetailCashflow(scope: CashflowScope, slug: string): Promise<CashflowPreload | null> {
@@ -24,8 +24,6 @@ export async function preloadDetailCashflow(scope: CashflowScope, slug: string):
         return (await preloadQuery(api.borrow.cashflow.getBreakdownForAsset, { slug })) as CashflowPreload
       case "lend":
         return (await preloadQuery(api.lend.cashflow.getBreakdown, { slug })) as CashflowPreload
-      case "multiply":
-        return (await preloadQuery(api.multiply.cashflow.getBreakdown, { slug })) as CashflowPreload
     }
   } catch {
     return null

@@ -2,7 +2,7 @@
 
 import { useSpeculativeLoading } from "@/app/lib/performance/speculative-loading"
 
-const HEAVY_PRODUCT_ROUTES = new Set(["/borrow", "/lend", "/multiply"])
+const HEAVY_PRODUCT_ROUTES = new Set(["/borrow", "/lend"])
 
 /**
  * Avoid eager RSC/Convex hydration for product catalogs. In the App Router `prefetch={false}`

@@ -70,53 +70,6 @@ export const BORROW_POOL_KIND_CONFIG: TransactionKindConfig = {
   },
 }
 
-export const MULTIPLY_KIND_CONFIG: TransactionKindConfig = {
-  labels: {
-    open: "Open",
-    add: "Add collateral",
-    reduce: "Reduce",
-    close: "Close",
-    interest: "Interest",
-    rebalance: "Rebalance",
-    multiply: "Open",
-    borrow: "Add collateral",
-    supply: "Add collateral",
-    deposit: "Add collateral",
-    deleverage: "Reduce",
-    repay: "Reduce",
-    withdraw: "Reduce",
-    liquidation: "Close",
-    claim: "Interest",
-    rewards: "Interest",
-  },
-  tones: {
-    open: INFLOW_TONE,
-    add: INFLOW_TONE,
-    reduce: OUTFLOW_TONE,
-    close: OUTFLOW_TONE,
-    interest: NEUTRAL_TONE,
-    rebalance: WARNING_TONE,
-    multiply: INFLOW_TONE,
-    borrow: INFLOW_TONE,
-    supply: INFLOW_TONE,
-    deposit: INFLOW_TONE,
-    deleverage: OUTFLOW_TONE,
-    repay: OUTFLOW_TONE,
-    withdraw: OUTFLOW_TONE,
-    liquidation: OUTFLOW_TONE,
-    claim: NEUTRAL_TONE,
-    rewards: NEUTRAL_TONE,
-  },
-  describeFor: (row, { collateralSymbol, borrowableSymbol }) => {
-    if (row.tokenSymbol && row.tokenAmountLabel) {
-      return row.tokenSymbolSecondary
-        ? `${row.tokenAmountLabel} ${row.tokenSymbol}`
-        : `${row.tokenAmountLabel} ${row.tokenSymbol}`
-    }
-    return `${collateralSymbol}/${borrowableSymbol}`
-  },
-}
-
 export type DetailTransactionPreset = "standard" | "pool"
 
 type DetailTransactionColumnId = "time" | "type" | "for" | "usd" | "token0" | "token1" | "wallet"

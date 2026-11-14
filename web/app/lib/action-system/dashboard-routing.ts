@@ -1,11 +1,10 @@
 import type { ActionProduct } from "./contracts"
 
-type DashboardTabKey = "wallet" | "lend" | "borrow" | "multiply" | "referrals" | "rewards"
+type DashboardTabKey = "wallet" | "lend" | "borrow" | "referrals" | "rewards"
 
 const PRODUCT_TAB: Record<ActionProduct, DashboardTabKey> = {
   borrow: "borrow",
   lend: "lend",
-  multiply: "multiply",
   rewards: "wallet",
   umbrella: "wallet",
 }

@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api"
 import type { DetailTransactionRow } from "@/app/lib/detail-page/transaction-history"
 import { mergeTransactionRows } from "@/app/lib/detail-page/transaction-history"
 
-type Scope = "asset" | "pool" | "lend" | "multiply"
+type Scope = "asset" | "pool" | "lend"
 
 type ConvexDetailTx = {
   id: string

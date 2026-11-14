@@ -11,26 +11,6 @@
 
 export type FaqContent = { question: string; answer: string }
 
-/** Editorial About copy for a multiply market — same length and shape as lend. */
-export function buildMultiplyAboutDescription(options: {
-  collateralName: string
-  collateralSymbol: string
-  borrowName: string
-  borrowSymbol: string
-  maxLeverage: string
-  riskTier?: "low" | "medium" | "high"
-}): string {
-  const marketType =
-    options.riskTier === "low" ? "lower-risk" : options.riskTier === "medium" ? "tier-medium" : "tier-high"
-  return (
-    `${options.collateralName} (${options.collateralSymbol}) / ${options.borrowName} (${options.borrowSymbol}) is a leveraged multiply market on Avana. ` +
-    `Supply ${options.collateralSymbol} as collateral to loop into ${options.borrowSymbol} exposure, up to ${options.maxLeverage}, in a route dedicated to leveraged positions rather than LP collateral pools. ` +
-    `Net returns track the supply/borrow spread, utilization, and the selected multiplier, so looping results can move as rates and available liquidity rebalance. ` +
-    `The page focuses on the live leverage limit, the supply/borrow mix, available liquidity, and the latest risk posture for this ${marketType} market. ` +
-    `Users should watch collateral factor, liquidation threshold, borrow cost, and available liquidity because those inputs affect both looping returns and how quickly a position can be unwound during stressed conditions.`
-  )
-}
-
 /** General FAQs for a borrowable asset (templated by symbol + name). */
 export function buildAssetFaqs(symbol: string, name: string): FaqContent[] {
   return [
@@ -81,34 +61,6 @@ export function buildLendFaqs(symbol: string, name: string): FaqContent[] {
     {
       question: `What risks should I watch when supplying ${symbol}?`,
       answer: `Watch smart-contract risk, ${name}'s own volatility or de-peg risk, and utilization spikes that can delay withdrawals. Higher-risk-tier markets keep a larger reserve and can move more when demand shifts.`,
-    },
-  ]
-}
-
-/** General FAQs for a multiply (leveraged loop) market (templated by the pair). */
-export function buildMultiplyFaqs(collateral: string, borrow: string): FaqContent[] {
-  return [
-    {
-      question: `What is the ${collateral} / ${borrow} multiply market?`,
-      answer: `It is a leveraged loop: you post ${collateral} as collateral, borrow ${borrow}, and recycle that exposure to increase size. The route is separate from LP collateral pools and is built only for this pair.`,
-    },
-    {
-      question: `How do I open a ${collateral} / ${borrow} position?`,
-      answer: `Enter the ${collateral} amount, choose a multiplier at or below the public cap, and confirm. Avana supplies the collateral, borrows ${borrow}, and loops in one transaction. Equity, debt, and health factor show after settlement.`,
-    },
-    {
-      question: "How is max APY calculated?",
-      answer:
-        "Max APY is the net of collateral carry minus borrow cost at the public leverage cap. It is a ceiling from current rates, not a guaranteed return. If borrow cost rises or supply APY falls, the net number moves.",
-    },
-    {
-      question: "Why is leverage capped, and what is liquidation risk?",
-      answer: `The cap keeps the loop inside this pair's collateral factor, liquidation threshold, and available liquidity. Higher leverage increases capital efficiency and also how fast health factor can fall if ${collateral} drops or ${borrow} cost jumps.`,
-    },
-    {
-      question: "How do I deleverage or close the position?",
-      answer:
-        "Use Deleverage to unwind part of the loop, or close the position to repay debt and return leftover collateral. Reducing leverage raises health factor. Closing needs enough liquidity in the borrow leg to buy back the debt.",
     },
   ]
 }

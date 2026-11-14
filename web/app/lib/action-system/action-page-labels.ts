@@ -6,8 +6,6 @@ export function getProcessingTitle(verb: string, symbol: string) {
     Repay: "Repaying",
     Remove: "Removing",
     Claim: "Claiming",
-    Multiply: "Multiplying",
-    Deleverage: "Deleveraging",
     Swap: "Swapping",
     Pledge: "Pledging",
   }

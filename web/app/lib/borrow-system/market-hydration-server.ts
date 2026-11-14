@@ -133,13 +133,6 @@ export async function fetchAssetContractAddresses(assetSlug: string): Promise<Co
   )
 }
 
-/** Multiply-market contract-address rows for detail.about.stats. */
-export async function fetchMultiplyContractAddresses(marketSlug: string): Promise<ConvexContractAddressRow[]> {
-  return fetchContractAddressRows(publicMetadataKey("multiply-addresses", marketSlug), (client) =>
-    client.query(api.contractAddresses.listMultiplyAddresses, { marketSlug }),
-  )
-}
-
 /** Recent market transactions (sandbox first, seeded walletEvents fallback). */
 export async function fetchRecentTransactions(scope: "pool" | "asset", slug: string) {
   const client = convexClient()

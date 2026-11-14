@@ -4,7 +4,6 @@ import { useMemo } from "react"
 import { buildBorrowSessionSeed, buildConvexBorrowSessionSeed } from "@/app/lib/borrow-system/demo-session"
 import { resolveWalletIdentity } from "@/app/lib/data/wallet/profiles"
 import { buildConvexLendSessionSeed, buildLendSessionSeed } from "@/app/lib/lend-system/demo-session"
-import { buildConvexMultiplySessionSeed, buildMultiplySessionSeed } from "@/app/lib/multiply-system/demo-session"
 import { buildRewardsSessionSeed } from "@/app/lib/rewards-system"
 
 type AvanaSession = {
@@ -12,7 +11,6 @@ type AvanaSession = {
   walletAddress: string
   sandboxMode: true
   borrowSessionSeed: string
-  multiplySessionSeed: string
   lendSessionSeed: string
   rewardsSessionSeed: string
 }
@@ -32,9 +30,6 @@ export function useAvanaSession(walletId?: string, source: "demo" | "convex" = "
       sandboxMode: true as const,
       borrowSessionSeed:
         source === "convex" ? buildConvexBorrowSessionSeed(profile.id) : buildBorrowSessionSeed(profile.id),
-      multiplySessionSeed:
-        source === "convex" ? buildConvexMultiplySessionSeed(profile.id) : buildMultiplySessionSeed(profile.id),
-      lendSessionSeed: source === "convex" ? buildConvexLendSessionSeed(profile.id) : buildLendSessionSeed(profile.id),
       rewardsSessionSeed: buildRewardsSessionSeed(),
     }),
     [profile.id, profile.walletAddress, source],

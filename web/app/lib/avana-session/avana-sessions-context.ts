@@ -6,7 +6,6 @@ import type {
   AvanaSessions,
   BorrowSession,
   LendSession,
-  MultiplySession,
   RewardsSession,
   SwapSession,
   UmbrellaSession,
@@ -15,7 +14,7 @@ import type {
 // These context objects + read hooks live in their own lightweight module (react + type-only
 // imports, which SWC erases) so a component can read a session slice WITHOUT statically pulling in
 // AvanaSessionsProvider and its heavy dependency graph — the Convex market-liquidity provider plus
-// every borrow/lend/multiply/swap session engine. The global search command's
+// every borrow/lend/swap session. The global search command's
 // useBorrowSessionContextOptional was dragging all of that (~413KB of Convex JS) onto every page
 // with the header, including the guest landing. AvanaSessionsProvider imports these same context
 // objects to provide them, and re-exports the read hooks below for backward compatibility.
@@ -23,7 +22,6 @@ import type {
 export const AvanaSessionsContext = createContext<AvanaSessions | null>(null)
 export const AvanaIdentityContext = createContext<AvanaIdentity | null>(null)
 export const BorrowSessionContext = createContext<BorrowSession | null>(null)
-export const MultiplySessionContext = createContext<MultiplySession | null>(null)
 export const LendSessionContext = createContext<LendSession | null>(null)
 export const RewardsSessionContext = createContext<RewardsSession | null>(null)
 export const SwapSessionContext = createContext<SwapSession | null>(null)
@@ -65,14 +63,6 @@ export function useBorrowSessionContext() {
  */
 export function useBorrowSessionContextOptional() {
   return useContext(BorrowSessionContext)
-}
-
-export function useMultiplySessionContext() {
-  const context = useContext(MultiplySessionContext)
-  if (!context) {
-    throw new Error("useMultiplySessionContext must be used within AvanaSessionsProvider")
-  }
-  return context
 }
 
 export function useLendSessionContext() {

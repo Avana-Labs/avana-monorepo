@@ -13,18 +13,16 @@ import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import type { ConvexMarketSnapshot } from "@/app/lib/borrow-system/market-hydration"
 import type { LendConvexSnapshot } from "@/app/lib/lend-system/market-hydration"
-import type { MultiplyConvexSnapshot } from "@/app/lib/multiply-system/market-hydration"
 import { PriceStatusContext, usePriceFor } from "@/app/lib/prices/token-prices-context"
-import { useBorrowSessionContext, useLendSessionContext, useMultiplySessionContext } from "./avana-sessions-provider"
+import { useBorrowSessionContext, useLendSessionContext } from "./avana-sessions-provider"
 import type { ProductRuntimeScope } from "./product-runtime-scope"
 
 export function ConvexMarketSnapshotHydrators({ scope }: { scope: ProductRuntimeScope }) {
   const borrow = useBorrowSessionContext()
   const lend = useLendSessionContext()
-  const multiply = useMultiplySessionContext()
   const priceFor = usePriceFor()
   const priceStatus = useContext(PriceStatusContext)
-  // One reactive subscription for all products instead of three. The rows carry
+  // One reactive subscription for all products instead of one per product. The rows carry
   // `scope`, so we partition client-side. Skipped on routes that do not need catalogs.
   const snapshots = useQuery(api.markets.listMarketSnapshots, scope.marketSnapshots ? {} : "skip")
 
@@ -46,12 +44,6 @@ export function ConvexMarketSnapshotHydrators({ scope }: { scope: ProductRuntime
       })
     if (rows.length > 0) lend.hydrateMarketData(rows as LendConvexSnapshot[])
   }, [lend.hydrateMarketData, priceFor, priceStatus?.updatedAt, scope.hydrateLendMarkets, snapshots])
-
-  useEffect(() => {
-    if (!scope.hydrateMultiplyMarkets || !snapshots) return
-    const rows = snapshots.filter((row) => row.scope === "multiply")
-    if (rows.length > 0) multiply.hydrateMarketData(rows as MultiplyConvexSnapshot[])
-  }, [multiply.hydrateMarketData, scope.hydrateMultiplyMarkets, snapshots])
 
   return null
 }

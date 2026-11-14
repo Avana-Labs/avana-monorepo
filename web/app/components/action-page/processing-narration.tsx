@@ -45,13 +45,6 @@ const SCRIPTS: Record<string, string[]> = {
     "Settling your balance",
     "Freeing up your borrowing power",
   ],
-  multiply: [
-    "Connecting to Uniswap v3",
-    "Opening your base position",
-    "Multiplying your collateral",
-    "Balancing your health factor",
-    "Locking in your leverage",
-  ],
   deleverage: [
     "Connecting to Uniswap v3",
     "Reading your leveraged position",
@@ -108,7 +101,6 @@ export function processingNarrationScript(verb: string): string[] {
   if (v.includes("repay")) return SCRIPTS.repay
   if (v.includes("withdraw")) return SCRIPTS.withdraw
   if (v.includes("deleverage") || v.includes("reduce") || v.includes("close")) return SCRIPTS.deleverage
-  if (v.includes("multiply") || v.includes("loop") || v.includes("leverage")) return SCRIPTS.multiply
   if (v.includes("remove")) return SCRIPTS.remove
   if (v.includes("supply") || v.includes("pledge") || v.includes("collateral")) return SCRIPTS.pledge
   if (v.includes("deposit") || v.includes("lend")) return SCRIPTS.deposit

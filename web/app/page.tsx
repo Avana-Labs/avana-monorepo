@@ -7,7 +7,7 @@ import { isLighthouseAuditMode } from "@/app/lib/test-mode"
 
 export const metadata: Metadata = buildSeoMetadata({
   title: "Borrow Against LP Positions on Aave v4",
-  description: "Borrow against LP positions on Aave v4, lend, and multiply liquidity.",
+  description: "Borrow against LP positions on Aave v4 and lend.",
   path: "/",
   keywords: ["Avana", "borrow LP tokens", "DeFi lending", "Aave v4"],
   index: true,
