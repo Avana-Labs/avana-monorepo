@@ -1742,22 +1742,40 @@
       "review": "Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "44a2a2ead4bfa2ff",
+      "fingerprint": "93c27d1899bfafc2",
       "check": "timestamp",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._collateralPrice(RiskModuleBorrowScope.Scope)",
-      "reason": "Per-feed age gate of REQ-ADAPTER-015 and REQ-ADAPTER-016: a leg timestamp after now reverts PriceTooOld(feed, 0), and age > borrowPriceMaxAge(feed) reverts; age limits are minutes to hours, so a validator's seconds of drift cannot matter, and both boundaries fail closed. Covered by TEST-028 (collateralPriceGates, futureTimestampsAreNeverFresh).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.age(uint256)",
+      "reason": "Specified timestamp: the price age block.timestamp - updatedAt, 0 for a source timestamp in the future (REQ-SWAP-008, REQ-LENS-030); it sizes the liquidation-side rule and the revert data and report fields, never a gate on its own. Age limits are minutes to hours, so a validator's seconds of drift cannot matter. Covered by TEST-028 (futureTimestampsAreNeverFresh), TEST-247 (debtLiquidationAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "f985956d754ee2b8",
+      "fingerprint": "de18540b3b7bf4ee",
       "check": "timestamp",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._debtPrices(RiskModuleBorrowScope.Scope)",
-      "reason": "Debt-price age gate of REQ-RISK-061: fresh iff servedUpdatedAt <= now and now - servedUpdatedAt <= the DebtOracle's borrowPriceMaxAge; a future timestamp is never fresh (fail closed). Covered by TEST-201 (debtPriceGatesAccountWide), TEST-028 (futureTimestampsAreNeverFresh).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.borrowFresh(uint256,uint256)",
+      "reason": "Specified timestamps: the borrow-side age rule of REQ-RISK-061 and REQ-ADAPTER-015, fresh iff updatedAt <= now and now - updatedAt <= maxAge (inclusive); a future timestamp is never fresh (fail closed). Age limits are minutes to hours, so a validator's seconds of drift cannot matter. Covered by TEST-028 (futureTimestampsAreNeverFresh, feedAgeBoundaryPerLeg), TEST-201 (debtPriceAgeBoundary), TEST-019 (feedAgeBoundary, debtPriceAgeBoundary fuzz), TEST-247 (debtBorrowAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+    },
+    {
+      "fingerprint": "325004943dead96f",
+      "check": "timestamp",
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.liquidationFresh(uint256,uint256)",
+      "reason": "Specified timestamps: LPVaultSwap's leg age rule against liquidationPriceMaxAge (REQ-SWAP-008, REQ-SWAP-091), age <= maxAge with a future timestamp counted as age 0; validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.PriceGates.fuzz (leg ages), TEST-247 (debtLiquidationAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+    },
+    {
+      "fingerprint": "f6f22299563d8bc0",
+      "check": "timestamp",
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.debtBorrowable(DebtPriceView,uint256)",
+      "reason": "Specified timestamps: the RiskModule's step (6) for a DebtOracle-priced reserve (REQ-RISK-061): Live, the oracle's borrowAllowed and borrowFresh(servedUpdatedAt, borrowPriceMaxAge); the only time comparison is borrowFresh's, which fails closed on a future timestamp. Covered by TEST-201 (debtPriceGatesAccountWide, debtPriceAgeBoundary), TEST-028 (futureTimestampsAreNeverFresh).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
       "fingerprint": "2b3e339d034585b3",
@@ -2326,30 +2344,6 @@
       "function": "LPVaultSwapDeleverageLogic._releaseAndSwap(LPVaultSwapDeleverageLogic.FlashContext)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
-    },
-    {
-      "fingerprint": "d0641a99eac4dc2b",
-      "check": "timestamp",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
-      "function": "LPVaultSwapSettlement._legStale(address,uint64)",
-      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
-      "approval": "pending review (approved pattern)"
-    },
-    {
-      "fingerprint": "b6966bf07827a17d",
-      "check": "timestamp",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
-      "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
-      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
-      "approval": "pending review (approved pattern)"
-    },
-    {
-      "fingerprint": "669ff2be6b33cd00",
-      "check": "timestamp",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
-      "function": "LPVaultSwapSettlement._checkDebtPrice(DebtReserveDef,uint256)",
-      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
-      "approval": "pending review (approved pattern)"
     },
     {
       "fingerprint": "5a0ebb103c3aa872",
@@ -3491,15 +3485,6 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "59a2517dc1359c7d",
-      "check": "timestamp",
-      "file": "src/lens/lens/LensBase.sol",
-      "function": "LensBase._debtView(address,DebtReserveDef)",
-      "reason": "Specified timestamps: the debt price's age block.timestamp - updatedAt (0 for a future stamp) against the borrow and liquidation age limits gives borrowFresh and liquidationFresh (REQ-LENS-030, Q-247, Q-248); stressPriced compares two prices. A view, no state; validator drift of seconds is far below the age limits and only reports a price fresh or stale a few seconds early or late. Covered by TEST-247 (Lens.Price: debtPriceExpiredStress; Lens.Edges: debtRouteWithoutFeedIsNeverFresh; Lens.Account: getAccountDebtPriceFreshness).",
-      "approval": "approved (Josue, 2026-11-13, by pattern)",
-      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
-    },
-    {
       "fingerprint": "d67b69bfa0ea6f47",
       "check": "timestamp",
       "file": "src/lens/lens/LensClose.sol",
@@ -3615,14 +3600,6 @@
       "reason": "totalDebtValueRay == 0 returns the report early for an account without debt and cfAssets == 0 reports the liquidation price as type(uint256).max instead of dividing by zero (REQ-LENS-047); a view, no state. Covered by TEST-247 (Lens.Positions: liquidationPriceZeroWithoutDebtAndMaxWithoutCollateral).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
-    },
-    {
-      "fingerprint": "84abc2797015a941",
-      "check": "timestamp",
-      "file": "src/lens/lens/LensBase.sol",
-      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
     },
     {
       "fingerprint": "79848a8b773b3267",
