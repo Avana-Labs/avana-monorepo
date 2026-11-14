@@ -5,6 +5,14 @@
 
 </div>
 
+| | Folder | What it is |
+|---|---|---|
+| 1 | [Webapp](webapp/) | the Avana app (Next.js) |
+| 2 | [Smart contracts](contracts/) | the Avana CDP protocol on Aave V4 (Foundry) |
+| 3 | [Off-chain services](services/) | keeper, indexer, Convex backend, monitor |
+
+Reference material is in [`docs/`](docs/): the specification ([`docs/spec/`](docs/spec/)), governance payloads and operations ([`docs/governance/`](docs/governance/)) and audit evidence ([`docs/audit/`](docs/audit/)). [`packages/`](packages/) holds the shared `@avana/protocol` ABIs, and [`deployments/`](deployments/) the release manifests.
+
 Avana lets a liquidity provider borrow against a liquidity position in a listed AMM pool without taking the liquidity out of the pool. It runs on several chains, Hubs and AMM protocols: at launch on Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), each with an Avana Stable LP Hub; the core also supports Uniswap v2, Curve, Balancer and Uniswap v4 once each passes its listing guards. The Aave DAO decides which assets are borrowable; on a Stable LP Hub they are stable debt assets it approves (for example GHO, USDC, USDT), each with its own credit line, draw cap, price source, swap routes and two loss layers: the Avana-funded Avana Umbrella, then a DAO deficit offset funded by the Aave DAO treasury. Each lend asset's rate follows Aave V4's standard utilization curve. The diagram below borrows GHO as an example.
 
 ```mermaid
@@ -52,12 +60,14 @@ Each chain has its own AvanaTimelock. Every privileged change there is scheduled
 
 | Folder | Contents |
 |---|---|
-| [`docs/spec/`](docs/spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
-| [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts and Certora specifications |
-| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `common/`: chains, manifest view and export types shared by the services |
 | [`webapp/`](webapp/) | The Next.js web app (Lend, Borrow, Portfolio, detail pages, Swap, Support, Ask AI); it reads `services/convex` |
+| [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts, Certora specifications and the security tools (`contracts/tools/`, including heimdall) |
+| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `monitor/`: the monitoring and alerting service; `common/`: chains, manifest view and export types shared by the services |
+| [`docs/spec/`](docs/spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
 | [`docs/governance/`](docs/governance/) | Aave DAO payloads (deployment, listing, collateral-factor, credit-line and refresh AIPs) and the AvanaTimelock operations scheduled by the governance multisig |
 | [`docs/audit/`](docs/audit/) | Audit scope, external reports, formal-verification reports and the evidence cited by findings |
+| [`packages/`](packages/) | `protocol/`: the `@avana/protocol` ABIs and ABI hash the indexer and keeper use |
+| [`deployments/`](deployments/) | Release manifests, one per chain and release, and their schema |
 
 ## Toolchain
 
