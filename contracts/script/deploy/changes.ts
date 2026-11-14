@@ -72,6 +72,8 @@ const network = process.env.AVANA_NETWORK ?? "anvil";
 const rpc = process.env.AVANA_RPC_URL ?? process.env.RPC_ANVIL ?? "http://127.0.0.1:8545";
 const OUT = join(CONTRACTS, "deployments-local", network);
 const ANVIL = network === "anvil";
+// refresh-feeds.ts sends its rounds to RPC_ANVIL.
+process.env.RPC_ANVIL ??= rpc;
 
 type Json = Record<string, any>;
 const readJson = (f: string) => JSON.parse(readFileSync(f, "utf8")) as Json;
