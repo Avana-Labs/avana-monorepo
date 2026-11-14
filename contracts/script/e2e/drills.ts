@@ -9,7 +9,7 @@
 // the protocol allows (an Aave unfreeze, a debt reserve enabled again), and the detail says what stays one-way.
 //
 // Usage, from contracts/ on a rehearsal chain (after the manifest step):
-//   node script/e2e/drills.ts --network anvil --drill <name>      names: setup and the DRILLS keys below
+//   node script/e2e/drills.ts --network anvil --drill <name>      names: setup, the DRILLS keys below, teardown
 // Exit status: 0 pass, 1 fail, 3 not run (the reason is the last line). Each drill also writes
 // deployments-local/<network>/drills/<name>.json with its checks.
 
@@ -236,6 +236,30 @@ async function setup(e: Env, c: Checks) {
     c.that(`${k} on ${h.market}`, true, `proxy ${h.account.proxy} debt ${await e.debt(m, h.account)} HF ${await e.healthFactor(m, h.account)}`);
   }
   c.works("pledger's 300k position can be pledged (simulated)", await pledgeProbe(e, s));
+}
+
+/**
+ * Undoes setup: each drill account repays all its debt and withdraws its whole position, and every drill account
+ * (the deficit drill's included) ends with no debt, so the Hubs' utilization is the one the drills found and the
+ * scenarios that run next start from it (their Lend Spoke check expects no accrual between two reads).
+ */
+async function teardown(e: Env, c: Checks) {
+  const s = loadState();
+  await e.settle();
+  for (const [k, h] of Object.entries({ borrower: s.borrower, volBorrower: s.volBorrower, slipBorrower: s.slipBorrower })) {
+    const m = e.market(h.market);
+    const debt = await e.debt(m, h.account);
+    if (debt > 0n) {
+      await e.mint(m.debtAsset, h.owner, debt * 2n + 10n ** BigInt(e.dec(m.debtAsset)));
+      await e.approve(h.owner, m.debtAsset, e.adapter, maxUint256);
+      await e.must(`${k} repay all`, h.owner, e.adapter, aaveAdapterAbi, "repay", [h.owner, m.marketId, h.account.debtReserveId, debt * 2n + 10n ** BigInt(e.dec(m.debtAsset)), true, await e.deadline()]);
+    }
+    const units = await e.supplied(m, h.account);
+    if (units > 0n) {
+      await e.must(`${k} withdraw`, h.owner, e.adapter, aaveAdapterAbi, "withdraw", [m.marketId, h.position.ref, units, await e.deadline(), 0n]);
+    }
+    c.that(`${k}: no debt, position withdrawn`, (await e.debt(m, h.account)) === 0n && (await e.supplied(m, h.account)) === 0n, `debt ${await e.debt(m, h.account)}, supplied ${await e.supplied(m, h.account)}`);
+  }
 }
 
 // ─── Drills ───
@@ -696,6 +720,7 @@ async function main() {
   try {
     const e = new Env(ctx);
     if (name === "setup") await setup(e, c);
+    else if (name === "teardown") await teardown(e, c);
     else {
       const d = DRILLS[name];
       if (!d) throw new Error(`unknown drill ${name}; drills: ${Object.keys(DRILLS).join(", ")}`);
