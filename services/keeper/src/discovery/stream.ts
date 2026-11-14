@@ -7,25 +7,13 @@
 
 import type { ChainInfo } from "@avana/services-common";
 
-/** Events that add or refresh an account, a market or the keeper's own status (services/README.md, Discovery). */
-export const ACCOUNT_EVENTS = [
-  "AaveAdapter.UserProxyCreated",
-  "ProxyManager.ProxyDeployed",
-  "AaveAdapter.CollateralAdded",
-  "AaveAdapter.Borrowed",
-  "AaveAdapter.Repaid",
-  "AaveAdapter.CollateralWithdrawn",
-  "LPVaultSwap.LiquidationSettled",
-  "AaveSpoke.Supply",
-  "AaveSpoke.Borrow",
-  "AaveSpoke.Repay",
-  "AaveSpoke.Withdraw",
-  "AaveSpoke.LiquidationCall",
-  "AaveSpoke.ReportDeficit",
-] as const;
-export const MARKET_EVENTS = ["LPOracle.PriceStateChanged", "DebtOracle.DebtPriceStateChanged", "LPOracle.GraceStarted", "DebtOracle.DebtGraceStarted"] as const;
-export const PENDING_EVENTS = ["Collateralization.SeizureReconciled", "Collateralization.PendingSettled"] as const;
-export const STATUS_EVENTS = ["LPVaultSwap.KeeperAdded", "LPVaultSwap.KeeperRemoved", "MarketRegistry.AddressFrozen", "MarketRegistry.AddressUnfrozen"] as const;
+/** The event kinds of the indexer stream (services/README.md, Discovery), shared with the indexer that serves them. */
+export {
+  KEEPER_ACCOUNT_KINDS as ACCOUNT_EVENTS,
+  KEEPER_MARKET_KINDS as MARKET_EVENTS,
+  KEEPER_PENDING_KINDS as PENDING_EVENTS,
+  KEEPER_STATUS_KINDS as STATUS_EVENTS,
+} from "@avana/services-common";
 
 export interface Head {
   readonly number: bigint;
