@@ -1,6 +1,6 @@
 /**
- * Canonical About-card contract rows for borrow pool / asset, lend, and multiply
- * detail pages. Pool/asset/multiply inject these from Convex `*ContractAddresses`
+ * Canonical About-card contract rows for borrow pool / asset and lend detail pages.
+ * Pool/asset inject these from Convex `*ContractAddresses`
  * tables; lend seeds the same labels into market content stats.
  */
 

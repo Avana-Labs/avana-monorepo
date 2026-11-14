@@ -233,7 +233,7 @@
 
 /* Some token marks read as black on a dark background and disappear: Apple, Micron, and
    Balancer are solid-black marks, and SpaceX is a black disc whose edge blends into the card.
-   Invert them in dark mode wherever the icon renders — borrow/lend/multiply cards, tables, the
+   Invert them in dark mode wherever the icon renders — borrow/lend cards, tables, the
    carousel, and search — not just the action pages. The selector matches both the raw path and
    the Next-optimized URL (both contain the file name), plus the sized WebP variants
    (`/stock-Icons/w64/apple.webp`) the token icons are served as. Balancer's `bal` file name is

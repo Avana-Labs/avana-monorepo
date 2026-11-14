@@ -89,7 +89,7 @@ export async function fetchConvexMarketSnapshot(
 export type ConvexSeriesPoint = { t: string; v: number }
 
 /**
- * Row shape from api.contractAddresses.list{Pool,Asset,Multiply}Addresses, mapped 1:1 into
+ * Row shape from api.contractAddresses.list{Pool,Asset}Addresses, mapped 1:1 into
  * AboutCard.stats. `label`/`href` are seeded; `isSynthetic` is seed-sync metadata, unused in UI.
  */
 export type ConvexContractAddressRow = {

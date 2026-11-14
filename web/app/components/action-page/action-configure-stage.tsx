@@ -41,13 +41,12 @@ type ActionConfigureStageProps = {
   onAmountChange: (value: string) => void
   inputLabel?: string
   /** Override the "~ USD" line under the amount. Used where the field shows a quantity the
-   *  preview's own amountUsd does not describe (Multiply close/deleverage show COLLATERAL,
-   *  while the preview's amount is the withdrawal / target leverage). */
+   *  preview's own amountUsd does not describe (e.g. a field that shows collateral while the
+   *  preview's amount is a withdrawal). No current caller passes it. */
   amountUsdLabel?: string
   /** Render this in the amount field INSTEAD of `amount`, without touching validation.
    *  `amount` still drives amountEntered / CTA state, so a read-only informational value
-   *  (Multiply close/deleverage show the position's collateral) cannot make an empty,
-   *  invalid form look filled in. */
+   *  cannot make an empty, invalid form look filled in. No current caller passes it. */
   displayAmount?: string
   preview: ActionPreviewUi | null
   assetSymbol?: string
@@ -99,7 +98,7 @@ type ActionConfigureStageProps = {
   assetPickerHint?: string
   onAssetPickerBlocked?: () => void
   /** Product-specific detail content that replaces the generic rate/market/metrics
-   *  block (e.g. the Umbrella market-risk card). The risk banner + network fee row
+   *  block. The risk banner + network fee row
    *  still render around it. */
   detailsSlot?: ReactNode
   /** Progressive disclosure: when true, the risk banner and network-fee row stay
@@ -107,7 +106,7 @@ type ActionConfigureStageProps = {
    *  (detailsSlot content is always shown — the slot decides its own reveal.) */
   deferDetailsUntilAmount?: boolean
   /** Fade/slide-in the details block when the preview mounts. Defaults to true;
-   *  pass false for a static reveal (e.g. the Umbrella market-risk stats). */
+   *  pass false for a static reveal. */
   animateDetails?: boolean
   /** Keep the asset picker interactive even when the amount is read-only (Claim). */
   allowAssetSwitchWhenReadOnly?: boolean

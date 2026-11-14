@@ -52,7 +52,7 @@ export const TABLE_CELL_PADDING_LEADING = "py-3 pl-6 pr-3"
 /** Trailing data column padding. */
 export const TABLE_CELL_PADDING_TRAILING = "py-3 px-4 pr-5"
 
-/** Shared table row hover treatment for lend, borrow, multiply, and dashboard tables. */
+/** Shared table row hover treatment for lend, borrow, and dashboard tables. */
 export const TABLE_ROW_HOVER_BG = "transition-colors group-hover:bg-hover"
 export const TABLE_ROW_HOVER_LEFT = TABLE_ROW_HOVER_BG
 export const TABLE_ROW_HOVER_RIGHT = TABLE_ROW_HOVER_BG
@@ -60,7 +60,7 @@ export const TABLE_ROW_HOVER_RIGHT = TABLE_ROW_HOVER_BG
 /**
  * Column kinds shared by every desktop table, with the width (px, padding included) each one
  * needs to show its content without truncating. One kind = one width everywhere, so an APY
- * column on Lend is as wide as the APY column on Multiply.
+ * column on Lend is as wide as the APY column on Borrow.
  */
 export const TABLE_COLUMN_MIN_PX = {
   /** `#` row index. */
@@ -192,7 +192,7 @@ export const TABLE_COLUMN_PHONE_CLASS: Record<TableColumnKind, string> = {
 /** Hides the `#` cells on phones (pair with the `index` column's `max-md:hidden`). */
 export const TABLE_INDEX_PHONE_HIDDEN = "max-md:hidden"
 
-/** Row action pill: one minimum width so Pledge / Deposit / Borrow / Multiply line up. */
+/** Row action pill: one minimum width so Pledge / Deposit / Borrow line up. */
 export const TABLE_ACTION_BUTTON = "w-auto min-w-[108px] justify-center"
 
 /** Table element classes for the shared layout (pair with `style={{ minWidth }}`). */

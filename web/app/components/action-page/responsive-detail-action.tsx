@@ -7,7 +7,7 @@ import { DetailSidebarActionCard } from "@/app/components/action-page/detail-sid
 import type { ActionKind, ActionProduct } from "@/app/lib/action-system/contracts"
 
 /**
- * Shared shell for the detail-page action rail (borrow / lend / multiply).
+ * Shared shell for the detail-page action rail (borrow / lend).
  *
  * Desktop: render the embedded, pre-loaded product action (`children`) — wrapped
  * in the sidebar card when `sidebar`. Mobile: fall through to a launch CTA that

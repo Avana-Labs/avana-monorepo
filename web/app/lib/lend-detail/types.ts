@@ -1,10 +1,9 @@
 /**
  * Public view-model for the lend (single-asset supply) detail page.
  *
- * Mirrors the multiply detail model: a lean per-market shape that reuses the
- * shared borrow-detail primitives (`Series`, `QuickStat`, `RiskAssessment`,
- * `EngagementTrend`, `AboutCard`, `CashflowCard`, `FaqContent`) and the shared
- * section components. The mock layer (`./mock.ts`) is the deterministic fallback;
+ * A lean per-market shape that reuses the shared borrow-detail primitives (`Series`,
+ * `QuickStat`, `RiskAssessment`, `EngagementTrend`, `AboutCard`, `CashflowCard`,
+ * `FaqContent`) and the shared section components. The mock layer (`./mock.ts`) is the deterministic fallback;
  * the Convex layer (`./convex-detail.ts`) overlays seeded/live data per section,
  * falling back to the mock when Convex is unreachable.
  *

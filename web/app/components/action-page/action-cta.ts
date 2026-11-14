@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 
 /**
  * Canonical action CTAs — one Uniswap-style treatment shared by every
- * lend / borrow / multiply / express surface. The visual tokens now live in the
+ * lend / borrow / swap / express surface. The visual tokens now live in the
  * shared Button (`buttonVariants` `brand` / `brand-secondary` variants + `cta` /
  * `compact` sizes); these helpers just adapt them for callers that render a class
  * string on a plain <button>/<Link> (e.g. the sticky action bars and ActionFooter).

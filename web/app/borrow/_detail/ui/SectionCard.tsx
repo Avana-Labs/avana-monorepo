@@ -44,8 +44,7 @@ export function SectionCardActions({ className, ...props }: React.ComponentProps
 }
 
 /**
- * Canonical section shell used across `/multiply`, `/lend`, and now the borrow
- * detail pages. Title sits OUTSIDE the Card (matches `HotMarkets`,
+ * Canonical section shell used across the `/lend` and borrow detail pages. Title sits OUTSIDE the Card (matches `HotMarkets`,
  * `MyInvestments`) and the Card itself uses the soft `border-border/40 bg-card/50`
  * surface with `shadow-none`. Body padding defaults to `p-6`; tables should
  * pass `bodyClassName="p-0"` so rows can reach the gutter.

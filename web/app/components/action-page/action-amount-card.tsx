@@ -104,9 +104,9 @@ type ActionAmountCardProps = {
   assetPickerDisabled?: boolean
   assetPickerHint?: string
   onAssetPickerBlocked?: () => void
-  /** Keep the asset picker interactive even when the amount is read-only (e.g. the
-   *  Umbrella Claim tab: the amount is the fixed pending-rewards total, but the user
-   *  still needs to choose which market's rewards to claim). */
+  /** Keep the asset picker interactive even when the amount is read-only (e.g. a claim
+   *  whose amount is the fixed pending-rewards total, where the user still chooses which
+   *  market's rewards to claim). */
   allowAssetSwitchWhenReadOnly?: boolean
 }
 

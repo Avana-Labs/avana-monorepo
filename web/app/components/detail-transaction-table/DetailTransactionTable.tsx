@@ -32,7 +32,7 @@ type Props = {
    * Debt/asset feed only: re-derive each row's token quantity from its recorded USD at the live
    * price and show that recorded USD, so the two cells reconcile with the transaction record (a
    * single borrowed token's quantity is otherwise reconstructed at a frozen seed price and drifts
-   * from the live-priced USD). Off for pool/lend/multiply, which carry real recorded amounts.
+   * from the live-priced USD). Off for pool/lend, which carry real recorded amounts.
    */
   reconcileTokenToLiveUsd?: boolean
 }

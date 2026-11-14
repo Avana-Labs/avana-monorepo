@@ -16,7 +16,7 @@ import { useTranslation } from "@/app/lib/i18n/use-translation"
 // <button> can't legally contain another <button>.
 export function SearchTrigger({
   iconOnly = false,
-  // "nav" matches Dashboard / Umbrella muted chrome; "brand" is the phone-only cyan.
+  // "nav" matches the Dashboard muted chrome; "brand" is the phone-only cyan.
   tone = "nav",
   onClick,
   onAskClick,

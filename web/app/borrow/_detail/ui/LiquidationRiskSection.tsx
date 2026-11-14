@@ -37,7 +37,7 @@ function DeltaArrow({
 
 /**
  * Market Liquidation Risk — Key-Statistics-style grid with small daily ▲/▼ deltas.
- * Borrow pool + Multiply detail only.
+ * Borrow pool detail only.
  */
 export function LiquidationRiskSection({ stats, className }: Props) {
   const { t } = useTranslation()

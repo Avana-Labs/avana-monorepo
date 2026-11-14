@@ -495,7 +495,7 @@ export type MarketFiltersBarProps = {
 }
 
 /**
- * Lend / Borrow / Multiply filter row: [All Chains] | [Hubs] [Markets] [Assets] … [search].
+ * Lend / Borrow filter row: [All Chains] | [Hubs] [Markets] [Assets] … [search].
  * Each pill opens a searchable multi-select panel (portaled, so the horizontally scrolling
  * mobile rail can't clip it). A pill with a selection reads "Hubs (2)" and gains an ×.
  */

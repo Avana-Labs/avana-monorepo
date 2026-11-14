@@ -30,8 +30,8 @@ type HeroFeeds = { heroFeed?: ChartFeed; heroBorrowedFeed?: ChartFeed; heroUtili
 /**
  * Server render window for the hero series. Every range is sliced from this one series (there is
  * no per-range client fetch), so it must be "ALL" for the 1Y/All tabs to show more than the
- * default view; a "3M" window made both of them repeat the last 90 days. Lend and Multiply
- * preload "ALL" for the same reason.
+ * default view; a "3M" window made both of them repeat the last 90 days. Lend preloads "ALL" for
+ * the same reason.
  */
 const SSR_HERO_RANGE = "ALL" as const
 

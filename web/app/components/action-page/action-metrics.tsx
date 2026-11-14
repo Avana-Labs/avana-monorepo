@@ -27,9 +27,8 @@ export function ActionCard({
 } & ComponentPropsWithoutRef<"div">) {
   return (
     <div
-      // Flat surface, matching the Umbrella detail stats (SurfaceMetricRow) these blocks sit
-      // beside. `shadow-elev-1` stacked a drop shadow under every secondary metric block on
-      // the action pages and sidebars, which read as heavy next to Umbrella's shadowless rows.
+      // Flat surface. `shadow-elev-1` stacked a drop shadow under every secondary metric block
+      // on the action pages and sidebars, which read as heavy next to the shadowless detail rows.
       // Structure comes from the border + card background, not elevation.
       className={cn("rounded-radius-lg border border-border bg-card text-card-foreground", className)}
       {...props}

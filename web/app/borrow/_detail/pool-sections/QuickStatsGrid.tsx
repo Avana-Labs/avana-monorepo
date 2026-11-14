@@ -21,7 +21,7 @@ type QuickStatLike = {
 
 type Props = {
   detail: { hero?: unknown; quickStats: QuickStatLike[] }
-  /** Token represented by a price stat when the detail hero is a pair (e.g. Multiply collateral). */
+  /** Token represented by a price stat when the detail hero is a pair. */
   priceSymbol?: string
   /** Pair rate for pool details, expressed as the base token in quote-token units. */
   pricePair?: readonly [baseSymbol: string, quoteSymbol: string]

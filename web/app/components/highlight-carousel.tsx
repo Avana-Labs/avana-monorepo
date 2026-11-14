@@ -17,8 +17,8 @@ import { useMediaQuery } from "@/app/lib/use-media-query"
 import { DASHBOARD_SNAPSHOT_SURFACE_CLASS } from "@/app/components/card-surface-tokens"
 
 /**
- * Shared surface styling for the Lend "Featured" and Multiply "Trending"
- * highlight cards: a flat `bg-card` panel with no border, shadow, or sheen —
+ * Shared surface styling for the Lend "Featured" highlight cards and the dashboard
+ * stat cards: a flat `bg-card` panel with no border, shadow, or sheen —
  * matching the Borrow "Explore" cards. Card dimensions are left to the caller
  * so each surface can size to its own content.
  */

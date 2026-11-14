@@ -118,7 +118,7 @@ export function selectPortfolioDebtRows(state: BorrowSystemState, walletId: stri
       borrowApr,
       // Accrue from this debt's own open time at the rate shown in the row, instead of the engine
       // index (which only advances on read and shares one account clock any action resets). Matches
-      // the Interest Owed tile's per-position basis and the Lend/Multiply counters.
+      // the Interest Owed tile's per-position basis and the Lend counters.
       accruedInterestUsd:
         (borrowedUsd * (borrowApr / 100) * Math.max(0, Date.now() - (position.openedAt ?? Date.now()))) /
         (365 * 24 * 60 * 60 * 1000),

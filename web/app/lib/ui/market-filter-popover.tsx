@@ -16,7 +16,7 @@ import {
 } from "@/app/lib/ui/market-filter-pill"
 
 // Loaded lazily by `market-filters.tsx` after mount, so Radix Popover (~19 KiB gzip) stays out of
-// the Lend / Borrow / Multiply first load; `StaticFacetPill` renders the closed pill until then.
+// the Lend / Borrow first load; `StaticFacetPill` renders the closed pill until then.
 
 const PANEL_CLASS =
   "z-[60] flex w-[min(var(--panel-width),calc(100vw-24px))] data-[fit=content]:w-max data-[fit=content]:min-w-[216px] data-[fit=content]:max-w-[min(var(--panel-width),calc(100vw-24px))] flex-col overflow-hidden rounded-[14px] border border-border bg-popover text-popover-foreground shadow-elev-2 outline-none " +

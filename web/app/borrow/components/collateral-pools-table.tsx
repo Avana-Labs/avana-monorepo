@@ -128,8 +128,8 @@ function CollateralAssetCell({ pool }: { pool: BorrowPoolRow }) {
 
 // Borrow pools store a single risk ratio (max LTV, which is the collateral factor). The
 // liquidation threshold sits a fixed spread above it — derive the display LT through the
-// canonical helper so it matches the credit engine's enforced threshold. This lets the CF
-// column read like the multiply table's (CF on top, small "LT:" below).
+// canonical helper so it matches the credit engine's enforced threshold. The CF column shows
+// CF on top and a small "LT:" below.
 function poolLiquidationThresholdPct(pool: BorrowPoolRow) {
   return liquidationThresholdPctFromMaxLtvPct(pool.ltv)
 }

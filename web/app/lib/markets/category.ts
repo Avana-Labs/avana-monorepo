@@ -1,13 +1,11 @@
 /**
- * Shared market categorisation for the filter chips on Lend / Borrow / Multiply.
+ * Shared market categorisation for the filter chips on Lend / Borrow.
  *
  * The user's taxonomy has five buckets — BTC, ETH, Forex, Utility, Smart — but the
  * raw catalog only tags assets btc/eth/stable/crypto. This maps a base-asset symbol
  * to the five buckets (the approved "best-guess" mapping): BTC/ETH by token family,
  * Forex = fiat-pegged stables, Utility = governance/protocol tokens, Smart = the
- * curated remainder. Multiply's table already renders these chips; this module lets
- * Lend and Borrow reuse the exact same bucketing when their filter rows are
- * converted from dropdowns to chips.
+ * curated remainder. Lend and Borrow share this bucketing so their filter chips agree.
  */
 
 export type MarketCategory = "btc" | "eth" | "forex" | "utility" | "smart"
