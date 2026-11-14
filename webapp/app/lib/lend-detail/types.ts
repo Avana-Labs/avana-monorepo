@@ -1,3 +1,4 @@
+import type { HeroContract } from "@/app/lib/detail-page/hero-contract"
 /**
  * Public view-model for the lend (single-asset supply) detail page.
  *
@@ -42,6 +43,8 @@ export type LendMarketHero = {
   venue: string
   /** Link to the source contract / external explorer. */
   explorerUrl?: string
+  /** The Hub asset's token contract from services/convex; null or absent when there is none. */
+  contract?: HeroContract | null
 }
 
 export type LendMarketDetail = {

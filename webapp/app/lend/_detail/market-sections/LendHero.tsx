@@ -15,12 +15,8 @@ import {
 import { getLendMarketHeroFeed } from "@/app/lib/chart-feeds"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { HeroContractLine } from "@/app/components/hero-contract-line"
-import {
-  isPlaceholderHeroContractAddress,
-  contractExplorerHref,
-  isSafeHeroLink,
-  resolveHeroContractAddress,
-} from "@/app/borrow/_detail/lib/hero-chart-feeds"
+import { isSafeHeroLink } from "@/app/borrow/_detail/lib/hero-chart-feeds"
+import { openExternal } from "@/app/lib/safe-links"
 import { useLendSessionContext } from "@/app/lib/lend-system/lend-session-context"
 import { buildWalletPositionFeed } from "@/app/lib/chart-feeds/wallet-position-feed"
 import { sizedLocalIconSrc } from "@/app/lib/local-asset-icons"
@@ -45,11 +41,7 @@ export function LendHeroIdentity({
   className?: string
 }) {
   const { t } = useTranslation()
-  // Suppress copy + Etherscan when the address is a synthetic placeholder that
-  // points at no real contract.
-  const isPlaceholderContract = isPlaceholderHeroContractAddress(
-    resolveHeroContractAddress(detail.id, detail.hero.explorerUrl),
-  )
+  const contract = detail.hero.contract ?? null
   const websiteHref = isSafeHeroLink(detail.hero.explorerUrl)
     ? detail.hero.explorerUrl
     : `https://www.google.com/search?q=${encodeURIComponent(detail.hero.name)}`
@@ -72,23 +64,17 @@ export function LendHeroIdentity({
                 {detail.hero.symbol}
               </span>
             </div>
-            <HeroContractLine
-              contextLabel="Asset on"
-              chainLabel={detail.hero.chain}
-              address={resolveHeroContractAddress(detail.id, detail.hero.explorerUrl)}
-              isPlaceholder={isPlaceholderContract}
-              explorerHref={contractExplorerHref(detail.hero.explorerUrl)}
-            />
+            <HeroContractLine contextLabel="Asset on" chainLabel={detail.hero.chain} contract={contract} />
           </div>
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 self-center pl-5 lg:flex">
-          <HeroIcon label={t("Website")} onClick={() => window.open(websiteHref, "_blank")}>
+          <HeroIcon label={t("Website")} onClick={() => openExternal(websiteHref)}>
             <Globe className="h-[18px] w-[18px]" />
           </HeroIcon>
           <HeroIcon
             label={t("X")}
-            onClick={() => window.open(`https://x.com/search?q=${encodeURIComponent(detail.hero.symbol)}`, "_blank")}
+            onClick={() => openExternal(`https://x.com/search?q=${encodeURIComponent(detail.hero.symbol)}`)}
           >
             <XIcon />
           </HeroIcon>
