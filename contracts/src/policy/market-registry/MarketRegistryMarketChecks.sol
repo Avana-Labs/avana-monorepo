@@ -125,8 +125,11 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
     }
 
     /// @dev REQ-CONFIG-035 for a two-token pool: with `a0`, `a1` the 8-decimal answers of each token's primary
-    /// route, `10^4 × a0 × 10^d1 < 2^64 × a1 × 10^d0`, so the TWAP reference price stays below `2^64` under a 100×
-    /// shock. Answers are bounded below `2^96`, so both sides fit in 256 bits.
+    /// route, `10^4 × a0 × 10^d1 < 2^128 × a1 × 10^d0`, so the TWAP reference price stays below `2^128`, the ratio up
+    /// to which `SPEC-ORC-009` computes the sqrt price without clamping, under a 100× shock. The former `2^64` bound
+    /// (the lower branch only) refused WBTC against an 18-decimal stable once BTC reached about $184,467 (INTEG-04);
+    /// at `2^128` that pair lists up to the `MAX_ROUTE_ANSWER` price. Answers are bounded below `2^96`, so the left
+    /// side and `2^128 × a1` fit in 256 bits.
     function _checkRawPrice(
         address[] memory tokens,
         uint8[] memory decs
@@ -136,7 +139,7 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         uint256 a1 = _primaryAnswer8(tokens[1]);
         if (a0 == 0 || a1 == 0 || decs[0] > 36 || decs[1] > 36) revert ListingCheckFailed("rawPrice");
         uint256 lhs = 1e4 * a0 * 10 ** uint256(decs[1]);
-        uint256 rhs = (uint256(1) << 64) * a1;
+        uint256 rhs = (uint256(1) << 128) * a1;
         // rhs × 10^d0 can exceed 2^256 only when the bound already holds by a wide margin.
         if (rhs <= type(uint256).max / 10 ** uint256(decs[0]) && lhs >= rhs * 10 ** uint256(decs[0])) {
             revert ListingCheckFailed("rawPrice");

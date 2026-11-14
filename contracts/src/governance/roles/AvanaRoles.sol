@@ -37,7 +37,7 @@ pragma solidity 0.8.28;
 /// The Emergency Guardian's five seats are three Avana Labs signers, one Aave Labs signer and one LlamaRisk signer, so
 /// no seat acts alone and no organisation reaches the threshold alone; no signer key is shared between the Emergency
 /// Guardian, the governance multisig and the Aave Protocol Guardian (REQ-ROLE-007). `COVERAGE_ROLE` is not an Avana
-/// role: it is the Aave DAO's AccessManager role for `coverDeficit` on each Coverage Spoke, which the DAO grants to the
+/// role: it is the Aave DAO's AccessManager role for `coverDeficit` on each First-Loss Reserve, which the DAO grants to the
 /// Emergency Guardian and the Aave Protocol Guardian.
 /// OpenZeppelin `TimelockController` roles on the AvanaTimelock: `PROPOSER_ROLE` the 4-of-7 governance multisig and
 /// the Aave governance executor (never fewer than two holders); `CANCELLER_ROLE` the governance multisig, the

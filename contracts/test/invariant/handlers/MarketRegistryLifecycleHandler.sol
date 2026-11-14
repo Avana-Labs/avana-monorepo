@@ -21,6 +21,10 @@ import {RegistryLPOracleMock} from "../../utils/mocks/MarketRegistryMocks.sol";
 /// call's success, the resulting status and the wind-down threshold; ghosts count every departure.
 /// @dev The handler owns its world (it is the fixture), so the suite reads the registry through `reg()`.
 contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     uint256 public constant SHAPES = 6;
     uint64 internal constant NOTICE = 5 days;
 
@@ -166,7 +170,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
     ) external {
         uint256 i = seed % SHAPES;
         Slot storage s = _slots[i];
-        if (s.id == 0) return;
+        if (s.id == 0) revert Skipped();
         if (s.status == MarketStatus.Registered) _prepare(i);
         bool expected = s.status == MarketStatus.Registered;
         vm.prank(address(timelock));
@@ -184,7 +188,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
     ) external {
         uint256 i = seed % SHAPES;
         Slot storage s = _slots[i];
-        if (s.id == 0) return;
+        if (s.id == 0) revert Skipped();
         bool expected = s.status == MarketStatus.Registered;
         vm.prank(address(timelock));
         try registry.cancelRegistration(s.id) {
@@ -201,7 +205,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
     ) external {
         uint256 i = seed % SHAPES;
         Slot storage s = _slots[i];
-        if (s.id == 0) return;
+        if (s.id == 0) revert Skipped();
         bool expected = s.status == MarketStatus.Active;
         // The Aave DAO may have moved the collateral factor since activation.
         uint16 cf = uint16(bound(cfSeed, 1, 8000));
@@ -225,7 +229,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
     ) external {
         uint256 i = seed % SHAPES;
         Slot storage s = _slots[i];
-        if (s.id == 0) return;
+        if (s.id == 0) revert Skipped();
         collat.setHasDebt(s.vaultToken, debt);
         s.debt = debt;
         bool expected = s.status == MarketStatus.Offboarding && block.timestamp >= s.offboardedAt + NOTICE && !debt;

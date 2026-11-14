@@ -43,6 +43,10 @@ interface IBalancesHubViews {
 /// @notice Borrowers on the CDP Spoke (collateral, borrow and repay of each debt reserve), a lender on the Lend Spoke
 /// (supply and withdraw of each asset, which moves the Hub's liquidity) and time (interest and premium accrual).
 contract BalancesHandler is Test {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     uint256 internal constant N_BORROWERS = 3;
 
     address public immutable hub;
@@ -133,7 +137,9 @@ contract BalancesHandler is Test {
             ++borrowsDone;
             if (amount > liquidityBefore) ++liquidityViolations;
             if (owedBefore + amount > drawCaps[r] * unit) ++drawCapViolations;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function repay(
@@ -144,14 +150,16 @@ contract BalancesHandler is Test {
         address user = borrowers[actor % N_BORROWERS];
         uint256 r = reserve % 2;
         uint256 owed = cdp.getUserTotalDebt(debtReserves[r], user);
-        if (owed == 0) return;
+        if (owed == 0) revert Skipped();
         amount = bound(amount, 1, owed);
         debts[r].mint(user, amount);
         vm.startPrank(user);
         debts[r].approve(address(cdp), amount);
         try cdp.repay(debtReserves[r], amount, user) {
             ++repaysDone;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
         vm.stopPrank();
     }
 
@@ -177,7 +185,9 @@ contract BalancesHandler is Test {
         vm.prank(lender);
         try lend.withdraw(lendReserves[r], amount, lender) {
             ++lenderWithdrawalsDone;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function warp(
@@ -376,6 +386,7 @@ contract BalancesInvariantTest is Deployments {
 
         // Above the Hub's liquidity: refused (USDC liquidity is 250,000 after the borrow).
         uint256 before = handler.borrowsDone();
+        vm.expectRevert(BalancesHandler.Skipped.selector);
         handler.borrow(0, 1, 260_000e6);
         assertEq(handler.borrowsDone(), before, "borrow above liquidity refused");
 
@@ -395,6 +406,7 @@ contract BalancesInvariantTest is Deployments {
         before = handler.borrowsDone();
         handler.borrow(1, 0, 400_000e18);
         handler.borrow(1, 0, 400_000e18);
+        vm.expectRevert(BalancesHandler.Skipped.selector);
         handler.borrow(1, 0, 400_000e18);
         assertEq(handler.borrowsDone(), before + 2, "the third borrow would pass the draw cap and is refused");
 

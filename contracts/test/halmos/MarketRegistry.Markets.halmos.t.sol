@@ -33,8 +33,8 @@ import {
 } from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {
     RegistryAdapterMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryCollateralizationMock,
-    RegistryCoverageSpokeMock,
     RegistryFeedMock,
     RegistryFlashSourceMock,
     RegistryLPOracleMock,
@@ -216,7 +216,8 @@ contract MarketRegistryMarketsHalmosTest is Test {
         (toks[0], toks[1]) = (address(usdc), address(usdt));
         lpVault.setPoolTokens(toks, 18);
         RegistryFeedMock ghoSource = new RegistryFeedMock(8, 1e8);
-        RegistryCoverageSpokeMock ghoCoverage = new RegistryCoverageSpokeMock(address(hub), address(gho), 0);
+        RegistryAvanaFirstLossReserveMock ghoCoverage =
+            new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), 0);
         ghoCoverage.setFunded(4e24, false);
         hub.setAsset(address(gho), 0);
         IAaveV4Spoke.Reserve memory r;
@@ -241,7 +242,7 @@ contract MarketRegistryMarketsHalmosTest is Test {
             SpokeDef(false, address(hub), V3, RiskTier.Stable, address(spokeImpl), address(aaveOracle))
         );
         registry.setFlashSource(address(new RegistryFlashSourceMock(AAVE_POOL, LP_VAULT_SWAP)));
-        registry.setCoverageSpoke(address(hub), address(gho), address(ghoCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
         registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _listToken(address(gho), IssuerProbe.None);

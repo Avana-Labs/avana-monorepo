@@ -38,7 +38,7 @@ npm run manifest -- verify --manifest ../../deployments/sepolia/v1.0.0.json --rp
 npm run manifest -- publish --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
 ```
 
-A check is pending, not passed, while the operation that completes it has not executed (for example the guardian roles before the `guardian-roles` operation) or while a contract is not deployed (the concentrated-liquidity LPOracle implementation). `publish` refuses a manifest with any failed or pending check. The live-configuration checks of `TEST-135` (reserve flags, caps, credit lines, Coverage Spoke funding) extend `verify` as markets are listed.
+A check is pending, not passed, while the operation that completes it has not executed (for example the guardian roles before the `guardian-roles` operation) or while a contract is not deployed (the concentrated-liquidity LPOracle implementation). `publish` refuses a manifest with any failed or pending check. The live-configuration checks of `TEST-135` (reserve flags, caps, credit lines, First-Loss Reserve funding) extend `verify` as markets are listed.
 
 ## Test-network stand-ins
 

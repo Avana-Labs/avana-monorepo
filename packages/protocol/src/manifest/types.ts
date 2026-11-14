@@ -49,7 +49,7 @@ export interface LpVault extends Immutable {
   readonly kind: string;
 }
 
-export interface CoverageSpoke extends Immutable {
+export interface AvanaFirstLossReserve extends Immutable {
   readonly asset: Address;
   readonly hub: Address;
 }
@@ -154,9 +154,9 @@ export interface ReleaseManifest {
     readonly flashLiquidator: Immutable;
     readonly operatorHelpers: readonly OperatorHelper[];
     readonly lpVaults: readonly LpVault[];
-    readonly coverageSpokes: readonly CoverageSpoke[];
-    /** The Aave DAO's deficit offset behind each Coverage Spoke (2.14), deployed on the Aave side. */
-    readonly deficitOffsetSpokes: readonly CoverageSpoke[];
+    readonly firstLossReserves: readonly AvanaFirstLossReserve[];
+    /** The Aave DAO's deficit offset behind each First-Loss Reserve (2.14), deployed on the Aave side. */
+    readonly daoDeficitOffsets: readonly AvanaFirstLossReserve[];
     readonly debtOracleImplementation: Immutable;
     /** Null while the concentrated-liquidity LPOracle implementation is not deployed. */
     readonly clOracles: readonly ClOracle[];

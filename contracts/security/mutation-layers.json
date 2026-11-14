@@ -16,7 +16,7 @@
       {"src": "src/custody/collateralization", "tests": "test/{unit,fuzz}/Collateralization*"}
     ],
     "2.2": [
-      {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath"], "tests": "test/unit/ClPriceMath.*"},
+      {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/unit/ClPriceMath.*"},
       {"src": "src/amm/concentrated-liquidity", "files": ["ClLPVault*"], "tests": "test/{unit,integration}/{UniswapV3Integration,SlipstreamIntegration}.*"},
       {"src": "src/amm/uniswap-v3", "tests": "test/{unit,integration}/UniswapV3Integration.*"},
       {"src": "src/amm/slipstream", "tests": "test/unit/SlipstreamIntegration.*"}
@@ -33,7 +33,7 @@
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
       {"src": "src/policy/aave-adapter", "tests": "test/unit/AaveAdapter*"},
       {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes}.*"},
-      {"src": "src/coverage/coverage-spoke", "tests": "test/unit/CoverageSpoke*"}
+      {"src": "src/coverage/first-loss-reserve", "tests": "test/unit/{AvanaFirstLossReserve,DaoDeficitOffset}*"}
     ],
     "2.6": [
       {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz}/FlashLiquidator.*"},

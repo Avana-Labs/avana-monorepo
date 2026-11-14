@@ -100,7 +100,7 @@ contracts/
 │   │   └── lens/                   ILens and its pieces, LensConstants
 │   ├── types/                      structs and enums shared by several contracts, one per file
 │   └── interfaces/external/
-│       ├── aave/         Aave V4 Spoke (events and extSload in their own files), Hub, AaveOracle, price-feed interface, Coverage Spoke funding; Aave V3 Pool, flash-loan receiver, ACLManager
+│       ├── aave/         Aave V4 Spoke (events and extSload in their own files), Hub, AaveOracle, price-feed interface, First-Loss Reserve funding; Aave V3 Pool, flash-loan receiver, ACLManager
 │       ├── uniswap/      NonfungiblePositionManager, UniswapV3Factory, UniswapV3Pool, swap callback
 │       ├── aerodrome/    Slipstream NonfungiblePositionManager, CLFactory, CLPool, CLGauge
 │       ├── chainlink/    AggregatorV3, aggregator proxy, offchain aggregator bounds, sequencer-uptime feed
@@ -136,13 +136,13 @@ GHO and the other debt assets are reached through OpenZeppelin's `IERC20`. Flash
 | `flash/` | `IFlashSource` implementation over the Aave V3 Pool | Immutable; replaced by `setFlashSource` on LPVaultSwap | [2.11](../spec/02-contracts/11-lpvaultswap.md) | `REQ-FLASH-…`, `REQ-ARCH-210` |
 | `governance/timelock/`, `governance/roles/` | AvanaTimelock; AvanaRoles role IDs | Immutable | [2.15](../spec/02-contracts/15-governance-and-timelock.md), [1.4](../spec/01-architecture/04-permissions-and-roles.md) | `REQ-ACCESS-…`, `SPEC-GOV-…`, `REQ-ROLE-…` |
 | `lock/lock/` | Lock | Immutable | [2.16](../spec/02-contracts/16-lock.md) | `REQ-LOCK-…` |
-| `coverage/coverage-spoke/` | Avana Umbrella (Coverage Spoke), one per covered `(Hub, debt asset)` | Immutable; controlled by the Aave DAO through its AccessManager | [2.14](../spec/02-contracts/14-first-loss-reserve.md) | `REQ-FLR-…`, `SPEC-FLR-…` |
+| `coverage/first-loss-reserve/` | Avana Umbrella (First-Loss Reserve), one per covered `(Hub, debt asset)` | Immutable; controlled by the Aave DAO through its AccessManager | [2.14](../spec/02-contracts/14-first-loss-reserve.md) | `REQ-FLR-…`, `SPEC-FLR-…` |
 | `lens/lens/` | Lens | Immutable; a new Lens is a new deployment | [2.17](../spec/02-contracts/17-lens.md) | `REQ-LENS-…` |
 | `interfaces/external/` | Aave V4, Uniswap v3, Chainlink, GHO, Sky, Curve | External | [4.3](../spec/04-security/03-external-dependencies.md), [2.1](../spec/02-contracts/01-avana-hub-and-spokes.md) | `EXT-…` (in NatSpec) |
 
 The SettlementBudget ([2.13](../spec/02-contracts/13-settlement-budget.md)) is removed (`Q-397`): the liquidation caller pays any rounding gap, so it has no folder. Debt buy routes are removed too (`Q-379`): LPVaultSwap flash-borrows the debt asset itself.
 
-The First-Loss Reserve ([2.14](../spec/02-contracts/14-first-loss-reserve.md)) is a set of Coverage Spokes (Avana Umbrella), one per covered `(Hub, asset)`. Each is a supply-only Aave V4 Spoke that Avana writes in `coverage/coverage-spoke/` and the Aave DAO controls through its own AccessManager (`COVERAGE_ROLE`, `RESERVE_ADMIN_ROLE`); no Avana contract, multisig, timelock or keeper holds a role on it. LPVaultSwap's `settlePending` funds the Coverage Spoke of the market's (funding Hub, debt asset) with the value recovered from pending settlement, and the RiskModule and the Lens read its balance and minimum.
+The First-Loss Reserve ([2.14](../spec/02-contracts/14-first-loss-reserve.md)) is a set of First-Loss Reserves (Avana Umbrella), one per covered `(Hub, asset)`. Each is a supply-only Aave V4 Spoke that Avana writes in `coverage/first-loss-reserve/` and the Aave DAO controls through its own AccessManager (`COVERAGE_ROLE`, `RESERVE_ADMIN_ROLE`); no Avana contract, multisig, timelock or keeper holds a role on it. LPVaultSwap's `settlePending` funds the First-Loss Reserve of the market's (funding Hub, debt asset) with the value recovered from pending settlement, and the RiskModule and the Lens read its balance and minimum.
 
 ### File layout and size limits
 
@@ -181,7 +181,7 @@ Size limits (`Q-240`): an implementation file holds at most 500 lines of code (l
 - Custody trust (`REQ-ARCH-047`): the reviewed AaveAdapter implementation is trusted for custody of proxy positions, and the ProxyManager only for creating proxies at their predicted addresses; the immutable contracts (each LPVault, Collateralization, vault tokens) keep NFT custody and the backing checks. Collateralization and the LPVault read the Spoke, Hub, pool, market ID and LPOracle only from the vault token's immutables (`REQ-ARCH-048`). Immutable contracts with a privileged function check `msg.sender == TIMELOCK` instead of keeping roles.
 - Vault tokens are deployed with CREATE3 salted by `keccak256(abi.encode(spoke, marketKey))` (`REQ-VTOKEN-020`); PositionProxies are deployed by the ProxyManager at CREATE2 addresses salted by `keccak256(abi.encode(wallet, spoke, marketId))` (`REQ-PROXY-001`); the immutable core is deployed at CREATE3 addresses so constructor immutables can reference each other ([`script/README.md`](script/README.md)).
 - Every outer state-changing entry point acquires the Lock (`REQ-ARCH-052`); amounts are measured as before/after deltas and approvals are exact and reset to 0 (`REQ-ARCH-051`).
-- Files start with `// SPDX-License-Identifier: BUSL-1.1`, `pragma solidity 0.8.28;`, a blank line and `// Copyright (c) 2026 Avana Labs` (`script/check-licence.sh`). A file containing ported third-party code carries that code's licence and is listed in `security/licence-allowlist.txt` (today `src/amm/concentrated-liquidity/ClPriceMath.sol`, GPL-2.0-or-later). An external interface written by Avana from a third party's ABI (the Aave V4 Hub, Spoke, oracle, price feed and storage read) is Avana's own code under the same licence as the rest of `src/`, declares only the members Avana code, tests and CVL specs use, and names the pinned source file its selectors, struct layouts and event signatures were checked against; an external interface taken from its origin keeps that origin's licence.
+- Files start with `// SPDX-License-Identifier: BUSL-1.1`, `pragma solidity 0.8.28;`, a blank line and `// Copyright (c) 2026 Avana Labs` (`script/check-licence.sh`). A file containing ported third-party code carries that code's licence and is listed in `security/licence-allowlist.txt` (today `src/amm/concentrated-liquidity/ClTickMath.sol`, MIT). An external interface written by Avana from a third party's ABI (the Aave V4 Hub, Spoke, oracle, price feed and storage read) is Avana's own code under the same licence as the rest of `src/`, declares only the members Avana code, tests and CVL specs use, and names the pinned source file its selectors, struct layouts and event signatures were checked against; an external interface taken from its origin keeps that origin's licence.
 
 ## Profiles
 
@@ -361,7 +361,7 @@ Files under another licence:
 
 | Files | Licence | Why |
 |---|---|---|
-| `src/amm/concentrated-liquidity/ClPriceMath.sol` (listed in `security/licence-allowlist.txt`) | GPL-2.0-or-later | contains code ported from Uniswap v3-core `TickMath` and `Tick` and v3-periphery `LiquidityAmounts` and `OracleLibrary`; compiled into the Uniswap v3 and Slipstream LPVaults through `ClLPVaultBase.sol` and `ClLPVaultMarkets.sol` |
+| `src/amm/concentrated-liquidity/ClTickMath.sol` (listed in `security/licence-allowlist.txt`) | MIT | Uniswap v4-core `TickMath` (tag v4.0.0), with Avana's changes listed in its header; called by `ClPriceMath.sol` (BUSL-1.1) and through it compiled into the Uniswap v3 and Slipstream LPVaults and the concentrated-liquidity LPOracle |
 | `test/differential/reference/avana_reference.py` | GPL-2.0-or-later | Python port of the same Uniswap v3 math, the reference of the differential tests |
 | `src/interfaces/external/uniswap/*.sol`, `src/interfaces/external/aerodrome/*.sol` | GPL-2.0-or-later | interface subsets copied from Uniswap v3 and Aerodrome Slipstream |
 | `src/interfaces/external/aave/IAaveV3ACLManager.sol` | AGPL-3.0 | copied from Aave V3 core |

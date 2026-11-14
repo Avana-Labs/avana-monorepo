@@ -13,7 +13,7 @@ import {
   aaveV4SpokeAbi,
   avanaTimelockAbi,
   collateralizationAbi,
-  coverageSpokeAbi,
+  firstLossReserveAbi,
   debtOracleAbi,
   flashLiquidatorAbi,
   lpOracleAbi,
@@ -51,7 +51,7 @@ export const abis = {
   VaultToken: vaultTokenAbi,
   VaultTokenFactory: vaultTokenFactoryAbi,
   PayoutEscrow: payoutEscrowAbi,
-  CoverageSpoke: coverageSpokeAbi,
+  AvanaFirstLossReserve: firstLossReserveAbi,
   FlashLiquidator: flashLiquidatorAbi,
   AaveSpoke: mergeAbis([aaveV4SpokeAbi, upgradeAndRoleEvents]),
   AaveHub: mergeAbis([aaveV4HubAbi, upgradeAndRoleEvents]),
@@ -69,8 +69,8 @@ export const factoryEvents = {
   marketRegistered: getAbiItem({ abi: marketRegistryAbi, name: "MarketRegistered" }),
   /** MarketRegistry: an approved debt reserve and its DebtOracle; child address in `priceSource`. */
   debtReserveApproved: getAbiItem({ abi: marketRegistryAbi, name: "DebtReserveApproved" }),
-  /** MarketRegistry: the Coverage Spoke of a Hub asset; child address in `coverageSpoke`. */
-  coverageSpokeSet: getAbiItem({ abi: marketRegistryAbi, name: "CoverageSpokeSet" }),
+  /** MarketRegistry: the First-Loss Reserve of a Hub asset; child address in `firstLossReserve`. */
+  firstLossReserveSet: getAbiItem({ abi: marketRegistryAbi, name: "AvanaFirstLossReserveSet" }),
   /** MarketRegistry: a recorded Hub; child address in `hub`. */
   hubRecorded: getAbiItem({ abi: marketRegistryAbi, name: "HubRecorded" }),
   /** MarketRegistry: an approved CDP Spoke; child address in `spoke`. */

@@ -28,7 +28,7 @@ struct HubInput {
 
 /// @notice The Aave contracts Avana's deployment reads or names.
 struct AaveInputs {
-    // The Aave V4 AccessManager (authority of every Coverage Spoke).
+    // The Aave V4 AccessManager (authority of every First-Loss Reserve).
     address accessManager;
     // The audited standard Spoke implementation every CDP Spoke must match (`MarketRegistryImmutables`).
     address standardSpokeImplementation;

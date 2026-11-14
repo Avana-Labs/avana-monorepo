@@ -10,7 +10,7 @@ import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketReg
 import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryDebtOracleMock,
     RegistryLPOracleMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
@@ -27,8 +27,8 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
 
     RegistryDebtOracleMock internal usdcOracle;
     RegistryDebtOracleMock internal usdtOracle;
-    RegistryCoverageSpokeMock internal usdcCoverage;
-    RegistryCoverageSpokeMock internal usdtCoverage;
+    RegistryAvanaFirstLossReserveMock internal usdcCoverage;
+    RegistryAvanaFirstLossReserveMock internal usdtCoverage;
 
     function setUp() public {
         _setUpWorld();
@@ -36,15 +36,15 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         (usdtOracle, usdtCoverage) = _prepareStable(address(usdt), USDT_RESERVE, USDT_ASSET, 300_000);
     }
 
-    /// @dev The Aave reserve, AaveOracle source, DebtOracle, Coverage Spoke and credit line of a 6-decimal stablecoin.
+    /// @dev The Aave reserve, AaveOracle source, DebtOracle, First-Loss Reserve and credit line of a 6-decimal stablecoin.
     function _prepareStable(
         address token,
         uint256 reserveId,
         uint256 assetId,
         uint40 drawCap
-    ) internal returns (RegistryDebtOracleMock o, RegistryCoverageSpokeMock cs) {
+    ) internal returns (RegistryDebtOracleMock o, RegistryAvanaFirstLossReserveMock cs) {
         o = new RegistryDebtOracleMock(token, address(registry), address(ps));
-        cs = new RegistryCoverageSpokeMock(address(hub), token, assetId);
+        cs = new RegistryAvanaFirstLossReserveMock(address(hub), token, assetId);
         cs.setFunded(2e12, false);
         hub.setAsset(token, assetId);
         hub.setSpokeConfig(assetId, address(spoke), 0, drawCap);
@@ -57,7 +57,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         aaveOracle.setSource(reserveId, address(o));
         ps.setStressRise(token, 500);
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(address(hub), token, address(cs));
+        registry.setAvanaFirstLossReserve(address(hub), token, address(cs));
         registry.recordCreditLine(address(hub), token, 1_000_000);
         vm.stopPrank();
     }
@@ -77,7 +77,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
             hubAssetId: assetId,
             priceSource: oracle,
             fixedPrice: false,
-            coverageSpoke: cs,
+            firstLossReserve: cs,
             crossHub: false,
             approved: false
         });
@@ -171,7 +171,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         assertEq(rec.hubAssetId, USDT_ASSET);
         assertEq(rec.priceSource, address(usdtOracle));
         assertFalse(rec.fixedPrice);
-        assertEq(rec.coverageSpoke, address(usdtCoverage));
+        assertEq(rec.firstLossReserve, address(usdtCoverage));
         assertFalse(rec.crossHub);
         assertTrue(rec.approved);
         rec = registry.getDebtReserve(address(spoke), USDC_RESERVE);

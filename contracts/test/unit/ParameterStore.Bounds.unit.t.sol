@@ -445,6 +445,11 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
 
     // TEST-272 verifies: REQ-RISK-044, REQ-RISK-042
     function test_TEST_272_capTightenStopsAboveZero() public {
+        // A partial tightening stores the new value itself, not 0.
+        uint256 slice = store.topUpSliceUsd(M) / 2;
+        assertGt(slice, 0);
+        _accepts(abi.encodeCall(store.tightenTopUpSliceUsd, (M, slice)));
+        assertEq(store.topUpSliceUsd(M), slice);
         _accepts(abi.encodeCall(store.tightenTopUpSliceUsd, (M, 0)));
         assertEq(store.topUpSliceUsd(M), 0);
         _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 1)));

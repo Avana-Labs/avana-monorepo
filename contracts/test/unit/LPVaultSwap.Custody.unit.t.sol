@@ -93,7 +93,7 @@ contract LVSReentryProbe {
 /// @title LPVaultSwapCustodyUnitTest
 /// @notice LPVaultSwap's side of the custody rows on the real Collateralization, vault token, Lock and local Aave V4:
 /// the pending settlement only it can drive under the Lock (TEST-152), the debit equalities of a seizure (TEST-056),
-/// no vault-token path out of LPVaultSwap (TEST-189), the pending balance funding only the Coverage Spoke (TEST-153)
+/// no vault-token path out of LPVaultSwap (TEST-189), the pending balance funding only the First-Loss Reserve (TEST-153)
 /// and re-entry from a pool token's transfer hook during the unwind (TEST-222).
 /// forge-config: default.isolate = false
 contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
@@ -260,10 +260,10 @@ contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
 
     /// @notice Reconcile and settle: after the reconcile Collateralization holds exactly the pool tokens of the
     /// pending balance and the LPVault none of them, supply equals credited plus pending; `settlePending` raises the
-    /// USDC Coverage Spoke's funded balance by exactly the recovered amount and no other address gains (the caller,
+    /// USDC First-Loss Reserve's funded balance by exactly the recovered amount and no other address gains (the caller,
     /// the fee recipient and LPVaultSwap end where they started).
     // TEST-153 verifies: REQ-VAULT-061, REQ-VAULT-154, REQ-SWAP-066, INV-042
-    function test_TEST_153_pendingFundsOnlyTheCoverageSpoke() public {
+    function test_TEST_153_pendingFundsOnlyTheAvanaFirstLossReserve() public {
         uint256 kept = _pendingBalance();
         address v = address(vt);
         assertEq(vt.totalSupply(), coll.getTotalCredited(v) + kept, "supply = credited + pending");

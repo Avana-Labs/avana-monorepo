@@ -13,7 +13,7 @@ import {TokenPriceView} from "../../../src/types/TokenPriceView.sol";
 
 /// @title LVSMarketRegistryMock
 /// @notice MarketRegistry stand-in for the LPVaultSwap suites: the market and debt-reserve records, the settlement
-/// reserve, Coverage Spokes, the flash source, recorded Hubs, swap-route slots and the address freeze, each set by the
+/// reserve, First-Loss Reserves, the flash source, recorded Hubs, swap-route slots and the address freeze, each set by the
 /// test. It has no pause state, pause reason or breaker: a read of any of them reverts, so a suite in which LPVaultSwap
 /// completes shows that it never reads one (REQ-SWAP-003, REQ-SWAP-104).
 contract LVSMarketRegistryMock {
@@ -21,7 +21,7 @@ contract LVSMarketRegistryMock {
     mapping(address spoke => mapping(uint256 reserveId => DebtReserveDef)) internal _debt;
     mapping(address spoke => mapping(uint256 reserveId => bool)) public isApprovedDebtReserve;
     mapping(uint256 marketId => uint256 reserveId) public settlementReserve;
-    mapping(address hub => mapping(address asset => address coverage)) public coverageSpokeOf;
+    mapping(address hub => mapping(address asset => address coverage)) public firstLossReserveOf;
     mapping(address hub => bool) public isRecordedHub;
     mapping(address account => bool) public isFrozenAddress;
     mapping(bytes32 slot => address route) internal _route;
@@ -78,12 +78,12 @@ contract LVSMarketRegistryMock {
         settlementReserve[marketId] = reserveId;
     }
 
-    function setCoverageSpoke(
+    function setAvanaFirstLossReserve(
         address hub,
         address asset,
         address coverage
     ) external {
-        coverageSpokeOf[hub][asset] = coverage;
+        firstLossReserveOf[hub][asset] = coverage;
     }
 
     function setFlashSource(

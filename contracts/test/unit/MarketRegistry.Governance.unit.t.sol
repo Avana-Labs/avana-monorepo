@@ -131,7 +131,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         bytes memory b = abi.encode(
             registry.flashSource(),
             registry.crossHubLinesEnabled(),
-            registry.coverageSpokeOf(address(hub), address(gho)),
+            registry.firstLossReserveOf(address(hub), address(gho)),
             registry.marketOfVaultToken(vt),
             registry.activeMarketCount(address(spoke))
         );

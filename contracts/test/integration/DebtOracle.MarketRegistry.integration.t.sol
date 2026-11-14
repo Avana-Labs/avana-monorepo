@@ -95,11 +95,12 @@ contract DebtOracleMarketRegistryIntegrationTest is MarketRegistryFixture {
         v = oracle.getPriceState();
         assertEq(uint8(v.replaced), uint8(RouteSlot.Primary));
         assertEq(v.primaryValue, 95_000_000, "the standby is read in the primary slot");
-        // The served 1.00 is the alternate's value, so the reported legs are the alternate's (SPEC-ORC-012).
-        assertEq(v.legFeeds[0], def.alternateRoute[0]);
+        // The served 1.00 is the accepted price (the lower route, the standby's 0.95, is below it), so no legs are
+        // reported (SPEC-ORC-012, SPEC-ORC-018).
+        assertEq(v.legFeeds[0], address(0));
         assertTrue(v.reasons & (1 << 16) != 0);
         assertEq(uint8(v.state), uint8(PriceState.Drifting), "the standby is held to the agreement check");
-        assertEq(uint256(v.answer), 1e8, "max(primary, alternate, accepted)");
+        assertEq(uint256(v.answer), 1e8, "max(min(primary, alternate), accepted)");
         vm.expectEmit(true, true, true, true, address(oracle));
         emit IDebtOracleEvents.DebtRouteVersionObserved(0, 1);
         oracle.poke();

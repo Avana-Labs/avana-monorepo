@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICoverageSpoke} from "../../coverage/coverage-spoke/ICoverageSpoke.sol";
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
@@ -99,18 +99,18 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev REQ-CONFIG-081: `def.coverageSpoke` is the recorded Coverage Spoke of `(fundingHub, asset)`, reports the
+    /// @dev REQ-CONFIG-081: `def.firstLossReserve` is the recorded First-Loss Reserve of `(fundingHub, asset)`, reports the
     /// same asset, Hub and Hub asset ID, and holds at least its `firstLossReserveMinimum`.
-    function _checkCoverageSpoke(
+    function _checkAvanaFirstLossReserve(
         DebtReserveDef calldata def
     ) internal view {
-        address cs = def.coverageSpoke;
-        if (cs == address(0) || cs != _s().coverageSpokeOf[def.fundingHub][def.asset]) {
-            revert IMarketRegistryCreditLines.CoverageSpokeMismatch(def.fundingHub, def.asset, cs);
+        address cs = def.firstLossReserve;
+        if (cs == address(0) || cs != _s().firstLossReserveOf[def.fundingHub][def.asset]) {
+            revert IMarketRegistryCreditLines.AvanaFirstLossReserveMismatch(def.fundingHub, def.asset, cs);
         }
-        ICoverageSpoke c = ICoverageSpoke(cs);
+        IAvanaFirstLossReserve c = IAvanaFirstLossReserve(cs);
         if (c.ASSET() != def.asset || c.HUB() != def.fundingHub || c.ASSET_ID() != def.hubAssetId) {
-            revert InvalidDebtReserve("coverageSpoke");
+            revert InvalidDebtReserve("firstLossReserve");
         }
         if (c.isBelowMinimum()) revert IMarketRegistryCreditLines.CoverageNotFunded(def.fundingHub, def.asset);
     }

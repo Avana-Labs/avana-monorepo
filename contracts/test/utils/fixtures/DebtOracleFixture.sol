@@ -147,4 +147,22 @@ abstract contract DebtOracleFixture is TimelockFixture {
     function _state() internal view returns (PriceState) {
         return oracle.getPriceState().state;
     }
+
+    /// @dev The route value a Drifting asset counts (`SPEC-ORC-018`): the lower route.
+    function _countedRoute(
+        uint256 p,
+        uint256 b
+    ) internal pure returns (uint256) {
+        return p < b ? p : b;
+    }
+
+    /// @dev The Drifting served price: `max(min(p, b), A)`, the median of `p`, `b` and `A`.
+    function _driftingServed(
+        uint256 p,
+        uint256 b,
+        uint256 a
+    ) internal pure returns (uint256) {
+        uint256 c = _countedRoute(p, b);
+        return c > a ? c : a;
+    }
 }

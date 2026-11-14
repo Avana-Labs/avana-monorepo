@@ -313,6 +313,16 @@ contract ParameterStoreCheckConfigUnitTest is ParameterStoreFixture {
     // ─── Structural setters need a zero bitmap; tightenings only no new failure ───
 
     // TEST-064 verifies: REQ-PSTORE-009, REQ-CONFIG-051, SPEC-GOV-011
+    // A tightening of market 2 re-runs market 2's LPOracle, the last of the two slots it lays out.
+    function test_TEST_064_tighteningRechecksTheSecondMarket() public {
+        _accepts(abi.encodeCall(store.setConsistencyToleranceBps, (M2, 60)));
+        oracle2.setFloors(50, 0, 0);
+        _refuses(abi.encodeCall(store.tightenConsistencyToleranceBps, (M2, 40)), _rejected(address(oracle2), 4));
+        _accepts(abi.encodeCall(store.tightenConsistencyToleranceBps, (M2, 50)));
+        assertEq(store.getMarketParams(M2).consistencyToleranceBps, 50);
+    }
+
+    // TEST-064 verifies: REQ-PSTORE-009, REQ-CONFIG-051, SPEC-GOV-011
     function test_TEST_064_structuralVersusTightenOnAnOldFailure() public {
         // Check 1 already fails at market 1 and no write breaks anything else.
         lpOracle.setFailed(1);

@@ -44,7 +44,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     uint256 internal constant CL_CHECK_CARDINALITY = 1 << 2;
     /// @notice `observe([twapWindow, 0])` fails.
     uint256 internal constant CL_CHECK_OBSERVE = 1 << 3;
-    /// @notice At a shocked price vector the raw ratio is not below `2^64` (`num < 2^64 * den` fails, `SPEC-ORC-009`).
+    /// @notice At a shocked price vector the raw ratio is not below `2^128` (`num < 2^128 * den` fails, `SPEC-ORC-009`).
     uint256 internal constant CL_CHECK_SHOCK_SQRT = 1 << 4;
     /// @notice A `PoolTwap` second source names a pool that does not pair its token with the market's other token.
     uint256 internal constant CL_CHECK_POOL_TWAP = 1 << 5;
@@ -366,8 +366,10 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return true;
     }
 
-    /// @dev `num < 2^64 * den` of `SPEC-ORC-009` with token0 raised and token1 lowered by `LISTING_SHOCK_FACTOR`, and
-    /// the reverse, each shocked price kept in `[1, MAX_ROUTE_ANSWER]` (`REQ-ORACLE-105`).
+    /// @dev `num < 2^128 * den` of `SPEC-ORC-009` (the sqrt price is exact to `2^-96` relative and not clamped) with
+    /// token0 raised and token1 lowered by `LISTING_SHOCK_FACTOR`, and the reverse, each shocked price kept in
+    /// `[1, MAX_ROUTE_ANSWER]` (`REQ-ORACLE-105`). Tested as `num >> 128 < den`, which cannot overflow. The former
+    /// `2^64` bound refused WBTC as token0 against an 18-decimal stable above about $184,467 (INTEG-04).
     function _shockSqrtHolds(
         uint256[] memory quotes
     ) internal view returns (bool) {
@@ -378,7 +380,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
             uint256 p1 = up == 0 ? _lower(quotes[1]) : _raise(quotes[1]);
             uint256 num = p0 * 10 ** uint256(decs[1]);
             uint256 den = p1 * 10 ** uint256(decs[0]);
-            if (num >= den << 64) return false;
+            if (num >> 128 >= den) return false;
         }
         return true;
     }

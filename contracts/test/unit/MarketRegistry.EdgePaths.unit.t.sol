@@ -16,7 +16,7 @@ import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryFeedMock,
     RegistryFlashSourceMock,
     RegistryLPOracleMock,
@@ -25,7 +25,7 @@ import {
 } from "../utils/mocks/MarketRegistryMocks.sol";
 
 /// @notice Paths the other suites leave out: a debt reserve before any flash source is set, a credit line with no
-/// Coverage Spoke, a cross-Hub reserve whose funding Hub never consented, and a primary route whose answer reaches
+/// First-Loss Reserve, a cross-Hub reserve whose funding Hub never consented, and a primary route whose answer reaches
 /// 2^96 at its own decimals.
 contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
     // TEST-285 verifies: REQ-MREG-006, INV-095, Q-386
@@ -43,7 +43,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         lpVault.setRegistry(address(registry));
         gho = new RegistryTokenMock(18);
         ghoSource = new RegistryFeedMock(8, 1e8);
-        ghoCoverage = new RegistryCoverageSpokeMock(address(hub), address(gho), GHO_ASSET);
+        ghoCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), GHO_ASSET);
         ghoCoverage.setFunded(4e24, false);
         vm.startPrank(address(timelock));
         factory.registerIntegration(V3, address(lpVault));
@@ -51,7 +51,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
         registry.deployCdpSpoke(_spokeDef());
         hub.setAsset(address(gho), GHO_ASSET);
-        registry.setCoverageSpoke(address(hub), address(gho), address(ghoCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
         registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _setGhoReserve();
@@ -71,9 +71,9 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
 
     // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010, REQ-MREG-009
     // Sources: 5.1 TEST-273
-    // A line on an asset with no Coverage Spoke counts as unfunded: any line above 0 is refused with funded 0; a line
+    // A line on an asset with no First-Loss Reserve counts as unfunded: any line above 0 is refused with funded 0; a line
     // of 0 needs nothing.
-    function test_TEST_273_lineWithoutCoverageSpokeIsUnfunded() public {
+    function test_TEST_273_lineWithoutAvanaFirstLossReserveIsUnfunded() public {
         _setUpWorld();
         // ceil(1 x 10^6 x 2,000 / 10^4) = 200,000 base units required, none funded.
         vm.prank(address(timelock));
@@ -103,14 +103,15 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         RegistryTokenMock dai = new RegistryTokenMock(18);
         _listToken(address(dai), "dai");
         hub.setAsset(address(dai), 4);
-        RegistryCoverageSpokeMock daiCoverage = new RegistryCoverageSpokeMock(address(hub), address(dai), 4);
+        RegistryAvanaFirstLossReserveMock daiCoverage =
+            new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 4);
         daiCoverage.setFunded(1e30, false);
         vm.startPrank(address(timelock));
         registry.recordHub(address(hub2), RiskTier.Correlated);
         registry.deployCdpSpoke(
             SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
         );
-        registry.setCoverageSpoke(address(hub), address(dai), address(daiCoverage));
+        registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
         registry.setCrossHubLinesEnabled(true);
         registry.setCrossHubLine(address(hub), address(dai), address(spoke2), 1e24);
         vm.stopPrank();
@@ -122,7 +123,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
             hubAssetId: 4,
             priceSource: address(ghoSource),
             fixedPrice: true,
-            coverageSpoke: address(daiCoverage),
+            firstLossReserve: address(daiCoverage),
             crossHub: true,
             approved: false
         });

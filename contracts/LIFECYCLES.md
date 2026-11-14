@@ -169,7 +169,7 @@ Bob's account of flow 8, liquidated by any address E that already holds USDC, wi
 3. Steps 4 to 6 of flow 8 run unchanged: 975 vault tokens seized and unwound, swaps.
 4. Shortfall rule: with `R = 2,040.30` no shortfall is pulled. Had the USDT leg returned 994 USDC (`R = 2,024.25`), LPVaultSwap would pull 1.774998 USDC from E to reach the floor 2,026.024998; Avana's fee is unchanged. Above `maxShortfall` it reverts `RecoveryBelowFloor`.
 5. Payout: Avana fee 19.5, `keeperOut` 2,020.8 USDC to E (its 1,950 back plus 70.8). Event `LiquidationSettled`. With no usable route it reverts `NoRouteAvailable`.
-6. Stranded units: anyone → LPVaultSwap [`settlePending`](src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol#L76)`(m, r)` burns vault tokens left by an unsettled seizure → Collateralization [`settlePending`](src/custody/collateralization/ICollateralizationSeizure.sol#L67) → swaps → the Coverage Spoke's `fund(R)`.
+6. Stranded units: anyone → LPVaultSwap [`settlePending`](src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol#L76)`(m, r)` burns vault tokens left by an unsettled seizure → Collateralization [`settlePending`](src/custody/collateralization/ICollateralizationSeizure.sol#L67) → swaps → the First-Loss Reserve's `fund(R)`.
 
 ## 11. Emergency
 

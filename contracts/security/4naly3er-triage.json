@@ -50,9 +50,9 @@
     },
     {
       "check": "`decimals()` is not a part of the ERC-20 standard",
-      "reason": "Avana reads decimals() only from tokens it configures through a timelock operation or a deployment: listed tokens (the listing reverts if the call fails, REQ-CONFIG-050; MarketRegistry's credit-line coverage check reads a listed debt asset), the constructor checks of PegModuleRoute (its tokenOut) and CoverageSpoke (its Hub asset), the LPOracle's guarded static read, and oracle interfaces (Chainlink AggregatorV3, Aave V4 oracle and price feeds, Avana's LPOracle) where decimals() is part of the interface. A token without decimals() makes the configuring call revert (fail closed).",
+      "reason": "Avana reads decimals() only from tokens it configures through a timelock operation or a deployment: listed tokens (the listing reverts if the call fails, REQ-CONFIG-050; MarketRegistry's credit-line coverage check reads a listed debt asset), the constructor checks of PegModuleRoute (its tokenOut) and AvanaFirstLossReserve (its Hub asset), the LPOracle's guarded static read, and oracle interfaces (Chainlink AggregatorV3, Aave V4 oracle and price feeds, Avana's LPOracle) where decimals() is part of the interface. A token without decimals() makes the configuring call revert (fail closed).",
       "approval": "approved (Josue, 2026-11-11)",
-      "review": "Excluded detector. Checked 2026-11-11 repo-wide; the reason was incomplete and is corrected: besides listed tokens and oracle interfaces, decimals() is read in constructors of PegModuleRoute (tokenOut) and CoverageSpoke (Hub asset) and by MarketRegistry's credit-line coverage check, each of which reverts for a token without decimals() (fail closed)."
+      "review": "Excluded detector. Checked 2026-11-11 repo-wide; the reason was incomplete and is corrected: besides listed tokens and oracle interfaces, decimals() is read in constructors of PegModuleRoute (tokenOut) and AvanaFirstLossReserve (Hub asset) and by MarketRegistry's credit-line coverage check, each of which reverts for a token without decimals() (fail closed)."
     }
   ],
   "accepted": [
@@ -209,9 +209,9 @@
       "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
     },
     {
-      "fingerprint": "9535cf1c776bd1de",
+      "fingerprint": "adec94737668c663",
       "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/coverage/coverage-spoke/CoverageSpoke.sol",
+      "file": "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol",
       "reason": "Zero-value transfer not possible: amount == 0 reverts ZeroAmount at the top of fund.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
@@ -393,11 +393,13 @@
       "review": "Reviewed per call site, group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern."
     },
     {
-      "fingerprint": "e8ae241b2aa2f712",
+      "fingerprint": "fa0049c6afde1ebb",
       "check": "Division by zero not prevented",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Division by zero not possible: Uniswap v3-core TickMath (sqrtRatioAtTick, differential test TEST-037); before the division `ratio` is the Q128.128 square-root ratio of -|tick|, at least about MIN_SQRT_RATIO * 2^32 > 0 for |tick| <= MAX_TICK (checked on the first line).",
-      "approval": "approved (Josue, 2026-11-11)"
+      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick",
+      "reason": "Division by zero not possible: Uniswap v4-core TickMath.getSqrtPriceAtTick (differential test TEST-037); before the division `price` is the Q128.128 square-root ratio of -|tick|, at least about MIN_SQRT_PRICE * 2^32 > 0 for |tick| <= MAX_TICK (checked on the first line).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces e8ae241b2aa2f712 (approved Josue 2026-11-11): the tick math moved from ClPriceMath.sqrtRatioAtTick into the MIT ClTickMath."
     },
     {
       "fingerprint": "03eb570ddacbad1b",
@@ -407,74 +409,67 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
-      "fingerprint": "175ab36d4d799831",
+      "fingerprint": "97ca0f5f4b1be4ec",
       "check": "Division by zero not prevented",
       "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "function": "ClPriceMath.maxLiquidityPerTick",
       "reason": "Division by zero not possible: maxLiquidityPerTick runs only in bindMarket after isUsableRange accepted the range, which requires spacing > 0 (InvalidShape otherwise); the function documents `s > 0` (Uniswap Tick.tickSpacingToMaxLiquidityPerTick).",
-      "approval": "approved (Josue, 2026-11-11)"
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 175ab36d4d799831, e4ddf35888de7d6c and 73cc698f57c6bb07 (approved Josue 2026-11-11): maxLiquidityPerTick now divides by the spacing once (MAX_TICK / spacing per side)."
     },
     {
-      "fingerprint": "e4ddf35888de7d6c",
+      "fingerprint": "2f0f64dfd42068e6",
       "check": "Division by zero not prevented",
       "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Division by zero not possible: same `spacing > 0` precondition as the line above (bindMarket checks isUsableRange first).",
-      "approval": "approved (Josue, 2026-11-11)"
+      "function": "ClPriceMath.maxLiquidityPerTick",
+      "reason": "Division by zero not possible: the usable tick count 2 * perSide + 1 is at least 1.",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 7d4a5f6d60a2a0cc (approved Josue 2026-11-11): the tick count is now 2 * perSide + 1."
     },
     {
-      "fingerprint": "73cc698f57c6bb07",
+      "fingerprint": "c588853659e04868",
       "check": "Division by zero not prevented",
       "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Division by zero not possible: same `spacing > 0` precondition (bindMarket checks isUsableRange first).",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
-      "fingerprint": "7d4a5f6d60a2a0cc",
-      "check": "Division by zero not prevented",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Division by zero not possible: numTicks = (maxTick - minTick) / spacing + 1 >= 1.",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
-      "fingerprint": "0a9713ef87af9900",
-      "check": "Division by zero not prevented",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "function": "ClPriceMath.meanTick",
       "reason": "Division by zero not possible: `w` is the window, and meanTick's only caller (consistencyDeviation) returns before it when window == 0; the function documents `window > 0`.",
-      "approval": "approved (Josue, 2026-11-11)"
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 0a9713ef87af9900 (approved Josue 2026-11-11): same meanTick, rewritten with a non-negative remainder."
     },
     {
-      "fingerprint": "aa2a8be49e2aa35b",
+      "fingerprint": "cd433982b3f6e953",
       "check": "Division by zero not prevented",
       "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Division by zero not possible: harmonicMeanLiquidity returns (0, false) on the line before when secondsPerLiquidityDelta == 0, and a non-zero uint160 shifted left by 32 stays non-zero in uint256.",
-      "approval": "approved (Josue, 2026-11-11)"
+      "function": "ClPriceMath._token0Over",
+      "reason": "Division by zero not possible: `x` is the lower square-root price of the range, `sa` or the clamped price above it, and every `sa` is sqrtRatioAtTick(tickLower) >= MIN_SQRT_RATIO > 0 (amountsForLiquidity documents 0 < sa < sb).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 0e41d13013f9cb4c (approved Josue 2026-11-11): the token0 amount moved into _token0Over."
     },
     {
-      "fingerprint": "0e41d13013f9cb4c",
-      "check": "Division by zero not prevented",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Division by zero not possible: `sLow` is `sa` or the clamped price `s > sa`, and every `sa` is sqrtRatioAtTick(tickLower) >= MIN_SQRT_RATIO > 0 (amountsForLiquidity documents 0 < sa < sb).",
-      "approval": "approved (Josue, 2026-11-11)"
-    },
-    {
-      "fingerprint": "61d80744e934256e",
+      "fingerprint": "783ddb7590bfa01b",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Cannot truncate: Uniswap v3-core TickMath, Q128.128 to Q64.96; the result is at most MAX_SQRT_RATIO < 2^160 for every tick in range (checked on the first line); forge-lint unsafe-typecast suppression on the line above states the bound; differential test TEST-037 over every tick bucket.",
-      "approval": "approved (Josue, 2026-11-11)"
+      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick",
+      "reason": "Cannot truncate: Uniswap v4-core TickMath, Q128.128 to Q64.96 rounded up; the result is at most MAX_SQRT_PRICE < 2^160 for every tick in range (checked on the first line); forge-lint unsafe-typecast suppression on the line above states the bound; differential test TEST-037 over every tick bucket.",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 61d80744e934256e (approved Josue 2026-11-11): the tick math moved from ClPriceMath into the MIT ClTickMath."
     },
     {
-      "fingerprint": "063afc7243c78431",
+      "fingerprint": "57d29d255d89d305",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Cannot truncate: Uniswap v3-core TickMath getTickAtSqrtRatio; for a sqrt price in [MIN_SQRT_RATIO, MAX_SQRT_RATIO) (checked on the first line) both candidate ticks lie within one tick of the true tick, inside int24; suppression comment on the line above; fuzz TEST-279 inverts sqrtRatioAtTick over every tick.",
-      "approval": "approved (Josue, 2026-11-11)"
+      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "function": "ClTickMath.getTickAtSqrtPrice",
+      "reason": "Cannot truncate: Uniswap v4-core TickMath.getTickAtSqrtPrice; for a sqrt price in [MIN_SQRT_PRICE, MAX_SQRT_PRICE) (checked on the first line) both candidate ticks lie within one tick of the true tick, inside int24; suppression comment on the line above; fuzz TEST-279 inverts sqrtRatioAtTick over every tick.",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 063afc7243c78431 (approved Josue 2026-11-11): the tick math moved from ClPriceMath into the MIT ClTickMath."
     },
     {
-      "fingerprint": "f266c56c5d130aad",
+      "fingerprint": "33872914871b7127",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
+      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "function": "ClTickMath.getTickAtSqrtPrice",
       "reason": "Cannot truncate: the second candidate tick of the same TickMath step, within one tick of the true tick (see the line above).",
-      "approval": "approved (Josue, 2026-11-11)"
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces f266c56c5d130aad (approved Josue 2026-11-11): the tick math moved from ClPriceMath into the MIT ClTickMath."
     },
     {
       "fingerprint": "d002cb842ffcf0eb",
@@ -484,11 +479,13 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
-      "fingerprint": "712fec8b56417ba0",
+      "fingerprint": "67fd9c75f7d25dcc",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "reason": "Cannot truncate: type(uint128).max divided by numTicks >= 1 is at most type(uint128).max.",
-      "approval": "approved (Josue, 2026-11-11)"
+      "function": "ClPriceMath.maxLiquidityPerTick",
+      "reason": "Cannot truncate: type(uint128).max divided by the tick count 2 * perSide + 1 >= 1 is at most type(uint128).max.",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 712fec8b56417ba0 (approved Josue 2026-11-11): the tick count is now 2 * perSide + 1."
     },
     {
       "fingerprint": "9a56655a20e1afad",
@@ -846,31 +843,13 @@
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
     },
     {
-      "fingerprint": "43fd52db3970ae91",
+      "fingerprint": "9d71b8a1cf1961e4",
       "check": "Signature use at deadlines should be allowed",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._collateralPrice",
-      "reason": "Not a deadline or signature: a leg timestamp after now reverts PriceTooOld(feed, 0), the future-timestamp rule of REQ-ADAPTER-015. Covered by TEST-028 (futureTimestampsAreNeverFresh).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
-    },
-    {
-      "fingerprint": "37d3eb10f2c39399",
-      "check": "Signature use at deadlines should be allowed",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._debtPrices",
-      "reason": "Not a deadline or signature: the age of a future timestamp reads as 0 only for the revert data; the next line makes it not fresh (REQ-RISK-061). Covered by TEST-028 (futureTimestampsAreNeverFresh), TEST-201.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
-    },
-    {
-      "fingerprint": "ec1b62ae3ee3fdd8",
-      "check": "Signature use at deadlines should be allowed",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._debtPrices",
-      "reason": "Not a deadline or signature: fresh iff servedUpdatedAt <= now and the age is within the DebtOracle's borrowPriceMaxAge (REQ-RISK-061). Covered by TEST-201, TEST-028.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.borrowFresh",
+      "reason": "Not a deadline or signature: the borrow-side age rule, fresh iff updatedAt <= now and now - updatedAt <= maxAge, so a source timestamp in the future is never fresh (REQ-RISK-061, REQ-ADAPTER-015). Used by the RiskModule's steps (5) and (6) and by the Lens. Covered by TEST-028 (futureTimestampsAreNeverFresh, feedAgeBoundaryPerLeg), TEST-201 (debtPriceAgeBoundary), TEST-247 (debtBorrowAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 43fd52db3970ae91, 37d3eb10f2c39399 and ec1b62ae3ee3fdd8 (RiskModuleBorrowLogic._collateralPrice and _debtPrices, approved by pattern, independent review 2026-11-11): the same comparison moved into PriceAge.borrowFresh, which both call."
     },
     {
       "fingerprint": "f378e36fb163d325",

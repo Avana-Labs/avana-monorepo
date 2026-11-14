@@ -7,6 +7,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
 import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
 import {IMarketRegistryWindDown} from "../../src/policy/market-registry/IMarketRegistryWindDown.sol";
+import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
 import {WindDownState} from "../../src/policy/market-registry/types/WindDownState.sol";
 import {Market} from "../../src/types/Market.sol";
@@ -130,6 +131,23 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(ids[1], id2);
         assertEq(registry.activeMarketCount(address(spoke)), 2);
         assertEq(registry.marketCount(), 2);
+    }
+
+    // TEST-138 verifies: REQ-CONFIG-007, REQ-CONFIG-042
+    // The activation's Aave configuration check covers the market being activated, not another identifier.
+    function test_TEST_138_activationChecksTheActivatedMarketsConfig() public {
+        _activate(id);
+        (uint256 id2, address vt2,) = _listSecond();
+        _prepareSecond(id2, vt2);
+        rm.setDriftMarket(id2);
+        vm.prank(address(timelock));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id2, bytes32("aaveConfig"))
+        );
+        registry.activateMarket(id2);
+        rm.setDriftMarket(0);
+        _activate(id2);
+        assertEq(uint8(_status(id2)), uint8(MarketStatus.Active));
     }
 
     // TEST-138 verifies: REQ-CONFIG-007, REQ-CONFIG-042
@@ -313,6 +331,12 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     // A relisting takes the reserved identifier back, rewrites the indexes and does not grow the market count or the
     // Spoke's list; a new market listed after it takes the next identifier.
     function test_TEST_252_relistReclaimsTheIdAndIndexes() public {
+        // A breach of the cancelled registration (a security latch and a temporary gate time) does not carry over.
+        vm.prank(address(rm));
+        registry.recordBreach(bytes32(id), BreakerReasons.ISSUER | BreakerReasons.ORACLE);
+        (uint32 latchedBefore, uint64 breachBefore) = registry.marketBreaker(id);
+        assertEq(latchedBefore, BreakerReasons.ISSUER);
+        assertEq(breachBefore, block.timestamp);
         vm.prank(address(timelock));
         registry.cancelRegistration(id);
         vm.warp(block.timestamp + 1 days);
@@ -325,6 +349,10 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfLpOracle(address(lpo)), id);
         assertEq(uint8(_status(id)), uint8(MarketStatus.Registered));
         assertEq(registry.getMarket(id).registeredAt, block.timestamp, "registration time restarts");
+        (uint32 latched, uint64 breach) = registry.marketBreaker(id);
+        assertEq(latched, 0, "latch cleared");
+        assertEq(breach, 0, "breach time cleared");
+        assertEq(registry.lastBreachAt(bytes32(id)), 0);
         assertEq(registry.marketCount(), 1);
         assertEq(registry.marketsOfSpoke(address(spoke)).length, 1);
         (uint256 id2,,) = _listSecond();

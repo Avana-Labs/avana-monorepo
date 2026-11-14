@@ -32,7 +32,7 @@ export function lendRiskParameters(slug: string, asset: HubAssetRow, slices: rea
       p("creditLine", "Credit line", ex ? `${tokens(ex.line, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Most the CDP Spokes may draw together."),
       p("drawCaps", "Draw caps (all CDP Spokes)", `${drawCaps.toLocaleString("en-US")} ${symbol}`),
       p("otherHubDraws", "Drawn by other Hubs", `${tokens(otherHubs, asset.decimals).toLocaleString("en-US")} ${symbol}`, "Owed by CDP Spokes of other Hubs on their credit lines."),
-      p("firstLoss", "First-loss reserve", ex ? `${tokens(ex.fundedBalance, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Funded balance of the Coverage Spoke, used before lenders."),
+      p("firstLoss", "First-loss reserve", ex ? `${tokens(ex.fundedBalance, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Funded balance of the First-Loss Reserve, used before lenders."),
       p("coverageBound", "Coverage bound", ex ? (ex.coverageBoundHolds ? "Holds" : "Breached") : "—"),
       p("status", asset.lendReserves.length > 1 ? "Lend reserves" : "Lend reserve", asset.lendReserves.map(status).join(", ")),
     ],

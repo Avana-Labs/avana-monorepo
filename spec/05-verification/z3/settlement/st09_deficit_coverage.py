@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Avana Labs
 """MATH-ST-46..50, MATH-ST-61..62, MATH-ST-114: First-Loss coverage and withdrawal (SPEC-FLR-001..003).
 
-Coverage Spoke (SPEC-FLR-001): amount = min(maxAmount, ceil(deficitRay / RAY), fundedBalance()), reverts if 0;
+First-Loss Reserve (SPEC-FLR-001): amount = min(maxAmount, ceil(deficitRay / RAY), fundedBalance()), reverts if 0;
 fundedBalance() = floor(callerShares (A+1e6) / (S+1e6)) (SPEC-FLR-002).
 
 Aave V4 Hub.eliminateDeficit(assetId, amount, spoke) (pinned a3ef63e), caller = coverage Spoke:
@@ -62,7 +62,7 @@ check("MATH-ST-49",
 
 # MATH-ST-114 verifies: SPEC-FLR-001, REQ-FLR-018, Q-101
 check("MATH-ST-114",
-      "the Hub eliminates exactly the Coverage Spoke's amount (dE == amount), so adding amount to totalCovered "
+      "the Hub eliminates exactly the First-Loss Reserve's amount (dE == amount), so adding amount to totalCovered "
       "before the call records what the Hub returns",
       model + [dE != amount],
       "PROVED")
@@ -73,7 +73,7 @@ check("MATH-ST-114",
 spokeApproved = Ints("spokeApproved")[0]
 # MATH-ST-50 verifies: SPEC-FLR-001, DEF-005, Q-101, Q-142
 check("MATH-ST-50",
-      "the Hub alone accepts coverage of any Spoke's deficit; the Coverage Spoke's COVERAGE_ROLE and Spoke allowlist "
+      "the Hub alone accepts coverage of any Spoke's deficit; the First-Loss Reserve's COVERAGE_ROLE and Spoke allowlist "
       "check carry the restriction (counterexample expected)",
       model + [spokeApproved == 0],
       "COUNTEREXAMPLE", show=[amount, defS, dRay, dE, sh])

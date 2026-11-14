@@ -7,7 +7,7 @@ import {DriftReason} from "../../types/DriftReason.sol";
 import {RiskTier} from "./types/RiskTier.sol";
 
 /// @title IMarketRegistryHubs
-/// @notice The chain's Hubs, AMM integrations, Coverage Spokes and cross-Hub credit lines, and the drift check of the
+/// @notice The chain's Hubs, AMM integrations, First-Loss Reserves and cross-Hub credit lines, and the drift check of the
 /// standard Spoke settings.
 /// @dev Writes require `APPLICATION_ADMIN` (the chain's timelock, normal delay). Views never revert; an unknown key
 /// returns zeros, so every check fails closed. A cross-Hub credit line lets a CDP Spoke of one Hub borrow an asset
@@ -25,9 +25,9 @@ interface IMarketRegistryHubs {
     /// @custom:spec Q-376
     event IntegrationRegistered(uint32 indexed integrationId, address lpVault, address pricing);
 
-    /// @notice The Coverage Spoke of a (Hub, asset) pair was recorded.
+    /// @notice The First-Loss Reserve of a (Hub, asset) pair was recorded.
     /// @custom:spec Q-379
-    event CoverageSpokeSet(address indexed hub, address indexed asset, address coverageSpoke);
+    event AvanaFirstLossReserveSet(address indexed hub, address indexed asset, address firstLossReserve);
 
     /// @notice A cross-Hub credit line cap changed; `total` is the new sum for (fundingHub, asset).
     /// @custom:spec Q-378
@@ -53,9 +53,9 @@ interface IMarketRegistryHubs {
     /// @custom:spec Q-376
     error InvalidIntegration(uint32 integrationId);
 
-    /// @notice The Coverage Spoke does not report the Hub and asset, or the pair already has one.
+    /// @notice The First-Loss Reserve does not report the Hub and asset, or the pair already has one.
     /// @custom:spec Q-379
-    error InvalidCoverageSpoke(address coverageSpoke);
+    error InvalidAvanaFirstLossReserve(address firstLossReserve);
 
     /// @notice A non-zero cross-Hub line cap while lines are off for the chain.
     /// @custom:spec Q-378
@@ -63,7 +63,7 @@ interface IMarketRegistryHubs {
 
     /// @notice The sum of cross-Hub lines for (funding Hub, asset) would exceed that Hub's first-loss coverage.
     /// @param total The sum the call would produce, base units.
-    /// @param coverage The Coverage Spoke's first-loss coverage, base units.
+    /// @param coverage The First-Loss Reserve's first-loss coverage, base units.
     /// @custom:spec Q-378
     error CrossHubCapExceeded(uint256 total, uint256 coverage);
 
@@ -96,24 +96,24 @@ interface IMarketRegistryHubs {
         address pricing
     ) external;
 
-    /// @notice Records the Coverage Spoke of a (Hub, debt asset) pair.
-    /// @dev Normal delay. Reverts `InvalidCoverageSpoke` unless the Spoke reports `hub` and `asset` and the pair has no
-    /// Coverage Spoke yet. Pending settlement of every market whose debt reserve is funded by `hub` in `asset` sends its
+    /// @notice Records the First-Loss Reserve of a (Hub, debt asset) pair.
+    /// @dev Normal delay. Reverts `InvalidAvanaFirstLossReserve` unless the Spoke reports `hub` and `asset` and the pair has no
+    /// First-Loss Reserve yet. Pending settlement of every market whose debt reserve is funded by `hub` in `asset` sends its
     /// recovered value here.
     /// @param hub Funding Hub.
     /// @param asset Debt asset.
-    /// @param coverageSpoke The Coverage Spoke.
+    /// @param firstLossReserve The First-Loss Reserve.
     /// @custom:spec REQ-MREG-009, Q-378, Q-379
-    function setCoverageSpoke(
+    function setAvanaFirstLossReserve(
         address hub,
         address asset,
-        address coverageSpoke
+        address firstLossReserve
     ) external;
 
     /// @notice Sets the cap of the cross-Hub credit line that lets `spoke` borrow `asset` from `fundingHub`.
     /// @dev Normal delay. Reverts `CrossHubLinesDisabled` while lines are off and `cap > 0`, `InvalidHub` when
     /// `fundingHub == hubOf(spoke)`, and `CrossHubCapExceeded` when the new sum of lines for (fundingHub, asset) would
-    /// exceed the first-loss coverage of `coverageSpokeOf(fundingHub, asset)`. A cap of 0 closes the line at once: no
+    /// exceed the first-loss coverage of `firstLossReserveOf(fundingHub, asset)`. A cap of 0 closes the line at once: no
     /// new draw passes, while repay, withdrawal and liquidation of existing debt continue. Emits `CrossHubLineSet`.
     /// @param fundingHub Hub that lends.
     /// @param asset Debt asset.
@@ -181,15 +181,15 @@ interface IMarketRegistryHubs {
         address lpVault
     ) external view returns (uint32 integrationId);
 
-    /// @notice Coverage Spoke of a (Hub, debt asset) pair (`address(0)` if none).
+    /// @notice First-Loss Reserve of a (Hub, debt asset) pair (`address(0)` if none).
     /// @param hub Funding Hub.
     /// @param asset Debt asset.
-    /// @return coverageSpoke The Coverage Spoke.
+    /// @return firstLossReserve The First-Loss Reserve.
     /// @custom:spec REQ-MREG-009, Q-379
-    function coverageSpokeOf(
+    function firstLossReserveOf(
         address hub,
         address asset
-    ) external view returns (address coverageSpoke);
+    ) external view returns (address firstLossReserve);
 
     /// @notice Cap of one cross-Hub credit line.
     /// @param fundingHub Hub that lends.

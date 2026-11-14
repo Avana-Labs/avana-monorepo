@@ -42,7 +42,7 @@ contract IntegRegistryMock {
     mapping(bytes32 => uint32) public latched;
     mapping(bytes32 => uint64) public lastBreachAt;
     mapping(uint256 => uint256) public settlementReserve;
-    mapping(address => mapping(address => address)) public coverageSpokeOf;
+    mapping(address => mapping(address => address)) public firstLossReserveOf;
     address public payoutEscrow;
     address public flashSourceAddr;
     bool public implementationStale;
@@ -159,12 +159,12 @@ contract IntegRegistryMock {
         settlementReserve[marketId] = reserveId;
     }
 
-    function setCoverageSpoke(
+    function setAvanaFirstLossReserve(
         address hub,
         address asset,
         address spoke
     ) external {
-        coverageSpokeOf[hub][asset] = spoke;
+        firstLossReserveOf[hub][asset] = spoke;
     }
 
     function setPayoutEscrow(
@@ -334,11 +334,14 @@ contract IntegRegistryMock {
 contract IntegStoreMock is RiskStoreMock {
     mapping(address => uint256) public floorRoundingAllowance;
     mapping(address => uint32) internal _liquidationAge;
-    uint16 public avanaFeeShareBps = 2000;
     uint16 public maxShortfallBps = 1000;
     address public feeRecipient;
     uint256 public graceHealthFactor = 0.95e18;
     uint32 public defaultLiquidationAge = 88_200;
+
+    constructor() {
+        avanaFeeShareBps = 2000;
+    }
 
     function setSlippage(
         uint256 marketId,

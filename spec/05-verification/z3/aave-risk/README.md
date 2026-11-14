@@ -166,7 +166,7 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 | MATH-AR-50c | with `addCap ≥ ⌈(max(K, R) + max(Z, S)) / floor⌉`, every pledge or top-up within the Avana budget fits under `addCap` | SPEC-CAP-006, SPEC-HUB-002 | counters may exceed tightened caps | PROVED (F-AR-5 resolved) |
 | MATH-AR-50d | 5,500,000; 4,230,770; 1,100,000; after a tightening 1,000,000, 910,000 > 600,000; `(2^40 − 1) × 10^18 < 2^120` | SPEC-HUB-002, SPEC-CAP-006 | — | COMPUTED |
 | MATH-AR-51a–b | draws stay within the credit line; 2,003,475 reverts; largest borrow 96,525 | SPEC-HUB-003 | two Spokes | PROVED / COMPUTED |
-| MATH-AR-51c–d | with public lending, a draw or a lender's withdrawal admitted only within idle liquidity keeps drawn ≤ supplied, whatever the supply cap or the line | SPEC-HUB-003, REQ-HUB-017, REQ-HUB-019 | supplied = idle + drawn (DAO, public and Coverage Spoke supply) | PROVED |
+| MATH-AR-51c–d | with public lending, a draw or a lender's withdrawal admitted only within idle liquidity keeps drawn ≤ supplied, whatever the supply cap or the line | SPEC-HUB-003, REQ-HUB-017, REQ-HUB-019 | supplied = idle + drawn (DAO, public and First-Loss Reserve supply) | PROVED |
 | MATH-AR-51f | supplied 1,800,000; idle 200,000 after 1,600,000 drawn; the public lender withdraws at most 200,000 now | REQ-ARCH-211, TEST-297 | — | COMPUTED |
 | MATH-AR-52a–b | the ratio never overstates; tail 56,160,000,000,000; 7,122 bps with 400,000 GHO funded | SPEC-CAP-008 | — | PROVED / COMPUTED |
 

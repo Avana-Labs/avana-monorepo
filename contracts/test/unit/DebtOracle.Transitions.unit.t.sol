@@ -56,7 +56,7 @@ contract DebtOracleTransitionsUnitTest is DebtOracleFixture {
         assertEq(uint8(_poke()), uint8(PriceState.Drifting));
         DebtPriceView memory v = _view();
         assertEq(v.reasons, R_DISAGREE | R_PAUSE);
-        assertEq(uint256(v.answer), ALT_UP, "max(p, b, A) is the alternate");
+        assertEq(uint256(v.answer), A0, "the higher alternate is unconfirmed: max(p, A)");
         assertEq(v.servedUpdatedAt, T0 - 100, "the alternate's oldest leg");
         assertEq(v.disagreeSince, t1);
         assertTrue(v.disagreementPauseActive);

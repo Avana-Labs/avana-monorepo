@@ -30,6 +30,132 @@
       "reason": "Equivalent: BreakerReasons.ORACLE (1 << 0) and CONFIG_DRIFT (1 << 10) are disjoint bits, so ORACLE + CONFIG_DRIFT equals ORACLE | CONFIG_DRIFT (1,025) and the mask is unchanged. The rule itself is covered by test_TEST_238_recreditRescueOnlyCases (ORACLE and CONFIG_DRIFT never force a rescue, POOL_SHARE does).",
       "approval": "pending (Josue)",
       "review": "Lens (wave 1), equivalent mutant"
+    },
+    {
+      "fingerprint": "6cd9167a05b28eff",
+      "check": "DeleteExpressionMutation",
+      "file": "src/policy/parameter-store/ParameterStore.sol",
+      "function": "ParameterStore.initialize",
+      "reason": "Equivalent: __UUPSUpgradeable_init has an empty body in OpenZeppelin Contracts Upgradeable 5.1.0 (proxy/utils/UUPSUpgradeable.sol), so removing the call changes no state; initializer and the upgrade authorisation are unaffected.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "eeaa6abb026f26be",
+      "check": "DeleteExpressionMutation",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
+      "function": "ClLPVaultCustody.positionOwner",
+      "reason": "Equivalent: `owner` is the named return value and is already address(0) when the catch branch runs, so dropping the assignment returns the same value.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "0155205b6e96789a",
+      "check": "SwapArgumentsOperatorMutation",
+      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
+      "function": "ClLPVaultMarkets.consistencyDeviation",
+      "reason": "Equivalent: swapping the operands only negates `diff`, and the next statement returns its absolute value (diff < 0 ? -diff : diff); |diff| is at most 2 * MAX_TICK, so the negation cannot overflow.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "135edb3bf7d7a81b",
+      "check": "DeleteExpressionMutation",
+      "file": "src/flash/AaveV3FlashSource.sol",
+      "function": "AaveV3FlashSource._clearContext",
+      "reason": "Equivalent: ASSET_SLOT is read only in executeOperation behind STATE_SLOT == STATE_OPEN, and the only path to STATE_OPEN (flashLoan) writes ASSET_SLOT first; _clearContext resets STATE_SLOT to STATE_NONE, so a stale transient asset can never be read. REQ-FLASH-001 state checks covered by the TEST-036/TEST-080 suites.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "8f2a426aaac50f95",
+      "check": "DeleteExpressionMutation",
+      "file": "src/flash/AaveV3FlashSource.sol",
+      "function": "AaveV3FlashSource._clearContext",
+      "reason": "Equivalent: AMOUNT_SLOT is read only in executeOperation behind STATE_SLOT == STATE_OPEN, and flashLoan writes it before setting STATE_OPEN; with STATE_SLOT reset to STATE_NONE a stale transient amount can never be read.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "0c5002ed11396357",
+      "check": "AssignmentMutation",
+      "file": "src/liquidation/settlement-routes/DexPathRoute.sol",
+      "function": "DexPathRoute.routeType",
+      "reason": "Equivalent: ROUTE_TYPE is the constant 1, so the literal Gambit substitutes is the same value.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "03fa68b57b4c7acb",
+      "check": "DeleteExpressionMutation",
+      "file": "src/liquidation/settlement-routes/PegModuleRoute.sol",
+      "function": "PegModuleRoute._runLegs",
+      "reason": "Equivalent for a conforming ERC-4626 wrapper: deposit(amount, ...) pulls exactly `amount` with transferFrom, which spends the `amount` allowance set just before, so the allowance is already 0 when the reset runs. The reset only guards a wrapper that pulls less, which the registry's wrapper review excludes.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "5be107e65910f34b",
+      "check": "BinaryOpMutation",
+      "file": "src/liquidation/settlement-routes/RouteReads.sol",
+      "function": "RouteReads.hasFeeSwitch",
+      "reason": "Equivalent in effect: the mutant lowers the gas threshold from ceil(64 * FEE_SWITCH_PROBE_GAS / 63) + POST_CALL_GAS by at most 2 gas; POST_CALL_GAS (5,000) still exceeds the gas spent between the check and the STATICCALL, so the probe receives its full FEE_SWITCH_PROBE_GAS in the 2-gas window and returns the same answer.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "0167431b9f86db67",
+      "check": "DeleteExpressionMutation",
+      "file": "src/periphery/flash-liquidator/FlashLiquidator.sol",
+      "function": "FlashLiquidator._zeroLoanAllowed",
+      "reason": "Equivalent: `allowed` is the named return value and defaults to false, so removing the assignment returns the same value.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "0a78c8ec11367e5b",
+      "check": "DeleteExpressionMutation",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._watch",
+      "reason": "Equivalent: without the pre-sized array w.tokens is an empty memory array and _add grows it on the first insert (count == length == 0), so the watched token set and its order are the same; only memory capacity differs.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "cd8e13442d61a90f",
+      "check": "BinaryOpMutation",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._add",
+      "reason": "Equivalent in reachable states: _add grows only when count == w.tokens.length, and w.tokens starts at the market's token count (a listed market has at least two tokens), so count >= 2 and count * 2 still leaves room for the new token; the arrays hold the same tokens.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "ab648b01955c8556",
+      "check": "DeleteExpressionMutation",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._clearContext",
+      "reason": "Equivalent: MAX_PREMIUM_SLOT is read only in the lender callback after STATE_SLOT == STATE_OPEN is checked, and _openContext writes it before setting STATE_OPEN; with STATE_SLOT reset to STATE_NONE a stale transient value is never read.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "d3b3ef383b60c772",
+      "check": "DeleteExpressionMutation",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._clearContext",
+      "reason": "Equivalent: PARAMS_HASH_SLOT is compared only in the lender callback in the same condition as STATE_SLOT == STATE_OPEN, and _openContext writes it before setting STATE_OPEN; with STATE_SLOT reset to STATE_NONE a stale hash is never read.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "767fffb6f2c6c3f9",
+      "check": "BinaryOpMutation",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._evaluate",
+      "reason": "Equivalent in reachable states: the age term is evaluated only when the state is Live, where every served leg passed DebtOracleReads' checks (updatedAt <= block.timestamp and age <= its feedMaxAge, at most a few days). Then 0 <= block.timestamp - servedUpdatedAt < servedUpdatedAt for any timestamp above twice that age (after early 1970), so block.timestamp % servedUpdatedAt equals the difference. The borrow-age gate itself is covered by test_TEST_276_alternateHeldToItsBorrowAge and test_TEST_276_feedFreshUntilHeartbeatPlusMargin.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
     }
   ]
 }

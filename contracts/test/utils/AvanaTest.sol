@@ -72,9 +72,9 @@ abstract contract AvanaTest is Test {
     address internal aaveDao = makeAddr("aaveDao");
     /// @notice Aave DAO treasury: supplies the credit lines through the Lend Spoke.
     address internal daoTreasury = makeAddr("daoTreasury");
-    /// @notice `COVERAGE_ROLE` holder on each Coverage Spoke.
+    /// @notice `COVERAGE_ROLE` holder on each First-Loss Reserve.
     address internal coverageCaller = makeAddr("coverageCaller");
-    /// @notice Avana Labs: funds the Coverage Spokes.
+    /// @notice Avana Labs: funds the First-Loss Reserves.
     address internal avanaLabs = makeAddr("avanaLabs");
     /// @notice Treasury Safe receiving Avana's fee share (`feeRecipient`).
     address internal feeRecipient = makeAddr("feeRecipient");

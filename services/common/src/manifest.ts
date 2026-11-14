@@ -50,8 +50,8 @@ export interface ServiceManifest {
     readonly operatorHelpers: readonly (Immutable & { readonly signer: Address; readonly fundingSafe: Address })[];
     /** One LPVault per AMM integration on this chain. */
     readonly lpVaults: readonly (Immutable & { readonly integrationId: number })[];
-    /** One Coverage Spoke per (Hub, covered debt asset). */
-    readonly coverageSpokes: readonly (Immutable & { readonly asset: Address; readonly hub: Address })[];
+    /** One First-Loss Reserve per (Hub, covered debt asset). */
+    readonly firstLossReserves: readonly (Immutable & { readonly asset: Address; readonly hub: Address })[];
     /** `PROXY_CREATION_CODE_HASH` of the ProxyManager; proxies are attributed only if their CREATE2 address matches. */
     readonly proxyCreationCodeHash: Hex;
   };

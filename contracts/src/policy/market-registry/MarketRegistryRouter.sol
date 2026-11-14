@@ -24,7 +24,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 /// normal delay of `upgradeToAndCall`.
 /// @custom:spec REQ-CONFIG-001, REQ-CONFIG-002, REQ-CONFIG-005, REQ-MREG-004, REQ-MREG-005, REQ-ACCESS-153, Q-226, Q-259
 abstract contract MarketRegistryRouter is AccessControlUpgradeable, MarketRegistryViews {
-    /// @dev Hubs, integrations, Coverage Spokes, cross-Hub lines, the flash source, CDP Spokes and debt reserves.
+    /// @dev Hubs, integrations, First-Loss Reserves, cross-Hub lines, the flash source, CDP Spokes and debt reserves.
     address internal immutable _HUBS_LOGIC;
     /// @dev Tokens, price sources and market listing.
     address internal immutable _LISTING_LOGIC;

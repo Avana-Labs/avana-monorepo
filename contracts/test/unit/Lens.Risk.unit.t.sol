@@ -69,7 +69,7 @@ contract LensRiskUnitTest is LensFixture {
         assertEq(t.blockNumber, block.number, "block");
         assertEq(t.hub, aave.hub, "Hub");
         assertEq(t.debtAsset, address(debt), "asset");
-        assertEq(t.coverageSpoke, address(ghoCov), "the reserve's Coverage Spoke");
+        assertEq(t.firstLossReserve, address(ghoCov), "the reserve's First-Loss Reserve");
         assertEq(t.funded, 100_000e18, "funded");
         assertEq(t.minimum, 100_000e18, "minimum");
         assertEq(t.fundedUsd, 100_000e8, "at $1.00");
@@ -152,7 +152,7 @@ contract LensRiskUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-034
     function test_TEST_247_tailCoverageUsdcDebtExcludesUsdcLeg() public view {
         TailCoverageView memory t = lens.getTailCoverage(aave.hub, address(usdc));
-        assertEq(t.coverageSpoke, address(usdcCov), "USDC Coverage Spoke");
+        assertEq(t.firstLossReserve, address(usdcCov), "USDC First-Loss Reserve");
         assertEq(t.worstToken, address(usdt), "the debt asset itself has no tail");
         assertEq(t.drawCapUsd, 500_000 * 0.9999e8, "draw caps at the served price");
         assertEq(t.fundedUsd, 50_000 * 0.9999e8, "funded at the served price, rounded down");
@@ -174,15 +174,15 @@ contract LensRiskUnitTest is LensFixture {
     function test_TEST_247_uncoveredDeficitCoveredIsZero() public {
         _deficit(aave.cdpSpoke, 10_000e18 * 1e27);
         assertEq(lens.uncoveredDeficit(aave.hub, address(debt)), 0, "within the funded reserve");
-        reg.setCoverageSpoke(aave.hub, address(debt), address(0));
-        assertEq(lens.uncoveredDeficit(aave.hub, address(debt)), 10_000e18, "no Coverage Spoke: all uncovered");
+        reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(0));
+        assertEq(lens.uncoveredDeficit(aave.hub, address(debt)), 10_000e18, "no First-Loss Reserve: all uncovered");
         vm.clearMockedCalls();
     }
 
     // TEST-247 verifies: REQ-LENS-042
     function test_TEST_247_uncoveredDeficitRoundsUp() public {
         _deficit(aave.cdpSpoke, 1);
-        reg.setCoverageSpoke(aave.hub, address(debt), address(0));
+        reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(0));
         assertEq(lens.uncoveredDeficit(aave.hub, address(debt)), 1, "a sub-unit deficit counts one unit");
         vm.clearMockedCalls();
     }
@@ -194,7 +194,7 @@ contract LensRiskUnitTest is LensFixture {
         assertEq(v.blockNumber, block.number, "block");
         assertEq(v.hub, aave.hub, "Hub");
         assertEq(v.asset, address(debt), "asset");
-        assertEq(v.coverageSpoke, address(ghoCov), "Coverage Spoke");
+        assertEq(v.firstLossReserve, address(ghoCov), "First-Loss Reserve");
         assertEq(v.fundedBalance, 100_000e18, "funded");
         assertEq(v.line, 2_000_000, "credit line");
         assertFalse(v.coverageBoundHolds, "2,000,000 x 10 % > 100,000");
@@ -233,7 +233,7 @@ contract LensRiskUnitTest is LensFixture {
         vm.mockCall(aave.hub, abi.encodeWithSignature("getAddedShares(uint256)", ghoAssetId), abi.encode(0));
         assertEq(lens.getHubAssetExposure(aave.hub, address(debt)).priceAdj, 0, "no share: 0");
         vm.clearMockedCalls();
-        reg.setCoverageSpoke(aave.hub, address(debt), address(0));
+        reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(0));
         _deficit(aave.cdpSpoke, 2_000_000e18 * 1e27);
         assertEq(lens.getHubAssetExposure(aave.hub, address(debt)).priceAdj, 0, "deficit above the assets: 0");
         vm.clearMockedCalls();

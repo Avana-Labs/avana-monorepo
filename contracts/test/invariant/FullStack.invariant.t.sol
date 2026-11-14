@@ -9,6 +9,7 @@ import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol"
 import {FullStackMarkets} from "../utils/fixtures/FullStackMarkets.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 import {FullStackHandler, FullStackWorld} from "./handlers/FullStackHandler.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title FullStackInvariantTest
@@ -21,7 +22,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// forge-config: default.isolate = false
 /// forge-config: default.invariant.runs = 16
 /// forge-config: default.invariant.depth = 24
-contract FullStackInvariantTest is FullStackMarkets {
+contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
     FullStackHandler internal handler;
     uint256 internal mA;
     uint256 internal mB;
@@ -59,7 +60,58 @@ contract FullStackInvariantTest is FullStackMarkets {
             list[4 + i] = feedsOf[address(usdt)][i];
         }
         handler = new FullStackHandler(world, [alice, bob, carol], makeAddr("thirdPartyPayer"), list);
+        handler.seedAccounts();
         targetContract(address(handler));
+        targetSelector(FuzzSelector({addr: address(handler), selectors: _actions()}));
+    }
+
+    /// @dev The fuzzed actions (`seedAccounts` is set-up only).
+    function _actions() internal pure returns (bytes4[] memory a) {
+        a = new bytes4[](11);
+        (a[0], a[1], a[2], a[3], a[4], a[5]) =
+        (
+            FullStackHandler.pledge.selector,
+            FullStackHandler.borrow.selector,
+            FullStackHandler.repay.selector,
+            FullStackHandler.withdraw.selector,
+            FullStackHandler.liquidate.selector,
+            FullStackHandler.setPause.selector
+        );
+        (a[6], a[7], a[8], a[9], a[10]) =
+        (
+            FullStackHandler.setPrice.selector,
+            FullStackHandler.warp.selector,
+            FullStackHandler.cutDrawCap.selector,
+            FullStackHandler.tightenSlice.selector,
+            FullStackHandler.upgradeAdapter.selector
+        );
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice The handler does real work: over 16 fixed-seed runs of 24 calls from this suite's set-up state, the
+    /// actions succeed in at least 20 % of their calls (borrow 10 %: it is refused while the Hub is stopped and beyond
+    /// the account's room, and the set-up's accounts are near it; `upgradeAdapter` runs once) and a liquidation, a
+    /// repay and a debt-free withdrawal are each reached in at least 75 % of the runs.
+    function test_TEST_082_handlerReach() public {
+        string[] memory names = new string[](11);
+        (names[0], names[1], names[2], names[3], names[4], names[5]) =
+        ("pledge", "borrow", "repay", "withdraw", "liquidate", "setPause");
+        (names[6], names[7], names[8], names[9], names[10]) =
+        ("setPrice", "warp", "cutDrawCap", "tightenSlice", "upgradeAdapter");
+        string[] memory targets = new string[](3);
+        (targets[0], targets[1], targets[2]) = ("liquidation", "repay", "debt-free withdrawal");
+        uint256[] memory minOk = _floors(11, 20);
+        minOk[1] = 10;
+        minOk[10] = 0;
+        Reach memory r = _replay(address(handler), _actions(), FullStackHandler.Skipped.selector, 16, 24, 3);
+        _check(r, names, targets, minOk, _floors(3, 75));
+    }
+
+    function _reached() internal view override returns (bool[] memory hit) {
+        hit = new bool[](3);
+        hit[0] = handler.liquidations() != 0;
+        hit[1] = handler.repays() != 0;
+        hit[2] = handler.withdrawals() != 0;
     }
 
     // TEST-215 verifies: REQ-ACCESS-148, INV-075
@@ -68,13 +120,16 @@ contract FullStackInvariantTest is FullStackMarkets {
     /// and the AaveAdapter upgrade through the timelock, a pause and its lifting, a price fall and a liquidation, a
     /// draw-cap cut, and a debt-free withdrawal.
     function test_TEST_215_handlerActionsComplete() public {
-        // Alice: $20,000 in market A ($6,000 of borrowing power), $5,900 borrowed; Bob: debt-free in market B.
+        // Counts from here on; the set-up seeded 3 pledges and 6 borrows.
+        uint256[4] memory base = [handler.pledges(), handler.borrows(), handler.liquidations(), handler.withdrawals()];
+        // Alice: $20,000 more in market A ($6,000 more borrowing power), $5,900 more borrowed; Bob: debt-free in
+        // market B.
         handler.pledge(0, 0, 10_000e6);
         handler.pledge(1, 1, 10_000e6);
         handler.borrow(0, 0, 0, 3000);
         handler.borrow(0, 0, 0, 2700);
         handler.borrow(0, 0, 1, 200);
-        assertEq(handler.borrows(), 3, "borrows");
+        assertEq(handler.borrows() - base[1], 3, "borrows");
         handler.repay(0, 0, 0, 1);
         handler.tightenSlice(0);
         assertEq(store.topUpSliceUsd(mA), 100_000e8 - 1e8, "slice tightened through the timelock");
@@ -84,11 +139,11 @@ contract FullStackInvariantTest is FullStackMarkets {
         handler.setPause(0);
         handler.setPrice(93_000_000);
         handler.liquidate(0);
-        assertEq(handler.liquidations(), 1, "liquidation");
+        assertEq(handler.liquidations() - base[2], 1, "liquidation");
         handler.cutDrawCap(0, 1);
         handler.withdraw(1, 1);
-        assertEq(handler.withdrawals(), 1, "debt-free withdrawal");
-        assertEq(handler.pledges(), 2, "pledges");
+        assertEq(handler.withdrawals() - base[3], 1, "debt-free withdrawal");
+        assertEq(handler.pledges() - base[0], 2, "pledges");
         assertGe(handler.repays(), 1, "repay");
         assertEq(handler.exitBlocked() + handler.gateViolations() + handler.earlyExecutions(), 0, "no violation");
     }

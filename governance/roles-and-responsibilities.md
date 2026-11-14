@@ -8,27 +8,27 @@ This page lists every authority that can act on Avana, who sits on it, what it c
 
 | Authority | Composition (per chain) | Acts | Main powers |
 |---|---|---|---|
-| Aave DAO (governance executor) | Aave governance; on Base, the Base executor over Aave's cross-chain governance | Through Aave governance | Owns the Hubs and Spokes, every Coverage Spoke's admin role; second proposer and only role-change canceller on the AvanaTimelock |
+| Aave DAO (governance executor) | Aave governance; on Base, the Base executor over Aave's cross-chain governance | Through Aave governance | Owns the Hubs and Spokes, every First-Loss Reserve's admin role; second proposer and only role-change canceller on the AvanaTimelock |
 | AvanaTimelock | Contract, its own admin | After each operation's delay | Holds every admin role on every Avana contract |
 | Governance Safe | 4-of-7, at most 3 Avana Labs signers, at least 3 organisations and 3 jurisdictions | Schedules; waits 12 hours or 5 days | Proposes every Avana change; cancels |
 | Emergency Guardian | 3-of-5: Avana Labs signers plus one Aave Labs seat and one LlamaRisk seat | Immediate | Freeze, pause, unpause, breakers, address freeze, standby switches, coverage, cancel |
 | Aave Protocol Guardian | Aave's guardian multisig | Immediate | The Emergency Guardian's Avana powers, plus Aave-side reserve freeze and pause |
 | Joint Configuration Safe | 2-of-3: Avana Labs, Aave Labs, LlamaRisk | Immediate | Risk tightenings, Avana's fee share within bounds, the guardians' MarketRegistry powers |
 | Keepers | Approved keeper addresses on LPVaultSwap, plus anyone through the permissionless path | Immediate | Liquidate accounts Aave marks liquidatable |
-| Avana treasury Safe | Avana Labs Safe | Immediate, own funds only | Funds each Coverage Spoke; receives Avana's fee as `feeRecipient` |
+| Avana treasury Safe | Avana Labs Safe | Immediate, own funds only | Funds each First-Loss Reserve; receives Avana's fee as `feeRecipient` |
 | Risk service providers | LlamaRisk and the Aave DAO's other risk providers | Through proposals | Size listings, caps and coverage; no on-chain Avana role of their own |
 
 No single person signs on two Safes of the same chain, no signer key is shared between the Emergency Guardian, the governance Safe, the Joint Configuration Safe and the Aave Protocol Guardian (`REQ-ROLE-007`), and the Aave Protocol Guardian's signers are disjoint from every Avana Safe (`REQ-ACCESS-104`). An organisation may hold seats on several Safes, each through a different person and key.
 
 ## Aave DAO
 
-**Holds:** ownership and configuration of each chain's Avana Stable LP Hub and its CDP, Lend and Coverage Spokes. On the AvanaTimelock, its executor holds `PROPOSER_ROLE`, `CANCELLER_ROLE` and `DAO_CANCELLER_ROLE`. On each Coverage Spoke, the DAO executor holds `RESERVE_ADMIN_ROLE` and is the admin of `COVERAGE_ROLE`.
+**Holds:** ownership and configuration of each chain's Avana Stable LP Hub and its CDP, Lend and First-Loss Reserves. On the AvanaTimelock, its executor holds `PROPOSER_ROLE`, `CANCELLER_ROLE` and `DAO_CANCELLER_ROLE`. On each First-Loss Reserve, the DAO executor holds `RESERVE_ADMIN_ROLE` and is the admin of `COVERAGE_ROLE`.
 
 **Does:**
 - Deploys and upgrades each standard CDP Spoke and its AaveOracle; sets collateral factors, caps, reserve flags, the bonus curve, target health factor, collateral risk, each lend asset's utilization curve, which stable assets are listed and borrowable, credit lines and draw caps.
 - Sets the three required settings on every Avana collateral reserve: `receiveSharesEnabled = false`, `liquidationFee = 0`, no reinvestment controller (`REQ-HUB-092`).
 - Grants the `FLASH_BORROWER` role on the Aave V3 Pool.
-- On each Coverage Spoke: sets the allowlisted CDP Spokes and `firstLossReserveMinimum`, requests, cancels and executes reserve withdrawals (14-day delay, and never while a covered Spoke has an open deficit), and grants `COVERAGE_ROLE`; the same on each DAO deficit offset, where it also sets `daoDeficitOffset` and funds and refills the offset from the DAO treasury.
+- On each First-Loss Reserve: sets the allowlisted CDP Spokes and `firstLossReserveMinimum`, requests, cancels and executes reserve withdrawals (14-day delay, and never while a covered Spoke has an open deficit), and grants `COVERAGE_ROLE`; the same on each DAO deficit offset, where it also sets `daoDeficitOffset` and funds and refills the offset from the DAO treasury.
 - On the AvanaTimelock: schedules Avana operations (same delays as everyone), cancels any queued operation, and is the only account that can cancel a role-change or restoring operation (`REQ-ACCESS-156`). On the MarketRegistry it undoes a guardian's standby switch at once (`cancelStandbySwitch`).
 
 **Cannot:** mint vault tokens, move positions, or execute an Avana operation before its delay.
@@ -63,14 +63,14 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 - `APPLICATION_PAUSE_GUARDIAN` and `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry.
 - `APPLICATION_PAUSE_GUARDIAN` on the ParameterStore, for `useStandbySecondSource` only.
 - `CANCELLER_ROLE` on the AvanaTimelock.
-- `COVERAGE_ROLE` on each Coverage Spoke, granted by the Aave DAO.
+- `COVERAGE_ROLE` on each First-Loss Reserve, granted by the Aave DAO.
 
 **Does, immediately:**
 - `freeze(hub)`, `freezeAll`, `pause(hub, reason)`, `pauseAll(reason)`, `unfreeze`, `unpause`.
 - `freezeAddress`: at most 20 in the 24 one-hour buckets ending with the current hour, never an address of the protected set; no keeper floor applies, so the last active keeper can be frozen and new borrowing then halts (`REQ-ACCESS-157`, `REQ-MREG-021`).
 - Trip and reset market and debt breakers (`REQ-ACCESS-158`).
 - Switch a token to its standby price route or standby second source, both recorded at listing (`REQ-ACCESS-159`, `REQ-ACCESS-179`).
-- `coverDeficit`: spend a Coverage Spoke's reserve on recorded deficits of allowlisted CDP Spokes, in that Coverage Spoke's own asset, never above the deficit or the funded balance, within the 72-hour coverage window (`REQ-FLR-021`); then, in the same batch, from the DAO deficit offset of that (Hub, asset), which refuses while the Coverage Spoke is active and holds any funds.
+- `coverDeficit`: spend a First-Loss Reserve's reserve on recorded deficits of allowlisted CDP Spokes, in that First-Loss Reserve's own asset, never above the deficit or the funded balance, within the 72-hour coverage window (`REQ-FLR-021`); then, in the same batch, from the DAO deficit offset of that (Hub, asset), which refuses while the First-Loss Reserve is active and holds any funds.
 - Cancel queued operations that are neither role-change nor restoring.
 
 **Cannot:** upgrade, change a parameter, choose a price source not recorded at listing, unfreeze an address, schedule an operation, cancel a role-change or restoring operation, move collateral, or stop liquidation, pending settlement, repay, fee collection or debt-free withdrawal (`REQ-ROLE-076`).
@@ -116,15 +116,15 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 
 **Composition:** an Avana Labs Safe, under the key standard of [README](README.md#multisig-and-key-security).
 
-**Does:** funds each Coverage Spoke's first-loss reserve (`fund`, which gives the funder no claim on it); receives Avana's fee share as `feeRecipient`.
+**Does:** funds each First-Loss Reserve's first-loss reserve (`fund`, which gives the funder no claim on it); receives Avana's fee share as `feeRecipient`.
 
-**Cannot:** withdraw from a Coverage Spoke (only the Aave DAO can, after 14 days), or act on any Avana contract.
+**Cannot:** withdraw from a First-Loss Reserve (only the Aave DAO can, after 14 days), or act on any Avana contract.
 
 ## Risk service providers
 
 **Who:** LlamaRisk and the Aave DAO's other risk service providers.
 
-**Does:** sizes each listing package (pool risk factors, USD caps, `minPledgeUsd`, per-pool `poolShareMaxBps`) with its cap-sizing calculation, the deficit-breaker materiality of each non-GHO debt reserve, and, with the Aave DAO, the credit lines, draw caps and each Coverage Spoke's coverage ratio and minimum. Changes reach Avana through the governance Safe and the timelock. LlamaRisk also holds one seat on the Emergency Guardian and one on the Joint Configuration Safe.
+**Does:** sizes each listing package (pool risk factors, USD caps, `minPledgeUsd`, per-pool `poolShareMaxBps`) with its cap-sizing calculation, the deficit-breaker materiality of each non-GHO debt reserve, and, with the Aave DAO, the credit lines, draw caps and each First-Loss Reserve's coverage ratio and minimum. Changes reach Avana through the governance Safe and the timelock. LlamaRisk also holds one seat on the Emergency Guardian and one on the Joint Configuration Safe.
 
 ## Contracts that act on each other
 
@@ -133,11 +133,11 @@ These are fixed in bytecode, not held by people:
 | Caller | Called | What |
 |---|---|---|
 | AaveAdapter | Vault tokens, ProxyManager, PositionProxies, Collateralization | Mint, burn and register proxies; create proxies; drive each proxy's Aave account |
-| LPVaultSwap | Collateralization, LPVaults, PayoutEscrow, Coverage Spokes | Seize and settle; deposit failed payouts; fund pending settlement |
+| LPVaultSwap | Collateralization, LPVaults, PayoutEscrow, First-Loss Reserves | Seize and settle; deposit failed payouts; fund pending settlement |
 | MarketRegistry | Each AMM integration | `bindMarket` at listing |
 | AvanaTimelock | LPVaults, VaultTokenFactory | `returnStray`, `registerIntegration`, `deployVaultToken` |
 
-No Avana contract and no deployer holds a role on a Coverage Spoke.
+No Avana contract and no deployer holds a role on a First-Loss Reserve.
 
 ## Who can stop what
 

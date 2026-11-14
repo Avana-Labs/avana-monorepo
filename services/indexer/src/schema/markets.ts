@@ -46,7 +46,7 @@ export const debtReserve = onchainTable(
     fundingHub: t.hex().notNull(),
     hubAssetId: t.bigint().notNull(),
     priceSource: t.hex().notNull(),
-    coverageSpoke: t.hex().notNull(),
+    firstLossReserve: t.hex().notNull(),
     approved: t.boolean().notNull(),
     lastBlock: t.bigint().notNull(),
   }),

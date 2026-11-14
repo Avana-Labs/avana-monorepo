@@ -105,7 +105,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         v.settleable = v.settleableUnits > 0;
         DebtReserveDef memory def = _registry().getDebtReserve(m.spoke, _registry().settlementReserve(marketId));
         v.debtAsset = def.asset;
-        v.coverageSpoke = _registry().coverageSpokeOf(def.fundingHub, def.asset);
+        v.firstLossReserve = _registry().firstLossReserveOf(def.fundingHub, def.asset);
         v.valueDebt = _oracleValue(p.units, _collateralPrice(m), m.decimals, def.decimals, _debtPrice(m.spoke, def));
     }
 

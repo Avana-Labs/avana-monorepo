@@ -8,35 +8,59 @@ import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSw
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {IntegrationFlows} from "../utils/fixtures/IntegrationFlows.sol";
-import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
+import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
+import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
+import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
+import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 
 /// @title LiquidationLensPreviewIntegrationTest
-/// @notice `TEST-205` on the deployed stack: the Lens's `previewLiquidation` parameters, executed unchanged in the
-/// same block through the real LPVaultSwap (directly and through the public flash liquidation helper with
-/// `flashAmount = debtToCover`), settle with the previewed debt repaid, units seized and recovery floor, for a
-/// GHO-debt and a USDC-debt account opened through the real AaveAdapter; each preview gate matches what `liquidate`
-/// enforces.
+/// @notice `TEST-205` on the real stack (`RealStackFlows`, and `RealStackVolatile`'s Volatile Hub for the debt gate):
+/// the Lens's `previewLiquidation` parameters, executed unchanged in the same block through the real LPVaultSwap
+/// (directly and through the real FlashLiquidator with `flashAmount = debtToCover`, borrowing from the Aave V3 Pool
+/// stand-in), settle with the previewed debt repaid, units seized, recovery floor and Avana fee, for a GHO-debt and a
+/// USDC-debt account opened through the real AaveAdapter; each preview gate matches what `liquidate` enforces. The
+/// gates are real: a primary route disabled through the real timelock and MarketRegistry, feeds left unpublished past
+/// their `liquidationPriceMaxAge`, and the Aave DAO pausing the repaid reserve.
+/// @dev Each account: 10,000 vault tokens ($20,000 at $2.00, CF 30 %) against 5,880 of debt, HF 1.020; USDT then falls
+/// to $0.93 (`_depegUsdt`), the vault token to $1.9287 and HF to 0.984. The preview values the seizure at the oracle
+/// (`R = V`); the real unwind and route pools recover slightly less, so the executed payout is below `expectedPayout`
+/// by exactly `V - R`. The USDC DebtOracle and the USDC/USDT market's LPOracle read the same USDC feeds, so there a
+/// stale USDC feed closes both gates and `liquidate` refuses at its collateral rule (`StalePrice`), which runs first.
+/// The debt rule alone (`DebtPriceStale`) is checked on a WBTC/WETH market of the Volatile Hub with USDC debt
+/// (`_wbtcWethMarket`), whose LPOracle reads no USDC feed: every USDC feed goes without a round past its
+/// `liquidationPriceMaxAge` while every other feed keeps publishing.
 /// forge-config: default.isolate = false
-contract LiquidationLensPreviewIntegrationTest is IntegrationFlows {
+contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
+    uint256 internal mA;
+
     function setUp() public {
-        _deployIntegration();
+        _setUpFullStack();
+        mA = _addMarket(poolA);
     }
 
-    /// @dev An account of 10,000 vault tokens pledged at $2.50 with 18,000 of debt in `reserveId`, at $2.10 after.
+    /// @dev An account of 10,000 vault tokens with 5,880 of debt in `reserveId` (call `_depegUsdt` after).
     function _account(
         address wallet,
         uint256 reserveId
     ) internal returns (address proxy) {
-        _setPrice(MARKET_ID, 250_000_000);
-        (, proxy) = _pledgeVia(wallet, MARKET_ID, 10_000e6);
-        _borrowVia(wallet, MARKET_ID, reserveId, reserveId == usdcReserveId ? 18_000e6 : 18_000e18);
-        _setPrice(MARKET_ID, P_VAULT);
+        (, proxy) = _pledgeAs(wallet, mA, UNITS);
+        _borrowAs(wallet, mA, reserveId, reserveId == usdcReserveId ? 5880e6 : 5880e18);
     }
 
     function _deadlineIn() internal view returns (uint256) {
         return block.timestamp + 120;
+    }
+
+    /// @dev The oracle value of `c` vault-token units in the debt asset's base units (USDC: 6 decimals, GHO: 18).
+    function _value(
+        uint256 c,
+        uint256 reserveId
+    ) internal view returns (uint256) {
+        uint256 price8 = uint256(mkt[mA].oracle.latestAnswer());
+        uint256 scale = reserveId == usdcReserveId ? 1 : 1e12;
+        return c * price8 * scale / 1e8;
     }
 
     /// @dev The preview's ready-to-send shape (REQ-LENS-028).
@@ -47,7 +71,7 @@ contract LiquidationLensPreviewIntegrationTest is IntegrationFlows {
     ) internal view {
         assertTrue(p.aaveLiquidatable && p.pricesUsable && p.sharesEqualAssets, "liquidatable with usable gates");
         assertEq(p.params.proxy, proxy, "proxy");
-        assertEq(p.params.marketId, MARKET_ID, "market");
+        assertEq(p.params.marketId, mA, "market");
         assertEq(p.params.debtReserveId, reserveId, "debt reserve");
         assertEq(p.params.minPayout, 0, "minPayout 0");
         assertEq(p.params.maxShortfall, 0, "maxShortfall 0");
@@ -70,31 +94,32 @@ contract LiquidationLensPreviewIntegrationTest is IntegrationFlows {
 
     // TEST-205 verifies: REQ-LENS-016, REQ-LENS-017, REQ-LENS-028, REQ-LENS-029, REQ-SWAP-011, REQ-SWAP-017, SPEC-LIQ-004, SPEC-LIQ-005, Q-232, Q-404
     function test_TEST_205_paramsExecuteUnchangedForGhoAndUsdc() public {
-        address ghoProxy = _account(alice, debtReserveId);
+        address ghoProxy = _account(alice, ghoReserveId);
         address usdcProxy = _account(bob, usdcReserveId);
-        uint256[2] memory reserves = [debtReserveId, usdcReserveId];
+        _depegUsdt(93_000_000);
+        uint256[2] memory reserves = [ghoReserveId, usdcReserveId];
         address[2] memory proxies = [ghoProxy, usdcProxy];
-        // V per seized unit at $2.10 in the debt asset's base units: 2.1e12 GHO wei, 2.1 USDC units.
-        uint256[2] memory vNum = [uint256(21e11), 21];
-        uint256[2] memory vDen = [uint256(1), 10];
         for (uint256 i = 0; i < 2; ++i) {
             LiquidationPreview memory p = lens.previewLiquidation(proxies[i], reserves[i], _deadlineIn());
             _checkShape(p, proxies[i], reserves[i]);
             LiquidationResult memory r = _liquidateAs(keeper, p.params);
             _checkExecuted(p, r);
             // expectedPayout is keeperOut at R = V (REQ-LENS-029): the executed payout differs by exactly V - R.
-            uint256 v = r.unitsSeized * vNum[i] / vDen[i];
+            uint256 v = _value(r.unitsSeized, reserves[i]);
             assertEq(r.borrowerSurplus + r.shortfall, 0, "no surplus and no top-up at these prices");
+            assertLt(r.recovered, v, "the real unwind and routes recover below the oracle value");
             assertEq(p.expectedPayout - r.keeperOut, v - r.recovered, "expectedPayout = Kf + V - D - A");
             assertEq(p.expectedNetPayout, p.expectedPayout - p.params.debtToCover, "net payout beyond the funding");
         }
     }
 
     /// @notice A caller may raise `minPayout` up to `expectedPayout`; LPVaultSwap then holds the call to it, so a
-    /// realized payout below it (routes and unwind below the oracle value) reverts `PayoutTooLow` and changes nothing.
+    /// realized payout below it (the real unwind and route pools recover below the oracle value) reverts
+    /// `PayoutTooLow` and changes nothing.
     // TEST-205 verifies: REQ-LENS-029, REQ-SWAP-026, Q-345
     function test_TEST_205_raisedMinPayoutIsEnforced() public {
         address proxy = _account(bob, usdcReserveId);
+        _depegUsdt(93_000_000);
         LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         LiquidationParams memory raised = p.params;
         raised.minPayout = p.expectedPayout;
@@ -112,9 +137,10 @@ contract LiquidationLensPreviewIntegrationTest is IntegrationFlows {
 
     // TEST-205 verifies: REQ-LENS-028, REQ-HELPER-002, REQ-SWAP-014, REQ-SWAP-105, Q-232, Q-345
     function test_TEST_205_sameParamsThroughFlashHelper() public {
-        address ghoProxy = _account(alice, debtReserveId);
+        address ghoProxy = _account(alice, ghoReserveId);
         address usdcProxy = _account(bob, usdcReserveId);
-        uint256[2] memory reserves = [debtReserveId, usdcReserveId];
+        _depegUsdt(93_000_000);
+        uint256[2] memory reserves = [ghoReserveId, usdcReserveId];
         address[2] memory proxies = [ghoProxy, usdcProxy];
         address caller = makeAddr("helperCaller");
         for (uint256 i = 0; i < 2; ++i) {
@@ -124,48 +150,68 @@ contract LiquidationLensPreviewIntegrationTest is IntegrationFlows {
             FlashLiquidationRequest memory q = FlashLiquidationRequest({
                 params: p.params, flashAmount: f, maxPremium: (f * 5 + 9999) / 10_000, maxTopUp: 0, minPayout: 0
             });
-            CollPoolToken asset = _asset(reserves[i]);
+            ClTestToken asset = _assetOf(reserves[i]);
             uint256 before = asset.balanceOf(caller);
             uint256 debtBefore = _debtOf(proxies[i], reserves[i]);
             vm.prank(caller);
-            uint256 payout = helper.flashLiquidate(q);
-            assertEq(debtBefore - _debtOf(proxies[i], reserves[i]), p.expectedDebtRepaid, "D as previewed");
+            uint256 payout = IFlashLiquidator(flashLiquidator).flashLiquidate(q);
+            assertApproxEqAbs(
+                debtBefore - _debtOf(proxies[i], reserves[i]), p.expectedDebtRepaid, 1, "D as previewed (Aave rounds)"
+            );
             assertEq(asset.balanceOf(caller) - before, payout, "net payout to the caller, who funded nothing");
             assertGt(payout, 0, "keeperOut covers the loan and its premium");
-            assertEq(asset.balanceOf(address(helper)), 0, "the helper keeps nothing");
+            assertEq(asset.balanceOf(flashLiquidator), 0, "the helper keeps nothing");
         }
         assertEq(v3Pool.flashLoanCalls(), 2, "one loan per helper call");
     }
 
-    /// @notice With the primary route of a released token unusable the preview asks for `BackupOnly`, which settles.
+    /// @notice With the primary route of a released token disabled through the real timelock and MarketRegistry, the
+    /// preview asks for `BackupOnly`, which settles without touching the primary's pool.
     // TEST-205 verifies: REQ-LENS-028, REQ-SWAP-022
     function test_TEST_205_backupOnlyWhenPrimaryUnusable() public {
         address proxy = _account(bob, usdcReserveId);
-        reg.setRouteUsable(MARKET_ID, address(usdt), address(usdc), 0, false);
+        _depegUsdt(93_000_000);
+        _govern(
+            address(registry), abi.encodeCall(IMarketRegistryRoutes.disableRoute, (mA, address(usdt), address(usdc), 0))
+        );
+        (, bool usable) = registry.getRoute(mA, address(usdt), address(usdc), 0);
+        assertFalse(usable, "the primary USDT -> USDC route is disabled");
         LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "backup routes only");
-        uint256 primarySwaps = usdtUsdcPool.swaps();
+        IClPool primaryPool = routePoolOf[address(usdt)][address(usdc)][0];
+        IClPool backupPool = routePoolOf[address(usdt)][address(usdc)][1];
+        uint256 primaryUsdt = usdt.balanceOf(address(primaryPool));
+        uint256 backupUsdt = usdt.balanceOf(address(backupPool));
         LiquidationResult memory r = _liquidateAs(keeper, p.params);
         _checkExecuted(p, r);
-        assertEq(usdtUsdcPool.swaps(), primarySwaps, "the primary was never called");
+        assertEq(usdt.balanceOf(address(primaryPool)), primaryUsdt, "the primary was never called");
+        assertGt(usdt.balanceOf(address(backupPool)), backupUsdt, "the backup ran");
     }
 
     /// @notice Each gate the preview reports refuses the call it describes, and passes once cleared.
     // TEST-205 verifies: REQ-LENS-016, REQ-SWAP-008, REQ-SWAP-091, REQ-SWAP-096, REQ-SWAP-007
     function test_TEST_205_previewGatesMatchLiquidate() public {
         address proxy = _account(bob, usdcReserveId);
-        // Collateral price liquidation-paused.
-        lpo.setFlags(true, false, false);
+        _depegUsdt(93_000_000);
+        // Collateral price liquidation-paused: every USDT feed left past its liquidationPriceMaxAge (the LPOracle
+        // fails and serves Cached), USDC and so the debt price kept fresh (a keeper pokes the DebtOracle).
+        _letFeedsAge();
+        _republish(address(usdc));
+        usdcOracle.poke();
         LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertFalse(p.pricesUsable, "preview: collateral price unusable");
+        assertTrue(p.debtPriceFresh, "preview: the debt price is fresh");
         _expectRefused(p.params, abi.encodeWithSelector(ILPVaultSwapErrors.StalePrice.selector));
-        lpo.setFlags(false, false, false);
-        // The USDC DebtOracle's leg older than liquidationPriceMaxAge.
-        usdcOracle.setLeg(uint64(block.timestamp - FEED_AGE - 1));
+        _refreshAndPoke();
+        // Every USDC feed left past its liquidationPriceMaxAge: the DebtOracle is stale, and so is the USDC leg of the
+        // collateral price; the collateral rule runs first.
+        _letFeedsAge();
+        _republish(address(usdt));
         p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertFalse(p.debtPriceFresh, "preview: debt price stale");
-        _expectRefused(p.params, abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId));
-        usdcOracle.setLeg(uint64(block.timestamp));
+        assertFalse(p.pricesUsable, "preview: prices unusable");
+        _expectRefused(p.params, abi.encodeWithSelector(ILPVaultSwapErrors.StalePrice.selector));
+        _refreshAndPoke();
         // The repaid reserve paused on Aave.
         vm.prank(aaveDao);
         (bool ok,) = aave.spokeConfigurator
@@ -184,6 +230,66 @@ contract LiquidationLensPreviewIntegrationTest is IntegrationFlows {
         _checkExecuted(p, _liquidateAs(keeper, p.params));
     }
 
+    /// @notice The debt-price gate on its own: a USDC-debt account on a WBTC/WETH market of the Volatile Hub, every
+    /// USDC feed left past its `liquidationPriceMaxAge` while the WBTC and WETH feeds (and every other) keep publishing:
+    /// the collateral price stays usable, the preview reports `debtPriceFresh = false` and `liquidate` reverts
+    /// `DebtPriceStale`; new USDC rounds (and a keeper's poke) reopen both and the same preview executes.
+    // TEST-205 verifies: REQ-LENS-016, REQ-SWAP-091, REQ-SWAP-096
+    function test_TEST_205_debtPriceStaleGateMatchesLiquidate() public {
+        uint256 m = _wbtcWethMarket();
+        (address proxy,) = _usdcAccountBelowOne(bob, m);
+        OracleFeedMock[] memory usdcFeeds = new OracleFeedMock[](4);
+        for (uint256 i = 0; i < 4; ++i) {
+            usdcFeeds[i] = feedsOf[address(usdc)][i];
+        }
+        // Two half steps, so no other feed ever passes its maximum age; USDC's last round ends FEED_AGE + 2 s old.
+        _warpBlocks(FEED_AGE / 2 + 1);
+        _refreshFeedsExcept(usdcFeeds);
+        _warpBlocks(FEED_AGE / 2 + 1);
+        _refreshFeedsExcept(usdcFeeds);
+        LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveIdV, _deadlineIn());
+        assertTrue(p.aaveLiquidatable, "liquidatable on Aave");
+        assertFalse(p.debtPriceFresh, "preview: debt price stale");
+        assertFalse(mkt[m].oracle.getPriceState().liquidationPaused, "the collateral price is usable");
+        ClTestToken(address(usdc)).mint(keeper, p.params.debtToCover);
+        vm.startPrank(keeper);
+        usdc.approve(lpVaultSwap, p.params.debtToCover);
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveIdV));
+        lvs.liquidate(p.params);
+        usdc.approve(lpVaultSwap, 0);
+        vm.stopPrank();
+        _refreshFeeds();
+        usdcOracle.poke();
+        p = lens.previewLiquidation(proxy, usdcReserveIdV, _deadlineIn());
+        assertTrue(p.pricesUsable && p.debtPriceFresh, "gates clear");
+        LiquidationResult memory r = _liquidateOn(spokeV, keeper, p.params);
+        _checkExecuted(p, r);
+    }
+
+    /// @dev Time moves past every feed's `liquidationPriceMaxAge` (`FEED_AGE`) with no new round anywhere.
+    function _letFeedsAge() internal {
+        vm.warp(block.timestamp + FEED_AGE + 1);
+        vm.roll(block.number + (FEED_AGE + 1) / BLOCK_TIME);
+        ghoFeed.push(ghoFeed.answer(), block.timestamp);
+    }
+
+    /// @dev Every feed republished, then every LPOracle and the USDC DebtOracle poked, as a keeper does.
+    function _refreshAndPoke() internal {
+        _refreshFeeds();
+        _pokeAll();
+        usdcOracle.poke();
+    }
+
+    /// @dev A new round now, at its current answer, on every feed of `token`.
+    function _republish(
+        address token
+    ) internal {
+        OracleFeedMock[4] storage f = feedsOf[token];
+        for (uint256 i = 0; i < 4; ++i) {
+            f[i].push(f[i].answer(), block.timestamp);
+        }
+    }
+
     function _expectRefused(
         LiquidationParams memory params,
         bytes memory err
@@ -194,6 +300,6 @@ contract LiquidationLensPreviewIntegrationTest is IntegrationFlows {
         vm.prank(keeper);
         lvs.liquidate(params);
         vm.prank(keeper);
-        _asset(params.debtReserveId).approve(lpVaultSwap, 0);
+        _assetOf(params.debtReserveId).approve(lpVaultSwap, 0);
     }
 }

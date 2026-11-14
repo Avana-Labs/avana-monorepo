@@ -10,8 +10,9 @@ interface ILensPreview {
     /// @notice Returns the protocol maximum borrow: the largest borrow that keeps the rescue-excluded health factor at or
     /// above `H0 * (1 + rate * (deadline - now)) * 1.005` once the debt has grown until `deadline`, with
     /// `H0 = max(1e18, hardHealthFloor(marketId))`: Aave's HF 1.00 unless the market's optional hard floor is set.
-    /// @dev Rounds down; capped by the reserve's `drawCap` headroom; 0 when the account's borrow gate fails (price, breaker,
-    /// pause, freeze, drift).
+    /// @dev Rounds down; capped by the reserve's `drawCap` headroom; 0 when the market's or the funding Hub is not None,
+    /// the wallet is frozen, or the RiskModule's `checkBorrowGate(proxy, debtReserveId)` reverts (the borrow's gates on
+    /// the stored oracle state, with the borrowed reserve in scope: price, breaker, drift, routes, credit line).
     /// @param wallet The borrower wallet.
     /// @param marketId The account's market (one PositionProxy per wallet and market).
     /// @param debtReserveId The debt reserve to borrow.
@@ -77,8 +78,9 @@ interface ILensPreview {
 
     /// @notice Returns the outcome of a repay with collateral at the block's prices.
     /// @dev Sized by SPEC-LIQ-020; `debtAssetToWallet` assumes every leg swaps at the oracle value. Returns
-    /// `(0, 0, current health factor)` when the call would revert (price gates, shares != assets, `Paused`, frozen wallet,
-    /// units above the record's credited units, no debt).
+    /// `(0, 0, current health factor)` when the call would revert (price gates, shares != assets,
+    /// `Paused(MintPathSuspect)`, units above the record's credited units, no debt); `Paused(General)` and a frozen
+    /// wallet leave it open, as at the AaveAdapter.
     /// @param wallet The borrower wallet.
     /// @param marketId The account's market.
     /// @param positionKey The record's position.

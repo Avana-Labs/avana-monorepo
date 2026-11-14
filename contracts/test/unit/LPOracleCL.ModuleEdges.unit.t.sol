@@ -220,6 +220,22 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
         assertFalse(h.shockSqrtHolds(1e8, LPPriceMath.MAX_ROUTE_ANSWER + 1), "quote above MAX_ROUTE_ANSWER");
     }
 
+    // TEST-306 verifies: REQ-ORACLE-105, SPEC-ORC-009, REQ-CONFIG-035
+    /// @notice INTEG-04: WBTC (8 decimals) as token0 against an 18-decimal $1 stable passes the shock check at $184,467,
+    /// $10M and the `MAX_ROUTE_ANSWER` price; the sqrt price there is computed, not clamped. The check still refuses a
+    /// shocked ratio at `2^128`, which with valid quotes needs more than 36 decimals between the tokens (here 0 and 22).
+    function test_TEST_306_shockCheckAdmitsWbtcAgainstAnEighteenDecimalStable() public {
+        ClModuleProbe h = new ClModuleProbe();
+        h.setMarket(8, 18, ClPriceMath.MIN_TICK, ClPriceMath.MAX_TICK);
+        uint256[3] memory btc = [uint256(184_467e8), 10_000_000e8, LPPriceMath.MAX_ROUTE_ANSWER];
+        for (uint256 i = 0; i < 3; ++i) {
+            assertTrue(h.shockSqrtHolds(btc[i], 1e8), "WBTC / 18-decimal stable");
+            assertFalse(h.clampedAt(btc[i], 1e8), "sqrt price not clamped");
+        }
+        h.setMarket(0, 22, ClPriceMath.MIN_TICK, ClPriceMath.MAX_TICK);
+        assertFalse(h.shockSqrtHolds(LPPriceMath.MAX_ROUTE_ANSWER, 1), "shocked ratio at 2^128");
+    }
+
     // TEST-306 verifies: SPEC-ORC-020
     /// @notice Above tick 443,636 the square-root ratio exceeds `2^128` and the quote goes through `ratioX128`
     /// (Uniswap `OracleLibrary.getQuoteAtTick`): at tick 600,000 (`1.0001^600000 = 1.13859e26`) one raw unit of token0
@@ -292,6 +308,22 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
         uint256 failed = caller.listingChecks(c, _pair(1e8, 1e8));
         assertTrue(failed != type(uint256).max, "two quotes reach the module");
         assertTrue(failed & 1 != 0, "no pool: range check fails");
+    }
+
+    // TEST-306 verifies: REQ-ORACLE-105, SPEC-ORC-009
+    /// @notice Through the logic contracts' hook caller, the module's listing checks set CL_CHECK_SHOCK_SQRT (bit 4)
+    /// when a shocked raw ratio reaches `2^128` (a 0-decimal token0 at `MAX_ROUTE_ANSWER` against a 22-decimal token1
+    /// at 1) and leave it clear for two $1 stables at 6 decimals.
+    function test_TEST_306_listingChecksSetTheShockBitAtTwoToThe128() public {
+        address m = address(new LPOracleCLModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7));
+        ClModuleCallerProbe caller = new ClModuleCallerProbe(m);
+        OracleConfig memory c;
+        caller.setMarket(6, 6, -10, 10);
+        assertEq(caller.listingChecks(c, _pair(1e8, 1e8)) & (1 << 4), 0, "two $1 stables: clear");
+        caller.setMarket(0, 22, -10, 10);
+        assertTrue(
+            caller.listingChecks(c, _pair(LPPriceMath.MAX_ROUTE_ANSWER, 1)) & (1 << 4) != 0, "shocked ratio at 2^128"
+        );
     }
 
     // TEST-306 verifies: REQ-ORACLE-080, REQ-ORACLE-106

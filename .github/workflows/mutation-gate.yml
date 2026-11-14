@@ -334,12 +334,14 @@ jobs:
 
   gambit:
     name: gambit ${{ matrix.layer }} ${{ matrix.contract }}
-    # Gambit mutants of one contract (layer cap, fixed seed), each run against its tests with GAMBIT_TIMEOUT (300
-    # seconds); any survived or timed-out mutant not accepted in security/gambit-triage.json fails the job.
+    # Gambit mutants of one contract (layer cap, fixed seed), each built with GAMBIT_BUILD_TIMEOUT (1500 seconds) and
+    # run against its tests with GAMBIT_TIMEOUT (300 seconds); any survived or timed-out mutant not accepted in
+    # security/gambit-triage.json fails the job. A Lens file's mutant rebuilds the via-IR Lens modules (several
+    # minutes each), so 20 of them need more than 240 minutes; 360 is the hosted-runner maximum.
     needs: [plan, build]
     if: needs.plan.outputs.contracts != '[]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       max-parallel: 3

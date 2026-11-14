@@ -18,13 +18,13 @@ import {
     RegistrySpokeMock
 } from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryFlashSourceMock,
     RegistryLPVaultMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
-/// @notice Hubs, AMM integrations, Coverage Spokes, cross-Hub lines, the flash source and CDP Spoke records.
+/// @notice Hubs, AMM integrations, First-Loss Reserves, cross-Hub lines, the flash source and CDP Spoke records.
 contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
     RegistryHubMock internal hub2;
     RegistrySpokeMock internal spoke2;
@@ -117,19 +117,25 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
     }
 
     // TEST-273 verifies: REQ-MREG-009, REQ-CONFIG-081, Q-379
-    function test_TEST_273_coverageSpokeRecord() public {
-        RegistryCoverageSpokeMock wrongHub = new RegistryCoverageSpokeMock(address(hub2), address(gho), 0);
-        RegistryCoverageSpokeMock wrongId = new RegistryCoverageSpokeMock(address(hub), address(usdc), 9);
+    function test_TEST_273_firstLossReserveRecord() public {
+        RegistryAvanaFirstLossReserveMock wrongHub =
+            new RegistryAvanaFirstLossReserveMock(address(hub2), address(gho), 0);
+        RegistryAvanaFirstLossReserveMock wrongId =
+            new RegistryAvanaFirstLossReserveMock(address(hub), address(usdc), 9);
         hub.setAsset(address(usdc), 2);
         vm.startPrank(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidHub.selector, address(hub2)));
-        registry.setCoverageSpoke(address(hub2), address(gho), address(wrongHub));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidCoverageSpoke.selector, address(wrongId)));
-        registry.setCoverageSpoke(address(hub), address(usdc), address(wrongId));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidCoverageSpoke.selector, address(wrongHub)));
-        registry.setCoverageSpoke(address(hub), address(gho), address(wrongHub));
+        registry.setAvanaFirstLossReserve(address(hub2), address(gho), address(wrongHub));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMarketRegistryHubs.InvalidAvanaFirstLossReserve.selector, address(wrongId))
+        );
+        registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(wrongId));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMarketRegistryHubs.InvalidAvanaFirstLossReserve.selector, address(wrongHub))
+        );
+        registry.setAvanaFirstLossReserve(address(hub), address(gho), address(wrongHub));
         vm.stopPrank();
-        assertEq(registry.coverageSpokeOf(address(hub), address(gho)), address(ghoCoverage));
+        assertEq(registry.firstLossReserveOf(address(hub), address(gho)), address(ghoCoverage));
     }
 
     // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, REQ-FLR-043, ATTACK-163, Q-378, REQ-ACCESS-175

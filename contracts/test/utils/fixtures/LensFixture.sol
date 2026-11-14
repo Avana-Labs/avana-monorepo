@@ -108,6 +108,7 @@ abstract contract LensFixture is CollateralizationFixture {
         escrow = new PayoutEscrow(lpVaultSwap, address(lock));
         adapterMock.setProxyManager(address(proxyManager));
         usdcOracle = new LensDebtOracleMock(0.9999e8, feedUsdcDebt, address(0));
+        usdcOracle.setStore(address(store));
         _listUsdcDebt();
         _configureWorld();
         core = [
@@ -193,14 +194,16 @@ abstract contract LensFixture is CollateralizationFixture {
         m.status = MarketStatus.Active;
         reg.setMarket(MARKET_ID, m);
         reg.addSpoke(aave.cdpSpoke, aave.hub);
-        reg.setDebtReserve(aave.cdpSpoke, _def(debtReserveId, address(debt), 18, ghoAssetId, address(0), true, ghoCov));
+        reg.setDebtReserve(
+            aave.cdpSpoke, _def(debtReserveId, address(debt), 18, ghoAssetId, address(debtPrice), true, ghoCov)
+        );
         reg.setDebtReserve(
             aave.cdpSpoke, _def(usdcReserveId, address(usdc), 6, usdcAssetId, address(usdcOracle), false, usdcCov)
         );
         reg.setSettlementReserve(MARKET_ID, debtReserveId);
         reg.setFlashSource(address(flash));
-        reg.setCoverageSpoke(aave.hub, address(debt), address(ghoCov));
-        reg.setCoverageSpoke(aave.hub, address(usdc), address(usdcCov));
+        reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(ghoCov));
+        reg.setAvanaFirstLossReserve(aave.hub, address(usdc), address(usdcCov));
         reg.setCreditLine(aave.hub, address(debt), 2_000_000, 1_000_000, 0, 0);
         for (uint8 k = 0; k < 2; ++k) {
             reg.setRoute(MARKET_ID, address(usdc), address(debt), k, makeAddr("routeUsdcGho"), true);
@@ -236,7 +239,7 @@ abstract contract LensFixture is CollateralizationFixture {
         LensCoverageMock coverage
     ) internal view returns (DebtReserveDef memory d) {
         (d.reserveId, d.asset, d.decimals, d.fundingHub, d.hubAssetId) = (reserveId, asset, decimals, aave.hub, assetId);
-        (d.priceSource, d.fixedPrice, d.coverageSpoke) = (source, fixedPrice, address(coverage));
+        (d.priceSource, d.fixedPrice, d.firstLossReserve) = (source, fixedPrice, address(coverage));
     }
 
     // ─── Accounts ───

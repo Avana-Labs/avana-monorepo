@@ -2,4 +2,4 @@
 # ported from a third party (THIRD_PARTY_LICENSES.md, "Ported third-party code"). One line per file: the path from
 # contracts/, then the exact SPDX identifier the file must carry. script/check-licence.sh fails when a listed file is
 # missing or carries another identifier.
-src/amm/concentrated-liquidity/ClPriceMath.sol GPL-2.0-or-later
+src/amm/concentrated-liquidity/ClTickMath.sol MIT

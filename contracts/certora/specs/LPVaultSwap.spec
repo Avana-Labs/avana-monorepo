@@ -21,7 +21,7 @@
  *   - no pool token paid out of a liquidation other than route residue to the caller, since there is no in-kind
  *     settlement (PROP-021, Q-401); the limits that bind every caller: a working swap route per released token, the
  *     recovery floor, no Avana funds and no flash loan in a liquidation (PROP-053); pending settlement into the
- *     Coverage Spoke of the market's (funding Hub, debt asset) (PROP-051, PROP-060); repay with collateral (PROP-072);
+ *     First-Loss Reserve of the market's (funding Hub, debt asset) (PROP-051, PROP-060); repay with collateral (PROP-072);
  *   - the committed-operator registry, roles and the flash callback (PROP-034, PROP-035, PROP-036, PROP-070);
  *   - the settlement arithmetic of PROP-015, PROP-017, PROP-018, PROP-019, PROP-048, PROP-069 restated over unbounded
  *     integers (primary tool per 5.2: Halmos) and the overflow bounds of PROP-044 (primary: SMTChecker).
@@ -35,7 +35,7 @@
  * `getUserAccountData` returns the ghost HF; LPOracle and DebtOracle states from the price-state model, with one
  * 8-decimal leg price per pool token; every Hub's pause state and reason as per-Hub ghosts, and the breakers, freeze
  * list and enabled debt set from the registry model (every read counted); markets (2 to 4 pool tokens,
- * distinct), debt reserves, Hubs, Coverage Spokes and swap routes as uninterpreted functions of their keys;
+ * distinct), debt reserves, Hubs, First-Loss Reserves and swap routes as uninterpreted functions of their keys;
  * ParameterStore values as uninterpreted constants; `AaveAdapter.burnSeized` burns from the caller's balance;
  * Collateralization's `settleSeizure` and `settlePending` pay an arbitrary amount of each pool token (zero for zero
  * units); swap routes pull their input and pay an arbitrary amount of their output token >= their `minOut` (the
@@ -138,7 +138,7 @@ methods {
     function _.getRoute(uint256 m, address tIn, address tOut, uint8 k) external => registryRoute(m, tIn, tOut, k) expect (address, bool);
     function _.flashSource() external => registryFlashSource() expect address;
     function _.hubOf(address s) external => registryHubOf(s) expect address;
-    function _.coverageSpokeOf(address h, address a) external => registryCoverageSpokeOf(h, a) expect address;
+    function _.firstLossReserveOf(address h, address a) external => registryAvanaFirstLossReserveOf(h, a) expect address;
     function _.isFrozenAddress(address a) external => registryIsFrozenAddress(a) expect bool;
     function _.pauseState(address h) external => swapHubPauseStateRead(h) expect PauseState;
     function _.pauseReason(address h) external => swapHubPauseReasonRead(h) expect PauseReason;
@@ -167,7 +167,7 @@ methods {
     function _.lpOracle() external => vtLpOracleOf(calledContract) expect address;
     function _.isValidProxy(address a) external => vtIsValidProxy(calledContract, a) expect bool;
 
-    // Flash source, swap routes, Coverage Spokes, PayoutEscrow (payout escrow)
+    // Flash source, swap routes, First-Loss Reserves, PayoutEscrow (payout escrow)
     function _.flashPremium(address t, uint256 a) external => swapFlashPremium(calledContract, t, a) expect uint256;
     function _.maxFlashLoan(address t) external => swapMaxFlashLoan(calledContract, t) expect uint256;
     function _.swap(uint256 amountIn, uint256 minOut) external with (env e) => routeSwap(calledContract, e.msg.sender, amountIn, minOut) expect uint256;
@@ -224,7 +224,7 @@ ghost drDecimals(address, uint256) returns uint8;
 ghost drFundingHub(address, uint256) returns address;
 ghost drPriceSource(address, uint256) returns address;
 ghost drFixedPrice(address, uint256) returns bool;
-// Coverage Spoke of each (Hub, debt asset) (MarketRegistry.coverageSpokeOf), its asset and its Hub.
+// First-Loss Reserve of each (Hub, debt asset) (MarketRegistry.firstLossReserveOf), its asset and its Hub.
 ghost coverageOf(address, address) returns address;
 ghost coverageAssetOf(address) returns address;
 ghost coverageHubOf(address) returns address;
@@ -298,7 +298,7 @@ function registryDebtReserve(address s, uint256 r) returns LPVaultSwap.DebtReser
     require d.reserveId == r && d.asset == drAsset(s, r) && d.decimals == drDecimals(s, r);
     require d.fundingHub == drFundingHub(s, r) && d.crossHub == (drFundingHub(s, r) != hubOfSpoke(s));
     require d.priceSource == drPriceSource(s, r) && d.fixedPrice == drFixedPrice(s, r);
-    require d.coverageSpoke == coverageOf(drFundingHub(s, r), drAsset(s, r)) && d.approved == regApprovedDebtReserve(s, r);
+    require d.firstLossReserve == coverageOf(drFundingHub(s, r), drAsset(s, r)) && d.approved == regApprovedDebtReserve(s, r);
     require coverageAssetOf(coverageOf(drFundingHub(s, r), drAsset(s, r))) == drAsset(s, r);
     require tokenDecimals(drAsset(s, r)) == drDecimals(s, r);
     require !drFixedPrice(s, r) => isDebtOracle(drPriceSource(s, r));
@@ -337,7 +337,7 @@ function registryHubOf(address s) returns address {
     return hubOfSpoke(s);
 }
 
-function registryCoverageSpokeOf(address h, address a) returns address {
+function registryAvanaFirstLossReserveOf(address h, address a) returns address {
     regAnyReads = regAnyReads + 1;
     require coverageAssetOf(coverageOf(h, a)) == a;
     return coverageOf(h, a);
@@ -539,7 +539,7 @@ function routeSwap(address route, address caller, uint256 amountIn, uint256 minO
     return out;
 }
 
-// A Coverage Spoke's `fund` pulls exactly `amount` of its asset from the caller into its Hub.
+// A First-Loss Reserve's `fund` pulls exactly `amount` of its asset from the caller into its Hub.
 function coverageFund(address coverage, address caller, uint256 amount) returns uint256 {
     require amount > 0;
     if (coverage != expectedCoverage) {
@@ -1207,10 +1207,10 @@ rule settlePendingSendsProceedsOnlyToCoverage(uint256 m, uint256 r, address toke
         "the Adapter did not burn the units before Collateralization settled them";
     assert token != vt => erc20Bal[token][caller] == callerBalance, "settlePending paid the caller";
     assert !routeCalled[other] => erc20Bal[token][other] == otherBalance,
-        "pool tokens or the debt asset went to an address other than the swap routes called, the Coverage Spoke's Hub or the fee recipient";
-    assert !fundedOtherThanExpected, "proceeds funded a Coverage Spoke other than that of the market's (funding Hub, debt asset)";
+        "pool tokens or the debt asset went to an address other than the swap routes called, the First-Loss Reserve's Hub or the fee recipient";
+    assert !fundedOtherThanExpected, "proceeds funded a First-Loss Reserve other than that of the market's (funding Hub, debt asset)";
     assert to_mathint(added) == coverageFunded && coverageFunded == routeOut + unwound[T],
-        "the debt asset released or returned by the routes did not all go to the Coverage Spoke";
+        "the debt asset released or returned by the routes did not all go to the First-Loss Reserve";
     assert escrowDeposits == 0, "settlePending used the PayoutEscrow";
 }
 

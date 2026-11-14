@@ -73,13 +73,15 @@ contract MockV3Pool is ClFeeGrowthPool {
     }
 
     function observe(
-        uint32[] calldata
+        uint32[] calldata secondsAgos
     ) external view returns (int56[] memory tc, uint160[] memory spl) {
         require(!observeReverts, "OLD");
         tc = new int56[](2);
         spl = new uint160[](2);
         (tc[0], tc[1]) = (tickCumulatives[0], tickCumulatives[1]);
         (spl[0], spl[1]) = (secondsPerLiquidity[0], secondsPerLiquidity[1]);
+        // As in v3-core, two reads of the same instant return the same accumulators (a zero delta).
+        if (secondsAgos.length == 2 && secondsAgos[0] == secondsAgos[1]) (tc[0], spl[0]) = (tc[1], spl[1]);
     }
 
     /// @notice v3-core `ticks`: only `feeGrowthOutside0X128` and `feeGrowthOutside1X128` are kept.

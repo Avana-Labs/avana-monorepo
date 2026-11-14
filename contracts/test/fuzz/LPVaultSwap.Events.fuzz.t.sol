@@ -15,7 +15,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// repayment, route mode, route rate, fee share and shortfall budget, exactly one `LiquidationSettled` is emitted, its
 /// indexed caller, proxy and market are the call's, and every field of its report equals the returned result and the
 /// call's parameters; `BorrowerSurplusPaid` appears exactly when `B > 0`; `RouteFailed` never appears for a backup;
-/// `PendingSettlementForwarded` reports the units, the amount added and the Coverage Spoke of a pending settlement.
+/// `PendingSettlementForwarded` reports the units, the amount added and the First-Loss Reserve of a pending settlement.
 /// forge-config: default.isolate = false
 /// forge-config: default.fuzz.runs = 256
 contract LPVaultSwapEventsFuzzTest is LPVaultSwapUnitBase {
@@ -115,7 +115,7 @@ contract LPVaultSwapEventsFuzzTest is LPVaultSwapUnitBase {
     }
 
     /// @notice `PendingSettlementForwarded` reports the caller, market, vault token, units, amounts, the amount added
-    /// and the USDC Coverage Spoke.
+    /// and the USDC First-Loss Reserve.
     // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-070, SPEC-LIQ-014
     function testFuzz_TEST_170_pendingEventFields(
         uint256 kept,
@@ -145,7 +145,7 @@ contract LPVaultSwapEventsFuzzTest is LPVaultSwapUnitBase {
             assertEq(a[0], amounts[0], "USDC released");
             assertEq(a[1], amounts[1], "USDT released");
             assertEq(added, recovered, "R added");
-            assertEq(coverage, address(usdcCoverage), "USDC Coverage Spoke");
+            assertEq(coverage, address(usdcCoverage), "USDC First-Loss Reserve");
         }
         assertTrue(found, "PendingSettlementForwarded emitted");
     }

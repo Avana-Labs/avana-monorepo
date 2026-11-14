@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICoverageSpoke} from "../../coverage/coverage-spoke/ICoverageSpoke.sol";
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
@@ -29,7 +29,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// @notice Body of `settlePending`, run by delegatecall from the LPVaultSwap implementation in the proxy's storage:
 /// burns vault tokens an earlier implementation seized and never settled against Collateralization's pending balance,
 /// swaps the released tokens into the market's settlement asset at the pending floor and adds the proceeds to the
-/// Coverage Spoke of the settlement reserve's (funding Hub, asset), carrying an amount worth less than one Hub share.
+/// First-Loss Reserve of the settlement reserve's (funding Hub, asset), carrying an amount worth less than one Hub share.
 /// @dev The caller supplies nothing and receives nothing. Before the Lock: `UnknownMarket`, `InvalidFeeRecipient`,
 /// `LockHeld(holder)`, then the view reads of the pending units and LPVaultSwap's vault-token balance (`NothingPending`)
 /// and the settlement reserve (`UnknownDebtReserve`). Under the Lock: price rules (no grace), burn and release, legs at
@@ -125,7 +125,7 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         IMarketRegistry mr = IMarketRegistry(_MARKET_REGISTRY);
         if (debtReserveId != mr.settlementReserve(marketId)) revert UnknownDebtReserve(debtReserveId);
         c.d = mr.getDebtReserve(c.m.spoke, debtReserveId);
-        c.coverage = mr.coverageSpokeOf(c.d.fundingHub, c.d.asset);
+        c.coverage = mr.firstLossReserveOf(c.d.fundingHub, c.d.asset);
     }
 
     /// @dev Burn and release measured as deltas, the pending floor and the legs at `s_P`, then `R` in the settlement
@@ -183,8 +183,13 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         });
     }
 
-    /// @dev Funds `Rt = R + carry` into the Coverage Spoke when it is worth at least one Hub share, with an exact
+    /// @dev Funds `Rt = R + carry` into the First-Loss Reserve when it is worth at least one Hub share, with an exact
     /// approval reset to 0 and the balance falling by exactly `Rt` (`FundingMismatch`); otherwise carries `Rt`.
+    /// A `fund` that reverts (no First-Loss Reserve recorded, or a finite Hub add cap that is full) reverts the whole
+    /// settlement on purpose (LIQ-I3): the units stay pending and any caller retries once governance acts, while
+    /// carrying a larger `Rt` would leave LPVaultSwap holding more than one Hub share (`REQ-SWAP-070`). Neither case
+    /// arises from Avana's own configuration (the First-Loss Reserve is write-once and required before a debt reserve is
+    /// enabled; its add cap is unlimited, `REQ-FLR-007`), and liquidation never calls this path.
     /// @custom:spec REQ-SWAP-070, REQ-SWAP-077, REQ-FLR-038
     function _fundCoverage(
         Pend memory c
@@ -196,9 +201,9 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
             l.carry[asset] = 0;
             uint256 before = IERC20(asset).balanceOf(address(this));
             IERC20(asset).forceApprove(c.coverage, total);
-            // The Coverage Spoke pulls exactly the amount; the pull is checked as LPVaultSwap balance fall right after.
+            // The First-Loss Reserve pulls exactly the amount; the pull is checked as LPVaultSwap balance fall right after.
             // forge-lint: disable-next-line(unused-return)
-            ICoverageSpoke(c.coverage).fund(total);
+            IAvanaFirstLossReserve(c.coverage).fund(total);
             IERC20(asset).forceApprove(c.coverage, 0);
             uint256 afterFunding = IERC20(asset).balanceOf(address(this));
             if (afterFunding > before || before - afterFunding != total) revert FundingMismatch();

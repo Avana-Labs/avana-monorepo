@@ -84,7 +84,7 @@ interface IParameterStoreAdmin {
     /// @notice Sets `feeRecipient`.
     /// @dev Normal delay; reverts `InvalidFeeRecipient` for the zero address, any Avana contract the MarketRegistry
     /// records or that reports this chain's timelock or registry (or answers `logicConfig()`), a Hub, a CDP Spoke, a
-    /// debt reserve's Coverage Spoke or price source, or a PositionProxy (its `ADAPTER()` is the AaveAdapter, or the
+    /// debt reserve's First-Loss Reserve or price source, or a PositionProxy (its `ADAPTER()` is the AaveAdapter, or the
     /// ProxyManager's `predictProxy` of its bindings is its address).
     /// @param recipient New recipient.
     /// @custom:spec REQ-CONFIG-056

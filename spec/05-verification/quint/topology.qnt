@@ -124,13 +124,13 @@ module topology {
     bound: (str, str) -> int,         // (wallet, Spoke) -> version of its current proxy (0 = none)
     debt: (Px, str) -> int,           // (proxy, asset) -> debt units
     liq: (str, str) -> int,           // (Hub, asset) -> liquidity
-    added: (str, str) -> int,         // (Hub, asset) -> assets owed to suppliers (lenders + Coverage Spoke)
+    added: (str, str) -> int,         // (Hub, asset) -> assets owed to suppliers (lenders + First-Loss Reserve)
     drawn: (str, str, str) -> int,    // (Hub, asset, Spoke)
     deficit: (str, str, str) -> int,  // (Hub, asset, Spoke)
     drawCap: (str, str, str) -> int,  // (Hub, asset, Spoke)
     creditLine: (str, str) -> int,    // (Hub, asset): approved line for all Spokes
     crossCap: (str, str) -> int,      // (Hub, asset): part of the line other Hubs' Spokes may draw
-    coverage: (str, str) -> int,      // Coverage Spoke balance per (funding Hub, asset)
+    coverage: (str, str) -> int,      // First-Loss Reserve balance per (funding Hub, asset)
     tokenCap: (str, str) -> int,      // (Hub, token): collateral units holding that token
     px: str -> int,                   // token USD price, cents
     stale: Set[str],                  // markets whose LP feed is stale (pool-local failure)
@@ -575,7 +575,7 @@ module topology {
   action settlePending(h: str, m: str): bool = all { settleOk(s, h, m), go(settleNext(s, h, m), "settlePending", h, m, 0) }
 
   // ============================================================ COVERAGE
-  // The Coverage Spoke of (h, a) eliminates deficit of a Spoke on its allowlist (Spokes drawing a from h).
+  // The First-Loss Reserve of (h, a) eliminates deficit of a Spoke on its allowlist (Spokes drawing a from h).
   pure def coverOk(st: St, h: str, a: str, sp: str, x: int): bool = and {
     x > 0, FUND.get((sp, a)) == h, x <= st.deficit.get((h, a, sp)), x <= st.coverage.get((h, a)),
   }
@@ -584,7 +584,7 @@ module topology {
     coverage: st.coverage.setBy((h, a), y => y - x),
     added: st.added.setBy((h, a), y => y - x),
     g: { ...st.g, lossMisattributed: st.g.lossMisattributed or FUND.get((sp, a)) != h } }
-  action cover(h: str, a: str, sp: str, x: int): bool = all { coverOk(s, h, a, sp, x), go(coverNext(s, h, a, sp, x), "CoverageSpoke.coverDeficit", h, sp, x) }
+  action cover(h: str, a: str, sp: str, x: int): bool = all { coverOk(s, h, a, sp, x), go(coverNext(s, h, a, sp, x), "AvanaFirstLossReserve.coverDeficit", h, sp, x) }
 
   // interest: every open debt in (h, a) grows by one unit
   pure def accrueNext(st: St, h: str, a: str): St = {
@@ -817,7 +817,7 @@ module topology {
       liquidateExternal(p, a, dd),
       settlePending(HOME.get(SPK.get(m)), m),
       cover(FUND.get((sp, a)), a, sp, x),
-      cover(h, a, sp, x),                           // any Coverage Spoke (a wrong pair is refused)
+      cover(h, a, sp, x),                           // any First-Loss Reserve (a wrong pair is refused)
       accrue(h, a),
       stutter,
     }

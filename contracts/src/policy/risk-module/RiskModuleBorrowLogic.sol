@@ -10,6 +10,7 @@ import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapVie
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
 import {DriftReason} from "../../types/DriftReason.sol";
 import {Market} from "../../types/Market.sol";
 import {PriceState} from "../../types/PriceState.sol";
@@ -193,11 +194,10 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
                 address feed = t.legFeeds[j];
                 if (feed == address(0)) continue;
                 uint256 at = t.legUpdatedAt[j];
-                // forge-lint: disable-next-line(require-revert-in-loop)
-                if (at > block.timestamp) revert PriceTooOld(feed, 0);
-                uint256 age = block.timestamp - at;
-                // forge-lint: disable-next-line(require-revert-in-loop)
-                if (age > _store().borrowPriceMaxAge(feed)) revert PriceTooOld(feed, age);
+                if (!PriceAge.borrowFresh(at, _store().borrowPriceMaxAge(feed))) {
+                    // forge-lint: disable-next-line(require-revert-in-loop)
+                    revert PriceTooOld(feed, PriceAge.age(at));
+                }
             }
             // forge-lint: disable-next-line(require-revert-in-loop)
             if (!_tokenSecondSourceConfirmed(t)) revert SecondSourceDisagrees(t.token);
@@ -237,11 +237,10 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             if (source != s.defs[i].priceSource) revert UnexpectedDebtPriceSource(r, source);
             if (s.defs[i].fixedPrice) continue;
             DebtPriceView memory dv = IDebtOracle(source).getPriceState();
-            uint256 at = dv.servedUpdatedAt;
-            uint256 age = at > block.timestamp ? 0 : block.timestamp - at;
-            bool fresh = at <= block.timestamp && age <= IDebtOracle(source).borrowPriceMaxAge();
-            // forge-lint: disable-next-line(require-revert-in-loop)
-            if (dv.state != PriceState.Live || !fresh || !dv.borrowAllowed) revert DebtPriceTooOld(r, source, age);
+            if (!PriceAge.debtBorrowable(dv, IDebtOracle(source).borrowPriceMaxAge())) {
+                // forge-lint: disable-next-line(require-revert-in-loop)
+                revert DebtPriceTooOld(r, source, PriceAge.age(dv.servedUpdatedAt));
+            }
         }
     }
 
@@ -268,7 +267,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
     }
 
     /// @dev Step (13), REQ-RISK-082: a reserve funded by another Hub than the market's needs cross-Hub lines on, the
-    /// registry's draw-cap sum within the funding Hub's line, and the line covered by its Coverage Spoke
+    /// registry's draw-cap sum within the funding Hub's line, and the line covered by its First-Loss Reserve
     /// (`creditLineCoverage`: `required <= funded`).
     function _creditLine(
         Scope memory s

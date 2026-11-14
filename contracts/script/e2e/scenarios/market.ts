@@ -3,7 +3,7 @@
 // Market scenarios of the local rehearsal, on the markets listed by script/deploy/09_ListMarkets.s.sol
 // (deployments-local/<network>/listing-markets.json): an LP's whole life on a Uniswap v3 and on a Slipstream market,
 // LPOracle price paths, keeper liquidations through LPVaultSwap, a self-liquidation attempt, a deficit covered by the
-// Coverage Spoke, and the cross-Hub credit line switch (off at launch). Each scenario uses its own wallet, starts from
+// First-Loss Reserve, and the cross-Hub credit line switch (off at launch). Each scenario uses its own wallet, starts from
 // the world's configured feed prices and leaves them restored. Prices move only by signed OCR2 rounds
 // (refresh-feeds.ts); pools move only by swaps through the world's routers.
 
@@ -24,7 +24,7 @@ import {
   aaveV4HubAbi,
   aaveV4SpokeAbi,
   collateralizationAbi,
-  coverageSpokeAbi,
+  firstLossReserveAbi,
   debtOracleAbi,
   lensAbi,
   lpOracleAbi,
@@ -91,7 +91,7 @@ const ERRORS = [
   ...lpVaultAbi,
   ...riskModuleAbi,
   ...marketRegistryAbi,
-  ...coverageSpokeAbi,
+  ...firstLossReserveAbi,
   ...aaveV4SpokeAbi,
   ...aaveV4HubAbi,
 ].filter((i: any) => i.type === "error") as readonly unknown[];
@@ -1187,7 +1187,7 @@ async function selfLiquidation(e: Env) {
   };
 }
 
-// ─── 6. Deficit after a 90 % crash, covered by the Coverage Spoke ───
+// ─── 6. Deficit after a 90 % crash, covered by the First-Loss Reserve ───
 
 async function deficitCoverage(e: Env) {
   const m = e.market("uni-WETH-USDC-500");
@@ -1229,14 +1229,14 @@ async function deficitCoverage(e: Env) {
     return { ok: false, detail: liq.ok ? "no deficit recorded on the CDP Spoke" : `liquidation reverted: ${liq.error}` };
   }
 
-  // The Coverage Spoke of (Hub, asset) covers the deficit.
+  // The First-Loss Reserve of (Hub, asset) covers the deficit.
   const coverage = e.ctx.file("coverage.json") ?? {};
-  const key = `CoverageSpoke.${e.hubLabel(m.hub)}.${e.sym(m.debtAsset)}`;
+  const key = `AvanaFirstLossReserve.${e.hubLabel(m.hub)}.${e.sym(m.debtAsset)}`;
   const cs = coverage[key] as Address | undefined;
   if (!cs) throw new StepError(`no ${key} in coverage.json`);
-  const registered = (await e.read(e.registry, marketRegistryAbi, "coverageSpokeOf", [m.hub, m.debtAsset])) as Address;
-  const allowed = (await e.read(cs, coverageSpokeAbi, "allowedBorrowSpoke", [m.spoke])) as boolean;
-  let funded0 = (await e.read(cs, coverageSpokeAbi, "fundedBalance")) as bigint;
+  const registered = (await e.read(e.registry, marketRegistryAbi, "firstLossReserveOf", [m.hub, m.debtAsset])) as Address;
+  const allowed = (await e.read(cs, firstLossReserveAbi, "allowedBorrowSpoke", [m.spoke])) as boolean;
+  let funded0 = (await e.read(cs, firstLossReserveAbi, "fundedBalance")) as bigint;
   const need = defAfter / RAY + 1n;
   let topUp = 0n;
   if (funded0 < need) {
@@ -1244,26 +1244,26 @@ async function deficitCoverage(e: Env) {
     const funder = (e.ctx.config.coverage?.funder ?? e.ctx.actors.deployer) as Address;
     await e.mint(m.debtAsset, funder, topUp);
     await e.approve(funder, m.debtAsset, cs, topUp);
-    await e.must("fund", funder, cs, coverageSpokeAbi, "fund", [topUp]);
-    funded0 = (await e.read(cs, coverageSpokeAbi, "fundedBalance")) as bigint;
+    await e.must("fund", funder, cs, firstLossReserveAbi, "fund", [topUp]);
+    funded0 = (await e.read(cs, firstLossReserveAbi, "fundedBalance")) as bigint;
   }
   await e.gasFor(guardian);
-  // The funded balance earns the Hub's supply interest from block to block, so the check is on the Coverage Spoke's
+  // The funded balance earns the Hub's supply interest from block to block, so the check is on the First-Loss Reserve's
   // Hub shares, which do not accrue: they fall by exactly the shares `coverDeficit` reports, and the deficit is gone.
-  const shares0 = (await e.read(cs, coverageSpokeAbi, "fundedShares")) as bigint;
-  const c = await e.ctx.send(guardian, cs, withErrors(coverageSpokeAbi), "coverDeficit", [m.spoke, maxUint256]);
+  const shares0 = (await e.read(cs, firstLossReserveAbi, "fundedShares")) as bigint;
+  const c = await e.ctx.send(guardian, cs, withErrors(firstLossReserveAbi), "coverDeficit", [m.spoke, maxUint256]);
   const defFinal = (await e.read(m.hub, hubAbi, "getSpokeDeficitRay", [assetId, m.spoke])) as bigint;
-  const funded1 = (await e.read(cs, coverageSpokeAbi, "fundedBalance")) as bigint;
-  const shares1 = (await e.read(cs, coverageSpokeAbi, "fundedShares")) as bigint;
+  const funded1 = (await e.read(cs, firstLossReserveAbi, "fundedBalance")) as bigint;
+  const shares1 = (await e.read(cs, firstLossReserveAbi, "fundedShares")) as bigint;
   // From the mined DeficitCovered event: the simulated return is priced at the previous block's timestamp.
   const ev = c.ok
-    ? (parseEventLogs({ abi: coverageSpokeAbi as any, logs: c.receipt!.logs, eventName: "DeficitCovered" }).find((l: any) => eq(l.address, cs)) as any)
+    ? (parseEventLogs({ abi: firstLossReserveAbi as any, logs: c.receipt!.logs, eventName: "DeficitCovered" }).find((l: any) => eq(l.address, cs)) as any)
     : undefined;
   const [burned, covered]: readonly [bigint, bigint] = ev ? [ev.args.sharesBurned as bigint, ev.args.covered as bigint] : [0n, 0n];
   n.coverage = `${key} ${cs} (registry ${eq(registered, cs) ? "agrees" : registered}); allowlisted ${allowed}; top-up ${fmt(topUp, d)}; coverDeficit by Emergency Guardian ${c.ok ? `covered ${fmt(covered, d)} for ${burned} shares` : c.error}; deficit ${fmt(defAfter, 27 + d)} -> ${fmt(defFinal, 27 + d)}; funded ${fmt(funded0, d)} -> ${fmt(funded1, d)}; shares ${shares0} -> ${shares1}`;
   n.restored = await e.settle();
   const ok = c.ok && ev !== undefined && defFinal === 0n && covered === (defAfter + RAY - 1n) / RAY && burned > 0n && shares0 - shares1 === burned;
-  return { ok, detail: ok ? `deficit of ${fmt(covered, d)} ${e.sym(m.debtAsset)} covered by ${key}, ${burned} Hub shares burned` : "deficit not fully covered, or the Coverage Spoke's shares did not fall by the shares burned" };
+  return { ok, detail: ok ? `deficit of ${fmt(covered, d)} ${e.sym(m.debtAsset)} covered by ${key}, ${burned} Hub shares burned` : "deficit not fully covered, or the First-Loss Reserve's shares did not fall by the shares burned" };
 }
 
 // ─── 7. Cross-Hub credit line (off at launch) ───
@@ -1295,7 +1295,7 @@ async function crossHubLine(e: Env) {
     hubAssetId: (await e.read(fundingHub, HUB, "getAssetId", [gho]).catch(() => 0n)) as bigint,
     priceSource: (homeDef?.priceSource ?? e.ctx.world.feeds?.GHO?.primary) as Address,
     fixedPrice: true,
-    coverageSpoke: (await e.read(e.registry, marketRegistryAbi, "coverageSpokeOf", [fundingHub, gho])) as Address,
+    firstLossReserve: (await e.read(e.registry, marketRegistryAbi, "firstLossReserveOf", [fundingHub, gho])) as Address,
     crossHub: true,
     approved: true,
   };
@@ -1321,7 +1321,7 @@ export function marketScenarios(ctx: ScenarioContext): Scenario[] {
     s("price paths: slow drift, 30/60/90 % crashes, depeg, feed staleness", pricePaths),
     s("keeper liquidates through LPVaultSwap on a Uniswap pool and on a Slipstream pool", keeperLiquidations),
     s("self-liquidation attempt by the borrower", selfLiquidation),
-    s("deficit after a 90 % crash and Coverage Spoke coverage", deficitCoverage),
+    s("deficit after a 90 % crash and First-Loss Reserve coverage", deficitCoverage),
     s("cross-Hub credit line borrow (off at launch: must revert)", crossHubLine),
   ];
 }

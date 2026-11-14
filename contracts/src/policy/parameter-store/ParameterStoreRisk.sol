@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICoverageSpoke} from "../../coverage/coverage-spoke/ICoverageSpoke.sol";
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
@@ -15,7 +15,7 @@ import {ParameterStoreOracle} from "./ParameterStoreOracle.sol";
 
 /// @title ParameterStoreRisk
 /// @notice The checks that read Aave and the Avana Umbrella: liquidation liveness of a (market, debt reserve) pair,
-/// the Hub `addCap` sizing of SPEC-CAP-006, and the approved debt reserves of a debt asset (their Coverage Spoke
+/// the Hub `addCap` sizing of SPEC-CAP-006, and the approved debt reserves of a debt asset (their First-Loss Reserve
 /// minimums and price sources).
 /// @dev Every call is a view; a call that reverts or returns an unusable value counts as a failed check, so the
 /// setter that needs it reverts and the view that reports it returns false.
@@ -74,6 +74,17 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
     ) internal pure returns (bool) {
         if (sMin >= BPS || f >= BPS) return false;
         return minLb * (BPS - sMin) >= BPS * (BPS + f);
+    }
+
+    /// @dev LIQ-I1 fee bound: `s × minLB ≤ (10⁴ − f) × (minLB − 10⁴)`, false for `minLB < 10⁴` or `f > 10⁴`. The same
+    /// bound the MarketRegistry checks at activation.
+    function _feeBoundHolds(
+        uint256 minLb,
+        uint256 s,
+        uint256 f
+    ) internal pure returns (bool) {
+        if (minLb < BPS || f > BPS) return false;
+        return s * minLb <= (BPS - f) * (minLb - BPS);
     }
 
     /// @dev Whether the Spoke has at least one enabled debt reserve.
@@ -141,7 +152,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
     }
 
     /// @dev Walks every approved debt reserve of `asset` on every CDP Spoke (funded by `hub` when `hub` is not zero):
-    /// whether one exists, the smallest `firstLossReserveMinimum()` of their Coverage Spokes (only when `hub` is set),
+    /// whether one exists, the smallest `firstLossReserveMinimum()` of their First-Loss Reserves (only when `hub` is set),
     /// the largest 8-decimal price their price sources report (only when `hub` is zero; a failed or non-positive read
     /// counts as unbounded) and the asset's decimals.
     /// @custom:spec REQ-PSTORE-016, REQ-CONFIG-050, REQ-PSTORE-006
@@ -159,7 +170,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
                 found = true;
                 decimals = d.decimals;
                 if (hub != address(0)) {
-                    uint256 minimum = ICoverageSpoke(d.coverageSpoke).firstLossReserveMinimum();
+                    uint256 minimum = IAvanaFirstLossReserve(d.firstLossReserve).firstLossReserveMinimum();
                     if (minimum < coverageMin) coverageMin = minimum;
                 } else {
                     uint256 p = _price(d.priceSource);

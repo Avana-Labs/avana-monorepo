@@ -26,7 +26,7 @@ export function chainDeployment(d: Doc<"deployments">): ChainDeployment {
     hubs: d.hubs.map((h) => ({ address: h.address as Hex, label: h.label })),
     lendSpokes: d.lendSpokes as Hex[],
     cdpSpokes: d.cdpSpokes as Hex[],
-    coverageSpokes: d.coverageSpokes.map((c) => ({ address: c.address as Hex, asset: c.asset as Hex, ...(c.hub ? { hub: c.hub as Hex } : {}) })),
+    firstLossReserves: d.firstLossReserves.map((c) => ({ address: c.address as Hex, asset: c.asset as Hex, ...(c.hub ? { hub: c.hub as Hex } : {}) })),
   };
 }
 

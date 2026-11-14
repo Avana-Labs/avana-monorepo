@@ -18,7 +18,7 @@ describe("factory events", () => {
       [factoryEvents.vaultTokenDeployed, abis.VaultTokenFactory],
       [factoryEvents.marketRegistered, abis.MarketRegistry],
       [factoryEvents.debtReserveApproved, abis.MarketRegistry],
-      [factoryEvents.coverageSpokeSet, abis.MarketRegistry],
+      [factoryEvents.firstLossReserveSet, abis.MarketRegistry],
     ] as const;
     for (const [event, abi] of watched) {
       const selectors = (abi as Abi).filter((i) => i.type === "event").map((i) => toEventSelector(i));

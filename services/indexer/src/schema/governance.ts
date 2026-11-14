@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Pause state, address freezes, timelock operations, implementations, roles and Coverage Spoke balances.
+// Pause state, address freezes, timelock operations, implementations, roles and First-Loss Reserve balances.
 
 import { index, onchainTable, primaryKey } from "ponder";
 
@@ -75,14 +75,14 @@ export const roleMember = onchainTable(
   (table) => ({ pk: primaryKey({ columns: [table.chainId, table.contract, table.role, table.account] }) }),
 );
 
-/** Funded balance of each Coverage Spoke after its last event (`balanceAfter`). */
+/** Funded balance of each First-Loss Reserve after its last event (`balanceAfter`). */
 export const coverageBalance = onchainTable(
   "coverage_balance",
   (t) => ({
     chainId: t.integer().notNull(),
-    coverageSpoke: t.hex().notNull(),
+    firstLossReserve: t.hex().notNull(),
     balance: t.bigint().notNull(),
     lastBlock: t.bigint().notNull(),
   }),
-  (table) => ({ pk: primaryKey({ columns: [table.chainId, table.coverageSpoke] }) }),
+  (table) => ({ pk: primaryKey({ columns: [table.chainId, table.firstLossReserve] }) }),
 );

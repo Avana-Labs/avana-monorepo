@@ -103,8 +103,9 @@ contract DebtOracleFuzzTest is DebtOracleFixture {
         if (v.state == PriceState.Cached) assertEq(served, a, "Cached serves A");
         if (v.state == PriceState.Expired) assertEq(served, _ceilStress(a, STRESS), "Expired serves the stress price");
         if (v.state == PriceState.Drifting) {
-            uint256 m = v.primaryValue > v.alternateValue ? v.primaryValue : v.alternateValue;
-            assertEq(served, m > a ? m : a, "a disagreement serves max(p, b, A)");
+            assertEq(
+                served, _driftingServed(v.primaryValue, v.alternateValue, a), "a disagreement serves max(counted, A)"
+            );
             assertTrue(v.liquidationPaused);
         }
         if (v.state == PriceState.Live) assertEq(served, v.quote, "Live serves the quote");
@@ -132,7 +133,7 @@ contract DebtOracleFuzzTest is DebtOracleFixture {
                 expected = p;
             } else {
                 live = false;
-                expected = hi > a ? hi : a;
+                expected = _driftingServed(p, b, a);
             }
         } else if (pValid) {
             expected = p;
@@ -162,15 +163,15 @@ contract DebtOracleFuzzTest is DebtOracleFixture {
         (uint256 a, uint64 aAt) = oracle.lastAcceptedPrice();
         DebtPriceView memory v = oracle.getPriceState();
         if (v.state != PriceState.Drifting) return;
-        uint256 hi = p > b ? p : b;
+        uint256 counted = _countedRoute(p, b);
         (,,, uint256 updatedAt,) = oracle.latestRoundData();
         assertEq(updatedAt, v.servedUpdatedAt);
-        if (a > hi) {
+        if (a > counted) {
             assertEq(v.servedUpdatedAt, aAt);
             assertEq(v.legFeeds[0], address(0));
             assertEq(v.borrowPriceMaxAge, 0);
             assertEq(v.liquidationPriceMaxAge, 0);
-        } else if (b > p) {
+        } else if (b == counted) {
             assertEq(v.servedUpdatedAt, block.timestamp - 50);
             assertEq(v.legFeeds[0], address(standby));
         } else {

@@ -8,7 +8,7 @@ import {LiquidationResult} from "./types/LiquidationResult.sol";
 
 /// @title ILPVaultSwapLiquidation
 /// @notice The entry points of LPVaultSwap open to any caller: `liquidate`, the one liquidation entry point, funded by
-/// the caller, and `settlePending`, which sends recovered value to the Coverage Spoke of the market's (funding Hub,
+/// the caller, and `settlePending`, which sends recovered value to the First-Loss Reserve of the market's (funding Hub,
 /// settlement asset).
 /// @dev Neither reads the MarketRegistry pause state, a breaker or the committed-operator registry (Q-404).
 interface ILPVaultSwapLiquidation {
@@ -51,7 +51,7 @@ interface ILPVaultSwapLiquidation {
 
     /// @notice Burns vault tokens left at LPVaultSwap by a seizure that was never settled against Collateralization's
     /// pending-settlement balance, swaps the released pool tokens into the market's settlement asset and adds the value
-    /// to the Coverage Spoke of that (funding Hub, asset).
+    /// to the First-Loss Reserve of that (funding Hub, asset).
     /// @dev Any caller; the caller supplies nothing and receives nothing; no Avana fee applies. The pause state,
     /// breakers and the address freeze are never read. Before acquiring the lock it reverts with `UnknownMarket`,
     /// `InvalidFeeRecipient` or `LockHeld(holder)`; it reads `p`, the units of `Collateralization.getPending(vaultToken)`,
@@ -62,7 +62,7 @@ interface ILPVaultSwapLiquidation {
     /// the n token amounts as deltas; (3) swap each token other than the settlement asset over its usable swap route at
     /// the SPEC-LIQ-018 minimum with `sLeg = min(slippageAllowanceBps, 30)` (`NoRouteAvailable`); (4) `R` from just
     /// before the burn to after the last route call, `RecoveryBelowFloor` if `R < minPending` (SPEC-LIQ-014); (5) fund
-    /// `Rt = R + carry[asset]`: if `Rt` is worth at least one Hub share, approve the Coverage Spoke for exactly `Rt`,
+    /// `Rt = R + carry[asset]`: if `Rt` is worth at least one Hub share, approve the First-Loss Reserve for exactly `Rt`,
     /// call `fund(Rt)`, reset the allowance, clear the carry and require the balance to fall by exactly `Rt`
     /// (`FundingMismatch`); otherwise skip `fund` and carry `Rt` to the next settlement into that asset; (6) send route
     /// residue and dust legs to `feeRecipient` by a gas-limited transfer, or on failure to `PayoutEscrow.deposit`

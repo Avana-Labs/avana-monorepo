@@ -9,6 +9,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
@@ -162,21 +163,20 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         uint64 updatedAt
     ) private view returns (bool) {
         if (feed == address(0)) return false;
-        uint256 age = block.timestamp > updatedAt ? block.timestamp - updatedAt : 0;
-        return age > IParameterStore(_PARAMETER_STORE).liquidationPriceMaxAge(feed);
+        return !PriceAge.liquidationFresh(updatedAt, IParameterStore(_PARAMETER_STORE).liquidationPriceMaxAge(feed));
     }
 
     /// @dev `Pc`: the smaller of the AaveOracle price of the collateral reserve and the LPOracle's served price.
     /// @custom:spec SPEC-LIQ-004
     function _collateralPrice(
         Market memory m
-    ) internal view returns (uint256 pc) {
-        pc = IAaveV4Oracle(IAaveV4Spoke(m.spoke).ORACLE()).getReservePrice(m.reserveId);
+    ) internal view returns (uint256 price) {
+        price = IAaveV4Oracle(IAaveV4Spoke(m.spoke).ORACLE()).getReservePrice(m.reserveId);
         int256 lp = ILPOracle(m.lpOracle).latestAnswer();
         if (lp <= 0) return 0;
         // lp > 0 is checked above (a non-positive answer is stale); the cast is of a positive int256.
         // forge-lint: disable-next-line(unsafe-typecast)
-        if (uint256(lp) < pc) pc = uint256(lp);
+        if (uint256(lp) < price) price = uint256(lp);
     }
 
     /// @dev `Pdebt`: the larger of the AaveOracle price of the reserve and its DebtOracle's (the AaveOracle's fixed

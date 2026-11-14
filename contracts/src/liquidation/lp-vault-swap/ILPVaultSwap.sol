@@ -23,7 +23,7 @@ import {ILPVaultSwapViews} from "./ILPVaultSwapViews.sol";
 /// the debt asset: Avana's fee (20 % of the oracle value the seizure gained, never above the realized surplus), the
 /// borrower's surplus and the caller's payout, which includes its unused funding and the recovered principal and is never
 /// escrowed. `liquidate` is the one liquidation entry point, open to every address that is not frozen with either route
-/// mode (Q-404); `settlePending` sends recovered value to the Coverage Spoke of the market's (funding Hub, settlement
+/// mode (Q-404); `settlePending` sends recovered value to the First-Loss Reserve of the market's (funding Hub, settlement
 /// asset); `deleverage` runs the swap side of a repay with collateral and is the only path that flash-borrows, through
 /// the chain's `IFlashSource` (`IFlashReceiver.onFlashLoan`). The keeper list is a registry of committed operators that
 /// gates no call.
@@ -32,7 +32,7 @@ import {ILPVaultSwapViews} from "./ILPVaultSwapViews.sol";
 /// and the swap-route contracts; `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only by the chain's AvanaTimelock
 /// (normal delay, cancellable). ERC-7201 storage; the implementation constructor calls `_disableInitializers()` and takes
 /// the implementation immutables `LOCK`, `AAVE_ADAPTER`, `COLLATERALIZATION`, `MARKET_REGISTRY`, `PARAMETER_STORE`,
-/// `PAYOUT_ESCROW` and `KEEPER_FLOOR`; no debt asset, Hub, Coverage Spoke or flash source is an immutable (the flash
+/// `PAYOUT_ESCROW` and `KEEPER_FLOOR`; no debt asset, Hub, First-Loss Reserve or flash source is an immutable (the flash
 /// source is `MARKET_REGISTRY.flashSource()`, replaceable through the timelock, read only by `deleverage`). It is one of
 /// the Lock's two members. LPVaultSwap never reads the MarketRegistry pause state, pause reason or circuit breakers:
 /// liquidation and pending settlement stay open in None, Frozen and both Paused reasons of every Hub; the address freeze

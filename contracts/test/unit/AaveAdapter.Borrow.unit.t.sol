@@ -284,7 +284,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     }
 
     // TEST-027 verifies: REQ-PROXY-017
-    /// @notice A Spoke listed on the funding Hub for the borrowed asset (the Lend Spoke, a Coverage Spoke) is refused
+    /// @notice A Spoke listed on the funding Hub for the borrowed asset (the Lend Spoke, a First-Loss Reserve) is refused
     /// even when the registry does not know it as a CDP Spoke, and a token listed on that Hub likewise.
     function test_TEST_027_receiverListedOnFundingHub() public {
         _expectBorrowRevert(

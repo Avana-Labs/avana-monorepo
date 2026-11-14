@@ -32,7 +32,7 @@ export default defineSchema({
     hubs: v.array(v.object({ address, label: v.string(), tier: v.number() })),
     lendSpokes: v.array(address),
     cdpSpokes: v.array(address),
-    coverageSpokes: v.array(v.object({ address, asset: address, hub: v.optional(address) })),
+    firstLossReserves: v.array(v.object({ address, asset: address, hub: v.optional(address) })),
     marketRegistry: address,
     timelock: address,
     explorerUrl: v.string(),
@@ -106,7 +106,7 @@ export default defineSchema({
     lendReserves: v.array(v.object({ spoke: address, reserveId: dec, paused: v.boolean(), frozen: v.boolean() })),
     exposure: v.union(
       v.null(),
-      v.object({ coverageSpoke: address, fundedBalance: dec, line: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec, deficitOffset: address, offsetFunded: dec }),
+      v.object({ firstLossReserve: address, fundedBalance: dec, line: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec, deficitOffset: address, offsetFunded: dec }),
     ),
     timestamp: v.number(),
     ...read,

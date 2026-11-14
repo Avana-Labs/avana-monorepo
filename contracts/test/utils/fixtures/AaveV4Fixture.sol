@@ -80,7 +80,7 @@ interface IAvanaAaveV4Roles {
 /// AccessManager sees the fixture as the deployer, as the orchestration's deployer is. Roles end where the
 /// orchestration with `grantRoles = true` leaves them, with `aaveDao` as Hub admin, Spoke admin, both configurator
 /// admins, proxy admin owner and AccessManager admin; the fixture renounces its admin role.
-/// Debt reserves, credit lines, Coverage Spokes and vault-token reserves are added by later fixtures.
+/// Debt reserves, credit lines, First-Loss Reserves and vault-token reserves are added by later fixtures.
 abstract contract AaveV4Fixture is AvanaTest {
     /// @notice Safe Singleton Factory, the CREATE2 factory of Aave's `Create2Utils`.
     address internal constant SAFE_SINGLETON_FACTORY = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
@@ -100,7 +100,7 @@ abstract contract AaveV4Fixture is AvanaTest {
     string internal constant LIQUIDATION_LOGIC_FQN =
         "dependencies/aave-v4-a3ef63e/src/spoke/libraries/LiquidationLogic.sol:LiquidationLogic";
 
-    /// @notice Aave Hub role of a Coverage Spoke (`Roles.HUB_DEFICIT_ELIMINATOR_ROLE`).
+    /// @notice Aave Hub role of a First-Loss Reserve (`Roles.HUB_DEFICIT_ELIMINATOR_ROLE`).
     uint64 internal constant HUB_DEFICIT_ELIMINATOR_ROLE = 103;
 
     /// @notice Labels of the instances, as Aave's orchestration names them.
@@ -207,15 +207,15 @@ abstract contract AaveV4Fixture is AvanaTest {
         _labelAaveV4();
     }
 
-    /// @notice Grants `HUB_DEFICIT_ELIMINATOR_ROLE` to a Coverage Spoke, as the DAO's listing payload does.
+    /// @notice Grants `HUB_DEFICIT_ELIMINATOR_ROLE` to a First-Loss Reserve, as the DAO's listing payload does.
     function _grantDeficitEliminator(
-        address coverageSpoke
+        address firstLossReserve
     ) internal {
         vm.prank(aaveDao);
         (bool ok, bytes memory data) = aave.accessManager
             .call(
                 abi.encodeWithSignature(
-                    "grantRole(uint64,address,uint32)", HUB_DEFICIT_ELIMINATOR_ROLE, coverageSpoke, 0
+                    "grantRole(uint64,address,uint32)", HUB_DEFICIT_ELIMINATOR_ROLE, firstLossReserve, 0
                 )
             );
         _bubble(ok, data);

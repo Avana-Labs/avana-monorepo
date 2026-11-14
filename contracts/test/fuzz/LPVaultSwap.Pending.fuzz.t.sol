@@ -11,7 +11,7 @@ import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 /// earlier unsettled seizure, any later liquidation that reconciles it, any second seizure not yet reconciled (so
 /// LPVaultSwap holds more units than are pending) and any route rate within the pending leg slippage, `settlePending`
 /// by any caller burns `x = min(held, pending)` units, releases them, swaps at the pending minimums, and adds exactly
-/// the measured `R` to the USDC Coverage Spoke's Hub; the caller receives nothing, a second call finds nothing pending,
+/// the measured `R` to the USDC First-Loss Reserve's Hub; the caller receives nothing, a second call finds nothing pending,
 /// and units beyond the pending balance stay.
 /// forge-config: default.isolate = false
 /// forge-config: default.fuzz.runs = 256
@@ -55,7 +55,7 @@ contract LPVaultSwapPendingFuzzTest is LPVaultSwapUnitBase {
         assertEq(vt.balanceOf(address(lvs)), held - x, "exactly x burned");
         assertEq(vt.balanceOf(address(lvs)), unreconciled, "the unreconciled seizure stays for its own reconcile");
         assertEq(recovered, amounts[0] + amounts[1] * rateBps / 10_000, "R measured over the release and the route");
-        assertEq(usdc.balanceOf(aave.hub), hubBefore + recovered, "R added to the Coverage Spoke's Hub");
+        assertEq(usdc.balanceOf(aave.hub), hubBefore + recovered, "R added to the First-Loss Reserve's Hub");
         assertEq(usdc.balanceOf(caller), callerBefore, "the caller receives nothing");
         assertEq(usdc.balanceOf(address(lvs)), 0, "no USDC kept");
         assertEq(usdt.balanceOf(address(lvs)), 0, "no USDT kept");

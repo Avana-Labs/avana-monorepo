@@ -52,7 +52,7 @@ interface ISpokeImplementationRead {
 ///   probe, GHO as a fixed-price monitoring-only listing), then their collateral factor, feed-agreement tolerance,
 ///   second source and Hub token caps, USDC's debt stress rise; each CDP Spoke (`approveSpokeCodeHash`,
 ///   `deployCdpSpoke`, `setLiquidationExpectations`), whose debt reserves the Aave payload left not borrowable; each
-///   (Hub, debt asset)'s Coverage Spoke and credit line.
+///   (Hub, debt asset)'s First-Loss Reserve and credit line.
 /// - `oracles` (Avana operators): GHO's fixed price source (a test-network stand-in) and the DebtOracle proxy of each
 ///   other debt asset, initialised in its deploying transaction once the asset is listed (`DebtOracle.initialize` reads
 ///   its routes). `10_AaveListingPayload` (`debt`) then names them as the reserves' price sources and makes the
@@ -333,7 +333,7 @@ contract ListMarkets is ListingBase {
         }
     }
 
-    /// @notice Each (Hub, debt asset) of the debt reserves: its Coverage Spoke and the Hub's credit line, which bounds
+    /// @notice Each (Hub, debt asset) of the debt reserves: its First-Loss Reserve and the Hub's credit line, which bounds
     /// the CDP Spokes' draw caps on the asset.
     function _coverageAndLines(
         Operation memory op
@@ -346,13 +346,14 @@ contract ListMarkets is ListingBase {
             string memory sym = _str(string.concat(k, ".symbol"));
             string memory hubLabel = _hubOfSpoke(_str(string.concat(k, ".spoke")));
             address hub = _hub(hubLabel);
-            address cs = vm.parseJsonAddress(coverage, string.concat("$['CoverageSpoke.", hubLabel, ".", sym, "']"));
-            if (registry.coverageSpokeOf(hub, _token(sym)) != address(0)) continue;
+            address cs =
+                vm.parseJsonAddress(coverage, string.concat("$['AvanaFirstLossReserve.", hubLabel, ".", sym, "']"));
+            if (registry.firstLossReserveOf(hub, _token(sym)) != address(0)) continue;
             _add(
                 op,
                 address(registry),
-                abi.encodeCall(registry.setCoverageSpoke, (hub, _token(sym), cs)),
-                "MR.setCoverageSpoke"
+                abi.encodeCall(registry.setAvanaFirstLossReserve, (hub, _token(sym), cs)),
+                "MR.setAvanaFirstLossReserve"
             );
             _add(
                 op,
@@ -735,8 +736,8 @@ contract ListMarkets is ListingBase {
             d.decimals = IDecimals(d.asset).decimals();
             d.priceSource = vm.parseJsonAddress(sources, string.concat(".", sym));
             d.fixedPrice = _debtAssetFixed(sym);
-            d.coverageSpoke = vm.parseJsonAddress(
-                coverage, string.concat("$['CoverageSpoke.", _hubOfSpoke(spokeLabel), ".", sym, "']")
+            d.firstLossReserve = vm.parseJsonAddress(
+                coverage, string.concat("$['AvanaFirstLossReserve.", _hubOfSpoke(spokeLabel), ".", sym, "']")
             );
             d.approved = true;
             _add(

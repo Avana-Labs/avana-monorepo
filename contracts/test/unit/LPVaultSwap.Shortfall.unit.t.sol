@@ -159,4 +159,24 @@ contract LPVaultSwapShortfallUnitTest is LPVaultSwapUnitBase {
         assertLt(r.recovered, r.debtRepaid, "R below D");
         assertEq(r.keeperOut, 3e6 - (3e6 - r.recovered), "keeperOut = R");
     }
+
+    /// @notice LIQ-I4, the per-call relaxation bound kept on purpose: with both USDT routes 12 % below the oracle, the
+    /// leg minimum at `sLeg = s + maxShortfallBps = 1,100` bps is above what any route returns, so no caller can
+    /// liquidate whatever `maxShortfall` it offers (`NoRouteAvailable`). The bound limits how far below the oracle a
+    /// single call may sell into a crashed route (and how much a sandwich can take from the caller's top-up); liveness
+    /// in a cascade comes from smaller calls once arbitrage restores the route, or from governance raising
+    /// `maxShortfallBps` (bounds [0, 5,000]), after which the same call settles with the caller's top-up.
+    // TEST-233 verifies: SPEC-LIQ-019, REQ-SWAP-046, REQ-PSTORE-018, ATTACK-065, EMG-057
+    function test_TEST_233_relaxationBoundHoldsInACascade() public {
+        usdtUsdcPool.setRate(88, 100);
+        usdtUsdcPool2.setRate(88, 100);
+        LiquidationParams memory p = _params(proxy, 1950e6);
+        p.maxShortfall = 1_000_000e6;
+        _fund(usdc, keeper, 1950e6 + 1_000_000e6);
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.NoRouteAvailable.selector));
+        store.setMaxShortfallBps(1500);
+        LiquidationResult memory r = _liquidateAs(keeper, p);
+        assertGt(r.shortfall, 0, "the caller tops up the floor gap");
+        assertEq(r.recovered + r.shortfall, r.minOut, "R' = minRec");
+    }
 }

@@ -26,13 +26,13 @@ export interface ChainDeployment {
   readonly lendSpokes: readonly Address[];
   /** The manifest's CDP Spokes. */
   readonly cdpSpokes: readonly Address[];
-  /** Every Coverage Spoke with the asset it covers and, when the manifest names it, its Hub. */
-  readonly coverageSpokes: readonly { readonly address: Address; readonly asset: Address; readonly hub?: Address }[];
+  /** Every First-Loss Reserve with the asset it covers and, when the manifest names it, its Hub. */
+  readonly firstLossReserves: readonly { readonly address: Address; readonly asset: Address; readonly hub?: Address }[];
 }
 
 /**
  * What a Spoke is to one Hub asset. Only CDP Spokes draw; the others have `drawCap = 0` (REQ-HUB-015). A
- * `deficitOffset` is the asset's DAO deficit offset: a Spoke whose `FIRST_LOSS_LAYER()` is the asset's Coverage Spoke,
+ * `deficitOffset` is the asset's DAO deficit offset: a Spoke whose `FIRST_LOSS_LAYER()` is the asset's First-Loss Reserve,
  * the second loss layer behind it (REQ-FLR-046).
  */
 export type SpokeKind = "lend" | "cdp" | "coverage" | "feeReceiver" | "other" | "deficitOffset";
@@ -85,7 +85,7 @@ export interface HubAssetRow {
   readonly lendReserves: readonly LendReserve[];
   /** From `Lens.getHubAssetExposure`; null when the Lens refuses the asset. */
   readonly exposure: {
-    readonly coverageSpoke: Address;
+    readonly firstLossReserve: Address;
     readonly fundedBalance: DecimalString;
     readonly line: DecimalString;
     readonly coverageBoundHolds: boolean;

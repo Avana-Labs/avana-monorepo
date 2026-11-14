@@ -268,13 +268,14 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         _expectListing("lpOracle");
         registry.listCollateralMarket(d);
         o.setSeed(8, 1e8);
-        // Raw-price bound: USDC at 1.9e15 USD against USDT at 1 USD breaks 2^64 under a 100x shock.
+        // Raw-price bound: with equal decimals the 2^128 bound is out of reach of a usable answer, so an answer at
+        // 2^96 (unusable) is what fails it, and the largest usable one lists.
         address usdcPrimary = registry.getToken(address(usdc)).primaryRoute[0];
-        RegistryFeedMock(usdcPrimary).setAnswer(1.9e23);
+        RegistryFeedMock(usdcPrimary).setAnswer(int256(2 ** 96));
         vm.prank(address(timelock));
         _expectListing("rawPrice");
         registry.listCollateralMarket(d);
-        RegistryFeedMock(usdcPrimary).setAnswer(1.8e23);
+        RegistryFeedMock(usdcPrimary).setAnswer(int256(2 ** 96 - 1));
         vm.prank(address(timelock));
         registry.listCollateralMarket(d);
     }

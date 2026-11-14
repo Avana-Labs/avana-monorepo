@@ -1,6 +1,6 @@
 name: services
 
-# The off-chain TypeScript packages: services/common, services/indexer, services/keeper and packages/protocol (the ABIs
+# The off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor and packages/protocol (the ABIs
 # and ABI hash the services are built against). They form one npm workspace whose root is the repository's
 # package.json, with one package-lock.json beside it. Every pull request and push to main that changes one of them, the
 # workspace manifests or this file runs one job per package: refuse an `@avana/` dependency that would come from the
@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [services/common, services/indexer, services/keeper, services/convex, packages/protocol]
+        package: [services/common, services/indexer, services/keeper, services/monitor, services/convex, packages/protocol]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:

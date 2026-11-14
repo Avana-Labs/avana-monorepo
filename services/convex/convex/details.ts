@@ -172,7 +172,7 @@ export async function readAddresses(ctx: QueryCtx, w: World, scope: PageScope, s
   if (scope === "lend") {
     const a = row as HubAssetDoc;
     rows.push(["Token", a.underlying], ["Hub", a.hub], ...a.lendReserves.map((r): [string, string] => ["Lend Spoke", r.spoke]));
-    if (a.exposure) rows.push(["Coverage Spoke", a.exposure.coverageSpoke]);
+    if (a.exposure) rows.push(["First-Loss Reserve", a.exposure.firstLossReserve]);
   } else if (scope === "asset") {
     const r = row as SpokeReserveDoc;
     rows.push(["Token", r.asset], ["Hub", r.hub], ["CDP Spoke", r.spoke]);

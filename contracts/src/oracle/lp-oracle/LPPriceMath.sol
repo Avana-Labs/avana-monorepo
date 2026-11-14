@@ -203,6 +203,11 @@ library LPPriceMath {
     /// @notice Price of one whole vault token from the composition `a = composition(10^d, v)` (`SPEC-ORC-008`).
     /// @dev `a'_i = a_i - 1` if `a_i >= 1`, else 0; `price8 = max(1, sum_i floor(a'_i * v_i / 10^(d_i)))`. Every term
     /// rounds down, so the price never exceeds the value of the holdings at the oracle prices, and it is at least 1.
+    /// The shortfall against the exact value is at most two raw units of each token plus one price unit per token. For a
+    /// low-decimals, high-price token (WBTC: one raw unit is $0.001 at $100,000) priced per whole vault token worth $1
+    /// to $10 (`SPEC-ORC-005`), that is up to ~2e-3 relative. It is kept, not tightened: it only ever understates the
+    /// collateral (never in the borrower's favour against lenders), it is below the 50 bps deviation threshold of the
+    /// feeds the price already tolerates, and it falls as the vault token appreciates (TEST-070 WBTC case).
     /// `valid` is false, with `price8 = 0`, unless the three vectors have one length `n` in `[2, MAX_POOL_TOKENS]`,
     /// every `a_i < 2^128`, every `d_i <= 77` and every `v_i` in `[1, MAX_ROUTE_ANSWER]`: a malformed module read
     /// (`REQ-ORACLE-103`), never a revert or a dropped token. Inside the bounds every term is below `2^188` and the
@@ -428,7 +433,8 @@ library LPPriceMath {
     }
 
     /// @notice Served debt price by state (`SPEC-ORC-018`).
-    /// @dev Live: `q`. Drifting (the routes disagree): `max(p, b, A)`. Cached: `A`. Expired:
+    /// @dev Live: `q`. Drifting (the routes disagree): `max(p, b, A)`; the DebtOracle passes the lower route as both
+    /// `p` and `b`, so it serves the median `max(min(p, b), A)` (ORACLE-06). Cached: `A`. Expired:
     /// `ceil(A * (10^4 + δ) / 10^4)`, rounding up against the borrower, with `δ` below 100 read as 100 and a product of
     /// 256 bits or more saturating at `type(uint256).max`. No stable ceiling. The route values round down by less than
     /// one unit (exact for a feed with 8 or fewer decimals). The result is at least 1 for any inputs and at least `A` in

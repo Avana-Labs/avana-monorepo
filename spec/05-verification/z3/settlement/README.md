@@ -169,8 +169,8 @@ There is no settlement budget (`Q-397`). These checks keep their IDs and verify 
 | MATH-ST-47 | With `amount = min(maxAmount, ⌈deficit/RAY⌉, fundedBalance())`, the GHO eliminated is ≤ the funded balance and the shares burned are ≤ the shares held, so the `uint120` subtraction never reverts. | `SPEC-FLR-001`, `-002`, `DEF-POST-001` | PROVED |
 | MATH-ST-48 | Coverage pays less than 1 wei above the exact deficit. | `SPEC-FLR-001` | PROVED |
 | MATH-ST-49 | Other suppliers' share price does not fall. | `SPEC-FLR-001`, `DEF-POST-001` | PROVED |
-| MATH-ST-114 | The Hub eliminates exactly the Coverage Spoke's `amount` (`dE = amount`), so `totalCovered` can be written before the call. | `SPEC-FLR-001`, `REQ-FLR-018` | PROVED |
-| MATH-ST-50 | The Hub alone would accept coverage of any Spoke's deficit; the Coverage Spoke's `COVERAGE_ROLE` and Spoke allowlist carry the restriction. | `SPEC-FLR-001`, `DEF-005` | COUNTEREXAMPLE (Hub only) |
+| MATH-ST-114 | The Hub eliminates exactly the First-Loss Reserve's `amount` (`dE = amount`), so `totalCovered` can be written before the call. | `SPEC-FLR-001`, `REQ-FLR-018` | PROVED |
+| MATH-ST-50 | The Hub alone would accept coverage of any Spoke's deficit; the First-Loss Reserve's `COVERAGE_ROLE` and Spoke allowlist carry the restriction. | `SPEC-FLR-001`, `DEF-005` | COUNTEREXAMPLE (Hub only) |
 | MATH-ST-61 | A withdrawal of `min(request, fundedBalance())` burns at most the shares held. | `SPEC-FLR-003` | PROVED |
 | MATH-ST-62 | `fund(x)` raises `fundedBalance` by between `x − 2` and `x + 1` (two floors), share price between 1 and 2. | `SPEC-FLR-002` | PROVED |
 

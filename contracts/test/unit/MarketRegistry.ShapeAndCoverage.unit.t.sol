@@ -11,13 +11,13 @@ import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryLPVaultMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
 
 /// @notice The canonical pool keying and shape of a market definition for every integration capability, and the
-/// Coverage Spoke record of a (Hub, asset), field by field.
+/// First-Loss Reserve record of a (Hub, asset), field by field.
 contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
     function setUp() public {
         _setUpWorld();
@@ -109,7 +109,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         }
     }
 
-    // ─── Coverage Spoke record ───
+    // ─── First-Loss Reserve record ───
 
     function _expectBadCoverage(
         address h,
@@ -117,51 +117,53 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         address cs
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidCoverageSpoke.selector, cs));
-        registry.setCoverageSpoke(h, asset, cs);
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidAvanaFirstLossReserve.selector, cs));
+        registry.setAvanaFirstLossReserve(h, asset, cs);
     }
 
     // TEST-273 verifies: REQ-MREG-009, REQ-CONFIG-081, Q-379
     // Sources: 5.1 TEST-273
-    // The Coverage Spoke must be non-zero, for a non-zero asset, report the Hub, the asset and the Hub's asset id, and
+    // The First-Loss Reserve must be non-zero, for a non-zero asset, report the Hub, the asset and the Hub's asset id, and
     // be the first for its (Hub, asset); each condition alone is refused.
-    function test_TEST_273_coverageSpokeEachCondition() public {
+    function test_TEST_273_firstLossReserveEachCondition() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
         hub.setAsset(address(dai), 4);
-        RegistryCoverageSpokeMock good = new RegistryCoverageSpokeMock(address(hub), address(dai), 4);
+        RegistryAvanaFirstLossReserveMock good = new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 4);
         _expectBadCoverage(address(hub), address(dai), address(0));
         _expectBadCoverage(address(hub), address(0), address(good));
-        _expectBadCoverage(address(hub), address(dai), address(new RegistryCoverageSpokeMock(alice, address(dai), 4)));
         _expectBadCoverage(
-            address(hub), address(dai), address(new RegistryCoverageSpokeMock(address(hub), address(usdc), 4))
+            address(hub), address(dai), address(new RegistryAvanaFirstLossReserveMock(alice, address(dai), 4))
         );
         _expectBadCoverage(
-            address(hub), address(dai), address(new RegistryCoverageSpokeMock(address(hub), address(dai), 5))
+            address(hub), address(dai), address(new RegistryAvanaFirstLossReserveMock(address(hub), address(usdc), 4))
+        );
+        _expectBadCoverage(
+            address(hub), address(dai), address(new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 5))
         );
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.CoverageSpokeSet(address(hub), address(dai), address(good));
+        emit IMarketRegistryHubs.AvanaFirstLossReserveSet(address(hub), address(dai), address(good));
         vm.prank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(dai), address(good));
-        assertEq(registry.coverageSpokeOf(address(hub), address(dai)), address(good));
-        // Set once: a second Coverage Spoke for the pair, even a valid one, is refused.
+        registry.setAvanaFirstLossReserve(address(hub), address(dai), address(good));
+        assertEq(registry.firstLossReserveOf(address(hub), address(dai)), address(good));
+        // Set once: a second First-Loss Reserve for the pair, even a valid one, is refused.
         _expectBadCoverage(
-            address(hub), address(dai), address(new RegistryCoverageSpokeMock(address(hub), address(dai), 4))
+            address(hub), address(dai), address(new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 4))
         );
-        // The recorded Coverage Spoke is protected from the address freeze.
+        // The recorded First-Loss Reserve is protected from the address freeze.
         vm.prank(emergencyGuardian);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, address(good)));
         registry.freezeAddress(address(good));
     }
 
     // TEST-273 verifies: REQ-MREG-009, REQ-CONFIG-083
-    // An asset the Hub does not list cannot get a Coverage Spoke (the Hub's asset-id read reverts).
-    function test_TEST_273_coverageSpokeNeedsAHubAsset() public {
+    // An asset the Hub does not list cannot get a First-Loss Reserve (the Hub's asset-id read reverts).
+    function test_TEST_273_firstLossReserveNeedsAHubAsset() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
-        RegistryCoverageSpokeMock cs = new RegistryCoverageSpokeMock(address(hub), address(dai), 0);
+        RegistryAvanaFirstLossReserveMock cs = new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 0);
         vm.prank(address(timelock));
         vm.expectRevert(bytes("AssetNotListed"));
-        registry.setCoverageSpoke(address(hub), address(dai), address(cs));
-        assertEq(registry.coverageSpokeOf(address(hub), address(dai)), address(0));
+        registry.setAvanaFirstLossReserve(address(hub), address(dai), address(cs));
+        assertEq(registry.firstLossReserveOf(address(hub), address(dai)), address(0));
     }
 
     // ─── Integrations ───

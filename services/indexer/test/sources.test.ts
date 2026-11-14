@@ -25,7 +25,7 @@ const manifest = {
     lens: im(0x10, 120),
     marketRegistry: up(0x11, 100),
     vaultTokenFactory: im(0x12, 100),
-    coverageSpokes: [{ ...im(0x41, 130), asset: addr(0x51), hub: addr(0x21) }],
+    firstLossReserves: [{ ...im(0x41, 130), asset: addr(0x51), hub: addr(0x21) }],
   },
   aave: {
     hubs: [{ ...up(0x21, 90), label: "Stable LP", tier: 1 }, { ...up(0x22, 95), label: "Core", tier: 2 }, { ...up(0x23, 97), label: "Growth", tier: 3 }],
@@ -81,7 +81,7 @@ describe("indexer sources with several Hubs", () => {
       ],
       lendSpokes: [addr(0x33), addr(0x34), addr(0x35)],
       cdpSpokes: [addr(0x31), addr(0x32)],
-      coverageSpokes: [{ address: addr(0x41), asset: addr(0x51), hub: addr(0x21) }],
+      firstLossReserves: [{ address: addr(0x41), asset: addr(0x51), hub: addr(0x21) }],
     });
     expect(sources.samplerSource().sepolia).toMatchObject({ startBlock: 125 });
   });

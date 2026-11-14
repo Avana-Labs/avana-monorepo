@@ -22,6 +22,7 @@ import {RouteMode} from "./types/RouteMode.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // The repayment loop makes at most MAX_REPAY_TRANSFERS (4) transfers to the flash source (REQ-SWAP-122); a revert
 // reverts the deleverage.
@@ -117,7 +118,7 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
 
     /// @dev Opens the context, takes the flash loan, reads the callback's results, clears the context, sends the debt
     /// asset left to the wallet and emits `Deleveraged`.
-    /// @custom:spec REQ-SWAP-106, REQ-SWAP-013
+    /// @custom:spec REQ-SWAP-106, REQ-SWAP-013, SPEC-LIQ-020
     function _runFlash(
         FlashContext memory fc
     ) private returns (uint256 debtRepaid, uint256 assetOut) {
@@ -139,8 +140,14 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         uint256 premium = _PREMIUM_SLOT.asUint256().tload();
         debtRepaid = _REPAID_SLOT.asUint256().tload();
         _clear();
+        // SPEC-LIQ-020: the borrower receives R − x − φ, with x the debt the AaveAdapter repaid (the flash amount F,
+        // less any part Aave returned unconsumed, which then stays the borrower's); `_settleLoan` already required
+        // R ≥ F + φ. It is paid out of the balance change over the loan: a donation above it is not paid out, and a
+        // transfer fee that made the source's repayment cost more (REQ-SWAP-122) comes out of it.
         uint256 afterLoan = asset.balanceOf(address(this));
-        assetOut = afterLoan > before ? afterLoan - before : 0;
+        assetOut = Math.min(
+            afterLoan - Math.min(afterLoan, before), SettlementMath.deleverageAssetOut(recovered, debtRepaid, premium)
+        );
         if (assetOut != 0) asset.safeTransfer(fc.r.wallet, assetOut);
         // The flash source is the registry's, the Lock is the AaveAdapter's and the context is cleared above, so no
         // reentrant call can interleave with this log.
@@ -304,6 +311,10 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
 
     /// @dev REQ-SWAP-122: at most `MAX_REPAY_TRANSFERS` times, read the source's balance, stop at `owed`, else send
     /// the difference; then `FlashRepayShort(balance, owed)` unless the source holds `owed`.
+    /// A balance donated to the source counts toward `owed` (LIQ-I2): it reduces this repayment and so ends in this
+    /// borrower's `assetOut`. Kept on purpose: only the donor loses (a donor that then deleverages gets it back), the
+    /// source forwards only what the Pool delivered, and topping up to `owed + donation` would strand the donation in
+    /// a source with no sweep. Pinned by TEST-080 `donationDoesNotBlockFlashPath`.
     /// @custom:spec REQ-SWAP-122, REQ-SWAP-124, REQ-SWAP-108
     function _repaySource(
         IERC20 asset,

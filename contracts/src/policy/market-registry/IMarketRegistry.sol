@@ -22,7 +22,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 
 /// @title IMarketRegistry
 /// @notice The chain's registry of Hubs, AMM integrations, CDP Spokes and their debt reserves (with funding Hub and
-/// Coverage Spoke), cross-Hub credit lines, markets and their status, listed pool tokens and debt assets with their
+/// First-Loss Reserve), cross-Hub credit lines, markets and their status, listed pool tokens and debt assets with their
 /// primary, alternate and standby Chainlink routes, swap routes,
 /// each Hub's pause state (None, Frozen, Paused) with its reason, the latched circuit breakers and the address freeze.
 /// @dev Deployed behind one fixed ERC-1967 proxy (UUPS); `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only
@@ -31,7 +31,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// `VAULT_TOKEN_FACTORY`, `AAVE_ADAPTER`, `COLLATERALIZATION`, `PROXY_MANAGER`, `PARAMETER_STORE`, `RISK_MODULE`,
 /// `LP_VAULT_SWAP`, `TIMELOCK`, `AAVE_GOVERNANCE_EXECUTOR`, `LOCK` and `PAYOUT_ESCROW`. No Hub,
 /// AMM position manager or factory, flash source or debt asset is an immutable: Hubs, integrations (each LPVault and
-/// pricing implementation), Coverage Spokes and the IFlashSource come from storage, so one registry serves every Hub
+/// pricing implementation), First-Loss Reserves and the IFlashSource come from storage, so one registry serves every Hub
 /// and AMM protocol on the chain and a new one needs no redeploy; `_grantRole` reverts `AdminRoleOnlyTimelock` for a
 /// grant of either admin role to any account but `TIMELOCK`. Roles are OpenZeppelin AccessControl:
 /// `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` belong to the timelock only; `APPLICATION_PAUSE_GUARDIAN` and

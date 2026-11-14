@@ -13,7 +13,7 @@ import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
-    RegistryCoverageSpokeMock,
+    RegistryAvanaFirstLossReserveMock,
     RegistryLPOracleMock,
     RegistryRouteMock,
     RegistryTokenMock
@@ -106,18 +106,18 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         // Listed token that is no debt asset.
         (ok,) = _setAs(id, address(usdc), address(usdt), 0, _route(address(usdc), address(usdt), "d2"));
         assertTrue(ok, "listed token");
-        // Unlisted asset with a Coverage Spoke on the home Hub.
+        // Unlisted asset with a First-Loss Reserve on the home Hub.
         RegistryTokenMock dai = new RegistryTokenMock(18);
         hub.setAsset(address(dai), 4);
-        RegistryCoverageSpokeMock cs = new RegistryCoverageSpokeMock(address(hub), address(dai), 4);
+        RegistryAvanaFirstLossReserveMock cs = new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 4);
         bytes memory ret;
         (ok, ret) = _setAs(id, address(usdc), address(dai), 0, _route(address(usdc), address(dai), "d3"));
         assertFalse(ok);
         assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.TokenNotListed.selector, address(dai)));
         vm.prank(address(timelock));
-        registry.setCoverageSpoke(address(hub), address(dai), address(cs));
+        registry.setAvanaFirstLossReserve(address(hub), address(dai), address(cs));
         (ok,) = _setAs(id, address(usdc), address(dai), 0, _route(address(usdc), address(dai), "d3"));
-        assertTrue(ok, "asset with a Coverage Spoke");
+        assertTrue(ok, "asset with a First-Loss Reserve");
     }
 
     // TEST-054 verifies: REQ-CONFIG-060

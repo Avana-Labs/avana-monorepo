@@ -10,7 +10,7 @@ import {
   activeChains,
   ammPoolSource,
   chainSources,
-  coverageSpokeSource,
+  firstLossReserveSource,
   debtOracleSource,
   hubRecordedSource,
   hubSource,
@@ -59,7 +59,7 @@ export default createConfig({
     VaultToken: { abi: abis.VaultToken, chain: vaultTokenSource() },
     LPOracle: { abi: abis.LPOracle, chain: lpOracleSource() },
     DebtOracle: { abi: abis.DebtOracle, chain: debtOracleSource() },
-    CoverageSpoke: { abi: abis.CoverageSpoke, chain: coverageSpokeSource() },
+    AvanaFirstLossReserve: { abi: abis.AvanaFirstLossReserve, chain: firstLossReserveSource() },
     // Aave V4: every Hub and every Lend and CDP Spoke, the manifest's and those listed later (src/config/aaveSources.ts).
     // Spoke events are attributed only to accounts the AaveAdapter and the ProxyManager both announced (TEST-144).
     AaveSpoke: { abi: abis.AaveSpoke, chain: spokeSource() },

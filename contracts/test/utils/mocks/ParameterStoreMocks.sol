@@ -269,8 +269,8 @@ contract MockCollateralization {
     }
 }
 
-/// @notice Coverage Spoke minimum.
-contract MockCoverageSpoke {
+/// @notice First-Loss Reserve minimum.
+contract MockAvanaFirstLossReserve {
     uint256 public firstLossReserveMinimum;
 
     function setMinimum(

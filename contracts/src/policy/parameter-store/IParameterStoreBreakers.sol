@@ -22,7 +22,7 @@ interface IParameterStoreBreakers {
     /// @param asset Debt asset.
     /// @return value Asset base units (10,000 GHO = 10_000e18 for a GHO reserve at launch; a per-reserve
     /// materiality set at listing for other assets), within [0,
-    /// `firstLossReserveMinimum` of the asset's Coverage Spoke]; 0 for an asset with no value written.
+    /// `firstLossReserveMinimum` of the asset's First-Loss Reserve]; 0 for an asset with no value written.
     /// @custom:spec REQ-PSTORE-016, SPEC-BRK-004, Q-241, Q-399
     function breakerDeficitMax(
         address hub,
@@ -64,7 +64,7 @@ interface IParameterStoreBreakers {
 
     /// @notice Raises a debt asset's `breakerDeficitMax(hub, asset)`; the debt reserve's listing batch writes the first
     /// value.
-    /// @dev Reverts `OutOfBounds` above `firstLossReserveMinimum()` of the Coverage Spoke of any approved debt reserve
+    /// @dev Reverts `OutOfBounds` above `firstLossReserveMinimum()` of the First-Loss Reserve of any approved debt reserve
     /// of `asset` funded by `hub`, and `UnknownDebtReserve(address(0), 0)` when no approved debt reserve uses `asset`.
     /// @param hub The funding Hub whose deficit is measured.
     /// @param asset Debt asset.

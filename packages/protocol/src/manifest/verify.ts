@@ -206,7 +206,7 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     add(`LPVault ${v.integrationId} MARKET_REGISTRY`, (await read(v.address, "MARKET_REGISTRY")) === m.avana.marketRegistry.address);
   }
   // Listed markets: vault tokens, routes and LPOracles are the recorded code, and each LPOracle proxy points at its
-  // integration's LPOracleCL implementation; Coverage Spokes and the DAO deficit offsets are the recorded code.
+  // integration's LPOracleCL implementation; First-Loss Reserves and the DAO deficit offsets are the recorded code.
   for (const mk of m.markets) {
     await compare(`market ${mk.marketId} vault token`, mk.vaultToken.address, mk.vaultToken.codeHash, null);
     for (const [i, r] of mk.routes.entries()) await compare(`market ${mk.marketId} route ${i}`, r.address, r.codeHash, r.artifact);
@@ -216,7 +216,7 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
   for (const d of m.debtReserves) {
     if (d.debtOracle) add(`DebtOracle ${d.asset} implementation`, (await implementationOf(client, d.debtOracle.address)) === d.debtOracle.implementation, d.debtOracle.implementation);
   }
-  for (const x of [...m.avana.coverageSpokes, ...m.avana.deficitOffsetSpokes]) {
+  for (const x of [...m.avana.firstLossReserves, ...m.avana.daoDeficitOffsets]) {
     await compare(`loss layer ${x.hub} ${x.asset}`, x.address, x.codeHash, x.artifact);
   }
 

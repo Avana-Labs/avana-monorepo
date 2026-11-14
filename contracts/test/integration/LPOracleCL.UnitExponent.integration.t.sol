@@ -7,7 +7,6 @@ import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol"
 import {ClUnitMath} from "../../src/amm/concentrated-liquidity/ClUnitMath.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
@@ -32,13 +31,11 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// `n · 10^k` liquidity from the pool returns. Pools with `k = 0` and `k > 0`: WETH/DAI at $3,000 (18/18), DAI/USDT on
 /// tick spacing 1 (18/6), an 18-decimal meme coin at $0.00001 against WETH and USDC on the 1 % tier and an 8-decimal
 /// token at $90,000 against that meme coin, in both token orders. A pair whose raw price ratio, shocked by
-/// `LISTING_SHOCK_FACTOR`, leaves `SPEC-ORC-009`'s lower branch is refused at `initialize` with `ConfigCheckFailed`
-/// carrying the module's shock bit; a feed initialized with another `k` than the pool's is refused by `checkConfig`.
+/// `LISTING_SHOCK_FACTOR`, leaves `SPEC-ORC-009`'s lower branch but stays below `2^128` lists (INTEG-04); a feed
+/// initialized with another `k` than the pool's is refused by `checkConfig`.
 contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
     using Math for uint256;
 
-    /// @dev The module's shocked-ratio bit (`REQ-ORACLE-105` bit 4), shifted into the `checkConfig` bitmap.
-    uint256 internal constant SHOCK_SQRT_BIT = (1 << 4) << LPOracleCodes.MODULE_CHECKS_SHIFT;
     /// @dev The module's unit-exponent bit (`REQ-ORACLE-105` bit 7), shifted into the `checkConfig` bitmap.
     uint256 internal constant UNIT_EXP_BIT = (1 << 7) << LPOracleCodes.MODULE_CHECKS_SHIFT;
     /// @dev Token addresses that fix the pool order: the token placed at `LOW` is token0.
@@ -125,9 +122,9 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
 
     // TEST-332 verifies: SPEC-ORC-009, REQ-ORACLE-105
     /// @notice With USDC as token0 the raw ratio is `10^8 · 10^18 / (1,000 · 10^6) = 10^17`; shocked by 100 each way it is
-    /// `10^21 ≥ 2^64`, so `initialize` reverts `ConfigCheckFailed` with the module's shock bit.
-    function test_TEST_332_memeUsdcRefusedUsdcFirst() public {
-        _expectRefused(_memeUsdc(false, 0), SHOCK_SQRT_BIT);
+    /// `10^21`, past the former `2^64` bound and far below `2^128`, so the market lists (INTEG-04).
+    function test_TEST_332_memeUsdcListsUsdcFirst() public {
+        _listAndCheck(_memeUsdc(false, 0));
     }
 
     // TEST-332 verifies: SPEC-ORC-005, SPEC-ORC-006, REQ-ORACLE-105
@@ -138,10 +135,10 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
     }
 
     // TEST-332 verifies: SPEC-ORC-009, REQ-ORACLE-105
-    /// @notice With the $90,000 token as token0 the raw ratio is `9·10^12 · 10^18 / (1,000 · 10^8) = 9·10^19 ≥ 2^64`
-    /// before any shock: refused at `initialize` with the module's shock bit.
-    function test_TEST_332_btcMemeRefusedBtcFirst() public {
-        _expectRefused(_btcMeme(true, 0), SHOCK_SQRT_BIT);
+    /// @notice With the $90,000 token as token0 the raw ratio is `9·10^12 · 10^18 / (1,000 · 10^8) = 9·10^19`, past
+    /// the former `2^64` bound before any shock and below `2^128` after it: the market lists (INTEG-04).
+    function test_TEST_332_btcMemeListsBtcFirst() public {
+        _listAndCheck(_btcMeme(true, 0));
     }
 
     // ─── Pools with k = 0 ───
@@ -317,24 +314,6 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
         if (v == 0) v = 1;
     }
 
-    /// @dev `initialize` of a feed for `c` with the exponent of the pool's first binding reverts `ConfigCheckFailed`
-    /// with `bit` set.
-    function _expectRefused(
-        Case memory c,
-        uint256 bit
-    ) internal {
-        _setUpPool(c);
-        (, uint8 k) = ClUnitMath.firstBindingExponent(_valuation(), pool.tickSpacing());
-        InitParams memory p = _oracleParams(k);
-        try new ERC1967Proxy(address(implementation), abi.encodeCall(ILPOracle.initialize, (p))) {
-            fail("initialize must revert");
-        } catch (bytes memory err) {
-            assertEq(bytes4(err), ILPOracleErrors.ConfigCheckFailed.selector, "ConfigCheckFailed");
-            uint256 failed = abi.decode(_tail(err), (uint256));
-            assertTrue(failed & bit != 0, "the expected check failed");
-        }
-    }
-
     // ─── Set-up ───
 
     /// @dev The pool of `c` (created two hours before `T0` at the listing prices, 151 observation slots, full-range
@@ -484,15 +463,5 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
     ) internal pure returns (uint256[] memory out) {
         out = new uint256[](2);
         (out[0], out[1]) = (a, b);
-    }
-
-    /// @dev The ABI arguments after a 4-byte selector.
-    function _tail(
-        bytes memory err
-    ) internal pure returns (bytes memory out) {
-        out = new bytes(err.length - 4);
-        for (uint256 i = 0; i < out.length; ++i) {
-            out[i] = err[i + 4];
-        }
     }
 }

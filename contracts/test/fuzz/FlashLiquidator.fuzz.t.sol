@@ -5,7 +5,10 @@ pragma solidity 0.8.28;
 
 import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
+import {IFlashLiquidatorEvents} from "../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
+import {FlashLiquidatorProperties} from "../invariant/echidna/FlashLiquidatorProperties.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Payout accounting of the flash liquidation helper (2.11 `REQ-HELPER-007`, `REQ-HELPER-008`) over loan size,
 /// funding, Aave's repayment, recovery, Avana's fee, the Pool rate, the top-up bound and the net minimum: every call
@@ -139,5 +142,47 @@ contract FlashLiquidatorFuzzTest is FlashLiquidatorFixture {
             assertEq(abi.decode(ret, (uint256)), 0);
             assertEq(usdcToken.balanceOf(safe), x - shortBy, "top-up from the Safe");
         }
+    }
+
+    /// @notice The Echidna and Medusa harness over a random sequence of its entry points: every assertion holds, the
+    /// helper keeps nothing and the reserve holds its idle liquidity plus every premium after each call, and a
+    /// liquidation at the Pool's own 5 bps rate completes.
+    // TEST-174 verifies: REQ-HELPER-005, REQ-HELPER-007, REQ-HELPER-008
+    function testFuzz_TEST_174_propertiesHarness(
+        uint64[6] memory premiums,
+        uint64[6] memory maxPremiums,
+        address initiator,
+        uint256 amount,
+        uint256 fee
+    ) public {
+        FlashLiquidatorProperties h = new FlashLiquidatorProperties();
+        vm.recordLogs();
+        h.liquidate(975_000, 975_000);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool completed;
+        for (uint256 i = 0; i < logs.length; ++i) {
+            completed = completed || logs[i].topics[0] == IFlashLiquidatorEvents.FlashLiquidated.selector;
+        }
+        assertTrue(completed, "a liquidation at 5 bps completes");
+        _checkProperties(h);
+        for (uint256 i = 0; i < 6; ++i) {
+            // Half the calls near the 10 bps cap (1.95 USDC on 1,950 USDC), half over the whole uint64 range.
+            uint64 premium = i % 2 == 0 ? uint64(bound(premiums[i], 0, 4e6)) : premiums[i];
+            uint64 maxPremium = i % 2 == 0 ? uint64(bound(maxPremiums[i], 0, 4e6)) : maxPremiums[i];
+            h.liquidate(premium, maxPremium);
+            _checkProperties(h);
+            if (i == 2) h.foreignInitiator(initiator);
+            if (i == 3) h.foreignInitiator(address(0));
+            h.callbackOutsideContext(initiator, amount, fee);
+            h.noMinterCallback(initiator, amount, fee);
+            _checkProperties(h);
+        }
+    }
+
+    function _checkProperties(
+        FlashLiquidatorProperties h
+    ) internal view {
+        assertTrue(h.property_helperHoldsNothing(), "the helper holds nothing");
+        assertTrue(h.property_reserveHoldsIdlePlusPremiums(), "the reserve holds idle liquidity plus premiums");
     }
 }

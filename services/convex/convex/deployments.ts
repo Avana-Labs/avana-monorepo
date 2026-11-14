@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Writes a chain's deployment row from its verified release manifest (`aave.hubs`, `aave.lendSpokes`,
-// `aave.borrowSpokes`, `avana.coverageSpokes`); run by an operator with each release (internal: no client can call it).
+// `aave.borrowSpokes`, `avana.firstLossReserves`); run by an operator with each release (internal: no client can call it).
 
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
@@ -14,7 +14,7 @@ export const setDeployment = internalMutation({
     hubs: v.array(v.object({ address: v.string(), label: v.string(), tier: v.number() })),
     lendSpokes: v.array(v.string()),
     cdpSpokes: v.array(v.string()),
-    coverageSpokes: v.array(v.object({ address: v.string(), asset: v.string(), hub: v.optional(v.string()) })),
+    firstLossReserves: v.array(v.object({ address: v.string(), asset: v.string(), hub: v.optional(v.string()) })),
     marketRegistry: v.string(),
     timelock: v.string(),
     explorerUrl: v.string(),
@@ -31,7 +31,7 @@ export const setDeployment = internalMutation({
       hubs: a.hubs.map((h) => ({ ...h, address: lower(h.address) })),
       lendSpokes: a.lendSpokes.map(lower),
       cdpSpokes: a.cdpSpokes.map(lower),
-      coverageSpokes: a.coverageSpokes.map((c) => ({ address: lower(c.address), asset: lower(c.asset), ...(c.hub ? { hub: lower(c.hub) } : {}) })),
+      firstLossReserves: a.firstLossReserves.map((c) => ({ address: lower(c.address), asset: lower(c.asset), ...(c.hub ? { hub: lower(c.hub) } : {}) })),
       marketRegistry: lower(a.marketRegistry),
       timelock: lower(a.timelock),
       nativeUsdFeed: lower(a.nativeUsdFeed),

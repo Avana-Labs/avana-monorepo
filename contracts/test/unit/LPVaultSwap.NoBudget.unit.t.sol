@@ -67,7 +67,7 @@ contract LPVaultSwapNoBudgetUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice TEST-246: a dust repayment sized up front; the gap below `D` is borne in `keeperOut`; no Avana contract
-    /// (escrow, Coverage Spokes, fee recipient) pays any part; without a top-up a recovery below the floor reverts with
+    /// (escrow, First-Loss Reserves, fee recipient) pays any part; without a top-up a recovery below the floor reverts with
     /// no state change.
     // TEST-246 verifies: SPEC-LIQ-005, SPEC-LIQ-010, SPEC-SET-001, REQ-SWAP-029, REQ-SWAP-073, INV-038, Q-267, Q-397
     // TEST-059 verifies: REQ-SWAP-029, REQ-SWAP-073, INV-037, Q-397
@@ -79,7 +79,7 @@ contract LPVaultSwapNoBudgetUnitTest is LPVaultSwapUnitBase {
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 3e6));
         assertLt(r.recovered, r.debtRepaid, "R < D");
         assertEq(r.keeperOut, r.callerFunds - (r.debtRepaid - r.recovered), "the caller bears D - R");
-        assertEq(usdcCoverage.fundedBalance(), coverage, "no Coverage Spoke draw");
+        assertEq(usdcCoverage.fundedBalance(), coverage, "no First-Loss Reserve draw");
         assertEq(usdc.balanceOf(address(escrow)), escrowUsdc, "no escrow");
         assertEq(usdc.balanceOf(feeRecipient), fee, "no fee");
         // Bound of INV-038: the loss is within one vault unit's value plus U + eps.

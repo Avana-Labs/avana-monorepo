@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Timelock operations, implementations and roles of every upgradeable contract, ParameterStore and RiskModule
-// events, Coverage Spoke balances, vault tokens and the factory.
+// events, First-Loss Reserve balances, vault tokens and the factory.
 
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
@@ -108,16 +108,16 @@ logOnly("ParameterStore", [
 logOnly("RiskModule", ["ConfigDriftDetected", "BreakersPoked"]);
 
 for (const name of ["ReserveFunded", "DeficitCovered", "WithdrawalExecuted"] as const) {
-  ponder.on(`CoverageSpoke:${name}`, async ({ event, context }) => {
-    const p = await recordLog(event, context, `CoverageSpoke.${name}`);
+  ponder.on(`AvanaFirstLossReserve:${name}`, async ({ event, context }) => {
+    const p = await recordLog(event, context, `AvanaFirstLossReserve.${name}`);
     const row = { balance: event.args.balanceAfter, lastBlock: p.blockNumber };
     await context.db
       .insert(schema.coverageBalance)
-      .values({ chainId: p.chainId, coverageSpoke: event.log.address, ...row })
+      .values({ chainId: p.chainId, firstLossReserve: event.log.address, ...row })
       .onConflictDoUpdate(row);
   });
 }
 
-logOnly("CoverageSpoke", ["ReserveBelowMinimum", "WithdrawalRequested", "WithdrawalCancelled", "BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"]);
+logOnly("AvanaFirstLossReserve", ["ReserveBelowMinimum", "WithdrawalRequested", "WithdrawalCancelled", "BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"]);
 logOnly("VaultToken", ["Transfer", "ProxyAdded"]);
 logOnly("VaultTokenFactory", ["IntegrationRegistered", "VaultTokenDeployed"]);

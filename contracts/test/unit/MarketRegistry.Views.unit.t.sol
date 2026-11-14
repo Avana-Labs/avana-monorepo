@@ -96,7 +96,7 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertEq(lpv, address(0));
         assertEq(pricing, address(0));
         assertEq(registry.integrationIdOf(anyAddr), 0);
-        assertEq(registry.coverageSpokeOf(anyAddr, anyAddr), address(0));
+        assertEq(registry.firstLossReserveOf(anyAddr, anyAddr), address(0));
         assertEq(registry.crossHubLineCap(anyAddr, anyAddr, anyAddr), 0);
         assertEq(registry.crossHubLineTotal(anyAddr, anyAddr), 0);
         (uint256 line, uint256 sum) = registry.creditLine(anyAddr, anyAddr);
@@ -161,8 +161,8 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
     }
 
     // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    // creditLineCoverage reads (0, 0) for a zero line whatever the Coverage Spoke holds, and the funded balance of the
-    // recorded Coverage Spoke otherwise; ceil(20,000,000 x 10^18 x 2,000 / 10^4) = 4 x 10^24 for the GHO line.
+    // creditLineCoverage reads (0, 0) for a zero line whatever the First-Loss Reserve holds, and the funded balance of the
+    // recorded First-Loss Reserve otherwise; ceil(20,000,000 x 10^18 x 2,000 / 10^4) = 4 x 10^24 for the GHO line.
     function test_TEST_273_coverageViewAtZeroAndAtTheLine() public {
         (uint256 required, uint256 funded) = registry.creditLineCoverage(address(hub), address(gho));
         assertEq(required, 4e24);

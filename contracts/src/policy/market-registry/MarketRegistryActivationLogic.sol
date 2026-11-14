@@ -215,6 +215,20 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         if (maxLb < _BPS || (maxLb - _BPS) * lc.liquidationBonusFactor / _BPS < ps.minLiquidationBonus(m.spoke)) {
             revert ActivationCheckFailed(marketId, "minBonus");
         }
+        _checkFeeBound(marketId, _BPS + (maxLb - _BPS) * lc.liquidationBonusFactor / _BPS);
+    }
+
+    /// @dev LIQ-I1: the slippage allowance `s` leaves the Avana fee intact at the smallest bonus `b = minLB`,
+    /// `s × b ≤ (10^4 − f) × (b − 10^4)` in bps with `f = avanaFeeShareBps`. A keeper that sandwiches its own legs down
+    /// to the recovery floor `V(1 − s) − U − ε` pays `A = min(f(V − D), V(1 − s) − U − ε − D)`, with `V = bD`; above
+    /// this bound the second term is the smaller and the fee shrinks. Example: `b = 10,500`, `f = 2,000`: `s ≤ 380`.
+    function _checkFeeBound(
+        uint256 marketId,
+        uint256 minLb
+    ) private view {
+        uint256 s = IParameterStoreViews(_PARAMETER_STORE).getMarketParams(marketId).slippageAllowanceBps;
+        uint256 f = IParameterStoreViews(_PARAMETER_STORE).avanaFeeShareBps();
+        if (f > _BPS || s * minLb > (_BPS - f) * (minLb - _BPS)) revert ActivationCheckFailed(marketId, "feeBound");
     }
 
     /// @dev REQ-CONFIG-046: market parameters, caps and `minPledgeUsd` set, and the Hub `addCap` at least

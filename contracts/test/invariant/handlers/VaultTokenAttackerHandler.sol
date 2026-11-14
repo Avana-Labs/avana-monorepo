@@ -16,6 +16,10 @@ import {VmSafe} from "forge-std/Vm.sol";
 /// is on no path). Every such call must revert `UnauthorizedTransfer(from, to)`; the ghosts count calls that succeeded
 /// and calls that reverted with any other data.
 contract VaultTokenAttackerHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     VaultToken internal immutable TOKEN;
     address[8] internal actors;
 
@@ -43,7 +47,7 @@ contract VaultTokenAttackerHandler is CommonBase, StdUtils {
         address from = actors[fromSeed % 8];
         address to = actors[toSeed % 8];
         amount = bound(amount, 0, 1e12);
-        if (amount != 0 && TOKEN.isAllowedTransfer(from, to)) return;
+        if (amount != 0 && TOKEN.isAllowedTransfer(from, to)) revert Skipped();
         ++attempts;
         // A handler call that reverted inside a `startPrank` leaves that prank active (cheatcode state is not rolled
         // back); end it so this call is made by `caller`.

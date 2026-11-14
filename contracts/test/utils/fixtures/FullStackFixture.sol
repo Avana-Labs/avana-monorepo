@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
+import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
@@ -19,7 +20,7 @@ import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.s
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {FullStackCoverageSpokeMock} from "../mocks/FullStackLPVaultMock.sol";
+import {FullStackAvanaFirstLossReserveMock} from "../mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {RegistryFlashSourceMock} from "../mocks/MarketRegistryMocks.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
@@ -44,9 +45,12 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// bps deviation and drift), GHO listed for monitoring and enabled as a fixed-price debt reserve, and USDC enabled as a
 /// debt reserve priced by its real DebtOracle (`debtStressRiseBps = 500`). Both debt assets are funded by the Hub
 /// through the Lend Spoke (1,000,000 each, draw caps 1,000,000, credit lines 2,000,000).
-/// @dev Markets come from `FullStackMarkets`. Stand-ins beyond `FullStackDeploy`, each named: the Coverage Spokes
-/// (`FullStackCoverageSpokeMock`, funded) and the flash source (`RegistryFlashSourceMock`, 5 bps); Chainlink feeds are
-/// `OracleFeedMock`s and GHO's fixed price a `CollPriceSource`.
+/// @dev Markets come from `FullStackMarkets`. Stand-ins beyond `FullStackDeploy`, each named: the First-Loss Reserves
+/// (`FullStackAvanaFirstLossReserveMock`, funded) and the flash source (`RegistryFlashSourceMock`, 5 bps); Chainlink feeds are
+/// `OracleFeedMock`s and GHO's fixed price a `CollPriceSource`. On the real stack (`_realStack()`) the First-Loss
+/// Reserves are real `AvanaFirstLossReserve`s (a Hub spoke with the deficit-eliminator role, funded with 100,000 whole
+/// tokens) and the flash source is the real `AaveV3FlashSource` on the Aave V3 Pool stand-in, which holds 2,000,000
+/// whole tokens of each debt asset; Chainlink feeds and GHO's fixed price are as above (external price sources).
 abstract contract FullStackFixture is FullStackDeploy {
     uint32 internal constant FEED_AGE = 88_200;
     uint40 internal constant DEBT_DRAW_CAP = 1_000_000;
@@ -64,12 +68,18 @@ abstract contract FullStackFixture is FullStackDeploy {
     OracleFeedMock internal ghoFeed;
     IDebtOracle internal usdcOracle;
     RegistryFlashSourceMock internal flash;
+    /// @dev The MarketRegistry's flash source: `address(flash)`, or the real `AaveV3FlashSource` on the real stack.
+    address internal flashSource;
+    /// @dev Per debt asset, its First-Loss Reserve.
+    mapping(address asset => address reserve) internal firstLossReserveOf;
     uint256 internal ghoAssetId;
     uint256 internal usdcAssetId;
     uint256 internal ghoReserveId;
     uint256 internal usdcReserveId;
     /// @dev Per pool token: primary, alternate, standby, second source.
     mapping(address token => OracleFeedMock[4] feeds) internal feedsOf;
+    /// @dev Every token with four feeds in `feedsOf`, in listing order (`_refreshFeeds` republishes them all).
+    address[] internal pricedTokens;
 
     /// @dev Aave V4, two real Uniswap v3 USDC/USDT pools (0.01 % and 0.05 %), the core, the Spoke and both debt reserves.
     function _setUpFullStack() internal {
@@ -78,9 +88,11 @@ abstract contract FullStackFixture is FullStackDeploy {
         _deployAaveV4();
         _deployPools();
         _deployCore();
-        // The LPVault stand-in pays unwinds from its own float of each pool token.
-        usdc.mint(address(lpVault), 1e30);
-        usdt.mint(address(lpVault), 1e30);
+        if (!_realStack()) {
+            // The LPVault stand-in pays unwinds from its own float of each pool token.
+            usdc.mint(address(lpVault), 1e30);
+            usdt.mint(address(lpVault), 1e30);
+        }
         _recordSpoke();
         _listPoolToken(usdc, "USDC");
         _listPoolToken(usdt, "USDT");
@@ -111,16 +123,25 @@ abstract contract FullStackFixture is FullStackDeploy {
 
     function _recordSpoke() private {
         address tl = address(timelock);
-        flash = new RegistryFlashSourceMock(makeAddr("aaveV3Pool"), address(swap));
         address[] memory amm = new address[](2);
-        (amm[0], amm[1]) = (address(factory), address(actor));
+        if (_realStack()) {
+            flashSource = deployCode(
+                "AaveV3FlashSource.sol:AaveV3FlashSource", abi.encode(address(v3Pool), lpVaultSwap, address(store))
+            );
+            vm.label(flashSource, "AaveV3FlashSource");
+            (amm[0], amm[1]) = (address(nfpm), address(factory));
+        } else {
+            flash = new RegistryFlashSourceMock(makeAddr("aaveV3Pool"), address(swap));
+            flashSource = address(flash);
+            (amm[0], amm[1]) = (address(factory), address(actor));
+        }
         vm.startPrank(tl);
-        vtFactory.registerIntegration(V3, address(lpVault));
+        vtFactory.registerIntegration(V3, integration);
         registry.recordHub(aave.hub, RiskTier.Stable);
-        registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
+        registry.registerIntegration(V3, integration, makeAddr("clPricing"));
         registry.recordIntegrationContracts(V3, amm);
         registry.finalizeIntegrationContracts(V3);
-        registry.setFlashSource(address(flash));
+        registry.setFlashSource(flashSource);
         registry.deployCdpSpoke(
             SpokeDef({
                 approved: false,
@@ -175,6 +196,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         OracleFeedMock s = _feed(string.concat(label, "/USD standby"), 1e8);
         OracleFeedMock n = _feed(string.concat(label, "/USD second source"), 1e8);
         feedsOf[address(token)] = [p, a, s, n];
+        pricedTokens.push(address(token));
         TokenDef memory d;
         d.isUsdStable = true;
         d.primaryRoute = _list(address(p));
@@ -208,9 +230,8 @@ abstract contract FullStackFixture is FullStackDeploy {
 
     /// @dev Every feed republished at the current time with its answer.
     function _refreshFeeds() internal {
-        address[2] memory toks = [address(usdc), address(usdt)];
-        for (uint256 t = 0; t < 2; ++t) {
-            OracleFeedMock[4] storage f = feedsOf[toks[t]];
+        for (uint256 t = 0; t < pricedTokens.length; ++t) {
+            OracleFeedMock[4] storage f = feedsOf[pricedTokens[t]];
             for (uint256 i = 0; i < 4; ++i) {
                 f[i].push(f[i].answer(), block.timestamp);
             }
@@ -229,7 +250,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         registry.listToken(address(gho), d);
         ghoPrice = new CollPriceSource(1e8);
         (ghoAssetId, ghoReserveId) = _addDebtAsset(gho, 18, address(ghoPrice));
-        FullStackCoverageSpokeMock cs = _coverage(address(gho), ghoAssetId);
+        address cs = _coverage(address(gho), ghoAssetId);
         _enableDebt(
             DebtReserveDef({
                 reserveId: ghoReserveId,
@@ -239,7 +260,7 @@ abstract contract FullStackFixture is FullStackDeploy {
                 hubAssetId: ghoAssetId,
                 priceSource: address(ghoPrice),
                 fixedPrice: true,
-                coverageSpoke: address(cs),
+                firstLossReserve: cs,
                 crossHub: false,
                 approved: false
             }),
@@ -263,7 +284,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         usdcOracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
         vm.label(address(usdcOracle), "DebtOracle USDC");
         (usdcAssetId, usdcReserveId) = _addDebtAsset(usdc, 6, address(usdcOracle));
-        FullStackCoverageSpokeMock cs = _coverage(address(usdc), usdcAssetId);
+        address cs = _coverage(address(usdc), usdcAssetId);
         _enableDebt(
             DebtReserveDef({
                 reserveId: usdcReserveId,
@@ -273,7 +294,7 @@ abstract contract FullStackFixture is FullStackDeploy {
                 hubAssetId: usdcAssetId,
                 priceSource: address(usdcOracle),
                 fixedPrice: false,
-                coverageSpoke: address(cs),
+                firstLossReserve: cs,
                 crossHub: false,
                 approved: false
             }),
@@ -287,7 +308,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         ClTestToken asset,
         uint8 dec,
         address source
-    ) private returns (uint256 assetId, uint256 reserveId) {
+    ) internal returns (uint256 assetId, uint256 reserveId) {
         IAaveV4Hub hubView = IAaveV4Hub(aave.hub);
         uint40 maxCap = hubView.MAX_ALLOWED_SPOKE_CAP();
         uint24 maxRp = hubView.MAX_RISK_PREMIUM_THRESHOLD();
@@ -328,11 +349,35 @@ abstract contract FullStackFixture is FullStackDeploy {
     function _coverage(
         address asset,
         uint256 assetId
-    ) private returns (FullStackCoverageSpokeMock cs) {
-        cs = new FullStackCoverageSpokeMock(aave.hub, asset, assetId, 100_000 * 10 ** ClTestToken(asset).decimals());
-        cs.setFunded(1e40, false);
+    ) internal returns (address cs) {
+        uint256 whole = 10 ** ClTestToken(asset).decimals();
+        if (_realStack()) {
+            cs = deployCode(
+                "AvanaFirstLossReserve.sol:AvanaFirstLossReserve",
+                abi.encode(aave.hub, asset, assetId, aave.accessManager, 1_209_600)
+            );
+            uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
+            vm.prank(aaveDao);
+            ICollHubConfigurator(aave.hubConfigurator)
+                .addSpoke(aave.hub, cs, assetId, CollHubSpokeConfig(1_000_000, 0, maxRp, true, false));
+            _grantDeficitEliminator(cs);
+            ClTestToken(asset).mint(address(this), 100_000 * whole);
+            ClTestToken(asset).approve(cs, 100_000 * whole);
+            AvanaFirstLossReserve(cs).fund(100_000 * whole);
+            // The Aave V3 Pool stand-in behind the flash source and the FlashLiquidator lends the asset.
+            address aToken = v3Pool.listReserve(asset);
+            ClTestToken(asset).mint(aToken, 2_000_000 * whole);
+            v3Pool.recordSupply(asset, 2_000_000 * whole);
+            vm.label(cs, string.concat(ClTestToken(asset).symbol(), " AvanaFirstLossReserve"));
+        } else {
+            FullStackAvanaFirstLossReserveMock m =
+                new FullStackAvanaFirstLossReserveMock(aave.hub, asset, assetId, 100_000 * whole);
+            m.setFunded(1e40, false);
+            cs = address(m);
+        }
+        firstLossReserveOf[asset] = cs;
         vm.startPrank(address(timelock));
-        registry.setCoverageSpoke(aave.hub, asset, address(cs));
+        registry.setAvanaFirstLossReserve(aave.hub, asset, cs);
         registry.recordCreditLine(aave.hub, asset, CREDIT_LINE);
         vm.stopPrank();
     }
@@ -340,7 +385,7 @@ abstract contract FullStackFixture is FullStackDeploy {
     function _enableDebt(
         DebtReserveDef memory def,
         uint256 floorRounding
-    ) private {
+    ) internal {
         vm.startPrank(address(timelock));
         registry.enableDebtReserve(aave.cdpSpoke, def);
         store.setDebtAssetParams(def.asset, DebtReserveParams(floorRounding));

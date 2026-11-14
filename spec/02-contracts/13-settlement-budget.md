@@ -73,7 +73,7 @@ None. LPVaultSwap's `LiquidationSettled` reports `shortfall`, which includes any
 
 ## Restrictions
 
-- `REQ-BUDGET-011` Coverage Spoke capital MUST NOT be used for settlement gaps, and no settlement gap is ever reported as a deficit: a liquidation's rounding loss falls on its caller's payout, and a floor gap is closed by the caller or the call reverts. Proceeds of `settlePending` go to a Coverage Spoke ([2.14](14-first-loss-reserve.md)). (Source: Q-071, Q-397)
+- `REQ-BUDGET-011` First-Loss Reserve capital MUST NOT be used for settlement gaps, and no settlement gap is ever reported as a deficit: a liquidation's rounding loss falls on its caller's payout, and a floor gap is closed by the caller or the call reverts. Proceeds of `settlePending` go to a First-Loss Reserve ([2.14](14-first-loss-reserve.md)). (Source: Q-071, Q-397)
 - `REQ-BUDGET-012` No Avana contract pays a keeper, a borrower or any caller for a settlement gap; the caller pays it from its own funds. (Source: Q-127, Q-397)
 - `REQ-BUDGET-020` No settlement key (Spoke and debt reserve, market and asset, or asset) is stored anywhere. (Source: Q-236, Q-397)
 - `REQ-BUDGET-021` No rolling total of settlement payments exists for any asset. (Source: Q-236, Q-397)

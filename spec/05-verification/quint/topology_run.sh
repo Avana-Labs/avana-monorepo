@@ -60,7 +60,7 @@ F-10 | topo10_shockIsolation | step | finding | initFixedLoaded
 W-LIQ | la.act != "LPVaultSwap.liquidate" | step | witness | initFixedLoaded
 W-DEFICIT | tuples(HUBS, ASSETS, SPOKES).forall(k => s.deficit.get(k) == 0) | step | witness | initFixedLoaded
 W-XDEFICIT | s.deficit.get(("STABLE", "USDC", "S3")) == 0 | step | witness | initFixedCrash
-W-COVER | la.act != "CoverageSpoke.coverDeficit" | step | witness | initFixedCrash
+W-COVER | la.act != "AvanaFirstLossReserve.coverDeficit" | step | witness | initFixedCrash
 F-ALLC | allFixed | step | hold | initFixedCrash
 W-MIGRATE | la.act != "migrateProxy" | step | witness | initFixedLoaded
 W-MIGPAUSE | not(la.act == "migrateProxy" and HUBS.exists(h => s.pause.get(h) != "None")) | step | witness | initFixedLoaded

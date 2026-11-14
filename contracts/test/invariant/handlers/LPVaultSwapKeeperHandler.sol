@@ -17,6 +17,10 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 /// needs a new (`InvalidKeeper` first), unfrozen, non-zero keeper below `MAX_KEEPERS` (32); `removeKeeper` needs a registered keeper whose removal keeps the active
 /// count at `keeperFloor` (1) or more. Any disagreement between the model and the contract is counted.
 contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     ILPVaultSwap public immutable LVS;
     LVSMarketRegistryMock public immutable REGISTRY;
     address public immutable TIMELOCK;
@@ -117,7 +121,7 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
         uint256 seed,
         address caller
     ) external {
-        if (caller == TIMELOCK) return;
+        if (caller == TIMELOCK) revert Skipped();
         address k = candidate(seed);
         vm.prank(caller);
         (bool okAdd,) = address(LVS).call(abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (k)));

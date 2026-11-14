@@ -230,7 +230,7 @@ module topology_tests {
 
   // ---------------------------------------------------------------- holding paths
   // A Volatile-home Spoke's USDC deficit lands on the Stable Hub (the Hub it draws from) and
-  // only the Stable USDC Coverage Spoke can cover it.
+  // only the Stable USDC First-Loss Reserve can cover it.
   // QNT-TOPO-T18 verifies: INV-041, INV-042
   run deficitAttributionTest = initFixedLoaded
     .then(borrow("alice", "S3", "USDC", 2))

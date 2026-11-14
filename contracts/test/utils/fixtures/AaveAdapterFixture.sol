@@ -81,7 +81,7 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
     address internal vtB;
     uint256 internal vtReserveIdB;
     address internal poolB = makeAddr("usdcUsdtPoolB");
-    address internal coverageSpoke = makeAddr("coverageSpoke");
+    address internal firstLossReserve = makeAddr("firstLossReserve");
 
     uint256 internal keyNonce;
 
@@ -206,7 +206,7 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
             hubAssetId: hubAssetId,
             priceSource: address(debtPrice),
             fixedPrice: decimals == 18,
-            coverageSpoke: coverageSpoke,
+            firstLossReserve: firstLossReserve,
             crossHub: false,
             approved: true
         });

@@ -208,7 +208,7 @@ abstract contract IntegrationMarkets is CollateralizationFixture {
             hubAssetId: hubAssetId,
             priceSource: fixedPrice ? address(debtPrice) : address(usdcOracle),
             fixedPrice: fixedPrice,
-            coverageSpoke: fixedPrice ? ghoCoverageAddr : usdcCoverageAddr,
+            firstLossReserve: fixedPrice ? ghoCoverageAddr : usdcCoverageAddr,
             crossHub: false,
             approved: true
         });

@@ -28,6 +28,7 @@ contract RegistryParameterStoreMock {
     mapping(address => uint16) public minLiquidationBonus;
     mapping(bytes32 => bool) public livenessFails;
     uint16 public maxFlashFeeBps = 10;
+    uint16 public avanaFeeShareBps;
     uint16 public coverageRatioBps = 2000;
     bool public oracleConfigReverts;
 
@@ -77,6 +78,15 @@ contract RegistryParameterStoreMock {
         uint16 v
     ) external {
         coverageRatioBps = v;
+    }
+
+    function setFeeBoundInputs(
+        uint256 id,
+        uint16 slippageAllowanceBps,
+        uint16 feeShareBps
+    ) external {
+        _params[id].slippageAllowanceBps = slippageAllowanceBps;
+        avanaFeeShareBps = feeShareBps;
     }
 
     function setMarket(
@@ -151,6 +161,7 @@ contract RegistryRiskModuleMock {
     mapping(uint256 => uint32) public liveBreakerReasons;
     mapping(bytes32 => uint32) internal _liveDebt;
     uint256 public driftChecks;
+    uint256 public driftMarket;
 
     error ConfigDrift();
 
@@ -158,6 +169,13 @@ contract RegistryRiskModuleMock {
         bool r
     ) external {
         driftReverts = r;
+    }
+
+    /// @notice Makes the drift check revert only when the checked ids include `marketId` (0: never).
+    function setDriftMarket(
+        uint256 marketId
+    ) external {
+        driftMarket = marketId;
     }
 
     function setSharesEqual(
@@ -196,9 +214,12 @@ contract RegistryRiskModuleMock {
 
     function checkAaveConfig(
         address,
-        uint256[] calldata
+        uint256[] calldata ids
     ) external view {
         if (driftReverts) revert ConfigDrift();
+        for (uint256 i = 0; i < ids.length; ++i) {
+            if (driftMarket != 0 && ids[i] == driftMarket) revert ConfigDrift();
+        }
     }
 
     function isHubSharesEqualAssets(
@@ -449,9 +470,9 @@ contract RegistryDebtOracleMock {
     }
 }
 
-/// @title RegistryCoverageSpokeMock
-/// @notice A Coverage Spoke as the MarketRegistry sees it.
-contract RegistryCoverageSpokeMock {
+/// @title RegistryAvanaFirstLossReserveMock
+/// @notice A First-Loss Reserve as the MarketRegistry sees it.
+contract RegistryAvanaFirstLossReserveMock {
     address public HUB;
     address public ASSET;
     uint256 public ASSET_ID;

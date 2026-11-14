@@ -97,8 +97,8 @@ export const releaseManifestSchema: Schema = {
       flashLiquidator: ref("immutable"),
       operatorHelpers: arr(obj({ ...immutableProps, signer: address, fundingSafe: address })),
       lpVaults: arr(obj({ ...immutableProps, integrationId: { type: "integer", minimum: 1 }, kind: { enum: ["uniswap-v3", "slipstream"] } })),
-      coverageSpokes: arr(obj({ ...immutableProps, asset: address, hub: address })),
-      deficitOffsetSpokes: arr(obj({ ...immutableProps, asset: address, hub: address })),
+      firstLossReserves: arr(obj({ ...immutableProps, asset: address, hub: address })),
+      daoDeficitOffsets: arr(obj({ ...immutableProps, asset: address, hub: address })),
       debtOracleImplementation: ref("immutable"),
       clOracles: arr(
         obj({

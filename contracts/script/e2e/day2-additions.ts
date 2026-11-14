@@ -4,7 +4,7 @@
 // applied to script/deploy/config/<network>.json and written to deployments-local/<network>/config-day2.json. The
 // deploy steps then run again with AVANA_CONFIG pointing at that file and act only on what it adds:
 //   1. a new Hub, `growth` (tier 3), with its Lend Spoke `lendGrowth` and a Uniswap v3 CDP Spoke `uniV3Growth`
-//      (Aave side: Hub, Spokes, assets; Avana side: recordHub, CDP Spoke, Coverage Spokes, credit line);
+//      (Aave side: Hub, Spokes, assets; Avana side: recordHub, CDP Spoke, First-Loss Reserves, credit line);
 //   2. a new lend asset: WETH on the volatile Hub's Lend Spoke only (`lendOnly`, no CDP Spoke, no loss layers);
 //   3. a new borrowable asset on an existing CDP Spoke: USDT on `slipVolatile`, with its DebtOracle, and the routes
 //      the Spoke's listed market needs into USDT;

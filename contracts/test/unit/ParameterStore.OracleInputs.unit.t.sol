@@ -41,6 +41,9 @@ contract ParameterStoreOracleInputsUnitTest is ParameterStoreFixture {
         vm.stopPrank();
         list.push(usdc);
         list.push(usdt);
+        // Route versions distinct from each other and from the tolerances, so every word of a token has its own value.
+        registry.setPriceRouteVersion(usdc, 3);
+        registry.setPriceRouteVersion(usdt, 5);
     }
 
     function _second(
