@@ -12,7 +12,8 @@ fails, so no target is ever dropped.
                                               and invariant_ function (Halmos's default test prefixes) of each
                                               non-abstract contract named *HalmosTest in a src/, test/ or script/ file;
                                               a test function in any other contract fails the listing, since no job
-                                              would run it
+                                              would run it, and so does an entry of security/halmos-bounds.json
+                                              that names no such function
     ci-shards.py invariant                    {"file": "<path>"} per test/invariant/**/*.t.sol (the invariant profile)
     ci-shards.py smt                          {"contract": "<Name>"} per entry of [profile.smt.model_checker] contracts
     ci-shards.py smt-only <Name>              prints foundry.toml with that contracts map reduced to <Name>
@@ -137,6 +138,14 @@ def halmos() -> list[dict]:
                     stray.append(f"{path}: {t.group(1)}")
     if stray:
         raise SystemExit("ci-shards: Halmos test functions outside a non-abstract *HalmosTest contract: " + ", ".join(stray))
+    # An entry of security/halmos-bounds.json whose check no longer exists (renamed or removed) fails the listing, so
+    # the file never accepts a bounded outcome for a check no job runs.
+    bounds = json.loads((ROOT / "security/halmos-bounds.json").read_text(encoding="utf8")).get("bounded", [])
+    planned = {(leg["contract"], leg["check"]) for leg in legs}
+    stale = [f"{e.get('contract')}.{e.get('check')}"
+             for e in bounds if (e.get("contract"), e.get("check")) not in planned]
+    if stale:
+        raise SystemExit("ci-shards: security/halmos-bounds.json lists checks that do not exist: " + ", ".join(stale))
     return legs
 
 

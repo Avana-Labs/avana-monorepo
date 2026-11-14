@@ -14331,7 +14331,7 @@
     ]
   },
   "REQ-ADAPTER-080": {
-    "hash": "868c2be4aac199dc",
+    "hash": "d35827965d44345e",
     "checks": [
       "AaveAdapter",
       "AaveAdapterCollateralLogic",
@@ -14341,6 +14341,7 @@
       "IAaveAdapterCollateral",
       "IAaveAdapterErrors",
       "IAaveAdapterEvents",
+      "LensDeleverage",
       "RepayWithCollateralParams",
       "TEST-061",
       "TEST-099",
@@ -14348,12 +14349,13 @@
       "TEST-193",
       "TEST-239",
       "TEST-241",
+      "TEST-247",
       "TEST-272",
       "TEST-275"
     ]
   },
   "REQ-ADAPTER-081": {
-    "hash": "8cb4c4b8bd7995a2",
+    "hash": "66f33cbf58135492",
     "checks": [
       "AaveAdapter",
       "AaveAdapterSettlementLogic",
@@ -20228,7 +20230,7 @@
     ]
   },
   "REQ-LENS-035": {
-    "hash": "2d434883c845b13c",
+    "hash": "5c29339716ea79d7",
     "checks": [
       "ILensHubReads",
       "ILensPreview",
@@ -25439,16 +25441,18 @@
     ]
   },
   "REQ-RISK-060": {
-    "hash": "af72561fa9196453",
+    "hash": "743e8973a4325a08",
     "checks": [
       "AccountGateStatus",
       "IRiskModuleBorrowLogic",
       "IRiskModuleStatusLogic",
       "IRiskModuleViews",
+      "LensPreview",
       "RiskModule",
       "RiskModuleBorrowLogic",
       "RiskModuleStatusLogic",
-      "TEST-028"
+      "TEST-028",
+      "TEST-247"
     ]
   },
   "REQ-RISK-061": {
@@ -33990,7 +33994,7 @@
     ]
   },
   "SPEC-PROXY-009": {
-    "hash": "3f4eb43c79c0d8ec",
+    "hash": "98908fa792fee96e",
     "checks": [
       "AaveAdapterCollateralLogic",
       "IAaveAdapterCollateral",

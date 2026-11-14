@@ -170,7 +170,7 @@ STAND_IN_RE = re.compile(r"\b(" + "|".join(sorted(STAND_INS, key=len, reverse=Tr
 # ---------------------------------------------------------------------------------------------------------------------
 
 def _rel(p: Path) -> str:
-    return str(p.relative_to(CONTRACTS))
+    return p.relative_to(CONTRACTS).as_posix()
 
 
 def _strip_comments(text: str) -> str:
