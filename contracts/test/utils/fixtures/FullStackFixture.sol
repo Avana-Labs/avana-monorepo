@@ -406,10 +406,10 @@ abstract contract FullStackFixture is FullStackDeploy {
         l[0] = a;
     }
 
-    /// @dev Full range of the pool's tick spacing.
+    /// @dev Full range of the pool's tick spacing (a suite may list narrower ranges by overriding it).
     function _fullRange(
         IClPool p
-    ) internal view returns (int24 lower, int24 upper) {
+    ) internal view virtual returns (int24 lower, int24 upper) {
         int24 s = p.tickSpacing();
         // forge-lint: disable-next-line(divide-before-multiply)
         upper = (ClPriceMath.MAX_TICK / s) * s;

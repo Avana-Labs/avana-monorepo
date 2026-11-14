@@ -82,6 +82,8 @@ abstract contract FullStackMarkets is FullStackFixture {
     address[2][] internal routePairs;
     uint256 internal keyNonce;
     uint256 internal opNonce;
+    /// @dev The LPOracleCL implementation of the Uniswap v3 markets `_addMarket` lists, deployed with the first.
+    LPOracleCL private oracleImpl;
 
     // ─── Listing ───
 
@@ -149,7 +151,10 @@ abstract contract FullStackMarkets is FullStackFixture {
         IClPool p
     ) private returns (LPOracleCL o) {
         (int24 lower, int24 upper) = _fullRange(p);
-        LPOracleCL impl = LPOracleCLDeployer.deploy(address(timelock), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7);
+        // One implementation serves every market's proxy, as on a chain.
+        if (address(oracleImpl) == address(0)) {
+            oracleImpl = LPOracleCLDeployer.deploy(address(timelock), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7);
+        }
         InitParams memory ip;
         ip.timelock = address(timelock);
         ip.parameterStore = address(store);
@@ -163,7 +168,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         ip.config = _oracleConfig(id);
         // USDC/USDT at $1 on any tier lists its one-spacing range at d <= 16, so the pool's unit exponent is 0.
         ip.market = abi.encode(address(p), lower, upper, uint256(0));
-        o = LPOracleCL(address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (ip)))));
+        o = LPOracleCL(address(new ERC1967Proxy(address(oracleImpl), abi.encodeCall(ILPOracle.initialize, (ip)))));
     }
 
     /// @dev The configuration the ParameterStore serves the market's LPOracle (`getOracleConfig`), built from the
