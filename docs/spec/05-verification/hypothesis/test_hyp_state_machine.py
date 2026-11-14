@@ -58,6 +58,7 @@ class AvanaMachine(RuleBasedStateMachine):
         self.s = System(Params(faulty_risk_module=faulty, **kw), spokes=(CDP, TIER2) if two_spokes else (CDP,))
         self.spokes = list(self.s.spokes)
         self.crashed = None
+        self.usdc_low = ONE
         self.gho_paused = {sp: False for sp in self.spokes}
         self.lent = 0
 
@@ -212,6 +213,13 @@ class AvanaMachine(RuleBasedStateMachine):
             assert not ok and "RepayExceedsMax" in r and s.ledger.balance(asset, payer) == bal0, "HYP-60"
             return
         paused = s.spokes[spoke].reserves[rid].paused
+        # an issuer pause or blocklist on the debt token stops the transfer itself, outside every Avana and Aave
+        # stop (3.3 dependency table: "an issuer blocklist on Y or P can block the transfer")
+        token_stop = asset in s.ledger.paused or any((asset, a) in s.ledger.blocklist or (asset, a) in s.ledger.blocked
+                                                     for a in (payer, w, pxo.addr))
+        if token_stop and not ok:
+            assert "TokenBlocked" in r, f"HYP-16 repay under an issuer stop failed for another reason: {r}"
+            return
         assert ok == (not paused), f"HYP-16 repay ok={ok} with every stop but Aave's own pause ignored: {r}"
         if not ok:
             return
@@ -362,6 +370,8 @@ class AvanaMachine(RuleBasedStateMachine):
             if price < 95 * 10 ** 6:
                 self.crashed = t
             price = min(price, 104 * 10 ** 6)
+            if t == "USDC":
+                price = self._usdc_bound(price, mode != "pool")
         if mode == "pool":
             for mk in s.markets:
                 if t in (mk.t0, mk.t1) and not ({mk.t0, mk.t1} & s.ledger.paused):
@@ -373,10 +383,23 @@ class AvanaMachine(RuleBasedStateMachine):
         routes = ("primary",) if mode == "primary" else ("primary", "alternate")
         s.set_price(t, price, routes=routes, new_phase=mode == "phase")
 
+    def _usdc_bound(self, price, record):
+        """Solvency profile: USDC is a pool token and a debt asset. It may crash like any pool token, but as a debt
+        asset it never rises more than 4% above its lowest price in the run (README: "USDC moving at most 4% up"),
+        the bounded rise the incident term of SPEC-CAP-007 sizes the First-Loss Reserve for. INV-074 is not claimed
+        past it: a depeg to $0.05 followed by a re-peg is a 20x rise of the USDC debt."""
+        price = min(price, self.usdc_low * 104 // 100)
+        if record:
+            self.usdc_low = min(self.usdc_low, price)
+        return price
+
     @rule(t=st.sampled_from(TOKENS))
     def recover_price(self, t):
-        self.s.set_price(t, ONE)
-        if self.crashed == t:
+        price = ONE
+        if self.profile == "solvency" and t == "USDC":
+            price = self._usdc_bound(price, True)
+        self.s.set_price(t, price)
+        if self.crashed == t and price >= 95 * 10 ** 6:
             self.crashed = None
 
     @rule(t=st.sampled_from(TOKENS), kind=st.sampled_from(["break", "fix", "zero", "max", "standby", "restore"]),
@@ -573,7 +596,8 @@ class AvanaMachine(RuleBasedStateMachine):
         if ok is not None:
             # HYP-68 verifies: Q-216, REQ-SWAP-074, REQ-SWAP-075
             assert not (ok and deadline == -60), "HYP-68 liquidation after its deadline"
-            assert ok is False or k != "outsider", "HYP-23 an outsider used the keeper entry point"
+            # an unregistered caller ("outsider") liquidates like any other: the committed-operator registry gates no
+            # call (REQ-SWAP-001, REQ-SWAP-048, Q-404); _liq checks its result like every other caller's
 
     @rule(c=st.sampled_from(["anyone", "atk"]), w=st.sampled_from(WALLETS), m=st.integers(0, 2),
           rid=st.sampled_from([GHO_RID, USDC_RID]), shortfall=st.sampled_from([0, 10 ** 22]),
@@ -586,6 +610,19 @@ class AvanaMachine(RuleBasedStateMachine):
         if ok:
             # HYP-67 verifies: Q-213, Q-397, INV-062 (no Avana balance funds a liquidation; only the fee flows in)
             assert self.s.ledger.balance(a, FEE_RECIPIENT) >= fee0, "HYP-67 an Avana balance funded a liquidation"
+
+    def _routes_clear_floor(self, mk, rid):
+        """True when the swap routes' market price clears the oracle minimum of every leg at the keeper's sLeg
+        (SPEC-LIQ-018, SPEC-LIQ-019 with maxShortfall saturated). A market price far below the LPOracle's leg price
+        (a lagging or fallback feed) must make the liquidation revert NoRouteAvailable rather than sell below the
+        oracle floor (REQ-SWAP-059, SPEC-LIQ-013), so liveness is not claimed there."""
+        s = self.s
+        T = s.debts[rid].asset
+        lp = s.leg_prices(mk)
+        s_leg = min(BPS - 1, s.p.slippage_bps + s.p.max_shortfall_bps)
+        p_debt, p_t = s.price_of(rid), s.debt_price(T)
+        return all(s.prices[t] * (BPS - s.p.dex_slippage_bps) * p_debt >= lp[t] * (BPS - s_leg + 1) * p_t
+                   for t in (mk.t0, mk.t1) if t != T)
 
     @rule(rid=st.sampled_from([GHO_RID, USDC_RID]))
     def keepers_sweep(self, rid):
@@ -602,15 +639,18 @@ class AvanaMachine(RuleBasedStateMachine):
                         and s.hub.shares_equal_assets(mk.aid) and not s.hostile_swap and "keeper0" in s.keepers
                         and "keeper0" not in s.frozen_addresses
                         and all(v == 0 for v in s.route_haircut.values())
-                        and not s.ledger.paused and not s.ledger.fee_bps and mk.route_backup_up)
+                        and not s.ledger.paused and not s.ledger.fee_bps and mk.route_backup_up
+                        and self._routes_clear_floor(mk, rid))
                 if ok is False and live:
                     # HYP-36 verifies: Q-128, Q-154, Q-198, Q-199, Q-208, Q-227, Q-247, INV-046
                     ok2, r2 = s.liquidate("keeper0", w, mk.idx, s.debt(pxo.addr, rid), rid, spoke,
                                           max_shortfall=10 ** 24)
-                    if not ok2 and any(x in r2 for x in ("FlashFeeTooHigh", "FlashLiquidityShort",
+                    if not ok2 and any(x in r2 for x in ("FlashFeeTooHigh", "InsufficientFlashLiquidity",
                                                          "InsufficientProceeds")):
                         # HYP-83: a short or repriced flash source, or a flash loan whose unused part's premium the
-                        # surplus cannot pay (SPEC-LIQ-010), falls back to the caller-funded path
+                        # surplus cannot pay (SPEC-LIQ-010), falls back to the caller-funded path. A short Pool
+                        # makes the liquidation helper revert InsufficientFlashLiquidity (LIQ-F-036, REQ-SWAP-053);
+                        # FlashLiquidityShort is the deleverage error and liquidation never raises it.
                         s.fund("keeper0", s.debts[rid].asset, 10 ** 9 * 10 ** s.debts[rid].decimals)
                         ok2, r2 = s.liquidate("keeper0", w, mk.idx, s.debt(pxo.addr, rid), rid, spoke,
                                               funding="keeper", max_shortfall=10 ** 24)
