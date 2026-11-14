@@ -60,6 +60,16 @@ CVL_RULE = re.compile(r"^\s*(?:rule|invariant)\s+(\w+)\b")
 DECL = re.compile(r"^\s*(abstract\s+)?(contract|library|interface)\s+(\w+)\b")
 OWN_TEST = re.compile(r"TEST_([0-9]{3}[a-z]?)(?![0-9])")
 JOB = re.compile(r"\b[0-9a-f]{32}\b")
+# A `forge test --json-file` result can reach gigabytes: it keeps every passing test's event logs. Files above this
+# size are scanned for the three things read here (suite key, each test's status, each invariant's status) instead of
+# being parsed, so memory stays at one block however large the file is.
+BIG_RESULT_BYTES = 64 << 20
+SCAN_BLOCK = 64 << 20
+SCAN_OVERLAP = 1 << 16
+RESULT_SCAN = re.compile(
+    rb'"(?P<path>[^"]+):(?P<contract>[A-Za-z_]\w*)":\{"duration":'
+    rb'|"(?P<fn>[A-Za-z_]\w*)\([^"]*\)":\{"status":"(?P<st>\w*)"'
+    rb'|\{"name":"(?P<pn>[A-Za-z_]\w*)","status":"(?P<ps>\w*)"\}')
 
 PASS, FAIL, NOT_RUN = "verified", "failed", "not run"
 
@@ -675,6 +685,9 @@ class Results:
             self._load(f)
 
     def _load(self, f: Path) -> None:
+        if f.suffix == ".json" and f.stat().st_size > BIG_RESULT_BYTES:
+            self._scan(f)
+            return
         text = f.read_text(errors="ignore")
         s = text.lstrip()
         if s.startswith("{"):
@@ -693,6 +706,39 @@ class Results:
             self._json(data, f)
         elif "Running " in text and re.search(r"^\[(PASS|FAIL|TIMEOUT|ERROR)\]", text, re.M):
             self._halmos(f)
+
+    def _scan(self, f: Path) -> None:
+        """The statuses `_json` reads, taken from a large Foundry result file one block at a time."""
+        suite: tuple[str, str] | None = None
+        fn: str | None = None
+        with f.open("rb") as h:
+            buf = b""
+            while True:
+                block = h.read(SCAN_BLOCK)
+                eof = not block
+                buf += block
+                limit = len(buf) if eof else max(0, len(buf) - SCAN_OVERLAP)
+                cut = limit
+                for m in RESULT_SCAN.finditer(buf):
+                    if m.end() > limit:
+                        cut = m.start()
+                        break
+                    if m.group("path") is not None:
+                        suite = (_norm_test_path(m.group("path").decode(errors="ignore")), m.group("contract").decode())
+                        fn = None
+                    elif suite is None:
+                        continue
+                    elif m.group("fn") is not None:
+                        fn, st = m.group("fn").decode(), m.group("st").decode()
+                        self.tests[(*suite, fn)].append(
+                            PASS if st == "Success" else FAIL if st == "Failure" else NOT_RUN)
+                    elif fn is not None and m.group("pn").decode() != fn:
+                        ps = m.group("ps").decode()
+                        self.tests[(*suite, m.group("pn").decode())].append(
+                            PASS if ps == "Success" else FAIL if ps == "Failure" else NOT_RUN)
+                if eof:
+                    break
+                buf = buf[cut:]
 
     def _json(self, data: dict, f: Path) -> None:
         if data.get("tool") == "certora":
