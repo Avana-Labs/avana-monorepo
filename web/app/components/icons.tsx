@@ -66,7 +66,6 @@ import {
   Target as _Target,
   TrendingUp as _TrendingUp,
   Trophy as _Trophy,
-  Umbrella as _Umbrella,
   Unlock as _Unlock,
   Wallet as _Wallet,
   X as _X,
@@ -165,7 +164,6 @@ export const SunMedium: IconComponent = /*#__PURE__*/ makeIcon(_SunMedium)
 export const Target: IconComponent = /*#__PURE__*/ makeIcon(_Target)
 export const TrendingUp: IconComponent = /*#__PURE__*/ makeIcon(_TrendingUp)
 export const Trophy: IconComponent = /*#__PURE__*/ makeIcon(_Trophy)
-export const Umbrella: IconComponent = /*#__PURE__*/ makeIcon(_Umbrella)
 export const Unlock: IconComponent = /*#__PURE__*/ makeIcon(_Unlock)
 export const Wallet: IconComponent = /*#__PURE__*/ makeIcon(_Wallet)
 export const X: IconComponent = /*#__PURE__*/ makeIcon(_X)
