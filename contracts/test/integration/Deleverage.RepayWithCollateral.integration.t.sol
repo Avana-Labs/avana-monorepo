@@ -167,14 +167,14 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
     function test_TEST_239_pauseAndFreeze() public {
         _setPause(PauseState.Paused, PauseReason.MintPathSuspect);
         RepayWithCollateralParams memory p = _rwc(500e6, usdcReserveId);
-        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(bob, MARKET_ID, key, 500e6, usdcReserveId);
+        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(bob, mA, key, 500e6, usdcReserveId);
         assertEq(pvRepaid, 0, "the Lens shows it closed under Paused(MintPathSuspect)");
         vm.expectRevert(IAaveAdapterErrors.ApplicationPaused.selector);
         vm.prank(bob);
         adapterC.repayWithCollateral(p);
         _setPause(PauseState.Paused, PauseReason.General);
         _freezeWallet(bob);
-        (pvRepaid,,) = lens.previewRepayWithCollateral(bob, MARKET_ID, key, 500e6, usdcReserveId);
+        (pvRepaid,,) = lens.previewRepayWithCollateral(bob, mA, key, 500e6, usdcReserveId);
         uint256 hfBefore = _hf(proxy);
         vm.prank(bob);
         (uint256 repaid,) = adapterC.repayWithCollateral(p);
