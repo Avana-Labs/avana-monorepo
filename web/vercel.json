@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
+  "functions": {
+    "app/page.tsx": {
+      "regions": ["iad1", "sfo1", "fra1", "sin1", "syd1"]
+    }
+  }
+}

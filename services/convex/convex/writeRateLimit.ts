@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Avana Labs
+/**
+ * Per-identity write throttle for wallet mutations.
+ *
+ * `requireWallet` (walletAuth.ts) proves ownership but does NOT bound how fast a
+ * wallet may write, so the append-only / state mutations that guard on it alone (onboarding steps,
+ * rewards save/claim) had no ceiling on write volume. This throttle bounds them.
+ *
+ * Backed by the shared @convex-dev/rate-limiter component (its own storage — no schema table), so the
+ * counter is correct across Convex instances. The bucket is per identity KEY (wallet or Ask AI
+ * subject), so wallets never contend on a shared row. The cap is deliberately generous: a legit flow
+ * writes a handful of rows, so 300/min/identity never trips while still bounding a spray.
+ */
+import { codedError } from "./codedError"
+import { RateLimiter } from "@convex-dev/rate-limiter"
+import { components } from "./_generated/api"
+import type { MutationCtx } from "./_generated/server"
+import { requireWallet } from "./walletAuth"
+
+const writeRateLimiter = new RateLimiter(components.rateLimiter, {
+  perIdentityWrite: { kind: "token bucket", rate: 300, period: 60_000, capacity: 300 },
+})
+
+/** Consume one write token for `key` (e.g. `wallet:0x…` or `subject:…`); throw when the bucket is dry. */
+export async function consumeWriteBudget(ctx: MutationCtx, key: string): Promise<void> {
+  let allowed: boolean
+  try {
+    allowed = (await writeRateLimiter.limit(ctx, "perIdentityWrite", { key })).ok
+  } catch {
+    // Fail OPEN when the rate-limiter component is unavailable (unit tests that don't register it, or a
+    // transient component error): this is a generous anti-spray ceiling, not a security boundary, so it
+    // must never turn a legit write into an error. Deployed Convex always has the component present
+    // (convex.config.ts), where the throttle enforces normally. Mirrors rateLimitShared's fallback.
+    allowed = true
+  }
+  if (!allowed) {
+    throw codedError("RATE_LIMITED: too many writes in a short window; please retry shortly.")
+  }
+}
+
+/** `requireWallet` + a per-wallet write throttle. Use in place of `requireWallet` in
+ *  wallet-scoped mutations that persist state but have no throttle of their own. */
+export async function requireWalletForWrite(ctx: MutationCtx, requestedWallet: string): Promise<string> {
+  const wallet = await requireWallet(ctx, requestedWallet)
+  await consumeWriteBudget(ctx, `wallet:${wallet}`)
+  return wallet
+}
