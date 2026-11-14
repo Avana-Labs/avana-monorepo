@@ -55,7 +55,6 @@ export type PortfolioSnapshotRecord = {
   totalSuppliedUsd: number
   totalBorrowedUsd: number
   availableToBorrowUsd: number
-  totalMultiplyExposureUsd: number
   totalEarnedUsd: number
 }
 
@@ -91,61 +90,6 @@ export type PortfolioCollateralRecord = {
   healthFactor: number | null
   pairApr: number
   feesUsd: number
-}
-
-export type PortfolioCreditLinesRecord = {
-  walletProfileId: string
-  approvedUsd: number
-  liquidationThresholdUsd: number
-  averageHealthFactor: number | null
-  currentLtvPct: number
-  totalBorrowedUsd: number
-  totalCollateralUsd: number
-}
-
-export type PortfolioMultiplyCollateralRecord = {
-  id: string
-  walletProfileId: string
-  label: string
-  collateralToken: string
-  borrowableToken: string
-  multiplier: number
-  protocol: string
-  healthFactor: number
-  collateralUsd: number
-  borrowPowerUsd: number
-}
-
-export type PortfolioMultiplyPositionRecord = {
-  id: string
-  walletProfileId: string
-  symbol: string
-  label: string
-  side: "long" | "short"
-  leverage: number
-  collateralUsd: number
-  exposureUsd: number
-  pnlUsd: number
-  pnlPct: number
-  status: "open" | "closed"
-}
-
-export type PortfolioOpenOrderRecord = {
-  id: string
-  walletProfileId: string
-  label: string
-  status: "open" | "pending" | "filled"
-  sizeUsd: number
-  venue: string
-}
-
-export type PortfolioTwapOrderRecord = {
-  id: string
-  walletProfileId: string
-  label: string
-  interval: string
-  status: "active" | "paused" | "completed"
-  amountUsd: number
 }
 
 export type PortfolioActivityRecord = {
@@ -192,11 +136,6 @@ export type PortfolioPageRecords = {
   supplies: PortfolioSupplyRecord[]
   debts: PortfolioDebtRecord[]
   collaterals: PortfolioCollateralRecord[]
-  multiplyCreditLines: PortfolioCreditLinesRecord
-  multiplyCollaterals: PortfolioMultiplyCollateralRecord[]
-  multiplyPositions: PortfolioMultiplyPositionRecord[]
-  openOrders: PortfolioOpenOrderRecord[]
-  twapOrders: PortfolioTwapOrderRecord[]
   activity: PortfolioActivityRecord[]
   strategies: PortfolioStrategyBucketRecord[]
   rewards: PortfolioRewardsRecord

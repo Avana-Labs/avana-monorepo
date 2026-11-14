@@ -5,8 +5,6 @@ export type {
   PortfolioBorrowTabData,
   PortfolioHeroData,
   PortfolioLendTabData,
-  PortfolioMultiplyCollateral,
-  PortfolioMultiplyTabData,
   PortfolioPageData,
   PortfolioRewardsData,
   PortfolioStrategyBucket,

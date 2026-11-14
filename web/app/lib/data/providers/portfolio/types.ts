@@ -7,7 +7,7 @@ import type {
   PortfolioStrategyTone,
 } from "./records"
 
-export type PortfolioTabKey = "overview" | "lending" | "looping" | "activity"
+export type PortfolioTabKey = "overview" | "lending" | "activity"
 
 export type FetchPortfolioPageInput = {
   walletProfileId: string
@@ -38,7 +38,6 @@ export type PortfolioTabSummary = {
     totalEarnedUsd: number
     averageApyPct: number
   }
-  multiply: Record<string, never>
   activity: {
     totalEvents: number
   }
@@ -144,53 +143,6 @@ export type PortfolioLendTabData = {
   }
 }
 
-export type PortfolioMultiplyCollateral = {
-  id: string
-  marketId: string
-  label: string
-  collateralToken: string
-  borrowableToken: string
-  multiplier: number
-  protocol: string
-  healthFactor: number
-  collateralUsd: number
-  borrowPowerUsd: number
-  debtUsd: number
-  ltvPct: number
-  liquidationPriceUsd: number | null
-  netApyPct: number
-  status: "open" | "closed"
-}
-
-export type PortfolioMultiplyPosition = {
-  id: string
-  symbol: string
-  label: string
-  side: "long" | "short"
-  leverage: number
-  collateralUsd: number
-  exposureUsd: number
-  pnlUsd: number
-  pnlPct: number
-  status: "open" | "closed"
-}
-
-export type PortfolioOrder = {
-  id: string
-  label: string
-  status: "open" | "pending" | "filled"
-  sizeUsd: number
-  venue: string
-}
-
-export type PortfolioTwapOrder = {
-  id: string
-  label: string
-  interval: string
-  status: "active" | "paused" | "completed"
-  amountUsd: number
-}
-
 export type PortfolioActivityRow = {
   id: string
   at: string
@@ -217,22 +169,6 @@ export type PortfolioRewardsData = {
   pendingUsd: number
 }
 
-export type PortfolioMultiplyTabData = {
-  creditLines: {
-    approvedUsd: number
-    liquidationThresholdUsd: number
-    averageHealthFactor: number | null
-    currentLtvPct: number
-    totalBorrowedUsd: number
-    totalCollateralUsd: number
-  }
-  lpCollaterals: PortfolioMultiplyCollateral[]
-  positions: PortfolioMultiplyPosition[]
-  openOrders: PortfolioOrder[]
-  twapOrders: PortfolioTwapOrder[]
-  history: PortfolioActivityRow[]
-}
-
 export type PortfolioPageData = {
   walletProfile: PortfolioWalletProfile
   fetchedAt: string
@@ -240,7 +176,6 @@ export type PortfolioPageData = {
   tabs: PortfolioTabSummary
   borrow: PortfolioBorrowTabData
   lend: PortfolioLendTabData
-  multiply: PortfolioMultiplyTabData
   activity: PortfolioActivityData
   rewards: PortfolioRewardsData
 }
