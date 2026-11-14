@@ -156,11 +156,11 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         disclaimer: (
           <>
             By connecting your wallet you agree to the{" "}
-            <a href={AVANA_EXTERNAL_LINKS.terms} target="_blank" rel="noreferrer">
+            <a href={AVANA_EXTERNAL_LINKS.terms} target="_blank" rel="noopener noreferrer">
               Terms of Service
             </a>{" "}
             and{" "}
-            <a href={AVANA_EXTERNAL_LINKS.privacy} target="_blank" rel="noreferrer">
+            <a href={AVANA_EXTERNAL_LINKS.privacy} target="_blank" rel="noopener noreferrer">
               Privacy Policy
             </a>
           </>

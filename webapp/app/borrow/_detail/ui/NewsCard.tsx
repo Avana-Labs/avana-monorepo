@@ -48,7 +48,7 @@ export function NewsCard({ items, title = "Risk Parameters", plain = false, view
           <Link
             href={viewAllHref}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="shrink-0 text-[13px] font-medium text-sky-500 transition-colors hover:text-sky-400"
           >
             {t("View all")}
@@ -95,7 +95,7 @@ export function NewsCard({ items, title = "Risk Parameters", plain = false, view
                 <Link
                   href={href}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="block rounded-radius-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-medium"
                 >
                   {content}

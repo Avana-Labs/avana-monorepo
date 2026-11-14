@@ -80,7 +80,7 @@ export function TransactionReceipt({ data, className }: { data: TransactionRecei
   const hashNode = data.hash ? (
     hashLink ? (
       data.hashExternal ? (
-        <a href={data.hashHref ?? undefined} target="_blank" rel="noreferrer" className={linkClass}>
+        <a href={data.hashHref ?? undefined} target="_blank" rel="noopener noreferrer" className={linkClass}>
           {data.hash}
         </a>
       ) : (
@@ -111,7 +111,7 @@ export function TransactionReceipt({ data, className }: { data: TransactionRecei
               <a
                 href={data.hashHref ?? undefined}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-[12px] text-muted-foreground transition-colors hover:text-foreground"
               >
                 {t("Explorer")}

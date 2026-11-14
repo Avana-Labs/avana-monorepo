@@ -11,9 +11,12 @@ const lendPageSchema = z.object({
       id: z.string(),
       symbol: z.string(),
       displayName: z.string(),
+      eyebrow: z.string(),
       apy: z.number(),
+      tone: z.enum(["green", "blue"]),
       iconUrl: z.string(),
-      path: z.string(),
+      // Sparkline path of the supply series; absent until series exist (LendFeaturedAsset.path).
+      path: z.string().optional(),
     }),
   ),
   featuredSequence: z.array(z.string()),

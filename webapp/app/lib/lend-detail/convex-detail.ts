@@ -1,4 +1,5 @@
 import "server-only"
+import { heroContractFromRows } from "@/app/lib/detail-page/hero-contract"
 import { requestCache as cache } from "@/app/lib/detail-page/request-cache"
 import { fetchLendDetailHydration } from "@/app/lib/lend-system/market-hydration-server"
 import type { PreloadedQuickStatRow } from "@/app/lib/detail-page/apply-preloaded-overlays"
@@ -169,7 +170,10 @@ async function getLendMarketDetailFromConvexUncached(id: string): Promise<LendMa
     injectLendContractAddressStats(
       {
         ...hydrated,
-        hero: overlayHeroIdentity(hydrated.hero, siloedMarket),
+        hero: {
+          ...overlayHeroIdentity(hydrated.hero, siloedMarket),
+          contract: heroContractFromRows(contractAddresses, "Token"),
+        },
       },
       contractAddresses ?? [],
     ),

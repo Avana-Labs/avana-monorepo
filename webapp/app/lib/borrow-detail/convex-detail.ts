@@ -1,4 +1,5 @@
 import "server-only"
+import { heroContractFromRows } from "@/app/lib/detail-page/hero-contract"
 import { requestCache as cache } from "@/app/lib/detail-page/request-cache"
 import {
   emptyBorrowSystemState,
@@ -359,7 +360,10 @@ async function getPoolDetailFromConvexUncached(id: string): Promise<PoolDetail |
   const withIdentity = injectContractAddressStats(
     {
       ...hydrated,
-      hero: overlayHeroIdentity(hydrated.hero, siloedMarket),
+      hero: {
+        ...overlayHeroIdentity(hydrated.hero, siloedMarket),
+        contract: heroContractFromRows(contractAddresses, "Pool"),
+      },
     },
     contractAddresses,
   )
@@ -434,7 +438,10 @@ async function getAssetDetailFromConvexUncached(id: string): Promise<AssetDetail
     injectContractAddressStats(
       {
         ...hydrated,
-        hero: overlayHeroIdentity(hydrated.hero, siloedMarket),
+        hero: {
+          ...overlayHeroIdentity(hydrated.hero, siloedMarket),
+          contract: heroContractFromRows(contractAddresses, "Token"),
+        },
       },
       contractAddresses,
     ),
