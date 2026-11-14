@@ -120,12 +120,8 @@ struct DebtEvaluation {
     uint64 recoveredAt;
     uint64 graceEndsAt;
     bool inGrace;
-    // Second source (SPEC-ORC-020): its value, validity and tolerance, read before the served price so that a
-    // Drifting asset's higher route counts only when the second source confirms it.
+    // Second source (SPEC-ORC-020).
     bool confirmed;
-    bool secondValid;
-    uint256 secondValue;
-    uint16 secondToleranceBps;
     // Gates.
     bool liquidationPaused;
     bool borrowAllowed;

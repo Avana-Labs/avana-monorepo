@@ -117,8 +117,8 @@ contract DebtOracleHalmosTest is Test {
                 expected = p;
             } else {
                 live = false;
-                // One route is A and the second source reads A: a higher route other than A is unconfirmed and the
-                // lower one is at most A, so a disagreement serves A (`SPEC-ORC-018`).
+                // One route is A, so the lower route is at most A and the median max(min(p, b), A) is A
+                // (`SPEC-ORC-018`).
                 expected = A;
             }
         } else if (pValid) {
@@ -184,10 +184,7 @@ contract DebtOracleHalmosTest is Test {
             if (v.state == PriceState.Drifting) {
                 uint256 p = pAnswer;
                 uint256 b = bAnswer;
-                (uint256 lo, uint256 hi) = p < b ? (p, b) : (b, p);
-                // The higher route counts only when the second source (at A, 100 bps) confirms it.
-                uint256 d = hi > A ? hi - A : A - hi;
-                uint256 counted = d * 10_000 <= 100 * (hi < A ? hi : A) ? hi : lo;
+                uint256 counted = p < b ? p : b;
                 if (A > counted) {
                     assert(v.servedUpdatedAt == T0 - 100);
                     assert(v.legFeeds[0] == address(0));
