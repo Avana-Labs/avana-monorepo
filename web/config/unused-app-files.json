@@ -1,0 +1,15 @@
+{
+  "app/lib/borrow-system/production-transaction-adapter.ts": "production adapter boundary; exercised by contract tests until chain integration is enabled",
+  "app/lib/borrow-system/borrow-economy.ts": "shared borrow economics fixture boundary; exercised by engine tests",
+  "app/lib/lend-system/production-transaction-adapter.ts": "production adapter boundary; exercised by contract tests until chain integration is enabled",
+  "app/lib/multiply-system/production-transaction-adapter.ts": "production adapter boundary; exercised by contract tests until chain integration is enabled",
+  "app/lib/borrow-system/production-read-adapter.ts": "production read adapter boundary; exercised by contract tests until indexer integration is enabled",
+  "app/lib/lend-system/production-read-adapter.ts": "production read adapter boundary; exercised by contract tests until indexer integration is enabled",
+  "app/lib/multiply-system/production-read-adapter.ts": "production read adapter boundary; exercised by contract tests until indexer integration is enabled",
+  "app/lib/i18n/translations.ts": "translation source consumed through generated/runtime lookup",
+  "app/lib/performance/route-budgets.ts": "budget data consumed by the performance test runner",
+  "app/components/action-page/multiplier-options.ts": "action option source consumed by test and dynamic action paths",
+  "app/lib/ask-ai/server-config.ts": "server-only configuration imported through runtime boundary",
+  "app/lib/ask-ai/output-policy.ts": "server output policy imported through runtime boundary",
+  "app/lib/avana-session/index.ts": "public barrel retained for compatibility imports"
+}

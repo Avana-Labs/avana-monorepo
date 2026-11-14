@@ -1,0 +1,18 @@
+# Gitleaks configuration for avana-webapp
+# Extends the upstream default ruleset and adds narrowly-scoped allowlists
+# for confirmed false positives.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Mock UI data in the umbrella page (dollar figures and vault identifiers rendered in the client, not credentials)."
+paths = ['''app/umbrella/page\.tsx''']
+
+[[allowlists]]
+description = "Lockfiles and example/placeholder env files never contain real secrets."
+paths = [
+  '''package-lock\.json''',
+  '''(^|/)\.env\.example$''',
+  '''(^|/)\.env\.sample$''',
+]
