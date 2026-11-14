@@ -93,7 +93,7 @@ export function AboutCard({ about, title = "About", compact = false, plain = fal
                     <a
                       href={s.href}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="group flex items-center justify-end gap-2 text-text-extra-high transition-colors hover:text-text-high"
                     >
                       <span className="truncate font-data font-medium tabular-nums">{t(s.value)}</span>

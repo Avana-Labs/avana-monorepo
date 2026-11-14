@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { LighthouseAuditSurface } from "@/app/components/lighthouse-audit-surface"
 import { buildSeoMetadata } from "@/app/lib/seo-metadata"
+import { safeInternalHref } from "@/app/lib/safe-links"
 import { isLighthouseAuditMode } from "@/app/lib/test-mode"
 import { SwapPageClient } from "./swap-page-client"
 
@@ -20,8 +21,7 @@ function readParam(value: string | string[] | undefined) {
 }
 
 function safeReturnHref(value: string | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/"
-  return value
+  return safeInternalHref(value) ?? "/"
 }
 
 export default async function SwapPage({ searchParams }: SwapPageProps) {

@@ -8,13 +8,8 @@ import { MarketHeroChart } from "@/app/components/charts/market-hero-chart"
 import { getPoolHeroFeed } from "@/app/lib/chart-feeds"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { HeroContractLine } from "@/app/components/hero-contract-line"
-import {
-  buildFeedFromRangeSeries,
-  isPlaceholderHeroContractAddress,
-  contractExplorerHref,
-  isSafeHeroLink,
-  resolveHeroContractAddress,
-} from "@/app/borrow/_detail/lib/hero-chart-feeds"
+import { buildFeedFromRangeSeries, isSafeHeroLink } from "@/app/borrow/_detail/lib/hero-chart-feeds"
+import { openExternal } from "@/app/lib/safe-links"
 import { useAvanaIdentity, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
 import { useDashboardBorrowLive } from "@/app/dashboard/use-dashboard-borrow-live"
 import { currentCollateralValueUsd6 } from "@/app/lib/borrow-system/model"
@@ -41,12 +36,11 @@ export function PoolHeroIdentity({
   className?: string
 }) {
   const { t } = useTranslation()
-  // Suppress copy + Etherscan when the address is a synthetic placeholder that
-  // points at no real contract.
-  const isPlaceholderContract = isPlaceholderHeroContractAddress(
-    resolveHeroContractAddress(detail.id, detail.hero.explorerUrl),
-  )
-  const websiteHref = isSafeHeroLink(detail.hero.explorerUrl) ? detail.hero.explorerUrl : null
+  const contract = detail.hero.contract ?? null
+  const websiteHref = isSafeHeroLink(detail.hero.explorerUrl)
+    ? detail.hero.explorerUrl
+    : (contract?.explorerHref ?? null)
+  const xHref = isSafeHeroLink(detail.hero.xUrl) ? detail.hero.xUrl : null
 
   return (
     <header className={cn("pb-5", className)}>
@@ -66,33 +60,15 @@ export function PoolHeroIdentity({
                 {detail.hero.name}
               </h1>
             </div>
-            <HeroContractLine
-              contextLabel="Market on"
-              chainLabel={detail.hero.chain}
-              address={resolveHeroContractAddress(detail.id, detail.hero.explorerUrl)}
-              isPlaceholder={isPlaceholderContract}
-              explorerHref={contractExplorerHref(detail.hero.explorerUrl)}
-            />
+            <HeroContractLine contextLabel="Market on" chainLabel={detail.hero.chain} contract={contract} />
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 self-center sm:pl-5">
-          <HeroIcon
-            label={t("Website")}
-            onClick={() => {
-              if (!websiteHref) return
-              window.open(websiteHref, "_blank")
-            }}
-          >
+          <HeroIcon label={t("Website")} onClick={() => openExternal(websiteHref)}>
             <Globe className="h-[18px] w-[18px]" />
           </HeroIcon>
-          <HeroIcon
-            label={t("X")}
-            onClick={() => {
-              if (!detail.hero.xUrl) return
-              window.open(detail.hero.xUrl, "_blank")
-            }}
-          >
+          <HeroIcon label={t("X")} onClick={() => openExternal(xHref)}>
             <XIcon />
           </HeroIcon>
           <HeroIcon label={t("Share")} onClick={() => navigator.clipboard.writeText(window.location.href)}>

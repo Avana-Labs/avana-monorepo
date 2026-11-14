@@ -1,3 +1,4 @@
+import type { HeroContract } from "@/app/lib/detail-page/hero-contract"
 /**
  * Public types for the borrow / lend detail pages.
  *
@@ -243,6 +244,8 @@ export type PoolDetailHero = {
   chain: string
   /** Link to the source contract / external explorer. */
   explorerUrl?: string
+  /** The market's pool contract from services/convex; null or absent when there is none. */
+  contract?: HeroContract | null
   /** Official X profile when known. */
   xUrl?: string
 }
@@ -397,7 +400,8 @@ export type AssetDetailHero = {
   chain: string
   category: "stable" | "crypto"
   contractLabel?: string
-  contractAddress?: string
+  /** The asset's token contract from services/convex; null or absent when there is none. */
+  contract?: HeroContract | null
   websiteUrl?: string
   xUrl?: string
 }

@@ -16,7 +16,12 @@ export function AskAIMarkdown({ text }: { text: string }) {
           a: ({ href, children }) => {
             const safe = safeAskAIUrl(href, true)
             return safe ? (
-              <a href={safe} rel="noreferrer" target="_blank" className="text-primary underline underline-offset-2">
+              <a
+                href={safe}
+                rel="noopener noreferrer"
+                target="_blank"
+                className="text-primary underline underline-offset-2"
+              >
                 {children}
               </a>
             ) : (

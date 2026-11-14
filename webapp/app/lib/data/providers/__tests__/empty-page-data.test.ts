@@ -6,6 +6,7 @@ vi.mock("@/app/lib/lend-system/market-hydration-server", () => ({ fetchLendMarke
 
 import { fetchBorrowPage } from "@/app/lib/data/providers/borrow/fetch-borrow-page"
 import { fetchLendPage } from "@/app/lib/data/providers/lend/fetch-lend-page"
+import { liveLendPageSource } from "@/app/lib/data/providers/lend/source"
 
 describe("page data without market snapshots", () => {
   it("serves an empty Borrow page that passes its schema", async () => {
@@ -19,5 +20,30 @@ describe("page data without market snapshots", () => {
     const page = await fetchLendPage()
     expect(page.markets).toEqual([])
     expect(page.featuredSnapshots).toEqual([])
+  })
+
+  it("accepts featured Lend assets that have no sparkline yet", async () => {
+    const featured = {
+      id: "ethereum-stable-a0b869",
+      symbol: "USDC",
+      displayName: "USD Coin",
+      eyebrow: "Stablecoin",
+      apy: 1.62,
+      tone: "green" as const,
+      iconUrl: "",
+    }
+    const page = await fetchLendPage({
+      adapter: liveLendPageSource.adapter,
+      getLendPageData: async () => ({
+        data: {
+          markets: [],
+          featuredAssets: { [featured.id]: featured },
+          featuredSequence: [featured.id],
+          featuredSnapshots: [],
+          assetGroups: [],
+        } as never,
+      }),
+    })
+    expect(page.featuredAssets[featured.id]).toEqual(featured)
   })
 })

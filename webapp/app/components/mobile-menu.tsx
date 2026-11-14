@@ -376,7 +376,7 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
             <a
               href={AVANA_EXTERNAL_LINKS.privacy}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               onClick={onClose}
               className={rootSettingsClass}
             >
