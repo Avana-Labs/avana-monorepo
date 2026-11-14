@@ -10,6 +10,11 @@
 # Manifests are read from deployments/verified/ (mounted read-only at /manifests): set AVANA_MANIFEST in each .env to
 # /manifests/<file>. State files, the incident log and the halt flag go to each service's /data volume. Production
 # runs each service on its own host or cloud (a standby keeper on another cloud, services/README.md), not this file.
+#
+# Prometheus and Grafana with the services' dashboards start only with the dashboards profile
+# (services/dashboards/README.md):
+#
+#   MONITOR_METRICS_TOKEN=... GRAFANA_ADMIN_PASSWORD=... docker compose -f services/compose.yaml --profile dashboards up --build
 
 name: avana-services
 
@@ -90,13 +95,68 @@ services:
       MONITOR_STATE_PATH: /data/state.json
       MONITOR_INCIDENT_LOG: /data/incidents.jsonl
       MONITOR_PORT: "9470"
+      # GET /metrics, read by the dashboards profile's Prometheus with the same value; unset, the endpoint is off.
+      MONITOR_METRICS_TOKEN: ${MONITOR_METRICS_TOKEN:-}
     volumes:
       - ../deployments/verified:/manifests:ro
       - monitor:/data
     ports:
       - "127.0.0.1:9470:9470"
 
+  # The dashboards profile. Each container checks its secret at start and exits without it, so the services above
+  # start without these variables.
+  prometheus:
+    image: prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+    profiles: [dashboards]
+    restart: unless-stopped
+    environment:
+      MONITOR_METRICS_TOKEN: ${MONITOR_METRICS_TOKEN:-}
+    # The monitor's token goes to a file only Prometheus's user reads (prometheus.yml, credentials_file).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        test -n "$$MONITOR_METRICS_TOKEN" || { echo "set MONITOR_METRICS_TOKEN (the monitor's /metrics token)" >&2; exit 1; }
+        umask 077
+        printf '%s' "$$MONITOR_METRICS_TOKEN" > /prometheus/monitor-metrics-token
+        exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=30d
+    volumes:
+      - ./dashboards/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    image: grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
+    profiles: [dashboards]
+    restart: unless-stopped
+    environment:
+      # Read when Grafana first creates its database; later changes go through `grafana cli admin reset-admin-password`.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        test -n "$$GF_SECURITY_ADMIN_PASSWORD" || { echo "set GRAFANA_ADMIN_PASSWORD" >&2; exit 1; }
+        exec /run.sh
+    volumes:
+      - ./dashboards/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   postgres:
   keeper:
   monitor:
+  prometheus:
+  grafana:

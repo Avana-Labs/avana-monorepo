@@ -10,7 +10,7 @@ Ponder indexer with a PostgreSQL store for Avana and Aave V4 events on Ethereum 
 | `src/lib/` | Provenance, the log writer, log-only registration, the series writer and the pool series aggregation |
 | `src/config/` | ABIs from `packages/protocol`, the factory events taken from them, and manifest-driven sources |
 | `test/` | Unit tests (vitest): the handlers on scripted logs through an in-memory store (`test/harness`; account attribution, debt, custody, reserves and deficit offsets, risk premiums), replay and reorg properties of the whole handler set, event coverage of every followed ABI, factory events and log-only subscriptions against the ABIs, export authentication, the keeper stream's paging rules and kinds, the wallet history's request, parties and paging, the snapshot reader's ABI fragments against the generated ABIs, pool series aggregation |
-| `src/api/` | The authenticated export (event pages, series pages, pool history, wallet history) and the keeper stream, the only HTTP routes besides Ponder's `/health` and `/ready` |
+| `src/api/` | The authenticated export (event pages, series pages, pool history, wallet history, risk premium refresh list) and the keeper stream, the only HTTP routes besides Ponder's own `/health`, `/ready`, `/status` and `/metrics` (Prometheus, read by `services/dashboards`) |
 
 ## Configuration
 

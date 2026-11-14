@@ -71,7 +71,6 @@ export class KeeperFeed {
     this.heartbeat(instance, block);
   }
 
-  /** Records the block an instance has processed; never moves backwards. */
   /** Held alerts and heartbeats, for the state file. The monitor's start block is not kept: a restart counts afresh. */
   save(): { held: Map<string, Held>; heartbeat: Map<string, bigint> } {
     return { held: new Map(this.#held), heartbeat: new Map(this.#heartbeat) };
@@ -82,6 +81,12 @@ export class KeeperFeed {
     for (const [k, b] of saved.heartbeat) this.#heartbeat.set(k, b);
   }
 
+  /** The last block the instance reported (heartbeat or alert); undefined before its first report. */
+  lastHeartbeat(instance: string): bigint | undefined {
+    return this.#heartbeat.get(instance);
+  }
+
+  /** Records the block an instance has processed; never moves backwards. */
   heartbeat(instance: KeeperInstance, block: bigint): void {
     const last = this.#heartbeat.get(instance.name);
     if (last === undefined || block > last) this.#heartbeat.set(instance.name, block);

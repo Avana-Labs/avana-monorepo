@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+#
+# Prometheus scrape configuration for the dashboards profile of services/compose.yaml. Targets are the compose service
+# names. The monitor's /metrics needs its bearer token: the container's entrypoint writes MONITOR_METRICS_TOKEN to the
+# file read below before Prometheus starts. The keeper and the indexer serve /metrics without authentication on their
+# private ports.
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Ponder's own metrics (ponder_*, and the Node.js process_* and nodejs_* defaults).
+  - job_name: indexer
+    fallback_scrape_protocol: PrometheusText0.0.4
+    static_configs:
+      - targets: ["indexer:42069"]
+
+  # keeper_mode, and the keeper gauges named in services/dashboards/README.md once the keeper exports them.
+  - job_name: keeper
+    fallback_scrape_protocol: PrometheusText0.0.4
+    static_configs:
+      - targets: ["keeper:9464"]
+
+  - job_name: monitor
+    authorization:
+      type: Bearer
+      credentials_file: /prometheus/monitor-metrics-token
+    static_configs:
+      - targets: ["monitor:9470"]
