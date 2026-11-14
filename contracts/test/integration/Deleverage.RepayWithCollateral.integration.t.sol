@@ -207,6 +207,38 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         assertEq(usdc.balanceOf(carol) + usdt.balanceOf(carol), poolTokensBefore, "no pool token reached the wallet");
     }
 
+    /// @notice An account below health factor 1 that would stay below 1 after the call cannot repay with collateral:
+    /// the withdrawal step is an Aave `withdraw` of collateral, which requires health factor 1 while debt remains. The
+    /// Lens previews it as closed, `(0, 0, current health factor)`, rather than as a repayment that improves the health
+    /// factor; a release large enough to reach health factor 1 is previewed and executes as previewed.
+    // TEST-239 verifies: REQ-LENS-038, REQ-ADAPTER-080
+    function test_TEST_239_previewClosedWhenTheHealthFactorStaysBelowOne() public {
+        _borrowAs(bob, mA, usdcReserveId, 1880e6);
+        _depegUsdt(93_000_000);
+        uint256 hf0 = _hf(proxy);
+        assertLt(hf0, 1e18, "Bob is below health factor 1");
+
+        uint128 small = 20e6;
+        (uint256 pvRepaid, uint256 pvToWallet, uint256 pvHf) =
+            lens.previewRepayWithCollateral(bob, mA, key, small, usdcReserveId);
+        RepayWithCollateralParams memory p = _rwc(small, usdcReserveId);
+        vm.expectRevert(bytes4(keccak256("HealthFactorBelowThreshold()")));
+        vm.prank(bob);
+        adapterC.repayWithCollateral(p);
+        assertEq(pvRepaid, 0, "the preview shows the call closed");
+        assertEq(pvToWallet, 0, "nothing to the wallet");
+        assertEq(pvHf, hf0, "the current health factor");
+
+        uint128 large = 400e6;
+        (pvRepaid,, pvHf) = lens.previewRepayWithCollateral(bob, mA, key, large, usdcReserveId);
+        assertGe(pvHf, 1e18, "the larger release reaches health factor 1");
+        p = _rwc(large, usdcReserveId);
+        vm.prank(bob);
+        (uint256 repaid,) = adapterC.repayWithCollateral(p);
+        assertEq(repaid, pvRepaid, "executes as previewed");
+        assertGe(_hf(proxy), 1e18, "health factor at least 1 after the call");
+    }
+
     function _recoveredLog(
         Vm.Log[] memory logs
     ) internal view returns (uint256 recovered) {
