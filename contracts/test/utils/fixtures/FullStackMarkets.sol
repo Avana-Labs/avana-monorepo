@@ -197,8 +197,9 @@ abstract contract FullStackMarkets is FullStackFixture {
         uint256 id
     ) private {
         MarketParams memory p;
+        // Slippage allowance 195: the largest the LIQ-I1 fee bound admits at minLB = 10,250 and a 20 % fee share.
         (p.twapWindow, p.consistencyToleranceBps, p.slippageAllowanceBps, p.slippageAllowanceMinBps) =
-        (1800, 50, 250, 30);
+        (1800, 50, 195, 30);
         (p.poolRiskFactor, p.minPledgeUsd) = (4000, MIN_PLEDGE_USD);
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, p);

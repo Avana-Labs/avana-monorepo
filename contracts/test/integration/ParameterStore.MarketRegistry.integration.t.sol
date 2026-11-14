@@ -252,7 +252,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         vm.mockCall(address(lpVault), abi.encodeWithSignature("riskStatus(uint256,uint32)"), abi.encode(st));
         MarketParams memory p;
         (p.twapWindow, p.consistencyToleranceBps, p.slippageAllowanceBps, p.slippageAllowanceMinBps) =
-        (1800, 50, 250, 30);
+        (1800, 50, 195, 30);
         (p.poolRiskFactor, p.minPledgeUsd) = (4000, 10e8);
         vm.startPrank(address(timelock));
         store.setTokenCollateralFactorBps(address(usdc), 7800);
@@ -329,18 +329,18 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         // minLB = 10,000 + ⌊500 × 5,000 / 10⁴⌋ = 10,250.
         assertTrue(store.liquidationLivenessHolds(address(spoke), id, GHO_RESERVE));
         assertFalse(store.liquidationLivenessHolds(address(spoke), id, 7), "unapproved reserve");
-        // Floor 200: 10,250 × 9,800 = 100,450,000 = 10⁴ × 10,045, so a flash ceiling of 45 holds with equality.
+        // Floor 190: 10,250 × 9,810 = 100,552,500 ≥ 10⁴ × 10,055, so a flash ceiling of 55 holds and 56 does not.
         vm.prank(address(timelock));
-        store.setSlippageAllowanceMinBps(id, 200);
+        store.setSlippageAllowanceMinBps(id, 190);
         vm.prank(address(timelock));
-        store.setMaxFlashFeeBps(45);
+        store.setMaxFlashFeeBps(55);
         _refuses(
-            abi.encodeCall(store.setMaxFlashFeeBps, (46)),
+            abi.encodeCall(store.setMaxFlashFeeBps, (56)),
             abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector)
         );
-        // At 45, raising the floor one more bp breaks the pair.
+        // At 55, raising the floor one more bp breaks the pair (10,250 × 9,809 < 10⁴ × 10,055).
         _refuses(
-            abi.encodeCall(store.setSlippageAllowanceMinBps, (id, 201)),
+            abi.encodeCall(store.setSlippageAllowanceMinBps, (id, 191)),
             abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector)
         );
         // An Aave bonus cut after activation is drift: the view turns false, and only lowerings still pass.

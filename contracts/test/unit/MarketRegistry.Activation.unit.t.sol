@@ -127,6 +127,19 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         _activate();
     }
 
+    // TEST-138 verifies: REQ-CONFIG-044, SPEC-LIQ-010, REQ-PSTORE-021
+    // LIQ-I1: the slippage allowance must leave the Avana fee intact at the smallest bonus,
+    // s x minLB <= (10^4 - f) x (minLB - 10^4). minLB = 10,000 + floor(500 x 5,000 / 10^4) = 10,250 and f = 2,000:
+    // s <= floor(8,000 x 250 / 10,250) = 195; at 196 a keeper sandwiching its own legs to the floor would pay less.
+    function test_TEST_138_slippageAllowanceKeepsTheFeeAtTheBonus() public {
+        spoke.setLiquidationConfig(1.1e18, 5000);
+        ps.setLiquidationExpectations(address(spoke), 1.1e18, 250);
+        ps.setFeeBoundInputs(id, 196, 2000);
+        _expectCheck("feeBound");
+        ps.setFeeBoundInputs(id, 195, 2000);
+        _activate();
+    }
+
     // TEST-138 verifies: REQ-CONFIG-046, SPEC-CAP-006, REQ-CONFIG-036, SPEC-CF-004, Q-150
     // Sources: 5.1 TEST-138, MATH-UO-28
     function test_TEST_138_parametersCapsAndMargin() public {

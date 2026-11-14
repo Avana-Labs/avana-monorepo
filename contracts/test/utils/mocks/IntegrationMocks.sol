@@ -334,11 +334,14 @@ contract IntegRegistryMock {
 contract IntegStoreMock is RiskStoreMock {
     mapping(address => uint256) public floorRoundingAllowance;
     mapping(address => uint32) internal _liquidationAge;
-    uint16 public avanaFeeShareBps = 2000;
     uint16 public maxShortfallBps = 1000;
     address public feeRecipient;
     uint256 public graceHealthFactor = 0.95e18;
     uint32 public defaultLiquidationAge = 88_200;
+
+    constructor() {
+        avanaFeeShareBps = 2000;
+    }
 
     function setSlippage(
         uint256 marketId,

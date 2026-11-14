@@ -76,6 +76,17 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         return minLb * (BPS - sMin) >= BPS * (BPS + f);
     }
 
+    /// @dev LIQ-I1 fee bound: `s × minLB ≤ (10⁴ − f) × (minLB − 10⁴)`, false for `minLB < 10⁴` or `f > 10⁴`. The same
+    /// bound the MarketRegistry checks at activation.
+    function _feeBoundHolds(
+        uint256 minLb,
+        uint256 s,
+        uint256 f
+    ) internal pure returns (bool) {
+        if (minLb < BPS || f > BPS) return false;
+        return s * minLb <= (BPS - f) * (minLb - BPS);
+    }
+
     /// @dev Whether the Spoke has at least one enabled debt reserve.
     function _hasEnabledReserve(
         address spoke
