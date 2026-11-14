@@ -18,22 +18,33 @@ import sys
 TIMINGS = os.path.join("script", "test-timings.json")
 RAN = re.compile(r"Ran \d+ tests? for (test/\S+?\.t\.sol):\S+")
 RESULT = re.compile(r"Suite result: .*?finished in [^(]*\(([\d.]+)(ms|s|µs|ns) CPU time\)")
+SEGMENT = re.compile(r"invariant campaign segment: (test/\S+?\.t\.sol), part \d+ of (\d+)")
 SCALE = {"s": 1.0, "ms": 1e-3, "µs": 1e-6, "ns": 1e-9}
 
 
 def parse(path):
-    times, current = {}, None
+    """(whole-file times, segment times): a suite run under script/test-shard.sh's `invariant campaign segment: <file>,
+    part k of m` header is one segment of m, recorded as (seconds, m)."""
+    times, segments, current, seg_of = {}, {}, None, None
     with open(path, errors="replace") as fh:
         for line in fh:
+            m = SEGMENT.search(line)
+            if m:
+                seg_of = (m.group(1), int(m.group(2)))
+                continue
             m = RAN.search(line)
             if m:
                 current = m.group(1)
                 continue
             m = RESULT.search(line)
             if m and current:
-                times[current] = times.get(current, 0.0) + float(m.group(1)) * SCALE[m.group(2)]
+                t = float(m.group(1)) * SCALE[m.group(2)]
+                if seg_of and seg_of[0] == current:
+                    segments.setdefault(current, []).append((t, seg_of[1]))
+                else:
+                    times[current] = times.get(current, 0.0) + t
                 current = None
-    return times
+    return times, segments
 
 
 def main(paths):
@@ -45,13 +56,20 @@ def main(paths):
             timings = json.load(fh)
     except FileNotFoundError:
         timings = {}
-    measured = {}
+    measured, segments = {}, {}
     for p in paths:
-        for f, t in parse(p).items():
+        times, segs = parse(p)
+        for f, t in times.items():
             measured[f] = measured.get(f, 0.0) + t
+        for f, s in segs.items():
+            segments.setdefault(f, []).extend(s)
+    # A segmented campaign weighs the mean of its finished segments times its segment count, so a segment that was
+    # cancelled (its shard timed out) does not shrink the campaign's weight.
+    for f, s in segments.items():
+        measured[f] = sum(t for t, _ in s) / len(s) * s[0][1]
     timings.update({f: round(t, 1) for f, t in measured.items()})
     timings = {f: t for f, t in sorted(timings.items()) if os.path.exists(f)}
-    with open(TIMINGS, "w") as fh:
+    with open(TIMINGS, "w", newline="\n") as fh:
         json.dump(timings, fh, indent=2)
         fh.write("\n")
     print(f"{len(measured)} files measured, {len(timings)} recorded in {TIMINGS}")

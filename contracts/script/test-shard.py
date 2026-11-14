@@ -32,8 +32,9 @@ import sys
 
 TIMINGS = os.path.join("script", "test-timings.json")
 CI_INVARIANT_WORK = 10_000 * 100  # runs x depth of the ci profile the timings were measured at
-# A campaign above 30 minutes of measured CPU time is split, so every unit leaves room in a 60-minute shard.
-SEGMENT_SECONDS = 1800
+# A campaign above 20 minutes of measured CPU time is split, so every unit leaves room in a 60-minute shard: at 30
+# minutes a segment plus a shard's other files overran the 60-minute job limit on main (run 43492421465, shards 10 and 11).
+SEGMENT_SECONDS = 1200
 
 
 def is_inv(f):

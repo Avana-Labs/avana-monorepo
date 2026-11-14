@@ -5,12 +5,12 @@ name: contracts
 # coverage, traceability, the evidence report (which spec rows a test that ran and passed checks, from the shards'
 # results) and the fast security tier. A pull request labelled `hotfix` (playbook P-05) also runs the
 # touched contracts' invariant campaigns at full depth, one per job. Every push to main runs the same set with the ci
-# profile at full depth (10,000 runs at depth 100) in 20 shards: each file of test/invariant/ is one campaign, and a
-# campaign over 30 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every
+# profile at full depth (10,000 runs at depth 100) in 30 shards: each file of test/invariant/ is one campaign, and a
+# campaign over 20 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every
 # night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep invariant campaign, fork tests, the FFI
 # differential suite, SMTChecker and Certora (paused unless the repository variable CERTORA_ENABLED is `true`), one
-# target per job, each at most 4 hours (a deep invariant file at most 6): `plan` lists the invariant files, SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one
-# gets its own job on the next run. Halmos runs in the slow security tier, one job per check at loop 16. The slow
+# target per job, each at most 4 hours (a deep invariant file at most 6): `plan` lists the invariant files,
+# SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. Halmos runs in the slow security tier, one job per check at loop 16. The slow
 # security tier (security-slow.yml), the per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) run on the
 # same nightly, release and manual schedule. An upgrade is scheduled from a release tag, so every long check has run
 # before the timelock delay ends; a failure is a reason to cancel the operation. A long check that cannot run (a missing
@@ -166,24 +166,24 @@ jobs:
           retention-days: 7
 
   test:
-    # The suite is split into shards that run side by side (10 on a pull request, 20 elsewhere): every test file
+    # The suite is split into shards that run side by side (10 on a pull request, 30 elsewhere): every test file
     # (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
     # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
     # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
-    # campaign, so running them one by one would repeat the campaign's calls per invariant. A campaign over 30 minutes runs as
+    # campaign, so running them one by one would repeat the campaign's calls per invariant. A campaign over 20 minutes runs as
     # segments of ceil(runs / m) runs each, at the same depth and with a seed of their own. Each shard reuses the build
     # job's compiled output.
-    name: tests (ci profile, shard ${{ matrix.shard }}/${{ github.event_name == 'pull_request' && 10 || 20 }})
+    name: tests (ci profile, shard ${{ matrix.shard }}/${{ github.event_name == 'pull_request' && 10 || 30 }})
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(github.event_name == 'pull_request' && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]') }}
+        shard: ${{ fromJSON(github.event_name == 'pull_request' && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]') }}
     env:
       FOUNDRY_PROFILE: ci
-      SHARDS: ${{ github.event_name == 'pull_request' && 10 || 20 }}
+      SHARDS: ${{ github.event_name == 'pull_request' && 10 || 30 }}
       # script/test-shard.sh writes each forge invocation's results here (`--json-file`); the evidence job reads them.
       TEST_RESULTS_DIR: ${{ github.workspace }}/contracts/out-results
     steps:
