@@ -1,6 +1,6 @@
 # Hypothesis recorded results
 
-Copied from spec/05-verification/hypothesis/README.md (Settings and run log, Results, Finding) as of 2026-11-10.
+Copied from docs/spec/05-verification/hypothesis/README.md (Settings and run log, Results, Finding) as of 2026-11-10.
 
 ## Settings and run log
 
@@ -13,7 +13,7 @@ Copied from spec/05-verification/hypothesis/README.md (Settings and run log, Res
 
 Run log (2026-11-10; Python 3.9.6, hypothesis 6.112.5, pytest 8.3.3; example database off, random seeds):
 
-| Run | Command (from `spec/05-verification/`) | Bounds | Result | Exit |
+| Run | Command (from `docs/spec/05-verification/`) | Bounds | Result | Exit |
 |---|---|---|---|---|
 | Recorded | `.venv/bin/python -m pytest -q hypothesis` | settings above | 71 tests: 70 passed, 1 failed (`test_hyp85_leg_minimums_within_aggregate_floor`, the finding below); 509 s wall, 261 s CPU | 1 |
 | Deep, state machine | `AVANA_HYP_SCALE=5 .venv/bin/python -m pytest -q hypothesis/test_hyp_state_machine.py` | 2,000 examples × 60 steps | 1 passed; 282 s | 0 |

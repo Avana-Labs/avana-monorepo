@@ -1,6 +1,6 @@
 # Simulation recorded results
 
-Copied from spec/05-verification/simulation/README.md (Results and Run log) as of 2026-11-10.
+Copied from docs/spec/05-verification/simulation/README.md (Results and Run log) as of 2026-11-10.
 
 ## Results
 
@@ -20,7 +20,7 @@ Copied from spec/05-verification/simulation/README.md (Results and Run log) as o
 
 ### 2026-11-10
 
-- Command: `cd spec/05-verification && for f in $(find simulation -name '*.py' | sort); do .venv/bin/python "$f"; echo "exit=$?"; done` (the simulation part of `run_all.sh`).
+- Command: `cd docs/spec/05-verification && for f in $(find simulation -name '*.py' | sort); do .venv/bin/python "$f"; echo "exit=$?"; done` (the simulation part of `run_all.sh`).
 - Python 3.9.6, standard library only.
 - Seeds 11/22/33 (sim05 Part B and D, sim07: 11/22; sim02 timeline: seeds 0–39; `SIM-00A`: `random.Random(5)`, 600 cases). Bounds: prf 0.20–0.40 (0.10–0.50 in sim08), outages 1–72h, horizons 74–122h (two years in sim07), 200 accounts (600 in the dust-heavy book).
 - Wall time 360 s on a shared machine.

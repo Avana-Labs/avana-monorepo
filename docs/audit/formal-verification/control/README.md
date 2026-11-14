@@ -5,10 +5,10 @@ Avana's internal formal verification of the control area: access control and `Ad
 ## Run
 
 ```
-audit/formal-verification/control/run.sh
+docs/audit/formal-verification/control/run.sh
 ```
 
-It runs every model with `spec/05-verification/.venv/bin/python` (Z3 4.13.0), type-checks `governance.qnt` and runs its six invariants with `quint run` (10,000 samples × 12 steps, seed `0x1`), then checks that every cited spec ID is defined (`check_ids.py`, using `trace.py`'s rules). It exits non-zero while any property is Violated or Unknown, except a violation registered with `open_finding` in `common.py`: such a check prints `[OPN]` with its counterexample, is listed at the end of the run, and is an open finding in [report.md](report.md) section 13.3 with the exact spec change that restores the property. Results land in `results/` (`<model>.json`, `quint.txt`, `run.log`); each run is logged in [RUNS.md](RUNS.md). The `models` CI workflow (`.github/workflows/models.yml`) runs `run.sh` on every pull request and push to `main`, and the job fails when `run.sh` exits non-zero.
+It runs every model with `docs/spec/05-verification/.venv/bin/python` (Z3 4.13.0), type-checks `governance.qnt` and runs its six invariants with `quint run` (10,000 samples × 12 steps, seed `0x1`), then checks that every cited spec ID is defined (`check_ids.py`, using `trace.py`'s rules). It exits non-zero while any property is Violated or Unknown, except a violation registered with `open_finding` in `common.py`: such a check prints `[OPN]` with its counterexample, is listed at the end of the run, and is an open finding in [report.md](report.md) section 13.3 with the exact spec change that restores the property. Results land in `results/` (`<model>.json`, `quint.txt`, `run.log`); each run is logged in [RUNS.md](RUNS.md). The `models` CI workflow (`.github/workflows/models.yml`) runs `run.sh` on every pull request and push to `main`, and the job fails when `run.sh` exits non-zero.
 
 ## Files
 
@@ -30,4 +30,4 @@ It runs every model with `spec/05-verification/.venv/bin/python` (Z3 4.13.0), ty
 | `report.md` | Report: scope, method, assumptions (including OpSec), findings with counterexamples and exact spec changes, bug-class sweep, property tables |
 | `audit-mapping.md` | Avana internal audit mapping: prover rules (CVL) and `PROP-NNN` per property |
 
-Check IDs are `FV-CTL-NN` (with `-W` witness and `-EX` example variants); each is tagged in its source as `FV-CTL-NN verifies: <spec IDs>`, which `spec/05-verification/trace.py` collects.
+Check IDs are `FV-CTL-NN` (with `-W` witness and `-EX` example variants); each is tagged in its source as `FV-CTL-NN verifies: <spec IDs>`, which `docs/spec/05-verification/trace.py` collects.

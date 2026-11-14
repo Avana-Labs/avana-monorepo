@@ -16,7 +16,7 @@ script/security-fast.sh cvl
 for conf in certora/conf/*.conf; do .venv/bin/certoraRun "$conf" --wait_for_results all; done
 ```
 
-Rules, shared models and the property map: [`contracts/certora/README.md`](../../contracts/certora/README.md); run log: [`contracts/certora/RUNS.md`](../../contracts/certora/RUNS.md). Prover results are filed per property under [`audit/formal/`](../formal/).
+Rules, shared models and the property map: [`contracts/certora/README.md`](../../../contracts/certora/README.md); run log: [`contracts/certora/RUNS.md`](../../../contracts/certora/RUNS.md). Prover results are filed per property under [`docs/audit/formal/`](../formal/).
 
 ## Scope
 

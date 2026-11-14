@@ -2,7 +2,7 @@
 //
 // Avana v1 — cross-contract state machine (spec stage).
 //
-// Models the final design (spec/04-security/04-design-decisions.md, Q-001 … Q-278).
+// Models the final design (docs/spec/04-security/04-design-decisions.md, Q-001 … Q-278).
 // Property IDs (QNT-…), bounds and readings are listed in quint/README.md.
 // Scenario tests: avana_tests.qnt.
 //

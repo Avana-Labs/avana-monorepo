@@ -6,7 +6,7 @@ Algebraic consistency: each formula equals the rule it implements, exactly and b
 
 ## How to run
 
-From `spec/05-verification/` (SymPy 1.13.3 in `.venv`):
+From `docs/spec/05-verification/` (SymPy 1.13.3 in `.venv`):
 
 ```bash
 ./run_all.sh
@@ -29,5 +29,5 @@ Re-run on 2026-11-10 at 22:4x: `sym09_governance_timing_examples.py` 9 / 9 and `
 
 ## Results folder
 
-- [`recorded-results-2026-11-10.md`](results/recorded-results-2026-11-10.md): Results, Findings and Run log of `spec/05-verification/sympy/README.md`.
+- [`recorded-results-2026-11-10.md`](results/recorded-results-2026-11-10.md): Results, Findings and Run log of `docs/spec/05-verification/sympy/README.md`.
 - [`sym09_governance_timing_examples-2026-11-10.txt`](results/sym09_governance_timing_examples-2026-11-10.txt), [`sym01_collateral_factor-2026-11-10.txt`](results/sym01_collateral_factor-2026-11-10.txt).

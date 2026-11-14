@@ -1,6 +1,6 @@
 # Verification coverage and AMM-neutral traceability
 
-Measured on 2026-11-10 against `spec/01`–`04` (decisions `Q-001`…`Q-278`), `spec/05-verification/`, `audit/findings-register.md` and `contracts/certora/`. Rule under test: every critical requirement has a verification method, and every failed verification has a traceable finding.
+Measured on 2026-11-10 against `docs/spec/01`–`04` (decisions `Q-001`…`Q-278`), `docs/spec/05-verification/`, `docs/audit/findings-register.md` and `contracts/certora/`. Rule under test: every critical requirement has a verification method, and every failed verification has a traceable finding.
 
 ## 1. Result
 
@@ -92,7 +92,7 @@ Largest gaps:
 | Links a requirement | 200 of 200 link a decision `Q-…`. 105 link **only** decisions and model checks, with no `REQ-`, `SPEC-`, `INV-` or flow-step ID: `FINDING-001`…`040`, `043`, `045`…`088`, `090`, `092`, `093`, `095`…`097`, `099`…`103`, `124`, `144`, `145`, `160`, `163`, `172`, `182`, `185`, `186` |
 | Links a passing or planned check | 198 of 200. **Orphans: `FINDING-197`** (deficit-coverage worked example, `DEF-006`) and **`FINDING-198`** (liquidation worked example, `LIQ-068`) have Verification `None` while their Evidence says "confirmed by the Verification tests". Five more name only a spec-stage check and no code test: `FINDING-164`, `165`, `166`, `168` (`MATH-AR-…`), `169` (`SYM-138d`, `SYM-138e`) |
 
-### 4.2 Register rows in `audit/findings-register.md`
+### 4.2 Register rows in `docs/audit/findings-register.md`
 
 102 rows; every row names a mirrored `FINDING-…` that exists in 5.3, and every row has a "Verified by" entry.
 
@@ -108,15 +108,15 @@ Largest gaps:
 
 | Check | Recorded in | Counterexample | Finding |
 |---|---|---|---|
-| `SIM-02H` | `spec/05-verification/simulation/README.md` | Both USDC routes fail 24 h with no standby: 24.7 liquidations of accounts healthy at market prices | none |
+| `SIM-02H` | `docs/spec/05-verification/simulation/README.md` | Both USDC routes fail 24 h with no standby: 24.7 liquidations of accounts healthy at market prices | none |
 | `SIM-04C` | same | No approved keeper for 48 h: permissionless fallback leaves 9,874 GHO of bad debt | none |
-| `QNT-F1` | `spec/05-verification/quint/README.md` | A hostile LPVaultSwap seizes an Expired market in full for one unit of debt | none in 5.3 or the register |
+| `QNT-F1` | `docs/spec/05-verification/quint/README.md` | A hostile LPVaultSwap seizes an Expired market in full for one unit of debt | none in 5.3 or the register |
 
 The other simulation counterexamples (`SIM-01D`, `SIM-05A`, `SIM-05C`, `SIM-07C`), every Z3, SymPy and Hypothesis finding, and the seven violated `FV-CTL-R3` checks map to findings.
 
 ### 4.4 Count drift
 
-The summary in `spec/05-verification/README.md` disagrees with the folder READMEs: Z3 "504 proved, 87 counterexamples (6 findings), 3 mismatches" against `z3/README.md` "509 proved, 83 counterexamples (all deliberate), 0 mismatches"; SymPy "228 hold, 2 counterexamples" against "229 hold, 1"; Quint "43 invariants, 35 scenarios" against 58 properties `QNT-01`…`QNT-58`. `z3/amm-pricing/ap01_concentrated_liquidity.py` carries no `verifies:` tags and has no README, so `trace.py` does not see it.
+The summary in `docs/spec/05-verification/README.md` disagrees with the folder READMEs: Z3 "504 proved, 87 counterexamples (6 findings), 3 mismatches" against `z3/README.md` "509 proved, 83 counterexamples (all deliberate), 0 mismatches"; SymPy "228 hold, 2 counterexamples" against "229 hold, 1"; Quint "43 invariants, 35 scenarios" against 58 properties `QNT-01`…`QNT-58`. `z3/amm-pricing/ap01_concentrated_liquidity.py` carries no `verifies:` tags and has no README, so `trace.py` does not see it.
 
 ## 5. The 4,033 warnings
 
@@ -163,7 +163,7 @@ Check IDs name the protocol and the method, `<KIND>-AMM-<P>-<METHOD>-NN`:
 | Invariant tests | `TEST-AMM-<P>-INVAR-NNN` under `contracts/test/invariant/` | The multi-actor suite (`TEST-215`) run with this protocol's markets, asserting `INV-001` (backing), `INV-074` (solvency per debt asset) and every `INV-AMM-<P>-…` after each step |
 | Core conformance | any check with `-AMM-<P>-` in its ID | Every `REQ-AMM-CORE-…` and `SPEC-AMM-CORE-…` linked by at least one check that runs against this protocol |
 
-Results: each listing records, per required check, the result and the run in `spec/05-verification/amm-integrations.json`:
+Results: each listing records, per required check, the result and the run in `docs/spec/05-verification/amm-integrations.json`:
 
 ```json
 {
@@ -211,7 +211,7 @@ Tested on a copy against the current repo: `patch --dry-run -p1` applies cleanly
  CHECK_KIND = {"MATH": "Z3", "SYM": "SymPy", "QNT": "Quint", "HYP": "Hypothesis",
                "SIM": "Simulation", "TEST": "Foundry", "PROP": "Formal",
 @@ -61,7 +64,20 @@
-                "audit/formal-verification/**/*.py", "audit/formal-verification/**/*.qnt"]
+                "docs/audit/formal-verification/**/*.py", "docs/audit/formal-verification/**/*.qnt"]
  SKIP = {".venv", "node_modules", "__pycache__", ".hypothesis"}
  
 +# Verification methods an AMM integration must carry before listing. Check IDs name the method:
@@ -328,4 +328,4 @@ Tested on a copy against the current repo: `patch --dry-run -p1` applies cleanly
          if rid not in reqs:
 ```
 
-Gaps outside `trace.py` on the review date: the 5.1 rows carried no `TEST-NNN verifies: <REQ/SPEC IDs>` tags, so the 1,415 decision-level plans were not direct links; `SIM-02H`, `SIM-04C` and `QNT-F1` had no findings, and `FINDING-197` and `FINDING-198` had no check; `z3/amm-pricing/` had no `MATH-AMM-V3-PRICE-…` or `MATH-AMM-SLIP-PRICE-…` tags; the result counts in `spec/05-verification/README.md` did not match; and a `PROP-…` counted as an implementation check before any logged prover run, so the matrix showed unrun CVL rules as Verified.
+Gaps outside `trace.py` on the review date: the 5.1 rows carried no `TEST-NNN verifies: <REQ/SPEC IDs>` tags, so the 1,415 decision-level plans were not direct links; `SIM-02H`, `SIM-04C` and `QNT-F1` had no findings, and `FINDING-197` and `FINDING-198` had no check; `z3/amm-pricing/` had no `MATH-AMM-V3-PRICE-…` or `MATH-AMM-SLIP-PRICE-…` tags; the result counts in `docs/spec/05-verification/README.md` did not match; and a `PROP-…` counted as an implementation check before any logged prover run, so the matrix showed unrun CVL rules as Verified.

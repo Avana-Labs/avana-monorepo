@@ -6,7 +6,7 @@ n-token USD band, second-source agreement, the L2 sequencer gate, the observatio
 chain block time, the 63/64 gas guard, and the token-decimals verification with the
 second-source confirmation as borrow-only gates.
 
-Formulas (final text of spec/02-contracts/10-lp-oracle.md):
+Formulas (final text of docs/spec/02-contracts/10-lp-oracle.md):
   SPEC-ORC-019  feedMaxAge = feedHeartbeat + heartbeatMargin; borrowPriceMaxAge <= feedMaxAge
   SPEC-ORC-015  maxAge() = min_l(updatedAt_l + limit_l) - servedUpdatedAt
   SPEC-ORC-006  s = min(max(sO, sa), sb); amounts by getAmountsForLiquidity (floor)

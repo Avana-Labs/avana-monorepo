@@ -6,7 +6,7 @@ A cross-contract state machine of Avana with honest and hostile components (`ava
 
 ## How to run
 
-From `spec/05-verification/` (Quint 0.22.4 from `package.json`):
+From `docs/spec/05-verification/` (Quint 0.22.4 from `package.json`):
 
 ```bash
 npx quint typecheck quint/avana.qnt && npx quint test quint/avana_tests.qnt
@@ -29,5 +29,5 @@ quint/topology_run.sh         # topology simulator, nightly
 
 ## Results folder
 
-- [`recorded-results-2026-11-10.md`](results/recorded-results-2026-11-10.md): Results and Findings of `spec/05-verification/quint/README.md`.
+- [`recorded-results-2026-11-10.md`](results/recorded-results-2026-11-10.md): Results and Findings of `docs/spec/05-verification/quint/README.md`.
 - [`quint-run-quick-2026-11-10.txt`](results/quint-run-quick-2026-11-10.txt): console output of `quint/run.sh` in quick mode (log paths shortened).

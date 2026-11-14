@@ -1,6 +1,6 @@
 # Avana internal audit mapping
 
-Liquidation area, in the design where LPVaultSwap flash-borrows the debt asset itself through `IFlashSource` (Aave V3 Pool `flashLoan`), calls the standard Spoke's 5-argument `liquidationCall` with `receiveShares = false`, unwinds the seized units into the market's n tokens, swaps each into the debt asset and pays Avana's fee, the keeper reward and the borrower surplus in that asset. For each property proved in this folder: the prover rule (CVL) or invariant that should prove it on the implementation in `contracts/certora/`, its contract, a sketch, and the `PROP-NNN` of `spec/05-verification/02-formal-properties.md` it corresponds to or that it adds.
+Liquidation area, in the design where LPVaultSwap flash-borrows the debt asset itself through `IFlashSource` (Aave V3 Pool `flashLoan`), calls the standard Spoke's 5-argument `liquidationCall` with `receiveShares = false`, unwinds the seized units into the market's n tokens, swaps each into the debt asset and pays Avana's fee, the keeper reward and the borrower surplus in that asset. For each property proved in this folder: the prover rule (CVL) or invariant that should prove it on the implementation in `contracts/certora/`, its contract, a sketch, and the `PROP-NNN` of `docs/spec/05-verification/02-formal-properties.md` it corresponds to or that it adds.
 
 | Property | Prover rule (CVL) | Contract | Sketch | PROP |
 |---|---|---|---|---|

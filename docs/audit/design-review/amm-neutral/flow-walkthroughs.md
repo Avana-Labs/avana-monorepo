@@ -1,6 +1,6 @@
 # AMM-neutral architecture: flow walkthroughs
 
-Date: 2026-11-10. Scope: every user, keeper and governance flow of `spec/03-operations/` (FLOW-001 to FLOW-009), read against `spec/02-contracts/` (2.1 to 2.18), under the proposed AMM-neutral architecture:
+Date: 2026-11-10. Scope: every user, keeper and governance flow of `docs/spec/03-operations/` (FLOW-001 to FLOW-009), read against `docs/spec/02-contracts/` (2.1 to 2.18), under the proposed AMM-neutral architecture:
 
 - many CDP Spokes per Hub, one collateral market per CDP Spoke, three Hubs (Stable, Correlated, Volatile);
 - an immutable LPVault and an immutable Collateralization ledger per CDP Spoke; a Lock, AaveAdapter, LPVaultSwap, MarketRegistry, ParameterStore, RiskModule, SettlementBudget and PayoutEscrow per Hub; a VaultTokenFactory, ProxyManager, Lens and Timelock per chain;

@@ -4,7 +4,7 @@
 
 Every rule of the spec links to the checks that verify it and to the Solidity that implements it, which of those checks ran and passed, and no rule changes without its checks being re-run.
 
-- [`trace.py`](../../spec/05-verification/trace.py) reads every `REQ-`, `SPEC-`, `INV-`, `ATTACK-`, flow-step and `Q-` ID in `spec/01`–`04`, every `<CHECK> verifies: <IDs>` tag (Z3, SymPy, Quint, Hypothesis, simulation, Foundry, Certora, Halmos) and every `/// @custom:spec` NatSpec link, and regenerates [`traceability.md`](../../spec/05-verification/traceability.md). It fails on a duplicate ID, a link to an undefined ID, or a rule whose text changed since its checks were last accepted.
+- [`trace.py`](../../spec/05-verification/trace.py) reads every `REQ-`, `SPEC-`, `INV-`, `ATTACK-`, flow-step and `Q-` ID in `docs/spec/01`–`04`, every `<CHECK> verifies: <IDs>` tag (Z3, SymPy, Quint, Hypothesis, simulation, Foundry, Certora, Halmos) and every `/// @custom:spec` NatSpec link, and regenerates [`traceability.md`](../../spec/05-verification/traceability.md). It fails on a duplicate ID, a link to an undefined ID, or a rule whose text changed since its checks were last accepted.
 - [`traceability.lock.json`](../../spec/05-verification/traceability.lock.json) holds a hash of each rule's text and the checks accepted for it; `--accept <ID>` records a re-verified change.
 - [`evidence.py`](../../spec/05-verification/evidence.py) decides which `TEST-`/`PROP-` tags count: a tag sits directly above a test function or CVL rule, the test carries the tag's own row (or the tag gives `shared: <reason>`), the check ran and passed in the run's results (`forge test --json-file`, Halmos logs; a CVL rule needs a prover result with a job id in `contracts/certora/RUNS.md` or a CI result file), and the test uses no harness or mock that stands in for the contract the row belongs to (`STAND_INS`). A `@custom:spec` tag on a body-less declaration is shown as a declaration, not an implementation.
 - [`contract_checklist.py`](../../spec/05-verification/contract_checklist.py) prints, for one contract, every REQ/SPEC ID on its page, its TEST, PROP, INV and ATTACK rows, each verified `[x]`, failed `[!]`, not run `[~]` or unlinked `[ ]`; `--check --results <run>` exits 1 while a row in scope is not verified, `--check --links-only` while one is unlinked or failed. `--all` runs every contract key and `--uncovered` the TEST rows on no contract's checklist.
@@ -12,17 +12,17 @@ Every rule of the spec links to the checks that verify it and to the Solidity th
 ## How to run
 
 ```bash
-cd spec/05-verification
+cd docs/spec/05-verification
 .venv/bin/python trace.py                 # matrix and errors
 .venv/bin/python trace.py --strict        # also coverage gaps
 python3 contract_checklist.py --list      # ID counts per contract
 python3 contract_checklist.py Collateralization --check --links-only
-python3 contract_checklist.py --all --check --results ../../contracts/out-results   # with a run's results
+python3 contract_checklist.py --all --check --results ../../../contracts/out-results   # with a run's results
 ```
 
 ## Scope
 
-3,558 requirements (2026-11-12; 3,478 on 2026-11-10) across `spec/01`–`04`; checks in `spec/05-verification/`, `audit/formal-verification/`, `contracts/test/`, `contracts/certora/`; Solidity in `contracts/src/`.
+3,558 requirements (2026-11-12; 3,478 on 2026-11-10) across `docs/spec/01`–`04`; checks in `docs/spec/05-verification/`, `docs/audit/formal-verification/`, `contracts/test/`, `contracts/certora/`; Solidity in `contracts/src/`.
 
 ## How often it runs
 

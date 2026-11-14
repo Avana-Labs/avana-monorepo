@@ -6,12 +6,12 @@ Date: 2026-11-10. Scope: the proposed multi-Hub, multi-Spoke topology (per-Hub A
 
 | File | What it holds |
 |---|---|
-| [`spec/05-verification/quint/topology.qnt`](../../../spec/05-verification/quint/topology.qnt) | The state machine: 2 Hubs, 3 CDP Spokes, actions, invariants `TOPO-01` … `TOPO-10`, `TOPO-X1`, `TOPO-X2` |
-| [`spec/05-verification/quint/topology_tests.qnt`](../../../spec/05-verification/quint/topology_tests.qnt) | 20 deterministic scenarios: one counterexample per finding under the proposal, the same steps under the fixed design, and the hardest path of each property that holds |
-| [`spec/05-verification/quint/topology_run.sh`](../../../spec/05-verification/quint/topology_run.sh) | 40 simulator runs (property × design × step relation), with an expectation per run |
+| [`docs/spec/05-verification/quint/topology.qnt`](../../../spec/05-verification/quint/topology.qnt) | The state machine: 2 Hubs, 3 CDP Spokes, actions, invariants `TOPO-01` … `TOPO-10`, `TOPO-X1`, `TOPO-X2` |
+| [`docs/spec/05-verification/quint/topology_tests.qnt`](../../../spec/05-verification/quint/topology_tests.qnt) | 20 deterministic scenarios: one counterexample per finding under the proposal, the same steps under the fixed design, and the hardest path of each property that holds |
+| [`docs/spec/05-verification/quint/topology_run.sh`](../../../spec/05-verification/quint/topology_run.sh) | 40 simulator runs (property × design × step relation), with an expectation per run |
 
 ```
-cd spec/05-verification
+cd docs/spec/05-verification
 npx quint typecheck quint/topology.qnt && npx quint test quint/topology_tests.qnt   # 20 passing, ~10 s
 quint/topology_run.sh                                                             # 1,000 traces x 25 steps per run, 8 in parallel
 ```

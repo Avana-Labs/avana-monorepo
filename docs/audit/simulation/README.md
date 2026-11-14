@@ -7,7 +7,7 @@ Seeded, reproducible stress simulations of the economics: stablecoin depegs, ora
 ## How to run
 
 ```bash
-cd spec/05-verification && for f in $(find simulation -name '*.py' | sort); do .venv/bin/python "$f"; done
+cd docs/spec/05-verification && for f in $(find simulation -name '*.py' | sort); do .venv/bin/python "$f"; done
 ```
 
 ## Scope
@@ -24,4 +24,4 @@ cd spec/05-verification && for f in $(find simulation -name '*.py' | sort); do .
 
 ## Results folder
 
-- [`recorded-results-2026-11-10.md`](results/recorded-results-2026-11-10.md): Results and Run log of `spec/05-verification/simulation/README.md`.
+- [`recorded-results-2026-11-10.md`](results/recorded-results-2026-11-10.md): Results and Run log of `docs/spec/05-verification/simulation/README.md`.

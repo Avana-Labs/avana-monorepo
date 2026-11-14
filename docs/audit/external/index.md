@@ -10,7 +10,7 @@ Every report from an external audit or formal-verification engagement on Avana c
 Columns:
 
 - **Audited commit** and **Fix commit**: full 40-character commit hashes. The release built from the fix commit (or a later commit with no change to the audited files) is the one a verified manifest may name.
-- **Release**: the `vX.Y.Z` tag that first shipped the fixes ([`CHANGELOG.md`](../../CHANGELOG.md)).
+- **Release**: the `vX.Y.Z` tag that first shipped the fixes ([`CHANGELOG.md`](../../../CHANGELOG.md)).
 - **Findings**: the `FINDING-NNN` range in [5.3 Audit Findings](../../spec/05-verification/03-audit-findings.md) and the rows of [`findings-register.md`](../findings-register.md) the report produced.
 
-The scope each engagement covers is set in [`../README.md`](../README.md#scope-q-115). [`SECURITY.md`](../../SECURITY.md) links this index.
+The scope each engagement covers is set in [`../README.md`](../README.md#scope-q-115). [`SECURITY.md`](../../../SECURITY.md) links this index.

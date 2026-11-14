@@ -171,7 +171,7 @@ SWAP_COST = 0.0005        # stable swap cost when a user buys the debt asset (AS
 RATES = {'GHO': 0.065 + 0.010, 'USDC': 0.055 + 0.010}  # borrow APR incl. Aave risk premium (ASSUMPTION)
 USDC_STRESS_RATE = 0.11   # USDC rate days 60-70 (utilisation spike, ASSUMPTION)
 APP_DEADLINE = 15 * MIN   # app default deadline (ASSUMPTION; the spec leaves it to the app)
-APP_REPAY_BUFFER = 0.0    # app approves exactly Lens.quoteRepayAll (web/README.md, Q-269)
+APP_REPAY_BUFFER = 0.0    # app approves exactly Lens.quoteRepayAll (webapp/README.md, Q-269)
 
 # ---------------------------------------------------------------- deployment topologies (design review)
 # Used only when the simulation runs with a topology (Sim(topology=...)); the base runs keep the

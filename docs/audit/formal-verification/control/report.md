@@ -2,17 +2,17 @@
 
 > **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
 >
-> **Check prefix:** `FV-CTL-NN` · **Finding prefix:** `FV-CTL-F-NN` · **Reproduce everything:** `audit/formal-verification/control/run.sh`
+> **Check prefix:** `FV-CTL-NN` · **Finding prefix:** `FV-CTL-F-NN` · **Reproduce everything:** `docs/audit/formal-verification/control/run.sh`
 
 ## 1. Project summary
 
-Avana's internal formal verification of the control area, run against the specification before any implementation exists. The models were written from the spec text; the existing models in `spec/05-verification/` were read only after the results were in (section 9).
+Avana's internal formal verification of the control area, run against the specification before any implementation exists. The models were written from the spec text; the existing models in `docs/spec/05-verification/` were read only after the results were in (section 9).
 
 | Item | Value |
 |---|---|
 | Area | control ([methodology](../methodology.md) section 1) |
 | Contracts in scope | AaveAdapter gates, RiskModule, PositionProxy and ProxyManager binding (immutable proxy per wallet × CDP Spoke × market since run `FV-CTL-R5`), standard-Spoke drift settings, the IFlashSource, Hub-keyed caps and credit lines, MarketRegistry (pause switch, lifecycle, routes, debt reserves), ParameterStore, LPOracle with LPPriceMath, Lock (two members), Lens, AvanaTimelock, UUPS upgrade paths |
-| Spec version | `spec/` as of 2026-11-09 20:30; decisions `Q-001`…`Q-240`, with `Q-227` as amended (no pause state stops liquidation) |
+| Spec version | `docs/spec/` as of 2026-11-09 20:30; decisions `Q-001`…`Q-240`, with `Q-227` as amended (no pause state stops liquidation) |
 | Targets | `T-53` … `T-80` (the 28 control targets), properties added from the spec reading, and two approved rules that the spec did not yet contain on the run date (circuit breakers, address freeze; later recorded as `Q-241` and `Q-242`) |
 | Tools | Z3 4.13.0 (Python), exhaustive enumeration over finite domains, Quint 0.22.4 `quint run` (randomized: 10,000 samples × 12 steps per invariant) |
 | Result | 122 checks: 89 Verified, 2 Verified under bounded model, 6 Quint invariants with no violation in 10,000 samples, 25 Violated. The violations are 16 findings: 4 Medium, 5 Low, 7 Informational. Every Medium and Low finding has a recommended spec change whose model is Verified (`-FIX` checks). |
@@ -224,7 +224,7 @@ Proved for the recommended reading (`-FIX` checks): no combination of pause stat
 
 ## 9. Comparison with the existing spec-stage models
 
-Read after the results were in. `spec/05-verification/z3/governance/gv01_timelock_timing.py`: `MATH-GOV-05` proves the exit window at `delay ≥ 432,000` with the delay fixed, so it does not see F-07 (the delay can be cut to 43,200); `MATH-GOV-10` proves the every-call cancel rule, which `FV-CTL-21` confirms, but no model covers admin-role grants (F-01). `MATH-GOV-07` and `FV-CTL-31` agree on the pause transitions. No disagreement on a proved property was found.
+Read after the results were in. `docs/spec/05-verification/z3/governance/gv01_timelock_timing.py`: `MATH-GOV-05` proves the exit window at `delay ≥ 432,000` with the delay fixed, so it does not see F-07 (the delay can be cut to 43,200); `MATH-GOV-10` proves the every-call cancel rule, which `FV-CTL-21` confirms, but no model covers admin-role grants (F-01). `MATH-GOV-07` and `FV-CTL-31` agree on the pause transitions. No disagreement on a proved property was found.
 
 ## 10. Properties overview
 
@@ -288,7 +288,7 @@ Status values: Verified (Z3 unsat of the negation, or complete enumeration of a 
 | `FV-CTL-10` | T-65 | No hostile RiskModule, ParameterStore, MarketRegistry, LPOracle or LPVaultSwap reaches mint, proxy registration, NFT return or budget withdrawal | Verified | exhaustive enumeration (5 cases) | `INV-052`, `INV-053`, `REQ-RISK-007`, `REQ-PSTORE-003` |
 | `FV-CTL-11` | T-65 | A hostile AaveAdapter reaches VT.mint and proxy registration (methodology T-65 scope check) | Violated | direct computation | `INV-018`, `Q-223` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_access.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_access.py`
 
 ### Timelock delays and cancel rights (`fv_ctl_timelock.py`)
 
@@ -310,7 +310,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-26` | T-64 | For every reachable normalDelay, a borrower with a 3-day reaction and one NFT exits before an upgrade executes | Violated | Z3 (sat of negation) | `REQ-ACCESS-148`, `REQ-ROLE-104`, `INV-068` |
 | `FV-CTL-26-FIX` | T-64 | With normalDelay >= 345,600 the exit guarantee holds for a 3-day reaction and up to 7,199 NFTs | Verified | Z3 (unsat of negation) | `REQ-ACCESS-148`, `REQ-ROLE-104` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_timelock.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_timelock.py`
 
 ### Pause state machine and exit liveness (`fv_ctl_pause.py`)
 
@@ -322,7 +322,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-34` | T-56, T-57 | Repay, fees, debt-free withdrawal, zero-credit release, liquidation and pending settlement are open in every pause state | Verified | exhaustive enumeration (18 cases) | `REQ-ACCESS-068`, `REQ-ROLE-068`, `REQ-ADAPTER-047`, `REQ-RISK-040`, `LIQ-002` |
 | `FV-CTL-35` | T-56 | A stronger pause state never allows an action a weaker one blocks | Verified | exhaustive enumeration (90 cases) | `SPEC-GOV-004`, `REQ-ACCESS-074` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_pause.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_pause.py`
 
 ### Borrow-side gates, health floor and repay liveness (`fv_ctl_gates.py`)
 
@@ -343,7 +343,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-46` | T-61 | borrowNonce rises by exactly 1 per successful borrow, is unchanged by a reverted one, and admits one borrow per nonce value | Verified | Z3 (unsat of negation) | `INV-019`, `REQ-PROXY-015` |
 | `FV-CTL-47` | T-62 | A wallet's pledge, borrow or withdrawal can act only on its own proxy, never on another wallet's account | Verified | Z3 (unsat of negation) | `REQ-ADAPTER-066`, `REQ-PROXY-053`, `Q-223` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_gates.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_gates.py`
 
 ### RiskModule opening checks and parameter bounds (`fv_ctl_params.py`)
 
@@ -369,7 +369,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-99` | T-80 | No borrow, withdraw-with-debt or new-account pledge completes while any Spoke can draw the vault-token asset | Verified | Z3 (unsat of negation) | `INV-029`, `REQ-CONFIG-043`, `INV-057` |
 | `FV-CTL-62` | T-71, T-54 | No loosen selector can be added to the short-delay list (loosening always waits the normal delay) | Violated | exhaustive enumeration (1 cases) | `REQ-CONFIG-053`, `REQ-ACCESS-142`, `REQ-PSTORE-002` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_params.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_params.py`
 
 ### MarketRegistry lifecycle, routes and Lock (`fv_ctl_registry.py`)
 
@@ -385,7 +385,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-85` | T-72 | Only a fixed member acquires a free Lock, only the holder releases it, nothing runs through delegatecall, and an inner call succeeds only while its named caller holds the Lock | Verified | Z3 (unsat of negation) | `INV-054`, `REQ-LOCK-019`, `REQ-LOCK-020`, `REQ-LOCK-021`, `REQ-LOCK-022`, `REQ-ROLE-021` |
 | `FV-CTL-85-W` | T-72 | Witness: the Adapter acquires the free Lock | Verified | Z3 witness (sat) |  |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_registry.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_registry.py`
 
 ### LPOracle state machine and LPPriceMath (`fv_ctl_oracle.py`)
 
@@ -409,7 +409,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-75-W` | T-69 | Witness: floor division would admit T + 1 bps where the exact check refuses (why the cross-multiplied form is required) | Verified | Z3 witness (sat) | `SPEC-ORC-003` |
 | `FV-CTL-76` | T-69 | The reference sqrt price never overflows and lies in [MIN_SQRT_RATIO, MAX_SQRT_RATIO) after clamping | Verified | Z3 (unsat of negation) | `SPEC-ORC-009`, `REQ-ORACLE-014` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_oracle.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_oracle.py`
 
 ### Upgrade safety, binding and Lens view integrity (`fv_ctl_upgrade_lens.py`)
 
@@ -427,7 +427,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-78` | T-74 | previewLiquidation's maxGhoSpend equals SPEC-LIQ-015's bound, so any spend LPVaultSwap accepts is within the preview's maxGhoSpend | Verified | Z3 (unsat of negation) | `REQ-LENS-028`, `SPEC-LIQ-015`, `REQ-LENS-016` |
 | `FV-CTL-97` | T-73 | Every view a third party can call mid-operation either reverts while the Lock is held or reads state the locked call does not write | Verified | exhaustive enumeration (7 cases) | `REQ-LENS-006`, `REQ-LENS-021`, `REQ-VAULT-125`, `REQ-ORACLE-025` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_upgrade_lens.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_upgrade_lens.py`
 
 ### Design check: circuit breakers and address freeze (`fv_ctl_breakers.py`)
 
@@ -444,7 +444,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-95-FIX` | T-55 | [RECOMMENDED] unfreezeAddress operations are cancellable only by DAO_CANCELLER_ROLE | Verified | direct computation | `SPEC-GOV-005` |
 | `FV-CTL-96` | T-56 | Breaker, pause and offboarding combine monotonically: new activity runs only when every control allows it; any control can only remove actions | Verified | exhaustive enumeration (288 cases) | `INV-067`, `REQ-SWAP-003`, `Q-227` |
 
-Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/control/fv_ctl_breakers.py`
+Reproduce: `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/fv_ctl_breakers.py`
 
 ### Governance state machine (`governance.qnt`, Quint)
 
@@ -456,7 +456,7 @@ Reproduce: `spec/05-verification/.venv/bin/python audit/formal-verification/cont
 | `FV-CTL-98` | `gov_spec` | `adminOnlyTimelock` | Violated → F-01 |
 | `FV-CTL-98` | `gov_fixed` | all four | no violation in 10,000 samples |
 
-Reproduce: `spec/05-verification/node_modules/.bin/quint run --main gov_spec --max-samples 10000 --max-steps 12 --invariant upgradesGuardianCancellable --seed 0x1 audit/formal-verification/control/governance.qnt`
+Reproduce: `docs/spec/05-verification/node_modules/.bin/quint run --main gov_spec --max-samples 10000 --max-steps 12 --invariant upgradesGuardianCancellable --seed 0x1 docs/audit/formal-verification/control/governance.qnt`
 
 ## 12. Re-verification against the final spec (run `FV-CTL-R3`, 2026-11-10)
 
@@ -624,7 +624,7 @@ Each recommended change of section 12.4 is now in the spec (2026-11-10), and the
 
 ### 12.6 Properties of run `FV-CTL-R3`
 
-Reproduce any model with `spec/05-verification/.venv/bin/python audit/formal-verification/control/<model>.py`, and the whole run with `audit/formal-verification/control/run.sh`.
+Reproduce any model with `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/control/<model>.py`, and the whole run with `docs/audit/formal-verification/control/run.sh`.
 
 **`fv_ctl_access.py`** (13 checks)
 

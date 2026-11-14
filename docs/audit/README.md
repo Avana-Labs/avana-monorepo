@@ -20,7 +20,7 @@ The unmodified Aave V4 contracts are not audited here; the deployment check prov
 
 | Item | Where |
 |---|---|
-| Commit and verification commands | `forge build`, `forge test`, the fork profiles in [`contracts/`](../contracts/), and `spec/05-verification/run_all.sh` |
+| Commit and verification commands | `forge build`, `forge test`, the fork profiles in [`contracts/`](../../contracts/), and `docs/spec/05-verification/run_all.sh` |
 | Pinned versions | Solidity 0.8.28, EVM `cancun`; Aave V4 `a3ef63ea6415d25237a9775bf66e76e9993561c2`; Uniswap v3-core, v3-periphery, gho-core and OpenZeppelin Contracts by commit |
 | Privilege map | [1.4 Permissions and Roles](../spec/01-architecture/04-permissions-and-roles.md) and the role table and restricted-function matrix in [2.15](../spec/02-contracts/15-governance-and-timelock.md) |
 | Deployment and initialization order | `REQ-ACCESS-027` (timelock roles and delays set, every upgradeable contract initialized in its deployment transaction with roles only for the timelock, the deployer left with no role, all before any market is activated) and the listing order in [3.8 Market Lifecycle](../spec/03-operations/08-market-lifecycle.md) |
@@ -96,12 +96,12 @@ Other evidence:
 | Path | Contents |
 |---|---|
 | [`findings-register.md`](findings-register.md) | Every finding from the runs above, with severity, status, resolution and the check that verifies the fix |
-| `audit/` (root) | Scope documents per audit, external audit reports, and evidence files cited by findings |
+| `docs/audit/` (root) | Scope documents per audit, external audit reports, and evidence files cited by findings |
 | [`external/`](external/index.md) | External audit and formal-verification reports, `YYYY-MM-DD_<Scope>_<Firm>.pdf`, indexed in [`external/index.md`](external/index.md) with the audited commit, fix commit and release of each |
-| [`audit/formal/`](formal/) | One report per implementation-stage formal property: property ID, scope, model, assumptions and summaries, tool and version, result, reproduction command. Filled as the Certora Prover passes each property ([certora](certora/)). |
-| [`contracts/certora/`](../contracts/) | CVL specifications and configurations for the prover rules (`Q-041`) |
-| [`contracts/test/`](../contracts/) | Foundry tests and Halmos symbolic tests |
-| [`spec/05-verification/`](../spec/05-verification/) | Spec-stage models (Z3, SymPy, Quint, Hypothesis, simulations) and their recorded results |
+| [`docs/audit/formal/`](formal/) | One report per implementation-stage formal property: property ID, scope, model, assumptions and summaries, tool and version, result, reproduction command. Filled as the Certora Prover passes each property ([certora](certora/)). |
+| [`contracts/certora/`](../../contracts/) | CVL specifications and configurations for the prover rules (`Q-041`) |
+| [`contracts/test/`](../../contracts/) | Foundry tests and Halmos symbolic tests |
+| [`docs/spec/05-verification/`](../spec/05-verification/) | Spec-stage models (Z3, SymPy, Quint, Hypothesis, simulations) and their recorded results |
 
 The implementation-stage properties `PROP-001` onward are proved with the prover rules in `contracts/certora/`, Halmos and the Solidity SMTChecker; each carries a `PROP-NNN verifies: <IDs>` tag that `trace.py` links to the requirements it proves.
 

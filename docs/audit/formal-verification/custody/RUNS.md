@@ -8,8 +8,8 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 |---|---|
 | Date | 2026-11-09 |
 | What ran | Every Z3 model (`fv_backing`, `fv_list`, `fv_exposure`, `fv_pending`, `fv_hub`, `fv_token`, `fv_lpvault`, `fv_arith`, `fv_lpvalue`, `fv_solvency`) and two Quint simulations of `custody.qnt` |
-| Command | `audit/formal-verification/custody/run.sh` (from the repository root; the script changes into its own folder) |
-| Tools | Python 3.9.6 from `spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4 (`quint run`, randomized simulator; Apalache not used) |
+| Command | `docs/audit/formal-verification/custody/run.sh` (from the repository root; the script changes into its own folder) |
+| Tools | Python 3.9.6 from `docs/spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4 (`quint run`, randomized simulator; Apalache not used) |
 | Seeds and bounds | Quint `--seed=0x1`, 10,000 samples × 20 steps for `FV-CUS-QNT-01` (`--invariant=inv`) and `FV-CUS-QNT-02` (`--step=stepOrphan --invariant=backing`). `FV-CUS-25-fuzz`: 17,053 seeded samples with exact Uniswap v3 amounts. Structure: `fv_backing.py` 1 market, 2 proxies, 3 record slots; `fv_list.py` 5 list slots; `fv_exposure.py` 3 records over 2 markets, 2 depositors; Quint 3 NFTs, 2 proxies. Value bounds: `L < 2^120`, `usdCharge < 2^128`, `price8 < 2^64`, decimals 6–18. |
 | Results | Z3: 305 Verified, 6 Violated (`FV-CUS-01-orphanBurn`, `FV-CUS-19-orphan`, `FV-CUS-11-depositor-hostile`, `FV-CUS-14-perbucket`, `FV-CUS-14-perbucket-trace`, `FV-CUS-25-exact`). Quint: `FV-CUS-QNT-01` no violation in 10,000 runs; `FV-CUS-QNT-02` Violated. Randomized: `FV-CUS-25-fuzz` holds over 17,053 samples. Every `-FIX` check passes. |
 | Exit code | 1. `run.sh` exits 1 while any check is Violated; each Violated check belongs to an open finding, so exit 1 is expected until the findings are resolved and the models updated. |
@@ -23,7 +23,7 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 |---|---|
 | Date | 2026-11-09, 22:00 EST |
 | What ran | The same checks as `FV-CUS-R1`, to confirm the reported counts |
-| Command | `audit/formal-verification/custody/run.sh` |
+| Command | `docs/audit/formal-verification/custody/run.sh` |
 | Tools | Python 3.9.6; z3-solver 4.13.0; Quint 0.22.4; Node.js 22.18.0 |
 | Seeds and bounds | Unchanged from `FV-CUS-R1` (Quint `--seed=0x1`, 10,000 × 20; fuzz 17,053 samples) |
 | Results | Z3: 305 Verified, 6 Violated (the same six rules). Quint: `FV-CUS-QNT-01` no violation in 10,000 runs; `FV-CUS-QNT-02` Violated. `FV-CUS-25-fuzz` holds over 17,053 samples. Identical to `FV-CUS-R1`. |
@@ -38,8 +38,8 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 |---|---|
 | Date | 2026-11-10 |
 | What ran | Every Z3 model (`fv_backing`, `fv_list`, `fv_exposure`, `fv_pending`, `fv_hub`, `fv_token`, `fv_lpvault`, `fv_arith`, `fv_lpvalue`, `fv_solvency`) and two Quint simulations of `custody.qnt`, after the models were updated to the final pages 2.2, 2.3, 2.4, 2.6, 2.16, 3.1, 3.4 and 3.7 |
-| Command | `audit/formal-verification/custody/run.sh` (from the repository root; the script changes into its own folder) |
-| Tools | Python 3.9.6 from `spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4 (`quint run`, randomized simulator; Apalache not used); Node.js 22.18.0 |
+| Command | `docs/audit/formal-verification/custody/run.sh` (from the repository root; the script changes into its own folder) |
+| Tools | Python 3.9.6 from `docs/spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4 (`quint run`, randomized simulator; Apalache not used); Node.js 22.18.0 |
 | Seeds and bounds | Quint `--seed=0x1`, 10,000 samples × 20 steps for `FV-CUS-QNT-01` (`--invariant=inv`) and `FV-CUS-QNT-02` (`--step=stepOrphan --invariant=invOneSided`). `FV-CUS-25-fuzz`: seed 20261109, 20,000 draws, 17,053 valid samples with exact Uniswap v3 amounts compared as exact rationals. Structure: `fv_backing.py` 1 market, 2 proxies, 3 record slots; `fv_list.py` 5 list slots; `fv_exposure.py` 3 records over 2 markets, 2 depositors; Quint 3 NFTs, 2 proxies. Value bounds: `L < 2^120`, `usdCharge < 2^128`, `price8 < 2^64`, decimals 6–18. |
 | Results | Z3: 506 Verified (including 8 satisfiable witnesses), 1 Violated (`FV-CUS-01-gapmono`). Per file: `fv_backing` 330 Verified and 1 Violated, `fv_list` 14, `fv_exposure` 54, `fv_pending` 7, `fv_hub` 10, `fv_token` 24, `fv_lpvault` 47, `fv_arith` 9, `fv_lpvalue` 7, `fv_solvency` 4. Quint: `FV-CUS-QNT-01` and `FV-CUS-QNT-02` no violation in 10,000 runs each. `FV-CUS-25-fuzz` holds over 17,053 samples (largest shortfall 376.70 in 8-decimal USD, within one raw unit per leg). No check is Vacuous or Unknown. |
 | Exit code | 1, from `FV-CUS-01-gapmono` (finding `FV-CUS-F-07`). Every other check passes. |
@@ -55,8 +55,8 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 |---|---|
 | Date | 2026-11-10 |
 | What ran | Every Z3 model and both Quint simulations of `FV-CUS-R3`, after `PROP-065`, `PROP-045`, `INV-008`, `INV-058`, `REQ-VAULT-089`, `REQ-VAULT-129`, `REQ-VAULT-130`, `REQ-COLL-006`, `REQ-COLL-018` and methodology T-01, T-08, T-09, T-14 and T-20 were changed for `FV-CUS-F-07`…`F-09`. `FV-CUS-01-gapmono` now encodes the restated `PROP-065` over every call: each call keeps or raises the backing gap, except a `settlePending(x)` called without a matching burn, which lowers it by exactly `x` and leaves it ≥ 0. |
-| Command | `audit/formal-verification/custody/run.sh` (from the repository root) |
-| Tools | Python 3.9.6 from `spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4; Node.js 22.18.0 |
+| Command | `docs/audit/formal-verification/custody/run.sh` (from the repository root) |
+| Tools | Python 3.9.6 from `docs/spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4; Node.js 22.18.0 |
 | Seeds and bounds | Unchanged from `FV-CUS-R3` |
 | Results | Z3: 507 Verified, 0 Violated, 0 Vacuous, 0 Unknown (`FV-CUS-01-gapmono` now passes). Quint: `FV-CUS-QNT-01` and `FV-CUS-QNT-02` no violation in 10,000 runs each. |
 | Exit code | 0 |
@@ -72,8 +72,8 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 |---|---|
 | Date | 2026-11-10 |
 | What ran | Every model of `FV-CUS-R4`, with `fv_token.py` T-22 brought to the new `SPEC-UNIT-001` (decimals from the value of one credited unit) and `SPEC-BACK-001` (exact range, signed tick alignment); the new model `fv_amm.py` (`FV-CUS-35`…`FV-CUS-42`: records keyed by (`integrationId`, `positionKey`), exact range match, clamped composition, n-token pending settlement, one market per proxy and CREATE2 binding, Hub-keyed caps, the 16-record bound, the two-member Lock); and the new spec-ID check `check_ids.py`, now part of `run.sh`. `common.py` gained `open_finding`: a registered check that is VIOLATED prints as `OPEN` with its counterexample and does not fail the run |
-| Command | `audit/formal-verification/custody/run.sh` (from the repository root) |
-| Tools | Python 3.9.6 from `spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4; Node.js 22.18.0 |
+| Command | `docs/audit/formal-verification/custody/run.sh` (from the repository root) |
+| Tools | Python 3.9.6 from `docs/spec/05-verification/.venv`; z3-solver 4.13.0; Quint 0.22.4; Node.js 22.18.0 |
 | Seeds and bounds | As in `FV-CUS-R3`; `fv_amm.py` enumerates spacings 1, 10, 60, 200 over ±8 spacings and n = 2…8 tokens |
 | Results | Z3 and enumeration: 532 Verified, 0 Violated, 0 Vacuous, 0 Unknown, 1 open finding (`FV-CUS-42-surface`, F-10). Per model: backing 331, list 14, exposure 54, pending 7, hub 10, token 25, lpvault 47, arith 9, lpvalue 7, solvency 4, amm 24 + 1 open. Quint: `FV-CUS-QNT-01` and `FV-CUS-QNT-02` no violation in 10,000 runs each. `check_ids.py`: 193 cited spec IDs, 0 undefined |
 | Exit code | 0 |
@@ -88,7 +88,7 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 | Field | Value |
 |---|---|
 | Spec state | Final AMM-neutral pages after the alignment pass; decisions `Q-001`…`Q-380`; traceability 0 errors |
-| Command | `bash audit/formal-verification/custody/run.sh` |
+| Command | `bash docs/audit/formal-verification/custody/run.sh` |
 | Result | Exit 0; every check Verified; 0 open findings |
 | Change | `FV-CUS-42-surface` now checks the final `REQ-LOCK-028`: position-moving LPVault functions run only inside a Lock member's call tree, and the timelock-only `returnStray` runs only from the AvanaTimelock while the Lock is free |
 | Findings resolved | `FV-CUS-F-10` (`FINDING-286`) |
@@ -98,7 +98,7 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 | Field | Value |
 |---|---|
 | Spec state | Decisions `Q-001`…`Q-402` |
-| Command | `bash audit/formal-verification/custody/run.sh` |
+| Command | `bash docs/audit/formal-verification/custody/run.sh` |
 | Result | Exit 0; every check Verified; 0 open findings |
 | Change | `fv_solvency.py` (`FV-CUS-29`): the withdrawal guard is `max(1.00, the market's optional hard floor, minHealthFactor) >= 1.00`; `minOpeningHealthFactor` and `PROXY_HEALTH_FACTOR_FLOOR` are removed (`Q-398`). `report.md` no longer lists a settlement budget among the controls outside this area (`Q-397`) |
 
@@ -107,6 +107,6 @@ One entry per run of the custody checks (`FV-CUS-*`). Each new run appends an en
 | Field | Value |
 |---|---|
 | Spec state | Decisions `Q-001`…`Q-406` |
-| Command | `bash audit/formal-verification/custody/run.sh` |
+| Command | `bash docs/audit/formal-verification/custody/run.sh` |
 | Result | Exit 0; 538 Z3 and enumeration checks Verified; `FV-CUS-QNT-01` and `FV-CUS-QNT-02` with no violation in 10,000 randomized runs of 20 steps; `check_ids.py` 201 cited spec IDs, 0 undefined; 0 open findings |
 | Change | None in this area's models; full re-run alongside the control-area model updates of `FV-CTL-R11` |

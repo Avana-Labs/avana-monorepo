@@ -1,6 +1,6 @@
 # Independent contract reviews
 
-Every contract gets an independent adversarial review as soon as it compiles. The reviewer receives only the contract's spec page and its code, not the author's reasoning, writes a PoC test for each finding it can demonstrate, and reports findings by the severity scale of [audit/README.md](../README.md#findings). Each finding is fixed in code, fixed in the spec, or accepted with its reason, and the decision is recorded with the contract's gate. One folder per contract: the findings table and the PoC tests (`poc/`).
+Every contract gets an independent adversarial review as soon as it compiles. The reviewer receives only the contract's spec page and its code, not the author's reasoning, writes a PoC test for each finding it can demonstrate, and reports findings by the severity scale of [docs/audit/README.md](../README.md#findings). Each finding is fixed in code, fixed in the spec, or accepted with its reason, and the decision is recorded with the contract's gate. One folder per contract: the findings table and the PoC tests (`poc/`).
 
 | Contract | Folder | Date | Critical | High | Medium | Low | Info / spec | Status |
 |---|---|---|---|---|---|---|---|---|

@@ -2,7 +2,7 @@
 
 > **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-09
 
-Two parts. Part A indexes the properties already checked at the spec stage by the models in this folder, with what each result does and does not establish. Part B lists the implementation-stage properties (`PROP-…`) to prove on the Solidity with Certora CVL (`contracts/certora/`, `Q-041`), Halmos (symbolic Foundry tests in `contracts/test/`) and the Solidity SMTChecker. Each `PROP-…` carries a `verifies:` tag naming its requirement IDs in its spec file, so [`trace.py`](trace.py) links it (`Q-173`). Proof reports, tool versions and reproduction commands go in `audit/formal/`.
+Two parts. Part A indexes the properties already checked at the spec stage by the models in this folder, with what each result does and does not establish. Part B lists the implementation-stage properties (`PROP-…`) to prove on the Solidity with Certora CVL (`contracts/certora/`, `Q-041`), Halmos (symbolic Foundry tests in `contracts/test/`) and the Solidity SMTChecker. Each `PROP-…` carries a `verifies:` tag naming its requirement IDs in its spec file, so [`trace.py`](trace.py) links it (`Q-173`). Proof reports, tool versions and reproduction commands go in `docs/audit/formal/`.
 
 Result vocabulary in part A:
 

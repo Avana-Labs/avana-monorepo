@@ -19,7 +19,7 @@ Each folder's `README.md` gives the formulas modelled with their rounding, one t
 ../.venv/bin/python settlement/st03_waterfall.py       # one model
 ```
 
-All models run on the shared `spec/05-verification/.venv` (`z3-solver 4.13.0` from [`../requirements.txt`](../requirements.txt)). A script exits 1 only when a result differs from the one it records; a property of the specification that fails keeps its expected `PROVED` or `COMPUTED`, so its script exits 1 until the specification changes.
+All models run on the shared `docs/spec/05-verification/.venv` (`z3-solver 4.13.0` from [`../requirements.txt`](../requirements.txt)). A script exits 1 only when a result differs from the one it records; a property of the specification that fails keeps its expected `PROVED` or `COMPUTED`, so its script exits 1 until the specification changes.
 
 ## Results
 

@@ -1,6 +1,6 @@
 # Evidence of a local run, 2026-11-12
 
-Output of `contract_checklist.py --all --check --results <run> --summary` on the wave 1 tree of 2026-11-12, with the results of one local `forge test --json` run: `FOUNDRY_PROFILE=lite` (optimizer off), fuzz 32 runs, invariant 8 runs at depth 16, fork and differential suites excluded by the profile, Halmos checks not run by forge (the recorded logs in `audit/halmos/results/` are read), 3,010 tests: 3,008 passed, 2 failed. Both failures come from the lite profile, not the code: `Lens.Surface` `test_TEST_247_everyFunctionIsView` reads `out/`, which the lite profile does not write, and `Lock` `test_TEST_060_exactCycleCost` asserts gas of the optimized build. CI's evidence job runs the same check on the ci profile's results.
+Output of `contract_checklist.py --all --check --results <run> --summary` on the wave 1 tree of 2026-11-12, with the results of one local `forge test --json` run: `FOUNDRY_PROFILE=lite` (optimizer off), fuzz 32 runs, invariant 8 runs at depth 16, fork and differential suites excluded by the profile, Halmos checks not run by forge (the recorded logs in `docs/audit/halmos/results/` are read), 3,010 tests: 3,008 passed, 2 failed. Both failures come from the lite profile, not the code: `Lens.Surface` `test_TEST_247_everyFunctionIsView` reads `out/`, which the lite profile does not write, and `Lock` `test_TEST_060_exactCycleCost` asserts gas of the optimized build. CI's evidence job runs the same check on the ci profile's results.
 
 | Contract | Verified | Failed | Not run | Unlinked | Out of scope | --check |
 |---|---:|---:|---:|---:|---:|---|
@@ -83,5 +83,5 @@ Output of `contract_checklist.py --all --check --results <run> --summary` on the
 - [ ] `TEST-260` [formal] `contracts/test/halmos/`, `contracts/test/symbolic/`, `contracts/test/invariant/` — outside contracts/
 - [ ] `TEST-261` [static-analysis] `contracts/src`, CI — outside contracts/
 - [ ] `TEST-262` [formal] `contracts/src`, CI — outside contracts/
-- [ ] `TEST-263` [environment] CI, `contracts/security/`, `audit/findings-register.md`
+- [ ] `TEST-263` [environment] CI, `contracts/security/`, `docs/audit/findings-register.md`
 - [ ] `TEST-282` [unit] Deficit coverage and liquidation worked examples

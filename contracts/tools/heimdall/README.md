@@ -5,15 +5,15 @@
 Install (the binary is not committed):
 
 ```bash
-mkdir -p tools/heimdall/bin
-gh release download 0.9.3 -R Jon-Becker/heimdall-rs -p heimdall-macos-arm64 -O tools/heimdall/bin/heimdall
-chmod +x tools/heimdall/bin/heimdall
+mkdir -p contracts/tools/heimdall/bin
+gh release download 0.9.3 -R Jon-Becker/heimdall-rs -p heimdall-macos-arm64 -O contracts/tools/heimdall/bin/heimdall
+chmod +x contracts/tools/heimdall/bin/heimdall
 ```
 
 Use:
 
 ```bash
-tools/heimdall/bin/heimdall decompile <address> --rpc-url <rpc> --include-sol --output <dir>
-tools/heimdall/bin/heimdall decode <calldata>
-tools/heimdall/bin/heimdall dump <address> --rpc-url <rpc>
+contracts/tools/heimdall/bin/heimdall decompile <address> --rpc-url <rpc> --include-sol --output <dir>
+contracts/tools/heimdall/bin/heimdall decode <calldata>
+contracts/tools/heimdall/bin/heimdall dump <address> --rpc-url <rpc>
 ```

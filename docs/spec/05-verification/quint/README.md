@@ -1,6 +1,6 @@
 # Quint model of Avana v1 (QNT)
 
-`avana.qnt` is a state machine of the whole Avana v1 system across contracts, written against the final design (decisions `Q-001` … `Q-278` in `spec/04-security/04-design-decisions.md`). `avana_tests.qnt` replays named scenarios. `run.sh` runs the random simulator once per property.
+`avana.qnt` is a state machine of the whole Avana v1 system across contracts, written against the final design (decisions `Q-001` … `Q-278` in `docs/spec/04-security/04-design-decisions.md`). `avana_tests.qnt` replays named scenarios. `run.sh` runs the random simulator once per property.
 
 | File | What it holds |
 |---|---|

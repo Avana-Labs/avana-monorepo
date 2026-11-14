@@ -2,7 +2,7 @@
 
 This folder holds an executable Python model of Avana (`model/`) and the Hypothesis tests that drive it. The model implements the final design (`Q-001`…`Q-278`) with integer arithmetic and real decimals: Uniswap v3 `uint128` liquidity and full-range amounts, tokens with 6 and 18 decimals, Aave V4 WAD/RAY/BPS math ported line by line from `aave-v4@a3ef63e`, 8-decimal prices, per-market vault-token decimals (6, 12, 18), two debt assets (GHO at its fixed price and USDC through its DebtOracle) and one PositionProxy per wallet per Borrow Spoke. Every check is tagged `HYP-NN verifies: Q-…/REQ-…/INV-…/SPEC-…` for `trace.py`.
 
-Run from `spec/05-verification/`:
+Run from `docs/spec/05-verification/`:
 
 ```bash
 .venv/bin/python -m pytest -q hypothesis                      # recorded settings (run_all.sh runs this)
@@ -41,7 +41,7 @@ Parameters: no on-chain opening floor (Q-398): the gate is HF ≥ 1.00, an optio
 
 Run log (2026-11-10; Python 3.9.6, hypothesis 6.112.5, pytest 8.3.3; example database off, random seeds):
 
-| Run | Command (from `spec/05-verification/`) | Bounds | Result | Exit |
+| Run | Command (from `docs/spec/05-verification/`) | Bounds | Result | Exit |
 |---|---|---|---|---|
 | Recorded | `.venv/bin/python -m pytest -q hypothesis` | settings above | 71 tests: 70 passed, 1 failed (`test_hyp85_leg_minimums_within_aggregate_floor`, the finding below); 509 s wall, 261 s CPU | 1 |
 | Recorded (option C, `Q-404`) | `.venv/bin/python -m pytest -q hypothesis` | settings above | 82 tests: 81 passed, 1 failed (`test_hyp83_debt_asset_flash_settlement`: its balance assertion missed the helper's premium; fixed, then `-k "hyp83 or hyp65"`: 2 passed); 1,093 s wall. `model/swap.py`: caller funding `Kf`, no premium term, gap `max(0, D + A − Kf − R)`, keeperOut paid directly, helper loan and top-up outside LPVaultSwap; HYP-23, -38, -65, -83 restated | 0 after the fix |

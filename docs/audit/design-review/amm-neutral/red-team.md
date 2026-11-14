@@ -1,8 +1,8 @@
 # AMM-neutral architecture: red-team review
 
-> **Status:** Design review · **Scope:** the proposed AMM-neutral layout (shared per-Hub AaveAdapter and LPVaultSwap, per-Spoke immutable LPVault and Collateralization, cross-Hub credit lines, pinned PositionProxy with opt-in migration, Uniswap v3 and Slipstream at launch, v2/Curve/Balancer/v4 later, standard Spoke with a transfer-restricted VaultToken as the alternative to the liquidation-manager Spoke) against `spec/02-contracts`, `spec/03-operations`, `spec/04-security/01-global-invariants.md` and `spec/04-security/02-attack-scenarios.md`.
+> **Status:** Design review · **Scope:** the proposed AMM-neutral layout (shared per-Hub AaveAdapter and LPVaultSwap, per-Spoke immutable LPVault and Collateralization, cross-Hub credit lines, pinned PositionProxy with opt-in migration, Uniswap v3 and Slipstream at launch, v2/Curve/Balancer/v4 later, standard Spoke with a transfer-restricted VaultToken as the alternative to the liquidation-manager Spoke) against `docs/spec/02-contracts`, `docs/spec/03-operations`, `docs/spec/04-security/01-global-invariants.md` and `docs/spec/04-security/02-attack-scenarios.md`.
 
-Attacker set: borrower, keeper, LP, trader, MEV searcher, malicious token or pool, compromised role. Numbers marked *(script)* come from a Python run with `spec/05-verification/.venv`; the script is reproduced in [Appendix A](#appendix-a-numeric-checks).
+Attacker set: borrower, keeper, LP, trader, MEV searcher, malicious token or pool, compromised role. Numbers marked *(script)* come from a Python run with `docs/spec/05-verification/.venv`; the script is reproduced in [Appendix A](#appendix-a-numeric-checks).
 
 ## Summary
 
@@ -163,7 +163,7 @@ An attacker pushes spot past the edge just before a liquidation (cheap for a nar
 
 **Fix.** At listing and in the route-depth monitor, stress each token's route with the full position value V (the single-token composition at each edge), not V/2.
 
-**Verification.** Simulation (`spec/05-verification/simulation`) over pool price paths crossing both edges: recovery ≥ floor. Foundry fork test of the edge unwind at listing stress size.
+**Verification.** Simulation (`docs/spec/05-verification/simulation`) over pool price paths crossing both edges: recovery ≥ floor. Foundry fork test of the edge unwind at listing stress size.
 
 ### AMMN-RT-10 — Per-chain ProxyManager serving per-Hub Adapters (Medium)
 
@@ -260,7 +260,7 @@ An attacker pushes spot past the edge just before a liquidation (cheap for a nar
 
 ## Appendix A — numeric checks
 
-Run with `spec/05-verification/.venv/bin/python -I rt_demo.py`. Output:
+Run with `docs/spec/05-verification/.venv/bin/python -I rt_demo.py`. Output:
 
 ```
 == 1. Clamp: oracle ratio outside the market range ==

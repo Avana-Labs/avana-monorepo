@@ -10,7 +10,7 @@ Avana lets a liquidity provider borrow approved debt assets, GHO first, against 
 
 | Topic | Rule | Spec |
 |---|---|---|
-| Who holds which power | Aave DAO, AvanaTimelock, Governance Safe (4-of-7), Emergency Guardian (3-of-5), Aave Protocol Guardian, Joint Configuration Safe (2-of-3), keepers, treasury Safe, risk service providers | [governance/roles-and-responsibilities.md](../../governance/roles-and-responsibilities.md), [1.4 Permissions and Roles](../../spec/01-architecture/04-permissions-and-roles.md), [2.15 Governance and Timelock](../../spec/02-contracts/15-governance-and-timelock.md) |
+| Who holds which power | Aave DAO, AvanaTimelock, Governance Safe (4-of-7), Emergency Guardian (3-of-5), Aave Protocol Guardian, Joint Configuration Safe (2-of-3), keepers, treasury Safe, risk service providers | [docs/governance/roles-and-responsibilities.md](../../governance/roles-and-responsibilities.md), [1.4 Permissions and Roles](../../spec/01-architecture/04-permissions-and-roles.md), [2.15 Governance and Timelock](../../spec/02-contracts/15-governance-and-timelock.md) |
 | Immutable and upgradeable contracts | Immutable: vault tokens, VaultTokenFactory, every LPVault, Collateralization, Lock, PayoutEscrow, every PositionProxy, ProxyManager, swap routes, flash source. Upgradeable (UUPS, `APPLICATION_ADMIN` held only by the timelock): AaveAdapter, RiskModule, MarketRegistry, ParameterStore, LPVaultSwap, LPOracle, DebtOracle | `INV-052`, `INV-065`, `Q-226`, [1.3 Trust Boundaries](../../spec/01-architecture/03-trust-boundaries.md) |
 | Blast radius | A faulty or hostile upgradeable contract is bounded by what the immutable contracts enforce: the LPVault returns a position only to its depositor of record, Collateralization rejects a seizure without the matching share and supply drop, borrowing stays within Aave's health factor and each `drawCap`. The AaveAdapter is trusted for custody of proxy positions and its radius is stated per Hub | `INV-018`, `Q-223`, [1.3 Custody trust and blast radius](../../spec/01-architecture/03-trust-boundaries.md#custody-trust-and-blast-radius) |
 | Every privileged change through the timelock | Scheduled by the Governance Safe or the Aave governance executor (the two proposers), 5-day normal delay, 12-hour short delay for an immutable allowlist of tightenings, any canceller can cancel while it waits, 14-day grace | `INV-051`, `INV-068`, `INV-090`, `Q-228`, `Q-262` |
@@ -48,7 +48,7 @@ Settlement formulas are in [2.11 Settlement math](../../spec/02-contracts/11-lpv
 | Fair composition | `SPEC-ORC-007`, `SPEC-AMM-CORE-001` | The composition at the oracle price is the cheapest holding of the position over every reachable pool state; concentrated liquidity in range: excess `L·(s − s_O)²/s` | `MATH-UO-09`, `MATH-UO-52`, `MATH-ST-106`, `MATH-AMM-V3-PRICE-01`, `MATH-AMM-SLIP-PRICE-01`; `SYM-22`, `SYM-23`, `SYM-26`, `SYM-33`, `SYM-66`, `SYM-126` |
 | Vault-token price | `SPEC-ORC-008` | `price8 = max(1, Σᵢ mulDiv(a'ᵢ, vᵢ, 10^dᵢ))` with `a'ᵢ = aᵢ − 1` (one raw unit off each floored amount) | `MATH-UO-02`, `-14`…`-18`, `-42`, `-51`, `-64`; `SYM-31`, `SYM-32`, `SYM-102`, `SYM-127` |
 
-Each ID is a tag in [`spec/05-verification/z3/`](../../spec/05-verification/z3/) or [`sympy/`](../../spec/05-verification/sympy/); results are in [z3](../z3/) and [sympy](../sympy/).
+Each ID is a tag in [`docs/spec/05-verification/z3/`](../../spec/05-verification/z3/) or [`sympy/`](../../spec/05-verification/sympy/); results are in [z3](../z3/) and [sympy](../sympy/).
 
 ## Main design decisions
 
@@ -73,7 +73,7 @@ All 401 decisions: [4.4 Design Decisions](../../spec/04-security/04-design-decis
 
 ## Attack scenarios with the highest severity
 
-All 197 scenarios: [4.2 Attack Scenarios](../../spec/04-security/02-attack-scenarios.md). Listed here: the scenarios whose impact, unblocked, is loss of collateral, unbacked debt or a protocol-wide halt (Critical or High in the severity scale of [audit/README.md](../README.md#findings)).
+All 197 scenarios: [4.2 Attack Scenarios](../../spec/04-security/02-attack-scenarios.md). Listed here: the scenarios whose impact, unblocked, is loss of collateral, unbacked debt or a protocol-wide halt (Critical or High in the severity scale of [docs/audit/README.md](../README.md#findings)).
 
 | Scenario | Impact if unblocked | Protection |
 |---|---|---|

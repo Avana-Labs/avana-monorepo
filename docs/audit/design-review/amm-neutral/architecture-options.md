@@ -3,7 +3,7 @@
 | Item | Value |
 |---|---|
 | Date | 2026-11-10 |
-| Scope | The proposed AMM-neutral design (instance scope, liquidation, pricing, launch chains) tested against `spec/01-architecture/*`, `spec/02-contracts/*`, [4.4 Design Decisions](../../../spec/04-security/04-design-decisions.md) (`Q-001`…`Q-278`), [8 Market lifecycle](../../../spec/03-operations/08-market-lifecycle.md) `MKT-018`…`MKT-026` and the interface tree in `contracts/src` |
+| Scope | The proposed AMM-neutral design (instance scope, liquidation, pricing, launch chains) tested against `docs/spec/01-architecture/*`, `docs/spec/02-contracts/*`, [4.4 Design Decisions](../../../spec/04-security/04-design-decisions.md) (`Q-001`…`Q-278`), [8 Market lifecycle](../../../spec/03-operations/08-market-lifecycle.md) `MKT-018`…`MKT-026` and the interface tree in `contracts/src` |
 | Method | Each assumption is compared with at least two alternatives. Counts come from the spec and the interfaces; where a fact could not be checked on-chain or in source it is marked **[UNVERIFIED]** with the check that settles it. |
 | Findings | `AMMN-ARCH-01`…`AMMN-ARCH-10`: 1 High, 5 Medium, 2 Low, 2 Informational |
 | Inputs added during the review | Decision on flash liquidity (one Aave flash source on every chain); [integration-assumptions.md](integration-assumptions.md) `AMMN-INT-01`, `AMMN-INT-04`, `AMMN-INT-05`, `AMMN-INT-06`, `AMMN-INT-07` |
@@ -381,7 +381,7 @@ The VaultTokenFactory, VaultToken and ledger are immutable, and they key markets
 | Avana governance | Two timelocks, two Guardian and governance Safe sets, two deployment manifests | One |
 | Aave DAO | Two listing AIPs. The Base AIP executes cross-chain, adding bridge delay to every Base payload, including an emergency one **[UNVERIFIED]** for V4 on Base | One |
 | Aave V4 | Mainnet live. A Base address-book file exists; which Hubs and Spokes exist on Base, and whether the liquidation-manager variant is deployable there, is **[UNVERIFIED]** | Mainnet live |
-| Oracles | Base needs an L2 sequencer-uptime check and a grace period after restart; **the spec has none** (no "sequencer" in `spec/`). Chainlink coverage on Base for USDT and other pool tokens needs checking | Not needed |
+| Oracles | Base needs an L2 sequencer-uptime check and a grace period after restart; **the spec has none** (no "sequencer" in `docs/spec/`). Chainlink coverage on Base for USDT and other pool tokens needs checking | Not needed |
 | GHO | Base: CCIP-bridged only, no FlashMinter or GSM (confirmed 2026-11-10), thin depth | GSM for conversion |
 | Funds at risk at launch | Two sets of caps | One |
 | Work | About 2× audit and operations | About 1× now, then a smaller increment |

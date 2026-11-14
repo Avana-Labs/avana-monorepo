@@ -1,6 +1,6 @@
 # Avana design risk review
 
-Date: 2026-11-09. Scope: the protocol design as written in `spec/` (rewritten for decisions `Q-223`…`Q-240`), the parameter registry (`spec/01-architecture/05-parameters.md`, cited as 1.5), the decisions table (`spec/04-security/04-design-decisions.md`), the interface tree under `contracts/src` (interfaces and types only; no implementation exists yet) and these user decisions of 2026-11-09:
+Date: 2026-11-09. Scope: the protocol design as written in `docs/spec/` (rewritten for decisions `Q-223`…`Q-240`), the parameter registry (`docs/spec/01-architecture/05-parameters.md`, cited as 1.5), the decisions table (`docs/spec/04-security/04-design-decisions.md`), the interface tree under `contracts/src` (interfaces and types only; no implementation exists yet) and these user decisions of 2026-11-09:
 
 - U1: liquidation, repay and debt-free withdraw are never paused.
 - U2: circuit breakers trip automatically and block NEW activity only.
@@ -43,7 +43,7 @@ Reference account used in the worked examples: one USDC/USDT full-range position
 
 ## 1. Invariants that must hold
 
-The spec has 73 invariants (`INV-001`…`INV-073`, `spec/04-security/01-global-invariants.md`). They cover unit backing, custody, access, per-call conservation and per-action bounds well. They do not state the system-level economic invariants below. Each one is written so it can be asserted after every step of a stateful test. "Present" names the closest existing rule; "Missing" means no INV, PROP or TEST states it.
+The spec has 73 invariants (`INV-001`…`INV-073`, `docs/spec/04-security/01-global-invariants.md`). They cover unit backing, custody, access, per-call conservation and per-action bounds well. They do not state the system-level economic invariants below. Each one is written so it can be asserted after every step of a stateful test. "Present" names the closest existing rule; "Missing" means no INV, PROP or TEST states it.
 
 ### 1.1 Solvency per debt asset (Missing)
 

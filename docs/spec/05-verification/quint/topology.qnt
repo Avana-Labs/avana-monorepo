@@ -19,7 +19,7 @@
 //
 // `s.design` selects how the open points of the proposal are read. PROPOSAL is the
 // literal reading of the proposal; FIXED applies the fixes in
-// audit/design-review/amm-neutral/state-machine.md. Each field can be set alone, so a
+// docs/audit/design-review/amm-neutral/state-machine.md. Each field can be set alone, so a
 // test can show one fix at a time.
 //
 // Scenario tests: topology_tests.qnt. Simulation runs: topology_run.sh.
@@ -898,7 +898,7 @@ module topology {
 
   // ============================================================ INVARIANTS
   // TOPO-01 … TOPO-10 are the properties requested for the design review; TOPO-X1, TOPO-X2
-  // are extra checks the review added. Results: audit/design-review/amm-neutral/state-machine.md.
+  // are extra checks the review added. Results: docs/audit/design-review/amm-neutral/state-machine.md.
 
   // TOPO-01 (INV-002, INV-005): per Spoke, the NFTs its vault custodies are exactly those of
   // its ledger's open records, each holds at least its credited units, and pending units equal

@@ -1,6 +1,6 @@
 # traceability.lock.json statistics
 
-Read on 2026-11-10 from `spec/05-verification/traceability.lock.json` (last written 2026-11-10 21:04).
+Read on 2026-11-10 from `docs/spec/05-verification/traceability.lock.json` (last written 2026-11-10 21:04).
 
 - Requirements with an accepted text hash: 3454
 - Accepted check links recorded: 8842

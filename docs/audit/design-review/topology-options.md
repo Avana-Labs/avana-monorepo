@@ -1,6 +1,6 @@
 # Deployment topology for LP-collateral Borrow Spokes
 
-Date: 2026-11-10. Question: how to map LP markets onto Aave V4 Borrow Spokes. Inputs: the 1,000-user simulation (`audit/user-simulation/avana_sim/`) run with a new topology option, the listing steps of [3.8 Market Lifecycle](../../spec/03-operations/08-market-lifecycle.md) and the Hub rules of [2.1](../../spec/02-contracts/01-avana-hub-and-spokes.md). Runs: [`SIM-R7`](../user-simulation/RUNS.md).
+Date: 2026-11-10. Question: how to map LP markets onto Aave V4 Borrow Spokes. Inputs: the 1,000-user simulation (`docs/audit/user-simulation/avana_sim/`) run with a new topology option, the listing steps of [3.8 Market Lifecycle](../../spec/03-operations/08-market-lifecycle.md) and the Hub rules of [2.1](../../spec/02-contracts/01-avana-hub-and-spokes.md). Runs: [`SIM-R7`](../user-simulation/RUNS.md).
 
 ## Recommendation
 
@@ -156,7 +156,7 @@ A new chain needs its own Hub, Lend Spoke, Coverage Spokes, credit lines and Ava
 ## Reproduce
 
 ```
-spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --topology --seeds 5 --jobs 8
+docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --topology --seeds 5 --jobs 8
 ```
 
-Output: `audit/user-simulation/results/topology/summary-<topology>-<scenario>-<seed>.json`, `aggregate.md` (every metric, every scenario) and `aggregate.json`.
+Output: `docs/audit/user-simulation/results/topology/summary-<topology>-<scenario>-<seed>.json`, `aggregate.md` (every metric, every scenario) and `aggregate.json`.

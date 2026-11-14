@@ -8,7 +8,7 @@ reproducible. Running this module directly runs the engine self-tests
 SIM-00A (float liquidation sizing == integer Aave V4 reference in
 z3/aave-risk/_v4ref.py) and SIM-00B (same seed -> identical results).
 
-What the engine models (launch values from spec/01-architecture/05-parameters.md):
+What the engine models (launch values from docs/spec/01-architecture/05-parameters.md):
   * Markets: full-range Uniswap v3 stable pools USDC/USDT, USDC/GHO, USDT/GHO,
     DAI/USDC. A position is measured in par units (1 unit = $1 of LP value at
     peg); value = units * sqrt(v0 * v1) with v = min(quote, $1) (Q-177).

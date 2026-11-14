@@ -1,11 +1,11 @@
 # Avana Protocol Specification
 
-The specification of the Avana protocol: how the contracts fit together, what each contract and operation does, the invariants that must always hold, the attacks the design defends against, the external dependencies it relies on, every design decision, and how each rule is verified. Contracts in [`contracts/`](../contracts/) are written from these pages; when the code and a page disagree, the page is changed first through change control and the code follows.
+The specification of the Avana protocol: how the contracts fit together, what each contract and operation does, the invariants that must always hold, the attacks the design defends against, the external dependencies it relies on, every design decision, and how each rule is verified. Contracts in [`contracts/`](../../contracts/) are written from these pages; when the code and a page disagree, the page is changed first through change control and the code follows.
 
 ## Structure
 
 ```
-spec/
+docs/spec/
 ├── README.md                          This index: structure, IDs, conventions, change control
 ├── 01-architecture/                   How the protocol fits together
 │   ├── 01-protocol-overview.md        1.1  What Avana does, participants, the collateral path, chains, Hubs and AMM protocols, scope, glossary

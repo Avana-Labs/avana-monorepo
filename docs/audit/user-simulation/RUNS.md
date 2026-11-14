@@ -12,7 +12,7 @@ The `models` CI workflow (`.github/workflows/models.yml`) runs the reported comm
 |---|---|
 | Date | 2026-11-09 (result files written 21:08–21:10) |
 | What ran | The 1,000-agent, 90-day simulation in three variants (`base`, `mainnet-feeds`, `literal-repay-quote`) at the default seed, and the `base` variant at four more seeds |
-| Commands | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py` and `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --extra-seeds 4` (from the repository root) |
+| Commands | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py` and `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --extra-seeds 4` (from the repository root) |
 | Tools | Python 3.9.6, standard library only (no numpy) |
 | Seeds and bounds | Seed 20261109 (extra seeds 20261110…20261113); 90 days; 985 users, 3 approved keepers, 10 searchers, 2 attackers; six stress episodes on the same path in every run |
 | Exit code | 0 |
@@ -40,7 +40,7 @@ The report's figure of 440,947 checks is the `base` run at seed 20261109; every 
 |---|---|
 | Date | 2026-11-09, 22:00 EST |
 | What ran | The `base` variant at the default seed, to confirm determinism and the reported counts |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base` |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base` |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population as in `SIM-R1` |
 | Results | 440,947 invariant checks, 0 violations, 151 liquidation calls; sha256 `202f9f8bb7795922`, the fingerprint the report states. `results/summary-base-20261109.json` was rewritten byte-for-byte identical. |
@@ -55,7 +55,7 @@ The report's figure of 440,947 checks is the `base` run at seed 20261109; every 
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The simulation brought up to the final spec (report section 7.1) in the three variants at the default seed and the `base` variant at four more seeds, then the `mainnet-feeds` variant again after two fixes that act only in that variant, and the `base` variant once more to confirm determinism |
-| Commands | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --extra-seeds 4 --jobs 7`; `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only mainnet-feeds`; `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root) |
+| Commands | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --extra-seeds 4 --jobs 7`; `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only mainnet-feeds`; `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root) |
 | Tools | Python 3.9.6, standard library only (no numpy); `multiprocessing` for `--jobs` |
 | Seeds and bounds | Seed 20261109 (extra seeds 20261110…20261113); 90 days; 985 users, 3 approved keepers, 10 searchers, 2 attackers; the six stress episodes of `SIM-R1` plus a 30-hour stall of every DAI route from day 52.0 |
 | Exit code | 0 for every command |
@@ -84,7 +84,7 @@ The violations are the check "rescue top-up sized to restore `minOpeningHealthFa
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The `base` variant at the default seed, with the pool-share breaker brought up to the final `SPEC-BRK-002`: `POOL_SHARE` counts only while `q0 × q1 ≤ 10^16` on the uncapped quotes, and a token with no quote counts as at or below peg (`avana_sim/world.py` `at_or_below_peg`, `avana_sim/protocol.py` `market_breaker`) |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base` (from the repository root) |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base` (from the repository root) |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |
 | Results | 514,318 invariant checks, 88 liquidation calls, summary sha256 `916f5dd5d76063b0`. Borrowing blocked by the pool-share breaker: GHO/USDC 0 hours during the GHO premium (44.8 hours in `SIM-R3`); USDC/USDT 72.3 hours and USDe/USDT 72.0 hours during the USDT depeg, as in `SIM-R3`; DAI/USDC 2.2 hours, plus 1.0 hour together with the manual trip of the DAI stall. 3 violations, all of the `SIM-GAP-14` check at the USDe/USDT probes, as in `SIM-R3` |
@@ -101,7 +101,7 @@ The violations are the check "rescue top-up sized to restore `minOpeningHealthFa
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The `base` variant at the default seed, with the restore amount brought up to the final `SPEC-CAP-003`: `restoreBooked = usdToRestore × max(price8, stressFloorUsd) / served8`, `served8` the served price (`avana_sim/protocol.py` `pledge_check`), and the app sizing a rescue top-up as `usdToRestore` at the served price (`avana_sim/engine.py`). Includes the `SIM-R4` pool-share change. |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root); the two output files were then copied to `results/final-spec/` |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root); the two output files were then copied to `results/final-spec/` |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |
 | Results | 514,318 invariant checks, 0 violations, 88 liquidation calls, summary sha256 `b32c4c5cdc21307b`. The check "rescue top-up sized to restore `minOpeningHealthFactor` at the served price is admitted (`SPEC-CAP-003`, `REQ-RISK-026`)" ran 15 times and passed every time, including the three USDe/USDT probes (days 60.21, 60.25, 66.0) that failed in `SIM-R3` and `SIM-R4`. 4 rescue top-ups were sized to the full restore amount, all 4 while the served price was below the accepted price, and all 4 were admitted. The pool-share breaker figures are those of `SIM-R4`. |
@@ -119,7 +119,7 @@ The violations are the check "rescue top-up sized to restore `minOpeningHealthFa
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The topology comparison of [topology-options.md](../design-review/topology-options.md): T1, T2 and T3 in 8 scenarios (T3 also in `eth-crash`), 40 days each, 6 seeds |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --topology --seeds 6 --jobs 8` (from the repository root) |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --topology --seeds 6 --jobs 8` (from the repository root) |
 | Tools | Python 3.9.6, standard library only; `multiprocessing` |
 | Seeds and bounds | Seeds 20261109…20261114; 150 runs |
 | Results | 0 invariant violations. Superseded: in `dai-failure`, accounts left with dust collateral and debt were "liquidated" for zero every keeper scan (up to 34,607 calls in one run) and their debt was never written off, so liquidation counts were inflated and bad debt understated |
@@ -134,7 +134,7 @@ The violations are the check "rescue top-up sized to restore `minOpeningHealthFa
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The topology comparison of [topology-options.md](../design-review/topology-options.md) after the dust fix: T1 (one market per Spoke), T2 (several markets per Spoke) and T3 (T2 plus a Volatile-Hub Spoke borrowing USDC from the Stable Hub) in `calm`, `dai-depeg`, `usdt-depeg`, `pool-crunch`, `two-pool`, `oracle-stale`, `dai-crash` and `dai-failure`, and T3 in `eth-crash`; 40 days per run, shock on day 25. Then the `base` variant once more to confirm the topology option leaves the base path unchanged |
-| Commands | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --topology --seeds 5 --jobs 8`; `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root) |
+| Commands | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --topology --seeds 5 --jobs 8`; `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root) |
 | Tools | Python 3.9.6, standard library only; `multiprocessing` |
 | Seeds and bounds | Seeds 20261109…20261113; 125 runs; 985 people on three stable markets (USDC/USDT and DAI/USDC on chain A, USDC/USDT-B on chain B), plus 150 WETH/USDC LPs in T3; no attackers, probes or pauses |
 | Results | 0 invariant violations in 125 runs (2,509,764 to 2,527,680 checks per scenario). No liquidation or bad debt in any topology in `calm`, `dai-depeg`, `usdt-depeg`, `pool-crunch` and `two-pool`. `oracle-stale`: 0 accounts liquidated in T1, 11.4 (0–28) in T2, every one through a market healthy on its own. `dai-failure`: bad debt $8.1k (T1), $6.7k (T2), $9.2k (T3), 0.22–0.31% of the $3M Hub reserve, all within the First-Loss Reserve. `DrawCapExceeded` refusals before the shock: 29 (T1), 4 (T2), 116 (T3). Mean over seeds per metric in `results/topology/aggregate.md`. Base confirmation: 514,318 checks, 0 violations, 88 liquidation calls, sha256 `b32c4c5cdc21307b`, as in `SIM-R5` |
@@ -150,7 +150,7 @@ The violations are the check "rescue top-up sized to restore `minOpeningHealthFa
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The `base` variant at the default seed, after the spec was rewritten for the AMM-neutral design (one immutable PositionProxy per wallet × CDP Spoke × market, one ledger per chain, Hub-keyed caps, the Aave V3 flash source). No file under `avana_sim/` changed |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root) |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root) |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |
 | Results | 514,318 invariant checks, 0 violations, 88 liquidation calls, summary sha256 `b32c4c5cdc21307b` (full digest `b32c4c5cdc21307b6ee37a4712a817a252853d95df030033d29dffa7a3c40fd7`), byte-for-byte equal to `results/final-spec/summary-base-20261109.json` of `SIM-R5` |
@@ -168,7 +168,7 @@ Why the fingerprint did not change: the fingerprint is a function of the simulat
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The `base` variant at the default seed after the model was brought to the decided design (report section 7.6): one account per wallet and market (`avana_sim/engine.py` `_split` with a per-market key, the split the topology runs use per Spoke); routed liquidations flash-borrow the debt asset through `IFlashSource` at 5 bps (`maxFlashFeeBps` = 10), convert the seized legs into the debt asset and pay `A`, `Kr` and `B` in it (`_routed`, `LIQ-027`, `LIQ-031`, `SPEC-LIQ-010`, `SPEC-LIQ-022`); repay with collateral sizes `x = Vnet / (1 + maxFlashFeeBps)` and repays the loan with its premium (`avana_sim/protocol.py` `deleverage_quote`); `minDebtUsd` = $2,000 on every borrow (`borrow_check`, `SPEC-CAP-009`, `REQ-RISK-077`); liquidation gas 1,550,000 for one record (`SPEC-CHAIN-001`) plus 290,000 per further record (`avana_sim/params.py`). Probe accounts hold $20,000 so their debt reaches the minimum. A first run with the same changes, in which a person refused by the minimum tried again at every check (`37b9b3fa0bc69457`, 532,028 checks, 0 violations, 27 liquidation calls), was replaced: the app shows the minimum and the person stays debt-free |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base` (from the repository root), then the same command with `--out <scratch directory>` to confirm determinism |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base` (from the repository root), then the same command with `--out <scratch directory>` to confirm determinism |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |
 | Results | 501,748 invariant checks (27 kinds), 0 violations, 18 liquidation calls on 10 accounts, summary sha256 `cd79a767842cfe9a` (full digest `cd79a767842cfe9a66fa984c15f778a6215f92340a758b3c36905eef5ba80661`); the confirmation run printed the same digest. Against `SIM-R5`/`SIM-R8` (`b32c4c5cdc21307b`): liquidation calls 88 → 18, accounts liquidated 77 → 10, bad debt $0 → $0, settlement-budget draws $0.69 → $0, supplier loss $0 → $0, bonus paid by borrowers $1,043 → $184, keeper loss reimbursed $57,848 → $20,535. All 18 calls were flash-funded (premium $4.34); keeper reward $44, Avana fee $36, borrower surplus $0 |
@@ -194,7 +194,7 @@ The variants `mainnet-feeds` and `literal-repay-quote`, the extra base seeds and
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The `base` variant at the default seed after decision `Q-381`: Avana has no minimum debt on any chain, and Avana's own keepers liquidate every account and pay the gas. Two code changes: the `minDebtUsd` refusal is removed from `borrow_check` (`avana_sim/protocol.py`) and from the app's pre-check (`avana_sim/engine.py`), with `MIN_DEBT_USD` and the `below_min_debt` frustration removed (`avana_sim/params.py`, `avana_sim/metrics.py`); liquidation gas follows the `SPEC-CHAIN-001` gas units model `G(n) = 1,310,000 + 240,000 × n` for an account with `n` records (was 1,260,000 + 290,000 × min(n, 3); `G(1) = 1,550,000` in both) |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base` (from the repository root), then the same command with `--out <scratch directory>` to confirm determinism |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base` (from the repository root), then the same command with `--out <scratch directory>` to confirm determinism |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |
 | Results | 559,561 invariant checks (27 kinds), 0 violations, 101 liquidation calls on 86 accounts, summary sha256 `b42224e0f720442e` (full digest `b42224e0f720442e63283e41c15ee29b4dbdb2aabc6a92aad48e541b6d6ab886`); the confirmation run printed the same digest. Against `SIM-R9` (`cd79a767842cfe9a`): people who borrow 201 → 483, liquidation calls 18 → 101 (40 of them on the attacker's dust accounts), accounts liquidated 10 → 86, bad debt $0 → $0, supplier loss $0 → $0, settlement-budget draws $0 → $0.18, bonus paid by borrowers $184 → $684, Avana fee $36 → $133, keeper reward $44 → $156, borrower surplus $0 → $0, flash-funded calls 18 → 101 (premium $16), caller shortfall top-ups 16 → 57 calls ($412), keeper loss after gas, now Avana's own keeper cost, $20,535 → $116,799 (of which $47,662 on the 40 dust-attack calls; largest single call $1,703 of gas) |
@@ -213,7 +213,7 @@ Why the fingerprint changed: the code changed in the two ways above. Without the
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The `base` variant at the default seed after the gas price path was brought to current mainnet levels. Source: the Etherscan gas tracker at 2026-11-10 16:19 UTC (base fee, Standard and Fast 0.939 gwei; Rapid 1.139 gwei; a 21,000-gas transfer at $0.041, which implies ETH at about $2,080; a swap at $0.70; the week's heatmap mostly low with brief peaks). The gas path is now the parameter `GAS_PRICE` in `avana_sim/params.py`: calm base 0.1–1.2 gwei with the same daily sine shape and log-normal noise (σ = 0.25); floors of 5 gwei on the USDT depeg (day 30.0–30.5) and on a scenario shock (8 gwei with an ETH drop), 30 gwei on the worst USDe crash half-day (day 60.0–60.5), 10 gwei on the next half-day, 4 gwei on day 75.25–75.5. `ETH_USD` = 2,080 (was 3,000). Congestion, which applies `FEED_DELAY_CONGESTED` to Chainlink rounds and the longer inclusion delay, is now `GAS_CONGESTION_MULT` × `base_hi` = 4 × 1.2 = 4.8 gwei instead of a fixed 70 gwei; on this seed only days 30.0–30.5 and 60.0–61.0 are congested, as before (calm maximum 2.99 gwei; the day-75 spike stays below the threshold, as its 60 gwei was below 70). The summary gains `total_gas` and `dust_attack_gas` under `liquidations` (`avana_sim/report.py`), and the `gas_exceeds_value` cause text states the new costs (`avana_sim/metrics.py`) |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base` (from the repository root), then the same command with `--out <scratch directory>` to confirm determinism |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base` (from the repository root), then the same command with `--out <scratch directory>` to confirm determinism |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |
 | Results | 546,706 invariant checks (27 kinds), 0 violations, 99 liquidation calls on 86 accounts, summary sha256 `751619709834af63` (full digest `751619709834af639eb70075de905b17812b3757de3bfa60e682fd994ee211fa`); the confirmation run printed the same digest. Against `SIM-R10` (`b42224e0f720442e`): people who borrow 483 → 485, liquidation calls 101 → 99 (40 of them on the attacker's dust accounts, unchanged), bad debt $0 → $0, supplier loss $0 → $0, settlement-budget draws $0.18 → $0.48, bonus paid by borrowers $684 → $689, Avana fee $133 → $135, keeper reward $156 → $181, caller shortfall top-ups 57 calls ($412) → 53 calls ($391), keeper loss after gas (Avana's own keeper cost) $116,799 → $9,762. Avana keeper gas: $9,552 in total over 99 calls, $96 per liquidation on average (largest single call $127); $3,869 (40.5%) on the 40 dust-attack calls ($97 each, all at 30 gwei in the USDe crash) and $5,683 on the 59 other calls ($96 each). Users who found gas above the value they could borrow (`gas_exceeds_value`): 3 |
@@ -231,7 +231,7 @@ Why the fingerprint changed: every gas cost in the run is priced from the gas pa
 |---|---|
 | Date | 2026-11-10 |
 | What ran | The `base` variant at the default seed after the removed mechanisms left the parameters and the engine (`avana_sim/params.py`, `protocol.py`, `engine.py`, `world.py`, `report.py`). No SettlementBudget (`Q-397`): a rounding gap at final settlement is paid by the keeper as part of its shortfall top-up, within `maxShortfallBps`, and the budget parameters, draws and report lines are gone. No in-kind settlement (`Q-401`): the governance and automatic in-kind openings, `inKindAutoDelay`, `inKindExpiry` and the in-kind liquidation mode are gone; a failed keeper attempt only counts toward the route-failure alert. No on-chain health floors (`Q-398`): `minOpeningHealthFactor` and `PROXY_HEALTH_FACTOR_FLOOR` are replaced by Aave's 1.00 and an optional per-market hard floor, off (0); the app's max button borrows the Lens recommended amount at HF 1.10, and a rescue top-up restores HF 1.10. Breakers (`Q-399`): price drop, seizure and route failures are alerts that block nothing, there is no cooldown, the concentration gate trips when Avana's share of a pool exceeds `poolShareMaxBps` (10%, no peg condition) and `breakerDeficitMax` is 10,000 GHO. `keeperFloor` = 1, `MAX_KEEPERS` = 32 (`Q-400`); new borrowing halts only at 0 active keepers. `keeperMinRepay` is removed (`Q-395`). The model had no idle-collateral mechanism, so `Q-396` changes nothing in it |
-| Command | `spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py --only base` (from the repository root) |
+| Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base` (from the repository root) |
 | Tools | Python 3.9.6, standard library only |
 | Seeds and bounds | Seed 20261109; 90 days; population and episodes as in `SIM-R3` |
 | Results | 572,608 invariant checks (27 kinds), 0 violations, 98 liquidation calls on 84 accounts, summary sha256 `eb8721c3196683b3` (full digest `eb8721c3196683b349b2b695d3fb26b9a9406a769a0e8a1d2bc07b4f1fa70484`). Against `SIM-R11` (`751619709834af63`): liquidation calls 99 → 98 (40 on the attacker's dust accounts, unchanged), bad debt $0 → $0, bonus paid by borrowers $689 → $557, Avana fee $135 → $108, keeper reward $181 → $129, caller shortfall top-ups 53 calls ($391) → 55 calls ($319, now including the rounding gaps a budget draw used to cover), keeper loss after gas $9,762 → $9,498, no monitoring alert fired. The concentration gate, now without the peg condition, blocked borrowing for 72.7 h on USDC/USDT and 72.3 h on USDe/USDT during the USDT depeg, 45.0 h on GHO/USDC during the GHO premium and 3.5 h on DAI/USDC |

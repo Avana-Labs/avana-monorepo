@@ -1,6 +1,6 @@
 # AMM-neutral architecture: gas and denial-of-service review
 
-Date: 2026-11-10. Scope: the proposed AMM-neutral architecture (per-Hub LPVaultSwap, MarketRegistry, ParameterStore, RiskModule, SettlementBudget, PayoutEscrow and Lock; per-CDP-Spoke LPVault and Collateralization; one LP market per CDP Spoke), read against `spec/02-contracts/*`, `spec/03-operations/05-liquidation.md` and the interfaces and types in `contracts/src/**`. `contracts/src` holds interfaces, types and constants only, so every gas figure below is an estimate built from known external costs and must be replaced by a fork-test measurement (each finding names the test).
+Date: 2026-11-10. Scope: the proposed AMM-neutral architecture (per-Hub LPVaultSwap, MarketRegistry, ParameterStore, RiskModule, SettlementBudget, PayoutEscrow and Lock; per-CDP-Spoke LPVault and Collateralization; one LP market per CDP Spoke), read against `docs/spec/02-contracts/*`, `docs/spec/03-operations/05-liquidation.md` and the interfaces and types in `contracts/src/**`. `contracts/src` holds interfaces, types and constants only, so every gas figure below is an estimate built from known external costs and must be replaced by a fork-test measurement (each finding names the test).
 
 ## Assumptions used for the numbers
 
@@ -119,7 +119,7 @@ Verification: Foundry fork test `test_gas_seizeMaxRecords` that pledges `MAX_REC
 
 Fix: make `minPledgeUsd`, plus a new `minDebtUsd` checked at borrow, chain-specific. Ethereum: debt ≥ $2,000, implying collateral ≥ about $7,000 at 28 % LTV. Base: $10–$50 pledge. Keep `REQ-RISK` text stating `minDebtUsd × netKeeperRate ≥ liquidationGas × gasPriceP95 × ETH` with the numbers per chain. Alternatively, fund dust liquidations from a capped per-market keeper subsidy (an Avana-run keeper paid from the SettlementBudget), with the cost stated.
 
-Verification: a parameter Z3/Python check in `spec/05-verification` asserting the inequality per chain with measured gas; a fork test measuring the 1-record liquidation gas that feeds the check.
+Verification: a parameter Z3/Python check in `docs/spec/05-verification` asserting the inequality per chain with measured gas; a fork test measuring the 1-record liquidation gas that feeds the check.
 
 ### AMMN-GAS-03 — Uniswap v4 hooks and subscribers on removal (High, gate before listing v4)
 

@@ -1,6 +1,6 @@
 # Quint recorded results
 
-Copied from spec/05-verification/quint/README.md (Results and Findings) as of 2026-11-10.
+Copied from docs/spec/05-verification/quint/README.md (Results and Findings) as of 2026-11-10.
 
 ## Results
 

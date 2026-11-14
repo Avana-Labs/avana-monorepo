@@ -13,9 +13,9 @@ No Solidity implementation exists yet. Every result below checks the spec, the i
 | Integration assumptions | [integration-assumptions.md](integration-assumptions.md) | 60 assumptions checked against the pinned source, the address book, Chainlink's directory and live `eth_call` | AMMN-INT-01…08 |
 | Gas and DoS | [gas-dos.md](gas-dos.md) | Gas models, griefing and liveness | AMMN-GAS-01…16 |
 | Architecture options | [architecture-options.md](architecture-options.md) | Alternatives compared, with counts | AMMN-ARCH-01…10 |
-| State machine | [state-machine.md](state-machine.md) | Quint model of 2 Hubs and 3 Spokes (`spec/05-verification/quint/topology*.qnt`), 20 tests and 40 simulator runs | AMMN-SM-01…06 |
+| State machine | [state-machine.md](state-machine.md) | Quint model of 2 Hubs and 3 Spokes (`docs/spec/05-verification/quint/topology*.qnt`), 20 tests and 40 simulator runs | AMMN-SM-01…06 |
 | Topology simulation | [../topology-options.md](../topology-options.md) | 1,000-user engine, 3 topologies, 5 seeds, 125 runs (`SIM-R7`) | Recommendation |
-| Pricing models | `spec/05-verification/z3/amm-pricing/`, `hypothesis/test_hyp_amm_pricing.py` | Z3 and Hypothesis, 11 tests | Listing guards |
+| Pricing models | `docs/spec/05-verification/z3/amm-pricing/`, `hypothesis/test_hyp_amm_pricing.py` | Z3 and Hypothesis, 11 tests | Listing guards |
 | Verification coverage | [verification-coverage.md](verification-coverage.md) | trace.py analysis | Coverage gaps |
 
 Background research (Aave V4 flash loans, Base, Slipstream, Uniswap v4 hooks) lives in Avana's internal references, outside the repo.

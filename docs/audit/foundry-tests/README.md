@@ -16,7 +16,7 @@ From `contracts/`, Foundry 1.9.0:
 | Deep invariant campaign (2,000 × 400) | `FOUNDRY_PROFILE=invariant forge test` |
 | Differential against the Python reference (FFI, 2,000 runs) | `FOUNDRY_PROFILE=differential forge test` |
 
-Configuration: `contracts/foundry.toml` profiles `default`, `ci`, `invariant`, `differential`; layout, naming and the full `TEST`/`INV` maps in [`contracts/test/README.md`](../../contracts/test/README.md).
+Configuration: `contracts/foundry.toml` profiles `default`, `ci`, `invariant`, `differential`; layout, naming and the full `TEST`/`INV` maps in [`contracts/test/README.md`](../../../contracts/test/README.md).
 
 ## Scope
 

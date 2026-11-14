@@ -8,7 +8,7 @@ Requirements: `REQ-*`, `INV-*`, `SPEC-*` (formulas), `ATTACK-*`, flow steps (`DE
 
 Status is the row's implementation state: **Verified** (a counting test or property ran and passed), **Failed** (a counting check failed), **Not run** (counting checks exist and none has a result), **Unlinked** (no counting check), or **Changed — re-verify**. A test or rule counts when its tag sits directly above it, carries its own row, and its test uses no stand-in (harness or mock) for a contract whose page defines the row. In the Impl. column, ° marks a check without a result, ✗ a failed one and ‡ one that does not count (stand-in or a tag on another row's test); in the Solidity column, (decl.) marks a `@custom:spec` tag on a body-less declaration, which is not an implementation link.
 
-No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
+No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
 **3562 requirements · 121 verified · 0 failed · 1878 not run · 1563 unlinked · 0 changed — re-verify · 0 errors · 3472 warnings**
 
@@ -3579,7 +3579,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 
 ## Design-review findings closed by checks
 
-Checks that name an `AMMN-*` finding of `audit/design-review/amm-neutral/` they close. A finding listed here still needs the spec rule that fixes it.
+Checks that name an `AMMN-*` finding of `docs/audit/design-review/amm-neutral/` they close. A finding listed here still needs the spec rule that fixes it.
 
 | Finding | Checks |
 |---|---|

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
 # Quint simulator runs for quint/topology.qnt (multi-Hub, multi-Spoke topology of the
-# AMM-neutral proposal; report: audit/design-review/amm-neutral/state-machine.md).
+# AMM-neutral proposal; report: docs/audit/design-review/amm-neutral/state-machine.md).
 # Runs on the nightly path (../run_all.sh --nightly), or by hand from any directory. The quick
 # path runs only the deterministic scenarios of topology_tests.qnt (QNT-TOPO-T00 … T19).
 # Each ID below simulates one invariant of topology.qnt (QNT-TOPO-01 … X2) or a reachability witness.

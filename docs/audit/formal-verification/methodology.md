@@ -11,7 +11,7 @@ This page sets out how Avana verifies its contracts formally:
 - the format of the internal verification reports;
 - the ordered list of properties proved before external audit.
 
-The property identifiers `PROP-001` onward live in [5.2 Formal Properties](../../spec/05-verification/02-formal-properties.md). The CVL sources live in [`contracts/certora/`](../../contracts/certora/), and one evidence file per property goes in [`audit/formal/`](../formal/). This page defines what those properties must cover and how their results are reported.
+The property identifiers `PROP-001` onward live in [5.2 Formal Properties](../../spec/05-verification/02-formal-properties.md). The CVL sources live in [`contracts/certora/`](../../../contracts/certora/), and one evidence file per property goes in [`docs/audit/formal/`](../formal/). This page defines what those properties must cover and how their results are reported.
 
 ## 1. Verification areas
 
@@ -35,7 +35,7 @@ Calls cross areas. For example, a liquidation's seized-unit burn is a custody fa
 | Halmos | Arithmetic and library lemmas (SettlementMath, LPPriceMath, share and charge math); short call sequences | Bit-precise on the real bytecode | Loop bound, call depth, bytes lengths |
 | Solidity SMTChecker | No overflow, underflow, division by zero or failing `assert` in immutable contracts (`PROP-043`, `PROP-044`) | Whole-contract, no harness | Engine timeouts are reported as unproved, never as proved |
 | Foundry invariant fuzzing (stateful handlers) | Cross-contract invariants on a mainnet fork with the real Aave V4 Hub and Spoke | Real external code, long sequences | Evidence within bounds, not proof |
-| Spec-stage models (Z3, SymPy, Quint, Hypothesis in [`spec/05-verification/`](../../spec/05-verification/)) | Every formula before code exists | Exact integer and real arithmetic | Model-to-code gap, closed by the implementation-stage property |
+| Spec-stage models (Z3, SymPy, Quint, Hypothesis in [`docs/spec/05-verification/`](../../spec/05-verification/)) | Every formula before code exists | Exact integer and real arithmetic | Model-to-code gap, closed by the implementation-stage property |
 
 ### 2.2 Proof styles
 
@@ -963,7 +963,7 @@ Every published FV engagement narrows its model, and the soundness of a result d
 
 ## 5. Report format
 
-Each area publishes one internal report per verified commit, in `audit/formal-verification/<area>-<commit>.md`. The per-property evidence files stay in `audit/formal/`. The report follows the section order used in Certora's published lending reports (Aave V4 Hub, Spoke and Libraries; Euler EVK; Balancer v3), so internal and external results can be compared side by side.
+Each area publishes one internal report per verified commit, in `docs/audit/formal-verification/<area>-<commit>.md`. The per-property evidence files stay in `docs/audit/formal/`. The report follows the section order used in Certora's published lending reports (Aave V4 Hub, Spoke and Libraries; Euler EVK; Balancer v3), so internal and external results can be compared side by side.
 
 1. **Project summary.**
    - Scope table: contract, file, commit, solc 0.8.28 / `cancun`, Certora and Halmos versions.
@@ -1022,7 +1022,7 @@ Likelihood levels:
 - **Medium:** needs a specific but plausible state, such as a price move, a paused reserve or a full cap.
 - **Low:** needs a privileged role acting against its mandate, a misconfiguration outside listing checks, or inputs at the edge of the stated bounds.
 
-A result with no security consequence is **Informational**. These levels give the same classes as the severity table in [`audit/README.md`](../README.md).
+A result with no security consequence is **Informational**. These levels give the same classes as the severity table in [`docs/audit/README.md`](../README.md).
 
 ## 6. Priority targets
 

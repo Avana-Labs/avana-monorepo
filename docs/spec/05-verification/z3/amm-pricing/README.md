@@ -2,7 +2,7 @@
 
 Z3 models and exact-integer runs of fair-composition LP pricing for three AMM types, with the Hypothesis search in [`../../hypothesis/test_hyp_amm_pricing.py`](../../hypothesis/test_hyp_amm_pricing.py). Fair composition values an LP position at the token amounts it would hold at the oracle-implied price, never at the pool's spot reserves.
 
-Run from `spec/05-verification/`:
+Run from `docs/spec/05-verification/`:
 
 ```bash
 .venv/bin/python z3/amm-pricing/ap01_concentrated_liquidity.py     # ~3 s

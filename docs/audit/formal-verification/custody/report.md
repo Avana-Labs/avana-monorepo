@@ -1,6 +1,6 @@
 # Custody area: internal formal verification report
 
-> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10 · **Verified artefact:** the specification (no implementation exists yet) · **Reproduce:** `audit/formal-verification/custody/run.sh`
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10 · **Verified artefact:** the specification (no implementation exists yet) · **Reproduce:** `docs/audit/formal-verification/custody/run.sh`
 
 Sections 1–8 report the first run (`FV-CUS-R1`, 2026-11-09, decisions `Q-001`…`Q-240`). Section 9 reports the re-verification against the final spec (`FV-CUS-R3`, 2026-11-10, decisions `Q-001`…`Q-278`). Section 10 reports the re-verification against the AMM-neutral design (`FV-CUS-R5`, 2026-11-10, decisions `Q-001`…`Q-380`), which is the current result of every check. Sections 1–9 are kept as the history of the earlier design: a full-range Uniswap v3 NFT keyed by `tokenId`, one Hub, beacon proxies per wallet and Spoke.
 
@@ -316,7 +316,7 @@ Update `PROP-001`, `PROP-054` and methodology T-01 to match.
 
 ### Detailed properties
 
-Reproduce everything with `./run.sh`, or one file with `spec/05-verification/.venv/bin/python <file>.py` run from the folder.
+Reproduce everything with `./run.sh`, or one file with `docs/spec/05-verification/.venv/bin/python <file>.py` run from the folder.
 
 **Sums and backing (`fv_backing.py`)**
 - `FV-CUS-01-base`; `FV-CUS-01-<call>` for 25 conforming and 3 non-conforming calls, all Verified.
@@ -370,13 +370,13 @@ Reproduce everything with `./run.sh`, or one file with `spec/05-verification/.ve
 ### Comparison with the spec-stage models
 
 The spec-stage models were read after this run.
-- `spec/05-verification/quint/avana.qnt` models a hostile LPVaultSwap that keeps units or debits the wrong proxy. It predates `Q-224`, so it has no `burnSeized` and cannot cover F-01.
+- `docs/spec/05-verification/quint/avana.qnt` models a hostile LPVaultSwap that keeps units or debits the wrong proxy. It predates `Q-224`, so it has no `burnSeized` and cannot cover F-01.
 - No spec-stage model checks a pledge whose depositor is the LPVault (F-02).
 - Every other overlapping property agrees: conforming backing, reconcile on exit, largest-first debit and the exit charge.
 
 ## 8. Spec-ID trace
 
-Every model file carries `# FV-CUS-NN verifies: …` lines, citing 130 distinct IDs. Each ID has a definition line in `spec/01-architecture` … `spec/04-security`. `spec/05-verification/trace.py` collects these tags from `audit/formal-verification/**/*.py|*.qnt`.
+Every model file carries `# FV-CUS-NN verifies: …` lines, citing 130 distinct IDs. Each ID has a definition line in `docs/spec/01-architecture` … `docs/spec/04-security`. `docs/spec/05-verification/trace.py` collects these tags from `docs/audit/formal-verification/**/*.py|*.qnt`.
 
 ## 9. Re-verification against the final spec (2026-11-10)
 
@@ -536,7 +536,7 @@ Targets not listed (T-03, T-05…T-08, T-10, T-12, T-15…T-18, T-20…T-23 and 
 
 ### 9.6 Spec-ID trace
 
-The model files cite 161 distinct spec IDs, each defined in `spec/01-architecture` … `spec/04-security`. `trace.py` reports no error from any file in this folder.
+The model files cite 161 distinct spec IDs, each defined in `docs/spec/01-architecture` … `docs/spec/04-security`. `trace.py` reports no error from any file in this folder.
 
 ## 10. Re-verification against the AMM-neutral design (2026-11-10)
 

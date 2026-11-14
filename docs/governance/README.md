@@ -24,7 +24,7 @@ Every AvanaTimelock operation and every Aave DAO payload Avana prepares has its 
 | `before.json`, `after.json` | `contracts/test/governance/<Title>.fork.t.sol` with `FOUNDRY_PROFILE=governance` | ParameterStore values, MarketRegistry state and the role map at the pinned block, before and after the batch executes through the real timelock |
 | `diff.md` | `contracts/script/governance-diff.py` | One row per value that changes |
 
-Targets come from the generated address library (`packages/protocol/sol/Avana<Chain>.sol`) rather than pasted hex, so an operation names the same addresses as the verified manifest. The `governance` profile in `contracts/foundry.toml` is the only one with write access to `governance/operations/`. Reviewers sign only once `diff.md` shows exactly the changes `operation.md` lists, and the folder stays in the repository after execution as the record of the change.
+Targets come from the generated address library (`packages/protocol/sol/Avana<Chain>.sol`) rather than pasted hex, so an operation names the same addresses as the verified manifest. The `governance` profile in `contracts/foundry.toml` is the only one with write access to `docs/governance/operations/`. Reviewers sign only once `diff.md` shows exactly the changes `operation.md` lists, and the folder stays in the repository after execution as the record of the change.
 
 ## Who controls what
 
@@ -204,4 +204,4 @@ The full steps are in [3.6 Emergency Operations](../spec/03-operations/06-emerge
 
 ## Licence
 
-The payloads, operation files and documents in this folder are Avana's under the Business Source License 1.1 in the root [`LICENSE`](../LICENSE). A payload that imports Aave or other third-party code compiles that code under its own licence ([`LICENSING.md`](../LICENSING.md)).
+The payloads, operation files and documents in this folder are Avana's under the Business Source License 1.1 in the root [`LICENSE`](../../LICENSE). A payload that imports Aave or other third-party code compiles that code under its own licence ([`LICENSING.md`](../../LICENSING.md)).

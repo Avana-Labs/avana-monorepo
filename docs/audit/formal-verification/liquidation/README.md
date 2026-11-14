@@ -5,12 +5,12 @@ Avana's internal formal verification of the liquidation area: LPVaultSwap and it
 ## Run
 
 ```bash
-audit/formal-verification/liquidation/run.sh
+docs/audit/formal-verification/liquidation/run.sh
 ```
 
 It runs every check and exits non-zero on any violation that is not an expected finding counterexample, on any solver timeout, on any vacuous premise and on any Quint result that differs from its expectation. A full run takes several minutes. `QNT_SAMPLES` and `QNT_STEPS` set the Quint simulation size (defaults 10,000 traces of 25 steps). The `models` CI workflow (`.github/workflows/models.yml`) runs `run.sh` at the defaults on every pull request and push to `main`, and the job fails when `run.sh` exits non-zero.
 
-Requirements: the Python environment in `spec/05-verification/.venv` (z3-solver 4.13, Hypothesis) and Quint in `spec/05-verification/node_modules`.
+Requirements: the Python environment in `docs/spec/05-verification/.venv` (z3-solver 4.13, Hypothesis) and Quint in `docs/spec/05-verification/node_modules`.
 
 ## Files
 
@@ -27,4 +27,4 @@ Requirements: the Python environment in `spec/05-verification/.venv` (z3-solver 
 | `fv_liq_07_system.py` | FV-LIQ-07* | System properties in value terms: equity and HF effect of a liquidation, single-block insolvency, self-liquidation loops with a shortfall top-up, swap limits, oracle extremes, stress valuation and no shield, one-token shocks, splitting. |
 | `liquidation.qnt` | FV-LIQ-08* | Multi-actor state machine (borrowers, committed operators and any other caller of the one entry point `liquidate`, governance, guardians with the address freeze and the application pause, coverage, escrow, price shocks) checked by randomized simulation. |
 
-Each check carries a tag `# FV-LIQ-NN verifies: …` naming the spec IDs it covers, which `spec/05-verification/trace.py` collects.
+Each check carries a tag `# FV-LIQ-NN verifies: …` naming the spec IDs it covers, which `docs/spec/05-verification/trace.py` collects.

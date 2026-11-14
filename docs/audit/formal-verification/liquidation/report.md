@@ -272,7 +272,7 @@ Status labels: Verified · Verified (bounded) · Verified (randomized) · Violat
 The counts below are those of `FV-LIQ-R1`; section 9 gives the checks and counts of the re-verification against the final pages.
 
 
-Run everything with `audit/formal-verification/liquidation/run.sh`. Run a single file with `spec/05-verification/.venv/bin/python audit/formal-verification/liquidation/<file>`.
+Run everything with `docs/audit/formal-verification/liquidation/run.sh`. Run a single file with `docs/spec/05-verification/.venv/bin/python docs/audit/formal-verification/liquidation/<file>`.
 
 - **FV-LIQ-01, SettlementMath (34 checks):**
   - 01a–e: net bonus, two-leg inequality, `SPEC-LIQ-003` = `016` at `cBuy = 0`, F-01, flash costs.
@@ -335,7 +335,7 @@ These were read only after the models in this folder were complete.
 
 ## 8. Spec-ID trace
 
-Each check's tag line (`# FV-LIQ-NN verifies: …`) lists the spec IDs it covers, and `spec/05-verification/trace.py` collects them. Every cited ID exists in the final spec.
+Each check's tag line (`# FV-LIQ-NN verifies: …`) lists the spec IDs it covers, and `docs/spec/05-verification/trace.py` collects them. Every cited ID exists in the final spec.
 
 ## 9. Re-verification against the final spec (FV-LIQ-R3, 2026-11-10)
 
