@@ -40,6 +40,10 @@ struct ReconcileWorld {
 /// withdrawal, honest liquidation and pending settlement that touched the proxy, and the pool tokens Collateralization
 /// must hold for the pending balance.
 contract AdapterReconcileHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     ReconcileWorld internal w;
     address[3] internal wallets;
     uint256 internal keyNonce;
@@ -50,6 +54,8 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
 
     uint256 public ledgerAfterExitViolations;
     uint256 public seizures;
+    /// @notice Hostile seizures that kept units (the state a reconciling exit acts on).
+    uint256 public keptSeizures;
     uint256 public reconciles;
     uint256 public settlements;
 
@@ -82,7 +88,7 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
         uint256 unitsSeed
     ) external {
         address wallet = wallets[walletSeed % 3];
-        if (openKeys[wallet].length >= 4) return;
+        if (openKeys[wallet].length >= 4) revert Skipped();
         uint128 units = uint128(bound(unitsSeed, 100_000_000, 5_000_000_000));
         bytes32 key = keccak256(abi.encode("reconcile", ++keyNonce));
         w.lpVault.mintPosition(key, wallet, w.market, units);
@@ -95,7 +101,9 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
                 known[proxy] = true;
                 proxies.push(proxy);
             }
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function borrow(
@@ -104,11 +112,14 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
     ) external {
         address wallet = wallets[walletSeed % 3];
         address proxy = w.adapter.proxyOf(wallet, w.market);
-        if (proxy == address(0)) return;
+        if (proxy == address(0)) revert Skipped();
         uint256 amount = bound(amountSeed, 1, 4000) * 1e18;
         uint256 nonce = w.adapter.borrowNonce(proxy);
         vm.prank(wallet);
-        try w.adapter.borrow(w.market, w.ghoReserve, amount, wallet, _deadline(), 0, nonce) {} catch {}
+        try w.adapter.borrow(w.market, w.ghoReserve, amount, wallet, _deadline(), 0, nonce) {}
+        catch {
+            revert Skipped();
+        }
     }
 
     function setPrice(
@@ -118,20 +129,95 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
     }
 
     /// @notice LPVaultSwap seizes, hostile (keeps the units, no Avana call) or honest (snapshot, burn, settlement).
+    /// @dev Steered so most calls seize: the account is the first from the seed with GHO debt (when none has any, the
+    /// first with a proxy borrows 3,000 GHO through `borrow`); for three seeds in four a healthy account has the
+    /// vault-token price lowered so its health factor is 0.85 to 0.99 (restored after the call); the cover is 1 to
+    /// 2,000 GHO, or the whole debt when less than 1,000 GHO would remain (no dust), so most seizures leave collateral
+    /// for a reconciling exit. Before steering (64 runs of 50 calls) no seizure ever succeeded, so the reconcile and
+    /// settlement invariants were never exercised.
     function seize(
         uint256 walletSeed,
         uint256 coverSeed,
         bool hostile
     ) external {
-        address proxy = w.adapter.proxyOf(wallets[walletSeed % 3], w.market);
-        if (proxy == address(0)) return;
+        address proxy = _debtor(walletSeed);
+        if (proxy == address(0)) {
+            for (uint256 j = 0; j < 3; ++j) {
+                if (w.adapter.proxyOf(wallets[(walletSeed % 3 + j) % 3], w.market) == address(0)) continue;
+                try this.borrow(walletSeed % 3 + j, 3000) {} catch {}
+                break;
+            }
+            proxy = _debtor(walletSeed);
+            if (proxy == address(0)) revert Skipped();
+        }
+        uint256 steer = uint256(keccak256(abi.encode(coverSeed)));
+        int256 price = w.vtPrice.latestAnswer();
+        _toLiquidatable(proxy, price, steer);
+        uint256 owed = w.spoke.getUserTotalDebt(w.ghoReserve, proxy);
         uint256 cover = bound(coverSeed, 1, 2000) * 1e18;
+        if (cover + 1000e18 > owed) cover = owed;
+        _seize(proxy, cover, hostile);
+        w.vtPrice.set(price);
+    }
+
+    /// @dev The first wallet from `walletSeed` with a position whose proxy holds kept units, else the first with a
+    /// position; zero when no wallet has one.
+    function _exiter(
+        uint256 walletSeed
+    ) internal view returns (address first) {
+        for (uint256 j = 0; j < 3; ++j) {
+            address wallet = wallets[(walletSeed % 3 + j) % 3];
+            if (openKeys[wallet].length == 0) continue;
+            if (first == address(0)) first = wallet;
+            address proxy = w.adapter.proxyOf(wallet, w.market);
+            if (w.spoke.getUserSuppliedShares(w.reserve, proxy) < w.coll.getAccountCredited(proxy, address(w.token))) {
+                return wallet;
+            }
+        }
+    }
+
+    /// @dev The first proxy from `walletSeed` with GHO debt, or zero.
+    function _debtor(
+        uint256 walletSeed
+    ) internal view returns (address proxy) {
+        for (uint256 j = 0; j < 3; ++j) {
+            proxy = w.adapter.proxyOf(wallets[(walletSeed % 3 + j) % 3], w.market);
+            if (proxy != address(0) && w.spoke.getUserTotalDebt(w.ghoReserve, proxy) != 0) return proxy;
+        }
+        return address(0);
+    }
+
+    /// @dev For three steering values in four, lowers the vault-token price so a healthy `proxy`'s health factor is
+    /// 0.85 to 0.99 (HF is linear in that price; GHO is fixed at $1).
+    function _toLiquidatable(
+        address proxy,
+        int256 price,
+        uint256 steer
+    ) internal {
+        uint256 hf = w.spoke.getUserAccountData(proxy).healthFactor;
+        if (hf < 1e18 || steer % 4 == 0) return;
+        uint256 lowered = uint256(price) * bound(steer >> 8, 85, 99) * 1e16 / hf;
+        // At most 0.99 / HF times the current price (below 2e8).
+        // forge-lint: disable-next-line(unsafe-typecast)
+        w.vtPrice.set(int256(lowered > 1e6 ? lowered : 1e6));
+    }
+
+    function _seize(
+        address proxy,
+        uint256 cover,
+        bool hostile
+    ) internal {
         if (hostile) {
             try w.swap.seizeAndKeep(address(w.spoke), address(w.token), w.reserve, w.ghoReserve, proxy, cover) returns (
                 uint256 s
             ) {
-                if (s > 0) ++seizures;
-            } catch {}
+                if (s > 0) {
+                    ++seizures;
+                    ++keptSeizures;
+                }
+            } catch {
+                revert Skipped();
+            }
         } else {
             try w.swap
             .liquidate(address(w.spoke), w.market, address(w.token), w.reserve, w.ghoReserve, proxy, cover, 2) returns (
@@ -139,18 +225,22 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
             ) {
                 if (s > 0) ++seizures;
                 _checkLedger(proxy);
-            } catch {}
+            } catch {
+                revert Skipped();
+            }
         }
     }
 
     /// @notice The borrower repays all its GHO and withdraws one position (reconciling any unsettled seizure).
+    /// @dev Steered to the first wallet from the seed whose proxy has units a hostile seizure kept (Spoke supply below
+    /// Collateralization's credit), else the first with a position.
     function exit(
         uint256 walletSeed,
         uint256 keySeed
     ) external {
-        address wallet = wallets[walletSeed % 3];
+        address wallet = _exiter(walletSeed);
+        if (wallet == address(0)) revert Skipped();
         bytes32[] storage ks = openKeys[wallet];
-        if (ks.length == 0) return;
         address proxy = w.adapter.proxyOf(wallet, w.market);
         uint256 owed = w.spoke.getUserTotalDebt(w.ghoReserve, proxy);
         if (owed > 0) {
@@ -164,6 +254,7 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
         bytes32 key = ks[index];
         uint256 pending0 = w.coll.getPending(address(w.token)).units;
         uint256 units = w.coll.previewRelease(w.integrationId, key);
+        if (units == 0) revert Skipped();
         vm.prank(wallet);
         w.adapter.withdraw(w.market, PositionRef(w.integrationId, key), units, _deadline(), 0);
         if (w.coll.getPending(address(w.token)).units > pending0) ++reconciles;
@@ -179,7 +270,7 @@ contract AdapterReconcileHandler is CommonBase, StdUtils {
         uint256 pendingUnits = w.coll.getPending(address(w.token)).units;
         uint256 held = w.token.balanceOf(address(w.swap));
         uint256 max = pendingUnits < held ? pendingUnits : held;
-        if (max == 0) return;
+        if (max == 0) revert Skipped();
         uint256 units = bound(unitsSeed, 1, max);
         w.swap.settlePending(w.market, address(w.token), units);
         ++settlements;

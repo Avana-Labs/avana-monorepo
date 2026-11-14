@@ -7,6 +7,7 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 | Path | Contents |
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
+| `monitor/` | The monitoring service: the signals `M-01` to `M-29` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
 | `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
 | `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the ParameterStore's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
@@ -15,7 +16,7 @@ The indexer, the keeper and the monitoring service read addresses and start bloc
 
 ## Build and test
 
-`services/common`, `services/indexer`, `services/keeper`, `services/convex` and `packages/protocol` form one npm workspace. Its root is the repository's [`package.json`](../package.json), with a single `package-lock.json` beside it; `@avana/services-common` and `@avana/protocol` are linked from the workspace with `file:` and never fetched from a registry. Node is the version in [`.nvmrc`](../.nvmrc) (22.18.0) and every direct dependency is pinned to an exact version.
+`services/common`, `services/indexer`, `services/keeper`, `services/monitor`, `services/convex` and `packages/protocol` form one npm workspace. Its root is the repository's [`package.json`](../package.json), with a single `package-lock.json` beside it; `@avana/services-common` and `@avana/protocol` are linked from the workspace with `file:` and never fetched from a registry. Node is the version in [`.nvmrc`](../.nvmrc) (22.18.0) and every direct dependency is pinned to an exact version.
 
 ```bash
 npm ci --ignore-scripts                        # at the repository root: installs every package, runs no install scripts
@@ -30,6 +31,7 @@ npm run test -w services/keeper                # one package
 | `services/common` | Manifest loading (ABI-hash refusal, exact bigint IDs), environment reads, chain lookup, provenance keys and ordering; series buckets, merge rules and gap filling; Hub accounting identities on the fixture snapshot, cap room and shared liquidity, rate conversions; the snapshot reader against a scripted multicall |
 | `services/indexer` | Factory events match the generated ABIs and decode the child address; every log-only event exists in its contract's ABI; export authentication (signature, key rotation, clock skew); the snapshot reader's ABI fragments against the generated ABIs; pool series aggregation |
 | `services/convex` | Spoke slices reconcile to the Hub totals the Lend page shows; the frontend fee (10 bps on each action, the 25 bps ceiling, the LP-value basis, rounding down) and fee + gas totals; chart buckets and quick stats; export page checks, request signing and listing metadata hashes; activity feeds by page |
+| `services/monitor` | Signal catalog against this README; snapshot rules at their boundaries; alert lifecycle, routing and its refusals; PagerDuty and webhook payloads and retries; second-provider confirmation of pages; keeper ingest and heartbeats; one round end to end; configuration refusals |
 | `services/keeper` | Liquidation decision and sizing rules at their boundaries; the pipeline sends only after a successful simulation with every guard passing, pages `M-26` on a code mismatch and logs observe-only calls |
 | `packages/protocol` | `ABI_HASH` matches the committed ABIs; no selector collision inside an ABI |
 
@@ -135,7 +137,7 @@ One public helper instance serves any address. Each keeper instance has its own 
 
 The unit is one PositionProxy: one wallet in one market on one CDP Spoke, keyed `chainId + Spoke + proxy` as in the indexer. Per account the keeper caches the wallet, Spoke, market, vault token, the debt reserves with non-zero debt, the last health factor with its block, and an in-flight flag.
 
-- **Live updates** come from the indexer's stream of the events listed under [Events](#events): `UserProxyCreated` and `ProxyDeployed` add accounts; `CollateralAdded`, `Borrowed`, `Repaid`, `CollateralWithdrawn`, `LiquidationSettled` and the Spoke's `Supply`, `Borrow`, `Repay`, `Withdraw`, `LiquidationCall` and `ReportDeficit` refresh an account; `PriceStateChanged`, `DebtPriceStateChanged` and `GraceStarted` refresh a market or debt reserve; `SeizureReconciled` and `PendingSettled` drive `settlePending`; `KeeperAdded`, `KeeperRemoved`, `AddressFrozen` and `AddressUnfrozen` drive the keeper's own status.
+- **Live updates** come from the indexer's stream (`GET /keeper/v1/events`, [EXPORT.md](indexer/EXPORT.md#keeper-stream)) of the events listed under [Events](#events): `UserProxyCreated` and `ProxyDeployed` add accounts; `CollateralAdded`, `Borrowed`, `Repaid`, `CollateralWithdrawn`, `LiquidationSettled` and the Spoke's `Supply`, `Borrow`, `Repay`, `Withdraw`, `LiquidationCall` and `ReportDeficit` refresh an account; `PriceStateChanged`, `DebtPriceStateChanged` and `GraceStarted` refresh a market or debt reserve; `SeizureReconciled` and `PendingSettled` drive `settlePending`; `KeeperAdded`, `KeeperRemoved`, `AddressFrozen` and `AddressUnfrozen` drive the keeper's own status.
 - **Startup backfill.** The keeper loads the account set from the indexer at a known block and, independently, reads every `ProxyDeployed` and `UserProxyCreated` log from the manifest's start blocks over a second RPC provider, in 10,000-block chunks halved whenever a provider refuses the range. It keeps the union of both sets and alerts when they differ (`REQ-LENS-004`).
 - **Reconnect backfill.** After any reconnect of the indexer stream or an RPC subscription, the keeper re-reads logs from the chain's last finalized block to the head before it processes new blocks, so no event missed during the outage is lost.
 - **Full sweep.** Every 10 minutes the keeper re-enumerates proxies from logs over both providers and re-reads each account's debt reserves, which repairs any cache entry a missed or misdecoded event left wrong.
@@ -229,6 +231,8 @@ The keeper and the indexer use the contracts' variable names, `RPC_<CHAIN>`, wit
 | `KEEPER_SHARD`, `KEEPER_SHARD_COUNT` | This instance's shard index and the number of primaries; unset on the standby |
 | `KEEPER_MODE` | `observe` (default: scan, size and log, never sign) or `active` |
 | `KEEPER_KILL_SWITCH_PORT`, `KEEPER_METRICS_PORT` | Ports of the authenticated halt endpoint and of the metrics endpoint, which are always different |
+| `KEEPER_GAS_CEILING_WEI_MAINNET`, `KEEPER_GAS_CEILING_WEI_BASE` | Worst-case cost in wei one transaction may have (gas limit × max fee, plus the L1 data fee on Base); required on a chain with a signer |
+| `KEEPER_INDEXER_URL`, `KEEPER_INDEXER_KEY` | The indexer's private address and the keeper's key for its stream (`id:base64secret`, listed in the indexer's `INDEXER_EXPORT_KEYS`) |
 | `AVANA_MANIFEST` | Path of the verified manifest of each chain; every address the keeper calls comes from it, never from code or another service |
 
 ### Operations
@@ -241,7 +245,7 @@ The keeper and the indexer use the contracts' variable names, `RPC_<CHAIN>`, wit
 
 ### Monitoring and alerting
 
-Each instance exposes metrics on a port separate from the kill switch: blocks behind head, scan time per block, accounts below HF 1 with their age, in-flight transactions, simulation failures by revert reason, inclusion delay in blocks, replacements and cancellations, gas wallet balance, free and reserved inventory per debt asset, Pool idle liquidity per debt asset, the code-check result and the mode (active, observe-only, halted). Logs are structured and shipped off the host; the failure log of duty 6 is published from them. The monitoring service turns these into the alerts `M-09` (accounts below HF 1 not liquidated), `M-10` (liquidation reverts and route failures), `M-16` (keeper debt-asset float), `M-17` (keeper gas and Pool liquidity) and `M-26` (code-check mismatch). An instance that stops reporting for 3 blocks pages its on-call engineer.
+Each instance exposes metrics on a port separate from the kill switch: blocks behind head, scan time per block, accounts below HF 1 with their age, in-flight transactions, simulation failures by revert reason, inclusion delay in blocks, replacements and cancellations, gas wallet balance, free and reserved inventory per debt asset, Pool idle liquidity per debt asset, the code-check result and the mode (active, observe-only, halted). Logs are structured and shipped off the host; the failure log of duty 6 is published from them. Each instance judges `M-09` (accounts below HF 1 not liquidated), `M-10` (liquidation reverts per market), `M-16` (keeper debt-asset float against the largest single `debtToCover` the caps allow, `KEEPER_LARGEST_DEBT_TO_COVER_<CHAIN>`), `M-17` (keeper gas and Pool liquidity) and `M-26` (code-check mismatch) at each block and posts them, with a heartbeat per processed head, to the monitoring service (`KEEPER_MONITOR_URL`; [keeper/DESIGN.md](keeper/DESIGN.md#monitoring-service)), which routes them; route failures and the share seized are counted by the monitor from chain events. An instance that stops reporting for 3 blocks pages its on-call engineer.
 
 ### Tests before launch
 
@@ -277,7 +281,7 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-18 | `drawn / drawCap` per asset | 80 % | 90 % | risk service providers | P-10 (`EMG-084`) |
 | M-19 | Hub utilization and Lend Spoke withdrawals | utilization 90 % | utilization 98 %, or a withdrawal above 10 % of supply within 1 hour | Aave DAO, guardians | P-10 (`EMG-084`) |
 | M-20 | Aave configuration against recorded values (collateral factor, bonus, target HF, caps, Spoke implementation) | any change | `ConfigDrift` live | Emergency Guardian | P-12 (`EMG-086`) |
-| M-21 | Backing-check simulation failure, `CounterSaturated`, `BreakerRecordFailed` | — | every | engineering | P-05 (`EMG-079`) |
+| M-21 | Backing-check failure (`Lens.checkBacking`), `CounterSaturated` | — | every | engineering | P-05 (`EMG-079`) |
 | M-22 | Timelock `CallScheduled` | every | role change, upgrade, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` | every canceller | P-06 (`EMG-080`) |
 | M-23 | Safe owner, threshold, guard or module change; signer liveness | every | every; liveness answers below threshold + 1 | every signer | P-07 (`EMG-081`) |
 | M-24 | Pause state and reason, address freeze, standby switch, manual breaker | every | — | every signer | per reason |

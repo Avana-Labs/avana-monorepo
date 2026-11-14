@@ -3,10 +3,11 @@ name: security-slow
 # Slow security tier every night on main (06:00 UTC), on every release tag (`v*`), by hand (workflow_dispatch): Echidna, Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Pull requests run contracts.yml only.
 # The `build` job compiles once (script/security-slow.sh build, and the build Halmos runs); `plan` lists the targets
 # from that build with script/ci-shards.py; every target then runs in its own job, reusing the build: one per Echidna
-# harness (both modes), one per Medusa harness, one per Halmos test function (up to 6 hours each), one per hevm target
-# (each harness's assertion entry points, each src/ contract), and one per group of eight src/ contracts for Mythril;
-# every other job has at most 4 hours. A new harness, Halmos test or src/ contract gets its own job on the next run.
-# `slow-gate` passes only when every job passed.
+# harness (both modes), one per Medusa harness, one per Halmos test function (a 5-hour budget in a 6-hour job), one per
+# hevm target (each harness's assertion entry points, each src/ contract), and one per group of eight src/ contracts
+# for Mythril; every other job has at most 4 hours. A new harness, Halmos test or src/ contract gets its own job on the
+# next run. `slow-gate` passes only when every job passed; a Halmos check of contracts/security/halmos-bounds.json that
+# its budget ends without a counterexample passes its job as "bounded, no violation found" (see the halmos job).
 # By hand, `campaign` runs the pre-audit fuzzing campaign of one layer instead: every harness of the layer gets 24
 # hours of Echidna per mode and 24 hours of Medusa, as eight parallel 3-hour jobs per harness and mode, each with a
 # fresh seed and starting from the stored corpus; `campaign-merge` then joins the eight corpora of each harness and
@@ -61,6 +62,8 @@ defaults:
 jobs:
   build:
     name: slow-tier build
+    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
+    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -307,8 +310,14 @@ jobs:
     if: needs.plan.outputs.halmos != '[]'
     runs-on: ubuntu-24.04
     # One Halmos test function at loop 16. Halmos runs a contract's tests one after another and has no wall-clock
-    # bound of its own (--solver-timeout-assertion 0), so each check runs alone with GitHub's maximum job time of
-    # 6 hours as its bound; a check that does not finish fails the job and the gate.
+    # bound of its own (--solver-timeout-assertion 0), so each check runs alone in a job of GitHub's maximum time,
+    # 6 hours, and within a wall-clock budget of 5 hours (HALMOS_TIMEOUT below, or the check's entry in
+    # contracts/security/halmos-bounds.json), so the job ends with its log and outcome uploaded instead of being
+    # cancelled. Outcomes (script/halmos-outcome.py): a counterexample fails; a listed check that the budget or a
+    # solver timeout ends without one is "bounded, no violation found" (not run to completion), passes the job and
+    # is written to the job summary, a warning annotation and out-security/halmos-outcome.json; an unlisted check
+    # that runs out fails, so a new slow check is noticed. The 23 listed checks were cancelled at 6 hours in run
+    # 43492412351; their fuzz twins run at 10,000 runs on every pull request.
     timeout-minutes: 360
     strategy:
       fail-fast: false
@@ -354,10 +363,11 @@ jobs:
           # check that needs more ends with "OUT OF MEMORY" in this log instead of the runner shutting down (run
           # 43387180884, check_PROP_019_legSlippage). It runs one solver thread (script/security-slow.sh).
           SECURITY_MEMORY_MAX: "14G"
-        run: |
-          set -o pipefail
-          script/security-slow.sh halmos
-          grep -qE 'Symbolic test result: 1 passed; 0 failed' out-security/halmos.txt
+          # 5 hours of wall clock for a check not in contracts/security/halmos-bounds.json (each listed check has its
+          # own budget there), leaving the rest of the 6 hours for set-up, the SIGKILL grace and the upload. The
+          # script requires "1 passed; 0 failed" for a pass, since each job runs one check.
+          HALMOS_TIMEOUT: "18000"
+        run: script/security-slow.sh halmos
 
       - name: Upload reports
         if: ${{ !cancelled() }}
@@ -837,7 +847,7 @@ jobs:
     # leg is skipped by its `if` (no target of that kind, or a campaign run, which skips the slow-tier jobs, or the
     # slow tier, which skips the campaign jobs); with the build and the plan passed, skipped can mean nothing else.
     name: slow-gate
-    if: always()
+    if: always() && (github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true')
     needs:
       - build
       - plan

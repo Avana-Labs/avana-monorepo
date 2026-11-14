@@ -14,6 +14,10 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 /// (frozen or not), strangers try to deploy and to drive proxies, the Adapter drives proxies, guardians freeze and
 /// unfreeze wallets. Ghosts record every outcome that breaks a rule, so the invariants only read counters.
 contract ProxyManagerHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     uint256 public constant TRIPLES = 12;
     address public constant SPOKE_1 = address(0x5B0CE1);
     address public constant SPOKE_2 = address(0x5B0CE2);
@@ -65,14 +69,16 @@ contract ProxyManagerHandler is CommonBase, StdUtils {
             if (p != predicted) ++deployedAtWrongAddress;
             deployed[i] = true;
             ++deployments;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function strangerDeploy(
         address caller,
         uint256 index
     ) external {
-        if (caller == ADAPTER) return;
+        if (caller == ADAPTER) revert Skipped();
         (address w, address s, uint256 m) = triple(index % TRIPLES);
         vm.prank(caller);
         try MANAGER.deployProxy(w, s, m) returns (address) {
@@ -85,7 +91,7 @@ contract ProxyManagerHandler is CommonBase, StdUtils {
         uint256 index
     ) external {
         uint256 i = index % TRIPLES;
-        if (caller == ADAPTER || !deployed[i]) return;
+        if (caller == ADAPTER || !deployed[i]) revert Skipped();
         (address w, address s, uint256 m) = triple(i);
         address p = MANAGER.predictProxy(w, s, m);
         vm.prank(caller);
@@ -101,7 +107,7 @@ contract ProxyManagerHandler is CommonBase, StdUtils {
         uint128 x
     ) external {
         uint256 i = index % TRIPLES;
-        if (!deployed[i]) return;
+        if (!deployed[i]) revert Skipped();
         (address w, address s, uint256 m) = triple(i);
         address p = MANAGER.predictProxy(w, s, m);
         vm.prank(ADAPTER);

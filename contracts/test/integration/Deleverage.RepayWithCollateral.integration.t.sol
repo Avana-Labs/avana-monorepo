@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IFlashSource} from "../../src/flash/IFlashSource.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
@@ -27,7 +28,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// tokens ($3,000 at the oracle) repays what the Lens previews (the oracle value less the market's slippage allowance
 /// and loan-fee room); the wallet's rest differs from the preview's (valued at `R = V`) by exactly `V - R`, what the
 /// real unwind and route pools recovered below the oracle value. `TEST-287` (a transfer fee on the debt asset) is in
-/// `Deleverage.RepayWithCollateral.FeeOnTransfer` on the stand-in fixture: the real stack's debt assets have no fee.
+/// `Deleverage.RepayWithCollateral.FeeOnTransfer`, on a debt asset whose issuer can switch on a fee.
 /// forge-config: default.isolate = false
 contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
     uint128 internal constant RELEASE = 1500e6;
@@ -103,9 +104,15 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         assertEq(usdc.balanceOf(flashSource), 0, "the flash source keeps nothing");
         assertEq(usdc.balanceOf(bob) - b.wallet, toWallet, "the rest of the recovery to the wallet");
         assertEq(toWallet, recovered - flashAmount - premium, "wallet gets R - x - premium");
-        // The preview converts at the oracle value V = 1,500 x $2.00 (REQ-LENS-029 style): it differs by V - R.
+        // The preview converts at the oracle value V = 1,500 x $2.00 (REQ-LENS-029 style) and charges the source's
+        // premium quote q, rounded up and never below the Pool's half-up charge (REQ-FLASH-002): it differs by
+        // (V - R) - (q - premium).
+        uint256 q = IFlashSource(flashSource).flashPremium(address(usdc), flashAmount);
+        assertLe(premium, q, "the quote is never below the charge");
+        assertLe(q - premium, 1, "the quote rounds up, the Pool half-up");
         assertLt(recovered, v, "the real unwind and routes recover below the oracle value");
-        assertEq(b.pvToWallet - toWallet, v - recovered, "preview at R = V");
+        assertEq(b.pvToWallet + q, v - flashAmount, "preview at R = V, with the quoted premium");
+        assertEq(b.pvToWallet - toWallet + (q - premium), v - recovered, "preview less execution is V - R");
         _checkAfter(b);
     }
 
@@ -167,14 +174,14 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
     function test_TEST_239_pauseAndFreeze() public {
         _setPause(PauseState.Paused, PauseReason.MintPathSuspect);
         RepayWithCollateralParams memory p = _rwc(500e6, usdcReserveId);
-        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(bob, MARKET_ID, key, 500e6, usdcReserveId);
+        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(bob, mA, key, 500e6, usdcReserveId);
         assertEq(pvRepaid, 0, "the Lens shows it closed under Paused(MintPathSuspect)");
         vm.expectRevert(IAaveAdapterErrors.ApplicationPaused.selector);
         vm.prank(bob);
         adapterC.repayWithCollateral(p);
         _setPause(PauseState.Paused, PauseReason.General);
         _freezeWallet(bob);
-        (pvRepaid,,) = lens.previewRepayWithCollateral(bob, MARKET_ID, key, 500e6, usdcReserveId);
+        (pvRepaid,,) = lens.previewRepayWithCollateral(bob, mA, key, 500e6, usdcReserveId);
         uint256 hfBefore = _hf(proxy);
         vm.prank(bob);
         (uint256 repaid,) = adapterC.repayWithCollateral(p);

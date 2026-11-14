@@ -18,6 +18,10 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 /// attacker. Ghosts record the fees accrued and paid per position, every fee token that reached anyone but the
 /// position's depositor during a collection, and every unwind that lowered a position's owed fees.
 contract SlipstreamFeesHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     uint256 internal constant MARKET = 1;
     uint256 internal constant MAX_POSITIONS = 8;
 
@@ -117,7 +121,7 @@ contract SlipstreamFeesHandler is CommonBase, StdUtils {
         uint256 who,
         uint128 liquidity
     ) external {
-        if (keys.length >= MAX_POSITIONS) return;
+        if (keys.length >= MAX_POSITIONS) revert Skipped();
         address owner = depositors[who % 2];
         liquidity = uint128(bound(liquidity, 1e6, 1e15));
         uint256 id = NFPM.mint(owner, address(T0), address(T1), POOL.tickSpacing(), -50, 50, liquidity);
@@ -135,7 +139,7 @@ contract SlipstreamFeesHandler is CommonBase, StdUtils {
         uint128 a0,
         uint128 a1
     ) external {
-        if (keys.length == 0) return;
+        if (keys.length == 0) revert Skipped();
         bytes32 key = _key(keySeed);
         a0 = uint128(bound(a0, 0, 1e12));
         a1 = uint128(bound(a1, 0, 1e12));
@@ -156,10 +160,10 @@ contract SlipstreamFeesHandler is CommonBase, StdUtils {
         uint256 keySeed,
         uint256 unitsSeed
     ) external {
-        if (keys.length == 0) return;
+        if (keys.length == 0) revert Skipped();
         bytes32 key = _key(keySeed);
         uint128 held = VAULT.unitsOf(key);
-        if (held == 0) return;
+        if (held == 0) revert Skipped();
         // Bounded by the position's units, so it fits uint128.
         uint128 units = uint128(bound(unitsSeed, 1, held));
         (uint256 o0, uint256 o1) = owed(key);
@@ -174,7 +178,7 @@ contract SlipstreamFeesHandler is CommonBase, StdUtils {
         uint256 keySeed,
         uint256 callerSeed
     ) external {
-        if (keys.length == 0) return;
+        if (keys.length == 0) revert Skipped();
         bytes32 key = _key(keySeed);
         uint256 pick = callerSeed % 3;
         address named = pick == 2 ? ATTACKER : depositors[pick];
@@ -182,7 +186,7 @@ contract SlipstreamFeesHandler is CommonBase, StdUtils {
         (uint256 o0, uint256 o1) = owed(key);
         (bool ok, bytes memory ret) = _asColl(abi.encodeCall(VAULT.collectFees, (key, named)));
         _countPaidToOthers(depositorOfKey[key]);
-        if (!ok) return;
+        if (!ok) revert Skipped();
         if (named != depositorOfKey[key]) ++foreignCollections;
         uint256[] memory amounts = abi.decode(ret, (uint256[]));
         (uint256 n0, uint256 n1) = owed(key);

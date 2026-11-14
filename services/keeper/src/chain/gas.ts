@@ -3,6 +3,8 @@
 // Fee and gas-limit rules (services/README.md, Submission > Gas). Avana pays gas as an operating cost; the
 // per-chain ceiling only stops a fault from draining the gas wallet, and reaching it pages.
 
+import { type Address, type Hex, type PublicClient, parseAbi, serializeTransaction } from "viem";
+import type { ChainInfo } from "@avana/services-common";
 import { paddedGasLimit } from "@avana/services-common/gas";
 
 export const GWEI = 1_000_000_000n;
@@ -40,6 +42,31 @@ export function bumpFees(fees: { maxFeePerGas: bigint; maxPriorityFeePerGas: big
 /** Worst-case cost; on Base the caller adds the L1 data fee from the chain's gas price oracle. */
 export function worstCaseCost(limit: bigint, maxFeePerGas: bigint, l1DataFee = 0n): bigint {
   return limit * maxFeePerGas + l1DataFee;
+}
+
+/** The OP Stack gas price oracle predeploy, which prices a transaction's L1 data on Base and Base Sepolia. */
+export const GAS_PRICE_ORACLE: Address = "0x420000000000000000000000000000000000000F";
+const gasPriceOracleAbi = parseAbi(["function getL1Fee(bytes _data) view returns (uint256)"]);
+
+/** Base and Base Sepolia charge an L1 data fee on top of L2 gas; the other chains do not. */
+export function paysL1DataFee(chain: Pick<ChainInfo, "key">): boolean {
+  return chain.key === "base" || chain.key === "baseSepolia";
+}
+
+export interface UnsignedTx {
+  readonly chainId: number;
+  readonly to: Address;
+  readonly data: Hex;
+  readonly nonce: number;
+  readonly gas: bigint;
+  readonly maxFeePerGas: bigint;
+  readonly maxPriorityFeePerGas: bigint;
+}
+
+/** The L1 data fee of the unsigned transaction, from `GasPriceOracle.getL1Fee` at the latest block. */
+export async function l1DataFee(client: Pick<PublicClient, "readContract">, tx: UnsignedTx): Promise<bigint> {
+  const unsigned = serializeTransaction({ type: "eip1559", value: 0n, ...tx });
+  return client.readContract({ address: GAS_PRICE_ORACLE, abi: gasPriceOracleAbi, functionName: "getL1Fee", args: [unsigned] });
 }
 
 /** True when the call's worst-case cost passes the chain's ceiling: the call is not sent and the on-call engineer is paged. */

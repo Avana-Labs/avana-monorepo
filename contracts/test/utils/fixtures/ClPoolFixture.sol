@@ -250,12 +250,15 @@ abstract contract ClPoolFixture is AvanaTest {
         actor.mint(pool, -top, top, 1e6);
     }
 
-    /// @dev Swaps the pool to `target` (exact square-root price) with unlimited input.
+    /// @dev Swaps the pool to `target` (exact square-root price) with unlimited input. Reads only the first word of
+    /// `slot0()`, so a Slipstream pool (six words, no protocol fee) is swapped as a Uniswap v3 pool is.
     function _swapTo(
         IClPool pool,
         uint160 target
     ) internal {
-        (uint160 now_,,,,,,) = pool.slot0();
+        (bool ok, bytes memory ret) = address(pool).staticcall(abi.encodeCall(IClPool.slot0, ()));
+        require(ok && ret.length >= 32, "slot0");
+        uint160 now_ = abi.decode(ret, (uint160));
         if (target == now_) return;
         actor.swap(pool, target < now_, type(int128).max, target);
     }

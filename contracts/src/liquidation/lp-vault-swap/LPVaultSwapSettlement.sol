@@ -170,13 +170,13 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
     /// @custom:spec SPEC-LIQ-004
     function _collateralPrice(
         Market memory m
-    ) internal view returns (uint256 pc) {
-        pc = IAaveV4Oracle(IAaveV4Spoke(m.spoke).ORACLE()).getReservePrice(m.reserveId);
+    ) internal view returns (uint256 price) {
+        price = IAaveV4Oracle(IAaveV4Spoke(m.spoke).ORACLE()).getReservePrice(m.reserveId);
         int256 lp = ILPOracle(m.lpOracle).latestAnswer();
         if (lp <= 0) return 0;
         // lp > 0 is checked above (a non-positive answer is stale); the cast is of a positive int256.
         // forge-lint: disable-next-line(unsafe-typecast)
-        if (uint256(lp) < pc) pc = uint256(lp);
+        if (uint256(lp) < price) price = uint256(lp);
     }
 
     /// @dev `Pdebt`: the larger of the AaveOracle price of the reserve and its DebtOracle's (the AaveOracle's fixed

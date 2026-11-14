@@ -25,11 +25,11 @@
 
 methods {
     function latestAnswer() external returns (int256);
-    function getPriceState() external returns (DebtPriceView);
+    function getPriceState() external returns (DebtOracle.DebtPriceView);
     function lastAcceptedPrice() external returns (uint256, uint64) envfree;
-    function poke() external returns (PriceState);
+    function poke() external returns (DebtOracle.PriceState);
     function setPokeMinGas(uint32) external;
-    function initialize(DebtOracleInitParams) external;
+    function initialize(DebtOracle.DebtOracleInitParams) external;
     function ASSET() external returns (address) envfree;
     function TIMELOCK() external returns (address) envfree;
     function hasRole(bytes32, address) external returns (bool) envfree;
@@ -143,7 +143,7 @@ rule debtDisagreementStartSetOnce(method f) filtered { f -> !f.isView && !isUpgr
     assert (before == 0 && after != 0) => to_mathint(after) == to_mathint(e.block.timestamp),
         "a new disagreement start is not the observation time";
     assert after != before => (
-        f.selector == sig:poke().selector || f.selector == sig:initialize(DebtOracleInitParams).selector),
+        f.selector == sig:poke().selector || f.selector == sig:initialize(DebtOracle.DebtOracleInitParams).selector),
         "the disagreement start changed outside an evaluation";
 }
 

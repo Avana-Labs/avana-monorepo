@@ -20,6 +20,10 @@ export const IMPLEMENTATION_SLOT: Hex = "0x360894a13ba1a3210667c828492db98dca3e2
 /** Accounts per multicall: keeps each eth_call under a node's 50,000,000-gas call limit (services/README.md). */
 export const ACCOUNTS_PER_CALL = 300;
 
+const routeAbi = parseAbi(["function tokenOut() view returns (address)", "function dependencies() view returns (address[])"]);
+const wrapperAbi = parseAbi(["function asset() view returns (address)", "function aToken() view returns (address)"]);
+const v3PoolAbi = parseAbi(["function getReserveAToken(address asset) view returns (address)"]);
+
 const aggregatorAbi = parseAbi([
   "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
 ]);
@@ -95,6 +99,47 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
         client.readContract({ ...at, address: helper, abi: flashLiquidatorAbi, functionName: "flashPremium", args: [asset, amount] }),
       ]);
       return { max, premium };
+    },
+
+    /**
+     * The Aave V3 Pool's aToken of `asset` (null when the Pool cannot say) and the dependencies of every route of
+     * `routes` whose output is `asset`, each with what it wraps; failed reads count as nothing wrapped.
+     */
+    async routeDraws(pool: Address, routes: readonly Address[], asset: Address) {
+      const aToken = await client.readContract({ ...at, address: pool, abi: v3PoolAbi, functionName: "getReserveAToken", args: [asset] }).catch(() => null);
+      const heads = await client.multicall({
+        ...at,
+        allowFailure: true,
+        multicallAddress: MULTICALL3_ADDRESS,
+        contracts: routes.flatMap((r) => [
+          { address: r, abi: routeAbi, functionName: "tokenOut" } as const,
+          { address: r, abi: routeAbi, functionName: "dependencies" } as const,
+        ]),
+      });
+      const deps: Address[] = [];
+      routes.forEach((_, i) => {
+        const out = heads[2 * i];
+        const d = heads[2 * i + 1];
+        // A route whose output cannot be read is checked anyway: assuming it reaches the asset is the safe side.
+        const intoAsset = out?.status !== "success" || (out.result as Address).toLowerCase() === asset.toLowerCase();
+        if (intoAsset && d?.status === "success") deps.push(...(d.result as readonly Address[]));
+      });
+      const wraps = await client.multicall({
+        ...at,
+        allowFailure: true,
+        multicallAddress: MULTICALL3_ADDRESS,
+        contracts: deps.flatMap((x) => [
+          { address: x, abi: wrapperAbi, functionName: "asset" } as const,
+          { address: x, abi: wrapperAbi, functionName: "aToken" } as const,
+        ]),
+      });
+      return {
+        aToken: aToken as Address | null,
+        deps: deps.map((address, i) => ({
+          address,
+          wraps: [wraps[2 * i], wraps[2 * i + 1]].filter((w) => w?.status === "success").map((w) => w!.result as Address),
+        })),
+      };
     },
 
     feedRound: (feed: Address) => client.readContract({ ...at, address: feed, abi: aggregatorAbi, functionName: "latestRoundData" }),

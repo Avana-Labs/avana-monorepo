@@ -45,8 +45,8 @@ interface IStatesSpokeConfigurator {
 /// feed rounds longer than their maximum age opens each LPOracle's grace window on the next poke, so after the three-day
 /// waits the test lets the window pass (`_waitOutGrace`) before a liquidation. TEST-202's WETH is a real
 /// DebtOracle-priced debt reserve (`_addWethDebtReserve`) with routes from USDC and USDT into WETH at the feed rate.
-/// TEST-247's chain has one CDP Spoke drawing GHO (the stand-in fixture had a second, Slipstream one), so the draw-cap
-/// sum is that Spoke's cap.
+/// TEST-247's chain has one CDP Spoke drawing GHO (no Slipstream Spoke is built here), so the draw-cap sum is that
+/// Spoke's cap.
 /// forge-config: default.isolate = false
 contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
     bytes4 internal constant AAVE_RESERVE_PAUSED = bytes4(keccak256("ReservePaused()"));

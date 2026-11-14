@@ -156,7 +156,7 @@ abstract contract DebtOracleFixture is TimelockFixture {
         return p < b ? p : b;
     }
 
-    /// @dev The Drifting served price: `max(min(p, b), A)`, the median of `p`, `b` and `A`.
+    /// @dev The Drifting served price: `max(min(p, b), A)`, the median of `p`, `b` and `A`, or `A` when it is above both.
     function _driftingServed(
         uint256 p,
         uint256 b,
