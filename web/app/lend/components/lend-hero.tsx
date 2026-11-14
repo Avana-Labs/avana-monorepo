@@ -3,7 +3,6 @@
 import { useMemo } from "react"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
 import { HowItWorks } from "@/app/components/how-it-works"
-import { TestnetMetricsBadge } from "@/app/components/testnet-metrics-badge"
 import { useCurrency } from "@/app/lib/currency/use-currency"
 import type { LendPageData } from "@/app/lib/data/providers/lend"
 import { aggregateLendHeroFromMarkets } from "@/app/lib/lend-system/lend-hero-aggregates"
@@ -28,7 +27,6 @@ export function LendHero({ markets }: { markets: ReadonlyArray<LendPageData["mar
           <p className="text-[13px] text-muted-foreground">{t("Lend TVL")}</p>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-data text-[17px] font-medium leading-none tracking-normal tabular-nums text-foreground md:text-[18px]">
             {showDollarAmounts ? fc.compact(metrics.totalTvl) : "••••••••"}
-            <TestnetMetricsBadge label={t("Testnet")} />
           </p>
         </div>
 

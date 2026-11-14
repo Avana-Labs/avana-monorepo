@@ -1,23 +1,25 @@
 "use client"
 
 import { ArrowUpRight, Copy } from "@/app/components/icons"
-import { TestnetMetricsBadge } from "@/app/components/testnet-metrics-badge"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 
 const ADDRESS_TEXT = "text-[15px] font-medium leading-none text-foreground/75"
 
 /**
- * Detail-hero network line: "Asset on [TESTNET] | ⧉ 0x7573 ↗". The address shows only its
+ * Detail-hero network line: "Asset on Ethereum | ⧉ 0x7573 ↗". The address shows only its
  * first four hex digits; the arrow opens the explorer when there is a real contract to show.
  */
 export function HeroContractLine({
   contextLabel,
+  chainLabel,
   address,
   isPlaceholder,
   explorerHref,
 }: {
   /** Untranslated lead-in, e.g. "Asset on" or "Market on". */
   contextLabel: string
+  /** Chain name shown after the lead-in, e.g. "Ethereum". */
+  chainLabel: string
   /** Full 0x address (copied as-is). */
   address: string
   /** Synthetic placeholder addresses get no copy action or explorer link. */
@@ -30,11 +32,9 @@ export function HeroContractLine({
 
   return (
     <div className="mt-0 flex flex-wrap items-center gap-3 text-[15px] font-medium text-foreground/75">
-      {/* Testnet: the network label is swapped for the Testnet badge until mainnet. When testnet
-          ends, render the chain name in place of the badge. */}
       <span className="inline-flex items-center gap-2">
         <span className="leading-none">{t(contextLabel)}</span>
-        <TestnetMetricsBadge label={t("Testnet")} />
+        <span className="leading-none text-foreground">{t(chainLabel)}</span>
       </span>
       <span aria-hidden className="h-5 w-px bg-border" />
       <span className="inline-flex min-h-8 items-center gap-1.5">

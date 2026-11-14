@@ -97,6 +97,7 @@ export function AssetHeroIdentity({
             </div>
             <HeroContractLine
               contextLabel="Asset on"
+              chainLabel={detail.hero.chain}
               address={contractAddress}
               isPlaceholder={isPlaceholderContract}
               explorerHref={`https://etherscan.io/address/${contractAddress}`}

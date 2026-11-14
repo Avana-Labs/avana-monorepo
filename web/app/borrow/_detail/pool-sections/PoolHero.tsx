@@ -68,6 +68,7 @@ export function PoolHeroIdentity({
             </div>
             <HeroContractLine
               contextLabel="Market on"
+              chainLabel={detail.hero.chain}
               address={resolveHeroContractAddress(detail.id, detail.hero.explorerUrl)}
               isPlaceholder={isPlaceholderContract}
               explorerHref={contractExplorerHref(detail.hero.explorerUrl)}

@@ -45,8 +45,6 @@ export function LendHeroIdentity({
   className?: string
 }) {
   const { t } = useTranslation()
-  // Testnet: read again by the commented-out network label below.
-  // const chainLabel = detail.hero.chain
   // Suppress copy + Etherscan when the address is a synthetic placeholder that
   // points at no real contract.
   const isPlaceholderContract = isPlaceholderHeroContractAddress(
@@ -76,6 +74,7 @@ export function LendHeroIdentity({
             </div>
             <HeroContractLine
               contextLabel="Asset on"
+              chainLabel={detail.hero.chain}
               address={resolveHeroContractAddress(detail.id, detail.hero.explorerUrl)}
               isPlaceholder={isPlaceholderContract}
               explorerHref={contractExplorerHref(detail.hero.explorerUrl)}
