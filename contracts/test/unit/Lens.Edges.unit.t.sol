@@ -76,12 +76,13 @@ contract LensEdgesUnitTest is LensFixture {
         vm.clearMockedCalls();
     }
 
-    // TEST-247 verifies: REQ-LENS-030
-    function test_TEST_247_debtAcceptedInTheFutureCountsAgeZero() public {
+    // TEST-247 verifies: REQ-LENS-030, REQ-RISK-061, REQ-SWAP-091
+    function test_TEST_247_debtServedInTheFutureCountsAgeZero() public {
         usdcOracle.set(1e8, PriceState.Live, 1e8, uint64(block.timestamp + 100));
         DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
         assertEq(v.age, 0, "no negative age");
-        assertTrue(v.borrowFresh, "fresh");
+        assertFalse(v.borrowFresh, "the RiskModule refuses a served timestamp in the future");
+        assertTrue(v.liquidationFresh, "LPVaultSwap counts it age 0");
     }
 
     // TEST-247 verifies: REQ-LENS-011, REQ-LENS-014

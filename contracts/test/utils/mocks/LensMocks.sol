@@ -598,6 +598,11 @@ contract LensDebtOracleMock {
     PriceState public state;
     uint256 public accepted;
     uint64 public acceptedAt;
+    // The served route's (and each leg's) source timestamp; follows `acceptedAt` unless set apart, as the real oracle's
+    // does between pokes when the feed posts a round the accepted price has not yet taken.
+    uint64 public servedAt;
+    // The ParameterStore the real oracle reads its legs' age limits from.
+    address public store;
     address[2] internal _feeds;
     // The oracle's own gates beyond the state (sequencer down or not ready, an alternate past its borrow age).
     bool public extraLiquidationPause;
@@ -611,7 +616,36 @@ contract LensDebtOracleMock {
         latestAnswer = answer;
         accepted = uint256(answer);
         acceptedAt = uint64(block.timestamp);
+        servedAt = acceptedAt;
         _feeds = [feed0, feed1];
+    }
+
+    function setStore(
+        address s
+    ) external {
+        store = s;
+    }
+
+    /// @notice The served route's source timestamp alone, the accepted price's left as it is.
+    function setServedAt(
+        uint64 at
+    ) external {
+        servedAt = at;
+    }
+
+    /// @notice The real oracle's `borrowPriceMaxAge()` for legs updated together: the smallest ParameterStore
+    /// `borrowPriceMaxAge(feed)` of the route's feeds, 0 with none.
+    function borrowPriceMaxAge() external view returns (uint32 age) {
+        if (store == address(0)) return 0;
+        age = type(uint32).max;
+        bool any;
+        for (uint256 i = 0; i < 2; ++i) {
+            if (_feeds[i] == address(0)) continue;
+            uint256 a = LensStoreMock(store).borrowPriceMaxAge(_feeds[i]);
+            if (a < age) age = uint32(a);
+            any = true;
+        }
+        if (!any) age = 0;
     }
 
     function set(
@@ -620,7 +654,7 @@ contract LensDebtOracleMock {
         uint256 accepted_,
         uint64 at
     ) external {
-        (latestAnswer, state, accepted, acceptedAt) = (answer, s, accepted_, at);
+        (latestAnswer, state, accepted, acceptedAt, servedAt) = (answer, s, accepted_, at, at);
     }
 
     function decimals() external pure returns (uint8) {
@@ -642,6 +676,10 @@ contract LensDebtOracleMock {
     function getPriceState() external view returns (OracleDebtView memory v) {
         (v.state, v.answer, v.acceptedAnswer, v.acceptedUpdatedAt) = (state, latestAnswer, accepted, acceptedAt);
         v.legFeeds = _feeds;
+        v.servedUpdatedAt = servedAt;
+        for (uint256 i = 0; i < 2; ++i) {
+            if (_feeds[i] != address(0)) v.legUpdatedAt[i] = servedAt;
+        }
         v.liquidationPaused = state != PriceState.Live || extraLiquidationPause;
         v.borrowAllowed = state == PriceState.Live && !extraBorrowStop;
     }
