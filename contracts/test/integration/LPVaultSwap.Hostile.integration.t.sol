@@ -3,10 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
@@ -15,7 +17,9 @@ import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapter
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
-import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
+import {IClPool} from "../utils/fixtures/ClPoolFixture.sol";
+import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -59,13 +63,15 @@ contract HostileLiquidatorImpl is UUPSUpgradeable {
 /// on the NonfungiblePositionManager, `DexPathRoute`s and Aave V4): what it cannot do (TEST-131), the C-QNT-1
 /// regression through the borrower's exits and the honest pending settlement, after the honest implementation is
 /// restored through the timelock, into the First-Loss Reserve (TEST-154), the Adapter's seized-unit burn (TEST-208)
-/// and each record's proxy across two markets (TEST-089). TEST-211 (deficits in two assets) is in
-/// `LPVaultSwap.Hostile.Deficit` on the stand-in fixture.
+/// and each record's proxy across two markets (TEST-089); and each First-Loss Reserve covering only its own asset's
+/// deficit (TEST-211), on a WETH/USDC market of `RealStackVolatile`'s Volatile Hub.
 /// @dev Accounts are made liquidatable by USDT falling to $0.93 (`_depegUsdt`): the vault token goes from $2.00 to
 /// $1.9287 (CF 30 %). Seizures are sized within Aave's close amount (the debt that restores HF 1.10). Pending units
-/// settle into the market's settlement asset, GHO (`registry.settlementReserve`), and its First-Loss Reserve.
+/// settle into the market's settlement asset, GHO (`registry.settlementReserve`), and its First-Loss Reserve. TEST-211
+/// needs collateral worth less than the debt, out of reach for USD-stable collateral inside the USD band: its account
+/// holds a full-range WETH/USDC NFT on the Volatile Spoke, and WETH falls 99 %.
 /// forge-config: default.isolate = false
-contract LPVaultSwapHostileIntegrationTest is RealStackFlows {
+contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
     bytes32 internal constant IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     uint256 internal mA;
@@ -278,4 +284,67 @@ contract LPVaultSwapHostileIntegrationTest is RealStackFlows {
         assertFalse(IVaultToken(vt).isValidProxy(p2), "not valid in another market");
         assertTrue(IVaultToken(mkt[mB].vaultToken).isValidProxy(p2), "valid in market B");
     }
+
+    /// @notice Each First-Loss Reserve covers only deficits of its own `(Hub, asset)`: an account owing USDC and GHO on
+    /// the Volatile Spoke ($60,000 of WETH/USDC liquidity against 8,000 USDC and 8,000 GHO, HF 1.125) sees WETH fall 99 %
+    /// on every feed and in the pool (the liquidity is then worth about $6,000), is liquidated in USDC with the Lens's
+    /// parameters until its collateral is gone, and the Spoke records a deficit in both assets; the real USDC First-Loss
+    /// Reserve's `coverDeficit` clears the USDC deficit and leaves the GHO deficit exactly unchanged.
+    // TEST-211 verifies: SPEC-FLR-001, INV-079, ATTACK-173
+    function test_TEST_211_coverageReducesOnlyItsOwnAssetsDeficit() public {
+        _setUpVolatile();
+        IClPool[] memory pools = new IClPool[](1);
+        pools[0] = _newVolatilePool(weth, usdc, 500, 1e18);
+        _ageNewPools(pools);
+        uint256 m = _addVolatileMarket(pools[0], 3000);
+        (, address p) = _pledgeUsd(carol, m, 60_000);
+        _borrowAs(carol, m, usdcReserveIdV, 8000e6);
+        _borrowAs(carol, m, ghoReserveIdV, 8000e18);
+        _publish(address(weth), WETH_PRICE / 100);
+        _repriceMarkets();
+        LiquidationPreview memory pv = lens.previewLiquidation(p, usdcReserveIdV, block.timestamp + 120);
+        assertTrue(pv.aaveLiquidatable && pv.pricesUsable, "liquidatable with usable prices");
+        pv.params.maxShortfall = pv.params.debtToCover / 20;
+        _liquidateOn(spokeV, keeper, pv.params);
+        assertEq(_sharesOn(spokeV, p, mkt[m].reserveId), 0, "the collateral is gone");
+        IHubDeficitView h = IHubDeficitView(hubV);
+        uint256 ghoDeficit = h.getSpokeDeficitRay(ghoAssetIdV, spokeV);
+        assertGt(h.getSpokeDeficitRay(usdcAssetIdV, spokeV), 0, "USDC deficit recorded");
+        assertGt(ghoDeficit, 0, "GHO deficit recorded");
+        AvanaFirstLossReserve usdcReserve = AvanaFirstLossReserve(firstLossReserveOfV[address(usdc)]);
+        _enableCover(address(usdcReserve), spokeV);
+        vm.prank(coverageCaller);
+        (, uint256 covered) = usdcReserve.coverDeficit(spokeV, type(uint256).max);
+        assertGt(covered, 0, "USDC deficit covered");
+        assertEq(h.getSpokeDeficitRay(usdcAssetIdV, spokeV), 0, "USDC deficit cleared");
+        assertEq(h.getSpokeDeficitRay(ghoAssetIdV, spokeV), ghoDeficit, "GHO deficit unchanged");
+    }
+
+    /// @dev The Aave DAO's roles for a First-Loss Reserve's cover: `coverDeficit` for `coverageCaller`, the borrow-Spoke
+    /// allowlist for the Aave governance executor, which allows `spoke`.
+    function _enableCover(
+        address cs,
+        address spoke
+    ) internal {
+        bytes4[] memory cover = new bytes4[](1);
+        cover[0] = AvanaFirstLossReserve.coverDeficit.selector;
+        bytes4[] memory admin = new bytes4[](1);
+        admin[0] = AvanaFirstLossReserve.setAllowedBorrowSpoke.selector;
+        IAccessManager am = IAccessManager(aave.accessManager);
+        vm.startPrank(aaveDao);
+        am.setTargetFunctionRole(cs, cover, 500);
+        am.setTargetFunctionRole(cs, admin, 501);
+        am.grantRole(500, coverageCaller, 0);
+        am.grantRole(501, aaveGovernanceExecutor, 0);
+        vm.stopPrank();
+        vm.prank(aaveGovernanceExecutor);
+        AvanaFirstLossReserve(cs).setAllowedBorrowSpoke(spoke, true);
+    }
+}
+
+interface IHubDeficitView {
+    function getSpokeDeficitRay(
+        uint256 assetId,
+        address spoke
+    ) external view returns (uint256);
 }
