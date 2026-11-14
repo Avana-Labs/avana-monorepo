@@ -826,15 +826,17 @@ async function runSteps(name: string, call: Call, log: string[]): Promise<Json> 
   return { steps: ops.length, operations: ops };
 }
 
+// process.exitCode, not process.exit: on Windows, exiting with the RPC client's handles open trips a libuv assertion
+// (src/win/async.c) and the status becomes 127.
 main().catch((e: unknown) => {
   if (e instanceof Refused) {
     process.stdout.write(`REFUSED by a limit check, nothing sent: ${e.message}\n`);
-    process.exit(2);
-  }
-  if (e instanceof NotAvailable) {
+    process.exitCode = 2;
+  } else if (e instanceof NotAvailable) {
     process.stdout.write(`NOT AVAILABLE: ${e.message}\n`);
-    process.exit(3);
+    process.exitCode = 3;
+  } else {
+    process.stderr.write(`${(e as Error).stack ?? String(e)}\n`);
+    process.exitCode = 1;
   }
-  process.stderr.write(`${(e as Error).stack ?? String(e)}\n`);
-  process.exit(1);
 });

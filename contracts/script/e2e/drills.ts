@@ -689,5 +689,5 @@ async function main() {
 
 main().catch((err: unknown) => {
   process.stderr.write(`${(err as Error).stack ?? String(err)}\n`);
-  process.exit(1);
+  process.exitCode = 1;
 });
