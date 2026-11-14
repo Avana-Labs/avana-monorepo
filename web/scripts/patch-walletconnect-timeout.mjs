@@ -7,7 +7,9 @@ import { fileURLToPath } from "node:url"
 // 2.21.0/2.21.1 reject the awaited promise AND create an orphan Promise.reject(err).
 // Remove only the orphan; callers still receive the original timeout error normally.
 // Apply to every locked copy and distribution, including Reown's nested dependencies.
-const root = fileURLToPath(new URL("../", import.meta.url))
+// The npm workspace installs into the repository root, next to its package-lock.json. CI installs with
+// --ignore-scripts, so `pretest` and `prebuild` run this too; it is idempotent.
+const root = fileURLToPath(new URL("../../", import.meta.url))
 const lock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"))
 const marker = "/* avana-walletconnect-timeout-fix */"
 const orphan = /[\w$]+=Promise\.reject\(([\w$]+)\),([\w$]+)\(\1\)/g
@@ -44,6 +46,6 @@ for (const [packagePath, locked] of Object.entries(lock.packages)) {
   }
 }
 
-// Validate every target before writing any of them. Re-running postinstall is a no-op.
+// Validate every target before writing any of them. Re-running is a no-op.
 for (const [filename, source] of edits) fs.writeFileSync(filename, source)
 console.log(`WalletConnect timeout patch: ${edits.length} distributions updated`)

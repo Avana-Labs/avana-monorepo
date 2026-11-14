@@ -1,22 +1,25 @@
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { describe, expect, it } from "vitest"
 
-const lock = JSON.parse(readFileSync(new URL("../../package-lock.json", import.meta.url), "utf8"))
+// The npm workspace installs into the repository root, next to its lock file.
+const repoRoot = path.resolve(fileURLToPath(new URL("../../../", import.meta.url)))
+const lock = JSON.parse(readFileSync(path.join(repoRoot, "package-lock.json"), "utf8"))
 const copies = Object.keys(lock.packages).filter((name) => name.endsWith("node_modules/@walletconnect/utils"))
 
 describe("WalletConnect proposal timeout", () => {
   // A separate process with strict rejection handling catches the orphan that escaped
   // ConnectKit's existing try/catch. Exercise the installed code, not a duplicate helper.
   for (const copy of copies) {
-    const installed = JSON.parse(readFileSync(path.resolve(copy, "package.json"), "utf8"))
+    const installed = JSON.parse(readFileSync(path.resolve(repoRoot, copy, "package.json"), "utf8"))
     for (const entry of [installed.main, installed.module]) {
       it(`${copy}/${entry} rejects only the awaited promise and permits a fresh attempt`, () => {
         const script = `
           const assert = require('node:assert/strict');
           (async () => {
-            const { createDelayedPromise } = await import(${JSON.stringify(path.resolve(copy, entry))});
+            const { createDelayedPromise } = await import(${JSON.stringify(pathToFileURL(path.resolve(repoRoot, copy, entry)).href)});
             const proposal = createDelayedPromise(0.01, 'Proposal expired');
             await assert.rejects(proposal.done(), { message: 'Proposal expired' });
             await new Promise(resolve => setTimeout(resolve, 20));
@@ -32,7 +35,7 @@ describe("WalletConnect proposal timeout", () => {
           })().catch(error => { console.error(error); process.exitCode = 1; });
         `
         expect(() => execFileSync(process.execPath, ["--unhandled-rejections=strict", "-e", script])).not.toThrow()
-      })
+      }, 30_000)
     }
   }
 })

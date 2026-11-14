@@ -1,27 +1,61 @@
-# Avana Sandbox
+# Avana web app
 
-Avana is a lending protocol built on Aave V4 that enables AMM liquidity pool positions to be used as collateral. Liquidity providers from Uniswap, Balancer, Curve, or Aerodrome can deposit supported LP positions, have them evaluated inside market-specific risk frameworks, and borrow against them while the positions stay active in the underlying pools.
+The Next.js app of Avana (`@avana/web` in the npm workspace): Lend, Borrow, the Portfolio dashboard, the market detail pages, Swap, the Support Center and Ask AI. It reads markets from [services/convex](../services/convex/README.md); wallet values will be read live from the chain.
 
-This is an interactive free risk frontend demo for exploring **Avana**. You can try to borrow against LP positions on Aave v4 here in a sandbox, not real transaction way. Everything runs locally with **synthetic wallets, markets, and transactions** so you can learn flows, stress-test UX, and validate engine behavior without mainnet risk.
+## What works today
 
-## Main routes
+- Markets, detail pages and charts come from `services/convex` (`api.markets.*` and the detail queries). Without a deployment every list is empty and detail pages 404.
+- Wallet connection (wagmi + ConnectKit) and optional SIWE sign-in. Sign-in is only needed for per-wallet features (synced preferences, support requests, Ask AI with a wallet); no page is gated on it.
+- Contract calls are not wired yet. Action pages open, and their previews and submit buttons say "Transactions are not available yet."
+- Swap shows its UI; quotes are unsupported until CoW Swap is connected.
+- Quests and points are placeholders ("Coming soon"); nothing is granted.
+- Ask AI market answers work; questions about the user's own positions answer that wallet data is not available yet.
 
-| Route        | What to try                                               |
-| ------------ | --------------------------------------------------------- |
-| `/`          | Home workspace — Borrow, Repay, Claim, Remove in one card |
-| `/borrow`    | Market explorer + pool detail pages with sidebar actions  |
-| `/lend`      | Supply / withdraw stable and volatile assets              |
-| `/multiply`  | Loop markets, leverage ruler, deleverage                  |
-| `/dashboard` | Portfolio tabs: Borrow, Lend, Multiply, Activity          |
+## Setup
 
-## Core flows to exercise
+From the repository root:
 
-1. **Borrow** — Select collateral pool → enter amount → review health factor / borrowing power → simulate transaction.
-2. **Pledge (supply collateral)** — Pick an LP pool you hold → deposit → see borrow power increase.
-3. **Repay / Remove / Claim** — Pay down debt, withdraw collateral %, or claim fee rewards.
-4. **Lend** — Deposit wallet balance into a market; withdraw supplied position.
-5. **Multiply** — Set collateral amount + multiplier; review net APY, LTV, liquidation price.
+```sh
+npm install
+cp web/.env.example web/.env.local   # then fill in the values you have
+npm run dev --workspace @avana/web   # http://localhost:3000
+```
 
-## Contributing
+The app imports the Convex API from `../services/convex/convex` (the `@/convex/*` path alias in `tsconfig.json` and `vitest.config.ts`). Run `npx convex dev` in `services/convex` against your own deployment, or point `NEXT_PUBLIC_CONVEX_URL` at an existing one.
 
-Keep changes focused: engine logic in `app/lib/*-engine`, product UI in `app/{borrow,lend,multiply}`, shared action chrome in `app/components/action-page`. Run `npm test` and `npm run build` before opening a PR.
+## Environment
+
+Every variable is listed with a comment in [`.env.example`](.env.example). `next build` succeeds with all of them empty.
+
+| Variable                                                | Needed for                                                                                                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL` | Market data (services/convex deployment)                                                                                                          |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`                  | WalletConnect wallets                                                                                                                             |
+| `NEXT_PUBLIC_SIWE_ISSUER`, `SIWE_JWT_PRIVATE_JWK`       | SIWE sign-in and the JWTs Convex accepts (`SIWE_JWT_ISSUER` on the Convex deployment must equal the issuer)                                       |
+| `CONVEX_RATE_LIMIT_SECRET`                              | Rate limit of the SIWE routes (same value on the Convex deployment)                                                                               |
+| `ASK_AI_GUEST_SECRET`                                   | Ask AI for visitors without sign-in                                                                                                               |
+| `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`           | Error reporting and source map upload (Vercel builds)                                                                                             |
+| `NEXT_PUBLIC_AVANA_CHAIN_ID`, `NEXT_PUBLIC_RPC_*`       | Reserved for contract calls; the first target is the local anvil deployment (chain 31337) read through the manifest loader in `packages/protocol` |
+
+Ask AI's OpenAI key and models (`OPENAI_API_KEY`, `ASK_AI_MODEL`, ...) are set on the Convex deployment, not here.
+
+## Scripts
+
+| Command             | Does                                          |
+| ------------------- | --------------------------------------------- |
+| `npm run dev`       | Development server                            |
+| `npm run build`     | Production build                              |
+| `npm run lint`      | ESLint                                        |
+| `npm run typecheck` | `tsc --noEmit`                                |
+| `npm test`          | Vitest unit tests                             |
+| `npm run test:e2e`  | Playwright (needs a running app and browsers) |
+
+## Layout
+
+| Path                                                  | Contents                                                                                                       |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `app/`                                                | Routes (`borrow`, `lend`, `swap`, `dashboard`, `ask`, `support-center`, `actions`, `api`) and their components |
+| `app/lib/borrow-system`, `lend-system`, `swap-system` | Session state, read models and transaction adapters of each product                                            |
+| `app/lib/borrow-detail`, `lend-detail`, `detail-page` | Detail page view models built from Convex rows                                                                 |
+| `app/lib/i18n`                                        | Translations (13 languages besides English)                                                                    |
+| `components/`, `lib/`                                 | Shared UI, CSP, analytics                                                                                      |
