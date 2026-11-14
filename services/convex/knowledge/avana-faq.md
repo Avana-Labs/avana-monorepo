@@ -296,35 +296,6 @@ After full repayment, collateral restrictions tied to that debt are released acc
 
 ---
 
-## Multiply Markets
-
-### What is Avana Multiply?
-
-Avana Multiply is the managed leverage workflow built on top of LP-backed credit. A user deposits supported LP collateral, Avana values it, and the interface can use that borrowing power to open approved loop or leverage exposure from one flow.
-
-Instead of manually borrowing, swapping, redepositing, and tracking debt across multiple tools, Multiply packages the position into one monitored workflow with collateral, debt, leverage level, health factor, and unwind controls shown together.
-
-### How is Multiply different from borrowing?
-
-Borrowing gives users assets they can use directly, as long as the account remains healthy. Multiply uses LP-backed borrowing power inside a managed strategy, where the borrowed capital is routed into approved exposure and tracked as one position.
-
-Because Multiply adds leverage, it can increase capital efficiency and potential returns, but it also increases downside, liquidation risk, and sensitivity to price movement. The health view matters more, not less, when a position is looped.
-
-### Do I keep my LP while using Multiply?
-
-Yes. The LP position remains the collateral base while the Multiply position is open. The user does not need to fully exit the AMM position just to create leveraged exposure.
-
-The LP is still backing debt, so it remains subject to collateral rules and liquidation if the account becomes unhealthy. Users monitor collateral value, debt, leverage, and liquidation buffer throughout the life of the loop.
-
-### What limits maximum leverage?
-
-Maximum leverage depends on collateral quality, pool liquidity, volatility, oracle confidence, borrow asset, market caps, and liquidation assumptions. Stable or highly correlated pools can usually support different leverage limits than volatile or thin pools.
-
-Avana uses market-specific risk controls so leverage is constrained by the actual LP collateral behind the position rather than a flat multiplier applied to every pool.
-
-
----
-
 ## Automation Features
 
 ### Can automation help manage position risk?
@@ -341,6 +312,6 @@ Availability is defined by the active market configuration: collateral type, mar
 
 ### What do users monitor after opening a position?
 
-Users monitor health factor, borrow usage, collateral value, debt growth, LP range status, fee accrual, and liquidation buffer. For Multiply positions, they also monitor leverage level and unwind controls.
+Users monitor health factor, borrow usage, collateral value, debt growth, LP range status, fee accrual, and liquidation buffer.
 
 Avana surfaces these values in the interface so users can see when a position is healthy, when it needs attention, and when risk is moving closer to liquidation.
