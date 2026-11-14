@@ -63,7 +63,10 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
     }
 
     /// @notice Body of `deleverageRepay` (REQ-ADAPTER-081): LPVaultSwap's funds repay the session's reserve on the
-    /// session's proxy; the unconsumed part returns to LPVaultSwap.
+    /// session's proxy; the unconsumed part returns to LPVaultSwap. Before the repay it records the account's health
+    /// factor as the session's `hfBefore`: LPVaultSwap has poked the market's LPOracle and the reserve's DebtOracle by
+    /// now, and a poke can move the price Aave reads within the block (REQ-ORACLE-107), so `repayWithCollateral`
+    /// compares health factors read at the same prices.
     /// @custom:spec REQ-ADAPTER-081, REQ-ADAPTER-092, REQ-PROXY-088, REQ-LOCK-023
     function deleverageRepay(
         address proxy,
@@ -79,6 +82,7 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (amount == 0) revert ZeroAmount();
         address spoke = _s().accountOf[proxy].spoke;
         address asset = IAaveV4Spoke(spoke).getReserve(debtReserveId).underlying;
+        _setHfBefore(IAaveV4Spoke(spoke).getUserAccountData(proxy).healthFactor);
         _markStep(STEP_REPAID);
         uint256 received = _pull(asset, _LP_VAULT_SWAP, proxy, amount);
         repaid = _repayStep(proxy, spoke, asset, debtReserveId, received, _LP_VAULT_SWAP);

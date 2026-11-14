@@ -574,7 +574,7 @@ contract RiskLPOracleMock {
         return 0;
     }
 
-    function poke() external returns (PriceState) {
+    function poke() public virtual returns (PriceState) {
         require(!pokeReverts, "poke");
         ++pokes;
         return _pv.state;

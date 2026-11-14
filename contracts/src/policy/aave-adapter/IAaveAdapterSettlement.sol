@@ -30,8 +30,10 @@ interface IAaveAdapterSettlement {
     /// @notice Repays `amount` of the session's debt reserve on the session's proxy with funds from LPVaultSwap.
     /// @dev `NotLPVaultSwap` unless `msg.sender == LP_VAULT_SWAP` and `LOCK.holder() == address(this)`;
     /// `NoDeleverageSession` unless an open session names `proxy` and `debtReserveId` and this step has not run;
-    /// `ZeroAmount` if `amount == 0`. Moves `amount` with `safeTransferFrom(LP_VAULT_SWAP, proxy, amount)`, measures
-    /// `received`, repays through `proxy.execute` (unconsumed part returned to LPVaultSwap) and marks the step done.
+    /// `ZeroAmount` if `amount == 0`. Records the account's health factor as the session's `hfBefore` (after
+    /// LPVaultSwap's pokes, so at the prices `repayWithCollateral` reads `hfAfter` at), moves `amount` with
+    /// `safeTransferFrom(LP_VAULT_SWAP, proxy, amount)`, measures `received`, repays through `proxy.execute` (unconsumed
+    /// part returned to LPVaultSwap) and marks the step done.
     /// @param proxy The session's proxy.
     /// @param debtReserveId The session's debt reserve.
     /// @param amount Debt asset LPVaultSwap provides, base units.

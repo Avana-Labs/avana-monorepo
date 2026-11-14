@@ -27,9 +27,9 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.AaveAdapter")) - 1)) & ~bytes32(uint256(0xff))`.
     bytes32 internal constant STORAGE_SLOT = 0x2072e6d03f11061b0cb3832feb372a04fa53d710ed44fa8554d505a1e2dbd700;
 
-    /// @dev First of the seven transient slots of the repay-with-collateral session, `keccak256(
+    /// @dev First of the eight transient slots of the repay-with-collateral session, `keccak256(
     /// "avana.transient.AaveAdapter.session")`: proxy, market, position key, units, debt reserve, hash of the per-token
-    /// minimums, step flags. EIP-1153 clears them at the end of every transaction.
+    /// minimums, step flags, health factor before. EIP-1153 clears them at the end of every transaction.
     bytes32 internal constant SESSION_SLOT = 0x0db5971807d1207a74b49bb675c29f58fab52360e24e9e8ddf89f8f844ac41b9;
 
     /// @dev Session flag: `deleverageRepay` ran.
@@ -122,6 +122,7 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
             tstore(add(slot, 4), debtReserveId)
             tstore(add(slot, 5), minAmountsHash)
             tstore(add(slot, 6), 0)
+            tstore(add(slot, 7), 0)
         }
     }
 
@@ -166,6 +167,28 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
         }
     }
 
+    /// @dev Records the session's health factor before, read by `deleverageRepay` after LPVaultSwap's pokes.
+    function _setHfBefore(
+        uint256 hf
+    ) internal {
+        bytes32 slot = SESSION_SLOT;
+        // Reason: the session lives in EIP-1153 transient storage, which Solidity reaches only through TSTORE.
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            tstore(add(slot, 7), hf)
+        }
+    }
+
+    /// @dev The session's health factor before.
+    function _hfBefore() internal view returns (uint256 hf) {
+        bytes32 slot = SESSION_SLOT;
+        // Reason: the session lives in EIP-1153 transient storage, which Solidity reaches only through TLOAD.
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            hf := tload(add(slot, 7))
+        }
+    }
+
     /// @dev Closes the session before the entry point returns, so no later call of the transaction can reach a step.
     function _clearSession() internal {
         bytes32 slot = SESSION_SLOT;
@@ -179,6 +202,7 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
             tstore(add(slot, 4), 0)
             tstore(add(slot, 5), 0)
             tstore(add(slot, 6), 0)
+            tstore(add(slot, 7), 0)
         }
     }
 }
