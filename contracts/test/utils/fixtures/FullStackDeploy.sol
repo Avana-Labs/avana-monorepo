@@ -3,11 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IUniswapV3Integration} from "../../../src/amm/uniswap-v3/IUniswapV3Integration.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
 import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
+import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
+import {ILens} from "../../../src/lens/lens/ILens.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
+import {LPVaultSwapLogics} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
 import {AaveAdapterCollateralLogic} from "../../../src/policy/aave-adapter/AaveAdapterCollateralLogic.sol";
@@ -48,6 +55,7 @@ import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModule
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {AdapterPlaceholder} from "../mocks/AaveAdapterMocks.sol";
+import {MockAaveV3ACLManager, MockAaveV3AddressesProvider, MockAaveV3Pool} from "../mocks/AaveV3PoolMocks.sol";
 import {FullStackLPVaultMock} from "../mocks/FullStackLPVaultMock.sol";
 import {LPVaultSwapMock} from "../mocks/LPVaultSwapMock.sol";
 import {AaveV4Fixture} from "./AaveV4Fixture.sol";
@@ -64,7 +72,11 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @dev The four upgradeable proxies are created first over a placeholder, so every immutable contract and every
 /// implementation is built with their final addresses and no address is predicted. Stand-ins, each named: LPVaultSwap
 /// (`LPVaultSwapMock`, which liquidates on the Spoke through the real Collateralization and AaveAdapter) and the
-/// LPVault (`FullStackLPVaultMock`). Nothing here imports Aave V4 sources or a via-IR contract's source.
+/// LPVault (`FullStackLPVaultMock`). A suite that overrides `_realStack()` to true gets neither: LPVaultSwap (router and
+/// three logic contracts, behind its ERC-1967 proxy), the PayoutEscrow, the FlashLiquidator, the Lens and the Uniswap v3
+/// LPVault (`UniswapV3Integration` on the real NonfungiblePositionManager of `out-univ3-periphery/`) are the real
+/// contracts, and the one stand-in left here is the Aave V3 Pool behind the flash paths (`MockAaveV3Pool`, 5 bps: an
+/// external flash lender, neither Avana nor Aave V4). Nothing here imports Aave V4 sources or a via-IR contract's source.
 abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     uint32 internal constant V3 = 1;
     uint32 internal constant BLOCK_TIME = 12;
@@ -92,41 +104,182 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     AaveAdapterImmutables internal adapterIm;
     address internal payoutEscrow = makeAddr("payoutEscrow");
     address internal flashLiquidator = makeAddr("flashLiquidator");
+    /// @dev `address(swap)`, or the real LPVaultSwap proxy on the real stack.
+    address internal lpVaultSwap;
+    /// @dev The Uniswap v3 LPVault: `address(lpVault)`, or the real `UniswapV3Integration` on the real stack.
+    address internal integration;
+
+    // ─── Real stack (`_realStack()`) ───
+    ILPVaultSwap internal lvs;
+    IUniswapV3Integration internal uniVault;
+    INonfungiblePositionManager internal nfpm;
+    ILens internal lens;
+    MockAaveV3Pool internal v3Pool;
+
+    /// @dev True on the real stack: LPVaultSwap, the PayoutEscrow, the FlashLiquidator, the Lens and the LPVault are
+    /// the real contracts (the Uniswap v3 factory is deployed before `_deployCore`).
+    function _realStack() internal pure virtual returns (bool) {
+        return false;
+    }
 
     /// @dev Proxies, timelock, immutable contracts, then each implementation behind its proxy.
     function _deployCore() internal {
+        bool real = _realStack();
         adapter = _placeholderProxy();
         address registryAddr = _placeholderProxy();
         address storeAddr = _placeholderProxy();
         address riskAddr = _placeholderProxy();
-        swap = new LPVaultSwapMock(adapter);
-        timelock = _launchTimelock(storeAddr, registryAddr, address(swap));
+        if (real) {
+            lpVaultSwap = _placeholderProxy();
+        } else {
+            swap = new LPVaultSwapMock(adapter);
+            lpVaultSwap = address(swap);
+        }
+        timelock = _launchTimelock(storeAddr, registryAddr, lpVaultSwap);
         address tl = address(timelock);
-        lock = new Lock(adapter, address(swap));
+        lock = new Lock(adapter, lpVaultSwap);
         address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
-        vtFactory = new VaultTokenFactory(adapter, address(swap), predicted, tl, registryAddr);
+        vtFactory = new VaultTokenFactory(adapter, lpVaultSwap, predicted, tl, registryAddr);
         coll = ICollateralization(
             deployCode(
                 "Collateralization.sol:Collateralization",
-                abi.encode(adapter, address(swap), riskAddr, address(lock), address(vtFactory))
+                abi.encode(adapter, lpVaultSwap, riskAddr, address(lock), address(vtFactory))
             )
         );
         require(address(coll) == predicted, "predicted Collateralization");
-        swap.wire(address(lock), address(coll));
-        lpVault = new FullStackLPVaultMock(V3, address(coll), address(lock), keccak256("UNISWAP_V3"));
-        lpVault.setCore(tl, registryAddr);
-        lpVault.setDepth(1e30, true);
+        if (real) {
+            _deployRealPeriphery(registryAddr);
+        } else {
+            swap.wire(address(lock), address(coll));
+            lpVault = new FullStackLPVaultMock(V3, address(coll), address(lock), keccak256("UNISWAP_V3"));
+            lpVault.setCore(tl, registryAddr);
+            lpVault.setDepth(1e30, true);
+            integration = address(lpVault);
+        }
         proxyManager = new ProxyManager(adapter, registryAddr);
         _installRegistry(registryAddr, storeAddr, riskAddr);
         _installStore(storeAddr, registryAddr);
         _installRiskModule(riskAddr, registryAddr, storeAddr);
         _installAdapter(registryAddr, storeAddr, riskAddr);
+        if (real) {
+            _installLPVaultSwap();
+            _deployLens();
+        }
         vm.startPrank(tl);
         registry.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
         registry.grantRole(AvanaRoles.APPLICATION_FREEZE_GUARDIAN, emergencyGuardian);
         store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
         vm.stopPrank();
         _labelCore();
+    }
+
+    /// @dev The real stack's contracts that read no MarketRegistry state at construction: the NonfungiblePositionManager
+    /// on the pools' factory, the Uniswap v3 LPVault, the PayoutEscrow and the Aave V3 Pool stand-in.
+    function _deployRealPeriphery(
+        address registryAddr
+    ) private {
+        require(address(factory) != address(0), "deploy the Uniswap v3 factory first");
+        nfpm = INonfungiblePositionManager(
+            _constructInPlace(
+                makeAddr("NonfungiblePositionManager"),
+                bytes.concat(
+                    vm.getCode("out-univ3-periphery/NonfungiblePositionManager.sol/NonfungiblePositionManager.json"),
+                    abi.encode(address(factory), makeAddr("WETH9"), address(0))
+                )
+            )
+        );
+        uniVault = IUniswapV3Integration(
+            deployCode(
+                "UniswapV3Integration.sol:UniswapV3Integration",
+                abi.encode(
+                    V3,
+                    address(coll),
+                    registryAddr,
+                    address(lock),
+                    address(timelock),
+                    address(nfpm),
+                    address(factory),
+                    uint256(BLOCK_TIME)
+                )
+            )
+        );
+        integration = address(uniVault);
+        payoutEscrow = deployCode("PayoutEscrow.sol:PayoutEscrow", abi.encode(lpVaultSwap, address(lock)));
+        v3Pool = new MockAaveV3Pool(address(new MockAaveV3AddressesProvider(address(new MockAaveV3ACLManager()))), 5);
+        // The FlashLiquidator's constructor reads the MarketRegistry, which is built with its address: it is placed at
+        // a fixed address once the registry is installed (`_installLPVaultSwap`).
+        flashLiquidator = makeAddr("FlashLiquidator");
+    }
+
+    /// @dev Runs `initCode` (creation code and constructor arguments) at `at` as a call and installs the runtime code it
+    /// returns there: the constructor's storage writes and immutables are exactly a CREATE's, without EIP-170's 24,576
+    /// byte limit. The pinned NonfungiblePositionManager build is 25,321 bytes (the local rehearsal runs anvil with
+    /// `--code-size-limit 49152`); a CREATE would refuse it.
+    function _constructInPlace(
+        address at,
+        bytes memory initCode
+    ) internal returns (address) {
+        vm.etch(at, initCode);
+        (bool ok, bytes memory runtime) = at.call("");
+        require(ok && runtime.length != 0, "constructor reverted");
+        vm.etch(at, runtime);
+        return at;
+    }
+
+    /// @dev The real LPVaultSwap (router and three logic contracts) behind its proxy, `keeper` its launch operator.
+    function _installLPVaultSwap() private {
+        LPVaultSwapImmutables memory im = LPVaultSwapImmutables({
+            lock: address(lock),
+            aaveAdapter: adapter,
+            collateralization: address(coll),
+            marketRegistry: address(registry),
+            parameterStore: address(store),
+            payoutEscrow: payoutEscrow,
+            keeperFloor: KEEPER_FLOOR
+        });
+        LPVaultSwapLogics memory l = LPVaultSwapLogics(
+            deployCode("LPVaultSwapLiquidationLogic.sol:LPVaultSwapLiquidationLogic", abi.encode(im)),
+            deployCode("LPVaultSwapPendingLogic.sol:LPVaultSwapPendingLogic", abi.encode(im)),
+            deployCode("LPVaultSwapDeleverageLogic.sol:LPVaultSwapDeleverageLogic", abi.encode(im))
+        );
+        address impl = deployCode("LPVaultSwap.sol:LPVaultSwap", abi.encode(im, l));
+        deployCodeTo(
+            "FlashLiquidator.sol:FlashLiquidator",
+            abi.encode(address(v3Pool), lpVaultSwap, address(registry), address(store)),
+            flashLiquidator
+        );
+        address[] memory keepers = new address[](1);
+        keepers[0] = keeper;
+        AdapterPlaceholder(lpVaultSwap)
+            .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwapAdmin.initialize, (address(timelock), keepers)));
+        lvs = ILPVaultSwap(lpVaultSwap);
+    }
+
+    /// @dev The Lens: entry point, nine modules and Aave's sizing library, over the real core.
+    function _deployLens() private {
+        address[9] memory core = [
+            address(coll),
+            address(proxyManager),
+            adapter,
+            address(lock),
+            address(registry),
+            address(store),
+            address(riskModule),
+            lpVaultSwap,
+            payoutEscrow
+        ];
+        address sizing = deployCode("out-aave/LensAaveSizing.sol/LensAaveSizing.json");
+        address[9] memory m;
+        m[0] = deployCode("LensAccountModule.sol:LensAccountModule", abi.encode(core));
+        m[1] = deployCode("LensMarketModule.sol:LensMarketModule", abi.encode(core));
+        m[2] = deployCode("LensPriceModule.sol:LensPriceModule", abi.encode(core));
+        m[3] = deployCode("LensLiquidationModule.sol:LensLiquidationModule", abi.encode(core, sizing));
+        m[4] = deployCode("LensRiskModule.sol:LensRiskModule", abi.encode(core));
+        m[5] = deployCode("LensPreviewModule.sol:LensPreviewModule", abi.encode(core));
+        m[6] = deployCode("LensMarketsModule.sol:LensMarketsModule", abi.encode(core));
+        m[7] = deployCode("LensPositionsModule.sol:LensPositionsModule", abi.encode(core));
+        m[8] = deployCode("LensSpeedModule.sol:LensSpeedModule", abi.encode(core));
+        lens = ILens(deployCode("Lens.sol:Lens", abi.encode(m)));
     }
 
     function _placeholderProxy() private returns (address) {
@@ -189,7 +342,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             proxyManager: address(proxyManager),
             parameterStore: storeAddr,
             riskModule: riskAddr,
-            lpVaultSwap: address(swap),
+            lpVaultSwap: lpVaultSwap,
             payoutEscrow: payoutEscrow,
             flashLiquidator: flashLiquidator,
             standardSpokeImplementation: aave.cdpSpokeImplementation,
@@ -254,7 +407,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             parameterStore: storeAddr,
             collateralization: address(coll),
             adapter: adapter,
-            lpVaultSwap: address(swap),
+            lpVaultSwap: lpVaultSwap,
             timelock: address(timelock)
         });
         RiskModuleLogics memory l;
@@ -281,7 +434,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             riskModule: riskAddr,
             marketRegistry: registryAddr,
             parameterStore: storeAddr,
-            lpVaultSwap: address(swap),
+            lpVaultSwap: lpVaultSwap,
             lock: address(lock),
             vaultTokenFactory: address(vtFactory),
             timelock: address(timelock)
@@ -310,11 +463,21 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         vm.label(address(store), "ParameterStore");
         vm.label(address(riskModule), "RiskModule");
         vm.label(adapter, "AaveAdapter");
-        vm.label(address(swap), "LPVaultSwap(stand-in)");
         vm.label(address(lock), "Lock");
         vm.label(address(vtFactory), "VaultTokenFactory");
         vm.label(address(coll), "Collateralization");
         vm.label(address(proxyManager), "ProxyManager");
-        vm.label(address(lpVault), "LPVault(stand-in)");
+        if (_realStack()) {
+            vm.label(lpVaultSwap, "LPVaultSwap");
+            vm.label(integration, "UniswapV3Integration");
+            vm.label(address(nfpm), "NonfungiblePositionManager");
+            vm.label(payoutEscrow, "PayoutEscrow");
+            vm.label(flashLiquidator, "FlashLiquidator");
+            vm.label(address(lens), "Lens");
+            vm.label(address(v3Pool), "AaveV3Pool(stand-in)");
+        } else {
+            vm.label(lpVaultSwap, "LPVaultSwap(stand-in)");
+            vm.label(integration, "LPVault(stand-in)");
+        }
     }
 }
