@@ -304,6 +304,10 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
 
     /// @dev REQ-SWAP-122: at most `MAX_REPAY_TRANSFERS` times, read the source's balance, stop at `owed`, else send
     /// the difference; then `FlashRepayShort(balance, owed)` unless the source holds `owed`.
+    /// A balance donated to the source counts toward `owed` (LIQ-I2): it reduces this repayment and so ends in this
+    /// borrower's `assetOut`. Kept on purpose: only the donor loses (a donor that then deleverages gets it back), the
+    /// source forwards only what the Pool delivered, and topping up to `owed + donation` would strand the donation in
+    /// a source with no sweep. Pinned by TEST-080 `donationDoesNotBlockFlashPath`.
     /// @custom:spec REQ-SWAP-122, REQ-SWAP-124, REQ-SWAP-108
     function _repaySource(
         IERC20 asset,
