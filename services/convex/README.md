@@ -11,7 +11,7 @@ The backend the web app reads. This folder is one Convex project (`@avana/convex
 | `convex/frontendFee.ts` | Fee rules and the fee + gas total shown before signing |
 | `convex/ingest/` | Export pull, series pull, pool history, current-value sampler, the mutations that apply them |
 | `convex/listing/` | Listing metadata: fetch, hash check, store |
-| `convex/wallet/`, `kept.ts` | A wallet's accounts and last samples; typed stubs of kept features (rewards, referrals, swap quotes, the in-app assistant) |
+| `convex/wallet/`, `kept.ts` | A wallet's accounts and last samples; its older activity on request (`wallet/history:older`: a signed `/export/v1/history` page, checked and returned unstored, 20 requests a minute per wallet, "unavailable" while the indexer reindexes); typed stubs of kept features (rewards, referrals, swap quotes, the in-app assistant) |
 | `convex/lib/` | Pure functions the tests run offline: page numbers, charts, fees, metadata, export checks, event decoding |
 | `convex/auth.config.ts`, `walletAuth.ts`, `rateLimits.ts`, `writeRateLimit.ts`, `codedError.ts` | The web app's SIWE→JWT issuer (only the per-wallet features below use it; protocol queries stay public), the wallet guard, the SIWE route rate limiter and coded errors |
 | `convex/wallet/profiles.ts`, `support.ts`, `fx.ts`, `tokenPrices.ts` | Per-wallet display preferences, Support Center requests, FX rates (open.er-api.com, hourly) and DefiLlama prices of tokens outside the protocol (display only; protocol values use `prices.ts`) |

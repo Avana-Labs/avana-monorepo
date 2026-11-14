@@ -9,6 +9,8 @@ import { recordLog } from "../lib/record.ts";
 
 ponder.on("Collateralization:CollateralPledged", async ({ event, context }) => {
   const p = await recordLog(event, context, "Collateralization.CollateralPledged");
+  // A replayed log must not insert the record again (the insert has no conflict rule) or undo later changes.
+  if (!p.fresh) return;
   const a = event.args;
   await context.db.insert(schema.collateralRecord).values({
     chainId: p.chainId,
@@ -32,6 +34,8 @@ ponder.on("Collateralization:CollateralPledged", async ({ event, context }) => {
 function recordUpdate(kind: string, change: (args: any, row: typeof schema.collateralRecord.$inferSelect) => Partial<typeof schema.collateralRecord.$inferInsert>) {
   ponder.on(`Collateralization:${kind}` as Parameters<typeof ponder.on>[0], async ({ event, context }: any) => {
     const p = await recordLog(event, context, `Collateralization.${kind}`);
+    // A replayed log (its event_log row already there) must not move a running total again.
+    if (!p.fresh) return;
     const key = { chainId: p.chainId, collateralization: event.log.address, recordId: event.args.recordId as bigint };
     await context.db
       .update(schema.collateralRecord, key)
@@ -54,6 +58,8 @@ recordUpdate("RecordRecredited", (a, row) => ({
 
 ponder.on("Collateralization:SeizureReconciled", async ({ event, context }) => {
   const p = await recordLog(event, context, "Collateralization.SeizureReconciled");
+  // A replayed log (its event_log row already there) must not move a running total again.
+  if (!p.fresh) return;
   await context.db
     .insert(schema.pendingSettlement)
     .values({ chainId: p.chainId, vaultToken: event.args.vaultToken, units: event.args.units, lastBlock: p.blockNumber })
@@ -62,6 +68,8 @@ ponder.on("Collateralization:SeizureReconciled", async ({ event, context }) => {
 
 ponder.on("Collateralization:PendingSettled", async ({ event, context }) => {
   const p = await recordLog(event, context, "Collateralization.PendingSettled");
+  // A replayed log (its event_log row already there) must not move a running total again.
+  if (!p.fresh) return;
   await context.db
     .update(schema.pendingSettlement, { chainId: p.chainId, vaultToken: event.args.vaultToken })
     .set((row) => ({ units: row.units - event.args.units, lastBlock: p.blockNumber }));

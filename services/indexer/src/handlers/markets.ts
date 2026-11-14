@@ -10,6 +10,8 @@ import { clPoolAbi } from "@avana/services-common/views";
 
 ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
   const p = await recordLog(event, context, "MarketRegistry.MarketRegistered");
+  // A replayed log must not insert the market again (the insert has no conflict rule) or undo its later status.
+  if (!p.fresh) return;
   const a = event.args;
   await context.db.insert(schema.market).values({
     chainId: p.chainId,
@@ -141,6 +143,7 @@ ponder.on("MarketRegistry:BreakerReset", async ({ event, context }) => {
 // CDP Spoke and credit-line events are handled in hubs.ts.
 logOnly("MarketRegistry", [
   "GateBreached",
+  "IntegrationContractsFinalized",
   "TokenListed",
   "PriceSourceSet",
   "RouteSet",

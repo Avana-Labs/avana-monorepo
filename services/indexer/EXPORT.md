@@ -71,10 +71,19 @@ Convex keeps current views and a bounded window of recent activity. Older activi
 | 200 + `HistoryPage` | The records naming the wallet or one of its attributed proxies, from blocks before `before`, newest first |
 | 400 | A parameter is not a decimal integer, `wallet` is not an address, or `limit` is outside 1 to 500 |
 | 401 | Authentication failed |
+| 503 | The indexer has not reached the chain head since it started (a new schema is still backfilling), so `log_party` is incomplete |
 
 - **Which records.** Every indexed log whose arguments name the wallet (its Lend Spoke activity, its proxies' creation) or one of its proxies attributed by both creation events (`account.adapterSeen` and `managerSeen`); `proxies` lists them. The indexer writes one `log_party` row per address a log's arguments name, with the log row, and the history reads that table instead of searching `event_log.args`.
 - **Depth.** `before` is capped at the export's servable block + 1 (`min(finalized, indexed − 1)`), so a history page never holds a block a reorg can remove; without `before` the newest page starts there.
 - **Order and cursor.** Records are in descending `(blockNumber, logIndex)` order and a page never splits a block: a full page drops its oldest block, which the next page (`next.before`, the oldest block served) starts with, unless that block is the whole page, in which case it is served whole. `next` is null when nothing older exists.
+
+- **Reindex.** `log_party` is written with each log, so a release that adds it (or any schema or handler change) runs under a new `DATABASE_SCHEMA` and reindexes from the manifest start blocks (README, Reorgs and checkpoints). While it backfills, the history answers 503 and Convex's `wallet/history:older` action reports the history as unavailable instead of showing it empty; the export's event pages are unaffected, since Convex follows them by block cursor. Traffic moves to the new schema after `/ready`.
+
+## Risk premium refresh
+
+`GET /export/v1/premium-refresh?chainId=<id>&spoke=<address>` returns a `PremiumRefreshList` ([`services/common/src/export.ts`](../common/src/export.ts)): the attributed proxies of one CDP Spoke that hold drawn debt and whose last `UpdateUserRiskPremium` is older than the Spoke's last `collateralRisk` change (`UpdateReserveConfig` with a new value; a reserve's first configuration is not a change). The Aave DAO's refresh payload passes them to `updateUserRiskPremium` (services/README.md); a proxy left out keeps its premium until its next action. The list is read at the indexer's head (`asOfBlock`), not at finality, and answers 503 before the indexer reaches the head.
+
+Example: reserve 1 of a Spoke moves from collateral risk 1,000 to 1,500 at block 8, log 3. Account A last had its premium updated at block 8, log 2, and account B at block 9; both borrow. The list names A only. Once the payload executes, A's `UpdateUserRiskPremium` at a later block takes it off the list.
 
 ## Reorgs
 

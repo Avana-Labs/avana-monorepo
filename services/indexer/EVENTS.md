@@ -104,6 +104,7 @@ LPOracle (one per market, followed from `MarketRegistered.lpOracle`) and DebtOra
 | LPOracle | `PriceAccepted(int256 answer, uint64 updatedAt, uint256[] prices)` | `oracle_state.acceptedPrice` | C |
 | LPOracle | `DisagreementRecorded(uint64 since, uint256[] primary, uint256[] alternate)`, `DisagreementCleared(uint64 since, uint64 clearedAt)` | `oracle_state.disagreeSince` | K M (`M-02`) |
 | LPOracle | `GraceStarted(uint64 recoveredAt, uint64 graceEndsAt, bool fromLatch)` | `oracle_state.graceEndsAt` | K |
+| LPOracle | `TokenDecimalsMismatch(uint8 token, uint8 stored, uint8 read, bool readable)`, `TokenDecimalsRestored(uint64 verifiedAt)` | log | K M |
 | LPOracle | `PriceSeeded`, `RouteChanged`, `FailureRecorded`, `FailureCleared`, `OutageExpiredLatched`, `QuoteChangeCapped`, `PokeMinGasUpdated`, `PriceCheckpointed`, `PriceRouteVersionObserved` | log | M |
 | DebtOracle | `DebtPriceStateChanged(PriceState previous, PriceState current, uint256 reasons)` | `oracle_state.state` | K M (`M-01`) |
 | DebtOracle | `DebtPriceAccepted(uint256 price8, uint64 updatedAt, RouteSlot source)` | `oracle_state.acceptedPrice` | C |
@@ -139,7 +140,7 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | `BreakerReset(BreakerScope scope idx, bytes32 key idx, address caller idx)` | `breaker` cleared | K C M |
 | `GateBreached(bytes32 key idx, uint32 reasons, uint64 at)` | log | M (`M-08`) |
 | `StandbyRouteActivated(address token idx, RouteSlot slot, address caller idx)`, `StandbySwitchCancelled(address token idx, address caller idx)`, `PriceRouteRestored(address token idx)` | log | K M (`M-24`) |
-| `IntegrationRegistered`, `AvanaFirstLossReserveSet` (starts the First-Loss Reserve source), `FlashSourceSet`, `SpokeCodeHashApproved`, `IntegrationContractsRecorded` | log | M |
+| `IntegrationRegistered`, `AvanaFirstLossReserveSet` (starts the First-Loss Reserve source), `FlashSourceSet`, `SpokeCodeHashApproved`, `IntegrationContractsRecorded`, `IntegrationContractsFinalized` | log | M |
 
 ## ParameterStore and RiskModule
 
@@ -162,7 +163,8 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | AvanaTimelock | `ExpiredOperationCleaned(bytes32 id idx)` | `timelock_operation` Cleaned | M |
 | AvanaTimelock | `NormalDelayChanged(uint256 previousDelay, uint256 newDelay)`, `ShortDelaySelectorSet(address target idx, bytes4 selector idx, bool enabled)`, `PublicExecutionToggled(bool enabled)`, `CallSalt`, `MinDelayChange` | log | M (`M-22`) |
 | Every upgradeable Avana contract | `Upgraded(address implementation idx)` (ERC-1967) | `implementation` | K (manifest refresh) M (`M-22`, `M-26`) |
-| Every role-managed Avana contract and the timelock | `RoleGranted`, `RoleRevoked`, `RoleAdminChanged` (OpenZeppelin AccessControl) | `role_member` | M (`M-22`) |
+| Every role-managed Avana contract and the timelock | `RoleGranted`, `RoleRevoked` (OpenZeppelin AccessControl) | `role_member` | M (`M-22`) |
+| Every role-managed Avana contract and the timelock | `RoleAdminChanged` | log | M (`M-22`) |
 
 An operation's expiry emits no event: `expiresAt = readyAt + GRACE_PERIOD` (14 days, `REQ-ACCESS-108`), and `readyAt = block timestamp of CallScheduled + delay`.
 
@@ -173,7 +175,9 @@ An operation's expiry emits no event: `expiresAt = readyAt + GRACE_PERIOD` (14 d
 | `ReserveFunded(address funder idx, uint256 amount, uint256 shares, uint256 balanceAfter)` | `coverage_balance` | C M (`M-13`) |
 | `DeficitCovered(address borrowSpoke idx, address caller idx, uint256 covered, uint256 sharesBurned, uint256 deficitRayBefore, uint256 deficitRayAfter, uint256 balanceAfter)` | `coverage_balance` | C M (`M-13`, `M-15`) |
 | `WithdrawalExecuted(uint256 id idx, uint256 withdrawn, uint256 sharesBurned, address to idx, uint256 balanceAfter)` | `coverage_balance` | M |
-| `WithdrawalRequested(uint256 id idx, uint256 amount, address to idx, uint64 executableAt)`, `WithdrawalCancelled(uint256 id idx)`, `ReserveBelowMinimum(uint256 balance, uint256 minimum)`, `BorrowSpokeAllowlistUpdated(address spoke idx, bool allowed)`, `FirstLossReserveMinimumUpdated(uint256 oldMinimum, uint256 newMinimum)` | log | M |
+| `WithdrawalRequested(uint256 id idx, uint256 amount, address to idx, uint64 executableAt)`, `WithdrawalCancelled(uint256 id idx)`, `ReserveBelowMinimum(uint256 balance, uint256 minimum)`, `BorrowSpokeAllowlistUpdated(address spoke idx, bool allowed)`, `FirstLossReserveMinimumUpdated(uint256 oldMinimum, uint256 newMinimum)`, `AuthorityUpdated(address authority)` | log | M |
+
+The same events are read from the Aave DAO's deficit offsets (`DaoDeficitOffset`, a First-Loss Reserve the DAO deploys and registers on a Hub behind the pair's Avana Umbrella). They are followed from the Hub's `AddSpoke` under the `DaoDeficitOffset` source, so an offset registered after start-up is indexed with no restart; Avana's own reserves match that source too and are recorded once. Every log is kept as `AvanaFirstLossReserve.<Event>` with the emitting contract's address, and `coverage_balance` has one row per reserve or offset; `Lens.getTailCoverage` and `getHubAssetExposure` say which address is the offset.
 
 ## Aave V4 Spokes and Hub
 
@@ -188,12 +192,16 @@ Avana's `IAaveV4Spoke` declares none of the Spoke's events, so the indexer decod
 | Spoke | `LiquidationCall(uint256 collateralReserveId idx, uint256 debtReserveId idx, address user idx, address liquidator, bool receiveShares, uint256 debtAmountRestored, uint256 drawnSharesLiquidated, premiumDelta, uint256 collateralAmountRemoved, uint256 collateralSharesLiquidated, uint256 collateralSharesToLiquidator)` | `account_debt` − shares | K C M |
 | Spoke | `ReportDeficit(uint256 reserveId idx, address user idx, uint256 drawnShares, premiumDelta)` | `account_debt` deficit | K C M (`M-15`) |
 | Spoke | `SetUsingAsCollateral(uint256 reserveId idx, address caller idx, address user idx, bool usingAsCollateral)` | `account.usingAsCollateral` | K C |
-| Spoke | `UpdateUserRiskPremium(address user idx, uint256 riskPremium)`, `RefreshPremiumDebt`, `RefreshAllUserDynamicConfig`, `RefreshSingleUserDynamicConfig` | log | C (`Q-145`) |
-| Spoke | `AddReserve`, `UpdateReserveConfig`, `AddDynamicReserveConfig`, `UpdateDynamicReserveConfig`, `UpdateLiquidationConfig`, `UpdateReservePriceSource`, `UpdatePositionManager`, `SetUserPositionManager`, `SetSpokeImmutables`, `AuthorityUpdated` | log | M (`M-20`) |
+| Spoke | `UpdateUserRiskPremium(address user idx, uint256 riskPremium)` | `account_premium` (attributed accounts) | C (`Q-145`, the refresh list) |
+| Spoke | `UpdateReserveConfig(uint256 reserveId idx, ReserveConfig config)` | `reserve_config` (`collateralRisk` and the log that last changed it) | C (`Q-145`, the refresh list) M (`M-20`) |
+| Spoke | `RefreshPremiumDebt`, `RefreshAllUserDynamicConfig`, `RefreshSingleUserDynamicConfig` | log | C |
+| Spoke | `AddReserve`, `AddDynamicReserveConfig`, `UpdateDynamicReserveConfig`, `UpdateLiquidationConfig`, `UpdateReservePriceSource`, `UpdatePositionManager`, `SetUserPositionManager`, `SetSpokeImmutables`, `AuthorityUpdated` | log | M (`M-20`) |
 | Hub | `AddSpoke(uint256 assetId idx, address spoke idx)` | `hub_spoke`; starts the `AaveSpokeAdded` source | C M (`M-20`) |
 | Hub | `Add`, `Remove`, `Draw`, `Restore`, `ReportDeficit`, `EliminateDeficit`, `RefreshPremium`, `TransferShares`, `MintFeeShares`, `UpdateAsset`, `UpdateAssetConfig`, `UpdateSpokeConfig`, `AddAsset`, `Reclaim`, `Sweep`, `AuthorityUpdated` | log | M (`M-15`, `M-18`, `M-19`, `M-20`) |
 
 A chain has several Hubs, each with its Lend and CDP Spokes. Hubs and Spokes are followed under several sources ([`src/config/aaveSources.ts`](src/config/aaveSources.ts)): `AaveHub` and `AaveSpoke` hold the manifest's Hubs and Lend and CDP Spokes from their deployment blocks; `AaveHubRecorded` every Hub the MarketRegistry records (`HubRecorded`); `AaveSpokeApproved` every CDP Spoke it approves (`SpokeApproved`); `AaveSpokeAdded` every Spoke a manifest Hub adds (`AddSpoke`). A Hub, CDP Spoke or Lend Spoke on a manifest Hub listed after start-up is therefore indexed with no restart. A log matched by two sources is recorded once under the Aave contract's kind (`AaveSpoke.Borrow`, `AaveHub.AddSpoke`), and `account_debt` moves on its first delivery only. A Lend Spoke on a Hub recorded after start-up is read by the sampler at once; its own events are indexed once the manifest names it.
+
+The refresh list (`/export/v1/premium-refresh`, [EXPORT.md](EXPORT.md#risk-premium-refresh)) names the attributed proxies with drawn debt whose last `UpdateUserRiskPremium` precedes the Spoke's last `collateralRisk` change.
 
 Every `LiquidationCall` on a CDP Spoke has `liquidator == LPVaultSwap` (`Q-222`); attribution uses `user`, never `liquidator` (`LIQ-056`). The Spoke events of a user that is not an attributed account are logged and attributed to nobody.
 
@@ -252,3 +260,7 @@ These values change with time, interest or prices and emit no event, or emit onl
 | Implementations and code | `eth_getStorageAt(proxy, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc)`; `keccak256(eth_getCode(address))` | K (`Q-219`) M (`M-26`) |
 | Safes | `getOwners()`, `getThreshold()`, guard and module slots | M (`M-23`) |
 | Token issuers | `paused()`, `basisPointsRate()` and the issuer's blocklist reads | M (`M-25`) |
+
+## Not indexed
+
+`VaultToken.Approval`: vault-token allowances stay between the AaveAdapter and its proxies, and no consumer reads them. `test/coverage.test.ts` fails on any other event of a followed contract that has no handler, and on a handler for an event the ABI does not have.

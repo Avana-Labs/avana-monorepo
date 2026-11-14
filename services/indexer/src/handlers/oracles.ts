@@ -51,6 +51,8 @@ ponder.on("LPOracle:GraceStarted", async ({ event, context }) => {
 
 logOnly("LPOracle", [
   "PriceSeeded",
+  "TokenDecimalsMismatch",
+  "TokenDecimalsRestored",
   "RouteChanged",
   "FailureRecorded",
   "FailureCleared",

@@ -11,6 +11,7 @@ import { buildExportPage } from "./exportPage.ts";
 import { buildHistoryPage } from "./history.ts";
 import { parseHistoryRequest } from "../lib/history.ts";
 import { buildKeeperEvents } from "./keeperEvents.ts";
+import { buildPremiumRefresh } from "./premiumRefresh.ts";
 import { parseStreamRequest } from "../lib/keeperStream.ts";
 import { POOL_HISTORY_MAX_BLOCKS, PoolHistoryRefused, readPoolHistory } from "./poolHistory.ts";
 import { SERIES_MAX_RECORDS, buildSeriesPage } from "./seriesPage.ts";
@@ -74,12 +75,29 @@ app.get("/export/v1/series", async (c) => {
 
 /**
  * GET /export/v1/history?chainId=1&wallet=0x…&before=<block>&limit=<n>
- * 200 with a HistoryPage: the records naming the wallet or its attributed proxies, newest first; 400 on a bad parameter.
+ * 200 with a HistoryPage: the records naming the wallet or its attributed proxies, newest first; 400 on a bad parameter;
+ * 503 while the indexer has not reached the chain head since it started indexing (the history would be incomplete).
  */
 app.get("/export/v1/history", async (c) => {
   const req = parseHistoryRequest({ chainId: c.req.query("chainId"), wallet: c.req.query("wallet"), before: c.req.query("before"), limit: c.req.query("limit") });
   if ("error" in req) return c.json({ error: req.error }, 400);
-  return c.json(await buildHistoryPage(req));
+  const page = await buildHistoryPage(req);
+  if (page === null) return c.json({ error: "indexing; the history is served once the indexer reaches the chain head" }, 503);
+  return c.json(page);
+});
+
+/**
+ * GET /export/v1/premium-refresh?chainId=1&spoke=0x…
+ * 200 with a PremiumRefreshList: the Spoke's attributed proxies with drawn debt whose risk premium predates its last
+ * collateral-risk change; 400 on a bad parameter; 503 before the indexer reaches the chain head.
+ */
+app.get("/export/v1/premium-refresh", async (c) => {
+  const chainId = c.req.query("chainId") ?? "";
+  const spoke = (c.req.query("spoke") ?? "").toLowerCase();
+  if (!/^\d+$/.test(chainId) || !/^0x[0-9a-f]{40}$/.test(spoke)) return c.json({ error: "chainId is a decimal integer, spoke an address" }, 400);
+  const list = await buildPremiumRefresh(Number(chainId), spoke as `0x${string}`);
+  if (list === null) return c.json({ error: "indexing; the list is served once the indexer reaches the chain head" }, 503);
+  return c.json(list);
 });
 
 /**
