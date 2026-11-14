@@ -607,10 +607,12 @@ class AvanaMachine(RuleBasedStateMachine):
                     # HYP-36 verifies: Q-128, Q-154, Q-198, Q-199, Q-208, Q-227, Q-247, INV-046
                     ok2, r2 = s.liquidate("keeper0", w, mk.idx, s.debt(pxo.addr, rid), rid, spoke,
                                           max_shortfall=10 ** 24)
-                    if not ok2 and any(x in r2 for x in ("FlashFeeTooHigh", "FlashLiquidityShort",
+                    if not ok2 and any(x in r2 for x in ("FlashFeeTooHigh", "InsufficientFlashLiquidity",
                                                          "InsufficientProceeds")):
                         # HYP-83: a short or repriced flash source, or a flash loan whose unused part's premium the
-                        # surplus cannot pay (SPEC-LIQ-010), falls back to the caller-funded path
+                        # surplus cannot pay (SPEC-LIQ-010), falls back to the caller-funded path. A short Pool
+                        # makes the liquidation helper revert InsufficientFlashLiquidity (LIQ-F-036, REQ-SWAP-053);
+                        # FlashLiquidityShort is the deleverage error and liquidation never raises it.
                         s.fund("keeper0", s.debts[rid].asset, 10 ** 9 * 10 ** s.debts[rid].decimals)
                         ok2, r2 = s.liquidate("keeper0", w, mk.idx, s.debt(pxo.addr, rid), rid, spoke,
                                               funding="keeper", max_shortfall=10 ** 24)
