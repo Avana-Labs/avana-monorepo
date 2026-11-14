@@ -77,8 +77,9 @@ interface ILensPreview {
 
     /// @notice Returns the outcome of a repay with collateral at the block's prices.
     /// @dev Sized by SPEC-LIQ-020; `debtAssetToWallet` assumes every leg swaps at the oracle value. Returns
-    /// `(0, 0, current health factor)` when the call would revert (price gates, shares != assets, `Paused`, frozen wallet,
-    /// units above the record's credited units, no debt).
+    /// `(0, 0, current health factor)` when the call would revert (price gates, shares != assets,
+    /// `Paused(MintPathSuspect)`, units above the record's credited units, no debt); `Paused(General)` and a frozen
+    /// wallet leave it open, as at the AaveAdapter.
     /// @param wallet The borrower wallet.
     /// @param marketId The account's market.
     /// @param positionKey The record's position.

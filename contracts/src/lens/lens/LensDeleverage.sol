@@ -11,6 +11,7 @@ import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
 import {Market} from "../../types/Market.sol";
+import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
@@ -93,9 +94,10 @@ abstract contract LensDeleverage is LensAccountMath {
     }
 
     /// @dev Whether `repayWithCollateral` would pass its checks: liquidation-grade prices on the market and the debt
-    /// reserve, Hub shares equal to assets, no `Paused`, wallet not frozen, the record is the account's and `units` is
-    /// within its credited units after reconciliation, and the account owes on the reserve.
-    /// @custom:spec REQ-LENS-038, SPEC-LIQ-020
+    /// reserve, Hub shares equal to assets, the Hub not `Paused(MintPathSuspect)`, the record is the account's and `units`
+    /// is within its credited units after reconciliation, and the account owes on the reserve. `Paused(General)`, Frozen
+    /// and a frozen wallet leave it open, as at the Adapter, because it only reduces debt (REQ-ADAPTER-080, Q-356).
+    /// @custom:spec REQ-LENS-038, SPEC-LIQ-020, REQ-ADAPTER-080, REQ-ADAPTER-082
     function _deleverageOpen(
         Repay memory r
     ) internal view returns (bool) {
@@ -111,7 +113,9 @@ abstract contract LensDeleverage is LensAccountMath {
     ) internal view returns (uint256) {
         Market memory m = r.m;
         if (IAaveV4Spoke(m.spoke).getUserTotalDebt(r.def.reserveId, r.proxy) == 0) return 0;
-        if (_registry().pauseState(m.hub) == PauseState.Paused || _registry().isFrozenAddress(r.wallet)) return 0;
+        if (_registry().pauseState(m.hub) == PauseState.Paused) {
+            if (_registry().pauseReason(m.hub) == PauseReason.MintPathSuspect) return 0;
+        }
         IAaveV4Hub hub = IAaveV4Hub(m.hub);
         if (hub.getAddedAssets(m.hubAssetId) != hub.getAddedShares(m.hubAssetId)) return 0;
         if (!_marketPriceUsable(m) || !_debtView(m.spoke, r.def).liquidationFresh) return 0;

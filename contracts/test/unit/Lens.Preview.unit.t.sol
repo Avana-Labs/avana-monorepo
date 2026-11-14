@@ -338,14 +338,18 @@ contract LensPreviewUnitTest is LensFixture {
         _open(bob, bobProxy, 2, 1000e6);
         _assertRwcZero(alice, _key(2), 100e6, debtReserveId, hf, "another account's record");
         _assertRwcZero(alice, _key(77), 100e6, debtReserveId, hf, "no record");
+        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
+        _assertRwcZero(alice, _key(1), 100e6, debtReserveId, hf, "Paused(MintPathSuspect)");
         reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
-        _assertRwcZero(alice, _key(1), 100e6, debtReserveId, hf, "Paused");
-        reg.setPause(aave.hub, PauseState.Frozen, PauseReason.None);
         (uint256 x,,) = lens.previewRepayWithCollateral(alice, MARKET_ID, _key(1), 100e6, debtReserveId);
+        assertGt(x, 0, "Paused(General) leaves repay with collateral open");
+        reg.setPause(aave.hub, PauseState.Frozen, PauseReason.None);
+        (x,,) = lens.previewRepayWithCollateral(alice, MARKET_ID, _key(1), 100e6, debtReserveId);
         assertGt(x, 0, "Frozen leaves repay with collateral open");
         reg.setPause(aave.hub, PauseState.None, PauseReason.None);
         reg.setFrozen(alice, true);
-        _assertRwcZero(alice, _key(1), 100e6, debtReserveId, hf, "frozen wallet");
+        (x,,) = lens.previewRepayWithCollateral(alice, MARKET_ID, _key(1), 100e6, debtReserveId);
+        assertGt(x, 0, "a frozen wallet can still repay with collateral (REQ-ADAPTER-082, Q-356)");
     }
 
     // TEST-239 verifies: REQ-LENS-038, SPEC-LIQ-020
