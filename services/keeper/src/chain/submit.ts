@@ -42,6 +42,8 @@ export type FollowUp =
  * - past its deadline and not liquidatable, nonce unconsumed 2 blocks later: cancel with a zero-value
  *   transfer from the signer to itself at that nonce, through the same private channel.
  * A poke carries no deadline: it is replaced while its simulation still changes state, otherwise cancelled.
+ * The rule applies from the block after the send: state read at the send's own block cannot show it mined, and a
+ * simulation there after a node already included it (anvil mines at once) would cancel a consumed nonce.
  */
 export function followUp(
   p: Pending,
@@ -50,6 +52,7 @@ export function followUp(
   simulationOk: boolean,
   stillDue: boolean,
 ): FollowUp {
+  if (now.blockNumber <= p.sentBlock) return { action: "wait" };
   if (nonceConsumed) return { action: "done" };
   const expired = p.plan.deadline !== null && now.timestamp > p.plan.deadline;
   if (!expired) return simulationOk ? { action: "replace" } : p.plan.deadline === null ? { action: "cancel" } : { action: "wait" };

@@ -14,7 +14,7 @@ import { logAttempt, stringifyParams } from "../failureLog.ts";
 import { decodeRevert, revertData } from "../jobs/failureReasons.ts";
 import type { InventoryBook } from "../inventory.ts";
 import type { Simulation } from "../pipeline.ts";
-import type { BlockContext, TxPlan } from "../types.ts";
+import type { BlockContext, JobKind, TxPlan } from "../types.ts";
 
 export async function simulate(client: PublicClient, from: Address, plan: Pick<TxPlan, "to" | "data">): Promise<Simulation> {
   try {
@@ -152,6 +152,17 @@ export class Submitter {
       for (const [key, m] of this.mined) if (m.minedBlock <= finalized) this.mined.delete(key);
     }
     const confirmed = await this.client.getTransactionCount({ address: this.signer.address, blockNumber: ctx.blockNumber });
+    // A follow-up send every endpoint refuses (typically "nonce too low": the original was mined after the nonce was
+    // read) is logged and left as it was; the next block reads the nonce again and decides. It never stops the keeper.
+    const refused = async (send: () => Promise<unknown>, record: { job: JobKind; subject: string; nonce: number; txHash?: Hex; params: Record<string, string> }, what: string) => {
+      try {
+        await send();
+        return false;
+      } catch (err) {
+        logAttempt({ at: new Date().toISOString(), chainId: this.cfg.chain.id, blockNumber: ctx.blockNumber.toString(10), ...record, outcome: "sendRefused", reason: `${what}: ${String(err)}` });
+        return true;
+      }
+    };
     // A nonce handed back for a rebuild that no pass used within 2 blocks is closed with a self-transfer, so no
     // gap can stall later transactions.
     for (const [subject, r] of this.reusable) {
@@ -159,13 +170,14 @@ export class Submitter {
       this.reusable.delete(subject);
       if (confirmed > r.nonce) continue;
       const raw = await this.nonces.withNonce((n) => this.sign({ to: this.signer.address, data: "0x" }, n, 21_000n, bumpFees(r.fees)), r.nonce);
-      await sendPrivate(this.cfg.rpc.privateSend, raw, this.post);
+      if (await refused(() => sendPrivate(this.cfg.rpc.privateSend, raw, this.post), { job: "liquidation", subject, nonce: r.nonce, params: {} }, "nonce close")) this.reusable.set(subject, r);
     }
     for (const [subject, p] of this.pending) {
       const sim = await simulate(this.client, this.signer.address, p.plan);
       const next = followUp(p, { blockNumber: ctx.blockNumber, timestamp: ctx.blockTimestamp }, confirmed > p.nonce, sim.ok, await stillDue(p.plan));
       const log = (outcome: "included" | "replaced" | "cancelled" | "expired") =>
         logAttempt({ at: new Date().toISOString(), chainId: this.cfg.chain.id, blockNumber: ctx.blockNumber.toString(10), job: p.plan.job, subject, outcome, txHash: p.hash, nonce: p.nonce, params: stringifyParams(p.plan.params) });
+      const record = { job: p.plan.job, subject, nonce: p.nonce, txHash: p.hash, params: stringifyParams(p.plan.params) };
       if (next.action === "wait") continue;
       if (next.action === "done") {
         this.pending.delete(subject);
@@ -185,20 +197,23 @@ export class Submitter {
           continue;
         }
         const raw = await this.nonces.withNonce((n) => this.sign(p.plan, n, gas, f), p.nonce);
-        await sendPrivate(this.cfg.rpc.privateSend, raw, this.post);
+        if (await refused(() => sendPrivate(this.cfg.rpc.privateSend, raw, this.post), record, "replacement")) continue;
         this.pending.set(subject, { ...p, hash: keccakOf(raw), fees: f, replacements: p.replacements + 1 });
         log("replaced");
       } else {
         // rebuild or cancel: the expired transaction can no longer execute. A rebuild hands the nonce back to the
         // job (the next pass sends a fresh preview at it); a cancel sends a zero-value transfer to the signer itself.
-        this.pending.delete(subject);
-        this.inventory.release(this.cfg.chain.id, subject);
         if (next.action === "cancel") {
           const f = bumpFees(p.fees);
           const raw = await this.nonces.withNonce((n) => this.sign({ to: this.signer.address, data: "0x" }, n, 21_000n, f), p.nonce);
-          await sendPrivate(this.cfg.rpc.privateSend, raw, this.post);
+          // A refused cancellation stays pending with its reservation: the next block finds the nonce consumed or cancels again.
+          if (await refused(() => sendPrivate(this.cfg.rpc.privateSend, raw, this.post), record, "cancellation")) continue;
+          this.pending.delete(subject);
+          this.inventory.release(this.cfg.chain.id, subject);
           log("cancelled");
         } else {
+          this.pending.delete(subject);
+          this.inventory.release(this.cfg.chain.id, subject);
           this.reusable.set(subject, { nonce: p.nonce, since: ctx.blockNumber, fees: p.fees });
           log("expired");
         }

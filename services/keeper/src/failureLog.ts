@@ -20,7 +20,9 @@ export type AttemptOutcome =
   /** A mined transaction whose block a reorg removed: it is pending again. */
   | "reorged"
   /** A send or replacement refused because its worst-case cost passes the chain's gas ceiling. */
-  | "aboveGasCeiling";
+  | "aboveGasCeiling"
+  /** A replacement, cancellation or nonce-closing send every private endpoint refused; the next block decides again. */
+  | "sendRefused";
 
 export interface AttemptRecord {
   readonly at: string;
