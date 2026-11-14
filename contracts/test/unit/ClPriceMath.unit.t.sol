@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
+import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ClPriceMathHarness} from "../utils/harness/ClPriceMathHarness.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -137,9 +138,9 @@ contract ClPriceMathUnitTest is AvanaTest {
         assertEq(m.tickAtSqrtRatio(ClPriceMath.MIN_SQRT_RATIO), ClPriceMath.MIN_TICK);
         assertEq(m.tickAtSqrtRatio(ClPriceMath.MAX_SQRT_RATIO - 1), ClPriceMath.MAX_TICK - 1);
         assertEq(m.tickAtSqrtRatio(2 ** 96), 0);
-        vm.expectRevert(abi.encodeWithSelector(ClPriceMath.TickOutOfRange.selector, int24(887_273)));
+        vm.expectRevert(abi.encodeWithSelector(ClTickMath.TickOutOfRange.selector, int24(887_273)));
         m.sqrtRatioAtTick(887_273);
-        vm.expectRevert(abi.encodeWithSelector(ClPriceMath.SqrtRatioOutOfRange.selector, ClPriceMath.MAX_SQRT_RATIO));
+        vm.expectRevert(abi.encodeWithSelector(ClTickMath.SqrtRatioOutOfRange.selector, ClPriceMath.MAX_SQRT_RATIO));
         m.tickAtSqrtRatio(ClPriceMath.MAX_SQRT_RATIO);
     }
 
