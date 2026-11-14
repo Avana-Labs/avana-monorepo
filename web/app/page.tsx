@@ -19,7 +19,7 @@ export default async function HomePage() {
       <>
         <SchemaMarkup data={[buildWebSiteSchema(), buildOrganizationSchema()]} />
         <LighthouseAuditSurface title="Borrow">
-          Swap, Borrow, Repay, Claim, Remove, Select Asset, Dashboard, Umbrella.
+          Swap, Borrow, Repay, Claim, Remove, Select Asset, Dashboard.
         </LighthouseAuditSurface>
       </>
     )

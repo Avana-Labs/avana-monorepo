@@ -8,7 +8,6 @@ import type {
   LendSession,
   RewardsSession,
   SwapSession,
-  UmbrellaSession,
 } from "./avana-sessions-provider"
 
 // These context objects + read hooks live in their own lightweight module (react + type-only
@@ -25,7 +24,6 @@ export const BorrowSessionContext = createContext<BorrowSession | null>(null)
 export const LendSessionContext = createContext<LendSession | null>(null)
 export const RewardsSessionContext = createContext<RewardsSession | null>(null)
 export const SwapSessionContext = createContext<SwapSession | null>(null)
-export const UmbrellaSessionContext = createContext<UmbrellaSession | null>(null)
 
 export function useAvanaSessions() {
   const context = useContext(AvanaSessionsContext)
@@ -85,14 +83,6 @@ export function useSwapSessionContext() {
   const context = useContext(SwapSessionContext)
   if (!context) {
     throw new Error("useSwapSessionContext must be used within AvanaSessionsProvider")
-  }
-  return context
-}
-
-export function useUmbrellaSessionContext() {
-  const context = useContext(UmbrellaSessionContext)
-  if (!context) {
-    throw new Error("useUmbrellaSessionContext must be used within AvanaSessionsProvider")
   }
   return context
 }

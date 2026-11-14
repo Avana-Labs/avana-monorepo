@@ -180,10 +180,6 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
       href: "/dashboard",
       label: "Dashboard",
     },
-    {
-      href: "/umbrella",
-      label: "Umbrella",
-    },
   ] as const
 
   const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0]

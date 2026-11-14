@@ -8,11 +8,6 @@ import type { LendSandboxActionResult, LendTransactionResult } from "@/app/lib/l
 import { useBorrowSession } from "@/app/lib/borrow-system/use-borrow-session"
 import { useLendSession } from "@/app/lib/lend-system/use-lend-session"
 import { useSwapSession, type DurableSwapTransaction } from "@/app/lib/swap-system/use-swap-session"
-import {
-  useUmbrellaSession,
-  type ConvexUmbrellaSessionState,
-  type PersistUmbrellaAction,
-} from "@/app/lib/umbrella-system/use-umbrella-session"
 import type { SwapTransactionRecord } from "@/app/lib/swap-system/transaction-adapter"
 import type { SwapQuote, SwapQuoteRequest } from "@/app/lib/swap-system/quote-provider"
 import { useAvanaSession } from "./use-avana-session"
@@ -23,14 +18,12 @@ import {
   LendSessionContext,
   RewardsSessionContext,
   SwapSessionContext,
-  UmbrellaSessionContext,
 } from "./avana-sessions-context"
 
 export type BorrowSession = ReturnType<typeof useBorrowSession>
 export type LendSession = ReturnType<typeof useLendSession>
 export type RewardsSession = ReturnType<typeof useRewardsSession>
 export type SwapSession = ReturnType<typeof useSwapSession>
-export type UmbrellaSession = ReturnType<typeof useUmbrellaSession>
 
 function usd6ToNumber(value: bigint) {
   return Number(value) / 1_000_000
@@ -157,7 +150,6 @@ export type AvanaSessions = {
   lend: LendSession
   rewards: RewardsSession
   swap: SwapSession
-  umbrella: UmbrellaSession
 }
 
 export type AvanaIdentity = Pick<AvanaSessions, "walletId" | "walletAddress" | "sandboxMode">
@@ -174,9 +166,6 @@ export function AvanaSessionsProvider({
   remoteRewardsRevision,
   persistRewardsState,
   persistLocalState = true,
-  persistUmbrellaState,
-  remoteUmbrellaState,
-  persistUmbrellaAction,
   sessionSource = "demo",
   authoritativeWalletPending = false,
 }: {
@@ -200,9 +189,6 @@ export function AvanaSessionsProvider({
     expectedRevision?: number
   }) => Promise<{ revision?: number } | unknown>
   persistLocalState?: boolean
-  persistUmbrellaState?: boolean
-  remoteUmbrellaState?: ConvexUmbrellaSessionState | null
-  persistUmbrellaAction?: PersistUmbrellaAction
   sessionSource?: "demo" | "convex"
   /** Keep every wallet-backed surface loading until the authoritative Convex reads settle. */
   authoritativeWalletPending?: boolean
@@ -242,13 +228,6 @@ export function AvanaSessionsProvider({
     remoteTransactions: remoteSwapTransactions,
     seedDemoBalances: sessionSource === "demo",
   })
-  const umbrella = useUmbrellaSession({
-    walletId: avana.walletId,
-    persistState: persistUmbrellaState ?? persistLocalState,
-    remoteState: remoteUmbrellaState,
-    persistAction: persistUmbrellaAction,
-    seedDemoState: sessionSource === "demo",
-  })
 
   const visibleBorrow = useMemo(
     () => (authoritativeWalletPending ? { ...borrow, isHydrated: false } : borrow),
@@ -262,12 +241,6 @@ export function AvanaSessionsProvider({
     () => (authoritativeWalletPending ? { ...swap, isHydrated: false } : swap),
     [authoritativeWalletPending, swap],
   )
-  // Umbrella hydrates on its OWN Convex query (remoteUmbrellaState) and reads no
-  // borrow/lend/swap balances, so it must NOT wait on wallet-wide hydration
-  // (authoritativeWalletPending) — that only stalled the umbrella page at the skeleton
-  // after its own data had already arrived. Its `isHydrated` re-keys on walletId, so a
-  // wallet switch still re-suspends to the skeleton (no stale/other-wallet flash).
-  const visibleUmbrella = umbrella
   const visibleRewards = useMemo(
     () => (authoritativeWalletPending ? { ...rewards, hasHydratedStorage: false } : rewards),
     [authoritativeWalletPending, rewards],
@@ -291,7 +264,6 @@ export function AvanaSessionsProvider({
       lend: visibleLend,
       rewards: visibleRewards,
       swap: visibleSwap,
-      umbrella: visibleUmbrella,
     }),
     [
       avana.walletId,
@@ -301,7 +273,6 @@ export function AvanaSessionsProvider({
       visibleLend,
       visibleRewards,
       visibleSwap,
-      visibleUmbrella,
     ],
   )
   const identity = useMemo<AvanaIdentity>(
@@ -320,7 +291,7 @@ export function AvanaSessionsProvider({
             <LendSessionContext.Provider value={visibleLend}>
               <RewardsSessionContext.Provider value={visibleRewards}>
                 <SwapSessionContext.Provider value={visibleSwap}>
-                  <UmbrellaSessionContext.Provider value={visibleUmbrella}>{children}</UmbrellaSessionContext.Provider>
+                  {children}
                 </SwapSessionContext.Provider>
               </RewardsSessionContext.Provider>
             </LendSessionContext.Provider>
@@ -339,5 +310,4 @@ export {
   useOptionalAvanaSessions,
   useRewardsSessionContext,
   useSwapSessionContext,
-  useUmbrellaSessionContext,
 } from "./avana-sessions-context"

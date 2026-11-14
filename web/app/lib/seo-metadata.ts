@@ -8,7 +8,7 @@ type SeoMetadataInput = {
   keywords?: string[]
   // Opt a route back into indexing. The root layout defaults every app route to noindex; routes
   // that render public content for guests (/, /ask, Borrow, Lend and their detail pages)
-  // pass index: true. The onboarding-gated dashboard and umbrella stay noindex.
+  // pass index: true. The wallet dashboard stays noindex.
   index?: boolean
 }
 

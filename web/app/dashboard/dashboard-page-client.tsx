@@ -29,8 +29,6 @@ import { useDurableRewardsClaim } from "@/app/lib/rewards-system"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
 import { DashboardWalletTab } from "./dashboard-wallet-tab"
-import { buildUmbrellaActivityRows } from "@/app/lib/umbrella-system/portfolio-mapper"
-import { useUmbrellaSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
 import { LearnSection } from "@/app/dashboard/_rewards-components/learn-section"
 import { RecentActivity } from "@/app/dashboard/recent-activity"
 import {
@@ -294,7 +292,6 @@ export function DashboardPageClient({ pageData: _pageData }: { pageData?: Reward
   const { t } = useTranslation()
   const { exact } = useCurrency()
   const avana = useAvanaSessions()
-  const umbrella = useUmbrellaSessionContext()
   const {
     walletId,
     state,
@@ -541,7 +538,6 @@ export function DashboardPageClient({ pageData: _pageData }: { pageData?: Reward
     ...mapTransactionHistoryToActivityRows(avana.borrow.transactionHistory, avana.borrow.state.markets),
     ...buildLendActivityHistory(avana.lend.walletId, avana.lend.transactionHistory, avana.lend.state),
     ...swapActivityRows,
-    ...buildUmbrellaActivityRows(umbrella.transactionHistory),
     ...rewardActivityRows,
   ]
   const seenIds = new Set<string>()

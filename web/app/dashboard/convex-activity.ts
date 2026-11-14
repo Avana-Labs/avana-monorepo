@@ -9,7 +9,6 @@ const PRODUCTS = new Set<PortfolioActivityProduct>([
   "onboarding",
   "rewards",
   "swap",
-  "umbrella",
 ])
 
 const KINDS = new Set<PortfolioActivityKind>([

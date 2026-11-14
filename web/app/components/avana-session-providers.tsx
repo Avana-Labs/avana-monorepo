@@ -75,7 +75,7 @@ export function AvanaSessionProviders({ walletId, children }: { walletId?: strin
     return (
       <OpenGateConvexProvider>
         <MarketLiquidityProvider live={false}>
-          <AvanaSessionsProvider walletId={TEST_MODE_WALLET_ADDRESS} persistLocalState persistUmbrellaState={false}>
+          <AvanaSessionsProvider walletId={TEST_MODE_WALLET_ADDRESS} persistLocalState>
             {children}
           </AvanaSessionsProvider>
         </MarketLiquidityProvider>
@@ -112,7 +112,6 @@ export function AvanaSessionProviders({ walletId, children }: { walletId?: strin
             walletId={GUEST_WALLET_ID}
             sessionSource="convex"
             persistLocalState={false}
-            persistUmbrellaState={false}
           >
             {children}
           </AvanaSessionsProvider>

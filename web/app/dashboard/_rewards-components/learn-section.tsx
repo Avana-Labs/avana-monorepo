@@ -1,7 +1,7 @@
 "use client"
 
 import type { LucideIcon } from "@/app/components/icons"
-import { Compass, GraduationCap, Repeat, ShieldCheck, Umbrella, Unlock } from "@/app/components/icons"
+import { Compass, GraduationCap, Layers3, Repeat, ShieldCheck, Unlock } from "@/app/components/icons"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 
 type LearnCard = {
@@ -36,7 +36,7 @@ const LEARN_CARDS: LearnCard[] = [
   {
     title: "Isolated risk",
     body: "Every pool is risk-scored on its own and kept isolated. Exposure stays contained to the market you use, so trouble in one pool doesn't cascade into your other positions.",
-    icon: Umbrella,
+    icon: Layers3,
   },
   {
     title: "Repay or close anytime",
@@ -45,7 +45,7 @@ const LEARN_CARDS: LearnCard[] = [
   },
   {
     title: "Ways to use Avana",
-    body: "Lend to earn yield, borrow against LP collateral, Multiply for leveraged exposure, or stake in Umbrella to backstop markets and earn rewards.",
+    body: "Lend to earn yield, borrow against LP collateral, or swap tokens in one place.",
     icon: Compass,
   },
 ]

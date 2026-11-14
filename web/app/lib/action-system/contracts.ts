@@ -1,11 +1,10 @@
-export type ActionProduct = "borrow" | "lend" | "rewards" | "umbrella"
+export type ActionProduct = "borrow" | "lend" | "rewards"
 
 export type BorrowActionKind = "borrow" | "repay" | "supply" | "remove" | "claim" | "pledge"
 export type LendActionKind = "deposit" | "withdraw"
 export type RewardsActionKind = "claim"
-export type UmbrellaActionKind = "stake" | "claim" | "cooldown" | "unstake"
 
-export type ActionKind = BorrowActionKind | LendActionKind | RewardsActionKind | UmbrellaActionKind
+export type ActionKind = BorrowActionKind | LendActionKind | RewardsActionKind
 
 export type ActionPageMode = "page" | "overlay" | "embedded"
 
@@ -178,36 +177,6 @@ export const ACTION_DESCRIPTORS: Record<ActionProduct, Partial<Record<ActionKind
       primaryVerb: "Claim",
     },
   },
-  umbrella: {
-    stake: {
-      product: "umbrella",
-      kind: "stake",
-      title: "Stake",
-      subtitle: "Configure and review your Umbrella stake.",
-      primaryVerb: "Stake",
-    },
-    claim: {
-      product: "umbrella",
-      kind: "claim",
-      title: "Claim",
-      subtitle: "Configure and review your Umbrella rewards claim.",
-      primaryVerb: "Claim",
-    },
-    cooldown: {
-      product: "umbrella",
-      kind: "cooldown",
-      title: "Start cooldown",
-      subtitle: "Choose how much stake should enter cooldown.",
-      primaryVerb: "Start cooldown",
-    },
-    unstake: {
-      product: "umbrella",
-      kind: "unstake",
-      title: "Unstake",
-      subtitle: "Withdraw stake from an open Umbrella withdrawal window.",
-      primaryVerb: "Unstake",
-    },
-  },
 }
 
 export function normalizeActionKind(product: string, kind: string): ActionKind {
@@ -228,8 +197,7 @@ export function isValidActionProduct(product: string): product is ActionProduct 
   return (
     product === "borrow" ||
     product === "lend" ||
-    product === "rewards" ||
-    product === "umbrella"
+    product === "rewards" 
   )
 }
 
@@ -248,7 +216,6 @@ const ACTION_CLOSE_HREF: Record<ActionProduct, string> = {
   borrow: "/borrow",
   lend: "/lend",
   rewards: "/dashboard",
-  umbrella: "/umbrella",
 }
 
 function normalizeReturnHref(returnHref: string) {

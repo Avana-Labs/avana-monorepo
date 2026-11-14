@@ -14,7 +14,6 @@ import {
   swapRecordToRecordSwapArgs,
 } from "@/app/lib/sandbox-tx/persistence"
 import type { SwapTransactionRecord } from "@/app/lib/swap-system/transaction-adapter"
-import type { ConvexUmbrellaSessionState, PersistUmbrellaAction } from "@/app/lib/umbrella-system/use-umbrella-session"
 import {
   AvanaSessionsProvider,
   useBorrowSessionContext,
@@ -151,7 +150,7 @@ export function ConvexWalletHydrators({
   useEnsureWalletFixtures({
     walletId,
     ensurePortfolioSnapshot: scope.walletSession ? ensurePortfolioSnapshot : noopEnsure,
-    ensureUmbrellaFixtures: scope.ensureUmbrellaFixtures ? ensureUmbrellaFixtures : noopEnsure,
+    ensureUmbrellaFixtures: noopEnsure,
   })
 
   // Each product session rehydrates only when its own inputs change. The 10-minute LP reprice
@@ -259,11 +258,6 @@ export function ConvexAvanaSessionsProvider({ walletId, children }: { walletId: 
   )
   const saveRewardsState = useMutation(api.sandbox.rewards.saveState)
   const rewardsState = useQuery(api.sandbox.rewards.getState, scope.rewards ? { wallet: walletId } : "skip")
-  const umbrellaSessionState = useQuery(
-    api.sandbox.umbrella.getSessionState,
-    scope.umbrella ? { wallet: walletId } : "skip",
-  )
-  const recordUmbrellaAction = useMutation(api.sandbox.umbrella.recordAction)
   const { revisions, walletHydrationPending, handleWalletHydrated } = useWalletHydrationScope(walletId)
 
   const persistBorrowTransaction = useCallback(
@@ -329,15 +323,6 @@ export function ConvexAvanaSessionsProvider({ walletId, children }: { walletId: 
     },
     [convex, walletId],
   )
-  const persistUmbrellaAction = useCallback<PersistUmbrellaAction>(
-    (args) => recordUmbrellaAction({ wallet: walletId, ...args }),
-    [recordUmbrellaAction, walletId],
-  )
-  const remoteUmbrellaState: ConvexUmbrellaSessionState | null | undefined = !scope.umbrella
-    ? null
-    : umbrellaSessionState === undefined
-      ? undefined
-      : (umbrellaSessionState as unknown as ConvexUmbrellaSessionState)
   const remoteRewardsState = !scope.rewards
     ? null
     : (rewardsState?.stateJson ?? (rewardsState === null ? null : undefined))
@@ -366,9 +351,6 @@ export function ConvexAvanaSessionsProvider({ walletId, children }: { walletId: 
       remoteRewardsRevision={remoteRewardsRevision}
       persistRewardsState={scope.rewards ? persistRewardsState : undefined}
       persistLocalState={false}
-      remoteUmbrellaState={remoteUmbrellaState}
-      persistUmbrellaAction={scope.umbrella ? persistUmbrellaAction : undefined}
-      persistUmbrellaState={false}
       sessionSource="convex"
       authoritativeWalletPending={scope.walletSession ? walletHydrationPending : false}
     >

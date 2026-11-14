@@ -31,12 +31,6 @@ const ACTION_TITLES: Record<ActionProduct, Partial<Record<ActionKind, string>>> 
   rewards: {
     claim: "Claim rewards",
   },
-  umbrella: {
-    stake: "Umbrella stake",
-    unstake: "Umbrella unstake",
-    claim: "Claim Umbrella rewards",
-    cooldown: "Umbrella cooldown",
-  },
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

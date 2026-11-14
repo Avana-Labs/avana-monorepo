@@ -3,7 +3,7 @@
 /**
  * Which Convex session/market subscriptions a signed-in route should open.
  * Product pages stay at ≤3 session-provider subscriptions; cross-product remotes
- * (rewards / swap / umbrella) only mount on their own surfaces (or dashboard).
+ * (rewards / swap) only mount on their own surfaces (or dashboard).
  */
 export type ProductRuntimeScope = {
   /** Wallet session + product-balance hydration (borrow/lend/swap/home). */
@@ -14,8 +14,6 @@ export type ProductRuntimeScope = {
   hydrateLendMarkets: boolean
   swapTransactions: boolean
   rewards: boolean
-  umbrella: boolean
-  ensureUmbrellaFixtures: boolean
 }
 
 const IDLE: ProductRuntimeScope = {
@@ -25,8 +23,6 @@ const IDLE: ProductRuntimeScope = {
   hydrateLendMarkets: false,
   swapTransactions: false,
   rewards: false,
-  umbrella: false,
-  ensureUmbrellaFixtures: false,
 }
 
 function pathPrefix(pathname: string, route: string) {
@@ -63,16 +59,8 @@ export function resolveProductRuntimeScope(pathname: string | null | undefined):
     }
   }
 
-  if (pathPrefix(pathname, "/umbrella") || pathPrefix(pathname, "/actions/umbrella")) {
-    return {
-      ...IDLE,
-      umbrella: true,
-      ensureUmbrellaFixtures: true,
-    }
-  }
-
   if (pathPrefix(pathname, "/dashboard")) {
-    // Consolidated portfolio surface: hydrate the Borrow/Lend sessions plus rewards/umbrella remotes.
+    // Consolidated portfolio surface: hydrate the Borrow/Lend sessions plus the rewards remote.
     // Borrow markets too: without the live LP price the Borrow tab valued collateral at the
     // catalog estimate (cbBTC/USDC $37.5K vs $48.6K elsewhere). Swap history remains off here.
     return {
@@ -81,8 +69,6 @@ export function resolveProductRuntimeScope(pathname: string | null | undefined):
       marketSnapshots: true,
       hydrateBorrowMarkets: true,
       rewards: true,
-      umbrella: true,
-      ensureUmbrellaFixtures: true,
     }
   }
 
@@ -94,14 +80,6 @@ export function resolveProductRuntimeScope(pathname: string | null | undefined):
       marketSnapshots: true,
       hydrateBorrowMarkets: true,
       swapTransactions: true,
-    }
-  }
-
-  if (pathPrefix(pathname, "/onboarding") || pathPrefix(pathname, "/sandbox")) {
-    return {
-      ...IDLE,
-      walletSession: true,
-      ensureUmbrellaFixtures: true,
     }
   }
 
