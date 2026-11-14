@@ -14,7 +14,8 @@ import { fileIncidentLog } from "./incidentLog.ts";
 import { KeeperFeed } from "./keeper.ts";
 import { type ChainReads, type ProviderReads, runRound } from "./monitor.ts";
 import type { RawRpc } from "./probe.ts";
-import { probesFor } from "./probes.ts";
+import { liveFrontend, probesFor } from "./probes.ts";
+import { LivenessBook } from "./liveness.ts";
 import { type Channel, logChannel, pagerDutyChannel, webhookChannel } from "./notify/channels.ts";
 import { monitorServer } from "./server.ts";
 import { apply, collect, fileStateStore } from "./state.ts";
@@ -77,23 +78,31 @@ const channels = new Map(config.channels.map((c) => [c.name, channelOf(c)]));
 const log = fileIncidentLog(config.incidentLogPath);
 const lastSuccess = new Map<number, number>(config.chains.map((c) => [c.chain.id, Date.now()]));
 
-monitorServer({ keeperTokens: config.keeperTokens, statusToken: config.statusToken }, feed, () => book.open(), () => {
-  const stale = config.chains.filter((c) => Date.now() - lastSuccess.get(c.chain.id)! > 5 * config.intervalSeconds * 1_000).map((c) => c.chain.key);
-  return { ok: stale.length === 0, stale };
-}).listen(config.port);
-out({ type: "monitor.start", chains: config.chains.map((c) => c.chain.key), channels: config.channels.map((c) => `${c.name}:${c.kind}`), keeperInstances: config.keeperInstances.map((i) => i.name) });
-
-const probesByChain = new Map(config.chains.map((c) => [c.chain.id, probesFor(c, config)]));
+const liveness = new LivenessBook(config.liveness);
+const probesByChain = new Map(config.chains.map((c) => [c.chain.id, probesFor(c, config, liveFrontend, liveness)]));
 const store = fileStateStore(config.statePath);
 const saved = store.load();
 if (saved) {
-  apply({ book, feed, probes: probesByChain }, saved);
+  apply({ book, feed, liveness, probes: probesByChain }, saved);
   out({ type: "monitor.restored", savedAt: saved.savedAt, openAlerts: book.open().length });
 }
+const safeWatched = new Set([...config.safes].flatMap(([chainId, safes]) => safes.map((x) => `${chainId}|${x.address.toLowerCase()}`)));
+monitorServer(
+  { keeperTokens: config.keeperTokens, statusToken: config.statusToken },
+  feed,
+  () => book.open(),
+  () => {
+    const stale = config.chains.filter((c) => Date.now() - lastSuccess.get(c.chain.id)! > 5 * config.intervalSeconds * 1_000).map((c) => c.chain.key);
+    return { ok: stale.length === 0, stale };
+  },
+  { book: liveness, watched: (chainId, safe) => safeWatched.has(`${chainId}|${safe.toLowerCase()}`), now: () => Math.floor(Date.now() / 1_000) },
+).listen(config.port);
+out({ type: "monitor.start", chains: config.chains.map((c) => c.chain.key), channels: config.channels.map((c) => `${c.name}:${c.kind}`), keeperInstances: config.keeperInstances.map((i) => i.name) });
+
 /** Written after every round, so a restart neither re-sends open alerts nor skips events. */
 const persist = () => {
   try {
-    store.save(collect({ book, feed, probes: probesByChain }, Math.floor(Date.now() / 1_000)));
+    store.save(collect({ book, feed, liveness, probes: probesByChain }, Math.floor(Date.now() / 1_000)));
   } catch (err) {
     out({ type: "monitor.stateNotSaved", error: err instanceof Error ? err.message : String(err) });
   }

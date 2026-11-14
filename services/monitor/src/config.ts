@@ -8,6 +8,7 @@ import { type ChainInfo, type NetworkSet, type ServiceManifest, aaveTopology, ch
 import type { ChainDeployment } from "@avana/services-common/views";
 import type { Address } from "viem";
 import type { KeeperInstance } from "./keeper.ts";
+import type { LivenessConfig } from "./liveness.ts";
 import type { CoreHubGho, FrontendConfig, SafeConfig } from "./probes/external.ts";
 import { RECIPIENTS, type Recipient, type RoutingTable, checkRouting } from "./routing.ts";
 
@@ -40,6 +41,8 @@ export interface MonitorConfig {
   readonly safes: ReadonlyMap<number, readonly SafeConfig[]>;
   /** The Core Hub's GHO asset each chain's Avana Hubs are compared with (M-29). */
   readonly coreHubGho: ReadonlyMap<number, CoreHubGho>;
+  /** Safe signer liveness periods (M-23). */
+  readonly liveness: LivenessConfig;
   /** The frontend checked on one chain's round (M-27); null when not configured. */
   readonly frontend: (FrontendConfig & { readonly chainId: number }) | null;
 }
@@ -144,6 +147,10 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     keeperInstances,
     keeperTokens,
     safes,
+    liveness: {
+      periodSeconds: (optionalEnv(env, "MONITOR_LIVENESS_PERIOD_HOURS") ? intEnv(env, "MONITOR_LIVENESS_PERIOD_HOURS") : 24) * 3_600,
+      windowSeconds: (optionalEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") ? intEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") : 12) * 3_600,
+    },
     coreHubGho,
     frontend,
   };

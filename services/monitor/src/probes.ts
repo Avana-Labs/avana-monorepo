@@ -6,6 +6,7 @@
 import { promises as dns } from "node:dns";
 import type { ChainConfig, MonitorConfig } from "./config.ts";
 import { snapshotProbe } from "./confirm.ts";
+import type { LivenessBook } from "./liveness.ts";
 import type { Probe } from "./probe.ts";
 import { coverageProbe } from "./probes/coverage.ts";
 import { eventsProbe } from "./probes/events.ts";
@@ -26,11 +27,11 @@ export const liveFrontend: FrontendDeps = {
   },
 };
 
-export function probesFor(chain: ChainConfig, config: MonitorConfig, frontendDeps: FrontendDeps = liveFrontend): Probe[] {
+export function probesFor(chain: ChainConfig, config: MonitorConfig, frontendDeps: FrontendDeps = liveFrontend, liveness?: LivenessBook): Probe[] {
   const id = chain.chain.id;
   const probes: Probe[] = [snapshotProbe() as Probe, oracleProbe() as Probe, coverageProbe() as Probe, eventsProbe() as Probe, issuerProbe() as Probe];
   const safes = config.safes.get(id);
-  if (safes && safes.length > 0) probes.push(safesProbe(safes) as Probe);
+  if (safes && safes.length > 0) probes.push(safesProbe(safes, liveness ? { book: liveness, chainId: id } : undefined) as Probe);
   const core = config.coreHubGho.get(id);
   if (core) probes.push(ghoRateProbe(core) as Probe);
   if (config.frontend && config.frontend.chainId === id) probes.push(frontendProbe(config.frontend, frontendDeps) as Probe);

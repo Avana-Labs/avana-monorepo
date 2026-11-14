@@ -14,6 +14,8 @@ export interface SavedState {
   readonly savedAt: number;
   readonly book: unknown;
   readonly keeper: unknown;
+  /** Safe signer liveness answers of the last periods. */
+  readonly liveness?: unknown;
   /** chainId → probe name → that probe's saved state. */
   readonly probes: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
@@ -65,6 +67,7 @@ export function fileStateStore(path: string): StateStore {
 export interface Stateful {
   readonly book: { save(): unknown; restore(saved: never): void };
   readonly feed: { save(): unknown; restore(saved: never): void };
+  readonly liveness?: { save(): unknown; restore(saved: never): void };
   /** chainId → that chain's probes. */
   readonly probes: ReadonlyMap<number, readonly { readonly name: string; save?(): unknown; restore?(state: unknown): void }[]>;
 }
@@ -74,13 +77,14 @@ export function collect(parts: Stateful, now: number): SavedState {
   for (const [chainId, ps] of parts.probes) {
     probes[String(chainId)] = Object.fromEntries(ps.filter((p) => p.save).map((p) => [p.name, p.save!()]));
   }
-  return { version: STATE_VERSION, savedAt: now, book: parts.book.save(), keeper: parts.feed.save(), probes };
+  return { version: STATE_VERSION, savedAt: now, book: parts.book.save(), keeper: parts.feed.save(), ...(parts.liveness ? { liveness: parts.liveness.save() } : {}), probes };
 }
 
 /** Restores a saved state; a probe or chain no longer configured is skipped, a new one starts fresh. */
 export function apply(parts: Stateful, saved: SavedState): void {
   (parts.book.restore as (s: unknown) => void).call(parts.book, saved.book);
   (parts.feed.restore as (s: unknown) => void).call(parts.feed, saved.keeper);
+  if (parts.liveness && saved.liveness) (parts.liveness.restore as (s: unknown) => void).call(parts.liveness, saved.liveness);
   for (const [chainId, ps] of parts.probes) {
     const mine = saved.probes[String(chainId)] ?? {};
     for (const p of ps) if (p.restore && p.name in mine) p.restore(mine[p.name]);
