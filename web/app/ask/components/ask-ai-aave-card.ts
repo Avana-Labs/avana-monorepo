@@ -123,8 +123,7 @@ export function buildAaveCard(kind: string, payload: unknown): AskAIFinancialRes
       ["lendUsd", "Lend"],
       ["borrowUsd", "Borrow balance"],
     ]) {
-      if (aaveNumber(totals[key]) !== undefined)
-        metrics.push({ label: `Avana ${label}`, value: dollars(totals[key]) })
+      if (aaveNumber(totals[key]) !== undefined) metrics.push({ label: `Avana ${label}`, value: dollars(totals[key]) })
     }
     return metrics.length
       ? {

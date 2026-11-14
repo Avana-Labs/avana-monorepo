@@ -30,7 +30,13 @@ export type ConvexMarketSnapshot = {
   maxLtvPct?: number
   premiumBps?: number
   reserveFactorPct?: number
-  visuals?: ReadonlyArray<{ symbol: string; shortLabel: string; bgClassName: string; textClassName: string; iconUrl?: string }>
+  visuals?: ReadonlyArray<{
+    symbol: string
+    shortLabel: string
+    bgClassName: string
+    textClassName: string
+    iconUrl?: string
+  }>
   suppliedUsd: number
   borrowedUsd: number
   availableUsd: number
@@ -81,7 +87,10 @@ function pairVisuals(snap: ConvexMarketSnapshot): [BorrowVisual, BorrowVisual] {
       { ...b, iconUrl: b.iconUrl ?? getTokenIconMeta(b.symbol).iconUrl ?? null },
     ]
   }
-  const parts = (snap.name ?? snap.symbol ?? snap.slug).split("/").map((part) => part.trim()).filter(Boolean)
+  const parts = (snap.name ?? snap.symbol ?? snap.slug)
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean)
   const first = parts[0] ?? snap.symbol ?? snap.slug
   return [visualFor(first), visualFor(parts[1] ?? first)]
 }
@@ -99,7 +108,10 @@ function category(value: string | undefined, symbol: string): BorrowAssetRecord[
 }
 
 /** A collateral market as services/convex reports it. Fields it does not report stay empty. */
-export function borrowMarketFromSnapshot(snap: ConvexMarketSnapshot, related: readonly ConvexMarketSnapshot[]): BorrowMarketRecord {
+export function borrowMarketFromSnapshot(
+  snap: ConvexMarketSnapshot,
+  related: readonly ConvexMarketSnapshot[],
+): BorrowMarketRecord {
   const visuals = pairVisuals(snap)
   const cf = wadFromPct(snap.maxLtvPct)
   const spokeId = snap.spokeId ?? ""
@@ -158,7 +170,10 @@ function sameSpokeOrChain(asset: ConvexMarketSnapshot, pool: ConvexMarketSnapsho
 }
 
 /** A CDP Spoke debt reserve as services/convex reports it. */
-export function borrowAssetFromSnapshot(snap: ConvexMarketSnapshot, related: readonly ConvexMarketSnapshot[]): BorrowAssetRecord {
+export function borrowAssetFromSnapshot(
+  snap: ConvexMarketSnapshot,
+  related: readonly ConvexMarketSnapshot[],
+): BorrowAssetRecord {
   const symbol = snap.symbol?.trim() || snap.slug.toUpperCase()
   const borrowed = usd6(snap.borrowedUsd)
   return {

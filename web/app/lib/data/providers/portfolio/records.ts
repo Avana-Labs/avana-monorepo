@@ -1,5 +1,4 @@
-export type PortfolioActivityProduct =
-  "borrow" | "pool" | "lend" | "rewards" | "swap"
+export type PortfolioActivityProduct = "borrow" | "pool" | "lend" | "rewards" | "swap"
 
 export type PortfolioActivityKind =
   | "swap"

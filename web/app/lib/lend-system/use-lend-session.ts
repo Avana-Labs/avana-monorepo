@@ -47,7 +47,10 @@ export function useLendSession({
     setState((prev) => mergeConvexLendSnapshots(prev, snapshots))
   }, [])
 
-  const createIntent = useCallback((action: LendAction) => transactionAdapter.createIntent(action), [transactionAdapter])
+  const createIntent = useCallback(
+    (action: LendAction) => transactionAdapter.createIntent(action),
+    [transactionAdapter],
+  )
   const previewTransaction = useCallback(
     (intent: LendTransactionIntent) => transactionAdapter.previewTransaction(intent),
     [transactionAdapter],

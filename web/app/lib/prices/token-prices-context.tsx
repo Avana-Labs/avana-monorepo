@@ -135,9 +135,7 @@ function RealtimeTokenPrices({ seed, children }: { seed: Record<string, number>;
   }, [])
   return (
     <TokenPricesContext.Provider value={live?.map ?? seed}>
-      <PriceStatusContext.Provider value={live?.status}>
-        {children}
-      </PriceStatusContext.Provider>
+      <PriceStatusContext.Provider value={live?.status}>{children}</PriceStatusContext.Provider>
       <React.Suspense fallback={null}>
         <ConvexTokenPricesSubscriber seed={seed} onChange={publish} />
       </React.Suspense>

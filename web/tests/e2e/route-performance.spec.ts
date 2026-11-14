@@ -19,7 +19,6 @@ for (const { route, heroText, heroRole } of PRIMARY_ROUTES) {
 
     await page.goto(route, { waitUntil: "domcontentloaded", timeout: 60_000 })
 
-
     const domContentLoadedMs = Date.now() - startedAt
     expect(
       domContentLoadedMs,

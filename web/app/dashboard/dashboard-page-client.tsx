@@ -188,16 +188,15 @@ export function DashboardPageClient() {
 
       {activeDashboardTab === "rewards" ? (
         <MobileDetailActionBar>
-            <button
-              type="button"
-              disabled
-              className={primaryCtaClass({ size: "compact", disabled: true, className: "w-full" })}
-            >
-              {t("No rewards ready")}
-            </button>
+          <button
+            type="button"
+            disabled
+            className={primaryCtaClass({ size: "compact", disabled: true, className: "w-full" })}
+          >
+            {t("No rewards ready")}
+          </button>
         </MobileDetailActionBar>
       ) : null}
-
     </>
   )
 }

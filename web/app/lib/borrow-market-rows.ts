@@ -224,7 +224,10 @@ type PoolFilterOptions = {
   spokes?: Set<BorrowSpokeId>
 }
 
-export function filterPools(rows: BorrowPoolRow[], { text = "", dexes, spokes }: PoolFilterOptions = {}): BorrowPoolRow[] {
+export function filterPools(
+  rows: BorrowPoolRow[],
+  { text = "", dexes, spokes }: PoolFilterOptions = {},
+): BorrowPoolRow[] {
   const needle = text.trim().toLowerCase()
   const activeDexes = dexes && dexes.size > 0 ? dexes : null
   const activeSpokes = spokes && spokes.size > 0 ? spokes : null

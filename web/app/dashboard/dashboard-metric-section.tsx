@@ -155,7 +155,6 @@ export function DashboardCreditOverviewSection({
   )
 }
 
-
 /**
  * Wallet-level Lend Balance across every active Lend position. Rewards stay on the
  * Claim path / assets table, not these cards.

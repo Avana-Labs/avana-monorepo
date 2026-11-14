@@ -54,9 +54,7 @@ test.describe("cold visits on slow connections", () => {
       page.on("pageerror", (error) => errors.push(error.message))
       await page.goto(route, { waitUntil: "domcontentloaded" })
       const content =
-        route === "/swap"
-            ? page.getByRole("button", { name: /^Sell asset/ })
-            : page.getByRole("main").first()
+        route === "/swap" ? page.getByRole("button", { name: /^Sell asset/ }) : page.getByRole("main").first()
       await expect(content).toBeVisible({ timeout: 20_000 })
       expect(errors).toEqual([])
     })

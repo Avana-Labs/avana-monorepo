@@ -73,7 +73,10 @@ export function resolveCollateralForAsset(
  * Restrict a collateral-pool list to the markets that unlock borrowing an asset (its
  * `marketIds`). Used by the asset-detail borrow picker.
  */
-export function filterPoolsForSpokeAsset<T extends { id: string }>(marketIds: readonly string[] | undefined, pools: T[]): T[] {
+export function filterPoolsForSpokeAsset<T extends { id: string }>(
+  marketIds: readonly string[] | undefined,
+  pools: T[],
+): T[] {
   if (!marketIds) return []
   const allowed = new Set(marketIds)
   return pools.filter((pool) => allowed.has(pool.id))

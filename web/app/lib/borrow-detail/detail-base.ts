@@ -118,7 +118,10 @@ function emptyInterestGenerated(id: string): Record<PerfPeriod, PerfTabDataset> 
 /** Borrow asset (CDP Spoke debt reserve) page shape from its record. */
 export function buildAssetDetail(asset: SpokeBorrowableRecord, chain?: string): AssetDetail {
   const series = Object.fromEntries(
-    ALL_ASSET_CHART_METRICS.map((metric) => [metric, emptyFamily(`${asset.id}:${metric}`, ASSET_METRIC_LABELS[metric])]),
+    ALL_ASSET_CHART_METRICS.map((metric) => [
+      metric,
+      emptyFamily(`${asset.id}:${metric}`, ASSET_METRIC_LABELS[metric]),
+    ]),
   ) as AssetDetail["heroMetric"]["series"]
   const quickStats: QuickStat[] = [
     { id: "price", label: "Price", value: UNAVAILABLE },

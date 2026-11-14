@@ -61,9 +61,7 @@ type LendMarketRow = {
 
 /** Featured Lend cards: the three largest Hub assets by supply. */
 function featuredMarkets(markets: LendMarket[]): LendMarket[] {
-  return [...markets]
-    .sort((a, b) => b.totalSupplied * b.assetPriceUsd - a.totalSupplied * a.assetPriceUsd)
-    .slice(0, 3)
+  return [...markets].sort((a, b) => b.totalSupplied * b.assetPriceUsd - a.totalSupplied * a.assetPriceUsd).slice(0, 3)
 }
 
 export function buildLendFeaturedSnapshots(markets: LendMarket[]): LendFeaturedSnapshot[] {

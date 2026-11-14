@@ -78,7 +78,12 @@ const modeConfig = isCI
 
 const config = modeConfig[mode]
 // next is hoisted to the monorepo root by the npm workspace; resolve it from here.
-const nextBin = path.join(path.dirname(createRequire(import.meta.url).resolve("next/package.json")), "dist", "bin", "next")
+const nextBin = path.join(
+  path.dirname(createRequire(import.meta.url).resolve("next/package.json")),
+  "dist",
+  "bin",
+  "next",
+)
 
 function processExists(pid) {
   if (!pid || typeof pid !== "number") {

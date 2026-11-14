@@ -200,11 +200,7 @@ export function RewardsPromoContent({
   const { t } = useTranslation()
   const activeQuests = questsByTab[activePromoTab] ?? []
   const rewardsSectionTitle =
-    activePromoTab === "lend"
-      ? t("Lend Rewards")
-      : activePromoTab === "borrow"
-        ? t("Borrow Rewards")
-        : null
+    activePromoTab === "lend" ? t("Lend Rewards") : activePromoTab === "borrow" ? t("Borrow Rewards") : null
 
   return (
     <div className={detailSectionStackClass}>

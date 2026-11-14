@@ -90,7 +90,6 @@ function formatPctValue(value: number, digits = 2) {
   return `${value.toFixed(digits)}%`
 }
 
-
 function sourceFor(title: string, index: number) {
   const normalized = title.toLowerCase()
   if (normalized.includes("deploy")) return "Deployment"

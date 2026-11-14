@@ -1,7 +1,11 @@
 import { emptyBorrowSystemState, mergeConvexMarketSnapshots } from "@/app/lib/borrow-system/market-hydration"
 import { fetchConvexMarketSnapshots } from "@/app/lib/borrow-system/market-hydration-server"
 import { buildBorrowPageData } from "@/app/lib/borrow-system/read-model"
-import type { DataSourceAdapter, DataSourceRequestContext, DataSourceResponse } from "@/app/lib/data/core/source-runtime"
+import type {
+  DataSourceAdapter,
+  DataSourceRequestContext,
+  DataSourceResponse,
+} from "@/app/lib/data/core/source-runtime"
 import { createMarketPageSource } from "@/app/lib/data/providers/catalog-page-source"
 import type { BorrowPageData } from "./types"
 

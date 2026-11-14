@@ -1,13 +1,7 @@
 "use client"
 
 import { createContext, useContext } from "react"
-import type {
-  AvanaIdentity,
-  AvanaSessions,
-  BorrowSession,
-  LendSession,
-  SwapSession,
-} from "./avana-sessions-provider"
+import type { AvanaIdentity, AvanaSessions, BorrowSession, LendSession, SwapSession } from "./avana-sessions-provider"
 
 // These context objects + read hooks live in their own lightweight module (react + type-only
 // imports, which SWC erases) so a component can read a session slice WITHOUT statically pulling in

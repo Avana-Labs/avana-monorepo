@@ -83,7 +83,8 @@ export function mergeConvexLendSnapshots(
     const existing = state.markets[snap.slug]
     // Keep the previous object when only the timestamps differ, so memoized readers stay stable.
     markets[snap.slug] =
-      existing && JSON.stringify({ ...existing, lastAccrualTimestamp: 0, priceUpdatedAt: 0 }) ===
+      existing &&
+      JSON.stringify({ ...existing, lastAccrualTimestamp: 0, priceUpdatedAt: 0 }) ===
         JSON.stringify({ ...next, lastAccrualTimestamp: 0, priceUpdatedAt: 0 })
         ? existing
         : next

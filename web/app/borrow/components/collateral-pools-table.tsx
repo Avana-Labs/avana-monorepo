@@ -447,4 +447,3 @@ function SpokeDesktopSection({
     </section>
   )
 }
-

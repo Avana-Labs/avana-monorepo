@@ -82,4 +82,3 @@ export function foldLiquidationRiskStats(
     stat("badDebt", "Bad debt", latest.badDebtUsd, previous?.badDebtUsd, "usd"),
   ]
 }
-

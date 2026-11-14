@@ -1,9 +1,5 @@
 import type { BorrowSystemState } from "@/app/lib/borrow-system/model"
-import {
-  currentCollateralValueUsd6,
-  currentDebtValueUsd6,
-  formatFixed,
-} from "@/app/lib/borrow-system/model"
+import { currentCollateralValueUsd6, currentDebtValueUsd6, formatFixed } from "@/app/lib/borrow-system/model"
 import { formatActionUsd } from "@/app/lib/action-system/formatters"
 import { selectRewardClaimableTotals } from "@/app/lib/borrow-system/home-runtime"
 import { formatBorrowMarketContext } from "@/app/lib/borrow-system/market-labels"

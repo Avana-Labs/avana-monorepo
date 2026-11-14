@@ -111,9 +111,7 @@ export function LendActionPageClient({
   // Prefer an explicit market id, then fall back to the asset id from the deep link.
   const requestedMarketId = initialMarketId ?? initialAssetId
   const validInitialMarketId =
-    requestedMarketId && session.state.markets[requestedMarketId]
-      ? requestedMarketId
-      : undefined
+    requestedMarketId && session.state.markets[requestedMarketId] ? requestedMarketId : undefined
   const hasInvalidInitialMarket = Boolean(requestedMarketId) && !validInitialMarketId
   const [marketId, setMarketId] = useState(() => validInitialMarketId ?? (kind === "deposit" ? "gho" : ""))
   const [stage, setStage] = useState<ActionStage>(() => {

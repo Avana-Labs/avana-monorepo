@@ -37,13 +37,7 @@ export {
   ALL_PERF_PERIODS,
   ALL_ASSET_CHART_METRICS,
 } from "./types"
-export {
-  formatBpsAsPct,
-  formatPct,
-  riskLevelFromBps,
-  riskLevelLabel,
-  riskScoreFromBps,
-} from "./allocation"
+export { formatBpsAsPct, formatPct, riskLevelFromBps, riskLevelLabel, riskScoreFromBps } from "./allocation"
 export {
   borrowAssetDetailPath,
   borrowMarketDetailPath,

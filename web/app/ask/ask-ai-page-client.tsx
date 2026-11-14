@@ -107,10 +107,7 @@ function toFinancialResultCard(payload: unknown): AskAIFinancialResult | null {
 
 // Reshape a verbatim financial tool result into the display card, per tool kind.
 // Returns null (card hidden) when the figures are absent — never invents them.
-function buildFinancialCard(
-  kind: string | undefined,
-  payload: unknown,
-): AskAIFinancialResult | null {
+function buildFinancialCard(kind: string | undefined, payload: unknown): AskAIFinancialResult | null {
   if (kind?.startsWith("aave_")) return buildAaveCard(kind, payload)
   const shaped = toFinancialResultCard(payload)
   if (shaped) return shaped
@@ -174,9 +171,7 @@ function buildFinancialCard(
         ["Lend", usd(t.lendNetValueUsd ?? canonicalFromRows.lend ?? t.lendNetUsd ?? t.lendUsd)],
         ["Borrow", usd(t.borrowNetValueUsd ?? canonicalFromRows.borrow ?? t.borrowNetUsd ?? t.borrowUsd)],
         ["Liquid", usd(t.liquidNetValueUsd ?? canonicalFromRows.liquid ?? t.liquidNetUsd ?? t.liquidUsd)],
-      ].flatMap(([product, value], index) =>
-        value ? [{ id: `product-${index}`, cells: [product ?? "", value] }] : [],
-      )
+      ].flatMap(([product, value], index) => (value ? [{ id: `product-${index}`, cells: [product ?? "", value] }] : []))
       return table(
         "portfolio",
         "Your Avana portfolio",

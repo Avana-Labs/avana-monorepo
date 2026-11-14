@@ -282,7 +282,9 @@ function injectContractAddressStats<T extends { about: AssetDetail["about"] | Po
 function applyRiskParametersToAbout<T extends { about: AssetDetail["about"] | PoolDetail["about"] }>(
   detail: T,
   riskParameters:
-    { parameters: ReadonlyArray<{ id: string; label: string; value: string; description?: string }> } | null | undefined,
+    | { parameters: ReadonlyArray<{ id: string; label: string; value: string; description?: string }> }
+    | null
+    | undefined,
 ): T {
   if (!riskParameters?.parameters.length) return detail
   return {

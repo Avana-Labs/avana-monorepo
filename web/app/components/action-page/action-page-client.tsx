@@ -26,9 +26,7 @@ export function ActionPageClient({
   initialDebtId?: string
 }) {
   if (!isValidAction(product, kind)) {
-    const fallbackHref =
-      closeHref ??
-      (product === "lend" || product === "borrow" ? `/${product}` : "/")
+    const fallbackHref = closeHref ?? (product === "lend" || product === "borrow" ? `/${product}` : "/")
     return <ActionNotFound closeHref={fallbackHref} />
   }
 
@@ -49,12 +47,12 @@ export function ActionPageClient({
   }
 
   return (
-      <LendActionPageClient
-        kind={kind as "deposit" | "withdraw"}
-        closeHref={closeHref ?? "/lend"}
-        initialAssetId={initialAssetId}
-        initialMarketId={initialMarketId}
-        initialAmount={initialAmount}
-      />
+    <LendActionPageClient
+      kind={kind as "deposit" | "withdraw"}
+      closeHref={closeHref ?? "/lend"}
+      initialAssetId={initialAssetId}
+      initialMarketId={initialMarketId}
+      initialAmount={initialAmount}
+    />
   )
 }

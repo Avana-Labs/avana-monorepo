@@ -7,10 +7,7 @@ import { HomeWorkspaceCard } from "@/app/components/home/home-workspace-card"
 import { HomeSwapAction } from "@/app/components/home/home-swap-action"
 import { ActionSessionLoading } from "@/app/components/action-page/action-session-loading"
 import { HomeWorkspaceSkeleton } from "@/app/components/loading-states"
-import {
-  AvanaSessionsProvider,
-  useBorrowSessionContext,
-} from "@/app/lib/avana-session/avana-sessions-provider"
+import { AvanaSessionsProvider, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
 
 // Swap is the initial mode. Fetch the other action forms only when selected,
 // keeping their configuration/picker graph off the initial workspace load.

@@ -30,10 +30,7 @@ export function useConvexWalletOnboardingSummary(
 const NO_SUMMARY = { sinceMs: null, boost: null }
 
 export function useConvexProductWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
-  const buckets = useQuery(
-    api.wallet.productBalances.listForWallet,
-    walletId ? { wallet: walletId } : "skip",
-  )
+  const buckets = useQuery(api.wallet.productBalances.listForWallet, walletId ? { wallet: walletId } : "skip")
   if (!buckets) return buckets === undefined ? undefined : []
   const resolvedWalletId = walletId ?? ""
 

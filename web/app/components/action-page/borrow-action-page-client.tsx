@@ -2,12 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  parseFixed,
-  currentDebtValueUsd6,
-  usd6ToNumber,
-  wadToPercent,
-} from "@/app/lib/borrow-system/model"
+import { parseFixed, currentDebtValueUsd6, usd6ToNumber, wadToPercent } from "@/app/lib/borrow-system/model"
 import {
   buildClaimBorrowAction,
   buildHomeClaimPreview,
@@ -183,10 +178,7 @@ export function BorrowActionPageClient({
 
   // Accrued to now so Outstanding debt and Max include the interest since the last write (the
   // dashboard figure); the stored index made a "full" repay leave that interest behind.
-  const debtPositions = useMemo(
-    () => session.state.accounts[walletId]?.debtPositions ?? [],
-    [session.state, walletId],
-  )
+  const debtPositions = useMemo(() => session.state.accounts[walletId]?.debtPositions ?? [], [session.state, walletId])
   const [debtPositionId, setDebtPositionId] = useState(initialDebtId ?? "")
 
   const debtPosition = useMemo(() => {

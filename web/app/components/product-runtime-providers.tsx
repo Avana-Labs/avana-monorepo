@@ -12,14 +12,7 @@ const AvanaSessionProviders = dynamic(() =>
   import("@/app/components/avana-session-providers").then((mod) => mod.AvanaSessionProviders),
 )
 
-const PRODUCT_RUNTIME_ROUTES = [
-  "/actions",
-  "/borrow",
-  "/lend",
-  "/swap",
-  "/dashboard",
-  "/ask",
-]
+const PRODUCT_RUNTIME_ROUTES = ["/actions", "/borrow", "/lend", "/swap", "/dashboard", "/ask"]
 
 function needsProductRuntime(pathname: string) {
   // The guest Express workspace owns a swap-only session and activates the full

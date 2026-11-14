@@ -49,7 +49,9 @@ export function useBorrowSession({
   // A wallet switch starts from an empty account; the markets are kept.
   useEffect(() => {
     setState((current) =>
-      current.accounts[walletId] ? current : { ...emptyBorrowSystemState(walletId), markets: current.markets, assets: current.assets },
+      current.accounts[walletId]
+        ? current
+        : { ...emptyBorrowSystemState(walletId), markets: current.markets, assets: current.assets },
     )
   }, [walletId])
 

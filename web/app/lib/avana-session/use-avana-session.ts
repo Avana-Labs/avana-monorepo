@@ -14,5 +14,8 @@ type AvanaSession = {
  */
 export function useAvanaSession(walletId?: string): AvanaSession {
   const profile = useMemo(() => resolveWalletIdentity(walletId), [walletId])
-  return useMemo(() => ({ walletId: profile.id, walletAddress: profile.walletAddress }), [profile.id, profile.walletAddress])
+  return useMemo(
+    () => ({ walletId: profile.id, walletAddress: profile.walletAddress }),
+    [profile.id, profile.walletAddress],
+  )
 }

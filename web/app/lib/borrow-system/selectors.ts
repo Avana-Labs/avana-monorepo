@@ -12,7 +12,6 @@ import { normalizeWeights } from "@/app/lib/prices/lp-token-price"
 import type { HomeCollateralPool } from "@/app/lib/borrow-system/home-contracts"
 import { getLocalAssetIcon } from "@/app/lib/local-asset-icons"
 
-
 function fixedToNumber(value: bigint, decimals: number) {
   return Number.parseFloat(formatFixed(value, decimals))
 }

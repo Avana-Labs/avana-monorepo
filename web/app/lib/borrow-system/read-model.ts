@@ -172,10 +172,7 @@ export function buildBorrowPageData(state: BorrowSystemState, walletId: string):
   }
 }
 
-export function buildPortfolioBorrowData(
-  state: BorrowSystemState,
-  walletId: string,
-): PortfolioBorrowTabData {
+export function buildPortfolioBorrowData(state: BorrowSystemState, walletId: string): PortfolioBorrowTabData {
   const snapshot = selectBorrowSnapshot(state, walletId)
   const debtPositions = selectPortfolioDebtRows(state, walletId).map((position, index) => ({
     ...position,
