@@ -1,0 +1,190 @@
+name: release
+
+# Publishes the build of a release tag. A tag `vX.Y.Z` (or a pre-release `vX.Y.Z-alpha.N`, `-beta.N`, `-rc.N`) is the
+# deploy scripts' AVANA_RELEASE: it is part of every CREATE2/CREATE3 salt, so the tag fixes the deployed addresses
+# (docs/release.md, contracts/script/README.md#releases-and-tags).
+#
+# On a tag push, or by hand for an existing tag (to attach the files to a release made before this workflow, such as
+# v0.1.0-alpha.1), the build job:
+#   1. checks the tag: its format (the manifest schema's `release` pattern), that it is not a learning tag, that its
+#      commit is on main, and that CHANGELOG.md on this workflow's commit has its section;
+#   2. builds the tagged commit with the release build: the default Foundry profile (solc 0.8.28, cancun, optimizer
+#      10,000 runs, no metadata hash, the settings of REQ-ARCH-053), which the deploy scripts and `manifest verify` read
+#      from contracts/out, and the `aave` profile for contracts/out-aave;
+#   3. checks the tagged commit's committed ABIs against that build, where the tag has packages/protocol;
+#   4. writes release.json with packages/protocol/scripts/release-build.mjs: every deployable artifact's creation and
+#      runtime code hash, the CREATE3 factory address, the salt of every named contract, the predicted addresses when a
+#      deployer is given (input or the AVANA_DEPLOYER repository variable), and the ABI hash, checked against the
+#      release manifest schema; plus bytecode-hashes.txt, the artifacts as a tarball and SHA256SUMS.
+# The publish job attaches the files to the tag's GitHub Release. An existing release keeps its title and notes; a
+# missing one is created as a draft with the CHANGELOG section as notes, for a maintainer to title and publish.
+#
+# No test suite runs here (the long checks of contracts.yml run on the same tag push) and nothing is deployed: no RPC
+# URL, key or deployer account is available to this workflow.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag, for example v0.1.0-alpha.1"
+        required: true
+        type: string
+      deployer:
+        description: "Deployer address for the predicted CREATE3 addresses (optional; defaults to vars.AVANA_DEPLOYER)"
+        required: false
+        type: string
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: release build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DEPLOYER: ${{ inputs.deployer || vars.AVANA_DEPLOYER }}
+    steps:
+      # This workflow's commit (the release tools and CHANGELOG.md) at the workspace root, the tagged commit in tag/.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          path: tag
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag
+        env:
+          INPUT_DEPLOYER: ${{ env.DEPLOYER }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9.]+)?$ ]]; then
+            echo "::error::$TAG is not vX.Y.Z or vX.Y.Z-<pre-release> (the manifest schema's release pattern)"; exit 1
+          fi
+          if [[ "$TAG" =~ -(local|test|learn) ]]; then
+            echo "::error::$TAG is a learning tag; learning deployments are never published"; exit 1
+          fi
+          if [ -n "$INPUT_DEPLOYER" ] && ! [[ "$INPUT_DEPLOYER" =~ ^0x[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::deployer $INPUT_DEPLOYER is not an address"; exit 1
+          fi
+          commit=$(git -C tag rev-parse HEAD)
+          if ! git -C tag merge-base --is-ancestor "$commit" origin/main; then
+            echo "::error::$TAG ($commit) is not on main"; exit 1
+          fi
+          if [ "$(git -C tag cat-file -t "refs/tags/$TAG")" != tag ]; then
+            echo "::warning::$TAG is a lightweight tag; release tags are annotated (docs/release.md)"
+          fi
+          version=${TAG#v}
+          awk -v h="## [$version]" 'index($0, h) == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' \
+            CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no section ## [$version]"; exit 1
+          fi
+          echo "COMMIT=$commit" >> "$GITHUB_ENV"
+
+      - name: Read the tag's pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat tag/contracts/.foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: tag/contracts/dependencies
+          key: soldeer-${{ hashFiles('tag/contracts/soldeer.lock') }}
+
+      - name: Release build
+        working-directory: tag/contracts
+        run: |
+          set -euo pipefail
+          forge soldeer install
+          forge --version | grep -F "Version: ${FOUNDRY_VERSION#v}"
+          forge build
+          if grep -q '^\[profile\.aave\]' foundry.toml; then FOUNDRY_PROFILE=aave forge build; fi
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install the workspace's npm dependencies (viem)
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: The tag's committed ABIs equal its build
+        run: |
+          if [ -f tag/packages/protocol/scripts/generate-abis.mjs ]; then
+            (cd tag/contracts && FOUNDRY_PROFILE=univ3 forge build)
+            node tag/packages/protocol/scripts/generate-abis.mjs --check
+          else
+            echo "$TAG has no packages/protocol; release.json records abiHash null" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Release record, bytecode hashes and artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          node packages/protocol/scripts/release-build.mjs --release "$TAG" --commit "$COMMIT" \
+            --contracts tag/contracts --abi-index tag/packages/protocol/src/abis/index.ts \
+            ${DEPLOYER:+--deployer "$DEPLOYER"} --out-dir dist
+          tar -czf "dist/avana-$TAG-artifacts.tar.gz" -C tag/contracts -T dist/artifacts.txt
+          rm dist/artifacts.txt
+          mv release-notes.md dist/release-notes.md
+          (cd dist && sha256sum release.json bytecode-hashes.txt "avana-$TAG-artifacts.tar.gz" > SHA256SUMS)
+          {
+            echo "### $TAG ($COMMIT)"
+            jq -r '"- \(.artifacts | length) artifacts\n- CREATE3 factory: \(.create3Factory // "none at this tag")\n- ABI hash: \(.abiHash // "none at this tag")\n- deployer: \(.deployer // "not given; no addresses predicted")"' dist/release.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ env.TAG }}
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: attach to the GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-${{ env.TAG }}
+          path: dist
+
+      - name: Create the draft release if the tag has none
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG exists; its title and notes are kept" >> "$GITHUB_STEP_SUMMARY"
+          else
+            pre=""
+            [[ "$TAG" == *-* ]] && pre="--prerelease"
+            gh release create "$TAG" --verify-tag --draft $pre --title "${TAG#v}" --notes-file dist/release-notes.md
+            echo "Draft release $TAG created; set its title and publish it (docs/release.md)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Attach the files
+        run: |
+          gh release upload "$TAG" --clobber \
+            dist/release.json dist/bytecode-hashes.txt "dist/avana-$TAG-artifacts.tar.gz" dist/SHA256SUMS
