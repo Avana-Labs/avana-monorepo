@@ -12,8 +12,8 @@
 #
 #   killed    a test failed
 #   survived  every matched test passed
-#   timeout   the run took longer than GAMBIT_TIMEOUT seconds (counted with the survivors: a slow suite must not hide
-#             a surviving mutant)
+#   timeout   the build took longer than GAMBIT_BUILD_TIMEOUT seconds or the test run longer than GAMBIT_TIMEOUT
+#             (counted with the survivors: a slow suite must not hide a surviving mutant)
 #   invalid   the mutant did not compile under forge (counted with neither)
 #
 # Reports, per layer and contract: out-security/gambit/<layer>/<Contract>/status.tsv (mutant id and result),
@@ -24,7 +24,8 @@
 # with the reason the change cannot be observed.
 #
 # Budgets (environment, with defaults): MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated, as for `mutate`; empty:
-# all), GAMBIT_TIMEOUT=300 seconds per mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS, else 256).
+# all), GAMBIT_BUILD_TIMEOUT=1500 seconds per mutant build (the via-IR baseline build of every unit took 722 s on
+# CI), GAMBIT_TIMEOUT=300 seconds per mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS, else 256).
 #
 # Usage, from contracts/:  script/security-gambit.sh
 
@@ -38,6 +39,7 @@ GAMBIT="$ROOT/tools/bin/gambit"
 export PATH="$ROOT/tools/bin:$ROOT/.venv/bin:$HOME/.foundry/bin:$PATH"
 
 GAMBIT_TIMEOUT=${GAMBIT_TIMEOUT:-300}
+GAMBIT_BUILD_TIMEOUT=${GAMBIT_BUILD_TIMEOUT:-1500}
 GAMBIT_FUZZ_RUNS=${GAMBIT_FUZZ_RUNS:-${MUTATE_FUZZ_RUNS:-256}}
 TRIAGE=security/gambit-triage.json
 
@@ -92,10 +94,14 @@ isolated_root() {
   ln -s "$solc" "$root/bin/solc"
 }
 
-# run_tests <root> <tests glob> <log>: forge test in the isolated copy; exit code as with_timeout.
+# run_tests <root> <tests glob> <log>: forge build, then forge test, in the isolated copy; exit code as with_timeout.
+# The build has its own budget: a mutant of a file that a via-IR unit imports (the Lens modules, Collateralization,
+# DebtOracle, the LPVaultSwap logic) recompiles that unit, which alone took longer than GAMBIT_TIMEOUT on CI (every
+# Lens mutant timed out in its build in run 43492416937), so only the test run counts against GAMBIT_TIMEOUT.
 run_tests() {
   (cd "$1" && export FOUNDRY_FUZZ_RUNS="$GAMBIT_FUZZ_RUNS" &&
-    with_timeout "$GAMBIT_TIMEOUT" forge test -j 2 --fail-fast --match-path "$2" >"$3" 2>&1)
+    with_timeout "$GAMBIT_BUILD_TIMEOUT" forge build >"$3" 2>&1 &&
+    with_timeout "$GAMBIT_TIMEOUT" forge test -j 2 --fail-fast --match-path "$2" >>"$3" 2>&1)
 }
 
 list=$("$PY" script/mutation-targets.py gambit --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}") ||
