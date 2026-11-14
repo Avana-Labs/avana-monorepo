@@ -144,12 +144,21 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         emit DisagreementRecorded(_now64(), primary, alternate);
     }
 
-    /// @dev `REQ-ORACLE-029`: store `{price8, min t_i, v}` only when Live and newer than the stored timestamp.
+    /// @dev `REQ-ORACLE-029`: store `{price8, min t_i, v}` when Live and either the oldest leg in use advanced or, at the
+    /// same oldest timestamp, a faster leg published a round that moved the price. The second case keeps the accepted
+    /// price (the borrow bound of `REQ-RISK-059` and the booking price of `REQ-RISK-026`) within one round of the fastest
+    /// feed instead of one round of the slowest (a day for a USD stable leg). The timestamp stays `min t_i`, so it never
+    /// decreases and re-reading the same rounds never refreshes it.
     function _writeAccepted(
         Evaluation memory e
     ) private {
         Layout storage $ = _s();
-        if (e.state != PriceState.Live || e.servedUpdatedAt <= $.accepted.updatedAt) return;
+        if (e.state != PriceState.Live) return;
+        uint64 at = $.accepted.updatedAt;
+        if (e.servedUpdatedAt < at) return;
+        // fresh < 2^255 (SPEC-ORC-008 bounds), so the signed comparison is exact.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        if (e.servedUpdatedAt == at && int256(e.fresh) == $.accepted.answer) return;
         _storeAccepted(e);
         emit PriceAccepted(SafeCast.toInt256(e.fresh), e.servedUpdatedAt, e.prices);
     }
