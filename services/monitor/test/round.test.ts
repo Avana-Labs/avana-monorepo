@@ -114,6 +114,7 @@ describe("loadConfig", () => {
     MONITOR_CHANNEL_OPS_URL: "https://hooks.example/ops",
     MONITOR_CHANNEL_PD_ROUTING_KEY: "rk",
     MONITOR_INCIDENT_LOG: "incidents.jsonl",
+    MONITOR_STATE_PATH: "state.json",
     MONITOR_STATUS_TOKEN: "st",
     MONITOR_KEEPER_INSTANCES: "eth-primary:mainnet",
     MONITOR_KEEPER_TOKEN_ETH_PRIMARY: "kt",

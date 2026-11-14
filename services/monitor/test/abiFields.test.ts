@@ -5,7 +5,7 @@
 // the contracts fails here instead of in production.
 
 import { describe, expect, it } from "vitest";
-import { debtOracleAbi, lensAbi, lpOracleAbi, parameterStoreAbi } from "@avana/protocol/abis";
+import { debtOracleAbi, lensAbi, lpOracleAbi, marketRegistryAbi, parameterStoreAbi } from "@avana/protocol/abis";
 import type { Abi } from "viem";
 import { BACKING_FLAGS } from "../src/probes/coverage.ts";
 import { EVENT_NAMES, TOPIC_COUNT } from "../src/probes/events.ts";
@@ -29,6 +29,10 @@ describe("protocol names the probes read", () => {
     ["Lens", lensAbi as Abi, "checkBacking", [...BACKING_FLAGS]],
     ["Lens", lensAbi as Abi, "getTailCoverage", ["funded", "minimum", "ratioBps", "deficitOffset", "offsetFunded"]],
     ["Lens", lensAbi as Abi, "getHubAsset", ["baseDrawnRateBps"]],
+    ["ParameterStore", parameterStoreAbi as Abi, "getMarketParams", ["slippageAllowanceBps"]],
+    ["ParameterStore", parameterStoreAbi as Abi, "routeDepthThreshold", ["value"]],
+    ["MarketRegistry", marketRegistryAbi as Abi, "getRoute", ["route", "usable"]],
+    ["LPOracle", lpOracleAbi as Abi, "getTokenPrices", ["prices"]],
     ["DebtOracle", debtOracleAbi as Abi, "borrowPriceMaxAge", [""]],
     ["DebtOracle", debtOracleAbi as Abi, "liquidationPriceMaxAge", [""]],
   ];

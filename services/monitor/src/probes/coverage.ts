@@ -159,6 +159,9 @@ export function coverageProbe(): Probe<CoverageInput> {
       return out;
     },
 
+    save: () => history.save(),
+    restore: (s) => history.restore(s as Map<string, { t: number; v: bigint }[]>),
+
     evidence(input, subject) {
       const [kind, a, b] = subject.split(":");
       if (kind === "market") return input.markets.get(a!) ? text(input.markets.get(a!)) : null;

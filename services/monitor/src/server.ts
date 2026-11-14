@@ -5,12 +5,14 @@
 //
 //   POST /v1/keeper/alerts     { "instance": "...", "alerts": [ <keeper.alert line>, ... ] }
 //   POST /v1/keeper/heartbeat  { "instance": "...", "blockNumber": "123" }
+//   POST /v1/liveness          { "chainId", "safe", "period", "signer", "signature" } (the signature authenticates)
 //   GET  /v1/status            open alerts (status token)
 //   GET  /healthz              200, or 503 naming the chains without a recent successful round
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
 import { type KeeperAlertLine, type KeeperFeed, type KeeperInstance, refusal } from "./keeper.ts";
+import { type LivenessAnswer, type LivenessBook, acceptAnswer } from "./liveness.ts";
 import type { Alert } from "./types.ts";
 
 const MAX_BODY = 256 * 1024;
@@ -53,7 +55,14 @@ export interface Health {
   readonly stale: readonly string[];
 }
 
-export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: () => readonly Alert[], health: () => Health = () => ({ ok: true, stale: [] })): Server {
+/** Safe signer liveness answers: the book and which (chain, Safe) pairs are watched. */
+export interface LivenessIngest {
+  readonly book: LivenessBook;
+  watched(chainId: number, safe: string): boolean;
+  now(): number;
+}
+
+export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: () => readonly Alert[], health: () => Health = () => ({ ok: true, stale: [] }), liveness?: LivenessIngest): Server {
   const instances = new Map<string, KeeperInstance>(feed.instances.map((i) => [i.name, i]));
   for (const name of instances.keys()) if (!cfg.keeperTokens.get(name)) throw new Error(`no token for keeper instance ${name}`);
 
@@ -67,6 +76,17 @@ export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: (
       if (req.method === "GET" && req.url === "/v1/status") {
         if (token === null || !same(token, cfg.statusToken)) return json(res, 401, { error: "unauthorized" });
         return json(res, 200, { open: openAlerts().map((a) => ({ ...a, blockNumber: a.blockNumber.toString(10) })) });
+      }
+      if (req.method === "POST" && req.url === "/v1/liveness") {
+        if (!liveness) return json(res, 404, { error: "not found" });
+        let answer: LivenessAnswer;
+        try {
+          answer = JSON.parse(await readBody(req));
+        } catch (err) {
+          return json(res, 400, { error: err instanceof Error ? err.message : "bad body" });
+        }
+        const why = await acceptAnswer(liveness.book, liveness.watched, answer, liveness.now());
+        return why === null ? json(res, 200, { ok: true }) : json(res, 422, { error: why });
       }
       if (req.method !== "POST" || (req.url !== "/v1/keeper/alerts" && req.url !== "/v1/keeper/heartbeat")) return json(res, 404, { error: "not found" });
 

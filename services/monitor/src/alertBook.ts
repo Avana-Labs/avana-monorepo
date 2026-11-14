@@ -71,6 +71,16 @@ export class AlertBook {
   }
 
   /** Open alerts, for the status endpoint. */
+  /** The open alerts with their sources, for the state file. */
+  save(): { key: string; alert: Alert; source: string }[] {
+    return [...this.#open].map(([key, o]) => ({ key, alert: o.alert, source: o.source }));
+  }
+
+  /** Reopens saved alerts without sending them again. */
+  restore(saved: readonly { key: string; alert: Alert; source: string }[]): void {
+    for (const s of saved) this.#open.set(s.key, { alert: s.alert, source: s.source });
+  }
+
   open(): Alert[] {
     return [...this.#open.values()].map((o) => o.alert);
   }

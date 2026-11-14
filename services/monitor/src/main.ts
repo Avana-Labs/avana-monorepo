@@ -14,9 +14,11 @@ import { fileIncidentLog } from "./incidentLog.ts";
 import { KeeperFeed } from "./keeper.ts";
 import { type ChainReads, type ProviderReads, runRound } from "./monitor.ts";
 import type { RawRpc } from "./probe.ts";
-import { probesFor } from "./probes.ts";
+import { liveFrontend, probesFor } from "./probes.ts";
+import { LivenessBook } from "./liveness.ts";
 import { type Channel, logChannel, pagerDutyChannel, webhookChannel } from "./notify/channels.ts";
 import { monitorServer } from "./server.ts";
+import { apply, collect, fileStateStore } from "./state.ts";
 
 const out = (o: unknown) => process.stdout.write(`${JSON.stringify(o)}\n`);
 const fatal = (kind: string) => (err: unknown) => {
@@ -45,6 +47,18 @@ function provider(c: ChainConfig, url: string): ProviderReads {
         return logs.map((l) => ({ address: l.address, topics: l.topics as Hex[], data: l.data, blockNumber: BigInt(l.blockNumber!), transactionHash: l.transactionHash!, logIndex: Number(l.logIndex) }));
       },
       getStorageAt: async (address, slot) => (await client.getStorageAt({ address, slot, blockNumber: b.number })) ?? "0x",
+      call: async (from, to, data, overrides = []) => {
+        try {
+          const r = await client.call({ account: from, to, data, blockNumber: b.number, stateOverride: overrides.map((o) => ({ address: o.address, ...(o.code ? { code: o.code } : {}), ...(o.stateDiff ? { stateDiff: [...o.stateDiff] } : {}) })) });
+          return { ok: true, data: r.data ?? "0x" };
+        } catch (err) {
+          // A revert answers with its reason; a transport failure is not an outcome of the call and is thrown.
+          const e = err as { name?: string; shortMessage?: string; message?: string; walk?: (f: (x: unknown) => boolean) => unknown };
+          const reverted = e.walk?.((x) => (x as { name?: string }).name === "CallExecutionError" || (x as { name?: string }).name === "ContractFunctionRevertedError" || (x as { name?: string }).name === "ExecutionRevertedError");
+          if (!reverted) throw err;
+          return { ok: false, error: e.shortMessage ?? e.message ?? String(err) };
+        }
+      },
     }),
   };
 }
@@ -76,15 +90,39 @@ const channels = new Map(config.channels.map((c) => [c.name, channelOf(c)]));
 const log = fileIncidentLog(config.incidentLogPath);
 const lastSuccess = new Map<number, number>(config.chains.map((c) => [c.chain.id, Date.now()]));
 
-monitorServer({ keeperTokens: config.keeperTokens, statusToken: config.statusToken }, feed, () => book.open(), () => {
-  const stale = config.chains.filter((c) => Date.now() - lastSuccess.get(c.chain.id)! > 5 * config.intervalSeconds * 1_000).map((c) => c.chain.key);
-  return { ok: stale.length === 0, stale };
-}).listen(config.port);
+const liveness = new LivenessBook(config.liveness);
+const probesByChain = new Map(config.chains.map((c) => [c.chain.id, probesFor(c, config, liveFrontend, liveness)]));
+const store = fileStateStore(config.statePath);
+const saved = store.load();
+if (saved) {
+  apply({ book, feed, liveness, probes: probesByChain }, saved);
+  out({ type: "monitor.restored", savedAt: saved.savedAt, openAlerts: book.open().length });
+}
+const safeWatched = new Set([...config.safes].flatMap(([chainId, safes]) => safes.map((x) => `${chainId}|${x.address.toLowerCase()}`)));
+monitorServer(
+  { keeperTokens: config.keeperTokens, statusToken: config.statusToken },
+  feed,
+  () => book.open(),
+  () => {
+    const stale = config.chains.filter((c) => Date.now() - lastSuccess.get(c.chain.id)! > 5 * config.intervalSeconds * 1_000).map((c) => c.chain.key);
+    return { ok: stale.length === 0, stale };
+  },
+  { book: liveness, watched: (chainId, safe) => safeWatched.has(`${chainId}|${safe.toLowerCase()}`), now: () => Math.floor(Date.now() / 1_000) },
+).listen(config.port);
 out({ type: "monitor.start", chains: config.chains.map((c) => c.chain.key), channels: config.channels.map((c) => `${c.name}:${c.kind}`), keeperInstances: config.keeperInstances.map((i) => i.name) });
+
+/** Written after every round, so a restart neither re-sends open alerts nor skips events. */
+const persist = () => {
+  try {
+    store.save(collect({ book, feed, liveness, probes: probesByChain }, Math.floor(Date.now() / 1_000)));
+  } catch (err) {
+    out({ type: "monitor.stateNotSaved", error: err instanceof Error ? err.message : String(err) });
+  }
+};
 
 for (const c of config.chains) {
   const reads = chainReads(c);
-  const probes = probesFor(c, config);
+  const probes = probesByChain.get(c.chain.id)!;
   let running = false;
   const tick = async () => {
     if (running) return; // a slow round is not overlapped by the next one
@@ -96,6 +134,7 @@ for (const c of config.chains) {
     } catch (err) {
       out({ type: "monitor.roundFailed", chain: c.chain.key, error: err instanceof Error ? err.message : String(err) });
     } finally {
+      persist();
       running = false;
     }
   };

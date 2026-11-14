@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { lensAbi } from "@avana/protocol/abis";
 import { some } from "@avana/services-common/views";
 import { type Address, type Hex, parseAbi } from "viem";
+import type { LivenessBook } from "../liveness.ts";
 import { type Probe, text } from "../probe.ts";
 import type { Level } from "../signals.ts";
 import type { Finding } from "../types.ts";
@@ -43,8 +44,16 @@ export function safeChanges(before: SafeState, after: SafeState): Record<string,
   return out;
 }
 
-export function safesProbe(safes: readonly SafeConfig[]): Probe<ReadonlyMap<string, SafeState | null>> {
+/** Signer liveness for a chain's Safes: the shared answer book and the chain the answers name. */
+export interface SafeLiveness {
+  readonly book: LivenessBook;
+  readonly chainId: number;
+}
+
+export function safesProbe(safes: readonly SafeConfig[], liveness?: SafeLiveness): Probe<ReadonlyMap<string, SafeState | null>> {
   const last = new Map<string, SafeState>();
+  // The first period the monitor watched: earlier periods had nobody collecting answers and are never judged.
+  let startedPeriod: number | null = null;
   return {
     name: "safes",
     async read(ctx) {
@@ -62,8 +71,9 @@ export function safesProbe(safes: readonly SafeConfig[]): Probe<ReadonlyMap<stri
       }
       return out;
     },
-    evaluate(input) {
+    evaluate(input, block) {
       const out: Finding[] = [];
+      if (liveness && startedPeriod === null) startedPeriod = liveness.book.periodOf(block.timestamp);
       for (const s of safes) {
         const key = s.address.toLowerCase();
         const now = input.get(key);
@@ -74,14 +84,28 @@ export function safesProbe(safes: readonly SafeConfig[]): Probe<ReadonlyMap<stri
         }
         const before = last.get(key);
         last.set(key, now);
+        if (liveness && startedPeriod !== null) {
+          const period = liveness.book.judgedPeriod(block.timestamp);
+          if (period >= startedPeriod) {
+            const answered = liveness.book.answered(liveness.chainId, key, period, now.owners);
+            const needed = Number(now.threshold) + 1;
+            out.push({ signal: "M-23", kind: "condition", level: answered.length >= needed ? "ok" : "page", subject: `${subject}:liveness`, detail: { safe: s.label, period: String(period), answered: String(answered.length), needed: String(needed), owners: String(now.owners.length) } });
+          }
+        }
         if (!before) continue;
         const changes = safeChanges(before, now);
         if (Object.keys(changes).length > 0) out.push({ signal: "M-23", kind: "event", level: "page", subject, detail: { safe: s.label, address: s.address, ...changes } });
       }
       return out;
     },
+    save: () => ({ last: new Map(last), startedPeriod }),
+    restore: (s) => {
+      const saved = s as { last: Map<string, SafeState>; startedPeriod: number | null };
+      saved.last.forEach((v, k) => last.set(k, v));
+      startedPeriod = saved.startedPeriod;
+    },
     evidence: (input, subject) => {
-      const v = input.get(subject.slice("safe:".length));
+      const v = input.get(subject.split(":")[1]!);
       return v ? text(v) : null;
     },
   };
@@ -115,6 +139,8 @@ export function issuerProbe(): Probe<ReadonlyMap<string, IssuerProbe>> {
       }
       return out;
     },
+    save: () => new Map(last),
+    restore: (s) => (s as Map<string, IssuerProbe>).forEach((v, k) => last.set(k, v)),
     evidence: (input, subject) => {
       const v = input.get(subject.slice("token:".length));
       return v ? text(v) : null;
@@ -197,5 +223,9 @@ export function frontendProbe(cfg: FrontendConfig, deps: FrontendDeps): Probe<Fr
       return out;
     },
     evidence: (input) => text(input),
+    save: () => last,
+    restore: (s) => {
+      last = s as FrontendRead | null;
+    },
   };
 }
