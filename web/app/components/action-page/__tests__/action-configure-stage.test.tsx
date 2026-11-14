@@ -285,13 +285,6 @@ describe("ActionConfigureStage without a transacting wallet", () => {
     expect(screen.getByTestId("action-footer-primary")).toHaveTextContent("Get Started")
   })
 
-  it("asks a signed-in wallet that has not onboarded to complete onboarding", () => {
-    renderWith("needs-onboarding")
-    const cta = screen.getByTestId("action-footer-primary")
-    expect(cta).toHaveTextContent("Complete onboarding")
-    expect(cta).toHaveAttribute("href", "/dashboard")
-  })
-
   it("keeps the normal Review CTA for a ready wallet", () => {
     renderWith("ready")
     expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument()

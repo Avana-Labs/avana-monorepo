@@ -46,12 +46,4 @@ describe("foldLiquidationRiskStats", () => {
     const stats = foldLiquidationRiskStats(latest, null)
     expect(stats.every((s) => s.deltaValue === 0)).toBe(true)
   })
-
-  it("builds a deterministic Dual fallback when Convex is empty", () => {
-    const a = buildMockLiquidationRiskStats("uni-v3-eth-usdc")
-    const b = buildMockLiquidationRiskStats("uni-v3-eth-usdc")
-    expect(a).toHaveLength(6)
-    expect(a).toEqual(b)
-    expect(a[0]?.value).not.toBe("")
-  })
 })

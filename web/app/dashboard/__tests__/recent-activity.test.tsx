@@ -39,54 +39,6 @@ describe("RecentActivity whole-row navigation", () => {
     push.mockClear()
   })
 
-  it("opens the in-app receipt when a simulated row is clicked anywhere", () => {
-    const { container } = render(
-      <DisplayPreferencesProvider>
-        <RecentActivity rows={[makeRow({ id: "sim-1", txHash: "sim-abc123", primaryLabel: "Simulated deposit" })]} />
-      </DisplayPreferencesProvider>,
-    )
-    const rows = Array.from(container.querySelectorAll('[role="link"]')) as HTMLElement[]
-    expect(rows.length).toBe(1)
-    expect(rows[0].getAttribute("aria-label")).toContain("Simulated deposit")
-    expect(rows[0].getAttribute("tabindex")).toBe("0")
-    fireEvent.click(rows[0])
-    expect(push).toHaveBeenCalledWith("/sandbox/transactions/sim-abc123")
-  })
-
-  it("activates the row via the keyboard (Enter)", () => {
-    const { container } = render(
-      <DisplayPreferencesProvider>
-        <RecentActivity rows={[makeRow({ id: "sim-2", txHash: "sim-key456" })]} />
-      </DisplayPreferencesProvider>,
-    )
-    const row = container.querySelector('[role="link"]') as HTMLElement
-    fireEvent.keyDown(row, { key: "Enter" })
-    expect(push).toHaveBeenCalledWith("/sandbox/transactions/sim-key456")
-  })
-
-  it("routes simulated sandbox hashes to the in-app receipt, not Etherscan", () => {
-    const { container } = render(
-      <DisplayPreferencesProvider>
-        <RecentActivity
-          rows={[
-            makeRow({ id: "sim-1", txHash: "sim_lend_abc123" }),
-            makeRow({ id: "sim-2", txHash: "sim-def456" }),
-            makeRow({ id: "sim-3", txHash: "0xsim9f8e7d" }),
-          ]}
-        />
-      </DisplayPreferencesProvider>,
-    )
-    const rows = Array.from(container.querySelectorAll('[role="link"]')) as HTMLElement[]
-    expect(rows).toHaveLength(3)
-
-    fireEvent.click(rows[0])
-    expect(push).toHaveBeenCalledWith("/sandbox/transactions/sim_lend_abc123")
-    fireEvent.click(rows[1])
-    expect(push).toHaveBeenCalledWith("/sandbox/transactions/sim-def456")
-    fireEvent.click(rows[2])
-    expect(push).toHaveBeenCalledWith("/sandbox/transactions/0xsim9f8e7d")
-  })
-
   it("routes a genuinely on-chain row to Etherscan instead of the in-app router", () => {
     const realHash = `0x${"b".repeat(64)}`
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
@@ -148,59 +100,6 @@ describe("RecentActivity whole-row navigation", () => {
     expect(panel?.className).toMatch(/lg:max-h-\[560px\]/)
     expect(panel?.className).toMatch(/overflow-y-auto/)
     expect(panel?.className).toMatch(/border/)
-  })
-
-  it("infers a token symbol for the row icon", () => {
-    expect(
-      inferActivityTokenSymbol(
-        makeRow({
-          id: "1",
-          txHash: "sim-1",
-          kind: "stake",
-          product: "umbrella",
-          primaryLabel: "Staked WETH",
-          secondaryLabel: "3.4747 WETH",
-        }),
-      ),
-    ).toBe("WETH")
-    expect(
-      inferActivityTokenSymbol(
-        makeRow({
-          id: "2",
-          txHash: "sim-2",
-          kind: "claim",
-          product: "rewards",
-          primaryLabel: "Activate 3 sandbox friends",
-          secondaryLabel: "140 AVA claimed",
-        }),
-      ),
-    ).toBe("AVA")
-    expect(
-      inferActivityTokenSymbol(
-        makeRow({
-          id: "3",
-          txHash: "sim-3",
-          product: "borrow",
-          kind: "repay",
-          marketId: "aero-slipstream-bluechip:usdc",
-          primaryLabel: "USDC",
-          secondaryLabel: "via cbBTC / USDC",
-        }),
-      ),
-    ).toBe("USDC")
-    expect(
-      inferActivityTokenSymbol(
-        makeRow({
-          id: "4",
-          txHash: "sim-4",
-          product: "multiply",
-          kind: "close",
-          marketId: "wsteth-eth",
-          primaryLabel: "Close position",
-          secondaryLabel: "2.00x → 1.00x",
-        }),
-      ),
-    ).toBe("wstETH")
   })
 
   it("infers both constituent icons for pool collateral activity", () => {

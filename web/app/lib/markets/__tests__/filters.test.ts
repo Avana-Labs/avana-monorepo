@@ -10,24 +10,28 @@ import {
   buildAssetOptions,
   facetCounts,
   hubForSymbols,
+  chainFilterId,
   lendFilterItem,
-  loopCategories,
   matchesMarketFilters,
-  multiplyFilterItem,
 } from "@/app/lib/markets/filters"
 
 describe("market filter model", () => {
-  it("offers exactly the requested chains, testnet first", () => {
-    expect(CHAIN_OPTIONS.map((chain) => chain.label)).toEqual(["Testnet", "Ethereum", "Avalanche", "Robinhood"])
+  it("offers the chains of the deployments", () => {
+    expect(CHAIN_OPTIONS.map((chain) => chain.label)).toEqual(["Ethereum", "Base", "Local"])
+    expect(chainFilterId(1)).toBe("ethereum")
+    expect(chainFilterId(8453)).toBe("base")
+    expect(chainFilterId(31337)).toBe("local")
+    expect(chainFilterId(10)).toBeNull()
   })
 
-  it("puts every market on testnet only until mainnet", () => {
-    expect(lendFilterItem("USDC").chains).toEqual(["testnet"])
-    expect(multiplyFilterItem("AVAX", "USDC").chains).toEqual(["testnet"])
-    expect(borrowPoolFilterItem({ spoke: "aero-basic-stable", visuals: [{ symbol: "USDC" }] }).chains).toEqual([
-      "testnet",
+  it("matches every chain while rows carry no chain", () => {
+    expect(lendFilterItem("USDC").chains).toEqual(["ethereum", "base", "local"])
+    expect(borrowPoolFilterItem({ spoke: "aero-slipstream", visuals: [{ symbol: "USDC" }] }).chains).toEqual([
+      "ethereum",
+      "base",
+      "local",
     ])
-    expect(matchesMarketFilters(lendFilterItem("USDC"), { ...EMPTY_MARKET_FILTERS, chains: ["ethereum"] })).toBe(false)
+    expect(matchesMarketFilters(lendFilterItem("USDC"), { ...EMPTY_MARKET_FILTERS, chains: ["local"] })).toBe(true)
   })
 
   it("derives the hub from the token mix", () => {
@@ -39,20 +43,12 @@ describe("market filter model", () => {
     expect(hubForSymbols(["AAVE"])).toBe("volatile")
   })
 
-  it("maps every live borrow spoke to a DEX market and keeps roadmap DEXes as Soon", () => {
-    expect(borrowMarketForSpoke("uni-v2")).toBe("uniswap-v2")
-    expect(borrowMarketForSpoke("uni-v3-stable")).toBe("uniswap-v3")
-    expect(borrowMarketForSpoke("uni-robinhood-stocks")).toBe("uniswap-v3")
-    expect(borrowMarketForSpoke("curve-correlated")).toBe("curve")
-    expect(borrowMarketForSpoke("aero-basic-volatile")).toBe("aerodrome-basic")
-    expect(borrowMarketForSpoke("aero-slipstream-bluechip")).toBe("aerodrome-slipstream")
-    expect(borrowMarketForSpoke("bal-reclamm")).toBe("balancer")
-    expect(BORROW_MARKET_OPTIONS.filter((option) => option.soon).map((option) => option.label)).toEqual([
-      "CoW Swap",
-      "Uniswap V4",
-      "Sushi",
-      "Balancer V2",
-    ])
+  it("maps a borrow row to the DEX its CDP Spoke accepts", () => {
+    expect(borrowMarketForSpoke("uniswap-v3")).toBe("uniswap-v3")
+    expect(borrowMarketForSpoke("Uniswap V3")).toBe("uniswap-v3")
+    expect(borrowMarketForSpoke("aerodrome-slipstream")).toBe("aerodrome-slipstream")
+    expect(borrowMarketForSpoke("unknown")).toBeNull()
+    expect(BORROW_MARKET_OPTIONS.map((option) => option.label)).toEqual(["Uniswap V3", "Aerodrome Slipstream"])
   })
 
   it("includes every constituent of a 3-token pool in its assets, once", () => {
@@ -62,13 +58,6 @@ describe("market filter model", () => {
       constituents: [{ symbol: "USDC" }, { symbol: "WBTC" }, { symbol: "ETH" }],
     })
     expect(item.assets).toEqual(["USDC", "WBTC", "ETH"])
-  })
-
-  it("keeps the old Multiply chip semantics as loop categories", () => {
-    expect(loopCategories("wstETH", "WETH").sort()).toEqual(["eth", "smart"])
-    expect(loopCategories("USDC", "USDT").sort()).toEqual(["forex", "smart"])
-    expect(loopCategories("WBTC", "USDC")).toEqual(["btc"])
-    expect(loopCategories("AAVE", "USDC")).toEqual(["utility"])
   })
 
   it("dedupes asset options by symbol and sorts them by name, with a tab per family", () => {
@@ -93,22 +82,17 @@ describe("market filter model", () => {
       false,
     )
     expect(matchesMarketFilters(usdc, { ...EMPTY_MARKET_FILTERS, assets: ["usdc"] })).toBe(true)
-    expect(matchesMarketFilters(usdc, { ...EMPTY_MARKET_FILTERS, chains: ["avalanche"] })).toBe(false)
+    expect(matchesMarketFilters(usdc, { ...EMPTY_MARKET_FILTERS, chains: ["polygon"] })).toBe(false)
   })
 
   it("counts each facet's options against the other active facets only", () => {
-    const items = [
-      lendFilterItem("USDC"),
-      lendFilterItem("USDT"),
-      lendFilterItem("WETH"),
-      multiplyFilterItem("AVAX", "USDC"),
-    ]
+    const items = [lendFilterItem("USDC"), lendFilterItem("USDT"), lendFilterItem("WETH")]
     const state = { ...EMPTY_MARKET_FILTERS, hubs: ["stable"] }
     // Hub counts ignore the hub selection itself...
     expect(facetCounts(items, state, "hubs").get("correlated")).toBe(1)
     // ...but chain counts honour it.
-    expect(facetCounts(items, state, "chains").get("testnet")).toBe(2)
-    expect(facetCounts(items, state, "chains").get("ethereum") ?? 0).toBe(0)
+    expect(facetCounts(items, state, "chains").get("ethereum")).toBe(2)
+    expect(facetCounts(items, state, "chains").get("polygon") ?? 0).toBe(0)
     expect(activeFilterCount({ ...state, assets: ["USDC", "USDT"] })).toBe(3)
   })
 })

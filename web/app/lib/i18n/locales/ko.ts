@@ -3,6 +3,8 @@
 import type { TranslationDictionary } from "../types"
 
 const dict: TranslationDictionary = {
+  "No data available yet.": "아직 데이터가 없습니다.",
+  Local: "로컬",
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "담보를 예치하고 이를 담보로 대출한 뒤, 빌린 자본을 다시 예치하고 위험 한도까지 반복하세요.",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":

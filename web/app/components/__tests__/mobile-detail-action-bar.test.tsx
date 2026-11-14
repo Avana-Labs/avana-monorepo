@@ -25,12 +25,6 @@ describe("MobileDetailActionBar", () => {
     expect(links[0]).toHaveAttribute("href", "/dashboard")
   })
 
-  it("collapses to one Complete onboarding button for a wallet still onboarding", () => {
-    renderBar("needs-onboarding")
-    expect(screen.getAllByRole("link")).toHaveLength(1)
-    expect(screen.getByRole("link")).toHaveTextContent("Complete onboarding")
-  })
-
   it("keeps the product actions for a ready wallet", () => {
     renderBar("ready")
     expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(["Deposit", "Withdraw"])

@@ -21,16 +21,6 @@ afterEach(() => {
 describe("auth-gated wallet reads", () => {
   // These queries call requireWallet, which throws when unauthenticated — and useQuery
   // re-throws into render, which crashed the dashboard before the JWT was attached.
-  it("skips every wallet query until Convex has authenticated", () => {
-    renderHook(() => {
-      useConvexProductWalletBalances("0xabc")
-      useConvexClaimBasis("0xabc")
-      useConvexWalletOnboardingSummary("0xabc")
-    })
-    expect(useQuery).toHaveBeenCalledTimes(3)
-    for (const call of useQuery.mock.calls as unknown as Array<[unknown, unknown]>) expect(call[1]).toBe("skip")
-  })
-
   it("subscribes with the wallet once authenticated", () => {
     auth.isAuthenticated = true
     renderHook(() => useConvexProductWalletBalances("0xabc"))

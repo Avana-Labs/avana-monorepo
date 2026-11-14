@@ -14,14 +14,6 @@ describe("HealthRiskBanner", () => {
     expect(repay.getAttribute("href")).toBe("/actions/borrow/repay")
   })
 
-  it("deep-links to Deleverage for a multiply position at risk", () => {
-    render(<HealthRiskBanner healthFactor={1.4} product="multiply" />)
-
-    // 1.4 is in the shared "watch" band — still surfaced.
-    const link = screen.getByRole("link", { name: "Deleverage" })
-    expect(link.getAttribute("href")).toBe("/actions/multiply/deleverage")
-  })
-
   it("renders nothing for a safe health factor", () => {
     const { container } = render(<HealthRiskBanner healthFactor={3.0} product="borrow" />)
     expect(container.firstChild).toBeNull()

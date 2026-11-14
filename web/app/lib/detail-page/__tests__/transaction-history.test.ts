@@ -148,43 +148,4 @@ describe("transaction-history helpers", () => {
     expect(scopedAssetKeysMatch("uni-v2:gho", "bal-stable:gho")).toBe(false)
     expect(scopedAssetKeysMatch("bal-stable-sdai-usdc", "bal-stable:gho")).toBe(false)
   })
-
-  it("mapMultiplyHistoryKind never leaves raw borrow-engine kinds on multiply", () => {
-    expect(mapMultiplyHistoryKind("multiply")).toBe("open")
-    expect(mapMultiplyHistoryKind("borrow")).toBe("add")
-    expect(mapMultiplyHistoryKind("deleverage")).toBe("reduce")
-    expect(mapMultiplyHistoryKind("close")).toBe("close")
-  })
-
-  it("mapMultiplySessionRows keeps close as close and matches normalized slugs", () => {
-    const rows = mapMultiplySessionRows(
-      [
-        {
-          id: "m1",
-          intentId: "i1",
-          walletId: "w",
-          marketId: "ETH_USDT",
-          kind: "close",
-          status: "success",
-          amountUsd: 2_000,
-          multiplierBefore: 2,
-          multiplierAfter: 1,
-          simulated: true,
-          timestamp: Date.now() - 1_000,
-          hash: "0xabc1234567890",
-        },
-      ],
-      "eth-usdt",
-      "ETH",
-      "USDT",
-    )
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.kind).toBe("close")
-    expect(rows[0]?.amountUsd).toBe(2_000)
-  })
-
-  it("resolveTransactionKindLabel never renders a raw borrow kind on multiply", () => {
-    expect(resolveTransactionKindLabel(MULTIPLY_KIND_CONFIG, "borrow")).toBe("Add collateral")
-    expect(resolveTransactionKindLabel(MULTIPLY_KIND_CONFIG, "open")).toBe("Open")
-  })
 })

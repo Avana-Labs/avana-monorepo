@@ -3,6 +3,8 @@
 import type { TranslationDictionary } from "../types"
 
 const dict: TranslationDictionary = {
+  "No data available yet.": "Belum ada data.",
+  Local: "Lokal",
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "Setor jaminan, pinjam dengan jaminan itu, setor ulang modal pinjaman, dan ulangi hingga batas risiko Anda.",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":

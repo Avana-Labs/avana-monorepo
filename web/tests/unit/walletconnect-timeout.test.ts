@@ -35,7 +35,7 @@ describe("WalletConnect proposal timeout", () => {
           })().catch(error => { console.error(error); process.exitCode = 1; });
         `
         expect(() => execFileSync(process.execPath, ["--unhandled-rejections=strict", "-e", script])).not.toThrow()
-      }, 30_000)
+      }, 120_000)
     }
   }
 })

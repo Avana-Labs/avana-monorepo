@@ -21,13 +21,6 @@ describe("health factor presentation unification", () => {
     expect(source).toMatch(/healthFactorBand/)
   })
 
-  it("p1-06: multiply collateral table reuses shared formatHealthFactor", () => {
-    const source = readFileSync(resolve(__dirname, "../../dashboard/multiply-collateral-table.tsx"), "utf8")
-
-    expect(source).not.toMatch(/function formatHealthFactor\(/)
-    expect(source).toMatch(/formatHealthFactor/)
-  })
-
   it("p1-06: shared bands classify 1.05 / 1.15 / 1.2 consistently", () => {
     expect(healthFactorBand(1.05).id).toBe("danger")
     expect(healthFactorBand(1.15).id).toBe("danger")

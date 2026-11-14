@@ -27,21 +27,6 @@ describe("Aave rich results", () => {
     expect(container.querySelector('[data-slot="chart"] polyline')).toHaveAttribute("points")
   })
 
-  it("shows Aave on-chain figures and Avana sandbox balances separately", () => {
-    const card = buildAaveCard(
-      "aave_positions",
-      aaveEnvelope({
-        summary: { v4: { totalSuppliedUsd: "1000", totalDebtUsd: "250" } },
-        avanaSandbox: { totals: { lendUsd: 500 } },
-      }),
-    )!
-    render(<AskAIFinancialResultCard result={card} />)
-    expect(screen.getByRole("region", { name: "Your Aave vs Avana" })).toBeInTheDocument()
-    expect(screen.getByText("Aave on-chain v4 Debt")).toBeInTheDocument()
-    expect(screen.getByText("Avana sandbox Lend")).toBeInTheDocument()
-    expect(screen.queryByText("$1,500")).not.toBeInTheDocument()
-  })
-
   it("renders governance status, quorum and votes as text with no proposal-body link", () => {
     const card = buildAaveCard(
       "aave_governance",

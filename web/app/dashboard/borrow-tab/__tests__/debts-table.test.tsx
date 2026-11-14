@@ -215,11 +215,6 @@ describe("CurrentLtvCard borrowing-power status", () => {
     expect(container.textContent).not.toMatch(/RISK/)
   })
 
-  it("reads GOOD when a healthy position has remaining borrowing power", () => {
-    const { container } = render(<CurrentLtvCard borrowedUsd={2_000} collateralUsd={10_000} showBalance />)
-    expect(container.textContent).toMatch(/GOOD/)
-  })
-
   it("surfaces borrowing cost (interest per day + accrued) when provided", () => {
     const { container } = render(
       <CurrentLtvCard

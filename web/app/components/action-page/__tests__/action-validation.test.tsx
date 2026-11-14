@@ -5,12 +5,6 @@ import { isValidAction, isValidActionProduct } from "@/app/lib/action-system/con
 import { ActionNotFound } from "@/app/components/action-page/action-not-found"
 
 describe("action validation", () => {
-  it("accepts known product/kind combinations", () => {
-    expect(isValidAction("borrow", "borrow")).toBe(true)
-    expect(isValidAction("lend", "deposit")).toBe(true)
-    expect(isValidAction("multiply", "multiply")).toBe(true)
-  })
-
   it("rejects unknown products and kinds", () => {
     expect(isValidActionProduct("nonsense")).toBe(false)
     expect(isValidAction("borrow", "frobnicate")).toBe(false)

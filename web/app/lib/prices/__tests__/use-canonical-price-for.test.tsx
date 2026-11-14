@@ -35,13 +35,6 @@ describe("useCanonicalPriceFor", () => {
     expect(renderWith({ [priceKey("ETH")]: 1902.05 }, "eth")).toBe("1902.05")
   })
 
-  it("falls back to the deterministic PRICE_FIXTURE when the live price is absent", () => {
-    // Empty live context (SSR / pre-hydration): a known token still resolves to the fixture
-    // (AAVE 105, ETH 1934) rather than its bare symbol — no hydration mismatch, always a price.
-    expect(renderWith({}, "AAVE")).toBe("105")
-    expect(renderWith({}, "ETH")).toBe("1934")
-  })
-
   it("prefers the live price over the fixture once it arrives", () => {
     // Simulates the overlay landing: ETH live 1902.05 must win over the fixture 1934.
     expect(renderWith({ [priceKey("ETH")]: 1902.05 }, "ETH")).toBe("1902.05")

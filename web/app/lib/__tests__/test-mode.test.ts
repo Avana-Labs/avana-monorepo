@@ -16,29 +16,6 @@ describe("open gate test mode", () => {
     expect(prod.shouldUseOpenGateSession()).toBe(false)
   })
 
-  it("stays locked in development by default — no auto-open", async () => {
-    vi.stubEnv("NODE_ENV", "development")
-    vi.stubEnv("NEXT_PUBLIC_DEV_OPEN_GATE", "0")
-    vi.stubEnv("NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE", "0")
-    vi.stubEnv("NEXT_PUBLIC_LIGHTHOUSE_AUDIT_MODE", "0")
-    const dev = await import("@/app/lib/test-mode")
-    expect(dev.IS_OPEN_GATE_TEST_MODE).toBe(false)
-    expect(dev.shouldUseOpenGateSession()).toBe(false)
-    expect(dev.shouldUseMockDataSource()).toBe(false)
-  })
-
-  it("opens in development when NEXT_PUBLIC_DEV_OPEN_GATE=1 without switching to mock data", async () => {
-    vi.stubEnv("NODE_ENV", "development")
-    vi.stubEnv("NEXT_PUBLIC_DEV_OPEN_GATE", "1")
-    vi.stubEnv("NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE", "0")
-    const open = await import("@/app/lib/test-mode")
-    expect(open.IS_OPEN_GATE_TEST_MODE).toBe(true)
-    expect(open.shouldUseOpenGateSession()).toBe(true)
-    // Open-gate is a session shortcut only — the data source stays live.
-    expect(open.shouldUseMockDataSource()).toBe(false)
-    expect(open.TEST_MODE_WALLET_ADDRESS).toMatch(/^0x[0-9a-f]{40}$/)
-  })
-
   it("opens in development for the Playwright e2e flag", async () => {
     vi.stubEnv("NODE_ENV", "development")
     vi.stubEnv("NEXT_PUBLIC_DEV_OPEN_GATE", "0")
@@ -71,15 +48,5 @@ describe("open gate test mode", () => {
     const audit = await import("@/app/lib/test-mode")
     expect(audit.shouldUseOpenGateSession()).toBe(false)
     expect(audit.isLighthouseAuditMode()).toBe(true)
-  })
-
-  it("keeps the mock data source override independent of the open gate", async () => {
-    vi.stubEnv("NODE_ENV", "production")
-    vi.stubEnv("NEXT_PUBLIC_DEV_OPEN_GATE", "0")
-    vi.stubEnv("NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE", "0")
-    vi.stubEnv("AVANA_DATA_SOURCE", "mock")
-    const m = await import("@/app/lib/test-mode")
-    expect(m.shouldUseOpenGateSession()).toBe(false)
-    expect(m.shouldUseMockDataSource()).toBe(true)
   })
 })

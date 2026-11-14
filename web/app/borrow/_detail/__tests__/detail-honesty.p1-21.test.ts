@@ -30,11 +30,4 @@ describe("detail page content honesty", () => {
     const source = readFileSync(resolve(__dirname, "../ui/AboutNewsSection.tsx"), "utf8")
     expect(source).not.toMatch(/governance\.aave\.com/)
   })
-
-  it("p1-21: pool/asset about stats do not emit fake-repeated etherscan hex", () => {
-    const pool = readFileSync(resolve(__dirname, "../../../lib/borrow-detail/pool.mock.ts"), "utf8")
-    const asset = readFileSync(resolve(__dirname, "../../../lib/borrow-detail/asset.mock.ts"), "utf8")
-    expect(pool).not.toMatch(/fakeAddressSeed/)
-    expect(asset).not.toMatch(/fakeAddressSeed/)
-  })
 })

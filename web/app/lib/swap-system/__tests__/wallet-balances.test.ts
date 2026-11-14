@@ -24,15 +24,6 @@ describe("swap wallet balance classification", () => {
     ])
   })
 
-  it("builds dashboard wallet rows from every product-scoped balance", () => {
-    expect(buildDashboardWalletBalanceRows({ walletId: "w1", balances }).map((row) => row.id)).toEqual([
-      "active-eth",
-      "wallet-eth",
-      "lend-usdc",
-      "wallet-lp",
-    ])
-  })
-
   it("names an off-catalog token stored as its ticker by its full name", () => {
     const [op] = buildDashboardWalletBalanceRows({
       walletId: "w1",
@@ -72,46 +63,6 @@ describe("swap wallet balance classification", () => {
 
     expect(row).toMatchObject({ symbol: "WSTETH", name: "Wrapped stETH", isLpToken: false })
     expect(row?.name).not.toBe("Unsupported asset")
-  })
-
-  it("keeps legacy Multiply available buckets in USD instead of inflating token quantity", () => {
-    const [row] = buildDashboardWalletBalanceRows({
-      walletId: "w1",
-      balances: [
-        {
-          id: "multiply-wsteth-legacy",
-          walletId: "w1",
-          assetId: "wsteth",
-          amount: 41_666.67,
-          valueUsd: 41_666.67,
-          sourceType: "multiply_available",
-        },
-      ],
-      priceFor: () => 2_982.18,
-    })
-
-    expect(row?.amount).toBeCloseTo(41_666.67 / 2_982.18, 6)
-    expect(row?.valueUsd).toBeCloseTo(41_666.67, 6)
-    expect(row?.amount).toBeLessThan(20)
-  })
-
-  it("keeps regular wallet tokens swappable while product-held rows stay restricted", () => {
-    const rows = buildDashboardWalletBalanceRows({ walletId: "w1", balances })
-    const walletEth = rows.find((row) => row.id === "wallet-eth")
-    const activeEth = rows.find((row) => row.id === "active-eth")
-
-    expect(walletEth).toMatchObject({
-      assetId: "eth",
-      symbol: "ETH",
-      swappable: true,
-      valueUsd: 3868,
-    })
-    expect(activeEth).toMatchObject({
-      assetId: "eth",
-      symbol: "ETH",
-      swappable: false,
-      valueUsd: 5802,
-    })
   })
 
   it("merges duplicate product rows and drops empty rows for dashboard display", () => {

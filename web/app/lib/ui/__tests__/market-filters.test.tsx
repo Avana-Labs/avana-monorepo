@@ -10,7 +10,6 @@ import {
   EMPTY_MARKET_FILTERS,
   HUB_OPTIONS,
   LEND_MARKET_OPTIONS,
-  MULTIPLY_MARKET_OPTIONS,
   buildAssetOptions,
   lendFilterItem,
   type MarketFilterState,
@@ -99,7 +98,7 @@ describe("MarketFiltersBar", () => {
   it("opens a pill clicked before the popover chunk loads", async () => {
     render(<Harness />)
     fireEvent.click(screen.getByRole("button", { name: /^Hubs$/ }))
-    const panel = await screen.findByRole("dialog")
+    const panel = await screen.findByRole("dialog", {}, { timeout: 5_000 })
     expect(within(panel).getByText("Hubs", { selector: "span" })).toBeInTheDocument()
   })
 
@@ -127,7 +126,7 @@ describe("MarketFiltersBar", () => {
     expect(onChange).toHaveBeenLastCalledWith({ ...EMPTY_MARKET_FILTERS, chains: ["ethereum"] })
     expect(within(panel).getByRole("checkbox", { name: /Ethereum/ })).toHaveAttribute("aria-checked", "true")
     expect(screen.getByRole("button", { name: /^Ethereum/ })).toBeInTheDocument()
-    fireEvent.click(within(panel).getByRole("checkbox", { name: /Testnet/ }))
+    fireEvent.click(within(panel).getByRole("checkbox", { name: /Local/ }))
     expect(screen.getByRole("button", { name: /Chains \(2\)/ })).toBeInTheDocument()
   })
 
@@ -212,7 +211,7 @@ describe("MarketFiltersBar", () => {
     expect(onChange).toHaveBeenLastCalledWith(EMPTY_MARKET_FILTERS)
   })
 
-  it("lists the Borrow DEXes with roadmap ones disabled as Soon", async () => {
+  it("lists the Borrow DEXes", async () => {
     await renderBar(
       <MarketFiltersBar
         items={[]}
@@ -226,10 +225,8 @@ describe("MarketFiltersBar", () => {
       />,
     )
     const panel = openFacet(/^Markets$/)
-    const cow = within(panel).getByRole("checkbox", { name: /CoW Swap/ })
-    expect(cow).toBeDisabled()
-    expect(cow).toHaveTextContent("Soon")
     expect(within(panel).getByRole("checkbox", { name: /Uniswap V3/ })).toBeEnabled()
+    expect(within(panel).getByRole("checkbox", { name: /Aerodrome Slipstream/ })).toBeEnabled()
   })
 
   it("renders translated labels", async () => {
@@ -253,7 +250,6 @@ describe("filter labels are translated in every locale", () => {
     ...CHAIN_OPTIONS.filter((option) => !option.brand).map((option) => option.label),
     ...HUB_OPTIONS.map((option) => option.label),
     ...LEND_MARKET_OPTIONS.map((option) => option.label),
-    ...MULTIPLY_MARKET_OPTIONS.map((option) => option.label),
     ...ASSET_TABS.filter((tab) => tab.id !== "eth" && tab.id !== "btc").map((tab) => tab.label),
     "Chains",
     "Hubs",

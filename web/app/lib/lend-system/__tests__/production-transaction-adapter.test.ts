@@ -103,7 +103,7 @@ describe("ProductionLendTransactionAdapter", () => {
     expect(executeTransaction).toHaveBeenCalledWith(intent)
   })
 
-  it("keeps throwing intentionally until real production transaction handlers are provided", async () => {
+  it("blocks previews and refuses execution until transaction handlers are provided", async () => {
     const adapter = new ProductionLendTransactionAdapter({ now: () => 123, generateId: () => "intent-live" })
     const intent = adapter.createIntent({
       type: "deposit",
@@ -113,11 +113,9 @@ describe("ProductionLendTransactionAdapter", () => {
       walletBalance: 3,
     })
 
-    await expect(adapter.previewTransaction(intent)).rejects.toThrow(
-      "Production lend transaction adapter is not implemented",
-    )
-    await expect(adapter.executeTransaction(intent)).rejects.toThrow(
-      "Production lend transaction adapter is not implemented",
-    )
+    const preview = await adapter.previewTransaction(intent)
+    expect(preview.allowed).toBe(false)
+    expect(preview.validationErrors).toEqual(["Transactions are not available yet."])
+    await expect(adapter.executeTransaction(intent)).rejects.toThrow("Transactions are not available yet.")
   })
 })

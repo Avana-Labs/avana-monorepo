@@ -50,20 +50,6 @@ describe("swap eligibility", () => {
     }
   })
 
-  it("rejects active multiply balances while keeping separate wallet balances eligible", () => {
-    const balances = [
-      balance({ assetId: "eth", amount: 3, sourceType: "multiply_active" }),
-      balance({ assetId: "eth", amount: 5, sourceType: "wallet" }),
-    ]
-
-    expect(getSwapEligibility(balances[0]!, context)).toEqual({
-      eligible: false,
-      availableAmount: 0,
-      reason: "ineligible_active_loop",
-    })
-    expect(getSwapEligibility(balances[1]!, context).eligible).toBe(true)
-  })
-
   it("rejects protocol-locked and unsupported assets", () => {
     expect(getSwapEligibility(balance({ assetId: "gho", amount: 10, sourceType: "protocol_locked" }), context)).toEqual(
       {

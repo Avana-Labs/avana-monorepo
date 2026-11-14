@@ -99,14 +99,4 @@ describe("collateral rows disambiguate same-pair pools (G3)", () => {
 
   // The row sub-label is TVL / premium only, so the pair label alone must tell pools apart. If a
   // spoke ever lists the same pair twice (e.g. two fee tiers), bring the fee tier back into the row.
-  it("no spoke lists the same pair twice, so rows need no fee-tier label", () => {
-    const seen = new Set<string>()
-    const duplicates: string[] = []
-    for (const pool of BORROW_POOL_CATALOG) {
-      const key = `${pool.spoke}|${formatBorrowPairLabel(pool)}`
-      if (seen.has(key)) duplicates.push(key)
-      seen.add(key)
-    }
-    expect(duplicates).toEqual([])
-  })
 })

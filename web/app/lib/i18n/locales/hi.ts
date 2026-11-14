@@ -3,6 +3,8 @@
 import type { TranslationDictionary } from "../types"
 
 const dict: TranslationDictionary = {
+  "No data available yet.": "अभी कोई डेटा उपलब्ध नहीं है।",
+  Local: "स्थानीय",
   "Supply collateral, borrow against it, resupply the borrowed capital, and repeat until your risk limit.":
     "कोलैटरल जमा करें, उसके बदले उधार लें, उधार ली गई पूंजी फिर से जमा करें, और अपनी जोखिम सीमा तक दोहराएँ।",
   "Turn your liquidity pool positions into collateral and borrow against them here without leaving the pool.":

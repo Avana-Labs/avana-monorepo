@@ -10,13 +10,4 @@ describe("detail heroes prefer Convex heroFeed on primary tab", () => {
     )
     expect(preferIdx).toBeGreaterThan(-1)
   })
-
-  it("Multiply MarketHero prefers detail.heroFeed for Supplied before mock series", () => {
-    const source = readFileSync(
-      resolve(__dirname, "../../../../multiply/_detail/market-sections/MarketHero.tsx"),
-      "utf8",
-    )
-    const preferIdx = source.indexOf("detail.heroFeed ??\n      buildFeedFromSeries(detail.supplyBorrow.supplied")
-    expect(preferIdx).toBeGreaterThan(-1)
-  })
 })

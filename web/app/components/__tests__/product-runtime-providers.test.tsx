@@ -22,19 +22,16 @@ import { ProductRuntimeProviders } from "../product-runtime-providers"
 afterEach(() => cleanup())
 
 describe("ProductRuntimeProviders for guests", () => {
-  it.each(["/", "/borrow", "/lend/markets/usdc", "/multiply"])(
-    "selects the required session runtime on %s",
-    (pathname) => {
-      state.pathname = pathname
-      render(<ProductRuntimeProviders>page</ProductRuntimeProviders>)
-      if (pathname === "/") {
-        expect(screen.queryByTestId("session-providers")).toBeNull()
-        expect(screen.getByText("page")).toBeInTheDocument()
-      } else {
-        expect(screen.getByTestId("session-providers")).toHaveTextContent("page")
-      }
-    },
-  )
+  it.each(["/", "/borrow", "/lend/markets/usdc", "/swap"])("selects the required session runtime on %s", (pathname) => {
+    state.pathname = pathname
+    render(<ProductRuntimeProviders>page</ProductRuntimeProviders>)
+    if (pathname === "/") {
+      expect(screen.queryByTestId("session-providers")).toBeNull()
+      expect(screen.getByText("page")).toBeInTheDocument()
+    } else {
+      expect(screen.getByTestId("session-providers")).toHaveTextContent("page")
+    }
+  })
 
   it("leaves guest /ask on its own Convex boundary", () => {
     state.pathname = "/ask"

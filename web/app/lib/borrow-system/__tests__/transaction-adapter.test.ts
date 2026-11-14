@@ -90,7 +90,7 @@ describe("transaction adapter contracts", () => {
     expect(execution.historyItem.intentId).toBe(intent.id)
   })
 
-  it("keeps the production adapter placeholder on the same interface and throws intentionally", async () => {
+  it("blocks previews and refuses execution until transaction handlers are provided", async () => {
     const adapter = new ProductionTransactionAdapter()
     const intent: TransactionIntent = {
       id: "intent-1",
@@ -103,12 +103,10 @@ describe("transaction adapter contracts", () => {
       simulated: false,
     }
 
-    await expect(adapter.previewTransaction(intent)).rejects.toThrow(
-      "Production transaction adapter is not implemented",
-    )
-    await expect(adapter.executeTransaction(intent)).rejects.toThrow(
-      "Production transaction adapter is not implemented",
-    )
+    const preview = await adapter.previewTransaction(intent)
+    expect(preview.allowed).toBe(false)
+    expect(preview.validationErrors).toEqual(["Transactions are not available yet."])
+    await expect(adapter.executeTransaction(intent)).rejects.toThrow("Transactions are not available yet.")
   })
 
   it("creates live intents and delegates production preview and execution", async () => {

@@ -9,14 +9,6 @@ const ACTION_ROUTES = [
   ["borrow", "claim"],
   ["lend", "deposit"],
   ["lend", "withdraw"],
-  ["multiply", "multiply"],
-  ["multiply", "deleverage"],
-  ["multiply", "close"],
-  ["rewards", "claim"],
-  ["umbrella", "stake"],
-  ["umbrella", "claim"],
-  ["umbrella", "cooldown"],
-  ["umbrella", "unstake"],
 ] as const
 
 describe("action routes", () => {

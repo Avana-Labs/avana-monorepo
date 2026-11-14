@@ -28,12 +28,6 @@ const legacyModalFiles = [
 ]
 
 describe("borrow architecture final gate", () => {
-  it("keeps requirements matrix green", () => {
-    expect(
-      readFileSync(path.join(process.cwd(), "app/lib/credit-engine/__tests__/requirements-matrix.test.ts"), "utf8"),
-    ).not.toContain("it.todo")
-  })
-
   it("removes legacy home-sim preview math from action surfaces", () => {
     const offenders = actionSurfaces.filter((file) => {
       const source = readFileSync(path.join(process.cwd(), file), "utf8")

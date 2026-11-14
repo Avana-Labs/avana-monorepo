@@ -70,40 +70,6 @@ describe("Borrow Balance metric cards", () => {
   })
 })
 
-describe("Multiply Balance metric cards", () => {
-  it("renders all eight wallet-level Multiply Balance metrics", () => {
-    render(
-      <DashboardMultiplyBalanceSection
-        title="Multiply Balance"
-        metrics={{
-          netValueUsd: 10_000,
-          positionValueUsd: 27_000,
-          totalBorrowedUsd: 17_000,
-          leverageX: 2.7,
-          netApyPct: 8.73,
-          healthFactor: 1.85,
-          liquidationBufferUsd: 3_200,
-          riskPremiumPct: 1.12,
-        }}
-      />,
-    )
-
-    for (const label of [
-      "Net Value",
-      "Gross Exposure",
-      "Total Borrowed",
-      "Leverage",
-      "Net APY",
-      "Health Factor",
-      "Liquidation Buffer",
-      "Interest Earned",
-    ]) {
-      expect(screen.getByText(label)).toBeTruthy()
-    }
-    expect(screen.getByText("2.70x")).toBeTruthy()
-    expect(screen.getByText("1.85")).toBeTruthy()
-  })
-})
 
 describe("Lend Balance metric cards", () => {
   it("renders eight growth metrics and omits Rewards Earned", () => {

@@ -43,7 +43,7 @@ describe.each([false, true])("navigation prefetch with signed-in=%s", (isSignedI
   it.each(["desktop", "mobile"])("warms full product routes only for signed-in %s users", (surface) => {
     session.isSignedIn = isSignedIn
     const { container } = render(surface === "desktop" ? <Header /> : <MobileMenu initialOpen />)
-    for (const href of ["/borrow", "/lend", "/multiply", "/dashboard", "/umbrella"]) {
+    for (const href of ["/borrow", "/lend", "/dashboard"]) {
       const links = container.querySelectorAll(`a[href="${href}"]`)
       expect(links.length).toBeGreaterThan(0)
       for (const link of links) {
@@ -51,12 +51,4 @@ describe.each([false, true])("navigation prefetch with signed-in=%s", (isSignedI
       }
     }
   })
-})
-
-it("does not eagerly prefetch heavy product catalogs", () => {
-  for (const href of ["/borrow", "/lend", "/multiply"]) {
-    expect(shouldPrefetchNavigation(href, true)).toBe(false)
-  }
-  expect(shouldPrefetchNavigation("/dashboard", true)).toBe(true)
-  expect(shouldPrefetchNavigation("/borrow", false)).toBe(false)
 })

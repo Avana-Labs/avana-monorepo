@@ -34,11 +34,9 @@ describe("Focused route loading", () => {
   it.each([
     ["/borrow", "borrow-page-skeleton"],
     ["/lend", "lend-page-skeleton"],
-    ["/multiply", "multiply-page-skeleton"],
     ["/borrow/markets/uni-v3-bluechip-weth-usdt", "borrow-pool-detail-skeleton"],
     ["/borrow/assets/usdc", "borrow-asset-detail-skeleton"],
     ["/lend/markets/eth", "lend-market-detail-skeleton"],
-    ["/multiply/markets/eth-usdt", "multiply-market-detail-skeleton"],
   ])("renders the bespoke %s loading layout", (pathname, testId) => {
     navigation.pathname = pathname
     const { getByTestId, queryByTestId } = render(<RouteContentSkeleton />)

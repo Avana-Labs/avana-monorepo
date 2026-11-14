@@ -28,36 +28,6 @@ describe("mapTransactionHistoryToActivityRows", () => {
     expect(rows[0]?.amountUsd).toBeLessThan(0)
   })
 
-  it("labels a borrow with the borrowed asset (not the collateral pool), pool as context", () => {
-    const markets = {
-      "uni-v3-bluechip-weth-usdc": { display: { visuals: [{ symbol: "WETH" }, { symbol: "USDC" }] } },
-    }
-    const [row] = mapTransactionHistoryToActivityRows(
-      [
-        {
-          id: "borrow-1",
-          intentId: "intent-b1",
-          walletId: "demo-wallet",
-          marketId: "uni-v3-bluechip-weth-usdc",
-          assetId: "uni-v3-bluechip:usdc",
-          kind: "borrow",
-          status: "success",
-          requestedAmountUsd6: parseFixed("250", 6),
-          executedAmountUsd6: parseFixed("250", 6),
-          simulated: true,
-          timestamp: Date.UTC(2026, 5, 19),
-          hash: "sim_borrow1",
-        },
-      ],
-      markets,
-    )
-
-    // Title + icon source are the borrowed asset, not the "WETH / USDC" collateral pool.
-    expect(row?.primaryLabel).toBe("USDC")
-    expect(row?.marketId).toBe("uni-v3-bluechip:usdc")
-    expect(row?.secondaryLabel).toBe("via WETH / USDC")
-  })
-
   it("keeps the collateral pool label + id for collateral actions (withdraw)", () => {
     const markets = {
       "uni-v3-bluechip-weth-usdc": { display: { visuals: [{ symbol: "WETH" }, { symbol: "USDC" }] } },

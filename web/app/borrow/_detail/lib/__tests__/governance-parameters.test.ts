@@ -6,7 +6,7 @@ import {
 } from "../governance-parameters"
 
 describe("risk parameter normalization", () => {
-  it("rewrites the IRM five-pack into eight filled risk parameters", () => {
+  it("rewrites the IRM five-pack into the eight risk parameters, leaving unknown ones empty", () => {
     const about = withGovernanceParameterView(
       {
         description: "x",
@@ -25,13 +25,13 @@ describe("risk parameter normalization", () => {
     expect(about.governanceParameters?.parameters.map((parameter) => parameter.label)).toEqual(RISK_PARAMETER_LABELS)
     expect(about.governanceParameters?.parameters.map((parameter) => parameter.value)).toEqual([
       "63.5%",
-      "10.00%",
-      "$25.0M",
-      "5.00% - 5.55%",
-      "$10.0M",
-      "1.57",
-      "73.50%",
-      "Chainlink",
+      "—",
+      "—",
+      "—",
+      "—",
+      "—",
+      "63.50%",
+      "—",
     ])
   })
 

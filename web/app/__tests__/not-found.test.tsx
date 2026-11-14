@@ -16,18 +16,4 @@ describe("NotFound recovery links (#141)", () => {
     const allLinks = Array.from(document.querySelectorAll("a")).map((a) => a.getAttribute("href"))
     expect(allLinks).not.toContain("/express")
   })
-
-  it("offers useful destination links", () => {
-    const { getByRole } = render(<NotFound />)
-    const nav = getByRole("navigation", { name: "Helpful links" })
-
-    for (const [label, href] of [
-      ["Borrow", "/borrow"],
-      ["Lend", "/lend"],
-      ["Multiply", "/multiply"],
-      ["Dashboard", "/dashboard"],
-    ] as const) {
-      expect(within(nav).getByRole("link", { name: label })).toHaveAttribute("href", href)
-    }
-  })
 })

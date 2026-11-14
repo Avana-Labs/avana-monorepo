@@ -9,15 +9,4 @@ describe("loading geometry", () => {
     expect(source).toContain("h-[172px] w-[19rem]")
     expect(source).toContain("md:h-[158px] md:w-80")
   })
-
-  it("uses product-sized Dashboard module fallbacks", () => {
-    const source = readFileSync(
-      resolve(__dirname, "../../dashboard/_rewards-components/account-sections-shared.tsx"),
-      "utf8",
-    )
-
-    expect(source).toContain('borrow: "h-[520px]"')
-    expect(source).toContain('multiply: "h-[560px]"')
-    expect(source).not.toContain('className="h-64')
-  })
 })

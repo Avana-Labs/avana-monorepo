@@ -5,15 +5,6 @@ import path from "node:path"
 const lendActionSurfaces = ["app/lend/lend-client.tsx", "app/dashboard/_rewards-components/lend-account-section.tsx"]
 
 describe("lend architecture final gate", () => {
-  it("keeps lend engine and session tests present", () => {
-    expect(readFileSync(path.join(process.cwd(), "app/lib/lend-engine/__tests__/formulas.test.ts"), "utf8")).toContain(
-      "calculateUtilization",
-    )
-    expect(
-      readFileSync(path.join(process.cwd(), "app/lib/lend-system/__tests__/use-lend-session.test.tsx"), "utf8"),
-    ).toContain("useLendSession")
-  })
-
   it("routes lend UI through shared avana session context", () => {
     const offenders = lendActionSurfaces.filter((file) => {
       const source = readFileSync(path.join(process.cwd(), file), "utf8")

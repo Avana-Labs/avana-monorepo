@@ -87,68 +87,6 @@ describe("AskAIPageClient rich parts", () => {
     }
   })
 
-  it("reshapes a verbatim portfolio tool payload into a card", () => {
-    messagesMock.mockReturnValue({
-      status: "Exhausted",
-      loadMore: vi.fn(),
-      results: [
-        {
-          id: "u1",
-          role: "user",
-          text: "Show all my positions, Umbrella included",
-          _creationTime: 1,
-          status: "success",
-        },
-        {
-          id: "a1",
-          role: "assistant",
-          text: "Here is your portfolio.",
-          _creationTime: 2,
-          status: "success",
-        },
-      ],
-    })
-    partsMock.mockReturnValue([
-      {
-        messageId: "a1",
-        parts: {
-          financialResults: [
-            {
-              kind: "portfolio",
-              dataProvenance: "sandbox",
-              payload: {
-                walletRequired: false,
-                dataProvenance: "sandbox",
-                totals: { lendUsd: 1000, borrowUsd: 250, multiplyUsd: 0, liquidUsd: 42.5, umbrellaUsd: 500 },
-                umbrella: [
-                  {
-                    marketSlug: "gho",
-                    suppliedUsd6: "500000000",
-                    cooldownAmountUsd6: "250000000",
-                    cooldownEndsAt: Date.now() + 86_400_000,
-                    withdrawalWindowEndsAt: Date.now() + 3 * 86_400_000,
-                    lifecycleStatus: "partiallyCooling",
-                  },
-                ],
-                asOf: 0,
-              },
-            },
-          ],
-        },
-      },
-    ])
-
-    render(<AskAIPageClient />)
-    expect(screen.getByRole("region", { name: "Your Avana portfolio" })).toBeInTheDocument()
-    expect(screen.getByText("$1,000.00")).toBeInTheDocument()
-    expect(screen.getByText("$42.50")).toBeInTheDocument()
-    expect(screen.getByRole("columnheader", { name: "Product" })).toBeInTheDocument()
-    expect(screen.getByRole("columnheader", { name: "Cooldown" })).toBeInTheDocument()
-    expect(screen.getByText("gho")).toBeInTheDocument()
-    expect(screen.getAllByText("$250.00").length).toBeGreaterThan(0)
-    expect(screen.getByText(/Cooling until/)).toBeInTheDocument()
-  })
-
   const portfolioPayload = {
     walletRequired: false,
     dataProvenance: "sandbox",
@@ -276,50 +214,6 @@ describe("AskAIPageClient rich parts", () => {
     expect(screen.getByText("$101,011,986.00")).toBeInTheDocument()
     // The lone token-price row is dropped once a richer market row exists.
     expect(screen.queryByText("$123.38")).not.toBeInTheDocument()
-  })
-
-  it("shows only Umbrella data for an Umbrella-focused portfolio result", () => {
-    messagesMock.mockReturnValue({
-      status: "Exhausted",
-      loadMore: vi.fn(),
-      results: [
-        { id: "u1", role: "user", text: "Do I have any Umbrella on cooldown?", _creationTime: 1, status: "success" },
-        { id: "a1", role: "assistant", text: "Your GHO is cooling down.", _creationTime: 2, status: "success" },
-      ],
-    })
-    partsMock.mockReturnValue([
-      {
-        messageId: "a1",
-        parts: {
-          financialResults: [
-            {
-              kind: "portfolio",
-              payload: {
-                focus: "umbrella",
-                totals: { umbrellaUsd: 5_000 },
-                umbrellaCooldownSummary: { coolingUsd: 2_500, readyUsd: 0 },
-                umbrella: [
-                  {
-                    marketSlug: "gho",
-                    suppliedUsd6: "5000000000",
-                    cooldownAmountUsd6: "2500000000",
-                    cooldownEndsAt: Date.now() + 86_400_000,
-                    withdrawalWindowEndsAt: Date.now() + 3 * 86_400_000,
-                    lifecycleStatus: "partiallyCooling",
-                  },
-                ],
-              },
-            },
-          ],
-        },
-      },
-    ])
-
-    render(<AskAIPageClient />)
-    expect(screen.getByRole("region", { name: "Your Umbrella positions" })).toBeInTheDocument()
-    expect(screen.getAllByText("$2,500.00").length).toBeGreaterThan(0)
-    expect(screen.queryByRole("columnheader", { name: "Product" })).not.toBeInTheDocument()
-    expect(screen.queryByText("Liquid")).not.toBeInTheDocument()
   })
 
   it("does not fabricate a card when the payload is not display-ready", () => {

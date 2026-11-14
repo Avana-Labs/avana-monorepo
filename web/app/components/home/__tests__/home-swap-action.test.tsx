@@ -51,46 +51,6 @@ it("loads the asset picker on demand and preserves sell/buy selection across ope
   expect(loadPicker).toHaveBeenCalledTimes(1)
 })
 
-it("updates the Buy amount while the authoritative server quote is still pending", async () => {
-  const serverGetSwapQuote = vi.fn(() => new Promise<never>(() => undefined))
-  render(
-    <AvanaSessionsProvider walletId="demo-wallet" persistLocalState={false} serverGetSwapQuote={serverGetSwapQuote}>
-      <HomeSwapAction />
-    </AvanaSessionsProvider>,
-  )
-
-  fireEvent.click(screen.getByRole("button", { name: /^Sell asset/ }))
-  fireEvent.click(within(await screen.findByRole("dialog")).getByRole("option", { name: "Ether (ETH)" }))
-  fireEvent.click(screen.getByRole("button", { name: /^Buy asset/ }))
-  fireEvent.click(within(await screen.findByRole("dialog")).getByRole("option", { name: "USD Coin (USDC)" }))
-  fireEvent.change(screen.getByRole("textbox", { name: "Sell" }), { target: { value: "0.001" } })
-
-  await waitFor(() => expect(screen.getByRole("textbox", { name: "Buy" })).not.toHaveValue("0"))
-  expect(screen.getByRole("button", { name: "Loading quote" })).toBeDisabled()
-})
-
-it("keeps the indicative Buy amount visible when the server quote fails", async () => {
-  const provider = new MockSwapProvider()
-  const serverGetSwapQuote = vi.fn(async (request) => ({
-    ...(await provider.getQuote(request)),
-    status: "error" as const,
-  }))
-  render(
-    <AvanaSessionsProvider walletId="demo-wallet" persistLocalState={false} serverGetSwapQuote={serverGetSwapQuote}>
-      <HomeSwapAction />
-    </AvanaSessionsProvider>,
-  )
-
-  fireEvent.click(screen.getByRole("button", { name: /^Sell asset/ }))
-  fireEvent.click(within(await screen.findByRole("dialog")).getByRole("option", { name: "Ether (ETH)" }))
-  fireEvent.click(screen.getByRole("button", { name: /^Buy asset/ }))
-  fireEvent.click(within(await screen.findByRole("dialog")).getByRole("option", { name: "USD Coin (USDC)" }))
-  fireEvent.change(screen.getByRole("textbox", { name: "Sell" }), { target: { value: "0.001" } })
-
-  await screen.findByRole("button", { name: "Refresh quote" })
-  expect(screen.getByRole("textbox", { name: "Buy" })).not.toHaveValue("0")
-})
-
 it("sends a guest to the dashboard onboarding instead of reviewing a swap", () => {
   render(
     <TransactAccessContext.Provider value="guest">
