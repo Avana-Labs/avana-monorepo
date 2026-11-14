@@ -492,6 +492,8 @@ contract ListMarkets is ListingBase {
         address lpOracle;
         address vaultToken;
         address debtAsset;
+        // A cancelled market relisted under its reserved ID.
+        bool relisting;
     }
 
     function _markets() private returns (Operation memory op) {
@@ -645,7 +647,7 @@ contract ListMarkets is ListingBase {
         m.debtAsset = _debtAssetOf(m.spokeLabel);
         if (vaultToken != address(0)) {
             // A relisting: the integration keeps the reserved ID's binding, which listCollateralMarket checks.
-            (m.vaultToken, m.lpOracle) = (vaultToken, IRelistedToken(vaultToken).lpOracle());
+            (m.vaultToken, m.lpOracle, m.relisting) = (vaultToken, IRelistedToken(vaultToken).lpOracle(), true);
             m.decimals = IRelistedToken(vaultToken).decimals();
             m.unitExp = IClIntegration(m.lpVault).unitExponent(m.marketId);
             return m;
@@ -938,13 +940,20 @@ contract ListMarkets is ListingBase {
             address asset = _token(_str(string.concat(rk, ".asset")));
             for (uint8 kind = 0; kind < 2; ++kind) {
                 (address existing,) = registry.getRoute(m.marketId, tokenIn, asset, kind);
-                if (existing != address(0)) {
+                // A relisting starts a new route epoch (REQ-MREG-030): the cancelled registration's routes are set
+                // again, the deployed route contracts reused.
+                if (existing != address(0) && !m.relisting) {
                     routes[2 * i + kind] = existing;
                     continue;
                 }
-                string[] memory pools =
-                    vm.parseJsonStringArray(cfg, string.concat(rk, kind == 0 ? ".primary" : ".backup"));
-                address route = _deployRoute(m, tokenIn, asset, pools);
+                address route = existing != address(0)
+                    ? existing
+                    : _deployRoute(
+                        m,
+                        tokenIn,
+                        asset,
+                        vm.parseJsonStringArray(cfg, string.concat(rk, kind == 0 ? ".primary" : ".backup"))
+                    );
                 routes[2 * i + kind] = route;
                 _add(
                     op,
