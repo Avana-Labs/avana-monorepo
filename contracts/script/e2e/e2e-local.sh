@@ -76,6 +76,12 @@ trap cleanup EXIT
 # --preserve-historical-states writes a 7 GB file for this world, so the services step runs only with the deploy step.
 STATE="$OUT/anvil-state.json"
 [[ " $STEPS " == *" deploy "* ]] && [ -z "$RESUME" ] && rm -f "$STATE"
+# A node already answering on the port (one an earlier run left behind: on Windows the INT below does not always stop
+# anvil) would take this run's transactions on its old chain, and this run's anvil would fail to bind unnoticed.
+if cast block-number --rpc-url "$RPC_ANVIL" >/dev/null 2>&1; then
+  for s in $STEPS; do record "$s" not-run "a node already answers on port $PORT: stop it or set E2E_PORT"; done
+  exit 1
+fi
 anvil --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
   --timestamp 1794500000 --state "$STATE" > "$LOG/anvil.log" 2>&1 &
 ANVIL_PID=$!
