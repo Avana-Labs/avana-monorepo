@@ -846,31 +846,13 @@
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
     },
     {
-      "fingerprint": "43fd52db3970ae91",
+      "fingerprint": "9d71b8a1cf1961e4",
       "check": "Signature use at deadlines should be allowed",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._collateralPrice",
-      "reason": "Not a deadline or signature: a leg timestamp after now reverts PriceTooOld(feed, 0), the future-timestamp rule of REQ-ADAPTER-015. Covered by TEST-028 (futureTimestampsAreNeverFresh).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
-    },
-    {
-      "fingerprint": "37d3eb10f2c39399",
-      "check": "Signature use at deadlines should be allowed",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._debtPrices",
-      "reason": "Not a deadline or signature: the age of a future timestamp reads as 0 only for the revert data; the next line makes it not fresh (REQ-RISK-061). Covered by TEST-028 (futureTimestampsAreNeverFresh), TEST-201.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
-    },
-    {
-      "fingerprint": "ec1b62ae3ee3fdd8",
-      "check": "Signature use at deadlines should be allowed",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._debtPrices",
-      "reason": "Not a deadline or signature: fresh iff servedUpdatedAt <= now and the age is within the DebtOracle's borrowPriceMaxAge (REQ-RISK-061). Covered by TEST-201, TEST-028.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.borrowFresh",
+      "reason": "Not a deadline or signature: the borrow-side age rule, fresh iff updatedAt <= now and now - updatedAt <= maxAge, so a source timestamp in the future is never fresh (REQ-RISK-061, REQ-ADAPTER-015). Used by the RiskModule's steps (5) and (6) and by the Lens. Covered by TEST-028 (futureTimestampsAreNeverFresh, feedAgeBoundaryPerLeg), TEST-201 (debtPriceAgeBoundary), TEST-247 (debtBorrowAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 43fd52db3970ae91, 37d3eb10f2c39399 and ec1b62ae3ee3fdd8 (RiskModuleBorrowLogic._collateralPrice and _debtPrices, approved by pattern, independent review 2026-11-11): the same comparison moved into PriceAge.borrowFresh, which both call."
     },
     {
       "fingerprint": "f378e36fb163d325",
