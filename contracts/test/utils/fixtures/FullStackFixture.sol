@@ -78,6 +78,8 @@ abstract contract FullStackFixture is FullStackDeploy {
     uint256 internal usdcReserveId;
     /// @dev Per pool token: primary, alternate, standby, second source.
     mapping(address token => OracleFeedMock[4] feeds) internal feedsOf;
+    /// @dev Every token with four feeds in `feedsOf`, in listing order (`_refreshFeeds` republishes them all).
+    address[] internal pricedTokens;
 
     /// @dev Aave V4, two real Uniswap v3 USDC/USDT pools (0.01 % and 0.05 %), the core, the Spoke and both debt reserves.
     function _setUpFullStack() internal {
@@ -194,6 +196,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         OracleFeedMock s = _feed(string.concat(label, "/USD standby"), 1e8);
         OracleFeedMock n = _feed(string.concat(label, "/USD second source"), 1e8);
         feedsOf[address(token)] = [p, a, s, n];
+        pricedTokens.push(address(token));
         TokenDef memory d;
         d.isUsdStable = true;
         d.primaryRoute = _list(address(p));
@@ -227,9 +230,8 @@ abstract contract FullStackFixture is FullStackDeploy {
 
     /// @dev Every feed republished at the current time with its answer.
     function _refreshFeeds() internal {
-        address[2] memory toks = [address(usdc), address(usdt)];
-        for (uint256 t = 0; t < 2; ++t) {
-            OracleFeedMock[4] storage f = feedsOf[toks[t]];
+        for (uint256 t = 0; t < pricedTokens.length; ++t) {
+            OracleFeedMock[4] storage f = feedsOf[pricedTokens[t]];
             for (uint256 i = 0; i < 4; ++i) {
                 f[i].push(f[i].answer(), block.timestamp);
             }
@@ -306,7 +308,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         ClTestToken asset,
         uint8 dec,
         address source
-    ) private returns (uint256 assetId, uint256 reserveId) {
+    ) internal returns (uint256 assetId, uint256 reserveId) {
         IAaveV4Hub hubView = IAaveV4Hub(aave.hub);
         uint40 maxCap = hubView.MAX_ALLOWED_SPOKE_CAP();
         uint24 maxRp = hubView.MAX_RISK_PREMIUM_THRESHOLD();
@@ -347,7 +349,7 @@ abstract contract FullStackFixture is FullStackDeploy {
     function _coverage(
         address asset,
         uint256 assetId
-    ) private returns (address cs) {
+    ) internal returns (address cs) {
         uint256 whole = 10 ** ClTestToken(asset).decimals();
         if (_realStack()) {
             cs = deployCode(
@@ -383,7 +385,7 @@ abstract contract FullStackFixture is FullStackDeploy {
     function _enableDebt(
         DebtReserveDef memory def,
         uint256 floorRounding
-    ) private {
+    ) internal {
         vm.startPrank(address(timelock));
         registry.enableDebtReserve(aave.cdpSpoke, def);
         store.setDebtAssetParams(def.asset, DebtReserveParams(floorRounding));

@@ -51,7 +51,8 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// debt asset it is not. On the real stack (`_realStack()`) the market is bound by the real Uniswap v3 LPVault (listing
 /// prices $1.00 each, unit exponent 0, 6 unit decimals), positions are real NonfungiblePositionManager NFTs, and the
 /// routes are real `DexPathRoute`s, each one hop through its own pool of a second Uniswap v3 factory (the "route DEX",
-/// fee 0.05 % for the primary and 0.3 % for the backup, full range, `ROUTE_LIQUIDITY` deep, at $1.00 per token).
+/// fee 0.05 % for the primary and 0.3 % for the backup, full range, `ROUTE_LIQUIDITY` deep, at `_routeStartPrice` per
+/// token, $1.00 unless a suite prices the token otherwise).
 abstract contract FullStackMarkets is FullStackFixture {
     uint32 internal constant POKE_FLOOR = 900_000;
     uint32 internal constant POKE_CEILING = 3_000_000;
@@ -293,7 +294,7 @@ abstract contract FullStackMarkets is FullStackFixture {
     }
 
     /// @dev Real stack: the primary and backup `DexPathRoute` from `tokenIn` into `tokenOut`, built on first use, each
-    /// over its own full-range route-DEX pool at $1.00 per token.
+    /// over its own full-range route-DEX pool at the `_routeStartPrice` rate.
     function _realRoutes(
         address tokenIn,
         address tokenOut
@@ -310,7 +311,11 @@ abstract contract FullStackMarkets is FullStackFixture {
         uint24[2] memory fees = [uint24(500), uint24(3000)];
         for (uint256 k = 0; k < 2; ++k) {
             IClPool p = IClPool(routeFactory.createPool(address(t0), address(t1), fees[k]));
-            p.initialize(ClPriceMath.oracleSqrtPrice(1e8, 1e8, t0.decimals(), t1.decimals()));
+            p.initialize(
+                ClPriceMath.oracleSqrtPrice(
+                    _routeStartPrice(address(t0)), _routeStartPrice(address(t1)), t0.decimals(), t1.decimals()
+                )
+            );
             t0.mint(address(actor), type(uint128).max);
             t1.mint(address(actor), type(uint128).max);
             (int24 lower, int24 upper) = _fullRange(p);
@@ -335,6 +340,13 @@ abstract contract FullStackMarkets is FullStackFixture {
         }
         routeOf[tokenIn][tokenOut] = r;
         routePairs.push([tokenIn, tokenOut]);
+    }
+
+    /// @dev The USD price, 8 decimals, a new route-DEX pool starts at for `token` ($1.00 here).
+    function _routeStartPrice(
+        address
+    ) internal view virtual returns (uint256) {
+        return 1e8;
     }
 
     // ─── Flows through the Adapter ───

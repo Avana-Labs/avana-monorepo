@@ -7,11 +7,21 @@ import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.s
 import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
+import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
+import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";
 import {PauseState} from "../../../src/types/PauseState.sol";
+import {RouteSlot} from "../../../src/types/RouteSlot.sol";
+import {SecondSource} from "../../../src/types/SecondSource.sol";
+import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {FullStackMarkets} from "./FullStackMarkets.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title RealStackFlows
 /// @notice `FullStackMarkets` on the real stack: every Avana contract and every Aave V4 contract is the real one,
@@ -26,8 +36,139 @@ import {FullStackMarkets} from "./FullStackMarkets.sol";
 /// round on every feed of a token (`_publish`), the route-DEX pools swapped to the new rates (`_alignRoutes`), then a
 /// poke of each market's LPOracle so Aave reads it.
 abstract contract RealStackFlows is FullStackMarkets {
+    /// @dev WETH's listing price, 8 decimals.
+    uint256 internal constant WETH_PRICE = 3000e8;
+    /// @dev WETH's floor rounding allowance: 0.0003 WETH ($0.90, within the $1.00 bound at $3,000).
+    uint256 internal constant FLOOR_ROUNDING_ALLOWANCE_WETH = 3e14;
+
+    ClTestToken internal weth;
+    IDebtOracle internal wethOracle;
+    uint256 internal wethAssetId;
+    uint256 internal wethReserveId;
+
     function _realStack() internal pure override returns (bool) {
         return true;
+    }
+
+    /// @dev A route-DEX pool starts at its tokens' published prices (GHO and a token without feeds at $1.00).
+    function _routeStartPrice(
+        address token
+    ) internal view override returns (uint256) {
+        if (address(feedsOf[token][0]) == address(0)) return 1e8;
+        return uint256(feedsOf[token][0].answer());
+    }
+
+    // ─── Listing beyond the fixture ───
+
+    /// @notice Lists `token` as the fixture lists USDC and USDT: a primary, alternate and standby one-leg route and an
+    /// oracle-network second source, each an 8-decimal feed at `price8` defined in the ParameterStore, and the launch
+    /// feed-agreement tolerance.
+    function _listPricedToken(
+        ClTestToken token,
+        string memory label,
+        uint256 price8,
+        bool usdStable
+    ) internal {
+        OracleFeedMock p = _feed(string.concat(label, "/USD"), price8);
+        OracleFeedMock a = _feed(string.concat(label, "/USD alternate"), price8);
+        OracleFeedMock st = _feed(string.concat(label, "/USD standby"), price8);
+        OracleFeedMock n = _feed(string.concat(label, "/USD second source"), price8);
+        feedsOf[address(token)] = [p, a, st, n];
+        pricedTokens.push(address(token));
+        TokenDef memory d;
+        d.isUsdStable = usdStable;
+        d.primaryRoute = _list(address(p));
+        d.alternateRoute = _list(address(a));
+        d.standbyRoute = _list(address(st));
+        d.replacedSlot = RouteSlot.None;
+        d.issuerProbe = IssuerProbe.None;
+        SecondSource memory none;
+        vm.startPrank(address(timelock));
+        registry.listToken(address(token), d);
+        store.setFeedAgreementToleranceBps(address(token), TOLERANCE_BPS);
+        store.setSecondSource(
+            address(token), SecondSource(SecondSourceKind.OracleNetwork, address(n), bytes32(0), FEED_AGE, 0, 100), none
+        );
+        vm.stopPrank();
+    }
+
+    /// @notice WETH as a DebtOracle-priced debt reserve of the CDP Spoke, as the fixture enables USDC: WETH listed with
+    /// its feeds at $3,000 (`_listPricedToken`), its real DebtOracle (`debtStressRiseBps = 500`), the Hub asset funded
+    /// with 1,000,000 WETH through the Lend Spoke, the CDP reserve priced by the DebtOracle (draw cap
+    /// `DEBT_DRAW_CAP`), its real First-Loss Reserve (100,000 WETH) and credit line, the Aave V3 Pool stand-in lending
+    /// it, a primary and a backup route from each pool token of every listed market into WETH (real `DexPathRoute`s
+    /// over route-DEX pools at the feed rate), then `registry.enableDebtReserve` with a 0.0003 WETH floor rounding
+    /// allowance. `weth` is created here unless a suite created it first.
+    function _addWethDebtReserve() internal {
+        if (address(weth) == address(0)) {
+            weth = new ClTestToken("WETH", 18);
+            vm.label(address(weth), "WETH");
+        }
+        if (address(feedsOf[address(weth)][0]) == address(0)) _listPricedToken(weth, "WETH", WETH_PRICE, false);
+        vm.prank(address(timelock));
+        store.tightenDebtStressRiseBps(address(weth), 500);
+        IDebtOracle impl = IDebtOracle(deployCode("DebtOracle.sol:DebtOracle", abi.encode(address(timelock))));
+        DebtOracleInitParams memory p = DebtOracleInitParams({
+            timelock: address(timelock),
+            asset: address(weth),
+            marketRegistry: address(registry),
+            parameterStore: address(store),
+            description: "WETH / USD",
+            pokeMinGas: 600_000
+        });
+        wethOracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
+        vm.label(address(wethOracle), "DebtOracle WETH");
+        (wethAssetId, wethReserveId) = _addDebtAsset(weth, 18, address(wethOracle));
+        address cs = _coverage(address(weth), wethAssetId);
+        // Every active market needs its routes into the asset before the reserve is enabled (REQ-MREG-032).
+        uint256 n = registry.marketCount();
+        for (uint256 id = 1; id <= n; ++id) {
+            _routesInto(id, address(weth));
+        }
+        _enableDebt(
+            DebtReserveDef({
+                reserveId: wethReserveId,
+                asset: address(weth),
+                decimals: 18,
+                fundingHub: aave.hub,
+                hubAssetId: wethAssetId,
+                priceSource: address(wethOracle),
+                fixedPrice: false,
+                firstLossReserve: cs,
+                crossHub: false,
+                approved: false
+            }),
+            FLOOR_ROUNDING_ALLOWANCE_WETH
+        );
+    }
+
+    /// @notice A primary and a backup route from each pool token of `marketId` into `debtAsset`, set by the timelock.
+    function _routesInto(
+        uint256 marketId,
+        address debtAsset
+    ) internal {
+        address[] memory toks = registry.getMarket(marketId).tokens;
+        for (uint256 i = 0; i < toks.length; ++i) {
+            if (toks[i] == debtAsset) continue;
+            address[2] memory r = _realRoutes(toks[i], debtAsset);
+            vm.startPrank(address(timelock));
+            registry.setRoute(marketId, toks[i], debtAsset, 0, r[0]);
+            registry.setRoute(marketId, toks[i], debtAsset, 1, r[1]);
+            vm.stopPrank();
+        }
+    }
+
+    /// @notice Every feed of `token` at `price8` in the next block, the route-DEX pools aligned, the token's DebtOracle
+    /// (when it has one) and every LPOracle poked.
+    function _moveToken(
+        address token,
+        uint256 price8
+    ) internal {
+        _publish(token, price8);
+        _alignRoutes();
+        if (token == address(weth) && address(wethOracle) != address(0)) wethOracle.poke();
+        if (token == address(usdc)) usdcOracle.poke();
+        _pokeAll();
     }
 
     // ─── Accounts through the AaveAdapter ───
