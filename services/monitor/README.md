@@ -35,7 +35,7 @@ Routing (services/README.md, Rules): warns reach the on-call engineer and the si
 | M-18 | snapshot | CDP Spoke owed against its draw cap: 80 % / 90 % |
 | M-19 | snapshot | Utilization 90 % / 98 %; a Lend Spoke's supply down more than 10 % within the hour pages |
 | M-20 | events | Aave configuration events and upgrades of every CDP Spoke warn; RiskModule `ConfigDriftDetected` pages |
-| M-21 | coverage, events | Lens `checkBacking` invariants and `CounterSaturated` page. The README's `BreakerRecordFailed` has no event in the contracts |
+| M-21 | coverage, events | Lens `checkBacking` invariants and `CounterSaturated` page |
 | M-22 | events | Timelock `CallScheduled` warns; role changes, upgrades, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` and Timelock role grants page |
 | M-23 | safes | Owners, threshold, guard slot and modules of each `MONITOR_SAFES` Safe; any change pages. Signer liveness answers are not wired |
 | M-24 | snapshot, events | Pause state and Hub application state changes, manual trips, address freezes, the standby switch, pause reasons |

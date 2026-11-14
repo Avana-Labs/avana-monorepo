@@ -279,7 +279,7 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-18 | `drawn / drawCap` per asset | 80 % | 90 % | risk service providers | P-10 (`EMG-084`) |
 | M-19 | Hub utilization and Lend Spoke withdrawals | utilization 90 % | utilization 98 %, or a withdrawal above 10 % of supply within 1 hour | Aave DAO, guardians | P-10 (`EMG-084`) |
 | M-20 | Aave configuration against recorded values (collateral factor, bonus, target HF, caps, Spoke implementation) | any change | `ConfigDrift` live | Emergency Guardian | P-12 (`EMG-086`) |
-| M-21 | Backing-check simulation failure, `CounterSaturated`, `BreakerRecordFailed` | — | every | engineering | P-05 (`EMG-079`) |
+| M-21 | Backing-check failure (`Lens.checkBacking`), `CounterSaturated` | — | every | engineering | P-05 (`EMG-079`) |
 | M-22 | Timelock `CallScheduled` | every | role change, upgrade, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` | every canceller | P-06 (`EMG-080`) |
 | M-23 | Safe owner, threshold, guard or module change; signer liveness | every | every; liveness answers below threshold + 1 | every signer | P-07 (`EMG-081`) |
 | M-24 | Pause state and reason, address freeze, standby switch, manual breaker | every | — | every signer | per reason |

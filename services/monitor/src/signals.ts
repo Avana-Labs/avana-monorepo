@@ -68,7 +68,7 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-18", name: "drawn / drawCap per asset", source: "snapshot", warn: "80 %", page: "90 %", responders: ["riskProviders"], playbook: "P-10 (EMG-084)" },
   { id: "M-19", name: "Hub utilization and Lend Spoke withdrawals", source: "snapshot", warn: "utilization 90 %", page: "utilization 98 %, or a withdrawal above 10 % of supply within 1 hour", responders: ["aaveDao", "guardians"], playbook: "P-10 (EMG-084)" },
   { id: "M-20", name: "Aave configuration against recorded values", source: "events", warn: "any change", page: "ConfigDrift live", responders: ["emergencyGuardian"], playbook: "P-12 (EMG-086)" },
-  { id: "M-21", name: "Backing-check failure, CounterSaturated, BreakerRecordFailed", source: "events", warn: "—", page: "every", responders: ["engineering"], playbook: "P-05 (EMG-079)" },
+  { id: "M-21", name: "Backing-check failure, CounterSaturated", source: "events", warn: "—", page: "every", responders: ["engineering"], playbook: "P-05 (EMG-079)" },
   { id: "M-22", name: "Timelock CallScheduled", source: "events", warn: "every", page: "role change, upgrade, setShortDelaySelector, setNormalDelay, unfreezeAddress, restorePriceRoute", responders: ["cancellers"], playbook: "P-06 (EMG-080)" },
   { id: "M-23", name: "Safe owner, threshold, guard or module change; signer liveness", source: "external", warn: "every", page: "every; liveness answers below threshold + 1", responders: ["signers"], playbook: "P-07 (EMG-081)" },
   { id: "M-24", name: "Pause state and reason, address freeze, standby switch, manual breaker", source: "snapshot", warn: "every", page: "—", responders: ["signers"], playbook: "per reason" },
