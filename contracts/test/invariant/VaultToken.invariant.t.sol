@@ -42,6 +42,7 @@ contract VaultTokenInvariantTest is CollateralizationFixture {
             marketId: MARKET_ID
         });
         handler = new CollateralizationHandler(world, [aliceProxy, bobProxy], [alice, bob]);
+        handler.seedAccounts();
         attacker_ = new VaultTokenAttackerHandler(
             token, [aave.hub, aliceProxy, bobProxy, lpVaultSwap, adapter, address(lpVault), address(coll), attacker]
         );
