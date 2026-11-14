@@ -1,4 +1,4 @@
-import { calculateSimpleInterestAccrued, calculateTotalApy } from "@/app/lib/lend-engine"
+import { calculateSimpleInterestAccrued, calculateTotalApy } from "@/app/lib/lend-system/model"
 import { calculateMultiplyHealthFactor, calculateMultiplyLtv } from "@/app/lib/multiply-engine"
 import { derivePersistedUmbrellaPositionStatus } from "@/app/lib/umbrella-system/portfolio-mapper"
 import { liquidationThresholdPctFromMaxLtvPct } from "@/app/lib/borrow-system/liquidation-threshold"

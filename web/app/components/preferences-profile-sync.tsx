@@ -1,7 +1,7 @@
 "use client"
 
 import { lazy, Suspense } from "react"
-import { hasConvexClient } from "@/app/lib/convex/market-liquidity-provider"
+import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
 import { useSiweAuth } from "@/app/lib/siwe/use-siwe-auth"
 import { IS_DEV_SHORTCUT_MODE } from "@/app/lib/test-mode"
 

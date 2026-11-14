@@ -1,4 +1,4 @@
-import { LEND_ASSET_GROUPS, LEND_FEATURED_ASSETS, LEND_FEATURED_SEQUENCE } from "@/app/lib/data/catalog/lend"
+import type { LendAssetGroup, LendFeaturedAsset, LendFeaturedAssetId } from "@/app/lib/data/lend-rows"
 import type { LendFeaturedSnapshot } from "@/app/lib/lend-system/read-model"
 
 export type LendMarket = {
@@ -20,8 +20,8 @@ export type LendMarket = {
 
 export type LendPageData = {
   markets: ReadonlyArray<LendMarket>
-  featuredAssets: typeof LEND_FEATURED_ASSETS
-  featuredSequence: ReadonlyArray<(typeof LEND_FEATURED_SEQUENCE)[number]>
+  featuredAssets: Readonly<Record<string, LendFeaturedAsset>>
+  featuredSequence: ReadonlyArray<LendFeaturedAssetId>
   featuredSnapshots: ReadonlyArray<LendFeaturedSnapshot>
-  assetGroups: ReadonlyArray<(typeof LEND_ASSET_GROUPS)[number]>
+  assetGroups: ReadonlyArray<LendAssetGroup>
 }

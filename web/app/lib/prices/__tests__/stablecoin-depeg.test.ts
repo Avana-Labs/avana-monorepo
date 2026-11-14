@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { canonicalPriceUsd, resetCanonicalPrices, setCanonicalPrices } from "@/app/lib/prices/canonical"
 import { formatTokenPrice } from "@/app/lib/prices/format"
-import { BORROW_POOL_CATALOG, poolLpTokenPriceUsd } from "@/app/lib/borrow-sim"
+import { BORROW_POOL_CATALOG, poolLpTokenPriceUsd } from "@/app/lib/borrow-market-rows"
 import { lpTokenPriceUsd, normalizeWeights } from "@/app/lib/prices/lp-token-price"
 
 afterEach(() => resetCanonicalPrices())

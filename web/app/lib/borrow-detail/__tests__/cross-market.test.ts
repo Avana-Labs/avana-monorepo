@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-sim"
+import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-market-rows"
 import { listSpokeBorrowables } from "@/app/lib/borrow-system/registry"
 import { filterPoolsForSpokeAsset, resolveBorrowablesForPool, resolveCollateralForAsset } from "../cross-market"
 

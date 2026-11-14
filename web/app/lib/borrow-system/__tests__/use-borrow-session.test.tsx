@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 import { buildBorrowSessionSeed } from "@/app/lib/borrow-system/demo-session"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 import { writeBorrowSessionMetadata, writeBorrowSessionState } from "@/app/lib/borrow-system/storage"

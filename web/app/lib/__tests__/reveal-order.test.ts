@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BORROW_SPOKES, groupByDex, orderPoolsForDexGroups, type BorrowPoolRow } from "@/app/lib/borrow-sim"
+import { BORROW_SPOKES, groupByDex, orderPoolsForDexGroups, type BorrowPoolRow } from "@/app/lib/borrow-market-rows"
 import { orderLoopRowsByGroup } from "@/app/multiply/components/explore-loops-markets-table"
 
 // Progressive reveal slices rows and then groups them. If the slice isn't already in group order,

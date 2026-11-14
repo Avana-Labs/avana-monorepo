@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { calculateClaimPreview, type HomeClaimPosition } from "@/app/lib/home-sim"
+import { calculateClaimPreview, type HomeClaimPosition } from "@/app/lib/home-view-model"
 
 const visual = { symbol: "X", shortLabel: "X", bgClassName: "bg-x", textClassName: "text-x" }
 

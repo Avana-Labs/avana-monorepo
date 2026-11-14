@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { makeExampleBorrowSystemState } from "@/app/lib/credit-engine/__tests__/fixtures"
-import { makeStressLendActions, makeStressLendSystemState } from "@/app/lib/lend-engine/__tests__/stress-fixtures"
+import { makeExampleBorrowSystemState } from "@/app/lib/borrow-system/model/__tests__/fixtures"
+import { makeStressLendActions, makeStressLendSystemState } from "@/app/lib/lend-system/model/__tests__/stress-fixtures"
 import { SandboxLendReadAdapter } from "@/app/lib/lend-system/sandbox-read-adapter"
 import { SandboxLendTransactionAdapter } from "@/app/lib/lend-system/sandbox-transaction-adapter"
 

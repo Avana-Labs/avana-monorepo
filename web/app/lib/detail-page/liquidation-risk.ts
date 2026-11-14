@@ -83,36 +83,3 @@ export function foldLiquidationRiskStats(
   ]
 }
 
-/** Deterministic Dual fallback when Convex liquidation daily rows are missing. */
-export function buildMockLiquidationRiskStats(seedKey: string): LiquidationRiskStat[] {
-  let h = 2166136261
-  for (let i = 0; i < seedKey.length; i++) {
-    h ^= seedKey.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  const rand = () => {
-    h += 0x6d2b79f5
-    let t = Math.imul(h ^ (h >>> 15), 1 | h)
-    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-  const latest: LiquidationDailyTotals = {
-    liquidationsCount: Math.floor(rand() * 20) + 2,
-    collateralSeizedUsd: Math.round(rand() * 2_000_000 + 200_000),
-    debtRepaidUsd: Math.round(rand() * 1_800_000 + 180_000),
-    liquidationBonusUsd: Math.round(rand() * 100_000 + 10_000),
-    collateralAtRiskUsd: Math.round(rand() * 12_000_000 + 1_000_000),
-    walletsAtRisk: Math.floor(rand() * 80) + 5,
-    walletsEligibleForLiquidation: Math.floor(rand() * 15) + 1,
-    badDebtUsd: Math.round((rand() * 5_000 + 100) * 100) / 100,
-    walletsWithBadDebt: Math.floor(rand() * 5),
-  }
-  const previous: LiquidationDailyTotals = {
-    ...latest,
-    liquidationsCount: Math.max(0, latest.liquidationsCount - Math.floor(rand() * 5)),
-    collateralAtRiskUsd: Math.round(latest.collateralAtRiskUsd * (0.9 + rand() * 0.2)),
-    walletsAtRisk: Math.max(0, latest.walletsAtRisk + Math.floor(rand() * 10) - 5),
-    badDebtUsd: Math.round(latest.badDebtUsd * (0.8 + rand() * 0.4) * 100) / 100,
-  }
-  return foldLiquidationRiskStats(latest, previous)
-}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { LEND_MARKET_CATALOG } from "@/app/lib/lend-system/catalog"
+import { LEND_MARKET_CATALOG } from "@/app/lib/lend-system/market-ids"
 
 /**
  * #19 — the list's "Available" and the detail page's "Available Liquidity" must

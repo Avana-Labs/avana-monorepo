@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 import { canonicalPriceUsd } from "@/app/lib/prices/canonical"
 import { listSpokeBorrowables } from "@/app/lib/borrow-system/registry"
 import { assetPriceUsd6 } from "@/app/lib/borrow-system/mock"

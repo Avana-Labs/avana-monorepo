@@ -28,9 +28,6 @@ const ACTION_TITLES: Record<ActionProduct, Partial<Record<ActionKind, string>>> 
     deposit: "Lend deposit",
     withdraw: "Lend withdraw",
   },
-  rewards: {
-    claim: "Claim rewards",
-  },
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

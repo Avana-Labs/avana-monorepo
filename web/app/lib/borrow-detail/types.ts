@@ -2,10 +2,9 @@
  * Public types for the borrow / lend detail pages.
  *
  * These types model everything a detail page needs to render. The frontend
- * consumes these shapes via the public API in `./index.ts`; the mock layer
- * (`pool.mock.ts`, `asset.mock.ts`) is the only place that knows how the
- * numbers are produced today. When live data arrives the data seam swaps
- * implementations without changing the shapes — see `docs/borrow-detail-tests/HANDOFF.md`.
+ * consumes these shapes via the public API in `./index.ts`. `detail-base.ts` builds the
+ * empty shape of a page from its services/convex row; `convex-detail.ts` fills it with the
+ * services/convex detail queries. A section with no source renders its empty state.
  *
  * ============================================================================
  * Convex mapping (future persistent layer)
@@ -38,11 +37,21 @@
  * ============================================================================
  */
 
-import type { BorrowAssetVisual, BorrowPoolRow } from "@/app/lib/borrow-sim"
-import type { SpokeBorrowableRecord } from "@/app/lib/borrow-system/registry"
+import type { BorrowAssetVisual, BorrowPoolRow, BorrowSpokeId, BorrowableAsset } from "@/app/lib/borrow-market-rows"
 import type { ChartFeed } from "@/app/components/charts"
 import type { FaqContent } from "./content-model"
 import type { ProtocolParameterRow } from "./protocol-parameters"
+
+/** One CDP Spoke's debt reserve as the Borrow asset page and its sidebar read it. */
+export type SpokeBorrowableRecord = BorrowableAsset & {
+  baseAssetId: string
+  spokeId: BorrowSpokeId
+  spokeSlug: string
+  spokeLabel: string
+  slug: string
+  contextLabel: string
+  marketIds: string[]
+}
 
 // -------------------------------------------------------------------------
 // Primitive building blocks

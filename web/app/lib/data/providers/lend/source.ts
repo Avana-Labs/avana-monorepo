@@ -1,13 +1,9 @@
-import {
-  type DataSourceAdapter,
-  type DataSourceRequestContext,
-  type DataSourceResponse,
-} from "@/app/lib/data/core/source-runtime"
-import { createCatalogPageSources } from "@/app/lib/data/providers/catalog-page-source"
-import { buildLendCatalogBaselineState } from "@/app/lib/lend-system/mock"
-import { SandboxLendReadAdapter } from "@/app/lib/lend-system/sandbox-read-adapter"
+import type { DataSourceAdapter, DataSourceRequestContext, DataSourceResponse } from "@/app/lib/data/core/source-runtime"
+import { createMarketPageSource } from "@/app/lib/data/providers/catalog-page-source"
+import { buildLendPageData } from "@/app/lib/lend-system/read-model"
 import { mergeConvexLendSnapshots } from "@/app/lib/lend-system/market-hydration"
 import { fetchLendMarketSnapshots } from "@/app/lib/lend-system/market-hydration-server"
+import { emptyLendSystemState } from "@/app/lib/lend-system/use-lend-session"
 import type { LendPageData } from "./types"
 
 export type LendPageSource = {
@@ -15,26 +11,15 @@ export type LendPageSource = {
   getLendPageData(context?: DataSourceRequestContext): Promise<DataSourceResponse<LendPageData>>
 }
 
-const catalogSources = createCatalogPageSources({
+const source = createMarketPageSource({
   product: "lend",
-  buildBaselineState: buildLendCatalogBaselineState,
+  buildEmptyState: (walletId) => emptyLendSystemState(walletId),
   fetchSnapshots: fetchLendMarketSnapshots,
   mergeSnapshots: mergeConvexLendSnapshots,
-  readPageData: async (state, walletId) => {
-    const readAdapter = new SandboxLendReadAdapter({ state })
-    return readAdapter.readLendPage(walletId)
-  },
+  readPageData: (state, walletId) => buildLendPageData(walletId, state),
 })
 
-const mockLendPageAdapter = catalogSources.mockAdapter
-const liveLendPageAdapter = catalogSources.liveAdapter
-
-export const mockLendPageSource: LendPageSource = {
-  adapter: mockLendPageAdapter,
-  getLendPageData: (context) => catalogSources.mockSource.getPageData(context),
-}
-
 export const liveLendPageSource: LendPageSource = {
-  adapter: liveLendPageAdapter,
-  getLendPageData: (context) => catalogSources.liveSource.getPageData(context),
+  adapter: source.adapter,
+  getLendPageData: (context) => source.getPageData(context),
 }

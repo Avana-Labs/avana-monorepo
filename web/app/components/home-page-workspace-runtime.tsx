@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
-import type { HomeMode } from "@/app/lib/home-sim"
+import type { HomeMode } from "@/app/lib/home-view-model"
 import { HomeWorkspaceCard } from "@/app/components/home/home-workspace-card"
 import { HomeSwapAction } from "@/app/components/home/home-swap-action"
 import { ActionSessionLoading } from "@/app/components/action-page/action-session-loading"
@@ -10,7 +10,6 @@ import { HomeWorkspaceSkeleton } from "@/app/components/loading-states"
 import {
   AvanaSessionsProvider,
   useBorrowSessionContext,
-  useRewardsSessionContext,
 } from "@/app/lib/avana-session/avana-sessions-provider"
 
 // Swap is the initial mode. Fetch the other action forms only when selected,
@@ -40,18 +39,7 @@ export function HomePageWorkspaceRuntime({
 
 function HomePageWorkspace({ initialMode }: { initialMode: HomeMode }) {
   const session = useBorrowSessionContext()
-  const { applyReferralCode, hasHydratedStorage } = useRewardsSessionContext()
   const [mode, setMode] = useState<HomeMode>(initialMode)
-
-  // Referral links now land here (https://avana.cc/?ref=<code>). Capture the code the
-  // same way the dashboard does — read it from the URL once storage has hydrated and
-  // record the referrer on this session. Fail-open: an invalid/self code is ignored.
-  useEffect(() => {
-    if (!hasHydratedStorage || typeof window === "undefined") return
-    const ref = new URLSearchParams(window.location.search).get("ref")
-    if (!ref) return
-    void applyReferralCode(ref).catch(() => undefined)
-  }, [applyReferralCode, hasHydratedStorage])
 
   // Gate on the full available-pool list (always populated) rather than the
   // pledged pools — a freshly onboarded wallet with no positions still renders

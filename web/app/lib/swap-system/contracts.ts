@@ -6,16 +6,12 @@ export type SwapBalanceSource =
   | "borrow_collateral_pledged"
   | "borrow_debt"
   | "borrow_claimable"
-  | "multiply_available"
-  | "multiply_active"
-  | "multiply_debt"
   | "protocol_locked"
 
 export type SwapRestrictionReason =
   | "ineligible_lp_token"
   | "ineligible_deposited"
   | "ineligible_pledged"
-  | "ineligible_active_loop"
   | "ineligible_protocol_locked"
   | "insufficient_balance"
   | "unsupported_asset"
@@ -26,7 +22,7 @@ export type SwapRestrictionReason =
   | "above_maximum"
   | "insufficient_native_gas"
 
-export type SwapOriginProduct = "wallet" | "lend" | "borrow" | "multiply"
+export type SwapOriginProduct = "wallet" | "lend" | "borrow"
 
 export type SwapAssetType = "native" | "erc20" | "lp_token"
 

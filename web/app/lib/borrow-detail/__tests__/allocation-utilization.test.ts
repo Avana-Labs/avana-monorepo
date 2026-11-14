@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { computeAssetAllocationRows } from "@/app/lib/borrow-detail/allocation"
-import type { BorrowPoolRow } from "@/app/lib/borrow-sim"
+import type { BorrowPoolRow } from "@/app/lib/borrow-market-rows"
 import type { SpokeBorrowableRecord } from "@/app/lib/borrow-system/registry"
 
 const visual = { symbol: "X", shortLabel: "X", bgClass: "", textClass: "" }

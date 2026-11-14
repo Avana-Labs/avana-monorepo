@@ -16,7 +16,7 @@ import { TRANSACT_ACCESS_HREF, useTransactAccessCta } from "@/app/lib/transact-a
 import { useActionNetworkGuard } from "@/app/lib/web3/use-action-network-guard"
 import { SWAP_ASSETS, SWAP_CHAIN_ID } from "@/app/lib/swap-system/catalog"
 import { validateSwapInputAmount } from "@/app/lib/swap-system/eligibility"
-import type { SwapQuote } from "@/app/lib/swap-system/quote-provider"
+import type { SwapQuote } from "@/app/lib/swap-system/quote-types"
 import type { ActionPreviewUi, ActionStage, ActionSuccessUi } from "@/app/lib/action-system/contracts"
 
 const ActionReviewStage = dynamic(

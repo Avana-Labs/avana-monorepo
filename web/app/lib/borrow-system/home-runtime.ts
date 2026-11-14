@@ -9,7 +9,7 @@ import {
   type BorrowSystemState,
   type UserCollateralPosition,
   type UserDebtPosition,
-} from "@/app/lib/credit-engine"
+} from "@/app/lib/borrow-system/model"
 import {
   calculateClaimPreview,
   formatCompactUsd,
@@ -22,7 +22,7 @@ import {
   type HomeClaimPosition,
   type RemovePreview,
   type RepayPreview,
-} from "@/app/lib/home-sim"
+} from "@/app/lib/home-view-model"
 import {
   buildBorrowPreviewModel,
   buildDepositPreviewModel,

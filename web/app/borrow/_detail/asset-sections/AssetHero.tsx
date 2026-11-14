@@ -16,7 +16,7 @@ import {
   resolveHeroContractAddress,
 } from "@/app/borrow/_detail/lib/hero-chart-feeds"
 import { useAvanaIdentity, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
-import { currentDebtValueUsd6 } from "@/app/lib/credit-engine"
+import { currentDebtValueUsd6 } from "@/app/lib/borrow-system/model"
 import { buildWalletPositionFeed } from "@/app/lib/chart-feeds/wallet-position-feed"
 import { sizedLocalIconSrc } from "@/app/lib/local-asset-icons"
 

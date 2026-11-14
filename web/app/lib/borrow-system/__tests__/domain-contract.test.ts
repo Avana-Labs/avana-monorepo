@@ -9,7 +9,7 @@ import type {
   TransactionPreview,
   TransactionResult,
 } from "@/app/lib/borrow-system/contracts"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 import type { BorrowPageData } from "@/app/lib/data/providers/borrow"
 import type { PortfolioBorrowTabData } from "@/app/lib/data/providers/portfolio"
 import type { AssetDetail, PoolDetail } from "@/app/lib/borrow-detail"

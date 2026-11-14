@@ -1,15 +1,9 @@
-import type { BorrowableAsset } from "@/app/lib/borrow-sim"
-import {
-  BORROW_DEXES,
-  BORROW_PENDING_ROWS,
-  BORROW_POOL_CATALOG,
-  HOME_COLLATERAL_POOLS,
-} from "@/app/lib/data/catalog/borrow"
+import type { BorrowDex, BorrowPoolRow, BorrowableAsset, PendingMarketRow } from "@/app/lib/borrow-market-rows"
+import type { HomeCollateralPool } from "@/app/lib/home-view-model"
 
 export type BorrowPageData = {
   walletId: string
-  borrowSessionSeed: string
-  poolCatalog: ReadonlyArray<(typeof BORROW_POOL_CATALOG)[number]>
+  poolCatalog: ReadonlyArray<BorrowPoolRow>
   heroMetrics: {
     totalTvlUsd: number
     totalCollateralUsd: number
@@ -18,9 +12,9 @@ export type BorrowPageData = {
     totalTvlChangePct: number
   }
   borrowableAssets: ReadonlyArray<BorrowableAsset>
-  pendingRows: ReadonlyArray<(typeof BORROW_PENDING_ROWS)[number]>
-  dexes: ReadonlyArray<(typeof BORROW_DEXES)[number]>
-  collateralPools: ReadonlyArray<(typeof HOME_COLLATERAL_POOLS)[number]>
+  pendingRows: ReadonlyArray<PendingMarketRow>
+  dexes: ReadonlyArray<BorrowDex>
+  collateralPools: ReadonlyArray<HomeCollateralPool>
   initialDebts: Record<string, number>
   borrowSnapshot: {
     totalBorrowedUsd: number
@@ -34,7 +28,6 @@ export type BorrowPageData = {
 export type BorrowWorkspaceData = Pick<
   BorrowPageData,
   | "walletId"
-  | "borrowSessionSeed"
   | "poolCatalog"
   | "borrowableAssets"
   | "pendingRows"

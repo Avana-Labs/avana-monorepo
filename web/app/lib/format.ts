@@ -1,4 +1,4 @@
-import { formatCompactUsd, formatUsdExact } from "@/app/lib/borrow-sim"
+import { formatCompactUsd, formatUsdExact } from "@/app/lib/borrow-market-rows"
 
 /**
  * Shared percent/APY formatting so every surface uses one decimal convention.

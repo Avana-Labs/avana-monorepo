@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { SchemaMarkup, buildBreadcrumbSchema, buildFaqSchema, buildWebPageSchema } from "@/app/components/seo/schema"
-import { getLendMarketDetail } from "@/app/lib/lend-detail"
 import { applyLendPreloadedOverlays, getLendMarketDetailFromConvex } from "@/app/lib/lend-detail/convex-detail"
 import { preloadLendHero } from "@/app/lib/lend-detail/hero-preload"
 import { preloadDetailQuickStats } from "@/app/lib/detail-page/quick-stats-preload"
@@ -28,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       path: `/lend/markets/${marketId}`,
       keywords: ["supply yield", "DeFi lend market"],
     })
-  const detail = getLendMarketDetail(marketId)
+  const detail = await getLendMarketDetailFromConvex(marketId)
   if (!detail)
     return {
       title: "Lend market · Avana",

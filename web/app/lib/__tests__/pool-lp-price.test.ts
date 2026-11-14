@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BORROW_POOL_CATALOG, poolLpTokenPriceUsd } from "@/app/lib/borrow-sim"
+import { BORROW_POOL_CATALOG, poolLpTokenPriceUsd } from "@/app/lib/borrow-market-rows"
 import { canonicalPriceUsd } from "@/app/lib/prices/canonical"
 import { lpTokenPriceUsd } from "@/app/lib/prices/lp-token-price"
 

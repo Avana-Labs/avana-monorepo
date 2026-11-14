@@ -1,7 +1,7 @@
 "use client"
 
 import { Check } from "@/app/components/icons"
-import { HOME_BORROW_TOKENS, type HomeBorrowToken } from "@/app/lib/home-sim"
+import type { HomeBorrowToken } from "@/app/lib/home-view-model"
 import { TokenBubble } from "@/app/components/home-workspace-primitives"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
@@ -33,7 +33,7 @@ export function TokenPickerDialog({
   onOpenChange,
   selectedTokenId,
   onSelect,
-  tokens = HOME_BORROW_TOKENS,
+  tokens = [],
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void

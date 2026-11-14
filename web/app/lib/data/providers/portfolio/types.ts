@@ -5,7 +5,7 @@ import type {
   PortfolioActivityProduct,
   PortfolioActivityStatus,
   PortfolioStrategyTone,
-} from "./source"
+} from "./records"
 
 export type PortfolioTabKey = "overview" | "lending" | "looping" | "activity"
 

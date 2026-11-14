@@ -1,7 +1,7 @@
 "use client"
 
 import { type ReactNode } from "react"
-import type { HomeMode } from "@/app/lib/home-sim"
+import type { HomeMode } from "@/app/lib/home-view-model"
 import { ActionWorkspaceTabs } from "@/app/components/action-page/action-workspace-tabs"
 import { TestnetMetricsBadge } from "@/app/components/testnet-metrics-badge"
 import { useTranslation } from "@/app/lib/i18n/use-translation"

@@ -5,7 +5,7 @@ import type { PoolDetail } from "@/app/lib/borrow-detail"
 import { ResponsiveBorrowAction } from "@/app/components/action-page/responsive-borrow-action"
 import { ActionPageLaunchCta } from "@/app/components/action-page/action-page-launch-cta"
 import { DetailActionTabs } from "@/app/components/detail-action-tabs"
-import { getPoolById, type HomeAssetVisual, type HomeCollateralPool } from "@/app/lib/borrow-system/home-contracts"
+import type { HomeAssetVisual, HomeCollateralPool } from "@/app/lib/borrow-system/home-contracts"
 import { cn } from "@/lib/utils"
 import { useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
@@ -91,17 +91,16 @@ function PoolActionRail({ detail, className, embedActions = false }: Props & { e
 }
 
 function resolvePool(detail: PoolDetail): HomeCollateralPool {
-  const fallback = getPoolById(detail.id)
-  if (fallback && fallback.id === detail.id) return fallback
+  // No wallet position is read yet, so the pool carries no collateral or borrow power.
   return {
     id: detail.id,
     name: detail.hero.name,
     venue: detail.hero.venue,
     category: detail.hero.feeTier ?? detail.hero.venue,
-    collateralUsd: detail.row.collateralExampleUsd,
+    collateralUsd: 0,
     maxLtv: detail.row.ltv,
-    borrowPowerUsd: Math.round(detail.row.collateralExampleUsd * (detail.row.ltv / 100)),
-    liquidationUsd: Math.round(detail.row.collateralExampleUsd * ((detail.row.ltv + 10) / 100)),
+    borrowPowerUsd: 0,
+    liquidationUsd: 0,
     pairApr: (detail.row.aprMin + detail.row.aprMax) / 2,
     visuals: [toHomeVisual(detail.hero.visuals[0]), toHomeVisual(detail.hero.visuals[1])],
   }

@@ -1,4 +1,4 @@
-import { formatFixed } from "@/app/lib/credit-engine"
+import { formatFixed } from "@/app/lib/borrow-system/model"
 import type { TransactionPreview } from "@/app/lib/borrow-system/contracts"
 import type { ActionPreviewUi, ActionSuccessUi } from "@/app/lib/action-system/contracts"
 import { humanizeBlockedReason } from "@/app/lib/action-system/blocked-reason"

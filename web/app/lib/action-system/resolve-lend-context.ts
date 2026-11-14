@@ -1,4 +1,4 @@
-import type { LendSystemState } from "@/app/lib/lend-engine"
+import type { LendSystemState } from "@/app/lib/lend-system/model"
 import { formatActionAmount, formatActionApproxUsd, formatActionRatioPercent } from "@/app/lib/action-system/formatters"
 import { formatLendMarketDropdownSublabel } from "@/app/lib/lend-system/market-labels"
 import { getWalletBalanceForLendMarket } from "@/app/lib/lend-system/wallet-balances"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BORROW_POOL_CATALOG, getSpokeById } from "@/app/lib/borrow-sim"
+import { BORROW_POOL_CATALOG, getSpokeById } from "@/app/lib/borrow-market-rows"
 import { buildPoolDetail } from "@/app/lib/borrow-detail/pool.mock"
 
 describe("pool detail collateral factor single-sources the pool LTV", () => {

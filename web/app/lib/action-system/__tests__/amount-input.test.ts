@@ -4,7 +4,7 @@ import {
   parsePositiveActionAmount,
   sanitizeDecimalInput,
 } from "@/app/lib/action-system/amount-input"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 
 describe("action amount parsing", () => {
   it.each(["1abc", "1.2.3", "1,000", "Infinity", "NaN", "-1", "0", ""])("rejects malformed amount %s", (value) => {

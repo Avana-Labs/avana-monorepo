@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { calculateSpokeCreditMetrics, formatFixed, parseFixed } from "@/app/lib/credit-engine"
+import { calculateSpokeCreditMetrics, formatFixed, parseFixed } from "@/app/lib/borrow-system/model"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 import { resolveBorrowAprPct, selectBorrowableAssets } from "@/app/lib/borrow-system/selectors"
 import { selectPortfolioDebtRows } from "@/app/lib/borrow-system/dashboard-selectors"

@@ -94,7 +94,7 @@ export function AssetIcon({ asset }: { asset: FeaturedAsset }) {
 
 function HoverTooltip({ asset, pointIndex, left }: { asset: FeaturedAsset; pointIndex: number; left: number }) {
   const { t } = useTranslation()
-  const points = useMemo(() => parsePathPoints(asset.path), [asset.path])
+  const points = useMemo(() => parsePathPoints(asset.path ?? ""), [asset.path])
   const point = points[pointIndex] ?? points[0]
   const timeIndex = Math.round((pointIndex / Math.max(points.length - 1, 1)) * (TIME_LABELS.length - 1))
   const deviation = ((60 - point.y) / 60) * 0.34
@@ -177,7 +177,7 @@ function FeaturedCard({
   onLeave: () => void
   interactive?: boolean
 }) {
-  const points = useMemo(() => parsePathPoints(asset.path), [asset.path])
+  const points = useMemo(() => parsePathPoints(asset.path ?? ""), [asset.path])
   const isHovered = hover?.cardKey === cardKey
   const cardContent = (
     <>

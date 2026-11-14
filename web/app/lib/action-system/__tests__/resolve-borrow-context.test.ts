@@ -6,7 +6,7 @@ import {
 } from "@/app/lib/action-system/resolve-borrow-context"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 import { selectBorrowMarketSummaries } from "@/app/lib/borrow-system/selectors"
-import { RAY, parseFixed } from "@/app/lib/credit-engine"
+import { RAY, parseFixed } from "@/app/lib/borrow-system/model"
 
 describe("resolve borrow context", () => {
   it("only lists supply pools with wallet LP balances", () => {

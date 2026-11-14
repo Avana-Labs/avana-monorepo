@@ -1,16 +1,18 @@
-import type { LendSystemState } from "@/app/lib/lend-engine"
-import { warnLiveFallback } from "@/app/lib/data/providers/hydration-telemetry"
+import type { LendMarket, LendMarketCategory, LendSystemState } from "@/app/lib/lend-system/model"
+import { INITIAL_LIQUIDITY_INDEX } from "@/app/lib/lend-system/model/constants"
 
 /**
- * One lend row from convex/markets.ts `listMarketSnapshots` (scope === "lend").
- * Loose `scope: string` so the raw query result (which also carries asset/pool
- * rows) is assignable without a cast.
+ * One lend row from services/convex `markets.listMarketSnapshots` (scope === "lend"): one Hub
+ * asset. Loose `scope: string` so the raw query result (which also carries asset/pool rows) is
+ * assignable without a cast.
  */
 export type LendConvexSnapshot = {
   slug: string
   scope: string
   name?: string
   symbol?: string
+  chainId?: number
+  category?: string
   reserveFactorPct?: number
   rewardsApyPct?: number
   assetPriceUsd?: number
@@ -22,99 +24,72 @@ export type LendConvexSnapshot = {
   supplyApyPct: number
 }
 
+function finite(value: number | undefined): number | undefined {
+  return value !== undefined && Number.isFinite(value) ? value : undefined
+}
+
+function categoryOf(value: string | undefined): LendMarketCategory {
+  return value === "stable" ? "stable" : "crypto"
+}
+
 /**
- * Fold Convex lend market reference data into a lend system state so the session
- * (list, hero overview, dashboard) reads the SAME numbers as the detail page and
- * the single source of truth. Overwrites supply/liquidity/rate fields plus identity,
- * reserve factor, and rewards when present on the snapshot.
+ * One Lend market built only from what services/convex reports. Amounts are kept in USD terms
+ * when the row carries no price (price 1), so supplied/borrowed/available stay consistent with
+ * the row; nothing is filled from a static catalog.
+ */
+export function lendMarketFromSnapshot(snap: LendConvexSnapshot, rank: number, now: number): LendMarket {
+  const livePrice = finite(snap.assetPriceUsd)
+  const price = livePrice !== undefined && livePrice > 0 ? livePrice : 1
+  const supplyApy = (finite(snap.supplyApyPct) ?? 0) / 100
+  const rewardsApy = (finite(snap.rewardsApyPct) ?? 0) / 100
+  const symbol = snap.symbol?.trim() || snap.slug.toUpperCase()
+  return {
+    marketId: snap.slug,
+    chainId: snap.chainId ?? 0,
+    rank,
+    asset: { symbol, name: snap.name?.trim() || symbol, priceUsd: price },
+    assetPriceUsd: price,
+    supplyApy,
+    rewardsApy,
+    totalApy: supplyApy + rewardsApy,
+    totalSupplied: snap.suppliedUsd / price,
+    totalBorrowed: snap.borrowedUsd / price,
+    availableLiquidity: snap.availableUsd / price,
+    utilization: (finite(snap.utilizationPct) ?? 0) / 100,
+    reserveFactor: (finite(snap.reserveFactorPct) ?? 0) / 100,
+    status: "active",
+    riskTier: "low",
+    category: categoryOf(snap.category),
+    liquidityIndex: INITIAL_LIQUIDITY_INDEX,
+    lastAccrualTimestamp: now,
+    priceUpdatedAt: finite(snap.priceUpdatedAt) ?? now,
+  }
+}
+
+/**
+ * Replace the Lend markets of a state with the Hub assets services/convex reports. Wallet
+ * positions are untouched. Returns the SAME state reference when nothing changed.
  */
 export function mergeConvexLendSnapshots(
   state: LendSystemState,
   snapshots: readonly LendConvexSnapshot[],
 ): LendSystemState {
-  if (snapshots.length === 0) return state
-  let changed = false
-  const markets = { ...state.markets }
-
-  for (const snap of snapshots) {
-    if (snap.scope !== "lend") continue
-    const existing = markets[snap.slug]
-    if (!existing) continue
-    const hasLivePrice =
-      snap.assetPriceUsd !== undefined &&
-      Number.isFinite(snap.assetPriceUsd) &&
-      snap.assetPriceUsd > 0 &&
-      snap.priceUpdatedAt !== undefined &&
-      Number.isFinite(snap.priceUpdatedAt)
-    const price = hasLivePrice ? snap.assetPriceUsd! : existing.assetPriceUsd || 1
-    const supplyApy = snap.supplyApyPct / 100
-    let rewardsApy: number
-    if (snap.rewardsApyPct !== undefined && Number.isFinite(snap.rewardsApyPct)) {
-      rewardsApy = snap.rewardsApyPct / 100
-    } else {
-      warnLiveFallback("lend", snap.slug, "rewardsApyPct")
-      rewardsApy = existing.rewardsApy
-    }
-    let reserveFactor: number
-    if (snap.reserveFactorPct !== undefined && Number.isFinite(snap.reserveFactorPct)) {
-      reserveFactor = snap.reserveFactorPct / 100
-    } else {
-      warnLiveFallback("lend", snap.slug, "reserveFactorPct")
-      reserveFactor = existing.reserveFactor
-    }
-    let assetName: string
-    if (snap.name?.trim()) {
-      assetName = snap.name
-    } else {
-      warnLiveFallback("lend", snap.slug, "name")
-      assetName = existing.asset.name
-    }
-    let assetSymbol: string
-    if (snap.symbol?.trim()) {
-      assetSymbol = snap.symbol
-    } else {
-      warnLiveFallback("lend", snap.slug, "symbol")
-      assetSymbol = existing.asset.symbol
-    }
-    const next = {
-      ...existing,
-      totalSupplied: snap.suppliedUsd / price,
-      totalBorrowed: snap.borrowedUsd / price,
-      availableLiquidity: snap.availableUsd / price,
-      utilization: snap.utilizationPct / 100,
-      supplyApy,
-      rewardsApy,
-      reserveFactor,
-      totalApy: supplyApy + rewardsApy,
-      assetPriceUsd: price,
-      priceUpdatedAt: hasLivePrice ? snap.priceUpdatedAt! : existing.priceUpdatedAt,
-      asset: {
-        ...existing.asset,
-        name: assetName,
-        symbol: assetSymbol,
-        priceUsd: price,
-      },
-    }
-    if (
-      existing.totalSupplied === next.totalSupplied &&
-      existing.totalBorrowed === next.totalBorrowed &&
-      existing.availableLiquidity === next.availableLiquidity &&
-      existing.utilization === next.utilization &&
-      existing.supplyApy === next.supplyApy &&
-      existing.rewardsApy === next.rewardsApy &&
-      existing.reserveFactor === next.reserveFactor &&
-      existing.totalApy === next.totalApy &&
-      existing.assetPriceUsd === next.assetPriceUsd &&
-      existing.priceUpdatedAt === next.priceUpdatedAt &&
-      existing.asset.name === next.asset.name &&
-      existing.asset.symbol === next.asset.symbol &&
-      existing.asset.priceUsd === next.asset.priceUsd
-    ) {
-      continue
-    }
-    markets[snap.slug] = next
-    changed = true
-  }
-
-  return changed ? { ...state, markets } : state
+  const rows = snapshots.filter((snap) => snap.scope === "lend")
+  if (rows.length === 0) return state
+  const now = Date.now()
+  const markets: Record<string, LendMarket> = {}
+  rows.forEach((snap, index) => {
+    const next = lendMarketFromSnapshot(snap, index + 1, now)
+    const existing = state.markets[snap.slug]
+    // Keep the previous object when only the timestamps differ, so memoized readers stay stable.
+    markets[snap.slug] =
+      existing && JSON.stringify({ ...existing, lastAccrualTimestamp: 0, priceUpdatedAt: 0 }) ===
+        JSON.stringify({ ...next, lastAccrualTimestamp: 0, priceUpdatedAt: 0 })
+        ? existing
+        : next
+  })
+  const sameKeys =
+    Object.keys(markets).length === Object.keys(state.markets).length &&
+    Object.entries(markets).every(([key, market]) => state.markets[key] === market)
+  return sameKeys ? state : { ...state, markets }
 }

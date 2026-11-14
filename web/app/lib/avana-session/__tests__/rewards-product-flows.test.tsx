@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 import { AvanaSessionsProvider, useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { buildMockLendSystemStateWithSeedPosition } from "@/app/lib/lend-system/mock"
 import { writeLendSessionState } from "@/app/lib/lend-system/storage"

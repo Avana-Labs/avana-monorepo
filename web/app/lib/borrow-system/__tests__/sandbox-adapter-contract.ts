@@ -1,8 +1,8 @@
 import { expect } from "vitest"
-import { calculateCreditMetrics, type BorrowAction } from "@/app/lib/credit-engine"
+import { calculateCreditMetrics, type BorrowAction } from "@/app/lib/borrow-system/model"
 import type { SandboxActionResult, TransactionIntent } from "@/app/lib/borrow-system/contracts"
 import type { SandboxTransactionAdapter } from "@/app/lib/borrow-system/sandbox-transaction-adapter"
-import type { BorrowSystemState } from "@/app/lib/credit-engine"
+import type { BorrowSystemState } from "@/app/lib/borrow-system/model"
 
 type SandboxHarness = {
   adapter: SandboxTransactionAdapter

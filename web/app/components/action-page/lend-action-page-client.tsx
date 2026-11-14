@@ -6,7 +6,6 @@ import { useCurrency } from "@/app/lib/currency/use-currency"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { useAvanaIdentity, useLendSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
 import { getWalletBalanceForLendMarket } from "@/app/lib/lend-system/wallet-balances"
-import { getLendMarketById } from "@/app/lib/lend-system/catalog"
 import type { ActionPreviewUi, ActionStage, ActionSuccessUi } from "@/app/lib/action-system/contracts"
 import { getActionDescriptor, actionPagePath } from "@/app/lib/action-system/contracts"
 import {
@@ -112,7 +111,7 @@ export function LendActionPageClient({
   // Prefer an explicit market id, then fall back to the asset id from the deep link.
   const requestedMarketId = initialMarketId ?? initialAssetId
   const validInitialMarketId =
-    requestedMarketId && (session.state.markets[requestedMarketId] ?? getLendMarketById(requestedMarketId))
+    requestedMarketId && session.state.markets[requestedMarketId]
       ? requestedMarketId
       : undefined
   const hasInvalidInitialMarket = Boolean(requestedMarketId) && !validInitialMarketId

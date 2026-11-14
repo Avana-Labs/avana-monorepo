@@ -1,7 +1,6 @@
 import { SWAP_CHAIN_ID, getSwapAsset } from "./catalog"
 import { getSwapEligibility } from "./eligibility"
 import { formatTokenDisplaySymbol } from "@/app/lib/token-icons"
-import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-sim"
 import { extraTokenName } from "@/app/lib/markets/extra-token-names"
 import type { SwapContext, SwapRestrictionReason, UserAssetBalance } from "./contracts"
 
@@ -23,54 +22,6 @@ export type DashboardWalletBalanceRow = {
   ltvPct?: number
 }
 
-export const DEMO_SWAP_BALANCES: UserAssetBalance[] = [
-  {
-    id: "wallet-eth",
-    walletId: "demo-wallet",
-    assetId: "eth",
-    amount: 0.012,
-    sourceType: "wallet",
-  },
-  {
-    id: "wallet-usdc",
-    walletId: "demo-wallet",
-    assetId: "usdc",
-    amount: 840,
-    sourceType: "wallet",
-  },
-  {
-    id: "wallet-link",
-    walletId: "demo-wallet",
-    assetId: "link",
-    amount: 24,
-    sourceType: "wallet",
-  },
-  {
-    id: "wallet-eth-usdc-lp",
-    walletId: "demo-wallet",
-    assetId: "eth-usdc-lp",
-    amount: 6.4,
-    ltvPct: 76.5,
-    sourceType: "wallet",
-  },
-  {
-    id: "lend-deposited-gho",
-    walletId: "demo-wallet",
-    assetId: "gho",
-    amount: 1250,
-    sourceType: "lend_deposited",
-    sourcePositionId: "lend-gho",
-  },
-  {
-    id: "multiply-active-eth",
-    walletId: "demo-wallet",
-    assetId: "eth",
-    amount: 3,
-    sourceType: "multiply_active",
-    sourcePositionId: "multiply-eth-usdc",
-  },
-]
-
 function sourceLabel(sourceType: UserAssetBalance["sourceType"]) {
   switch (sourceType) {
     case "wallet":
@@ -87,18 +38,12 @@ function sourceLabel(sourceType: UserAssetBalance["sourceType"]) {
       return "Borrow debt"
     case "borrow_claimable":
       return "Pool fees"
-    case "multiply_available":
-      return "Multiply available"
-    case "multiply_active":
-      return "Active loop"
-    case "multiply_debt":
-      return "Loop debt"
     case "protocol_locked":
       return "Protocol locked"
   }
 }
 
-export function getUserSwapBalances(walletId: string, balances: UserAssetBalance[] = DEMO_SWAP_BALANCES) {
+export function getUserSwapBalances(walletId: string, balances: UserAssetBalance[] = []) {
   return balances.filter((balance) => balance.walletId === walletId)
 }
 
@@ -120,7 +65,7 @@ export function selectDashboardWalletValueRows(rows: DashboardWalletBalanceRow[]
 
 export function buildDashboardWalletBalanceRows({
   walletId,
-  balances = DEMO_SWAP_BALANCES,
+  balances = [],
   context = { originProduct: "wallet", chainId: SWAP_CHAIN_ID },
   priceFor,
 }: {
@@ -164,16 +109,9 @@ export function buildDashboardWalletBalanceRows({
       // and never pinned to a frozen stored value. LP rows keep the canonical stored basis.
       const isLpToken = balance.isLpToken ?? asset?.isLpToken ?? false
       const livePrice = !isLpToken ? priceFor?.(asset?.symbol ?? balance.assetId) : undefined
-      // Multiply available buckets are USD ledgers. Their token amount may be a
-      // legacy USD-denominated value, so never revalue them as `amount × price`.
-      // Derive the display quantity from the canonical stored USD value instead.
-      const isMultiplyAvailable = balance.sourceType === "multiply_available"
       const hasLivePrice = livePrice != null && Number.isFinite(livePrice) && livePrice > 0
-      const valueUsd = isMultiplyAvailable ? storedValueUsd : hasLivePrice ? balance.amount * livePrice : storedValueUsd
-      const amount = isMultiplyAvailable && hasLivePrice ? valueUsd / livePrice : balance.amount
-      const catalogPool = balance.sourcePositionId
-        ? BORROW_POOL_CATALOG.find((pool) => pool.id === balance.sourcePositionId)
-        : undefined
+      const valueUsd = hasLivePrice ? balance.amount * livePrice : storedValueUsd
+      const amount = balance.amount
       const symbol = asset?.symbol ?? balance.symbol ?? formatTokenDisplaySymbol(balance.assetId)
       // Tokens outside the swap catalog (e.g. OP from rewards) are stored with name = ticker;
       // prefer the catalog-wide token name ("Optimism") over repeating the ticker.
@@ -190,7 +128,7 @@ export function buildDashboardWalletBalanceRows({
         isLpToken,
         isWalletHeld: balance.sourceType === "wallet",
         unitPriceUsd: balance.unitPriceUsd,
-        ltvPct: balance.ltvPct ?? catalogPool?.ltv,
+        ltvPct: balance.ltvPct,
         swappable: eligibility.eligible,
         restrictionReason: eligibility.eligible ? null : eligibility.reason,
         sourcePositionId: balance.sourcePositionId,

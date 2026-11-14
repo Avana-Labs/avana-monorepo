@@ -2,22 +2,14 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { useQuery } from "convex/react"
-import { useAuthedQueryArgs } from "@/app/lib/convex/use-authed-query-args"
 import { ChevronRight } from "@/app/components/icons"
 import { TokenIcon } from "@/app/components/token-icon"
 import { getTokenIconMeta } from "@/app/lib/token-icons"
-import { api } from "@/convex/_generated/api"
 import type { PortfolioActivityRow } from "@/app/lib/data/providers/portfolio"
-import { formatCompactUsd } from "@/app/lib/borrow-sim"
+import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { cn } from "@/lib/utils"
-import {
-  mapConvexActivityItemsToRows,
-  mergeActivityRows,
-  type ConvexActivityItem,
-} from "@/app/dashboard/convex-activity"
 
 const MASK = "••••"
 const ACTIVITY_PAGE_SIZE = 10
@@ -152,14 +144,20 @@ function amountToneClass(row: PortfolioActivityRow) {
 
 const REAL_TX_HASH = /^0x[0-9a-fA-F]{64}$/
 
-function isSimulatedTxHash(txHash: string) {
-  return !REAL_TX_HASH.test(txHash)
+function getTxnHref(txHash: string) {
+  return REAL_TX_HASH.test(txHash) ? `https://etherscan.io/tx/${txHash}` : null
 }
 
-function getTxnHref(txHash: string) {
-  return isSimulatedTxHash(txHash)
-    ? `/sandbox/transactions/${encodeURIComponent(txHash)}`
-    : `https://etherscan.io/tx/${txHash}`
+function logicalActivityKey(row: PortfolioActivityRow) {
+  if (!row.txHash) return `id\u0000${row.id}`
+  return `${row.txHash}\u0000${row.product}\u0000${row.kind}\u0000${row.marketId ?? ""}`
+}
+
+/** Dedupe rows by id and by logical action, newest first. */
+function mergeActivityRows(rows: PortfolioActivityRow[]): PortfolioActivityRow[] {
+  const byAction = new Map<string, PortfolioActivityRow>()
+  for (const row of rows) byAction.set(logicalActivityKey(row), row)
+  return [...byAction.values()].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
 }
 
 function formatRelativeTime(iso: string) {
@@ -191,25 +189,14 @@ export function RecentActivity({
   const router = useRouter()
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const [limit, setLimit] = React.useState(ACTIVITY_PAGE_SIZE)
-  const cachedConvexRef = React.useRef<PortfolioActivityRow[]>([])
+  // A wallet's history needs a wallet activity query over the indexer's logs (not in
+  // services/convex yet), so only the rows the session passes in are shown.
+  const isLoadingConvex = false
+  const isLoadingMore = false
+  const hasMore = false
+  void walletId
 
-  const convexRaw = useQuery(
-    api.sandbox.transactions.getActivity,
-    useAuthedQueryArgs(walletId ? { wallet: walletId, limit } : null),
-  )
-
-  const convexRows = React.useMemo(() => {
-    if (!convexRaw) return cachedConvexRef.current
-    const mapped = mapConvexActivityItemsToRows(convexRaw as ConvexActivityItem[])
-    cachedConvexRef.current = mapped
-    return mapped
-  }, [convexRaw])
-
-  const isLoadingConvex = Boolean(walletId) && convexRaw === undefined && cachedConvexRef.current.length === 0
-  const isLoadingMore = Boolean(walletId) && convexRaw === undefined && cachedConvexRef.current.length > 0
-  const hasMore = Boolean(walletId) && limit < ACTIVITY_MAX && (convexRaw === undefined || convexRaw.length >= limit)
-
-  const sortedRows = React.useMemo(() => mergeActivityRows(seedRows, convexRows), [convexRows, seedRows])
+  const sortedRows = React.useMemo(() => mergeActivityRows(seedRows), [seedRows])
 
   const loadMore = React.useCallback(() => {
     if ((!hasMore && sortedRows.length <= limit) || isLoadingMore) return
@@ -221,11 +208,8 @@ export function RecentActivity({
   const openReceipt = React.useCallback(
     (txHash: string) => {
       if (!txHash) return
-      if (isSimulatedTxHash(txHash)) {
-        router.push(getTxnHref(txHash))
-      } else {
-        window.open(getTxnHref(txHash), "_blank", "noopener,noreferrer")
-      }
+      const href = getTxnHref(txHash)
+      if (href) window.open(href, "_blank", "noopener,noreferrer")
     },
     [router],
   )

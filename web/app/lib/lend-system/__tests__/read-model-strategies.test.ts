@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildLendPageData, buildLendStrategyBuckets, buildPortfolioLendData } from "@/app/lib/lend-system/read-model"
-import { formatCompactUsd } from "@/app/lib/borrow-sim"
+import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { buildMockLendSystemState } from "@/app/lib/lend-system/mock"
 import { WALLET_STRATEGY_BUCKETS } from "@/app/lib/data/mock/wallet/portfolio/strategies"
 

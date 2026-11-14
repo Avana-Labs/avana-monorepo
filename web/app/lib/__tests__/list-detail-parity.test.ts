@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildPoolDetail } from "@/app/lib/borrow-detail/pool.mock"
 import { formatPct } from "@/app/lib/borrow-detail/allocation"
-import { formatCompactUsd } from "@/app/lib/borrow-sim"
+import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 import { mergeConvexMarketSnapshots, type ConvexMarketSnapshot } from "@/app/lib/borrow-system/market-hydration"
 import { resolvePoolDetailFromState } from "@/app/lib/borrow-system/read-model"

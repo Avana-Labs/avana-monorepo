@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { PoolPickerDialog } from "@/app/components/home/pool-picker-dialog"
-import type { HomeCollateralPool } from "@/app/lib/home-sim"
+import type { HomeCollateralPool } from "@/app/lib/home-view-model"
 
 const pool: HomeCollateralPool = {
   id: "eth-usdc",

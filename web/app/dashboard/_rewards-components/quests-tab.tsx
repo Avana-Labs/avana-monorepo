@@ -69,7 +69,8 @@ function AvanaQuestCard({
   const Icon = QUEST_ICON_MAP[quest.iconId]
   const isClaimable = quest.status === "claimable"
   const isClaimed = quest.status === "claimed"
-  const isDisabled = isClaimed || quest.status === "expired" || quest.cta === t("Waiting")
+  const isDisabled =
+    isClaimed || quest.status === "expired" || quest.status === "coming_soon" || quest.cta === t("Waiting")
   const canAct =
     isClaimable || ((quest.status === "available" || quest.status === "in_progress") && quest.cta !== t("Waiting"))
   const rewardValue = quest.reward.replace(/[^\d.,]/g, "")

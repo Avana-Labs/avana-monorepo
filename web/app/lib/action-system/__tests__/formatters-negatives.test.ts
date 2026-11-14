@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { formatActionUsd } from "@/app/lib/action-system/formatters"
-import { formatCompactUsd, formatUsdExact } from "@/app/lib/borrow-sim"
+import { formatCompactUsd, formatUsdExact } from "@/app/lib/borrow-market-rows"
 
 // Currency layer is untouched here, so the active currency stays USD ("$"),
 // which is what these assertions assume.

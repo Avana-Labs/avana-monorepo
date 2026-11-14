@@ -6,7 +6,7 @@ import {
   formatBorrowPairLabel,
   formatLtvPct,
   normalizeBorrowTokenSymbol,
-} from "@/app/lib/borrow-sim"
+} from "@/app/lib/borrow-market-rows"
 
 const readSource = (relativeFromRepoRoot: string) =>
   readFileSync(resolve(__dirname, "../../..", relativeFromRepoRoot), "utf8")

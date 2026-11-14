@@ -80,8 +80,6 @@ function swapValidationMessage(reason: SwapRestrictionReason, asset: (typeof SWA
       return `${asset.symbol} is deposited in Lend and cannot be swapped from this wallet flow.`
     case "ineligible_pledged":
       return `${asset.symbol} is pledged as collateral and cannot be swapped from this wallet flow.`
-    case "ineligible_active_loop":
-      return `${asset.symbol} is part of an active Multiply position and cannot be swapped here.`
     case "ineligible_protocol_locked":
       return `${asset.symbol} is locked by the protocol and cannot be swapped here.`
     case "ineligible_lp_token":

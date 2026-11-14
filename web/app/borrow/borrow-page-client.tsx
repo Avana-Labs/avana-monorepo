@@ -19,7 +19,6 @@ export function BorrowPageClient({
   // reads the wallet's own live positions from the borrow session internally.
   const workspaceData: BorrowWorkspaceData = {
     walletId,
-    borrowSessionSeed: pageData.borrowSessionSeed,
     poolCatalog: pageData.poolCatalog,
     borrowableAssets: pageData.borrowableAssets,
     pendingRows: pageData.pendingRows,

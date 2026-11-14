@@ -1,5 +1,4 @@
 import {
-  accrueBorrowSystemState,
   calculateBorrowCapacityUsd6,
   calculateCollateralValueUsd6,
   calculateCreditMetrics,
@@ -7,15 +6,10 @@ import {
   calculateHealthFactorWad,
   formatFixed,
   type BorrowSystemState,
-} from "@/app/lib/credit-engine"
-import { buildAssetDetail, resolveAsset } from "@/app/lib/borrow-detail/asset.mock"
-import { buildPoolDetail } from "@/app/lib/borrow-detail/pool.mock"
-import type { AssetDetail, PoolDetail } from "@/app/lib/borrow-detail/types"
+} from "@/app/lib/borrow-system/model"
 import type { BorrowPageData } from "@/app/lib/data/providers/borrow"
 import type { PortfolioBorrowTabData } from "@/app/lib/data/providers/portfolio"
 import { formatBorrowLpSymbolLabel } from "@/app/lib/borrow-system/market-labels"
-import { HOME_POOL_TO_MARKET_ID } from "@/app/lib/borrow-system/mock"
-import { listSpokeBorrowables } from "@/app/lib/borrow-system/registry"
 import type { TransactionHistoryItem, TransactionMetricsSnapshot, WalletReadSnapshot } from "./contracts"
 import {
   selectBorrowCollateralPools,
@@ -25,7 +19,7 @@ import {
   selectWalletBorrowSnapshot,
 } from "./selectors"
 import { selectBorrowSnapshot, selectPortfolioDebtRows, selectPortfolioSupplyRows } from "./dashboard-selectors"
-import { BORROW_DEXES, BORROW_PENDING_ROWS } from "@/app/lib/data/catalog/borrow"
+import { dexForRow } from "@/app/lib/borrow-market-rows"
 
 function fixedToNumber(value: bigint, decimals: number) {
   return Number.parseFloat(formatFixed(value, decimals))
@@ -42,25 +36,6 @@ function toMetricsSnapshot(state: BorrowSystemState, walletId: string): Transact
     currentLtvWad: calculateCurrentLtvWad(state, walletId),
     healthFactorWad: calculateHealthFactorWad(state, walletId),
   }
-}
-
-export function buildLegacyTransactionHistory(state: BorrowSystemState, walletId: string): TransactionHistoryItem[] {
-  return state.transactions
-    .filter((transaction) => transaction.walletId === walletId)
-    .map((transaction) => ({
-      id: transaction.id,
-      intentId: `legacy-${transaction.id}`,
-      walletId: transaction.walletId,
-      marketId: transaction.marketId,
-      assetId: transaction.assetId,
-      kind: transaction.kind,
-      status: "success",
-      requestedAmountUsd6: transaction.amountUsd6,
-      executedAmountUsd6: transaction.amountUsd6,
-      simulated: true,
-      timestamp: transaction.at,
-      hash: `sim_${transaction.id}`,
-    }))
 }
 
 export function buildSyntheticReceipts(history: TransactionHistoryItem[]) {
@@ -102,7 +77,11 @@ const BORROW_KIND_LABEL: Record<TransactionHistoryItem["kind"], string> = {
 
 type MarketDisplayLookup = Record<string, { display?: { visuals?: Array<{ symbol: string }>; name?: string } }>
 
-export function mapTransactionHistoryToActivityRows(history: TransactionHistoryItem[], markets?: MarketDisplayLookup) {
+export function mapTransactionHistoryToActivityRows(
+  history: TransactionHistoryItem[],
+  markets?: MarketDisplayLookup,
+  assets?: Record<string, { symbol: string }>,
+) {
   return history.map((item) => {
     const amountUsd = Number.parseFloat(formatFixed(item.executedAmountUsd6, 6))
     const signedAmount =
@@ -115,7 +94,7 @@ export function mapTransactionHistoryToActivityRows(history: TransactionHistoryI
     const isDebtAction = item.kind === "borrow" || item.kind === "repay"
     const market = item.marketId && markets ? markets[item.marketId] : undefined
     const poolLabel = market ? formatBorrowLpSymbolLabel(market) : undefined
-    const debtAsset = isDebtAction && item.assetId ? resolveAsset(item.assetId) : null
+    const debtAsset = isDebtAction && item.assetId && assets ? assets[item.assetId] : null
 
     const fallbackLabel = BORROW_KIND_LABEL[item.kind] ?? "Borrow"
     const primaryLabel = isDebtAction
@@ -149,28 +128,17 @@ export function mapTransactionHistoryToActivityRows(history: TransactionHistoryI
 export function buildWalletReadSnapshot(
   state: BorrowSystemState,
   walletId: string,
-  transactionHistory: TransactionHistoryItem[] = buildLegacyTransactionHistory(state, walletId),
-  now: number = Date.now(),
+  transactionHistory: TransactionHistoryItem[] = [],
 ): WalletReadSnapshot {
-  // Advance indexes to `now` so the displayed HF drifts with interest between actions.
-  // accrueBorrowSystemState is immutable and no-ops when now <= state.now.
-  const accrued = accrueBorrowSystemState(state, now)
   return {
     walletId,
     transactionHistory,
-    creditSnapshot: toMetricsSnapshot(accrued, walletId),
+    creditSnapshot: toMetricsSnapshot(state, walletId),
   }
 }
 
-export function buildBorrowPageData(
-  state: BorrowSystemState,
-  walletId: string,
-  now: number = Date.now(),
-): BorrowPageData {
-  // Market-reference figures and the serialized seed read the RAW state (accruing would drift
-  // them and bake an advanced `now` into the seed); wallet position views read the accrued copy
-  // so detail and dashboard agree.
-  const accrued = accrueBorrowSystemState(state, now)
+export function buildBorrowPageData(state: BorrowSystemState, walletId: string): BorrowPageData {
+  const accrued = state
   const poolCatalog = selectBorrowMarketSummaries(state, walletId)
   const markets = Object.values(state.markets)
   const assets = Object.values(state.assets)
@@ -187,9 +155,6 @@ export function buildBorrowPageData(
 
   return {
     walletId,
-    // Deliberately empty: the session seed lives in AvanaSessionsProvider (client). Serializing
-    // it here added ~250KB to every catalog RSC payload with no consumer on the list page.
-    borrowSessionSeed: "",
     poolCatalog,
     heroMetrics: {
       totalTvlUsd,
@@ -199,8 +164,8 @@ export function buildBorrowPageData(
       totalTvlChangePct,
     },
     borrowableAssets: selectBorrowableAssets(state, walletId),
-    pendingRows: BORROW_PENDING_ROWS,
-    dexes: BORROW_DEXES,
+    pendingRows: [],
+    dexes: [...new Map(poolCatalog.map((row) => [row.dexId, dexForRow(row)])).values()],
     collateralPools: selectBorrowCollateralPools(accrued, walletId),
     initialDebts: selectInitialBorrowDebts(accrued, walletId),
     borrowSnapshot: selectWalletBorrowSnapshot(accrued, walletId),
@@ -210,11 +175,7 @@ export function buildBorrowPageData(
 export function buildPortfolioBorrowData(
   state: BorrowSystemState,
   walletId: string,
-  now: number = Date.now(),
 ): PortfolioBorrowTabData {
-  // Accrue once here so the portfolio HF/debt rows drift with interest between actions;
-  // the low-level selectors below stay pure and select from this accrued copy.
-  state = accrueBorrowSystemState(state, now)
   const snapshot = selectBorrowSnapshot(state, walletId)
   const debtPositions = selectPortfolioDebtRows(state, walletId).map((position, index) => ({
     ...position,
@@ -233,38 +194,4 @@ export function buildPortfolioBorrowData(
     collateralPositions: selectPortfolioSupplyRows(state, walletId),
     debtPositions,
   }
-}
-
-export function resolvePoolDetailFromState(
-  state: BorrowSystemState,
-  walletId: string,
-  poolId: string,
-): PoolDetail | null {
-  const resolvedId = HOME_POOL_TO_MARKET_ID[poolId] ?? poolId
-  const row = selectBorrowMarketSummaries(state, walletId).find((candidate) => candidate.id === resolvedId)
-  if (!row) return null
-  return buildPoolDetail(row)
-}
-
-/** Convex market reference overrides applied to a borrowable asset before building its detail. */
-type AssetLiquidityOverrides = {
-  availableUsd?: number
-  totalBorrowedUsd?: number
-  utilization?: number
-  borrowApr?: number
-}
-
-export function resolveAssetDetailFromState(assetId: string, overrides?: AssetLiquidityOverrides): AssetDetail | null {
-  const base = listSpokeBorrowables().find((candidate) => candidate.id === assetId) ?? resolveAsset(assetId)
-  if (!base) return null
-  const asset = overrides
-    ? {
-        ...base,
-        availableUsd: overrides.availableUsd ?? base.availableUsd,
-        totalBorrowedUsd: overrides.totalBorrowedUsd ?? base.totalBorrowedUsd,
-        utilization: overrides.utilization ?? base.utilization,
-        borrowApr: overrides.borrowApr ?? base.borrowApr,
-      }
-    : base
-  return buildAssetDetail(asset)
 }

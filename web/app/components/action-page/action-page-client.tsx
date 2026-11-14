@@ -5,7 +5,6 @@ import { isValidAction, normalizeActionKind } from "@/app/lib/action-system/cont
 import { ActionNotFound } from "@/app/components/action-page/action-not-found"
 import { BorrowActionPageClient } from "@/app/components/action-page/borrow-action-page-client"
 import { LendActionPageClient } from "@/app/components/action-page/lend-action-page-client"
-import { RewardsActionPageClient } from "@/app/components/action-page/rewards-action-page-client"
 
 export function ActionPageClient({
   product,
@@ -49,8 +48,7 @@ export function ActionPageClient({
     )
   }
 
-  if (product === "lend") {
-    return (
+  return (
       <LendActionPageClient
         kind={kind as "deposit" | "withdraw"}
         closeHref={closeHref ?? "/lend"}
@@ -58,8 +56,5 @@ export function ActionPageClient({
         initialMarketId={initialMarketId}
         initialAmount={initialAmount}
       />
-    )
-  }
-
-  return <RewardsActionPageClient closeHref={closeHref ?? "/dashboard"} />
+  )
 }

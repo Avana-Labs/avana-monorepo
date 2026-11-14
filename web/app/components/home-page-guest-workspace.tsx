@@ -14,9 +14,9 @@ const HomePageGuestRuntime = lazy(async () => ({
   default: (await import("./home-page-guest-runtime")).HomePageGuestRuntime,
 }))
 
-/** Use the existing swap engine with the same empty, non-persisted guest wallet. */
+/** The swap card with the empty guest wallet. */
 export function HomePageGuestWorkspace() {
-  const swap = useSwapSession({ walletId: GUEST_WALLET_ID, persistState: false, seedDemoBalances: false })
+  const swap = useSwapSession({ walletId: GUEST_WALLET_ID })
   const [mode, setMode] = useState<HomeMode>("swap")
 
   // Once a product tab is requested, keep the normal workspace mounted so its

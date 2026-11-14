@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button"
 import { useCurrency } from "@/app/lib/currency/use-currency"
 import { formatTokenQuantity } from "@/app/lib/currency/format"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import { LIQUIDATION_LTV } from "@/app/lib/data/borrow-domain"
 import type { DebtRowContext } from "@/app/lib/data/borrow-position-types"
 import { TokenIcon } from "@/app/components/token-icon"
 import {} from "@/app/components/market-card-primitives"
@@ -248,12 +247,14 @@ export function CurrentLtvCard({
   showBalance,
   dailyInterestUsd,
   accruedInterestUsd,
+  liquidationThresholdPct,
 }: {
   borrowedUsd: number
   collateralUsd: number
   showBalance: boolean
-  // Borrowing cost. Optional so callers that only have the LTV inputs (multiply
-  // health card) render the card unchanged; the borrow tab passes both.
+  /** The account's liquidation threshold (= collateral factor in Aave V4), from Lens; 0 when unknown. */
+  liquidationThresholdPct?: number
+  // Borrowing cost. Optional so callers that only have the LTV inputs render the card unchanged.
   dailyInterestUsd?: number
   accruedInterestUsd?: number
 }) {
@@ -264,7 +265,7 @@ export function CurrentLtvCard({
   // a neutral/empty state rather than letting the "0 borrowing power" branch read
   // as RISK for a wallet that simply hasn't opened anything.
   const hasPosition = collateralUsd > 0 || borrowedUsd > 0
-  const liquidationValueUsd = collateralUsd * LIQUIDATION_LTV
+  const liquidationValueUsd = collateralUsd * ((liquidationThresholdPct ?? 0) / 100)
   const remainingBorrowingPowerUsd = Math.max(0, liquidationValueUsd - borrowedUsd)
   const liqUtilizationPct = liquidationValueUsd > 0 ? Math.min(100, (borrowedUsd / liquidationValueUsd) * 100) : 0
   const barFillPct = liquidationValueUsd > 0 ? liqUtilizationPct : 0

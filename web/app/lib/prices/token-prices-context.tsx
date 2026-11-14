@@ -1,17 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { hasConvexClient } from "@/app/lib/convex/market-liquidity-provider"
+import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
 import { isLighthouseAuditMode } from "@/app/lib/test-mode"
 import { priceKey } from "./format"
-import { PRICE_FIXTURE } from "./price-fixture"
-import { stockPriceMap } from "./canonical"
-import {
-  applyCachedStockPrices,
-  fetchStockPrices,
-  STOCK_PRICE_REFRESH_MS,
-  STOCK_PRICES_UPDATED_EVENT,
-} from "./stock-prices"
 
 /**
  * Live token prices (base symbol → USD) from the Convex oracle, provided once and
@@ -53,17 +45,13 @@ export function usePriceFor(): (symbol: string) => number | undefined {
 }
 
 /**
- * REACTIVE canonical price lookup for client components: the live oracle price from
- * context (re-renders when the overlay lands) with the deterministic PRICE_FIXTURE as a
- * fallback. Use this instead of the non-reactive `canonicalPriceUsd` module read — that
- * one is captured once at first render and never updates when the live prices arrive, so
- * a token stays pinned to the fixture (e.g. AAVE $105) even after the oracle refreshes.
- * The fixture fallback keeps SSR and the first client paint identical (no hydration
- * mismatch) and always resolves a known token to a price rather than its bare symbol.
+ * REACTIVE canonical price lookup for client components: the live price from context
+ * (re-renders when the snapshot lands). Use this instead of the non-reactive
+ * `canonicalPriceUsd` module read, which is captured once at first render. A token the
+ * snapshot does not cover resolves to `undefined` (the caller shows its unavailable label).
  */
 export function useCanonicalPriceFor(): (symbol: string) => number | undefined {
-  const live = usePriceFor()
-  return React.useCallback((symbol: string) => live(symbol) ?? PRICE_FIXTURE[symbol.trim().toUpperCase()], [live])
+  return usePriceFor()
 }
 
 /** Freshness of the oracle prices — read this to show a "prices may be stale" indicator. */
@@ -106,44 +94,6 @@ export function usePriceFreshness(): PriceFreshness {
  */
 const EMPTY_PRICES: Record<string, number> = {}
 
-/**
- * Client bridge for live tokenized-stock prices. Fetches them (currency-style, Convex-independent),
- * overlays them on the module canonical store for the engine (via setStockPrices inside
- * fetchStockPrices), and merges them into the reactive TokenPricesContext for the list/detail cells.
- * Reads the PARENT context so it composes on top of whatever map is already provided (the server
- * seed, or the Convex realtime map). Skips the network under the Lighthouse audit for determinism.
- */
-function StockPriceOverlay({ children }: { children: React.ReactNode }) {
-  const parent = React.useContext(TokenPricesContext)
-  const [overlay, setOverlay] = React.useState<Record<string, number>>(() => stockPriceMap())
-  React.useEffect(() => {
-    if (isLighthouseAuditMode()) return
-    const sync = () => setOverlay(stockPriceMap())
-    window.addEventListener(STOCK_PRICES_UPDATED_EVENT, sync)
-    // Cached quotes first (instant), then a refresh; both dispatch the event → sync.
-    applyCachedStockPrices()
-    void fetchStockPrices()
-    // Only poll while the tab is visible — a backgrounded tab shouldn't keep hitting the network —
-    // and refresh once on return so a long-hidden tab isn't left stale.
-    const refreshIfVisible = () => {
-      if (document.visibilityState === "visible") void fetchStockPrices()
-    }
-    const id = window.setInterval(refreshIfVisible, STOCK_PRICE_REFRESH_MS)
-    document.addEventListener("visibilitychange", refreshIfVisible)
-    sync()
-    return () => {
-      window.clearInterval(id)
-      window.removeEventListener(STOCK_PRICES_UPDATED_EVENT, sync)
-      document.removeEventListener("visibilitychange", refreshIfVisible)
-    }
-  }, [])
-  const merged = React.useMemo(
-    () => (Object.keys(overlay).length === 0 ? parent : { ...parent, ...overlay }),
-    [parent, overlay],
-  )
-  return <TokenPricesContext.Provider value={merged}>{children}</TokenPricesContext.Provider>
-}
-
 export function TokenPricesProvider({
   children,
   initialPrices,
@@ -156,7 +106,7 @@ export function TokenPricesProvider({
   // Base context = the server-seeded live oracle prices (fetched once during SSR, keys in
   // `priceKey` form). This is what makes CLIENT-rendered prices live even though the realtime
   // Convex subscription only mounts on authenticated product routes — the client no longer
-  // depends on that subscription to escape the fixture. Token prices are PUBLIC data.
+  // depends on that subscription for live prices. Token prices are PUBLIC data.
   const seed = initialPrices ?? EMPTY_PRICES
 
   // Skip the realtime subscription when there's no Convex client (nothing to query) and under the
@@ -164,10 +114,8 @@ export function TokenPricesProvider({
   // dashboard's client price context froze at the initial-load seed while detail pages re-SSR'd
   // fresh, so the SAME token showed two prices (e.g. AAVE $123.25 on the wallet card vs $123.33 on
   // the lend detail). The subscription also calls setCanonicalPrices, so the module store the
-  // detail pages / Lend / Borrow / Multiply tabs read stays in lockstep with the wallet card.
+  // detail pages / Lend / Borrow tabs read stays in lockstep with the wallet card.
   if (!realtime || !hasConvexClient || isLighthouseAuditMode()) {
-    // Guests / no-Convex / audit never render stock cells (product routes are wallet-gated), so
-    // skip the stock-price overlay entirely — no unused fetch or polling timer on the guest path.
     return <TokenPricesContext.Provider value={seed}>{children}</TokenPricesContext.Provider>
   }
   return <RealtimeTokenPrices seed={seed}>{children}</RealtimeTokenPrices>
@@ -188,7 +136,7 @@ function RealtimeTokenPrices({ seed, children }: { seed: Record<string, number>;
   return (
     <TokenPricesContext.Provider value={live?.map ?? seed}>
       <PriceStatusContext.Provider value={live?.status}>
-        <StockPriceOverlay>{children}</StockPriceOverlay>
+        {children}
       </PriceStatusContext.Provider>
       <React.Suspense fallback={null}>
         <ConvexTokenPricesSubscriber seed={seed} onChange={publish} />

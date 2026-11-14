@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-sim"
+import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-market-rows"
 import { WEIGHT_SUM_TOLERANCE } from "@/app/lib/prices/lp-token-price"
 
 const bySlug = (fragment: string) => BORROW_POOL_CATALOG.filter((p) => p.name.includes(fragment))

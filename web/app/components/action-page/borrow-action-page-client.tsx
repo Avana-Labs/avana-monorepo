@@ -3,12 +3,11 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
-  accrueBorrowSystemState,
   parseFixed,
   currentDebtValueUsd6,
   usd6ToNumber,
   wadToPercent,
-} from "@/app/lib/credit-engine"
+} from "@/app/lib/borrow-system/model"
 import {
   buildClaimBorrowAction,
   buildHomeClaimPreview,
@@ -17,7 +16,6 @@ import {
   selectHomeRepayTokensForMarket,
 } from "@/app/lib/borrow-system/action-preview-runtime"
 import { buildRepayPreviewModel, buildWithdrawPreviewModel } from "@/app/lib/borrow-system/preview-builders"
-import { getBorrowSpoke } from "@/app/lib/borrow-system/registry"
 import { filterPoolsForSpokeAsset } from "@/app/lib/borrow-detail/cross-market"
 import { borrowMarketDetailPath } from "@/app/lib/borrow-routes"
 import { useAvanaIdentity, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
@@ -30,7 +28,7 @@ import {
   mapBorrowSupplyPreviewToActionUi,
   mapBorrowTransactionPreviewToActionUi,
 } from "@/app/lib/action-system/adapters/borrow-preview-mapper"
-import { mapBorrowRewardsClaimPreviewToActionUi } from "@/app/lib/action-system/adapters/rewards-preview-mapper"
+import { mapBorrowRewardsClaimPreviewToActionUi } from "@/app/lib/action-system/adapters/claim-fees-preview-mapper"
 import { ActionBorrowContextBar } from "@/app/components/action-page/action-borrow-context-bar"
 import { ActionPageShell } from "@/app/components/action-page/action-page-shell"
 import { ActionConfigureStage, ActionConfigureAmountSection } from "@/app/components/action-page/action-configure-stage"
@@ -119,7 +117,7 @@ export function BorrowActionPageClient({
   const scopeCollateralToAsset = Boolean(sidebar && initialAssetId && (kind === "borrow" || kind === "repay"))
   const collateralPoolOptions = useMemo(() => {
     if (!scopeCollateralToAsset || !initialAssetId) return unscopedCollateralPoolOptions
-    return filterPoolsForSpokeAsset(initialAssetId, unscopedCollateralPoolOptions)
+    return filterPoolsForSpokeAsset(session.state.assets[initialAssetId]?.marketIds, unscopedCollateralPoolOptions)
   }, [initialAssetId, scopeCollateralToAsset, unscopedCollateralPoolOptions])
   const hasInvalidInitialMarket = Boolean(
     initialMarketId &&
@@ -186,7 +184,7 @@ export function BorrowActionPageClient({
   // Accrued to now so Outstanding debt and Max include the interest since the last write (the
   // dashboard figure); the stored index made a "full" repay leave that interest behind.
   const debtPositions = useMemo(
-    () => accrueBorrowSystemState(session.state, Date.now()).accounts[walletId]?.debtPositions ?? [],
+    () => session.state.accounts[walletId]?.debtPositions ?? [],
     [session.state, walletId],
   )
   const [debtPositionId, setDebtPositionId] = useState(initialDebtId ?? "")
@@ -337,7 +335,7 @@ export function BorrowActionPageClient({
     const scopedMarketId = kind === "borrow" ? activeMarketId : (debtPosition?.marketId ?? marketId ?? activeMarketId)
     const market = scopedMarketId ? session.state.markets[scopedMarketId] : null
     if (!market) return null
-    return getBorrowSpoke(market.spokeId)?.label ?? market.display.venue
+    return market.display.venue || market.spokeId
   }, [activeMarketId, debtPosition?.marketId, kind, marketId, session.state.markets])
 
   const repayAssetOptions = useMemo(() => {

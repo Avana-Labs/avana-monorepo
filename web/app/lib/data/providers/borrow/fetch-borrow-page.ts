@@ -1,7 +1,6 @@
 import { z } from "zod"
 import { executeSourceLoad, type DataSourceRequestContext } from "@/app/lib/data/core/source-runtime"
-import { resolveDataSourceMode } from "../source-mode"
-import { liveBorrowPageSource, mockBorrowPageSource, type BorrowPageSource } from "./source"
+import { liveBorrowPageSource, type BorrowPageSource } from "./source"
 import type { BorrowPageData } from "./types"
 
 const borrowPageSchema = z.object({
@@ -30,9 +29,7 @@ const borrowPageSchema = z.object({
 })
 
 function getBorrowPageSource(source?: BorrowPageSource) {
-  if (source) return source
-  const mode = resolveDataSourceMode()
-  return mode === "mock" ? mockBorrowPageSource : liveBorrowPageSource
+  return source ?? liveBorrowPageSource
 }
 
 function getBorrowPageFallback() {

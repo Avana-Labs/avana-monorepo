@@ -1,6 +1,5 @@
 import type { AboutCard, QuickStat } from "@/app/lib/borrow-detail"
 import type { ProtocolParameterRow } from "@/app/lib/borrow-detail/protocol-parameters"
-import { liquidationThresholdPctFromMaxLtvPct } from "@/app/lib/borrow-system/liquidation-threshold"
 
 type ParameterInput = Pick<ProtocolParameterRow, "id" | "label" | "value"> | Pick<QuickStat, "id" | "label" | "value">
 type GovernanceParameters = NonNullable<AboutCard["governanceParameters"]>
@@ -16,56 +15,56 @@ const LEND_RISK_PARAMETERS = [
     label: "Collateral factor",
     aliases: ["collateral factor", "max ltv", "ltv"],
     description: "Maximum percentage of an asset's value that can be borrowed against",
-    fallback: "75.00%",
+    fallback: "—",
   },
   {
     id: "collateralRisk",
     label: "Collateral risk",
     aliases: ["collateral risk", "risk premium"],
     description: "Risk premium adjustment applied to borrows backed by this collateral",
-    fallback: "0.00%",
+    fallback: "—",
   },
   {
     id: "depositCapacity",
     label: "Deposit capacity",
     aliases: ["deposit capacity", "supply cap"],
     description: "Maximum total deposits allowed before the cap is reached",
-    fallback: "$25.0M",
+    fallback: "—",
   },
   {
     id: "liquidationPenalty",
     label: "Liquidation penalty",
     aliases: ["liquidation penalty", "liquidation bonus"],
     description: "The penalty range applied when this position is liquidated",
-    fallback: "5.00% - 5.55%",
+    fallback: "—",
   },
   {
     id: "borrowCapacity",
     label: "Borrow capacity",
     aliases: ["borrow capacity", "borrow cap"],
     description: "Maximum total borrows allowed before the cap is reached",
-    fallback: "$10.0M",
+    fallback: "—",
   },
   {
     id: "targetHealthFactor",
     label: "Target health factor",
     aliases: ["target health factor"],
     description: "The ideal health factor to restore during liquidation",
-    fallback: "1.25",
+    fallback: "—",
   },
   {
     id: "liquidationThreshold",
     label: "Liquidation threshold",
     aliases: ["liquidation threshold"],
     description: "Health factor begins breaking down when collateral value crosses this threshold.",
-    fallback: "80.00%",
+    fallback: "—",
   },
   {
     id: "oracle",
     label: "Oracle source",
     aliases: ["oracle source", "oracle"],
     description: "Price feed family used by the market risk engine.",
-    fallback: "Chainlink",
+    fallback: "—",
   },
 ] as const
 
@@ -91,13 +90,6 @@ function formatPctValue(value: number, digits = 2) {
   return `${value.toFixed(digits)}%`
 }
 
-function formatPenaltyRange(value: string) {
-  if (value.includes("-")) return value
-  const pct = parsePct(value)
-  if (pct == null) return value
-  const high = Math.round(pct * 1.11 * 100) / 100
-  return `${formatPctValue(pct)} - ${formatPctValue(high)}`
-}
 
 function sourceFor(title: string, index: number) {
   const normalized = title.toLowerCase()
@@ -154,45 +146,16 @@ export function normalizeGovernanceParameters(about: AboutCard): GovernanceParam
 
   const cfIndex = findIndex("collateralFactor")
   const ltIndex = findIndex("liquidationThreshold")
-  const riskIndex = findIndex("collateralRisk")
-  const hfIndex = findIndex("targetHealthFactor")
-  const penaltyIndex = findIndex("liquidationPenalty")
 
+  // Aave V4: the liquidation threshold equals the collateral factor (REQ-LENS-045). Slots the
+  // backend does not report stay "—"; nothing else is derived.
   const cf = parsePct(parameters[cfIndex]?.value ?? "")
   const ltSpec = LEND_RISK_PARAMETERS[ltIndex]!
   if (cf != null && parameters[ltIndex]?.value === ltSpec.fallback) {
-    parameters[ltIndex] = {
-      ...parameters[ltIndex]!,
-      value: formatPctValue(Math.round(liquidationThresholdPctFromMaxLtvPct(cf) * 10) / 10),
-    }
+    parameters[ltIndex] = { ...parameters[ltIndex]!, value: formatPctValue(cf) }
   }
 
-  const lt = parsePct(parameters[ltIndex]?.value ?? "")
-  const riskSpec = LEND_RISK_PARAMETERS[riskIndex]!
-  if (cf != null && lt != null && parameters[riskIndex]?.value === riskSpec.fallback) {
-    parameters[riskIndex] = {
-      ...parameters[riskIndex]!,
-      value: formatPctValue(Math.max(0, Math.round((lt - cf) * 100) / 100)),
-    }
-  }
-
-  const hfSpec = LEND_RISK_PARAMETERS[hfIndex]!
-  if (cf != null && parameters[hfIndex]?.value === hfSpec.fallback) {
-    const target = Math.max(1.1, Math.round((1 / Math.max(0.5, cf / 100)) * 100) / 100)
-    parameters[hfIndex] = {
-      ...parameters[hfIndex]!,
-      value: target.toFixed(2),
-    }
-  }
-
-  if (parameters[penaltyIndex]) {
-    parameters[penaltyIndex] = {
-      ...parameters[penaltyIndex]!,
-      value: formatPenaltyRange(parameters[penaltyIndex]!.value),
-    }
-  }
-
-  // The rich governance changelog (Convex `parameterChanges`, or the mock fallback):
+  // The rich governance changelog (services/convex `parameterChanges`):
   // real previous → current transitions with source/executor/category. This is the
   // authoritative changelog and drives the paginated detail table.
   const fromGovernance = about.governanceParameters?.changelog.filter((entry) => !isIrmLabel(entry.parameter)) ?? []
@@ -237,87 +200,16 @@ export function withGovernanceParameterView(about: AboutCard, parameters: readon
   return { ...about, governanceParameters: normalizeGovernanceParameters(seeded) }
 }
 
-/** Build the canonical eight-parameter Risk Parameters set for mock/Convex seeders. */
-export function buildRiskParameterSet(input: {
-  collateralFactorPct: number
-  liquidationThresholdPct?: number
-  depositCapacityLabel: string
-  borrowCapacityLabel: string
-  liquidationPenaltyPct: number
-  oracle?: string
-  collateralFactorDescription?: string
-}): GovernanceParameter[] {
-  const cf = input.collateralFactorPct
-  const lt = input.liquidationThresholdPct ?? Math.round(liquidationThresholdPctFromMaxLtvPct(cf) * 10) / 10
-  const collateralRisk = Math.max(0, Math.round((lt - cf) * 100) / 100)
-  const targetHf = Math.max(1.1, Math.round((1 / Math.max(0.5, cf / 100)) * 100) / 100)
-  const penaltyHigh = Math.round(input.liquidationPenaltyPct * 1.11 * 100) / 100
-
-  return [
-    {
-      id: "collateralFactor",
-      label: "Collateral factor",
-      value: formatPctValue(cf),
-      description:
-        input.collateralFactorDescription ?? "Maximum percentage of an asset's value that can be borrowed against",
-    },
-    {
-      id: "collateralRisk",
-      label: "Collateral risk",
-      value: formatPctValue(collateralRisk),
-      description: "Risk premium adjustment applied to borrows backed by this collateral",
-    },
-    {
-      id: "depositCapacity",
-      label: "Deposit capacity",
-      value: input.depositCapacityLabel,
-      description: "Maximum total deposits allowed before the cap is reached",
-    },
-    {
-      id: "liquidationPenalty",
-      label: "Liquidation penalty",
-      value: `${formatPctValue(input.liquidationPenaltyPct)} - ${formatPctValue(penaltyHigh)}`,
-      description: "The penalty range applied when this position is liquidated",
-    },
-    {
-      id: "borrowCapacity",
-      label: "Borrow capacity",
-      value: input.borrowCapacityLabel,
-      description: "Maximum total borrows allowed before the cap is reached",
-    },
-    {
-      id: "targetHealthFactor",
-      label: "Target health factor",
-      value: targetHf.toFixed(2),
-      description: "The ideal health factor to restore during liquidation",
-    },
-    {
-      id: "liquidationThreshold",
-      label: "Liquidation threshold",
-      value: formatPctValue(lt),
-      description: "Health factor begins breaking down when collateral value crosses this threshold.",
-    },
-    {
-      id: "oracle",
-      label: "Oracle source",
-      value: input.oracle ?? "Chainlink",
-      description: "Price feed family used by the market risk engine.",
-    },
-  ]
-}
-
 /**
- * LP collateral is liquidated at the engine's threshold (collateral factor + the fixed spread,
- * see liquidation-threshold.ts), which the Borrow list shows as "LT". The seeded governance row
- * carried collateral factor + 5, so the detail page read 70% where the list and the engine used
- * 75%. Rewrite that row from the collateral factor so every Borrow surface shows one threshold.
+ * In Aave V4 a market's liquidation threshold equals its collateral factor (REQ-LENS-045).
+ * Rewrite that row from the collateral factor so every Borrow surface shows one threshold.
  */
 export function withEngineLiquidationThreshold(about: AboutCard): AboutCard {
   const parameters = about.governanceParameters?.parameters
   if (!parameters?.length) return about
   const cf = parsePct(parameters.find((parameter) => parameter.id === "collateralFactor")?.value ?? "")
   if (cf == null) return about
-  const lt = formatPctValue(Math.round(liquidationThresholdPctFromMaxLtvPct(cf) * 10) / 10)
+  const lt = formatPctValue(cf)
   return {
     ...about,
     governanceParameters: {

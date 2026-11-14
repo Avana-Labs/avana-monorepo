@@ -52,17 +52,8 @@ export function shouldUseOpenGateSession(): boolean {
   return isDevOpenGateEnabled() || isPlaywrightTestMode() || isLighthouseAuditMode()
 }
 
-/**
- * The dev open-gate session (fake wallet, skip SIWE) is INTENTIONALLY decoupled from the
- * mock data source. Dev work reads live Convex against a shared wallet. Playwright sets
- * AVANA_DATA_SOURCE=mock explicitly and its provider tree stays local-only.
- */
-export function shouldUseMockDataSource(): boolean {
-  return process.env.AVANA_DATA_SOURCE === "mock"
-}
-
 export const IS_DEV_SHORTCUT_MODE = shouldUseOpenGateSession()
 export const IS_OPEN_GATE_TEST_MODE = IS_DEV_SHORTCUT_MODE
 
-/** Same address as Convex seed `TEST_WALLET_ADDRESS` — open-gate JWT + seeded portfolio rows. */
-export { TEST_WALLET_ADDRESS as TEST_MODE_WALLET_ADDRESS } from "@/app/lib/convex-seed/test-wallet"
+/** Wallet the dev open gate and Playwright authenticate as (never a real SIWE subject). */
+export const TEST_MODE_WALLET_ADDRESS = "0x0000000000000000000000000000000000000a11"

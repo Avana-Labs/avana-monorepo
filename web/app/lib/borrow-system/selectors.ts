@@ -6,15 +6,12 @@ import {
   formatFixed,
   totalDebtValueUsd6,
   type BorrowSystemState,
-} from "@/app/lib/credit-engine"
-import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-sim"
-import type { BorrowAssetVisual, BorrowPoolRow, BorrowableAsset } from "@/app/lib/borrow-sim"
+} from "@/app/lib/borrow-system/model"
+import type { BorrowAssetVisual, BorrowPoolRow, BorrowableAsset } from "@/app/lib/borrow-market-rows"
 import { normalizeWeights } from "@/app/lib/prices/lp-token-price"
 import type { HomeCollateralPool } from "@/app/lib/borrow-system/home-contracts"
 import { getLocalAssetIcon } from "@/app/lib/local-asset-icons"
 
-/** Intrinsic per-market risk premium (bps) from the catalog — the same value the pool detail renders. */
-const CATALOG_RISK_PREMIUM_BPS = new Map(BORROW_POOL_CATALOG.map((row) => [row.id, row.riskPremiumBps]))
 
 function fixedToNumber(value: bigint, decimals: number) {
   return Number.parseFloat(formatFixed(value, decimals))
@@ -61,10 +58,15 @@ export function toPairVisuals(visuals: BorrowAssetVisual[]): [BorrowAssetVisual,
 
 function venueChipLabel(venue: string) {
   if (venue.toLowerCase().includes("uniswap")) return "Uniswap"
-  if (venue.toLowerCase().includes("curve")) return "Curve"
-  if (venue.toLowerCase().includes("balancer")) return "Balancer"
   if (venue.toLowerCase().includes("aerodrome")) return "Aerodrome"
-  return venue
+  return venue || "—"
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
 }
 
 function marketDebtUsd6(state: BorrowSystemState, walletId: string, marketId: string) {
@@ -82,18 +84,11 @@ export function selectBorrowMarketSummaries(state: BorrowSystemState, walletId: 
 
   return Object.values(state.markets).map((market) => {
     const position = account?.collateralPositions.find((row) => row.marketId === market.id)
-    const positionUsd = position
-      ? fixedToNumber(currentCollateralValueUsd6(position, market), 6)
-      : fixedToNumber(market.snapshot.lpTokenPriceUsd6, 6) * 1.75
+    const positionUsd = position ? fixedToNumber(currentCollateralValueUsd6(position, market), 6) : 0
     const feeApyPct = fixedToNumber(market.snapshot.feeApyWad, 18) * 100
-    // Show the intrinsic per-market risk premium (matches the pool detail) rather than the
-    // wallet-scoped premium, which is 0 for a browsing wallet with no position in the spoke.
-    const riskPremiumBps =
-      market.listPremiumBps ??
-      CATALOG_RISK_PREMIUM_BPS.get(market.id) ??
-      Math.round(
-        fixedToNumber(calculateSpokeCreditMetrics(state, walletId, market.spokeId).riskPremiumWad, 18) * 10_000,
-      )
+    // The market's collateral risk (borrow-rate premium) as services/convex reports it.
+    const riskPremiumBps = market.listPremiumBps ?? Number.NaN
+    const dexLabel = venueChipLabel(market.display.venue)
 
     return {
       id: market.id,
@@ -106,15 +101,19 @@ export function selectBorrowMarketSummaries(state: BorrowSystemState, walletId: 
           ? fixedToNumber((market.snapshot.fees24hUsd6 * 10_000n) / market.snapshot.totalLiquidityUsd6, 2)
           : 0,
       spoke: market.spokeId,
+      spokeLabel: market.display.venue || market.spokeId,
+      dexId: slugify(dexLabel) || "dex",
+      dexLabel,
+      chain: market.display.chain,
       ltv: Math.round(fixedToNumber(market.riskConfig.collateralFactorWad, 18) * 1000) / 10,
-      dexes: [{ id: market.display.venue.toLowerCase(), label: venueChipLabel(market.display.venue) }],
+      dexes: [{ id: slugify(dexLabel) || "dex", label: dexLabel }],
       borrowableTokens: market.relations.supportedBorrowAssetIds
         .map((assetId) => state.assets[assetId])
         .filter((asset): asset is NonNullable<typeof asset> => Boolean(asset))
         .slice(0, 5)
         .map((asset) => visualToUi(asset.display.visual)),
-      aprMin: Math.max(0, feeApyPct - 0.6),
-      aprMax: feeApyPct + 0.6,
+      aprMin: feeApyPct,
+      aprMax: feeApyPct,
       availableUsd: fixedToNumber(market.snapshot.availableUsd6, 6),
       capacityFilledPct:
         market.snapshot.totalLiquidityUsd6 > 0n
@@ -124,14 +123,13 @@ export function selectBorrowMarketSummaries(state: BorrowSystemState, walletId: 
           : 0,
       riskPremiumBps,
       visuals: toPairVisuals(market.display.visuals.map(visualToUi)),
-      // Equal-weight fallback from the display pair until Convex markets carry authoritative
-      // pool composition (see credit-engine market snapshot). Keeps LP valuation well-formed.
+      // Equal-weight display pair: collateral value comes from the market's LPOracle price, not this.
       constituents: normalizeWeights(
         toPairVisuals(market.display.visuals.map(visualToUi)).map((vis) => ({ symbol: vis.symbol, weight: 1 })),
       ),
       collateralExampleUsd: positionUsd,
-      trendUp: feeApyPct >= 4,
-      trendValues: [0.62, 0.66, 0.64, 0.7, 0.73].map((value) => value * feeApyPct),
+      trendUp: true,
+      trendValues: undefined,
       events:
         position && marketDebtUsd6(state, walletId, market.id) > 0n
           ? [{ label: "Borrow active", tone: "warning" }]
@@ -178,7 +176,7 @@ export function selectBorrowableAssets(
         hasWalletBalance: Boolean(account && account.walletBalanceUsd6 > 0n),
         visual: visualToUi(asset.display.visual),
         trendUp: asset.snapshot.priceChange24hWad >= 0n,
-        trendValues: [0.94, 0.98, 1.01, 0.99, 1.03].map((value) => value * utilization),
+        trendValues: undefined,
         category: asset.display.category,
       }
     })
@@ -215,7 +213,7 @@ export function selectBorrowCollateralPools(state: BorrowSystemState, walletId: 
 }
 
 /**
- * Every market in the catalog as a collateral pool — pledged or not. Pools the
+ * Every listed market as a collateral pool — pledged or not. Pools the
  * wallet already holds carry their real collateral/borrow-power; the rest report
  * zero until the user pledges. The Express borrow card uses this so its pool
  * picker is always pre-loaded (a fresh wallet with no positions still sees the

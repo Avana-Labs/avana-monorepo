@@ -23,7 +23,7 @@ import {
   evaluateBorrowAction,
   type BorrowAction,
   type BorrowSystemState,
-} from "@/app/lib/credit-engine"
+} from "@/app/lib/borrow-system/model"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 import { serializeBorrowSystemState, deserializeBorrowSystemState } from "@/app/lib/borrow-system/codec"
 
@@ -32,7 +32,7 @@ import {
   assertLendSystemInvariants,
   type LendAction,
   type LendSystemState,
-} from "@/app/lib/lend-engine"
+} from "@/app/lib/lend-system/model"
 import { buildMockLendSystemState } from "@/app/lib/lend-system/mock"
 import { serializeLendSystemState, deserializeLendSystemState } from "@/app/lib/lend-system/codec"
 

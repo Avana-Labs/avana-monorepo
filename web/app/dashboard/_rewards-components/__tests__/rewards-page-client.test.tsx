@@ -5,7 +5,7 @@ import { DisplayPreferencesProvider } from "@/app/components/display-preferences
 import { REWARDS_PROMO_TABS } from "@/app/lib/data/rewards/catalog"
 import { buildDefaultRewardsCatalog, evaluateAllTasksForUser } from "@/app/lib/rewards-engine"
 import { DashboardPageClient } from "@/app/dashboard/dashboard-page-client"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 
 const push = vi.fn()
 let searchTab: string | null = "lend"

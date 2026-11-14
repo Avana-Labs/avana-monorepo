@@ -1,6 +1,4 @@
-import { LEND_ASSET_GROUPS } from "@/app/lib/data/catalog/lend"
-
-const STABLE_SYMBOLS = new Set(LEND_ASSET_GROUPS[0]?.rows.map((row) => row.symbol) ?? [])
+import { isStableSymbol } from "@/app/lib/tokens/stable-symbols"
 
 type LendMarketMeta = {
   hubBucket: "Stable" | "Volatile"
@@ -8,26 +6,8 @@ type LendMarketMeta = {
   issuerHub: string
 }
 
-const META_BY_SYMBOL = new Map<string, LendMarketMeta>()
-
-for (const group of LEND_ASSET_GROUPS) {
-  for (const row of group.rows) {
-    META_BY_SYMBOL.set(row.symbol.toUpperCase(), {
-      hubBucket: STABLE_SYMBOLS.has(row.symbol) ? "Stable" : "Volatile",
-      marketTier: row.market,
-      issuerHub: row.hub,
-    })
-  }
-}
-
 export function getLendMarketMeta(symbol: string): LendMarketMeta {
-  return (
-    META_BY_SYMBOL.get(symbol.toUpperCase()) ?? {
-      hubBucket: STABLE_SYMBOLS.has(symbol) ? "Stable" : "Volatile",
-      marketTier: "Core",
-      issuerHub: "Core",
-    }
-  )
+  return { hubBucket: isStableSymbol(symbol) ? "Stable" : "Volatile", marketTier: "Core", issuerHub: "Core" }
 }
 
 /** Dropdown sublabel aligned with lend page hub filters (Stable / Volatile). */

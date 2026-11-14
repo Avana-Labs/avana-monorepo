@@ -1,4 +1,4 @@
-import type { BorrowAccountState, BorrowSystemState } from "@/app/lib/credit-engine"
+import type { BorrowAccountState, BorrowSystemState } from "@/app/lib/borrow-system/model"
 
 function normalizeBorrowAccount(account: BorrowAccountState): BorrowAccountState {
   return {

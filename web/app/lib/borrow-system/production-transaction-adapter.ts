@@ -1,4 +1,4 @@
-import type { BorrowAction } from "@/app/lib/credit-engine"
+import type { BorrowAction } from "@/app/lib/borrow-system/model"
 import type {
   SandboxActionResult,
   TransactionActionType,
@@ -7,7 +7,17 @@ import type {
   TransactionPreview,
 } from "./contracts"
 
-const NOT_IMPLEMENTED = "Production transaction adapter is not implemented"
+/** Shown wherever an action would run until the contract calls are wired. */
+export const TRANSACTIONS_UNAVAILABLE = "Transactions are not available yet."
+
+const EMPTY_METRICS = {
+  collateralValueUsd6: 0n,
+  borrowCapacityUsd6: 0n,
+  availableBorrowCapacityUsd6: 0n,
+  totalBorrowedUsd6: 0n,
+  currentLtvWad: 0n,
+  healthFactorWad: null,
+}
 
 export type ProductionBorrowTransactionSource = Partial<{
   previewTransaction: (intent: TransactionIntent) => Promise<TransactionPreview>
@@ -60,12 +70,20 @@ export class ProductionTransactionAdapter implements TransactionAdapter {
   }
 
   async previewTransaction(intent: TransactionIntent): Promise<TransactionPreview> {
-    if (!this.source.previewTransaction) throw new Error(NOT_IMPLEMENTED)
-    return this.source.previewTransaction(intent)
+    if (this.source.previewTransaction) return this.source.previewTransaction(intent)
+    return {
+      intent,
+      allowed: false,
+      warnings: [],
+      validationErrors: [TRANSACTIONS_UNAVAILABLE],
+      riskLabel: "safe",
+      before: EMPTY_METRICS,
+      after: EMPTY_METRICS,
+    }
   }
 
   async executeTransaction(intent: TransactionIntent): Promise<SandboxActionResult> {
-    if (!this.source.executeTransaction) throw new Error(NOT_IMPLEMENTED)
+    if (!this.source.executeTransaction) throw new Error(TRANSACTIONS_UNAVAILABLE)
     return this.source.executeTransaction(intent)
   }
 }

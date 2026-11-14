@@ -9,7 +9,7 @@ import {
 } from "@/app/lib/avana-session/avana-sessions-provider"
 import { BorrowActionPageClient } from "@/app/components/action-page/borrow-action-page-client"
 import { repayUsdForTokenAmount } from "@/app/components/action-page/borrow-action-selection"
-import { currentDebtValueUsd6, parseFixed, usd6ToNumber } from "@/app/lib/credit-engine"
+import { currentDebtValueUsd6, parseFixed, usd6ToNumber } from "@/app/lib/borrow-system/model"
 import { listSpokeBorrowables } from "@/app/lib/borrow-system/registry"
 
 const push = vi.fn()

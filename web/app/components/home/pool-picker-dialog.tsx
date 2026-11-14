@@ -1,7 +1,7 @@
 "use client"
 
 import { Check } from "@/app/components/icons"
-import { getHealthStatus, type HomeCollateralPool } from "@/app/lib/home-sim"
+import { getHealthStatus, type HomeCollateralPool } from "@/app/lib/home-view-model"
 import { PairVisual } from "@/app/components/home-workspace-primitives"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"

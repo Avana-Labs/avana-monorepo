@@ -4,7 +4,6 @@ import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import { shouldUseMockDataSource } from "@/app/lib/test-mode"
 
 export type SupportSubmitPayload = {
   category: string
@@ -620,11 +619,9 @@ export function SupportCenterClient() {
 
   return (
     <>
-      {!shouldUseMockDataSource() ? (
-        <Suspense fallback={null}>
-          <SupportCenterSubmissionBridge onReady={handleConnectedSubmit} />
-        </Suspense>
-      ) : null}
+      <Suspense fallback={null}>
+        <SupportCenterSubmissionBridge onReady={handleConnectedSubmit} />
+      </Suspense>
       <SupportCenterForm submit={submit} />
     </>
   )

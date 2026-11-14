@@ -14,7 +14,7 @@ vi.mock("@/app/lib/lend-system/market-hydration-server", () => {
 })
 
 import { getLendMarketDetailFromConvex } from "@/app/lib/lend-detail/convex-detail"
-import { LEND_MARKET_CATALOG } from "@/app/lib/lend-system/catalog"
+import { LEND_MARKET_CATALOG } from "@/app/lib/lend-system/market-ids"
 
 describe("lend detail SSR", () => {
   it("uses one product-scoped Convex detail batch", async () => {

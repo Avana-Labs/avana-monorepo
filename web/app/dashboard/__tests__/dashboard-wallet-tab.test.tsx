@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { DisplayPreferencesProvider } from "@/app/components/display-preferences"
 import { DashboardWalletTab, resolvePoolRiskPremiumBps } from "@/app/dashboard/dashboard-wallet-tab"
-import { BORROW_POOL_CATALOG, formatRiskPremium } from "@/app/lib/borrow-sim"
+import { BORROW_POOL_CATALOG, formatRiskPremium } from "@/app/lib/borrow-market-rows"
 
 vi.mock("@/app/lib/i18n/use-translation", () => ({
   useTranslation: () => ({ t: (value: string) => value }),

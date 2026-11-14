@@ -13,7 +13,6 @@ import {
 } from "@/app/components/market-table-primitives"
 import {
   formatRiskPremium,
-  getSpokeById,
   type BorrowPoolRow,
   type BorrowSpoke,
   type BorrowableAsset,
@@ -21,7 +20,7 @@ import {
   type PendingMarketRow,
 } from "@/app/lib/data/borrow-domain"
 import { borrowMarketDetailPath } from "@/app/lib/borrow-routes"
-import { formatBorrowPairLabel, formatLtvPct } from "@/app/lib/borrow-sim"
+import { formatBorrowPairLabel, formatLtvPct } from "@/app/lib/borrow-market-rows"
 import { liquidationThresholdPctFromMaxLtvPct } from "@/app/lib/borrow-system/liquidation-threshold"
 import { BorrowableAssetsPanel } from "./borrowable-assets-table"
 import { TokenBubble } from "./atoms"
@@ -449,4 +448,3 @@ function SpokeDesktopSection({
   )
 }
 
-export { getSpokeById }

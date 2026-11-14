@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { formatOraclePrice } from "@/app/lib/borrow-detail/formatters"
 import { formatBpsAsPct } from "@/app/lib/borrow-detail/allocation"
-import { aprRangeLabel, formatRiskPremium } from "@/app/lib/borrow-sim"
-import type { BorrowPoolRow } from "@/app/lib/borrow-sim"
+import { aprRangeLabel, formatRiskPremium } from "@/app/lib/borrow-market-rows"
+import type { BorrowPoolRow } from "@/app/lib/borrow-market-rows"
 
 /**
  * Guard regression: presentational formatters must never surface "$NaN" / "NaN%"

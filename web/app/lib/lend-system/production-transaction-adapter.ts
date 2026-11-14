@@ -1,4 +1,4 @@
-import type { LendAction } from "@/app/lib/lend-engine"
+import type { LendAction } from "@/app/lib/lend-system/model"
 import type {
   LendSandboxActionResult,
   LendTransactionAdapter,
@@ -6,7 +6,17 @@ import type {
   LendTransactionPreview,
 } from "./contracts"
 
-const NOT_IMPLEMENTED = "Production lend transaction adapter is not implemented"
+import { TRANSACTIONS_UNAVAILABLE } from "@/app/lib/borrow-system/production-transaction-adapter"
+
+const EMPTY_METRICS = {
+  suppliedAmount: 0,
+  suppliedValueUsd: 0,
+  principalAmount: 0,
+  interestEarned: 0,
+  rewardsEarnedUsd: 0,
+  totalEarnedUsd: 0,
+  currentApy: 0,
+}
 
 type ProductionLendTransactionAdapterOptions = Partial<{
   previewTransaction: (intent: LendTransactionIntent) => Promise<LendTransactionPreview>
@@ -44,12 +54,19 @@ export class ProductionLendTransactionAdapter implements LendTransactionAdapter 
   }
 
   async previewTransaction(intent: LendTransactionIntent): Promise<LendTransactionPreview> {
-    if (!this.source.previewTransaction) throw new Error(NOT_IMPLEMENTED)
-    return this.source.previewTransaction(intent)
+    if (this.source.previewTransaction) return this.source.previewTransaction(intent)
+    return {
+      intent,
+      allowed: false,
+      warnings: [],
+      validationErrors: [TRANSACTIONS_UNAVAILABLE],
+      before: EMPTY_METRICS,
+      after: EMPTY_METRICS,
+    }
   }
 
   async executeTransaction(intent: LendTransactionIntent): Promise<LendSandboxActionResult> {
-    if (!this.source.executeTransaction) throw new Error(NOT_IMPLEMENTED)
+    if (!this.source.executeTransaction) throw new Error(TRANSACTIONS_UNAVAILABLE)
     return this.source.executeTransaction(intent)
   }
 }

@@ -5,7 +5,7 @@ import { ActionMetricHelp } from "@/app/components/action-page/action-metric-hel
 import { LiveInterestEarnedUsd, LiveInterestOwedUsd, LiveYieldGeneratedPct } from "./live-accrual"
 import { cn } from "@/lib/utils"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
-import { formatUsdExact } from "@/app/lib/borrow-sim"
+import { formatUsdExact } from "@/app/lib/borrow-market-rows"
 import { formatHealthFactor } from "@/app/lib/data/borrow-domain"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import type { BorrowBalanceMetrics, LendBalanceMetrics } from "./dashboard-tab-metrics"

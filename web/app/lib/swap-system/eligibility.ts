@@ -2,15 +2,12 @@ import { NATIVE_GAS_RESERVE_ETH, getSwapAsset, getSwapPair } from "./catalog"
 import type { SwapAmountValidationResult, SwapContext, SwapEligibilityResult, UserAssetBalance } from "./contracts"
 
 function sourceRestriction(balance: UserAssetBalance): SwapEligibilityResult | null {
-  if (balance.sourceType === "wallet" || balance.sourceType === "multiply_available") return null
+  if (balance.sourceType === "wallet") return null
   if (balance.sourceType === "lend_deposited") {
     return { eligible: false, availableAmount: 0, reason: "ineligible_deposited" }
   }
   if (balance.sourceType === "borrow_collateral_pledged" || balance.sourceType === "borrow_collateral_unpledged") {
     return { eligible: false, availableAmount: 0, reason: "ineligible_pledged" }
-  }
-  if (balance.sourceType === "multiply_active") {
-    return { eligible: false, availableAmount: 0, reason: "ineligible_active_loop" }
   }
   return { eligible: false, availableAmount: 0, reason: "ineligible_protocol_locked" }
 }

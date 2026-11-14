@@ -13,7 +13,6 @@ import {
   SortHeaderButton,
 } from "@/app/components/market-table-primitives"
 import { TokenIcon } from "@/app/components/token-icon"
-import { LEND_ASSET_GROUPS } from "@/app/lib/data/catalog/lend"
 import type { LendPageData } from "@/app/lib/data/providers/lend"
 import { cn } from "@/lib/utils"
 import {
@@ -96,7 +95,7 @@ export function paginateLendAssetGroups(groups: AssetGroup[], page: number, page
     })
     .filter((group) => group.rows.length > 0)
 }
-const DEFAULT_ASSET_GROUPS: AssetGroup[] = LEND_ASSET_GROUPS
+const DEFAULT_ASSET_GROUPS: AssetGroup[] = []
 
 function AssetIcon({ row, eager = false }: { row: AssetRow; eager?: boolean }) {
   if (row.logoSrc) {

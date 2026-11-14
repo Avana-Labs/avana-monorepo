@@ -5,7 +5,7 @@ import {
   calculateRepayPreview,
   HOME_COLLATERAL_POOLS,
   type HomeCollateralPool,
-} from "@/app/lib/home-sim"
+} from "@/app/lib/home-view-model"
 
 const pool = HOME_COLLATERAL_POOLS[0] as HomeCollateralPool
 // eth-usdc: collateralUsd 4200, maxLtv 70, liquidationUsd 3380

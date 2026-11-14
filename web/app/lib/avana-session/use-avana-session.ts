@@ -1,37 +1,18 @@
 "use client"
 
 import { useMemo } from "react"
-import { buildBorrowSessionSeed, buildConvexBorrowSessionSeed } from "@/app/lib/borrow-system/demo-session"
 import { resolveWalletIdentity } from "@/app/lib/data/wallet/profiles"
-import { buildConvexLendSessionSeed, buildLendSessionSeed } from "@/app/lib/lend-system/demo-session"
-import { buildRewardsSessionSeed } from "@/app/lib/rewards-system"
 
 type AvanaSession = {
   walletId: string
   walletAddress: string
-  sandboxMode: true
-  borrowSessionSeed: string
-  lendSessionSeed: string
-  rewardsSessionSeed: string
 }
 
 /**
- * Build the per-wallet sandbox session. `walletId` defaults to the built-in demo profile id;
- * after SIWE sign-in the providers pass the authed wallet ADDRESS, scoping every product hook,
- * seed, and Convex read to the signed wallet.
+ * The wallet the product sessions are scoped to: the signed-in wallet address, or the guest id
+ * when no wallet is connected.
  */
-export function useAvanaSession(walletId?: string, source: "demo" | "convex" = "demo"): AvanaSession {
+export function useAvanaSession(walletId?: string): AvanaSession {
   const profile = useMemo(() => resolveWalletIdentity(walletId), [walletId])
-
-  return useMemo(
-    () => ({
-      walletId: profile.id,
-      walletAddress: profile.walletAddress,
-      sandboxMode: true as const,
-      borrowSessionSeed:
-        source === "convex" ? buildConvexBorrowSessionSeed(profile.id) : buildBorrowSessionSeed(profile.id),
-      rewardsSessionSeed: buildRewardsSessionSeed(),
-    }),
-    [profile.id, profile.walletAddress, source],
-  )
+  return useMemo(() => ({ walletId: profile.id, walletAddress: profile.walletAddress }), [profile.id, profile.walletAddress])
 }

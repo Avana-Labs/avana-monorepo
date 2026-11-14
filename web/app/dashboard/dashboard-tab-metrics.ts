@@ -1,5 +1,5 @@
-import { accrueBorrowSystemState, calculateCreditMetrics, clampNetApyWad, usd6ToNumber } from "@/app/lib/credit-engine"
-import type { BorrowSystemState } from "@/app/lib/credit-engine"
+import { calculateCreditMetrics, clampNetApyWad, usd6ToNumber } from "@/app/lib/borrow-system/model"
+import type { BorrowSystemState } from "@/app/lib/borrow-system/model"
 import { lendNetApyPct } from "@/app/lib/lend-system/read-model"
 import type { DebtRowContext, SupplyRowContext } from "@/app/lib/data/borrow-position-types"
 import type { BorrowSnapshot } from "@/app/dashboard/borrow-hero-state"
@@ -115,7 +115,7 @@ export function buildBorrowBalanceMetrics(
   walletId: string,
   now: number = Date.now(),
 ): BorrowBalanceMetrics {
-  const accrued = accrueBorrowSystemState(state, now)
+  const accrued = state
   const metrics = calculateCreditMetrics(accrued, walletId)
   const netPositionValueUsd6 = metrics.poolCollateralValueUsd6 - metrics.totalBorrowedUsd6
   const rawNetApyWad =

@@ -10,7 +10,11 @@ import {
   resolveMarketLiquidityUsd,
 } from "@/app/lib/borrow-detail/interest-rate-curve"
 import { resolveBorrowDetailMetricHelp } from "@/app/lib/borrow-detail/metric-help"
-import { resolveInterestRateModelParams, type ProtocolParameterRow } from "@/app/lib/borrow-detail/protocol-parameters"
+import {
+  resolveInterestRateModelParams,
+  type InterestRateModelParams,
+  type ProtocolParameterRow,
+} from "@/app/lib/borrow-detail/protocol-parameters"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { cn } from "@/lib/utils"
 import { formatPercent } from "@/app/lib/format"
@@ -99,18 +103,38 @@ export function interestRateModelFromAssetDetail(detail: AssetDetail): Omit<Prop
   }
 }
 
-export function InterestRateModelCard({
+export function InterestRateModelCard(props: Props) {
+  const { t } = useTranslation()
+  const irm = React.useMemo(() => resolveInterestRateModelParams(props.protocolParameters), [props.protocolParameters])
+  if (!irm) {
+    // No rate curve from services/convex yet: keep the section, show its empty state.
+    return (
+      <section className={cn("min-w-0", props.className)} aria-label={t("Interest rate model")}>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-[22px] font-medium leading-none tracking-[-0.01em] text-foreground md:text-[24px]">
+            {t("Interest rate model")}
+          </h2>
+        </div>
+        <p className="mt-6 rounded-radius-md border border-border px-4 py-8 text-center text-[13px] text-muted-foreground">
+          {t("No data available yet.")}
+        </p>
+      </section>
+    )
+  }
+  return <InterestRateModelCardBody {...props} irm={irm} />
+}
+
+function InterestRateModelCardBody({
   utilizationPct,
   borrowAprPct,
-  protocolParameters,
   borrowedUsd,
   suppliedUsd,
   className,
-}: Props) {
+  irm,
+}: Props & { irm: InterestRateModelParams }) {
   const { t } = useTranslation()
   const currentUtilization = Number.isFinite(utilizationPct) ? utilizationPct : 0
-  const currentBorrowApr = Number.isFinite(borrowAprPct) ? borrowAprPct : 4
-  const irm = React.useMemo(() => resolveInterestRateModelParams(protocolParameters), [protocolParameters])
+  const currentBorrowApr = Number.isFinite(borrowAprPct) ? borrowAprPct : 0
   const [hoverUtilization, setHoverUtilization] = React.useState<number | null>(null)
 
   const helpText = t("Borrow APR rises as utilization increases and steepens past the optimal threshold.")

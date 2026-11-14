@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { HomeActionContextBar } from "@/app/components/home/home-action-context-bar"
-import type { HomeCollateralPool } from "@/app/lib/home-sim"
+import type { HomeCollateralPool } from "@/app/lib/home-view-model"
 
 const pool: HomeCollateralPool = {
   id: "eth-usdc",

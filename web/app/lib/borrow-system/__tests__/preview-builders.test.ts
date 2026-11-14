@@ -6,7 +6,7 @@ import {
   simulateDeposit,
   simulateRepay,
   simulateWithdraw,
-} from "@/app/lib/credit-engine"
+} from "@/app/lib/borrow-system/model"
 import {
   buildBorrowPreviewModel,
   buildDepositPreviewModel,
@@ -18,7 +18,7 @@ import {
   EXAMPLE_UNI_USDC_ASSET_ID,
   EXAMPLE_WALLET_1_DEBT_ID,
   makeExampleBorrowSystemState,
-} from "@/app/lib/credit-engine/__tests__/fixtures"
+} from "@/app/lib/borrow-system/model/__tests__/fixtures"
 
 describe("borrow preview builders", () => {
   it("matches engine borrow simulations", () => {

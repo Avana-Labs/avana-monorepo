@@ -4,7 +4,6 @@
  */
 export {
   RISK_PARAMETER_LABELS,
-  buildRiskParameterSet,
   normalizeGovernanceParameters,
   withEngineLiquidationThreshold,
   withGovernanceParameterView,

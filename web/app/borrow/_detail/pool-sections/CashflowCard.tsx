@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import type { CashflowCard as CashflowCardData } from "@/app/lib/borrow-detail"
-import { formatCompactUsd } from "@/app/lib/borrow-sim"
+import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { SectionCard } from "../ui"
 

@@ -11,11 +11,9 @@ import { actionPagePath } from "@/app/lib/action-system/contracts"
 import type { PortfolioLendTabData } from "@/app/lib/data/providers/portfolio"
 import { useCanonicalPriceFor } from "@/app/lib/prices/token-prices-context"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import { LEND_MARKET_CATALOG } from "@/app/lib/lend-system/catalog"
 import { ProductAvailableCard } from "./account-sections-shared"
 
 const EMPTY_LEND_TAB: PortfolioLendTabData = { investments: [], positions: [], strategyBuckets: [], history: [] }
-const LEND_MARKET_IDS = new Set(LEND_MARKET_CATALOG.map((market) => market.marketId))
 
 /**
  * The lend account overview (performance metrics + supplied-asset table) that used
@@ -28,6 +26,7 @@ export function LendAccountSection({ returnHref = "/dashboard" }: { returnHref?:
   const lendSession = useLendSessionContext()
   const priceFor = useCanonicalPriceFor()
   const dashboardLend = useDashboardLendLive(walletId, lendSession)
+  const lendMarketIds = useMemo(() => new Set(Object.keys(lendSession.state.markets)), [lendSession.state.markets])
   // Value every supplied position at the live oracle price so the Deposited column,
   // "Total Supplied", Net APY weighting and interest accrual all agree to the cent
   // (financial app — the sum of the table MUST equal the headline). Unpriced tokens
@@ -79,7 +78,7 @@ export function LendAccountSection({ returnHref = "/dashboard" }: { returnHref?:
       <ProductAvailableCard
         walletId={walletId ?? ""}
         sourceTypes={["wallet", "lend_available"]}
-        allowedAssetIds={LEND_MARKET_IDS}
+        allowedAssetIds={lendMarketIds}
         title={t("Available to deposit")}
         action={{
           icon: "deposit",

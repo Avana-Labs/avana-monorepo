@@ -1,4 +1,4 @@
-import type { BorrowPoolRow } from "@/app/lib/borrow-sim"
+import type { BorrowPoolRow } from "@/app/lib/borrow-market-rows"
 
 /** Pair label shown on the borrow page (e.g. "WETH / USDC"). */
 export function formatBorrowMarketLabel(market: Pick<BorrowPoolRow, "name">) {

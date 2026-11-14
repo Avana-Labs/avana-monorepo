@@ -5,7 +5,7 @@ import { CarouselArrowButtons, useOverflowCarousel } from "@/app/components/caro
 import { HowItWorks } from "@/app/components/how-it-works"
 import type { BorrowPageData } from "@/app/lib/data/providers/borrow"
 import { borrowMarketDetailPath } from "@/app/lib/borrow-routes"
-import { formatBorrowPairLabel, formatLtvPct } from "@/app/lib/borrow-sim"
+import { formatBorrowPairLabel, formatLtvPct } from "@/app/lib/borrow-market-rows"
 import { formatApy } from "@/app/lib/format"
 import { MOBILE_EDGE_RAIL_CLASS } from "@/app/lib/ui/horizontal-rail"
 import { cn } from "@/lib/utils"

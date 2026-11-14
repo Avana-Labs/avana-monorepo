@@ -1,4 +1,3 @@
-import { sandboxBaselinePriceUsd } from "@/app/lib/prices/sandbox-baseline-prices"
 import type { SwapAsset, SwapPair } from "./contracts"
 
 export const SWAP_CHAIN_ID = 1
@@ -15,7 +14,7 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: true,
     isLpToken: false,
     isSwapEnabled: true,
-    priceUsd: sandboxBaselinePriceUsd("ETH"),
+    priceUsd: 0,
     minimumSwapAmount: 0.00001,
     maximumSwapAmount: 500,
   },
@@ -29,7 +28,7 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: true,
-    priceUsd: sandboxBaselinePriceUsd("USDC"),
+    priceUsd: 0,
     minimumSwapAmount: 1,
     maximumSwapAmount: 1_000_000,
   },
@@ -43,7 +42,7 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: true,
-    priceUsd: sandboxBaselinePriceUsd("GHO"),
+    priceUsd: 0,
     minimumSwapAmount: 1,
     maximumSwapAmount: 1_000_000,
   },
@@ -57,8 +56,8 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: true,
-    // Aligned with the single sandbox baseline (see prices/sandbox-baseline-prices.ts).
-    priceUsd: sandboxBaselinePriceUsd("WBTC"),
+    // Display price comes from the live price layer; 0 means none.
+    priceUsd: 0,
     minimumSwapAmount: 0.00001,
     maximumSwapAmount: 50,
   },
@@ -72,7 +71,7 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: true,
-    priceUsd: sandboxBaselinePriceUsd("LINK"),
+    priceUsd: 0,
     minimumSwapAmount: 0.01,
     maximumSwapAmount: 500_000,
   },
@@ -86,8 +85,8 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: true,
-    // Aligned with the single sandbox baseline (see prices/sandbox-baseline-prices.ts).
-    priceUsd: sandboxBaselinePriceUsd("AAVE"),
+    // Display price comes from the live price layer; 0 means none.
+    priceUsd: 0,
     minimumSwapAmount: 0.001,
     maximumSwapAmount: 100_000,
   },
@@ -101,7 +100,7 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: true,
-    priceUsd: sandboxBaselinePriceUsd("USDT"),
+    priceUsd: 0,
     minimumSwapAmount: 1,
     maximumSwapAmount: 1_000_000,
   },
@@ -115,27 +114,9 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: true,
-    // Aligned with the single sandbox baseline (WETH tracks ETH — see prices/sandbox-baseline-prices.ts).
-    priceUsd: sandboxBaselinePriceUsd("WETH"),
+    priceUsd: 0,
     minimumSwapAmount: 0.00001,
     maximumSwapAmount: 500,
-  },
-  {
-    // Multiply collateral (see multiply-system/catalog markets crv-crvusd, crvusd-usdt), surfaced in
-    // the dashboard "Available to loop" card. Metadata-only so the row resolves a real name/icon/price
-    // instead of "Unsupported asset"; not swap-routed (isSwapEnabled: false → adds no SWAP_PAIRS).
-    id: "crvusd",
-    chainId: SWAP_CHAIN_ID,
-    symbol: "crvUSD",
-    name: "Curve USD",
-    decimals: 18,
-    assetType: "erc20",
-    isNative: false,
-    isLpToken: false,
-    isSwapEnabled: false,
-    priceUsd: sandboxBaselinePriceUsd("CRVUSD"),
-    minimumSwapAmount: 0,
-    maximumSwapAmount: 0,
   },
   {
     // Multiply collateral surfaced by the wallet/product balance feed. Metadata-only so it
@@ -149,7 +130,7 @@ export const SWAP_ASSETS: SwapAsset[] = [
     isNative: false,
     isLpToken: false,
     isSwapEnabled: false,
-    priceUsd: sandboxBaselinePriceUsd("WSTETH"),
+    priceUsd: 0,
     minimumSwapAmount: 0,
     maximumSwapAmount: 0,
   },

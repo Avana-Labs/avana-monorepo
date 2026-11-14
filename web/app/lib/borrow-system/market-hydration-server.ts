@@ -4,9 +4,6 @@ import { publicMetadataCache, publicMetadataKey } from "@/app/lib/detail-page/pu
 import { api } from "@/convex/_generated/api"
 import { publicConvexClient as convexClient } from "@/app/lib/convex/server-client"
 import type { ConvexMarketSnapshot } from "@/app/lib/borrow-system/market-hydration"
-import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-sim"
-import { allocationVenueLabel } from "@/app/lib/borrow-detail/allocation"
-import type { AllocationRow } from "@/app/lib/borrow-detail/types"
 import { reportServerFetchFailure, reportServerFetchSuccess } from "@/app/lib/detail-page/report-server-fetch-failure"
 
 export { fetchTokenPrices } from "@/app/lib/prices/server-snapshot"
@@ -142,43 +139,6 @@ export async function fetchRecentTransactions(scope: "pool" | "asset", slug: str
     return rows.length > 0 ? rows : null
   } catch (error) {
     reportServerFetchFailure("fetchRecentTransactions", error)
-    return null
-  }
-}
-
-/**
- * Per-pool asset allocation from `assetPoolAllocationDaily`. Convex returns the numeric split
- * plus `poolSlug`; visuals and the venue label are hydrated from the catalog here to match
- * `computeAssetAllocation`'s output shape exactly.
- */
-export async function fetchAllocation(slug: string): Promise<AllocationRow[] | null> {
-  const client = convexClient()
-  if (!client) return null
-  try {
-    const rows = await client.query(api.allocation.getForAsset, { slug })
-    if (!rows || rows.length === 0) return null
-    const out: AllocationRow[] = []
-    for (const row of rows) {
-      const pool = BORROW_POOL_CATALOG.find((p) => p.id === row.poolSlug)
-      if (!pool) continue
-      out.push({
-        id: `${slug}-${row.poolSlug}`,
-        poolName: row.poolName,
-        venueLabel: allocationVenueLabel(pool),
-        visuals: pool.visuals,
-        sharePct: row.sharePct,
-        valueUsd: row.valueUsd,
-        utilizationPct: row.utilizationPct,
-        borrowAprPct: row.borrowAprPct,
-        // Convex allocation carries no fee tier / TVL, so pull them from the catalog pool for
-        // the "Supported Collateral" sub-label (otherwise it renders blank on the live path).
-        feeTier: pool.feeTier,
-        tvlUsd: pool.tvlUsd,
-      })
-    }
-    return out.length > 0 ? out : null
-  } catch (error) {
-    reportServerFetchFailure("fetchAllocation", error)
     return null
   }
 }

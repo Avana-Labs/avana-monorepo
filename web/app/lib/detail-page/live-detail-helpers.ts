@@ -1,5 +1,5 @@
+import { canonicalPriceUsd } from "@/app/lib/prices/canonical"
 import { formatTokenPrice } from "@/app/lib/prices/format"
-import { sandboxBaselinePriceUsd } from "@/app/lib/prices/sandbox-baseline-prices"
 
 type DetailQuickStat = {
   id: string
@@ -8,12 +8,12 @@ type DetailQuickStat = {
 }
 
 /**
- * Pin the "Price" quick stat to the sandbox baseline — the SAME price that values this token
- * everywhere else. Overlaying the live oracle here instead makes the tile disagree with the
- * valuation sitting next to it.
+ * The "Price" quick stat from the live price snapshot — the SAME price that values this token
+ * everywhere else. "—" when the snapshot does not cover the token.
  */
 export function injectBaselinePrice<T extends DetailQuickStat>(quickStats: T[], baseSymbol: string): T[] {
-  const value = formatTokenPrice(sandboxBaselinePriceUsd(baseSymbol))
+  const price = canonicalPriceUsd(baseSymbol)
+  const value = price !== undefined ? formatTokenPrice(price) : "—"
   return quickStats.map((stat) => (stat.id === "price" ? { ...stat, value } : stat))
 }
 
@@ -75,8 +75,8 @@ type DetailWithContent = {
 
 type DetailContentOverlayOptions = {
   /**
-   * Live mode: when Convex content is missing, clear catalog About/FAQs/history
-   * instead of silently re-pinning mock editorial. Mock/open-gate leaves base intact.
+   * When services/convex has no content for the page, clear the base About/FAQs/history
+   * instead of keeping generic copy.
    */
   clearWhenMissing?: boolean
 }

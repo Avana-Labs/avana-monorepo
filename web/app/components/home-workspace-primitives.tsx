@@ -5,7 +5,7 @@ import { useState } from "react"
 import { getTokenIconMeta } from "@/app/lib/token-icons"
 import { TOKEN_ICON_TABLE_PX } from "@/app/lib/token-icon-sizes"
 import { cn } from "@/lib/utils"
-import type { HomeAssetVisual } from "@/app/lib/home-sim"
+import type { HomeAssetVisual } from "@/app/lib/home-view-model"
 import { sizedLocalIconSrc } from "@/app/lib/local-asset-icons"
 
 type TokenBubbleProps = {

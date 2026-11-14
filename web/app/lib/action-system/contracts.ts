@@ -1,10 +1,9 @@
-export type ActionProduct = "borrow" | "lend" | "rewards"
+export type ActionProduct = "borrow" | "lend"
 
 export type BorrowActionKind = "borrow" | "repay" | "supply" | "remove" | "claim" | "pledge"
 export type LendActionKind = "deposit" | "withdraw"
-export type RewardsActionKind = "claim"
 
-export type ActionKind = BorrowActionKind | LendActionKind | RewardsActionKind
+export type ActionKind = BorrowActionKind | LendActionKind
 
 export type ActionPageMode = "page" | "overlay" | "embedded"
 
@@ -168,15 +167,6 @@ export const ACTION_DESCRIPTORS: Record<ActionProduct, Partial<Record<ActionKind
       primaryVerb: "Withdraw",
     },
   },
-  rewards: {
-    claim: {
-      product: "rewards",
-      kind: "claim",
-      title: "Claim",
-      subtitle: "Configure and review your rewards claim.",
-      primaryVerb: "Claim",
-    },
-  },
 }
 
 export function normalizeActionKind(product: string, kind: string): ActionKind {
@@ -194,11 +184,7 @@ export function getActionDescriptor(product: ActionProduct, kind: ActionKind): A
 }
 
 export function isValidActionProduct(product: string): product is ActionProduct {
-  return (
-    product === "borrow" ||
-    product === "lend" ||
-    product === "rewards" 
-  )
+  return product === "borrow" || product === "lend"
 }
 
 export function isValidAction(product: string, kind: string): product is ActionProduct {
@@ -215,7 +201,6 @@ export function actionPagePath(product: ActionProduct, kind: ActionKind, params?
 const ACTION_CLOSE_HREF: Record<ActionProduct, string> = {
   borrow: "/borrow",
   lend: "/lend",
-  rewards: "/dashboard",
 }
 
 function normalizeReturnHref(returnHref: string) {

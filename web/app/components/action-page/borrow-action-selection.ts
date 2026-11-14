@@ -1,5 +1,5 @@
 import type { useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
-import { usd6ToNumber } from "@/app/lib/credit-engine"
+import { usd6ToNumber } from "@/app/lib/borrow-system/model"
 
 type BorrowSession = ReturnType<typeof useBorrowSessionContext>
 

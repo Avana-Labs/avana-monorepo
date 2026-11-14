@@ -1,5 +1,5 @@
 /**
- * Faceted market filters shared by Lend / Borrow / Multiply: Chains, Hubs, Markets and Assets.
+ * Faceted market filters shared by Lend / Borrow: Chains, Hubs, Markets and Assets.
  *
  * Every page reduces its rows to a `FilterableItem` (which chains, hub, markets and assets the
  * row belongs to); the filter bar then only deals with ids. Facets combine with AND, the options
@@ -7,12 +7,11 @@
  */
 
 import { categorizeMarket, CATEGORY_CHIPS, type MarketCategory } from "@/app/lib/markets/category"
-import { getRegistryToken } from "@/app/lib/tokens/registry"
 import { tokenDisplayName } from "@/app/lib/markets/token-names"
 
 // ----- Chains ----------------------------------------------------------------
 
-export type ChainId = "testnet" | "ethereum" | "avalanche" | "robinhood"
+export type ChainId = "ethereum" | "base" | "local"
 
 export type FilterOption<Id extends string = string> = {
   id: Id
@@ -26,21 +25,23 @@ export type FilterOption<Id extends string = string> = {
 }
 
 export const CHAIN_OPTIONS: ReadonlyArray<FilterOption<ChainId>> = [
-  { id: "testnet", label: "Testnet", iconSrc: "/asset-icons/testnet.png" },
   { id: "ethereum", label: "Ethereum", brand: true, iconSrc: "/asset-icons/eth.png" },
-  { id: "avalanche", label: "Avalanche", brand: true, iconSrc: "/asset-icons/avalanche.png" },
-  { id: "robinhood", label: "Robinhood", brand: true, iconSrc: "/stock-Icons/robinhood.png" },
+  { id: "base", label: "Base", brand: true },
+  { id: "local", label: "Local" },
 ]
 
 /**
- * Every market runs on the testnet until mainnet launches, so each one belongs to `testnet` only
- * and the named chains are listed (with zero markets) for what's coming. At mainnet, derive the
- * real chain per market here.
+ * List rows do not carry their chain yet, so every row matches every chain option. Derive the
+ * chain per row from services/convex `chainId` when the rows carry it.
  */
-export const MARKET_CHAINS: readonly ChainId[] = ["testnet"]
+export const MARKET_CHAINS: readonly ChainId[] = ["ethereum", "base", "local"]
 
-function isStockSymbol(symbol: string): boolean {
-  return Boolean(getRegistryToken(symbol)?.iconPath?.startsWith("/stock-Icons/"))
+/** The chain filter id of an EVM chain id. */
+export function chainFilterId(chainId: number | undefined): ChainId | null {
+  if (chainId === 1) return "ethereum"
+  if (chainId === 8453) return "base"
+  if (chainId === 31337) return "local"
+  return null
 }
 
 // ----- Hubs ------------------------------------------------------------------
@@ -74,52 +75,31 @@ const categoryOptions = (product: "lend"): ReadonlyArray<FilterOption<MarketCate
 
 export const LEND_MARKET_OPTIONS = categoryOptions("lend")
 
-export type BorrowMarketId =
-  | "uniswap-v2"
-  | "uniswap-v3"
-  | "curve"
-  | "aerodrome-basic"
-  | "aerodrome-slipstream"
-  | "balancer"
-  | "cow-swap"
-  | "uniswap-v4"
-  | "sushi"
-  | "balancer-v2"
+/** The DEX (AMM protocol) a CDP Spoke accepts LP positions from. */
+export type BorrowMarketId = "uniswap-v3" | "aerodrome-slipstream"
 
 export const BORROW_MARKET_OPTIONS: ReadonlyArray<FilterOption<BorrowMarketId>> = [
-  { id: "uniswap-v2", label: "Uniswap V2", brand: true, iconSrc: "/asset-icons/uni.png" },
   { id: "uniswap-v3", label: "Uniswap V3", brand: true, iconSrc: "/asset-icons/uni.png" },
-  { id: "curve", label: "Curve", brand: true, iconSrc: "/asset-icons/crv.png" },
-  { id: "aerodrome-basic", label: "Aerodrome Basic", brand: true, iconSrc: "/asset-icons/aero.png" },
   { id: "aerodrome-slipstream", label: "Aerodrome Slipstream", brand: true, iconSrc: "/asset-icons/aero.png" },
-  { id: "balancer", label: "Balancer", brand: true, iconSrc: "/asset-icons/bal.png" },
-  { id: "cow-swap", label: "CoW Swap", brand: true, iconSrc: "/asset-icons/cowswap.png", soon: true },
-  { id: "uniswap-v4", label: "Uniswap V4", brand: true, iconSrc: "/asset-icons/uni.png", soon: true },
-  { id: "sushi", label: "Sushi", brand: true, iconSrc: "/asset-icons/sushiswap.png", soon: true },
-  { id: "balancer-v2", label: "Balancer V2", brand: true, iconSrc: "/asset-icons/bal.png", soon: true },
 ]
 
-/** Borrow spoke id → the DEX market its LP positions come from. */
-export function borrowMarketForSpoke(spoke: string): BorrowMarketId | null {
-  if (spoke === "uni-v2") return "uniswap-v2"
-  if (spoke.startsWith("uni-")) return "uniswap-v3"
-  if (spoke.startsWith("curve-")) return "curve"
-  if (spoke.startsWith("aero-basic-")) return "aerodrome-basic"
-  if (spoke.startsWith("aero-")) return "aerodrome-slipstream"
-  if (spoke.startsWith("bal-")) return "balancer"
+/** The DEX market of a row, from its DEX label or Spoke id. */
+export function borrowMarketForSpoke(spokeOrDex: string): BorrowMarketId | null {
+  const key = spokeOrDex.toLowerCase()
+  if (key.includes("uni")) return "uniswap-v3"
+  if (key.includes("aero") || key.includes("slipstream")) return "aerodrome-slipstream"
   return null
 }
 
 // ----- Assets ----------------------------------------------------------------
 
-export type AssetTabId = "all" | "stable" | "eth" | "btc" | "stocks" | "other"
+export type AssetTabId = "all" | "stable" | "eth" | "btc" | "other"
 
 export const ASSET_TABS: ReadonlyArray<{ id: AssetTabId; label: string }> = [
   { id: "all", label: "All" },
   { id: "stable", label: "Stablecoins" },
   { id: "eth", label: "ETH" },
   { id: "btc", label: "BTC" },
-  { id: "stocks", label: "Stocks" },
   { id: "other", label: "Other" },
 ]
 
@@ -127,7 +107,6 @@ export function assetTabFor(symbol: string): Exclude<AssetTabId, "all"> {
   const family = categorizeMarket(symbol)
   if (family === "forex") return "stable"
   if (family === "eth" || family === "btc") return family
-  if (isStockSymbol(symbol.trim().toUpperCase())) return "stocks"
   return "other"
 }
 
@@ -139,7 +118,7 @@ export function buildAssetOptions(entries: ReadonlyArray<{ symbol: string; name?
   for (const entry of entries) {
     const key = entry.symbol.trim().toUpperCase()
     if (!key || bySymbol.has(key)) continue
-    // A "name" that is just the symbol again (Multiply rows) is no name at all.
+    // A "name" that is just the symbol again is no name at all.
     const given = entry.name?.trim()
     const name = (given && given.toUpperCase() !== key ? given : undefined) ?? tokenDisplayName(key) ?? entry.symbol
     bySymbol.set(key, { symbol: entry.symbol.trim(), name, tab: assetTabFor(key) })
@@ -232,11 +211,12 @@ export function borrowPoolSymbols(pool: {
 
 export function borrowPoolFilterItem(pool: {
   spoke: string
+  dexId?: string
   visuals: ReadonlyArray<{ symbol: string }>
   constituents?: ReadonlyArray<{ symbol: string }>
 }): FilterableItem {
   const symbols = borrowPoolSymbols(pool)
-  const market = borrowMarketForSpoke(pool.spoke)
+  const market = borrowMarketForSpoke(pool.dexId ?? pool.spoke)
   return {
     chains: MARKET_CHAINS,
     hub: hubForSymbols(symbols),

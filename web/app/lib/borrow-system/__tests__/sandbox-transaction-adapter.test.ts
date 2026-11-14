@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { parseFixed, type BorrowAction } from "@/app/lib/credit-engine"
+import { parseFixed, type BorrowAction } from "@/app/lib/borrow-system/model"
 import { SandboxTransactionAdapter } from "@/app/lib/borrow-system/sandbox-transaction-adapter"
 import {
   EXAMPLE_UNI_MARKET_ID,
   EXAMPLE_UNI_USDC_ASSET_ID,
   EXAMPLE_WALLET_1_DEBT_ID,
   makeExampleBorrowSystemState,
-} from "@/app/lib/credit-engine/__tests__/fixtures"
+} from "@/app/lib/borrow-system/model/__tests__/fixtures"
 import { assertSandboxActionContract } from "./sandbox-adapter-contract"
 
 function createHarness() {

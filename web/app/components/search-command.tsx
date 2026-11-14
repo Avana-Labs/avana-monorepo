@@ -7,16 +7,19 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { SearchTrigger } from "./search-trigger"
 import { triggerPageLoading } from "@/app/lib/page-loading"
 import { borrowAssetDetailPath } from "@/app/lib/borrow-routes"
-import { resolveLendMarketId } from "@/app/lib/lend-system/catalog"
-import type { BorrowAssetVisual } from "@/app/lib/borrow-sim"
-import { formatBorrowPairLabel, formatLtvPct } from "@/app/lib/borrow-sim"
+import type { BorrowAssetVisual } from "@/app/lib/borrow-market-rows"
+import { formatBorrowPairLabel, formatLtvPct } from "@/app/lib/borrow-market-rows"
 import { TOKEN_ICON_TABLE_PX } from "@/app/lib/token-icon-sizes"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { rankResults } from "@/app/lib/search-ranking"
 import { useCurrency } from "@/app/lib/currency/use-currency"
-import { useBorrowSessionContextOptional } from "@/app/lib/avana-session/avana-sessions-context"
-import type { BorrowPoolRow, BorrowableAsset } from "@/app/lib/borrow-sim"
+import {
+  useBorrowSessionContextOptional,
+  useLendSessionContextOptional,
+} from "@/app/lib/avana-session/avana-sessions-context"
+import type { LendMarket } from "@/app/lib/lend-system/model"
+import type { BorrowPoolRow, BorrowableAsset } from "@/app/lib/borrow-market-rows"
 import { sizedLocalIconSrc } from "@/app/lib/local-asset-icons"
 
 type SearchTab = "all" | "pools" | "borrow" | "lend"
@@ -61,16 +64,10 @@ async function getSearchResults(
   t: (key: string) => string,
   hydratedPools: BorrowPoolRow[],
   hydratedAssets: BorrowableAsset[],
+  lendMarkets: LendMarket[],
 ): Promise<SearchResult[]> {
-  // Read pool + borrowable numbers from the Convex-hydrated session state (fed by
-  // listBorrowMarketSnapshots) so the search box shows the SAME TVL/available/APR
-  // the borrow list + detail show. Lend symbol set stays catalog-derived — it's a
-  // set membership filter, not a number.
-  const { MARKETS, TOKENS } = await import("@/app/lend/components/data")
-  const lendSymbols: ReadonlySet<string> = new Set([
-    ...TOKENS.map((token) => token.symbol),
-    ...MARKETS.map((market) => market.symbol),
-  ])
+  // Pools, borrowable assets and Lend markets come from the session state, which holds the
+  // markets services/convex reports, so the search box shows the same numbers as the lists.
   const poolResults = hydratedPools.slice(0, 18).map((pool) => ({
     id: `pool-${pool.id}`,
     tab: "pools" as const,
@@ -99,22 +96,22 @@ async function getSearchResults(
     visual: asset.visual,
   }))
 
-  const lendResults = hydratedAssets
-    .filter((asset) => lendSymbols.has(asset.symbol))
-    .slice(0, 12)
-    .map((asset) => ({
-      id: `lend-${asset.id}`,
-      tab: "lend" as const,
-      title: asset.name,
-      subtitle: `${asset.symbol} ${t("lending market")} / ${asset.utilization}% ${t("utilization")}`,
-      eyebrow: "Lend asset",
-      metric: `${Math.max(asset.borrowApr - 0.8, 0.1).toFixed(1)}% APY`,
-      // Lend results are presented as lend markets — link into the lend product, not
-      // the borrow asset page. Same slug derivation the lend list/detail use.
-      href: `/lend/markets/${resolveLendMarketId(asset.symbol)}`,
-      keywords: `${asset.id} ${asset.symbol} ${asset.name} lend deposit supply yield apy`,
-      visual: asset.visual,
-    }))
+  const lendResults = lendMarkets.slice(0, 12).map((market) => ({
+    id: `lend-${market.marketId}`,
+    tab: "lend" as const,
+    title: market.asset.name,
+    subtitle: `${market.asset.symbol} ${t("lending market")} / ${Math.round(market.utilization * 100)}% ${t("utilization")}`,
+    eyebrow: "Lend asset",
+    metric: `${(market.supplyApy * 100).toFixed(1)}% APY`,
+    href: `/lend/markets/${market.marketId}`,
+    keywords: `${market.marketId} ${market.asset.symbol} ${market.asset.name} lend deposit supply yield apy`,
+    visual: {
+      symbol: market.asset.symbol,
+      shortLabel: market.asset.symbol.slice(0, 2),
+      bgClass: "bg-muted",
+      textClass: "text-foreground",
+    },
+  }))
 
   return [...poolResults, ...borrowResults, ...lendResults]
 }
@@ -229,6 +226,7 @@ export function SearchCommand({
   const { t } = useTranslation()
   const { compact } = useCurrency()
   const borrowSession = useBorrowSessionContextOptional()
+  const lendSession = useLendSessionContextOptional()
   const [open, setOpen] = useState(initialOpen)
   const [query, setQuery] = useState("")
   const [activeTab, setActiveTab] = useState<SearchTab>("all")
@@ -245,22 +243,15 @@ export function SearchCommand({
     setLoadingResults(true)
 
     try {
-      // Prefer the Convex-hydrated session state (matches list/detail numbers). If the
-      // search command is mounted outside AvanaSessionsProvider (e.g. an isolated test
-      // wrapper), fall back to the static catalog so the box still renders.
-      let hydratedPools: BorrowPoolRow[] = borrowSession?.marketSummaries ?? []
-      let hydratedAssets: BorrowableAsset[] = borrowSession?.borrowableAssets ?? []
-      if (hydratedPools.length === 0 || hydratedAssets.length === 0) {
-        const { BORROW_POOL_CATALOG, BORROWABLE_ASSETS } = await import("@/app/lib/borrow-sim")
-        if (hydratedPools.length === 0) hydratedPools = BORROW_POOL_CATALOG
-        if (hydratedAssets.length === 0) hydratedAssets = BORROWABLE_ASSETS
-      }
-      const nextResults = await getSearchResults(compact, t, hydratedPools, hydratedAssets)
+      const hydratedPools: BorrowPoolRow[] = borrowSession?.marketSummaries ?? []
+      const hydratedAssets: BorrowableAsset[] = borrowSession?.borrowableAssets ?? []
+      const lendMarkets = lendSession ? Object.values(lendSession.state.markets) : []
+      const nextResults = await getSearchResults(compact, t, hydratedPools, hydratedAssets, lendMarkets)
       setResults(nextResults)
     } finally {
       setLoadingResults(false)
     }
-  }, [borrowSession, compact, loadingResults, results, t])
+  }, [borrowSession, compact, lendSession, loadingResults, results, t])
 
   useEffect(() => {
     setResults(null)

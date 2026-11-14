@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 import { mapTransactionHistoryToActivityRows } from "@/app/lib/borrow-system/read-model"
 
 describe("mapTransactionHistoryToActivityRows", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import type { TransactionAdapter, TransactionIntent, TransactionPreview } from "@/app/lib/borrow-system/contracts"
 import { ProductionTransactionAdapter } from "@/app/lib/borrow-system/production-transaction-adapter"
-import { parseFixed } from "@/app/lib/credit-engine"
+import { parseFixed } from "@/app/lib/borrow-system/model"
 
 describe("transaction adapter contracts", () => {
   it("supports structured preview and execute shapes", async () => {

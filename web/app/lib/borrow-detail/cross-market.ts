@@ -3,15 +3,11 @@
  *
  * Pool (collateral market) → assets you can borrow against it.
  * Asset (borrowable) → collateral markets that unlock borrowing it.
- * Both are spoke-scoped via the registry so every market gets the right peers.
+ * Both are built from the markets services/convex reports, passed in by the caller.
  */
 
-import { BORROW_POOL_CATALOG, type BorrowAssetVisual, type BorrowPoolRow } from "@/app/lib/borrow-sim"
-import {
-  listSpokeBorrowables,
-  resolveSpokeBorrowable,
-  type SpokeBorrowableRecord,
-} from "@/app/lib/borrow-system/registry"
+import type { BorrowAssetVisual, BorrowPoolRow } from "@/app/lib/borrow-market-rows"
+import type { SpokeBorrowableRecord } from "./types"
 import { borrowAssetDetailPath, borrowMarketDetailPath } from "@/app/lib/borrow-routes"
 
 export type BorrowableAssetRef = {
@@ -37,8 +33,11 @@ type CollateralMarketRef = {
 }
 
 /** Borrowable assets unlocked by a specific collateral market. */
-export function resolveBorrowablesForPool(pool: Pick<BorrowPoolRow, "id" | "spoke">): BorrowableAssetRef[] {
-  return listSpokeBorrowables()
+export function resolveBorrowablesForPool(
+  pool: Pick<BorrowPoolRow, "id" | "spoke">,
+  borrowables: readonly SpokeBorrowableRecord[] = [],
+): BorrowableAssetRef[] {
+  return borrowables
     .filter((asset) => asset.spokeId === pool.spoke && asset.marketIds.includes(pool.id))
     .map((asset) => ({
       id: asset.id,
@@ -55,7 +54,7 @@ export function resolveBorrowablesForPool(pool: Pick<BorrowPoolRow, "id" | "spok
 /** Collateral markets that can be used to borrow a specific asset. */
 export function resolveCollateralForAsset(
   asset: Pick<SpokeBorrowableRecord, "id" | "marketIds">,
-  pools: BorrowPoolRow[] = BORROW_POOL_CATALOG,
+  pools: readonly BorrowPoolRow[] = [],
 ): CollateralMarketRef[] {
   return pools
     .filter((pool) => asset.marketIds.includes(pool.id))
@@ -71,13 +70,11 @@ export function resolveCollateralForAsset(
 }
 
 /**
- * Restrict a collateral-pool list to markets that unlock borrowing `assetId`
- * (spoke-scoped via the registry). Used by the asset-detail borrow picker so
- * Balancer GHO never lists Uniswap v3 Stable pools, etc.
+ * Restrict a collateral-pool list to the markets that unlock borrowing an asset (its
+ * `marketIds`). Used by the asset-detail borrow picker.
  */
-export function filterPoolsForSpokeAsset<T extends { id: string }>(assetId: string, pools: T[]): T[] {
-  const asset = resolveSpokeBorrowable(assetId)
-  if (!asset) return []
-  const allowed = new Set(asset.marketIds)
+export function filterPoolsForSpokeAsset<T extends { id: string }>(marketIds: readonly string[] | undefined, pools: T[]): T[] {
+  if (!marketIds) return []
+  const allowed = new Set(marketIds)
   return pools.filter((pool) => allowed.has(pool.id))
 }

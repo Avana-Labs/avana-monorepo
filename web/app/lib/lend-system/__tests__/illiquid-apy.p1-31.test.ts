@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { LEND_MARKET_CATALOG } from "@/app/lib/lend-system/catalog"
+import { LEND_MARKET_CATALOG } from "@/app/lib/lend-system/market-ids"
 import { catalogMarketToRow } from "@/app/lib/lend-system/read-model"
 
 describe("illiquid lend APY outliers", () => {

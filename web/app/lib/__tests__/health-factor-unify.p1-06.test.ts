@@ -3,7 +3,7 @@ import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { formatActionHealthFactor } from "@/app/lib/action-system/formatters"
 import { healthFactorBand } from "@/app/lib/health/health-factor-bands"
-import { formatHealthFactor } from "@/app/lib/home-sim"
+import { formatHealthFactor } from "@/app/lib/home-view-model"
 
 describe("health factor presentation unification", () => {
   it("p1-06: action and dashboard formatters share ∞ policy and decimals", () => {

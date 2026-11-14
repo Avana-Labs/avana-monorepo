@@ -1,4 +1,4 @@
-import type { LendMarket } from "@/app/lib/lend-engine"
+import type { LendMarket } from "@/app/lib/lend-system/model"
 import type { LendPageData } from "@/app/lib/data/providers/lend/types"
 import type { PortfolioLendTabData } from "@/app/lib/data/providers/portfolio/types"
 import type { LendReadAdapter, LendWalletReadSnapshot } from "./contracts"

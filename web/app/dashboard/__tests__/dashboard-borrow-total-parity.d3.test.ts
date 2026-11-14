@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { makeExampleBorrowSystemState } from "@/app/lib/credit-engine/__tests__/fixtures"
+import { makeExampleBorrowSystemState } from "@/app/lib/borrow-system/model/__tests__/fixtures"
 import { buildPortfolioBorrowData } from "@/app/lib/borrow-system/read-model"
 import { buildBorrowBalanceMetrics } from "@/app/dashboard/dashboard-tab-metrics"
 

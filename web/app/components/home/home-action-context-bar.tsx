@@ -1,7 +1,7 @@
 "use client"
 
 import { AnimatedTextValue } from "@/app/components/action-page/action-live-value"
-import type { HomeCollateralPool } from "@/app/lib/home-sim"
+import type { HomeCollateralPool } from "@/app/lib/home-view-model"
 import { formatActionApproxUsd } from "@/app/lib/action-system/formatters"
 import { ActionContextSelectorCard } from "@/app/components/action-page/action-context-selector-card"
 import { ActionTokenPairIcon } from "@/app/components/action-page/action-token-icon"

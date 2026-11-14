@@ -18,7 +18,7 @@
  */
 
 import type { ChartFeed } from "@/app/components/charts"
-import type { LendMarket } from "@/app/lib/lend-engine/types"
+import type { LendMarket } from "@/app/lib/lend-system/model/types"
 import type { AboutCard, CashflowCard, QuickStat, RiskAssessment, Series, TxHistoryRow } from "@/app/lib/borrow-detail"
 import type { FaqContent } from "@/app/lib/borrow-detail/content-model"
 import type { ProtocolParameterRow } from "@/app/lib/borrow-detail/protocol-parameters"

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildLendMarketDetail, getLendMarketDetail, resolveLendMarket } from "@/app/lib/lend-detail"
-import { LEND_MARKET_CATALOG, getLendMarketById } from "@/app/lib/lend-system/catalog"
+import { LEND_MARKET_CATALOG, getLendMarketById } from "@/app/lib/lend-system/market-ids"
 
 describe("lend detail contract", () => {
   it("resolves a market by its id and by its asset symbol", () => {

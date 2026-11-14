@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { SchemaMarkup, buildBreadcrumbSchema, buildFaqSchema, buildWebPageSchema } from "@/app/components/seo/schema"
-import { getPoolDetail } from "@/app/lib/borrow-detail"
 import { applyPoolPreloadedOverlays, getPoolDetailFromConvex } from "@/app/lib/borrow-detail/convex-detail"
 import { preloadPoolHero } from "@/app/lib/borrow-detail/hero-preload"
 import { preloadDetailQuickStats } from "@/app/lib/detail-page/quick-stats-preload"
@@ -28,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       path: `/borrow/markets/${marketId}`,
       keywords: ["LP collateral", "borrow against AMM positions"],
     })
-  const detail = getPoolDetail(marketId)
+  const detail = await getPoolDetailFromConvex(marketId)
   if (!detail)
     return {
       title: "Market · Avana",

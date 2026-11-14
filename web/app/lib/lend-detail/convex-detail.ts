@@ -2,7 +2,6 @@ import "server-only"
 import { requestCache as cache } from "@/app/lib/detail-page/request-cache"
 import { fetchLendDetailHydration } from "@/app/lib/lend-system/market-hydration-server"
 import type { PreloadedQuickStatRow } from "@/app/lib/detail-page/apply-preloaded-overlays"
-import { emptySeries, shouldStripMockSeriesForLive } from "@/app/lib/detail-page/strip-mock-series"
 import {
   applyDetailContentOverlay,
   injectBaselinePrice,
@@ -10,34 +9,30 @@ import {
 } from "@/app/lib/detail-page/live-detail-helpers"
 import { QUICK_STAT_ALIASES } from "@/app/lib/detail-page/live-quick-stats"
 import { injectSiloedMarketQuickStats, overlayHeroIdentity } from "@/app/lib/detail-page/siloed-market-overlay"
-import { resolveDataSourceMode } from "@/app/lib/data/providers/source-mode"
-import { preferLiveOrNull, shouldFailClosedInLive } from "@/app/lib/detail-page/live-fallback"
 import { EMPTY_RISK_ASSESSMENT } from "@/app/lib/detail-page/empty-risk-assessment"
-import { warnLiveFallback } from "@/app/lib/data/providers/hydration-telemetry"
 import {
-  ABOUT_CONTRACT_ADDRESS_SALTS,
   aboutContractAddressLabelForSalt,
   isAboutContractAddressStat,
   sortAboutContractAddressRows,
 } from "@/app/lib/detail-page/about-contract-addresses"
 import { resolveLendHeadlineRates } from "./headline-rates"
 import type { ProtocolParameterRow } from "@/app/lib/borrow-detail/protocol-parameters"
-import { alignRiskSupplyApyMetric, buildLendMarketDetail, resolveLendMarket } from "./mock"
+import { alignRiskSupplyApyMetric, buildLendMarketDetail } from "./detail-base"
+import { lendMarketFromSnapshot } from "@/app/lib/lend-system/market-hydration"
 import type { LendMarketDetail } from "./types"
 import type { QuickStat } from "@/app/lib/borrow-detail"
 import { formatPercent } from "@/app/lib/format"
 
 /**
- * Server-only Convex-hydrated lend detail builder. The lend detail page calls this
- * so its numbers come from Convex and match the list/hero:
- *   - reference values (supplied / borrowed / utilization / APY) ← Convex snapshot
- *   - HERO chart (total supplied)                                ← Convex daily series
- *   - engagement / cashflow / risk / about / faqs / transactions ← Convex queries
- *   - risk parameters / IRM                                      ← lend* product silos
- *   - "Price" quick stat                                         ← deterministic sandbox baseline
- * Each Convex read falls back to the catalog/mock value when unreachable, so the
- * page always renders. Kept OUT of `./index.ts` because that barrel is also imported
- * by client components and `market-hydration-server.ts` is `server-only`.
+ * Server-only lend detail builder. The lend detail page calls this so its numbers come from
+ * services/convex and match the list/hero:
+ *   - the page is resolved from its services/convex snapshot row (no row -> 404)
+ *   - reference values (supplied / borrowed / utilization / APY) <- snapshot
+ *   - HERO chart (total supplied) <- daily series, preloaded on the page
+ *   - risk / about / faqs / transactions / IRM <- services/convex queries
+ *   - "Price" quick stat <- live price snapshot
+ * A section services/convex does not serve renders its empty state. Kept OUT of `./index.ts`
+ * because that barrel is also imported by client components.
  */
 
 /** Convex `getQuickStats` emits asset-style ids; map each to the mock ids it overrides. */
@@ -85,17 +80,12 @@ function applyRiskParametersToAbout(
   }
 }
 
-const LEND_CONTRACT_SALTS = new Set<string>(ABOUT_CONTRACT_ADDRESS_SALTS)
-
-/**
- * Replace About contract-address rows with the canonical four from Convex
- * `lendContractAddresses` — same inject path as borrow/multiply.
- */
+/** Replace About contract-address rows with the services/convex rows (manifest addresses). */
 function injectLendContractAddressStats(
   detail: LendMarketDetail,
   rows: ReadonlyArray<{ salt: string; label: string; href: string }>,
 ): LendMarketDetail {
-  const contractRows = sortAboutContractAddressRows(rows.filter((row) => LEND_CONTRACT_SALTS.has(row.salt)))
+  const contractRows = sortAboutContractAddressRows(rows.filter((row) => Boolean(row.href || row.label)))
   if (contractRows.length === 0) return detail
   const seen = new Set<string>()
   const contractStats: Array<{ label: string; value: string; href: string }> = []
@@ -115,15 +105,8 @@ function injectLendContractAddressStats(
 }
 
 async function getLendMarketDetailFromConvexUncached(id: string): Promise<LendMarketDetail | null> {
-  const market = resolveLendMarket(id)
-  if (!market) return null
-  const slug = market.marketId
-
-  const mode = resolveDataSourceMode()
-  // Supply hero / quick-stats / cashflow preloaded on the page — not fetched here (C03).
-  // supplyBorrow from Convex replaces PRNG series on the live path (C05).
-  // The snapshot rides in the same batch: every key here comes from the catalog slug, so
-  // waiting for it first only added a Convex round trip to every detail SSR.
+  const slug = id
+  // Supply hero / quick-stats / cashflow preloaded on the page - not fetched here.
   const hydration = await fetchLendDetailHydration(slug, `/lend/markets/${id}`)
   const {
     snapshot,
@@ -136,41 +119,25 @@ async function getLendMarketDetailFromConvexUncached(id: string): Promise<LendMa
     contractAddresses,
     supplyBorrow,
   } = hydration ?? {}
-  // Fail closed in live mode when Convex has no snapshot — matches borrow detail
-  // so the page never silently renders the mock catalog next to an empty live list.
-  if (shouldFailClosedInLive(mode, snapshot != null)) return null
-  const detail = buildLendMarketDetail(
-    market,
-    snapshot
-      ? {
-          suppliedUsd: snapshot.suppliedUsd,
-          borrowedUsd: snapshot.borrowedUsd,
-          availableUsd: snapshot.availableUsd,
-          utilizationPct: snapshot.utilizationPct,
-          supplyApyPct: snapshot.supplyApyPct,
-          borrowAprPct: snapshot.borrowAprPct,
-        }
-      : undefined,
-  )
+  // The page exists only for a Hub asset services/convex reports.
+  if (!snapshot) return null
+  const market = lendMarketFromSnapshot({ ...snapshot, scope: "lend" }, 1, Date.now())
+  const detail = buildLendMarketDetail(market, {
+    suppliedUsd: snapshot.suppliedUsd,
+    borrowedUsd: snapshot.borrowedUsd,
+    availableUsd: snapshot.availableUsd,
+    utilizationPct: snapshot.utilizationPct,
+    supplyApyPct: snapshot.supplyApyPct,
+    borrowAprPct: snapshot.borrowAprPct,
+  })
 
   const headline = resolveLendHeadlineRates({
-    snapshotBacked: Boolean(snapshot),
+    snapshotBacked: true,
     detailUtilizationPct: detail.utilizationPct,
     detailBorrowAprPct: detail.borrowAprPct,
     irmUtilizationPct: interestRateModel?.utilizationPct,
     irmBorrowAprPct: interestRateModel?.borrowAprPct,
   })
-
-  const emptySupplyBorrow = {
-    supplied: emptySeries(`${slug}:sb:supplied`, "Supplied"),
-    borrowed: emptySeries(`${slug}:sb:borrowed`, "Borrowed"),
-    utilization: emptySeries(`${slug}:sb:utilization`, "Utilization"),
-  }
-
-  // protocolParameters has no empty-state card (an IRM table with no rows reads as
-  // broken), so keep the catalog rows when Convex has no IRM — but make the fallback
-  // loud in live so the missing lendInterestRateModel seed gets fixed.
-  if (mode === "live" && !interestRateModel) warnLiveFallback("lend", slug, "interestRateModel")
 
   const hydrated = applyDetailContentOverlay(
     {
@@ -181,25 +148,19 @@ async function getLendMarketDetailFromConvexUncached(id: string): Promise<LendMa
       ),
       // heroFeed set by the page from preloadLendHero.
       cashflow: { bars: [], rows: [], periodLabel: "" },
-      supplyBorrow: shouldStripMockSeriesForLive()
-        ? ((supplyBorrow as typeof detail.supplyBorrow | null) ?? emptySupplyBorrow)
-        : ((supplyBorrow as typeof detail.supplyBorrow | null) ?? detail.supplyBorrow),
-      // Fail closed in live: empty (not the catalog copy) when Convex has no rows.
+      supplyBorrow: (supplyBorrow as typeof detail.supplyBorrow | null) ?? detail.supplyBorrow,
       // The client overlays the wallet's own session transactions on top of this.
-      transactions:
-        preferLiveOrNull(mode, transactions as typeof detail.transactions | null, detail.transactions) ?? [],
-      // Single-source Supply APY: the seeded/frozen risk metric is realigned to the live
-      // headline value Key Statistics shows, so the page never renders two different rates.
-      risk: alignRiskSupplyApyMetric(
-        preferLiveOrNull(mode, risk as typeof detail.risk | null, detail.risk) ?? EMPTY_RISK_ASSESSMENT,
-        detail.quickStats,
-      ),
+      transactions: (transactions as typeof detail.transactions | null) ?? [],
+      // Single-source Supply APY: the risk metric is realigned to the headline value Key
+      // Statistics shows, so the page never renders two different rates.
+      risk: alignRiskSupplyApyMetric((risk as typeof detail.risk | null) ?? EMPTY_RISK_ASSESSMENT, detail.quickStats),
       utilizationPct: headline.utilizationPct,
       borrowAprPct: headline.borrowAprPct,
-      protocolParameters: interestRateModel ? irmProtocolParameters(interestRateModel) : detail.protocolParameters,
+      // Without the services/convex rate curve the IRM card shows its empty state.
+      protocolParameters: interestRateModel ? irmProtocolParameters(interestRateModel) : [],
     },
     content,
-    { clearWhenMissing: mode === "live" },
+    { clearWhenMissing: true },
   )
 
   return applyRiskParametersToAbout(

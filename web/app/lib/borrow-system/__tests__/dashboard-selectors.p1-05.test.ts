@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accrueBorrowSystemState } from "@/app/lib/credit-engine"
+import { accrueBorrowSystemState } from "@/app/lib/borrow-system/model"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 import { selectPortfolioSupplyRows } from "@/app/lib/borrow-system/dashboard-selectors"
 

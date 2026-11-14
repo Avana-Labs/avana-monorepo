@@ -8,7 +8,7 @@ import {
 } from "@/app/lib/action-system/resolve-borrow-context"
 import { lendWithdrawSelectItems } from "@/app/lib/action-system/resolve-lend-context"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
-import { RAY, parseFixed } from "@/app/lib/credit-engine"
+import { RAY, parseFixed } from "@/app/lib/borrow-system/model"
 
 describe("resolveBorrowAssetId", () => {
   it("maps short asset params to scoped engine ids", () => {

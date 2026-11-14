@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { assertBorrowSystemInvariants, calculateCreditMetrics } from "@/app/lib/credit-engine"
+import { assertBorrowSystemInvariants, calculateCreditMetrics } from "@/app/lib/borrow-system/model"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 
 describe("mock borrow system source", () => {

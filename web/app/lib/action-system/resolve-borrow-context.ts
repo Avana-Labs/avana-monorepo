@@ -1,16 +1,13 @@
-import type { BorrowSystemState } from "@/app/lib/credit-engine"
+import type { BorrowSystemState } from "@/app/lib/borrow-system/model"
 import {
-  accrueBorrowSystemState,
   currentCollateralValueUsd6,
   currentDebtValueUsd6,
   formatFixed,
-} from "@/app/lib/credit-engine"
+} from "@/app/lib/borrow-system/model"
 import { formatActionUsd } from "@/app/lib/action-system/formatters"
 import { selectRewardClaimableTotals } from "@/app/lib/borrow-system/home-runtime"
 import { formatBorrowMarketContext } from "@/app/lib/borrow-system/market-labels"
 import { getWalletLpBalanceUsd } from "@/app/lib/borrow-system/wallet-lp-balances"
-import { HOME_POOL_TO_MARKET_ID } from "@/app/lib/borrow-system/mock"
-import { getBorrowSpoke } from "@/app/lib/borrow-system/registry"
 
 function normalizeBorrowAssetKey(value: string) {
   return value.trim().toLowerCase()
@@ -247,7 +244,7 @@ export function borrowSelectItemsForMarket(
       id: asset.id,
       name: asset.name,
       symbol: asset.symbol,
-      sublabel: (spokeId && getBorrowSpoke(spokeId)?.label) || asset.symbol,
+      sublabel: session.state.assets[asset.id]?.contextLabel || spokeId || asset.symbol,
       trailingLabel:
         liquidityUsd != null
           ? `${formatActionUsd(liquidityUsd, { compact: true })} liquidity`
@@ -280,12 +277,12 @@ export function claimSelectItemsForWallet(session: BorrowContextSession, walletI
 }
 
 export function resolveClaimMarketId(marketOrPoolId: string) {
-  return HOME_POOL_TO_MARKET_ID[marketOrPoolId] ?? marketOrPoolId
+  return marketOrPoolId
 }
 
 export function repaySelectItemsForWallet(session: BorrowContextSession, walletId: string, now = Date.now()) {
   // Owed = principal plus interest accrued since the last write, the figure the dashboard shows.
-  const account = accrueBorrowSystemState(session.state, now).accounts[walletId]
+  const account = session.state.accounts[walletId]
   if (!account) return []
 
   return account.debtPositions.map((position) => {

@@ -5,14 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { TokenIcon } from "@/app/components/token-icon"
 import { OVERLAY_SCRIM_CLASS } from "@/app/components/card-surface-tokens"
 import type { DesktopMenuId } from "@/app/components/header-desktop-menu-data"
-import { LEND_ASSET_GROUPS } from "@/app/lib/data/catalog/lend"
-import { resolveLendMarketId } from "@/app/lib/lend-system/catalog"
-import { BORROW_POOL_CATALOG, type BorrowPoolRow } from "@/app/lib/data/borrow-domain"
-import { borrowMarketDetailPath } from "@/app/lib/borrow-routes"
-import { categorizeMarket, type MarketCategory } from "@/app/lib/markets/category"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import { buildSparklineLinePath, getSparklineColor } from "@/app/lib/sparkline"
-import { createSeededRandom } from "@/app/lib/deterministic"
 
 interface PanelRow {
   /** Symbol used for the (primary) token icon. */
@@ -47,130 +40,14 @@ interface PanelConfig {
   columns: PanelColumn[]
 }
 
-// Deep-link a column's "View all" to the product page with the matching category chip
-// preselected (?category=). Stablecoins → forex, ETH family → eth, stocks/curated → smart.
-function categoryHref(base: string, symbol: string): string {
-  return `${base}?category=${categorizeMarket(symbol)}#markets`
-}
-
-// Niche stablecoins pushed below the majors so the Stablecoins column leads with USDC/USDT/GHO.
-const LEND_DEMOTE = new Set(["EURC", "frxUSD"])
-
-// Prefer a stablecoin / BTC / stocks spread so the columns span colours rather than reading as
-// three near-identical blue columns.
+// The columns list markets from services/convex once the header can read them; until then the
+// panel shows its intro and the link to the product page only.
 function lendColumns(): PanelColumn[] {
-  const preferred = ["Stablecoins", "Bitcoin Based", "Coinbase & Robinhood Stocks"]
-  const byTitle = new Map(LEND_ASSET_GROUPS.map((group) => [group.title, group]))
-  const chosen = preferred
-    .map((title) => byTitle.get(title))
-    .filter((group): group is (typeof LEND_ASSET_GROUPS)[number] => Boolean(group))
-  for (const group of LEND_ASSET_GROUPS) {
-    if (chosen.length >= 3) break
-    if (!chosen.includes(group)) chosen.push(group)
-  }
-  return chosen.slice(0, 3).map((group) => {
-    const rows = [...group.rows]
-      .sort((a, b) => Number(LEND_DEMOTE.has(a.symbol)) - Number(LEND_DEMOTE.has(b.symbol)))
-      .slice(0, 3)
-    return {
-      title: group.title === "Coinbase & Robinhood Stocks" ? "Stocks" : group.title,
-      viewAllHref: categoryHref("/lend", rows[0]?.symbol ?? ""),
-      rows: rows.map((row) => ({
-        symbol: row.symbol,
-        name: row.name,
-        metric: `${row.apyValue.toFixed(2)}%`,
-        metricTone: "positive" as const,
-        href: `/lend/markets/${resolveLendMarketId(row.symbol)}`,
-      })),
-    }
-  })
+  return []
 }
 
-const CATEGORY_TITLE: Record<MarketCategory, string> = {
-  eth: "ETH",
-  btc: "BTC",
-  forex: "Stablecoins",
-  utility: "Utility",
-  smart: "Smart",
-}
-
-// A pool's signature family for colour spread: its first non-stable leg, else stable.
-function poolFamily(pool: BorrowPoolRow): MarketCategory {
-  const cats = pool.visuals.map((visual) => categorizeMarket(visual.symbol))
-  return cats.find((category) => category !== "forex") ?? "forex"
-}
-
-// Greedily pick up to `count` pools that maximise variety: each step takes the unused,
-// unique-pair pool that introduces the most new tokens (tie-broken by a new token family), so a
-// column doesn't lean on one token (e.g. USDC) in every row.
-function pickDiversePools(pools: BorrowPoolRow[], count: number): BorrowPoolRow[] {
-  const chosen: BorrowPoolRow[] = []
-  const seenPairs = new Set<string>()
-  const seenTokens = new Set<string>()
-  const seenFamilies = new Set<MarketCategory>()
-  const pairKey = (pool: BorrowPoolRow) =>
-    [pool.visuals[0].symbol, pool.visuals[1].symbol]
-      .map((symbol) => symbol.toUpperCase())
-      .sort()
-      .join("/")
-  while (chosen.length < count) {
-    let best: BorrowPoolRow | null = null
-    let bestScore = -1
-    for (const pool of pools) {
-      if (seenPairs.has(pairKey(pool))) continue
-      const newTokens = pool.visuals.filter((visual) => !seenTokens.has(visual.symbol.toUpperCase())).length
-      const score = newTokens * 2 + (seenFamilies.has(poolFamily(pool)) ? 0 : 1)
-      if (score > bestScore) {
-        bestScore = score
-        best = pool
-      }
-    }
-    if (!best) break
-    chosen.push(best)
-    seenPairs.add(pairKey(best))
-    seenFamilies.add(poolFamily(best))
-    for (const visual of best.visuals) seenTokens.add(visual.symbol.toUpperCase())
-  }
-  return chosen
-}
-
-function poolDex(pool: BorrowPoolRow): string {
-  const spoke = pool.spoke
-  if (spoke.startsWith("uni")) return "Uniswap"
-  if (spoke.startsWith("aero")) return "Aerodrome"
-  if (spoke.startsWith("curve")) return "Curve"
-  if (spoke.startsWith("bal")) return "Balancer"
-  return pool.dexes[0]?.label ?? pool.venue
-}
-
-// Group collateral (LP) pools by venue (Uniswap / Aerodrome / Curve …); one column per DEX,
-// deep-linking "View all" to the borrow page's search pre-filled with that venue.
 function borrowColumns(): PanelColumn[] {
-  const preferred = ["Uniswap", "Aerodrome", "Curve"]
-  const byDex = new Map<string, BorrowPoolRow[]>()
-  for (const pool of BORROW_POOL_CATALOG) {
-    const dex = poolDex(pool)
-    const bucket = byDex.get(dex) ?? []
-    bucket.push(pool)
-    byDex.set(dex, bucket)
-  }
-  const dexes = [
-    ...preferred.filter((dex) => byDex.has(dex)),
-    ...[...byDex.keys()].filter((dex) => !preferred.includes(dex)),
-  ].slice(0, 3)
-  return dexes.map((dex) => ({
-    title: dex,
-    viewAllHref: `/borrow?q=${encodeURIComponent(dex)}#markets`,
-    rows: pickDiversePools(byDex.get(dex) ?? [], 3).map((pool) => ({
-      symbol: pool.visuals[0].symbol,
-      symbol2: pool.visuals[1].symbol,
-      label: `${pool.visuals[0].symbol}/${pool.visuals[1].symbol}`,
-      metric: `${((pool.aprMin + pool.aprMax) / 2).toFixed(1)}%`,
-      // Deterministic recent-momentum tone so the APR colour matches its sparkline.
-      metricTone: createSeededRandom(pool.id)() > 0.42 ? ("positive" as const) : ("negative" as const),
-      href: borrowMarketDetailPath(pool.id),
-    })),
-  }))
+  return []
 }
 
 function usePanelConfig(menuId: DesktopMenuId): PanelConfig | null {
@@ -208,45 +85,6 @@ interface HeaderDesktopMenuPanelProps {
 }
 
 const DESKTOP_MENU_TRANSITION_MS = 300
-
-// Small colour sparkline before the metric — the same deterministic mock the Featured cards use.
-function RowSparkline({ seed, isPositive }: { seed: string; isPositive: boolean }) {
-  const total = 40
-  const random = createSeededRandom(seed)
-  // Realistic mock series: a mean-reverting random walk plus a gentle up/down drift, then
-  // min-max normalised so the line fills the box instead of saturating into a flat line.
-  const series: number[] = []
-  let level = 0
-  for (let index = 0; index < total; index++) {
-    level = level * 0.85 + (random() - 0.5) * 12
-    const drift = (isPositive ? 1 : -1) * (index / (total - 1)) * 22
-    series.push(drift + level + (random() - 0.5) * 6)
-  }
-  const min = Math.min(...series)
-  const max = Math.max(...series)
-  const range = Math.max(max - min, 0.0001)
-  const points = series.map((value, index) => ({
-    x: (index / (total - 1)) * 100,
-    y: 88 - ((value - min) / range) * 76,
-  }))
-  const linePath = buildSparklineLinePath(points)
-  const color = getSparklineColor(isPositive)
-  return (
-    <span aria-hidden="true" className="block h-6 w-16 shrink-0">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
-        <path
-          d={linePath}
-          fill="none"
-          stroke={color}
-          strokeWidth="1.25"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-    </span>
-  )
-}
 
 export default function HeaderDesktopMenuPanel({
   menuId,
@@ -372,7 +210,6 @@ export default function HeaderDesktopMenuPanel({
                                 <span className="truncate text-[12px] text-muted-foreground">{row.name}</span>
                               ) : null}
                             </span>
-                            <RowSparkline seed={row.href} isPositive={row.metricTone !== "negative"} />
                             <span
                               className={`w-14 shrink-0 text-right text-[13px] font-medium tabular-nums ${
                                 row.metricTone === "negative"

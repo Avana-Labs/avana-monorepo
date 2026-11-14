@@ -7,7 +7,7 @@ import {
   totalDebtValueUsd6,
   type BorrowSpokeId,
   type BorrowSystemState,
-} from "@/app/lib/credit-engine"
+} from "@/app/lib/borrow-system/model"
 import type { DebtRowContext, SupplyRowContext } from "@/app/lib/data/borrow-position-types"
 import {
   resolveBorrowAprPct,
@@ -16,7 +16,7 @@ import {
   selectInitialBorrowDebts,
   selectWalletBorrowSnapshot,
 } from "@/app/lib/borrow-system/selectors"
-import { formatUsdExact } from "@/app/lib/borrow-sim"
+import { formatUsdExact } from "@/app/lib/borrow-market-rows"
 import type { BorrowSnapshot } from "@/app/dashboard/borrow-hero-state"
 
 function fixedToNumber(value: bigint, decimals: number) {

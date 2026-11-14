@@ -68,13 +68,7 @@ import { useCanonicalPriceFor } from "@/app/lib/prices/token-prices-context"
 import { useCurrency } from "@/app/lib/currency/use-currency"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import type { BorrowAssetVisual } from "@/app/lib/data/borrow-domain"
-import {
-  BORROW_POOL_CATALOG,
-  formatLtvPct,
-  formatRiskPremium,
-  getSpokeById,
-  type BorrowSpokeId,
-} from "@/app/lib/borrow-sim"
+import { formatLtvPct, formatRiskPremium, type BorrowSpokeId } from "@/app/lib/borrow-market-rows"
 
 const DASH = "\u2014"
 const MASK = "••••"
@@ -162,6 +156,7 @@ function formatMemberSince(sinceMs: number): string {
 type DashboardBorrowMarketMeta = {
   listPremiumBps?: number
   spokeId?: BorrowSpokeId
+  display?: { venue?: string }
 }
 
 type DashboardBorrowMarkets = Readonly<Record<string, DashboardBorrowMarketMeta>>
@@ -218,9 +213,8 @@ function poolIdForRow(row: DashboardWalletBalanceRow) {
 
 function poolUiDetail(row: DashboardWalletBalanceRow, markets?: DashboardBorrowMarkets) {
   const poolId = poolIdForRow(row)
-  const catalogPool = BORROW_POOL_CATALOG.find((pool) => pool.id === poolId)
-  const spokeId = markets?.[poolId]?.spokeId ?? catalogPool?.spoke
-  return { protocol: spokeId ? getSpokeById(spokeId).label : row.sourceLabel }
+  const venue = markets?.[poolId]?.display?.venue
+  return { protocol: venue || row.sourceLabel }
 }
 
 export function resolvePoolRiskPremiumBps(
@@ -229,8 +223,7 @@ export function resolvePoolRiskPremiumBps(
 ): number | undefined {
   const poolId = poolIdForRow(row)
   const livePremium = markets?.[poolId]?.listPremiumBps
-  if (livePremium != null && Number.isFinite(livePremium)) return livePremium
-  return BORROW_POOL_CATALOG.find((pool) => pool.id === poolId)?.riskPremiumBps
+  return livePremium != null && Number.isFinite(livePremium) ? livePremium : undefined
 }
 
 function TokenUsdCell({ token, usd }: { token: string; usd?: string }) {

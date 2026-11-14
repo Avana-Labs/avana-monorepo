@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest"
 import { applyMultiplyAction } from "@/app/lib/multiply-engine"
 import { buildMockMultiplySystemState } from "@/app/lib/multiply-system/mock"
 
-import { applyLendAction } from "@/app/lib/lend-engine"
+import { applyLendAction } from "@/app/lib/lend-system/model"
 import { buildMockLendSystemState } from "@/app/lib/lend-system/mock"
 
 const MULTIPLY_MARKET = "eth-usdt"

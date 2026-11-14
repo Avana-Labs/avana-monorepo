@@ -1,4 +1,4 @@
-import type { BorrowAction, BorrowMarketRecord, BorrowSystemState } from "@/app/lib/credit-engine"
+import type { BorrowAction, BorrowMarketRecord, BorrowSystemState } from "@/app/lib/borrow-system/model"
 import type { AssetDetail, PoolDetail } from "@/app/lib/borrow-detail"
 import type { BorrowPageData } from "@/app/lib/data/providers/borrow"
 import type { PortfolioBorrowTabData } from "@/app/lib/data/providers/portfolio"

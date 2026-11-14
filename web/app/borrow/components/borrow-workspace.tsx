@@ -16,8 +16,6 @@ import { actionPagePath } from "@/app/lib/action-system/contracts"
 import { borrowAssetDetailPath, borrowMarketDetailPath } from "@/app/lib/borrow-routes"
 import { triggerPageLoading } from "@/app/lib/page-loading"
 import { useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
-import { useMarketLiquidity } from "@/app/lib/convex/market-liquidity-provider"
-import { applyBorrowableAssetDelta } from "@/app/lib/market-liquidity/apply"
 import { TabsBar } from "./tabs-bar"
 import { CollateralPoolsTable } from "./collateral-pools-table"
 import { useMediaQuery } from "@/app/lib/use-media-query"
@@ -57,7 +55,6 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
   const isDesktop = useMediaQuery("(min-width: 768px)", initialIsDesktop, true)
   const { pendingRows } = pageData
   const session = useBorrowSessionContext()
-  const { deltas: liquidityDeltas } = useMarketLiquidity()
   const searchParams = useSearchParams()
   const [filters, setFilters] = useState<MarketFilterState>(EMPTY_MARKET_FILTERS)
   const [search, setSearch] = useState(() => searchParams?.get("q") ?? "")
@@ -122,7 +119,7 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
       const spokeId = asset.id.includes(":") ? asset.id.split(":")[0] : ""
       if (!spokeId) continue
       const assets = assetsBySpoke.get(spokeId) ?? []
-      assets.push(applyBorrowableAssetDelta(asset, liquidityDeltas))
+      assets.push(asset)
       assetsBySpoke.set(spokeId, assets)
     }
 
@@ -133,7 +130,7 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
       }
     }
     return next
-  }, [liquidityDeltas, pageData.borrowableAssets, poolGroups])
+  }, [pageData.borrowableAssets, poolGroups])
 
   const hasActiveFilters = search.trim().length > 0 || activeFilterCount(filters) > 0
   const clearFilters = useCallback(() => {

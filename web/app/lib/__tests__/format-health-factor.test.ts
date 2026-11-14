@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatHealthFactor } from "@/app/lib/home-sim"
+import { formatHealthFactor } from "@/app/lib/home-view-model"
 
 describe("formatHealthFactor", () => {
   it("renders a normal leveraged health factor with two decimals", () => {

@@ -1,6 +1,5 @@
 import type { DetailTransactionRow } from "@/app/lib/detail-page/transaction-history"
 import { canonicalPriceUsd } from "@/app/lib/prices/canonical"
-import { PRICE_FIXTURE } from "@/app/lib/prices/price-fixture"
 
 /** Format a token quantity for transaction tables (commas, sane precision). */
 export function formatDetailTokenAmount(value: number): string {
@@ -45,10 +44,10 @@ export type TransactionPriceContext = {
   token1Weight?: number
 }
 
-/** Frozen fixture/seed price — never the live oracle (FOR must not move with price). */
+/** Price used to turn a recorded USD amount into a token quantity: the override, else the live price. */
 export function seedPriceUsdForSymbol(symbol: string, seedOverride?: number): number {
   if (seedOverride != null && seedOverride > 0) return seedOverride
-  return PRICE_FIXTURE[symbol.toUpperCase()] ?? 1
+  return canonicalPriceUsd(symbol) ?? 1
 }
 
 function livePriceUsdForSymbol(symbol: string, ctx?: TransactionPriceContext): number {

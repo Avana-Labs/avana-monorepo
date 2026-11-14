@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { SchemaMarkup, buildBreadcrumbSchema, buildFaqSchema, buildWebPageSchema } from "@/app/components/seo/schema"
-import { getAssetDetail } from "@/app/lib/borrow-detail"
 import { applyAssetPreloadedOverlays, getAssetDetailFromConvex } from "@/app/lib/borrow-detail/convex-detail"
-import { resolveSpokeBorrowable } from "@/app/lib/borrow-system/registry"
 import { normalizeBorrowAssetRouteId } from "@/app/lib/borrow-routes"
 import { preloadAssetHero } from "@/app/lib/borrow-detail/hero-preload"
 import { preloadDetailQuickStats } from "@/app/lib/detail-page/quick-stats-preload"
@@ -30,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       path: `/borrow/assets/${assetId}`,
       keywords: ["borrow against LP tokens"],
     })
-  const detail = getAssetDetail(assetId)
+  const detail = await getAssetDetailFromConvex(assetId)
   if (!detail)
     return { title: "Asset · Avana", description: "View asset details, borrow rates, and supply data on Avana." }
   return buildSeoMetadata({
@@ -46,26 +44,21 @@ export default async function BorrowAssetPage({ params }: PageProps) {
   const { assetId } = await params
   if (isLighthouseAuditMode()) return <LighthouseAuditSurface title="Asset data" eyebrow={assetId} />
 
-  // Resolve spoke slug before fan-out so hero/QS/cashflow hit the same Convex keys as the builder.
-  // (BASE ids like "dai" must map to spoke-scoped "uni-v2:dai" — D2.)
-  const canonicalSlug = resolveSpokeBorrowable(normalizeBorrowAssetRouteId(assetId))?.id ?? assetId
+  // The route id is the services/convex slug of the debt reserve.
+  const canonicalSlug = normalizeBorrowAssetRouteId(assetId)
   const [detailRawConvex, heroBundle, quickStatsPreload, cashflowPreload] = await Promise.all([
     getAssetDetailFromConvex(assetId),
     preloadAssetHero(canonicalSlug),
     preloadDetailQuickStats("asset", canonicalSlug),
     preloadDetailCashflow("asset", canonicalSlug),
   ])
-  // Fail closed like the pool / lend / multiply detail routes: getAssetDetailFromConvex
-  // already returns null in live mode when Convex has no snapshot, so honor that with a
-  // notFound() instead of swapping the whole mock catalog detail back in. (Mock mode
-  // returns a catalog-built detail here, so the demo/Playwright routes still render.)
+  // No services/convex row for this debt reserve: 404, like the pool and lend routes.
   if (!detailRawConvex) notFound()
   const detailBase = detailRawConvex
-  const spoke = resolveSpokeBorrowable(normalizeBorrowAssetRouteId(assetId))
   const detail = applyAssetPreloadedOverlays(detailBase, {
     quickStats: readPreloadedQuickStats(quickStatsPreload),
     cashflow: readPreloadedCashflow(cashflowPreload),
-    baselinePriceSymbol: spoke?.baseAssetId ?? detailBase.hero.symbol,
+    baselinePriceSymbol: detailBase.hero.symbol,
   })
   const { feeds } = heroBundle
   const detailWithFeeds = { ...detail, ...feeds }

@@ -1,13 +1,11 @@
-import { formatCompactUsd } from "@/app/lib/borrow-sim"
+import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { formatActivityTokenAmount } from "@/app/lib/currency/format"
-import { calculateMaxWithdrawable, calculateTotalApy } from "@/app/lib/lend-engine/formulas"
-import type { LendMarket, LendSystemState } from "@/app/lib/lend-engine"
+import { calculateMaxWithdrawable, calculateTotalApy } from "@/app/lib/lend-system/model/formulas"
+import type { LendMarket, LendSystemState } from "@/app/lib/lend-system/model"
 import type { LendPageData } from "@/app/lib/data/providers/lend/types"
 import type { PortfolioLendTabData, PortfolioStrategyBucket } from "@/app/lib/data/providers/portfolio/types"
-import { LEND_ASSET_GROUPS } from "@/app/lib/data/catalog/lend/asset-groups"
-import { LEND_FEATURED_ASSETS, LEND_FEATURED_SEQUENCE } from "@/app/lib/data/catalog/lend/featured-assets"
+import { LEND_GROUP_TITLES, type LendAssetGroup, type LendFeaturedAsset } from "@/app/lib/data/lend-rows"
 import { getLocalAssetIcon } from "@/app/lib/local-asset-icons"
-import { LEND_MARKET_CATALOG } from "./catalog"
 import { formatReliableLendApyLabel } from "./illiquid-apy"
 import type { LendTransactionHistoryItem, LendWalletReadSnapshot, LendYieldSnapshot } from "./contracts"
 import { formatPercent } from "@/app/lib/format"
@@ -61,31 +59,77 @@ type LendMarketRow = {
   reserveFactor: number
 }
 
+/** Featured Lend cards: the three largest Hub assets by supply. */
+function featuredMarkets(markets: LendMarket[]): LendMarket[] {
+  return [...markets]
+    .sort((a, b) => b.totalSupplied * b.assetPriceUsd - a.totalSupplied * a.assetPriceUsd)
+    .slice(0, 3)
+}
+
 export function buildLendFeaturedSnapshots(markets: LendMarket[]): LendFeaturedSnapshot[] {
-  return LEND_FEATURED_SEQUENCE.map((featuredId) => {
-    const featured = LEND_FEATURED_ASSETS[featuredId]
-    const market = markets.find((entry) => entry.asset.symbol.toUpperCase() === featured.symbol.toUpperCase())
-    const apy = market?.totalApy ?? featured.apy / 100
-    const supplyApy = market?.supplyApy ?? featured.apy / 100
-    return {
-      marketId: market?.marketId ?? featuredId,
-      symbol: featured.symbol,
-      displayName: featured.displayName,
-      eyebrow: featured.eyebrow,
-      apyLabel: formatPercent(apy * 100),
-      apyPct: apy * 100,
-      supplyApyPct: supplyApy * 100,
-      tone: featured.tone,
-      iconUrl: featured.iconUrl,
-      href: `/lend/markets/${market?.marketId ?? featuredId}`,
-      sparklinePath: featured.path,
+  return featuredMarkets(markets).map((market) => ({
+    marketId: market.marketId,
+    symbol: market.asset.symbol,
+    displayName: market.asset.name,
+    eyebrow: market.category === "stable" ? "Stablecoin" : "Crypto",
+    apyLabel: formatPercent(market.totalApy * 100),
+    apyPct: market.totalApy * 100,
+    supplyApyPct: market.supplyApy * 100,
+    tone: market.category === "stable" ? "green" : "blue",
+    iconUrl: getLocalAssetIcon(market.asset.symbol) ?? "",
+    href: `/lend/markets/${market.marketId}`,
+  }))
+}
+
+function featuredAssetsRecord(markets: LendMarket[]): Record<string, LendFeaturedAsset> {
+  const record: Record<string, LendFeaturedAsset> = {}
+  for (const market of featuredMarkets(markets)) {
+    record[market.marketId] = {
+      id: market.marketId,
+      symbol: market.asset.symbol,
+      displayName: market.asset.name,
+      eyebrow: market.category === "stable" ? "Stablecoin" : "Crypto",
+      apy: market.totalApy * 100,
+      tone: market.category === "stable" ? "green" : "blue",
+      iconUrl: getLocalAssetIcon(market.asset.symbol) ?? "",
     }
-  })
+  }
+  return record
+}
+
+/** Lend list groups from the Hub assets: stablecoins first, then everything else. */
+function buildAssetGroups(markets: LendMarket[]): LendAssetGroup[] {
+  const groups: LendAssetGroup[] = [
+    { title: LEND_GROUP_TITLES.stable, rows: [] },
+    { title: LEND_GROUP_TITLES.crypto, rows: [] },
+  ]
+  for (const market of markets) {
+    const tvlUsd = market.totalSupplied * market.assetPriceUsd
+    const availableUsd = market.availableLiquidity * market.assetPriceUsd
+    const group = market.category === "stable" ? groups[0] : groups[1]
+    group.rows.push({
+      symbol: market.asset.symbol,
+      name: market.asset.name,
+      apy: formatPercent(market.totalApy * 100),
+      apyValue: market.totalApy * 100,
+      totalDepositsPrimary: formatTokenQuantity(market.totalSupplied, market.asset.symbol),
+      totalDepositsSecondary: formatPositiveUsd(tvlUsd),
+      totalDepositsValue: tvlUsd,
+      availableLiquidityPrimary: formatTokenQuantity(market.availableLiquidity, market.asset.symbol),
+      availableLiquiditySecondary: formatPositiveUsd(availableUsd),
+      availableLiquidityValue: availableUsd,
+      hub: "",
+      market: market.marketId,
+      logoSrc: getLocalAssetIcon(market.asset.symbol),
+      logoAlt: `${market.asset.symbol} logo`,
+    })
+  }
+  return groups.filter((group) => group.rows.length > 0)
 }
 
 const formatFractionPct = (value: number) => formatPercent(value * 100)
 
-function formatSandboxSupplyApyLabel(supplyApy: number, tvlUsd: number) {
+function formatSupplyApyLabel(supplyApy: number, tvlUsd: number) {
   return formatReliableLendApyLabel(supplyApy, tvlUsd, formatFractionPct)
 }
 
@@ -101,7 +145,7 @@ export function catalogMarketToRow(market: LendMarket): LendMarketRow {
     asset: market.asset.symbol,
     assetName: market.asset.name,
     logoSrc: getLocalAssetIcon(market.asset.symbol),
-    supplyApyLabel: formatSandboxSupplyApyLabel(market.supplyApy, tvlUsd),
+    supplyApyLabel: formatSupplyApyLabel(market.supplyApy, tvlUsd),
     rewardsApyLabel: market.rewardsApy > 0 ? formatPercent(market.rewardsApy * 100) : "No rewards",
     totalApyLabel: formatTotalApyLabel(market.totalApy, tvlUsd),
     totalSuppliedLabel: formatCompactUsd(market.totalSupplied * market.assetPriceUsd),
@@ -120,8 +164,8 @@ export function catalogMarketToRow(market: LendMarket): LendMarketRow {
 }
 
 export function buildLendPageData(_walletId: string, state?: LendSystemState): LendPageData {
-  const markets = state ? Object.values(state.markets) : LEND_MARKET_CATALOG
-  const assetGroups = LEND_ASSET_GROUPS.map((group) => ({
+  const markets = state ? Object.values(state.markets) : []
+  const assetGroups = buildAssetGroups(markets).map((group) => ({
     ...group,
     rows: group.rows.map((row) => {
       const market = markets.find((entry) => entry.asset.symbol.toUpperCase() === row.symbol.toUpperCase())
@@ -178,8 +222,8 @@ export function buildLendPageData(_walletId: string, state?: LendSystemState): L
       soon: market.status !== "active",
       event: null,
     })),
-    featuredAssets: LEND_FEATURED_ASSETS,
-    featuredSequence: LEND_FEATURED_SEQUENCE,
+    featuredAssets: featuredAssetsRecord(markets),
+    featuredSequence: featuredMarkets(markets).map((market) => market.marketId),
     featuredSnapshots: buildLendFeaturedSnapshots(markets),
     assetGroups,
   }

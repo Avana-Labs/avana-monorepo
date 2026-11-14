@@ -1,7 +1,7 @@
 import type { AssetDetail, PoolDetail } from "@/app/lib/borrow-detail"
 import type { BorrowPageData } from "@/app/lib/data/providers/borrow"
 import type { PortfolioBorrowTabData } from "@/app/lib/data/providers/portfolio"
-import type { BorrowMarketRecord } from "@/app/lib/credit-engine"
+import type { BorrowMarketRecord } from "@/app/lib/borrow-system/model"
 import type { ProductionReadAdapter, WalletReadSnapshot } from "./contracts"
 
 const NOT_IMPLEMENTED = "BLOCKED: Production read adapter is not implemented"

@@ -1,4 +1,4 @@
-import type { LendSystemState } from "@/app/lib/lend-engine"
+import type { LendSystemState } from "@/app/lib/lend-system/model"
 
 export function serializeLendSystemState(state: LendSystemState) {
   return JSON.stringify(state)

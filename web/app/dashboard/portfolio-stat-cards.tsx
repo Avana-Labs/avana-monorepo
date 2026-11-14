@@ -14,8 +14,7 @@ import { cn } from "@/lib/utils"
 import { CarouselArrowButtons, useOverflowCarousel } from "@/app/components/carousel-arrow-buttons"
 import { Eye, EyeOff } from "@/app/components/icons"
 import { HIGHLIGHT_CARD_CLASS } from "@/app/components/highlight-carousel"
-import { LEND_FEATURED_ASSETS } from "@/app/lib/data/catalog/lend/featured-assets"
-import { hasConvexClient } from "@/app/lib/convex/market-liquidity-provider"
+import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
 import { useAvanaIdentity } from "@/app/lib/avana-session/avana-sessions-provider"
 import { formatAskAIGreeting } from "@/app/lib/ask-ai/greeting"
@@ -32,7 +31,8 @@ const GRAPH_PADDING_Y = 8
 const TONE_UP = "#58d89a"
 const TONE_DOWN = "#f0444c"
 
-const FEATURED_PATHS = [LEND_FEATURED_ASSETS.usdt.path, LEND_FEATURED_ASSETS.usdc.path, LEND_FEATURED_ASSETS.gho.path]
+// No portfolio history series exists yet, so the cards draw a flat line.
+const FLAT_PATH = "M0,50L396,50"
 
 const TIME_LABELS = [
   "12:00 AM",
@@ -316,7 +316,7 @@ function PortfolioStatCardsView({
                 data-carousel-card
                 className="w-[min(320px,88%)] shrink-0 snap-start sm:w-[calc((100%-0.75rem)/2)] lg:w-[calc((100%-1.5rem)/3)]"
               >
-                <StatCardView card={card} graphPath={FEATURED_PATHS[i % FEATURED_PATHS.length]!} />
+                <StatCardView card={card} graphPath={FLAT_PATH} />
               </li>
             ))}
           </ul>

@@ -3,7 +3,7 @@
 import * as React from "react"
 import type { InterestRateCurve, InterestRateModelProbe } from "@/app/lib/borrow-detail/interest-rate-curve"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import { formatCompactUsd } from "@/app/lib/borrow-sim"
+import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { cn } from "@/lib/utils"
 import { formatPercent } from "@/app/lib/format"
 

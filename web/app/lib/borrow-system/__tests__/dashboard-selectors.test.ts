@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { calculateHealthFactorWad, currentDebtValueUsd6, formatFixed, parseFixed } from "@/app/lib/credit-engine"
-import { applyBorrowAction } from "@/app/lib/credit-engine/actions"
+import { calculateHealthFactorWad, currentDebtValueUsd6, formatFixed, parseFixed } from "@/app/lib/borrow-system/model"
+import { applyBorrowAction } from "@/app/lib/borrow-system/model/actions"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
 import { selectBorrowableAssets } from "@/app/lib/borrow-system/selectors"
 import {

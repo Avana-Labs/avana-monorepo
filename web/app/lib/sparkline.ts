@@ -1,24 +1,24 @@
-import { getDeterministicAmount, hashString } from "@/app/lib/deterministic"
+/** FNV-1a hash, for stable SVG ids. */
+function hashString(value: string) {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
 
 type SparklinePoint = {
   x: number
   y: number
 }
 
-/** Builds stable sparkline points so charts match between renders and test runs. */
-export function buildSparklinePoints(totalPoints: number, isPositive: boolean, seed: string): SparklinePoint[] {
-  const result: SparklinePoint[] = []
-
-  for (let index = 0; index < totalPoints; index++) {
-    const x = totalPoints === 1 ? 50 : (index / (totalPoints - 1)) * 100
-    const previousY = result[index - 1]?.y ?? 50
-    const delta = getDeterministicAmount(`${seed}-${index}`, isPositive ? -3 : -7, isPositive ? 7 : 3)
-    const nextY = Math.max(20, Math.min(80, previousY + delta))
-
-    result.push({ x, y: nextY })
-  }
-
-  return result
+/** A flat line: what a sparkline shows when its series has no values yet. */
+export function buildSparklinePoints(totalPoints: number, _isPositive: boolean, _seed: string): SparklinePoint[] {
+  return Array.from({ length: Math.max(1, totalPoints) }, (_, index) => ({
+    x: totalPoints <= 1 ? 50 : (index / (totalPoints - 1)) * 100,
+    y: 50,
+  }))
 }
 
 export function buildSparklineLinePath(points: SparklinePoint[]) {

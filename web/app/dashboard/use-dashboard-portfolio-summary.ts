@@ -1,9 +1,6 @@
 "use client"
 
 import { useMemo } from "react"
-import { useQuery } from "convex/react"
-import { useAuthedQueryArgs } from "@/app/lib/convex/use-authed-query-args"
-import { api } from "@/convex/_generated/api"
 import { getSwapAsset } from "@/app/lib/swap-system/catalog"
 import type { UserAssetBalance } from "@/app/lib/swap-system"
 import { buildDashboardWalletBalanceRows, selectDashboardWalletValueRows } from "@/app/lib/swap-system"
@@ -93,12 +90,8 @@ export function aggregateNetValueUsd(
     const asset = getSwapAsset(row.assetId)
     const isLp = asset?.isLpToken ?? false
     const live = isLp ? undefined : priceFor(asset?.symbol ?? row.assetId)
-    // Multiply available buckets store a USD budget. Legacy rows can contain
-    // that USD budget again in `amount`, so valuing them as `amount × price`
-    // inflates Net Value into the millions. Their stored USD value is canonical.
-    const isMultiplyAvailable = row.sourceType === "multiply_available"
     const magnitude =
-      isMultiplyAvailable || live == null || !Number.isFinite(live)
+      live == null || !Number.isFinite(live)
         ? Math.abs(stored)
         : amountIsTokenDenominated(row.amount, Math.abs(stored), live)
           ? row.amount * live
@@ -117,10 +110,6 @@ export function useDashboardPortfolioSummary(walletId: string | undefined): Dash
   const hasMounted = useHasMounted()
   const balances = useConvexProductWalletBalances(walletId)
   const priceFor = useCanonicalPriceFor()
-  const portfolio = useQuery(
-    api.sandbox.transactions.getPortfolio,
-    useAuthedQueryArgs(walletId ? { wallet: walletId } : null),
-  )
   const borrowSession = useBorrowSessionContext()
   const lendSession = useLendSessionContext()
 
@@ -181,6 +170,6 @@ export function useDashboardPortfolioSummary(walletId: string | undefined): Dash
     // products, so the headline reflects earned yield rather than frozen principal. The aggregate
     // never carries that interest, so there is no double-count with the credit-engine net.
     netValueUsd: productNetValueUsd + clientMetrics.netAccruedInterestUsd,
-    netApyPct: resolveDashboardNetApyPct(clientMetrics.netApyPct, portfolio?.netApyPct),
+    netApyPct: resolveDashboardNetApyPct(clientMetrics.netApyPct, undefined),
   }
 }

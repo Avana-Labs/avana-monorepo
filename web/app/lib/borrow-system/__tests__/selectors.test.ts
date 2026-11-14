@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-sim"
+import { BORROW_POOL_CATALOG } from "@/app/lib/borrow-market-rows"
 import { buildMockBorrowSystemState } from "@/app/lib/borrow-system/mock"
-import { calculateSpokeCreditMetrics } from "@/app/lib/credit-engine"
-import type { BorrowAssetVisual } from "@/app/lib/borrow-sim"
+import { calculateSpokeCreditMetrics } from "@/app/lib/borrow-system/model"
+import type { BorrowAssetVisual } from "@/app/lib/borrow-market-rows"
 import {
   selectAllAvailableCollateralPools,
   selectBorrowableAssets,

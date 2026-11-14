@@ -12,7 +12,7 @@ import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { TokenIcon } from "@/app/components/token-icon"
 import type { PortfolioLendTabData, PortfolioSupplyPosition } from "@/app/lib/data/providers/portfolio"
 import { LiveInterestEarnedUsd } from "@/app/dashboard/live-accrual"
-import { formatUsdExact } from "@/app/lib/borrow-sim"
+import { formatUsdExact } from "@/app/lib/borrow-market-rows"
 import { getActiveCurrency } from "@/app/lib/currency/active-rate"
 import {
   DASHBOARD_TABLE_REFERENCE_PX,

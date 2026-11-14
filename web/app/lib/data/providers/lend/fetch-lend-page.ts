@@ -1,7 +1,6 @@
 import { z } from "zod"
 import { executeSourceLoad, type DataSourceRequestContext } from "@/app/lib/data/core/source-runtime"
-import { resolveDataSourceMode } from "../source-mode"
-import { liveLendPageSource, mockLendPageSource, type LendPageSource } from "./source"
+import { liveLendPageSource, type LendPageSource } from "./source"
 import type { LendPageData } from "./types"
 
 const lendPageSchema = z.object({
@@ -37,9 +36,7 @@ const lendPageSchema = z.object({
 })
 
 function getLendPageSource(source?: LendPageSource) {
-  if (source) return source
-  const mode = resolveDataSourceMode()
-  return mode === "mock" ? mockLendPageSource : liveLendPageSource
+  return source ?? liveLendPageSource
 }
 
 function getLendPageFallback() {

@@ -1,5 +1,5 @@
 import { getActiveCurrency, withCurrencySymbol } from "@/app/lib/currency/active-rate"
-import { formatHealthFactor } from "@/app/lib/home-sim"
+import { formatHealthFactor } from "@/app/lib/home-view-model"
 
 export function formatActionInputAmount(value: number, maxDecimals = 6) {
   if (!Number.isFinite(value)) return "0"

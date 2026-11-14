@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { parseFixed } from "@/app/lib/credit-engine"
-import { applyBorrowAction } from "@/app/lib/credit-engine/actions"
+import { parseFixed } from "@/app/lib/borrow-system/model"
+import { applyBorrowAction } from "@/app/lib/borrow-system/model/actions"
 import {
   EXAMPLE_UNI_MARKET_ID,
   EXAMPLE_UNI_USDC_ASSET_ID,
   makeExampleBorrowSystemState,
-} from "@/app/lib/credit-engine/__tests__/fixtures"
+} from "@/app/lib/borrow-system/model/__tests__/fixtures"
 import { buildBorrowBalanceMetrics } from "@/app/dashboard/dashboard-tab-metrics"
 
 // One dollar of rounding tolerance for share-index arithmetic.

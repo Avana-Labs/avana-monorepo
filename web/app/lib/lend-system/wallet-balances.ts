@@ -1,5 +1,5 @@
-import type { LendMarket, LendSystemState } from "@/app/lib/lend-engine"
-import { resolveLendMarketId } from "./catalog"
+import type { LendMarket, LendSystemState } from "@/app/lib/lend-system/model"
+import { resolveLendMarketId } from "./market-ids"
 
 export function getWalletBalanceForLendMarket(
   state: Pick<Partial<LendSystemState>, "walletBalances">,
