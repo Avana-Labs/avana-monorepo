@@ -17,6 +17,7 @@ import {
 } from "@avana/services-common";
 import { ABI_HASH } from "@avana/protocol/abis";
 import { type StreamKey, parseStreamKey } from "./discovery/indexerStream.ts";
+import { parseLargest } from "./monitoring/funding.ts";
 
 export type KeeperMode = "observe" | "active";
 export type KeeperRole = "primary" | "standby";
@@ -29,6 +30,12 @@ export interface ChainConfig {
   readonly kmsKeyId: string | undefined;
   /** Worst-case wei one transaction may cost (KEEPER_GAS_CEILING_WEI_<CHAIN>); required wherever a signer is set. */
   readonly gasCeilingWei: bigint | undefined;
+  /** Largest single debtToCover the chain's caps allow, per debt asset (lower-case), base units: M-16 and M-17. */
+  readonly largestDebtToCover: ReadonlyMap<string, bigint>;
+  /** The signer's expected daily gas spend, the floor of M-17's measured median; required wherever a signer is set. */
+  readonly gasDailySpendWei: bigint | undefined;
+  /** This chain's instance at the monitoring service; null when KEEPER_MONITOR_URL is unset (log lines only). */
+  readonly monitor: { readonly url: string; readonly instance: string; readonly token: string } | null;
 }
 
 export interface KeeperConfig {
@@ -63,6 +70,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     const m = loadManifest(p, ABI_HASH);
     return [m.chainId, m] as const;
   }));
+  const monitorUrl = optionalEnv(env, "KEEPER_MONITOR_URL");
+  if (monitorUrl !== undefined && !/^https?:\/\//.test(monitorUrl)) throw new Error("KEEPER_MONITOR_URL must be an http(s) URL");
   const chains = chainsOf(set).filter((c) => manifests.has(c.id)).map((chain): ChainConfig => ({
     chain,
     manifest: manifests.get(chain.id)!,
@@ -74,6 +83,11 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     },
     kmsKeyId: optionalEnv(env, `KEEPER_KMS_KEY_ID_${chain.envSuffix}`),
     gasCeilingWei: gasCeiling(env, `KEEPER_GAS_CEILING_WEI_${chain.envSuffix}`),
+    largestDebtToCover: parseLargest(listEnv(env, `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`), `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`),
+    gasDailySpendWei: gasCeiling(env, `KEEPER_GAS_DAILY_SPEND_WEI_${chain.envSuffix}`),
+    monitor: monitorUrl
+      ? { url: monitorUrl, instance: requireEnv(env, `KEEPER_MONITOR_INSTANCE_${chain.envSuffix}`), token: requireEnv(env, `KEEPER_MONITOR_TOKEN_${chain.envSuffix}`) }
+      : null,
   }));
   if (chains.length === 0) throw new Error(`no verified manifest for any ${set} chain`);
   for (const c of chains) {
@@ -83,6 +97,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     }
     // A signer without a fee ceiling could drain its gas wallet on a fault: refused at startup.
     if (c.kmsKeyId && c.gasCeilingWei === undefined) throw new Error(`KEEPER_GAS_CEILING_WEI_${c.chain.envSuffix} is required with a signer`);
+    // M-17's gas level needs a spend to compare with before 7 days are measured.
+    if (c.kmsKeyId && c.gasDailySpendWei === undefined) throw new Error(`KEEPER_GAS_DAILY_SPEND_WEI_${c.chain.envSuffix} is required with a signer`);
   }
 
   const shard = role === "standby" ? null : { index: intEnv(env, "KEEPER_SHARD"), count: intEnv(env, "KEEPER_SHARD_COUNT") };

@@ -9,6 +9,7 @@ import { KMSClient } from "@aws-sdk/client-kms";
 import { type Address, type PublicClient, createPublicClient, http, parseAbiItem, webSocket } from "viem";
 import { awsKmsKey } from "./adapters/awsKms.ts";
 import { logAlertSink } from "./adapters/logAlertSink.ts";
+import { monitorSink, teeSink } from "./adapters/monitorSink.ts";
 import { l1DataFee, paysL1DataFee } from "./chain/gas.ts";
 import { kmsSigner } from "./chain/signer.ts";
 import { type ChainConfig, loadConfig } from "./config.ts";
@@ -17,6 +18,8 @@ import { getLogsChunked } from "./discovery/backfill.ts";
 import { IndexerStream, applyStreamRecords } from "./discovery/indexerStream.ts";
 import { headWatchdog } from "./discovery/stream.ts";
 import { InventoryBook } from "./inventory.ts";
+import type { AlertSink } from "./monitoring/alerts.ts";
+import { SpendTracker, fundingCheck } from "./monitoring/funding.ts";
 import { chainLoop } from "./runtime/chainLoop.ts";
 import { Submitter } from "./runtime/submitter.ts";
 import { type SafetyState, effectiveMode } from "./safety/guards.ts";
@@ -79,6 +82,13 @@ for (const cfg of config.chains) {
   const cache = new AccountCache();
   const inventory = new InventoryBook();
 
+  // Alerts go to the log and, when configured, to the monitoring service as this chain's instance. An alert raised
+  // outside a pass (the Submitter's gas ceiling) carries the last processed head, so the monitor can hold it.
+  let lastHead = 0n;
+  const toMonitor = cfg.monitor ? monitorSink(cfg.monitor, { log: line }) : null;
+  const sink = toMonitor ? teeSink(logAlertSink, toMonitor) : logAlertSink;
+  const alerts: AlertSink = { send: (a) => sink.send(a.blockNumber === 0n ? { ...a, blockNumber: lastHead } : a) };
+
   const kms = cfg.kmsKeyId ? awsKmsKey(new KMSClient({}), cfg.kmsKeyId) : null;
   const signerAddress = kms ? await kms.address() : null;
   const helperEntry = signerAddress
@@ -90,7 +100,7 @@ for (const cfg of config.chains) {
         ceilingWei: cfg.gasCeilingWei!,
         l1Fee: paysL1DataFee(cfg.chain) ? (tx) => l1DataFee(primary, tx) : null,
         onCeiling: (detail) =>
-          void logAlertSink.send({ signal: "M-17", level: "page", chainId: cfg.chain.id, blockNumber: 0n, subject: detail.subject ?? "", detail: { ...detail, note: "gas ceiling" } }),
+          void alerts.send({ signal: "M-17", level: "page", chainId: cfg.chain.id, blockNumber: 0n, subject: detail.subject ?? "", detail: { ...detail, note: "gas ceiling" } }),
       })
     : null;
 
@@ -136,7 +146,7 @@ for (const cfg of config.chains) {
     fallback,
     cache,
     safety,
-    alerts: logAlertSink,
+    alerts,
     submitter,
     from: helperEntry.signer,
     helper: { address: helperEntry.address, maxTopUpBps },
@@ -145,6 +155,22 @@ for (const cfg of config.chains) {
     },
     // The indexer stream refreshes the cache before each pass; its reconnect or reorg re-reads RPC logs from finality first.
     beforePass: pollStream,
+    funding: fundingCheck({
+      chainId: cfg.chain.id,
+      primary,
+      fallback,
+      alerts,
+      assets: [...new Map(cfg.manifest.debtReserves.map((r) => [r.asset.toLowerCase(), r.asset])).values()],
+      fundingSafe: helperEntry.fundingSafe,
+      helper: helperEntry.address,
+      largest: cfg.largestDebtToCover,
+      free: (asset, safeBalance) => inventory.free(cfg.chain.id, asset, safeBalance),
+      gas: signerAddress ? { signer: signerAddress, dailyFloorWei: cfg.gasDailySpendWei!, spend: new SpendTracker() } : null,
+    }),
+    processed: (head) => {
+      lastHead = head.number;
+      toMonitor?.heartbeat(head.number);
+    },
   });
 
   // Reconnect backfill: after a stalled stream, logs from the last finalized block are re-read before new heads.

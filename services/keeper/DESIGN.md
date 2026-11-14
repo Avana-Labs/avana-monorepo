@@ -23,7 +23,14 @@ Each chain processes one head at a time; heads arriving during a pass queue behi
 3. **Own status**: `isApprovedKeeper`, `isFrozenAddress` and `activeKeeperCount` of the instance's helper. A frozen helper stops every submission on that chain.
 4. **Jobs**, each through the pipeline below: liquidation, `settlePending`, oracle pokes, breaker and configuration pokes.
 5. **Follow-ups** of pending transactions (`chain/submit.ts`, `runtime/submitter.ts`).
-6. **Block-cadence alerts** (`monitoring/`), each page confirmed on the fallback provider at `B`.
+6. **Block-cadence alerts** (`monitoring/`), each page confirmed on the fallback provider at `B`: `M-09` per account; `M-16`, the funding Safe's balance of each debt asset less open reservations, against the largest single `debtToCover` the chain's caps allow (`KEEPER_LARGEST_DEBT_TO_COVER_<CHAIN>`, from each listing's REQ-FLASH-008 sizing; 150 % warns, 100 % pages; an asset without one warns); `M-17`, the helper's `maxFlashLoan` of each debt asset against the same size (2x / 1x) and the signer's gas balance against its daily spend (3 days / 1 day), the spend being the median of the measured daily balance decreases over 7 days, never below `KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>` (`monitoring/funding.ts`). A failed read is logged (`keeper.fundingCheck`) and the pass ends normally.
+7. **Heartbeat**: the head is reported processed to the monitoring service.
+
+## Monitoring service
+
+Every alert is a `keeper.alert` log line and, with `KEEPER_MONITOR_URL` set, is also posted to the monitoring service (`adapters/monitorSink.ts`): `POST /v1/keeper/alerts` as this chain's instance (`KEEPER_MONITOR_INSTANCE_<CHAIN>`, one of the monitor's `MONITOR_KEEPER_INSTANCES`) with its bearer token (`KEEPER_MONITOR_TOKEN_<CHAIN>`), and `POST /v1/keeper/heartbeat` with each processed head. The monitor holds an alert open while it keeps arriving and resolves it two blocks after the last one; an instance whose heartbeat falls 3 blocks behind pages its on-call engineer. Posting runs in the background and never delays a pass: a failed post keeps its lines (up to 1,000, oldest dropped first) and is retried on the next alert or heartbeat, an outage is logged once (`keeper.monitorSink`), and lines the monitor refuses (422) are logged and dropped. An alert raised outside a pass (the gas ceiling) carries the last processed head.
+
+`M-10` is judged per market: a revert in the keeper's simulation counts once per account per hour in its market (1 account warns, 3 page; `InsufficientProceeds` and `NoRouteAvailable` page at once), and is sent with the subject `market:<marketId>`, the account and reason in the detail (`monitoring/m10.ts`). A single account that keeps reverting is `M-09`'s to escalate. `RouteFailed` events and the share of collateral seized are counted by the monitor from chain events.
 
 ## The pipeline
 

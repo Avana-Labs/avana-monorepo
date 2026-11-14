@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // One chain's loop. Each new head: detect a reorg, read the instance's own status, run every job through the
-// pipeline at that block, follow up pending transactions, then evaluate the block-cadence alerts. Blocks are
+// pipeline at that block, follow up pending transactions, then evaluate the block-cadence alerts (M-09, then M-16 and
+// M-17) and report the head as processed (the monitor's heartbeat). Blocks are
 // processed one at a time; a head that arrives during a pass is processed after it, newest first.
 
 import { type Address, type PublicClient, decodeFunctionResult, encodeFunctionData } from "viem";
@@ -15,7 +16,9 @@ import { breakerPokeJob } from "../jobs/breakerPoke.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
 import { PokeBook, oraclePokeJob } from "../jobs/oraclePoke.ts";
 import { settlePendingJob } from "../jobs/settlePending.ts";
+import { blocksFor } from "@avana/services-common";
 import { type AlertSink, m09Level, raise } from "../monitoring/alerts.ts";
+import { RevertWindow, m10Level } from "../monitoring/m10.ts";
 import { type PipelineDeps, runJob } from "../pipeline.ts";
 import { type SafetyState, effectiveMode } from "../safety/guards.ts";
 import type { BlockContext, Job } from "../types.ts";
@@ -38,14 +41,29 @@ export interface ChainLoopDeps {
   onReorg(head: Head): Promise<void>;
   /** Polls the indexer stream before the pass (discovery/indexerStream.ts); a failure never stops the pass. */
   beforePass?(head: Head): Promise<void>;
+  /** M-16 and M-17 at the head after the pass (monitoring/funding.ts); a failed read is logged, never stops the loop. */
+  funding?(head: Head): Promise<void>;
+  /** The head this instance has finished processing: the monitor's heartbeat. */
+  processed?(head: Head): void;
 }
 
 export function chainLoop(d: ChainLoopDeps) {
   const book = new PokeBook();
   const hints = new Map<string, RetryHint>();
   let previous: Head | null = null;
-  const alert = (signal: `M-${string}`, level: "warn" | "page", subject: string, detail: Readonly<Record<string, string>>) =>
-    void d.alerts.send({ signal, level, chainId: d.cfg.chain.id, blockNumber: previous?.number ?? 0n, subject, detail });
+  const reverts = new RevertWindow(BigInt(blocksFor(d.cfg.chain, 3_600)));
+  const alert = (signal: `M-${string}`, level: "warn" | "page", subject: string, detail: Readonly<Record<string, string>>) => {
+    const blockNumber = previous?.number ?? 0n;
+    // M-10 is judged per market: the account's market from the cache, the account and its reason in the detail.
+    const account = signal === "M-10" ? d.cache.ofChain(d.cfg.chain.id).find((x) => subject.endsWith(x.proxy)) : undefined;
+    if (account) {
+      const market = account.marketId.toString(10);
+      const accounts = reverts.record(market, account.proxy, blockNumber);
+      const m10 = { account: subject, accountsInHour: String(accounts), playbook: "P-04", ...detail };
+      return void d.alerts.send({ signal, level: m10Level(accounts, level), chainId: d.cfg.chain.id, blockNumber, subject: `market:${market}`, detail: m10 });
+    }
+    void d.alerts.send({ signal, level, chainId: d.cfg.chain.id, blockNumber, subject, detail });
+  };
   const jobs: Job<any, any>[] = [
     liquidationJob({
       cache: d.cache,
@@ -125,5 +143,13 @@ export function chainLoop(d: ChainLoopDeps) {
         async () => (await createChainReader(d.fallback, d.cfg.manifest, head.number).accountData([a])).get(a.proxy)!.healthFactor < 10n ** 18n,
       );
     }
+
+    try {
+      await d.funding?.(head);
+    } catch (err) {
+      process.stdout.write(`${JSON.stringify({ type: "keeper.fundingCheck", chainId, blockNumber: head.number.toString(10), error: String(err) })}
+`);
+    }
+    d.processed?.(head);
   };
 }
