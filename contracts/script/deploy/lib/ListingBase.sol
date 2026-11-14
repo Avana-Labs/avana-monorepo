@@ -47,6 +47,15 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     IMarketRegistry internal registry;
     IParameterStore internal store;
 
+    // The `listing.tokens` then `listing.debtAssets` entries, indexed once by `_loadListing`: every symbol and address
+    // lookup reads these instead of the config. Each config read copies the whole file into memory, which a script run
+    // never frees, and a lookup scanning the lists that way made the exotic pass's listing (ten markets) run out of the
+    // script's memory (MemoryOOG).
+    bytes32[] internal entrySymbols;
+    string[] internal entryKeys;
+    address[] internal entryTokens;
+    uint256 internal poolTokenEntries;
+
     function _loadListing() internal {
         cfg = vm.readFile(_configPath(_network()));
         avanaJson = vm.readFile(_outputPath("avana"));
@@ -54,6 +63,17 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
         registry = IMarketRegistry(vm.parseJsonAddress(avanaJson, ".marketRegistry.proxy"));
         store = IParameterStore(vm.parseJsonAddress(avanaJson, ".parameterStore.proxy"));
         release = vm.parseJsonString(avanaJson, ".release");
+        string[2] memory lists = ["tokens", "debtAssets"];
+        for (uint256 l = 0; l < 2; ++l) {
+            uint256 n = _count(cfg, string.concat(".listing.", lists[l]));
+            for (uint256 i = 0; i < n; ++i) {
+                string memory k = _at(lists[l], i);
+                entrySymbols.push(keccak256(bytes(_str(string.concat(k, ".symbol")))));
+                entryKeys.push(k);
+                entryTokens.push(_addr(cfg, string.concat(k, ".address")));
+            }
+            if (l == 0) poolTokenEntries = n;
+        }
     }
 
     // ─── Config and outputs ───
@@ -87,21 +107,26 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _symbolKey(
         string memory symbol
     ) internal view returns (string memory) {
-        string[2] memory lists = ["tokens", "debtAssets"];
-        for (uint256 l = 0; l < 2; ++l) {
-            uint256 n = _count(cfg, string.concat(".listing.", lists[l]));
-            for (uint256 i = 0; i < n; ++i) {
-                if (_eq(_str(string.concat(_at(lists[l], i), ".symbol")), symbol)) return _at(lists[l], i);
-            }
-        }
-        revert(string.concat("no listing entry for ", symbol));
+        return entryKeys[_entryOf(symbol)];
     }
 
     /// @notice A listed token's address: a literal in the config, or a `$world:` reference on test networks.
     function _token(
         string memory symbol
     ) internal view returns (address) {
-        return _addr(cfg, string.concat(_symbolKey(symbol), ".address"));
+        return entryTokens[_entryOf(symbol)];
+    }
+
+    /// @notice The index of the first `listing.tokens` or `listing.debtAssets` entry of a symbol.
+    function _entryOf(
+        string memory symbol
+    ) private view returns (uint256) {
+        bytes32 h = keccak256(bytes(symbol));
+        uint256 n = entrySymbols.length;
+        for (uint256 i = 0; i < n; ++i) {
+            if (entrySymbols[i] == h) return i;
+        }
+        revert(string.concat("no listing entry for ", symbol));
     }
 
     /// @notice A listed token's Chainlink feed of `role` (`primary`, `alternate`, `standby`, `second`).
@@ -176,10 +201,8 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _feedOfToken(
         address token
     ) internal view returns (address) {
-        uint256 n = _count(cfg, ".listing.tokens");
-        for (uint256 i = 0; i < n; ++i) {
-            string memory sym = _str(string.concat(_at("tokens", i), ".symbol"));
-            if (_token(sym) == token) return _feed(sym, "primary");
+        for (uint256 i = 0; i < poolTokenEntries; ++i) {
+            if (entryTokens[i] == token) return _addr(cfg, string.concat(entryKeys[i], ".feeds.primary"));
         }
         revert("token is not a listed pool token");
     }
@@ -188,9 +211,8 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _tokenKey(
         address token
     ) internal view returns (string memory) {
-        uint256 n = _count(cfg, ".listing.tokens");
-        for (uint256 i = 0; i < n; ++i) {
-            if (_token(_str(string.concat(_at("tokens", i), ".symbol"))) == token) return _at("tokens", i);
+        for (uint256 i = 0; i < poolTokenEntries; ++i) {
+            if (entryTokens[i] == token) return entryKeys[i];
         }
         return "";
     }

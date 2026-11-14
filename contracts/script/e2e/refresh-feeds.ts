@@ -15,6 +15,8 @@ import { type Address, type Hex, type PublicClient, createPublicClient, createWa
 import { OCR2_ABI, transmit } from "./scenarios/ocr2.ts";
 
 const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+/** A loaded machine answers a burst of transmits slowly: viem's default 10 s request timeout failed a refresh there. */
+export const RPC_TIMEOUT_MS = 120_000;
 
 /** Every (symbol, aggregator, proxy) of the world, or of `symbols` when given. */
 export function worldFeeds(network: string, symbols?: readonly string[]) {
@@ -39,7 +41,7 @@ export async function refreshFeeds(
   network: string,
   opts: { symbols?: readonly string[]; prices?: Record<string, bigint> } = {},
 ) {
-  const wallet = createWalletClient({ transport: http(process.env.RPC_ANVIL ?? "http://127.0.0.1:8545") });
+  const wallet = createWalletClient({ transport: http(process.env.RPC_ANVIL ?? "http://127.0.0.1:8545", { timeout: RPC_TIMEOUT_MS }) });
   const feeds = worldFeeds(network, opts.symbols);
   const hashes: Hex[] = [];
   for (const f of feeds) {
@@ -60,7 +62,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const i = process.argv.indexOf(`--${n}`);
     return i === -1 ? undefined : process.argv[i + 1];
   };
-  const client = createPublicClient({ transport: http(process.env.RPC_ANVIL ?? "http://127.0.0.1:8545") }) as PublicClient;
+  const client = createPublicClient({ transport: http(process.env.RPC_ANVIL ?? "http://127.0.0.1:8545", { timeout: RPC_TIMEOUT_MS }) }) as PublicClient;
   const prices: Record<string, bigint> = {};
   for (const p of (arg("price") ?? "").split(",").filter(Boolean)) {
     const [s, v] = p.split("=");

@@ -99,7 +99,7 @@ const withErrors = (abi: readonly unknown[]) => [...abi, ...ERRORS] as readonly 
 
 // ─── Constants ───
 
-const WAD = 10n ** 18n;
+export const WAD = 10n ** 18n;
 const RAY = 10n ** 27n;
 const ONE_USD = 100_000_000n;
 /** Gas for `poke()`: the LPOracle's and the DebtOracle's `pokeMinGas` is 1,000,000 at entry. */
@@ -136,7 +136,7 @@ const WALLETS = {
 // ─── Types ───
 
 /** One market of listing-markets.json. */
-interface Market {
+export interface Market {
   readonly name: string;
   readonly marketId: bigint;
   readonly integrationId: number;
@@ -156,7 +156,7 @@ interface Market {
   readonly vaultToken: Address;
 }
 
-interface Position {
+export interface Position {
   readonly tokenId: bigint;
   readonly key: Hex;
   readonly npm: Address;
@@ -164,7 +164,7 @@ interface Position {
   readonly amounts: readonly [bigint, bigint];
 }
 
-interface Account {
+export interface Account {
   readonly proxy: Address;
   readonly credited: bigint;
   readonly collateralReserveId: bigint;
@@ -172,14 +172,14 @@ interface Account {
 }
 
 /** Raised by a step whose failure ends the scenario; `run` turns it into a fail with the numbers so far. */
-class StepError extends Error {}
+export class StepError extends Error {}
 
 // ─── Small helpers ───
 
 const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-const pct = (x: bigint, bps: bigint) => (x * bps) / 10_000n;
-const fmt = (x: bigint, decimals: number) => formatUnits(x, decimals);
-const usd8 = (x: bigint) => `$${formatUnits(x, 8)}`;
+export const pct = (x: bigint, bps: bigint) => (x * bps) / 10_000n;
+export const fmt = (x: bigint, decimals: number) => formatUnits(x, decimals);
+export const usd8 = (x: bigint) => `$${formatUnits(x, 8)}`;
 const stateName = (s: number) => STATES[s] ?? `state ${s}`;
 
 function isqrt(n: bigint): bigint {
@@ -213,7 +213,7 @@ function errorName(e: unknown): string {
 
 // ─── The scenario environment ───
 
-class Env {
+export class Env {
   readonly ctx: ScenarioContext;
   readonly numbers: Record<string, string> = {};
   readonly adapter: Address;
@@ -677,7 +677,7 @@ class Env {
 }
 
 /** Runs a scenario body; a StepError or any other throw becomes a fail with the numbers gathered so far. */
-async function runWith(ctx: ScenarioContext, body: (e: Env) => Promise<{ ok: boolean; detail: string }>): Promise<ScenarioRun> {
+export async function runWith(ctx: ScenarioContext, body: (e: Env) => Promise<{ ok: boolean; detail: string }>): Promise<ScenarioRun> {
   let e: Env | undefined;
   try {
     e = new Env(ctx);
