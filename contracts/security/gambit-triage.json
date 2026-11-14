@@ -147,6 +147,15 @@
       "reason": "Equivalent: PARAMS_HASH_SLOT is compared only in the lender callback in the same condition as STATE_SLOT == STATE_OPEN, and _openContext writes it before setting STATE_OPEN; with STATE_SLOT reset to STATE_NONE a stale hash is never read.",
       "approval": "pending (Josue)",
       "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "767fffb6f2c6c3f9",
+      "check": "BinaryOpMutation",
+      "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
+      "function": "DebtOracleEvaluation._evaluate",
+      "reason": "Equivalent in reachable states: the age term is evaluated only when the state is Live, where every served leg passed DebtOracleReads' checks (updatedAt <= block.timestamp and age <= its feedMaxAge, at most a few days). Then 0 <= block.timestamp - servedUpdatedAt < servedUpdatedAt for any timestamp above twice that age (after early 1970), so block.timestamp % servedUpdatedAt equals the difference. The borrow-age gate itself is covered by test_TEST_276_alternateHeldToItsBorrowAge and test_TEST_276_feedFreshUntilHeartbeatPlusMargin.",
+      "approval": "pending (Josue)",
+      "review": "mutation gate run 43492416937, equivalent mutant"
     }
   ]
 }
