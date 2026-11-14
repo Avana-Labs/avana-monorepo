@@ -70,3 +70,23 @@ export function canonicalJson(value: unknown): string {
   }
   return JSON.stringify(value);
 }
+
+/** At most this many records per history page (`/export/v1/history`); a page still never splits a block. */
+export const HISTORY_MAX_RECORDS = 500;
+
+/**
+ * Older activity of one wallet (EXPORT.md, "Older history"): the records naming the wallet or one of its attributed
+ * proxies, newest first, from blocks before `before` and no later than the export's servable block. Shown, not stored.
+ */
+export interface HistoryPage {
+  readonly schemaVersion: number;
+  readonly chainId: number;
+  readonly wallet: HexString;
+  /** The wallet's attributed proxies on the chain (both creation events seen), lower-case. */
+  readonly proxies: readonly HexString[];
+  /** The exclusive upper block the request named, or the servable block + 1 when it named none. */
+  readonly before: DecimalString;
+  readonly records: readonly ExportRecord[];
+  /** `before` of the next (older) page; null when no older record exists. */
+  readonly next: { readonly before: DecimalString } | null;
+}

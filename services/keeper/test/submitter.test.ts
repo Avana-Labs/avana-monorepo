@@ -153,3 +153,48 @@ describe("reorgs", () => {
     expect(s.mined.size).toBe(0);
   });
 });
+
+describe("follow-ups", () => {
+  it("waits in the block the transaction was sent in, even when its simulation already fails", async () => {
+    // A poke sent at block 10 and mined at once (anvil): state read at block 10 cannot show it, and its re-simulation
+    // fails because the oracle is already poked; cancelling there would send at a consumed nonce.
+    const { s, post } = setup({ ceilingWei: 10n ** 30n });
+    const poke: TxPlan = { ...plan, job: "oraclePoke", subject: `1:${addr(0x0c)}`, deadline: null, reservations: [] };
+    await s.submit(ctx(10n), poke, sim);
+    const client = (s as unknown as { client: { call: () => Promise<unknown> } }).client;
+    client.call = async () => {
+      throw new Error("already poked");
+    };
+    await s.followUps(ctx(10n), async () => true, () => {});
+    expect(post).toHaveBeenCalledOnce();
+    expect(s.pending.has(poke.subject)).toBe(true);
+  });
+
+  it("logs a refused cancellation and keeps the transaction pending; the next block finds it mined", async () => {
+    const { s, state, post, inventory } = setup({ ceilingWei: 10n ** 30n });
+    await s.submit(ctx(10n), plan, sim);
+    // Past the deadline, no longer due, 2 blocks on: cancel. The node refuses it (the original was mined meanwhile).
+    post.mockRejectedValueOnce(new Error("nonce too low"));
+    await expect(s.followUps(ctx(12n, 2_000n), async () => false, () => {})).resolves.toBeUndefined();
+    expect(lines).toContainEqual(expect.objectContaining({ outcome: "sendRefused", nonce: 5, reason: expect.stringContaining("refused") }));
+    expect(s.pending.has(plan.subject)).toBe(true);
+    expect(inventory.reserved(1, ASSET)).toBe(500n);
+
+    state.confirmed = 6;
+    const done = vi.fn();
+    await s.followUps(ctx(13n, 2_012n), async () => false, done);
+    expect(done).toHaveBeenCalledOnce();
+    expect(s.pending.size).toBe(0);
+    expect(inventory.reserved(1, ASSET)).toBe(0n);
+  });
+
+  it("logs a refused replacement and keeps the original hash", async () => {
+    const { s, post } = setup({ ceilingWei: 10n ** 30n });
+    await s.submit(ctx(10n), plan, sim);
+    const hash = s.pending.get(plan.subject)!.hash;
+    post.mockRejectedValueOnce(new Error("replacement underpriced"));
+    await s.followUps(ctx(11n), async () => true, () => {});
+    expect(s.pending.get(plan.subject)!.hash).toBe(hash);
+    expect(lines).toContainEqual(expect.objectContaining({ outcome: "sendRefused", txHash: hash }));
+  });
+});

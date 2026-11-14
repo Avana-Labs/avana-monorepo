@@ -9,8 +9,8 @@ Ponder indexer with a PostgreSQL store for Avana and Aave V4 events on Ethereum 
 | `src/handlers/` | One file per area; every event handler writes the `event_log` row first, except pool swaps, mints and burns, which only feed the pool's series (`pools.ts`); `series.ts` is the hourly sampler |
 | `src/lib/` | Provenance, the log writer, log-only registration, the series writer and the pool series aggregation |
 | `src/config/` | ABIs from `packages/protocol`, the factory events taken from them, and manifest-driven sources |
-| `test/` | Unit tests (vitest): factory events and log-only subscriptions against the ABIs, export authentication, the keeper stream's paging rules and kinds, the snapshot reader's ABI fragments against the generated ABIs, pool series aggregation |
-| `src/api/` | The authenticated export (event pages, series pages, pool history) and the keeper stream, the only HTTP routes besides Ponder's `/health` and `/ready` |
+| `test/` | Unit tests (vitest): factory events and log-only subscriptions against the ABIs, export authentication, the keeper stream's paging rules and kinds, the wallet history's request, parties and paging, the snapshot reader's ABI fragments against the generated ABIs, pool series aggregation |
+| `src/api/` | The authenticated export (event pages, series pages, pool history, wallet history) and the keeper stream, the only HTTP routes besides Ponder's `/health` and `/ready` |
 
 ## Configuration
 

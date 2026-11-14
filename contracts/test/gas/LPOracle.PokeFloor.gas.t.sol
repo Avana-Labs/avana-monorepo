@@ -91,6 +91,8 @@ contract LPOraclePokeFloorGasTest is LPOracleGasFixture {
         emit log_named_uint("binding read: gas used before it, u_k", readBound - 1 - left);
         emit log_named_uint("binding read: ceil(64 G_k / 63) + POST_CALL_GAS", required);
         emit log_named_uint("smallest entry gas at which poke completes", minimum);
+        vm.snapshotValue("PokeFloor", "LPOracleCL_twoToken_worstCase_used", used);
+        vm.snapshotValue("PokeFloor", "LPOracleCL_twoToken_worstCase_minimumEntryGas", minimum);
         assertLe(minimum, POKE_MIN_GAS_FLOOR_2, "POKE_MIN_GAS_FLOOR");
         (bool ok,) = _pokeWith(POKE_MIN_GAS_FLOOR_2);
         assertTrue(ok, "poke at the floor");
