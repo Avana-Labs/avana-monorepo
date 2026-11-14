@@ -7,6 +7,7 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 | Path | Contents |
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
+| `monitor/` | The monitoring service: the signals `M-01` to `M-29` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
 | `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
 | `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the ParameterStore's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
@@ -15,7 +16,7 @@ The indexer, the keeper and the monitoring service read addresses and start bloc
 
 ## Build and test
 
-`services/common`, `services/indexer`, `services/keeper`, `services/convex` and `packages/protocol` form one npm workspace. Its root is the repository's [`package.json`](../package.json), with a single `package-lock.json` beside it; `@avana/services-common` and `@avana/protocol` are linked from the workspace with `file:` and never fetched from a registry. Node is the version in [`.nvmrc`](../.nvmrc) (22.18.0) and every direct dependency is pinned to an exact version.
+`services/common`, `services/indexer`, `services/keeper`, `services/monitor`, `services/convex` and `packages/protocol` form one npm workspace. Its root is the repository's [`package.json`](../package.json), with a single `package-lock.json` beside it; `@avana/services-common` and `@avana/protocol` are linked from the workspace with `file:` and never fetched from a registry. Node is the version in [`.nvmrc`](../.nvmrc) (22.18.0) and every direct dependency is pinned to an exact version.
 
 ```bash
 npm ci --ignore-scripts                        # at the repository root: installs every package, runs no install scripts
@@ -30,6 +31,7 @@ npm run test -w services/keeper                # one package
 | `services/common` | Manifest loading (ABI-hash refusal, exact bigint IDs), environment reads, chain lookup, provenance keys and ordering; series buckets, merge rules and gap filling; Hub accounting identities on the fixture snapshot, cap room and shared liquidity, rate conversions; the snapshot reader against a scripted multicall |
 | `services/indexer` | Factory events match the generated ABIs and decode the child address; every log-only event exists in its contract's ABI; export authentication (signature, key rotation, clock skew); the snapshot reader's ABI fragments against the generated ABIs; pool series aggregation |
 | `services/convex` | Spoke slices reconcile to the Hub totals the Lend page shows; the frontend fee (10 bps on each action, the 25 bps ceiling, the LP-value basis, rounding down) and fee + gas totals; chart buckets and quick stats; export page checks, request signing and listing metadata hashes; activity feeds by page |
+| `services/monitor` | Signal catalog against this README; snapshot rules at their boundaries; alert lifecycle, routing and its refusals; PagerDuty and webhook payloads and retries; second-provider confirmation of pages; keeper ingest and heartbeats; one round end to end; configuration refusals |
 | `services/keeper` | Liquidation decision and sizing rules at their boundaries; the pipeline sends only after a successful simulation with every guard passing, pages `M-26` on a code mismatch and logs observe-only calls |
 | `packages/protocol` | `ABI_HASH` matches the committed ABIs; no selector collision inside an ABI |
 

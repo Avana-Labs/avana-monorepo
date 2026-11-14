@@ -6,7 +6,7 @@
 //   POST /v1/keeper/alerts     { "instance": "...", "alerts": [ <keeper.alert line>, ... ] }
 //   POST /v1/keeper/heartbeat  { "instance": "...", "blockNumber": "123" }
 //   GET  /v1/status            open alerts (status token)
-//   GET  /healthz              200 while the process runs
+//   GET  /healthz              200, or 503 naming the chains without a recent successful round
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
@@ -47,13 +47,22 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 const json = (res: ServerResponse, status: number, body: unknown) => res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
 
-export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: () => readonly Alert[]): Server {
+export interface Health {
+  readonly ok: boolean;
+  /** Chains without a successful round for too long. */
+  readonly stale: readonly string[];
+}
+
+export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: () => readonly Alert[], health: () => Health = () => ({ ok: true, stale: [] })): Server {
   const instances = new Map<string, KeeperInstance>(feed.instances.map((i) => [i.name, i]));
   for (const name of instances.keys()) if (!cfg.keeperTokens.get(name)) throw new Error(`no token for keeper instance ${name}`);
 
   return createServer(async (req, res) => {
     try {
-      if (req.method === "GET" && req.url === "/healthz") return json(res, 200, { ok: true });
+      if (req.method === "GET" && req.url === "/healthz") {
+        const h = health();
+        return json(res, h.ok ? 200 : 503, h);
+      }
       const token = bearer(req);
       if (req.method === "GET" && req.url === "/v1/status") {
         if (token === null || !same(token, cfg.statusToken)) return json(res, 401, { error: "unauthorized" });
