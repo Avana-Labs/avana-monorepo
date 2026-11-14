@@ -32,6 +32,8 @@ export interface Alert {
 export interface Notice {
   readonly alert: Alert;
   readonly transition: "open" | "escalate" | "deescalate" | "resolve" | "event";
+  /** The level before an escalation or de-escalation, so whoever received a page also learns it eased. */
+  readonly from?: Alert["level"];
   /** Unix seconds of the block the alert was read at. */
   readonly timestamp: number;
 }
