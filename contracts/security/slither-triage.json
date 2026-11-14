@@ -644,20 +644,13 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "8c751f8fcc9b8636",
+      "fingerprint": "419a0c7223e7edf5",
       "check": "divide-before-multiply",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "function": "ClPriceMath.maxLiquidityPerTick(int24)",
-      "reason": "Intended truncation, not lost precision: `(MIN_TICK / s) * s` and `(MAX_TICK / s) * s` are the usable tick bounds of spacing s (SPEC-BACK-001, Uniswap Tick.tickSpacingToMaxLiquidityPerTick), and in sqrtRatioAtTick `type(uint256).max / ratio` inverts the Q128.128 ratio for positive ticks exactly as Uniswap v3-core TickMath does (the result is rounded up afterwards). Covered by TEST-279 (signedAlignmentAndUsableTicks, maxLiquidityPerTickBelowTheCreditBound, tickBoundsMatchUniswap) and the TEST-037 differential suite against the integer reference.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "a2b58ce48cdc5468",
-      "check": "divide-before-multiply",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "function": "ClPriceMath.sqrtRatioAtTick(int24)",
-      "reason": "Intended truncation, not lost precision: `(MIN_TICK / s) * s` and `(MAX_TICK / s) * s` are the usable tick bounds of spacing s (SPEC-BACK-001, Uniswap Tick.tickSpacingToMaxLiquidityPerTick), and in sqrtRatioAtTick `type(uint256).max / ratio` inverts the Q128.128 ratio for positive ticks exactly as Uniswap v3-core TickMath does (the result is rounded up afterwards). Covered by TEST-279 (signedAlignmentAndUsableTicks, maxLiquidityPerTickBelowTheCreditBound, tickBoundsMatchUniswap) and the TEST-037 differential suite against the integer reference.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
+      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick(int24)",
+      "reason": "Intended inversion, not lost precision: for a positive tick `type(uint256).max / price` inverts the Q128.128 ratio exactly as Uniswap v4-core TickMath.getSqrtPriceAtTick does (Slither pairs it with the table products above it on the same variable); the result is rounded up to Q64.96 afterwards. Covered by TEST-279 (tickBoundsMatchUniswap, tickAtSqrtRatioInvertsSqrtRatioAtTick) and the TEST-037 differential suite (tickMapMatchesReference).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces a2b58ce48cdc5468 (ClPriceMath.sqrtRatioAtTick, approved Josue 2026-11-10 by pattern): the tick math moved into the MIT ClTickMath (v4-core TickMath), which ClPriceMath.sqrtRatioAtTick now calls."
     },
     {
       "fingerprint": "7b9b455abd0705f5",
@@ -732,12 +725,13 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "d1115e0b28e5b4e8",
+      "fingerprint": "0b8562377edf1d1e",
       "check": "cyclomatic-complexity",
-      "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
-      "function": "ClPriceMath.sqrtRatioAtTick(int24)",
-      "reason": "sqrtRatioAtTick is Uniswap v3-core TickMath.getSqrtRatioAtTick: one branch per bit of |tick| over the magic-constant table, kept line for line so it can be compared with the audited original; splitting it would only hide the table. forge-lint suppression on the function with the same reason. Covered by TEST-279 (tickBoundsMatchUniswap) and the TEST-037 differential suite (tickMapMatchesReference).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
+      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick(int24)",
+      "reason": "getSqrtPriceAtTick is Uniswap v4-core TickMath.getSqrtPriceAtTick: one branch per bit of |tick| over the magic-constant table, kept line for line so it can be compared with the audited original; splitting it would only hide the table. forge-lint suppression on the function with the same reason. Covered by TEST-279 (tickBoundsMatchUniswap) and the TEST-037 differential suite (tickMapMatchesReference).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces d1115e0b28e5b4e8 (ClPriceMath.sqrtRatioAtTick, approved Josue 2026-11-10 by pattern): the same table, now in ClTickMath."
     },
     {
       "fingerprint": "ad1f4ccc881dce75",
@@ -1742,22 +1736,40 @@
       "review": "Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "44a2a2ead4bfa2ff",
+      "fingerprint": "93c27d1899bfafc2",
       "check": "timestamp",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._collateralPrice(RiskModuleBorrowScope.Scope)",
-      "reason": "Per-feed age gate of REQ-ADAPTER-015 and REQ-ADAPTER-016: a leg timestamp after now reverts PriceTooOld(feed, 0), and age > borrowPriceMaxAge(feed) reverts; age limits are minutes to hours, so a validator's seconds of drift cannot matter, and both boundaries fail closed. Covered by TEST-028 (collateralPriceGates, futureTimestampsAreNeverFresh).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.age(uint256)",
+      "reason": "Specified timestamp: the price age block.timestamp - updatedAt, 0 for a source timestamp in the future (REQ-SWAP-008, REQ-LENS-030); it sizes the liquidation-side rule and the revert data and report fields, never a gate on its own. Age limits are minutes to hours, so a validator's seconds of drift cannot matter. Covered by TEST-028 (futureTimestampsAreNeverFresh), TEST-247 (debtLiquidationAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "f985956d754ee2b8",
+      "fingerprint": "de18540b3b7bf4ee",
       "check": "timestamp",
-      "file": "src/policy/risk-module/RiskModuleBorrowLogic.sol",
-      "function": "RiskModuleBorrowLogic._debtPrices(RiskModuleBorrowScope.Scope)",
-      "reason": "Debt-price age gate of REQ-RISK-061: fresh iff servedUpdatedAt <= now and now - servedUpdatedAt <= the DebtOracle's borrowPriceMaxAge; a future timestamp is never fresh (fail closed). Covered by TEST-201 (debtPriceGatesAccountWide), TEST-028 (futureTimestampsAreNeverFresh).",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.borrowFresh(uint256,uint256)",
+      "reason": "Specified timestamps: the borrow-side age rule of REQ-RISK-061 and REQ-ADAPTER-015, fresh iff updatedAt <= now and now - updatedAt <= maxAge (inclusive); a future timestamp is never fresh (fail closed). Age limits are minutes to hours, so a validator's seconds of drift cannot matter. Covered by TEST-028 (futureTimestampsAreNeverFresh, feedAgeBoundaryPerLeg), TEST-201 (debtPriceAgeBoundary), TEST-019 (feedAgeBoundary, debtPriceAgeBoundary fuzz), TEST-247 (debtBorrowAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+    },
+    {
+      "fingerprint": "325004943dead96f",
+      "check": "timestamp",
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.liquidationFresh(uint256,uint256)",
+      "reason": "Specified timestamps: LPVaultSwap's leg age rule against liquidationPriceMaxAge (REQ-SWAP-008, REQ-SWAP-091), age <= maxAge with a future timestamp counted as age 0; validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.PriceGates.fuzz (leg ages), TEST-247 (debtLiquidationAgeBoundaryMatchesExecution).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
+    },
+    {
+      "fingerprint": "f6f22299563d8bc0",
+      "check": "timestamp",
+      "file": "src/oracle/lp-oracle/PriceAge.sol",
+      "function": "PriceAge.debtBorrowable(DebtPriceView,uint256)",
+      "reason": "Specified timestamps: the RiskModule's step (6) for a DebtOracle-priced reserve (REQ-RISK-061): Live, the oracle's borrowAllowed and borrowFresh(servedUpdatedAt, borrowPriceMaxAge); the only time comparison is borrowFresh's, which fails closed on a future timestamp. Covered by TEST-201 (debtPriceGatesAccountWide, debtPriceAgeBoundary), TEST-028 (futureTimestampsAreNeverFresh).",
+      "approval": "pending review (approved pattern)",
+      "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
       "fingerprint": "2b3e339d034585b3",
@@ -2326,30 +2338,6 @@
       "function": "LPVaultSwapDeleverageLogic._releaseAndSwap(LPVaultSwapDeleverageLogic.FlashContext)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
-    },
-    {
-      "fingerprint": "d0641a99eac4dc2b",
-      "check": "timestamp",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
-      "function": "LPVaultSwapSettlement._legStale(address,uint64)",
-      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
-      "approval": "pending review (approved pattern)"
-    },
-    {
-      "fingerprint": "b6966bf07827a17d",
-      "check": "timestamp",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
-      "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
-      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
-      "approval": "pending review (approved pattern)"
-    },
-    {
-      "fingerprint": "669ff2be6b33cd00",
-      "check": "timestamp",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
-      "function": "LPVaultSwapSettlement._checkDebtPrice(DebtReserveDef,uint256)",
-      "reason": "Specified timestamp comparison: the caller's deadline (REQ-SWAP-030, DeadlineExpired) and the oracle leg ages against liquidationPriceMaxAge (REQ-SWAP-091, REQ-SWAP-110); validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.Thresholds.fuzz (deadline) and LPVaultSwap.PriceGates.fuzz (leg ages).",
-      "approval": "pending review (approved pattern)"
     },
     {
       "fingerprint": "5a0ebb103c3aa872",
@@ -2939,6 +2927,24 @@
       "review": "Pattern: assembly for ERC-7201/transient slots."
     },
     {
+      "fingerprint": "a0c00fe2f9e87536",
+      "check": "assembly",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "function": "AaveAdapterStorage._setHfBefore(uint256)",
+      "reason": "EIP-1153 TSTORE/TLOAD of the eighth repay-with-collateral session slot (SESSION_SLOT + 7, the health factor before that deleverageRepay records after LPVaultSwap's pokes, REQ-ADAPTER-081), memory-safe, one word per access; cleared with the session by _clearSession. Covered by TEST-239.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: assembly for ERC-7201/transient slots."
+    },
+    {
+      "fingerprint": "6524b154180fa761",
+      "check": "assembly",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "function": "AaveAdapterStorage._hfBefore()",
+      "reason": "EIP-1153 TSTORE/TLOAD of the eighth repay-with-collateral session slot (SESSION_SLOT + 7, the health factor before that deleverageRepay records after LPVaultSwap's pokes, REQ-ADAPTER-081), memory-safe, one word per access; cleared with the session by _clearSession. Covered by TEST-239.",
+      "approval": "pending review (approved pattern)",
+      "review": "Pattern: assembly for ERC-7201/transient slots."
+    },
+    {
       "fingerprint": "98e56f10e9d01a3f",
       "check": "missing-inheritance",
       "file": "src/policy/aave-adapter/AaveAdapterSettlementLogic.sol",
@@ -3275,14 +3281,6 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "a7089f6553c80f83",
-      "check": "unused-return",
-      "file": "src/lens/lens/LensPreview.sol",
-      "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
       "fingerprint": "bc95ba34754a5993",
       "check": "unused-return",
       "file": "src/lens/lens/LensPreview.sol",
@@ -3491,15 +3489,6 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "59a2517dc1359c7d",
-      "check": "timestamp",
-      "file": "src/lens/lens/LensBase.sol",
-      "function": "LensBase._debtView(address,DebtReserveDef)",
-      "reason": "Specified timestamps: the debt price's age block.timestamp - updatedAt (0 for a future stamp) against the borrow and liquidation age limits gives borrowFresh and liquidationFresh (REQ-LENS-030, Q-247, Q-248); stressPriced compares two prices. A view, no state; validator drift of seconds is far below the age limits and only reports a price fresh or stale a few seconds early or late. Covered by TEST-247 (Lens.Price: debtPriceExpiredStress; Lens.Edges: debtRouteWithoutFeedIsNeverFresh; Lens.Account: getAccountDebtPriceFreshness).",
-      "approval": "approved (Josue, 2026-11-13, by pattern)",
-      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
-    },
-    {
       "fingerprint": "d67b69bfa0ea6f47",
       "check": "timestamp",
       "file": "src/lens/lens/LensClose.sol",
@@ -3617,12 +3606,40 @@
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "84abc2797015a941",
-      "check": "timestamp",
-      "file": "src/lens/lens/LensBase.sol",
-      "reason": "Specified timestamps: input ages and the interest growth until the caller's deadline (REQ-LENS-015, REQ-LENS-030, REQ-LENS-035, REQ-LENS-036); a view, no state. Tests: priceStateInputAgesAgainstBothLimits, repayAllDeadlineInPast, borrowMaxRateGrowsTarget.",
+      "fingerprint": "0e3881fdcddd3c82",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensAccountMath.sol",
+      "function": "LensAccountMath._hfOf(uint256,uint256,uint256)",
+      "reason": "debtRay == 0 reports the health factor of an account without debt as type(uint256).max, as Aave does, instead of dividing by zero (REQ-LENS-052, REQ-LENS-053); a pure helper of views, never a gate on a state change. Covered by TEST-247 (Lens.Preview: borrowMaxAndRecommendedWithoutDebt; Lens.Actions: repayAfterWithoutDebtChangesNothing).",
       "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: first reported on 2bfa529, the merge that added src/amm/concentrated-liquidity/ClTickMath.sol; LensAccountMath and LensRemoval did not change (the same effect as the approved entries reported once ClUnitMath.sol joined the build, e.g. 03014b6b72ff2b15)."
+    },
+    {
+      "fingerprint": "c672634ec643bb7d",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensAccountMath.sol",
+      "function": "LensAccountMath._liquidationPrice(uint256,uint256)",
+      "reason": "debtRay == 0 reports no liquidation price (0) for an account without debt and cfAssets == 0 reports type(uint256).max instead of dividing by zero (REQ-LENS-047); a pure helper of views, no state. Covered by TEST-247 (Lens.Positions: liquidationPriceZeroWithoutDebtAndMaxWithoutCollateral; Lens.ActionsLiquidationPrice: noLiquidationPriceOnceEverythingIsRepaid).",
+      "approval": "pending review (approved pattern)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: first reported on 2bfa529, the merge that added src/amm/concentrated-liquidity/ClTickMath.sol; LensAccountMath and LensRemoval did not change (the same effect as the approved entries reported once ClUnitMath.sol joined the build, e.g. 03014b6b72ff2b15)."
+    },
+    {
+      "fingerprint": "d7f8a0e3ef66ab61",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensRemoval.sol",
+      "function": "LensRemoval._maxRemoval(Market,address,uint256,uint256)",
+      "reason": "per == 0 || assets == 0 returns a removal of 0 when nothing is counted (no price, no collateral factor or no enabled collateral) instead of dividing by zero (REQ-LENS-054); a view, no state. Covered by TEST-247 (Lens.InverseSizing: closeAccountWithoutDebtOrPriceOrAccount; Lens.ActionsEdge: removalAndWithdrawAfterAgreeOnTheBestRecord).",
+      "approval": "pending review (approved pattern)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: first reported on 2bfa529, the merge that added src/amm/concentrated-liquidity/ClTickMath.sol; LensAccountMath and LensRemoval did not change (the same effect as the approved entries reported once ClUnitMath.sol joined the build, e.g. 03014b6b72ff2b15)."
+    },
+    {
+      "fingerprint": "3ebbabdb1e4eca03",
+      "check": "incorrect-equality",
+      "file": "src/lens/lens/LensRemoval.sol",
+      "function": "LensRemoval._removalBound(uint256,uint256,uint256,uint256)",
+      "reason": "per == 0 returns 0 before the division by per (REQ-LENS-054, MATH-AR-76); a pure helper of views, no state. Covered by TEST-247 (Lens.ActionsConfig fuzz: removalSubtractsTheRescueExclusion).",
+      "approval": "pending review (approved pattern)",
+      "review": "New Slither result on unchanged Lens code, not a re-fingerprint: first reported on 2bfa529, the merge that added src/amm/concentrated-liquidity/ClTickMath.sol; LensAccountMath and LensRemoval did not change (the same effect as the approved entries reported once ClUnitMath.sol joined the build, e.g. 03014b6b72ff2b15)."
     },
     {
       "fingerprint": "79848a8b773b3267",

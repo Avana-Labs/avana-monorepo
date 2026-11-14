@@ -310,6 +310,22 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
         assertTrue(failed & 1 != 0, "no pool: range check fails");
     }
 
+    // TEST-306 verifies: REQ-ORACLE-105, SPEC-ORC-009
+    /// @notice Through the logic contracts' hook caller, the module's listing checks set CL_CHECK_SHOCK_SQRT (bit 4)
+    /// when a shocked raw ratio reaches `2^128` (a 0-decimal token0 at `MAX_ROUTE_ANSWER` against a 22-decimal token1
+    /// at 1) and leave it clear for two $1 stables at 6 decimals.
+    function test_TEST_306_listingChecksSetTheShockBitAtTwoToThe128() public {
+        address m = address(new LPOracleCLModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7));
+        ClModuleCallerProbe caller = new ClModuleCallerProbe(m);
+        OracleConfig memory c;
+        caller.setMarket(6, 6, -10, 10);
+        assertEq(caller.listingChecks(c, _pair(1e8, 1e8)) & (1 << 4), 0, "two $1 stables: clear");
+        caller.setMarket(0, 22, -10, 10);
+        assertTrue(
+            caller.listingChecks(c, _pair(LPPriceMath.MAX_ROUTE_ANSWER, 1)) & (1 << 4) != 0, "shocked ratio at 2^128"
+        );
+    }
+
     // TEST-306 verifies: REQ-ORACLE-080, REQ-ORACLE-106
     /// @notice Called directly, outside a delegatecall, every entry point of the module contract reverts NotDelegated.
     function test_TEST_306_moduleEntryPointsRefuseDirectCalls() public {
