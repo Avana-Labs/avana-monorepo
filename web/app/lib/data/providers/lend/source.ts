@@ -7,7 +7,7 @@ import { createMarketPageSource } from "@/app/lib/data/providers/catalog-page-so
 import { buildLendPageData } from "@/app/lib/lend-system/read-model"
 import { mergeConvexLendSnapshots } from "@/app/lib/lend-system/market-hydration"
 import { fetchLendMarketSnapshots } from "@/app/lib/lend-system/market-hydration-server"
-import { emptyLendSystemState } from "@/app/lib/lend-system/use-lend-session"
+import { emptyLendSystemState } from "@/app/lib/lend-system/market-hydration"
 import type { LendPageData } from "./types"
 
 export type LendPageSource = {

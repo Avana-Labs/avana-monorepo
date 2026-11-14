@@ -8,6 +8,7 @@
 
 import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
 import type { UserAssetBalance } from "./contracts"
 
 /**
@@ -29,7 +30,16 @@ export function useConvexWalletOnboardingSummary(
 
 const NO_SUMMARY = { sinceMs: null, boost: null }
 
+const NO_BALANCES: UserAssetBalance[] = []
+
 export function useConvexProductWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
+  // Without a deployment there is no ConvexProvider and nothing to read. `hasConvexClient` is a
+  // build-time constant, so every render takes the same branch.
+  if (!hasConvexClient) return NO_BALANCES
+  return useLiveProductWalletBalances(walletId)
+}
+
+function useLiveProductWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
   const buckets = useQuery(api.wallet.productBalances.listForWallet, walletId ? { wallet: walletId } : "skip")
   if (!buckets) return buckets === undefined ? undefined : []
   const resolvedWalletId = walletId ?? ""

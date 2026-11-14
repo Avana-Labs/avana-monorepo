@@ -12,11 +12,9 @@ import type {
 } from "./contracts"
 import { ProductionLendReadAdapter } from "./production-read-adapter"
 import { ProductionLendTransactionAdapter } from "./production-transaction-adapter"
-import { mergeConvexLendSnapshots, type LendConvexSnapshot } from "./market-hydration"
+import { emptyLendSystemState, mergeConvexLendSnapshots, type LendConvexSnapshot } from "./market-hydration"
 
-export function emptyLendSystemState(walletId: string, now = Date.now()): LendSystemState {
-  return { now, markets: {}, positions: {}, walletBalances: { [walletId]: {} }, transactions: [] }
-}
+export { emptyLendSystemState }
 
 /**
  * Lend state of one wallet: the Hub assets services/convex reports and the wallet's supplies.

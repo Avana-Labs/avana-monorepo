@@ -1,6 +1,11 @@
 import type { LendMarket, LendMarketCategory, LendSystemState } from "@/app/lib/lend-system/model"
 import { INITIAL_LIQUIDITY_INDEX } from "@/app/lib/lend-system/model/constants"
 
+/** Lend state of a wallet before any market snapshot or chain read. Server-safe (no "use client"). */
+export function emptyLendSystemState(walletId: string, now = Date.now()): LendSystemState {
+  return { now, markets: {}, positions: {}, walletBalances: { [walletId]: {} }, transactions: [] }
+}
+
 /**
  * One lend row from services/convex `markets.listMarketSnapshots` (scope === "lend"): one Hub
  * asset. Loose `scope: string` so the raw query result (which also carries asset/pool rows) is
