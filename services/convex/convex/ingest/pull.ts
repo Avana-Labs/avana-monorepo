@@ -49,6 +49,8 @@ async function rebuild(ctx: ActionCtx, chainId: number) {
 export const pull = internalAction({
   args: { chainId: v.number() },
   handler: async (ctx, { chainId }) => {
+    // A chain without a deployments row is skipped (crons.ts), before its RPC variables are read.
+    if (!(await ctx.runQuery(internal.ingest.apply.state, { chainId })).deployment) return;
     const client = rpcClient(chainId);
     for (let i = 0; i < PAGES_PER_RUN; i++) {
       const { checkpoint } = await ctx.runQuery(internal.ingest.apply.state, { chainId });
