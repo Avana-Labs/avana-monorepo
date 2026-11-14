@@ -1,4 +1,4 @@
-import { execSync, spawn } from "node:child_process"
+import { spawn } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import process from "node:process"
@@ -159,12 +159,31 @@ function directorySizeKb(absolutePath) {
     return 0
   }
 
-  try {
-    const out = execSync(`du -sk ${JSON.stringify(absolutePath)}`, { encoding: "utf8" })
-    return Number.parseInt(out.split(/\s/)[0] ?? "0", 10)
-  } catch {
-    return 0
+  // Walk the tree in Node: no shell, and it works on Windows. Symlinks are not followed.
+  let bytes = 0
+  const pending = [absolutePath]
+  while (pending.length > 0) {
+    const directory = pending.pop()
+    let entries
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(directory, entry.name)
+      if (entry.isDirectory()) {
+        pending.push(entryPath)
+      } else if (entry.isFile()) {
+        try {
+          bytes += fs.statSync(entryPath).size
+        } catch {
+          // A file removed during the walk is not counted.
+        }
+      }
+    }
   }
+  return Math.ceil(bytes / 1024)
 }
 
 function maybePruneTurbopackCache(distDir) {

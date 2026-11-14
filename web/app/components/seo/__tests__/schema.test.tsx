@@ -24,7 +24,7 @@ describe("SchemaMarkup — JSON-LD escaping (P3-7)", () => {
   it("still emits valid JSON that round-trips to the original data", async () => {
     const data = { "@type": "WebPage", name: "A <b> & c > d" }
     const html = renderToStaticMarkup(await SchemaMarkup({ data }))
-    const json = html.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "")
+    const json = html.replace(/^<script[^>]*>/i, "").replace(/<\/script>$/i, "")
     expect(JSON.parse(json)).toEqual(data)
   })
 })
