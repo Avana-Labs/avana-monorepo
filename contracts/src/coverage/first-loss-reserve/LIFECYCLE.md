@@ -51,5 +51,5 @@ Ethereum GHO instance on the Stable LP Hub (illustrative 400,000 GHO minimum; th
 
 ## Spec
 
-- [2.14 First-Loss Reserve](../../../../spec/02-contracts/14-first-loss-reserve.md): `REQ-FLR-001`–`REQ-FLR-045`, `SPEC-FLR-001`–`SPEC-FLR-003`.
-- Flow: [3.9 Deficit Coverage](../../../../spec/03-operations/09-deficit-coverage.md) `DEF-009`, `DEF-011`, `DEF-015`, `DEF-016`, `DEF-017`.
+- [2.14 First-Loss Reserve](../../../../docs/spec/02-contracts/14-first-loss-reserve.md): `REQ-FLR-001`–`REQ-FLR-045`, `SPEC-FLR-001`–`SPEC-FLR-003`.
+- Flow: [3.9 Deficit Coverage](../../../../docs/spec/03-operations/09-deficit-coverage.md) `DEF-009`, `DEF-011`, `DEF-015`, `DEF-016`, `DEF-017`.

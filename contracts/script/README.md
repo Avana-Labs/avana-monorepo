@@ -2,7 +2,7 @@
 
 Foundry deployment, listing and verification scripts for Avana. Every script is a `forge script` run from `contracts/`, reads its inputs from a release manifest under [`deployments/`](../../deployments/) and environment variables, and writes what it deployed to `contracts/deployments-local/`. Scripts never write into `deployments/proposed/` or `deployments/verified/`: a manifest enters `proposed/` by review and enters `verified/` only after the bytecode and live-configuration checks below pass (`Q-043`, `TEST-134`, `TEST-135`).
 
-The order follows the contract inventory and constructor immutables of [1.2 Contract Relationships](../../spec/01-architecture/02-contract-relationships.md), the roles of [1.4 Permissions and Roles](../../spec/01-architecture/04-permissions-and-roles.md) and [2.15 Governance and Timelock](../../spec/02-contracts/15-governance-and-timelock.md), and the listing steps `MKT-018`…`MKT-026` of [3.8 Market Lifecycle](../../spec/03-operations/08-market-lifecycle.md).
+The order follows the contract inventory and constructor immutables of [1.2 Contract Relationships](../../docs/spec/01-architecture/02-contract-relationships.md), the roles of [1.4 Permissions and Roles](../../docs/spec/01-architecture/04-permissions-and-roles.md) and [2.15 Governance and Timelock](../../docs/spec/02-contracts/15-governance-and-timelock.md), and the listing steps `MKT-018`…`MKT-026` of [3.8 Market Lifecycle](../../docs/spec/03-operations/08-market-lifecycle.md).
 
 ## Scripts
 
@@ -57,7 +57,7 @@ Every CREATE3 deployment goes through `deploy/AvanaCreate3Factory.sol`, whose ef
 | 3 | ERC-1967 proxies of AaveAdapter, RiskModule, MarketRegistry, ParameterStore, LPVaultSwap | UUPS; `_authorizeUpgrade` requires `APPLICATION_ADMIN`; `initialize(timelock, …)` in the deploying transaction (`REQ-ACCESS-150`) | CREATE3 | Each `initialize` grants `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` to the timelock only. `ParameterStore.initialize(timelock, params, initialDepositorUsdCap, initialPoolShareMaxBps)` writes every global value within its hard bounds, including `feeRecipient`; `LPVaultSwap.initialize(timelock, initialKeepers)` with at least `keeperFloor` keepers; `MarketRegistry.initialize(timelock)` sets both guardian roles' admin to `APPLICATION_ADMIN`. The Adapter and LPVaultSwap proxy addresses are immutables of every vault token, the Lock, Collateralization and the ProxyManager, so they never change |
 | 4 | Lock | Immutable (`REQ-LOCK-001`) | CREATE3 | `AAVE_ADAPTER`, `LP_VAULT_SWAP`, `SELF` from predictions |
 | 5 | Collateralization | Immutable (`REQ-COLL-002`) | CREATE3 | `ADAPTER`, `LP_VAULT_SWAP`, `RISK_MODULE`, `LOCK`, `VAULT_TOKEN_FACTORY` |
-| 6 | LPVault, one per AMM protocol of the chain (Uniswap v3 on Ethereum, Slipstream on Base) | Immutable (`REQ-VAULT-155`) | CREATE3 | `INTEGRATION_ID`, `COLLATERALIZATION`, `MARKET_REGISTRY`, `LOCK`, `TIMELOCK`, and the AMM protocol's position manager and factory (`REQ-AMM-V3-001`, [2.21](../../spec/02-contracts/21-aerodrome-slipstream-integration.md)); a later AMM protocol adds one LPVault and touches no other contract |
+| 6 | LPVault, one per AMM protocol of the chain (Uniswap v3 on Ethereum, Slipstream on Base) | Immutable (`REQ-VAULT-155`) | CREATE3 | `INTEGRATION_ID`, `COLLATERALIZATION`, `MARKET_REGISTRY`, `LOCK`, `TIMELOCK`, and the AMM protocol's position manager and factory (`REQ-AMM-V3-001`, [2.21](../../docs/spec/02-contracts/21-aerodrome-slipstream-integration.md)); a later AMM protocol adds one LPVault and touches no other contract |
 | 7 | VaultTokenFactory | Immutable (`REQ-VTOKEN-023`) | CREATE3 | `ADAPTER`, `LP_VAULT_SWAP`, `COLLATERALIZATION`, `TIMELOCK`, `MARKET_REGISTRY` (the factory reads the Lock through Collateralization); registers each LPVault's integration ID once; deploys vault tokens with CREATE3, salt `keccak256(abi.encode(spoke, marketKey))` (`REQ-VTOKEN-020`), only when called by `TIMELOCK` in a listing batch |
 | 8 | ProxyManager, then `AaveV3FlashSource` | Immutable (`REQ-PROXY-001`, `REQ-FLASH-001`) | CREATE3 | ProxyManager: `ADAPTER`, `MARKET_REGISTRY`, `PROXY_CREATION_CODE_HASH`. `AaveV3FlashSource`: `LENDER` (the chain's Aave V3 Pool), `LP_VAULT_SWAP`, `PARAMETER_STORE`; LPVaultSwap points at it through `setFlashSource`. There is no settlement budget (`Q-397`) |
 | 9 | PayoutEscrow (escrow for failed payouts, Q-401) | Immutable (`REQ-ESCROW-001`) | CREATE3 | `LP_VAULT_SWAP`, `LOCK`; the constructor reverts `LockMismatch` unless the Lock of step 4 names the same LPVaultSwap |
@@ -69,7 +69,7 @@ Every CREATE3 deployment goes through `deploy/AvanaCreate3Factory.sol`, whose ef
 
 PositionProxies are not deployed by the scripts: each is a logic-free immutable account that the ProxyManager creates on the AaveAdapter's call, one per (wallet, CDP Spoke, market), with CREATE2 and salt `keccak256(abi.encode(wallet, spoke, marketId))` (`REQ-PROXY-001`); the manifest records the init-code hash used by `predictProxy`.
 
-On mainnet Aave V4 is the Aave DAO's deployment; the manifest names its Hubs, CDP Spokes, Lend Spoke, AaveOracle, configurators and the linked `LiquidationLogic`, and `03_DeployAvana` reads them instead of running steps 01–02; the First-Loss Reserves are Avana's deployments of step 12, which the Aave DAO registers and controls. Aave-side settings Avana depends on (the deployment AIP, `FLASH_BORROWER` on the Aave V3 Pool for LPVaultSwap's flash source, the Aave Protocol Guardian's one-way `freezeReserve` and `pauseReserve`) are governance payloads in [`governance/`](../../governance/), not script actions.
+On mainnet Aave V4 is the Aave DAO's deployment; the manifest names its Hubs, CDP Spokes, Lend Spoke, AaveOracle, configurators and the linked `LiquidationLogic`, and `03_DeployAvana` reads them instead of running steps 01–02; the First-Loss Reserves are Avana's deployments of step 12, which the Aave DAO registers and controls. Aave-side settings Avana depends on (the deployment AIP, `FLASH_BORROWER` on the Aave V3 Pool for LPVaultSwap's flash source, the Aave Protocol Guardian's one-way `freezeReserve` and `pauseReserve`) are governance payloads in [`docs/governance/`](../../docs/governance/), not script actions.
 
 ## Listing a market
 
@@ -162,14 +162,14 @@ Each deploy script derives from a base contract with `_expectedChainId()` and re
 - A release is an annotated git tag `vX.Y.Z` on a commit of `main` that passed every CI job, with its section in [`CHANGELOG.md`](../../CHANGELOG.md). Version rules are in that file.
 - `AVANA_RELEASE` equals that tag. Scripts `02`, `03` and `05` assert that `vm.envString("AVANA_RELEASE")` equals the manifest's `release` and that the manifest's `commit` is the tagged commit.
 - A tag is never moved, deleted or reused: a tag deployed once names those addresses for good. A fix is a new tag.
-- External audit reports name the audited and fix commits ([`audit/external/`](../../audit/external/index.md)); a verified manifest names a release whose commit is the fix commit or later with no change to the audited files.
+- External audit reports name the audited and fix commits ([`docs/audit/external/`](../../docs/audit/external/index.md)); a verified manifest names a release whose commit is the fix commit or later with no change to the audited files.
 
 ## Checks on the build
 
 | Script | Does |
 |---|---|
 | `check-sizes.sh` | Writes `out-security/sizes.json` from `out/` and fails when a deployable `src/` contract's runtime code is larger than 24,576 bytes minus its margin in [`security/size-margins.json`](../security/size-margins.json). Each contract is measured on the artifact of the profile it is deployed with: the restricted profile's artifact for a file named in a `compilation_restrictions` entry of `foundry.toml`, the default profile's artifact for every other file, even when a restricted file also compiles it; a contract with no artifact for its deployment profile fails. `check-sizes.test.sh` checks this rule on fixture artifacts (`make sizes` runs both); with `--base <sizes.json>` prints each change in size. CI compares every pull request with the sizes saved from the last `main` build and writes the table to the job summary. |
-| `governance-diff.py` | Writes a governance operation folder's `diff.md` from its `before.json` and `after.json` ([`governance/README.md`](../../governance/README.md#operation-folders)). |
+| `governance-diff.py` | Writes a governance operation folder's `diff.md` from its `before.json` and `after.json` ([`docs/governance/README.md`](../../docs/governance/README.md#operation-folders)). |
 
 ## Mutation testing at the layer gate
 

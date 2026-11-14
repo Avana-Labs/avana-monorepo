@@ -46,5 +46,5 @@ Aerodrome Slipstream on Base (Carol, USDC debt, 3.6 `EMG-113`). Setup: Circle bl
 
 ## Spec
 
-- [2.18 Payout Escrow (PayoutEscrow)](../../../../spec/02-contracts/18-payout-escrow.md): `REQ-ESCROW-001`–`REQ-ESCROW-019`, `REQ-SWAP-076`, `REQ-SWAP-082`.
-- Flows: [3.5](../../../../spec/03-operations/05-liquidation.md) `LIQ-048a`, `LIQ-085`; [3.6](../../../../spec/03-operations/06-emergency-operations.md) `EMG-105` (P-21), `EMG-113`.
+- [2.18 Payout Escrow (PayoutEscrow)](../../../../docs/spec/02-contracts/18-payout-escrow.md): `REQ-ESCROW-001`–`REQ-ESCROW-019`, `REQ-SWAP-076`, `REQ-SWAP-082`.
+- Flows: [3.5](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-048a`, `LIQ-085`; [3.6](../../../../docs/spec/03-operations/06-emergency-operations.md) `EMG-105` (P-21), `EMG-113`.

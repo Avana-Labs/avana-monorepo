@@ -29,9 +29,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "spec" / "05-verification"))
+sys.path.insert(0, str(ROOT / "docs" / "spec" / "05-verification"))
 import evidence as ev  # noqa: E402  (tag placement and own-row rule of the traceability tools)
-import trace as tr  # noqa: E402  (spec/05-verification/trace.py, first on the path; its main() is guarded)
+import trace as tr  # noqa: E402  (docs/spec/05-verification/trace.py, first on the path; its main() is guarded)
 
 TEST = ROOT / "contracts" / "test"
 FORK = TEST / "fork"

@@ -50,5 +50,5 @@ Setup (Ethereum market 1, USDC/USDT 0.01% pool, `tickSpacing = 1`, exact range `
 
 ## Spec
 
-- [2.20 Uniswap v3 Integration](../../../../spec/02-contracts/20-uniswap-v3-integration.md): `REQ-VAULT-008`, `REQ-VAULT-009`, `REQ-VAULT-011`, `REQ-VAULT-057`, `REQ-VAULT-058`, `REQ-VAULT-065`, `REQ-VAULT-147`–`REQ-VAULT-149`, `REQ-AMM-V3-001`, `REQ-AMM-V3-003`, `REQ-AMM-V3-004`, `SPEC-BACK-008`.
-- Flows: [3.1](../../../../spec/03-operations/01-deposit.md) worked example, [3.5](../../../../spec/03-operations/05-liquidation.md) `LIQ-023`, `LIQ-068`, [3.7](../../../../spec/03-operations/07-collect-fees.md) worked example.
+- [2.20 Uniswap v3 Integration](../../../../docs/spec/02-contracts/20-uniswap-v3-integration.md): `REQ-VAULT-008`, `REQ-VAULT-009`, `REQ-VAULT-011`, `REQ-VAULT-057`, `REQ-VAULT-058`, `REQ-VAULT-065`, `REQ-VAULT-147`–`REQ-VAULT-149`, `REQ-AMM-V3-001`, `REQ-AMM-V3-003`, `REQ-AMM-V3-004`, `SPEC-BACK-008`.
+- Flows: [3.1](../../../../docs/spec/03-operations/01-deposit.md) worked example, [3.5](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-023`, `LIQ-068`, [3.7](../../../../docs/spec/03-operations/07-collect-fees.md) worked example.

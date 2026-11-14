@@ -61,5 +61,5 @@ Uniswap v3 on Ethereum (Bob, USDC debt, 3.5 `LIQ-069`). Setup: Bob pledged a USD
 
 ## Spec
 
-- [2.11 LPVaultSwap](../../../../spec/02-contracts/11-lpvaultswap.md): `REQ-SWAP-001`–`REQ-SWAP-016`, `REQ-SWAP-026`, `REQ-SWAP-032`–`REQ-SWAP-038`, `REQ-SWAP-042`–`REQ-SWAP-045`, `REQ-SWAP-072`–`REQ-SWAP-076`, `REQ-SWAP-100`, `REQ-SWAP-101`, `REQ-SWAP-105`, `REQ-SWAP-106`, `REQ-FLASH-001`–`REQ-FLASH-006`, `SPEC-LIQ-009`, `SPEC-LIQ-010`, `SPEC-LIQ-014`, `SPEC-LIQ-018`–`SPEC-LIQ-020`.
-- Flow: [3.5 Liquidation](../../../../spec/03-operations/05-liquidation.md) `LIQ-011`, `LIQ-030`, `LIQ-041`, `LIQ-061`, `LIQ-062`, `LIQ-068`, `LIQ-069`, `LIQ-089`.
+- [2.11 LPVaultSwap](../../../../docs/spec/02-contracts/11-lpvaultswap.md): `REQ-SWAP-001`–`REQ-SWAP-016`, `REQ-SWAP-026`, `REQ-SWAP-032`–`REQ-SWAP-038`, `REQ-SWAP-042`–`REQ-SWAP-045`, `REQ-SWAP-072`–`REQ-SWAP-076`, `REQ-SWAP-100`, `REQ-SWAP-101`, `REQ-SWAP-105`, `REQ-SWAP-106`, `REQ-FLASH-001`–`REQ-FLASH-006`, `SPEC-LIQ-009`, `SPEC-LIQ-010`, `SPEC-LIQ-014`, `SPEC-LIQ-018`–`SPEC-LIQ-020`.
+- Flow: [3.5 Liquidation](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-011`, `LIQ-030`, `LIQ-041`, `LIQ-061`, `LIQ-062`, `LIQ-068`, `LIQ-069`, `LIQ-089`.

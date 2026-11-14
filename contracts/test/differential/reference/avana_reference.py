@@ -21,7 +21,7 @@ LPPriceMath formulas of 2.10 (SPEC-ORC-001 to SPEC-ORC-023 except the concentrat
 follow; the formulas of MATH-UO-06, MATH-UO-07 and MATH-UO-17 (concentrated-liquidity composition) join this file with
 the CL pricing library.
 
-The file imports nothing from spec/, so the contracts workspace stays self-contained.
+The file imports nothing from docs/spec/, so the contracts workspace stays self-contained.
 """
 from __future__ import annotations
 

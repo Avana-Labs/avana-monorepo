@@ -4,28 +4,28 @@
 name: models
 
 # Python and Quint models outside the spec-stage quick path. Every pull request and every push to main runs the
-# formal-verification areas of audit/formal-verification/ (each area's run.sh: every Z3, enumeration and Quint model,
-# then check_ids.py where the area has one), the user simulation of audit/user-simulation/ (the reported run with
+# formal-verification areas of docs/audit/formal-verification/ (each area's run.sh: every Z3, enumeration and Quint model,
+# then check_ids.py where the area has one), the user simulation of docs/audit/user-simulation/ (the reported run with
 # --extra-seeds 4, and the deployment-topology grid one seed per job) and contract_checklist.py --all --check
 # --links-only: every contract key of contract_checklist.py, and the TEST rows on no contract's checklist, must be
 # linked by a tag on a test of their own (a row is "not run" here, since this workflow runs no test; contracts.yml's
 # evidence job checks that the linked tests ran and passed), and check-mock-counterparts.py: every mocked external has a
 # fork test on its chain (TEST-005). The nightly run (06:00 UTC), every
-# release tag (`v*`) and every manual run also run the topology simulator checks of spec/05-verification/quint/topology_run.sh, the part that
+# release tag (`v*`) and every manual run also run the topology simulator checks of docs/spec/05-verification/quint/topology_run.sh, the part that
 # run_all.sh --nightly adds to the quick path; spec.yml runs the quick path. A simulation job also fails when a run
 # reports an invariant violation, since run_simulation.py exits 0 whenever it completes.
-# Tool versions are pinned: Python packages by spec/05-verification/requirements.txt, Quint by
-# spec/05-verification/package-lock.json, Node by .nvmrc, every action by commit SHA (the release tag in the trailing
+# Tool versions are pinned: Python packages by docs/spec/05-verification/requirements.txt, Quint by
+# docs/spec/05-verification/package-lock.json, Node by .nvmrc, every action by commit SHA (the release tag in the trailing
 # comment).
 
 on:
   pull_request:
     paths:
-      - "audit/formal-verification/**"
-      - "audit/user-simulation/**"
-      - "audit/traceability/**"
-      - "audit/design-review/**"
-      - "spec/**"
+      - "docs/audit/formal-verification/**"
+      - "docs/audit/user-simulation/**"
+      - "docs/audit/traceability/**"
+      - "docs/audit/design-review/**"
+      - "docs/spec/**"
       - "contracts/src/**"
       - "contracts/test/**"
       - "contracts/certora/**"
@@ -36,11 +36,11 @@ on:
     branches: [main]
     tags: ["v*"]
     paths:
-      - "audit/formal-verification/**"
-      - "audit/user-simulation/**"
-      - "audit/traceability/**"
-      - "audit/design-review/**"
-      - "spec/**"
+      - "docs/audit/formal-verification/**"
+      - "docs/audit/user-simulation/**"
+      - "docs/audit/traceability/**"
+      - "docs/audit/design-review/**"
+      - "docs/spec/**"
       - "contracts/src/**"
       - "contracts/test/**"
       - "contracts/certora/**"
@@ -79,17 +79,17 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: spec/05-verification/requirements.txt
+          cache-dependency-path: docs/spec/05-verification/requirements.txt
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         continue-on-error: true
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: spec/05-verification/package-lock.json
+          cache-dependency-path: docs/spec/05-verification/package-lock.json
 
       - name: Install pinned tools
         continue-on-error: true
-        working-directory: spec/05-verification
+        working-directory: docs/spec/05-verification
         run: |
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
@@ -97,9 +97,9 @@ jobs:
 
       - name: Every model of the area, then the spec-ID check
         continue-on-error: true
-        # run.sh uses spec/05-verification/.venv/bin/python and spec/05-verification/node_modules/.bin/quint, with the
+        # run.sh uses docs/spec/05-verification/.venv/bin/python and docs/spec/05-verification/node_modules/.bin/quint, with the
         # sample counts, steps and seeds recorded in the area's RUNS.md.
-        run: bash audit/formal-verification/${{ matrix.area }}/run.sh
+        run: bash docs/audit/formal-verification/${{ matrix.area }}/run.sh
 
   user-simulation:
     name: user simulation (${{ matrix.name }})
@@ -139,11 +139,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: spec/05-verification/requirements.txt
+          cache-dependency-path: docs/spec/05-verification/requirements.txt
 
       - name: Install pinned tools
         continue-on-error: true
-        working-directory: spec/05-verification
+        working-directory: docs/spec/05-verification
         run: |
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
@@ -159,7 +159,7 @@ jobs:
           # --jobs of at least 2: the parallel path prints each run's invariant violations, which the next lines read.
           jobs=$(nproc); [ "$jobs" -ge 2 ] || jobs=2
           # shellcheck disable=SC2086 # ARGS holds several arguments
-          spec/05-verification/.venv/bin/python audit/user-simulation/run_simulation.py $ARGS --jobs "$jobs" --out "$OUT" | tee "$LOG"
+          docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py $ARGS --jobs "$jobs" --out "$OUT" | tee "$LOG"
           grep -q 'violations ' "$LOG" || { echo "::error::no run printed its invariant violations"; exit 1; }
           if grep 'violations ' "$LOG" | grep -v 'violations none$'; then
             echo "::error::invariant violations in the runs above"; exit 1
@@ -188,11 +188,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: spec/05-verification/requirements.txt
+          cache-dependency-path: docs/spec/05-verification/requirements.txt
 
       - name: Install pinned tools
         continue-on-error: true
-        working-directory: spec/05-verification
+        working-directory: docs/spec/05-verification
         run: |
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
@@ -204,7 +204,7 @@ jobs:
         # of its own names it, or its only tests use a stand-in for the contract (evidence.STAND_INS).
         run: |
           rc=0
-          spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --all --check --links-only \
+          docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py --all --check --links-only \
             --summary checklists.md || rc=$?
           cat checklists.md >> "$GITHUB_STEP_SUMMARY"
           exit $rc
@@ -229,7 +229,7 @@ jobs:
     timeout-minutes: 120
     defaults:
       run:
-        working-directory: spec/05-verification
+        working-directory: docs/spec/05-verification
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         continue-on-error: true
@@ -240,7 +240,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: spec/05-verification/package-lock.json
+          cache-dependency-path: docs/spec/05-verification/package-lock.json
 
       - name: Install pinned tools
         continue-on-error: true

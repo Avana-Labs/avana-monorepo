@@ -13,7 +13,10 @@ The backend the web app reads. This folder is one Convex project (`@avana/convex
 | `convex/listing/` | Listing metadata: fetch, hash check, store |
 | `convex/wallet/`, `kept.ts` | A wallet's accounts and last samples; typed stubs of kept features (rewards, referrals, swap quotes, the in-app assistant) |
 | `convex/lib/` | Pure functions the tests run offline: page numbers, charts, fees, metadata, export checks, event decoding |
-| `convex/_generated/` | Convex's generated API and types, committed; `npx convex dev` rewrites them |
+| `convex/auth.config.ts`, `walletAuth.ts`, `rateLimits.ts`, `writeRateLimit.ts`, `codedError.ts` | The web app's SIWE→JWT issuer (only the per-wallet features below use it; protocol queries stay public), the wallet guard, the SIWE route rate limiter and coded errors |
+| `convex/wallet/profiles.ts`, `support.ts`, `fx.ts`, `tokenPrices.ts` | Per-wallet display preferences, Support Center requests, FX rates (open.er-api.com, hourly) and DefiLlama prices of tokens outside the protocol (display only; protocol values use `prices.ts`) |
+| `convex/askAI*.ts`, `convex/lib/askAI/`, `convex.config.ts`, `knowledge/` | Ask AI: threads, turn queue, quotas, the agent (Convex Agent + OpenAI), the market cache (DefiLlama pools, Aave markets), knowledge search over `askAICorpus.generated.ts` (rendered from `knowledge/*.md` by `scripts/render-ask-ai-corpus.mjs`). The wallet tools answer "not available yet" until they read the chain. Components: agent, rag, rate-limiter |
+| `convex/_generated/` | Convex's generated API and types, committed; `npx convex dev` rewrites them (without a deployment, `node scripts/write-generated-api.mjs` rewrites `api.d.ts` the same way) |
 
 ## Scopes
 

@@ -57,5 +57,5 @@ Setup (Base market 3, from 3.1 `DEP-029` and 3.4 `WDR-045`): one whole vault tok
 
 ## Spec
 
-- [2.3 Collateralization](../../../../spec/02-contracts/03-collateralization.md): `REQ-VAULT-007`–`REQ-VAULT-019` (pledge), `REQ-VAULT-046`–`REQ-VAULT-063` (seizure), `REQ-VAULT-137`–`REQ-VAULT-146` (pending), `REQ-COLL-014`–`REQ-COLL-017`, `REQ-COLL-038`–`REQ-COLL-040`, `SPEC-BACK-004`–`SPEC-BACK-009`, `SPEC-BACK-011`–`SPEC-BACK-014`.
-- Flows: [3.1](../../../../spec/03-operations/01-deposit.md) `DEP-012`, [3.4](../../../../spec/03-operations/04-withdraw.md) `WDR-025`–`WDR-028`, [3.5](../../../../spec/03-operations/05-liquidation.md) `LIQ-020`–`LIQ-024`, `LIQ-057`.
+- [2.3 Collateralization](../../../../docs/spec/02-contracts/03-collateralization.md): `REQ-VAULT-007`–`REQ-VAULT-019` (pledge), `REQ-VAULT-046`–`REQ-VAULT-063` (seizure), `REQ-VAULT-137`–`REQ-VAULT-146` (pending), `REQ-COLL-014`–`REQ-COLL-017`, `REQ-COLL-038`–`REQ-COLL-040`, `SPEC-BACK-004`–`SPEC-BACK-009`, `SPEC-BACK-011`–`SPEC-BACK-014`.
+- Flows: [3.1](../../../../docs/spec/03-operations/01-deposit.md) `DEP-012`, [3.4](../../../../docs/spec/03-operations/04-withdraw.md) `WDR-025`–`WDR-028`, [3.5](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-020`–`LIQ-024`, `LIQ-057`.

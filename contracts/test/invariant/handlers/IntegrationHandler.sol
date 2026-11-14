@@ -16,20 +16,54 @@ import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/t
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterErrors} from "../../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";
 import {PauseState} from "../../../src/types/PauseState.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {MockAaveV3Pool} from "../../utils/mocks/AaveV3PoolMocks.sol";
-import {CollPoolToken} from "../../utils/mocks/CollateralizationMocks.sol";
-import {IntegLPVaultMock} from "../../utils/mocks/IntegLPVaultMock.sol";
-import {IntegDebtOracleMock, IntegLPOracleMock} from "../../utils/mocks/IntegOracleMocks.sol";
-import {IntegRegistryMock} from "../../utils/mocks/IntegrationMocks.sol";
-import {MockCLPool} from "../../utils/mocks/SwapRouteMocks.sol";
 import {Held, IntegrationBalanceChecks} from "./IntegrationBalanceChecks.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
+
+/// @notice What the suite does for the handler on the real stack: positions on the real NonfungiblePositionManager,
+/// the guardians' calls on the real MarketRegistry, and price, route and time moves through the feeds and real pools.
+interface IIntegrationWorld {
+    function mintPosition(
+        address wallet,
+        uint128 units
+    ) external returns (bytes32 key);
+
+    function setPause(
+        PauseState state,
+        PauseReason reason
+    ) external;
+
+    function freezeWallet(
+        address wallet,
+        bool on
+    ) external;
+
+    function moveUsdt(
+        uint256 price8
+    ) external;
+
+    function toHealth(
+        address wallet,
+        uint256 reserveId,
+        uint256 seed
+    ) external;
+
+    function moveRoutes(
+        uint256 rateBps
+    ) external;
+
+    function warp(
+        uint256 secs
+    ) external;
+}
 
 /// @title IntegrationHandler
 /// @notice Actions of the integration invariant suite on the deployed stack, every one through a real entry point:
@@ -37,7 +71,8 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 /// collateral) through the AaveAdapter; liquidators (Avana's keeper, unregistered addresses and the public flash
 /// liquidation helper, both route modes) and `settlePending` through LPVaultSwap; an attacker's direct
 /// `liquidationCall`; the guardians (pause state and reason, address freeze); and the environment (vault price, feed
-/// time, route rates). Ghosts record every rule an action must keep, so the suite asserts them after every call.
+/// time, route rates), the guardians' and the environment's through the suite (`IIntegrationWorld`). Ghosts record every
+/// rule an action must keep, so the suite asserts them after every call.
 /// @dev Liveness (TEST-100, fail_on_revert for the live actions): an account the Lens reports liquidatable with every
 /// gate open must settle with the Lens's own parameters; exits must settle whenever their own checks pass. Their
 /// failures are counted, not swallowed.
@@ -47,15 +82,12 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         ILPVaultSwap lvs;
         address helper;
         ILens lens;
-        IntegRegistryMock reg;
-        IntegLPOracleMock lpo;
-        IntegDebtOracleMock usdcOracle;
-        IntegLPVaultMock vault;
+        IIntegrationWorld world;
+        MarketRegistry reg;
         MockAaveV3Pool v3Pool;
-        MockCLPool primaryPool;
-        CollPoolToken usdc;
-        CollPoolToken usdt;
-        CollPoolToken gho;
+        ClTestToken usdc;
+        ClTestToken usdt;
+        ClTestToken gho;
         address vt;
         address spoke;
         address hub;
@@ -70,14 +102,13 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         address feeRecipient;
         IPayoutEscrow escrow;
         address coll;
-        // Holders a liquidation's unwind and swaps pay each debt asset from: the LPVault and the route pools into it.
+        // Holders a liquidation's unwind and swaps pay each debt asset from: the market pool and the route pools into it.
         address[] usdcSources;
         address[] ghoSources;
     }
 
     Env internal env;
     mapping(address => bytes32[]) internal _keys;
-    uint256 internal _nonce;
 
     uint256 public liquidations;
     /// @notice Direct liquidations that completed (each checked on balances).
@@ -119,8 +150,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     ) external {
         address wallet = env.wallets[w % env.wallets.length];
         units = bound(units, 100e6, 5000e6);
-        bytes32 key = keccak256(abi.encode("handler position", ++_nonce));
-        env.vault.mintPosition(key, wallet, env.marketId, uint128(units));
+        bytes32 key = env.world.mintPosition(wallet, uint128(units));
         vm.prank(wallet);
         try env.adapter.pledge(env.marketId, PositionRef(env.integrationId, key), block.timestamp) {
             _keys[wallet].push(key);
@@ -171,7 +201,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         uint256 spend = all
             ? env.lens.quoteRepayAll(wallet, env.marketId, reserveId, block.timestamp)
             : _debt(proxy, reserveId) * bound(shareBps, 1, 9999) / 10_000 + 1;
-        CollPoolToken asset = gho ? env.gho : env.usdc;
+        ClTestToken asset = gho ? env.gho : env.usdc;
         asset.mint(payer, spend);
         vm.prank(payer);
         asset.approve(address(env.adapter), spend);
@@ -286,7 +316,8 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     /// call must settle (TEST-100) and keep every settlement postcondition (TEST-104).
     /// @dev Steered so most calls reach a settlement: the wallet is the first from `w` with debt in the chosen reserve
     /// (the other reserve when none has any), and for three seeds in four an account the Lens does not report
-    /// liquidatable has the LPOracle price lowered so its health factor is 0.85 to 0.99.
+    /// liquidatable is borrowed close to its maximum and has USDT's price lowered so its health factor is 0.85 to 0.99
+    /// where USDT's floor allows (`IIntegrationWorld.toHealth`).
     function liquidate(
         uint256 w,
         uint256 callerSeed,
@@ -299,7 +330,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         gho = inGho;
         uint256 reserveId = gho ? env.ghoReserveId : env.usdcReserveId;
         if ((w >> 8) % 4 != 0 && !env.lens.previewLiquidation(proxy, reserveId, block.timestamp).aaveLiquidatable) {
-            _toHealth(proxy, w >> 16);
+            env.world.toHealth(wallet, reserveId, w >> 16);
         }
         LiquidationPreview memory p = env.lens.previewLiquidation(proxy, reserveId, block.timestamp);
         if (!p.aaveLiquidatable || p.params.debtToCover == 0) return;
@@ -330,32 +361,19 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         return (address(0), address(0), gho);
     }
 
-    /// @dev Lowers the LPOracle price so `proxy`'s health factor is 0.85 to 0.99 (HF is linear in the collateral
-    /// price; both debt assets are priced at $1).
-    function _toHealth(
-        address proxy,
-        uint256 seed
-    ) internal {
-        uint256 hf = IAaveV4Spoke(env.spoke).getUserAccountData(proxy).healthFactor;
-        uint256 price = uint256(env.lpo.latestAnswer()) * bound(seed, 85, 99) * 1e16 / hf;
-        // At most 0.99 / HF times the current price, far below 2^255.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        env.lpo.setAnswer(int256(price));
-    }
-
     function _direct(
         address caller,
         address wallet,
         LiquidationPreview memory p,
         bool open,
-        CollPoolToken asset
+        ClTestToken asset
     ) internal {
         uint256 funding = p.params.debtToCover + p.params.maxShortfall;
         asset.mint(caller, funding);
         vm.prank(caller);
         asset.approve(address(env.lvs), funding);
         uint256 loans = env.v3Pool.flashLoanCalls();
-        uint256 supply = CollPoolToken(env.vt).totalSupply();
+        uint256 supply = ClTestToken(env.vt).totalSupply();
         Held memory before = _held(asset, caller, wallet);
         vm.prank(caller);
         try env.lvs.liquidate(p.params) returns (LiquidationResult memory r) {
@@ -376,7 +394,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         address wallet,
         LiquidationPreview memory p,
         bool open,
-        CollPoolToken asset
+        ClTestToken asset
     ) internal {
         uint256 f = p.params.debtToCover;
         asset.mint(caller, f + p.params.maxShortfall);
@@ -429,7 +447,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     function _checkSettlement(
         LiquidationPreview memory p,
         LiquidationResult memory r,
-        CollPoolToken asset,
+        ClTestToken asset,
         uint256 supplyBefore
     ) internal {
         uint256 rf = r.recovered + r.shortfall;
@@ -438,14 +456,14 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             || r.debtRepaid > r.callerFunds || r.callerFunds != p.params.debtToCover
             || r.avanaFee + r.keeperReward + r.borrowerSurplus != s || r.avanaFee > s
             || r.shortfall > p.params.maxShortfall || r.unitsSeized == 0
-            || supplyBefore - CollPoolToken(env.vt).totalSupply() != r.unitsSeized
+            || supplyBefore - ClTestToken(env.vt).totalSupply() != r.unitsSeized
             || asset.balanceOf(address(env.lvs)) != 0 || env.usdt.balanceOf(address(env.lvs)) != 0
-            || CollPoolToken(env.vt).balanceOf(address(env.lvs)) != 0;
+            || ClTestToken(env.vt).balanceOf(address(env.lvs)) != 0;
         if (broken) ++settlementBreaks;
     }
 
     function _held(
-        CollPoolToken asset,
+        ClTestToken asset,
         address caller,
         address wallet
     ) internal view returns (Held memory b) {
@@ -490,7 +508,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             catch {}
         env.usdc.approve(env.spoke, 0);
         vm.stopPrank();
-        if (CollPoolToken(env.vt).balanceOf(env.attacker) != 0) ++directSeizures;
+        if (ClTestToken(env.vt).balanceOf(env.attacker) != 0) ++directSeizures;
     }
 
     // ─── Guardians and environment ───
@@ -501,35 +519,33 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         uint256 i = seed % 4;
         PauseState s = i == 0 ? PauseState.None : i == 1 ? PauseState.Frozen : PauseState.Paused;
         PauseReason r = i == 2 ? PauseReason.General : i == 3 ? PauseReason.MintPathSuspect : PauseReason.None;
-        env.reg.setPause(env.hub, s, r);
+        env.world.setPause(s, r);
     }
 
     function freeze(
         uint256 w,
         bool on
     ) external {
-        env.reg.setFrozen(env.wallets[w % env.wallets.length], on);
+        env.world.freezeWallet(env.wallets[w % env.wallets.length], on);
     }
 
+    /// @notice USDT at $0.82 to $1.02 (the vault token about -9.4 % to +1.0 %), the market pool at the new rate.
     function movePrice(
         uint256 price8
     ) external {
-        env.lpo.setAnswer(int256(bound(price8, 150_000_000, 230_000_000)));
+        env.world.moveUsdt(bound(price8, 82_000_000, 102_000_000));
     }
 
     function moveRoutes(
         uint256 rate
     ) external {
-        env.primaryPool.setRate(bound(rate, 9950, 10_040), 10_000);
+        env.world.moveRoutes(bound(rate, 9950, 10_040));
     }
 
     function warp(
         uint256 secs
     ) external {
-        vm.warp(block.timestamp + bound(secs, 1, 1 days));
-        vm.roll(block.number + 1);
-        env.lpo.refresh(uint64(block.timestamp));
-        env.usdcOracle.setLeg(uint64(block.timestamp));
+        env.world.warp(bound(secs, 1, 1 days));
     }
 
     // ─── Internals ───
@@ -548,7 +564,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     }
 
     function _fundApprove(
-        CollPoolToken asset,
+        ClTestToken asset,
         address wallet,
         uint256 amount
     ) internal {

@@ -75,5 +75,5 @@ The arithmetic of every step below is in [`LPPriceMath`](LPPriceMath.sol); the L
 
 ## Spec
 
-- [2.10 LPOracle, LPPriceMath and DebtOracle](../../../../spec/02-contracts/10-lp-oracle.md): `REQ-ORACLE-010`–`REQ-ORACLE-045`, `REQ-ORACLE-085`–`REQ-ORACLE-090`, `REQ-ORACLE-100`, `REQ-ORACLE-107`, `SPEC-ORC-004`, `SPEC-ORC-007`, `SPEC-ORC-015`, `SPEC-ORC-017`.
-- Flows: [3.6 Emergency](../../../../spec/03-operations/06-emergency-operations.md) `EMG-007`, `EMG-030`–`EMG-036`, `EMG-076` (P-02), `EMG-107`.
+- [2.10 LPOracle, LPPriceMath and DebtOracle](../../../../docs/spec/02-contracts/10-lp-oracle.md): `REQ-ORACLE-010`–`REQ-ORACLE-045`, `REQ-ORACLE-085`–`REQ-ORACLE-090`, `REQ-ORACLE-100`, `REQ-ORACLE-107`, `SPEC-ORC-004`, `SPEC-ORC-007`, `SPEC-ORC-015`, `SPEC-ORC-017`.
+- Flows: [3.6 Emergency](../../../../docs/spec/03-operations/06-emergency-operations.md) `EMG-007`, `EMG-030`–`EMG-036`, `EMG-076` (P-02), `EMG-107`.

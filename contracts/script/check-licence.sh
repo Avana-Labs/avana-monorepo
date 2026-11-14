@@ -3,7 +3,7 @@
 # Copyright (c) 2026 Avana Labs
 # Licence headers (LICENSE, LICENSING.md, THIRD_PARTY_LICENSES.md).
 #
-# Every Solidity file Avana owns, under contracts/{src,test,script,certora,aave-deploy} and audit/, starts with exactly
+# Every Solidity file Avana owns, under contracts/{src,test,script,certora,aave-deploy} and docs/audit/, starts with exactly
 #
 #   // SPDX-License-Identifier: BUSL-1.1
 #   pragma solidity <the file's version>;
@@ -13,7 +13,7 @@
 # Exempt from that header: src/interfaces/external/ (third-party interfaces keep their origin's SPDX identifier, which
 # must be present) and the files in security/licence-allowlist.txt, each of which must carry exactly the identifier
 # listed there. No Solidity file, script or package.json in those folders, in packages/ or in
-# spec/05-verification/ may carry UNLICENSED.
+# docs/spec/05-verification/ may carry UNLICENSED.
 #
 # Prints one line per violation and exits 1 if there is any.
 #
@@ -27,7 +27,7 @@ ALLOW=security/licence-allowlist.txt
 [ -f "$ALLOW" ] || { echo "check-licence: missing $ALLOW" >&2; exit 2; }
 
 roots=()
-for d in src test script certora aave-deploy ../audit; do
+for d in src test script certora aave-deploy ../docs/audit; do
   [ -d "$d" ] && roots+=("$d")
 done
 
@@ -78,7 +78,7 @@ find "${roots[@]}" -name '*.sol' -type f | LC_ALL=C sort | xargs awk -v allow="$
 unlicensed=$(grep -rIlE --exclude-dir=node_modules --exclude-dir=.venv --exclude-dir=__pycache__ \
   --exclude-dir=.hypothesis --exclude-dir=.pytest_cache --exclude-dir=tools \
   'SPDX-License-Identifier: *UNLICENSED|"license": *"UNLICENSED"' \
-  "${roots[@]}" package.json ../packages ../spec/05-verification 2>/dev/null || true)
+  "${roots[@]}" package.json ../packages ../docs/spec/05-verification 2>/dev/null || true)
 if [ -n "$unlicensed" ]; then
   while IFS= read -r f; do echo "$f: carries UNLICENSED"; done <<<"$unlicensed"
   status=1

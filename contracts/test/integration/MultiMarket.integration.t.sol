@@ -22,8 +22,8 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// each borrowing USDC at HF about 1.08 (the Lens's `previewBorrowMax` / 1.08; CF 30 %, 20 % for MEME/WETH); the stable
 /// account 10,000 vault tokens against 5,880 USDC. Crash: WETH -20 %, WBTC -20 %, MEME -40 % and USDT -7 % on every
 /// feed, every market pool swapped to the new prices and the TWAP window waited (`_repriceMarkets`); the volatile vault
-/// tokens lose 10.6 %, 20 % and 30.7 %, the stable one 3.6 %. The Slipstream cases are in `MultiMarket.Slipstream` on the
-/// stand-in fixture.
+/// tokens lose 10.6 %, 20 % and 30.7 %, the stable one 3.6 %. The Slipstream cases are in `MultiMarket.Slipstream`
+/// (`RealStackSlipstream`).
 /// forge-config: default.isolate = false
 contract MultiMarketIntegrationTest is RealStackVolatile {
     struct Case {

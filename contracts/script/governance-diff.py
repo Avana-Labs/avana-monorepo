@@ -8,7 +8,7 @@ before.json and after.json: the ParameterStore values, MarketRegistry state and 
 before and after the operation executes through the AvanaTimelock. This script lists every leaf value that differs,
 one row per JSON path, so a reviewer sees exactly what the operation changes.
 
-Usage, from contracts/:  python3 script/governance-diff.py ../governance/operations/<YYYYMMDD_Chain_Title>
+Usage, from contracts/:  python3 script/governance-diff.py ../docs/governance/operations/<YYYYMMDD_Chain_Title>
 Writes <folder>/diff.md; exits 1 if either JSON file is missing.
 """
 from __future__ import annotations

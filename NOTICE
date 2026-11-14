@@ -14,8 +14,8 @@ Uniswap v3-core and v3-periphery
   Copyright (c) 2021 Uniswap Labs
   Licensed under the GNU General Public License v2.0 or later (LICENSES/GPL-2.0.txt).
   Ported in contracts/test/differential/reference/avana_reference.py,
-  spec/05-verification/z3/units-oracle/_common.py and
-  spec/05-verification/hypothesis/model/uniswap.py; interface subsets copied in
+  docs/spec/05-verification/z3/units-oracle/_common.py and
+  docs/spec/05-verification/hypothesis/model/uniswap.py; interface subsets copied in
   contracts/src/interfaces/external/uniswap/.
 
 Uniswap v4-core
@@ -33,10 +33,10 @@ Aave V4
   Copyright (c) Aave Labs
   Licensed under the Aave V4 licence (LICENSES/LicenseRef-BUSL-AaveV4.md), which
   permits use in test environments only. Ported in
-  spec/05-verification/hypothesis/model/aave.py,
-  spec/05-verification/hypothesis/model/mathlib.py,
-  spec/05-verification/z3/aave-risk/_v4ref.py and
-  audit/formal-verification/liquidation/aave_ref.py, all of which are used only
+  docs/spec/05-verification/hypothesis/model/aave.py,
+  docs/spec/05-verification/hypothesis/model/mathlib.py,
+  docs/spec/05-verification/z3/aave-risk/_v4ref.py and
+  docs/audit/formal-verification/liquidation/aave_ref.py, all of which are used only
   to check Avana's specification and tests.
 
 Aave V3 (aave-v3-core, aave-v3-origin)

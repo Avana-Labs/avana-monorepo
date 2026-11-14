@@ -98,7 +98,7 @@ export interface DetailTxRow {
   readonly counterpartyLabel?: string;
   readonly txHashShort: string;
   /** The app's row origin flag; rows read from the chain are served as "seed". */
-  readonly source: "sandbox" | "seed";
+  readonly source: "wallet" | "seed";
 }
 
 export interface InterestRateModel {

@@ -97,6 +97,37 @@ export function splitFunding(debtToCover: bigint, idle: bigint): { flashAmount: 
   return { flashAmount, inventoryAmount: debtToCover - flashAmount };
 }
 
+/** A contract a swap route calls (`ISettlementRoute.dependencies()`), with what it wraps when it is a wrapper. */
+export interface RouteDependency {
+  readonly address: `0x${string}`;
+  /** `asset()` of an ERC-4626 wrapper and `aToken()` of a static aToken, where the contract answers them. */
+  readonly wraps: readonly `0x${string}`[];
+}
+
+/**
+ * Whether a route into the debt asset draws on the Aave V3 Pool reserve a flash loan of that asset borrows: one of
+ * its dependencies is the reserve's aToken or wraps it (an ERC-4626 wrapper of the aToken, a static aToken). The loan
+ * would then take the liquidity the route's leg needs, so the call is inventory-funded (services/README.md, Building
+ * the call). Without a known aToken nothing can match.
+ */
+export function routeDrawsOnReserve(deps: readonly RouteDependency[], aToken: `0x${string}` | null): boolean {
+  if (aToken === null) return false;
+  const a = aToken.toLowerCase();
+  return deps.some((d) => d.address.toLowerCase() === a || d.wraps.some((w) => w.toLowerCase() === a));
+}
+
+/**
+ * How one call is funded. The flash path splits `debtToCover` by `splitFunding`. The inventory-only path (`F = 0`, which
+ * only the operator helper accepts, REQ-HELPER-003) funds the whole repayment from the funding Safe: when flash
+ * funding is stopped (the Aave V3 Pool's implementation is not the manifest's), or when the loan would round to zero
+ * (no idle liquidity, or a dust repayment the 1 % headroom floors to nothing).
+ */
+export function fundingPlan(debtToCover: bigint, idle: bigint, flashUsable: boolean): { flashAmount: bigint; inventoryAmount: bigint; inventoryOnly: boolean } {
+  const split = flashUsable ? splitFunding(debtToCover, idle) : null;
+  if (!split) return { flashAmount: 0n, inventoryAmount: debtToCover, inventoryOnly: true };
+  return { ...split, inventoryOnly: false };
+}
+
 /**
  * Top-up bound: 0 for a profitable call, otherwise premium + expectedCallerLoss − expectedNetPayout from the
  * preview (REQ-LENS-029), capped so the Safe's whole outflow stays within MAX_TOP_UP_BPS of the debt repaid (FL-02).

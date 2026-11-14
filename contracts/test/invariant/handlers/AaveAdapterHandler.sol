@@ -272,8 +272,14 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 mode
     ) external {
         ++calls;
-        (bool found, address wallet, uint256 market,,) = _withKey(walletSeed, marketSeed, 0);
-        if (!found) revert Skipped();
+        address wallet;
+        uint256 market;
+        {
+            // Scoped, which keeps the function within the legacy code generator's stack (coverage build).
+            bool found;
+            (found, wallet, market,,) = _withKey(walletSeed, marketSeed, 0);
+            if (!found) revert Skipped();
+        }
         address proxy = w.adapter.proxyOf(wallet, market);
         bool gho = reserveSeed % 2 == 0;
         uint256 reserve = gho ? w.ghoReserve : w.usdcReserve;

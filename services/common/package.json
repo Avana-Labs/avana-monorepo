@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./export": "./src/export.ts",
+    "./keeperStream": "./src/keeperStream.ts",
     "./series": "./src/series.ts",
     "./views": "./src/views/index.ts",
     "./fixtures": "./src/views/fixtures.ts",

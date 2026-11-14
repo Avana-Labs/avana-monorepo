@@ -3,8 +3,7 @@
 // The list, header, quick-stat, chart and activity queries of the Lend and Borrow screens, under the names and
 // shapes the web app calls. A chain has several Hubs: list rows name their Hub, totals add every Hub. Scopes: "lend" =
 // a Hub asset (Lend page), "asset" = one CDP Spoke's debt reserve
-// (Borrow asset page), "pool" = one collateral market (Borrow pool page). Multiply is not part of v1, so its list is
-// empty and no Multiply row exists.
+// (Borrow asset page), "pool" = one collateral market (Borrow pool page).
 
 import { v } from "convex/values";
 import { bpsToPct, rayToAprPct, rayToApyPct, usd } from "@avana/services-common/views";
@@ -17,7 +16,7 @@ import { lendTotals } from "./lib/hubViews.ts";
 import { type World, bySlug, hubLabelOf, loadWorld, priceAsset, reserveKey, scopePoints, sliceOf, snapshotRows, symbolOf } from "./model.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
 
-const scopeArg = v.union(v.literal("asset"), v.literal("pool"), v.literal("lend"), v.literal("multiply"));
+const scopeArg = v.union(v.literal("asset"), v.literal("pool"), v.literal("lend"));
 const rangeArg = v.union(v.literal("1D"), v.literal("1W"), v.literal("1M"), v.literal("3M"), v.literal("1Y"), v.literal("ALL"));
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -43,16 +42,13 @@ export const getLendTotals = query({
   },
 });
 
-/** Multiply is not in v1. */
-export const listMultiplyMarketSnapshots = query({ args: {}, handler: async (): Promise<MarketSnapshotRow[]> => [] });
-
 export async function readMarketSnapshot(ctx: QueryCtx, w: World, scope: PageScope, slug: string): Promise<MarketSnapshotRow | null> {
   return (await snapshotRows(ctx, w, nowSeconds(), scope)).find((r) => r.slug === slug) ?? null;
 }
 
 export const getMarketSnapshot = query({
   args: { scope: scopeArg, slug: v.string() },
-  handler: async (ctx, { scope, slug }) => (scope === "multiply" ? null : readMarketSnapshot(ctx, await loadWorld(ctx), scope, slug)),
+  handler: async (ctx, { scope, slug }) => readMarketSnapshot(ctx, await loadWorld(ctx), scope, slug),
 });
 
 /** Day buckets of a scope, with gaps filled, keyed by bucket start. */
@@ -94,7 +90,6 @@ async function snapshot24hAgo(ctx: QueryCtx, w: World, scope: PageScope, slug: s
 export const getQuickStats = query({
   args: { scope: scopeArg, slug: v.string() },
   handler: async (ctx, { scope, slug }) => {
-    if (scope === "multiply") return null;
     const w = await loadWorld(ctx);
     const current = await readMarketSnapshot(ctx, w, scope, slug);
     if (!current) return null;
@@ -272,6 +267,6 @@ export async function readRecentTransactions(ctx: QueryCtx, w: World, scope: Pag
 
 export const getRecentTransactions = query({
   args: { scope: scopeArg, slug: v.string(), limit: v.optional(v.number()) },
-  handler: async (ctx, { scope, slug, limit }) => (scope === "multiply" ? [] : readRecentTransactions(ctx, await loadWorld(ctx), scope, slug, limit)),
+  handler: async (ctx, { scope, slug, limit }) => readRecentTransactions(ctx, await loadWorld(ctx), scope, slug, limit),
 });
 

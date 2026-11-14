@@ -11,14 +11,14 @@
       "contract": "AvanaFirstLossReserveHalmosTest",
       "check": "check_PROP_039_coverDeficitBoundedAndAllowlisted",
       "timeout": 18000,
-      "reason": "PROP-039: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). The recorded run of 2026-11-10 (audit/halmos/) also timed out on the RAY division.",
+      "reason": "PROP-039: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). The recorded run of 2026-11-10 (docs/audit/halmos/) also timed out on the RAY division.",
       "approval": "approved (Josue, 2026-11-13)"
     },
     {
       "contract": "AvanaFirstLossReserveHalmosTest",
       "check": "check_PROP_039_coverDeficitLive",
       "timeout": 18000,
-      "reason": "PROP-039: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). The recorded run of 2026-11-10 (audit/halmos/) also timed out on the RAY division.",
+      "reason": "PROP-039: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). The recorded run of 2026-11-10 (docs/audit/halmos/) also timed out on the RAY division.",
       "approval": "approved (Josue, 2026-11-13)"
     },
     {
@@ -53,7 +53,7 @@
       "contract": "LPPriceMathHalmosTest",
       "check": "check_PROP_023_price8PositiveAndBelowExact_18_18",
       "timeout": 18000,
-      "reason": "PROP-023: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it ended [TIMEOUT] after 1,113 s at the 60 s assertion limit.",
+      "reason": "PROP-023: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (docs/audit/halmos/) it ended [TIMEOUT] after 1,113 s at the 60 s assertion limit.",
       "approval": "approved (Josue, 2026-11-13)"
     },
     {
@@ -74,7 +74,7 @@
       "contract": "LPPriceMathHalmosTest",
       "check": "check_PROP_024_valuationSymmetricInTokenOrder",
       "timeout": 18000,
-      "reason": "PROP-024: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it ended [TIMEOUT] after 182 s at the 60 s assertion limit.",
+      "reason": "PROP-024: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (docs/audit/halmos/) it ended [TIMEOUT] after 182 s at the 60 s assertion limit.",
       "approval": "approved (Josue, 2026-11-13)"
     },
     {
@@ -116,7 +116,7 @@
       "contract": "SettlementMathHalmosTest",
       "check": "check_PROP_015_gapSettlesWithoutRevert",
       "timeout": 18000,
-      "reason": "PROP-015: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it reached the 240 s wall clock of that run.",
+      "reason": "PROP-015: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (docs/audit/halmos/) it reached the 240 s wall clock of that run.",
       "approval": "approved (Josue, 2026-11-13)"
     },
     {
@@ -130,7 +130,7 @@
       "contract": "SettlementMathHalmosTest",
       "check": "check_PROP_018_unitAndPendingValues",
       "timeout": 18000,
-      "reason": "PROP-018: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (audit/halmos/) it reached the 240 s wall clock of that run.",
+      "reason": "PROP-018: cancelled at GitHub's 6-hour job limit in run 43492412351 on main (loop 16, --solver-timeout-assertion 0), before its result line. Bounded to 5 hours so the job ends and reports the check as bounded; the property's fuzz twin keeps running at 10,000 runs on every pull request ([profile.ci.fuzz]). On 2026-11-10 (docs/audit/halmos/) it reached the 240 s wall clock of that run.",
       "approval": "approved (Josue, 2026-11-13)"
     },
     {

@@ -6,5 +6,6 @@ export * from "./env.ts";
 export * from "./manifest.ts";
 export * from "./provenance.ts";
 export * from "./export.ts";
+export * from "./keeperStream.ts";
 export * from "./gas.ts";
 export * from "./series.ts";

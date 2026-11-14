@@ -84,6 +84,7 @@ MSYS2_ARG_CONV_EXCL="/CN=" openssl req -x509 -newkey rsa:2048 -nodes -days 1 -su
   KEEPER_SHARD_COUNT=1 KEEPER_KILL_SWITCH_PORT="$KILL_PORT" KEEPER_KILL_SWITCH_TLS_CERT="$WORK/cert.pem" \
   KEEPER_KILL_SWITCH_TLS_KEY="$WORK/key.pem" KEEPER_KILL_SWITCH_CLIENT_CA="$WORK/cert.pem" \
   KEEPER_HALT_STATE_PATH="$WORK/halt" KEEPER_METRICS_PORT="$METRICS_PORT" KEEPER_INDEXER_URL="http://127.0.0.1:${INDEXER_PORT}" \
+  KEEPER_INDEXER_KEY="$EXPORT_KEY_ID:$EXPORT_SECRET" \
   "$REPO/node_modules/.bin/tsx" src/main.ts > "$WORK/keeper.log" 2>&1) &
 PIDS="$PIDS $!"
 up=0
@@ -96,6 +97,14 @@ if [ $up -eq 1 ] && ! grep -q '"keeper.fatal"' "$WORK/keeper.log"; then
   echo "keeper: $(tr '\n' ' ' < "$WORK/metrics.txt")"
 else
   echo "keeper: did not stay up"; tail -30 "$WORK/keeper.log"
+fi
+# The keeper read the indexer stream at startup: a stream failure, or an account only one of the stream and the RPC
+# logs holds, fails the step (on a fresh anvil world both sources must agree).
+if grep -qE '"type":"keeper\.(stream|discoveryMismatch)"' "$WORK/keeper.log"; then
+  echo "keeper: indexer stream: $(grep -m2 -E '"type":"keeper\.(stream|discoveryMismatch)"' "$WORK/keeper.log" | cut -c1-300 | tr '\n' ' ')"
+  up=0
+else
+  echo "keeper: indexer stream read, no discovery mismatch"
 fi
 
 # Convex: the export serves only finalized blocks, and anvil finalizes 64 blocks behind its head. Mine past that and

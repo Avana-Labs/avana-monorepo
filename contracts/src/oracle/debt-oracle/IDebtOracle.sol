@@ -71,7 +71,7 @@ interface IDebtOracle is IAaveV4PriceFeed, IAccessControl, IDebtOracleEvents, ID
     /// @return answer Served price, 8 decimals.
     /// @return startedAt servedUpdatedAt.
     /// @return updatedAt servedUpdatedAt: the timestamp of the route whose value is served (the quote's route when Live,
-    /// the route of max(p, b) while Drifting), else the accepted timestamp (failed, or Drifting with A served).
+    /// the route of min(p, b) while Drifting), else the accepted timestamp (failed, or Drifting with A served).
     /// @return answeredInRound uint80(servedUpdatedAt).
     /// @custom:spec REQ-ORACLE-093
     function latestRoundData()

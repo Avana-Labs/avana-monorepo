@@ -1,0 +1,23 @@
+# Prettier already respects .gitignore, so only list paths NOT covered there.
+
+# Lockfile (never reformat)
+package-lock.json
+
+# Convex-generated code (owned by `convex codegen`)
+convex/_generated/
+
+# Local Convex deployment state (ignored via nested .convex/.gitignore, which
+# Prettier does not read — the root .gitignore alone does not cover this).
+.convex/
+
+# Build/report artifacts not in .gitignore
+.next-lighthouse/
+dist/
+.reports/
+coverage/
+
+# Ask AI knowledge corpus — the .md sources and the generated file are owned by
+# scripts/render-ask-ai-corpus.mjs (verified by `npm run ask-ai:corpus:check`).
+# Reformatting them would break that check or change the corpus version hash.
+convex/knowledge/
+convex/askAICorpus.generated.ts

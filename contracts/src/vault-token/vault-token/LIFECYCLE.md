@@ -34,4 +34,4 @@ Setup (Base market 3: vault token `VT` with 6 decimals, $2.00 per whole token, f
 
 ## Spec
 
-- [2.4 Vault Tokens](../../../../spec/02-contracts/04-vault-tokens.md): `REQ-VTOKEN-006`–`REQ-VTOKEN-015`, `REQ-VTOKEN-025`, `REQ-VTOKEN-030`–`REQ-VTOKEN-048`, `REQ-VTOKEN-050`, `SPEC-UNIT-001`, `INV-009`, `INV-010`, `INV-011`, `INV-012`.
+- [2.4 Vault Tokens](../../../../docs/spec/02-contracts/04-vault-tokens.md): `REQ-VTOKEN-006`–`REQ-VTOKEN-015`, `REQ-VTOKEN-025`, `REQ-VTOKEN-030`–`REQ-VTOKEN-048`, `REQ-VTOKEN-050`, `SPEC-UNIT-001`, `INV-009`, `INV-010`, `INV-011`, `INV-012`.

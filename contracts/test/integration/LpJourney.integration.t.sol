@@ -69,10 +69,15 @@ contract LpJourneyIntegrationTest is RealStackFlows {
         if (usdcDebt != 0) _borrowAs(wallet, mA, usdcReserveId, usdcDebt);
     }
 
+    /// @dev The NFT's liquidity, decoded from the first eight words of `positions` (decoding all twelve return values
+    /// exceeds the legacy code generator's stack in the coverage build).
     function _liquidityOf(
         bytes32 key
     ) internal view returns (uint128 liquidity) {
-        (,,,,,,, liquidity,,,,) = nfpm.positions(uint256(key));
+        (bool ok, bytes memory ret) =
+            address(nfpm).staticcall(abi.encodeCall(INonfungiblePositionManager.positions, (uint256(key))));
+        assertTrue(ok, "positions");
+        (,,,,,,, liquidity) = abi.decode(ret, (uint96, address, address, address, uint24, int24, int24, uint128));
     }
 
     function _credited(

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IClIntegration} from "../../../src/amm/IClIntegration.sol";
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {ClUnitMath} from "../../../src/amm/concentrated-liquidity/ClUnitMath.sol";
 import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
@@ -60,6 +61,26 @@ abstract contract RealStackVolatile is RealStackFlows {
     string internal constant HUB_VOLATILE_LP = "volatile-lp";
     string internal constant SPOKE_CDP_UNISWAP_V3_VOLATILE = "uniswap-v3-volatile";
     uint16 internal constant POOL_RISK_FACTOR = 4000;
+
+    /// @notice Where a concentrated-liquidity market is listed: its AMM integration and LPVault, its Hub, CDP Spoke and
+    /// the Hub's interest-rate strategy, the `slot0` layout of its pools (7 Uniswap v3, 6 Slipstream) and, for
+    /// Slipstream, the pool's generation (`bindMarket`'s `integrationData` names it).
+    struct ClSite {
+        uint32 integrationId;
+        address lpVault;
+        address hub;
+        address spoke;
+        address ir;
+        uint8 slot0Words;
+        uint8 generation;
+    }
+
+    /// @dev A vault token's name, symbol and shape (one stack slot for `_volatileVaultToken`).
+    struct VtMeta {
+        string name;
+        string symbol;
+        PositionShape shape;
+    }
 
     address internal hubV;
     address internal irV;
@@ -311,16 +332,27 @@ abstract contract RealStackVolatile is RealStackFlows {
         IClPool p,
         uint16 cf
     ) internal returns (uint256 id) {
+        id = _addClMarket(p, cf, ClSite(V3, integration, hubV, spokeV, irV, 7, 0));
+    }
+
+    /// @notice `_addVolatileMarket` at any site: the full range of `p` listed and activated on `site`'s Spoke with the
+    /// unit of the real LPVault's `bindMarket`, CF `cf`, and routes from each pool token into USDC and GHO. A market
+    /// whose two tokens are USD stables carries the chain's USD band; any other has none (REQ-ORACLE-056).
+    function _addClMarket(
+        IClPool p,
+        uint16 cf,
+        ClSite memory site
+    ) internal returns (uint256 id) {
         id = registry.marketCount() + 1;
         MarketInfo storage m = mkt[id];
         m.pool = p;
         (uint8 d, uint8 k) = _unitOf(p);
-        m.oracle = _volatileOracle(id, p, k);
-        m.vaultToken = _volatileVaultToken(id, p, address(m.oracle), d);
-        _listVolatile(p, m.vaultToken, address(m.oracle));
-        require(uniVault.unitExponent(id) == k, "the LPVault bound the pool's unit exponent");
+        m.oracle = _volatileOracle(id, p, k, site);
+        m.vaultToken = _volatileVaultToken(id, p, address(m.oracle), d, site);
+        _listVolatile(p, m.vaultToken, address(m.oracle), site);
+        require(IClIntegration(site.lpVault).unitExponent(id) == k, "the LPVault bound the pool's unit exponent");
         _storeVolatile(id);
-        _aaveVolatile(m, d, cf);
+        _aaveVolatile(m, d, cf, site);
         _routesInto(id, address(usdc));
         _routesInto(id, address(gho));
         vm.prank(address(timelock));
@@ -348,10 +380,12 @@ abstract contract RealStackVolatile is RealStackFlows {
     function _volatileOracle(
         uint256 id,
         IClPool p,
-        uint8 k
+        uint8 k,
+        ClSite memory site
     ) private returns (LPOracleCL o) {
         (int24 lower, int24 upper) = _fullRange(p);
-        LPOracleCL impl = LPOracleCLDeployer.deploy(address(timelock), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7);
+        LPOracleCL impl =
+            LPOracleCLDeployer.deploy(address(timelock), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, site.slot0Words);
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (p.token0(), p.token1());
         InitParams memory ip;
@@ -359,14 +393,16 @@ abstract contract RealStackVolatile is RealStackFlows {
         ip.parameterStore = address(store);
         ip.marketRegistry = address(registry);
         ip.marketId = id;
-        ip.integration = integration;
+        ip.integration = site.lpVault;
         ip.isUsdStable = new bool[](2);
-        (ip.isUsdStable[0], ip.isUsdStable[1]) = (toks[0] == address(usdc), toks[1] == address(usdc));
-        ip.description = "Uniswap v3 LP / USD";
+        (ip.isUsdStable[0], ip.isUsdStable[1]) = (_isStable(toks[0]), _isStable(toks[1]));
+        ip.description = "CL LP / USD";
         ip.pokeMinGas = POKE_FLOOR;
         ip.config = _oracleConfigFor(id, toks);
         // A market with a token that is not a USD stable has no USD band (REQ-ORACLE-056).
-        (ip.config.usdBandLow, ip.config.usdBandHigh) = (0, type(uint256).max);
+        if (!ip.isUsdStable[0] || !ip.isUsdStable[1]) {
+            (ip.config.usdBandLow, ip.config.usdBandHigh) = (0, type(uint256).max);
+        }
         ip.market = abi.encode(address(p), lower, upper, uint256(k));
         o = LPOracleCL(address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (ip)))));
     }
@@ -375,12 +411,23 @@ abstract contract RealStackVolatile is RealStackFlows {
         uint256 id,
         IClPool p,
         address oracle,
-        uint8 d
+        uint8 d,
+        ClSite memory site
     ) private returns (address vt) {
-        (string memory name, string memory symbol) = _vtNames(id, p);
-        PositionShape memory shape = _fullShape(p);
+        VtMeta memory v;
+        (v.name, v.symbol) = _vtNames(id, p);
+        v.shape = _fullShape(p);
         vm.prank(address(timelock));
-        vt = vtFactory.deployVaultToken(V3, address(p), bytes32(0), shape, hubV, spokeV, id, oracle, d, name, symbol);
+        vt = vtFactory.deployVaultToken(
+            site.integrationId, address(p), bytes32(0), v.shape, site.hub, site.spoke, id, oracle, d, v.name, v.symbol
+        );
+    }
+
+    /// @dev True for the fixture's USD stable pool tokens.
+    function _isStable(
+        address token
+    ) internal view returns (bool) {
+        return token == address(usdc) || token == address(usdt);
     }
 
     function _vtNames(
@@ -402,14 +449,17 @@ abstract contract RealStackVolatile is RealStackFlows {
     function _listVolatile(
         IClPool p,
         address vt,
-        address oracle
+        address oracle,
+        ClSite memory site
     ) private {
         (int24 lower, int24 upper) = _fullRange(p);
         MarketDef memory d;
-        (d.hub, d.spoke, d.integrationId, d.pool) = (hubV, spokeV, V3, address(p));
+        (d.hub, d.spoke, d.integrationId, d.pool) = (site.hub, site.spoke, site.integrationId, address(p));
         d.shape = PositionShape(ShapeKind.TickRange, lower, upper);
         (d.vaultToken, d.lpOracle) = (vt, oracle);
-        d.integrationData = abi.encode(_usdPrice(p.token0()), _usdPrice(p.token1()));
+        (uint256 p0, uint256 p1) = (_usdPrice(p.token0()), _usdPrice(p.token1()));
+        // Slipstream's `bindMarket` reads the pool's generation first (`abi.encode(generation, price0, price1)`).
+        d.integrationData = site.slot0Words == 6 ? abi.encode(uint256(site.generation), p0, p1) : abi.encode(p0, p1);
         vm.prank(address(timelock));
         registry.listCollateralMarket(d);
     }
@@ -436,18 +486,20 @@ abstract contract RealStackVolatile is RealStackFlows {
     function _aaveVolatile(
         MarketInfo storage m,
         uint8 d,
-        uint16 cf
+        uint16 cf,
+        ClSite memory site
     ) private {
-        uint24 maxRp = IAaveV4Hub(hubV).MAX_RISK_PREMIUM_THRESHOLD();
+        address hub = site.hub;
+        uint24 maxRp = IAaveV4Hub(hub).MAX_RISK_PREMIUM_THRESHOLD();
         vm.startPrank(aaveDao);
         m.assetId = ICollHubConfigurator(aave.hubConfigurator)
-            .addAssetWithDecimals(hubV, m.vaultToken, d, aave.treasurySpoke, 0, irV, _irData());
+            .addAssetWithDecimals(hub, m.vaultToken, d, aave.treasurySpoke, 0, site.ir, _irData());
         ICollHubConfigurator(aave.hubConfigurator)
-            .addSpoke(hubV, spokeV, m.assetId, CollHubSpokeConfig(VT_ADD_CAP, 0, maxRp, true, false));
+            .addSpoke(hub, site.spoke, m.assetId, CollHubSpokeConfig(VT_ADD_CAP, 0, maxRp, true, false));
         m.reserveId = ICollSpokeConfigurator(aave.spokeConfigurator)
             .addReserve(
-                spokeV,
-                hubV,
+                site.spoke,
+                hub,
                 m.assetId,
                 address(m.oracle),
                 CollSpokeReserveConfig(0, false, false, false, false),
@@ -456,7 +508,7 @@ abstract contract RealStackVolatile is RealStackFlows {
         (bool ok,) = aave.hubConfigurator
             .call(
                 abi.encodeWithSignature(
-                    "updateSpokeAddCap(address,uint256,address,uint256)", hubV, m.assetId, aave.treasurySpoke, 0
+                    "updateSpokeAddCap(address,uint256,address,uint256)", hub, m.assetId, aave.treasurySpoke, 0
                 )
             );
         require(ok, "fee receiver add cap");

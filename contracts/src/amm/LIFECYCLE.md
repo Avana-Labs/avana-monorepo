@@ -38,5 +38,5 @@ Protocol-specific steps: [Uniswap v3](uniswap-v3/LIFECYCLE.md), [Aerodrome Slips
 
 ## Spec
 
-- [2.19 AMM Integration Interface](../../../spec/02-contracts/19-amm-integration-interface.md): `REQ-AMM-CORE-001`–`REQ-AMM-CORE-012`, `SPEC-ORC-007` (composition).
-- [2.22 AMM Integration Readiness](../../../spec/02-contracts/22-amm-integration-readiness.md) for Uniswap v2, Curve, Balancer and Uniswap v4.
+- [2.19 AMM Integration Interface](../../../docs/spec/02-contracts/19-amm-integration-interface.md): `REQ-AMM-CORE-001`–`REQ-AMM-CORE-012`, `SPEC-ORC-007` (composition).
+- [2.22 AMM Integration Readiness](../../../docs/spec/02-contracts/22-amm-integration-readiness.md) for Uniswap v2, Curve, Balancer and Uniswap v4.
