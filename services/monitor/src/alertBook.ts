@@ -5,16 +5,16 @@
 // is sent every time. Nothing is sent again while a condition stays at the same level, so a page that stays true is
 // one page, not one per block.
 
-import type { Source } from "./signals.ts";
 import type { Alert, Finding, Notice } from "./types.ts";
 
 interface Open {
   readonly alert: Alert;
-  readonly source: Source;
+  readonly source: string;
 }
 
 export interface Evaluation {
-  readonly source: Source;
+  /** The probe or feed the findings come from (`keeper`, `snapshot`, `oracle`, ...). */
+  readonly source: string;
   readonly chainId: number;
   readonly blockNumber: bigint;
   readonly timestamp: number;

@@ -16,6 +16,7 @@ export type ChannelConfig =
 
 export interface ChainConfig {
   readonly chain: ChainInfo;
+  readonly manifest: ServiceManifest;
   readonly deployment: ChainDeployment;
   readonly rpc: { readonly primary: string; readonly second: string };
 }
@@ -63,7 +64,8 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     const primary = requireEnv(env, rpcEnvName(chain, "PRIMARY"));
     const second = requireEnv(env, rpcEnvName(chain, "FALLBACK"));
     if (primary === second) throw new Error(`${rpcEnvName(chain, "FALLBACK")} must be a second provider, not the primary endpoint again`);
-    return { chain, deployment: deploymentOf(manifests.get(chain.id)!), rpc: { primary, second } };
+    const manifest = manifests.get(chain.id)!;
+    return { chain, manifest, deployment: deploymentOf(manifest), rpc: { primary, second } };
   });
   if (chains.length === 0) throw new Error(`AVANA_MANIFEST names no chain of the ${set} set`);
 

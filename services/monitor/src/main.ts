@@ -7,14 +7,15 @@
 
 import { MULTICALL3_ADDRESS } from "@avana/services-common";
 import { type CallResult, type ContractCall, type ViewClient, readChainSnapshot } from "@avana/services-common/views";
-import { type PublicClient, createPublicClient, http } from "viem";
+import { type Hex, type PublicClient, createPublicClient, http, toHex } from "viem";
 import { AlertBook } from "./alertBook.ts";
 import { type ChainConfig, type ChannelConfig, loadConfig } from "./config.ts";
 import { fileIncidentLog } from "./incidentLog.ts";
 import { KeeperFeed } from "./keeper.ts";
-import { type ChainReads, runRound } from "./monitor.ts";
+import { type ChainReads, type ProviderReads, runRound } from "./monitor.ts";
+import type { RawRpc } from "./probe.ts";
+import { probesFor } from "./probes.ts";
 import { type Channel, logChannel, pagerDutyChannel, webhookChannel } from "./notify/channels.ts";
-import { SnapshotMemory } from "./rules/snapshot.ts";
 import { monitorServer } from "./server.ts";
 
 const out = (o: unknown) => process.stdout.write(`${JSON.stringify(o)}\n`);
@@ -32,18 +33,33 @@ function pinned(client: PublicClient, blockNumber: bigint): ViewClient {
   };
 }
 
+function provider(c: ChainConfig, url: string): ProviderReads {
+  const client = createPublicClient({ transport: http(url) }) as PublicClient;
+  return {
+    snapshot: (b) => readChainSnapshot(pinned(client, b.number), c.deployment, { blockNumber: b.number, timestamp: b.timestamp }),
+    views: (b) => pinned(client, b.number),
+    rpc: (b): RawRpc => ({
+      getLogs: async (addresses, fromBlock, toBlock) => {
+        if (toBlock > b.number) throw new Error(`logs past the round's block ${b.number}`);
+        const logs = await client.request({ method: "eth_getLogs", params: [{ address: [...addresses], fromBlock: toHex(fromBlock), toBlock: toHex(toBlock) }] });
+        return logs.map((l) => ({ address: l.address, topics: l.topics as Hex[], data: l.data, blockNumber: BigInt(l.blockNumber!), transactionHash: l.transactionHash!, logIndex: Number(l.logIndex) }));
+      },
+      getStorageAt: async (address, slot) => (await client.getStorageAt({ address, slot, blockNumber: b.number })) ?? "0x",
+    }),
+  };
+}
+
 function chainReads(c: ChainConfig): ChainReads {
   const primary = createPublicClient({ transport: http(c.rpc.primary) }) as PublicClient;
-  const second = createPublicClient({ transport: http(c.rpc.second) }) as PublicClient;
-  const read = (client: PublicClient) => (b: { number: bigint; timestamp: number }) => readChainSnapshot(pinned(client, b.number), c.deployment, { blockNumber: b.number, timestamp: b.timestamp });
   return {
-    chainId: c.chain.id,
+    chain: c.chain,
+    manifest: c.manifest,
     head: async () => {
       const b = await primary.getBlock({ blockTag: "latest" });
       return { number: b.number, timestamp: Number(b.timestamp) };
     },
-    primary: read(primary),
-    second: read(second),
+    primary: provider(c, c.rpc.primary),
+    second: provider(c, c.rpc.second),
   };
 }
 
@@ -68,13 +84,13 @@ out({ type: "monitor.start", chains: config.chains.map((c) => c.chain.key), chan
 
 for (const c of config.chains) {
   const reads = chainReads(c);
-  const memory = new SnapshotMemory();
+  const probes = probesFor(c, config);
   let running = false;
   const tick = async () => {
     if (running) return; // a slow round is not overlapped by the next one
     running = true;
     try {
-      const sent = await runRound(reads, { book, memory, feed, routing: config.routing, channels, log });
+      const sent = await runRound(reads, { book, feed, probes, routing: config.routing, channels, log });
       lastSuccess.set(c.chain.id, Date.now());
       if (sent.length > 0) out({ type: "monitor.round", chain: c.chain.key, notices: sent.length });
     } catch (err) {

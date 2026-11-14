@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// A page is sent only after the rows it was judged from read the same on a second RPC provider at the same block
-// (services/README.md: "re-checked against a second RPC source before paging"). A page the second provider reads
-// differently goes out as a warn with a note, because two providers disagreeing is itself a fault to look at.
+// The evidence of the snapshot probe: the rows a finding's subject was judged from. A page is sent only when they
+// read the same on the second RPC provider at the same block (services/README.md: "re-checked against a second RPC
+// source before paging"); see probe.ts.
 
 import type { ChainSnapshot } from "@avana/services-common/views";
-import type { Finding } from "./types.ts";
+import type { Probe } from "./probe.ts";
+import { SnapshotMemory, evaluateSnapshot } from "./rules/snapshot.ts";
 
 /** The snapshot rows a finding's subject was judged from, as text; null for a subject no row backs. */
 export function rowsFor(snap: ChainSnapshot, subject: string): string | null {
@@ -33,28 +34,7 @@ export function rowsFor(snap: ChainSnapshot, subject: string): string | null {
   return rows.length > 0 ? JSON.stringify(rows) : null;
 }
 
-/**
- * Keeps each page whose rows match on the second provider's snapshot of the same block and turns the others into
- * warns. `secondary` is read only when there is a page to confirm, so pass it lazily.
- */
-export async function confirmPages(findings: readonly Finding[], primary: ChainSnapshot, secondary: () => Promise<ChainSnapshot>): Promise<Finding[]> {
-  if (!findings.some((f) => f.level === "page")) return [...findings];
-  let second: ChainSnapshot | null = null;
-  let error = "";
-  try {
-    second = await secondary();
-    if (second.blockNumber !== primary.blockNumber) throw new Error(`second provider read block ${second.blockNumber}, not ${primary.blockNumber}`);
-  } catch (err) {
-    second = null;
-    error = err instanceof Error ? err.message : String(err);
-  }
-  return findings.map((f) => {
-    if (f.level !== "page") return f;
-    // With the second provider down the page still goes out, marked unconfirmed: withholding every page while one
-    // RPC endpoint is down would hide a real emergency, and the note sends the reader to check it by hand.
-    if (!second) return { ...f, detail: { ...f.detail, note: `unconfirmed, second provider unavailable: ${error}` } };
-    const mine = rowsFor(primary, f.subject);
-    if (mine !== null && mine === rowsFor(second, f.subject)) return f;
-    return { ...f, level: "warn", detail: { ...f.detail, note: "not confirmed on the second provider" } };
-  });
+/** The snapshot rules as a probe: the round's snapshot is its input, its rows are the evidence. */
+export function snapshotProbe(memory: SnapshotMemory = new SnapshotMemory()): Probe<ChainSnapshot> {
+  return { name: "snapshot", read: async (ctx) => ctx.snapshot, evaluate: (snap) => evaluateSnapshot(snap, memory), evidence: rowsFor };
 }

@@ -1,33 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// One round end to end on a scripted chain (snapshot rules, second-provider confirmation, keeper findings, routing,
-// delivery and the incident log), and the configuration's refusals.
+// One round end to end on a scripted chain (probes, second-provider confirmation, keeper findings, routing, delivery
+// and the incident log), a failing probe, and the configuration's refusals.
 
 import { describe, expect, it } from "vitest";
-import { FIXTURE_HUB, FIXTURE_LEND, FIXTURE_U, FIXTURE_X, fixtureHubAsset, fixtureMarkets, fixtureSlices, fixtureSpokeReserves } from "@avana/services-common/fixtures";
 import type { ServiceManifest } from "@avana/services-common";
-import type { ChainSnapshot, MarketRow } from "@avana/services-common/views";
 import { AlertBook } from "../src/alertBook.ts";
 import { loadConfig, routeEnvName } from "../src/config.ts";
+import { snapshotProbe } from "../src/confirm.ts";
 import type { IncidentEntry } from "../src/incidentLog.ts";
 import { KeeperFeed } from "../src/keeper.ts";
-import { type ChainReads, runRound } from "../src/monitor.ts";
+import { RoundError, runRound } from "../src/monitor.ts";
 import type { Channel } from "../src/notify/channels.ts";
+import type { Probe } from "../src/probe.ts";
 import { RECIPIENTS, checkRouting } from "../src/routing.ts";
-import { SnapshotMemory } from "../src/rules/snapshot.ts";
 import type { Notice } from "../src/types.ts";
-
-const snap = (block: bigint, timestamp: number, market1: Partial<MarketRow> = {}): ChainSnapshot => ({
-  chainId: 1,
-  blockNumber: block.toString(10),
-  timestamp,
-  hubs: [{ chainId: 1, hub: FIXTURE_HUB, label: "Stable", tier: 1, recorded: true, applicationState: 0, assetCount: 1, lendAssetIds: ["1"], lendSpokes: [FIXTURE_LEND], cdpSpokes: [FIXTURE_U, FIXTURE_X], blockNumber: block.toString(10) }],
-  creditLines: [],
-  hubAssets: [fixtureHubAsset],
-  slices: fixtureSlices,
-  spokeReserves: fixtureSpokeReserves,
-  markets: fixtureMarkets.map((m) => (m.marketId === "1" ? { ...m, ...market1 } : m)),
-});
+import { fakeChain, fakeProvider, fixtureSnapshot } from "./fakeChain.ts";
 
 function harness() {
   const sent: { channel: string; n: Notice }[] = [];
@@ -35,60 +23,83 @@ function harness() {
   const channel = (name: string): Channel => ({ name, send: async (n) => void sent.push({ channel: name, n }) });
   const routing = checkRouting({ ...Object.fromEntries(RECIPIENTS.map((r) => [r, ["ops"]])), governanceSafeSigners: ["pager"], emergencyGuardianSigners: ["pager"], aaveProtocolGuardian: ["aave"] }, new Set(["ops", "pager", "aave"]));
   const feed = new KeeperFeed([{ name: "eth-primary", chainId: 1 }]);
-  const deps = { book: new AlertBook(), memory: new SnapshotMemory(), feed, routing, channels: new Map(["ops", "pager", "aave"].map((c) => [c, channel(c)])), log: { write: (e: IncidentEntry) => void entries.push(e) }, retry: { attempts: 1, backoffMs: 0, sleep: async () => {} } };
+  const deps = { book: new AlertBook(), feed, probes: [snapshotProbe() as Probe], routing, channels: new Map(["ops", "pager", "aave"].map((c) => [c, channel(c)])), log: { write: (e: IncidentEntry) => void entries.push(e) }, retry: { attempts: 1, backoffMs: 0, sleep: async () => {} } };
   return { sent, entries, deps, feed };
 }
 
-function chain(state: { block: bigint; primary: Partial<MarketRow>; second: Partial<MarketRow> | "down" }): ChainReads {
-  return {
-    chainId: 1,
-    head: async () => ({ number: state.block, timestamp: Number(state.block) * 12 }),
-    primary: async (b) => snap(b.number, b.timestamp, state.primary),
-    second: async (b) => {
-      if (state.second === "down") throw new Error("ECONNREFUSED");
-      return snap(b.number, b.timestamp, state.second);
-    },
-  };
-}
+const priced = (priceState: number) => (b: { number: bigint; timestamp: number }) => fixtureSnapshot(b, (s) => ({ ...s, markets: s.markets.map((m) => (m.marketId === "1" ? { ...m, priceState } : m)) }));
 
 describe("runRound", () => {
   it("pages a confirmed Expired price to the signers and the Aave contact, once, then resolves it", async () => {
     const { sent, entries, deps, feed } = harness();
-    const state = { block: 100n, primary: {} as Partial<MarketRow>, second: {} as Partial<MarketRow> | "down" };
-    feed.heartbeat({ name: "eth-primary", chainId: 1 }, 100n);
-    expect(await runRound(chain(state), deps)).toEqual([]);
+    const primary = fakeProvider();
+    const second = fakeProvider();
+    let block = 100n;
+    const chain = fakeChain(() => ({ number: block, timestamp: Number(block) * 12 }), primary, second);
+    const beat = () => feed.heartbeat({ name: "eth-primary", chainId: 1 }, block);
+    beat();
+    expect(await runRound(chain, deps)).toEqual([]);
 
-    Object.assign(state, { block: 101n, primary: { priceState: 3 }, second: { priceState: 3 } });
-    feed.heartbeat({ name: "eth-primary", chainId: 1 }, 101n);
-    const opened = await runRound(chain(state), deps);
+    block = 101n;
+    primary.snapshot = second.snapshot = priced(3);
+    beat();
+    const opened = await runRound(chain, deps);
     expect(opened.map((n) => `${n.transition}:${n.alert.signal}:${n.alert.level}`)).toEqual(["open:M-01:page"]);
     expect(sent.map((s) => s.channel).sort()).toEqual(["aave", "ops", "pager"]);
     expect(entries[0]).toMatchObject({ signal: "M-01", level: "page", blockNumber: "101", recipients: ["onCall", "operators", "emergencyGuardian", "governanceSafeSigners", "emergencyGuardianSigners", "aaveProtocolGuardian"] });
 
-    state.block = 102n;
-    feed.heartbeat({ name: "eth-primary", chainId: 1 }, 102n);
-    expect(await runRound(chain(state), deps)).toEqual([]);
+    block = 102n;
+    beat();
+    expect(await runRound(chain, deps)).toEqual([]);
 
-    Object.assign(state, { block: 103n, primary: {}, second: {} });
-    feed.heartbeat({ name: "eth-primary", chainId: 1 }, 103n);
-    expect((await runRound(chain(state), deps)).map((n) => `${n.transition}:${n.alert.signal}`)).toEqual(["resolve:M-01"]);
+    block = 103n;
+    primary.snapshot = second.snapshot = priced(0);
+    beat();
+    expect((await runRound(chain, deps)).map((n) => `${n.transition}:${n.alert.signal}`)).toEqual(["resolve:M-01"]);
   });
 
   it("sends a page the second provider reads differently as a warn, without the signers", async () => {
     const { sent, deps } = harness();
-    const ns = await runRound(chain({ block: 1n, primary: { priceState: 3 }, second: { priceState: 2 } }), deps);
+    const ns = await runRound(fakeChain(() => ({ number: 1n, timestamp: 12 }), fakeProvider({ snapshot: priced(3) }), fakeProvider({ snapshot: priced(2) })), deps);
     expect(ns.map((n) => `${n.alert.signal}:${n.alert.level}:${n.alert.detail.note}`)).toEqual(["M-01:warn:not confirmed on the second provider"]);
     expect(sent.map((s) => s.channel)).toEqual(["ops"]);
   });
 
+  it("pages unconfirmed when the second provider is down", async () => {
+    const { deps } = harness();
+    const ns = await runRound(fakeChain(() => ({ number: 1n, timestamp: 12 }), fakeProvider({ snapshot: priced(3) }), fakeProvider({ down: true })), deps);
+    expect(ns.map((n) => `${n.alert.level}:${n.alert.detail.note}`)).toEqual(["page:unconfirmed, second provider unavailable: ECONNREFUSED"]);
+  });
+
   it("handles the keeper's findings before a failing snapshot read", async () => {
     const { deps } = harness();
-    const reads: ChainReads = { ...chain({ block: 10n, primary: {}, second: {} }), primary: async () => { throw new Error("RPC down"); } };
-    // First round: the monitor's start, from which the never-heard instance is counted.
-    await expect(runRound({ ...reads, head: async () => ({ number: 10n, timestamp: 0 }) }, deps)).rejects.toThrow(/RPC down/);
+    let block = 10n;
+    const chain = fakeChain(() => ({ number: block, timestamp: 0 }), fakeProvider({ down: true }), fakeProvider());
+    await expect(runRound(chain, deps)).rejects.toThrow(/ECONNREFUSED/);
     expect(deps.book.open()).toEqual([]);
-    await expect(runRound({ ...reads, head: async () => ({ number: 13n, timestamp: 36 }) }, deps)).rejects.toThrow(/RPC down/);
+    block = 13n;
+    await expect(runRound(chain, deps)).rejects.toThrow(/ECONNREFUSED/);
     expect(deps.book.open().map((a) => `${a.signal}:${a.subject}:${a.level}`)).toEqual(["M-09:keeperInstance:eth-primary:page"]);
+  });
+
+  it("runs the other probes when one fails to read, keeps the failed probe's alerts open, and reports it", async () => {
+    const { deps } = harness();
+    let fail = false;
+    const flaky: Probe<number> = {
+      name: "flaky",
+      read: async () => {
+        if (fail) throw new Error("reverted");
+        return 1;
+      },
+      evaluate: () => [{ signal: "M-21", kind: "condition", level: "warn", subject: "x", detail: {} }],
+      evidence: () => "1",
+    };
+    const withFlaky = { ...deps, probes: [flaky as Probe, ...deps.probes] };
+    const chain = fakeChain(() => ({ number: 1n, timestamp: 12 }), fakeProvider({ snapshot: priced(2) }), fakeProvider());
+    await runRound(chain, withFlaky);
+    fail = true;
+    await expect(runRound(chain, withFlaky)).rejects.toThrow(RoundError);
+    expect(deps.book.open().map((a) => a.signal).sort()).toEqual(["M-01", "M-21"]);
   });
 });
 

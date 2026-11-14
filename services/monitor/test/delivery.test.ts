@@ -5,7 +5,8 @@
 import { describe, expect, it } from "vitest";
 import { FIXTURE_HUB, fixtureHubAsset, fixtureMarkets, fixtureSlices, fixtureSpokeReserves } from "@avana/services-common/fixtures";
 import type { ChainSnapshot } from "@avana/services-common/views";
-import { confirmPages, rowsFor } from "../src/confirm.ts";
+import { rowsFor, snapshotProbe } from "../src/confirm.ts";
+import { confirmWith } from "../src/probe.ts";
 import { type Channel, type FetchLike, dedupKey, deliver, logChannel, pagerDutyChannel, summary, webhookChannel } from "../src/notify/channels.ts";
 import type { Finding, Notice } from "../src/types.ts";
 
@@ -99,23 +100,20 @@ describe("second-provider confirmation", () => {
     edit({ chainId: 1, blockNumber: block, timestamp: 0, hubs: [], creditLines: [], hubAssets: [fixtureHubAsset], slices: fixtureSlices, spokeReserves: fixtureSpokeReserves, markets: fixtureMarkets });
   const page: Finding = { signal: "M-01", kind: "condition", level: "page", subject: "market:1", detail: {} };
   const warn: Finding = { ...page, level: "warn", subject: "market:2" };
+  const probe = snapshotProbe();
 
-  it("keeps a page whose rows match and does not read the second provider without a page", async () => {
-    expect(await confirmPages([page, warn], snap("5"), async () => snap("5"))).toEqual([page, warn]);
-    let read = false;
-    await confirmPages([warn], snap("5"), async () => { read = true; return snap("5"); });
-    expect(read).toBe(false);
+  it("keeps a page whose evidence matches and leaves warns alone", () => {
+    expect(confirmWith(probe, [page, warn], snap("5"), snap("5"))).toEqual([page, warn]);
   });
 
-  it("turns a page the second provider reads differently into a warn", async () => {
+  it("turns a page the second provider reads differently into a warn", () => {
     const other = snap("5", (s) => ({ ...s, markets: s.markets.map((m) => (m.marketId === "1" ? { ...m, priceState: 3 } : m)) }));
-    const [f] = await confirmPages([page], snap("5"), async () => other);
-    expect(f).toMatchObject({ level: "warn", detail: { note: "not confirmed on the second provider" } });
+    expect(confirmWith(probe, [page], snap("5"), other)[0]).toMatchObject({ level: "warn", detail: { note: "not confirmed on the second provider" } });
   });
 
-  it("refuses a second read at another block, and pages unconfirmed when the second provider is down", async () => {
-    expect((await confirmPages([page], snap("5"), async () => snap("6")))[0]).toMatchObject({ level: "page", detail: { note: "unconfirmed, second provider unavailable: second provider read block 6, not 5" } });
-    expect((await confirmPages([page], snap("5"), async () => { throw new Error("ECONNREFUSED"); }))[0]!.detail.note).toMatch(/ECONNREFUSED/);
+  it("pages unconfirmed when the second read failed, and does not confirm a subject without evidence", () => {
+    expect(confirmWith(probe, [page], snap("5"), new Error("ECONNREFUSED"))[0]).toMatchObject({ level: "page", detail: { note: "unconfirmed, second provider unavailable: ECONNREFUSED" } });
+    expect(confirmWith(probe, [{ ...page, subject: "market:99" }], snap("5"), snap("5"))[0]!.level).toBe("warn");
   });
 
   it("finds the rows of every subject kind", () => {
