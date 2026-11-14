@@ -195,7 +195,7 @@ abstract contract LensFixture is CollateralizationFixture {
         reg.setMarket(MARKET_ID, m);
         reg.addSpoke(aave.cdpSpoke, aave.hub);
         reg.setDebtReserve(
-            aave.cdpSpoke, _def(debtReserveId, address(debt), 18, ghoAssetId, address(0), true, ghoCov)
+            aave.cdpSpoke, _def(debtReserveId, address(debt), 18, ghoAssetId, address(debtPrice), true, ghoCov)
         );
         reg.setDebtReserve(
             aave.cdpSpoke, _def(usdcReserveId, address(usdc), 6, usdcAssetId, address(usdcOracle), false, usdcCov)
