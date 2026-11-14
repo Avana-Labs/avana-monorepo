@@ -167,24 +167,26 @@ for (const [spoke, assets] of Object.entries(LENDS)) {
 }
 
 // 3. The collateral tokens. A token's collateral factor caps every market it is in; the exotic Hub is added to the
-// Hubs USDC and WETH may be pledged on.
-const TOKENS: { symbol: string; deviationBps: number; collateralFactorBps: number; toleranceBps: number; tokenCapUsd: string }[] = [
-  { symbol: "PEPE", deviationBps: 200, collateralFactorBps: 4000, toleranceBps: 400, tokenCapUsd: "2000000" },
-  { symbol: "AAVE", deviationBps: 100, collateralFactorBps: 6500, toleranceBps: 300, tokenCapUsd: "5000000" },
-  { symbol: "UNI", deviationBps: 100, collateralFactorBps: 6000, toleranceBps: 300, tokenCapUsd: "5000000" },
-  { symbol: "WBTC", deviationBps: 50, collateralFactorBps: 7500, toleranceBps: 200, tokenCapUsd: "10000000" },
-  { symbol: "THIN", deviationBps: 200, collateralFactorBps: 2500, toleranceBps: 400, tokenCapUsd: "50000" },
-  { symbol: "AERO", deviationBps: 100, collateralFactorBps: 5000, toleranceBps: 300, tokenCapUsd: "5000000" },
-  { symbol: "cbBTC", deviationBps: 50, collateralFactorBps: 7500, toleranceBps: 200, tokenCapUsd: "10000000" },
+// Hubs USDC and WETH may be pledged on. The feed-agreement tolerance is the ParameterStore's least (two routes'
+// deviation thresholds plus feedAgreementMarginBps, LivenessBound below it) plus 50 bps.
+const TOKENS: { symbol: string; deviationBps: number; collateralFactorBps: number; tokenCapUsd: string }[] = [
+  { symbol: "PEPE", deviationBps: 200, collateralFactorBps: 4000, tokenCapUsd: "2000000" },
+  { symbol: "AAVE", deviationBps: 100, collateralFactorBps: 6500, tokenCapUsd: "5000000" },
+  { symbol: "UNI", deviationBps: 100, collateralFactorBps: 6000, tokenCapUsd: "5000000" },
+  { symbol: "WBTC", deviationBps: 50, collateralFactorBps: 7500, tokenCapUsd: "10000000" },
+  { symbol: "THIN", deviationBps: 200, collateralFactorBps: 2500, tokenCapUsd: "50000" },
+  { symbol: "AERO", deviationBps: 100, collateralFactorBps: 5000, tokenCapUsd: "5000000" },
+  { symbol: "cbBTC", deviationBps: 50, collateralFactorBps: 7500, tokenCapUsd: "10000000" },
 ];
 for (const t of TOKENS) {
+  const tolerance = 2 * t.deviationBps + (c.parameters.globals.feedAgreementMarginBps as number) + 50;
   c.listing.tokens.push({
     symbol: t.symbol,
     isUsdStable: false,
     deviationBps: t.deviationBps,
     collateralFactorBps: t.collateralFactorBps,
-    agreementToleranceBps: t.toleranceBps,
-    secondToleranceBps: t.toleranceBps,
+    agreementToleranceBps: tolerance,
+    secondToleranceBps: tolerance,
     tokenCapUsd: t.tokenCapUsd,
     hubs: [HUB],
     address: `$world:.tokens.${t.symbol}`,
