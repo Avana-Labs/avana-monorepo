@@ -17350,14 +17350,15 @@
     ]
   },
   "REQ-CONFIG-035": {
-    "hash": "0cef711b3ad7bfa7",
+    "hash": "eef1e267cb964136",
     "checks": [
       "IMarketRegistryListing",
       "MATH-UO-10",
       "MATH-UO-11",
       "MarketRegistryListingLogic",
       "MarketRegistryMarketChecks",
-      "TEST-139"
+      "TEST-139",
+      "TEST-306"
     ]
   },
   "REQ-CONFIG-036": {
@@ -17461,12 +17462,13 @@
     ]
   },
   "REQ-CONFIG-044": {
-    "hash": "c33ce9774325c19b",
+    "hash": "756f9a11799d4afe",
     "checks": [
       "IMarketRegistryListing",
       "IMarketRegistryViews",
       "MarketRegistryActivationLogic",
-      "TEST-138"
+      "TEST-138",
+      "TEST-245"
     ]
   },
   "REQ-CONFIG-045": {
@@ -19914,13 +19916,14 @@
     ]
   },
   "REQ-LENS-015": {
-    "hash": "e95f14bb7d473930",
+    "hash": "9945c0095525dbd1",
     "checks": [
       "ILensLiquidation",
       "Lens",
       "LensBase",
       "LensPrice",
       "LensPriceModule",
+      "PriceAge",
       "PriceInput",
       "PriceView",
       "TEST-247"
@@ -20144,7 +20147,7 @@
     ]
   },
   "REQ-LENS-030": {
-    "hash": "58c8f3d0c5c7dd99",
+    "hash": "e998f88f503897c4",
     "checks": [
       "DebtPosition",
       "DebtPriceView",
@@ -20155,6 +20158,7 @@
       "LensLiquidation",
       "LensPrice",
       "LensPriceModule",
+      "PriceAge",
       "TEST-069",
       "TEST-205",
       "TEST-247"
@@ -20224,7 +20228,7 @@
     ]
   },
   "REQ-LENS-035": {
-    "hash": "24d4de76422fab23",
+    "hash": "2d434883c845b13c",
     "checks": [
       "ILensHubReads",
       "ILensPreview",
@@ -20274,7 +20278,7 @@
     ]
   },
   "REQ-LENS-038": {
-    "hash": "17372d170553c84c",
+    "hash": "e6a675196ad365d7",
     "checks": [
       "ILensPreview",
       "Lens",
@@ -21840,7 +21844,7 @@
     ]
   },
   "REQ-ORACLE-029": {
-    "hash": "f1a67569fe998c2b",
+    "hash": "cc21c2d59eff39dd",
     "checks": [
       "DebtOracle",
       "FV-CTL-64",
@@ -21850,6 +21854,7 @@
       "LPOraclePoke",
       "MATH-UO-75",
       "TEST-042",
+      "TEST-049",
       "TEST-105",
       "TEST-219",
       "TEST-231",
@@ -23039,7 +23044,7 @@
     ]
   },
   "REQ-ORACLE-105": {
-    "hash": "887ad95aac43fae0",
+    "hash": "9654c44936c74153",
     "checks": [
       "HYP-AMM-05",
       "LPOracleCLListingLogic",
@@ -25069,7 +25074,7 @@
     ]
   },
   "REQ-RISK-026": {
-    "hash": "8c18635946e97492",
+    "hash": "8b89e83e14aa9d56",
     "checks": [
       "IRiskModuleChecks",
       "MATH-AR-47",
@@ -25079,6 +25084,7 @@
       "RiskModulePledgeLogic",
       "TEST-010",
       "TEST-013",
+      "TEST-042",
       "TEST-070",
       "TEST-164",
       "TEST-230"
@@ -27048,13 +27054,14 @@
     ]
   },
   "REQ-SWAP-006": {
-    "hash": "8ea0aba26ebb2acc",
+    "hash": "20628327e3c9efb2",
     "checks": [
       "FV-LIQ-03",
       "FV-LIQ-08",
       "ILPVaultSwapErrors",
       "ILPVaultSwapLiquidation",
       "LPVaultSwapLiquidationLogic",
+      "TEST-049",
       "TEST-055",
       "TEST-170",
       "TEST-278"
@@ -33463,7 +33470,7 @@
     ]
   },
   "SPEC-ORC-012": {
-    "hash": "dc42683fd6795ceb",
+    "hash": "592b7f9047cbd0c0",
     "checks": [
       "DebtOracleEvaluation",
       "FV-CTL-111",
@@ -33610,7 +33617,7 @@
     ]
   },
   "SPEC-ORC-017": {
-    "hash": "a149df6217173efe",
+    "hash": "00a9a0f3dd1908ab",
     "checks": [
       "FV-CTL-110",
       "FV-CTL-111",
@@ -33648,7 +33655,7 @@
     ]
   },
   "SPEC-ORC-018": {
-    "hash": "8bb29b2c0d2daad3",
+    "hash": "93c4006d4b7f25aa",
     "checks": [
       "DebtEvaluation",
       "DebtOracle",
