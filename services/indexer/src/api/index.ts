@@ -8,6 +8,8 @@ import { Hono } from "hono";
 import { EXPORT_MAX_RECORDS } from "@avana/services-common";
 import { requireExportAuth } from "./auth.ts";
 import { buildExportPage } from "./exportPage.ts";
+import { buildHistoryPage } from "./history.ts";
+import { parseHistoryRequest } from "../lib/history.ts";
 import { buildKeeperEvents } from "./keeperEvents.ts";
 import { parseStreamRequest } from "../lib/keeperStream.ts";
 import { POOL_HISTORY_MAX_BLOCKS, PoolHistoryRefused, readPoolHistory } from "./poolHistory.ts";
@@ -68,6 +70,16 @@ app.get("/export/v1/series", async (c) => {
   const page = await buildSeriesPage(Number(chainId), after === undefined ? null : Number(after), n);
   if (page === null) return c.body(null, 204);
   return c.json(page);
+});
+
+/**
+ * GET /export/v1/history?chainId=1&wallet=0x…&before=<block>&limit=<n>
+ * 200 with a HistoryPage: the records naming the wallet or its attributed proxies, newest first; 400 on a bad parameter.
+ */
+app.get("/export/v1/history", async (c) => {
+  const req = parseHistoryRequest({ chainId: c.req.query("chainId"), wallet: c.req.query("wallet"), before: c.req.query("before"), limit: c.req.query("limit") });
+  if ("error" in req) return c.json({ error: req.error }, 400);
+  return c.json(await buildHistoryPage(req));
 });
 
 /**

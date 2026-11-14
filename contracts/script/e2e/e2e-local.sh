@@ -18,7 +18,10 @@
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
 # `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
 # the Chainlink OCR2 aggregator and proxy).
-# No key or RPC secret is used: anvil runs with --auto-impersonate and every script broadcasts with --unlocked.
+# No key or RPC secret is written: anvil runs with --auto-impersonate and every script broadcasts with --unlocked. The
+# keeper failover drill signs as the operator helper's signer (anvil account #7) from an encrypted keystore made for the
+# run in a temporary folder and removed at exit; its password is ANVIL_KEYSTORE_PASSWORD from contracts/.env when set,
+# otherwise a random value for the run, kept in a file only the user can read.
 
 set -uo pipefail
 cd "$(dirname "$0")/../.."
@@ -51,7 +54,7 @@ need_file() { [ -e "$1" ]; }
 
 # ─── Prerequisites: a missing one marks the dependent steps not-run ───
 MISSING=""
-for t in anvil forge cast node; do need_tool "$t" || MISSING="$MISSING tool:$t"; done
+for t in anvil forge cast node openssl; do need_tool "$t" || MISSING="$MISSING tool:$t"; done
 need_file "$REPO/node_modules/viem" || MISSING="$MISSING npm-workspace(npm ci)"
 for a in out/AvanaTimelock.sol/AvanaTimelock.json out/AvanaAaveV4Payload.sol/AvanaAaveV4Payload.json \
   out/AaveGovernanceExecutorStandIn.sol/AaveGovernanceExecutorStandIn.json out-aave/HubInstance.sol/HubInstance.json \
@@ -77,8 +80,27 @@ stop_anvil() {
   kill -0 "$ANVIL_PID" 2>/dev/null && kill -KILL "$ANVIL_PID" 2>/dev/null
   wait "$ANVIL_PID" 2>/dev/null
 }
-cleanup() { [ -n "$ANVIL_PID" ] && stop_anvil; [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null; true; }
+cleanup() {
+  [ -n "$ANVIL_PID" ] && stop_anvil
+  [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null
+  [ -n "${KEYSTORE_DIR:-}" ] && rm -rf "$KEYSTORE_DIR"
+  true
+}
 trap cleanup EXIT
+
+# The drill signer's keystore: anvil account #7 of the public test mnemonic, encrypted under a per-run password.
+KEYSTORE_DIR="$(mktemp -d)"
+chmod 700 "$KEYSTORE_DIR"
+KEYSTORE_PASSWORD="${ANVIL_KEYSTORE_PASSWORD:-}"
+if [ -z "$KEYSTORE_PASSWORD" ] && [ -f "$CONTRACTS/.env" ]; then
+  KEYSTORE_PASSWORD="$(grep -E '^ANVIL_KEYSTORE_PASSWORD=' "$CONTRACTS/.env" | head -1 | cut -d= -f2-)"
+fi
+[ -n "$KEYSTORE_PASSWORD" ] || KEYSTORE_PASSWORD="$(openssl rand -hex 32)"
+(umask 077 && printf '%s' "$KEYSTORE_PASSWORD" > "$KEYSTORE_DIR/password")
+if cast wallet import drill-signer --keystore-dir "$KEYSTORE_DIR" --unsafe-password "$KEYSTORE_PASSWORD"   --mnemonic "test test test test test test test test test test test junk" --mnemonic-index 7 >/dev/null 2>&1; then
+  export E2E_DRILL_KEYSTORE="$KEYSTORE_DIR/drill-signer" E2E_DRILL_KEYSTORE_PASSWORD_FILE="$KEYSTORE_DIR/password"
+fi
+unset KEYSTORE_PASSWORD
 # The chain state is saved to anvil-state.json when the node stops; a run without the deploy step reloads it, so the
 # manifest and scenario steps can be rerun on the same deployment (E2E_STEPS="manifest scenarios"). A reloaded node
 # holds only the latest state while the indexer reads contracts at past blocks (BlockOutOfRangeError), and anvil's

@@ -29,7 +29,7 @@ function clientFor(chainId: number) {
 }
 
 /** Highest block the export may serve: finalized on the chain and fully handled by the indexer. */
-async function servableThrough(chainId: number): Promise<{ through: bigint; finalized: bigint }> {
+export async function servableThrough(chainId: number): Promise<{ through: bigint; finalized: bigint }> {
   const client = clientFor(chainId);
   const finalized = (await client.getBlock({ blockTag: "finalized" })).number;
   const [progress] = await db.select().from(schema.chainProgress).where(eq(schema.chainProgress.chainId, chainId));
@@ -57,7 +57,7 @@ async function closeAtBlock(chainId: number, rows: Row[], through: bigint, limit
   return { rows: await rowsIn(chainId, last, last, Number.MAX_SAFE_INTEGER), toBlock: last };
 }
 
-function toRecord(r: Row): ExportRecord {
+export function toRecord(r: Row): ExportRecord {
   return {
     key: `${r.chainId}:${r.txHash}:${r.logIndex}`,
     kind: r.kind,
