@@ -92,7 +92,7 @@ Every property below **holds** in the recorded and deep runs. The one finding, t
 | HYP-13, HYP-54 | After a borrow, `hfEx ≥ max(1.00, optional hard floor, minHealthFactor)` (Q-398) and Aave's HF ≥ `hfEx`; with a faulty RiskModule only Aave's HF ≥ 1 holds | Q-018, Q-229, Q-253, SPEC-PROXY-001, SPEC-CF-003 |
 | HYP-14 | Borrow only in pause state None, with every collateral market Live and every collateral and debt price within `borrowPriceMaxAge` | Q-081, Q-128, Q-227, Q-234, Q-238, Q-275 |
 | HYP-15 | Wrong nonce or past deadline reverts and keeps the nonce; success increments it and pays the receiver exactly | Q-075, Q-105, Q-106 |
-| HYP-16 | Zero debt returns 0 with no movement; a partial repay of 0 reverts; otherwise repay by any payer succeeds in every pause, breaker and freeze state unless Aave pauses the reserve | Q-051, Q-153, Q-227, Q-260, INV-043 |
+| HYP-16 | Zero debt returns 0 with no movement; a partial repay of 0 reverts; otherwise repay by any payer succeeds in every pause, breaker and freeze state unless Aave pauses the reserve or the token's issuer pauses it or blocklists the payer, wallet or proxy (`TokenBlocked`) | Q-051, Q-153, Q-227, Q-260, INV-043 |
 | HYP-17, HYP-95 | A partial repay pulls `min(cap, debt)`; repay-all pulls the cap, Aave takes the debt, the rest is refunded in the same call and the debt is 0 | Q-153, Q-180, Q-268, Q-269 |
 | HYP-60 | Repay-all with debt above the cap reverts `RepayExceedsMax` before any transfer | Q-180, Q-269 |
 | HYP-64 | A third-party repay never debits the borrower; a second repay-all after the debt is cleared pulls nothing | Q-212 |
@@ -104,7 +104,7 @@ Every property below **holds** in the recorded and deep runs. The one finding, t
 | HYP-21 | Fee collection succeeds in every Avana state unless the token itself cannot move | Q-011, Q-030, Q-227, INV-044 |
 | HYP-22 | New accounts pledge only Live, top-ups Live or Drifting, every pledge at least the minimum value at the booking price `min(fresh, accepted)` (`REQ-RISK-026`) | Q-054, Q-132, Q-227, Q-230 |
 | HYP-59 | Charge ≥ units × stress floor; slice only for indebted accounts | Q-150, Q-157, Q-175 |
-| HYP-23, HYP-81 | Only HF < 1 accounts are liquidated, by an approved keeper or the permissionless entry point; a frozen caller never liquidates | Q-053, Q-213, Q-222, Q-242 |
+| HYP-23, HYP-81 | Only HF < 1 accounts are liquidated, by any caller that is not frozen (the committed-operator registry gates no call, `REQ-SWAP-001`, `REQ-SWAP-048`); a frozen caller never liquidates | Q-053, Q-213, Q-222, Q-242 |
 | HYP-24, HYP-25 | Settlement changes no supply except the burned vault tokens; LPVaultSwap ends every settlement with zero change for every token | Q-063, Q-097, Q-124, Q-271 |
 | HYP-26, HYP-27, HYP-28 | Records debited = seized units, largest first with only the last partial; fees never taken | Q-061, Q-108, Q-160, Q-194, Q-224 |
 | HYP-29, HYP-86 | Routed: `R + shortfall ≥ minRec` in the debt asset, with the effective slippage after the flash premium and the floor shortfall at most the caller's maximum (in-kind settlement is removed, Q-401) | Q-085, Q-159, Q-198, Q-235, Q-251, INV-034 |
@@ -115,7 +115,7 @@ Every property below **holds** in the recorded and deep runs. The one finding, t
 | HYP-72 | Each liquidation adds at most `seizedValue × (1 − 1/LB)` to the account's shortfall | Q-249, Q-278, INV-076 |
 | HYP-34 | Collateral seized ≤ debt repaid × bonus + one unit | Q-060, Q-116 |
 | HYP-35 | A full-size liquidation of a single-reserve account that leaves collateral and debt ends at HF ≥ target 1.10 | Q-060, Q-185 |
-| HYP-36 | Liveness: every HF < 1 account whose seized market and repaid reserve pass their gates, with no Aave pause, honest routes and an active keeper, is liquidated at full size | Q-128, Q-198, Q-227, Q-247, INV-046 |
+| HYP-36 | Liveness: every HF < 1 account whose seized market and repaid reserve pass their gates, with no Aave pause, honest routes whose market price clears every leg's oracle minimum at the keeper's `sLeg` (otherwise `NoRouteAvailable`, `REQ-SWAP-059`) and an active keeper, is liquidated at full size, through the caller-funded path when the flash source is short (`InsufficientFlashLiquidity`, `LIQ-F-036`) | Q-128, Q-198, Q-227, Q-247, INV-046 |
 | HYP-37 | A gas-starved `poke()` reverts and changes no stored oracle state | Q-129, Q-154 |
 | HYP-50 | Inside the grace window only accounts below HF 0.95 are liquidated | Q-088, Q-129, Q-154, Q-264 |
 | HYP-58 | `settlePending` retires exactly the units it burns, meets `minPending` and funds only the GHO First-Loss Reserve | Q-201, Q-211, Q-236 |
