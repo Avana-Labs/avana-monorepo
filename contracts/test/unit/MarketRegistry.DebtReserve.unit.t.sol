@@ -427,7 +427,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
             SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
         );
         registry.setCrossHubLinesEnabled(true);
-        registry.setCrossHubLine(address(hub), address(usdc), address(spoke2), 300_000);
+        registry.setCrossHubLine(address(hub), address(usdc), address(spoke2), 300_000e6);
         vm.stopPrank();
         IAaveV4Spoke.Reserve memory r;
         (r.underlying, r.hub, r.assetId, r.decimals) = (address(usdc), address(hub), uint16(USDC_ASSET), 6);
