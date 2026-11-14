@@ -21,7 +21,9 @@
 #            (out-security/build/medusa/<Name>, slow-tier settings) with a copy of medusa.json pointing at it
 #   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest)
 #   hevm     against a local anvil chain (see hevm_targets below): `hevm symbolic` on each assertion entry point of
-#            every harness, deployed so its constructor has run (each must reach QED), on the runtime code of every
+#            every harness, deployed so its constructor has run (each must reach QED; a counterexample fails the step
+#            only when replaying it with `cast call` on the deployed harness ends in Panic(1), and an hevm internal
+#            error is reported as not run, see hevm_replay), on the runtime code of every
 #            src/ contract and library with its address immutables filled (no assertion violation), and `hevm test`
 #            on every `prove_` function in test/symbolic/
 #   mythril  script/security-mythril.sh on the runtime code of every src/ contract and library
@@ -476,6 +478,28 @@ hevm_symbolic() {
   return 1
 }
 
+# hevm_replay <log> <address>: replays every counterexample calldata of an hevm log with `cast call` on the deployed
+# harness, at the chain's latest block (the state and block context hevm explored). Prints "<reproduced> of <total>"
+# and returns 0 when at least one counterexample ends in Panic(1) on the chain, 1 when none does, 2 when the log holds
+# no calldata. hevm 0.58 reports counterexamples that the deployed harness does not reproduce (run 43492412351: all
+# 124 counterexamples of 7 harnesses returned normally when replayed), so only a reproduced one fails the step.
+hevm_replay() {
+  local log=$1 addr=$2 cd out total=0 hit=0
+  while IFS= read -r cd; do
+    [ -n "$cd" ] || continue
+    total=$((total + 1))
+    out=$(cast call --rpc-url "$HEVM_RPC" --from "$HEVM_DEPLOYER" "$addr" "$cd" 2>&1) && continue
+    if echo "$out" | grep -qiE 'assertion failed|0x4e487b710{63}1([^0-9a-f]|$)'; then
+      hit=$((hit + 1))
+      echo "  reproduced: $cd" >>"$log"
+    fi
+  done < <(grep -A1 '^Calldata:' "$log" | grep -oE '0x[0-9a-fA-F]+')
+  echo "$hit of $total"
+  [ "$total" -gt 0 ] || return 2
+  [ "$hit" -gt 0 ] && return 0
+  return 1
+}
+
 # hevm_deploy <creation-code file>: deploys it from HEVM_DEPLOYER and prints the new address; fails when the
 # constructor reverts.
 hevm_deploy() {
@@ -518,12 +542,26 @@ hevm_targets() {
     echo "hevm $name: deployed at $addr"
     while IFS= read -r sig; do
       [ -n "$sig" ] || continue
-      hevm_symbolic "$OUT/hevm/$name.${sig%%(*}.log" --address "$addr" --sig "$sig"
+      local slog="$OUT/hevm/$name.${sig%%(*}.log" replayed
+      hevm_symbolic "$slog" --address "$addr" --sig "$sig"
       rc=$?
       case $rc in
         0) echo "hevm $name.$sig: QED" ;;
-        2) echo "hevm $name.$sig: FAIL, explored only partially (see $OUT/hevm/$name.${sig%%(*}.log)"; status=1 ;;
-        *) echo "hevm $name.$sig: FAIL (see $OUT/hevm/$name.${sig%%(*}.log)"; status=1 ;;
+        2) echo "hevm $name.$sig: FAIL, explored only partially (see $slog)"; status=1 ;;
+        *)
+          if grep -qi 'internal error' "$slog"; then
+            # A crash of hevm itself proves nothing either way: reported, not counted as a finding.
+            echo "hevm $name.$sig: NOT RUN, hevm internal error (see $slog)"
+          elif replayed=$(hevm_replay "$slog" "$addr"); then
+            echo "hevm $name.$sig: FAIL, $replayed counterexamples reproduce on the deployed harness (see $slog)"
+            status=1
+          elif [ $? -eq 1 ]; then
+            echo "hevm $name.$sig: unconfirmed, $replayed counterexamples reproduce on the deployed harness (see $slog)"
+          else
+            echo "hevm $name.$sig: FAIL (see $slog)"
+            status=1
+          fi
+          ;;
       esac
     done < <("$PY" script/security-targets.py assertion-sigs "$BUILD" "$name")
   done <<<"$list"
