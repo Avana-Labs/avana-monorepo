@@ -117,7 +117,9 @@ contract DebtOracleHalmosTest is Test {
                 expected = p;
             } else {
                 live = false;
-                expected = hi > A ? hi : A;
+                // One route is A and the second source reads A: a higher route other than A is unconfirmed and the
+                // lower one is at most A, so a disagreement serves A (`SPEC-ORC-018`).
+                expected = A;
             }
         } else if (pValid) {
             expected = p;
@@ -182,12 +184,15 @@ contract DebtOracleHalmosTest is Test {
             if (v.state == PriceState.Drifting) {
                 uint256 p = pAnswer;
                 uint256 b = bAnswer;
-                uint256 hi = p > b ? p : b;
-                if (A > hi) {
+                (uint256 lo, uint256 hi) = p < b ? (p, b) : (b, p);
+                // The higher route counts only when the second source (at A, 100 bps) confirms it.
+                uint256 d = hi > A ? hi - A : A - hi;
+                uint256 counted = d * 10_000 <= 100 * (hi < A ? hi : A) ? hi : lo;
+                if (A > counted) {
                     assert(v.servedUpdatedAt == T0 - 100);
                     assert(v.legFeeds[0] == address(0));
                     assert(v.borrowPriceMaxAge == 0 && v.liquidationPriceMaxAge == 0);
-                } else if (b > p) {
+                } else if (b == counted) {
                     assert(v.servedUpdatedAt == T0 - 50);
                     assert(v.legFeeds[0] == address(alternate));
                 } else {

@@ -37,10 +37,10 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
             _readRoute(e.routes[1]);
         }
         _classify($, e, configOk);
+        if (!e.failed) _readSecondSource($, e);
         _serve(e);
         _readSequencer($.parameterStore, e);
         _grace(e);
-        if (!e.failed) _readSecondSource($, e);
         e.liquidationPaused = e.state != PriceState.Live || e.alternatePastBorrowAge || e.sequencerDown;
         e.borrowAllowed = e.state == PriceState.Live && e.sequencerReady && e.confirmed
             && block.timestamp - e.servedUpdatedAt <= e.borrowPriceMaxAge;
@@ -255,15 +255,16 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
 
     /// @dev Served price (`SPEC-ORC-018`), the route it comes from, its source timestamp and its age limits
     /// (`SPEC-ORC-012`, `SPEC-ORC-015`), and the alternate held to its borrow age (`REQ-ORACLE-090`). While the routes
-    /// disagree the served value is `max(p, b, A)`: its route is the alternate when `b > p`, else the primary, and when
-    /// `A` exceeds both, no route: the accepted timestamp is reported with age limits 0, as when failed.
+    /// disagree the served value is the larger of `A` and the routes that count (`_countedRoutes`): the higher route
+    /// only when the second source confirms it, else the lower one, so one faulty route cannot raise the debt price
+    /// alone (ORACLE-06); its route is the counted route, and when `A` exceeds it, no route: the accepted timestamp is
+    /// reported with age limits 0, as when failed.
     /// @custom:spec SPEC-ORC-018, SPEC-ORC-012, SPEC-ORC-015, REQ-ORACLE-090, REQ-ORACLE-093, REQ-ORACLE-021, REQ-ORACLE-066
     function _serve(
         DebtEvaluation memory e
     ) internal view {
-        e.served = LPPriceMath.debtServedPrice(
-            e.state, e.quote, e.routes[0].value, e.routes[1].value, e.accepted, e.stressRiseBps
-        );
+        (uint256 p, uint256 b) = _countedRoutes(e);
+        e.served = LPPriceMath.debtServedPrice(e.state, e.quote, p, b, e.accepted, e.stressRiseBps);
         e.servedRoute = _servedRoute(e);
         if (e.servedRoute == RouteSlot.None) {
             e.servedUpdatedAt = e.acceptedUpdatedAt;
@@ -287,18 +288,37 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         if (e.alternatePastBorrowAge) e.reasons |= R_ALTERNATE_PAST_BORROW_AGE;
     }
 
-    /// @dev The route the served value comes from: none when failed; while Drifting the route of `max(p, b)` (a tie
-    /// is impossible, the routes disagree), or none when `A > max(p, b)`; otherwise the quote's route.
+    /// @dev The route values `debtServedPrice` takes while Drifting. The routes disagree, so one of them is wrong and
+    /// the oracle cannot tell which from the two alone: the higher route counts only when the second source confirms
+    /// it (`SPEC-ORC-020` test against that route); otherwise both inputs are the lower route, and the served value is
+    /// `max(min(p, b), A)`, the median of `p`, `b` and `A`. A rise of the debt asset seen by one route and the second
+    /// source is served; a rise seen by one route alone is not, and the debt still never counts below `A`. Outside
+    /// Drifting the routes are passed unchanged (`debtServedPrice` does not use them).
+    /// @custom:spec SPEC-ORC-018, SPEC-ORC-020
+    function _countedRoutes(
+        DebtEvaluation memory e
+    ) internal pure returns (uint256 p, uint256 b) {
+        (p, b) = (e.routes[0].value, e.routes[1].value);
+        if (e.state != PriceState.Drifting) return (p, b);
+        uint256 high = Math.max(p, b);
+        if (LPPriceMath.secondSourceAgrees(e.secondValid, high, e.secondValue, e.secondToleranceBps)) return (p, b);
+        uint256 low = Math.min(p, b);
+        return (low, low);
+    }
+
+    /// @dev The route the served value comes from: none when failed; while Drifting the route of the larger counted
+    /// value (`_countedRoutes`; a tie of the routes is impossible, they disagree), or none when `A` exceeds it;
+    /// otherwise the quote's route.
     /// @custom:spec SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018
     function _servedRoute(
         DebtEvaluation memory e
     ) internal pure returns (RouteSlot slot) {
         if (e.failed) return RouteSlot.None;
         if (e.state != PriceState.Drifting) return e.routeUsed;
-        uint256 p = e.routes[0].value;
-        uint256 b = e.routes[1].value;
-        if (e.accepted > Math.max(p, b)) return RouteSlot.None;
-        return b > p ? RouteSlot.Alternate : RouteSlot.Primary;
+        (uint256 cp, uint256 cb) = _countedRoutes(e);
+        uint256 counted = Math.max(cp, cb);
+        if (e.accepted > counted) return RouteSlot.None;
+        return e.routes[1].value == counted ? RouteSlot.Alternate : RouteSlot.Primary;
     }
 
     /// @dev Sequencer gate (`SPEC-ORC-021`, `REQ-ORACLE-099`); a failed `sequencer()` read, or an uptime answer that is
@@ -368,10 +388,11 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
             if (_readFeedDef(store, src)) {
                 src.maxAge = SafeCast.toUint64(w[3]);
                 _readLeg(src, true);
-                uint256 value = LPPriceMath.normalizeAnswer(src.answer, src.pinnedDecimals);
-                e.confirmed = LPPriceMath.secondSourceAgrees(
-                    src.status == ReadStatus.Valid, e.quote, value, SafeCast.toUint16(w[5])
-                );
+                e.secondValue = LPPriceMath.normalizeAnswer(src.answer, src.pinnedDecimals);
+                e.secondValid = src.status == ReadStatus.Valid;
+                e.secondToleranceBps = SafeCast.toUint16(w[5]);
+                e.confirmed =
+                    LPPriceMath.secondSourceAgrees(e.secondValid, e.quote, e.secondValue, e.secondToleranceBps);
             }
         }
         if (!e.confirmed) e.reasons |= R_SECOND_SOURCE_DISAGREE;

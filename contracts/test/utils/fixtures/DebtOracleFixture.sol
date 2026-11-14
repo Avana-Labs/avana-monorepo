@@ -147,4 +147,36 @@ abstract contract DebtOracleFixture is TimelockFixture {
     function _state() internal view returns (PriceState) {
         return oracle.getPriceState().state;
     }
+
+    /// @dev Whether the second source (`maxAge = 88,200`, tolerance 100 bps) is valid and within its tolerance of
+    /// `value` (`SPEC-ORC-020`).
+    function _secondConfirms(
+        uint256 value
+    ) internal view returns (bool) {
+        (, int256 s,, uint256 at,) = second.latestRoundData();
+        if (s <= 0 || s > 1e12 || at > block.timestamp || block.timestamp - at > 88_200) return false;
+        uint256 su = uint256(s);
+        uint256 diff = value > su ? value - su : su - value;
+        return diff * 1e4 <= 100 * (value < su ? value : su);
+    }
+
+    /// @dev The route value a Drifting asset counts (`SPEC-ORC-018`): the higher route when the second source confirms
+    /// it, else the lower one.
+    function _countedRoute(
+        uint256 p,
+        uint256 b
+    ) internal view returns (uint256) {
+        uint256 hi = p > b ? p : b;
+        return _secondConfirms(hi) ? hi : (p < b ? p : b);
+    }
+
+    /// @dev The Drifting served price: `max(counted, A)`.
+    function _driftingServed(
+        uint256 p,
+        uint256 b,
+        uint256 a
+    ) internal view returns (uint256) {
+        uint256 c = _countedRoute(p, b);
+        return c > a ? c : a;
+    }
 }

@@ -91,7 +91,7 @@ contract DebtOracleRulesFuzzTest is DebtOracleFixture {
         uint256 diff = p > b ? p - b : b - p;
         bool agree = diff * 1e4 <= 225 * (p < b ? p : b);
         assertEq(uint8(v.state), uint8(agree ? PriceState.Live : PriceState.Drifting));
-        if (!agree) assertEq(uint256(v.answer), p > b ? p : b, "max(p, b, A)");
+        if (!agree) assertEq(uint256(v.answer), _driftingServed(p, b, _accepted()), "max(counted route, A)");
     }
 
     // TEST-276 verifies: SPEC-ORC-020, REQ-ORACLE-100, REQ-ORACLE-092

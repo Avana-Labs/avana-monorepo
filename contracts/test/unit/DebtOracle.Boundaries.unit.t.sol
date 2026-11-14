@@ -151,7 +151,7 @@ contract DebtOracleBoundariesUnitTest is DebtOracleFixture {
         DebtPriceView memory v = _view();
         assertEq(v.alternateValue, 1e18);
         assertEq(uint8(v.state), uint8(PriceState.Drifting), "valid at the bound, and far from the primary");
-        assertEq(uint256(v.answer), 1e18, "Drifting serves the higher route");
+        assertEq(uint256(v.answer), 99_990_000, "an unconfirmed higher route does not raise the price");
         ethUsd.push(2_000_000_000_000_000_002, block.timestamp);
         v = _view();
         assertEq(v.alternateValue, 1e18 + 1, "the value is reported");

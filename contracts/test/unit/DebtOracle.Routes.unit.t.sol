@@ -150,7 +150,7 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
         assertEq(uint8(v.state), uint8(PriceState.Drifting));
         assertTrue(v.reasons & BIT_DISAGREE != 0);
         assertEq(v.deviationBps, 225);
-        assertEq(uint256(v.answer), 102_239_776);
+        assertEq(uint256(v.answer), 99_990_000, "the higher primary is unconfirmed: max(b, A)");
         assertEq(uint8(v.routeUsed), uint8(RouteSlot.Primary));
     }
 
@@ -162,6 +162,8 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
     // TEST-219 verifies: REQ-ORACLE-093, SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-090, REQ-ORACLE-092
     function test_TEST_219_disagreementTimestampsFollowServedRoute() public {
         vm.warp(T0 + 50_000);
+        // The second source confirms the higher routes below (103,000,000 and 103,500,000), so they are served.
+        second.push(103_000_000, block.timestamp);
         aEth.push(343_333_333_333_334, block.timestamp);
         ethUsd.republish(block.timestamp);
         DebtPriceView memory v = _view();
@@ -429,5 +431,30 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
         assertTrue(v.reasons & BIT_SECOND != 0);
         assertFalse(v.borrowAllowed);
         assertFalse(v.liquidationPaused);
+    }
+
+    // TEST-230 verifies: SPEC-ORC-018, SPEC-ORC-020, REQ-ORACLE-093, INV-087
+    // ORACLE-06: one faulty debt route cannot raise the debt price alone. The alternate jumps to 1.10 (ETH/USD
+    // misreporting) while the primary and the second source read 0.9999 / 0.9998: Drifting serves max(min(p, b), A) =
+    // 99,990,000 on the primary's legs, so no account holding the debt gets a lower health factor. Once the second
+    // source also reads 1.10, the higher route is confirmed and served; with both routes below A, A is still served.
+    function test_TEST_230_oneFaultyDebtRouteCannotRaiseThePrice() public {
+        ethUsd.push(int256(uint256(ETH_USD)) * 110 / 100, block.timestamp);
+        DebtPriceView memory v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Drifting), "the routes disagree");
+        assertGt(v.alternateValue, 109_000_000, "the alternate reads about 1.10");
+        assertEq(uint256(v.answer), 99_990_000, "the unconfirmed alternate does not raise the price");
+        assertEq(v.legFeeds[0], address(pUsd), "served on the primary's legs");
+        second.push(int256(v.alternateValue), block.timestamp);
+        v = _view();
+        assertEq(uint256(v.answer), v.alternateValue, "confirmed by the second source: the higher route is served");
+        assertEq(v.legFeeds[0], address(aEth));
+        // Both below A and disagreeing, the second source confirming neither: A.
+        second.push(USDC_USD, block.timestamp);
+        pUsd.push(95_000_000, block.timestamp);
+        ethUsd.push(int256(uint256(ETH_USD)) * 90 / 100, block.timestamp);
+        v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Drifting));
+        assertEq(uint256(v.answer), _accepted(), "never below the accepted price");
     }
 }

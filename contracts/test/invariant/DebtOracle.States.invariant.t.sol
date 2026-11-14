@@ -43,8 +43,7 @@ contract DebtOracleStatesInvariantTest is DebtOracleFixture {
             assertEq(served, v.quote, "Live serves the quote");
             assertEq(v.quote, v.routeUsed == RouteSlot.Primary ? v.primaryValue : v.alternateValue, "quote's route");
         } else if (v.state == PriceState.Drifting) {
-            uint256 m = v.primaryValue > v.alternateValue ? v.primaryValue : v.alternateValue;
-            assertEq(served, m > a ? m : a, "Drifting serves max(p, b, A)");
+            assertEq(served, _driftingServed(v.primaryValue, v.alternateValue, a), "Drifting serves max(counted, A)");
         } else if (v.state == PriceState.Cached) {
             assertEq(served, a, "Cached serves A");
         } else {
