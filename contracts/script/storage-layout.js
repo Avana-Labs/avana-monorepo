@@ -192,7 +192,9 @@ function snapshotsOf(buildDir) {
             if (item.slot === undefined) throw new Error(`no slot for ${ns} ${item.label}`);
             flatten(layout.types, item.label, item.type, BigInt(item.slot), item.offset || 0, fields);
           }
-          snapshot.namespaces[ns] = { baseSlot: erc7201(id), declaredIn: items.length ? items[0].src.split(':')[0] : '', fields };
+          // Source paths with `/` on every OS: a build on Windows reports them with `\`.
+          const declaredIn = items.length ? items[0].src.split(':')[0].replace(/\\/g, '/') : '';
+          snapshot.namespaces[ns] = { baseSlot: erc7201(id), declaredIn, fields };
         }
         // A source compiled under several compiler profiles (via-IR or optimizer-run restrictions on files that import
         // it) appears in more than one build-info; its layout must then be the same in each.
