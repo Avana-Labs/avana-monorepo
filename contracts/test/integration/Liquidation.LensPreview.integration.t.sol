@@ -12,25 +12,27 @@ import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiqui
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
-import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
+import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 
 /// @title LiquidationLensPreviewIntegrationTest
-/// @notice `TEST-205` on the real stack (`RealStackFlows`): the Lens's `previewLiquidation` parameters, executed
-/// unchanged in the same block through the real LPVaultSwap (directly and through the real FlashLiquidator with
-/// `flashAmount = debtToCover`, borrowing from the Aave V3 Pool stand-in), settle with the previewed debt repaid, units
-/// seized, recovery floor and Avana fee, for a GHO-debt and a USDC-debt account opened through the real AaveAdapter;
-/// each preview gate matches what `liquidate` enforces. The gates are real: a primary route disabled through the real
-/// timelock and MarketRegistry, feeds left unpublished past their `liquidationPriceMaxAge`, and the Aave DAO pausing the
-/// repaid reserve.
+/// @notice `TEST-205` on the real stack (`RealStackFlows`, and `RealStackVolatile`'s Volatile Hub for the debt gate):
+/// the Lens's `previewLiquidation` parameters, executed unchanged in the same block through the real LPVaultSwap
+/// (directly and through the real FlashLiquidator with `flashAmount = debtToCover`, borrowing from the Aave V3 Pool
+/// stand-in), settle with the previewed debt repaid, units seized, recovery floor and Avana fee, for a GHO-debt and a
+/// USDC-debt account opened through the real AaveAdapter; each preview gate matches what `liquidate` enforces. The
+/// gates are real: a primary route disabled through the real timelock and MarketRegistry, feeds left unpublished past
+/// their `liquidationPriceMaxAge`, and the Aave DAO pausing the repaid reserve.
 /// @dev Each account: 10,000 vault tokens ($20,000 at $2.00, CF 30 %) against 5,880 of debt, HF 1.020; USDT then falls
 /// to $0.93 (`_depegUsdt`), the vault token to $1.9287 and HF to 0.984. The preview values the seizure at the oracle
 /// (`R = V`); the real unwind and route pools recover slightly less, so the executed payout is below `expectedPayout`
-/// by exactly `V - R`. The USDC DebtOracle and the market's LPOracle read the same USDC feeds, so a stale USDC feed
-/// closes both gates and `liquidate` refuses at its collateral rule (`StalePrice`), which runs first; the debt rule
-/// alone (`DebtPriceStale`) is checked on the stand-in fixture in `Liquidation.LensPreview.DebtStale`.
+/// by exactly `V - R`. The USDC DebtOracle and the USDC/USDT market's LPOracle read the same USDC feeds, so there a
+/// stale USDC feed closes both gates and `liquidate` refuses at its collateral rule (`StalePrice`), which runs first.
+/// The debt rule alone (`DebtPriceStale`) is checked on a WBTC/WETH market of the Volatile Hub with USDC debt
+/// (`_wbtcWethMarket`), whose LPOracle reads no USDC feed: every USDC feed goes without a round past its
+/// `liquidationPriceMaxAge` while every other feed keeps publishing.
 /// forge-config: default.isolate = false
-contract LiquidationLensPreviewIntegrationTest is RealStackFlows {
+contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
     uint256 internal mA;
 
     function setUp() public {
@@ -226,6 +228,42 @@ contract LiquidationLensPreviewIntegrationTest is RealStackFlows {
         p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertTrue(p.pricesUsable && p.debtPriceFresh && !p.debtReservePaused, "gates clear");
         _checkExecuted(p, _liquidateAs(keeper, p.params));
+    }
+
+    /// @notice The debt-price gate on its own: a USDC-debt account on a WBTC/WETH market of the Volatile Hub, every
+    /// USDC feed left past its `liquidationPriceMaxAge` while the WBTC and WETH feeds (and every other) keep publishing:
+    /// the collateral price stays usable, the preview reports `debtPriceFresh = false` and `liquidate` reverts
+    /// `DebtPriceStale`; new USDC rounds (and a keeper's poke) reopen both and the same preview executes.
+    // TEST-205 verifies: REQ-LENS-016, REQ-SWAP-091, REQ-SWAP-096
+    function test_TEST_205_debtPriceStaleGateMatchesLiquidate() public {
+        uint256 m = _wbtcWethMarket();
+        (address proxy,) = _usdcAccountBelowOne(bob, m);
+        OracleFeedMock[] memory usdcFeeds = new OracleFeedMock[](4);
+        for (uint256 i = 0; i < 4; ++i) {
+            usdcFeeds[i] = feedsOf[address(usdc)][i];
+        }
+        // Two half steps, so no other feed ever passes its maximum age; USDC's last round ends FEED_AGE + 2 s old.
+        _warpBlocks(FEED_AGE / 2 + 1);
+        _refreshFeedsExcept(usdcFeeds);
+        _warpBlocks(FEED_AGE / 2 + 1);
+        _refreshFeedsExcept(usdcFeeds);
+        LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveIdV, _deadlineIn());
+        assertTrue(p.aaveLiquidatable, "liquidatable on Aave");
+        assertFalse(p.debtPriceFresh, "preview: debt price stale");
+        assertFalse(mkt[m].oracle.getPriceState().liquidationPaused, "the collateral price is usable");
+        ClTestToken(address(usdc)).mint(keeper, p.params.debtToCover);
+        vm.startPrank(keeper);
+        usdc.approve(lpVaultSwap, p.params.debtToCover);
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveIdV));
+        lvs.liquidate(p.params);
+        usdc.approve(lpVaultSwap, 0);
+        vm.stopPrank();
+        _refreshFeeds();
+        usdcOracle.poke();
+        p = lens.previewLiquidation(proxy, usdcReserveIdV, _deadlineIn());
+        assertTrue(p.pricesUsable && p.debtPriceFresh, "gates clear");
+        LiquidationResult memory r = _liquidateOn(spokeV, keeper, p.params);
+        _checkExecuted(p, r);
     }
 
     /// @dev Time moves past every feed's `liquidationPriceMaxAge` (`FEED_AGE`) with no new round anywhere.

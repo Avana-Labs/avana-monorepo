@@ -23,6 +23,7 @@ import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.s
 import {MarketDef} from "../../../src/types/MarketDef.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {IAvanaAaveV4Roles, IHubInstanceBatch, ISpokeInstanceBatch} from "./AaveV4Fixture.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {
@@ -460,6 +461,56 @@ abstract contract RealStackVolatile is RealStackFlows {
             );
         require(ok, "fee receiver add cap");
         vm.stopPrank();
+    }
+
+    /// @notice The Volatile Hub (`_setUpVolatile`) and its WBTC/WETH market: the full range of a real 0.3 % pool
+    /// (liquidity 1e16, about $27M) created at $60,000 and $3,000, CF 30 %. Neither token is priced from a USDC feed.
+    function _wbtcWethMarket() internal returns (uint256 id) {
+        _setUpVolatile();
+        IClPool[] memory pools = new IClPool[](1);
+        pools[0] = _newVolatilePool(wbtc, weth, 3000, 1e16);
+        _ageNewPools(pools);
+        id = _addVolatileMarket(pools[0], 3000);
+    }
+
+    /// @notice `wallet`'s account in `marketId` on the Volatile Spoke: $60,000 of liquidity against USDC at HF about
+    /// 1.02 (the Lens's `previewBorrowMax` / 1.02), then WBTC and WETH 10 % lower on every feed and in the pool, the TWAP
+    /// window waited: HF about 0.92.
+    function _usdcAccountBelowOne(
+        address wallet,
+        uint256 marketId
+    ) internal returns (address proxy, bytes32 key) {
+        (key, proxy) = _pledgeUsd(wallet, marketId, 60_000);
+        uint256 max = lens.previewBorrowMax(wallet, marketId, usdcReserveIdV, _deadline());
+        _borrowAs(wallet, marketId, usdcReserveIdV, max * 100 / 102);
+        _publish(address(wbtc), 54_000e8);
+        _publish(address(weth), WETH_PRICE * 9 / 10);
+        _repriceMarkets();
+        require(_hfOn(spokeV, proxy) < 1e18, "below HF 1");
+    }
+
+    /// @notice A new round now, at its current answer, on every feed of every priced token and GHO's, except `skip`.
+    function _refreshFeedsExcept(
+        OracleFeedMock[] memory skip
+    ) internal {
+        for (uint256 t = 0; t < pricedTokens.length; ++t) {
+            OracleFeedMock[4] storage f = feedsOf[pricedTokens[t]];
+            for (uint256 i = 0; i < 4; ++i) {
+                bool skipped = false;
+                for (uint256 k = 0; k < skip.length; ++k) {
+                    if (skip[k] == f[i]) skipped = true;
+                }
+                if (!skipped) f[i].push(f[i].answer(), block.timestamp);
+            }
+        }
+        ghoFeed.push(ghoFeed.answer(), block.timestamp);
+    }
+
+    function _warpBlocks(
+        uint256 s_
+    ) internal {
+        vm.warp(block.timestamp + s_);
+        vm.roll(block.number + s_ / BLOCK_TIME);
     }
 
     // ─── Positions, prices and liquidation on any Spoke ───
