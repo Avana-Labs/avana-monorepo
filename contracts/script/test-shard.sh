@@ -13,6 +13,10 @@
 # $TEST_RESULTS_DIR/<shard or unit>-<n>.json; spec/05-verification/trace.py and contract_checklist.py read them
 # (--results) to tell a test that ran and passed from one that only carries a tag.
 #
+# Run it at -vv when TEST_RESULTS_DIR is set: from -vvv, forge writes the traces of every test, passing ones too, into
+# the results file (gigabytes per shard). After a failed invocation the script runs its failed tests again with
+# `--rerun -vvv` (no results file), so the log still shows the traces of every failure.
+#
 # Usage, from contracts/:  script/test-shard.sh <K> <N> [forge test arguments]
 #                          script/test-shard.sh --list <K> <N>     (print the shard's units)
 #                          script/test-shard.sh --unit <unit> [forge test arguments]   (one unit, as printed by
@@ -52,6 +56,22 @@ results_args() {
   mkdir -p "$TEST_RESULTS_DIR"
   printf '%s\n' --json-file "$TEST_RESULTS_DIR/$(echo "$1" | tr -c 'A-Za-z0-9._-' '_').json"
 }
+# show_failures <match-path> [forge args]: runs the failed tests of the last invocation again at -vvv with no results
+# file, to print their traces. Never changes the shard's result.
+show_failures() {
+  local path=$1 a skip=0 keep=()
+  shift
+  for a in "$@"; do
+    if [ "$skip" = 1 ]; then skip=0; continue; fi
+    case "$a" in
+      --json-file) skip=1 ;;
+      -v|-vv|-vvv|-vvvv|-vvvvv) ;;
+      *) keep+=("$a") ;;
+    esac
+  done
+  echo "failed tests of $path, again with traces (--rerun -vvv):"
+  forge test --match-path "$path" --rerun -vvv ${keep[@]+"${keep[@]}"} || true
+}
 tag=${K:+shard-$K-of-$N}
 tag=${tag:-unit-$units}
 
@@ -63,7 +83,7 @@ if [ -n "$files" ]; then
   glob="{$(echo "$files" | paste -sd, -)}"
   res=()
   while IFS= read -r a; do [ -n "$a" ] && res+=("$a"); done < <(results_args "$tag-files")
-  forge test --match-path "$glob" ${res[@]+"${res[@]}"} "$@" || rc=1
+  forge test --match-path "$glob" ${res[@]+"${res[@]}"} "$@" || { rc=1; show_failures "$glob" "$@"; }
 fi
 segments=$(echo "$units" | grep '@' || true)
 if [ -n "$segments" ]; then
@@ -75,7 +95,8 @@ if [ -n "$segments" ]; then
     args=()
     while IFS= read -r a; do args+=("$a"); done < <(segment_args "$k" "$@")
     while IFS= read -r a; do [ -n "$a" ] && args+=("$a"); done < <(results_args "$tag-$file-$k-of-$m")
-    FOUNDRY_INVARIANT_RUNS=$seg_runs forge test --match-path "$file" "${args[@]}" || rc=1
+    FOUNDRY_INVARIANT_RUNS=$seg_runs forge test --match-path "$file" "${args[@]}" \
+      || { rc=1; FOUNDRY_INVARIANT_RUNS=$seg_runs show_failures "$file" "${args[@]}"; }
   done <<< "$segments"
 fi
 exit $rc
