@@ -10,6 +10,7 @@ import {RecordView} from "../../../src/lens/lens/types/RecordView.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
 import {IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
@@ -65,6 +66,26 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         address[] wallets;
         address[] callers;
         address attacker;
+        address feeRecipient;
+        IPayoutEscrow escrow;
+        address coll;
+        // Holders a liquidation's unwind and swaps pay each debt asset from: the LPVault and the route pools into it.
+        address[] usdcSources;
+        address[] ghoSources;
+    }
+
+    /// @dev The debt asset held by every address a direct liquidation can move it between.
+    struct Held {
+        uint256 caller;
+        uint256 lvs;
+        uint256 hub;
+        uint256 fee;
+        uint256 feeEscrowed;
+        uint256 wallet;
+        uint256 walletEscrowed;
+        uint256 escrow;
+        uint256 sources;
+        uint256 parked;
     }
 
     Env internal env;
@@ -72,7 +93,15 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     uint256 internal _nonce;
 
     uint256 public liquidations;
+    /// @notice Direct liquidations that completed (each checked on balances).
+    uint256 public directLiquidations;
+    /// @notice Liquidations through the public flash liquidation helper that completed.
+    uint256 public helperLiquidations;
     uint256 public settlementBreaks;
+    /// @notice Direct liquidations whose debt-asset balances do not balance (TEST-104 on balances).
+    uint256 public conservationBreaks;
+    /// @notice Direct liquidations whose result does not report the balance changes.
+    uint256 public reportBreaks;
     uint256 public livenessFailures;
     uint256 public exitFailures;
     uint256 public exitBlockedByStop;
@@ -266,6 +295,9 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
 
     /// @notice Liquidates with the Lens's parameters when it reports the account liquidatable; with every gate open the
     /// call must settle (TEST-100) and keep every settlement postcondition (TEST-104).
+    /// @dev Steered so most calls reach a settlement: the wallet is the first from `w` with debt in the chosen reserve
+    /// (the other reserve when none has any), and for three seeds in four an account the Lens does not report
+    /// liquidatable has the LPOracle price lowered so its health factor is 0.85 to 0.99.
     function liquidate(
         uint256 w,
         uint256 callerSeed,
@@ -273,9 +305,13 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         bool viaHelper,
         bool backupOnly
     ) external {
-        address proxy = env.adapter.proxyOf(env.wallets[w % env.wallets.length], env.marketId);
+        (address wallet, address proxy, bool inGho) = _withDebt(w, gho);
+        if (proxy == address(0)) return;
+        gho = inGho;
         uint256 reserveId = gho ? env.ghoReserveId : env.usdcReserveId;
-        if (proxy == address(0) || _debt(proxy, reserveId) == 0) return;
+        if ((w >> 8) % 4 != 0 && !env.lens.previewLiquidation(proxy, reserveId, block.timestamp).aaveLiquidatable) {
+            _toHealth(proxy, w >> 16);
+        }
         LiquidationPreview memory p = env.lens.previewLiquidation(proxy, reserveId, block.timestamp);
         if (!p.aaveLiquidatable || p.params.debtToCover == 0) return;
         bool open = p.pricesUsable && p.sharesEqualAssets && !p.debtReservePaused && !p.vaultTokenReservePaused;
@@ -283,11 +319,44 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         p.params.maxShortfall = p.params.debtToCover / 20;
         address caller = env.callers[callerSeed % env.callers.length];
         if (viaHelper) _viaHelper(caller, p, open, gho ? env.gho : env.usdc);
-        else _direct(caller, p, open, gho ? env.gho : env.usdc);
+        else _direct(caller, wallet, p, open, gho ? env.gho : env.usdc);
+    }
+
+    /// @dev The first wallet from `w` whose proxy owes the GHO (`gho`) or USDC reserve, else the first that owes the
+    /// other; a zero proxy when no account has debt.
+    function _withDebt(
+        uint256 w,
+        bool gho
+    ) internal view returns (address wallet, address proxy, bool inGho) {
+        uint256 n = env.wallets.length;
+        for (uint256 pass = 0; pass < 2; ++pass) {
+            inGho = pass == 0 ? gho : !gho;
+            uint256 reserveId = inGho ? env.ghoReserveId : env.usdcReserveId;
+            for (uint256 j = 0; j < n; ++j) {
+                wallet = env.wallets[(w + j) % n];
+                proxy = env.adapter.proxyOf(wallet, env.marketId);
+                if (proxy != address(0) && _debt(proxy, reserveId) != 0) return (wallet, proxy, inGho);
+            }
+        }
+        return (address(0), address(0), gho);
+    }
+
+    /// @dev Lowers the LPOracle price so `proxy`'s health factor is 0.85 to 0.99 (HF is linear in the collateral
+    /// price; both debt assets are priced at $1).
+    function _toHealth(
+        address proxy,
+        uint256 seed
+    ) internal {
+        uint256 hf = IAaveV4Spoke(env.spoke).getUserAccountData(proxy).healthFactor;
+        uint256 price = uint256(env.lpo.latestAnswer()) * bound(seed, 85, 99) * 1e16 / hf;
+        // At most 0.99 / HF times the current price, far below 2^255.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        env.lpo.setAnswer(int256(price));
     }
 
     function _direct(
         address caller,
+        address wallet,
         LiquidationPreview memory p,
         bool open,
         CollPoolToken asset
@@ -298,10 +367,13 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         asset.approve(address(env.lvs), funding);
         uint256 loans = env.v3Pool.flashLoanCalls();
         uint256 supply = CollPoolToken(env.vt).totalSupply();
+        Held memory before = _held(asset, caller, wallet);
         vm.prank(caller);
         try env.lvs.liquidate(p.params) returns (LiquidationResult memory r) {
             ++liquidations;
+            ++directLiquidations;
             _checkSettlement(p, r, asset, supply);
+            _checkBalances(before, _held(asset, caller, wallet), r);
             if (env.v3Pool.flashLoanCalls() != loans) ++settlementBreaks;
         } catch (bytes memory err) {
             if (open) _livenessFailed(err);
@@ -326,6 +398,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(caller);
         try IFlashLiquidator(env.helper).flashLiquidate(q) {
             ++liquidations;
+            ++helperLiquidations;
         } catch (bytes memory err) {
             if (open) _livenessFailed(err);
         }
@@ -351,6 +424,53 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             || asset.balanceOf(address(env.lvs)) != 0 || env.usdt.balanceOf(address(env.lvs)) != 0
             || CollPoolToken(env.vt).balanceOf(address(env.lvs)) != 0;
         if (broken) ++settlementBreaks;
+    }
+
+    function _held(
+        CollPoolToken asset,
+        address caller,
+        address wallet
+    ) internal view returns (Held memory b) {
+        b.caller = asset.balanceOf(caller);
+        b.lvs = asset.balanceOf(address(env.lvs));
+        b.hub = asset.balanceOf(env.hub);
+        b.fee = asset.balanceOf(env.feeRecipient);
+        b.feeEscrowed = env.escrow.claimable(address(asset), env.feeRecipient);
+        b.wallet = asset.balanceOf(wallet);
+        b.walletEscrowed = env.escrow.claimable(address(asset), wallet);
+        b.escrow = asset.balanceOf(address(env.escrow));
+        b.parked = asset.balanceOf(env.coll);
+        address[] memory sources = asset == env.gho ? env.ghoSources : env.usdcSources;
+        for (uint256 i = 0; i < sources.length; ++i) {
+            b.sources += asset.balanceOf(sources[i]);
+        }
+    }
+
+    /// @dev TEST-104 on balances: the debt asset that left the caller and the sources (the LPVault and the route
+    /// pools) equals what reached the Hub, the fee recipient and the borrower (paid or escrowed) and Collateralization
+    /// (pool tokens of a reconcile, held for `settlePending`); LPVaultSwap's balance is unchanged and the escrow rose by
+    /// exactly the escrowed credit. The result's `D`, `A`, `B`, `R` and the caller's net equal those changes.
+    function _checkBalances(
+        Held memory b,
+        Held memory a,
+        LiquidationResult memory r
+    ) internal {
+        int256 callerIn = int256(b.caller) - int256(a.caller);
+        int256 parked = int256(a.parked) - int256(b.parked);
+        int256 recovered = int256(b.sources) - int256(a.sources) - parked;
+        int256 toHub = int256(a.hub) - int256(b.hub);
+        int256 toFee = int256(a.fee + a.feeEscrowed) - int256(b.fee + b.feeEscrowed);
+        int256 toBorrower = int256(a.wallet + a.walletEscrowed) - int256(b.wallet + b.walletEscrowed);
+        int256 escrowed = int256(a.feeEscrowed + a.walletEscrowed) - int256(b.feeEscrowed + b.walletEscrowed);
+        if (
+            callerIn + recovered != toHub + toFee + toBorrower || a.lvs != b.lvs || parked < 0
+                || int256(a.escrow) - int256(b.escrow) != escrowed
+        ) ++conservationBreaks;
+        if (
+            toHub != int256(r.debtRepaid) || toFee != int256(r.avanaFee) || toBorrower != int256(r.borrowerSurplus)
+                || recovered != int256(r.recovered)
+                || -callerIn != int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall)
+        ) ++reportBreaks;
     }
 
     function settlePending(
