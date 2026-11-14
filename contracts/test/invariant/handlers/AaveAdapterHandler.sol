@@ -57,6 +57,10 @@ struct AdapterWorld {
 /// a debt-free withdrawal and a fee collection must succeed whatever the Avana pause state and freeze, since Aave
 /// allows them here (no Aave pause or halt is set). Each failed expectation increments a counter the invariants read.
 contract AaveAdapterHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     AdapterWorld internal w;
     address[3] internal wallets;
     address internal payer;
@@ -160,6 +164,50 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         return (true, index, ks[index]);
     }
 
+    /// @dev The (wallet, market) pairs in the order a call tries them: the seeds' own pair first, then the others.
+    function _pair(
+        uint256 walletSeed,
+        uint256 marketSeed,
+        uint256 j
+    ) internal view returns (address wallet, uint256 market) {
+        wallet = wallets[(walletSeed + j) % 3];
+        (market,,) = _market(marketSeed + j / 3);
+    }
+
+    /// @dev The first pair from the seeds whose wallet holds an open position there, and that position.
+    function _withKey(
+        uint256 walletSeed,
+        uint256 marketSeed,
+        uint256 keySeed
+    ) internal view returns (bool ok, address wallet, uint256 market, uint256 index, bytes32 key) {
+        for (uint256 j = 0; j < 6; ++j) {
+            (wallet, market) = _pair(walletSeed, marketSeed, j);
+            (ok, index, key) = _pickKey(wallet, market, keySeed);
+            if (ok) return (ok, wallet, market, index, key);
+        }
+    }
+
+    /// @dev The first pair from the seeds whose proxy owes the GHO (`gho`) or USDC reserve, else the first that owes
+    /// the other; `ok` false when no account has debt. With `ghoOnly` only the GHO reserve is searched.
+    function _withDebt(
+        uint256 walletSeed,
+        uint256 marketSeed,
+        bool gho,
+        bool ghoOnly
+    ) internal view returns (bool ok, address wallet, uint256 market, address proxy, bool inGho) {
+        for (uint256 pass = 0; pass < (ghoOnly ? 1 : 2); ++pass) {
+            inGho = ghoOnly || (pass == 0 ? gho : !gho);
+            uint256 reserve = inGho ? w.ghoReserve : w.usdcReserve;
+            for (uint256 j = 0; j < 6; ++j) {
+                (wallet, market) = _pair(walletSeed, marketSeed, j);
+                proxy = w.adapter.proxyOf(wallet, market);
+                if (proxy != address(0) && w.spoke.getUserTotalDebt(reserve, proxy) != 0) {
+                    return (true, wallet, market, proxy, inGho);
+                }
+            }
+        }
+    }
+
     function _dropKey(
         address wallet,
         uint256 market,
@@ -168,6 +216,18 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         bytes32[] storage ks = openKeys[wallet][market];
         ks[index] = ks[ks.length - 1];
         ks.pop();
+    }
+
+    // ─── Set-up ───
+
+    /// @notice Set-up only (not a fuzzed action): each wallet opens a position in each market and borrows 1,500 GHO
+    /// against the first, so liquidations, repays and repays with collateral have debt to act on from the first call.
+    function seedAccounts() external {
+        for (uint256 i = 0; i < 3; ++i) {
+            this.pledge(i, 0, 3_000_000_000);
+            this.pledge(i, 1, 2_000_000_000);
+            this.borrow(i, 0, 0, 1500, 0);
+        }
     }
 
     // ─── Actions ───
@@ -180,7 +240,7 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         ++calls;
         address wallet = wallets[walletSeed % 3];
         (uint256 market,,) = _market(marketSeed);
-        if (openKeys[wallet][market].length >= 6) return;
+        if (openKeys[wallet][market].length >= 6) revert Skipped();
         uint128 units = uint128(bound(unitsSeed, 100_000_000, 5_000_000_000));
         bytes32 key = keccak256(abi.encode("handler", ++keyNonce));
         w.lpVault.mintPosition(key, wallet, market, units);
@@ -198,7 +258,9 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
                 proxyCodeHash[proxy] = proxy.codehash;
                 proxies.push(proxy);
             }
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
         _checkBacking(s0, l0);
     }
 
@@ -210,10 +272,9 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 mode
     ) external {
         ++calls;
-        address wallet = wallets[walletSeed % 3];
-        (uint256 market,,) = _market(marketSeed);
+        (bool found, address wallet, uint256 market,,) = _withKey(walletSeed, marketSeed, 0);
+        if (!found) revert Skipped();
         address proxy = w.adapter.proxyOf(wallet, market);
-        if (proxy == address(0)) return;
         bool gho = reserveSeed % 2 == 0;
         uint256 reserve = gho ? w.ghoReserve : w.usdcReserve;
         uint256 amount = bound(amountSeed, 1, 3000) * (gho ? 1e18 : 1e6);
@@ -236,7 +297,9 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
             IAaveV4Hub.SpokeConfig memory cfg = IAaveV4Hub(w.hub).getSpokeConfig(assetId, address(w.spoke));
             uint256 cap = uint256(cfg.drawCap) * (gho ? 1e18 : 1e6);
             if (IAaveV4Hub(w.hub).getSpokeTotalOwed(assetId, address(w.spoke)) > cap) ++drawCapViolations;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
     }
 
     function repay(
@@ -247,14 +310,12 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 mode
     ) external {
         ++calls;
-        address borrower = wallets[walletSeed % 3];
-        (uint256 market,,) = _market(marketSeed);
-        address proxy = w.adapter.proxyOf(borrower, market);
-        if (proxy == address(0)) return;
-        bool gho = reserveSeed % 2 == 0;
+        (bool found, address borrower, uint256 market, address proxy, bool gho) =
+            _withDebt(walletSeed, marketSeed, reserveSeed % 2 == 0, false);
+        if (!found) revert Skipped();
         uint256 reserve = gho ? w.ghoReserve : w.usdcReserve;
         uint256 debtNow = w.spoke.getUserTotalDebt(reserve, proxy);
-        if (debtNow == 0) return;
+        if (debtNow == 0) revert Skipped();
         // Mode 0: partial by the borrower; 1: repay-all by the borrower; 2: partial by a third party; 3: repay-all
         // by a third party.
         bool all = mode % 2 == 1;
@@ -283,14 +344,13 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 keySeed
     ) external {
         ++calls;
-        address wallet = wallets[walletSeed % 3];
-        (uint256 market,,) = _market(marketSeed);
-        (bool ok, uint256 index, bytes32 key) = _pickKey(wallet, market, keySeed);
-        if (!ok) return;
+        (bool ok, address wallet, uint256 market, uint256 index, bytes32 key) =
+            _withKey(walletSeed, marketSeed, keySeed);
+        if (!ok) revert Skipped();
         address proxy = w.adapter.proxyOf(wallet, market);
         bool debtFree = w.spoke.getUserAccountData(proxy).borrowCount == 0;
         uint256 units = w.coll.previewRelease(w.integrationId, key);
-        if (units == 0) return;
+        if (units == 0) revert Skipped();
         uint256 s0 = _supply();
         uint256 l0 = _ledger();
         if (debtFree) ++exitsAttempted;
@@ -314,12 +374,10 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 unitsSeed
     ) external {
         ++calls;
-        address wallet = wallets[walletSeed % 3];
-        (uint256 market,,) = _market(marketSeed);
-        (bool ok,, bytes32 key) = _pickKey(wallet, market, keySeed);
-        if (!ok) return;
+        (bool ok, address wallet, uint256 market,, bytes32 key) = _withKey(walletSeed, marketSeed, keySeed);
+        if (!ok) revert Skipped();
         uint256 credited = w.coll.previewRelease(w.integrationId, key);
-        if (credited < 2) return;
+        if (credited < 2) revert Skipped();
         uint128 units = uint128(bound(unitsSeed, 1, credited - 1));
         uint256 s0 = _supply();
         uint256 l0 = _ledger();
@@ -327,7 +385,9 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         try w.adapter.removeLiquidity(market, PositionRef(w.integrationId, key), units, _mins(), _deadline(), 0) {
             burned += units;
             ++removals;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
         _checkBacking(s0, l0);
     }
 
@@ -338,10 +398,8 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 addSeed
     ) external {
         ++calls;
-        address wallet = wallets[walletSeed % 3];
-        (uint256 market,,) = _market(marketSeed);
-        (bool ok,, bytes32 key) = _pickKey(wallet, market, keySeed);
-        if (!ok) return;
+        (bool ok, address wallet, uint256 market,, bytes32 key) = _withKey(walletSeed, marketSeed, keySeed);
+        if (!ok) revert Skipped();
         w.lpVault.addUnits(key, uint128(bound(addSeed, 1, 1_000_000_000)));
         uint256 s0 = _supply();
         uint256 l0 = _ledger();
@@ -349,10 +407,13 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         try w.adapter.recredit(market, PositionRef(w.integrationId, key), "", _deadline()) returns (uint128 added) {
             minted += added;
             ++recredits;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
         _checkBacking(s0, l0);
     }
 
+    /// @dev Steered to the first pair from the seeds with GHO debt.
     function repayWithCollateral(
         uint256 walletSeed,
         uint256 marketSeed,
@@ -360,20 +421,20 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 unitsSeed
     ) external {
         ++calls;
-        address wallet = wallets[walletSeed % 3];
-        (uint256 market,,) = _market(marketSeed);
-        (bool ok,, bytes32 key) = _pickKey(wallet, market, keySeed);
-        if (!ok) return;
-        address proxy = w.adapter.proxyOf(wallet, market);
+        (bool ok, address wallet, uint256 market, address proxy,) = _withDebt(walletSeed, marketSeed, true, true);
+        if (!ok) revert Skipped();
+        bytes32 key;
+        (ok,, key) = _pickKey(wallet, market, keySeed);
+        if (!ok) revert Skipped();
         uint256 debtNow = w.spoke.getUserTotalDebt(w.ghoReserve, proxy);
         uint256 credited = w.coll.previewRelease(w.integrationId, key);
-        if (debtNow == 0 || credited < 2) return;
+        if (debtNow == 0 || credited < 2) revert Skipped();
         // LPVaultSwap converts at the oracle: price8 × 10^4 GHO wei per unit of a 6-decimal vault token; the units
         // released are at most what repays the GHO debt, so the flash loan never exceeds it.
         uint256 perUnit = uint256(w.vtPrice.latestAnswer()) * 1e4;
         uint256 maxUnits = debtNow / perUnit;
         if (maxUnits > credited - 1) maxUnits = credited - 1;
-        if (maxUnits == 0) return;
+        if (maxUnits == 0) revert Skipped();
         uint128 units = uint128(bound(unitsSeed, 1, maxUnits));
         uint256 flash = uint256(units) * perUnit;
         w.swap.setDeleverage(flash, perUnit, 0);
@@ -395,7 +456,9 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
             burned += units;
             ++deleverages;
             if (w.spoke.getUserTotalDebt(w.ghoReserve, proxy) > debtNow) ++livenessViolations;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
         _checkBacking(s0, l0);
     }
 
@@ -406,10 +469,8 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         uint256 feeSeed
     ) external {
         ++calls;
-        address wallet = wallets[walletSeed % 3];
-        (uint256 market,,) = _market(marketSeed);
-        (bool ok,, bytes32 key) = _pickKey(wallet, market, keySeed);
-        if (!ok) return;
+        (bool ok, address wallet, uint256 market,, bytes32 key) = _withKey(walletSeed, marketSeed, keySeed);
+        if (!ok) revert Skipped();
         w.lpVault.accrueFees(key, bound(feeSeed, 0, 1e9));
         ++exitsAttempted;
         vm.prank(wallet);
@@ -442,20 +503,57 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         w.registry.setFrozen(who, (freezeSeed >> 8) % 4 == 0);
     }
 
+    /// @notice LPVaultSwap liquidates an account below HF 1.
+    /// @dev Steered so most calls liquidate: the account is the first from the seeds with GHO debt (when none has any,
+    /// the seeds' pair first borrows 2,000 GHO through `borrow`); for three seeds in four a healthy account has the
+    /// vault-token price lowered so its health factor is 0.85 to 0.99 (HF is linear in that price; the debt assets are
+    /// fixed at $1), and the price is restored after the call. The cover is the whole debt for half the seeds or below
+    /// 4,000 GHO (no dust left), otherwise a quarter to all of it. The steering bits come from a hash of the seed, so
+    /// the fuzzer's small dictionary values steer too.
     function liquidate(
         uint256 walletSeed,
         uint256 marketSeed,
         uint256 coverSeed
     ) external {
         ++calls;
-        address wallet = wallets[walletSeed % 3];
-        (uint256 market, VaultToken token, uint256 reserve) = _market(marketSeed);
-        address proxy = w.adapter.proxyOf(wallet, market);
-        if (proxy == address(0)) return;
-        if (w.spoke.getUserAccountData(proxy).healthFactor >= 1e18) return;
+        (bool found,, uint256 market, address proxy,) = _withDebt(walletSeed, marketSeed, true, true);
+        if (!found) {
+            try this.borrow(walletSeed, marketSeed, 0, 2000, 0) {} catch {}
+            (found,, market, proxy,) = _withDebt(walletSeed, marketSeed, true, true);
+            if (!found) revert Skipped();
+        }
+        uint256 steer = uint256(keccak256(abi.encode(coverSeed)));
+        int256 price = w.vtPrice.latestAnswer();
+        _toLiquidatable(proxy, price, steer);
+        if (w.spoke.getUserAccountData(proxy).healthFactor >= 1e18) revert Skipped();
         uint256 debtNow = w.spoke.getUserTotalDebt(w.ghoReserve, proxy);
-        if (debtNow == 0) return;
-        uint256 cover = bound(coverSeed, 1, debtNow);
+        uint256 cover = (steer >> 16) % 2 == 0 || debtNow < 4000e18 ? debtNow : bound(coverSeed, debtNow / 4, debtNow);
+        _liquidate(market, proxy, cover);
+        w.vtPrice.set(price);
+    }
+
+    /// @dev For three steering values in four, lowers the vault-token price so a healthy `proxy`'s health factor is
+    /// 0.85 to 0.99.
+    function _toLiquidatable(
+        address proxy,
+        int256 price,
+        uint256 steer
+    ) internal {
+        uint256 hf = w.spoke.getUserAccountData(proxy).healthFactor;
+        if (hf < 1e18 || steer % 4 == 0) return;
+        uint256 lowered = uint256(price) * bound(steer >> 8, 85, 99) * 1e16 / hf;
+        // At most 0.99 / HF times the current price (below 2.2e8).
+        // forge-lint: disable-next-line(unsafe-typecast)
+        w.vtPrice.set(int256(lowered > 1e6 ? lowered : 1e6));
+    }
+
+    function _liquidate(
+        uint256 market,
+        address proxy,
+        uint256 cover
+    ) internal {
+        VaultToken token = market == w.marketA ? w.tokenA : w.tokenB;
+        uint256 reserve = market == w.marketA ? w.reserveA : w.reserveB;
         uint256 s0 = _supply();
         uint256 l0 = _ledger();
         try w.swap.liquidate(address(w.spoke), market, address(token), reserve, w.ghoReserve, proxy, cover, 2) returns (
@@ -463,7 +561,9 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
         ) {
             burned += seized;
             ++liquidations;
-        } catch {}
+        } catch {
+            revert Skipped();
+        }
         _checkBacking(s0, l0);
     }
 
