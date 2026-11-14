@@ -1,9 +1,8 @@
 import { lazy, Suspense, type ComponentType } from "react"
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest"
 import { HomeSwapAction } from "../home-swap-action"
 import { AvanaSessionsProvider } from "@/app/lib/avana-session/avana-sessions-provider"
-import { MockSwapProvider } from "@/app/lib/swap-system"
 import { TransactAccessContext } from "@/app/lib/transact-access"
 
 const { loadPicker } = vi.hoisted(() => ({ loadPicker: vi.fn() }))

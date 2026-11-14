@@ -8,7 +8,6 @@ export type TransactionKindConfig = {
 
 const INFLOW_TONE = "text-success"
 const OUTFLOW_TONE = "text-rose-600 dark:text-rose-400"
-const NEUTRAL_TONE = "text-muted-foreground"
 const WARNING_TONE = "text-amber-600 dark:text-amber-400"
 
 export const LEND_KIND_CONFIG: TransactionKindConfig = {

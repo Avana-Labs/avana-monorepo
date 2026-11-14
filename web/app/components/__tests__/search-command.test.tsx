@@ -1,6 +1,6 @@
 import { renderToString } from "react-dom/server"
 import { SearchTrigger } from "../search-trigger"
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const push = vi.fn()
@@ -53,14 +53,6 @@ describe("SearchCommand keyboard navigation", () => {
     render(<SearchTrigger iconOnly />)
     expect(screen.getByRole("button", { name: "Search Avana" })).toBeEnabled()
   })
-
-  const openAndLoad = async () => {
-    render(<SearchCommand />)
-    fireEvent.click(screen.getByRole("button", { name: "Search Avana" }))
-    // Results load via dynamic import; wait until at least one option appears.
-    await waitFor(() => expect(screen.getAllByRole("option").length).toBeGreaterThan(0))
-    return screen.getByRole("combobox")
-  }
 
   it("opens immediately after an intent-loaded trigger requests the module", () => {
     render(<SearchCommand initialOpen />)

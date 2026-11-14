@@ -1,10 +1,6 @@
 import type { ActionPreviewUi } from "@/app/lib/action-system/contracts"
 import { formatActionApproxUsd, formatActionFeeSummary, formatActionUsd } from "@/app/lib/action-system/formatters"
 
-function formatTokenRewardAmount(value: number) {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 })
-}
-
 export function mapBorrowRewardsClaimPreviewToActionUi(options: {
   allowed: boolean
   claimUsd: number

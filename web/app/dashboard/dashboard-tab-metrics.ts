@@ -159,12 +159,6 @@ export function buildBorrowBalanceMetrics(
   }
 }
 
-function weightedAverage(values: Array<{ weight: number; value: number }>) {
-  const totalWeight = values.reduce((sum, entry) => sum + entry.weight, 0)
-  if (totalWeight <= 0) return 0
-  return values.reduce((sum, entry) => sum + entry.weight * entry.value, 0) / totalWeight
-}
-
 export function buildLendDashboardMetrics(data: PortfolioLendTabData) {
   const balance = buildLendBalanceMetrics(data)
   const investments = data.investments ?? []

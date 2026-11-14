@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CATEGORY_CHIPS, categorizeMarket, matchesCategory } from "@/app/lib/markets/category"
+import { categorizeMarket, matchesCategory } from "@/app/lib/markets/category"
 
 describe("market categorization", () => {
   it("buckets BTC and ETH families by token", () => {

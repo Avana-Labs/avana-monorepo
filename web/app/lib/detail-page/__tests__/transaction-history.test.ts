@@ -7,15 +7,9 @@ import {
   formatRelativeTime,
   mapBorrowSessionRows,
   mapLendSessionRows,
-  mapMultiplyHistoryKind,
-  mapMultiplySessionRows,
   mergeTransactionRows,
   scopedAssetKeysMatch,
 } from "@/app/lib/detail-page/transaction-history"
-import {
-  MULTIPLY_KIND_CONFIG,
-  resolveTransactionKindLabel,
-} from "@/app/components/detail-transaction-table/kind-configs"
 
 describe("transaction-history helpers", () => {
   it("formats the canonical wallet address", () => {

@@ -7,11 +7,7 @@ const { useQuery, auth } = vi.hoisted(() => ({
 }))
 vi.mock("convex/react", () => ({ useQuery, useConvexAuth: () => auth }))
 
-import {
-  useConvexClaimBasis,
-  useConvexProductWalletBalances,
-  useConvexWalletOnboardingSummary,
-} from "@/app/lib/swap-system/use-convex-wallet-balances"
+import { useConvexProductWalletBalances } from "@/app/lib/swap-system/use-convex-wallet-balances"
 
 afterEach(() => {
   useQuery.mockClear()

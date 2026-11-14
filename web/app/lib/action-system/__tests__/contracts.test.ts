@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { actionPagePath, getActionDescriptor, resolveActionCloseHref } from "@/app/lib/action-system/contracts"
+import { getActionDescriptor } from "@/app/lib/action-system/contracts"
 
 describe("action-system contracts", () => {
   it("uses Avana action configure subtitles", () => {

@@ -1,16 +1,13 @@
 "use client"
 
 import { TableHeaderHint } from "@/app/components/table-header-hint"
-import { formatTokenDisplaySymbol } from "@/app/lib/token-icons"
-import { Suspense, useMemo, type ReactNode } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, type ReactNode } from "react"
 import Link from "next/link"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ActionIcon } from "@/app/components/action-icon"
 import { Button } from "@/components/ui/button"
 import { TokenIcon } from "@/app/components/token-icon"
 import { DesktopTableSurface, HoverActionGroup, ScrollableTable } from "@/app/components/market-table-primitives"
-import { pairedLoopBorrowPx, TOKEN_ICON_TABLE_PAIR_WIDTH_PX, TOKEN_ICON_TABLE_PX } from "@/app/lib/token-icon-sizes"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
 import {} from "@/app/components/market-card-primitives"
 import { useCanonicalPriceFor } from "@/app/lib/prices/token-prices-context"
@@ -18,7 +15,6 @@ import { useCurrency } from "@/app/lib/currency/use-currency"
 import { buildDashboardWalletBalanceRows } from "@/app/lib/swap-system"
 import { useConvexProductWalletBalances } from "@/app/lib/swap-system/use-convex-wallet-balances"
 import type { UserAssetBalance } from "@/app/lib/swap-system"
-import { actionPagePath } from "@/app/lib/action-system/contracts"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import {
   DASHBOARD_TABLE_REFERENCE_PX,
@@ -65,23 +61,6 @@ function AvailableActionButton({ href, label, icon }: { href: string; label: str
         </Link>
       </Button>
     </HoverActionGroup>
-  )
-}
-
-function PairedTokenIcons({ collateralSymbol, borrowSymbol }: { collateralSymbol: string; borrowSymbol: string }) {
-  return (
-    <span
-      className="relative block shrink-0"
-      style={{ height: TOKEN_ICON_TABLE_PX, width: TOKEN_ICON_TABLE_PAIR_WIDTH_PX }}
-    >
-      <TokenIcon symbol={collateralSymbol} size="table" className="absolute left-0 top-0" />
-      <TokenIcon
-        symbol={borrowSymbol}
-        size="md"
-        pixelSize={pairedLoopBorrowPx(TOKEN_ICON_TABLE_PX)}
-        className="absolute bottom-0 right-0 z-10"
-      />
-    </span>
   )
 }
 

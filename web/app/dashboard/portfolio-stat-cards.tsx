@@ -310,7 +310,7 @@ function PortfolioStatCardsView({
           className="overflow-x-auto pb-1 [scrollbar-width:none] snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
         >
           <ul className="flex w-full gap-3">
-            {cards.map((card, i) => (
+            {cards.map((card) => (
               <li
                 key={card.key}
                 data-carousel-card

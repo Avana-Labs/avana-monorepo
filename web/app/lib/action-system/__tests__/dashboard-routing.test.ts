@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { dashboardHrefForProduct, successDashboardCtaLabel } from "@/app/lib/action-system/dashboard-routing"
+import { successDashboardCtaLabel } from "@/app/lib/action-system/dashboard-routing"
 
 describe("dashboard-routing", () => {
   it("labels success CTAs to return to the dashboard", () => {

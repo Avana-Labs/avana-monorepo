@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildMockLiquidationRiskStats, foldLiquidationRiskStats } from "@/app/lib/detail-page/liquidation-risk"
+import { foldLiquidationRiskStats } from "@/app/lib/detail-page/liquidation-risk"
 
 describe("foldLiquidationRiskStats", () => {
   const latest = {

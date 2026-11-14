@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import dynamic from "next/dynamic"
 import type { HomeMode } from "@/app/lib/home-view-model"
 import { HomeWorkspaceCard } from "@/app/components/home/home-workspace-card"

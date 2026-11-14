@@ -1,11 +1,6 @@
 import { fireEvent, render, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import {
-  AMOUNT_SIGN_BY_KIND,
-  inferActivityTokenSymbol,
-  inferActivityTokenSymbols,
-  RecentActivity,
-} from "@/app/dashboard/recent-activity"
+import { AMOUNT_SIGN_BY_KIND, inferActivityTokenSymbols, RecentActivity } from "@/app/dashboard/recent-activity"
 import { DisplayPreferencesProvider } from "@/app/components/display-preferences"
 import type { PortfolioActivityRow } from "@/app/lib/data/providers/portfolio"
 

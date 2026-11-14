@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest"
-import {
-  mapConvexSwapTransactionsToActivityRows,
-  mapSwapTransactionHistoryToActivityRows,
-} from "@/app/dashboard/swap-activity"
+import { mapSwapTransactionHistoryToActivityRows } from "@/app/dashboard/swap-activity"
 import type { SwapTransactionRecord } from "@/app/lib/swap-system"
-import type { DurableSwapTransaction } from "@/app/lib/swap-system/use-swap-session"
 
 const transaction: SwapTransactionRecord = {
   id: "swap-1",
@@ -49,17 +45,3 @@ describe("mapSwapTransactionHistoryToActivityRows", () => {
     ).toMatchObject({ status: "failed", secondaryLabel: "Quote expired.", txHash: "swap-1" })
   })
 })
-
-const durable: DurableSwapTransaction = {
-  id: "convex-doc-1",
-  intentId: "swap-1",
-  status: "success",
-  inputSymbol: "ETH",
-  outputSymbol: "USDC",
-  inputAmount: 0.001,
-  outputAmount: 1.925,
-  amountUsd: 1.934,
-  hash: "sim-swap-abc",
-  at: 1_700_000_000_000,
-}
-

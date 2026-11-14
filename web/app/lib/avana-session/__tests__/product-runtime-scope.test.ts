@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest"
-import { resolveProductRuntimeScope } from "@/app/lib/avana-session/product-runtime-scope"
-
 
 describe("market snapshot hydrator price source", () => {
   it("does not open a duplicate getPriceSnapshot subscription", async () => {

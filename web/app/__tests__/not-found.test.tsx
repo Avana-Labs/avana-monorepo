@@ -1,4 +1,4 @@
-import { cleanup, render, within } from "@testing-library/react"
+import { cleanup, render } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 import NotFound from "@/app/not-found"
 

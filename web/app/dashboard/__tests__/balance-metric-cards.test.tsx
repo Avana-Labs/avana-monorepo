@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   DashboardCreditOverviewSection,
   DashboardLendPerformanceSection,
-  DashboardMultiplyBalanceSection,
 } from "@/app/dashboard/dashboard-metric-section"
 
 vi.mock("@/app/components/display-preferences", () => ({
@@ -69,7 +68,6 @@ describe("Borrow Balance metric cards", () => {
     expect(screen.queryByText("$284,276")).toBeNull()
   })
 })
-
 
 describe("Lend Balance metric cards", () => {
   it("renders eight growth metrics and omits Rewards Earned", () => {

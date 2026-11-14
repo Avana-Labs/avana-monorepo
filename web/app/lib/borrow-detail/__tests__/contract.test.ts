@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getAssetDetail, getPoolDetail, listAllAssetDetails, listAllPoolDetails } from "@/app/lib/borrow-detail"
-import {
-  isPlaceholderHeroContractAddress,
-  isSafeHeroLink,
-  resolveHeroContractLabel,
-} from "@/app/borrow/_detail/lib/hero-chart-feeds"
+import { isPlaceholderHeroContractAddress, isSafeHeroLink } from "@/app/borrow/_detail/lib/hero-chart-feeds"
 
 describe("borrow detail contract", () => {
   it("flags repeated-hex synthetic contract addresses as placeholders", () => {

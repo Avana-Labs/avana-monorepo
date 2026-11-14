@@ -1,12 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { canonicalPriceUsd, resetCanonicalPrices, setCanonicalPrices } from "@/app/lib/prices/canonical"
 import { formatTokenPrice } from "@/app/lib/prices/format"
-import { BORROW_POOL_CATALOG, poolLpTokenPriceUsd } from "@/app/lib/borrow-market-rows"
 import { lpTokenPriceUsd, normalizeWeights } from "@/app/lib/prices/lp-token-price"
 
 afterEach(() => resetCanonicalPrices())
-
-const usdcUsdt = () => BORROW_POOL_CATALOG.find((p) => p.name === "USDC / USDT")!
 
 describe("stablecoin depeg flows through the stack (C5)", () => {
   it("does not permanently assume USDC/USDT/DAI/GHO = 1 — live depeg is reflected", () => {

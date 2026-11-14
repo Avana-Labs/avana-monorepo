@@ -276,7 +276,7 @@ export function resolveClaimMarketId(marketOrPoolId: string) {
   return marketOrPoolId
 }
 
-export function repaySelectItemsForWallet(session: BorrowContextSession, walletId: string, now = Date.now()) {
+export function repaySelectItemsForWallet(session: BorrowContextSession, walletId: string, _now = Date.now()) {
   // Owed = principal plus interest accrued since the last write, the figure the dashboard shows.
   const account = session.state.accounts[walletId]
   if (!account) return []

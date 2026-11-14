@@ -1,12 +1,7 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
-import {
-  BORROW_POOL_CATALOG,
-  formatBorrowPairLabel,
-  formatLtvPct,
-  normalizeBorrowTokenSymbol,
-} from "@/app/lib/borrow-market-rows"
+import { formatBorrowPairLabel, formatLtvPct, normalizeBorrowTokenSymbol } from "@/app/lib/borrow-market-rows"
 
 const readSource = (relativeFromRepoRoot: string) =>
   readFileSync(resolve(__dirname, "../../..", relativeFromRepoRoot), "utf8")
