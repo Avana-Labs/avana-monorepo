@@ -35,8 +35,9 @@ npx convex env set CONVEX_RATE_LIMIT_SECRET <secret>
 npx convex dev --typecheck disable --codegen disable                                       # keep running
 cd ../..
 node webapp/scripts/local-convex-seed.ts                                                    # fixture deployment, tokens and chain snapshot
-git checkout -- services/convex/convex/_generated                                           # the CLI rewrites api.js at start-up
 ```
+
+`--codegen disable` keeps the CLI from rewriting the committed `convex/_generated/` files.
 
 `local-convex-seed.ts` refuses any deployment that is not on 127.0.0.1 or localhost. It loads the services' fixture chain (`@avana/services-common/fixtures`): three Hubs of different tiers, their Lend and CDP Spokes, Hub assets, Spoke reserves and two markets, through the same `deployments:setDeployment` and `ingest/apply:applySnapshot` mutations the indexer export uses, and the USDC, USDT and GHO names and symbols through `listing/store:store`. On the first run the CLI may also add `services/convex/.gitignore` and `services/convex/convex/tsconfig.json`; delete them. Then set `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_URL` to `http://127.0.0.1:3210`, `NEXT_PUBLIC_CONVEX_SITE_URL` to `http://127.0.0.1:3211` and `CONVEX_RATE_LIMIT_SECRET` to the same secret in `webapp/.env.local`, and run the app.
 

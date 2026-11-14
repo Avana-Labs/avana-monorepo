@@ -43,7 +43,7 @@ const convexCli = path.join(
 )
 
 function run(fn: string, args: unknown) {
-  execFileSync(process.execPath, [convexCli, "run", fn, json(args)], {
+  execFileSync(process.execPath, [convexCli, "run", "--codegen", "disable", fn, json(args)], {
     cwd: convexDir,
     stdio: ["ignore", "inherit", "inherit"],
   })
