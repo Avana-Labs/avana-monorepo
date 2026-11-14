@@ -11,8 +11,16 @@ Code from these projects is ported into files in this repository. Each such file
 - Version: v3-core `5ea68a77cb541c6b3812df783be71ba8c081e25f`, v3-periphery `24ccf014fe7f81d74a14c1689d6fdf123f280e45`.
 - Copyright: (c) 2021 Uniswap Labs.
 - Licence: GPL-2.0-or-later. `TickMath.sol`, `LiquidityAmounts.sol` and `OracleLibrary.sol` are GPL-2.0-or-later at these commits; `Tick.sol` and `SqrtPriceMath.sol` were BUSL-1.1 until the v3-core change date of 2023-04-01 and are GPL-2.0-or-later since.
-- Used in: `contracts/src/amm/concentrated-liquidity/ClPriceMath.sol` (tick and square-root price conversion, the per-tick liquidity bound, amounts for liquidity, mean tick and harmonic-mean liquidity; compiled into the Uniswap v3 and Slipstream LPVaults); the Python ports in `contracts/test/differential/reference/avana_reference.py`, `spec/05-verification/z3/units-oracle/_common.py` and `spec/05-verification/hypothesis/model/uniswap.py`.
+- Used in: the Python ports in `contracts/test/differential/reference/avana_reference.py`, `spec/05-verification/z3/units-oracle/_common.py` and `spec/05-verification/hypothesis/model/uniswap.py`, which check Avana's code and specification and are not deployed. No Solidity file ports v3 code: `ClPriceMath.sol` was GPL-2.0-or-later until 2026-11-13 and is now BUSL-1.1, its tick math taken from v4-core (below) and the rest written from Avana's specification.
 - Licence text: [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt).
+
+### Uniswap v4-core
+
+- Version: tag `v4.0.0`, commit `e50237c43811bd9b526eff40f26772152a42daba` (`Uniswap/v4-core`); `src/libraries/TickMath.sol` last changed upstream in `0f17b65aa61edee384d5129b7ea080f22905faa0`.
+- Copyright: 2023 Universal Navigation Inc.
+- Licence: MIT (`licenses/MIT_LICENSE` of v4-core; v4-core is BUSL-1.1 and MIT file by file, and `TickMath.sol` carries `SPDX-License-Identifier: MIT`).
+- Used in: `contracts/src/amm/concentrated-liquidity/ClTickMath.sol` (`getSqrtPriceAtTick`, `getTickAtSqrtPrice` and their constants; compiled into the Uniswap v3 and Slipstream LPVaults and the concentrated-liquidity LPOracle through `ClPriceMath.sol`). Avana's changes, listed in the file header, are MIT as well: the inline assembly written as plain Solidity, `BitMath.mostSignificantBit` replaced by OpenZeppelin `Math.log2`, the logarithm steps as one loop, the errors renamed, the tick-spacing helpers left out.
+- Licence text: [MIT](#mit-license).
 
 ### Aave V4
 
