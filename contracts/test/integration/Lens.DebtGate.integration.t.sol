@@ -9,24 +9,25 @@ import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/Liqui
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
+import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 
 /// @title LensDebtGateIntegrationTest
 /// @notice `previewLiquidation`'s debt-price gate matches what `liquidate` enforces (TEST-205), on the real stack
-/// (`RealStackFlows`) with the real USDC DebtOracle: a DebtOracle that is Live with a fresh accepted price but reports
-/// `liquidationPaused` because the alternate route it serves is past its `borrowPriceMaxAge` makes the Lens report
-/// `debtPriceFresh = false` and `pricesUsable = false`, and LPVaultSwap refuses the liquidation; once the pause lifts,
-/// both views reopen and the reopened preview executes.
+/// (`RealStackFlows`, and `RealStackVolatile`'s Volatile Hub for the debt rule alone) with the real USDC DebtOracle: a
+/// DebtOracle that is Live with a fresh accepted price but reports `liquidationPaused` because the alternate route it
+/// serves is past its `borrowPriceMaxAge` makes the Lens report `debtPriceFresh = false` and `pricesUsable = false`,
+/// and LPVaultSwap refuses the liquidation; once the pause lifts, both views reopen and the reopened preview executes.
 /// @dev Bob's account: 10,000 vault tokens against 5,880 USDC, HF 0.984 after USDT falls to $0.93 (`_depegUsdt`). The
 /// timelock lowers the USDC alternate feed's `borrowPriceMaxAge` to one hour; the USDC primary feed then goes without a
 /// round past its `feedMaxAge` (the DebtOracle serves the alternate) and the alternate's last round is an hour and a
 /// second old, within its `liquidationPriceMaxAge`. The market's LPOracle prices USDC from the same feeds under the same
 /// rule, so it is liquidation-paused too and `liquidate` refuses at its collateral rule, which runs first
-/// (`StalePrice`); `Lens.DebtGate.DebtOnly` checks the debt rule alone (`DebtPriceStale`) on the stand-in fixture. The
-/// L1 configuration has no sequencer feed, so the sequencer-down pause is not reachable here.
+/// (`StalePrice`). The debt rule alone (`DebtPriceStale`) is checked with the same pause on a USDC-debt account of a
+/// WBTC/WETH market of the Volatile Hub (`_wbtcWethMarket`), whose LPOracle reads no USDC feed. The L1 configuration
+/// has no sequencer feed, so the sequencer-down pause is not reachable here.
 /// forge-config: default.isolate = false
-contract LensDebtGateIntegrationTest is RealStackFlows {
+contract LensDebtGateIntegrationTest is RealStackVolatile {
     uint32 internal constant ALT_BORROW_AGE = 3600;
     uint256 internal mA;
 
@@ -104,6 +105,58 @@ contract LensDebtGateIntegrationTest is RealStackFlows {
         assertTrue(p.debtPriceFresh, "open again");
         assertTrue(p.pricesUsable, "usable again");
         LiquidationResult memory r = _liquidateAs(keeper, p.params);
+        assertEq(r.debtRepaid, p.expectedDebtRepaid, "D as previewed");
+        assertEq(r.unitsSeized, p.expectedUnitsSeized, "c as previewed");
+    }
+
+    /// @notice The debt rule alone: the same DebtOracle pause (the served USDC alternate past its borrow age) on a
+    /// USDC-debt account of a WBTC/WETH market, whose LPOracle reads no USDC feed and stays usable, makes LPVaultSwap
+    /// revert `DebtPriceStale` and the Lens report `debtPriceFresh = false` and `pricesUsable = false`; a new USDC
+    /// primary round lifts the pause, both views reopen and the reopened preview executes.
+    // TEST-205 verifies: REQ-LENS-016, REQ-LENS-030, REQ-SWAP-008
+    function test_TEST_205_debtPauseAloneRevertsDebtPriceStale() public {
+        uint256 m = _wbtcWethMarket();
+        (address proxy,) = _usdcAccountBelowOne(bob, m);
+        OracleFeedMock usdcPrimary = feedsOf[address(usdc)][0];
+        OracleFeedMock usdcAlternate = feedsOf[address(usdc)][1];
+        vm.prank(address(timelock));
+        store.tightenBorrowPriceMaxAge(address(usdcAlternate), ALT_BORROW_AGE);
+        OracleFeedMock[] memory quiet = new OracleFeedMock[](2);
+        (quiet[0], quiet[1]) = (usdcPrimary, usdcAlternate);
+        // Every other feed publishes at least every half FEED_AGE; the USDC primary goes quiet past its feedMaxAge and
+        // the alternate's last round ends an hour and a second old.
+        _warpBlocks(FEED_AGE / 2 + 1);
+        _refreshFeedsExcept(quiet);
+        _warpBlocks(FEED_AGE / 2 + 1);
+        _refreshFeedsExcept(quiet);
+        usdcAlternate.push(usdcAlternate.answer(), block.timestamp);
+        _warpBlocks(ALT_BORROW_AGE + 1);
+        _refreshFeedsExcept(quiet);
+        usdcOracle.poke();
+
+        DebtPriceView memory d = usdcOracle.getPriceState();
+        assertEq(uint8(d.state), uint8(PriceState.Live), "the DebtOracle is Live");
+        assertEq(uint8(d.routeUsed), uint8(RouteSlot.Alternate), "serving the alternate");
+        assertTrue(d.liquidationPaused, "the alternate past its borrowPriceMaxAge pauses liquidation");
+        assertFalse(mkt[m].oracle.getPriceState().liquidationPaused, "the WBTC/WETH price is usable");
+        LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveIdV, block.timestamp + 120);
+        assertTrue(p.aaveLiquidatable, "liquidatable on Aave");
+        assertFalse(p.debtPriceFresh, "the debt price is closed to liquidation");
+        assertFalse(p.pricesUsable, "the preview reports the gate liquidate enforces");
+        usdc.mint(keeper, p.params.debtToCover);
+        vm.startPrank(keeper);
+        usdc.approve(lpVaultSwap, p.params.debtToCover);
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveIdV));
+        lvs.liquidate(p.params);
+        usdc.approve(lpVaultSwap, 0);
+        vm.stopPrank();
+
+        usdcPrimary.push(usdcPrimary.answer(), block.timestamp);
+        usdcOracle.poke();
+        p = lens.previewLiquidation(proxy, usdcReserveIdV, block.timestamp + 120);
+        assertTrue(p.debtPriceFresh, "open again");
+        assertTrue(p.pricesUsable, "usable again");
+        LiquidationResult memory r = _liquidateOn(spokeV, keeper, p.params);
         assertEq(r.debtRepaid, p.expectedDebtRepaid, "D as previewed");
         assertEq(r.unitsSeized, p.expectedUnitsSeized, "c as previewed");
     }
