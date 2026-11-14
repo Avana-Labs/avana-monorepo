@@ -13,6 +13,7 @@ import {
     OperatorHelperInput
 } from "./DeployTypes.sol";
 import {Script} from "forge-std/Script.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @title DeployInputs
 /// @notice Reads a network's deployment inputs from `script/deploy/config/<network>.json`.
@@ -46,15 +47,22 @@ abstract contract DeployInputs is Script {
         return string.concat(vm.projectRoot(), "/", OUTPUT_DIR, "/", _network(), "/", file, ".json");
     }
 
-    /// @notice Loads the inputs of `network` and checks the chain.
+    /// @notice Chain ID of anvil, the only chain that takes a learning tag or a checkout that is not the release tag.
+    uint256 internal constant ANVIL_CHAIN_ID = 31_337;
+
+    /// @notice What the release check compares with HEAD: the deployed sources and their build settings.
+    string internal constant RELEASE_SOURCES = "src script/deploy foundry.toml soldeer.lock remappings.txt";
+
+    /// @notice Loads the inputs of `network`, checks the chain and the release (`_requireReleaseCheckout`).
     function _loadInputs(
         string memory network
-    ) internal view returns (ChainInputs memory c) {
+    ) internal returns (ChainInputs memory c) {
         string memory json = vm.readFile(_configPath(network));
         c.network = network;
         c.chainId = vm.parseJsonUint(json, ".chainId");
         c.release = vm.envOr("AVANA_RELEASE", vm.parseJsonString(json, ".release"));
         require(c.chainId == block.chainid, string.concat("config ", network, " is for another chain"));
+        _requireReleaseCheckout(c.release);
         c.gov = GovernanceInputs({
             governanceSafe: _addr(json, ".governance.governanceSafe"),
             emergencyGuardian: _addr(json, ".governance.emergencyGuardian"),
@@ -74,6 +82,148 @@ abstract contract DeployInputs is Script {
         c.keepers = _addrs(json, ".keepers");
         c.operatorHelpers = _helpers(json);
         c.integrations = _integrations(json);
+    }
+
+    // ─── Release check ───
+
+    /// @notice Checks `release` (`_checkRelease`); off anvil it first reads HEAD, the tag's commit and any uncommitted
+    /// change to `RELEASE_SOURCES` from git, which needs forge's `--ffi` (`step.sh` passes it off anvil). Without it the
+    /// script stops: a release is never deployed outside anvil unchecked.
+    /// @return head The 20-byte HEAD commit off anvil, empty on anvil.
+    function _requireReleaseCheckout(
+        string memory release_
+    ) internal returns (bytes memory head) {
+        bytes memory tagCommit;
+        bytes memory dirty;
+        if (block.chainid != ANVIL_CHAIN_ID && _isReleaseTag(release_) && !_isLearningRelease(release_)) {
+            head = _gitCommit("HEAD");
+            tagCommit = _gitCommit(string.concat("refs/tags/", release_, "^{commit}"));
+            bool ok;
+            (ok, dirty) =
+                _git(vm.split(string.concat("status --porcelain --untracked-files=no -- ", RELEASE_SOURCES), " "));
+            if (!ok) dirty = "git status failed";
+        }
+        _checkRelease(release_, block.chainid, head, tagCommit, dirty);
+    }
+
+    /// @notice The release rules: `release` is a tag `vX.Y.Z` or `vX.Y.Z-<pre-release>` (the manifest schema's
+    /// pattern) on every chain. Off anvil it is not a learning tag (`-local`, `-test`, `-learn`), HEAD is the tag's
+    /// commit and the deployed sources have no uncommitted change, so the build in `out/` is the tagged code whose
+    /// release record the release workflow published.
+    function _checkRelease(
+        string memory release_,
+        uint256 chainId,
+        bytes memory head,
+        bytes memory tagCommit,
+        bytes memory dirty
+    ) internal pure {
+        require(
+            _isReleaseTag(release_),
+            string.concat("AVANA_RELEASE ", release_, " is not a release tag vX.Y.Z or vX.Y.Z-<pre-release>")
+        );
+        if (chainId == ANVIL_CHAIN_ID) return;
+        require(
+            !_isLearningRelease(release_),
+            string.concat("AVANA_RELEASE ", release_, " is a learning tag, for anvil only")
+        );
+        require(tagCommit.length != 0, string.concat("no git tag ", release_, " in this checkout"));
+        require(
+            keccak256(head) == keccak256(tagCommit),
+            string.concat(
+                "HEAD ",
+                vm.toString(head),
+                " is not ",
+                release_,
+                " (",
+                vm.toString(tagCommit),
+                "): check out the release tag"
+            )
+        );
+        require(dirty.length == 0, string.concat("uncommitted changes to the deployed sources:\n", string(dirty)));
+    }
+
+    /// @notice `^v[0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9.]+)?$`.
+    function _isReleaseTag(
+        string memory r
+    ) internal pure returns (bool) {
+        bytes memory b = bytes(r);
+        if (b.length < 6 || b[0] != "v") return false;
+        uint256 i = 1;
+        for (uint256 part = 0; part < 3; ++part) {
+            uint256 start = i;
+            while (i < b.length && b[i] >= "0" && b[i] <= "9") {
+                ++i;
+            }
+            if (i == start) return false;
+            if (part < 2) {
+                if (i == b.length || b[i] != ".") return false;
+                ++i;
+            }
+        }
+        if (i == b.length) return true;
+        if (b[i] != "-" || i + 1 == b.length) return false;
+        for (++i; i < b.length; ++i) {
+            bytes1 ch = b[i];
+            if (!((ch >= "a" && ch <= "z") || (ch >= "0" && ch <= "9") || ch == ".")) return false;
+        }
+        return true;
+    }
+
+    /// @notice A learning tag: its pre-release starts with `local`, `test` or `learn` (the release workflow's rule).
+    function _isLearningRelease(
+        string memory r
+    ) internal pure returns (bool) {
+        bytes memory b = bytes(r);
+        uint256 dash = b.length;
+        for (uint256 i = 0; i < b.length; ++i) {
+            if (b[i] == "-") {
+                dash = i;
+                break;
+            }
+        }
+        if (dash == b.length) return false;
+        string memory pre = _drop(r, dash + 1);
+        return _hasPrefix(pre, "local") || _hasPrefix(pre, "test") || _hasPrefix(pre, "learn");
+    }
+
+    /// @notice Runs `git <args>` in `contracts/`: whether it exited 0, and its output.
+    function _git(
+        string[] memory args
+    ) internal returns (bool ok, bytes memory out) {
+        string[] memory cmd = new string[](args.length + 1);
+        cmd[0] = "git";
+        for (uint256 i = 0; i < args.length; ++i) {
+            cmd[i + 1] = args[i];
+        }
+        Vm.FfiResult memory r = vm.tryFfi(cmd);
+        return (r.exitCode == 0, r.stdout);
+    }
+
+    /// @notice The 20-byte commit `ref` names, empty when there is none (no such tag).
+    function _gitCommit(
+        string memory ref
+    ) internal returns (bytes memory commit) {
+        string[] memory args = new string[](3);
+        (args[0], args[1], args[2]) = ("rev-parse", "--verify", ref);
+        bool ok;
+        (ok, commit) = _git(args);
+        if (!ok) return "";
+        // forge hex-decodes output that is hex: the 40 digits usually arrive as 20 bytes already.
+        if (commit.length == 40) commit = vm.parseBytes(string.concat("0x", string(commit)));
+        require(commit.length == 20, string.concat("git rev-parse ", ref, " printed no commit"));
+    }
+
+    function _hasPrefix(
+        string memory s,
+        string memory prefix
+    ) private pure returns (bool) {
+        bytes memory a = bytes(s);
+        bytes memory p = bytes(prefix);
+        if (a.length < p.length) return false;
+        for (uint256 i = 0; i < p.length; ++i) {
+            if (a[i] != p[i]) return false;
+        }
+        return true;
     }
 
     function _aave(

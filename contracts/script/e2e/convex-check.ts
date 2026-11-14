@@ -11,7 +11,7 @@
 // Environment: RPC_ANVIL, E2E_EXPORT_URL, E2E_EXPORT_KEY_ID, E2E_EXPORT_SECRET, E2E_LISTING_CONTENT_URL.
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 type Json = Record<string, any>;
@@ -112,7 +112,13 @@ async function main() {
   const missing = pending();
   if (missing.length > 0) {
     // The latest listing operation's record says whether its file loaded, was refused (and why) or was not found.
-    const latest = JSON.parse(readFileSync(join(OUT, "operation-listing-markets.json"), "utf8")) as Json;
+    // A split listing's last part (operation-listing-markets.<k>.json) carries the metadata salt.
+    let latest = JSON.parse(readFileSync(join(OUT, "operation-listing-markets.json"), "utf8")) as Json;
+    for (let k = 2; existsSync(join(OUT, `operation-listing-markets.${k}.json`)); k++) {
+      const next = JSON.parse(readFileSync(join(OUT, `operation-listing-markets.${k}.json`), "utf8")) as Json;
+      if (next.predecessor !== latest.id) break;
+      latest = next;
+    }
     const op = run<Json | null>("listing/load:operation", { chainId, operationId: latest.id });
     process.stdout.write(`convex: listing operation ${latest.id} (salt ${latest.salt}): ${JSON.stringify(op)}\n`);
   }

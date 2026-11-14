@@ -69,6 +69,10 @@ abstract contract TimelockOperations is DeployInputs {
         string[] labels;
         bytes32 salt;
         uint256 capacity;
+        // The operation that must be done before this one executes (0 for none): the parts of a split batch.
+        bytes32 predecessor;
+        // The execution gas `09_ListMarkets` estimated for the batch, 0 when not estimated.
+        uint256 gasEstimate;
     }
 
     function _newOperation(
@@ -93,8 +97,15 @@ abstract contract TimelockOperations is DeployInputs {
         address timelock,
         Operation memory op
     ) internal view {
-        bytes32 id = ITimelockOps(timelock).hashOperationBatch(op.targets, op.values, op.payloads, bytes32(0), op.salt);
+        bytes32 id = _operationId(timelock, op);
         if (ITimelockOps(timelock).isOperation(id)) op.salt = keccak256(abi.encode(op.salt, block.timestamp));
+    }
+
+    function _operationId(
+        address timelock,
+        Operation memory op
+    ) internal view returns (bytes32) {
+        return ITimelockOps(timelock).hashOperationBatch(op.targets, op.values, op.payloads, op.predecessor, op.salt);
     }
 
     function _add(
@@ -139,7 +150,7 @@ abstract contract TimelockOperations is DeployInputs {
         Operation memory op
     ) internal returns (bytes32 id) {
         ITimelockOps t = ITimelockOps(timelock);
-        id = t.hashOperationBatch(op.targets, op.values, op.payloads, bytes32(0), op.salt);
+        id = _operationId(timelock, op);
         uint256 delay = t.requiredDelay(op.targets, op.payloads);
         string memory k = string.concat("op.", op.name);
         vm.serializeString(k, "name", op.name);
@@ -147,7 +158,8 @@ abstract contract TimelockOperations is DeployInputs {
         vm.serializeAddress(k, "timelock", timelock);
         vm.serializeBytes32(k, "id", id);
         vm.serializeBytes32(k, "salt", op.salt);
-        vm.serializeBytes32(k, "predecessor", bytes32(0));
+        vm.serializeBytes32(k, "predecessor", op.predecessor);
+        if (op.gasEstimate != 0) vm.serializeUint(k, "gasEstimate", op.gasEstimate);
         vm.serializeUint(k, "delay", delay);
         vm.serializeAddress(k, "targets", op.targets);
         vm.serializeUint(k, "values", op.values);
@@ -156,14 +168,23 @@ abstract contract TimelockOperations is DeployInputs {
         vm.serializeBytes(
             k,
             "executeBatchCalldata",
-            abi.encodeCall(ITimelockOps.executeBatch, (op.targets, op.values, op.payloads, bytes32(0), op.salt))
+            abi.encodeCall(ITimelockOps.executeBatch, (op.targets, op.values, op.payloads, op.predecessor, op.salt))
         );
         string memory json = vm.serializeBytes(
             k,
             "scheduleBatchCalldata",
-            abi.encodeCall(ITimelockOps.scheduleBatch, (op.targets, op.values, op.payloads, bytes32(0), op.salt, delay))
+            abi.encodeCall(
+                ITimelockOps.scheduleBatch, (op.targets, op.values, op.payloads, op.predecessor, op.salt, delay)
+            )
         );
         vm.writeJson(json, _operationPath(op.name));
+    }
+
+    /// @notice Whether `_writeOperation` wrote an operation of this name on this network.
+    function _hasOperation(
+        string memory name
+    ) internal view returns (bool) {
+        return vm.exists(_operationPath(name));
     }
 
     /// @notice Reads an operation written by `_writeOperation`.
@@ -178,6 +199,7 @@ abstract contract TimelockOperations is DeployInputs {
         op.payloads = vm.parseJsonBytesArray(json, ".payloads");
         op.labels = vm.parseJsonStringArray(json, ".labels");
         op.salt = vm.parseJsonBytes32(json, ".salt");
+        if (vm.keyExistsJson(json, ".predecessor")) op.predecessor = vm.parseJsonBytes32(json, ".predecessor");
         delay = vm.parseJsonUint(json, ".delay");
     }
 }

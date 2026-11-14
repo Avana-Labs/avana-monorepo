@@ -99,5 +99,7 @@ fi
 # One script run can deploy hundreds of contracts: lift the simulation's per-call gas cap (Foundry's gas_limit, 2^30
 # by default) as well as the block gas limit. AVANA_FORGE_FLAGS adds flags (the rehearsal's --start-fresh on resume).
 read -r -a extra <<< "${AVANA_FORGE_FLAGS:-}"
+# Off anvil the scripts check that HEAD is the AVANA_RELEASE tag with git (DeployInputs._requireReleaseCheckout).
+[ "$(config chainId)" != 31337 ] && extra+=(--ffi)
 exec env FOUNDRY_GAS_LIMIT=30000000000 ${envs[@]+"${envs[@]}"} forge script "script/deploy/$script" --rpc-url "$AVANA_RPC_URL" \
   --broadcast "${signer[@]}" --slow --non-interactive --disable-block-gas-limit --memory-limit 1073741824 ${extra[@]+"${extra[@]}"}
