@@ -6,9 +6,8 @@ import { KNOWN_UNTRANSLATED } from "./known-untranslated"
 /**
  * Code-derived key-parity guard.
  *
- * Sibling suites (translation-completeness, umbrella-completeness) check the
- * locale dictionaries against each other or against a hand-curated list. None of
- * them close the real hole: a `t("…")` literal that lives in the SOURCE but is
+ * The sibling translation-completeness suite checks the locale dictionaries against
+ * each other or against a hand-curated list. It does not close the real hole: a `t("…")` literal that lives in the SOURCE but is
  * absent from the locale dicts renders the English fallback forever, and no test
  * notices. This suite extracts every literal `t("…")` key straight from app/ +
  * components/ and asserts each one resolves (i.e. produces non-English output) in

@@ -21,7 +21,7 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   "Member since",
   // Per-collateral borrow-power utilization caption.
   "used",
-  // Multiply Loop Positions — split Position column headers/captions.
+  // Position column headers/captions.
   "Equity",
   "leverage",
   "debt",
@@ -29,7 +29,6 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   // Wallet tab — Tokens + Pools table column (i) help text.
   // Lend investments table — column (i) help text.
   // Borrow "My Collaterals" table — column (i) help text.
-  // My Loops (Multiply positions) table — redesigned column (i) help text + Value caption.
   "Exp.",
   // Dashboard loading status — new copy awaiting the locale backfill.
   "Loading dashboard…",
@@ -37,8 +36,6 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   // Merkl rewards — coming-soon copy awaiting the locale backfill.
   "Coming soon",
   "Merkl reward campaigns will appear here once they launch.",
-  // Multiply Balance — Interest Earned tile help text.
-  // Umbrella hero — Weighted APY tile (i) help text.
   "1 Day",
   "1D",
   "6 Months",
@@ -64,12 +61,10 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   "Explorer",
   "Exposure",
   "Exposure · Net APY",
-  // Multiply tab — Gross Exposure tile + worst-position "Lowest Position Health" card
-  // (title + tooltip) awaiting the locale backfill.
+  // Gross Exposure tile + worst-position "Lowest Position Health" card awaiting the locale backfill.
   "Gross Exposure",
   "Health Factor",
   "Lowest Position Health",
-  "The health factor of your closest-to-liquidation Multiply position — the lowest across your open loops, not the portfolio blend. Below 1.0 triggers liquidation.",
   "Help",
   "HF",
   "In cooldown",
@@ -86,8 +81,6 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   "LT",
   "LTV",
   "Manage",
-  "Multiply {name}",
-  "Multiply TVL",
   "Net",
   "No",
   "Optimal",

@@ -8,7 +8,7 @@ describe("action translations", () => {
     expect(translate("ES", "Deposit successful")).toBe("Depósito completado")
     expect(translate("ES", "12.0000 EURC processed.")).toBe("12.0000 EURC procesado.")
     expect(translate("FR", "Receipt")).toBe("Reçu")
-    expect(translate("JA", "Multiply successful")).toBe("マルチプライ 成功")
+    expect(translate("JA", "Deposit successful")).toBe("預け入れ 成功")
   })
 })
 
