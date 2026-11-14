@@ -62,6 +62,11 @@ struct FullStackWorld {
 /// state forbids it; a borrow that leaves the Spoke's owed amount above its draw cap; a pledge worth less than
 /// `minPledgeUsd` at the served price; a timelock operation that executed before its required delay.
 contract FullStackHandler is CommonBase, StdUtils {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work. An exit refused for a pause, a
+    /// freeze or a breaker does not revert, so its `exitBlocked` count stands.
+    error Skipped();
+
     FullStackWorld internal w;
     address[3] internal wallets;
     address internal payer;
@@ -115,6 +120,19 @@ contract FullStackHandler is CommonBase, StdUtils {
         return wallets[i];
     }
 
+    // ─── Set-up ───
+
+    /// @notice Set-up only (not a fuzzed action): Alice and Bob pledge 10,000 units ($20,000) into market A and
+    /// Carol into market B, and each borrows 5,700 GHO (95 % of the $6,000 the pledge can borrow), so a price fall
+    /// inside the USD band puts the accounts below HF 1 and repays have debt from the first call.
+    function seedAccounts() external {
+        for (uint256 i = 0; i < 3; ++i) {
+            this.pledge(i, i / 2, 10_000e6);
+            this.borrow(i, i / 2, 0, 2850);
+            this.borrow(i, i / 2, 0, 2850);
+        }
+    }
+
     // ─── Actions ───
 
     function pledge(
@@ -135,7 +153,7 @@ contract FullStackHandler is CommonBase, StdUtils {
         vm.prank(wallet);
         (bool ok,) = address(w.adapter)
             .call(abi.encodeCall(w.adapter.pledge, (market, PositionRef(w.integrationId, key), block.timestamp + 600)));
-        if (!ok) return;
+        if (!ok) revert Skipped();
         ++pledges;
         if (state == PauseState.Frozen && !indebted) ++gateViolations;
         if (state == PauseState.Paused && w.registry.pauseReason(w.hub) == PauseReason.MintPathSuspect) {
@@ -153,16 +171,15 @@ contract FullStackHandler is CommonBase, StdUtils {
         }
     }
 
+    /// @dev Steered to the first (wallet, market) pair from the seeds that has a proxy.
     function borrow(
         uint256 walletSeed,
         uint256 marketSeed,
         uint256 reserveSeed,
         uint256 shareSeed
     ) external {
-        address wallet = wallets[walletSeed % 3];
-        uint256 market = w.markets[marketSeed % 2];
-        address proxy = w.adapter.proxyOf(wallet, market);
-        if (proxy == address(0)) return;
+        (address wallet, uint256 market, address proxy) = _withProxy(walletSeed, marketSeed, false);
+        if (proxy == address(0)) revert Skipped();
         uint256 r = reserveSeed % 2;
         // $1 to $3,000 of the asset ($1.00 each); a borrow beyond the account's room is refused by Aave or the RiskModule.
         uint256 amount = bound(shareSeed, 1, 3000) * 10 ** w.debtAssets[r].decimals();
@@ -175,7 +192,7 @@ contract FullStackHandler is CommonBase, StdUtils {
                     w.adapter.borrow, (market, w.debtReserves[r], amount, wallet, block.timestamp + 600, 0, nonce)
                 )
             );
-        if (!ok) return;
+        if (!ok) revert Skipped();
         ++borrows;
         if (state != PauseState.None) ++gateViolations;
         IAaveV4Hub h = IAaveV4Hub(w.hub);
@@ -185,21 +202,20 @@ contract FullStackHandler is CommonBase, StdUtils {
         if (owed > cap) ++drawCapViolations;
     }
 
+    /// @dev Steered to the first pair from the seeds whose proxy has debt, in the chosen reserve if it owes it.
     function repay(
         uint256 walletSeed,
         uint256 marketSeed,
         uint256 reserveSeed,
         uint256 shareSeed
     ) external {
-        address wallet = wallets[walletSeed % 3];
-        uint256 market = w.markets[marketSeed % 2];
-        address proxy = w.adapter.proxyOf(wallet, market);
-        if (proxy == address(0)) return;
+        (address wallet, uint256 market, address proxy) = _withProxy(walletSeed, marketSeed, true);
+        if (proxy == address(0)) revert Skipped();
         uint256 r = reserveSeed % 2;
+        if (w.spoke.getUserTotalDebt(w.debtReserves[r], proxy) == 0) r = 1 - r;
         uint256 owed = w.spoke.getUserTotalDebt(w.debtReserves[r], proxy);
-        if (owed == 0) return;
         uint256 amount = owed * bound(shareSeed, 1, 100) / 100;
-        if (amount == 0) return;
+        if (amount == 0) revert Skipped();
         address who = shareSeed % 2 == 0 ? wallet : payer;
         ClTestToken asset = w.debtAssets[r];
         asset.mint(who, amount);
@@ -212,19 +228,26 @@ contract FullStackHandler is CommonBase, StdUtils {
                     w.adapter.repay, (wallet, market, w.debtReserves[r], amount, false, block.timestamp + 600)
                 )
             );
-        _exit(ok, ret);
+        if (!ok && !_exit(ret)) revert Skipped();
         if (ok) ++repays;
     }
 
+    /// @dev Steered to the first pair from the seeds whose proxy is debt-free and holds a position; when there is
+    /// none, the first debt-free pair first pledges 1,000 units through `pledge`.
     function withdraw(
         uint256 walletSeed,
         uint256 marketSeed
     ) external {
-        address wallet = wallets[walletSeed % 3];
-        uint256 market = w.markets[marketSeed % 2];
-        address proxy = w.adapter.proxyOf(wallet, market);
+        (bool found, address wallet, uint256 market) = _debtFree(walletSeed, marketSeed, true);
+        if (!found) {
+            (found,,) = _debtFree(walletSeed, marketSeed, false);
+            if (!found) revert Skipped();
+            uint256 j = _debtFreeIndex(walletSeed, marketSeed);
+            try this.pledge(walletSeed % 3 + j, marketSeed % 2 + j / 3, 1000e6) {} catch {}
+            (found, wallet, market) = _debtFree(walletSeed, marketSeed, true);
+            if (!found) revert Skipped();
+        }
         bytes32[] storage keys = openKeys[wallet][market];
-        if (proxy == address(0) || keys.length == 0 || _indebted(proxy)) return;
         bytes32 key = keys[keys.length - 1];
         uint128 units = w.coll.getRecord(w.coll.recordIdOf(w.integrationId, key)).credited;
         vm.prank(wallet);
@@ -234,7 +257,7 @@ contract FullStackHandler is CommonBase, StdUtils {
                     w.adapter.withdraw, (market, PositionRef(w.integrationId, key), units, block.timestamp + 600, 0)
                 )
             );
-        _exit(ok, ret);
+        if (!ok && !_exit(ret)) revert Skipped();
         if (ok) {
             ++withdrawals;
             keys.pop();
@@ -242,9 +265,14 @@ contract FullStackHandler is CommonBase, StdUtils {
     }
 
     /// @notice LPVaultSwap liquidates `debtToCover` of the first account below HF 1 in the chosen market.
+    /// @dev Steered: when no account is below HF 1, for three seeds in four both pool tokens first move to $0.93 to
+    /// $0.95 (`setPrice`, inside the USD band), which puts the set-up's accounts (HF about 1.05) below 1. The steering
+    /// bits come from a hash of the seed, so the fuzzer's small dictionary values steer too.
     function liquidate(
         uint256 seed
     ) external {
+        uint256 steer = uint256(keccak256(abi.encode(seed)));
+        if (!_anyLiquidatable() && steer % 4 != 0) this.setPrice(bound(steer >> 8, 93_000_000, 95_000_000));
         for (uint256 j = 0; j < proxies.length; ++j) {
             address proxy = proxies[(seed + j) % proxies.length];
             if (w.spoke.getUserAccountData(proxy).healthFactor >= 1e18) continue;
@@ -268,10 +296,11 @@ contract FullStackHandler is CommonBase, StdUtils {
                         )
                     )
                 );
-            _exit(ok, ret);
+            if (!ok && !_exit(ret)) revert Skipped();
             if (ok) ++liquidations;
             return;
         }
+        revert Skipped();
     }
 
     /// @notice The Emergency Guardian sets the Hub's state: None, Frozen, Paused(General) or Paused(MintPathSuspect).
@@ -339,13 +368,13 @@ contract FullStackHandler is CommonBase, StdUtils {
     ) external {
         uint256 market = w.markets[marketSeed % 2];
         uint256 slice = w.store.topUpSliceUsd(market);
-        if (slice <= 1e8) return;
+        if (slice <= 1e8) revert Skipped();
         _govern(address(w.store), abi.encodeCall(IParameterStoreTighten.tightenTopUpSliceUsd, (market, slice - 1e8)));
     }
 
     /// @notice The timelock upgrades the AaveAdapter to the second reviewed implementation at the normal delay.
     function upgradeAdapter() external {
-        if (upgrades > 0) return;
+        if (upgrades > 0) revert Skipped();
         _govern(
             address(w.adapter), abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (w.secondImplementation, bytes("")))
         );
@@ -353,6 +382,64 @@ contract FullStackHandler is CommonBase, StdUtils {
     }
 
     // ─── Internals ───
+
+    /// @dev The (wallet, market) pairs in the order a call tries them: the seeds' own pair first, then the others.
+    function _pair(
+        uint256 walletSeed,
+        uint256 marketSeed,
+        uint256 j
+    ) internal view returns (address wallet, uint256 market) {
+        wallet = wallets[(walletSeed % 3 + j) % 3];
+        market = w.markets[(marketSeed % 2 + j / 3) % 2];
+    }
+
+    /// @dev The first pair from the seeds with a proxy (with debt when `indebted`); a zero proxy when there is none.
+    function _withProxy(
+        uint256 walletSeed,
+        uint256 marketSeed,
+        bool indebted
+    ) internal view returns (address wallet, uint256 market, address proxy) {
+        for (uint256 j = 0; j < 6; ++j) {
+            (wallet, market) = _pair(walletSeed, marketSeed, j);
+            proxy = w.adapter.proxyOf(wallet, market);
+            if (proxy != address(0) && (!indebted || _indebted(proxy))) return (wallet, market, proxy);
+        }
+        return (wallet, market, address(0));
+    }
+
+    /// @dev The first pair from the seeds whose proxy is absent or debt-free (and, with `withPosition`, exists and
+    /// holds a position the handler opened).
+    function _debtFree(
+        uint256 walletSeed,
+        uint256 marketSeed,
+        bool withPosition
+    ) internal view returns (bool found, address wallet, uint256 market) {
+        for (uint256 j = 0; j < 6; ++j) {
+            (wallet, market) = _pair(walletSeed, marketSeed, j);
+            address p = w.adapter.proxyOf(wallet, market);
+            bool free = p == address(0) || !_indebted(p);
+            if (withPosition) free = free && p != address(0) && openKeys[wallet][market].length != 0;
+            if (free) return (true, wallet, market);
+        }
+    }
+
+    function _debtFreeIndex(
+        uint256 walletSeed,
+        uint256 marketSeed
+    ) internal view returns (uint256 j) {
+        for (; j < 6; ++j) {
+            (address wallet, uint256 market) = _pair(walletSeed, marketSeed, j);
+            address p = w.adapter.proxyOf(wallet, market);
+            if (p == address(0) || !_indebted(p)) return j;
+        }
+    }
+
+    function _anyLiquidatable() internal view returns (bool) {
+        for (uint256 j = 0; j < proxies.length; ++j) {
+            if (_indebted(proxies[j]) && w.spoke.getUserAccountData(proxies[j]).healthFactor < 1e18) return true;
+        }
+        return false;
+    }
 
     function _govern(
         address target,
@@ -416,18 +503,17 @@ contract FullStackHandler is CommonBase, StdUtils {
         return ok && ret.length == 32 ? abi.decode(ret, (int256)) : int256(0);
     }
 
-    /// @dev An exit never fails for a pause, a freeze or a breaker.
+    /// @dev An exit never fails for a pause, a freeze or a breaker: counts a failed exit's error when it is one.
+    /// @return blocked Whether `ret` is such an error.
     function _exit(
-        bool ok,
         bytes memory ret
-    ) internal {
-        if (ok || ret.length < 4) return;
+    ) internal returns (bool blocked) {
+        if (ret.length < 4) return false;
         bytes4 sel = bytes4(ret);
-        if (
-            sel == IAaveAdapterErrors.ApplicationFrozen.selector || sel == IAaveAdapterErrors.ApplicationPaused.selector
-                || sel == IAaveAdapterErrors.AddressIsFrozen.selector
-                || sel == IRiskModuleErrors.BreakerTripped.selector
-                || sel == IRiskModuleErrors.DebtBreakerTripped.selector
-        ) ++exitBlocked;
+        blocked = sel == IAaveAdapterErrors.ApplicationFrozen.selector
+            || sel == IAaveAdapterErrors.ApplicationPaused.selector
+            || sel == IAaveAdapterErrors.AddressIsFrozen.selector || sel == IRiskModuleErrors.BreakerTripped.selector
+            || sel == IRiskModuleErrors.DebtBreakerTripped.selector;
+        if (blocked) ++exitBlocked;
     }
 }
