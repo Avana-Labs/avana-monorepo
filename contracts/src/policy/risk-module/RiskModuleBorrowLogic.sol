@@ -194,8 +194,8 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
                 address feed = t.legFeeds[j];
                 if (feed == address(0)) continue;
                 uint256 at = t.legUpdatedAt[j];
-                // forge-lint: disable-next-line(require-revert-in-loop)
                 if (!PriceAge.borrowFresh(at, _store().borrowPriceMaxAge(feed))) {
+                    // forge-lint: disable-next-line(require-revert-in-loop)
                     revert PriceTooOld(feed, PriceAge.age(at));
                 }
             }
