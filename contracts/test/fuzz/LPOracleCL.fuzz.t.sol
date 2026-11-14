@@ -180,7 +180,7 @@ contract LPOracleCLFuzzTest is Test {
         for (uint256 up = 0; up < 2; ++up) {
             uint256 p0 = up == 0 ? _raise(q0) : _lower(q0);
             uint256 p1 = up == 0 ? _lower(q1) : _raise(q1);
-            if (p0 * 10 ** d1 >= (p1 * 10 ** d0) << 64) expected = false;
+            if ((p0 * 10 ** d1) >> 128 >= p1 * 10 ** d0) expected = false;
         }
         assertEq(h.shockSqrtHolds(q0, q1), expected);
     }

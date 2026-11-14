@@ -220,6 +220,22 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
         assertFalse(h.shockSqrtHolds(1e8, LPPriceMath.MAX_ROUTE_ANSWER + 1), "quote above MAX_ROUTE_ANSWER");
     }
 
+    // TEST-306 verifies: REQ-ORACLE-105, SPEC-ORC-009, REQ-CONFIG-035
+    /// @notice INTEG-04: WBTC (8 decimals) as token0 against an 18-decimal $1 stable passes the shock check at $184,467,
+    /// $10M and the `MAX_ROUTE_ANSWER` price; the sqrt price there is computed, not clamped. The check still refuses a
+    /// shocked ratio at `2^128`, which with valid quotes needs more than 36 decimals between the tokens (here 0 and 22).
+    function test_TEST_306_shockCheckAdmitsWbtcAgainstAnEighteenDecimalStable() public {
+        ClModuleProbe h = new ClModuleProbe();
+        h.setMarket(8, 18, ClPriceMath.MIN_TICK, ClPriceMath.MAX_TICK);
+        uint256[3] memory btc = [uint256(184_467e8), 10_000_000e8, LPPriceMath.MAX_ROUTE_ANSWER];
+        for (uint256 i = 0; i < 3; ++i) {
+            assertTrue(h.shockSqrtHolds(btc[i], 1e8), "WBTC / 18-decimal stable");
+            assertFalse(h.clampedAt(btc[i], 1e8), "sqrt price not clamped");
+        }
+        h.setMarket(0, 22, ClPriceMath.MIN_TICK, ClPriceMath.MAX_TICK);
+        assertFalse(h.shockSqrtHolds(LPPriceMath.MAX_ROUTE_ANSWER, 1), "shocked ratio at 2^128");
+    }
+
     // TEST-306 verifies: SPEC-ORC-020
     /// @notice Above tick 443,636 the square-root ratio exceeds `2^128` and the quote goes through `ratioX128`
     /// (Uniswap `OracleLibrary.getQuoteAtTick`): at tick 600,000 (`1.0001^600000 = 1.13859e26`) one raw unit of token0

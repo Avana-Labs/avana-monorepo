@@ -190,8 +190,9 @@ contract LPOracleCLPoolReadsTest is LPOracleCLFixture {
 
     // TEST-306 verifies: REQ-ORACLE-105, SPEC-ORC-009
     /// @notice CL_CHECK_SHOCK_SQRT (bit 20): with the lower-decimals token as token0 (WBTC 8 / WETH 18, or USDC 6 /
-    /// WETH 18), WETH quoted at $10^-6 (answer 100) makes the raw ratio `p0 / p1 * 10^(d1 - d0)` at least `10^18`, so
-    /// the shocked ratio (times `100^2`) passes `2^64`; at the launch prices the bit is clear.
+    /// WETH 18), WETH quoted at $10^-6 (answer 100) makes the raw ratio `p0 / p1 * 10^(d1 - d0)` at least `10^18`; the
+    /// shocked ratio (times `100^2`) passes the former `2^64` bound but stays below `2^128`, where `SPEC-ORC-009` still
+    /// computes the sqrt price, so the bit stays clear (INTEG-04).
     function test_TEST_306_shockSqrtBitAtAnExtremeRatio() public {
         uint256 snap = vm.snapshotState();
         _deployClMarket(_wbtcEth());
@@ -203,8 +204,9 @@ contract LPOracleCLPoolReadsTest is LPOracleCLFixture {
         assertEq(oracle.checkConfig(_config()) & (1 << (SHIFT + 4)), 0, "launch prices: clear");
         _setPrices(price0, 100);
         uint256 raw = price0 * 10 ** token1.decimals() / (price1 * 10 ** token0.decimals());
-        assertGe(raw * 100 * 100, 1 << 64, "shocked ratio reaches 2^64");
-        assertTrue(oracle.checkConfig(_config()) & (1 << (SHIFT + 4)) != 0, "shocked ratio refused");
+        assertGe(raw * 100 * 100, 1 << 64, "shocked ratio passes 2^64");
+        assertLt(raw * 100 * 100, 1 << 128, "and stays below 2^128");
+        assertEq(oracle.checkConfig(_config()) & (1 << (SHIFT + 4)), 0, "shocked ratio admitted");
     }
 
     // TEST-306 verifies: REQ-ORACLE-046, REQ-ORACLE-100, REQ-ORACLE-103

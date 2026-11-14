@@ -63,7 +63,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
 
     // ─── Raw-price bound (REQ-CONFIG-035) ───
 
-    /// @dev The exact bound: 10^4 x a0 x 10^d1 < 2^64 x a1 x 10^d0, evaluated without overflow (when the right side
+    /// @dev The exact bound: 10^4 x a0 x 10^d1 < 2^128 x a1 x 10^d0, evaluated without overflow (when the right side
     /// exceeds 2^256 it exceeds the left side, which always fits).
     function _rawPriceHolds(
         uint256 a0,
@@ -72,7 +72,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         uint8 d1
     ) internal pure returns (bool) {
         uint256 lhs = 1e4 * a0 * 10 ** uint256(d1);
-        uint256 rhs = (uint256(1) << 64) * a1;
+        uint256 rhs = (uint256(1) << 128) * a1;
         uint256 scale = 10 ** uint256(d0);
         if (rhs > type(uint256).max / scale) return true;
         return lhs < rhs * scale;
@@ -105,12 +105,12 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
     }
 
     // TEST-139 verifies: REQ-CONFIG-035
-    // The bound is strict: with d0 = d1 = 6 and a1 = 1, a0 = 2^64 / 10^4 rounded up fails and one less passes.
+    // The bound is strict: with d0 = 0, d1 = 18 and a1 = 1, a0 = 2^128 / 10^22 rounded up fails and one less passes.
     function test_TEST_139_rawPriceEdgeIsStrict() public {
-        // 10^4 x a0 < 2^64 <=> a0 <= floor((2^64 - 1) / 10^4) = 1,844,674,407,370,955.
-        uint256 edge = ((uint256(1) << 64) - 1) / 1e4;
-        address t0 = _tokenWithPrimary(6, int256(edge + 1), "t0");
-        address t1 = _tokenWithPrimary(6, 1, "t1");
+        // 10^4 x a0 x 10^18 < 2^128 <=> a0 <= floor((2^128 - 1) / 10^22).
+        uint256 edge = ((uint256(1) << 128) - 1) / 1e22;
+        address t0 = _tokenWithPrimary(0, int256(edge + 1), "t0");
+        address t1 = _tokenWithPrimary(18, 1, "t1");
         _pool(t0, t1);
         (bool ok, bytes memory ret) = _tryList();
         assertFalse(ok);
@@ -118,6 +118,20 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         RegistryFeedMock(registry.getToken(t0).primaryRoute[0]).setAnswer(int256(edge));
         (ok,) = _tryList();
         assertTrue(ok);
+    }
+
+    // TEST-139 verifies: REQ-CONFIG-035
+    // INTEG-04: WBTC (8 decimals) as token0 against an 18-decimal $1 stable lists at $184,467 (where the former 2^64
+    // bound refused it), at $10M and at the MAX_ROUTE_ANSWER price ($10^10).
+    function test_TEST_139_rawPriceAdmitsWbtcAgainstAnEighteenDecimalStable() public {
+        int256[3] memory btc = [int256(184_467e8), int256(10_000_000e8), int256(1e18)];
+        for (uint256 i = 0; i < 3; ++i) {
+            address wbtc = _tokenWithPrimary(8, btc[i], "wbtc");
+            address dai = _tokenWithPrimary(18, 1e8, "dai");
+            _pool(wbtc, dai);
+            (bool ok, bytes memory ret) = _tryList();
+            assertTrue(ok, string(ret));
+        }
     }
 
     // TEST-139 verifies: REQ-CONFIG-035
@@ -141,10 +155,10 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
 
     // TEST-139 verifies: REQ-CONFIG-035
     // A two-leg primary route multiplies its legs at their own decimals: TOKEN/ETH at 18 decimals x ETH/USD at 8
-    // decimals. Against USDT (6 decimals, 1 USD) the bound fails from a token price of 2^64 x 10^8 / 10^4, about
-    // 1.84 x 10^23 at 8 decimals.
+    // decimals. TOKEN has 0 decimals; against an 18-decimal $1 token the bound fails from a TOKEN price of
+    // 2^128 x 10^8 / (10^4 x 10^18), about 3.4 x 10^24 at 8 decimals.
     function test_TEST_139_twoLegPrimaryAnswer() public {
-        address t0 = address(new RegistryTokenMock(6));
+        address t0 = address(new RegistryTokenMock(0));
         RegistryFeedMock legA = new RegistryFeedMock(18, 1e12);
         RegistryFeedMock legB = new RegistryFeedMock(8, 3000e8);
         ps.setFeed(address(legA), 18, 86_400, 25, 25);
@@ -154,16 +168,17 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         (p[0], p[1]) = (address(legA), address(legB));
         vm.prank(address(timelock));
         registry.listToken(t0, _tokenDef(p, a, s));
-        _pool(t0, address(usdt));
+        _pool(t0, _tokenWithPrimary(18, 1e8, "t1"));
         // 10^-6 ETH x 3,000 USD = 0.003 USD: 300,000 at 8 decimals.
         (bool ok,) = _tryList();
         assertTrue(ok);
-        // 10^-6 ETH x 2 x 10^15 USD = 2 x 10^9 USD: 2 x 10^17, still far inside the bound.
+        // 1 ETH x 2 x 10^15 USD = 2 x 10^15 USD: 2 x 10^23, inside the bound only because the first leg is 1.
+        legA.setAnswer(1e18);
         legB.setAnswer(2e23);
         (ok,) = _tryList();
         assertTrue(ok, "the first leg scales the second");
-        // 1 ETH x 2 x 10^15 USD: 2 x 10^23 >= 1.84 x 10^23.
-        legA.setAnswer(1e18);
+        // 20 ETH x 2 x 10^15 USD = 4 x 10^16 USD: 4 x 10^24 >= 3.4 x 10^24.
+        legA.setAnswer(20e18);
         bytes memory ret;
         (ok, ret) = _tryList();
         assertFalse(ok);
