@@ -41,6 +41,8 @@ export interface MonitorConfig {
   readonly safes: ReadonlyMap<number, readonly SafeConfig[]>;
   /** The Core Hub's GHO asset each chain's Avana Hubs are compared with (M-29). */
   readonly coreHubGho: ReadonlyMap<number, CoreHubGho>;
+  /** Seconds between route depth and GSM headroom measurements (M-11, M-12). */
+  readonly routeCheckSeconds: number;
   /** Safe signer liveness periods (M-23). */
   readonly liveness: LivenessConfig;
   /** The frontend checked on one chain's round (M-27); null when not configured. */
@@ -147,6 +149,7 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     keeperInstances,
     keeperTokens,
     safes,
+    routeCheckSeconds: (optionalEnv(env, "MONITOR_ROUTE_CHECK_HOURS") ? intEnv(env, "MONITOR_ROUTE_CHECK_HOURS") : 24) * 3_600,
     liveness: {
       periodSeconds: (optionalEnv(env, "MONITOR_LIVENESS_PERIOD_HOURS") ? intEnv(env, "MONITOR_LIVENESS_PERIOD_HOURS") : 24) * 3_600,
       windowSeconds: (optionalEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") ? intEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") : 12) * 3_600,

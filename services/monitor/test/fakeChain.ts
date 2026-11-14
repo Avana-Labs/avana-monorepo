@@ -8,7 +8,7 @@ import { FIXTURE_HUB, FIXTURE_LEND, FIXTURE_U, FIXTURE_X, fixtureHubAsset, fixtu
 import type { CallResult, ChainSnapshot, ContractCall, ViewClient } from "@avana/services-common/views";
 import type { Address, Hex } from "viem";
 import type { Block, ChainReads, ProviderReads } from "../src/monitor.ts";
-import type { RawLog, ReadContext } from "../src/probe.ts";
+import type { CallOutcome, Override, RawLog, ReadContext } from "../src/probe.ts";
 
 /** Answers a call, or throws to make it fail (a revert). Return `undefined` for "not handled". */
 export type Handler = (call: ContractCall) => unknown;
@@ -19,6 +19,8 @@ export interface FakeProvider {
   storage: Map<string, Hex>;
   snapshot: (b: Block) => ChainSnapshot;
   down?: boolean;
+  /** Answers simulated calls (`eth_call` with overrides). */
+  call?: (from: Address, to: Address, data: Hex, overrides: readonly Override[]) => Promise<CallOutcome> | CallOutcome;
 }
 
 export function fixtureSnapshot(b: Block, edit: (s: ChainSnapshot) => ChainSnapshot = (s) => s): ChainSnapshot {
@@ -74,6 +76,11 @@ export function provider(p: FakeProvider): ProviderReads {
         return p.logs.filter((l) => set.has(l.address.toLowerCase()) && topics.has((l.topics[0] ?? "").toLowerCase()) && l.blockNumber >= from && l.blockNumber <= to);
       },
       getStorageAt: async (address: Address, slot: Hex) => p.storage.get(`${address.toLowerCase()}:${slot}`) ?? `0x${"00".repeat(32)}`,
+      call: async (from, to, data, overrides = []) => {
+        if (p.down) throw new Error("ECONNREFUSED");
+        if (!p.call) return { ok: false, error: "no call handler" };
+        return p.call(from, to, data, overrides);
+      },
     }),
   };
 }

@@ -47,6 +47,18 @@ function provider(c: ChainConfig, url: string): ProviderReads {
         return logs.map((l) => ({ address: l.address, topics: l.topics as Hex[], data: l.data, blockNumber: BigInt(l.blockNumber!), transactionHash: l.transactionHash!, logIndex: Number(l.logIndex) }));
       },
       getStorageAt: async (address, slot) => (await client.getStorageAt({ address, slot, blockNumber: b.number })) ?? "0x",
+      call: async (from, to, data, overrides = []) => {
+        try {
+          const r = await client.call({ account: from, to, data, blockNumber: b.number, stateOverride: overrides.map((o) => ({ address: o.address, ...(o.code ? { code: o.code } : {}), ...(o.stateDiff ? { stateDiff: [...o.stateDiff] } : {}) })) });
+          return { ok: true, data: r.data ?? "0x" };
+        } catch (err) {
+          // A revert answers with its reason; a transport failure is not an outcome of the call and is thrown.
+          const e = err as { name?: string; shortMessage?: string; message?: string; walk?: (f: (x: unknown) => boolean) => unknown };
+          const reverted = e.walk?.((x) => (x as { name?: string }).name === "CallExecutionError" || (x as { name?: string }).name === "ContractFunctionRevertedError" || (x as { name?: string }).name === "ExecutionRevertedError");
+          if (!reverted) throw err;
+          return { ok: false, error: e.shortMessage ?? e.message ?? String(err) };
+        }
+      },
     }),
   };
 }

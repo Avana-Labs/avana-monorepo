@@ -18,11 +18,22 @@ export interface RawLog {
   readonly logIndex: number;
 }
 
+/** An `eth_call` state override: replaced code and storage slots of one account. */
+export interface Override {
+  readonly address: Address;
+  readonly code?: Hex;
+  readonly stateDiff?: readonly { readonly slot: Hex; readonly value: Hex }[];
+}
+
+export type CallOutcome = { readonly ok: true; readonly data: Hex } | { readonly ok: false; readonly error: string };
+
 /** Reads that a multicall cannot make, pinned to the context's block (logs up to it). */
 export interface RawRpc {
   /** Logs of `addresses` whose first topic is one of `topic0s`, in [fromBlock, toBlock]. */
   getLogs(addresses: readonly Address[], topic0s: readonly Hex[], fromBlock: bigint, toBlock: bigint): Promise<RawLog[]>;
   getStorageAt(address: Address, slot: Hex): Promise<Hex>;
+  /** A simulated call from `from` at the block, with state overrides; never sent. A revert is an outcome, not a throw. */
+  call(from: Address, to: Address, data: Hex, overrides?: readonly Override[]): Promise<CallOutcome>;
 }
 
 export interface ReadContext {
