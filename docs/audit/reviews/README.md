@@ -18,10 +18,10 @@ Every contract gets an independent adversarial review as soon as it compiles. Th
 | MarketRegistry | [MarketRegistry](MarketRegistry/) | 2026-11-10 | 0 | 0 | 2 (one Medium/Low) | 6 | 4 | decided |
 | Collateralization | [Collateralization](Collateralization/) | 2026-11-10 | 0 | 0 | 0 | 1 | 4 | decided |
 | Swap routes | [swap-routes](swap-routes/) | 2026-11-10 | 0 | 0 | 1 | 3 | 1 | decided (one Low accepted) |
-| Uniswap v3 LPVault (UniswapV3Integration) | [cl-lpvaults](cl-lpvaults/) | 2026-11-11 | 0 | 0 | 0 | 1 (CL-01) | CL-04; spec S1, S6, S8, S9 | open |
-| Slipstream LPVault (SlipstreamIntegration) | [cl-lpvaults](cl-lpvaults/) | 2026-11-11 | 0 | 0 | 0 | 2 (CL-01, CL-03) | CL-02, CL-04, CL-05; spec S1–S8 | open |
-| DebtOracle | [DebtOracle](DebtOracle/) | 2026-11-11 | 0 | 0 | 0 | 0 | DO-01, DO-02, DO-03; spec S1–S7 | open |
-| Flash liquidation helper (FlashLiquidator, OperatorFlashLiquidator) | [FlashLiquidator](FlashLiquidator/) | 2026-11-11 | 0 | 0 | 2 (FL-01, FL-02) | 1 (FL-03) | spec S1–S5 | open |
+| Uniswap v3 LPVault (UniswapV3Integration) | [cl-lpvaults](cl-lpvaults/) | 2026-11-11 | 0 | 0 | 0 | 1 (CL-01) | CL-04; spec S1, S6, S8, S9 | fixed (re-checked on main 2026-11-14) |
+| Slipstream LPVault (SlipstreamIntegration) | [cl-lpvaults](cl-lpvaults/) | 2026-11-11 | 0 | 0 | 0 | 2 (CL-01, CL-03) | CL-02, CL-04, CL-05; spec S1–S8 | fixed (re-checked on main 2026-11-14) |
+| DebtOracle | [DebtOracle](DebtOracle/) | 2026-11-11 | 0 | 0 | 0 | 0 | DO-01, DO-02, DO-03; spec S1–S7 | fixed (re-checked on main 2026-11-14) |
+| Flash liquidation helper (FlashLiquidator, OperatorFlashLiquidator) | [FlashLiquidator](FlashLiquidator/) | 2026-11-11 | 0 | 0 | 2 (FL-01, FL-02) | 1 (FL-03) | spec S1–S5 | fixed (re-checked on main 2026-11-14) |
 
 "Decided" means the decision is recorded; this table does not yet record the code, spec and test changes as re-checked by the contract gate (tests, Halmos, fast tier, traceability).
 
