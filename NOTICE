@@ -13,11 +13,16 @@ Third-party code in this repository
 Uniswap v3-core and v3-periphery
   Copyright (c) 2021 Uniswap Labs
   Licensed under the GNU General Public License v2.0 or later (LICENSES/GPL-2.0.txt).
-  Ported in contracts/src/amm/concentrated-liquidity/ClPriceMath.sol,
-  contracts/test/differential/reference/avana_reference.py,
+  Ported in contracts/test/differential/reference/avana_reference.py,
   spec/05-verification/z3/units-oracle/_common.py and
   spec/05-verification/hypothesis/model/uniswap.py; interface subsets copied in
   contracts/src/interfaces/external/uniswap/.
+
+Uniswap v4-core
+  Copyright 2023 Universal Navigation Inc.
+  MIT License (THIRD_PARTY_LICENSES.md, "MIT License"). TickMath ported in
+  contracts/src/amm/concentrated-liquidity/ClTickMath.sol; Avana's changes to
+  that file are MIT as well.
 
 Aerodrome Slipstream
   Copyright (c) 2023 Perpetual Cyclist Services LLC
