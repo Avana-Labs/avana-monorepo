@@ -20,7 +20,8 @@ interface ILPVaultSwapLiquidation {
     /// cannot stop a caller using the public helper). Then acquires the lock and releases it last. The pause state,
     /// pause reason, breakers and the committed-operator registry are never read. Entry checks:
     /// `params.marketId == proxy.MARKET_ID()` and the market's vault token reports `isValidProxy(proxy)`; debt reserve
-    /// enabled in the MarketRegistry and on the Spoke; amounts (`InvalidAmount`); `HF < 1e18`; Hub shares == assets;
+    /// approved in the MarketRegistry (Aave's `borrowable` flag is not read, REQ-SWAP-087); amounts (`InvalidAmount`);
+    /// `HF < 1e18`; Hub shares == assets;
     /// `poke()` on the market's LPOracle and the price rules for the market and the repaid reserve only (Q-247); the
     /// grace bound. Funding: pulls `X = params.debtToCover` of the debt asset from `msg.sender` with `transferFrom` and
     /// measures the balance rise `Kf`, reverting `FundingMismatch` unless `0 < Kf <= X`. LPVaultSwap takes no flash loan

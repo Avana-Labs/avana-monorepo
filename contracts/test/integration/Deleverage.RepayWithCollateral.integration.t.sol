@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IFlashSource} from "../../src/flash/IFlashSource.sol";
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
@@ -205,6 +206,59 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         assertGt(repaid, 1900e18, "above 95 % of the $2,000 the 1,000 vault tokens are worth");
         assertEq(gho.balanceOf(carol), 2500e18 + toWallet, "GHO rest to the wallet");
         assertEq(usdc.balanceOf(carol) + usdt.balanceOf(carol), poolTokensBefore, "no pool token reached the wallet");
+    }
+
+    /// @notice A repay with collateral that leaves the account debt-free and empties its last record runs the
+    /// collateral cleanup, as every other debt-free exit does: the vault-token reserve is no longer used as
+    /// collateral, so a later pledge enables it afresh on Aave's latest dynamic configuration key.
+    // TEST-239 verifies: REQ-PROXY-089, REQ-PROXY-046, REQ-ADAPTER-080
+    function test_TEST_239_debtFreeRepayWithCollateralRunsTheCollateralCleanup() public {
+        (bytes32 k2, address p2) = _pledgeAs(alice, mA, 2000e6);
+        _borrowAs(alice, mA, usdcReserveId, 1000e6);
+        uint256 r = mkt[mA].reserveId;
+        (bool enabledBefore,) = IAaveV4Spoke(aave.cdpSpoke).getUserReserveStatus(r, p2);
+        assertTrue(enabledBefore, "the vault-token reserve is collateral while pledged");
+        RepayWithCollateralParams memory p = _rwcParams(mA, k2, _credited(k2), usdcReserveId);
+        vm.expectEmit(adapter);
+        emit IAaveAdapterEvents.CollateralDisabled(p2, r);
+        vm.prank(alice);
+        adapterC.repayWithCollateral(p);
+        assertEq(_debtOf(p2, usdcReserveId), 0, "debt-free");
+        assertEq(_sharesOf(p2, r), 0, "nothing left supplied");
+        (bool enabled,) = IAaveV4Spoke(aave.cdpSpoke).getUserReserveStatus(r, p2);
+        assertFalse(enabled, "the emptied reserve is no longer used as collateral");
+    }
+
+    /// @notice An account below health factor 1 that would stay below 1 after the call cannot repay with collateral:
+    /// the withdrawal step is an Aave `withdraw` of collateral, which requires health factor 1 while debt remains. The
+    /// Lens previews it as closed, `(0, 0, current health factor)`, rather than as a repayment that improves the health
+    /// factor; a release large enough to reach health factor 1 is previewed and executes as previewed.
+    // TEST-239 verifies: REQ-LENS-038, REQ-ADAPTER-080
+    function test_TEST_239_previewClosedWhenTheHealthFactorStaysBelowOne() public {
+        _borrowAs(bob, mA, usdcReserveId, 1880e6);
+        _depegUsdt(93_000_000);
+        uint256 hf0 = _hf(proxy);
+        assertLt(hf0, 1e18, "Bob is below health factor 1");
+
+        uint128 small = 20e6;
+        (uint256 pvRepaid, uint256 pvToWallet, uint256 pvHf) =
+            lens.previewRepayWithCollateral(bob, mA, key, small, usdcReserveId);
+        RepayWithCollateralParams memory p = _rwc(small, usdcReserveId);
+        vm.expectRevert(bytes4(keccak256("HealthFactorBelowThreshold()")));
+        vm.prank(bob);
+        adapterC.repayWithCollateral(p);
+        assertEq(pvRepaid, 0, "the preview shows the call closed");
+        assertEq(pvToWallet, 0, "nothing to the wallet");
+        assertEq(pvHf, hf0, "the current health factor");
+
+        uint128 large = 400e6;
+        (pvRepaid,, pvHf) = lens.previewRepayWithCollateral(bob, mA, key, large, usdcReserveId);
+        assertGe(pvHf, 1e18, "the larger release reaches health factor 1");
+        p = _rwc(large, usdcReserveId);
+        vm.prank(bob);
+        (uint256 repaid,) = adapterC.repayWithCollateral(p);
+        assertEq(repaid, pvRepaid, "executes as previewed");
+        assertGe(_hf(proxy), 1e18, "health factor at least 1 after the call");
     }
 
     function _recoveredLog(
