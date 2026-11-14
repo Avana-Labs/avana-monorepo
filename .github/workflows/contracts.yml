@@ -398,7 +398,7 @@ jobs:
   plan:
     name: plan the long jobs
     # Long check: nightly, release tags and manual runs only.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -426,7 +426,7 @@ jobs:
     # GitHub's maximum of 6 hours.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.invariant != '[]'
+    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.invariant != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
@@ -473,7 +473,7 @@ jobs:
     # is due (nightly, release tags, by hand). Any failing fork test fails the job.
     needs: build
     # Long check: nightly, release tags and manual runs only.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     outputs:
@@ -582,7 +582,7 @@ jobs:
     name: FFI differential (LPOracle vs mpmath)
     needs: build
     # Long check: nightly, release tags and manual runs only.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -640,7 +640,7 @@ jobs:
     # unchanged.
     name: SMTChecker ${{ matrix.contract }}
     needs: [build, plan]
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.smt != '[]'
+    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.smt != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -688,7 +688,7 @@ jobs:
     # fast security tier (`cvl`) still runs on every pull request.
     name: Certora ${{ matrix.conf }}
     needs: [build, plan]
-    if: vars.CERTORA_ENABLED == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
+    if: vars.CERTORA_ENABLED == 'true' && ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -1036,7 +1036,7 @@ jobs:
         working-directory: .
         env:
           RESULTS: ${{ toJSON(needs) }}
-          LONG: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+          LONG: ${{ (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
           HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
           CERTORA: ${{ vars.CERTORA_ENABLED == 'true' }}
         run: |

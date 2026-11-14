@@ -54,6 +54,8 @@ defaults:
 jobs:
   plan:
     name: plan the jobs
+    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
+    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -79,6 +81,8 @@ jobs:
 
   build:
     name: Aave V4 and Uniswap v3 builds
+    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
+    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     # The mutation jobs' isolated copies link out-aave/ and out-univ3/, which the Aave V4 and Uniswap v3 fixtures
     # deploy from (vm.getCode).
     runs-on: ubuntu-24.04
@@ -575,7 +579,7 @@ jobs:
     # by its `if` (the selected layers hold no such target); with the plan and the build passed, skipped can mean
     # nothing else.
     name: mutation-summary
-    if: always()
+    if: always() && (github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true')
     needs: [plan, build, mutate-statements, mutate-operators, mutate-others, gambit, necessist, certora-mutate]
     runs-on: ubuntu-24.04
     timeout-minutes: 5

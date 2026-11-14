@@ -62,6 +62,8 @@ defaults:
 jobs:
   build:
     name: slow-tier build
+    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
+    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -845,7 +847,7 @@ jobs:
     # leg is skipped by its `if` (no target of that kind, or a campaign run, which skips the slow-tier jobs, or the
     # slow tier, which skips the campaign jobs); with the build and the plan passed, skipped can mean nothing else.
     name: slow-gate
-    if: always()
+    if: always() && (github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true')
     needs:
       - build
       - plan
