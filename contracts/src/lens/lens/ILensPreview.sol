@@ -11,7 +11,8 @@ interface ILensPreview {
     /// above `H0 * (1 + rate * (deadline - now)) * 1.005` once the debt has grown until `deadline`, with
     /// `H0 = max(1e18, hardHealthFloor(marketId))`: Aave's HF 1.00 unless the market's optional hard floor is set.
     /// @dev Rounds down; capped by the reserve's `drawCap` headroom; 0 when the account's borrow gate fails (price, breaker,
-    /// pause, freeze, drift).
+    /// pause, freeze, drift) or the borrowed reserve fails the RiskModule's debt-reserve step (paused, unexpected source,
+    /// or a DebtOracle price not Live, closed by the oracle or older than its `borrowPriceMaxAge()`).
     /// @param wallet The borrower wallet.
     /// @param marketId The account's market (one PositionProxy per wallet and market).
     /// @param debtReserveId The debt reserve to borrow.
@@ -77,8 +78,9 @@ interface ILensPreview {
 
     /// @notice Returns the outcome of a repay with collateral at the block's prices.
     /// @dev Sized by SPEC-LIQ-020; `debtAssetToWallet` assumes every leg swaps at the oracle value. Returns
-    /// `(0, 0, current health factor)` when the call would revert (price gates, shares != assets, `Paused`, frozen wallet,
-    /// units above the record's credited units, no debt).
+    /// `(0, 0, current health factor)` when the call would revert (price gates, shares != assets,
+    /// `Paused(MintPathSuspect)`, units above the record's credited units, no debt); `Paused(General)` and a frozen
+    /// wallet leave it open, as at the AaveAdapter.
     /// @param wallet The borrower wallet.
     /// @param marketId The account's market.
     /// @param positionKey The record's position.

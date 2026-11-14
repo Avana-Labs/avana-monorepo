@@ -11,6 +11,7 @@ import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol
 import {ILock} from "../../lock/lock/ILock.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView as OracleDebtView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
+import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
 import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryErrors} from "../../policy/market-registry/IMarketRegistryErrors.sol";
@@ -224,8 +225,11 @@ abstract contract LensBase is ILensErrors {
         }
     }
 
-    /// @dev The debt-reserve price report of REQ-LENS-030, without the block stamp.
-    /// @custom:spec REQ-LENS-030, Q-247, Q-248
+    /// @dev The debt-reserve price report of REQ-LENS-030, without the block stamp. Both flags are execution's own rules
+    /// (`PriceAge`): `borrowFresh` the RiskModule's step (6) on the served route's timestamp and the DebtOracle's
+    /// `borrowPriceMaxAge()`, `liquidationFresh` LPVaultSwap's rule on each leg's timestamp and the ParameterStore's
+    /// `liquidationPriceMaxAge(feed)`.
+    /// @custom:spec REQ-LENS-030, Q-247, Q-248, REQ-RISK-061, REQ-SWAP-091
     function _debtView(
         address spoke,
         DebtReserveDef memory def
@@ -243,23 +247,31 @@ abstract contract LensBase is ILensErrors {
         IDebtOracle debtOracle = IDebtOracle(def.priceSource);
         OracleDebtView memory r = debtOracle.getPriceState();
         v.state = r.state;
-        (v.acceptedPrice, v.updatedAt) = debtOracle.lastAcceptedPrice();
-        v.age = block.timestamp > v.updatedAt ? block.timestamp - v.updatedAt : 0;
-        // The smallest borrowPriceMaxAge and liquidationPriceMaxAge over the route's non-zero feeds, read from the
-        // ParameterStore in this call.
-        (uint256 borrowAge, uint256 liquidationAge) = (type(uint256).max, type(uint256).max);
-        for (uint256 i = 0; i < 2; ++i) {
-            if (r.legFeeds[i] == address(0)) continue;
-            borrowAge = Math.min(borrowAge, _store().borrowPriceMaxAge(r.legFeeds[i]));
-            liquidationAge = Math.min(liquidationAge, _store().liquidationPriceMaxAge(r.legFeeds[i]));
-        }
+        // forge-lint: disable-next-line(unused-return)
+        (v.acceptedPrice,) = debtOracle.lastAcceptedPrice();
+        // The age execution measures: the served route's source timestamp, read live (the accepted price's stored
+        // timestamp only moves on a poke, which execution does first).
+        v.updatedAt = r.servedUpdatedAt;
+        v.age = PriceAge.age(v.updatedAt);
         // A route that names no feed has no source age to check, so it is never reported fresh.
-        bool live = r.state == PriceState.Live && (r.legFeeds[0] != address(0) || r.legFeeds[1] != address(0));
+        bool named = r.legFeeds[0] != address(0) || r.legFeeds[1] != address(0);
         // The oracle's own gates close borrowing (sequencer not ready, second source unconfirmed) and liquidation
         // (sequencer down, a serving alternate past its borrow age) while the state can still be Live and fresh.
-        v.borrowFresh = live && r.borrowAllowed && v.age <= borrowAge;
-        v.liquidationFresh = live && !r.liquidationPaused && v.age <= liquidationAge;
+        v.borrowFresh = named && PriceAge.debtBorrowable(r, debtOracle.borrowPriceMaxAge());
+        v.liquidationFresh = named && r.state == PriceState.Live && !r.liquidationPaused
+            && _legLiquidationFresh(r.legFeeds[0], r.legUpdatedAt[0])
+            && _legLiquidationFresh(r.legFeeds[1], r.legUpdatedAt[1]);
         v.stressPriced = v.price > v.acceptedPrice;
+    }
+
+    /// @dev LPVaultSwap's leg rule: an unused leg passes; a used one is within the ParameterStore's
+    /// `liquidationPriceMaxAge(feed)`, a timestamp in the future counting age 0.
+    /// @custom:spec REQ-SWAP-008, REQ-SWAP-091
+    function _legLiquidationFresh(
+        address feed,
+        uint256 updatedAt
+    ) internal view returns (bool) {
+        return feed == address(0) || PriceAge.liquidationFresh(updatedAt, _store().liquidationPriceMaxAge(feed));
     }
 
     /// @dev `drawCap` headroom of `spoke` on one debt reserve's funding Hub asset, base units.
@@ -360,11 +372,12 @@ abstract contract LensBase is ILensErrors {
         uint256 updatedAt
     ) internal view returns (PriceInput memory p) {
         (p.feed, p.updatedAt) = (feed, updatedAt);
-        p.age = block.timestamp > updatedAt ? block.timestamp - updatedAt : 0;
+        p.age = PriceAge.age(updatedAt);
         p.borrowPriceMaxAge = _store().borrowPriceMaxAge(feed);
         p.liquidationPriceMaxAge = _store().liquidationPriceMaxAge(feed);
-        p.borrowFresh = p.age <= p.borrowPriceMaxAge;
-        p.liquidationFresh = p.age <= p.liquidationPriceMaxAge;
+        // The RiskModule refuses a borrow on a timestamp in the future; LPVaultSwap counts it age 0.
+        p.borrowFresh = PriceAge.borrowFresh(updatedAt, p.borrowPriceMaxAge);
+        p.liquidationFresh = PriceAge.liquidationFresh(updatedAt, p.liquidationPriceMaxAge);
     }
 
     /// @dev The MarketRegistry.

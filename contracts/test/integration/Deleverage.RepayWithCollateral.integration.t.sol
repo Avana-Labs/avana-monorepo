@@ -134,19 +134,23 @@ contract DeleverageRepayWithCollateralIntegrationTest is IntegrationFlows {
 
     /// @notice Paused(MintPathSuspect) refuses it; Paused(General) and a frozen wallet are served, since it only lowers
     /// debt and never lowers the health factor (REQ-ADAPTER-082, Q-356).
-    // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-082, Q-347, Q-356
+    // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-082, REQ-LENS-038, Q-347, Q-356
     function test_TEST_239_pauseAndFreeze() public {
         reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
         RepayWithCollateralParams memory p = _rwc(500e6, usdcReserveId);
+        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(bob, MARKET_ID, key, 500e6, usdcReserveId);
+        assertEq(pvRepaid, 0, "the Lens shows it closed under Paused(MintPathSuspect)");
         vm.expectRevert(IAaveAdapterErrors.ApplicationPaused.selector);
         vm.prank(bob);
         adapterC.repayWithCollateral(p);
         reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
         reg.setFrozen(bob, true);
+        (pvRepaid,,) = lens.previewRepayWithCollateral(bob, MARKET_ID, key, 500e6, usdcReserveId);
         uint256 hfBefore = _hf(proxy);
         vm.prank(bob);
         (uint256 repaid,) = adapterC.repayWithCollateral(p);
         assertGt(repaid, 0, "served under Paused(General) for a frozen wallet");
+        assertEq(pvRepaid, repaid, "the Lens preview agrees with the execution");
         assertGe(_hf(proxy), hfBefore, "health factor not lowered");
     }
 

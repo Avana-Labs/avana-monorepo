@@ -108,6 +108,7 @@ abstract contract LensFixture is CollateralizationFixture {
         escrow = new PayoutEscrow(lpVaultSwap, address(lock));
         adapterMock.setProxyManager(address(proxyManager));
         usdcOracle = new LensDebtOracleMock(0.9999e8, feedUsdcDebt, address(0));
+        usdcOracle.setStore(address(store));
         _listUsdcDebt();
         _configureWorld();
         core = [
@@ -193,7 +194,9 @@ abstract contract LensFixture is CollateralizationFixture {
         m.status = MarketStatus.Active;
         reg.setMarket(MARKET_ID, m);
         reg.addSpoke(aave.cdpSpoke, aave.hub);
-        reg.setDebtReserve(aave.cdpSpoke, _def(debtReserveId, address(debt), 18, ghoAssetId, address(0), true, ghoCov));
+        reg.setDebtReserve(
+            aave.cdpSpoke, _def(debtReserveId, address(debt), 18, ghoAssetId, address(debtPrice), true, ghoCov)
+        );
         reg.setDebtReserve(
             aave.cdpSpoke, _def(usdcReserveId, address(usdc), 6, usdcAssetId, address(usdcOracle), false, usdcCov)
         );

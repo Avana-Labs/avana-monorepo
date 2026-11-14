@@ -128,6 +128,14 @@ contract IntegDebtOracleMock is RiskDebtOracleMock {
         _dv.liquidationPaused = on;
     }
 
+    /// @notice The accepted price's stored source timestamp alone, as when the feed has posted rounds since the last
+    /// poke: the served route and its leg keep their own timestamps.
+    function setAcceptedAt(
+        uint64 at
+    ) external {
+        _dv.acceptedUpdatedAt = at;
+    }
+
     function lastAcceptedPrice() external view returns (uint256, uint64) {
         return (_dv.acceptedAnswer, _dv.acceptedUpdatedAt);
     }
