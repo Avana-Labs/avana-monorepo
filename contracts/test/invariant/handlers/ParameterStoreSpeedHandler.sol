@@ -13,7 +13,14 @@ import {Test} from "forge-std/Test.sol";
 /// @notice Random speed-limit tightenings and loosenings by the timelock, the Joint Configuration Safe and a stranger
 /// against the real ParameterStore (TEST-325). After each call the handler records whether a stored value changed and
 /// in which direction, so the suite can check that no call moved a value the wrong way for its role.
+/// @dev Steered: three calls in four write a valid value moved from the stored one in the call's own direction (by a
+/// seed-derived fraction of the room left), so the role rules decide the outcome; the fourth writes an arbitrary value,
+/// which is mostly invalid or in the wrong direction and must be refused. Callers stay random among the three roles.
 contract ParameterStoreSpeedHandler is Test {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     IParameterStore internal store;
     address internal timelock;
     address internal safe;
@@ -59,6 +66,77 @@ contract ParameterStoreSpeedHandler is Test {
         v.max = uint96((seed >> 128) % 1e24);
     }
 
+    /// @dev Bounds of ParameterStoreSpeedRules: window 1 hour to 7 days, rates up to 10,000 bps.
+    uint32 internal constant WINDOW_MIN = 3600;
+    uint32 internal constant WINDOW_MAX = 604_800;
+    uint16 internal constant RATE_MAX = 10_000;
+
+    /// @dev `x` moved toward `to` by `f` percent of the distance (either direction).
+    function _toward(
+        uint256 x,
+        uint256 to,
+        uint256 f
+    ) internal pure returns (uint256) {
+        return x <= to ? x + (to - x) * f / 100 : x - (x - to) * f / 100;
+    }
+
+    /// @dev A window `f` % tighter (longer) or looser (shorter) than `old`; a never-written window loosens to any valid one.
+    function _window(
+        uint32 old,
+        bool loosen,
+        uint256 f
+    ) internal pure returns (uint32) {
+        if (old == 0) return loosen ? uint32(WINDOW_MIN + f * (WINDOW_MAX - WINDOW_MIN) / 100) : 0;
+        // Within [WINDOW_MIN, WINDOW_MAX], so it fits.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return uint32(_toward(old, loosen ? WINDOW_MIN : WINDOW_MAX, f));
+    }
+
+    /// @dev A valid market value moved from `old` in the call's direction: tighter shortens nothing and lowers every
+    /// rate and amount, looser does the opposite; minimums stay at or below their maximums.
+    function _marketStep(
+        MarketSpeedLimits memory old,
+        bool loosen,
+        uint256 h
+    ) internal pure returns (MarketSpeedLimits memory v) {
+        uint256 f = 1 + (h >> 8) % 100;
+        uint256 cap = 1e16;
+        v.window = _window(old.window, loosen, f);
+        // Rates within RATE_MAX and amounts within 1e16 (or their old values), so the casts fit.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.borrowRateBps = uint16(_toward(old.borrowRateBps, loosen ? RATE_MAX : 0, f));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.pledgeRateBps = uint16(_toward(old.pledgeRateBps, loosen ? RATE_MAX : 0, f));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.borrowMaxUsd = uint96(_toward(old.borrowMaxUsd, loosen ? cap : 0, f));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.borrowMinUsd = uint96(_toward(old.borrowMinUsd, loosen ? v.borrowMaxUsd : 0, f));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.pledgeMaxUsd = uint96(_toward(old.pledgeMaxUsd, loosen ? cap : 0, f));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.pledgeMinUsd = uint96(_toward(old.pledgeMinUsd, loosen ? v.pledgeMaxUsd : 0, f));
+        if (v.borrowMinUsd > v.borrowMaxUsd) v.borrowMinUsd = v.borrowMaxUsd;
+        if (v.pledgeMinUsd > v.pledgeMaxUsd) v.pledgeMinUsd = v.pledgeMaxUsd;
+    }
+
+    /// @dev The same for a (Hub, asset) value.
+    function _debtStep(
+        SpeedLimit memory old,
+        bool loosen,
+        uint256 h
+    ) internal pure returns (SpeedLimit memory v) {
+        uint256 f = 1 + (h >> 8) % 100;
+        v.window = _window(old.window, loosen, f);
+        // Within RATE_MAX and 1e24 (or the old values), so the casts fit.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.rateBps = uint16(_toward(old.rateBps, loosen ? RATE_MAX : 0, f));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.max = uint96(_toward(old.max, loosen ? 1e24 : 0, f));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.min = uint96(_toward(old.min, loosen ? v.max : 0, f));
+        if (v.min > v.max) v.min = v.max;
+    }
+
     function _who(
         uint8 role
     ) internal view returns (address) {
@@ -80,7 +158,8 @@ contract ParameterStoreSpeedHandler is Test {
     ) external {
         address who = _who(role);
         MarketSpeedLimits memory old = store.marketSpeedLimits(marketId);
-        MarketSpeedLimits memory v = _market(seed);
+        uint256 h = uint256(keccak256(abi.encode(seed)));
+        MarketSpeedLimits memory v = h % 4 == 0 ? _market(seed) : _marketStep(old, loosen, h);
         vm.prank(who);
         (bool ok,) = address(store)
             .call(
@@ -89,7 +168,7 @@ contract ParameterStoreSpeedHandler is Test {
                     : abi.encodeCall(IParameterStoreSpeed.tightenMarketSpeedLimits, (marketId, v))
             );
         MarketSpeedLimits memory now_ = store.marketSpeedLimits(marketId);
-        if (!_changed(abi.encode(old), abi.encode(now_))) return;
+        if (!_changed(abi.encode(old), abi.encode(now_))) revert Skipped();
         ++writes;
         if (!ok) ++wrongDirection;
         if (who == stranger) ++strangerWrites;
@@ -113,7 +192,8 @@ contract ParameterStoreSpeedHandler is Test {
     ) external {
         address who = _who(role);
         SpeedLimit memory old = store.debtSpeedLimit(hub, asset);
-        SpeedLimit memory v = _debt(seed);
+        uint256 h = uint256(keccak256(abi.encode(seed)));
+        SpeedLimit memory v = h % 4 == 0 ? _debt(seed) : _debtStep(old, loosen, h);
         vm.prank(who);
         (bool ok,) = address(store)
             .call(
@@ -122,7 +202,7 @@ contract ParameterStoreSpeedHandler is Test {
                     : abi.encodeCall(IParameterStoreSpeed.tightenDebtSpeedLimit, (hub, asset, v))
             );
         SpeedLimit memory now_ = store.debtSpeedLimit(hub, asset);
-        if (!_changed(abi.encode(old), abi.encode(now_))) return;
+        if (!_changed(abi.encode(old), abi.encode(now_))) revert Skipped();
         ++writes;
         if (!ok) ++wrongDirection;
         if (who == stranger) ++strangerWrites;

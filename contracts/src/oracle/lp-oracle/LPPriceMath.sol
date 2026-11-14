@@ -434,7 +434,7 @@ library LPPriceMath {
 
     /// @notice Served debt price by state (`SPEC-ORC-018`).
     /// @dev Live: `q`. Drifting (the routes disagree): `max(p, b, A)`; the DebtOracle passes the lower route as both
-    /// `p` and `b`, so it serves the median `max(min(p, b), A)` (ORACLE-06). Cached: `A`. Expired:
+    /// `p` and `b`, so it serves `max(min(p, b), A)`, the median or `A` above both (ORACLE-06). Cached: `A`. Expired:
     /// `ceil(A * (10^4 + δ) / 10^4)`, rounding up against the borrower, with `δ` below 100 read as 100 and a product of
     /// 256 bits or more saturating at `type(uint256).max`. No stable ceiling. The route values round down by less than
     /// one unit (exact for a feed with 8 or fewer decimals). The result is at least 1 for any inputs and at least `A` in

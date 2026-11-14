@@ -153,12 +153,12 @@ abstract contract LPOracleEval is LPOracleConfig {
     function _valueMarket(
         Evaluation memory e
     ) internal view {
-        PoolCheck memory pc = _poolCheck(e.quotes, e.prices, e.cfg.twapWindow, e.cfg.consistencyToleranceBps);
-        if (!pc.readOk) {
+        PoolCheck memory poolCheck = _poolCheck(e.quotes, e.prices, e.cfg.twapWindow, e.cfg.consistencyToleranceBps);
+        if (!poolCheck.readOk) {
             _failRead(e);
             return;
         }
-        if (pc.locked) {
+        if (poolCheck.locked) {
             e.reasons |= LPOracleCodes.POOL_REENTRANCY_LOCKED;
             e.failed = true;
             return;
@@ -175,7 +175,7 @@ abstract contract LPOracleEval is LPOracleConfig {
             return;
         }
         if (!inBand) e.reasons |= LPOracleCodes.USD_BAND;
-        _consistencyBits(e, pc);
+        _consistencyBits(e, poolCheck);
         _chooseRoutes(e);
         if (e.disagreeing) {
             uint256[] memory w = new uint256[](e.tokens.length);
@@ -205,12 +205,12 @@ abstract contract LPOracleEval is LPOracleConfig {
     /// @dev Reason bits 4, 5 and 6 from the pricing module's consistency check (`REQ-ORACLE-014`, `REQ-ORACLE-104`).
     function _consistencyBits(
         Evaluation memory e,
-        PoolCheck memory pc
+        PoolCheck memory poolCheck
     ) private pure {
-        e.consistencyDeviationBps = pc.available ? pc.deviationBps : type(uint256).max;
-        if (!pc.available) e.reasons |= LPOracleCodes.CONSISTENCY_UNAVAILABLE;
-        else if (!pc.pass) e.reasons |= LPOracleCodes.CONSISTENCY_DEVIATION;
-        if (pc.clamped) e.reasons |= LPOracleCodes.PRICE_CLAMPED;
+        e.consistencyDeviationBps = poolCheck.available ? poolCheck.deviationBps : type(uint256).max;
+        if (!poolCheck.available) e.reasons |= LPOracleCodes.CONSISTENCY_UNAVAILABLE;
+        else if (!poolCheck.pass) e.reasons |= LPOracleCodes.CONSISTENCY_DEVIATION;
+        if (poolCheck.clamped) e.reasons |= LPOracleCodes.PRICE_CLAMPED;
     }
 
     /// @dev The route serving each token (`SPEC-ORC-017`): during a disagreement, the lower of two valid routes (the

@@ -147,7 +147,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
     ) internal view {
         bool oneLeg = route.legCount == 1;
         bool decoded = true;
-        bool invalid = false;
+        bool anyInvalid = false;
         bool stale = false;
         route.updatedAt = type(uint64).max;
         route.staleFrom = type(uint64).max;
@@ -158,7 +158,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
                 decoded = false;
                 continue;
             }
-            if (leg.status == ReadStatus.Invalid) invalid = true;
+            if (leg.status == ReadStatus.Invalid) anyInvalid = true;
             if (leg.updatedAt < route.updatedAt) route.updatedAt = leg.updatedAt;
             if (leg.status == ReadStatus.Stale) {
                 stale = true;
@@ -177,7 +177,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         route.value = oneLeg
             ? LPPriceMath.routeValue(a.answer, a.pinnedDecimals)
             : LPPriceMath.routeValue(a.answer, a.pinnedDecimals, b.answer, b.pinnedDecimals);
-        if (invalid || route.value == 0 || route.value > LPPriceMath.MAX_ROUTE_ANSWER) {
+        if (anyInvalid || route.value == 0 || route.value > LPPriceMath.MAX_ROUTE_ANSWER) {
             route.status = ReadStatus.Invalid;
         } else if (stale) {
             route.status = ReadStatus.Stale;
@@ -255,7 +255,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
 
     /// @dev Served price (`SPEC-ORC-018`), the route it comes from, its source timestamp and its age limits
     /// (`SPEC-ORC-012`, `SPEC-ORC-015`), and the alternate held to its borrow age (`REQ-ORACLE-090`). While the routes
-    /// disagree the served value is `max(min(p, b), A)`, the median of `p`, `b` and `A`: the routes disagree, so one of
+    /// disagree the served value is `max(min(p, b), A)`, the median of `p`, `b` and `A` (or `A` when above both): the routes disagree, so one of
     /// them is wrong and the two alone cannot tell which, and one faulty route must not raise the debt price alone
     /// (ORACLE-06); the debt still never counts below `A`. Its route is the lower route, and when `A` exceeds it, no
     /// route: the accepted timestamp is reported with age limits 0, as when failed.

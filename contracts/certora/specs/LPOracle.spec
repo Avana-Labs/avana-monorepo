@@ -28,11 +28,11 @@
 
 methods {
     function latestAnswer() external returns (int256);
-    function getPriceState() external returns (PriceStateView);
+    function getPriceState() external returns (LPOracleCL.PriceStateView);
     function lastAcceptedPrice() external returns (uint256, uint64) envfree;
-    function poke() external returns (PriceState);
+    function poke() external returns (LPOracleCL.PriceState);
     function setPokeMinGas(uint32) external;
-    function initialize(InitParams) external;
+    function initialize(LPOracleCL.InitParams) external;
     function decimals() external returns (uint8) envfree;
     function tokens() external returns (address[]) envfree;
     function TIMELOCK() external returns (address) envfree;
@@ -138,7 +138,7 @@ rule disagreementStartSetOnceAndNeverMoved(method f) filtered { f -> !f.isView &
     assert (before == 0 && after != 0) => to_mathint(after) == to_mathint(e.block.timestamp),
         "a new disagreement start is not the observation time";
     assert after != before => (
-        f.selector == sig:poke().selector || f.selector == sig:initialize(InitParams).selector),
+        f.selector == sig:poke().selector || f.selector == sig:initialize(LPOracleCL.InitParams).selector),
         "the disagreement start changed outside an evaluation";
 }
 
@@ -192,7 +192,7 @@ rule setPokeMinGasNeedsApplicationAdmin(uint32 value) {
 
 // PROP-034 verifies: INV-051, Q-226, Q-228
 rule onlyPokeIsPermissionless(method f) filtered {
-    f -> !f.isView && f.selector != sig:poke().selector && f.selector != sig:initialize(InitParams).selector
+    f -> !f.isView && f.selector != sig:poke().selector && f.selector != sig:initialize(LPOracleCL.InitParams).selector
         && f.selector != sig:renounceRole(bytes32, address).selector
 } {
     env e;

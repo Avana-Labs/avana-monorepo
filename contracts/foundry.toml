@@ -92,6 +92,11 @@ compilation_restrictions = [
   # runs change only bytecode size and gas, not behaviour; the deployable contracts keep their own settings.
   { paths = "test/invariant/echidna/ParameterStoreProperties.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "test/invariant/echidna/LPVaultSwapProperties.sol", via_ir = false, optimizer_runs = 200 },
+  # The steered invariant handlers of Collateralization and the Integration suite carry their steering and balance
+  # checks in one contract each; at 10,000 runs their runtime code passed EIP-170 (25,351 and 24,729 bytes), which
+  # fails `forge build --sizes`. As above, runs change only size and gas.
+  { paths = "test/invariant/handlers/CollateralizationHandler.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "test/invariant/handlers/IntegrationHandler.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/liquidation/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
@@ -413,6 +418,10 @@ contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integra
 # the optimizer ("stack too deep" in ABI decoding without it), built here with the legacy pipeline.
 optimizer = false
 via_ir = false
+# Unoptimized, instrumented code spends more gas per call than the ci profile's build: Cascade's 100-account setUp
+# ran out of the default 2^30 test gas limit (a DebtOracle poke then saw less than its 900,000 gas floor). Coverage
+# measures branches, not gas, so its limit is 2^32.
+gas_limit = 4294967296
 no_match_path = "test/{fork,differential,halmos,invariant}/**"
 additional_compiler_profiles = [
   { name = "coverage-ir", optimizer = false, via_ir = true },

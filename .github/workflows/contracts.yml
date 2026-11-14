@@ -5,12 +5,12 @@ name: contracts
 # coverage, traceability, the evidence report (which spec rows a test that ran and passed checks, from the shards'
 # results) and the fast security tier. A pull request labelled `hotfix` (playbook P-05) also runs the
 # touched contracts' invariant campaigns at full depth, one per job. Every push to main runs the same set with the ci
-# profile at full depth (10,000 runs at depth 100) in 20 shards: each file of test/invariant/ is one campaign, and a
-# campaign over 30 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every
+# profile at full depth (10,000 runs at depth 100) in 30 shards: each file of test/invariant/ is one campaign, and a
+# campaign over 20 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every
 # night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep invariant campaign, fork tests, the FFI
-# differential suite, SMTChecker and Certora, one target per job, each at most 4 hours (a deep invariant file at most
-# 6): `plan` lists the invariant files, SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one
-# gets its own job on the next run. Halmos runs in the slow security tier, one job per check at loop 16. The slow
+# differential suite, SMTChecker and Certora (paused unless the repository variable CERTORA_ENABLED is `true`), one
+# target per job, each at most 4 hours (a deep invariant file at most 6): `plan` lists the invariant files,
+# SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. Halmos runs in the slow security tier, one job per check at loop 16. The slow
 # security tier (security-slow.yml), the per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) run on the
 # same nightly, release and manual schedule. An upgrade is scheduled from a release tag, so every long check has run
 # before the timelock delay ends; a failure is a reason to cancel the operation. A long check that cannot run (a missing
@@ -153,6 +153,10 @@ jobs:
         run: |
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
+          FOUNDRY_PROFILE=slipstream-v1 forge build
+          FOUNDRY_PROFILE=slipstream-main forge build
+          FOUNDRY_PROFILE=aerodrome forge build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -162,28 +166,32 @@ jobs:
             contracts/out
             contracts/out-aave
             contracts/out-univ3
+            contracts/out-univ3-periphery
+            contracts/out-slipstream-v1
+            contracts/out-slipstream-main
+            contracts/out-aerodrome
             contracts/cache
           retention-days: 7
 
   test:
-    # The suite is split into shards that run side by side (10 on a pull request, 20 elsewhere): every test file
+    # The suite is split into shards that run side by side (10 on a pull request, 30 elsewhere): every test file
     # (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
     # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
     # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
-    # campaign, so running them one by one would repeat the campaign's calls per invariant. A campaign over 30 minutes runs as
+    # campaign, so running them one by one would repeat the campaign's calls per invariant. A campaign over 20 minutes runs as
     # segments of ceil(runs / m) runs each, at the same depth and with a seed of their own. Each shard reuses the build
     # job's compiled output.
-    name: tests (ci profile, shard ${{ matrix.shard }}/${{ github.event_name == 'pull_request' && 10 || 20 }})
+    name: tests (ci profile, shard ${{ matrix.shard }}/${{ github.event_name == 'pull_request' && 10 || 30 }})
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(github.event_name == 'pull_request' && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]') }}
+        shard: ${{ fromJSON(github.event_name == 'pull_request' && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]') }}
     env:
       FOUNDRY_PROFILE: ci
-      SHARDS: ${{ github.event_name == 'pull_request' && 10 || 20 }}
+      SHARDS: ${{ github.event_name == 'pull_request' && 10 || 30 }}
       # script/test-shard.sh writes each forge invocation's results here (`--json-file`); the evidence job reads them.
       TEST_RESULTS_DIR: ${{ github.workspace }}/contracts/out-results
     steps:
@@ -223,7 +231,9 @@ jobs:
             export FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=64
             echo "invariant suites: 256 runs at depth 64 (pull request)"
           fi
-          script/test-shard.sh ${{ matrix.shard }} "$SHARDS" --fuzz-seed "$SEED" -vvv
+          # -vv: from -vvv forge writes every test's traces into the results file; test-shard.sh prints the failures'
+          # traces with --rerun -vvv.
+          script/test-shard.sh ${{ matrix.shard }} "$SHARDS" --fuzz-seed "$SEED" -vv
 
       - name: Upload this shard's results (forge --json-file)
         if: ${{ !cancelled() }}
@@ -304,7 +314,7 @@ jobs:
         run: |
           SEED=$(printf '0x%x' "$(date +%s)")
           echo "fuzz seed: $SEED"
-          script/test-shard.sh --unit "$UNIT" --fuzz-seed "$SEED" -vvv
+          script/test-shard.sh --unit "$UNIT" --fuzz-seed "$SEED" -vv
 
   gas:
     name: gas snapshots
@@ -335,6 +345,7 @@ jobs:
         run: |
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
 
       - name: Gas snapshots (test/gas against the committed snapshots/)
         # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
@@ -398,7 +409,7 @@ jobs:
   plan:
     name: plan the long jobs
     # Long check: nightly, release tags and manual runs only.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -426,7 +437,7 @@ jobs:
     # GitHub's maximum of 6 hours.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.invariant != '[]'
+    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.invariant != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
@@ -459,6 +470,7 @@ jobs:
         run: |
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
 
       - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
         env:
@@ -473,7 +485,7 @@ jobs:
     # is due (nightly, release tags, by hand). Any failing fork test fails the job.
     needs: build
     # Long check: nightly, release tags and manual runs only.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     outputs:
@@ -543,14 +555,16 @@ jobs:
         if: steps.ready.outputs.ready == 'true'
         run: |
           mkdir -p out-results
-          forge test --json-file out-results/fork.json -vvv
+          # -vv keeps traces out of the results file; the failed tests run again with --rerun -vvv to print them.
+          forge test --json-file out-results/fork.json -vv || { forge test --rerun -vvv || true; exit 1; }
 
       - name: Hostile-component tests on the fork
         # The hostile-component suite of contracts/test/README.md section 6, run when test/hostile/ holds tests.
         if: steps.ready.outputs.ready == 'true'
         run: |
           if [ -d test/hostile ]; then
-            AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --json-file out-results/hostile.json -vvv
+            AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --json-file out-results/hostile.json -vv \
+              || { AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --rerun -vvv || true; exit 1; }
           else
             echo "No test/hostile/ folder: the hostile-component tests did not run."
             echo "Hostile-component tests: not run (no test/hostile/ folder)." >> "$GITHUB_STEP_SUMMARY"
@@ -582,7 +596,7 @@ jobs:
     name: FFI differential (LPOracle vs mpmath)
     needs: build
     # Long check: nightly, release tags and manual runs only.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -624,7 +638,8 @@ jobs:
       - name: Differential fuzzing (TEST-037)
         run: |
           mkdir -p out-results
-          forge test --json-file out-results/differential.json -vvv
+          # -vv keeps traces out of the results file; the failed tests run again with --rerun -vvv to print them.
+          forge test --json-file out-results/differential.json -vv || { forge test --rerun -vvv || true; exit 1; }
 
       - name: Upload the differential results
         if: ${{ !cancelled() }}
@@ -640,7 +655,7 @@ jobs:
     # unchanged.
     name: SMTChecker ${{ matrix.contract }}
     needs: [build, plan]
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.smt != '[]'
+    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.smt != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -683,10 +698,12 @@ jobs:
 
   certora:
     # One job per conf of certora/conf. At most six run at a time, the number of Certora jobs the account keeps open
-    # at once.
+    # at once. Paused since 2026-11-13 (Josue): the prover runs only when the repository variable CERTORA_ENABLED is
+    # `true`; otherwise the job is skipped and the gate lists it as paused, not failed. The offline methods check of the
+    # fast security tier (`cvl`) still runs on every pull request.
     name: Certora ${{ matrix.conf }}
     needs: [build, plan]
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
+    if: vars.CERTORA_ENABLED == 'true' && ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -1034,22 +1051,25 @@ jobs:
         working-directory: .
         env:
           RESULTS: ${{ toJSON(needs) }}
-          LONG: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+          LONG: ${{ (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
           HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
+          CERTORA: ${{ vars.CERTORA_ENABLED == 'true' }}
         run: |
           long='["plan","invariant","fork","differential","smtchecker","certora"]'
-          report=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" '
+          report=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson certora "$CERTORA" '
             to_entries[] | .key as $k | .value as $v
-            | if ($long | index($k)) and ($due | not) and $v.result == "skipped" then "\($k): not due (long check; runs nightly, on release tags and by hand)"
+            | if $k == "certora" and ($certora | not) and $v.result == "skipped" then "\($k): paused (repository variable CERTORA_ENABLED is not true)"
+              elif ($long | index($k)) and ($due | not) and $v.result == "skipped" then "\($k): not due (long check; runs nightly, on release tags and by hand)"
               elif $k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true" then "\($k): NOT RUN (\($v.outputs.reason // "no reason given"))"
               else "\($k): \($v.result)" end')
           echo "$report"
           { echo '### Gate'; echo '```'; echo "$report"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          bad=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson hotfix "$HOTFIX" '
+          bad=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson hotfix "$HOTFIX" --argjson certora "$CERTORA" '
             [to_entries[] | .key as $k | .value as $v
              | select(
                  ($v.result != "success"
                    and ((($v.result == "skipped") and ($long | index($k)) and ($due | not))
+                        or ($k == "certora" and ($certora | not) and $v.result == "skipped")
                         or ($k == "hotfix" and $v.result == "skipped")
                         or ($k == "hotfix-plan" and ($hotfix | not) and $v.result == "skipped")) == false)
                  or ($k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true"))

@@ -39,6 +39,25 @@ Example: Convex holds `seriesThroughTime = 1,767,229,200` (01:00 UTC) for chain 
 
 `GET /export/v1/pool-history?chainId=<id>&pool=<address>&fromBlock=<n>&toBlock=<n>` returns `{ chainId, pool, fromBlock, toBlock, feePips, records }`: the hourly and daily pool buckets of the pool's Swap, Mint and Burn logs in that range, read over the indexer's RPC with `eth_getLogs` (10,000-block chunks, halved when the provider refuses) and aggregated with the same function as the live handler. It answers 400 for a pool not listed on the chain, a range over 50,000 blocks, a range that reaches the pool's listing block (those logs are in the live series) or one above the finalized block. Block timestamps are interpolated between hourly anchor blocks: exact on Base, within a missed slot on Ethereum. Buckets cut by the range's edges are partial; Convex requests consecutive ranges in order and merges each bucket by the pool series' merge rules, so the result equals one request over the whole range.
 
+## Keeper stream
+
+`GET /keeper/v1/events?chainId=<id>&after=<block>&afterHash=<hash>&limit=<n>` feeds the keeper's candidate cache at the chain head ([`src/api/keeperEvents.ts`](src/api/keeperEvents.ts); wire types in [`services/common/src/keeperStream.ts`](../common/src/keeperStream.ts)). It serves only the `event_log` kinds the keeper follows (`KEEPER_STREAM_KINDS`: account, market, pending-settlement and keeper-status events), under the same authentication as the export with the keeper's own key ID.
+
+| Response | Meaning |
+|---|---|
+| 200 + `KeeperStreamPage` | Records of whole blocks after `after` (from the start blocks when `after` is absent), up to the last block the indexer has fully handled |
+| 204 | No block after `after` is fully indexed yet |
+| 409 + `KeeperStreamReorg` | `afterHash` is no longer the chain's hash at `after`, or a served block above `finalized` is not canonical: rewind to the `finalized` cursor it returns |
+| 400 | Malformed parameter; `after` and `afterHash` go together; `limit` is 1 to 1,000 |
+| 401 | Authentication failed |
+
+- **Depth.** Unlike the export, the stream does not wait for finality: `toBlock ≤ indexed − 1`. Rows at the head can still be rolled back by Ponder, which is why each cursor carries its block hash.
+- **Cursor.** `next = { block: toBlock, hash }`, the hash read over the indexer's RPC when the page was built. The keeper sends both back; the indexer re-reads the hash at `after` and answers 409 on a mismatch. Pages never split a block (as in the export), so a cursor always points after a complete block.
+- **Catching up.** A page ends at `toBlock < indexedBlock` when it is full; the keeper asks again until `toBlock = indexedBlock` or 204.
+- **What the keeper does with it.** Creation events add accounts to the cache (`seenBy.indexer`); every other kind only names what to re-read. Decisions never use a streamed value: every decision re-reads the chain at a pinned block. A stream that fails or answers 409 is followed by the keeper's RPC backfill from the finalized block before new heads are processed.
+
+Example: the keeper holds `{ block: 21,400,240, hash: 0xaa… }`. Block 21,400,240 is replaced by `0xbb…`; Ponder rolls back and replays. The next request names `0xaa…`, the indexer reads `0xbb…` at that height and answers 409 with the finalized cursor `{ 21,400,176, 0xcc… }`; the keeper re-reads its RPC logs from 21,400,176 and continues the stream from that cursor.
+
 ## Authentication
 
 Every request carries `x-avana-key-id`, `x-avana-timestamp` (unix seconds) and `x-avana-signature = hex(HMAC-SHA256(secret, timestamp + "\n" + METHOD + "\n" + path?query))`. The indexer accepts timestamps within 60 s of its clock and compares in constant time. Keys are listed in `INDEXER_EXPORT_KEYS` as `id:base64secret` (at least 32 bytes); during a rotation both the old and the new key are listed, Convex switches to the new ID, and the old entry is removed. The export listens only on the private network interface; it is never exposed through the public app's hosting.

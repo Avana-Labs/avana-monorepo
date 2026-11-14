@@ -70,8 +70,6 @@ spec/05-verification/tools/
 # EVM decompiler binary (downloaded, not committed)
 tools/heimdall/bin/
 
-# Folders outside this repository's tracked tree
-web/
 # Only packages/protocol (the ABIs the services import) is tracked under packages/.
 packages/*
 !packages/protocol/

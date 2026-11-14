@@ -32,6 +32,14 @@ export class InventoryBook {
     return true;
   }
 
+  /**
+   * Restores the reservation of a mined transaction whose block a reorg removed: the funds it pulled are back in the
+   * Safe, so no balance check applies; the transaction is pending again and may pull them again.
+   */
+  restore(chainId: number, txKey: string, items: readonly Reservation[]): void {
+    this.open.set(`${chainId}:${txKey}`, [...items]);
+  }
+
   /** Released when the transaction is mined, replaced by a rebuilt one, cancelled or expired. */
   release(chainId: number, txKey: string): void {
     this.open.delete(`${chainId}:${txKey}`);

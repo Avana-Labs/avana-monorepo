@@ -14,6 +14,8 @@ export interface CachedAccount {
   readonly wallet: Address;
   readonly marketId: bigint;
   readonly vaultToken: Address;
+  /** Block of the creation event that announced the account (the earliest one, when both sources saw it). */
+  createdBlock: bigint;
   /** Debt reserves with non-zero debt at the last read. */
   debtReserveIds: bigint[];
   lastHealthFactor: bigint | null;
@@ -36,6 +38,7 @@ export class AccountCache {
     const existing = this.accounts.get(key);
     if (existing) {
       existing.seenBy[source] = true;
+      if (entry.createdBlock < existing.createdBlock) existing.createdBlock = entry.createdBlock;
       return existing;
     }
     const fresh: CachedAccount = {
@@ -60,9 +63,13 @@ export class AccountCache {
     return [...this.accounts.values()].filter((a) => a.chainId === chainId);
   }
 
-  /** Accounts the two discovery sources disagree on; each is kept (the union) and reported. */
-  oneSided(chainId: number): CachedAccount[] {
-    return this.ofChain(chainId).filter((a) => !(a.seenBy.indexer && a.seenBy.rpc));
+  /**
+   * Accounts the two discovery sources disagree on; each is kept (the union) and reported. Only accounts created at
+   * or before `through` count, the lower of the blocks both sources have read to, so an account one source has simply
+   * not reached yet is not a disagreement.
+   */
+  oneSided(chainId: number, through: bigint): CachedAccount[] {
+    return this.ofChain(chainId).filter((a) => a.createdBlock <= through && !(a.seenBy.indexer && a.seenBy.rpc));
   }
 
   /** Records a read: tracks when an account first fell below HF 1, for shard takeover and M-09. */

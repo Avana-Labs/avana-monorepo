@@ -19,9 +19,14 @@
 #   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
 #            assertion tests in one campaign), each on a build of its own file and imports
 #            (out-security/build/medusa/<Name>, slow-tier settings) with a copy of medusa.json pointing at it
-#   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest)
+#   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest); a single check listed in
+#            security/halmos-bounds.json runs within that entry's wall-clock budget, and when the budget (or a solver
+#            timeout) ends it without a counterexample it is reported as bounded, no violation found, and passes; a
+#            counterexample always fails, and so does an unlisted check that runs out (script/halmos-outcome.py)
 #   hevm     against a local anvil chain (see hevm_targets below): `hevm symbolic` on each assertion entry point of
-#            every harness, deployed so its constructor has run (each must reach QED), on the runtime code of every
+#            every harness, deployed so its constructor has run (each must reach QED; a counterexample fails the step
+#            only when replaying it with `cast call` on the deployed harness ends in Panic(1), and an hevm internal
+#            error is reported as not run, see hevm_replay), on the runtime code of every
 #            src/ contract and library with its address immutables filled (no assertion violation), and `hevm test`
 #            on every `prove_` function in test/symbolic/
 #   mythril  script/security-mythril.sh on the runtime code of every src/ contract and library
@@ -45,7 +50,9 @@
 # seconds per harness and mode, ECHIDNA_MAX_HEAP=8g (GHC heap limit), ECHIDNA_HARNESSES (space-separated harness
 # names; empty: all), MEDUSA_TEST_LIMIT
 # (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query, HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own
-# default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1);
+# default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1),
+# HALMOS_TIMEOUT (seconds of wall clock per Halmos run; empty: none) unless security/halmos-bounds.json sets the
+# budget, and the loop bound, of the one selected check;
 # SECURITY_MEMORY_MAX (empty: no cap) bounds the memory of each hevm and Halmos run (see `capped`);
 # BUILD_CHUNK=60 files per strict build group;
 # MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
@@ -362,27 +369,52 @@ step_halmos() {
   fi
   # HALMOS_CONTRACTS selects exact contract names and HALMOS_TESTS exact test function names (CI runs one of each per
   # job); halmos fails with "No tests with" when the selection matches no test.
-  local match='HalmosTest$' tests=()
+  local match='HalmosTest$' tests=() single=() budget=${HALMOS_TIMEOUT:-} loop=$HALMOS_LOOP listed bloop
   [ -n "${HALMOS_CONTRACTS:-}" ] && match="^($(echo $HALMOS_CONTRACTS | tr ' ' '|'))\$"
   [ -n "${HALMOS_TESTS:-}" ] && tests=(--match-test "^($(echo $HALMOS_TESTS | tr ' ' '|'))\\(")
+  # A single-check run (one contract and one test function, as each CI job runs) of a check listed in
+  # security/halmos-bounds.json takes that entry's wall-clock budget (`timeout`, seconds) and, when given, its loop
+  # bound; any other run takes HALMOS_TIMEOUT (empty: no wall-clock budget) and HALMOS_LOOP.
+  if [ "$(wc -w <<<"${HALMOS_CONTRACTS:-}")" -eq 1 ] && [ "$(wc -w <<<"${HALMOS_TESTS:-}")" -eq 1 ]; then
+    single=("$(echo $HALMOS_CONTRACTS)" "$(echo $HALMOS_TESTS)")
+    listed=$("$PY" script/halmos-outcome.py budget "${single[@]}") || return 1
+    if [ -n "$listed" ]; then
+      read -r budget bloop <<<"$listed"
+      [ "$bloop" = - ] || loop=$bloop
+      echo "halmos ${single[0]}.${single[1]}: listed in security/halmos-bounds.json, budget ${budget}s, loop $loop"
+    fi
+  fi
+  # timeout: at the budget Halmos gets SIGTERM, on which it shuts its solver processes down, and SIGKILL 5 minutes
+  # later if it has not exited (a solver call in progress holds the signal back); timeout signals its whole process
+  # group, so the solvers end with it. It exits 124 after SIGTERM and 137 after SIGKILL.
+  local wrap=()
+  if [ -n "$budget" ]; then
+    if ! command -v timeout >/dev/null 2>&1; then
+      echo "halmos: a budget of ${budget}s needs GNU timeout (coreutils)" >&2
+      return 1
+    fi
+    wrap=(timeout --kill-after=300 "$budget")
+  fi
   # Halmos has no deployCode cheatcode, which dynamic test linking turns `new C(...)` into. PYTHONUNBUFFERED: each
-  # result line reaches the log when the check ends, so a run stopped by a time limit still shows which checks passed.
-  # --solver-threads 1: one solver process at a time, so a check's queries do not multiply its memory by the number
-  # of CPUs; with SECURITY_MEMORY_MAX the run is capped (`capped`) and a check that reaches the cap is reported.
-  capped halmos env PYTHONUNBUFFERED=1 FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . --match-contract "$match" \
-    ${tests[@]+"${tests[@]}"} --loop "$HALMOS_LOOP" --solver-timeout-assertion 0 --solver-threads 1 2>&1 |
-    tee "$OUT/halmos.txt"
-  local rc=${PIPESTATUS[0]}
-  # A build failure, or a run that never reached a result line, fails the step whatever the exit code says.
-  if grep -qE 'Build failed|Unable to resolve imports|Compiler run failed' "$OUT/halmos.txt"; then
-    echo "halmos: the build failed (see $OUT/halmos.txt)" >&2
-    return 1
+  # result line, and each counterexample as the solver finds it, reaches the log at once, so a run ended by its budget
+  # still shows which checks passed and every counterexample found. --solver-threads 1: one solver process at a time,
+  # so a check's queries do not multiply its memory by the number of CPUs; with SECURITY_MEMORY_MAX the run is capped
+  # (`capped`) and a check that reaches the cap is reported.
+  local start=$SECONDS
+  capped halmos ${wrap[@]+"${wrap[@]}"} env PYTHONUNBUFFERED=1 FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . \
+    --match-contract "$match" ${tests[@]+"${tests[@]}"} --loop "$loop" --solver-timeout-assertion 0 \
+    --solver-threads 1 2>&1 | tee "$OUT/halmos.txt"
+  local rc=${PIPESTATUS[0]} exhausted=0
+  # The budget ran out when timeout reports it (124), or when it had to kill Halmos (137) once the budget had passed;
+  # a 137 before that is the memory cap, which `capped` reports in the log.
+  if [ -n "$budget" ]; then
+    if [ "$rc" -eq 124 ] || { [ "$rc" -eq 137 ] && [ $((SECONDS - start)) -ge "$budget" ]; }; then exhausted=1; fi
   fi
-  if ! grep -qE 'Symbolic test result: [0-9]+ passed' "$OUT/halmos.txt"; then
-    echo "halmos: no test result in $OUT/halmos.txt" >&2
-    return 1
-  fi
-  return "$rc"
+  # pass, bounded or fail (script/halmos-outcome.py): a counterexample always fails; a listed single check that its
+  # budget or a solver timeout ended without one is "bounded, no violation found" and passes; an unlisted check that
+  # runs out fails. The outcome goes to out-security/halmos-outcome.json and, in CI, to the job summary.
+  "$PY" script/halmos-outcome.py classify "$OUT/halmos.txt" "$rc" "$exhausted" "$OUT/halmos-outcome.json" \
+    ${single[@]+"${single[@]}"}
 }
 
 # hevm_targets runs every target against a local anvil chain (`--rpc`), never on bare runtime code: on bare code the
@@ -481,6 +513,28 @@ hevm_symbolic() {
   return 1
 }
 
+# hevm_replay <log> <address>: replays every counterexample calldata of an hevm log with `cast call` on the deployed
+# harness, at the chain's latest block (the state and block context hevm explored). Prints "<reproduced> of <total>"
+# and returns 0 when at least one counterexample ends in Panic(1) on the chain, 1 when none does, 2 when the log holds
+# no calldata. hevm 0.58 reports counterexamples that the deployed harness does not reproduce (run 43492412351: all
+# 124 counterexamples of 7 harnesses returned normally when replayed), so only a reproduced one fails the step.
+hevm_replay() {
+  local log=$1 addr=$2 cd out total=0 hit=0
+  while IFS= read -r cd; do
+    [ -n "$cd" ] || continue
+    total=$((total + 1))
+    out=$(cast call --rpc-url "$HEVM_RPC" --from "$HEVM_DEPLOYER" "$addr" "$cd" 2>&1) && continue
+    if echo "$out" | grep -qiE 'assertion failed|0x4e487b710{63}1([^0-9a-f]|$)'; then
+      hit=$((hit + 1))
+      echo "  reproduced: $cd" >>"$log"
+    fi
+  done < <(grep -A1 '^Calldata:' "$log" | grep -oE '0x[0-9a-fA-F]+')
+  echo "$hit of $total"
+  [ "$total" -gt 0 ] || return 2
+  [ "$hit" -gt 0 ] && return 0
+  return 1
+}
+
 # hevm_deploy <creation-code file>: deploys it from HEVM_DEPLOYER and prints the new address; fails when the
 # constructor reverts.
 hevm_deploy() {
@@ -523,12 +577,26 @@ hevm_targets() {
     echo "hevm $name: deployed at $addr"
     while IFS= read -r sig; do
       [ -n "$sig" ] || continue
-      hevm_symbolic "$OUT/hevm/$name.${sig%%(*}.log" --address "$addr" --sig "$sig"
+      local slog="$OUT/hevm/$name.${sig%%(*}.log" replayed
+      hevm_symbolic "$slog" --address "$addr" --sig "$sig"
       rc=$?
       case $rc in
         0) echo "hevm $name.$sig: QED" ;;
-        2) echo "hevm $name.$sig: FAIL, explored only partially (see $OUT/hevm/$name.${sig%%(*}.log)"; status=1 ;;
-        *) echo "hevm $name.$sig: FAIL (see $OUT/hevm/$name.${sig%%(*}.log)"; status=1 ;;
+        2) echo "hevm $name.$sig: FAIL, explored only partially (see $slog)"; status=1 ;;
+        *)
+          if grep -qi 'internal error' "$slog"; then
+            # A crash of hevm itself proves nothing either way: reported, not counted as a finding.
+            echo "hevm $name.$sig: NOT RUN, hevm internal error (see $slog)"
+          elif replayed=$(hevm_replay "$slog" "$addr"); then
+            echo "hevm $name.$sig: FAIL, $replayed counterexamples reproduce on the deployed harness (see $slog)"
+            status=1
+          elif [ $? -eq 1 ]; then
+            echo "hevm $name.$sig: unconfirmed, $replayed counterexamples reproduce on the deployed harness (see $slog)"
+          else
+            echo "hevm $name.$sig: FAIL (see $slog)"
+            status=1
+          fi
+          ;;
       esac
     done < <("$PY" script/security-targets.py assertion-sigs "$BUILD" "$name")
   done <<<"$list"

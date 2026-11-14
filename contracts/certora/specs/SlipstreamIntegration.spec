@@ -12,7 +12,7 @@
  */
 
 methods {
-    function clMarket(uint256) external returns (ClMarketConfig) envfree;
+    function clMarket(uint256) external returns (SlipstreamIntegration.ClMarketConfig) envfree;
     function tokenIdOf(bytes32) external returns (uint256) envfree;
     function validatePosition(uint256, address, bytes32) external returns (uint128) envfree;
     function receivePosition(uint256, address, bytes32) external returns (uint128);

@@ -4,7 +4,8 @@
 # Installs the pinned security tools of the contracts workspace.
 #
 #   tools/bin/        Echidna, Medusa, Aderyn and hevm from their GitHub releases, each checked against the sha256
-#                     pinned below before it is unpacked
+#                     pinned below before it is unpacked; Aderyn falls back to building the release's pinned source
+#                     archive with cargo when its binary archive is gone
 #   .venv/            Slither, crytic-compile, Halmos and certora-cli (requirements.txt)
 #   .venv-mythril/    Mythril (requirements-mythril.txt); its z3-solver and py-evm pins conflict with Halmos
 #   node_modules/     solhint and @openzeppelin/upgrades-core (package.json, package-lock.json), installed with
@@ -33,6 +34,8 @@ cd "$(dirname "$0")/.."
 ECHIDNA_VERSION=2.3.3
 MEDUSA_VERSION=1.5.1
 ADERYN_VERSION=0.6.8
+# sha256 of the release's source.tar.gz (the same on every platform), as published in its source.tar.gz.sha256.
+ADERYN_SOURCE_SHA256=2d4afdb52bae30f8488e5d9470a281d284c0b286455b61b474e6c2e7dafe343a
 HEVM_VERSION=0.58.0
 PYTHON_VERSION=3.11
 SEMGREP_RULES_COMMIT=2e878a89ac7bba1f8435e8a68e3ecb7700096cd5
@@ -80,8 +83,24 @@ sha256() {
 
 # fetch <url> <sha256> <dest>: download into a fresh temporary directory and keep the file only if the hash matches.
 fetch() {
-  local url=$1 want=$2 dest=$3 got
+  local url=$1 want=$2 dest=$3
   curl -sSfL --retry 3 -o "$dest" "$url"
+  verify "$url" "$want" "$dest"
+}
+
+# fetch_optional <url> <sha256> <dest>: as fetch, but returns 1 when the download fails (a release asset that was
+# removed) so the caller can fall back; a hash mismatch still stops the script.
+fetch_optional() {
+  local url=$1 want=$2 dest=$3
+  if ! curl -sSfL --retry 3 -o "$dest" "$url" 2>/dev/null; then
+    rm -f "$dest"
+    return 1
+  fi
+  verify "$url" "$want" "$dest"
+}
+
+verify() {
+  local url=$1 want=$2 dest=$3 got
   got=$(sha256 "$dest")
   if [ "$got" != "$want" ]; then
     echo "install-security-tools: sha256 mismatch for $url" >&2
@@ -139,11 +158,24 @@ install_binaries() {
     echo "aderyn $ADERYN_VERSION already installed"
   else
     mkdir "$tmp/aderyn"
-    fetch "https://github.com/Cyfrin/aderyn/releases/download/aderyn-v${ADERYN_VERSION}/${ADERYN_ASSET}" \
-      "$ADERYN_SHA256" "$tmp/aderyn.txz"
-    tar -xJf "$tmp/aderyn.txz" -C "$tmp/aderyn"
-    install -m 0755 "$(find "$tmp/aderyn" -type f -name aderyn | head -n1)" "$BIN_DIR/aderyn"
-    echo "aderyn $ADERYN_VERSION installed"
+    if fetch_optional "https://github.com/Cyfrin/aderyn/releases/download/aderyn-v${ADERYN_VERSION}/${ADERYN_ASSET}" \
+      "$ADERYN_SHA256" "$tmp/aderyn.txz"; then
+      tar -xJf "$tmp/aderyn.txz" -C "$tmp/aderyn"
+      install -m 0755 "$(find "$tmp/aderyn" -type f -name aderyn | head -n1)" "$BIN_DIR/aderyn"
+      echo "aderyn $ADERYN_VERSION installed"
+    else
+      # Cyfrin removed the binary archives of this release (only their .sha256 files remain); build the pinned
+      # source archive of the same release with its own Cargo.lock and rust-toolchain.toml.
+      echo "aderyn $ADERYN_VERSION: release binary unavailable, building from source (a few minutes)"
+      command -v cargo >/dev/null ||
+        { echo "install-security-tools: building Aderyn from source needs cargo (rustup.rs)" >&2; exit 2; }
+      fetch "https://github.com/Cyfrin/aderyn/releases/download/aderyn-v${ADERYN_VERSION}/source.tar.gz" \
+        "$ADERYN_SOURCE_SHA256" "$tmp/aderyn-src.tgz"
+      tar -xzf "$tmp/aderyn-src.tgz" -C "$tmp/aderyn"
+      (cd "$tmp/aderyn/aderyn-${ADERYN_VERSION}" && cargo build --release --locked --quiet -p aderyn --bin aderyn)
+      install -m 0755 "$tmp/aderyn/aderyn-${ADERYN_VERSION}/target/release/aderyn" "$BIN_DIR/aderyn"
+      echo "aderyn $ADERYN_VERSION built from source and installed"
+    fi
   fi
 
   if ! wanted hevm; then

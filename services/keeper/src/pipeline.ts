@@ -7,13 +7,14 @@
 
 import type { Hex } from "viem";
 import { type AttemptRecord, logAttempt, stringifyParams } from "./failureLog.ts";
+import { type Revert, RevertError } from "./jobs/failureReasons.ts";
 import { type EffectiveMode, type SafetyState, blockingReason, checkTargets } from "./safety/guards.ts";
-import type { BlockContext, Job, TxPlan } from "./types.ts";
+import type { BlockContext, Job, SkipReason, TxPlan } from "./types.ts";
 
 export interface Simulation {
   readonly ok: boolean;
   readonly gasEstimate: bigint;
-  readonly revert?: { readonly selector: Hex; readonly name: string };
+  readonly revert?: Revert;
 }
 
 export interface PipelineDeps {
@@ -25,6 +26,11 @@ export interface PipelineDeps {
   submit(ctx: BlockContext, plan: TxPlan, sim: Simulation): Promise<Hex>;
   /** Pages the on-call engineer (M-26 for a code mismatch). */
   page(signal: string, detail: Readonly<Record<string, string>>): void;
+  /**
+   * A last check after a successful simulation and before the guards: for a liquidation, the account's health factor
+   * read again on the second provider at the decision block. A reason stops the call in this block (logged skipped).
+   */
+  confirm?(ctx: BlockContext, plan: TxPlan): Promise<SkipReason | null>;
 }
 
 function record(ctx: BlockContext, plan: Pick<TxPlan, "job" | "subject" | "params">, rest: Omit<AttemptRecord, "at" | "chainId" | "blockNumber" | "job" | "subject" | "params">): AttemptRecord {
@@ -52,6 +58,13 @@ export async function runJob<C, D>(job: Job<C, D>, ctx: BlockContext, deps: Pipe
     try {
       await (job.exclusive ? job.exclusive(candidate, pass) : pass());
     } catch (err) {
+      if (err instanceof RevertError) {
+        // A simulation inside the build (the liquidation's net measurement) reverted: logged and handled as a failed simulation.
+        const subject = err.subject ?? describeCandidate(candidate);
+        logAttempt(record(ctx, { job: job.kind, subject, params: {} }, { outcome: "simulationFailed", revert: err.revert }));
+        await job.onFailure?.(ctx, subject, err.revert);
+        continue;
+      }
       logAttempt(record(ctx, { job: job.kind, subject: describeCandidate(candidate), params: {} }, { outcome: "skipped", reason: err instanceof Error ? err.message : String(err) }));
     }
   }
@@ -76,6 +89,13 @@ async function runOne<C, D>(job: Job<C, D>, ctx: BlockContext, deps: PipelineDep
   const sim = await deps.simulate(ctx, plan);
   if (!sim.ok) {
     logAttempt(record(ctx, plan, { outcome: "simulationFailed", ...(sim.revert ? { revert: sim.revert } : {}) }));
+    if (sim.revert) await job.onFailure?.(ctx, plan.subject, sim.revert);
+    return;
+  }
+
+  const unconfirmed = deps.confirm ? await deps.confirm(ctx, plan) : null;
+  if (unconfirmed) {
+    logAttempt(record(ctx, plan, { outcome: "skipped", reason: unconfirmed }));
     return;
   }
 

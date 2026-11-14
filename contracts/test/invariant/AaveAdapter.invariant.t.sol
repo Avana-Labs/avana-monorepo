@@ -9,6 +9,7 @@ import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol"
 import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {AaveAdapterHandler, AdapterWorld} from "./handlers/AaveAdapterHandler.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title AaveAdapterInvariantTest
 /// @notice AaveAdapter invariants on the real local Aave V4, Collateralization, vault tokens, ProxyManager and
@@ -21,7 +22,7 @@ import {AaveAdapterHandler, AdapterWorld} from "./handlers/AaveAdapterHandler.so
 /// most one proxy per market, at the ProxyManager's prediction, with its binding and code unchanged.
 /// @dev Each handler call is one transaction.
 /// forge-config: default.isolate = false
-contract AaveAdapterInvariantTest is AaveAdapterFixture {
+contract AaveAdapterInvariantTest is AaveAdapterFixture, HandlerReach {
     AaveAdapterHandler internal handler;
 
     function setUp() public override {
@@ -51,8 +52,14 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture {
             integrationId: INTEGRATION
         });
         handler = new AaveAdapterHandler(world, [alice, bob, carol], makeAddr("thirdPartyPayer"));
+        handler.seedAccounts();
         targetContract(address(handler));
-        bytes4[] memory actions = new bytes4[](13);
+        targetSelector(FuzzSelector({addr: address(handler), selectors: _actions()}));
+    }
+
+    /// @dev The fuzzed actions (`pledge` twice, so positions accumulate; `seedAccounts` is set-up only).
+    function _actions() internal pure returns (bytes4[] memory actions) {
+        actions = new bytes4[](13);
         actions[0] = AaveAdapterHandler.pledge.selector;
         actions[1] = AaveAdapterHandler.borrow.selector;
         actions[2] = AaveAdapterHandler.repay.selector;
@@ -66,7 +73,33 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture {
         actions[10] = AaveAdapterHandler.liquidate.selector;
         actions[11] = AaveAdapterHandler.warp.selector;
         actions[12] = AaveAdapterHandler.pledge.selector;
-        targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice The handler does real work: over 32 fixed-seed runs of 50 calls from this suite's set-up state, each
+    /// action succeeds in at least its floor share of calls (borrow 15 %: half its modes are refused by design and the
+    /// Hub is stopped half the time; the others 25 %), and a liquidation, a repay with collateral and a debt-free
+    /// withdrawal are each reached in at least 75 % of the runs.
+    function test_TEST_082_handlerReach() public {
+        string[] memory names = new string[](13);
+        (names[0], names[1], names[2], names[3], names[4]) =
+        ("pledge", "borrow", "repay", "withdraw", "removeLiquidity");
+        (names[5], names[6], names[7], names[8], names[9]) =
+        ("recredit", "repayWithCollateral", "collectFees", "setPrice", "setPause");
+        (names[10], names[11], names[12]) = ("liquidate", "warp", "pledge (2)");
+        string[] memory targets = new string[](3);
+        (targets[0], targets[1], targets[2]) = ("liquidation", "repay with collateral", "withdrawal");
+        uint256[] memory minOk = _floors(13, 25);
+        minOk[1] = 15;
+        Reach memory r = _replay(address(handler), _actions(), AaveAdapterHandler.Skipped.selector, 32, 50, 3);
+        _check(r, names, targets, minOk, _floors(3, 75));
+    }
+
+    function _reached() internal view override returns (bool[] memory hit) {
+        hit = new bool[](3);
+        hit[0] = handler.liquidations() != 0;
+        hit[1] = handler.deleverages() != 0;
+        hit[2] = handler.withdrawals() != 0;
     }
 
     // TEST-088 verifies: REQ-ADAPTER-005, REQ-ADAPTER-068, REQ-ADAPTER-069, REQ-ADAPTER-070, INV-009, INV-010, INV-066
@@ -212,6 +245,16 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture {
     /// campaign exercises real calls, not only early returns): pledge, borrow, third-party repay, partial removal,
     /// re-credit, repay with collateral, fee collection, a liquidation after a price fall, and a debt-free withdrawal.
     function test_TEST_099_handlerActionsComplete() public {
+        // Counts from here on; the set-up seeded 6 pledges and 3 borrows.
+        uint256[7] memory base = [
+            handler.pledges(),
+            handler.borrows(),
+            handler.removals(),
+            handler.recredits(),
+            handler.deleverages(),
+            handler.liquidations(),
+            handler.withdrawals()
+        ];
         handler.pledge(0, 0, 4_000_000_000);
         handler.pledge(0, 0, 3_000_000_000);
         handler.borrow(0, 0, 0, 2500, 0);
@@ -227,13 +270,13 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture {
         handler.liquidate(0, 0, 2000e18);
         handler.pledge(1, 1, 1_000_000_000);
         handler.withdraw(1, 1, 0);
-        assertEq(handler.pledges(), 3, "pledges");
-        assertEq(handler.borrows(), 4, "borrows");
-        assertEq(handler.removals(), 1, "removal");
-        assertEq(handler.recredits(), 1, "recredit");
-        assertEq(handler.deleverages(), 1, "repay with collateral");
-        assertEq(handler.liquidations(), 1, "liquidation");
-        assertEq(handler.withdrawals(), 1, "debt-free withdrawal");
+        assertEq(handler.pledges() - base[0], 3, "pledges");
+        assertEq(handler.borrows() - base[1], 4, "borrows");
+        assertEq(handler.removals() - base[2], 1, "removal");
+        assertEq(handler.recredits() - base[3], 1, "recredit");
+        assertEq(handler.deleverages() - base[4], 1, "repay with collateral");
+        assertEq(handler.liquidations() - base[5], 1, "liquidation");
+        assertEq(handler.withdrawals() - base[6], 1, "debt-free withdrawal");
         assertEq(handler.exitsAttempted(), handler.exitsSucceeded(), "exits");
         invariant_TEST_088_mintBurnAuthority();
         invariant_TEST_083_backingGapZero();

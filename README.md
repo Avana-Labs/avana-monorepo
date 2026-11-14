@@ -55,6 +55,7 @@ Each chain has its own AvanaTimelock. Every privileged change there is scheduled
 | [`spec/`](spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
 | [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts and Certora specifications |
 | [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `common/`: chains, manifest view and export types shared by the services |
+| [`web/`](web/) | The Next.js web app (Lend, Borrow, Portfolio, detail pages, Swap, Support, Ask AI); it reads `services/convex` |
 | [`governance/`](governance/) | Aave DAO payloads (deployment, listing, collateral-factor, credit-line and refresh AIPs) and the AvanaTimelock operations scheduled by the governance multisig |
 | [`audit/`](audit/) | Audit scope, external reports, formal-verification reports and the evidence cited by findings |
 
@@ -63,7 +64,7 @@ Each chain has its own AvanaTimelock. Every privileged change there is scheduled
 | Area | Stack |
 |---|---|
 | Contracts | [Foundry](https://getfoundry.sh) 1.9.0 (pinned in `contracts/.foundry-version`) with Soldeer (dependencies locked in `contracts/soldeer.lock`), Solidity 0.8.28, EVM `cancun`; Aave V4 pinned at `a3ef63ea6415d25237a9775bf66e76e9993561c2`, the Aave V3 Pool interfaces, Uniswap v3-core and v3-periphery, Aerodrome Slipstream, gho-core and OpenZeppelin Contracts pinned by commit. The workspace builds independently of the TypeScript code. |
-| Web app and backend | The stack of the [Avana sandbox](https://github.com/Avana-Labs/avana-sandbox): Next.js and React, wagmi + viem for wallets and typed transactions, Convex for the backend, Sign-In with Ethereum (EIP-4361) sessions |
+| Web app and backend | The stack of the [web app](web/): Next.js and React, wagmi + viem for wallets and typed transactions, Convex for the backend, Sign-In with Ethereum (EIP-4361) sessions |
 | Indexer | Ponder with Postgres |
 | Keeper | Reads chain state over RPC, sizes liquidations by simulating the deployed Spoke, submits through private builder RPCs |
 | TypeScript workspace | npm (`Q-027`); Node 22.18.0, pinned in `.nvmrc` and used by every workflow that installs Node |
@@ -161,7 +162,7 @@ To run one row of 5.1: `forge test --match-test 'TEST_057_'`. Because the fork b
 
 ### Symbolic execution
 
-Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input: 148 checks in 26 files. The recorded runs ([`audit/halmos/`](audit/halmos/README.md)) include checks that time out (LPPriceMath, SettlementMath, AvanaFirstLossReserve); a check without a pass counts as not run. In CI each check runs in a job of its own in the slow security tier, with loops unrolled to 16, every night, on every release tag and by hand, with up to 6 hours (GitHub's maximum job time): Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
+Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input: 148 checks in 26 files. The recorded runs ([`audit/halmos/`](audit/halmos/README.md)) include checks that time out (LPPriceMath, SettlementMath, AvanaFirstLossReserve); a check without a pass counts as not run. In CI each check runs in a job of its own in the slow security tier, with loops unrolled to 16, every night, on every release tag and by hand, in a job of 6 hours (GitHub's maximum job time) with a wall-clock budget of 5 hours: Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. A counterexample always fails. The checks that do not finish within GitHub's limit (23 were cancelled at 6 hours in run 43492412351) are listed, each with its budget and a reason, in [`contracts/security/halmos-bounds.json`](contracts/security/halmos-bounds.json); when the budget or a solver timeout ends a listed check without a counterexample, its job passes and reports it as "bounded, no violation found", which is not a proof: the outcome is printed, written to the job summary and to `out-security/halmos-outcome.json`, and raised as a warning on the run. A check not in the file that runs out of budget fails, so a new slow check is noticed; an entry whose check no longer exists fails the plan, and an entry whose check passes is reported as removable. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
 
 ```bash
 FOUNDRY_DYNAMIC_TEST_LINKING=false .venv/bin/halmos --root . --match-contract 'HalmosTest$' --loop 8 --solver-timeout-assertion 0

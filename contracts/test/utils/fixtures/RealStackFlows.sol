@@ -69,6 +69,17 @@ abstract contract RealStackFlows is FullStackMarkets {
         uint256 price8,
         bool usdStable
     ) internal {
+        _listPricedToken(token, label, price8, usdStable, IssuerProbe.None);
+    }
+
+    /// @notice `_listPricedToken` with the issuer probe `probe` recorded in the listing.
+    function _listPricedToken(
+        ClTestToken token,
+        string memory label,
+        uint256 price8,
+        bool usdStable,
+        IssuerProbe probe
+    ) internal {
         OracleFeedMock p = _feed(string.concat(label, "/USD"), price8);
         OracleFeedMock a = _feed(string.concat(label, "/USD alternate"), price8);
         OracleFeedMock st = _feed(string.concat(label, "/USD standby"), price8);
@@ -81,7 +92,7 @@ abstract contract RealStackFlows is FullStackMarkets {
         d.alternateRoute = _list(address(a));
         d.standbyRoute = _list(address(st));
         d.replacedSlot = RouteSlot.None;
-        d.issuerProbe = IssuerProbe.None;
+        d.issuerProbe = probe;
         SecondSource memory none;
         vm.startPrank(address(timelock));
         registry.listToken(address(token), d);
@@ -105,40 +116,53 @@ abstract contract RealStackFlows is FullStackMarkets {
             vm.label(address(weth), "WETH");
         }
         if (address(feedsOf[address(weth)][0]) == address(0)) _listPricedToken(weth, "WETH", WETH_PRICE, false);
+        (wethOracle, wethAssetId, wethReserveId) = _addDebtReserve(weth, "WETH / USD", FLOOR_ROUNDING_ALLOWANCE_WETH);
+    }
+
+    /// @notice The already listed `token` as a DebtOracle-priced debt reserve of the CDP Spoke, as `_addWethDebtReserve`
+    /// enables WETH: its real DebtOracle (`description`, `debtStressRiseBps = 500`), the Hub asset funded through the
+    /// Lend Spoke, the CDP reserve, its real First-Loss Reserve and credit line, the Aave V3 Pool stand-in lending it,
+    /// routes into it from every listed market, then `registry.enableDebtReserve` with `floorRounding`.
+    function _addDebtReserve(
+        ClTestToken token,
+        string memory description,
+        uint256 floorRounding
+    ) internal returns (IDebtOracle oracle, uint256 assetId, uint256 reserveId) {
         vm.prank(address(timelock));
-        store.tightenDebtStressRiseBps(address(weth), 500);
+        store.tightenDebtStressRiseBps(address(token), 500);
         IDebtOracle impl = IDebtOracle(deployCode("DebtOracle.sol:DebtOracle", abi.encode(address(timelock))));
         DebtOracleInitParams memory p = DebtOracleInitParams({
             timelock: address(timelock),
-            asset: address(weth),
+            asset: address(token),
             marketRegistry: address(registry),
             parameterStore: address(store),
-            description: "WETH / USD",
+            description: description,
             pokeMinGas: 600_000
         });
-        wethOracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
-        vm.label(address(wethOracle), "DebtOracle WETH");
-        (wethAssetId, wethReserveId) = _addDebtAsset(weth, 18, address(wethOracle));
-        address cs = _coverage(address(weth), wethAssetId);
+        oracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
+        vm.label(address(oracle), string.concat("DebtOracle ", token.symbol()));
+        uint8 dec = token.decimals();
+        (assetId, reserveId) = _addDebtAsset(token, dec, address(oracle));
+        address cs = _coverage(address(token), assetId);
         // Every active market needs its routes into the asset before the reserve is enabled (REQ-MREG-032).
         uint256 n = registry.marketCount();
         for (uint256 id = 1; id <= n; ++id) {
-            _routesInto(id, address(weth));
+            _routesInto(id, address(token));
         }
         _enableDebt(
             DebtReserveDef({
-                reserveId: wethReserveId,
-                asset: address(weth),
-                decimals: 18,
+                reserveId: reserveId,
+                asset: address(token),
+                decimals: dec,
                 fundingHub: aave.hub,
-                hubAssetId: wethAssetId,
-                priceSource: address(wethOracle),
+                hubAssetId: assetId,
+                priceSource: address(oracle),
                 fixedPrice: false,
                 firstLossReserve: cs,
                 crossHub: false,
                 approved: false
             }),
-            FLOOR_ROUNDING_ALLOWANCE_WETH
+            floorRounding
         );
     }
 
