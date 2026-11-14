@@ -3,8 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
+import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/DexHop.sol";
+import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
@@ -21,7 +25,7 @@ import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";
 import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
 import {RegistryRouteMock} from "../mocks/MarketRegistryMocks.sol";
-import {IClPool} from "./ClPoolFixture.sol";
+import {ClTestToken, IClFactory, IClPool} from "./ClPoolFixture.sol";
 import {
     CollHubSpokeConfig,
     CollSpokeDynamicReserveConfig,
@@ -33,6 +37,7 @@ import {FullStackFixture} from "./FullStackFixture.sol";
 import {LPOracleCLDeployer} from "./LPOracleCLFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 /// @title FullStackMarkets
 /// @notice Collateral markets of `FullStackFixture` listed and activated through the real MarketRegistry and
@@ -43,7 +48,10 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// slippage 250 / 30 bps, pool risk factor 4,000, `minPledgeUsd` $10, caps $1,000,000 / slice $100,000 / floor $1.00,
 /// Aave CF 3,000 (the expected `min(7,800, 7,500) × 40 %`), bonus 10,500, Hub add cap 2,000,000 vault tokens, and a
 /// primary and a backup route (`RegistryRouteMock`, a stand-in for the swap routes) from each pool token into each
-/// debt asset it is not.
+/// debt asset it is not. On the real stack (`_realStack()`) the market is bound by the real Uniswap v3 LPVault (listing
+/// prices $1.00 each, unit exponent 0, 6 unit decimals), positions are real NonfungiblePositionManager NFTs, and the
+/// routes are real `DexPathRoute`s, each one hop through its own pool of a second Uniswap v3 factory (the "route DEX",
+/// fee 0.05 % for the primary and 0.3 % for the backup, full range, `ROUTE_LIQUIDITY` deep, at $1.00 per token).
 abstract contract FullStackMarkets is FullStackFixture {
     uint32 internal constant POKE_FLOOR = 900_000;
     uint32 internal constant POKE_CEILING = 3_000_000;
@@ -53,6 +61,8 @@ abstract contract FullStackMarkets is FullStackFixture {
     uint256 internal constant DEADLINE_SLACK = 600;
     /// @dev 10,000 whole vault tokens, $20,000 at $2.00.
     uint128 internal constant UNITS = 10_000_000_000;
+    /// @dev Full-range liquidity of each route-DEX pool: about 10^18 raw units of each 6-decimal token (10^12 whole).
+    uint128 internal constant ROUTE_LIQUIDITY = 1e18;
 
     struct MarketInfo {
         IClPool pool;
@@ -63,6 +73,12 @@ abstract contract FullStackMarkets is FullStackFixture {
     }
 
     mapping(uint256 marketId => MarketInfo) internal mkt;
+    /// @dev Real stack: the route DEX's factory and, per (tokenIn, tokenOut), its primary and backup route and pool.
+    IClFactory internal routeFactory;
+    mapping(address tokenIn => mapping(address tokenOut => address[2] routes)) internal routeOf;
+    mapping(address tokenIn => mapping(address tokenOut => IClPool[2] pools)) internal routePoolOf;
+    /// @dev Real stack: every (tokenIn, tokenOut) pair with routes, in creation order.
+    address[2][] internal routePairs;
     uint256 internal keyNonce;
     uint256 internal opNonce;
 
@@ -77,7 +93,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         m.pool = p;
         m.oracle = _deployOracle(id, p);
         m.vaultToken = _deployVaultToken(id, p, address(m.oracle));
-        lpVault.prepare(id, _poolTokens(), _two(1e18, 1e18), VT_DECIMALS);
+        if (!_realStack()) lpVault.prepare(id, _poolTokens(), _two(1e18, 1e18), VT_DECIMALS);
         _listMarket(p, m.vaultToken, address(m.oracle));
         _storeListing(id);
         _aaveListing(m);
@@ -121,6 +137,8 @@ abstract contract FullStackMarkets is FullStackFixture {
         (d.hub, d.spoke, d.integrationId, d.pool) = (aave.hub, aave.cdpSpoke, V3, address(p));
         d.shape = PositionShape(ShapeKind.TickRange, lower, upper);
         (d.vaultToken, d.lpOracle) = (vt, oracle);
+        // The listing valuation prices of the two tokens, 8 decimals (read by the real LPVault's `bindMarket`).
+        d.integrationData = abi.encode(uint256(1e8), uint256(1e8));
         vm.prank(address(timelock));
         registry.listCollateralMarket(d);
     }
@@ -136,7 +154,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         ip.parameterStore = address(store);
         ip.marketRegistry = address(registry);
         ip.marketId = id;
-        ip.integration = address(lpVault);
+        ip.integration = integration;
         ip.isUsdStable = new bool[](2);
         (ip.isUsdStable[0], ip.isUsdStable[1]) = (true, true);
         ip.description = "USDC/USDT LP / USD";
@@ -256,6 +274,14 @@ abstract contract FullStackMarkets is FullStackFixture {
         for (uint256 i = 0; i < toks.length; ++i) {
             for (uint256 j = 0; j < debts.length; ++j) {
                 if (toks[i] == debts[j]) continue;
+                if (_realStack()) {
+                    address[2] memory r = _realRoutes(toks[i], debts[j]);
+                    vm.startPrank(address(timelock));
+                    registry.setRoute(id, toks[i], debts[j], 0, r[0]);
+                    registry.setRoute(id, toks[i], debts[j], 1, r[1]);
+                    vm.stopPrank();
+                    continue;
+                }
                 for (uint8 kind = 0; kind < 2; ++kind) {
                     address[] memory deps = _list(makeAddr(string.concat("dex ", vm.toString(kind))));
                     address route = address(new RegistryRouteMock(toks[i], debts[j], address(swap), deps));
@@ -264,6 +290,51 @@ abstract contract FullStackMarkets is FullStackFixture {
                 }
             }
         }
+    }
+
+    /// @dev Real stack: the primary and backup `DexPathRoute` from `tokenIn` into `tokenOut`, built on first use, each
+    /// over its own full-range route-DEX pool at $1.00 per token.
+    function _realRoutes(
+        address tokenIn,
+        address tokenOut
+    ) internal returns (address[2] memory r) {
+        r = routeOf[tokenIn][tokenOut];
+        if (r[0] != address(0)) return r;
+        if (address(routeFactory) == address(0)) {
+            routeFactory = IClFactory(deployCode("out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json"));
+            vm.label(address(routeFactory), "RouteDex.UniswapV3Factory");
+        }
+        (ClTestToken t0, ClTestToken t1) = tokenIn < tokenOut
+            ? (ClTestToken(tokenIn), ClTestToken(tokenOut))
+            : (ClTestToken(tokenOut), ClTestToken(tokenIn));
+        uint24[2] memory fees = [uint24(500), uint24(3000)];
+        for (uint256 k = 0; k < 2; ++k) {
+            IClPool p = IClPool(routeFactory.createPool(address(t0), address(t1), fees[k]));
+            p.initialize(ClPriceMath.oracleSqrtPrice(1e8, 1e8, t0.decimals(), t1.decimals()));
+            t0.mint(address(actor), type(uint128).max);
+            t1.mint(address(actor), type(uint128).max);
+            (int24 lower, int24 upper) = _fullRange(p);
+            actor.mint(p, lower, upper, ROUTE_LIQUIDITY);
+            vm.label(address(p), string.concat("RouteDex pool ", vm.toString(uint256(fees[k]))));
+            DexHop[] memory hops = new DexHop[](1);
+            hops[0] = DexHop({kind: HopKind.ConcentratedLiquidity, pool: address(p), tokenOut: tokenOut, i: 0, j: 0});
+            RouteConfig memory c = RouteConfig({
+                lpVaultSwap: lpVaultSwap,
+                lock: address(lock),
+                aaveAdapter: adapter,
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                tokenClassMask: 1 << 1,
+                uniswapV3Factory: address(routeFactory),
+                slipstreamFactory: address(0),
+                curveFactory: address(0),
+                curveLegacyPools: new address[](0)
+            });
+            r[k] = deployCode("DexPathRoute.sol:DexPathRoute", abi.encode(c, hops));
+            routePoolOf[tokenIn][tokenOut][k] = p;
+        }
+        routeOf[tokenIn][tokenOut] = r;
+        routePairs.push([tokenIn, tokenOut]);
     }
 
     // ─── Flows through the Adapter ───
@@ -288,10 +359,60 @@ abstract contract FullStackMarkets is FullStackFixture {
         uint256 marketId,
         uint128 units
     ) internal returns (bytes32 key, address proxy) {
-        key = _newKey();
-        lpVault.mintPosition(key, wallet, marketId, units);
+        key = _mintPosition(wallet, marketId, units);
         vm.prank(wallet);
         (proxy,,) = adapterC.pledge(marketId, _ref(key), _deadline());
+    }
+
+    /// @dev A position of `units` in `marketId` owned by `wallet`, approved to the LPVault. On the real stack: a
+    /// NonfungiblePositionManager NFT on the market's pool and range, minted by the wallet from about `units` raw units of
+    /// each token (its liquidity, the units, is read back; full range at $1.00 gives `units` within a few units).
+    function _mintPosition(
+        address wallet,
+        uint256 marketId,
+        uint128 units
+    ) internal returns (bytes32 key) {
+        if (!_realStack()) {
+            key = _newKey();
+            lpVault.mintPosition(key, wallet, marketId, units);
+            return key;
+        }
+        IClPool p = mkt[marketId].pool;
+        (int24 lower, int24 upper) = _fullRange(p);
+        (ClTestToken t0, ClTestToken t1) = (ClTestToken(p.token0()), ClTestToken(p.token1()));
+        // One raw unit of each token per unit of liquidity, plus a margin for the pool's rounding up.
+        uint256 amt = uint256(units) + uint256(units) / 1e4 + 10;
+        t0.mint(wallet, amt);
+        t1.mint(wallet, amt);
+        vm.startPrank(wallet);
+        t0.approve(address(nfpm), amt);
+        t1.approve(address(nfpm), amt);
+        (uint256 tokenId,,,) = nfpm.mint(
+            INonfungiblePositionManager.MintParams({
+                token0: address(t0),
+                token1: address(t1),
+                fee: _fee(p),
+                tickLower: lower,
+                tickUpper: upper,
+                amount0Desired: amt,
+                amount1Desired: amt,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: wallet,
+                deadline: block.timestamp
+            })
+        );
+        IERC721(address(nfpm)).approve(integration, tokenId);
+        vm.stopPrank();
+        key = bytes32(tokenId);
+    }
+
+    function _fee(
+        IClPool p
+    ) internal view returns (uint24 fee) {
+        (bool ok, bytes memory ret) = address(p).staticcall(abi.encodeWithSignature("fee()"));
+        require(ok, "pool fee");
+        fee = abi.decode(ret, (uint24));
     }
 
     function _borrowAs(
