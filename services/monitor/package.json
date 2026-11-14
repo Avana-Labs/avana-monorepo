@@ -1,0 +1,27 @@
+{
+  "name": "@avana/monitor",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Avana's monitoring service: the signals M-01 to M-29 at warn and page levels, each with its responder and playbook, confirmed on a second RPC provider before paging, logged with its block.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@avana/protocol": "file:../../packages/protocol",
+    "@avana/services-common": "file:../common",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}
