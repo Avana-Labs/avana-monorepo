@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
@@ -116,6 +117,27 @@ contract LPVaultSwapRealOraclesIntegrationTest is LPVaultSwapUnitBase {
         assertTrue(read, "LPVaultSwap read the DebtOracle's state");
         assertLt(iPoke, iRead, "poke before the read");
         assertTrue(acc.wroteStorage(o, iPoke, iRead), "the poke stored state before the read");
+    }
+
+    /// @notice LPVaultSwap reads the account's health factor only after it has poked the market's LPOracle and the
+    /// repaid reserve's DebtOracle, so `NotLiquidatable`, the grace check and the bonus use the health factor Aave
+    /// applies in `liquidationCall` (a poke can move the price Aave reads in the same block,
+    /// `LPOraclePokeInvarianceUnitTest`). Regression for the HF read that preceded the pokes.
+    // TEST-049 verifies: REQ-SWAP-006, REQ-SWAP-008, REQ-SWAP-009, REQ-SWAP-091, Q-199
+    function test_TEST_049_readsTheHealthFactorAfterBothPokes() public {
+        _step(60);
+        _refresh();
+        vm.startStateDiffRecording();
+        LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
+        Vm.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();
+        assertGt(r.unitsSeized, 0, "the liquidation settled");
+        (bool lpPoked, uint256 iLp) = acc.firstCall(address(clOracle), ILPOracle.poke.selector, address(lvs), 0);
+        (bool debtPoked, uint256 iDebt) = acc.firstCall(address(debtOracle), IDebtOracle.poke.selector, address(lvs), 0);
+        (bool read, uint256 iHf) =
+            acc.firstCall(aave.cdpSpoke, IAaveV4Spoke.getUserAccountData.selector, address(lvs), 0);
+        assertTrue(lpPoked && debtPoked && read, "both pokes and the HF read happened");
+        assertGt(iHf, iLp, "HF read after the LPOracle poke");
+        assertGt(iHf, iDebt, "HF read after the DebtOracle poke");
     }
 
     /// @notice USD-band breach with both routes fresh and agreeing (USDC and USDT at $0.89, below the 0.90 band): the

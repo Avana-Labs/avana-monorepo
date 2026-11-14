@@ -98,7 +98,10 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         ILock(_LOCK).release();
     }
 
-    /// @dev Amounts, market, proxy, debt reserve, HF, Hub shares and the two price rules with grace.
+    /// @dev Amounts, market, proxy, debt reserve, Hub shares, the two price rules, then HF and grace. The health factor
+    /// is read after both pokes: a poke can move the price Aave reads in the same block (the LPOracle's token-decimals
+    /// check runs only in `poke()`), and the HF checked here, the grace check and the bonus `_seize` reads must be the
+    /// one Aave applies in `liquidationCall`.
     /// @custom:spec REQ-SWAP-004, REQ-SWAP-005, REQ-SWAP-006, REQ-SWAP-007, REQ-SWAP-008, REQ-SWAP-009, REQ-SWAP-087, REQ-SWAP-091
     function _entryChecks(
         LiquidationParams calldata p
@@ -110,11 +113,11 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         if (p.minAmounts.length != 0 && p.minAmounts.length != c.m.tokens.length) revert InvalidAmount();
         if (!IVaultToken(c.m.vaultToken).isValidProxy(p.proxy)) revert UnknownProxy();
         c.d = _loadDebtReserve(c.m.spoke, p.debtReserveId);
-        c.hf = IAaveV4Spoke(c.m.spoke).getUserAccountData(p.proxy).healthFactor;
-        if (c.hf >= _HF_ONE) revert NotLiquidatable();
         _requireSharesEqualAssets(c.m.hub, c.m.hubAssetId);
         bool inGrace = _checkCollateralPrice(c.m.lpOracle);
         _checkDebtPrice(c.d, p.debtReserveId);
+        c.hf = IAaveV4Spoke(c.m.spoke).getUserAccountData(p.proxy).healthFactor;
+        if (c.hf >= _HF_ONE) revert NotLiquidatable();
         if (inGrace && c.hf >= IParameterStore(_PARAMETER_STORE).graceHealthFactor()) revert GraceHealthFactor();
     }
 
