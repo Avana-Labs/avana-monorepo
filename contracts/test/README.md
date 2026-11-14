@@ -168,6 +168,8 @@ Safety handlers bound inputs but may hit reverting paths; the suites keep `fail_
 function invariant_TEST_099_repayLive() public view { assertFalse(ghosts.livenessViolation(), ghosts.violationReason()); }
 ```
 
+A campaign that passes because every call reverted or returned early proves nothing, so the steered handlers (`CollateralizationHandler`, `LPVaultSwapHandler`) revert `Skipped()` when a call finds nothing to act on: the campaign's metrics (`show_metrics`, on in the `invariant` profile) then count only real work as success. `handlers/HandlerReach.sol` replays fixed-seed sequences of a suite's targeted actions from its set-up state and asserts, in the suite's `test_TEST_082_handlerReach`, a floor on each action's success rate and on the share of runs that reach each target state (a liquidation, a kept seizure, a pending settlement, a shortfall top-up); `forge test --match-test handlerReach -vv` prints the table.
+
 ### 4.2 Ghost variables
 
 `GhostStore.sol` is written only by handlers and read by invariant functions:
