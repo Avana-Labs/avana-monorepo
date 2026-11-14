@@ -282,7 +282,7 @@ function injectContractAddressStats<T extends { about: AssetDetail["about"] | Po
 function applyRiskParametersToAbout<T extends { about: AssetDetail["about"] | PoolDetail["about"] }>(
   detail: T,
   riskParameters:
-    { parameters: Array<{ id: string; label: string; value: string; description?: string }> } | null | undefined,
+    { parameters: ReadonlyArray<{ id: string; label: string; value: string; description?: string }> } | null | undefined,
 ): T {
   if (!riskParameters?.parameters.length) return detail
   return {
@@ -348,7 +348,7 @@ async function getPoolDetailFromConvexUncached(id: string): Promise<PoolDetail |
       risk: convexRisk ?? EMPTY_RISK_ASSESSMENT,
       borrowableAssets: mapConvexBorrowables(poolBorrowables),
       // Never fabricate liquidation KPIs: without rows the card renders its empty state.
-      liquidationRisk: liquidationRisk?.stats?.length ? liquidationRisk.stats : [],
+      liquidationRisk: liquidationRisk?.stats?.length ? [...liquidationRisk.stats] : [],
     },
     content,
     { clearWhenMissing: true },

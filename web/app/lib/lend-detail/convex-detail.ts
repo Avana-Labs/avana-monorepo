@@ -60,7 +60,7 @@ function irmProtocolParameters(irm: {
 function applyRiskParametersToAbout(
   detail: LendMarketDetail,
   riskParameters:
-    { parameters: Array<{ id: string; label: string; value: string; description?: string }> } | null | undefined,
+    { parameters: ReadonlyArray<{ id: string; label: string; value: string; description?: string }> } | null | undefined,
 ): LendMarketDetail {
   if (!riskParameters?.parameters.length) return detail
   return {

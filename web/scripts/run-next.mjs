@@ -2,7 +2,7 @@ import { execSync, spawn } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import process from "node:process"
-import crypto from "node:crypto"
+import { createRequire } from "node:module"
 import nextEnv from "@next/env"
 
 const root = process.cwd()
@@ -16,25 +16,6 @@ if (!supportedModes.has(mode)) {
 
 // Load the same local configuration Next will use before checking its target.
 nextEnv.loadEnvConfig(root, mode === "dev", { info() {}, error() {} })
-if (mode === "dev") {
-  if (process.env.AVANA_DATA_SOURCE === "mock") {
-    for (const name of [
-      "CONVEX_DEPLOY_KEY",
-      "NEXT_PUBLIC_CONVEX_URL",
-      "NEXT_PUBLIC_CONVEX_SITE_URL",
-      "CONVEX_URL",
-      "CONVEX_SEED_SECRET",
-      "CONVEX_RATE_LIMIT_SECRET",
-      "AVANA_E2E_STAGING",
-    ])
-      process.env[name] = ""
-    process.env.SIWE_JWT_PRIVATE_JWK = JSON.stringify({
-      ...crypto.generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ format: "jwk" }),
-      kid: "local-only",
-    })
-    process.env.NEXT_PUBLIC_SIWE_ISSUER = `http://127.0.0.1:${process.env.PORT || 3000}`
-  }
-}
 if (
   (process.env.VERCEL_ENV === "production" || process.env.AVANA_DEPLOYMENT_ENV === "production") &&
   ["AVANA_E2E_SESSION_SECRET", "AVANA_E2E_PRIVATE_JWK", "AVANA_E2E_STAGING"].some((key) => process.env[key])
@@ -96,7 +77,8 @@ const modeConfig = isCI
     }
 
 const config = modeConfig[mode]
-const nextBin = path.join(root, "node_modules", "next", "dist", "bin", "next")
+// next is hoisted to the monorepo root by the npm workspace; resolve it from here.
+const nextBin = path.join(path.dirname(createRequire(import.meta.url).resolve("next/package.json")), "dist", "bin", "next")
 
 function processExists(pid) {
   if (!pid || typeof pid !== "number") {

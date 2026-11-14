@@ -7,7 +7,7 @@ import { ArrowUp, Check, ChevronDown, Copy, Square, ThumbsDown, ThumbsUp } from 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { ComponentType, MouseEvent as ReactMouseEvent } from "react"
 import { Code2, PieChart, Sparkles, SunMedium, TrendingUp } from "@/app/components/icons"
-import { ASK_AI_CONFIG } from "@/app/lib/ask-ai/config"
+import { ASK_AI_CONFIG } from "@/convex/lib/askAI/config"
 import { Chart } from "@/components/elements/chart"
 import { ErrorState } from "@/components/elements/error-state"
 import { FeedbackDialog } from "@/components/elements/feedback-dialog"
@@ -25,15 +25,15 @@ import { RetrievalChunks, type RetrievalChunk } from "@/components/elements/retr
 import { Sources, type Source } from "@/components/elements/sources"
 import { AskAIMarkdown } from "./ask-ai-markdown"
 import { AskAIAaveChart } from "./ask-ai-aave-chart"
-import type { AaveApyVisual } from "@/app/lib/ask-ai/aave-mcp"
-import { sanitizeAskAISources } from "@/app/lib/ask-ai/sources"
+import type { AaveApyVisual } from "@/convex/lib/askAI/aaveMcp"
+import { sanitizeAskAISources } from "@/convex/lib/askAI/sources"
 import { api } from "@/convex/_generated/api"
-import type { AskAIUsage } from "@/app/lib/ask-ai/chat-protocol"
+import type { AskAIUsage } from "@/convex/lib/askAI/chatProtocol"
 import { formatAskAIMessageTimestamp } from "@/app/lib/ask-ai/message-timestamp"
 import { formatAskAIGreeting } from "@/app/lib/ask-ai/greeting"
 import { AskAIFinancialResultCard, type AskAIFinancialResult } from "./ask-ai-financial-result-card"
 import { AskAiRunCards } from "./ask-ai-run-cards"
-import type { AskAiRun } from "@/app/lib/ask-ai/mode-run"
+import type { AskAiRun } from "@/convex/lib/askAI/modeRun"
 
 const FEEDBACK_REASONS = ["Incorrect", "Outdated data", "Not helpful", "Missing context", "Unsafe", "Other"]
 

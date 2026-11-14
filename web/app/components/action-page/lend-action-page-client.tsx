@@ -137,7 +137,7 @@ export function LendActionPageClient({
   const [isPending, setIsPending] = useState(false)
 
   const market = useMemo(
-    () => (marketId ? (session.state.markets[marketId] ?? getLendMarketById(marketId)) : null),
+    () => (marketId ? (session.state.markets[marketId] ?? null) : null),
     [marketId, session.state.markets],
   )
   const assetPriceUsd = market ? (priceFor(market.asset.symbol) ?? market.assetPriceUsd) : 0

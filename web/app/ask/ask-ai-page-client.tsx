@@ -13,7 +13,7 @@ import { useUIMessages } from "@convex-dev/agent/react"
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react"
 import type { Id } from "@/convex/_generated/dataModel"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { AskAIUsage } from "@/app/lib/ask-ai/chat-protocol"
+import type { AskAIUsage } from "@/convex/lib/askAI/chatProtocol"
 import { api } from "@/convex/_generated/api"
 import { useLiveSiweToken } from "@/app/lib/siwe/use-siwe-auth"
 import {
@@ -27,9 +27,9 @@ import { AskAILoadingBody } from "./components/ask-ai-skeleton"
 import { buildAaveCard } from "./components/ask-ai-aave-card"
 import type { AskAIFinancialResult } from "./components/ask-ai-financial-result-card"
 import { AskAIMessagePartsSubscriber, type AskAIMessagePartsRow } from "./message-parts-subscriber"
-import { askAiModeRunsEnabled } from "@/app/lib/ask-ai/config"
-import { shouldBuildModeRunForTurn, type AskAiRun } from "@/app/lib/ask-ai/mode-run"
-import { portfolioCardFor } from "@/app/lib/ask-ai/card-policy"
+import { askAiModeRunsEnabled } from "@/convex/lib/askAI/config"
+import { shouldBuildModeRunForTurn, type AskAiRun } from "@/convex/lib/askAI/modeRun"
+import { portfolioCardFor } from "@/convex/lib/askAI/cardPolicy"
 
 type PendingTurn = {
   id: string

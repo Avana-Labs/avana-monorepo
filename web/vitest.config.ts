@@ -9,7 +9,6 @@ const sharedExclude = [
   "**/__tests__/**/stress-fixtures.ts",
   "**/__tests__/**/fixtures.ts",
   "**/__tests__/**/oracle.ts",
-  "**/__tests__/**/sandbox-adapter-contract.ts",
 ]
 
 // `.test.ts` specs that genuinely need a DOM (localStorage / storage events,
@@ -17,21 +16,18 @@ const sharedExclude = [
 // `node` environment; only `.tsx` render tests and these files pay for jsdom.
 // If a node-project spec ever needs the DOM, it fails loudly — move it here.
 const DOM_TS_TESTS = [
-  "app/lib/borrow-system/__tests__/storage.test.ts",
   "app/lib/currency/__tests__/exchange-rates.test.ts",
   "app/lib/siwe/__tests__/auth-store-cross-tab.test.ts",
-  "app/lib/swap-system/__tests__/swap-storage-occ.p2-05.test.ts",
   "app/lib/ui/__tests__/use-has-mounted.test.ts",
   "app/lib/web3/__tests__/schedule-idle.test.ts",
-  "convex/__tests__/prices-freshness.test.ts",
-  "convex/onboarding.test.ts",
-  "convex/sandbox-umbrella.test.ts",
 ]
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // The Convex API and the Ask AI library live in services/convex (same mapping as tsconfig `paths`).
+      "@/convex": path.resolve(__dirname, "../services/convex/convex"),
       "@": path.resolve(__dirname, "."),
       // Next.js `server-only` guard isn't resolvable under vitest; stub it.
       "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
@@ -47,7 +43,7 @@ export default defineConfig({
           name: "node",
           environment: "node",
           setupFiles: ["./vitest.setup.ts"],
-          include: ["app/**/__tests__/**/*.{test,spec}.ts", "tests/unit/**/*.test.ts", "convex/**/*.test.ts"],
+          include: ["app/**/__tests__/**/*.{test,spec}.ts", "tests/unit/**/*.test.ts"],
           exclude: [...sharedExclude, ...DOM_TS_TESTS],
         },
       },

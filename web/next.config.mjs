@@ -1,3 +1,4 @@
+import path from "node:path"
 import process from "node:process"
 import bundleAnalyzer from "@next/bundle-analyzer"
 import { withSentryConfig } from "@sentry/nextjs"
@@ -87,7 +88,7 @@ const nextConfig = {
   async rewrites() {
     return [
       // SIWE → JWT bridge: Convex fetches the OIDC discovery doc + JWKS at these
-      // well-known paths to verify the sandbox JWTs. Served by /api route handlers.
+      // well-known paths to verify the app's JWTs. Served by /api route handlers.
       { source: "/.well-known/openid-configuration", destination: "/api/siwe/openid-configuration" },
       { source: "/.well-known/jwks.json", destination: "/api/siwe/jwks" },
     ]
@@ -114,8 +115,9 @@ const nextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
+  // The monorepo root: web/ imports the Convex API and Ask AI library from services/convex.
   turbopack: {
-    root: process.cwd(),
+    root: path.resolve(process.cwd(), ".."),
   },
 }
 

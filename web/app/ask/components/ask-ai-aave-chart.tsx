@@ -1,7 +1,7 @@
 "use client"
 
 import { Chart } from "@/components/elements/chart"
-import type { AaveApyVisual } from "@/app/lib/ask-ai/aave-mcp"
+import type { AaveApyVisual } from "@/convex/lib/askAI/aaveMcp"
 
 export function AskAIAaveChart({ visual }: { visual: AaveApyVisual }) {
   const dates = visual.timestamps

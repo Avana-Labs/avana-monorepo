@@ -62,10 +62,10 @@ type FaqEntry = { question: string; answer: string }
 /** Convex editorial content shape (`getContent`): About fields + FAQs + the rich changelog. */
 type DetailContentOverlay = {
   description: string
-  stats: AboutContent["stats"]
-  history: AboutContent["history"]
-  faqs: FaqEntry[]
-  changelog?: ChangelogEntry[]
+  stats: ReadonlyArray<AboutContent["stats"][number]>
+  history: ReadonlyArray<AboutContent["history"][number]>
+  faqs: ReadonlyArray<FaqEntry>
+  changelog?: ReadonlyArray<ChangelogEntry>
 }
 
 type DetailWithContent = {
@@ -109,15 +109,15 @@ export function applyDetailContentOverlay<T extends DetailWithContent>(
     about: {
       ...detail.about,
       description: content.description,
-      stats: content.stats,
-      history: content.history,
+      stats: [...content.stats],
+      history: [...content.history],
       // Prefer the Convex-seeded governance changelog when present; keep any base
       // parameters (applyRiskParametersToAbout, which runs after, refreshes them).
       governanceParameters:
         changelog && changelog.length > 0
-          ? { parameters: detail.about.governanceParameters?.parameters ?? [], changelog }
+          ? { parameters: detail.about.governanceParameters?.parameters ?? [], changelog: [...changelog] }
           : detail.about.governanceParameters,
     },
-    faqs: content.faqs,
+    faqs: [...content.faqs],
   } as T
 }

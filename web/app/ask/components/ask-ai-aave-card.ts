@@ -1,4 +1,4 @@
-import { aaveNumber, aaveObject, aavePlainText, aaveRows, type AaveObject } from "@/app/lib/ask-ai/aave-mcp"
+import { aaveNumber, aaveObject, aavePlainText, aaveRows, type AaveObject } from "@/convex/lib/askAI/aaveMcp"
 import type { AskAIFinancialResult } from "./ask-ai-financial-result-card"
 
 const number = (value: unknown, suffix = "") => {

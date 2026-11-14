@@ -2,7 +2,7 @@
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { safeAskAIUrl } from "@/app/lib/ask-ai/sources"
+import { safeAskAIUrl } from "@/convex/lib/askAI/sources"
 
 /** Streamed prose is also an untrusted surface. Links belong in Sources; only
  * official protocol/app destinations are actionable inline. Never load images.

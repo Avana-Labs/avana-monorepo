@@ -403,4 +403,345 @@ export default defineSchema({
     blockNumber: dec,
     updatedAt: v.number(),
   }).index("by_chain", ["chainId"]),
+
+  // ---- App features (moved from the web app's former backend): token prices for tokens outside the protocol,
+  // FX, support requests, wallet preferences, the SIWE route rate limiter and Ask AI. ----
+
+  /**
+   * Real token spot prices — the ONE place the sandbox reads live market data
+   * (`convex/prices.ts refreshPrices`, from DefiLlama). Supply/borrow/TVL stay
+   * simulated. One row per lowercase base symbol.
+   */
+  tokenPrices: defineTable({
+    /** Lowercase base symbol, e.g. "usdc". Matches SpokeBorrowableRecord.baseAssetId. */
+    symbol: v.string(),
+    /** DefiLlama coin id (chain:address or coingecko:id). */
+    llamaId: v.string(),
+    /**
+     * Prefer (chainId, contractAddress) over symbol for identity — two tokens on
+     * different chains can share a symbol. Absent for coingecko-id quotes (e.g. native
+     * ETH), which carry no contract.
+     */
+    chainId: v.optional(v.number()),
+    contractAddress: v.optional(v.string()),
+    priceUsd: v.number(),
+    decimals: v.optional(v.number()),
+    /** DefiLlama price confidence (0..1). */
+    confidence: v.optional(v.number()),
+    /**
+     * Freshness lineage: sourceUpdatedAt = provider's own quote time, fetchedAt = when the
+     * response arrived, snapshotAt = when the row was written. A failed refresh writes
+     * nothing, so none of these ever advance on stale data. `status` is the classification
+     * at write time; the client re-derives live age as well.
+     */
+    sourceUpdatedAt: v.optional(v.number()),
+    fetchedAt: v.optional(v.number()),
+    snapshotAt: v.optional(v.number()),
+    status: v.optional(v.union(v.literal("fresh"), v.literal("stale"), v.literal("invalid"))),
+    /**
+     * "defillama" = hourly live spot; "baseline" = seeded snapshot used until the first
+     * live refresh. A live upsert always overwrites a baseline on the same symbol.
+     */
+    source: v.string(),
+    /**
+     * 24h price change as a 1e18 wad (bigint stored as a string). Absent when DefiLlama
+     * omits percentChange1d, and the UI then suppresses the delta arrow.
+     */
+    priceChange24hWad: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_symbol", ["symbol"])
+    .index("by_chain_contract", ["chainId", "contractAddress"]),
+
+  /**
+   * Last successful oracle/FX provider check. Written on every successful refresh even
+   * when the quotes are unchanged, so freshness is observable without rewriting quote
+   * rows — which would invalidate every price subscriber.
+   */
+  oracleProviderHealth: defineTable({
+    kind: v.union(v.literal("prices"), v.literal("fx")),
+    checkedAt: v.number(),
+    sourceUpdatedAt: v.optional(v.number()),
+    quoteCount: v.number(),
+    written: v.number(),
+    unchanged: v.number(),
+  }).index("by_kind", ["kind"]),
+
+  /**
+   * Daily closing token prices, one row per (symbol, UTC day). Deliberately SEPARATE from
+   * `tokenPrices`: the UI reads `tokenPrices`, charts read this, so an old value can never
+   * be mistaken for the live price.
+   */
+  tokenPricesHistory: defineTable({
+    symbol: v.string(),
+    day: v.string(),
+    priceUsd: v.number(),
+    updatedAt: v.number(),
+  }).index("by_symbol_day", ["symbol", "day"]),
+
+  /**
+   * Fiat FX rates, refreshed server-side from open.er-api.com so conversion never depends
+   * on client polling. `usdPerUnit` = units of the currency per 1 USD (USD row is always 1).
+   * Same freshness lineage as tokenPrices; a failed refresh writes nothing.
+   */
+  fxRates: defineTable({
+    currency: v.string(),
+    usdPerUnit: v.number(),
+    source: v.string(),
+    status: v.optional(v.union(v.literal("fresh"), v.literal("stale"), v.literal("invalid"))),
+    sourceUpdatedAt: v.optional(v.number()),
+    fetchedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_currency", ["currency"]),
+
+  /**
+   * Support Center submissions. Wallet/email are optional because the sender may not be
+   * signed in; status starts at "new".
+   */
+  supportRequests: defineTable({
+    wallet: v.optional(v.string()),
+    userEmail: v.optional(v.string()),
+    category: v.string(),
+    categoryLabel: v.optional(v.string()),
+    topic: v.string(),
+    topicLabel: v.optional(v.string()),
+    message: v.string(),
+    status: v.union(v.literal("new"), v.literal("in_progress"), v.literal("resolved")),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_wallet", ["wallet"])
+    .index("by_wallet_created", ["wallet", "createdAt"])
+    .index("by_status", ["status"])
+    .index("by_created_at", ["createdAt"]),
+
+  /** Permanent wallet identity and display preferences, independent of Sandbox onboarding. */
+  walletProfiles: defineTable({
+    /** Lowercased, derived from the authenticated identity. */
+    wallet: v.string(),
+    /** Privy user id or SIWE-JWT subject. */
+    authSubject: v.optional(v.string()),
+    preferences: v.optional(
+      v.object({
+        theme: v.optional(v.string()),
+        language: v.optional(v.string()),
+        currency: v.optional(v.string()),
+        showDollarAmounts: v.optional(v.boolean()),
+        name: v.optional(v.string()),
+        dexSources: v.optional(v.array(v.string())),
+      }),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_wallet", ["wallet"])
+    .index("by_authSubject", ["authSubject"]),
+
+  /**
+   * Shared per-key rate-limit buckets for the Next API route guards (SIWE nonce/verify/
+   * dev-token). Must live here, not in process memory, so a horizontally-scaled deploy
+   * enforces ONE limit across instances. `resetAt` = epoch ms the window ends.
+   */
+  rateLimitBuckets: defineTable({
+    key: v.string(),
+    count: v.number(),
+    resetAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /** Owner mapping and lifecycle metadata for Convex Agent Ask AI threads. */
+  askAIThreads: defineTable({
+    threadId: v.string(),
+    ownerSubject: v.string(),
+    title: v.string(),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_thread", ["threadId"])
+    .index("by_owner_status_updated", ["ownerSubject", "status", "updatedAt"]),
+
+  /** Rich assistant-ui parts persisted alongside the Agent message text. */
+  askAIMessageParts: defineTable({
+    threadId: v.string(),
+    messageId: v.string(),
+    parts: v.any(),
+    createdAt: v.number(),
+  })
+    .index("by_thread", ["threadId"])
+    .index("by_message", ["messageId"]),
+
+  askAIBudgetReservations: defineTable({
+    ownerSubject: v.string(),
+    tokens: v.number(),
+    settled: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_owner_created", ["ownerSubject", "createdAt"]),
+
+  /** Bounded hourly token totals used by Ask AI quota reads instead of scanning every row. */
+  askAICostBuckets: defineTable({
+    ownerSubject: v.string(),
+    bucketStart: v.number(),
+    usedTokens: v.number(),
+    reservedTokens: v.number(),
+    updatedAt: v.number(),
+  }).index("by_owner_bucket", ["ownerSubject", "bucketStart"]),
+
+  /** Marks that legacy usage/reservations were folded into the bounded cost buckets. */
+  askAIQuotaState: defineTable({
+    ownerSubject: v.string(),
+    initializedAt: v.number(),
+  }).index("by_owner", ["ownerSubject"]),
+
+  askAITurns: defineTable({
+    capacityAttempts: v.optional(v.number()),
+    nextCapacityRetryAt: v.optional(v.number()),
+    budgetReservationId: v.optional(v.id("askAIBudgetReservations")),
+    timeoutOutcome: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("completed"),
+        v.literal("failed"),
+        v.literal("timed_out"),
+        v.literal("cancelled"),
+      ),
+    ),
+    threadId: v.string(),
+    ownerSubject: v.string(),
+    clientRequestId: v.optional(v.string()),
+    wallet: v.optional(v.string()),
+    promptMessageId: v.string(),
+    prompt: v.string(),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("running"),
+      v.literal("failed"),
+      v.literal("cancelled"),
+      v.literal("complete"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner_request", ["ownerSubject", "clientRequestId"])
+    .index("by_prompt_message", ["promptMessageId"])
+    .index("by_thread_status_created", ["threadId", "status", "createdAt"])
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_owner_status_created", ["ownerSubject", "status", "createdAt"]),
+
+  askAIFeedback: defineTable({
+    ownerSubject: v.string(),
+    threadId: v.string(),
+    messageId: v.string(),
+    categories: v.array(v.string()),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner_message", ["ownerSubject", "messageId"])
+    .index("by_thread", ["threadId"])
+    .index("by_created_at", ["createdAt"]),
+
+  askAIUsage: defineTable({
+    ownerSubject: v.string(),
+    threadId: v.string(),
+    messageId: v.string(),
+    model: v.string(),
+    provider: v.string(),
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    totalTokens: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_owner_created", ["ownerSubject", "createdAt"])
+    .index("by_message", ["messageId"]),
+
+  askAITelemetry: defineTable({
+    attemptId: v.optional(v.string()),
+    timeoutOutcome: v.optional(
+      v.union(v.literal("completed"), v.literal("failed"), v.literal("timed_out"), v.literal("cancelled")),
+    ),
+    ownerSubject: v.string(),
+    threadId: v.string(),
+    promptMessageId: v.string(),
+    status: v.union(v.literal("complete"), v.literal("failed"), v.literal("cancelled")),
+    model: v.optional(v.string()),
+    provider: v.optional(v.string()),
+    durationMs: v.number(),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    totalTokens: v.optional(v.number()),
+    cacheReadTokens: v.optional(v.number()),
+    cacheWriteTokens: v.optional(v.number()),
+    serviceTier: v.optional(v.string()),
+    tools: v.array(v.string()),
+    routeIntent: v.optional(v.string()),
+    toolBudget: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_attempt", ["attemptId"])
+    .index("by_created", ["createdAt"])
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_owner_created", ["ownerSubject", "createdAt"]),
+
+  /** Normalized cache populated only by external market-provider ingestion. */
+  askAIMarketSnapshots: defineTable({
+    // Only coingecko/defillama/aave are writable by current ingestion, but the legacy
+    // literals must stay until prod rows are cleaned up — narrowing first makes Convex
+    // reject the existing documents during schema validation.
+    source: v.union(
+      v.literal("coingecko"),
+      v.literal("defillama"),
+      v.literal("uniswap"),
+      v.literal("curve"),
+      v.literal("balancer"),
+      v.literal("aave"),
+    ),
+    kind: v.union(v.literal("token_price"), v.literal("dex_pool"), v.literal("lending_market")),
+    key: v.string(),
+    payload: v.any(),
+    sourceUpdatedAt: v.optional(v.number()),
+    fetchedAt: v.number(),
+    contentHash: v.optional(v.string()),
+  })
+    .index("by_source_kind_key", ["source", "kind", "key"])
+    .index("by_kind_key", ["kind", "key"])
+    .index("by_fetched_at", ["fetchedAt"]),
+
+  askAIMarketProviderRuns: defineTable({
+    // Historical run rows use the same legacy source set as market snapshots.
+    source: v.union(
+      v.literal("coingecko"),
+      v.literal("defillama"),
+      v.literal("uniswap"),
+      v.literal("curve"),
+      v.literal("balancer"),
+      v.literal("aave"),
+    ),
+    status: v.union(v.literal("success"), v.literal("failed")),
+    records: v.number(),
+    error: v.optional(v.string()),
+    startedAt: v.number(),
+    completedAt: v.number(),
+  })
+    .index("by_source_completed", ["source", "completedAt"])
+    .index("by_status_completed", ["status", "completedAt"]),
+
+  /** Bounded latest ingestion health; one document per active market provider. */
+  askAIMarketProviderState: defineTable({
+    source: v.union(v.literal("defillama"), v.literal("aave")),
+    status: v.union(v.literal("success"), v.literal("failed")),
+    records: v.number(),
+    inserted: v.number(),
+    updated: v.number(),
+    unchanged: v.number(),
+    error: v.optional(v.string()),
+    httpStatus: v.optional(v.number()),
+    retryAt: v.optional(v.number()),
+    startedAt: v.number(),
+    completedAt: v.number(),
+    lastCheckedAt: v.number(),
+    lastChangedAt: v.optional(v.number()),
+    lastSuccessAt: v.optional(v.number()),
+    lastFailureAt: v.optional(v.number()),
+  }).index("by_source", ["source"]),
 });

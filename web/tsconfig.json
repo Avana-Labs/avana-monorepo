@@ -37,6 +37,10 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "next-env.d.ts",
+    ".next-dev/types/**/*.ts",
+    ".next-prod/types/**/*.ts",
+    ".next-dev/dev/types/**/*.ts",
+    ".next-prod/dev/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
@@ -44,7 +48,6 @@
     "vitest.config.ts",
     "vitest.setup.ts",
     "**/__tests__/**",
-    "tests/**",
-    "convex/**"
+    "tests/**"
   ]
 }

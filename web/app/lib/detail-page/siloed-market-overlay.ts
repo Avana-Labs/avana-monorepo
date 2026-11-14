@@ -33,8 +33,10 @@ export function formatRewardsApyLabel(rewardsApyPct: number | undefined | null):
 /** Overlay reserveFactor + rewardsApy quick stats from a siloed market row. */
 export function injectSiloedMarketQuickStats<T extends OverlayQuickStat>(
   quickStats: T[],
-  market: Pick<SiloedMarketIdentity, "reserveFactorPct" | "rewardsApyPct"> | null | undefined,
+  siloed: object | null | undefined,
 ): T[] {
+  // services/convex may omit both fields; read them as optional.
+  const market = siloed as Pick<SiloedMarketIdentity, "reserveFactorPct" | "rewardsApyPct"> | null | undefined
   if (!market) return quickStats
   return quickStats.map((stat) => {
     if (

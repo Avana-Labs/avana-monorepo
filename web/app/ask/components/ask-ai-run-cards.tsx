@@ -10,9 +10,9 @@ import { ActionCard, ActionMetricsBlock } from "@/app/components/action-page/act
 import { TokenIcon } from "@/app/components/token-icon"
 import type { RiskLevel as DetailRiskLevel } from "@/app/lib/borrow-detail"
 import type { ActionMetricRow, ActionMetricTone } from "@/app/lib/action-system/contracts"
-import type { AskAiRun } from "@/app/lib/ask-ai/mode-run"
-import type { AskAiAction, AskAiWidget } from "@/app/lib/ask-ai/widgets"
-import type { RiskLevel } from "@/app/lib/ask-ai/position-context"
+import type { AskAiRun } from "@/convex/lib/askAI/modeRun"
+import type { AskAiAction, AskAiWidget } from "@/convex/lib/askAI/widgets"
+import type { RiskLevel } from "@/convex/lib/askAI/positionContext"
 
 /**
  * Renders a deterministic Ask AI mode-run as native detail-page cards, inline in the

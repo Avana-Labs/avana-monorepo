@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
-import { buildPositionContext, type PositionSnapshotInput } from "@/app/lib/ask-ai/position-context"
-import { buildReturnsRun, buildRiskRun, buildStressRun } from "@/app/lib/ask-ai/mode-run"
+import { buildPositionContext, type PositionSnapshotInput } from "@/convex/lib/askAI/positionContext"
+import { buildReturnsRun, buildRiskRun, buildStressRun } from "@/convex/lib/askAI/modeRun"
 import { AskAiRunCards } from "../components/ask-ai-run-cards"
 
 afterEach(cleanup)

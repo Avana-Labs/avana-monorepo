@@ -121,7 +121,7 @@ function HoverTooltip({ asset, pointIndex, left }: { asset: FeaturedAsset; point
 }
 
 function ReferenceGraph({ asset, activePointIndex }: { asset: FeaturedAsset; activePointIndex: number | null }) {
-  const graph = useMemo(() => normalizeGraphPath(asset.path), [asset.path])
+  const graph = useMemo(() => normalizeGraphPath(asset.path ?? ""), [asset.path])
   const point = activePointIndex == null ? null : graph.points[activePointIndex]
   const stroke = asset.tone === "blue" ? "#78c9e8" : "#58d89a"
 

@@ -57,16 +57,16 @@ Installed by Soldeer into `contracts/dependencies/` (not committed), declared in
 
 ## Packages
 
-Installed from the lock files, not committed. TypeScript packages are bundled into the builds of `services/`; Python and Node packages under `contracts/` and `spec/05-verification/` run the checks only.
+Installed from the lock files, not committed. TypeScript packages are bundled into the builds of `services/` and of the web app (`web/`); Python and Node packages under `contracts/` and `spec/05-verification/` run the checks only.
 
 | Package | Version | Licence | Where |
 |---|---|---|---|
-| viem | 2.57.11 | MIT | `services/common`, `services/indexer`, `services/keeper`, `packages/protocol` |
+| viem | 2.57.11 | MIT | `services/common`, `services/indexer`, `services/keeper`, `services/convex`, `packages/protocol`, `web/` |
 | ponder | 0.18.2 | MIT | `services/indexer` |
 | hono | 4.13.13 | MIT | `services/indexer` |
-| typescript | 6.0.3 | Apache-2.0 | `services/` (build) |
-| @types/node | 22.20.5 | MIT | `services/` (build) |
-| vitest | 5.1.0 | MIT | `services/common`, `services/indexer`, `services/keeper`, `packages/protocol` (tests) |
+| typescript | 6.0.3 | Apache-2.0 | `services/`, `web/` (build) |
+| @types/node | 22.20.5 | MIT | `services/`, `web/` (build) |
+| vitest | 5.1.0 | MIT | `services/common`, `services/indexer`, `services/keeper`, `services/convex`, `packages/protocol`, `web/` (tests) |
 | @aws-sdk/client-kms | 3.1156.0 | Apache-2.0 | `services/keeper` (signer keys held in AWS KMS) |
 | tsx | 4.23.15 | MIT | `services/keeper` (runs the TypeScript entry point) |
 | solhint | 6.2.5 | MIT | `contracts/package.json` |
@@ -77,6 +77,65 @@ Installed from the lock files, not committed. TypeScript packages are bundled in
 | mpmath | 1.3.0 | BSD-3-Clause | dependency of sympy |
 | hypothesis | 6.112.5 | MPL-2.0 | `spec/05-verification/requirements.txt` |
 | pytest | 8.3.3 | MIT | `spec/05-verification/requirements.txt` |
+| convex | 1.50.0 | Apache-2.0 | `services/convex`, `web/` |
+| @assistant-ui/react | 0.15.15 | MIT | `web/` |
+| @convex-dev/agent | 0.7.0 | Apache-2.0 | `web/`, `services/convex` (Ask AI) |
+| @emotion/is-prop-valid | 1.4.0 | MIT | `web/` |
+| @hugeicons/core-free-icons | 4.2.3 | MIT | `web/` |
+| @hugeicons/react | 1.1.9 | MIT | `web/` |
+| @radix-ui/react-accordion | 1.2.20 | MIT | `web/` |
+| @radix-ui/react-dialog | 1.1.23 | MIT | `web/` |
+| @radix-ui/react-dropdown-menu | 2.1.24 | MIT | `web/` |
+| @radix-ui/react-select | 2.3.7 | MIT | `web/` |
+| @radix-ui/react-slot | 1.3.3 | MIT | `web/` |
+| @radix-ui/react-switch | 1.3.7 | MIT | `web/` |
+| @sentry/nextjs | 10.78.0 | MIT | `web/` |
+| @tanstack/react-query | 5.101.4 | MIT | `web/` |
+| @vercel/analytics | 2.0.1 | MIT | `web/` |
+| @vercel/speed-insights | 2.0.0 | Apache-2.0 | `web/` |
+| class-variance-authority | 0.7.1 | Apache-2.0 | `web/` |
+| clsx | 2.1.1 | MIT | `web/` |
+| connectkit | 1.9.2 | BSD-2-Clause | `web/` |
+| framer-motion | 12.43.0 | MIT | `web/` |
+| lucide-react | 1.33.0 | ISC | `web/` |
+| next | 16.4.5 | MIT | `web/` |
+| radix-ui | 1.6.7 | MIT | `web/` |
+| react | 18.3.1 | MIT | `web/` |
+| react-dom | 18.3.1 | MIT | `web/` |
+| react-markdown | 10.1.0 | MIT | `web/` |
+| remark-gfm | 4.0.1 | MIT | `web/` |
+| tailwind-merge | 2.6.1 | MIT | `web/` |
+| tailwindcss-animate | 1.0.7 | MIT | `web/` |
+| wagmi | 2.19.5 | MIT | `web/` |
+| web-vitals | 4.2.4 | Apache-2.0 | `web/` |
+| zod | 4.6.7 | MIT | `web/`, `services/convex` (Ask AI) |
+| @eslint/js | 10.0.1 | MIT | `web/` (build, tests) |
+| @next/bundle-analyzer | 16.4.5 | MIT | `web/` (build, tests) |
+| @next/eslint-plugin-next | 16.4.5 | MIT | `web/` (build, tests) |
+| @playwright/test | 1.62.1 | Apache-2.0 | `web/` (build, tests) |
+| @testing-library/dom | 10.4.1 | MIT | `web/` (build, tests) |
+| @testing-library/jest-dom | 6.9.1 | MIT | `web/` (build, tests) |
+| @testing-library/react | 16.3.2 | MIT | `web/` (build, tests) |
+| @testing-library/user-event | 14.6.1 | MIT | `web/` (build, tests) |
+| @types/react | 18.3.31 | MIT | `web/` (build, tests) |
+| @types/react-dom | 18.3.7 | MIT | `web/` (build, tests) |
+| @vitejs/plugin-react | 6.0.5 | MIT | `web/` (build, tests) |
+| eslint | 10.8.0 | MIT | `web/` (build, tests) |
+| eslint-config-prettier | 10.1.8 | MIT | `web/` (build, tests) |
+| globals | 17.8.0 | MIT | `web/` (build, tests) |
+| jsdom | 29.1.1 | MIT | `web/` (build, tests) |
+| lighthouse | 13.4.1 | Apache-2.0 | `web/` (build, tests) |
+| postcss | 8.5.32 | MIT | `web/` (build, tests) |
+| prettier | 3.9.6 | MIT | `web/` (build, tests) |
+| tailwindcss | 3.4.19 | MIT | `web/` (build, tests) |
+| typescript-eslint | 8.65.0 | MIT | `web/` (build, tests) |
+| @rolldown/binding-linux-x64-gnu | 1.2.1 | MIT | `web/` (Linux build binding) |
+| @ai-sdk/openai | 4.0.44 | Apache-2.0 | `services/convex` (Ask AI) |
+| @convex-dev/rag | 0.7.6 | Apache-2.0 | `services/convex` (Ask AI) |
+| @convex-dev/rate-limiter | 0.3.2 | Apache-2.0 | `services/convex` (Ask AI) |
+| ai | 7.0.0 | Apache-2.0 | `services/convex` (Ask AI) |
+| convex-test | 0.0.54 | Apache-2.0 | `services/convex` (tests) |
+| @edge-runtime/vm | 5.0.0 | MIT | `services/convex` (tests) |
 
 ## Tools installed at run time
 

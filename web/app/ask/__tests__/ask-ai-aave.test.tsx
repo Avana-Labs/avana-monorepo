@@ -4,8 +4,8 @@ import { AskAIAaveChart } from "../components/ask-ai-aave-chart"
 import { AskAIMarkdown } from "../components/ask-ai-markdown"
 import { AskAIFinancialResultCard } from "../components/ask-ai-financial-result-card"
 import { buildAaveCard } from "../components/ask-ai-aave-card"
-import { aaveApyVisual, aaveEnvelope } from "@/app/lib/ask-ai/aave-mcp"
-import { sanitizeAskAISources } from "@/app/lib/ask-ai/sources"
+import { aaveApyVisual, aaveEnvelope } from "@/convex/lib/askAI/aaveMcp"
+import { sanitizeAskAISources } from "@/convex/lib/askAI/sources"
 
 afterEach(cleanup)
 

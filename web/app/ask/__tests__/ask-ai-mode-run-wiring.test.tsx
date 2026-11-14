@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { buildPositionContext } from "@/app/lib/ask-ai/position-context"
-import { buildRiskRun } from "@/app/lib/ask-ai/mode-run"
+import { buildPositionContext } from "@/convex/lib/askAI/positionContext"
+import { buildRiskRun } from "@/convex/lib/askAI/modeRun"
 
 const partsMock = vi.fn<() => Array<{ messageId: string; parts: unknown }>>(() => [])
 vi.mock("convex/react", () => ({
