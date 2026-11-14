@@ -1314,8 +1314,6 @@ async function crossHubLine(e: Env) {
 
 // ─── 8. Keeper failover drill: every primary stopped, the standby liquidates within the M-09 window ───
 
-/** Anvil's published test account #7, which the rehearsal binds the operator helper to (its key is public). */
-const DRILL_SIGNER_KEY = "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356";
 const BLOCK_SECONDS = 12;
 /** M-09 warns at 60 s and pages at 300 s: the standby acts from 60 s on and must have liquidated before 300 s. */
 const STANDBY_AFTER_BLOCKS = 60 / BLOCK_SECONDS;
@@ -1324,8 +1322,9 @@ const PAGE_AFTER_BLOCKS = 300 / BLOCK_SECONDS;
 /**
  * services/README.md: "a failover drill: stopping every primary lets the standby liquidate each
  * account within the M-09 warning window". Two accounts (a Uniswap v3 and a Slipstream market) fall below HF 1 with no
- * primary running; only a standby keeper runs, in active mode, signing with the operator helper's test key on anvil
- * (KEEPER_LOCAL_KEY_ANVIL, refused on every other network set). Blocks are mined 12 s apart. Pass: neither account is
+ * primary running; only a standby keeper runs, in active mode, signing as the operator helper's signer (anvil account
+ * #7) from the encrypted keystore e2e-local.sh makes for the run (E2E_DRILL_KEYSTORE and E2E_DRILL_KEYSTORE_PASSWORD_FILE,
+ * passed as KEEPER_LOCAL_KEYSTORE_ANVIL, which the keeper refuses on every other network set). Blocks are mined 12 s apart. Pass: neither account is
  * liquidated before the standby's 60 s, and both are by 300 s (the M-09 page).
  */
 async function failoverDrill(e: Env) {
@@ -1334,6 +1333,9 @@ async function failoverDrill(e: Env) {
   const { tmpdir } = await import("node:os");
   const { join: joinPath, resolve } = await import("node:path");
   const n = e.numbers;
+  const keystore = process.env.E2E_DRILL_KEYSTORE;
+  const passwordFile = process.env.E2E_DRILL_KEYSTORE_PASSWORD_FILE;
+  if (!keystore || !passwordFile) return { ok: false, detail: "not run: no drill signer keystore (E2E_DRILL_KEYSTORE, made by e2e-local.sh)" };
   const um = e.market("uni-WETH-USDC-500");
   const sm = e.market("slip-WETH-USDC-cl100");
   const helper = e.ctx.manifest.avana.operatorHelpers[0] as { address: Address; signer: Address; fundingSafe: Address };
@@ -1384,7 +1386,8 @@ async function failoverDrill(e: Env) {
     RPC_ANVIL_FALLBACK: rpcUrl,
     RPC_ANVIL_WS: rpcUrl.replace(/^http/, "ws"),
     RPC_ANVIL_PRIVATE: rpcUrl,
-    KEEPER_LOCAL_KEY_ANVIL: DRILL_SIGNER_KEY,
+    KEEPER_LOCAL_KEYSTORE_ANVIL: keystore,
+    KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile,
     KEEPER_GAS_CEILING_WEI_ANVIL: String(10n ** 18n),
     KEEPER_GAS_DAILY_SPEND_WEI_ANVIL: String(10n ** 16n),
     KEEPER_KILL_SWITCH_PORT: String(metricsPort + 1),
