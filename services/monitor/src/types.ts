@@ -12,7 +12,8 @@ import type { Level, SignalId } from "./signals.ts";
  */
 export interface Finding {
   readonly signal: SignalId;
-  readonly kind: "condition" | "event";
+  /** `unread`: the subject's inputs could not be read this round; its open alert is neither resolved nor re-sent. */
+  readonly kind: "condition" | "event" | "unread";
   readonly level: Level;
   /** The scope the alert is about, stable across blocks: `market:7`, `hubAsset:0xhub:3`, `slice:0xhub:3:0xspoke`. */
   readonly subject: string;

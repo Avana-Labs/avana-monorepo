@@ -40,6 +40,7 @@ export class AlertBook {
     for (const f of e.findings) {
       const key = keyOf(e.chainId, f);
       seen.add(key);
+      if (f.kind === "unread") continue;
       if (f.kind === "event") {
         if (f.level !== "ok") notice(this.#alert(e, f, f.level), "event");
         continue;

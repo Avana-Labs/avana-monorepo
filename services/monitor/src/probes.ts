@@ -5,7 +5,8 @@
 import type { ChainConfig, MonitorConfig } from "./config.ts";
 import { snapshotProbe } from "./confirm.ts";
 import type { Probe } from "./probe.ts";
+import { oracleProbe } from "./probes/oracle.ts";
 
 export function probesFor(_chain: ChainConfig, _config: MonitorConfig): Probe[] {
-  return [snapshotProbe() as Probe];
+  return [snapshotProbe(), oracleProbe()] as Probe[];
 }

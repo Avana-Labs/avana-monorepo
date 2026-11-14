@@ -50,6 +50,14 @@ describe("AlertBook", () => {
     expect(gone[0]!.alert.detail.note).toBe("subject no longer read");
   });
 
+  it("neither resolves nor re-sends an open alert whose subject could not be read", () => {
+    const book = new AlertBook();
+    book.apply(ev(1n, [f("M-03", "page", "feed:0xf")]));
+    expect(brief(book.apply(ev(2n, [f("M-03", "ok", "feed:0xf", "unread")])))).toEqual([]);
+    expect(book.open().map((a) => a.subject)).toEqual(["feed:0xf"]);
+    expect(brief(book.apply(ev(3n, [f("M-03", "ok", "feed:0xf")])))).toEqual(["resolve:M-03:page:feed:0xf"]);
+  });
+
   it("leaves other sources and chains alone when resolving missing subjects", () => {
     const book = new AlertBook();
     book.apply(ev(1n, [f("M-09", "warn", "account:0xabc")], false, "keeper"));
