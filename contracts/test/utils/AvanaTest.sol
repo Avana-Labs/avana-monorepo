@@ -7,7 +7,7 @@ import {Test} from "forge-std/Test.sol";
 
 /// @title AvanaTest
 /// @notice Base contract of every Avana Foundry test: the named actors, the fixture values of 5.1 and bound helpers.
-/// @dev Values are the launch values of 1.5 Parameters (`spec/01-architecture/05-parameters.md`) and the fixture values
+/// @dev Values are the launch values of 1.5 Parameters (`docs/spec/01-architecture/05-parameters.md`) and the fixture values
 /// listed at the top of 5.1 Test Requirements. A test that needs another value sets it in its own setUp, so a change
 /// here moves every suite at once and only through a reviewed edit of this file.
 abstract contract AvanaTest is Test {

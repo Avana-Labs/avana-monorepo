@@ -13,7 +13,7 @@ Every run of this folder's checks, newest last.
 - **Counts**: 735 methods entries checked, 0 errors, in each of the first two runs; every one of `PROP-001` … `PROP-074` has at least one tagged rule or invariant (299 rules and invariants in all).
 - **Exit codes**: 0, 0, 0.
 - **Prover**: not run. `contracts/src/` holds interfaces only, so no conf compiles. certora-cli 8.20.3 is installed in `contracts/.venv`.
-- **Traceability**: `spec/05-verification/trace.py` reports no error from `contracts/certora/`.
+- **Traceability**: `docs/spec/05-verification/trace.py` reports no error from `contracts/certora/`.
 
 ## 2026-11-10 — methods check after the alignment with the final 5.2 text
 

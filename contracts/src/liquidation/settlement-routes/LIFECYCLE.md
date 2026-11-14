@@ -49,5 +49,5 @@ Setup (Ethereum market `m`, Uniswap v3 USDC/USDT, USDC debt, Bob's liquidation o
 
 ## Spec
 
-- [2.12 Settlement Routes](../../../../spec/02-contracts/12-settlement-routes.md): `REQ-ROUTE-002`–`REQ-ROUTE-016`, `REQ-ROUTE-023`–`REQ-ROUTE-029`, `REQ-ROUTE-036`, `REQ-ROUTE-037`, `REQ-ROUTE-042`–`REQ-ROUTE-046`.
-- [2.11 LPVaultSwap](../../../../spec/02-contracts/11-lpvaultswap.md) `SPEC-LIQ-018` (per-leg minimum); [3.5](../../../../spec/03-operations/05-liquidation.md) `LIQ-075`.
+- [2.12 Settlement Routes](../../../../docs/spec/02-contracts/12-settlement-routes.md): `REQ-ROUTE-002`–`REQ-ROUTE-016`, `REQ-ROUTE-023`–`REQ-ROUTE-029`, `REQ-ROUTE-036`, `REQ-ROUTE-037`, `REQ-ROUTE-042`–`REQ-ROUTE-046`.
+- [2.11 LPVaultSwap](../../../../docs/spec/02-contracts/11-lpvaultswap.md) `SPEC-LIQ-018` (per-leg minimum); [3.5](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-075`.

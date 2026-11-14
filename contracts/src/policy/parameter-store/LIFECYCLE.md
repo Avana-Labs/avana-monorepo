@@ -50,5 +50,5 @@ Setup (Ethereum market 1, Uniswap v3 USDC/USDT; proposed defaults from 1.5, fina
 
 ## Spec
 
-- [2.9 Parameter Store](../../../../spec/02-contracts/09-parameter-store.md): `REQ-PSTORE-016`, `REQ-PSTORE-017`, `REQ-PSTORE-030`, `REQ-PSTORE-035`, `REQ-PSTORE-036`, `REQ-PSTORE-031`, `REQ-CONFIG-049`–`REQ-CONFIG-053`, `REQ-RISK-042`–`REQ-RISK-044`, `SPEC-BRK-004`, `SPEC-CAP-006`.
-- [1.5 Parameters](../../../../spec/01-architecture/05-parameters.md) for every value and bound.
+- [2.9 Parameter Store](../../../../docs/spec/02-contracts/09-parameter-store.md): `REQ-PSTORE-016`, `REQ-PSTORE-017`, `REQ-PSTORE-030`, `REQ-PSTORE-035`, `REQ-PSTORE-036`, `REQ-PSTORE-031`, `REQ-CONFIG-049`–`REQ-CONFIG-053`, `REQ-RISK-042`–`REQ-RISK-044`, `SPEC-BRK-004`, `SPEC-CAP-006`.
+- [1.5 Parameters](../../../../docs/spec/01-architecture/05-parameters.md) for every value and bound.

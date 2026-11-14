@@ -16,5 +16,5 @@ pre-commit:
       glob: "*.{sol,py,js,mjs,sh,json}"
       run: contracts/script/check-licence.sh
     traceability:
-      glob: "{spec/**,contracts/src/**,contracts/test/**,contracts/certora/**}"
-      run: cd spec/05-verification && .venv/bin/python trace.py
+      glob: "{docs/spec/**,contracts/src/**,contracts/test/**,contracts/certora/**}"
+      run: cd docs/spec/05-verification && .venv/bin/python trace.py

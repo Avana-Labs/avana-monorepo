@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The signals M-01 to M-29 of services/README.md (Monitoring and alerting): what each reads, its warn and page
-// levels, who responds and which playbook of spec/03-operations/06-emergency-operations.md they follow. The router
+// levels, who responds and which playbook of docs/spec/03-operations/06-emergency-operations.md they follow. The router
 // sends each alert to the responders named here, so no time is spent deciding who acts.
 
 export type SignalId = `M-${string}`;

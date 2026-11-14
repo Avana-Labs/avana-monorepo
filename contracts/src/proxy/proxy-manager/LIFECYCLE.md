@@ -42,5 +42,5 @@ Setup (Base market 3 on Spoke `S`, Carol's first pledge, 3.1 `DEP-029`).
 
 ## Spec
 
-- [2.5 Position Proxy and Proxy Manager](../../../../spec/02-contracts/05-position-proxy-and-proxy-manager.md): `REQ-PROXY-050`–`REQ-PROXY-056`, `REQ-PROXY-085`, `REQ-PROXY-097`–`REQ-PROXY-102`, `INV-012`.
-- Flow: [3.1](../../../../spec/03-operations/01-deposit.md) `DEP-029` steps 1 and 4.
+- [2.5 Position Proxy and Proxy Manager](../../../../docs/spec/02-contracts/05-position-proxy-and-proxy-manager.md): `REQ-PROXY-050`–`REQ-PROXY-056`, `REQ-PROXY-085`, `REQ-PROXY-097`–`REQ-PROXY-102`, `INV-012`.
+- Flow: [3.1](../../../../docs/spec/03-operations/01-deposit.md) `DEP-029` steps 1 and 4.
