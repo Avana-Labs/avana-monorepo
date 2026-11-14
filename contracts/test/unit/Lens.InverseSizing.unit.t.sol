@@ -186,8 +186,11 @@ contract LensInverseSizingUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-055, REQ-LENS-032
     function test_TEST_247_deleverageToClosedOrUnknown() public {
         _borrow(aliceProxy, 12_000e18);
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
-        assertFalse(lens.previewDeleverageTo(alice, MARKET_ID, _key(1), debtReserveId, 1.6e18).reachable, "Paused");
+        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
+        assertFalse(
+            lens.previewDeleverageTo(alice, MARKET_ID, _key(1), debtReserveId, 1.6e18).reachable,
+            "Paused(MintPathSuspect)"
+        );
         reg.setPause(aave.hub, PauseState.None, PauseReason.None);
         assertFalse(lens.previewDeleverageTo(bob, MARKET_ID, _key(1), debtReserveId, 1.6e18).reachable, "not his");
         assertFalse(lens.previewDeleverageTo(alice, MARKET_ID, _key(1), usdcReserveId, 1.6e18).reachable, "no USDC");
