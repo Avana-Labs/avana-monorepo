@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IFlashSource} from "../../src/flash/IFlashSource.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
@@ -103,9 +104,15 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         assertEq(usdc.balanceOf(flashSource), 0, "the flash source keeps nothing");
         assertEq(usdc.balanceOf(bob) - b.wallet, toWallet, "the rest of the recovery to the wallet");
         assertEq(toWallet, recovered - flashAmount - premium, "wallet gets R - x - premium");
-        // The preview converts at the oracle value V = 1,500 x $2.00 (REQ-LENS-029 style): it differs by V - R.
+        // The preview converts at the oracle value V = 1,500 x $2.00 (REQ-LENS-029 style) and charges the source's
+        // premium quote q, rounded up and never below the Pool's half-up charge (REQ-FLASH-002): it differs by
+        // (V - R) - (q - premium).
+        uint256 q = IFlashSource(flashSource).flashPremium(address(usdc), flashAmount);
+        assertLe(premium, q, "the quote is never below the charge");
+        assertLe(q - premium, 1, "the quote rounds up, the Pool half-up");
         assertLt(recovered, v, "the real unwind and routes recover below the oracle value");
-        assertEq(b.pvToWallet - toWallet, v - recovered, "preview at R = V");
+        assertEq(b.pvToWallet + q, v - flashAmount, "preview at R = V, with the quoted premium");
+        assertEq(b.pvToWallet - toWallet + (q - premium), v - recovered, "preview less execution is V - R");
         _checkAfter(b);
     }
 
