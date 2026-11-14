@@ -98,6 +98,14 @@ if [ $up -eq 1 ] && ! grep -q '"keeper.fatal"' "$WORK/keeper.log"; then
 else
   echo "keeper: did not stay up"; tail -30 "$WORK/keeper.log"
 fi
+# The keeper read the indexer stream at startup: a stream failure, or an account only one of the stream and the RPC
+# logs holds, fails the step (on a fresh anvil world both sources must agree).
+if grep -qE '"type":"keeper\.(stream|discoveryMismatch)"' "$WORK/keeper.log"; then
+  echo "keeper: indexer stream: $(grep -m2 -E '"type":"keeper\.(stream|discoveryMismatch)"' "$WORK/keeper.log" | cut -c1-300 | tr '\n' ' ')"
+  up=0
+else
+  echo "keeper: indexer stream read, no discovery mismatch"
+fi
 
 # Convex: the export serves only finalized blocks, and anvil finalizes 64 blocks behind its head. Mine past that and
 # let the indexer follow, then run a fresh local deployment and check every listed page.
