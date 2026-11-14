@@ -22,8 +22,6 @@ const legacyModalFiles = [
   "app/borrow/components/borrow-modal.tsx",
   "app/borrow/components/repay-remove-modal.tsx",
   "app/borrow/components/supply-collateral-modal.tsx",
-  "app/multiply/components/multiply-action-modal.tsx",
-  "app/multiply/components/deleverage-modal.tsx",
   "app/lend/components/lend-market-action-dialog.tsx",
 ]
 

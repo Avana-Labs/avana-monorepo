@@ -177,7 +177,7 @@ describe("ActionConfigureStage", () => {
     render(
       <ActionConfigureStage
         stage="configure"
-        verb="Multiply"
+        verb="Borrow"
         amount=""
         onAmountChange={() => undefined}
         preview={preview}
@@ -204,7 +204,7 @@ describe("ActionConfigureStage", () => {
     render(
       <ActionConfigureStage
         stage="configure"
-        verb="Multiply"
+        verb="Borrow"
         amount="1"
         onAmountChange={() => undefined}
         preview={preview}

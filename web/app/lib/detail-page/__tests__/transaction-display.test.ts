@@ -91,7 +91,7 @@ describe("transaction-display", () => {
     expect(usdLabel(resolveTransactionUsdValue(row))).toBe("$1.2K")
   })
 
-  it("does not treat multiply collateral rows as pool legs", () => {
+  it("does not treat a single-token row with a secondary symbol as pool legs", () => {
     const row = baseRow({
       amountLabel: "+$50.0K",
       tokenAmountLabel: "25.8521",
@@ -117,7 +117,7 @@ describe("transaction-display", () => {
     })
     setCanonicalPrices({ WETH: 2450 })
 
-    // Default (pool/lend/multiply): frozen seed quantity, USD re-valued at live → over-values.
+    // Default (pool/lend): frozen seed quantity, USD re-valued at live → over-values.
     expect(resolveTransactionTokenDisplay(row)).toEqual({ amount: "1.2776", symbol: "WETH" })
     expect(resolveTransactionUsdValue(row)).toBeCloseTo(1.2776 * 2450, 0)
 

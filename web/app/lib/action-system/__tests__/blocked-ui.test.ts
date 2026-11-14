@@ -23,8 +23,8 @@ describe("blockedCtaLabel", () => {
     })
   })
 
-  it("maps missing multiply/deleverage positions to No position", () => {
-    expect(blockedCtaLabel("No open position to deleverage in this market.").label).toBe("No position")
+  it("maps a missing position to No position", () => {
+    expect(blockedCtaLabel("No open position in this market.").label).toBe("No position")
   })
 
   it("maps liquidity, borrowing power, and market-state blocks to short labels", () => {
@@ -42,13 +42,5 @@ describe("blockedCtaLabel", () => {
     expect(blockedCtaLabel("Nothing to claim").label).toBe("Nothing to claim")
     expect(blockedCtaLabel("Select rewards to claim").label).toBe("Select rewards")
     expect(blockedCtaLabel("Amount must be positive.").label).toBe("Enter an amount")
-  })
-
-  it("uses state-specific labels for Umbrella cooldown blocks", () => {
-    expect(blockedCtaLabel("Withdrawal window expired — restart cooldown.").label).toBe("Window expired")
-    expect(blockedCtaLabel("Cooldown is not ready").label).toBe("Cooldown not ready")
-    expect(blockedCtaLabel("Finish or unstake the current cooldown before starting a new one.").label).toBe(
-      "Cooldown active",
-    )
   })
 })

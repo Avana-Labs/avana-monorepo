@@ -40,9 +40,6 @@ export function blockedCtaLabel(reason: string, options?: { symbol?: string }): 
   ) {
     return { label: "Try a smaller amount" }
   }
-  if (r.includes("withdrawal window expired")) return { label: "Window expired" }
-  if (r.includes("cooldown is not ready")) return { label: "Cooldown not ready" }
-  if (r.includes("finish or unstake the current cooldown")) return { label: "Cooldown active" }
   if (r.includes("supply cap")) return { label: "Supply cap reached" }
   if (r.includes("paused")) return { label: "Market paused" }
   if (r.includes("price")) return { label: "Price unavailable" }

@@ -76,25 +76,25 @@ describe("ActionSuccessStage", () => {
     await waitFor(() => expect(screen.getByText("1000.00 USDC")).toBeInTheDocument())
   })
 
-  it("omits the rate receipt row when the action has no rate (multiply)", async () => {
+  it("omits the rate receipt row when the action has no rate (pledge)", async () => {
     render(
       <DisplayPreferencesProvider>
         <ActionSuccessStage
-          closeHref="/multiply"
+          closeHref="/borrow"
           success={{
-            title: "Multiply successful",
-            description: "3.00x on ETH processed.",
+            title: "Pledge successful",
+            description: "1.000000 ETH processed.",
             receiptHash: "sim-456",
             metrics: [],
-            primaryCtaLabel: "View multiply dashboard",
-            primaryCtaHref: "/multiply",
+            primaryCtaLabel: "View borrow dashboard",
+            primaryCtaHref: "/borrow",
             secondaryCtaLabel: "Done",
             receiptContext: {
-              verb: "Multiply",
+              verb: "Pledge",
               amountLabel: "1.000000 ETH",
               rateLabel: "",
               rateValue: "",
-              marketValue: "ETH · USDT",
+              marketValue: "ETH · USDC",
             },
           }}
         />
@@ -104,7 +104,7 @@ describe("ActionSuccessStage", () => {
     // The verb and market rows render; the empty rate row (no label/value, stray
     // info icon) must not.
     await waitFor(() => expect(screen.getByText("1.000000 ETH")).toBeInTheDocument())
-    expect(screen.getByText("Multiply")).toBeInTheDocument()
+    expect(screen.getByText("Pledge")).toBeInTheDocument()
     expect(screen.getByText("Market")).toBeInTheDocument()
     // Three info-row tooltips (amount + market + fee) — no orphan "rate" tooltip row.
     expect(screen.getAllByRole("button", { name: /more info/i })).toHaveLength(3)

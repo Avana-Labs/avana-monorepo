@@ -30,7 +30,7 @@ afterEach(() => {
 })
 
 describe("action stage flow UI", () => {
-  it("P1-18 uses FX and APY-specific help for swap and multiply rates", async () => {
+  it("P1-18 uses FX and APY-specific help for swap rates and the market breakdown", async () => {
     const user = userEvent.setup()
     const swapPreview = {
       ...preview,
@@ -55,7 +55,7 @@ describe("action stage flow UI", () => {
 
     render(
       <ActionReviewStage
-        title="Review multiply"
+        title="Review borrow"
         preview={{
           ...preview,
           rateLabel: "",
@@ -120,7 +120,7 @@ describe("action stage flow UI", () => {
     const message = "This leverage reduces your safety buffer."
     render(
       <ActionReviewStage
-        title="Review multiply"
+        title="Review borrow"
         preview={{
           ...preview,
           rateLabel: "",
@@ -128,7 +128,7 @@ describe("action stage flow UI", () => {
           risk: { level: "warning", title: "Review leverage carefully", message },
           warnings: [message],
         }}
-        primaryLabel="Multiply"
+        primaryLabel="Borrow"
         onPrimary={() => undefined}
         onSecondary={() => undefined}
       />,
@@ -143,13 +143,13 @@ describe("action stage flow UI", () => {
   it("still shows a distinct Note warning alongside the risk banner", () => {
     render(
       <ActionReviewStage
-        title="Review multiply"
+        title="Review borrow"
         preview={{
           ...preview,
           risk: { level: "warning", title: "Review leverage carefully", message: "Watch your health factor." },
           warnings: ["Liquidity is thin in this market."],
         }}
-        primaryLabel="Multiply"
+        primaryLabel="Borrow"
         onPrimary={() => undefined}
         onSecondary={() => undefined}
       />,

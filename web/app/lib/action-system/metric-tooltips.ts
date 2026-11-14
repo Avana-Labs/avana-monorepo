@@ -47,8 +47,8 @@ export const ACTION_INFO_TOOLTIPS: Record<string, string> = {
   fee: "A 15 bps (0.15%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.",
   amount: "Amount you are confirming for this transaction.",
   apy: "Annualized yield or cost rate for the selected market.",
-  collateralApy: "Annualized yield earned by the collateral asset in this multiply position.",
-  borrowApy: "Annualized cost to borrow the debt asset in this multiply position.",
+  collateralApy: "Annualized yield earned by the collateral asset in this position.",
+  borrowApy: "Annualized cost to borrow the debt asset in this position.",
   claimTotal: "Total token rewards selected to claim. Network or protocol fees are separate from harvestable rewards.",
 }
 
