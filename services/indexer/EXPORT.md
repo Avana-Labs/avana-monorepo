@@ -64,7 +64,17 @@ Every request carries `x-avana-key-id`, `x-avana-timestamp` (unix seconds) and `
 
 ## Older history
 
-Convex keeps current views and a bounded window of recent activity. Older activity of one wallet is fetched on request by a Convex action from `GET /export/v1/history?chainId=<id>&wallet=<address>&before=<block>&limit=<n>`, under the same authentication, and is shown without being stored. It returns the same `ExportRecord` shape for the wallet's attributed proxies, newest first.
+Convex keeps current views and a bounded window of recent activity. Older activity of one wallet is fetched on request by a Convex action from `GET /export/v1/history?chainId=<id>&wallet=<address>&before=<block>&limit=<n>`, under the same authentication, and is shown without being stored ([`src/api/history.ts`](src/api/history.ts); wire type `HistoryPage` in [`services/common/src/export.ts`](../common/src/export.ts)).
+
+| Response | Meaning |
+|---|---|
+| 200 + `HistoryPage` | The records naming the wallet or one of its attributed proxies, from blocks before `before`, newest first |
+| 400 | A parameter is not a decimal integer, `wallet` is not an address, or `limit` is outside 1 to 500 |
+| 401 | Authentication failed |
+
+- **Which records.** Every indexed log whose arguments name the wallet (its Lend Spoke activity, its proxies' creation) or one of its proxies attributed by both creation events (`account.adapterSeen` and `managerSeen`); `proxies` lists them. The indexer writes one `log_party` row per address a log's arguments name, with the log row, and the history reads that table instead of searching `event_log.args`.
+- **Depth.** `before` is capped at the export's servable block + 1 (`min(finalized, indexed − 1)`), so a history page never holds a block a reorg can remove; without `before` the newest page starts there.
+- **Order and cursor.** Records are in descending `(blockNumber, logIndex)` order and a page never splits a block: a full page drops its oldest block, which the next page (`next.before`, the oldest block served) starts with, unless that block is the whole page, in which case it is served whole. `next` is null when nothing older exists.
 
 ## Reorgs
 
