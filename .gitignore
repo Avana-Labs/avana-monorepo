@@ -63,12 +63,12 @@ contracts/.venv/
 __pycache__/
 
 # Spec verification tooling
-spec/05-verification/node_modules/
-spec/05-verification/tools/
+docs/spec/05-verification/node_modules/
+docs/spec/05-verification/tools/
 .hypothesis/
 
 # EVM decompiler binary (downloaded, not committed)
-tools/heimdall/bin/
+contracts/tools/heimdall/bin/
 
 # Only packages/protocol (the ABIs the services import) is tracked under packages/.
 packages/*
@@ -82,5 +82,5 @@ packages/*
 **/.gitkeep
 
 # Local working files
-spec/contracts-build-todo.md
-spec/services-build-todo.md
+docs/spec/contracts-build-todo.md
+docs/spec/services-build-todo.md
