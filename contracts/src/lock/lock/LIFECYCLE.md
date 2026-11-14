@@ -52,4 +52,4 @@ Setup (Base market 3, Carol's pledge of 3.1 `DEP-029`, then Bob's liquidation of
 
 ## Spec
 
-- [2.16 Lock](../../../../spec/02-contracts/16-lock.md): `REQ-LOCK-001`–`REQ-LOCK-030`, `INV-054`.
+- [2.16 Lock](../../../../docs/spec/02-contracts/16-lock.md): `REQ-LOCK-001`–`REQ-LOCK-030`, `INV-054`.

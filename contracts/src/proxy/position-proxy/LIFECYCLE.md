@@ -52,4 +52,4 @@ Setup (Base market 3, Carol, from 3.1 `DEP-029`, 3.2 `BOR-022`, 3.3 `REP-024`): 
 
 ## Spec
 
-- [2.5 Position Proxy and Proxy Manager](../../../../spec/02-contracts/05-position-proxy-and-proxy-manager.md): `REQ-PROXY-001`–`REQ-PROXY-014`, `REQ-PROXY-040`, `REQ-PROXY-078`, `REQ-PROXY-087`–`REQ-PROXY-091`, `INV-012`, `INV-016`, `INV-017`.
+- [2.5 Position Proxy and Proxy Manager](../../../../docs/spec/02-contracts/05-position-proxy-and-proxy-manager.md): `REQ-PROXY-001`–`REQ-PROXY-014`, `REQ-PROXY-040`, `REQ-PROXY-078`, `REQ-PROXY-087`–`REQ-PROXY-091`, `INV-012`, `INV-016`, `INV-017`.

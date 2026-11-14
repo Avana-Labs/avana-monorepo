@@ -115,7 +115,7 @@ Avana's keeper liquidates every Avana account whose health factor falls below 1,
 
 ### Funding and the flash liquidation helper
 
-`LPVaultSwap.liquidate`, the one liquidation entry point, is caller-funded: it pulls `debtToCover` of the debt asset from `msg.sender`, measured by balance delta, and takes no flash loan. Flash funding sits in a periphery contract, the flash liquidation helper ([2.11](../spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper)):
+`LPVaultSwap.liquidate`, the one liquidation entry point, is caller-funded: it pulls `debtToCover` of the debt asset from `msg.sender`, measured by balance delta, and takes no flash loan. Flash funding sits in a periphery contract, the flash liquidation helper ([2.11](../docs/spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper)):
 
 - It is immutable and holds no funds or allowances between transactions.
 - It flash-borrows every debt asset, GHO included, from the chain's Aave V3 Pool, its only lender (`flashLoan`, one asset, mode 0). Its callback accepts only that Pool as caller and itself as initiator, and only the asset, amount and calldata hash recorded in a single-use context before the loan, with a premium no higher than the caller's maximum and `maxFlashFeeBps`.
@@ -249,7 +249,7 @@ Each instance exposes metrics on a port separate from the kill switch: blocks be
 
 ### Tests before launch
 
-- `TEST-140` observe-only mode with fork replay; `TEST-141` sizing and submission from `previewLiquidation`; `TEST-142` the liquidate-every-account duty on a fork depeg, dust accounts included; `TEST-143` reorg replay; `TEST-149` the ABI-hash check ([5.1](../spec/05-verification/01-test-requirements.md)).
+- `TEST-140` observe-only mode with fork replay; `TEST-141` sizing and submission from `previewLiquidation`; `TEST-142` the liquidate-every-account duty on a fork depeg, dust accounts included; `TEST-143` reorg replay; `TEST-149` the ABI-hash check ([5.1](../docs/spec/05-verification/01-test-requirements.md)).
 - Fork tests of the helper against the deployed Aave V3 Pool: flash-funded, inventory-funded and split calls; a payout below the flash repayment beyond the top-up bound reverts; a net payout below the request's `minPayout` reverts; a call from anyone but the bound signer reverts; the callback refuses a foreign caller, initiator, asset, amount, calldata, a premium above the bound and a second callback in the same transaction.
 - Unit tests of the decision rules (price gates, grace, debt reserve choice, zero-collateral skip), the nonce manager (mutex, replacement, cancellation after the deadline), inventory reservation and the failure-reason table.
 - Fault tests: a code-check mismatch set on the fork with `anvil_setStorageAt` moves the keeper to observe-only; the kill switch refuses unauthenticated requests and survives a restart; a 1-wei repay and a repay to just under the dust threshold before inclusion still settle (`Q-345`); another address wins the race; a removed or unregistered helper keeps liquidating and a frozen one stops; a Base sequencer outage and grace window; a dropped indexer stream recovers by reconnect backfill.
@@ -257,7 +257,7 @@ Each instance exposes metrics on a port separate from the kill switch: blocks be
 
 ## Monitoring and alerting
 
-The monitoring service, run by Avana Labs on the indexer's data and direct RPC reads, raises two alert levels per market and debt asset: **warn** (drift that needs attention) and **page** (a failure that needs action now). Every alert names its responder and the [3.6 Emergency Operations](../spec/03-operations/06-emergency-operations.md) playbook to follow, so no time is spent deciding who acts. Circuit breakers stop new activity by themselves; only people can switch feeds, cover deficits, fund reserves, cancel operations or ask Aave to act, and each alert fires early enough to act inside the 48-hour window caps are sized for (`Q-244`). Every alert is confirmed on-chain within 15 minutes and logged in the incident log (`EMG-075`).
+The monitoring service, run by Avana Labs on the indexer's data and direct RPC reads, raises two alert levels per market and debt asset: **warn** (drift that needs attention) and **page** (a failure that needs action now). Every alert names its responder and the [3.6 Emergency Operations](../docs/spec/03-operations/06-emergency-operations.md) playbook to follow, so no time is spent deciding who acts. Circuit breakers stop new activity by themselves; only people can switch feeds, cover deficits, fund reserves, cancel operations or ask Aave to act, and each alert fires early enough to act inside the 48-hour window caps are sized for (`Q-244`). Every alert is confirmed on-chain within 15 minutes and logged in the incident log (`EMG-075`).
 
 | # | Signal | Warn | Page | Responder | Playbook |
 |---|---|---|---|---|---|

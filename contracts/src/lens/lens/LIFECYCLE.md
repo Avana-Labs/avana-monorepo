@@ -36,5 +36,5 @@ Alice's account in market 4 (USDC/USDT, 6-decimal vault token at $2.00, collater
 
 ## Spec
 
-- [2.17 Lens](../../../../spec/02-contracts/17-lens.md): `REQ-LENS-001`–`REQ-LENS-061`, `SPEC-LIQ-020`, `SPEC-CF-005`.
-- Flows: [3.1](../../../../spec/03-operations/01-deposit.md) `DEP-029`, [3.2](../../../../spec/03-operations/02-borrow.md) `BOR-022`, [3.3](../../../../spec/03-operations/03-repay.md) `REP-024`, [3.5](../../../../spec/03-operations/05-liquidation.md) `LIQ-068`.
+- [2.17 Lens](../../../../docs/spec/02-contracts/17-lens.md): `REQ-LENS-001`–`REQ-LENS-061`, `SPEC-LIQ-020`, `SPEC-CF-005`.
+- Flows: [3.1](../../../../docs/spec/03-operations/01-deposit.md) `DEP-029`, [3.2](../../../../docs/spec/03-operations/02-borrow.md) `BOR-022`, [3.3](../../../../docs/spec/03-operations/03-repay.md) `REP-024`, [3.5](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-068`.

@@ -15,16 +15,16 @@
 /contracts/test/utils/fixtures/ForkConstants.sol @Avana-Labs/contracts @Avana-Labs/security
 
 # Specification and its verification models.
-/spec/                                           @Avana-Labs/contracts
+/docs/spec/                                      @Avana-Labs/contracts
 # Review records, findings and verification evidence.
-/audit/                                          @Avana-Labs/security
+/docs/audit/                                     @Avana-Labs/security
 
 # Release manifests and generated address libraries: a verified manifest is approved by the deployment signers.
 /deployments/verified/                           @Avana-Labs/deployers
 /packages/protocol/sol/                          @Avana-Labs/deployers
 
 # Governance operations and payloads.
-/governance/                                     @Avana-Labs/governance
+/docs/governance/                                @Avana-Labs/governance
 
 # Off-chain services: the indexer, Convex backend and shared wire types fall under core.
 /services/                                       @Avana-Labs/core

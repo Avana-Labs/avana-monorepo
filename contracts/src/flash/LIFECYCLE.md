@@ -48,5 +48,5 @@ Repay with collateral on Ethereum (V, USDC debt, the repay-with-collateral flow 
 
 ## Spec
 
-- [2.11 LPVaultSwap](../../../spec/02-contracts/11-lpvaultswap.md): `REQ-FLASH-001`–`REQ-FLASH-010`, `REQ-SWAP-012`, `REQ-SWAP-013`, `REQ-SWAP-106`, `REQ-SWAP-122`, `INV-095`.
-- Flows: [3.5](../../../spec/03-operations/05-liquidation.md) `LIQ-081`; [3.3 Repay](../../../spec/03-operations/03-repay.md); [3.6](../../../spec/03-operations/06-emergency-operations.md) `EMG-098` (P-15), `EMG-109`.
+- [2.11 LPVaultSwap](../../../docs/spec/02-contracts/11-lpvaultswap.md): `REQ-FLASH-001`–`REQ-FLASH-010`, `REQ-SWAP-012`, `REQ-SWAP-013`, `REQ-SWAP-106`, `REQ-SWAP-122`, `INV-095`.
+- Flows: [3.5](../../../docs/spec/03-operations/05-liquidation.md) `LIQ-081`; [3.3 Repay](../../../docs/spec/03-operations/03-repay.md); [3.6](../../../docs/spec/03-operations/06-emergency-operations.md) `EMG-098` (P-15), `EMG-109`.

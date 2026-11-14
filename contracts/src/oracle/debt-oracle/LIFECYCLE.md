@@ -48,5 +48,5 @@ Setup (Base, `r_USDC` on the "Aerodrome Slipstream Stable" CDP Spoke, from 3.2 `
 
 ## Spec
 
-- [2.10 LPOracle, LPPriceMath and DebtOracle](../../../../spec/02-contracts/10-lp-oracle.md): `REQ-ORACLE-089`–`REQ-ORACLE-098`, `SPEC-ORC-015`, `SPEC-ORC-018`.
-- Flows: [3.2](../../../../spec/03-operations/02-borrow.md) `BOR-006`, `BOR-022`; [3.5](../../../../spec/03-operations/05-liquidation.md) `LIQ-073`; [3.6](../../../../spec/03-operations/06-emergency-operations.md) `EMG-020`.
+- [2.10 LPOracle, LPPriceMath and DebtOracle](../../../../docs/spec/02-contracts/10-lp-oracle.md): `REQ-ORACLE-089`–`REQ-ORACLE-098`, `SPEC-ORC-015`, `SPEC-ORC-018`.
+- Flows: [3.2](../../../../docs/spec/03-operations/02-borrow.md) `BOR-006`, `BOR-022`; [3.5](../../../../docs/spec/03-operations/05-liquidation.md) `LIQ-073`; [3.6](../../../../docs/spec/03-operations/06-emergency-operations.md) `EMG-020`.

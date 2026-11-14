@@ -1,11 +1,19 @@
 # Avana Monorepo
 <div align="center">
 
-![Avana](./spec/Avana.png)
+![Avana](./docs/spec/Avana.png)
 
 </div>
 
-Avana lets a liquidity provider borrow against a liquidity position in a listed AMM pool without taking the liquidity out of the pool. It runs on several chains, Hubs and AMM protocols: at launch on Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), each with an Avana Stable LP Hub; the core also supports Uniswap v2, Curve, Balancer and Uniswap v4 once each passes its listing guards. The Aave DAO decides which assets are borrowable; on a Stable LP Hub they are stable debt assets it approves (for example GHO, USDC, USDT), each with its own credit line, draw cap, price source, swap routes and two loss layers: the Avana-funded Avana Umbrella, then a DAO deficit offset funded by the Aave DAO treasury. Each lend asset's rate follows Aave V4's standard utilization curve. The diagram below borrows GHO as an example.
+| | Folder | What it is |
+|---|---|---|
+| 1 | [Webapp](webapp/) | the Avana app (Next.js) |
+| 2 | [Smart contracts](contracts/) | the Avana CDP protocol on Aave V4 (Foundry) |
+| 3 | [Off-chain services](services/) | keeper, indexer, Convex backend, monitor |
+
+Reference material is in [`docs/`](docs/): the specification ([`docs/spec/`](docs/spec/)), governance payloads and operations ([`docs/governance/`](docs/governance/)) and audit evidence ([`docs/audit/`](docs/audit/)). [`packages/`](packages/) holds the shared `@avana/protocol` ABIs, and [`deployments/`](deployments/) the release manifests.
+
+Avana lets a liquidity provider borrow against a liquidity position in a listed AMM pool without taking the liquidity out of the pool. It runs on several chains, Hubs and AMM protocols, for example Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), each with an Avana Stable LP Hub; the core also supports Uniswap v2, Curve, Balancer and Uniswap v4 once each passes its listing guards. The Aave DAO decides which assets are borrowable; on a Stable LP Hub they are stable debt assets it approves (for example GHO, USDC, USDT), each with its own credit line, draw cap, price source, swap routes and two loss layers: the Avana-funded Avana First-Loss Reserve, then a DAO deficit offset funded by the Aave DAO treasury. Each lend asset's rate follows Aave V4's standard utilization curve. The diagram below borrows GHO as an example.
 
 ```mermaid
 sequenceDiagram
@@ -52,19 +60,21 @@ Each chain has its own AvanaTimelock. Every privileged change there is scheduled
 
 | Folder | Contents |
 |---|---|
-| [`spec/`](spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
-| [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts and Certora specifications |
-| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `common/`: chains, manifest view and export types shared by the services |
-| [`web/`](web/) | The Next.js web app (Lend, Borrow, Portfolio, detail pages, Swap, Support, Ask AI); it reads `services/convex` |
-| [`governance/`](governance/) | Aave DAO payloads (deployment, listing, collateral-factor, credit-line and refresh AIPs) and the AvanaTimelock operations scheduled by the governance multisig |
-| [`audit/`](audit/) | Audit scope, external reports, formal-verification reports and the evidence cited by findings |
+| [`webapp/`](webapp/) | The Next.js web app (Lend, Borrow, Portfolio, detail pages, Swap, Support, Ask AI); it reads `services/convex` |
+| [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts, Certora specifications and the security tools (`contracts/tools/`, including heimdall) |
+| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `monitor/`: the monitoring and alerting service; `common/`: chains, manifest view and export types shared by the services |
+| [`docs/spec/`](docs/spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
+| [`docs/governance/`](docs/governance/) | Aave DAO payloads (deployment, listing, collateral-factor, credit-line and refresh AIPs) and the AvanaTimelock operations scheduled by the governance multisig |
+| [`docs/audit/`](docs/audit/) | Audit scope, external reports, formal-verification reports and the evidence cited by findings |
+| [`packages/`](packages/) | `protocol/`: the `@avana/protocol` ABIs and ABI hash the indexer and keeper use |
+| [`deployments/`](deployments/) | Release manifests, one per chain and release, and their schema |
 
 ## Toolchain
 
 | Area | Stack |
 |---|---|
 | Contracts | [Foundry](https://getfoundry.sh) 1.9.0 (pinned in `contracts/.foundry-version`) with Soldeer (dependencies locked in `contracts/soldeer.lock`), Solidity 0.8.28, EVM `cancun`; Aave V4 pinned at `a3ef63ea6415d25237a9775bf66e76e9993561c2`, the Aave V3 Pool interfaces, Uniswap v3-core and v3-periphery, Aerodrome Slipstream, gho-core and OpenZeppelin Contracts pinned by commit. The workspace builds independently of the TypeScript code. |
-| Web app and backend | The stack of the [web app](web/): Next.js and React, wagmi + viem for wallets and typed transactions, Convex for the backend, Sign-In with Ethereum (EIP-4361) sessions |
+| Web app and backend | The stack of the [web app](webapp/): Next.js and React, wagmi + viem for wallets and typed transactions, Convex for the backend, Sign-In with Ethereum (EIP-4361) sessions |
 | Indexer | Ponder with Postgres |
 | Keeper | Reads chain state over RPC, sizes liquidations by simulating the deployed Spoke, submits through private builder RPCs |
 | TypeScript workspace | npm (`Q-027`); Node 22.18.0, pinned in `.nvmrc` and used by every workflow that installs Node |
@@ -76,25 +86,25 @@ Test environments: a local Anvil chain and Sepolia, each with Avana's own deploy
 
 ## How Avana is verified
 
-Every rule is checked twice. Models written from the pages in `spec/01`–`04` check the design; tests, symbolic execution, prover rules, fuzzing campaigns and static analysis check the Solidity in `contracts/`. Each check carries a `<CHECK-ID> verifies: <ID>, …` tag, `trace.py` links every requirement to its checks and to the code that implements it, and every failed check becomes a `FINDING-…` in [5.3 Audit Findings](spec/05-verification/03-audit-findings.md). The latest result of each check and the per-contract review reports are under [`audit/`](audit/), indexed in [`audit/README.md`](audit/README.md).
+Every rule is checked twice. Models written from the pages in `docs/spec/01`–`04` check the design; tests, symbolic execution, prover rules, fuzzing campaigns and static analysis check the Solidity in `contracts/`. Each check carries a `<CHECK-ID> verifies: <ID>, …` tag, `trace.py` links every requirement to its checks and to the code that implements it, and every failed check becomes a `FINDING-…` in [5.3 Audit Findings](docs/spec/05-verification/03-audit-findings.md). The latest result of each check and the per-contract review reports are under [`docs/audit/`](docs/audit/), indexed in [`docs/audit/README.md`](docs/audit/README.md).
 
 | Layer | What it establishes | Tools | Results |
 |---|---|---|---|
-| Specification models | Every formula holds with exact rounding and Solidity bit widths; the cross-contract state machine keeps every invariant, with honest and hostile components; the launch parameters survive economic stress | Z3, SymPy, Quint, Hypothesis, Python simulations; the custody, control and liquidation formal-verification areas | [`z3/`](audit/z3/), [`sympy/`](audit/sympy/), [`quint/`](audit/quint/), [`hypothesis/`](audit/hypothesis/), [`simulation/`](audit/simulation/), [`spec-essentials/`](audit/spec-essentials/) |
-| Contract tests | Each `TEST-NNN` of [5.1](spec/05-verification/01-test-requirements.md) has a test named for it that runs and passes, on the pinned Aave V4 release where the row needs Aave; the math libraries equal an exact Python reference; mutation testing measures whether the suites catch mutated code. The CI evidence job reports, per contract, which rows a test that ran and passed checks; the fork rows have not run yet (the fork blocks are not pinned), and no mutation campaign result is recorded yet | Foundry unit, fuzz, integration, invariant, differential and fork suites; coverage gate, mutation testing, Necessist | [`foundry-tests/`](audit/foundry-tests/), [`fork-tests/`](audit/fork-tests/), [`coverage/`](audit/coverage/), [`mutation/`](audit/mutation/), [`necessist/`](audit/necessist/) |
-| Symbolic execution | Properties hold for every input, not only sampled ones | Halmos, hevm, Mythril | [`halmos/`](audit/halmos/), [`hevm/`](audit/hevm/), [`mythril/`](audit/mythril/) |
-| Formal verification | The `PROP-NNN` rows of [5.2](spec/05-verification/02-formal-properties.md) hold on the compiled contracts over unbounded integers | Certora Prover (CVL), Solidity SMTChecker | [`certora/`](audit/certora/), [`smtchecker/`](audit/smtchecker/) |
-| Fuzzing campaigns | No call sequence breaks a harness property or reaches a failing assertion | Echidna, Medusa | [`echidna/`](audit/echidna/), [`medusa/`](audit/medusa/) |
-| Static analysis | No untriaged detector finding at or above each tool's gate | Slither, Aderyn, solhint, `forge lint`, Mythril, Semgrep, 4naly3er | [`slither/`](audit/slither/), [`aderyn/`](audit/aderyn/), [`solhint-and-lint/`](audit/solhint-and-lint/), [`semgrep/`](audit/semgrep/), [`4naly3er/`](audit/4naly3er/) |
-| Upgrade safety | Every UUPS contract initializes once, keeps its ERC-7201 layout across releases and upgrades only through the AvanaTimelock | `slither-check-upgradeability`, storage-layout check, Certora and control-area rules | [`upgrade-safety/`](audit/upgrade-safety/) |
-| Traceability | Every requirement links to its checks and its Solidity; a test counts for a row only when its tag sits on a test of that row, the test ran and passed in the run's results and it uses the real contract, not a harness or mock standing in for it; a changed requirement fails until its checks are re-run | `trace.py`, `contract_checklist.py` | [`traceability/`](audit/traceability/) |
-| Review process | Every contract passes an independent adversarial review; every finding is fixed or triaged with a reason | Per-contract and per-layer gates | [`reviews/`](audit/reviews/) |
+| Specification models | Every formula holds with exact rounding and Solidity bit widths; the cross-contract state machine keeps every invariant, with honest and hostile components; the default parameters survive economic stress | Z3, SymPy, Quint, Hypothesis, Python simulations; the custody, control and liquidation formal-verification areas | [`z3/`](docs/audit/z3/), [`sympy/`](docs/audit/sympy/), [`quint/`](docs/audit/quint/), [`hypothesis/`](docs/audit/hypothesis/), [`simulation/`](docs/audit/simulation/), [`spec-essentials/`](docs/audit/spec-essentials/) |
+| Contract tests | Each `TEST-NNN` of [5.1](docs/spec/05-verification/01-test-requirements.md) has a test named for it that runs and passes, on the pinned Aave V4 release where the row needs Aave; the math libraries equal an exact Python reference; mutation testing measures whether the suites catch mutated code. The CI evidence job reports, per contract, which rows a test that ran and passed checks; the fork rows have not run yet (the fork blocks are not pinned), and no mutation campaign result is recorded yet | Foundry unit, fuzz, integration, invariant, differential and fork suites; coverage gate, mutation testing, Necessist | [`foundry-tests/`](docs/audit/foundry-tests/), [`fork-tests/`](docs/audit/fork-tests/), [`coverage/`](docs/audit/coverage/), [`mutation/`](docs/audit/mutation/), [`necessist/`](docs/audit/necessist/) |
+| Symbolic execution | Properties hold for every input, not only sampled ones | Halmos, hevm, Mythril | [`halmos/`](docs/audit/halmos/), [`hevm/`](docs/audit/hevm/), [`mythril/`](docs/audit/mythril/) |
+| Formal verification | The `PROP-NNN` rows of [5.2](docs/spec/05-verification/02-formal-properties.md) hold on the compiled contracts over unbounded integers | Certora Prover (CVL), Solidity SMTChecker | [`certora/`](docs/audit/certora/), [`smtchecker/`](docs/audit/smtchecker/) |
+| Fuzzing campaigns | No call sequence breaks a harness property or reaches a failing assertion | Echidna, Medusa | [`echidna/`](docs/audit/echidna/), [`medusa/`](docs/audit/medusa/) |
+| Static analysis | No untriaged detector finding at or above each tool's gate | Slither, Aderyn, solhint, `forge lint`, Mythril, Semgrep, 4naly3er | [`slither/`](docs/audit/slither/), [`aderyn/`](docs/audit/aderyn/), [`solhint-and-lint/`](docs/audit/solhint-and-lint/), [`semgrep/`](docs/audit/semgrep/), [`4naly3er/`](docs/audit/4naly3er/) |
+| Upgrade safety | Every UUPS contract initializes once, keeps its ERC-7201 layout across releases and upgrades only through the AvanaTimelock | `slither-check-upgradeability`, storage-layout check, Certora and control-area rules | [`upgrade-safety/`](docs/audit/upgrade-safety/) |
+| Traceability | Every requirement links to its checks and its Solidity; a test counts for a row only when its tag sits on a test of that row, the test ran and passed in the run's results and it uses the real contract, not a harness or mock standing in for it; a changed requirement fails until its checks are re-run | `trace.py`, `contract_checklist.py` | [`traceability/`](docs/audit/traceability/) |
+| Review process | Every contract passes an independent adversarial review; every finding is fixed or triaged with a reason | Per-contract and per-layer gates | [`reviews/`](docs/audit/reviews/) |
 
 ### Gates and review
 
 A contract is accepted only when all of these pass: `forge build --force -D warnings`; its unit, fuzz and invariant tests; the file-size check; `trace.py` with 0 errors and `contract_checklist.py <Contract> --check --results <run>` with every row verified by a test that ran and passed; the fast security tier with zero untriaged findings; every Halmos `check_`; its Echidna and Medusa harness written; its Certora confs compiling with `--compilation_steps_only`; the differential run for math contracts; and an independent adversarial review that reads only the contract's spec page and code. Every review finding is fixed or answered in writing.
 
-Contracts are written in dependent layers (2.1 to 2.6). After each layer, the layer gate runs over everything written so far: the slow tier at full budget (Echidna, Medusa, hevm, Mythril, SMTChecker), Certora mutation testing with `certoraMutate` on every contract whose rules verify, mutation testing of the Foundry suites with `slither-mutate` (statement mutants) and Gambit (expression mutants), Necessist, the integration tests across the layer, `spec/05-verification/run_all.sh`, the three `audit/formal-verification/*/run.sh` and the size check over all of `src/`.
+Contracts are written in dependent layers (2.1 to 2.6). After each layer, the layer gate runs over everything written so far: the slow tier at full budget (Echidna, Medusa, hevm, Mythril, SMTChecker), Certora mutation testing with `certoraMutate` on every contract whose rules verify, mutation testing of the Foundry suites with `slither-mutate` (statement mutants) and Gambit (expression mutants), Necessist, the integration tests across the layer, `docs/spec/05-verification/run_all.sh`, the three `docs/audit/formal-verification/*/run.sh` and the size check over all of `src/`.
 
 Triage: a real finding is fixed. A false positive is accepted in the tool's file in `contracts/security/` (`slither-triage.json`, `slither-upgradeability-triage.json`, `aderyn-triage.json`, `mythril-triage.json`, `semgrep-triage.json`, `4naly3er-triage.json`, and `gambit-triage.json` for a surviving mutant whose change cannot be observed) with a one-line reason and its approval. `contracts/script/security-gate.py` fails the run on any finding that is neither fixed nor accepted, and on any entry or disabled detector without a reason.
 
@@ -146,7 +156,7 @@ FOUNDRY_PROFILE=aave forge build
 | Differential (`test/differential/`) | ClPriceMath, LPPriceMath, RouteMath and SettlementMath equal the exact Python reference `test/differential/reference/avana_reference.py` (integers and `fractions.Fraction`, called over FFI) | 26 tests in 5 suites |
 | Fork (`test/fork/`) | Behaviour against the deployed Uniswap v3, Aerodrome Slipstream, Chainlink and Aave V3 Pool at a pinned block | 6 test files; none has run yet: the fork blocks in `ForkConstants.sol` are 0, so every fork test skips |
 
-Test names carry their row of 5.1 (`test_TEST_NNN_…`, `testFuzz_TEST_NNN_…`, `invariant_TEST_NNN_…`); 81 of the 3,113 test functions do not yet. A `TEST-NNN verifies:` tag on a test named for another row counts for nothing unless the tag gives `shared: <reason>`, and `trace.py --strict` lists every such tag. The full map is in [`contracts/test/README.md`](contracts/test/README.md), and the counts of the latest run are in [`audit/foundry-tests/`](audit/foundry-tests/).
+Test names carry their row of 5.1 (`test_TEST_NNN_…`, `testFuzz_TEST_NNN_…`, `invariant_TEST_NNN_…`); 81 of the 3,113 test functions do not yet. A `TEST-NNN verifies:` tag on a test named for another row counts for nothing unless the tag gives `shared: <reason>`, and `trace.py --strict` lists every such tag. The full map is in [`contracts/test/README.md`](contracts/test/README.md), and the counts of the latest run are in [`docs/audit/foundry-tests/`](docs/audit/foundry-tests/).
 
 | Profile | Runs | Command |
 |---|---|---|
@@ -162,7 +172,7 @@ To run one row of 5.1: `forge test --match-test 'TEST_057_'`. Because the fork b
 
 ### Symbolic execution
 
-Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input: 148 checks in 26 files. The recorded runs ([`audit/halmos/`](audit/halmos/README.md)) include checks that time out (LPPriceMath, SettlementMath, AvanaFirstLossReserve); a check without a pass counts as not run. In CI each check runs in a job of its own in the slow security tier, with loops unrolled to 16, every night, on every release tag and by hand, in a job of 6 hours (GitHub's maximum job time) with a wall-clock budget of 5 hours: Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. A counterexample always fails. The checks that do not finish within GitHub's limit (23 were cancelled at 6 hours in run 43492412351) are listed, each with its budget and a reason, in [`contracts/security/halmos-bounds.json`](contracts/security/halmos-bounds.json); when the budget or a solver timeout ends a listed check without a counterexample, its job passes and reports it as "bounded, no violation found", which is not a proof: the outcome is printed, written to the job summary and to `out-security/halmos-outcome.json`, and raised as a warning on the run. A check not in the file that runs out of budget fails, so a new slow check is noticed; an entry whose check no longer exists fails the plan, and an entry whose check passes is reported as removable. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
+Halmos proves each `check_PROP_NNN_…` function in `test/halmos/` for every input: 148 checks in 26 files. The recorded runs ([`docs/audit/halmos/`](docs/audit/halmos/README.md)) include checks that time out (LPPriceMath, SettlementMath, AvanaFirstLossReserve); a check without a pass counts as not run. In CI each check runs in a job of its own in the slow security tier, with loops unrolled to 16, every night, on every release tag and by hand, in a job of 6 hours (GitHub's maximum job time) with a wall-clock budget of 5 hours: Halmos runs a contract's checks one after another without a time bound of its own, so a slow check would otherwise hold up the rest. A counterexample always fails. The checks that do not finish within GitHub's limit (23 were cancelled at 6 hours in run 43492412351) are listed, each with its budget and a reason, in [`contracts/security/halmos-bounds.json`](contracts/security/halmos-bounds.json); when the budget or a solver timeout ends a listed check without a counterexample, its job passes and reports it as "bounded, no violation found", which is not a proof: the outcome is printed, written to the job summary and to `out-security/halmos-outcome.json`, and raised as a warning on the run. A check not in the file that runs out of budget fails, so a new slow check is noticed; an entry whose check no longer exists fails the plan, and an entry whose check passes is reported as removable. The properties' fuzz twins run at 10,000 runs on every pull request. Halmos has no cheatcode for the `new C(...)` calls that dynamic test linking produces, so it runs with that linking off:
 
 ```bash
 FOUNDRY_DYNAMIC_TEST_LINKING=false .venv/bin/halmos --root . --match-contract 'HalmosTest$' --loop 8 --solver-timeout-assertion 0
@@ -264,7 +274,7 @@ The branch-coverage gate runs `forge coverage --report lcov` in the `coverage` p
 script/check-coverage.sh
 ```
 
-The Certora rules and the control-area models (`audit/formal-verification/control/fv_ctl_upgrade_lens.py`) prove that each initializer runs once, that `APPLICATION_ADMIN` is held only by the AvanaTimelock, and that the PositionProxy has no upgrade path.
+The Certora rules and the control-area models (`docs/audit/formal-verification/control/fv_ctl_upgrade_lens.py`) prove that each initializer runs once, that `APPLICATION_ADMIN` is held only by the AvanaTimelock, and that the PositionProxy has no upgrade path.
 
 ### Security tiers
 
@@ -309,19 +319,19 @@ Slow-tier budgets come from the environment: `ECHIDNA_TEST_LIMIT`, `ECHIDNA_TIME
 
 ## Specification checks
 
-Every command in this section runs from `spec/05-verification/`, on the `.venv` that `run_all.sh` creates from `requirements.txt` and the Quint installed from `package.json`. A model script exits non-zero only when a result differs from the one it records, so any drift between the spec and its models fails the run. Deliberate counterexamples (wrong readings and boundaries the spec rules out) are recorded as expected results.
+Every command in this section runs from `docs/spec/05-verification/`, on the `.venv` that `run_all.sh` creates from `requirements.txt` and the Quint installed from `package.json`. A model script exits non-zero only when a result differs from the one it records, so any drift between the spec and its models fails the run. Deliberate counterexamples (wrong readings and boundaries the spec rules out) are recorded as expected results.
 
 ### Z3
 
-Z3 checks every formula in exact integers, or at Solidity bit widths where overflow or truncation is the question. A property is proved when its negation is unsat, and every worked example on the spec pages is recomputed. Counts from the latest run, recorded in [`z3/README.md`](spec/05-verification/z3/README.md#results):
+Z3 checks every formula in exact integers, or at Solidity bit widths where overflow or truncation is the question. A property is proved when its negation is unsat, and every worked example on the spec pages is recomputed. Counts from the latest run, recorded in [`z3/README.md`](docs/spec/05-verification/z3/README.md#results):
 
 | Folder | Covers | Scripts | Proved | Counterexamples (deliberate) | Computed |
 |---|---|---|---|---|---|
-| [`z3/units-oracle/`](spec/05-verification/z3/units-oracle/) | Vault-token units and decimals, LPOracle and DebtOracle math, price states, backing ledger, cap counters | 16 | 212 | 40 | 27 |
-| [`z3/aave-risk/`](spec/05-verification/z3/aave-risk/) | Health factor on Aave V4 `a3ef63e`, opening gate, liquidation sizing and bonus, repay, risk premium, caps, breakers, offboarding target | 13 | 149 | 12 | 55 |
-| [`z3/settlement/`](spec/05-verification/z3/settlement/) | Net bonus and slippage, recovery floor, per-leg minimums, caller top-up, waterfall, payout escrow, First-Loss coverage | 17 | 199 | 58 | 33 |
-| [`z3/governance/`](spec/05-verification/z3/governance/) | Timelock delays, execution window and expiry, delay floor, short-delay allowlist, cancel rights, pause state, market-count limit | 3 | 31 | 4 | — |
-| [`z3/amm-pricing/`](spec/05-verification/z3/amm-pricing/) | Fair-composition LP pricing for concentrated liquidity, constant product, StableSwap and weighted pools | 3 | 50 | 9 | 16 |
+| [`z3/units-oracle/`](docs/spec/05-verification/z3/units-oracle/) | Vault-token units and decimals, LPOracle and DebtOracle math, price states, backing ledger, cap counters | 16 | 212 | 40 | 27 |
+| [`z3/aave-risk/`](docs/spec/05-verification/z3/aave-risk/) | Health factor on Aave V4 `a3ef63e`, opening gate, liquidation sizing and bonus, repay, risk premium, caps, breakers, offboarding target | 13 | 149 | 12 | 55 |
+| [`z3/settlement/`](docs/spec/05-verification/z3/settlement/) | Net bonus and slippage, recovery floor, per-leg minimums, caller top-up, waterfall, payout escrow, First-Loss coverage | 17 | 199 | 58 | 33 |
+| [`z3/governance/`](docs/spec/05-verification/z3/governance/) | Timelock delays, execution window and expiry, delay floor, short-delay allowlist, cancel rights, pause state, market-count limit | 3 | 31 | 4 | — |
+| [`z3/amm-pricing/`](docs/spec/05-verification/z3/amm-pricing/) | Fair-composition LP pricing for concentrated liquidity, constant product, StableSwap and weighted pools | 3 | 50 | 9 | 16 |
 
 One script:
 
@@ -337,13 +347,13 @@ One script:
 | Hypothesis (`hypothesis/`) | Generated action sequences and numeric edge cases against an executable integer model of Avana, Aave V4 and Uniswap v3; global invariants, including solvency per debt asset, after every step; LP pricing under swaps, donations, mints and burns | 6 test files; none has run yet: the fork blocks in `ForkConstants.sol` are 0, so every fork test skips | `.venv/bin/python -m pytest -q hypothesis` |
 | Quint scenarios | Named cross-contract scenarios replay deterministically | `avana_tests.qnt`: 50 scenarios; `topology_tests.qnt`: 20 multi-Hub, multi-Spoke scenarios | `npx quint test quint/avana_tests.qnt` |
 | Quint invariant runs | No random trace violates an invariant, with honest or hostile components; witness runs show that traces reach seizures, deficits, rescues and timelock operations | `avana.qnt`: 58 invariants, 96 simulator checks at 500 traces × 20 steps (10,000 × 20 with `QUINT_FULL=1`); `topology.qnt`: 15 invariants at 1,000 traces × 25 steps | `quint/run.sh` |
-| Simulations (`simulation/`) | Depegs, oracle outages, correlated drops, keeper outages, gas and dust, route stress and interest accrual against the launch parameters | 8 seeded, reproducible scenarios | `.venv/bin/python simulation/sim01_depeg.py` |
+| Simulations (`simulation/`) | Depegs, oracle outages, correlated drops, keeper outages, gas and dust, route stress and interest accrual against the default parameters | 8 seeded, reproducible scenarios | `.venv/bin/python simulation/sim01_depeg.py` |
 
 Deeper runs: `AVANA_HYP_SCALE=5 .venv/bin/python -m pytest -q hypothesis`, `QUINT_FULL=1 quint/run.sh`, `npx quint test quint/topology_tests.qnt` and `quint/topology_run.sh`.
 
 ### Formal-verification areas
 
-Three areas in [`audit/formal-verification/`](audit/formal-verification/) model the protocol by concern with Z3 and Quint, and each checks that every spec ID it cites is defined. They run from the repository root; each writes its run log to `RUNS.md` and its findings to `report.md` in its folder.
+Three areas in [`docs/audit/formal-verification/`](docs/audit/formal-verification/) model the protocol by concern with Z3 and Quint, and each checks that every spec ID it cites is defined. They run from the repository root; each writes its run log to `RUNS.md` and its findings to `report.md` in its folder.
 
 | Area | Covers | Latest full run |
 |---|---|---|
@@ -352,15 +362,15 @@ Three areas in [`audit/formal-verification/`](audit/formal-verification/) model 
 | Liquidation | LPVaultSwap and SettlementMath, routes, flash funding, caller top-up, First-Loss Reserves, PayoutEscrow | 277 checks passed, Quint checks at 2,000 traces × 25 steps |
 
 ```bash
-audit/formal-verification/control/run.sh
+docs/audit/formal-verification/control/run.sh
 ```
 
 ```bash
-audit/formal-verification/custody/run.sh
+docs/audit/formal-verification/custody/run.sh
 ```
 
 ```bash
-audit/formal-verification/liquidation/run.sh
+docs/audit/formal-verification/liquidation/run.sh
 ```
 
 ### `run_all.sh`
@@ -368,16 +378,16 @@ audit/formal-verification/liquidation/run.sh
 One script runs every Z3, SymPy and simulation script, the Hypothesis suite, the Quint typecheck and tests of every model, the Quint simulator checks of `quint/run.sh` and `trace.py`, then prints the exit status of each step. The first run creates `.venv/` and installs Quint. `--nightly` adds the topology simulator runs. A part name runs one part of the same checks (`z3/<folder>`, `sympy`, `simulation`, `hypothesis`, `quint`, `trace`; `--list` prints them); CI runs one part per job.
 
 ```bash
-spec/05-verification/run_all.sh
+docs/spec/05-verification/run_all.sh
 ```
 
 ```bash
-spec/05-verification/run_all.sh --nightly
+docs/spec/05-verification/run_all.sh --nightly
 ```
 
 ### Traceability
 
-[`trace.py`](spec/05-verification/trace.py) builds the matrix requirement → check → implementation in [`traceability.md`](spec/05-verification/traceability.md) (3,558 requirements at the latest run). It scans the spec models, `contracts/test/`, `contracts/certora/` and the `/// @custom:spec <ID>` tags in `contracts/src/`. [`traceability.lock.json`](spec/05-verification/traceability.lock.json) stores a hash of each requirement's text and the checks accepted for it (3,458 entries).
+[`trace.py`](docs/spec/05-verification/trace.py) builds the matrix requirement → check → implementation in [`traceability.md`](docs/spec/05-verification/traceability.md) (3,558 requirements at the latest run). It scans the spec models, `contracts/test/`, `contracts/certora/` and the `/// @custom:spec <ID>` tags in `contracts/src/`. [`traceability.lock.json`](docs/spec/05-verification/traceability.lock.json) stores a hash of each requirement's text and the checks accepted for it (3,458 entries).
 
 Each row's implementation state is **Verified** (a test or property that counts ran and passed), **Failed**, **Not run** (counting tests exist, none has a result) or **Unlinked** (none counts). A `TEST-`/`PROP-` tag counts only when it sits directly above a test function or CVL rule, the test carries the tag's own row, and its test file uses no harness or mock that stands in for a contract whose page defines the row (`evidence.py`, `STAND_INS`): a test of the LPOracle base runs on `LPOracleHarness`, which replaces the pricing hooks, so it does not count for the LPOracle's rows. Results come from `--results` (`forge test --json-file` output and Halmos logs) and, for CVL rules, from a prover result with a job id in `contracts/certora/RUNS.md` or a CI result file. The committed `traceability.md` is written without run results, so its Foundry rows read Not run; the CI evidence job writes the same matrix from the run's results. A `@custom:spec` tag on an interface, a function without a body or an abstract contract that no concrete contract inherits is shown as a declaration and is not an implementation link.
 
@@ -397,18 +407,18 @@ With a run's results (from `contracts/`, `forge test --json-file out-results/run
 .venv/bin/python trace.py --strict --results ../../contracts/out-results --out /tmp/traceability-run.md
 ```
 
-[`contract_checklist.py`](spec/05-verification/contract_checklist.py) lists, for one of the 26 contracts, every REQ and SPEC ID of its page, its TEST and PROP rows, and the INV and ATTACK rows that name it, each marked verified `[x]`, failed `[!]`, not run `[~]` or unlinked `[ ]` by the rules above. `--check --results <run>` exits 1 while a row in scope is not verified; `--check --links-only` (no run) exits 1 on unlinked and failed rows. `--all` runs every contract and `--uncovered` lists the TEST rows on no contract's checklist, which fail unless verified or listed in `OUTSIDE_CONTRACTS` with the reason (keeper, off-chain and CI-tool rows). It runs from the repository root:
+[`contract_checklist.py`](docs/spec/05-verification/contract_checklist.py) lists, for one of the 26 contracts, every REQ and SPEC ID of its page, its TEST and PROP rows, and the INV and ATTACK rows that name it, each marked verified `[x]`, failed `[!]`, not run `[~]` or unlinked `[ ]` by the rules above. `--check --results <run>` exits 1 while a row in scope is not verified; `--check --links-only` (no run) exits 1 on unlinked and failed rows. `--all` runs every contract and `--uncovered` lists the TEST rows on no contract's checklist, which fail unless verified or listed in `OUTSIDE_CONTRACTS` with the reason (keeper, off-chain and CI-tool rows). It runs from the repository root:
 
 ```bash
-spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --list
+docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py --list
 ```
 
 ```bash
-spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py Lock --check --links-only
+docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py Lock --check --links-only
 ```
 
 ```bash
-spec/05-verification/.venv/bin/python spec/05-verification/contract_checklist.py --all --check --results contracts/out-results
+docs/spec/05-verification/.venv/bin/python docs/spec/05-verification/contract_checklist.py --all --check --results contracts/out-results
 ```
 
 ## Run everything
@@ -466,26 +476,26 @@ script/security-slow.sh
 From the repository root:
 
 ```bash
-spec/05-verification/run_all.sh --nightly
+docs/spec/05-verification/run_all.sh --nightly
 ```
 
 ```bash
-audit/formal-verification/control/run.sh
+docs/audit/formal-verification/control/run.sh
 ```
 
 ```bash
-audit/formal-verification/custody/run.sh
+docs/audit/formal-verification/custody/run.sh
 ```
 
 ```bash
-audit/formal-verification/liquidation/run.sh
+docs/audit/formal-verification/liquidation/run.sh
 ```
 
 The fork tests need `RPC_MAINNET` and `RPC_BASE`, and the Certora loop needs `CERTORAKEY`, Java 21 and `solc-0.8.28`; every other command runs offline.
 
 ## Continuous integration
 
-[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs on every pull request and every push to `main` that touches `contracts/**`, `audit/**/*.sol`, `spec/05-verification/trace.py`, `evidence.py`, `contract_checklist.py` or the workflow, and can be started by hand. A pull request runs the short set in about 10 minutes (`build`, `test`, `gas`, `abis`, `traceability`, `evidence`, `coverage`, `fast-security`); a pull request labelled `hotfix` adds `hotfix-plan` and `hotfix`. A push to `main` runs the same set with the tests at full depth in 20 shards of about 30 minutes each. The long checks (`plan`, `invariant`, `fork`, `differential`, `smtchecker`, `certora`) run every night at 06:00 UTC on `main`, on every release tag (`v*`) and by hand; a run on `main` is never cancelled by the next push. `gate` lists the long checks as not due outside those runs and requires every job in them; a due check that did not run (a missing secret, an unpinned fork block, every fork test skipped) fails it. It uses the Foundry release in `contracts/.foundry-version` and the dependencies in `soldeer.lock`.
+[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml) runs on every pull request and every push to `main` that touches `contracts/**`, `docs/audit/**/*.sol`, `docs/spec/05-verification/trace.py`, `evidence.py`, `contract_checklist.py` or the workflow, and can be started by hand. A pull request runs the short set in about 10 minutes (`build`, `test`, `gas`, `abis`, `traceability`, `evidence`, `coverage`, `fast-security`); a pull request labelled `hotfix` adds `hotfix-plan` and `hotfix`. A push to `main` runs the same set with the tests at full depth in 20 shards of about 30 minutes each. The long checks (`plan`, `invariant`, `fork`, `differential`, `smtchecker`, `certora`) run every night at 06:00 UTC on `main`, on every release tag (`v*`) and by hand; a run on `main` is never cancelled by the next push. `gate` lists the long checks as not due outside those runs and requires every job in them; a due check that did not run (a missing secret, an unpinned fork block, every fork test skipped) fails it. It uses the Foundry release in `contracts/.foundry-version` and the dependencies in `soldeer.lock`.
 
 | Job | Runs |
 |---|---|
@@ -510,20 +520,20 @@ Every job of every workflow is bounded at 4 hours, except the Halmos jobs (one c
 
 Two more workflows run every night at 06:00 UTC on `main`, on every release tag (`v*`) and by hand (`workflow_dispatch`); pull requests and pushes do not run them. [`.github/workflows/security-slow.yml`](.github/workflows/security-slow.yml) builds once (`script/security-slow.sh build` and the build Halmos runs) and runs every target on that build in its own job with the slow-tier budgets (`ECHIDNA_TEST_LIMIT=1000000`, `ECHIDNA_TIMEOUT=1800`, `MEDUSA_TIMEOUT=1800`, `HEVM_SMT_TIMEOUT=600`, `HALMOS_LOOP=16`): one job per Echidna harness (property and assertion mode, about 70 minutes), one per Medusa harness (about 45 minutes), one per Halmos check at loop 16 (up to 6 hours each), one per hevm target (each harness's assertion entry points, each `src/` contract) and one per group of eight `src/` contracts for Mythril (at most 2 hours of symbolic execution). Each harness keeps its Echidna and Medusa corpus between runs, each job uploads its reports, and `slow-gate` passes only when every job passed. Started by hand with `campaign` set to a layer, it runs that layer's 24-hour pre-audit campaign instead: eight 3-hour jobs per harness and mode with fresh seeds, then `campaign-merge` joins their corpora into each harness's stored corpus. [`.github/workflows/mutation-gate.yml`](.github/workflows/mutation-gate.yml) runs, for all six layers (or one, by hand), `slither-mutate` per contract and mutator group, Gambit per contract, Necessist per test file and `certoraMutate` per Certora conf (needs `CERTORAKEY`; without it each job writes "not run" and fails), uploads `out-security/mutation`, `out-security/gambit`, `out-security/necessist` and `out-security/certora-mutate`, and `mutation-summary` passes only when every job passed.
 
-[`.github/workflows/services.yml`](.github/workflows/services.yml) runs on every pull request and push to `main` that changes `services/`, `packages/protocol/` or the root npm files, with one job per package (`services/common`, `services/indexer`, `services/keeper`, `packages/protocol`): it installs the package's dependencies, runs Ponder codegen for the indexer, then the package's `typecheck` and `test` scripts, and its `services-gate` job passes only when every package passed. [`.github/workflows/models.yml`](.github/workflows/models.yml) runs on every pull request and push to `main` that touches the models, the spec or the contracts: each formal-verification area's `run.sh` (control, custody, liquidation), the user simulation (the reported variants and seeds and the topology grid, failing on any invariant violation) and `contract_checklist.py --all --check --links-only` (every contract key and the TEST rows on no checklist: every row linked by a test of its own that uses the real contract); every night, on every release tag and by hand it also runs the Quint topology simulator checks of `spec/05-verification/quint/topology_run.sh`, which `run_all.sh --nightly` adds to the quick path, and its `models-gate` job passes only when every job passed.
+[`.github/workflows/services.yml`](.github/workflows/services.yml) runs on every pull request and push to `main` that changes `services/`, `packages/protocol/` or the root npm files, with one job per package (`services/common`, `services/indexer`, `services/keeper`, `packages/protocol`): it installs the package's dependencies, runs Ponder codegen for the indexer, then the package's `typecheck` and `test` scripts, and its `services-gate` job passes only when every package passed. [`.github/workflows/models.yml`](.github/workflows/models.yml) runs on every pull request and push to `main` that touches the models, the spec or the contracts: each formal-verification area's `run.sh` (control, custody, liquidation), the user simulation (the reported variants and seeds and the topology grid, failing on any invariant violation) and `contract_checklist.py --all --check --links-only` (every contract key and the TEST rows on no checklist: every row linked by a test of its own that uses the real contract); every night, on every release tag and by hand it also runs the Quint topology simulator checks of `docs/spec/05-verification/quint/topology_run.sh`, which `run_all.sh --nightly` adds to the quick path, and its `models-gate` job passes only when every job passed.
 
 [`.github/workflows/ci-failure-report.yml`](.github/workflows/ci-failure-report.yml) records why a run of `contracts`, `spec`, `security-slow`, `mutation-gate`, `gitleaks`, `services` or `models` failed. A failure on `main` opens an issue labelled `ci-failure` with the failed jobs and steps, GitHub's annotations, the error lines and log tail of each failed step, and links to the run and its artifacts; the next success of that workflow on `main` closes it. A failure on a pull request adds the same report as a comment.
 
-[`.github/workflows/spec.yml`](.github/workflows/spec.yml) runs `spec/05-verification/run_all.sh` on every change to `spec/`, `contracts/src/`, `contracts/test/` or `contracts/certora/`, one part per job in parallel (`run_all.sh --list`). The `trace` part (the licence-header check, `trace.py` and a check that the committed `traceability.md` is current) runs on every such pull request and push. The model parts (each `z3/` folder, SymPy, the simulations, Hypothesis and Quint, each bounded at 4 hours) run every night on `main`, on every release tag and by hand. `spec-gate` passes only when `trace` passed and, in those runs, every model part passed; elsewhere it accepts the skipped model parts. [`.github/workflows/dependency-review.yml`](.github/workflows/dependency-review.yml) fails a pull request that adds an npm or pip dependency with a known vulnerability of moderate severity or above. [`.github/workflows/gitleaks.yml`](.github/workflows/gitleaks.yml) scans the full git history, every branch and tag, for committed secrets with Gitleaks 8.30.1 (checksum-verified CLI, the upstream rules plus the allowlist in [`.gitleaks.toml`](.gitleaks.toml)) on every pull request, every push to `main` and every Monday; findings are redacted in the log and uploaded to code scanning. The same scan runs locally with `gitleaks git . --config .gitleaks.toml --log-opts="--all"`. Every action is pinned by commit SHA, checkouts keep no credentials, and dependency versions change only by a reviewed pull request; Dependabot is off.
+[`.github/workflows/spec.yml`](.github/workflows/spec.yml) runs `docs/spec/05-verification/run_all.sh` on every change to `docs/spec/`, `contracts/src/`, `contracts/test/` or `contracts/certora/`, one part per job in parallel (`run_all.sh --list`). The `trace` part (the licence-header check, `trace.py` and a check that the committed `traceability.md` is current) runs on every such pull request and push. The model parts (each `z3/` folder, SymPy, the simulations, Hypothesis and Quint, each bounded at 4 hours) run every night on `main`, on every release tag and by hand. `spec-gate` passes only when `trace` passed and, in those runs, every model part passed; elsewhere it accepts the skipped model parts. [`.github/workflows/dependency-review.yml`](.github/workflows/dependency-review.yml) fails a pull request that adds an npm or pip dependency with a known vulnerability of moderate severity or above. [`.github/workflows/gitleaks.yml`](.github/workflows/gitleaks.yml) scans the full git history, every branch and tag, for committed secrets with Gitleaks 8.30.1 (checksum-verified CLI, the upstream rules plus the allowlist in [`.gitleaks.toml`](.gitleaks.toml)) on every pull request, every push to `main` and every Monday; findings are redacted in the log and uploaded to code scanning. The same scan runs locally with `gitleaks git . --config .gitleaks.toml --log-opts="--all"`. Every action is pinned by commit SHA, checkouts keep no credentials, and dependency versions change only by a reviewed pull request; Dependabot is off.
 
 ## Security, releases and contributions
 
 - Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) gives the setup, build, test and security-tier commands and the licence of contributions.
-- Vulnerabilities: [`SECURITY.md`](SECURITY.md); reports go to support@avana.cc, and the bug bounty is at [avana.cc/developers/safety/bug-bounty](https://www.avana.cc/developers/safety/bug-bounty). External audit reports are indexed in [`audit/external/`](audit/external/index.md).
-- Releases: annotated tags `vX.Y.Z`, each with a section in [`CHANGELOG.md`](CHANGELOG.md). The tag is the deploy scripts' `AVANA_RELEASE`, which feeds the CREATE2 and CREATE3 salts, so a tag is never moved or reused. A tag starts every long check; an upgrade is scheduled from a tag and executes only when they passed, so they run during the timelock delay ([governance](governance/README.md#releases-and-emergency-fixes)).
-- Emergency fixes: a pull request labelled `hotfix` runs the short set plus the touched contracts' invariant campaigns at full depth, one campaign or run segment per job, each at most about 30 minutes (playbook P-05 in [3.6](spec/03-operations/06-emergency-operations.md)). The guardians' pause protects funds at once; the fix then follows the release path.
+- Vulnerabilities: [`SECURITY.md`](SECURITY.md); reports go to support@avana.cc, and the bug bounty is at [avana.cc/developers/safety/bug-bounty](https://www.avana.cc/developers/safety/bug-bounty). External audit reports are indexed in [`docs/audit/external/`](docs/audit/external/index.md).
+- Releases: annotated tags `vX.Y.Z`, each with a section in [`CHANGELOG.md`](CHANGELOG.md). The tag is the deploy scripts' `AVANA_RELEASE`, which feeds the CREATE2 and CREATE3 salts, so a tag is never moved or reused. A tag starts every long check; an upgrade is scheduled from a tag and executes only when they passed, so they run during the timelock delay ([governance](docs/governance/README.md#releases-and-emergency-fixes)).
+- Emergency fixes: a pull request labelled `hotfix` runs the short set plus the touched contracts' invariant campaigns at full depth, one campaign or run segment per job, each at most about 30 minutes (playbook P-05 in [3.6](docs/spec/03-operations/06-emergency-operations.md)). The guardians' pause protects funds at once; the fix then follows the release path.
 - Reviews: [`.github/CODEOWNERS`](.github/CODEOWNERS) names the team that approves each path; [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) is the checklist every pull request completes. The repository is `Avana-Labs/avana-monorepo` in the [Avana-Labs](https://github.com/Avana-Labs) GitHub organisation.
-- Governance changes: one folder per operation in [`governance/operations/`](governance/README.md#operation-folders).
+- Governance changes: one folder per operation in [`docs/governance/operations/`](docs/governance/README.md#operation-folders).
 
 ## Licence
 
@@ -533,11 +543,11 @@ Files that contain third-party code keep its licence: `contracts/src/amm/concent
 
 ## Where to start reading
 
-1. [`spec/README.md`](spec/README.md): how the specification is organised, the ID scheme and the units.
-2. [1.1 Protocol Overview](spec/01-architecture/01-protocol-overview.md): participants, the collateral path and what is in scope.
-3. [1.2 Contract Relationships](spec/01-architecture/02-contract-relationships.md): every contract, its form (immutable or upgradeable), every call between contracts and where assets sit.
-4. The operation pages in [`spec/03-operations/`](spec/03-operations/), starting with deposit, borrow and liquidation.
-5. [4.4 Design Decisions](spec/04-security/04-design-decisions.md): every decision `Q-001` onward with its resolution.
-6. [`spec/05-verification/README.md`](spec/05-verification/README.md): how each rule is checked.
+1. [`docs/spec/README.md`](docs/spec/README.md): how the specification is organised, the ID scheme and the units.
+2. [1.1 Protocol Overview](docs/spec/01-architecture/01-protocol-overview.md): participants, the collateral path and what is in scope.
+3. [1.2 Contract Relationships](docs/spec/01-architecture/02-contract-relationships.md): every contract, its form (immutable or upgradeable), every call between contracts and where assets sit.
+4. The operation pages in [`docs/spec/03-operations/`](docs/spec/03-operations/), starting with deposit, borrow and liquidation.
+5. [4.4 Design Decisions](docs/spec/04-security/04-design-decisions.md): every decision `Q-001` onward with its resolution.
+6. [`docs/spec/05-verification/README.md`](docs/spec/05-verification/README.md): how each rule is checked.
 
-Contracts are written from the specification. When code and specification disagree, the specification is changed first, through the change control described in [`spec/README.md`](spec/README.md#traceability-and-change-control), and the code follows.
+Contracts are written from the specification. When code and specification disagree, the specification is changed first, through the change control described in [`docs/spec/README.md`](docs/spec/README.md#traceability-and-change-control), and the code follows.

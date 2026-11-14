@@ -68,5 +68,5 @@ Setup (Base, from 3.1 `DEP-029`, 3.2 `BOR-022`, 3.4 `WDR-045`): market 3 is a US
 
 ## Spec
 
-- [2.6 Aave Adapter](../../../../spec/02-contracts/06-aave-adapter.md): `REQ-ADAPTER-065`–`REQ-ADAPTER-092`, `REQ-PROXY-015`–`REQ-PROXY-039`, `REQ-PROXY-083`, `SPEC-PROXY-003`, `SPEC-PROXY-007`, `SPEC-PROXY-008`, `SPEC-PROXY-009`.
-- Flows: [3.1 Deposit](../../../../spec/03-operations/01-deposit.md) `DEP-029`, [3.2 Borrow](../../../../spec/03-operations/02-borrow.md) `BOR-022`, [3.3 Repay](../../../../spec/03-operations/03-repay.md) `REP-024`, [3.4 Withdraw](../../../../spec/03-operations/04-withdraw.md) `WDR-045`, [3.7 Collect fees](../../../../spec/03-operations/07-collect-fees.md) `FEE-009`.
+- [2.6 Aave Adapter](../../../../docs/spec/02-contracts/06-aave-adapter.md): `REQ-ADAPTER-065`–`REQ-ADAPTER-092`, `REQ-PROXY-015`–`REQ-PROXY-039`, `REQ-PROXY-083`, `SPEC-PROXY-003`, `SPEC-PROXY-007`, `SPEC-PROXY-008`, `SPEC-PROXY-009`.
+- Flows: [3.1 Deposit](../../../../docs/spec/03-operations/01-deposit.md) `DEP-029`, [3.2 Borrow](../../../../docs/spec/03-operations/02-borrow.md) `BOR-022`, [3.3 Repay](../../../../docs/spec/03-operations/03-repay.md) `REP-024`, [3.4 Withdraw](../../../../docs/spec/03-operations/04-withdraw.md) `WDR-045`, [3.7 Collect fees](../../../../docs/spec/03-operations/07-collect-fees.md) `FEE-009`.
