@@ -409,6 +409,51 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.syncDrawCap(address(spoke), 9);
     }
 
+    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010, Q-378
+    // Two CDP Spokes draw on the Hub's one USDC credit line (the second through a cross-Hub line): a sync replaces only
+    // the synced reserve's share of the recorded sum.
+    function test_TEST_273_syncReplacesOnlyItsOwnShareOfTheLine() public {
+        _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
+        _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
+        RegistryHubMock hub2 = new RegistryHubMock();
+        RegistrySpokeMock spoke2 = new RegistrySpokeMock();
+        RegistryAaveOracleMock oracle2 = new RegistryAaveOracleMock();
+        spoke2.setOracle(address(oracle2));
+        spoke2.setImplementation(address(spokeImpl));
+        oracle2.setSpoke(address(spoke2));
+        vm.startPrank(address(timelock));
+        registry.recordHub(address(hub2), RiskTier.Correlated);
+        registry.deployCdpSpoke(
+            SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
+        );
+        registry.setCrossHubLinesEnabled(true);
+        registry.setCrossHubLine(address(hub), address(usdc), address(spoke2), 300_000);
+        vm.stopPrank();
+        IAaveV4Spoke.Reserve memory r;
+        (r.underlying, r.hub, r.assetId, r.decimals) = (address(usdc), address(hub), uint16(USDC_ASSET), 6);
+        IAaveV4Spoke.ReserveConfig memory c;
+        c.borrowable = true;
+        IAaveV4Spoke.DynamicReserveConfig memory d;
+        spoke2.setReserve(USDC_RESERVE, r, c, d);
+        oracle2.setSource(USDC_RESERVE, address(usdcOracle));
+        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 200_000);
+        _enable(_usdcDef());
+        DebtReserveDef memory cross = _usdcDef();
+        cross.crossHub = true;
+        vm.prank(address(timelock));
+        registry.enableDebtReserve(address(spoke2), cross);
+        (, uint256 sum) = registry.creditLine(address(hub), address(usdc));
+        assertEq(sum, 700_000);
+        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 600_000);
+        registry.syncDrawCap(address(spoke), USDC_RESERVE);
+        (, sum) = registry.creditLine(address(hub), address(usdc));
+        assertEq(sum, 800_000, "700,000 - 500,000 + 600,000");
+        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 50_000);
+        registry.syncDrawCap(address(spoke2), USDC_RESERVE);
+        (, sum) = registry.creditLine(address(hub), address(usdc));
+        assertEq(sum, 650_000, "800,000 - 200,000 + 50,000");
+    }
+
     // TEST-273 verifies: REQ-CONFIG-081
     function test_TEST_273_specExampleCoverageRatio() public {
         // 20,000,000 GHO at 2,000 bps needs 4,000,000 GHO; 3,900,000 GHO reverts with the spec's numbers.
