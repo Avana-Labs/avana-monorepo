@@ -465,8 +465,10 @@ const DRILLS: Record<string, Drill> = {
       const early = await tryAs(e, W.anyone, marketRegistryAbi, "closeMarket", [m.marketId], e.registry);
       c.refused("forward: closeMarket during the notice", early, /OffboardNoticeRunning/);
       const debt = await e.debt(m, s.borrower.account);
+      await e.mint(m.debtAsset, s.borrower.owner, debt * 2n + 10n ** 18n);
       await e.must("repay all", s.borrower.owner, e.adapter, aaveAdapterAbi, "repay", [s.borrower.owner, m.marketId, s.borrower.account.debtReserveId, debt * 2n + 10n ** 18n, true, await e.deadline()]);
       await wait(e, 5 * 86_400 + 1);
+      await e.gasFor(W.anyone);
       await e.must("closeMarket by anyone", W.anyone, e.registry, marketRegistryAbi, "closeMarket", [m.marketId]);
       const st = await e.read(e.registry, marketRegistryAbi, "getMarket", [m.marketId]);
       c.that("forward: market Closed", Number(st.status) === 5, `status ${st.status}`);
@@ -566,6 +568,7 @@ const DRILLS: Record<string, Drill> = {
       await pokeAll(e);
       c.refused("forward: pledge into the growth market", await pledgeProbe(e, s, M6, fresh, p), /MarketOffboarding|ReserveFrozen|AaveReserveUnavailable/);
       await wait(e, 5 * 86_400 + 1);
+      await e.gasFor(W.anyone);
       await e.must("closeMarket by anyone", W.anyone, e.registry, marketRegistryAbi, "closeMarket", [m.marketId]);
       mustApply("retire-forward-debt-aip.json", log);
       mustApply("retire-forward-debt.json", log);
