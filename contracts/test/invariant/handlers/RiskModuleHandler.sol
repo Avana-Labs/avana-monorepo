@@ -14,6 +14,9 @@ import {Test} from "forge-std/Test.sol";
 /// @notice Random sequences of Aave, oracle, issuer and keeper changes, time steps, breaker pokes, guardian resets and
 /// borrow-side pre-checks against the real RiskModule and MarketRegistry. Every pre-check that passes is compared with
 /// an independent reading of the gates of 2.7; a pass while a gate is closed is a violation.
+/// @dev Steered: three pre-checks in four first open every gate the handler controls, and half of those then close
+/// exactly one, chosen by the seed, so each gate is tested alone at its boundary; the fourth runs on whatever state the
+/// sequence left. A pre-check refused with every modelled gate open is counted (`refusedWhileClear`).
 contract RiskModuleHandler is Test {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
     /// campaign's success count, so the metrics show the calls that did real work.
@@ -48,6 +51,8 @@ contract RiskModuleHandler is Test {
     uint256 public borrowsWithoutKeeper;
     uint256 public borrows;
     uint256 public withdrawals;
+    /// @notice Pre-checks refused while every gate the handler models was open.
+    uint256 public refusedWhileClear;
 
     constructor(
         World memory world
@@ -92,8 +97,12 @@ contract RiskModuleHandler is Test {
         w.swap.setKeepers(n % 3);
     }
 
-    function offboard() external {
-        if (_offboarding) revert Skipped();
+    /// @notice Offboards the market, which no call undoes: one seed in sixteen, so most runs keep testing the borrow
+    /// gates and some test a borrow after offboarding.
+    function offboard(
+        uint256 seed
+    ) external {
+        if (_offboarding || uint256(keccak256(abi.encode(seed))) % 16 != 0) revert Skipped();
         _offboarding = true;
         vm.prank(address(w.rm.TIMELOCK()));
         w.registry.setMarketOffboarding(w.marketId);
@@ -122,7 +131,10 @@ contract RiskModuleHandler is Test {
         try w.registry.resetMarketBreaker(w.marketId) {} catch {}
     }
 
-    function borrow() external {
+    function borrow(
+        uint256 seed
+    ) external {
+        _steer(seed, true);
         bool clear = _clear(true);
         uint256 keepers = w.swap.activeKeeperCount();
         try w.rm.preBorrowCheck(w.proxy, w.debtReserve, 1) {
@@ -130,17 +142,78 @@ contract RiskModuleHandler is Test {
             if (!clear) ++violations;
             if (keepers == 0) ++borrowsWithoutKeeper;
         } catch {
+            if (clear) ++refusedWhileClear;
             revert Skipped();
         }
     }
 
-    function withdraw() external {
+    function withdraw(
+        uint256 seed
+    ) external {
+        _steer(seed, false);
         bool clear = _clear(false);
         try w.rm.preWithdrawCheck(w.proxy) {
             ++withdrawals;
             if (!clear) ++violations;
         } catch {
+            if (clear) ++refusedWhileClear;
             revert Skipped();
+        }
+    }
+
+    /// @dev Seed bits from a hash, so the fuzzer's small dictionary values still spread over the modes: mode 0 leaves
+    /// the state as the sequence made it; 1 opens every gate; 2 and 3 open every gate and close one.
+    function _steer(
+        uint256 seed,
+        bool isBorrow
+    ) internal {
+        uint256 h = uint256(keccak256(abi.encode(seed)));
+        if (h % 4 == 0) return;
+        _open();
+        if (h % 4 == 1) return;
+        _closeOne((h >> 8) % (isBorrow ? 9 : 8));
+    }
+
+    /// @dev Opens every gate the handler controls: Live price with borrowing allowed, fresh feeds, no Aave pause,
+    /// freeze or drift, no issuer pause, one active keeper, the breaker reset by the guardian and its 1,800 s cooldown
+    /// passed. Offboarding cannot be undone, so a borrow after it stays closed.
+    function _open() internal {
+        w.oracle.setState(PriceState.Live, 0, true);
+        (_vtPaused, _debtPaused, _frozen, _drift) = (false, false, false, false);
+        _config();
+        _issuer = false;
+        w.usdt.setPaused(false, false);
+        if (w.swap.activeKeeperCount() == 0) w.swap.setKeepers(1);
+        vm.prank(w.guardian);
+        try w.registry.resetMarketBreaker(w.marketId) {} catch {}
+        (, uint64 lastBreach) = w.registry.marketBreaker(w.marketId);
+        if (lastBreach != 0 && block.timestamp < uint256(lastBreach) + 1800) vm.warp(uint256(lastBreach) + 1800);
+        _reportAt = uint64(block.timestamp);
+        _report();
+    }
+
+    /// @dev Closes one gate: the price Cached or with borrowing disallowed, a stale feed, an Aave pause of either
+    /// reserve, drift, an issuer pause, no keeper, or (borrow only) a frozen vault-token reserve.
+    function _closeOne(
+        uint256 gate
+    ) internal {
+        if (gate == 0) {
+            w.oracle.setState(PriceState.Cached, 0, true);
+        } else if (gate == 1) {
+            w.oracle.setState(PriceState.Live, 0, false);
+        } else if (gate == 2) {
+            vm.warp(block.timestamp + w.feedAge + 1);
+        } else if (gate == 6) {
+            _issuer = true;
+            w.usdt.setPaused(true, false);
+        } else if (gate == 7) {
+            w.swap.setKeepers(0);
+        } else {
+            if (gate == 3) _vtPaused = true;
+            else if (gate == 4) _debtPaused = true;
+            else if (gate == 5) _drift = true;
+            else _frozen = true;
+            _config();
         }
     }
 
