@@ -5,6 +5,7 @@
 import type { Address, Hex } from "viem";
 import type { ChainConfig } from "./config.ts";
 import type { ChainReader } from "./chain/reads.ts";
+import type { Revert } from "./jobs/failureReasons.ts";
 
 export type JobKind = "liquidation" | "settlePending" | "oraclePoke" | "breakerPoke" | "configPoke";
 
@@ -82,4 +83,6 @@ export interface Job<C, D> {
   build(ctx: BlockContext, decision: D): Promise<TxPlan>;
   /** Runs one candidate's whole pass (check to send) under the job's own exclusion, such as the account in-flight flag. */
   exclusive?(candidate: C, pass: () => Promise<void>): Promise<void>;
+  /** Acts on a simulation that reverted (in the build or before the send), by the failure-reason table. */
+  onFailure?(ctx: BlockContext, subject: string, revert: Revert): Promise<void> | void;
 }

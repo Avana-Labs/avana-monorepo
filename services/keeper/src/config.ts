@@ -16,6 +16,7 @@ import {
   rpcEnvName,
 } from "@avana/services-common";
 import { ABI_HASH } from "@avana/protocol/abis";
+import { type StreamKey, parseStreamKey } from "./discovery/indexerStream.ts";
 
 export type KeeperMode = "observe" | "active";
 export type KeeperRole = "primary" | "standby";
@@ -26,6 +27,8 @@ export interface ChainConfig {
   readonly rpc: { readonly primary: string; readonly fallback: string; readonly ws: string; readonly privateSend: readonly string[] };
   /** Undefined runs this chain in observe-only mode whatever KEEPER_MODE says. */
   readonly kmsKeyId: string | undefined;
+  /** Worst-case wei one transaction may cost (KEEPER_GAS_CEILING_WEI_<CHAIN>); required wherever a signer is set. */
+  readonly gasCeilingWei: bigint | undefined;
 }
 
 export interface KeeperConfig {
@@ -37,6 +40,16 @@ export interface KeeperConfig {
   readonly killSwitch: { readonly port: number; readonly cert: string; readonly key: string; readonly clientCa: string; readonly statePath: string };
   readonly metricsPort: number;
   readonly indexerUrl: string;
+  /** The keeper's key for the indexer stream, one of the indexer's INDEXER_EXPORT_KEYS (id:base64secret). */
+  readonly indexerKey: StreamKey;
+}
+
+/** A decimal wei amount; a missing or zero ceiling stops startup on a chain that can sign. */
+export function gasCeiling(env: NodeJS.ProcessEnv, name: string): bigint | undefined {
+  const raw = optionalEnv(env, name);
+  if (raw === undefined) return undefined;
+  if (!/^\d+$/.test(raw) || BigInt(raw) === 0n) throw new Error(`${name} must be a positive integer number of wei`);
+  return BigInt(raw);
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
@@ -60,6 +73,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
       privateSend: listEnv(env, rpcEnvName(chain, "PRIVATE")),
     },
     kmsKeyId: optionalEnv(env, `KEEPER_KMS_KEY_ID_${chain.envSuffix}`),
+    gasCeilingWei: gasCeiling(env, `KEEPER_GAS_CEILING_WEI_${chain.envSuffix}`),
   }));
   if (chains.length === 0) throw new Error(`no verified manifest for any ${set} chain`);
   for (const c of chains) {
@@ -67,6 +81,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     if (mode === "active" && c.kmsKeyId && c.rpc.privateSend.length === 0) {
       throw new Error(`${rpcEnvName(c.chain, "PRIVATE")} is empty; active mode sends only through private order flow`);
     }
+    // A signer without a fee ceiling could drain its gas wallet on a fault: refused at startup.
+    if (c.kmsKeyId && c.gasCeilingWei === undefined) throw new Error(`KEEPER_GAS_CEILING_WEI_${c.chain.envSuffix} is required with a signer`);
   }
 
   const shard = role === "standby" ? null : { index: intEnv(env, "KEEPER_SHARD"), count: intEnv(env, "KEEPER_SHARD_COUNT") };
@@ -90,5 +106,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     },
     metricsPort,
     indexerUrl: requireEnv(env, "KEEPER_INDEXER_URL"),
+    indexerKey: parseStreamKey(requireEnv(env, "KEEPER_INDEXER_KEY")),
   };
 }

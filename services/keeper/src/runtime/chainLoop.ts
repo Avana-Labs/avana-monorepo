@@ -7,6 +7,7 @@
 import { type Address, type PublicClient, decodeFunctionResult, encodeFunctionData } from "viem";
 import { flashLiquidatorAbi } from "@avana/protocol/abis";
 import type { ChainConfig, KeeperConfig } from "../config.ts";
+import type { RetryHint } from "../jobs/failureReasons.ts";
 import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
 import { type Head, isReorg } from "../discovery/stream.ts";
@@ -35,11 +36,16 @@ export interface ChainLoopDeps {
   readonly helper: { address: Address; maxTopUpBps: bigint };
   /** Re-reads accounts touched by removed blocks and rolls the cache back to the common ancestor. */
   onReorg(head: Head): Promise<void>;
+  /** Polls the indexer stream before the pass (discovery/indexerStream.ts); a failure never stops the pass. */
+  beforePass?(head: Head): Promise<void>;
 }
 
 export function chainLoop(d: ChainLoopDeps) {
   const book = new PokeBook();
+  const hints = new Map<string, RetryHint>();
   let previous: Head | null = null;
+  const alert = (signal: `M-${string}`, level: "warn" | "page", subject: string, detail: Readonly<Record<string, string>>) =>
+    void d.alerts.send({ signal, level, chainId: d.cfg.chain.id, blockNumber: previous?.number ?? 0n, subject, detail });
   const jobs: Job<any, any>[] = [
     liquidationJob({
       cache: d.cache,
@@ -55,6 +61,9 @@ export function chainLoop(d: ChainLoopDeps) {
         const payout = decodeFunctionResult({ abi: flashLiquidatorAbi, functionName: "flashLiquidate", data: ret }) as bigint;
         return payout - (request.params.debtToCover - request.flashAmount);
       },
+      hints,
+      alert,
+      stopHelper: (chainId) => d.safety.frozenHelperChains.add(chainId),
     }),
     settlePendingJob(),
     oraclePokeJob(book),
@@ -80,8 +89,14 @@ export function chainLoop(d: ChainLoopDeps) {
   return async function onHead(head: Head): Promise<void> {
     if (isReorg(previous, head)) {
       await d.onReorg(head);
+      // Transactions mined in removed blocks return to pending with their flags and reservations, then the nonce is re-read.
+      await d.submitter?.onReorg(head.number, (plan, hash) => {
+        const a = d.cache.ofChain(chainId).find((x) => plan.subject.endsWith(x.proxy));
+        if (plan.job === "liquidation" && a) a.pendingTx = hash;
+      });
       await d.submitter?.nonces.resync();
     }
+    await d.beforePass?.(head);
     previous = head;
     const ctx: BlockContext = { config: d.cfg, blockNumber: head.number, blockTimestamp: head.timestamp, reader: createChainReader(d.primary, d.cfg.manifest, head.number) };
 

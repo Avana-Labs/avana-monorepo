@@ -7,13 +7,14 @@
 
 import type { Hex } from "viem";
 import { type AttemptRecord, logAttempt, stringifyParams } from "./failureLog.ts";
+import { type Revert, RevertError } from "./jobs/failureReasons.ts";
 import { type EffectiveMode, type SafetyState, blockingReason, checkTargets } from "./safety/guards.ts";
 import type { BlockContext, Job, TxPlan } from "./types.ts";
 
 export interface Simulation {
   readonly ok: boolean;
   readonly gasEstimate: bigint;
-  readonly revert?: { readonly selector: Hex; readonly name: string };
+  readonly revert?: Revert;
 }
 
 export interface PipelineDeps {
@@ -52,6 +53,13 @@ export async function runJob<C, D>(job: Job<C, D>, ctx: BlockContext, deps: Pipe
     try {
       await (job.exclusive ? job.exclusive(candidate, pass) : pass());
     } catch (err) {
+      if (err instanceof RevertError) {
+        // A simulation inside the build (the liquidation's net measurement) reverted: logged and handled as a failed simulation.
+        const subject = err.subject ?? describeCandidate(candidate);
+        logAttempt(record(ctx, { job: job.kind, subject, params: {} }, { outcome: "simulationFailed", revert: err.revert }));
+        await job.onFailure?.(ctx, subject, err.revert);
+        continue;
+      }
       logAttempt(record(ctx, { job: job.kind, subject: describeCandidate(candidate), params: {} }, { outcome: "skipped", reason: err instanceof Error ? err.message : String(err) }));
     }
   }
@@ -76,6 +84,7 @@ async function runOne<C, D>(job: Job<C, D>, ctx: BlockContext, deps: PipelineDep
   const sim = await deps.simulate(ctx, plan);
   if (!sim.ok) {
     logAttempt(record(ctx, plan, { outcome: "simulationFailed", ...(sim.revert ? { revert: sim.revert } : {}) }));
+    if (sim.revert) await job.onFailure?.(ctx, plan.subject, sim.revert);
     return;
   }
 

@@ -11,6 +11,7 @@ import type { ManifestDebtReserve, ManifestMarket, ServiceManifest } from "@avan
 import type { AccountCache, CachedAccount } from "../discovery/accountCache.ts";
 import { mayAct } from "../shard.ts";
 import type { BlockContext, CodeTarget, Job, TxPlan } from "../types.ts";
+import { type RetryHint, RevertError, decodeRevert, failureAction, hintFor, revertData, topUpCap, widen } from "./failureReasons.ts";
 import * as R from "./liquidationRules.ts";
 
 type Preview = Awaited<ReturnType<BlockContext["reader"]["previewLiquidation"]>>;
@@ -31,6 +32,12 @@ export interface LiquidationDeps {
   readonly helper: { address: Address; maxTopUpBps: bigint };
   /** eth_call of `flashLiquidate` with `minPayout = 0`: the signed net result keeperOut − debtToCover − premium. */
   simulateNet(ctx: BlockContext, request: FlashRequest): Promise<bigint>;
+  /** What a failed attempt left for the account's next build, keyed by plan subject (failureReasons.ts). */
+  readonly hints: Map<string, RetryHint>;
+  /** Sends a monitoring alert: M-10 for liquidation reverts, M-24 for a frozen helper. */
+  alert(signal: `M-${string}`, level: "warn" | "page", subject: string, detail: Readonly<Record<string, string>>): void;
+  /** Stops submissions from this instance's helper on this chain (REQ-SWAP-105). */
+  stopHelper(chainId: number): void;
 }
 
 export interface FlashRequest {
@@ -95,6 +102,7 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
     },
 
     async build(ctx, { account, market, reserve, preview, deadline }) {
+      const subject = `${ctx.config.chain.id}:${account.spoke}:${account.proxy}`;
       const debtToCover = preview.params.debtToCover;
       const { max: idle } = await ctx.reader.flashQuote(d.helper.address, reserve.asset, debtToCover);
       const split = R.splitFunding(debtToCover, idle);
@@ -108,17 +116,50 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
         maxTopUpBps: d.helper.maxTopUpBps,
       });
       const params = { ...preview.params, routeMode: R.routeMode(preview.routeUsable), minAmounts: [], deadline, minPayout: 0n, maxShortfall: 0n };
-      const draft: FlashRequest = { params, flashAmount: split.flashAmount, maxPremium: premium, maxTopUp, minPayout: 0n };
-      const net = await d.simulateNet(ctx, draft);
+      // Failure reasons a larger bound cures (RecoveryBelowFloor, TopUpExceeded): a hint from an earlier block widens
+      // the request at once, and the same revert in this build's own simulation widens it and simulates once more.
+      const cap = topUpCap(preview.expectedDebtRepaid, d.helper.maxTopUpBps);
+      let bounds = { maxShortfall: 0n, maxTopUp };
+      const earlier = d.hints.get(subject);
+      d.hints.delete(subject);
+      if (earlier) bounds = widen(bounds, earlier, cap) ?? bounds;
+      const draftOf = (b: typeof bounds): FlashRequest => ({
+        params: { ...params, maxShortfall: b.maxShortfall },
+        flashAmount: split.flashAmount,
+        maxPremium: premium,
+        maxTopUp: b.maxTopUp,
+        minPayout: 0n,
+      });
+      let draft = draftOf(bounds);
+      let net: bigint;
+      try {
+        net = await d.simulateNet(ctx, draft);
+      } catch (err) {
+        const revert = decodeRevert(revertData(err));
+        if (!revert) throw err;
+        const hint = hintFor(revert);
+        const wider = hint ? widen(bounds, hint, cap) : null;
+        if (!wider) throw new RevertError(revert, subject);
+        if (hint?.shortfall) d.alert("M-10", "warn", subject, { reason: revert.name, retry: "maxShortfall", maxShortfall: wider.maxShortfall.toString(10) });
+        bounds = wider;
+        draft = draftOf(bounds);
+        try {
+          net = await d.simulateNet(ctx, draft);
+        } catch (again) {
+          const r = decodeRevert(revertData(again));
+          throw r ? new RevertError(r, subject) : again;
+        }
+      }
       const request: FlashRequest = { ...draft, minPayout: R.requestMinPayout(split.inventoryAmount, net) };
+      const pull = bounds.maxTopUp > bounds.maxShortfall ? bounds.maxTopUp : bounds.maxShortfall;
 
       const plan: TxPlan = {
         job: "liquidation",
-        subject: `${ctx.config.chain.id}:${account.spoke}:${account.proxy}`,
+        subject,
         to: d.helper.address,
         data: encodeFunctionData({ abi: flashLiquidatorAbi, functionName: "flashLiquidate", args: [request] }),
         deadline,
-        reservations: [{ asset: reserve.asset, amount: split.inventoryAmount + maxTopUp }],
+        reservations: [{ asset: reserve.asset, amount: split.inventoryAmount + pull }],
         targets: liquidationTargets(ctx.config.manifest, market, reserve, d.helper.address),
         params: { ...request, debtReserveId: reserve.debtReserveId, healthFactor: preview.healthFactor },
       };
@@ -126,6 +167,36 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
     },
 
     exclusive: (a, pass) => d.cache.exclusive(a, pass).then(() => undefined),
+
+    // services/README.md, Submission > Failure reasons.
+    onFailure(ctx, subject, revert) {
+      const action = failureAction(revert.name);
+      const detail = { reason: revert.name, selector: revert.selector, ...(revert.args?.length ? { args: revert.args.join(",") } : {}) };
+      switch (action.kind) {
+        case "retryWithShortfall":
+        case "retryWithTopUp": {
+          const hint = hintFor(revert);
+          if (hint) d.hints.set(subject, hint);
+          if (action.kind === "retryWithShortfall") d.alert(action.signal, action.level, subject, detail);
+          return;
+        }
+        case "fault":
+        case "retryAndPage":
+          d.alert(action.signal, action.level, subject, { ...detail, ...(action.kind === "retryAndPage" ? { playbook: "P-04" } : {}) });
+          return;
+        case "stopHelper":
+          d.stopHelper(ctx.config.chain.id);
+          d.alert(action.signal, action.level, subject, detail);
+          return;
+        // NotLiquidatable (another caller won or the account recovered), stale prices and the next-block retries need
+        // no state: the next block re-reads the account and the gates and decides afresh.
+        case "clearAccount":
+        case "waitForPrice":
+        case "retryNextBlock":
+        case "unknown":
+          return;
+      }
+    },
   };
 }
 

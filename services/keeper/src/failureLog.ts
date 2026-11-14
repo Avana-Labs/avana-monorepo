@@ -7,7 +7,20 @@
 import type { Hex } from "viem";
 import type { JobKind, SkipReason } from "./types.ts";
 
-export type AttemptOutcome = "wouldSend" | "sent" | "simulationFailed" | "reverted" | "replaced" | "cancelled" | "expired" | "included" | "skipped";
+export type AttemptOutcome =
+  | "wouldSend"
+  | "sent"
+  | "simulationFailed"
+  | "reverted"
+  | "replaced"
+  | "cancelled"
+  | "expired"
+  | "included"
+  | "skipped"
+  /** A mined transaction whose block a reorg removed: it is pending again. */
+  | "reorged"
+  /** A send or replacement refused because its worst-case cost passes the chain's gas ceiling. */
+  | "aboveGasCeiling";
 
 export interface AttemptRecord {
   readonly at: string;
@@ -17,8 +30,8 @@ export interface AttemptRecord {
   readonly subject: string;
   readonly outcome: AttemptOutcome;
   readonly reason?: SkipReason | string;
-  /** 4-byte selector and decoded name of the revert, when there is one (M-10 counts by name). */
-  readonly revert?: { readonly selector: Hex; readonly name: string };
+  /** 4-byte selector, decoded name and arguments of the revert, when there is one (M-10 counts by name). */
+  readonly revert?: { readonly selector: Hex; readonly name: string; readonly args?: readonly string[] };
   readonly txHash?: Hex;
   readonly nonce?: number;
   readonly params: Readonly<Record<string, string>>;
