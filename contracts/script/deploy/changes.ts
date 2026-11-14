@@ -24,7 +24,7 @@
 //     ]
 //   }
 // Contracts: MarketRegistry, ParameterStore, LPVaultSwap, AvanaFirstLossReserve (with "target": "reserve:<hub>:<SYMBOL>").
-// References: market:<name>, hub:<label>, spoke:<label>, token:<SYMBOL>, debtReserve:<spokeLabel>:<SYMBOL> (its reserve
+// References: market:<name>, hub:<label>, spoke:<label>, token:<SYMBOL>, vaultToken:<market name>, debtReserve:<spokeLabel>:<SYMBOL> (its reserve
 // ID), collateral:<market name> (the vault-token reserve ID), reserve:<hub>:<SYMBOL> (a First-Loss Reserve),
 // actor:<governance key>, "$prior" (the value the restored run found before its change), or a literal.
 //
@@ -195,6 +195,8 @@ async function resolveValue(v: unknown, prior: unknown): Promise<unknown> {
       return spokeOf(a!);
     case "token":
       return tokenOf(a!);
+    case "vaultToken":
+      return getAddress(marketByName(a!).vaultToken);
     case "debtReserve":
       return debtReserveId(a!, b!);
     case "collateral": {

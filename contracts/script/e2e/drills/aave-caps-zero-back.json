@@ -1,6 +1,6 @@
 {
   "name": "aave-caps-zero-back",
-  "description": "AIP: the draw cap back to its value",
+  "description": "AIP: both caps back to their values",
   "via": "aip",
   "restores": "aave-caps-zero-forward",
   "changes": [
@@ -11,6 +11,15 @@
       "spoke": "spoke:uniV3Stable",
       "set": {
         "drawCap": "$prior"
+      }
+    },
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:stable",
+      "asset": "vaultToken:uni-USDC-USDT-100",
+      "spoke": "spoke:uniV3Stable",
+      "set": {
+        "addCap": "$prior"
       }
     }
   ]

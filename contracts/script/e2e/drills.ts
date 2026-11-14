@@ -274,8 +274,8 @@ const DRILLS: Record<string, Drill> = {
     c.works("backward: 300k pledge", await pledgeProbe(e, s));
   },
 
-  // Aave: the CDP Spoke's GHO draw cap to 0 by AIP, then back to its value.
-  "aave-caps-zero": switchDrill("aave-caps-zero-forward.json", "aave-caps-zero-back.json", /DrawCapExceeded/),
+  // Aave: the CDP Spoke's GHO draw cap and the market's vault-token add cap to 0 by AIP, then back to their values.
+  "aave-caps-zero": switchDrill("aave-caps-zero-forward.json", "aave-caps-zero-back.json", /DrawCapExceeded/, { pledge: /AddCapExceeded|HubAddCapReached/ }),
 
   "market-breaker": switchDrill("market-breaker-forward.json", "market-breaker-back.json", /BreakerTripped/, { pledge: /BreakerTripped/ }),
 
