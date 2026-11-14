@@ -8,6 +8,8 @@ import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/Li
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {PauseReason} from "../../../src/types/PauseReason.sol";
+import {PauseState} from "../../../src/types/PauseState.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {FullStackMarkets} from "./FullStackMarkets.sol";
 
@@ -120,6 +122,60 @@ abstract contract RealStackFlows is FullStackMarkets {
         for (uint256 id = 1; id <= n; ++id) {
             mkt[id].oracle.poke();
         }
+    }
+
+    /// @notice USDT alone at `price8`: every USDT feed, both markets' USDC/USDT pools swapped to the new rate, then
+    /// `TWAP_WAIT` (31 minutes) so the pools' 1,800 s TWAP agrees with the feeds, every feed republished, the route-DEX
+    /// pools aligned and every LPOracle poked. A full-range USDC/USDT unit is worth `2·sqrt(pUSDC·pUSDT)`, so USDT at
+    /// $0.93 takes a market's vault token from $2.00 to $1.9287 (-3.56 %) while USDC debt keeps its $1.00.
+    function _depegUsdt(
+        uint256 price8
+    ) internal {
+        _publish(address(usdt), price8);
+        uint256 n = registry.marketCount();
+        for (uint256 id = 1; id <= n; ++id) {
+            IClPool p = mkt[id].pool;
+            (ClTestToken t0, ClTestToken t1) = (ClTestToken(p.token0()), ClTestToken(p.token1()));
+            _swapTo(
+                p,
+                ClPriceMath.oracleSqrtPrice(
+                    _usdPrice(address(t0)), _usdPrice(address(t1)), t0.decimals(), t1.decimals()
+                )
+            );
+        }
+        vm.warp(block.timestamp + TWAP_WAIT);
+        vm.roll(block.number + TWAP_WAIT / BLOCK_TIME);
+        _refreshFeeds();
+        _alignRoutes();
+        _pokeAll();
+    }
+
+    /// @dev Long enough after a pool move for the 1,800 s TWAP to sit at the new rate.
+    uint256 internal constant TWAP_WAIT = 1860;
+
+    // ─── Pause and freeze, by the Emergency Guardian ───
+
+    /// @notice Moves the Hub to `state` for `reason` from whatever it is now (None clears it), as the Emergency
+    /// Guardian does.
+    function _setPause(
+        PauseState state,
+        PauseReason reason
+    ) internal {
+        PauseState now_ = registry.pauseState(aave.hub);
+        vm.startPrank(emergencyGuardian);
+        if (now_ == PauseState.Paused) registry.unpause(aave.hub);
+        else if (now_ == PauseState.Frozen) registry.unfreeze(aave.hub);
+        if (state == PauseState.Frozen) registry.freeze(aave.hub);
+        else if (state == PauseState.Paused) registry.pause(aave.hub, reason);
+        vm.stopPrank();
+    }
+
+    /// @notice The Emergency Guardian freezes `account`.
+    function _freezeWallet(
+        address account
+    ) internal {
+        vm.prank(emergencyGuardian);
+        registry.freezeAddress(account);
     }
 
     // ─── Liquidation through LPVaultSwap ───
