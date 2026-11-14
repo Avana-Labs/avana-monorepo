@@ -508,4 +508,16 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         bytes32 id = _schedule(aaveGovernanceExecutor, add, NORMAL_DELAY, SALT);
         assertTrue(timelock.isRestoringOperation(id));
     }
+
+    // TEST-194 verifies: REQ-ACCESS-144, REQ-ACCESS-029
+    function test_TEST_194_emptyBatchIsOrdinaryOperation() public {
+        // An empty batch changes no role and restores nothing: neither mark is set, and every canceller may stop it.
+        TimelockFixture.Call[] memory none = new TimelockFixture.Call[](0);
+        bytes32 id = _schedule(governanceMultisig, none, NORMAL_DELAY, SALT);
+        assertFalse(timelock.isRoleChangeOperation(id));
+        assertFalse(timelock.isRestoringOperation(id));
+        vm.prank(emergencyGuardian);
+        timelock.cancel(id);
+        assertFalse(timelock.isOperation(id));
+    }
 }

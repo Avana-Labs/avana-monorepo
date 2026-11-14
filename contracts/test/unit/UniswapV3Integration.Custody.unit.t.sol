@@ -165,6 +165,20 @@ contract UniswapV3IntegrationCustodyUnitTest is UniswapV3IntegrationFixture {
         assertEq(owed0, 12_400_000, "owed fees go back with the NFT");
     }
 
+    // TEST-016 verifies: REQ-VAULT-151, REQ-VAULT-168
+    function test_TEST_016_returnClearsTheMarketOfASecondMarketPosition() public {
+        // Market 2 (full range on the 0.3% pool): the cleared binding reads 0, not the previous identifier minus one.
+        bytes32 key = _mint(alice, pool3000, -FULL_60, FULL_60, 1e9);
+        _receive(M2, alice, key);
+        assertEq(vault.marketOfPosition(key), M2);
+        _lock();
+        vm.prank(coll);
+        vault.returnPosition(key);
+        _unlock();
+        assertEq(vault.marketOfPosition(key), 0);
+        assertEq(vault.depositorOf(key), address(0));
+    }
+
     // TEST-016 verifies: REQ-VAULT-158, REQ-VAULT-156, REQ-VAULT-157
     function test_TEST_016_returnRefusals() public {
         bytes32 key = _pledge1(alice, 1e9);

@@ -33,7 +33,7 @@
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
       {"src": "src/policy/aave-adapter", "tests": "test/unit/AaveAdapter*"},
       {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes}.*"},
-      {"src": "src/coverage/first-loss-reserve", "tests": "test/unit/AvanaFirstLossReserve*"}
+      {"src": "src/coverage/first-loss-reserve", "tests": "test/unit/{AvanaFirstLossReserve,DaoDeficitOffset}*"}
     ],
     "2.6": [
       {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz}/FlashLiquidator.*"},

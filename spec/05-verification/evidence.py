@@ -146,10 +146,10 @@ STAND_INS: dict[str, tuple[str, ...]] = {
     "LVSFlashSourceMock": ("AaveV3FlashSource",),
     "LensFlashSourceMock": ("AaveV3FlashSource",),
     "RegistryFlashSourceMock": ("AaveV3FlashSource",),
-    # Coverage Spoke
-    "MockCoverageSpoke": ("CoverageSpoke",),
-    "RegistryCoverageSpokeMock": ("CoverageSpoke",),
-    "LensCoverageMock": ("CoverageSpoke",),
+    # First-Loss Reserve
+    "MockAvanaFirstLossReserve": ("AvanaFirstLossReserve",),
+    "RegistryAvanaFirstLossReserveMock": ("AvanaFirstLossReserve",),
+    "LensCoverageMock": ("AvanaFirstLossReserve",),
     # Proxies, vault token, Lock
     "MockPositionProxy": ("PositionProxy",),
     "MockProxyBindings": ("PositionProxy",),

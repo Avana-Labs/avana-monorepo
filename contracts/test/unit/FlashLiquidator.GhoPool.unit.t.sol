@@ -98,6 +98,11 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         vm.prank(caller);
         vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InsufficientFlashLiquidity.selector, 0));
         helper.flashLiquidate(_example());
+        // Configuration bits above the flash-loan flag (a supply cap, bits 116-151) do not stand in for it.
+        aavePool.setConfiguration(
+            address(ghoToken), aavePool.getConfiguration(address(ghoToken)) | (uint256(1_000_000) << 116)
+        );
+        assertEq(helper.maxFlashLoan(address(ghoToken)), 0, "flash-disabled GHO reserve with a supply cap");
         aavePool.setFlags(address(ghoToken), true, false, true, true);
         assertEq(helper.maxFlashLoan(address(ghoToken)), 0, "paused GHO reserve");
         aavePool.setFlags(address(ghoToken), true, true, false, true);
