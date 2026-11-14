@@ -155,21 +155,25 @@ async function repayProbe(e: Env, h: Holder): Promise<Probe> {
 /** The drill's record: each check, and whether it held. */
 class Checks {
   readonly lines: string[] = [];
+  readonly passed: string[] = [];
   failed = "";
 
   works(label: string, p: Probe) {
     this.lines.push(`${p.ok ? "ok  " : "FAIL"} ${label}: ${p.ok ? "works" : `refused ${p.error}`}`);
+    if (p.ok) this.passed.push(`${label} works`);
     if (!p.ok && !this.failed) this.failed = `${label} was refused (${p.error.slice(0, 120)})`;
   }
 
   refused(label: string, p: Probe, want: RegExp) {
     const ok = !p.ok && want.test(p.error);
+    if (ok) this.passed.push(`${label} refused ${p.error.replace(/\(.*$/, "")}`);
     this.lines.push(`${ok ? "ok  " : "FAIL"} ${label}: ${p.ok ? "WORKS (expected a refusal)" : `refused ${p.error}`}${ok ? "" : ` (expected /${want.source}/)`}`);
     if (!ok && !this.failed) this.failed = p.ok ? `${label} still works after the forward change` : `${label} refused with ${p.error.slice(0, 120)}, expected /${want.source}/`;
   }
 
   that(label: string, ok: boolean, detail: string) {
     this.lines.push(`${ok ? "ok  " : "FAIL"} ${label}: ${detail}`);
+    if (ok) this.passed.push(label);
     if (!ok && !this.failed) this.failed = `${label}: ${detail}`;
   }
 }
@@ -664,7 +668,7 @@ async function main() {
       outcome = "fail";
       detail = c.failed;
     } else {
-      detail = c.lines.filter((l) => l.startsWith("ok")).map((l) => l.slice(4).split(":")[0]).join("; ");
+      detail = c.passed.join("; ");
     }
   } catch (err) {
     if (err instanceof NotRun) {
