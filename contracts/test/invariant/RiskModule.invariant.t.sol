@@ -43,6 +43,9 @@ contract RiskModuleInvariantTest is RiskModuleFixture {
     // Sources: 5.1 TEST-095 (RiskModule half)
     function invariant_TEST_095_noGateBypassed() public view {
         assertEq(handler.violations(), 0, "a pre-check passed with a gate closed");
+        // The converse: with every gate the handler models open, the pre-check passes, so the gates of 2.7 are the
+        // only reasons it refuses.
+        assertEq(handler.refusedWhileClear(), 0, "a pre-check refused with every gate open");
     }
 
     // TEST-098 verifies: REQ-RISK-071, REQ-ADAPTER-010

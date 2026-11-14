@@ -95,12 +95,13 @@ contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture {
         handler.setFreeze(0, true);
         handler.breakNeighbours(true, true);
         handler.repay(0, true, 100e18);
-        handler.repayAllAndWithdraw(0);
-        handler.withdrawDebtFree(0);
+        // Fees and the debt mark while the positions are open (after the withdrawals there would be nothing to act on).
         handler.collectFees(0, 1000);
         handler.refreshDebtMark(0);
+        handler.repayAllAndWithdraw(0);
+        handler.withdrawDebtFree(0);
         assertEq(handler.exitFailures(), 0, string(handler.lastExitError()));
-        assertGe(handler.exitsDone(), 4, "exits completed");
+        assertEq(handler.exitsDone(), 5, "exits completed");
         handler.borrow(1, 1e18);
         handler.pledge(1);
         assertEq(handler.forbiddenSuccesses(), 0, "refused");

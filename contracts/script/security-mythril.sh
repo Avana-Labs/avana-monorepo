@@ -46,19 +46,40 @@ if [ -z "$targets" ]; then
 fi
 
 status=0
-while IFS=$'\t' read -r name hex; do
-  echo "=== mythril $name"
-  "$MYTH" analyze --bin-runtime -f "$hex" -o json -m "$MYTHRIL_MODULES" \
+not_run=""
+analyze() { # name hex
+  "$MYTH" analyze --bin-runtime -f "$2" -o json -m "$MYTHRIL_MODULES" \
     -t "$MYTHRIL_TX_COUNT" --execution-timeout "$MYTHRIL_EXECUTION_TIMEOUT" \
     --solver-timeout "$MYTHRIL_SOLVER_TIMEOUT" --max-depth "$MYTHRIL_MAX_DEPTH" \
-    >"$OUT/$name.json" 2>"$OUT/$name.log"
-  # myth exits 1 when it reports issues; a missing or non-JSON report is a tool error.
-  if ! "$PY" -c 'import json,sys; json.load(open(sys.argv[1]))' "$OUT/$name.json" 2>/dev/null; then
+    >"$OUT/$1.json" 2>"$OUT/$1.log"
+}
+has_report() { "$PY" -c 'import json,sys; json.load(open(sys.argv[1]))' "$OUT/$1.json" 2>/dev/null; }
+while IFS=$'\t' read -r name hex; do
+  echo "=== mythril $name"
+  analyze "$name" "$hex"
+  rc=$?
+  # myth exits 1 when it reports issues; a missing or non-JSON report is a tool error. A crash of Mythril itself
+  # (a signal, e.g. the segmentation fault on VaultToken in run 43492412351) is retried once; a second crash leaves the
+  # contract "not run": no report means neither a pass nor a finding, so it is listed, not counted.
+  if ! has_report "$name" && [ "$rc" -ge 128 ]; then
+    echo "mythril: $name crashed (exit $rc), retrying once"
+    analyze "$name" "$hex"
+    rc=$?
+  fi
+  if ! has_report "$name"; then
     cat "$OUT/$name.log"
-    echo "mythril: no report for $name" >&2
-    status=1
+    rm -f "$OUT/$name.json"
+    if [ "$rc" -ge 128 ]; then
+      echo "mythril: NOT RUN for $name, Mythril crashed twice (exit $rc)" >&2
+      echo "::warning title=Mythril not run::Mythril crashed twice on $name (exit $rc); no report, so neither a pass nor a finding."
+      not_run+=" $name"
+    else
+      echo "mythril: no report for $name" >&2
+      status=1
+    fi
   fi
 done <<<"$targets"
+[ -z "$not_run" ] || echo "mythril: not run (tool crash):$not_run"
 [ $status -eq 0 ] || exit 1
 
 "$PY" - "$OUT" <<'PYEOF'

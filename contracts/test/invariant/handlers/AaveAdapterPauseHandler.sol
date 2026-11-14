@@ -37,6 +37,10 @@ struct PauseWorld {
 /// allows is counted in `exitFailures`. New activity (pledge, borrow, a withdrawal that leaves debt) is attempted in
 /// every state and any success outside the states REQ-ADAPTER-045/046/082 allow is counted in `forbiddenSuccesses`.
 contract AaveAdapterPauseHandler is Test {
+    /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
+    /// campaign's success count, so the metrics show the calls that did real work.
+    error Skipped();
+
     PauseWorld internal w;
     address[3] internal wallets;
     address internal immutable PAYER;
@@ -115,7 +119,7 @@ contract AaveAdapterPauseHandler is Test {
     ) external {
         address wallet = wallets[actorSeed % 3];
         address proxy = w.adapter.proxyOf(wallet, w.market);
-        if (proxy == address(0)) return;
+        if (proxy == address(0)) revert Skipped();
         amount = bound(amount, 1e18, 2000e18);
         (PauseState st,, bool frozen) = _state(wallet);
         uint256 n = w.adapter.borrowNonce(proxy);
@@ -132,8 +136,8 @@ contract AaveAdapterPauseHandler is Test {
     ) external {
         address wallet = wallets[actorSeed % 3];
         address proxy = w.adapter.proxyOf(wallet, w.market);
-        if (proxy == address(0) || keys[wallet].length < 2) return;
-        if (w.spoke.getUserAccountData(proxy).borrowCount == 0) return;
+        if (proxy == address(0) || keys[wallet].length < 2) revert Skipped();
+        if (w.spoke.getUserAccountData(proxy).borrowCount == 0) revert Skipped();
         (PauseState st,, bool frozen) = _state(wallet);
         bytes32 key = keys[wallet][keys[wallet].length - 1];
         uint256 units = w.coll.previewRelease(w.integrationId, key);
@@ -155,9 +159,9 @@ contract AaveAdapterPauseHandler is Test {
     ) external {
         address wallet = wallets[actorSeed % 3];
         address proxy = w.adapter.proxyOf(wallet, w.market);
-        if (proxy == address(0)) return;
+        if (proxy == address(0)) revert Skipped();
         uint256 debt = w.spoke.getUserTotalDebt(w.ghoReserve, proxy);
-        if (debt == 0) return;
+        if (debt == 0) revert Skipped();
         amount = bound(amount, 1, debt);
         address payer = thirdParty ? PAYER : wallet;
         w.gho.mint(payer, amount);
@@ -176,7 +180,7 @@ contract AaveAdapterPauseHandler is Test {
     ) external {
         address wallet = wallets[actorSeed % 3];
         address proxy = w.adapter.proxyOf(wallet, w.market);
-        if (proxy == address(0) || keys[wallet].length == 0) return;
+        if (proxy == address(0) || keys[wallet].length == 0) revert Skipped();
         uint256 debt = w.spoke.getUserTotalDebt(w.ghoReserve, proxy);
         uint256[] memory ids = new uint256[](1);
         ids[0] = w.ghoReserve;
@@ -204,8 +208,8 @@ contract AaveAdapterPauseHandler is Test {
     ) external {
         address wallet = wallets[actorSeed % 3];
         address proxy = w.adapter.proxyOf(wallet, w.market);
-        if (proxy == address(0) || keys[wallet].length == 0) return;
-        if (w.spoke.getUserAccountData(proxy).borrowCount != 0) return;
+        if (proxy == address(0) || keys[wallet].length == 0) revert Skipped();
+        if (w.spoke.getUserAccountData(proxy).borrowCount != 0) revert Skipped();
         bytes32 key = keys[wallet][keys[wallet].length - 1];
         uint256 units = w.coll.previewRelease(w.integrationId, key);
         vm.prank(wallet);
@@ -222,7 +226,7 @@ contract AaveAdapterPauseHandler is Test {
         uint256 fees
     ) external {
         address wallet = wallets[actorSeed % 3];
-        if (keys[wallet].length == 0) return;
+        if (keys[wallet].length == 0) revert Skipped();
         bytes32 key = keys[wallet][0];
         w.lpVault.accrueFees(key, bound(fees, 0, 1e9));
         vm.prank(wallet);
@@ -237,7 +241,7 @@ contract AaveAdapterPauseHandler is Test {
         uint8 actorSeed
     ) external {
         address proxy = w.adapter.proxyOf(wallets[actorSeed % 3], w.market);
-        if (proxy == address(0)) return;
+        if (proxy == address(0)) revert Skipped();
         vm.prank(PAYER);
         try w.adapter.refreshDebtMark(proxy) {
             ++exitsDone;

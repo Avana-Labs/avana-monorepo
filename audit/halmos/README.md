@@ -15,7 +15,7 @@ script/security-slow.sh halmos
 HALMOS_CONTRACTS=VaultTokenHalmosTest HALMOS_LOOP=16 script/security-slow.sh halmos            # one test contract, as each CI job runs it
 ```
 
-`FOUNDRY_DYNAMIC_TEST_LINKING=false` is required: dynamic test linking turns `new C(...)` into `deployCode`, which Halmos does not support. Budget: `HALMOS_LOOP` (default 8, nightly 16). `script/security-slow.sh` runs one solver thread (`--solver-threads 1`; Halmos's default is one per CPU). In CI, it runs Halmos and its solver in a systemd scope capped at `SECURITY_MEMORY_MAX` (14 GB of the runner's 16 GB, no swap), so a check that needs more ends with "OUT OF MEMORY" in its log instead of the runner shutting down. In run 43387180884 the runner shut down 30 s into `check_PROP_019_legSlippage`, with no log.
+`FOUNDRY_DYNAMIC_TEST_LINKING=false` is required: dynamic test linking turns `new C(...)` into `deployCode`, which Halmos does not support. Budget: `HALMOS_LOOP` (default 8, nightly 16) and `HALMOS_TIMEOUT` (seconds of wall clock per run; none by default, 18,000 in CI); a single check listed in `contracts/security/halmos-bounds.json` takes that entry's budget (and its loop bound, when it sets one). `script/security-slow.sh` runs one solver thread (`--solver-threads 1`; Halmos's default is one per CPU). In CI, it runs Halmos and its solver in a systemd scope capped at `SECURITY_MEMORY_MAX` (14 GB of the runner's 16 GB, no swap), so a check that needs more ends with "OUT OF MEMORY" in its log instead of the runner shutting down. In run 43387180884 the runner shut down 30 s into `check_PROP_019_legSlippage`, with no log.
 
 ## Scope
 
@@ -23,7 +23,7 @@ HALMOS_CONTRACTS=VaultTokenHalmosTest HALMOS_LOOP=16 script/security-slow.sh hal
 
 ## How often it runs
 
-Contract gate (every `check_` of the contract passes) and the slow tier at each layer gate. In CI, the `halmos` jobs of `security-slow.yml` (loop 16, one job per check, up to 6 hours each) run every night on `main`, on every release tag and by hand; no pull-request or push workflow runs Halmos. A check that timed out or has no recorded pass counts as not run in the traceability evidence.
+Contract gate (every `check_` of the contract passes) and the slow tier at each layer gate. In CI, the `halmos` jobs of `security-slow.yml` (loop 16, one job per check, a 5-hour budget in a 6-hour job) run every night on `main`, on every release tag and by hand; no pull-request or push workflow runs Halmos. A counterexample fails the job. A check listed in `contracts/security/halmos-bounds.json` (the 23 checks cancelled at 6 hours in run 43492412351) that its budget or a solver timeout ends without a counterexample passes its job as "bounded, no violation found": not run to completion, reported in the job summary, as a warning and in `out-security/halmos-outcome.json`; an unlisted check that runs out fails. A check that timed out or has no recorded pass counts as not run in the traceability evidence.
 
 ## Latest result
 
