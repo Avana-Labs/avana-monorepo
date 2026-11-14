@@ -9,7 +9,9 @@
     "./abis": "./src/abis/index.ts",
     "./addresses": "./src/addresses/index.ts",
     "./calldata": "./src/calldata/index.ts",
-    "./manifest": "./src/manifest/index.ts"
+    "./manifest": "./src/manifest/index.ts",
+    "./manifest/schema": "./src/manifest/schema.ts",
+    "./manifest/sample": "./src/manifest/sample.ts"
   },
   "engines": {
     "node": ">=22.12"

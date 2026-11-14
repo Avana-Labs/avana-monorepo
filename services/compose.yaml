@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+#
+# The services on one host, for a testnet or a rehearsal against a remote RPC: PostgreSQL, the indexer, one keeper
+# (observe mode unless its .env names a KMS key) and the monitor. From the repository root:
+#
+#   cp services/indexer/.env.example services/indexer/.env   # and the keeper's and monitor's; fill in the values
+#   docker compose -f services/compose.yaml up --build
+#
+# Manifests are read from deployments/verified/ (mounted read-only at /manifests): set AVANA_MANIFEST in each .env to
+# /manifests/<file>. State files, the incident log and the halt flag go to each service's /data volume. Production
+# runs each service on its own host or cloud (a standby keeper on another cloud, services/README.md), not this file.
+
+name: avana-services
+
+x-service: &service
+  restart: unless-stopped
+  build:
+    context: ..
+    dockerfile: services/Dockerfile
+  volumes:
+    - ../deployments/verified:/manifests:ro
+
+services:
+  postgres:
+    image: postgres:17.6-bookworm@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: avana
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: indexer
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avana -d indexer"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  indexer:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: indexer
+    env_file: indexer/.env
+    environment:
+      DATABASE_URL: postgres://avana:${POSTGRES_PASSWORD}@postgres:5432/indexer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:42069:42069"
+
+  keeper:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: keeper
+    env_file: keeper/.env
+    environment:
+      KEEPER_INDEXER_URL: http://indexer:42069
+      KEEPER_HALT_STATE_PATH: /data/halt.json
+      KEEPER_KILL_SWITCH_PORT: "9443"
+      KEEPER_METRICS_PORT: "9464"
+      KEEPER_KILL_SWITCH_TLS_CERT: /tls/server.pem
+      KEEPER_KILL_SWITCH_TLS_KEY: /tls/server.key
+      KEEPER_KILL_SWITCH_CLIENT_CA: /tls/client-ca.pem
+    volumes:
+      - ../deployments/verified:/manifests:ro
+      - keeper:/data
+      # The kill switch's server certificate, key and client CA (mutual TLS). Never committed.
+      - ${KEEPER_TLS_DIR:?set KEEPER_TLS_DIR to the folder holding server.pem, server.key and client-ca.pem}:/tls:ro
+    ports:
+      - "127.0.0.1:9443:9443"
+      - "127.0.0.1:9464:9464"
+    depends_on:
+      indexer:
+        condition: service_healthy
+
+  monitor:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: monitor
+    env_file: monitor/.env
+    environment:
+      MONITOR_STATE_PATH: /data/state.json
+      MONITOR_INCIDENT_LOG: /data/incidents.jsonl
+      MONITOR_PORT: "9470"
+    volumes:
+      - ../deployments/verified:/manifests:ro
+      - monitor:/data
+    ports:
+      - "127.0.0.1:9470:9470"
+
+volumes:
+  postgres:
+  keeper:
+  monitor:
