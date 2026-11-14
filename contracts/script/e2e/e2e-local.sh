@@ -68,7 +68,15 @@ if [ -n "$MISSING" ]; then
 fi
 
 ANVIL_PID=""
-cleanup() { [ -n "$ANVIL_PID" ] && kill -INT "$ANVIL_PID" 2>/dev/null && wait "$ANVIL_PID" 2>/dev/null; [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null; true; }
+# INT lets anvil write its state file. Under Git Bash on Windows anvil ignores it, and waiting for it hung the run after
+# its last step: after 10 s it is killed (the state file then holds anvil's last periodic dump).
+stop_anvil() {
+  kill -INT "$ANVIL_PID" 2>/dev/null || return 0
+  for _ in $(seq 1 50); do kill -0 "$ANVIL_PID" 2>/dev/null || break; sleep 0.2; done
+  kill -0 "$ANVIL_PID" 2>/dev/null && kill -KILL "$ANVIL_PID" 2>/dev/null
+  wait "$ANVIL_PID" 2>/dev/null
+}
+cleanup() { [ -n "$ANVIL_PID" ] && stop_anvil; [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null; true; }
 trap cleanup EXIT
 # The chain state is saved to anvil-state.json when the node stops; a run without the deploy step reloads it, so the
 # manifest and scenario steps can be rerun on the same deployment (E2E_STEPS="manifest scenarios"). A reloaded node
