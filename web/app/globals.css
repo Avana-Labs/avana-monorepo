@@ -1,0 +1,854 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes assistant-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+.shimmer {
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground)) 35%,
+    hsl(var(--foreground)) 50%,
+    hsl(var(--muted-foreground)) 65%
+  );
+  background-position: 150% 0;
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: assistant-shimmer 2s linear infinite;
+}
+
+@layer base {
+  html {
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /*
+   * Stable header: never shift when a popover/dialog/wallet modal opens.
+   *
+   * The scroll gutter is permanently reserved above (scrollbar-gutter: stable),
+   * so the scrollbar hiding on scroll-lock does NOT reflow the page. But scroll-lock
+   * libraries (Radix `react-remove-scroll`, ConnectKit, etc.) still add a
+   * scrollbar-width `padding-right`/`margin-right` to <body> to "compensate" for a
+   * scrollbar removal that — thanks to the reserved gutter — never actually frees space.
+   * That extra padding double-counts and pushes the sticky header/content sideways.
+   *
+   * Neutralize every form of that compensation. Scroll stays locked (overflow: hidden
+   * is untouched); only the width compensation is cancelled, so the header stays put.
+   *
+   * The selectors are prefixed with `html` / `:root` on purpose. `react-remove-scroll-bar`
+   * injects `body[data-scroll-locked] { margin-right: <scrollbar>px !important }` at runtime,
+   * after this sheet; at equal specificity that later rule won and shifted the page left by
+   * the scrollbar width whenever the search dialog opened.
+   */
+  body {
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+  html body[data-scroll-locked],
+  html body[style*="overflow: hidden"],
+  html body[style*="overflow:hidden"],
+  html:root[data-scroll-locked],
+  html:root[style*="overflow: hidden"],
+  html:root[style*="overflow:hidden"] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+  :root {
+    /* Light — bright neutral canvas */
+    --background: 0 0% 100%; /* #FFFFFF page — Uniswap-parity */
+    --foreground: 0 0% 0%; /* pure black — crisp primary text */
+
+    --card: 0 0% 97.6%; /* #F9F9F9 — subtle card on white */
+    --card-foreground: 0 0% 17.3%;
+
+    --popover: 0 0% 98%; /* #FAFAFA dropdowns */
+    --popover-foreground: 0 0% 17.3%;
+
+    --primary: 0 0% 17.3%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 92.2%;
+    --secondary-foreground: 0 0% 17.3%;
+
+    --muted: 0 0% 92.2%;
+    --muted-foreground: 0 0% 44%; /* #707070 descriptions: #777 was 4.48:1 on white, under WCAG AA */
+    --section-foreground: 0 0% 13.3%; /* #222222 section headers */
+    --table-header: 0 0% 96.5%; /* header strip on bright page */
+
+    --accent: 0 0% 92.2%;
+    --accent-foreground: 0 0% 17.3%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Semantic status colors (light) — matched to Tailwind emerald/amber/rose-600 */
+    --success: 160 84% 26%; /* 30% was 3.98:1 on cards for 12px APY/fee text */
+    --success-foreground: 0 0% 100%;
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+    --danger: 347 77% 50%;
+    --danger-foreground: 0 0% 100%;
+
+    --border: 0 0% 92%; /* #EBEBEB — soft Uniswap-style hairlines */
+    --input: 0 0% 96%; /* #F5F5F5 recessed inputs on white */
+    --ring: 191 99% 41%;
+
+    --surface-1: 0 0% 100%;
+    --surface-2: 0 0% 92.2%;
+    --surface-hover: 0 0% 93.5%; /* solid hover step for filled controls */
+    --hover-overlay: 0 0% 0% / 0.04; /* canonical hover wash for transparent-resting items */
+    --field-top: 0 0% 100%; /* Uniswap-style emphasized top input — page-matching + border */
+    --field-bottom: 0 0% 96.1%; /* #F5F5F5 — filled bottom input, no border */
+
+    --brand: 191 99% 41%;
+    --brand-foreground: 0 0% 8%;
+    --brand-soft: 191 100% 95%;
+    --brand-soft-foreground: 191 99% 41%;
+
+    --radius: 0.75rem;
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px; /* card standard */
+
+    /* Subtle, layered elevation so cards read as distinct surfaces on the bright
+       canvas instead of merging into gray-on-gray blocks. */
+    --elev-1: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+    --elev-2: 0 2px 6px rgba(16, 24, 40, 0.06), 0 6px 16px rgba(16, 24, 40, 0.08);
+    --elev-3: 0 12px 32px rgba(16, 24, 40, 0.12);
+
+    --accent-primary: 0 0% 13.3%;
+    --accent-primary-foreground: 0 0% 100%;
+    --accent-primary-hover: 0 0% 20%;
+
+    --accent-emphasis: 214 84% 44%;
+    --accent-emphasis-foreground: 0 0% 100%;
+    --accent-emphasis-soft: 214 90% 96%;
+
+    --surface-raised: 0 0% 98%; /* #FAFAFA */
+    --surface-inset: 0 0% 91.8%; /* #EAEAEA steppers */
+
+    --progress: 221 83% 53%;
+    --progress-track: 0 0% 91.8%;
+
+    --scrollbar-track: 0 0% 92.2%;
+    /* Soft brand wash — matches disabled CTA (bg-brand-soft), not full brand */
+    --scrollbar-thumb: 191 100% 95%;
+    --scrollbar-thumb-hover: 191 80% 88%;
+    --scrollbar-thumb-active: 191 70% 80%;
+  }
+
+  .dark {
+    /* Dark — sampled Cursor reference */
+    --background: 0 0% 7%; /* #121212 page — neutral near-black (Uniswap-parity) */
+    --foreground: 0 0% 100%; /* pure white — crisp primary text */
+
+    --card: 0 0% 11%; /* #1C1C1C — subtle layered surface */
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 13%; /* #212121 dropdowns */
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 0 0% 82%;
+    --primary-foreground: 0 0% 11%;
+
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 13.5%;
+    --muted-foreground: 0 0% 66%; /* legible secondary copy on dark */
+    --section-foreground: 0 0% 92%;
+    --table-header: 0 0% 10%;
+
+    --accent: 0 0% 13%;
+    --accent-foreground: 0 0% 96%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 82%;
+
+    /* Semantic status colors (dark) — matched to Tailwind emerald/amber/rose-400 */
+    --success: 160 64% 52%;
+    --success-foreground: 0 0% 10%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 0 0% 10%;
+    --danger: 351 95% 71%;
+    --danger-foreground: 0 0% 10%;
+
+    --border: 0 0% 17%; /* #2B2B2B — subtle Uniswap-style hairlines */
+    --input: 0 0% 9%; /* #171717 recessed inputs (below card) */
+    --ring: 191 99% 41%;
+
+    --surface-1: 0 0% 7%;
+    --surface-2: 0 0% 13%;
+    --surface-hover: 0 0% 17%; /* solid hover step for filled controls */
+    --hover-overlay: 0 0% 100% / 0.04; /* canonical hover wash for transparent-resting items */
+    --field-top: 0 0% 8.6%; /* #161616 — emphasized top input, subtle lift + border */
+    --field-bottom: 0 0% 12.2%; /* #1F1F1F — filled bottom input, no border */
+
+    --brand: 191 99% 41%;
+    --brand-foreground: 0 0% 8%;
+    --brand-soft: 191 55% 18%;
+    --brand-soft-foreground: 191 99% 41%;
+
+    /* Dark elevation: a faint inset top-light hairline gives every raised card a
+       crisp edge (so stacked cards stop merging) plus a deeper drop shadow. */
+    --elev-1: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --elev-2: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 8px rgba(0, 0, 0, 0.5), 0 10px 24px rgba(0, 0, 0, 0.4);
+    --elev-3: 0 12px 32px rgba(0, 0, 0, 0.6);
+
+    --accent-primary: 0 0% 82%;
+    --accent-primary-foreground: 0 0% 11%;
+    --accent-primary-hover: 0 0% 72%;
+
+    --accent-emphasis: 214 90% 62%;
+    --accent-emphasis-foreground: 0 0% 11%;
+    --accent-emphasis-soft: 214 40% 18%;
+
+    --surface-raised: 0 0% 13%; /* #212121 — one step above card */
+    --surface-inset: 0 0% 8%; /* recessed steppers (below card) */
+
+    --progress: 221 83% 53%;
+    --progress-track: 0 0% 11%;
+
+    --scrollbar-track: 220 7% 8.4%;
+    /* Soft brand wash — matches disabled CTA (bg-brand-soft), not full brand */
+    --scrollbar-thumb: 191 55% 18%;
+    --scrollbar-thumb-hover: 191 50% 24%;
+    --scrollbar-thumb-active: 191 45% 30%;
+  }
+}
+
+/* Some token marks read as black on a dark background and disappear: Apple, Micron, and
+   Balancer are solid-black marks, and SpaceX is a black disc whose edge blends into the card.
+   Invert them in dark mode wherever the icon renders — borrow/lend cards, tables, the
+   carousel, and search — not just the action pages. The selector matches both the raw path and
+   the Next-optimized URL (both contain the file name), plus the sized WebP variants
+   (`/stock-Icons/w64/apple.webp`) the token icons are served as. Balancer's `bal` file name is
+   short, so it is anchored on the preceding slash (raw or URL-encoded). */
+.dark img[src*="apple.png"],
+.dark img[src*="apple.webp"],
+.dark img[src*="micron.png"],
+.dark img[src*="micron.webp"],
+.dark img[src*="spacex.png"],
+.dark img[src*="spacex.webp"],
+.dark img[src*="/bal.png"],
+.dark img[src*="/bal.webp"],
+.dark img[src*="%2Fbal.png"],
+.dark img[src*="%2Fbal.webp"] {
+  filter: invert(1);
+}
+
+/* ConnectKit renders its overlay in a portal outside the modal root, so these theme
+   vars must be set globally to take effect. Keep the overlay blur disabled entirely:
+   the modal already animates between screens, and live backdrop filtering behind those
+   transitions causes visible ghosting on this app shell. */
+:root {
+  --ck-overlay-background: rgba(7, 9, 12, 0.72);
+  --ck-overlay-backdrop-filter: none;
+}
+
+/*
+ * ConnectKit keeps the previous route mounted for 400ms while the next route
+ * enters. On mobile its page animation is 0ms, so both complete pages can remain
+ * painted on top of each other. Hide only those exiting route containers and
+ * snap incoming route containers to their final state. The modal overlay and
+ * open/close animation remain unaffected.
+ */
+#__CONNECTKIT__ [role="dialog"] .exit,
+#__CONNECTKIT__ [role="dialog"] .exit-scale-down {
+  display: none !important;
+  animation: none !important;
+}
+
+#__CONNECTKIT__ [role="dialog"] .active-scale-up {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.home-reveal-tab {
+  background-color: transparent !important;
+  color: hsl(var(--muted-foreground)) !important;
+  /* Allow width to animate toward max-content as localized labels expand. */
+  interpolate-size: allow-keywords;
+  transition:
+    width 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 520ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.home-reveal-tab:hover {
+  background-color: hsl(var(--hover-overlay)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.home-reveal-tab[data-state="active"] {
+  background-color: hsl(var(--field-bottom)) !important;
+  color: hsl(var(--foreground)) !important;
+  box-shadow: var(--elev-1) !important;
+}
+
+.home-reveal-tab svg {
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.home-reveal-tab[data-state="active"] svg {
+  transform: scale(1.06);
+}
+
+.home-reveal-tab-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  transform: translateX(5px) scaleX(0.92);
+  transform-origin: left center;
+  transition:
+    max-width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.home-reveal-tab[data-state="active"] .home-reveal-tab-label {
+  /* Room for longer DeFi verbs across locales (Intercambiar, Échanger, スワップ…). */
+  max-width: 12rem;
+  opacity: 1;
+  transform: translateX(0) scaleX(1);
+}
+
+.dashboard-quick-action-pill {
+  transition:
+    width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    gap 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 160ms ease !important;
+}
+
+.dashboard-quick-action-pill[data-state="active"] {
+  width: 10rem !important;
+  gap: 0.625rem !important;
+  padding-inline: 0.875rem !important;
+}
+
+.dashboard-quick-action-pill-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  transform: translateX(5px) scaleX(0.92);
+  transform-origin: left center;
+  transition:
+    max-width 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.dashboard-quick-action-pill[data-state="active"] .dashboard-quick-action-pill-label {
+  max-width: 8.5rem;
+  opacity: 1;
+  transform: translateX(0) scaleX(1);
+}
+
+@media (max-width: 560px) {
+  #__CONNECTKIT__ [role="dialog"] div.active {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    font-synthesis: none;
+  }
+  body {
+    @apply text-foreground;
+    background-color: hsl(var(--background)) !important;
+    font-family: var(--font-diatype-sans), sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+    /* Render text with grayscale antialiasing instead of the browser default
+       (subpixel), which makes white-on-dark text look heavier/bolder than it is.
+       This gives the lighter, crisper weight seen in comparable dashboards. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :where(h1, h2, h3, h4, h5, h6, strong, b, th, button, label) {
+    font-weight: 400;
+  }
+
+  h1 {
+    font-size: 20px;
+    line-height: 1.25;
+    color: hsl(var(--foreground));
+  }
+
+  h2 {
+    font-size: 16px;
+    line-height: 1.3;
+    color: hsl(var(--foreground));
+  }
+
+  h3 {
+    font-size: 14px;
+    line-height: 1.35;
+    color: hsl(var(--foreground));
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-size: 12px;
+    line-height: 1.35;
+    color: hsl(var(--section-foreground));
+  }
+
+  small,
+  .text-ui-section {
+    font-size: 12px;
+    line-height: 1.35;
+    color: hsl(var(--section-foreground));
+  }
+
+  html {
+    scrollbar-color: hsl(var(--scrollbar-thumb)) hsl(var(--scrollbar-track));
+    scrollbar-width: thin;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: hsl(var(--scrollbar-track));
+  }
+
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background: hsl(var(--scrollbar-thumb) / 0.9);
+    border: 0;
+    border-radius: 9999px;
+    box-shadow: none;
+  }
+
+  html::-webkit-scrollbar-thumb:hover,
+  body::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--scrollbar-thumb-hover) / 0.95);
+  }
+
+  html::-webkit-scrollbar-thumb:active,
+  body::-webkit-scrollbar-thumb:active {
+    background: hsl(var(--scrollbar-thumb-active));
+  }
+
+  html::-webkit-scrollbar-corner,
+  body::-webkit-scrollbar-corner {
+    background: hsl(var(--scrollbar-track));
+  }
+  /* Tighter default spacing */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply mb-2;
+  }
+  p {
+    @apply mb-2;
+  }
+}
+
+/* Diatype font utilities implemented in plain CSS, not Tailwind config. */
+.font-sans,
+.font-compact {
+  font-family: var(--font-diatype-sans), sans-serif;
+}
+
+.font-data {
+  font-family: var(--font-diatype-sans), sans-serif;
+}
+
+.font-brand {
+  font-family: var(--font-diatype-sans), sans-serif;
+}
+
+@layer utilities {
+  /*
+   * ABCDiatype tabular figures give each digit equal width but visually detach
+   * grouping commas and decimal points (e.g. "$299 , 997"). Use proportional
+   * lining figures everywhere Tailwind's tabular-nums is applied so currency and
+   * percentages read as normal "$299,997" / "5.31%". Keep amount + symbol on one
+   * line (e.g. "378,041.33 OP") — never break at the space before the ticker.
+   */
+  .tabular-nums {
+    font-variant-numeric: lining-nums proportional-nums;
+    white-space: nowrap;
+  }
+}
+
+/* Cursor-like text hierarchy — size and color only */
+.text-ui-heading {
+  /* Canonical detail/action section heading (was ad-hoc text-[21px]/[1.375rem]). */
+  font-size: 21px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.text-ui-section {
+  font-size: 12px;
+  line-height: 1.25rem;
+  color: hsl(var(--section-foreground));
+}
+
+.text-ui-label {
+  font-size: 14px;
+  line-height: 1.25rem;
+  color: hsl(var(--foreground));
+}
+
+.text-ui-description {
+  font-size: 13px;
+  line-height: 1.25rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.text-brand-readable {
+  color: hsl(var(--brand-soft-foreground));
+}
+
+.text-hero-metric-emerald {
+  color: #2f6b4f;
+}
+
+.text-hero-metric-violet {
+  color: #5a4d9e;
+}
+
+.text-hero-metric-amber {
+  color: #8a5c38;
+}
+
+.text-apy-positive {
+  color: hsl(var(--success));
+}
+
+.no-number-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.no-number-spinner::-webkit-outer-spin-button,
+.no-number-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Tighter utility classes */
+.container {
+  @apply px-3;
+}
+
+.card-grid {
+  @apply grid gap-3;
+}
+
+.section-spacing {
+  @apply py-4;
+}
+
+/* Tighter form elements */
+.form-group {
+  @apply space-y-2;
+}
+
+/* Tighter table styles */
+.table-compact {
+  @apply [&_td]:py-2 [&_th]:py-2;
+}
+
+.lend-filter-input {
+  color: hsl(var(--foreground)) !important;
+  caret-color: hsl(var(--brand));
+}
+
+.lend-filter-input::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+  opacity: 1 !important;
+}
+
+/* Premium surfaces — tone separation like Cursor, no card borders/shadows */
+@layer components {
+  /*
+   * Render-virtualize long list sections: the browser skips layout/paint for
+   * off-screen blocks (e.g. the per-spoke market sections) while keeping them in
+   * the DOM, so find-in-page, anchors, and accessibility still work. The
+   * intrinsic-size keeps the scrollbar stable before a section is rendered.
+   */
+  .cv-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 640px;
+  }
+}
+
+html[data-lighthouse-audit="true"] *,
+html[data-lighthouse-audit="true"] *::before,
+html[data-lighthouse-audit="true"] *::after {
+  animation-duration: 0ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-lighthouse-audit="true"] .reveal-in {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+  will-change: auto !important;
+}
+
+.loading-progress-head {
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--brand) / 0) 0%,
+    hsl(var(--brand) / 0.35) 38%,
+    hsl(var(--brand) / 1) 100%
+  );
+  box-shadow:
+    0 0 8px hsl(var(--brand) / 0.5),
+    0 0 14px hsl(var(--brand) / 0.28);
+  animation: loading-progress-head 900ms ease-in-out infinite alternate;
+  will-change: opacity, transform;
+}
+
+/* Skeleton shimmer sweep. The bright band travels fully across in the first ~55%
+   of the cycle, then holds off-screen for the remainder — a slim streak that
+   glides through and rests, rather than a relentless strobe. */
+@keyframes loading-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  55%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Subtle "just refreshed" pulse for live values that update on a client refetch,
+   so numbers ease in instead of hard-popping. Honors reduced-motion (callers gate
+   the class on it). */
+@keyframes value-refresh {
+  0% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Gentle breathing for skeleton bases — keeps the placeholder feeling alive
+   between shimmer sweeps without the harsh strobe of a plain pulse. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+.skeleton-shimmer {
+  background-color: hsl(var(--muted));
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 35%,
+    hsl(0 0% 100% / 0.85) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+  background-position: -125% 0;
+  background-repeat: no-repeat;
+  background-size: 55% 100%;
+  will-change: background-position;
+}
+
+.dark .skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 35%,
+    hsl(0 0% 100% / 0.2) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+}
+
+/* Content reveal: the real view fades + lifts in as the client-gated skeleton
+   clears, so the placeholder→content swap reads as a smooth reveal instead of a
+   hard pop. Honors reduced-motion below and is disabled under the
+   lighthouse-audit reset above. Skeleton bodies themselves intentionally have no
+   entrance animation because the runtime can remount an identical loading tree
+   several times while providers hydrate; replaying an entrance on every remount
+   flashes the whole page. */
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-in {
+  animation: reveal-in 460ms cubic-bezier(0.22, 0.8, 0.22, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-in {
+    animation: none;
+  }
+}
+
+/* Prevent mouse/touch clicks from leaving browser tap/focus artifacts. Keyboard
+   navigation still receives the existing :focus-visible treatment. */
+a,
+button,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@keyframes loading-progress-head {
+  0% {
+    opacity: 0.72;
+    transform: translateX(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(6px);
+  }
+}
+
+@keyframes mobile-menu-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-bottom-sheet {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    transform: none;
+    overflow: hidden;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-left-radius: 1.75rem;
+    border-top-right-radius: 1.75rem;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding-top: 3.2rem !important;
+    max-height: min(86dvh, calc(100dvh - 2.75rem));
+    will-change: transform, opacity;
+  }
+
+  .mobile-bottom-sheet-fullscreen {
+    top: 0;
+    bottom: 0;
+    border-radius: 0;
+    padding-top: 0 !important;
+    max-height: 100dvh;
+  }
+
+  .mobile-dialog-sheet {
+    opacity: 1;
+    transition:
+      transform 380ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 220ms ease-out;
+  }
+
+  @starting-style {
+    .mobile-dialog-sheet[data-state="open"] {
+      opacity: 0;
+      transform: translateY(calc(100% + 1rem));
+    }
+  }
+
+  .mobile-bottom-sheet-dragging {
+    transition: none !important;
+  }
+
+  .mobile-bottom-sheet-handle {
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .mobile-bottom-sheet-handle:active {
+    cursor: grabbing;
+  }
+}
+
+/* Premium depth: flat cards — tone steps only, no borders/shadows */
+.surface-elevated {
+  box-shadow: none;
+}
+
+/* Keep compact display tracking from becoming visually dense on desktop. */
+@media (min-width: 1280px) {
+  [class~="tracking-[-0.06em]"] {
+    letter-spacing: -0.03em;
+  }
+
+  [class~="tracking-[-0.04em]"] {
+    letter-spacing: -0.02em;
+  }
+
+  [class~="tracking-[-0.03em]"] {
+    letter-spacing: -0.015em;
+  }
+
+  [class~="tracking-[-0.02em]"] {
+    letter-spacing: -0.01em;
+  }
+}
