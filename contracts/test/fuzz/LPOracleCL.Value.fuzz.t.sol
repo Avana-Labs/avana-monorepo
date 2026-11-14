@@ -156,6 +156,45 @@ contract LPOracleCLValueFuzzTest is LPOracleCLFixture {
         if (v.state == PriceState.Live) assertEq(uint256(v.answer), fresh, "Live serves the fresh price");
     }
 
+    // TEST-070 verifies: SPEC-ORC-008, REQ-ORACLE-012, SPEC-ORC-005
+    /// @notice WBTC rounding bound. An 8-decimal token is priced per whole vault token, which `SPEC-ORC-005` makes worth
+    /// $1 to $10 at listing, so its raw unit ($0.001 at $100,000) is a large share of the price: the floor and the
+    /// one-raw-unit deduction of `SPEC-ORC-008` can put the fresh price up to ~2e-3 below the exact value when a whole
+    /// token holds only ~500 raw WBTC units (the fixture markets measure 0.3 to 0.6 bps). The test pins
+    /// that this shortfall is (1) never negative, (2) at most two raw units of each token's share plus two price units
+    /// (`2/a0 + 2/a1 + 2/price8` relative), and (3) at the listing prices of WBTC/WETH and WBTC/USDC below 25 bps,
+    /// half the 50 bps deviation threshold of the BTC/USD feed the price already tolerates.
+    /// forge-config: default.fuzz.runs = 64
+    function testFuzz_TEST_070_wbtcRoundingIsBoundedAndDownward(
+        bool usdc,
+        uint256 f0,
+        uint256 f1
+    ) public {
+        _deployClMarket(
+            usdc ? MarketSpec("WBTC", 8, 100_000e8, false, "USDC", 6, 1e8, true, 500, true, 0, 0, 1e15) : _wbtcEth()
+        );
+        uint8 d = _d();
+        for (uint256 step = 0; step < 2; ++step) {
+            if (step == 1) _movePrices(bound(f0, 50, 200), bound(f1, 50, 200));
+            PriceStateView memory v = _state();
+            if (v.state == PriceState.Cached || v.state == PriceState.Expired) continue;
+            uint256 v0 = v.tokens[0].valuationPrice;
+            uint256 v1 = v.tokens[1].valuationPrice;
+            (uint256 a0, uint256 a1) = _composition(10 ** d, v0, v1);
+            // Exact value of the composition (before the floor, at most one raw unit above the floored amounts), x 10^18.
+            uint256 low18 = a0 * v0 * 10 ** (18 - token0.decimals()) + a1 * v1 * 10 ** (18 - token1.decimals());
+            uint256 fresh = uint256(v.freshAnswer);
+            assertLe(fresh * 1e18, low18, "fresh price above the value of the floored composition");
+            uint256 high18 = low18 + v0 * 10 ** (18 - token0.decimals()) + v1 * 10 ** (18 - token1.decimals());
+            // (2): relative shortfall against the unfloored value, in 1e18, below 2/a0 + 2/a1 + 2/price8 (shares of
+            // each token at most 1, so 2 raw units of a token are at most 2/a_i of the value).
+            uint256 rel18 = (high18 - fresh * 1e18) * 1e18 / high18;
+            uint256 allowed18 = 2e18 / a0 + 2e18 / a1 + 2e18 / fresh + 3;
+            assertLe(rel18, allowed18, "shortfall above the SPEC-ORC-008 rounding");
+            if (step == 0) assertLt(rel18, 25e14, "at listing: below 25 bps");
+        }
+    }
+
     // TEST-071 verifies: MATH-UO-05, MATH-UO-29, REQ-ORACLE-012
     // Sources: 5.1 TEST-071 (LPOracle part: amount x price x 10^(18 - decimals) never overflows inside the listing
     // bounds)
