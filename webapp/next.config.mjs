@@ -115,7 +115,7 @@ const nextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
-  // The monorepo root: web/ imports the Convex API and Ask AI library from services/convex.
+  // The monorepo root: webapp/ imports the Convex API and Ask AI library from services/convex.
   turbopack: {
     root: path.resolve(process.cwd(), ".."),
   },

@@ -17,7 +17,7 @@ From the repository root:
 
 ```sh
 npm install
-cp web/.env.example web/.env.local   # then fill in the values you have
+cp webapp/.env.example webapp/.env.local   # then fill in the values you have
 npm run dev --workspace @avana/web   # http://localhost:3000
 ```
 
