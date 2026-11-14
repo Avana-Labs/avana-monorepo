@@ -77,7 +77,9 @@ else
 fi
 
 # Keeper: observe mode (no KMS key), a throwaway mutual-TLS kill switch.
-openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" -keyout "$WORK/key.pem" -out "$WORK/cert.pem" >/dev/null 2>&1
+# MSYS2_ARG_CONV_EXCL: Git Bash on Windows would rewrite the subject "/CN=localhost" as a Windows path and openssl would
+# reject it; the variable is ignored elsewhere.
+MSYS2_ARG_CONV_EXCL="/CN=" openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" -keyout "$WORK/key.pem"   -out "$WORK/cert.pem" > "$WORK/openssl.log" 2>&1 || { echo "keeper: openssl could not make the kill switch certificate"; tail -5 "$WORK/openssl.log"; }
 (cd "$REPO/services/keeper" && KEEPER_NETWORK_SET=local KEEPER_MODE=observe KEEPER_ROLE=primary KEEPER_SHARD=0 \
   KEEPER_SHARD_COUNT=1 KEEPER_KILL_SWITCH_PORT="$KILL_PORT" KEEPER_KILL_SWITCH_TLS_CERT="$WORK/cert.pem" \
   KEEPER_KILL_SWITCH_TLS_KEY="$WORK/key.pem" KEEPER_KILL_SWITCH_CLIENT_CA="$WORK/cert.pem" \

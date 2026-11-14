@@ -10,7 +10,7 @@
 // Usage, from contracts/:  node script/e2e/convex-check.ts <manifest.json> <repo root>
 // Environment: RPC_ANVIL, E2E_EXPORT_URL, E2E_EXPORT_KEY_ID, E2E_EXPORT_SECRET, E2E_LISTING_CONTENT_URL.
 
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -24,11 +24,21 @@ const env = (n: string) => {
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Json;
 const OUT = dirname(manifestPath);
 const CONVEX_DIR = join(repo, "services/convex");
-const CONVEX = join(repo, "node_modules/.bin/convex");
+// The CLI's own entry point, run with this node: node_modules/.bin/convex is a shell script, which Windows cannot run
+// (and its convex.cmd would need a shell, which mangles the JSON arguments).
+const CONVEX = join(repo, "node_modules/convex", JSON.parse(readFileSync(join(repo, "node_modules/convex/package.json"), "utf8")).bin.convex);
+
+// On Windows, `convex run` prints its result and then aborts on a libuv assertion while exiting (Node 24); that exit
+// alone is not a failure.
+const EXIT_ABORT = /^(Assertion failed: !\(handle->flags & UV_HANDLE_CLOSING\), file src\\win\\async\.c, line \d+\s*)+$/;
 
 /** One `convex` CLI call on the local deployment; `run` answers with the function's JSON result. */
 function convex(args: string[]): string {
-  return execFileSync(CONVEX, args, { cwd: CONVEX_DIR, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const r = spawnSync(process.execPath, [CONVEX, ...args], { cwd: CONVEX_DIR, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  if (r.error) throw r.error;
+  if (r.status !== 0 && !(process.platform === "win32" && EXIT_ABORT.test(r.stderr.trim())))
+    throw new Error(`convex ${args.slice(0, 2).join(" ")} exited ${r.status ?? r.signal}: ${r.stderr.trim()}`);
+  return r.stdout;
 }
 function run<T>(fn: string, args: Json = {}): T {
   const out = convex(["run", fn, JSON.stringify(args)]).trim();
