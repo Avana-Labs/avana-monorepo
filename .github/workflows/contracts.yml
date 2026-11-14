@@ -225,7 +225,9 @@ jobs:
             export FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=64
             echo "invariant suites: 256 runs at depth 64 (pull request)"
           fi
-          script/test-shard.sh ${{ matrix.shard }} "$SHARDS" --fuzz-seed "$SEED" -vvv
+          # -vv: from -vvv forge writes every test's traces into the results file; test-shard.sh prints the failures'
+          # traces with --rerun -vvv.
+          script/test-shard.sh ${{ matrix.shard }} "$SHARDS" --fuzz-seed "$SEED" -vv
 
       - name: Upload this shard's results (forge --json-file)
         if: ${{ !cancelled() }}
@@ -306,7 +308,7 @@ jobs:
         run: |
           SEED=$(printf '0x%x' "$(date +%s)")
           echo "fuzz seed: $SEED"
-          script/test-shard.sh --unit "$UNIT" --fuzz-seed "$SEED" -vvv
+          script/test-shard.sh --unit "$UNIT" --fuzz-seed "$SEED" -vv
 
   gas:
     name: gas snapshots
@@ -547,14 +549,16 @@ jobs:
         if: steps.ready.outputs.ready == 'true'
         run: |
           mkdir -p out-results
-          forge test --json-file out-results/fork.json -vvv
+          # -vv keeps traces out of the results file; the failed tests run again with --rerun -vvv to print them.
+          forge test --json-file out-results/fork.json -vv || { forge test --rerun -vvv || true; exit 1; }
 
       - name: Hostile-component tests on the fork
         # The hostile-component suite of contracts/test/README.md section 6, run when test/hostile/ holds tests.
         if: steps.ready.outputs.ready == 'true'
         run: |
           if [ -d test/hostile ]; then
-            AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --json-file out-results/hostile.json -vvv
+            AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --json-file out-results/hostile.json -vv \
+              || { AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --rerun -vvv || true; exit 1; }
           else
             echo "No test/hostile/ folder: the hostile-component tests did not run."
             echo "Hostile-component tests: not run (no test/hostile/ folder)." >> "$GITHUB_STEP_SUMMARY"
@@ -628,7 +632,8 @@ jobs:
       - name: Differential fuzzing (TEST-037)
         run: |
           mkdir -p out-results
-          forge test --json-file out-results/differential.json -vvv
+          # -vv keeps traces out of the results file; the failed tests run again with --rerun -vvv to print them.
+          forge test --json-file out-results/differential.json -vv || { forge test --rerun -vvv || true; exit 1; }
 
       - name: Upload the differential results
         if: ${{ !cancelled() }}
