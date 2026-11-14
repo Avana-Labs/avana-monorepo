@@ -255,7 +255,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
 
     /// @dev Served price (`SPEC-ORC-018`), the route it comes from, its source timestamp and its age limits
     /// (`SPEC-ORC-012`, `SPEC-ORC-015`), and the alternate held to its borrow age (`REQ-ORACLE-090`). While the routes
-    /// disagree the served value is `max(min(p, b), A)`, the median of `p`, `b` and `A`: the routes disagree, so one of
+    /// disagree the served value is `max(min(p, b), A)`, the median of `p`, `b` and `A` (or `A` when above both): the routes disagree, so one of
     /// them is wrong and the two alone cannot tell which, and one faulty route must not raise the debt price alone
     /// (ORACLE-06); the debt still never counts below `A`. Its route is the lower route, and when `A` exceeds it, no
     /// route: the accepted timestamp is reported with age limits 0, as when failed.
