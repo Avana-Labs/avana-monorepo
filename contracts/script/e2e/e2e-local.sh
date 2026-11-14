@@ -232,12 +232,15 @@ grow() { # phase generator config
   return $ok
 }
 GREW=""
+GROW_FAILED=""
 if [[ " $STEPS " == *" day2 "* ]]; then
-  grow day2 script/e2e/day2-additions.ts deployments-local/anvil/config-day2.json && GREW=1
+  grow day2 script/e2e/day2-additions.ts deployments-local/anvil/config-day2.json && GREW=1 || GROW_FAILED=day2
 fi
 if [[ " $STEPS " == *" exotic "* ]]; then
-  if [ -f "$OUT/config-day2.json" ]; then
-    grow exotic script/e2e/exotic-additions.ts deployments-local/anvil/config-exotic.json && GREW=1
+  if [ -n "$GROW_FAILED" ]; then
+    record exotic not-run "the day2 phase failed"
+  elif [ -f "$OUT/config-day2.json" ]; then
+    grow exotic script/e2e/exotic-additions.ts deployments-local/anvil/config-exotic.json && GREW=1 || GROW_FAILED=exotic
   else
     record exotic not-run "needs the day-2 config (run day2 first)"
   fi
@@ -248,7 +251,10 @@ if [ -z "${AVANA_CONFIG:-}" ]; then
     [ -f "$OUT/$f.json" ] && { export AVANA_CONFIG="deployments-local/anvil/$f.json"; break; }
   done
 fi
-if [ -n "$GREW" ]; then
+# After a failed phase the config holds additions not on chain yet: a rerun would act on them, so it waits for the fix.
+if [ -n "$GROW_FAILED" ]; then
+  record rerun not-run "the $GROW_FAILED phase failed: fix it and resume (E2E_RESUME) before every step runs again"
+elif [ -n "$GREW" ]; then
   for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-first-loss-reserves 08-aave-loss-layers-aip \
     07-fund-first-loss-reserves 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
     09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
