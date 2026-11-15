@@ -31,6 +31,12 @@ export interface PipelineDeps {
    * read again on the second provider at the decision block. A reason stops the call in this block (logged skipped).
    */
   confirm?(ctx: BlockContext, plan: TxPlan): Promise<SkipReason | null>;
+  /**
+   * True while the subject has a transaction pending. Nothing new is sent for it: the follow-up replaces or cancels the
+   * pending one at its nonce, and a second send would take a later nonce that every later call, a liquidation
+   * included, then waits behind.
+   */
+  pending?(subject: string): boolean;
 }
 
 function record(ctx: BlockContext, plan: Pick<TxPlan, "job" | "subject" | "params">, rest: Omit<AttemptRecord, "at" | "chainId" | "blockNumber" | "job" | "subject" | "params">): AttemptRecord {
@@ -79,6 +85,7 @@ async function runOne<C, D>(job: Job<C, D>, ctx: BlockContext, deps: PipelineDep
     return;
   }
   const plan = await job.build(ctx, check.decision);
+  if (deps.pending?.(plan.subject)) return;
 
   const mismatch = await checkTargets(ctx, plan.targets);
   if (mismatch) {

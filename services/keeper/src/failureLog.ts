@@ -22,7 +22,9 @@ export type AttemptOutcome =
   /** A send or replacement refused because its worst-case cost passes the chain's gas ceiling. */
   | "aboveGasCeiling"
   /** A replacement, cancellation or nonce-closing send every private endpoint refused; the next block decides again. */
-  | "sendRefused";
+  | "sendRefused"
+  /** A pending poke whose nonce a due liquidation took as its replacement; the poke's job sends it again later. */
+  | "preempted";
 
 export interface AttemptRecord {
   readonly at: string;

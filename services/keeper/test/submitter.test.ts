@@ -7,11 +7,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type Address, type PublicClient, serializeTransaction } from "viem";
 import { CHAINS } from "@avana/services-common";
-import { GWEI, gasLimit, paysL1DataFee } from "../src/chain/gas.ts";
+import { GWEI, bumpFees, gasLimit, paysL1DataFee } from "../src/chain/gas.ts";
 import type { TxSigner } from "../src/chain/signer.ts";
 import type { ChainConfig } from "../src/config.ts";
 import type { ChainReader } from "../src/chain/reads.ts";
 import { InventoryBook } from "../src/inventory.ts";
+import { sendPrivate } from "../src/chain/submit.ts";
 import { AboveGasCeiling, type GasPolicy, Submitter } from "../src/runtime/submitter.ts";
 import type { BlockContext, TxPlan } from "../src/types.ts";
 
@@ -196,5 +197,76 @@ describe("follow-ups", () => {
     await s.followUps(ctx(11n), async () => true, () => {});
     expect(s.pending.get(plan.subject)!.hash).toBe(hash);
     expect(lines).toContainEqual(expect.objectContaining({ outcome: "sendRefused", txHash: hash }));
+  });
+});
+
+describe("private send", () => {
+  it("names each endpoint's refusal, so a refused replacement shows why (nonce too low, underpriced, funds)", async () => {
+    const post = vi.fn(async (url: string) => {
+      throw new Error(url === "https://a" ? "nonce too low" : "replacement transaction underpriced");
+    });
+    await expect(sendPrivate(["https://a", "https://b"], "0x01", post)).rejects.toThrow(
+      "every private endpoint refused the transaction: https://a: nonce too low; https://b: replacement transaction underpriced",
+    );
+  });
+
+  it("resolves with the endpoints that accepted when at least one did", async () => {
+    const post = vi.fn(async (url: string) => {
+      if (url === "https://a") throw new Error("down");
+      return "0xhash";
+    });
+    await expect(sendPrivate(["https://a", "https://b"], "0x01", post)).resolves.toEqual(["https://b"]);
+  });
+});
+
+describe("liquidation pre-emption", () => {
+  const poke = (n: number): TxPlan => ({ ...plan, job: "oraclePoke", subject: `1:${addr(0x100 + n)}`, deadline: null, reservations: [], params: { oracle: addr(0x100 + n) } });
+
+  it("sends a due liquidation at the lowest nonce a pending poke holds, as a replacement of that poke at a higher fee", async () => {
+    const { s, post } = setup({ ceilingWei: 10n ** 30n });
+    const preempted = vi.fn();
+    s.preempted = preempted;
+    for (let i = 0; i < 3; i++) await s.submit(ctx(10n), poke(i), sim);
+    expect([...s.pending.values()].map((p) => p.nonce)).toEqual([5, 6, 7]);
+    const pokeFees = s.pending.get(poke(0).subject)!.fees;
+
+    await s.submit(ctx(11n), plan, sim);
+    const liquidation = s.pending.get(plan.subject)!;
+    expect(liquidation.nonce).toBe(5);
+    expect(liquidation.fees.maxFeePerGas).toBe(bumpFees(pokeFees).maxFeePerGas);
+    expect(liquidation.fees.maxPriorityFeePerGas).toBe(bumpFees(pokeFees).maxPriorityFeePerGas);
+    expect(post).toHaveBeenCalledTimes(4);
+    // The poke at nonce 5 is dropped and handed back to be sent again; the later pokes keep their nonces.
+    expect(s.pending.has(poke(0).subject)).toBe(false);
+    expect(s.pending.get(poke(1).subject)!.nonce).toBe(6);
+    expect(s.pending.get(poke(2).subject)!.nonce).toBe(7);
+    expect(preempted).toHaveBeenCalledWith(poke(0));
+    expect(lines).toContainEqual(expect.objectContaining({ job: "oraclePoke", subject: poke(0).subject, outcome: "preempted", nonce: 5 }));
+    // The pre-emption took no new nonce: the next send gets 8.
+    await s.submit(ctx(11n), poke(9), sim);
+    expect(s.pending.get(poke(9).subject)!.nonce).toBe(8);
+  });
+
+  it("never pre-empts a pending liquidation, nor a poke whose nonce is already mined", async () => {
+    const { s, state } = setup({ ceilingWei: 10n ** 30n });
+    const other: TxPlan = { ...plan, subject: `1:${addr(0x5)}:${addr(0xcafe)}` };
+    await s.submit(ctx(10n), other, sim);
+    await s.submit(ctx(10n), poke(0), sim);
+    state.confirmed = 7;
+    await s.submit(ctx(11n), plan, sim);
+    expect(s.pending.get(other.subject)!.nonce).toBe(5);
+    expect(s.pending.get(poke(0).subject)!.nonce).toBe(6);
+    expect(s.pending.get(plan.subject)!.nonce).toBe(7);
+    expect(lines.some((l) => l.outcome === "preempted")).toBe(false);
+  });
+
+  it("sends at a fresh nonce when the node refuses the pre-emption, and keeps the poke pending", async () => {
+    const { s, post } = setup({ ceilingWei: 10n ** 30n });
+    await s.submit(ctx(10n), poke(0), sim);
+    post.mockRejectedValueOnce(new Error("nonce too low"));
+    await s.submit(ctx(11n), plan, sim);
+    expect(s.pending.get(poke(0).subject)!.nonce).toBe(5);
+    expect(s.pending.get(plan.subject)!.nonce).toBe(6);
+    expect(lines).toContainEqual(expect.objectContaining({ job: "liquidation", outcome: "sendRefused", nonce: 5, reason: expect.stringContaining("nonce too low") }));
   });
 });
