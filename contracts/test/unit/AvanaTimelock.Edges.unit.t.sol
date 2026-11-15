@@ -523,4 +523,79 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         timelock.cancel(id);
         assertFalse(timelock.isOperation(id));
     }
+
+    // TEST-244 verifies: REQ-ACCESS-143, REQ-ACCESS-156, SPEC-GOV-005
+    /// @notice A single scheduled role call is not a restoring operation, and a single `execute` clears its
+    /// role-change mark.
+    function test_TEST_244_singleExecuteClearsMarks() public {
+        bytes memory role = abi.encodeCall(IAccessControl.grantRole, (keccak256("R"), bob));
+        vm.prank(governanceMultisig);
+        timelock.schedule(address(other), 0, role, bytes32(0), SALT, NORMAL_DELAY);
+        bytes32 id = timelock.hashOperation(address(other), 0, role, bytes32(0), SALT);
+        assertTrue(timelock.isRoleChangeOperation(id));
+        assertFalse(timelock.isRestoringOperation(id), "a role call is not restoring");
+        vm.warp(block.timestamp + NORMAL_DELAY);
+        timelock.execute(address(other), 0, role, bytes32(0), SALT);
+        assertTrue(timelock.isOperationDone(id));
+        assertFalse(timelock.isRoleChangeOperation(id), "mark cleared by execute");
+    }
+
+    // TEST-194 verifies: REQ-ACCESS-144, REQ-ACCESS-027
+    /// @notice Built with public execution on, the constructor's grant of the open executor role emits
+    /// `PublicExecutionToggled(true)` once.
+    function test_TEST_194_constructionWithPublicExecutionEmitsToggleTrue() public {
+        SelectorPair[] memory none = new SelectorPair[](0);
+        vm.recordLogs();
+        AvanaTimelock on = _newTimelock(NORMAL_DELAY, true, none, none);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 toggledOn;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter != address(on) || logs[i].topics.length == 0) continue;
+            if (
+                logs[i].topics[0] == IAvanaTimelockEvents.PublicExecutionToggled.selector
+                    && abi.decode(logs[i].data, (bool))
+            ) ++toggledOn;
+        }
+        assertEq(toggledOn, 1, "PublicExecutionToggled(true)");
+        assertTrue(on.publicExecution());
+    }
+
+    // TEST-242 verifies: REQ-ACCESS-182, REQ-ACCESS-001
+    /// @notice An account that does not hold `DEFAULT_ADMIN_ROLE` renouncing it is a no-op: only the timelock's own
+    /// admin role is protected, and the call does not revert.
+    function test_TEST_242_renouncingAdminNotHeldIsNoOp() public {
+        bytes32 admin = timelock.DEFAULT_ADMIN_ROLE();
+        vm.prank(alice);
+        timelock.renounceRole(admin, alice);
+        assertFalse(timelock.hasRole(admin, alice));
+        assertTrue(timelock.hasRole(admin, address(timelock)));
+    }
+
+    // TEST-194 verifies: REQ-ACCESS-144
+    /// @notice Only the open executor role's revocation emits `PublicExecutionToggled`: a canceller renouncing its role
+    /// emits none.
+    function test_TEST_194_otherRevocationEmitsNoToggle() public {
+        bytes32 canceller = timelock.CANCELLER_ROLE();
+        vm.recordLogs();
+        vm.prank(aaveGuardian);
+        timelock.renounceRole(canceller, aaveGuardian);
+        (,, uint256 toggled) = _countEvents(address(timelock));
+        assertEq(toggled, 0, "no PublicExecutionToggled");
+        assertTrue(timelock.publicExecution());
+    }
+
+    // TEST-224 verifies: REQ-ACCESS-183, REQ-ACCESS-027
+    /// @notice The proposer list needs at least two holders, not exactly two: three proposers construct, and a single
+    /// proposer is refused even when it is also the DAO canceller (so the DAO-cancel check alone would pass).
+    function test_TEST_224_proposerCountIsAtLeastTwo() public {
+        address[] memory exec = _list(governanceMultisig);
+        address[] memory canc = _list(emergencyGuardian, aaveGuardian);
+        address[] memory dao = _list(aaveGovernanceExecutor);
+        address[] memory three = new address[](3);
+        (three[0], three[1], three[2]) = (governanceMultisig, aaveGovernanceExecutor, bob);
+        AvanaTimelock t = _deployWith(three, exec, canc, dao);
+        assertTrue(t.hasRole(t.PROPOSER_ROLE(), bob));
+        vm.expectRevert(IAvanaTimelockErrors.InvalidRoleHolders.selector);
+        _deployWith(_list(aaveGovernanceExecutor), exec, canc, dao);
+    }
 }

@@ -16,6 +16,7 @@ import {
     IGvSpokeConfigurator
 } from "../integration/GoldenVectors.integration.t.sol";
 import {Deployments} from "../utils/Deployments.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @dev Hub views of aave-v4 a3ef63e this suite reads beyond `IAaveV4Hub`.
@@ -150,6 +151,12 @@ contract BalancesHandler is Test {
         address user = borrowers[actor % N_BORROWERS];
         uint256 r = reserve % 2;
         uint256 owed = cdp.getUserTotalDebt(debtReserves[r], user);
+        // Steered: with nothing owed on the picked pair, repay the first borrower and reserve that owe something.
+        for (uint256 j = 0; owed == 0 && j < 2 * N_BORROWERS; ++j) {
+            user = borrowers[(actor + j / 2) % N_BORROWERS];
+            r = (reserve + j) % 2;
+            owed = cdp.getUserTotalDebt(debtReserves[r], user);
+        }
         if (owed == 0) revert Skipped();
         amount = bound(amount, 1, owed);
         debts[r].mint(user, amount);
@@ -201,7 +208,7 @@ contract BalancesHandler is Test {
 /// @notice Debt accounting per debt reserve on the pinned Aave V4 Hub and the standard CDP Spoke Avana deploys, with two
 /// debt reserves (GHO-like, 18 decimals; USDC-like, 6 decimals), a collateral reserve with collateral risk so premium
 /// shares accrue, finite draw caps and a lender who supplies and withdraws on the Lend Spoke.
-contract BalancesInvariantTest is Deployments {
+contract BalancesInvariantTest is Deployments, HandlerReach {
     BalancesHandler internal handler;
     GvToken internal coll;
     GvToken[2] internal debts;
@@ -242,6 +249,79 @@ contract BalancesInvariantTest is Deployments {
         handler.lenderSupply(0, 500_000e18);
         handler.lenderSupply(1, 300_000e6);
         targetContract(address(handler));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r =
+            _replayLanded(address(handler), actions, BalancesHandler.Skipped.selector, 32, 50, 0, own, true);
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](6);
+        bool[] memory check = new bool[](6);
+        floors[0] = 80; // supplyCollateral
+        floors[1] = 30; // borrow
+        floors[2] = 40; // repay
+        floors[3] = 80; // lenderSupply
+        floors[4] = 35; // lenderWithdraw
+        floors[5] = 80; // warp
+        check[5] = true; // warp
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](6), new string[](6), new int16[][](6));
+        (actions[0], names[0]) = (BalancesHandler.supplyCollateral.selector, "supplyCollateral");
+        kinds[0] = new int16[](2);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        (actions[1], names[1]) = (BalancesHandler.borrow.selector, "borrow");
+        kinds[1] = new int16[](3);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        kinds[1][2] = 256;
+        (actions[2], names[2]) = (BalancesHandler.repay.selector, "repay");
+        kinds[2] = new int16[](3);
+        kinds[2][0] = 256;
+        kinds[2][1] = 256;
+        kinds[2][2] = 256;
+        (actions[3], names[3]) = (BalancesHandler.lenderSupply.selector, "lenderSupply");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        (actions[4], names[4]) = (BalancesHandler.lenderWithdraw.selector, "lenderWithdraw");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 256;
+        kinds[4][1] = 256;
+        (actions[5], names[5]) = (BalancesHandler.warp.selector, "warp");
+        kinds[5] = new int16[](1);
+        kinds[5][0] = 256;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     function _hubCfg(

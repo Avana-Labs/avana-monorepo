@@ -424,4 +424,15 @@ contract ParameterStoreSequencerUnitTest is ParameterStoreFixture {
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreChain.InvalidSequencerFeed.selector, alice));
         store.setSequencer(alice, 3600);
     }
+
+    // TEST-250 verifies: REQ-CONFIG-022, REQ-ORACLE-049
+    /// @notice An 18-decimal feed whose minimum normalises above 1 (minAnswer 1e11, above 10^10) is pinned.
+    function test_TEST_250_eighteenDecimalFeedAboveNormalisedMinimum() public {
+        MockAggregator f18 = new MockAggregator(18, 1e11, 1e30);
+        vm.prank(address(timelock));
+        store.setFeed(address(f18), _feedDef(86_400, 1800));
+        FeedDef memory d = store.getFeed(address(f18));
+        assertEq(d.decimals, 18);
+        assertEq(d.minAnswer, 1e11);
+    }
 }

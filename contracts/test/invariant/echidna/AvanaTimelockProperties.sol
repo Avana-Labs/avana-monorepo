@@ -30,8 +30,8 @@ contract TimelockDaoActor {
 /// the short list stays inside `SHORT_ELIGIBLE`, and public execution equals the open executor role. Inside a
 /// transaction a schedule meets its required delay, an execution happens only inside its window, and a role-change or
 /// restoring operation is cancelled only by the DAO canceller.
-/// @dev Assertion entry points: `scheduleKind`, `executeAt`, `cancelAt`, `cleanupAt`; time moves through the
-/// fuzzers' block-timestamp delay (up to 14 days per call).
+/// @dev Assertion entry points: `scheduleShort`, `scheduleNormal`, `scheduleNoDelay`, `executeAt`, `cancelAt`,
+/// `cleanupAt`; time moves through the fuzzers' block-timestamp delay (up to 14 days per call).
 contract AvanaTimelockProperties {
     AvanaTimelock internal immutable TL;
     TimelockDaoActor internal immutable DAO;
@@ -102,16 +102,38 @@ contract AvanaTimelockProperties {
 
     // ─── Assertion entry points ───
 
-    /// @notice Schedules one of eight call shapes at a chosen delay; a success always meets the required delay.
-    function scheduleKind(
-        uint8 kind,
-        uint8 delayChoice,
-        uint256 saltSeed
+    /// @notice Schedules one of eight call shapes (`kind`) at the short delay; a success always meets the required delay.
+    /// One entry point per delay, with the salt taken from the operation count: with the delay choice and a symbolic
+    /// salt in one entry point, hevm ran past its 4-hour job (security-slow run 43677588077), hashing the symbolic salt
+    /// into the operation id and writing the timelock's mappings at that key.
+    function scheduleShort(
+        uint8 kind
     ) external {
+        _schedule(kind, TL.SHORT_DELAY());
+    }
+
+    /// @notice `scheduleShort` at the normal delay.
+    function scheduleNormal(
+        uint8 kind
+    ) external {
+        _schedule(kind, TL.normalDelay());
+    }
+
+    /// @notice `scheduleShort` with no delay.
+    function scheduleNoDelay(
+        uint8 kind
+    ) external {
+        _schedule(kind, 0);
+    }
+
+    function _schedule(
+        uint8 kind,
+        uint256 delay
+    ) internal {
         (address target, bytes memory data) = _call(kind % 8);
         uint256 required = _requiredOne(target, data);
-        uint256 delay = delayChoice % 3 == 0 ? TL.SHORT_DELAY() : (delayChoice % 3 == 1 ? TL.normalDelay() : 0);
-        bytes32 salt = keccak256(abi.encode(saltSeed, ops.length));
+        // A new salt per scheduled operation; a refused schedule pushes nothing, so the next call reuses it.
+        bytes32 salt = bytes32(ops.length);
         try TL.schedule(target, 0, data, bytes32(0), salt, delay) {
             assert(delay >= required);
             ops.push(Op(target, data, salt));

@@ -337,4 +337,35 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
             assertEq(_logs(calls[i]), 1, "setter emitted other than one log");
         }
     }
+
+    // TEST-272 verifies: REQ-RISK-041, REQ-RISK-042
+    /// @notice A repeated initial cap write that lowers the cap emits `CapTightened` naming the caller, the timelock.
+    function test_TEST_272_initialCapLoweringEmitsCaller() public {
+        _tl();
+        vm.expectEmit(address(store));
+        emit IParameterStoreEvents.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
+        store.setInitialMarketCaps(M, 4_000_000e8, 500_000e8, 1e8);
+    }
+
+    // TEST-061 verifies: REQ-CONFIG-050, REQ-PSTORE-006
+    /// @notice A second `setDebtAssetParams` reports the value it replaces.
+    function test_TEST_061_debtAssetParamsReportsReplacedValue() public {
+        _tl();
+        store.setDebtAssetParams(gho, DebtReserveParams(0.5e18));
+        _tl();
+        vm.expectEmit(address(store));
+        emit IParameterStoreEvents.ParameterSet("floorRoundingAllowance", _a(gho), 0.5e18, 1e18);
+        store.setDebtAssetParams(gho, DebtReserveParams(1e18));
+    }
+
+    // TEST-061 verifies: REQ-PSTORE-032, REQ-CONFIG-049
+    /// @notice A second `setCoverageRatioBps` reports the value it replaces.
+    function test_TEST_061_coverageRatioReportsReplacedValue() public {
+        _tl();
+        store.setCoverageRatioBps(2000);
+        _tl();
+        vm.expectEmit(address(store));
+        emit IParameterStoreEvents.ParameterSet("coverageRatioBps", bytes32(0), 2000, 3000);
+        store.setCoverageRatioBps(3000);
+    }
 }

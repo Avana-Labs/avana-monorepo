@@ -447,6 +447,14 @@ HEVM_PORT=${HEVM_PORT:-18545}
 # 4x): pc 16294 is the same decoder check in the main build (ParameterStoreListingLogic changed), passed 22 times by
 # a successful setFeed(3, ...) as by setFeed9 and setFeed14 (debug_traceCall on anvil; the next busiest branches of the
 # frame pass 18 and 16 times), so it takes the same bound.
+# With the bound of 32 these six entry points end with counterexamples that hevm_replay does not reproduce (runs
+# 43595414156 and 43653574421: 0 of 11 and 0 of 13; locally, setFeed9 gives such counterexamples also with
+# --merge-max-budget 0, --no-simplify, --no-decompose or the Naive loop heuristic). They are spurious: hevm reports the delegatecall into the listing logic
+# as succeeding for inputs that every check of `_pin` rejects (decimals 0 or above 18, a negative or zero minimum, a
+# maximum below the minimum, a minimum below 10^(decimals − 8)) and as failing for valid inputs, while the deployed
+# harness returns normally for every one of them; setFeed14 gives the same kind of counterexample at 32 and is QED at
+# the default bound. The replay classifies them "unconfirmed", which does not fail the step; at the default bound the
+# six entry points explore partially, which does (docs/audit/hevm/README.md, "Iteration bound").
 HEVM_MAX_ITERATIONS_FOR=${HEVM_MAX_ITERATIONS_FOR:-"ParameterStoreListingProperties.setFeed=32
   ParameterStoreListingProperties.setFeed9=32
   ParameterStoreListingProperties.setFeed10=32 ParameterStoreListingProperties.setFeed11=32
