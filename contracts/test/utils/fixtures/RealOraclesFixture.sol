@@ -22,7 +22,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// real Uniswap v3 pool) beside a real USDC DebtOracle behind its UUPS proxy, the implementation deployed from its
 /// build artifact: primary USDC/USD (8 decimals, 86,400 s heartbeat, 1,800 s margin), alternate USDC/ETH (18 decimals,
 /// same heartbeat) times ETH/USD (8 decimals, 3,600 s, margin 1,800 s), a standby USDC/USD and an oracle-network second
-/// source; `T = 225`, `debtStressRiseBps = 500`, launch timers, no sequencer. Its MarketRegistry and ParameterStore
+/// source; `T = 225`, `debtStressRiseBps = 500`, default timers, no sequencer. Its MarketRegistry and ParameterStore
 /// views are mocks (their own suites test the real ones).
 /// @dev `_seizable` and `_repayable` are LPVaultSwap's two oracle rules (`_checkCollateralPrice`, `_checkDebtPrice`)
 /// read after a poke: a test of the oracles' side of a liquidation asks exactly what LPVaultSwap asks.

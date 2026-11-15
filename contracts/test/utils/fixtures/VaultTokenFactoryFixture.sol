@@ -11,7 +11,7 @@ import {LPVaultIdentityMock} from "../mocks/LPVaultIdentityMock.sol";
 import {TimelockFixture} from "./TimelockFixture.sol";
 
 /// @title VaultTokenFactoryFixture
-/// @notice The chain's VaultTokenFactory behind the launch AvanaTimelock, with the Uniswap v3 LPVault registered as
+/// @notice The chain's VaultTokenFactory behind the AvanaTimelock, with the Uniswap v3 LPVault registered as
 /// integration 1 and the full-range USDC/USDT listing of 2.4 (`marketId` 4, 6 decimals) ready to deploy.
 /// @dev The AaveAdapter, Hub, CDP Spoke, LPOracle and pool are plain addresses: the factory and the token never call
 /// them. Collateralization and the LPVault are mocks answering the identity getters `registerIntegration` reads.

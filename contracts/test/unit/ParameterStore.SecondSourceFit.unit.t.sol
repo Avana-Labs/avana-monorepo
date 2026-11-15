@@ -167,7 +167,7 @@ contract ParameterStoreSecondSourceFitUnitTest is ParameterStoreFixture {
         (bool ok,) = _set(usdt, _twap(OTHER_POOL), _none());
         assertTrue(ok);
         _idKeyedMarket(OTHER_POOL, usdt);
-        MarketParams memory p = _launchMarketParams();
+        MarketParams memory p = _defaultMarketParams();
         vm.prank(address(timelock));
         bytes memory ret;
         (ok, ret) = address(store).call(abi.encodeCall(store.setInitialMarketParams, (M2, p)));

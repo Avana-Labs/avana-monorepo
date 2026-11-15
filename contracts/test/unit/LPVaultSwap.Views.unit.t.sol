@@ -46,8 +46,8 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
             lvs.addKeeper(k[i]);
         }
         address[] memory list = lvs.getKeepers();
-        assertEq(list.length, 5, "the launch keeper plus four");
-        assertEq(list[0], keeper, "the launch keeper first");
+        assertEq(list.length, 5, "the initial keeper plus four");
+        assertEq(list[0], keeper, "the initial keeper first");
         for (uint256 i = 0; i < 4; ++i) {
             assertEq(list[i + 1], k[i], "registration order");
         }
@@ -92,7 +92,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
         vm.prank(timelock);
         lvs.addKeeper(k);
         registry.setFrozen(k, true);
-        assertEq(lvs.activeKeeperCount(), 1, "only the launch keeper is active");
+        assertEq(lvs.activeKeeperCount(), 1, "only the initial keeper is active");
         vm.prank(timelock);
         lvs.removeKeeper(k);
         assertEq(lvs.activeKeeperCount(), 1, "unchanged");
@@ -173,7 +173,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
         assertEq(lvs.activeKeeperCount(), 1, "active count unchanged");
         address[] memory list = lvs.getKeepers();
         assertEq(list.length, 1, "list unchanged");
-        assertEq(list[0], keeper, "only the launch keeper");
+        assertEq(list[0], keeper, "only the initial keeper");
     }
 }
 

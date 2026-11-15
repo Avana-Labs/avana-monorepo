@@ -18,7 +18,7 @@ import {IAvanaTimelockViews} from "./IAvanaTimelockViews.sol";
 /// `AdminRoleOnlyTimelock`. The proposers are the 4-of-7 governance multisig and the Aave governance executor (never
 /// fewer than two). `schedule` and `scheduleBatch` require `delay >= requiredDelay(targets, payloads)`: `SHORT_DELAY`
 /// (12 hours) when every call is on the short-delay list, a subset of the immutable `SHORT_ELIGIBLE` set, otherwise
-/// `normalDelay()` (5 days at launch, within `[MIN_NORMAL_DELAY, MAX_DELAY]` = 4 to 5 days). A ready operation is
+/// `normalDelay()` (for example 5 days, within `[MIN_NORMAL_DELAY, MAX_DELAY]` = 4 to 5 days). A ready operation is
 /// executable for `GRACE_PERIOD` (14 days), by anyone while public execution is on, then expires. Any
 /// `CANCELLER_ROLE` holder (governance multisig, Emergency Guardian, Aave Protocol Guardian, Aave governance
 /// executor) cancels, except that an operation in which every call is a role change, or every call is in the

@@ -10,7 +10,7 @@ pragma solidity 0.8.28;
 /// drawing `(fundingHub, asset)` (2.7 `SPEC-CAP-010`), in whole tokens as Aave V4 records caps; the line is in whole
 /// tokens too, and coverage is tested on the line, not on the sum, which the line bounds. A line is covered when `line × 10^dec × coverageRatioBps <=
 /// fundedBalance × 1e4`, with `line` in whole tokens, `dec` the asset's decimals, `fundedBalance` the asset balance
-/// of `firstLossReserveOf(fundingHub, asset)` and `coverageRatioBps` from the ParameterStore (launch 2,000). Example: a
+/// of `firstLossReserveOf(fundingHub, asset)` and `coverageRatioBps` from the ParameterStore. Example: a
 /// 20,000,000 GHO line at 2,000 bps needs 20,000,000 × 1e18 × 2,000 <= fundedBalance × 1e4, that is a First-Loss Reserve
 /// balance of at least 4,000,000 GHO. `enableDebtReserve` and `recordCreditLine` run both checks, so no line is recorded
 /// above coverage and no reserve is enabled past its line; `syncDrawCap` records the live cap whatever the result, so

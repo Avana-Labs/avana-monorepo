@@ -17,7 +17,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @notice The legacy Curve hop (2.12 `REQ-ROUTE-046`) on an Ethereum fork, against the 3pool (DAI, USDC, USDT), whose
 /// `exchange` returns no data: the constructor's `coins(uint256)` checks pass at the 3pool's indices, a USDT -> USDC
 /// swap delivers the measured output to LPVaultSwap with `min_dy = 0`, and wrong indices are refused. The 3pool checks
-/// the hop code against a deployed legacy pool; the launch list names no legacy pool (see the skipped test below).
+/// the hop code against a deployed legacy pool; the address book names no legacy pool (see the skipped test below).
 /// Skipped without `RPC_MAINNET`; forks the latest block. LPVaultSwap is the suites' `MockRouteCaller`.
 /// @dev Run with `FOUNDRY_PROFILE=fork forge test --match-contract CurveLegacyRouteForkTest`.
 contract CurveLegacyRouteForkTest is AvanaTest {
@@ -101,11 +101,11 @@ contract CurveLegacyRouteForkTest is AvanaTest {
         this.deployDexPath(c, _hop(3, 1));
     }
 
-    /// @notice No legacy Curve pool is named for launch: the Ethereum and Base drafts route only through StableSwap-NG
-    /// pools. When the address book pins a legacy pool for a launch route, this test becomes a swap through that pool
+    /// @notice No legacy Curve pool is named yet: the Ethereum and Base drafts route only through StableSwap-NG
+    /// pools. When the address book pins a legacy pool for a route, this test becomes a swap through that pool
     /// at the route's listed size, with its depth measured as `REQ-ROUTE-006` requires.
     // TEST-054 verifies: REQ-ROUTE-046
-    function test_TEST_054_legacyCurveLaunchPoolNotYetNamed() public {
+    function test_TEST_054_legacyCurvePoolNotYetNamed() public {
         vm.skip(true);
     }
 }

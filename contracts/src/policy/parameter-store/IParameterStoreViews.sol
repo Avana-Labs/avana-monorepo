@@ -108,7 +108,7 @@ interface IParameterStoreViews {
     ) external view returns (uint32 age);
 
     /// @notice A market's optional hard health-factor floor after a borrow or a withdrawal that leaves debt.
-    /// @dev 0 means off, the default and the launch value: those operations then need only Aave's HF 1.00 and the
+    /// @dev 0 means off, the default: those operations then need only Aave's HF 1.00 and the
     /// caller's `minHealthFactor`. When set, within [1e18, 1.25e18]. The Lens previews a recommended borrow at
     /// HF 1.10 either way (Q-398).
     /// @param marketId Market identifier.

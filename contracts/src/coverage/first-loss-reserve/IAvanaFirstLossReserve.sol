@@ -10,7 +10,7 @@ pragma solidity 0.8.28;
 /// in that asset and controlled by the Aave DAO through the Aave DAO's AccessManager (`COVERAGE_ROLE`,
 /// `RESERVE_ADMIN_ROLE`); no Avana contract, multisig, timelock or keeper holds a role on it. There is one instance per
 /// (Hub, debt asset) on each chain; a debt reserve is enabled only with an instance on its own `(hub, hubAssetId)`,
-/// funded to its minimum before the reserve's `drawCap` rises above 0 (at launch: GHO on the Stable LP Hubs). A deficit
+/// funded to its minimum before the reserve's `drawCap` rises above 0 (for example GHO on a Stable LP Hub). A deficit
 /// is covered only by the instance of its own (Hub, asset), never across assets or Hubs. Avana contracts call only
 /// `fund`: LPVaultSwap, from `settlePending`, on the instance of the market's (Hub, debt asset), after approving exactly
 /// `amount` of that asset. The asset moves straight from the

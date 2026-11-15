@@ -61,7 +61,7 @@ contract AaveV3FlashSourceFuzzTest is FlashSourceFixture {
         uint256 amount
     ) public {
         idle = bound(idle, 0, 1e30);
-        // From 1,000 base units every loan passes the launch cap of 10 bps at the 5 bps rate (MATH-ST-115).
+        // From 1,000 base units every loan passes the default cap of 10 bps at the 5 bps rate (MATH-ST-115).
         amount = bound(amount, 1000, 1e30);
         (PayoutToken t,) = _listToken("DAI", idle);
         t.mint(address(swap), amount / 100 + 1);

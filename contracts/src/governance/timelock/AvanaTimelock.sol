@@ -47,9 +47,9 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
     /// @param executors `EXECUTOR_ROLE`: the governance multisig.
     /// @param cancellers Further `CANCELLER_ROLE` holders: the Emergency Guardian and the Aave Protocol Guardian.
     /// @param daoCancellers `DAO_CANCELLER_ROLE`: the Aave governance executor.
-    /// @param normalDelay_ Launch normal delay, within `[MIN_NORMAL_DELAY, MAX_DELAY]` (432,000).
-    /// @param publicExecution_ Whether anyone may execute ready operations (launch `true`).
-    /// @param shortEligible The immutable `SHORT_ELIGIBLE` set, also the launch short-delay list.
+    /// @param normalDelay_ Initial normal delay, within `[MIN_NORMAL_DELAY, MAX_DELAY]` (for example 432,000).
+    /// @param publicExecution_ Whether anyone may execute ready operations (for example `true`).
+    /// @param shortEligible The immutable `SHORT_ELIGIBLE` set, also the constructor's short-delay list.
     /// @param daoOnlyCancel The immutable DAO-only cancel set.
     /// @param targets The chain's deterministic ParameterStore, MarketRegistry and LPVaultSwap addresses: every pair of
     /// either set must name the one its selector belongs to (`REQ-ACCESS-155`, `REQ-ACCESS-156`).
@@ -441,7 +441,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
     }
 
     /// @dev Index of the first `SHORT_ELIGIBLE` pair that targets the timelock, names a never-short selector or a
-    /// selector outside the launch short-delay list (REQ-ACCESS-142), or a target other than the deployed contract
+    /// selector outside the short-delay list (REQ-ACCESS-142), or a target other than the deployed contract
     /// its selector belongs to (REQ-ACCESS-155), or `pairs.length` when there is none.
     function _firstInvalidShort(
         SelectorPair[] memory pairs,
@@ -451,7 +451,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
             bytes4 s = pairs[i].selector;
             if (
                 pairs[i].target == address(this) || TimelockSelectors.isNeverShort(s)
-                    || !TimelockSelectors.isLaunchShortSelector(s) || pairs[i].target != _ownerOf(s, targets)
+                    || !TimelockSelectors.isShortDelayListSelector(s) || pairs[i].target != _ownerOf(s, targets)
             ) return i;
         }
         return pairs.length;

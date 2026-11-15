@@ -10,7 +10,7 @@ import {LPOracleCLFixture} from "./LPOracleCLFixture.sol";
 
 /// @title RealClMarketBuilder
 /// @notice Builds the real concentrated-liquidity LPOracle of `LPOracleCLFixture` (USDC/USDT on a real Uniswap v3
-/// pool, launch timers, a 1,800 s TWAP) inside its own contract, so a suite built on another fixture can point a
+/// pool, default timers, a 1,800 s TWAP) inside its own contract, so a suite built on another fixture can point a
 /// market at it. Build it before the suite's own fixture warps forward: the pool's history is written at the fixture's
 /// `T0` and earlier.
 contract RealClMarketBuilder is LPOracleCLFixture {

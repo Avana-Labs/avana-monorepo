@@ -34,9 +34,9 @@ pragma solidity 0.8.28;
 ///   `AAVE_GOVERNANCE_EXECUTOR`, the only caller of `cancelStandbySwitch`.
 /// Every role above except the two admin roles is granted and revoked only by a role-change operation of the timelock
 /// at the normal delay, which only the Aave governance executor can cancel.
-/// The Emergency Guardian's five seats are three Avana Labs signers, one Aave Labs signer and one LlamaRisk signer, so
-/// no seat acts alone and no organisation reaches the threshold alone; no signer key is shared between the Emergency
-/// Guardian, the governance multisig and the Aave Protocol Guardian (REQ-ROLE-007). `COVERAGE_ROLE` is not an Avana
+/// The Emergency Guardian has five seats and a threshold of three (3-of-5), so no seat acts alone; no signer key is
+/// shared between the Emergency Guardian, the governance multisig and the Aave Protocol Guardian (REQ-ROLE-007).
+/// `COVERAGE_ROLE` is not an Avana
 /// role: it is the Aave DAO's AccessManager role for `coverDeficit` on each First-Loss Reserve, which the DAO grants to the
 /// Emergency Guardian and the Aave Protocol Guardian.
 /// OpenZeppelin `TimelockController` roles on the AvanaTimelock: `PROPOSER_ROLE` the 4-of-7 governance multisig and

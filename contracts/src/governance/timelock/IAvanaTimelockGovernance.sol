@@ -12,7 +12,7 @@ interface IAvanaTimelockGovernance {
     /// @notice Sets the delay of every operation that is not entirely on the short-delay list.
     /// @dev Only the timelock. Reverts `DelayOutOfBounds` unless `MIN_NORMAL_DELAY <= newDelay <= MAX_DELAY`
     /// (345,600 to 432,000). Applies to operations scheduled after it executes; emits `NormalDelayChanged`.
-    /// @param newDelay New normal delay, seconds (launch 432,000).
+    /// @param newDelay New normal delay, seconds (initial value 432,000).
     /// @custom:spec SPEC-GOV-003, SPEC-GOV-015, REQ-ACCESS-029, REQ-ACCESS-125, REQ-ACCESS-154
     function setNormalDelay(
         uint256 newDelay
@@ -36,7 +36,7 @@ interface IAvanaTimelockGovernance {
     /// @dev Only the timelock. While on, anyone executes ready operations; while off, only `EXECUTOR_ROLE`. Grants or
     /// revokes `EXECUTOR_ROLE` for `address(0)` (OpenZeppelin's open role) and emits `PublicExecutionToggled`; a call
     /// that leaves the value unchanged changes nothing and emits nothing.
-    /// @param enabled New value (launch `true`).
+    /// @param enabled New value (initial value `true`).
     /// @custom:spec REQ-ACCESS-029, REQ-ACCESS-144
     function togglePublicExecution(
         bool enabled

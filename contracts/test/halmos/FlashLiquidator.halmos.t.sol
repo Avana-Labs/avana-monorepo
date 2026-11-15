@@ -32,7 +32,7 @@ import {Test} from "forge-std/Test.sol";
 /// is the only lender, REQ-HELPER-015); the operator variant's Safe loses at most `MAX_TOP_UP_BPS` of the debt repaid, with or without a loan, and
 /// never funds a loan above the need.
 /// @dev The Pool, ACLManager and PoolAddressesProvider are the unit suite's mocks; `maxFlashFeeBps` is
-/// `MockFlashFeeCap` (10, the launch value); LPVaultSwap is `MockLiquidationSwap` over the real Lock and PayoutEscrow,
+/// `MockFlashFeeCap` (10, the default value); LPVaultSwap is `MockLiquidationSwap` over the real Lock and PayoutEscrow,
 /// settling the 2.11 example (`keeperOut = 2,020.8` USDC for `X = F = 1,950` USDC). Premiums are bounded to uint64.
 contract FlashLiquidatorHalmosTest is Test {
     address internal constant CALLER = address(0xCA11E2);

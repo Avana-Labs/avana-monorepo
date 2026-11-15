@@ -15,7 +15,7 @@ import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketReg
 import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
-import {TimelockLaunchLists} from "../utils/fixtures/TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -234,12 +234,12 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         _expectDao(lvs, unfreeze);
         _expectDao(mr, add);
         _expectDao(address(other), add);
-        // The right targets pass: every launch pair, each with its own contract.
+        // The right targets pass: every listed pair, each with its own contract.
         AvanaTimelock t = _newTimelock(
             NORMAL_DELAY,
             true,
-            TimelockLaunchLists.shortEligible(ps, mr, lvs),
-            TimelockLaunchLists.daoOnlyCancel(mr, lvs)
+            TimelockShortDelayLists.shortEligible(ps, mr, lvs),
+            TimelockShortDelayLists.daoOnlyCancel(mr, lvs)
         );
         assertTrue(t.isShortEligible(ps, cap));
         assertFalse(t.isShortEligible(mr, cap));
@@ -277,23 +277,25 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
     }
 
     // TEST-244 verifies: REQ-ACCESS-142, REQ-ACCESS-155, REQ-ACCESS-181, INV-090
-    function test_TEST_244_constructorRefusesNonLaunchSelectors() public {
-        SelectorPair[] memory launch =
-            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
-        SelectorPair[] memory dao = TimelockLaunchLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
+    function test_TEST_244_constructorRefusesUnlistedSelectors() public {
+        SelectorPair[] memory shortList = TimelockShortDelayLists.shortEligible(
+            address(parameterStore), address(marketRegistry), address(lpVaultSwap)
+        );
+        SelectorPair[] memory dao = TimelockShortDelayLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
         bytes4 loosen = bytes4(keccak256("loosenMarketUsdCap(uint256,uint256)"));
         bytes4 setPriceSource = bytes4(keccak256("setPriceSource(address,uint8,address)"));
         // A loosening selector at the last index of the short list.
-        launch[launch.length - 1] = SelectorPair(address(parameterStore), loosen);
+        shortList[shortList.length - 1] = SelectorPair(address(parameterStore), loosen);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAvanaTimelockErrors.InvalidShortDelaySelector.selector, address(parameterStore), loosen
             )
         );
-        _newTimelock(NORMAL_DELAY, true, launch, dao);
+        _newTimelock(NORMAL_DELAY, true, shortList, dao);
         // A short-list selector that is not one of the four DAO-only selectors, at index 2.
-        launch =
-            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
+        shortList = TimelockShortDelayLists.shortEligible(
+            address(parameterStore), address(marketRegistry), address(lpVaultSwap)
+        );
         dao[2] = SelectorPair(address(marketRegistry), IMarketRegistryRoutes.disableRoute.selector);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -302,14 +304,14 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
                 IMarketRegistryRoutes.disableRoute.selector
             )
         );
-        _newTimelock(NORMAL_DELAY, true, launch, dao);
+        _newTimelock(NORMAL_DELAY, true, shortList, dao);
         dao[2] = SelectorPair(address(marketRegistry), setPriceSource);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAvanaTimelockErrors.InvalidDaoCancelSelector.selector, address(marketRegistry), setPriceSource
             )
         );
-        _newTimelock(NORMAL_DELAY, true, launch, dao);
+        _newTimelock(NORMAL_DELAY, true, shortList, dao);
     }
 
     // TEST-244 verifies: REQ-ACCESS-156
@@ -321,15 +323,16 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
 
     // TEST-194 verifies: REQ-ACCESS-144, REQ-ACCESS-027
     function test_TEST_194_constructionEvents() public {
-        SelectorPair[] memory launch =
-            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
-        SelectorPair[] memory dao = TimelockLaunchLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
+        SelectorPair[] memory shortList = TimelockShortDelayLists.shortEligible(
+            address(parameterStore), address(marketRegistry), address(lpVaultSwap)
+        );
+        SelectorPair[] memory dao = TimelockShortDelayLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
         vm.recordLogs();
-        AvanaTimelock off = _newTimelock(NORMAL_DELAY, false, launch, dao);
+        AvanaTimelock off = _newTimelock(NORMAL_DELAY, false, shortList, dao);
         assertFalse(off.publicExecution());
         (uint256 normal, uint256 shortSet, uint256 toggled) = _countEvents(address(off));
         assertEq(normal, 1, "NormalDelayChanged(0, d)");
-        assertEq(shortSet, 34, "ShortDelaySelectorSet per launch entry");
+        assertEq(shortSet, 34, "ShortDelaySelectorSet per listed entry");
         assertEq(toggled, 1, "PublicExecutionToggled(false)");
     }
 

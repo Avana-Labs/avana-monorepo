@@ -72,7 +72,7 @@ interface IRelistedToken {
 ///   every pool token into the Spoke's debt asset. `10_AaveListingPayload` (`vault-tokens`) then lists the vault tokens.
 /// - `activate` (short delay): every LPOracle poked Live, then `activateMarket` for each market.
 /// @dev Speed limits fail closed (Q-411): a market or a (Hub, asset) without a written value refuses every pledge or
-/// borrow, so the listing batch writes the launch values (τ 6 h; borrow 25 %, $250k–$2.5M; pledge 25 %, $1M–$10M;
+/// borrow, so the listing batch writes the config values (τ 6 h; borrow 25 %, $250k–$2.5M; pledge 25 %, $1M–$10M;
 /// (Hub, asset) 25 %, 500k–5M tokens). The `markets` operation's salt is keccak256 of the listing metadata file
 /// (`09-market-metadata`), so the operation commits to the pages it adds. Outputs: `listing-oracles.json` and `listing-markets.json` in
 /// `deployments-local/<network>/`, read by the manifest producer and the scenarios.
@@ -747,7 +747,7 @@ contract ListMarkets is ListingBase {
     }
 
     /// @notice `enableDebtReserve` for each configured reserve, the asset's settlement parameters and, on the first
-    /// reserve of a (Hub, asset), its launch borrow-speed limit (written after the reserve exists, `UnknownDebtReserve`
+    /// reserve of a (Hub, asset), its borrow-speed limit (written after the reserve exists, `UnknownDebtReserve`
     /// otherwise).
     function _enableDebtReserves(
         Operation memory op

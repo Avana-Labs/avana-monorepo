@@ -80,37 +80,37 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, Q-259, REQ-ACCESS-150
     function test_TEST_242_initializeRefusesOtherTimelockAndRunsOnce() public {
         ParameterStore impl = new ParameterStore(address(timelock), address(registry), 12, false, logics);
-        bytes memory bad = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, _launchGlobals(), 0, 10_000));
+        bytes memory bad = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, _defaultGlobals(), 0, 10_000));
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
         new ERC1967Proxy(address(impl), bad);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        store.initialize(address(timelock), _launchGlobals(), 0, 10_000);
+        store.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock), _launchGlobals(), 0, 10_000);
+        impl.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-PSTORE-030, REQ-PSTORE-018
     function test_TEST_242_initializeChecksBounds() public {
         ParameterStore impl = new ParameterStore(address(timelock), address(registry), 12, false, logics);
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.gateRecoverySeconds = 599;
         _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.OutOfBounds.selector);
-        g = _launchGlobals();
+        g = _defaultGlobals();
         g.graceHealthFactor = 0.89e18;
         _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.LivenessBound.selector);
-        g = _launchGlobals();
+        g = _defaultGlobals();
         g.graceDuration = 7201;
         _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.LivenessBound.selector);
-        g = _launchGlobals();
+        g = _defaultGlobals();
         g.maxShortfallBps = 5001;
         _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.OutOfBounds.selector);
-        _expectInitRevert(impl, _launchGlobals(), 1, 10_000, IParameterStoreErrors.OutOfBounds.selector);
-        _expectInitRevert(impl, _launchGlobals(), 0, 0, IParameterStoreErrors.OutOfBounds.selector);
-        g = _launchGlobals();
+        _expectInitRevert(impl, _defaultGlobals(), 1, 10_000, IParameterStoreErrors.OutOfBounds.selector);
+        _expectInitRevert(impl, _defaultGlobals(), 0, 0, IParameterStoreErrors.OutOfBounds.selector);
+        g = _defaultGlobals();
         g.feeRecipient = address(0);
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, address(0)));
         new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 0, 1)));
-        // Launch values read back.
+        // Initial values read back.
         assertEq(store.gateRecoverySeconds(), 1800);
         assertEq(store.maxShortfallBps(), 1000);
         assertEq(store.maxFlashFeeBps(), 10);
@@ -318,7 +318,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
             }
         }
         assertEq(refused, calls.length - 1);
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         (bool done, bytes memory r) =
             logics.adminRisk.call(abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 0, 10_000)));
         assertFalse(done);

@@ -144,7 +144,7 @@ contract LPOracleCLSurfaceTest is LPOracleCLFixture {
 
     // TEST-219 verifies: REQ-ORACLE-051
     /// @notice A token's primary and alternate sharing an aggregator, two tokens' alternates sharing one, and a second
-    /// source sharing one with its token's route each set `CHECK_SHARED_FEED`; the launch configuration does not.
+    /// source sharing one with its token's route each set `CHECK_SHARED_FEED`; the default configuration does not.
     function test_TEST_219_sharedAggregatorsRefused() public {
         _stable();
         assertEq(_check(_config()) & LPOracleCodes.CHECK_SHARED_FEED, 0, "independent routes");
@@ -206,7 +206,7 @@ contract LPOracleCLSurfaceTest is LPOracleCLFixture {
     // ─── Stable flags fixed at initialize ───
 
     // TEST-036 verifies: REQ-ORACLE-010, SPEC-ORC-004
-    /// @notice The stable ceiling applies to the tokens flagged at `initialize`: the launch fixture flags both tokens of
+    /// @notice The stable ceiling applies to the tokens flagged at `initialize`: the fixture flags both tokens of
     /// the USDC/USDT market, so both are valued at most $1.00; a second LPOracle of the same market initialized with
     /// token1 not flagged values token1 uncapped at $1.01 while token0 at $1.05 is valued at $1.00. The flags cannot
     /// be set again: `initialize` runs once.
@@ -231,8 +231,8 @@ contract LPOracleCLSurfaceTest is LPOracleCLFixture {
         assertEq(v.tokens[0].valuationPrice, ONE, "flagged: capped at the ceiling");
         assertEq(v.tokens[1].valuationPrice, 101_000_000, "not flagged: not capped");
         PriceStateView memory both = _state();
-        assertEq(both.tokens[0].valuationPrice, ONE, "launch market: token0 flagged");
-        assertEq(both.tokens[1].valuationPrice, ONE, "launch market: token1 flagged");
+        assertEq(both.tokens[0].valuationPrice, ONE, "default market: token0 flagged");
+        assertEq(both.tokens[1].valuationPrice, ONE, "default market: token1 flagged");
         vm.expectRevert();
         other.initialize(p);
     }

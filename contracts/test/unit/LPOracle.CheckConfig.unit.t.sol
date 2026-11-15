@@ -23,7 +23,7 @@ contract LPOracleCheckConfigUnitTest is LPOracleFixture {
     }
 
     // TEST-219 verifies: REQ-ORACLE-046, REQ-ORACLE-077, Q-191
-    function test_TEST_219_launchConfigPasses() public view {
+    function test_TEST_219_defaultConfigPasses() public view {
         assertEq(_check(_config()), 0);
     }
 

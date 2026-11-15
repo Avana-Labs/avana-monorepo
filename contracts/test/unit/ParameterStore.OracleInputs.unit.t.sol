@@ -189,7 +189,7 @@ contract ParameterStoreOracleInputsUnitTest is ParameterStoreFixture {
         registry.setUsdStable(usdt, false);
         registry.setStatus(M, MarketStatus.Registered);
         vm.prank(address(timelock));
-        store.setInitialMarketParams(M, _launchMarketParams());
+        store.setInitialMarketParams(M, _defaultMarketParams());
         w = store.getOracleInputs(address(lpOracle), list, false);
         assertEq(w[3], 0, "volatile market: no band low");
         assertEq(w[4], type(uint256).max, "volatile market: no band high");

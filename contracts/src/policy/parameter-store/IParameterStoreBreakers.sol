@@ -20,7 +20,7 @@ interface IParameterStoreBreakers {
     /// reopened only by an authorized reset).
     /// @param hub The funding Hub whose deficit is measured.
     /// @param asset Debt asset.
-    /// @return value Asset base units (10,000 GHO = 10_000e18 for a GHO reserve at launch; a per-reserve
+    /// @return value Asset base units (for example 10,000 GHO = 10_000e18 for a GHO reserve; a per-reserve
     /// materiality set at listing for other assets), within [0,
     /// `firstLossReserveMinimum` of the asset's First-Loss Reserve]; 0 for an asset with no value written.
     /// @custom:spec REQ-PSTORE-016, SPEC-BRK-004, Q-241, Q-399
@@ -31,7 +31,7 @@ interface IParameterStoreBreakers {
 
     /// @notice Seconds of healthy observations before a temporary gate (`ORACLE`, `POOL_SHARE`, `POOL_DEPTH`) reopens
     /// after its last recorded breach.
-    /// @return value Launch 1,800 (a provisional launch setting), within [600, 7,200].
+    /// @return value For example 1,800 (a provisional setting), within [600, 7,200].
     /// @custom:spec REQ-PSTORE-030, SPEC-BRK-007, Q-399
     function gateRecoverySeconds() external view returns (uint64 value);
 

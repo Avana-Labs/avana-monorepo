@@ -22,6 +22,6 @@ struct LPVaultSwapImmutables {
     address parameterStore;
     // The PayoutEscrow.
     address payoutEscrow;
-    // keeperFloor: fewest active committed operators removeKeeper leaves (1 at launch).
+    // keeperFloor: fewest active committed operators removeKeeper leaves (for example 1).
     uint256 keeperFloor;
 }

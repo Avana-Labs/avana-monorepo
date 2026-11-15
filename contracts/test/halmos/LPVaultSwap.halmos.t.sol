@@ -84,7 +84,7 @@ contract LPVaultSwapHalmosTest is Test {
     }
 
     // PROP-059 verifies: SPEC-LIQ-010, SPEC-LIQ-017, REQ-SWAP-089, REQ-SWAP-111, INV-035, Q-333, Q-404
-    /// @notice The unused funding returns: for `Kf ≥ D`, a recovery and floor in range and the launch fee share, the
+    /// @notice The unused funding returns: for `Kf ≥ D`, a recovery and floor in range and the default fee share, the
     /// payout is `keeperOut = (Kf − D) + (R' − A − B) ≥ Kf − D`, and `keeperOut = Kf + kr` whenever `R' ≥ D`.
     function check_PROP_059_unusedPrincipalRepaid(
         uint256 debt,

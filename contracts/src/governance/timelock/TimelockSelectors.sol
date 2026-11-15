@@ -55,10 +55,10 @@ library TimelockSelectors {
             || selector == IMarketRegistryHubs.setCrossHubLine.selector || _isInitializer(selector);
     }
 
-    /// @notice Whether `selector` is one of the 34 selectors of the launch short-delay list (`REQ-ACCESS-155`): the
+    /// @notice Whether `selector` is one of the 34 selectors of the fixed short-delay list (`REQ-ACCESS-155`): the
     /// 22 ParameterStore tighten setters, the 11 MarketRegistry stops and repairs, and LPVaultSwap `removeKeeper`.
     /// @custom:spec REQ-ACCESS-142, REQ-ACCESS-155
-    function isLaunchShortSelector(
+    function isShortDelayListSelector(
         bytes4 selector
     ) internal pure returns (bool) {
         return _isTightenSelector(selector) || selector == IMarketRegistryRoutes.disableRoute.selector
@@ -95,7 +95,7 @@ library TimelockSelectors {
         if (selector == ILPVaultSwapAdmin.removeKeeper.selector || selector == ILPVaultSwapAdmin.addKeeper.selector) {
             return 3;
         }
-        if (isLaunchShortSelector(selector) || isDaoCancelSelector(selector)) return 2;
+        if (isShortDelayListSelector(selector) || isDaoCancelSelector(selector)) return 2;
         return 0;
     }
 

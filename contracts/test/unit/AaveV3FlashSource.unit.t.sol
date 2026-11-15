@@ -234,11 +234,11 @@ contract AaveV3FlashSourceUnitTest is FlashSourceFixture {
         _borrow(1999);
     }
 
-    /// @notice Launch values: cap 10 above the 5 bps rate; every loan of at least 1,000 base units passes and 999 fails
+    /// @notice Defaults: cap 10 above the 5 bps rate; every loan of at least 1,000 base units passes and 999 fails
     /// closed.
     // TEST-052 verifies: SPEC-LIQ-015, REQ-FLASH-001, REQ-FLASH-007
     // Sources: MATH-ST-115
-    function test_TEST_052_capAboveRateLaunchThreshold() public {
+    function test_TEST_052_capAboveRateThreshold() public {
         assertEq(_borrow(1000), 1);
         assertEq(_borrow(2000), 1);
         // The source quotes ⌈2,001 × 5 / 10⁴⌉ = 2 for its gate; the V3.4 Pool charges half-up, 1.
@@ -250,7 +250,7 @@ contract AaveV3FlashSourceUnitTest is FlashSourceFixture {
     }
 
     /// @notice 5.1 TEST-267 example: with `maxFlashFeeBps = 4` below the 5 bps rate the flash path refuses before the
-    /// loan; at the launch cap 1,000,000 USDC repays 1,000,500 USDC.
+    /// loan; at the default cap 1,000,000 USDC repays 1,000,500 USDC.
     // TEST-267 verifies: SPEC-LIQ-015, REQ-FLASH-001, INV-095
     // Sources: MATH-ST-115
     function test_TEST_267_capBelowRateRefusedAndPremiumExample() public {

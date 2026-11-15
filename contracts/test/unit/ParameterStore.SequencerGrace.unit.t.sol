@@ -68,7 +68,7 @@ contract ParameterStoreSequencerGraceUnitTest is ParameterStoreFixture {
 
     // TEST-250 verifies: REQ-PSTORE-034, REQ-PSTORE-004
     function test_TEST_250_listingWindowNeverAboveTheGrace() public {
-        MarketParams memory p = _launchMarketParams();
+        MarketParams memory p = _defaultMarketParams();
         p.twapWindow = 3601;
         (bool ok, bytes memory ret) = _call(abi.encodeCall(store.setInitialMarketParams, (M, p)));
         assertFalse(ok, "listing window above the grace accepted");

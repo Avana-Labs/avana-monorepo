@@ -30,7 +30,7 @@ contract RiskModuleCombinedProbeUnitTest is RiskModuleFixture {
     }
 
     // TEST-228 verifies: SPEC-BRK-003, REQ-MREG-027, REQ-RISK-065
-    // Sources: Launch configuration decision 2026-11-11 (USDT probe)
+    // Sources: Configuration decision 2026-11-11 (USDT probe)
     /// @notice A pause trips the debt breaker and blocks a borrow; the fee read alone would miss it. Fails if the
     /// combined kind reads only `basisPointsRate()`.
     function test_TEST_228_combinedProbeTripsOnPause() public {
@@ -53,7 +53,7 @@ contract RiskModuleCombinedProbeUnitTest is RiskModuleFixture {
     }
 
     // TEST-228 verifies: SPEC-BRK-003, REQ-MREG-027, REQ-SWAP-123, ATTACK-197
-    // Sources: Launch configuration decision 2026-11-11 (USDT probe)
+    // Sources: Configuration decision 2026-11-11 (USDT probe)
     /// @notice A fee switched on trips the debt breaker while the pause flag is clear. Fails if the combined kind
     /// reads only `paused()`.
     function test_TEST_228_combinedProbeTripsOnFee() public {

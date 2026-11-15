@@ -17,7 +17,7 @@ import {HarnessMarketRegistry} from "../../utils/mocks/HarnessMarketRegistry.sol
 /// tighten and loosen logic contracts exactly as `ParameterStore._forward` does, and it is their `TIMELOCK` (it
 /// answers `normalDelay()` with 432,000 s). The proxy's role checks are covered by the unit suite, Halmos and
 /// Certora; deploying the full proxy with all five logic contracts here would exceed the 49,152-byte initcode limit.
-/// Market 1 starts with the launch values of 1.5, written straight into the layout.
+/// Market 1 starts with the default values of 1.5, written straight into the layout.
 contract ParameterStoreProperties is ParameterStoreStorage {
     uint256 internal constant M = 1;
     uint256 internal constant NORMAL_DELAY = 432_000;

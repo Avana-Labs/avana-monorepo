@@ -22,13 +22,13 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 /// @notice A two-token USD-stable market priced by `LPOracleHarness`: tokens A and B (6 decimals), one-leg primary
 /// and alternate routes per token (8-decimal feeds, heartbeat 86,400 s, margin 1,800 s), an oracle-network second
-/// source per token, launch timers (cached 3,600 s, pause 3,600 s, grace 1,800 s), band 0.90 / 1.02 and a linear
+/// source per token, default timers (cached 3,600 s, pause 3,600 s, grace 1,800 s), band 0.90 / 1.02 and a linear
 /// composition of one raw unit per vault-token unit, so `d = 6` and one whole vault token at $1 per token is worth
 /// `2 * (10^6 - 1) * 10^8 / 10^6 = 199,999,800`.
 abstract contract LPOracleFixture is AvanaTest {
     uint32 internal constant BLOCK_TIME = 12;
     /// @dev `POKE_MIN_GAS_FLOOR` of a two-token implementation (`SPEC-ORC-023`): 900,000, provisional until the fork
-    /// calibration that is a launch requirement.
+    /// calibration that is a deployment requirement.
     uint32 internal constant POKE_FLOOR = 900_000;
     uint32 internal constant POKE_CEILING = 3_000_000;
     uint256 internal constant MARKET = 1;
@@ -105,7 +105,7 @@ abstract contract LPOracleFixture is AvanaTest {
         store.setFeed(address(f), d);
     }
 
-    /// @dev The launch configuration of the market.
+    /// @dev The default configuration of the market.
     function _config() internal view returns (OracleConfig memory c) {
         c.marketId = MARKET;
         c.twapWindow = 1800;

@@ -9,7 +9,7 @@ import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTa
 import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
-import {TimelockLaunchLists} from "../../utils/fixtures/TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "../../utils/fixtures/TimelockShortDelayLists.sol";
 import {CallRecorder} from "../../utils/mocks/CallRecorder.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -67,8 +67,8 @@ contract AvanaTimelockProperties {
             dao,
             432_000,
             true,
-            TimelockLaunchLists.shortEligible(address(PS), address(MR), address(SWAP)),
-            TimelockLaunchLists.daoOnlyCancel(address(MR), address(SWAP)),
+            TimelockShortDelayLists.shortEligible(address(PS), address(MR), address(SWAP)),
+            TimelockShortDelayLists.daoOnlyCancel(address(MR), address(SWAP)),
             GovernedTargets(address(PS), address(MR), address(SWAP))
         );
     }

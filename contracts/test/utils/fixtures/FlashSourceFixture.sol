@@ -12,7 +12,7 @@ import {ParameterStoreFixture} from "./ParameterStoreFixture.sol";
 /// @title FlashSourceFixture
 /// @notice The chain's AaveV3FlashSource over a mocked Aave V3.4 Pool (ACLManager and PoolAddressesProvider mocked,
 /// 5 bps premium charged half-up, virtual accounting, a USDC reserve with 18,000,000 USDC idle and recorded, the Base figure of 2.11 `REQ-FLASH-008`), reading
-/// `maxFlashFeeBps` from the real ParameterStore (launch value 10), with a `MockFlashReceiver` at the LPVaultSwap address
+/// `maxFlashFeeBps` from the real ParameterStore (default 10), with a `MockFlashReceiver` at the LPVaultSwap address
 /// holding 1,000,000 USDC to pay premiums. The liquidated Spoke's Hub is the fixture's MockHub.
 abstract contract FlashSourceFixture is ParameterStoreFixture {
     uint128 internal constant POOL_PREMIUM_BPS = 5;

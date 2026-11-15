@@ -63,7 +63,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052
     function test_TEST_242_disagreementPauseAtBothEnds() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.disagreementPauseMax = 0;
         assertEq(_accepted(g).disagreementPauseMax(), 0);
         g.disagreementPauseMax = 1800;
@@ -76,7 +76,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-052
     function test_TEST_242_graceDurationAtBothEnds() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.graceDuration = 0;
         assertEq(_accepted(g).graceDuration(), 0);
         g.graceDuration = 7200;
@@ -87,7 +87,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-052
     function test_TEST_242_graceHealthFactorAtBothEnds() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.graceHealthFactor = 0.9e18;
         assertEq(_accepted(g).graceHealthFactor(), 0.9e18);
         g.graceHealthFactor = 1e18 - 1;
@@ -100,17 +100,17 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-055
     function test_TEST_242_cachedWindowAndBandEdges() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.cachedWindow = 0;
         _refused(g, oob);
         g.cachedWindow = 1;
         assertEq(_accepted(g).cachedWindow(), 1);
-        g = _launchGlobals();
+        g = _defaultGlobals();
         g.usdBandLow = 1e8;
         _refused(g, oob);
         g.usdBandLow = 1e8 - 1;
         assertEq(_accepted(g).usdBandLow(), 1e8 - 1);
-        g = _launchGlobals();
+        g = _defaultGlobals();
         g.usdBandHigh = 1e8;
         _refused(g, oob);
         g.usdBandHigh = 1e8 + 1;
@@ -119,14 +119,14 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-024, REQ-PSTORE-010
     function test_TEST_242_flashFeeAndFeeShareEdges() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.maxFlashFeeBps = 0;
         assertEq(_accepted(g).maxFlashFeeBps(), 0);
         g.maxFlashFeeBps = 100;
         assertEq(_accepted(g).maxFlashFeeBps(), 100);
         g.maxFlashFeeBps = 101;
         _refused(g, oob);
-        g = _launchGlobals();
+        g = _defaultGlobals();
         g.avanaFeeShareBps = 0;
         assertEq(_accepted(g).avanaFeeShareBps(), 0);
         g.avanaFeeShareBps = 5000;
@@ -137,7 +137,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-024, REQ-CONFIG-050
     function test_TEST_242_agreementMarginEdges() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.feedAgreementMarginBps = 0;
         assertEq(_accepted(g).feedAgreementMarginBps(), 0);
         g.feedAgreementMarginBps = 10_000;
@@ -148,7 +148,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-030
     function test_TEST_242_gateRecoveryEdges() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.gateRecoverySeconds = 600;
         assertEq(_accepted(g).gateRecoverySeconds(), 600);
         g.gateRecoverySeconds = 7200;
@@ -163,7 +163,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-018
     function test_TEST_242_maxShortfallEdges() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.maxShortfallBps = 0;
         assertEq(_accepted(g).maxShortfallBps(), 0);
         g.maxShortfallBps = 5000;
@@ -174,7 +174,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-026, REQ-RISK-042, Q-403
     function test_TEST_242_depositorCapAndPoolShareEdges() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         (bool ok, bytes memory err, IParameterStore s) = _init(g, 1, 10_000);
         assertFalse(ok);
         assertEq(err, oob);
@@ -199,7 +199,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-056
     function test_TEST_242_feeRecipientCheckedAtInitialize() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         address[4] memory bad = [address(0), address(timelock), address(registry), address(hub)];
         for (uint256 i = 0; i < bad.length; ++i) {
             g.feeRecipient = bad[i];
@@ -213,7 +213,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052
     function test_TEST_242_livenessBeforeRangeBeforeRecipient() public {
-        GlobalParams memory g = _launchGlobals();
+        GlobalParams memory g = _defaultGlobals();
         g.cachedWindow = 0;
         g.feeRecipient = address(0);
         g.graceDuration = 7201;
@@ -236,7 +236,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-023, REQ-ACCESS-153, REQ-ACCESS-150
     function test_TEST_242_initializeGrantsRolesAndEmits() public {
         bytes memory data =
-            abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), _launchGlobals(), 0, 10_000));
+            abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), _defaultGlobals(), 0, 10_000));
         vm.expectEmit();
         emit IAccessControl.RoleGranted(bytes32(0), address(timelock), address(this));
         vm.expectEmit();
@@ -259,8 +259,8 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-ACCESS-101
-    function test_TEST_242_everyLaunchValueReadsBack() public view {
-        GlobalParams memory g = _launchGlobals();
+    function test_TEST_242_everyInitialValueReadsBack() public view {
+        GlobalParams memory g = _defaultGlobals();
         assertEq(store.cachedWindow(), g.cachedWindow);
         assertEq(store.disagreementPauseMax(), g.disagreementPauseMax);
         assertEq(store.usdBandLow(), g.usdBandLow);
@@ -305,12 +305,12 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-150, REQ-ACCESS-031
     function test_TEST_242_implementationCannotBeInitialized() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock), _launchGlobals(), 0, 10_000);
+        impl.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        implementation.initialize(address(timelock), _launchGlobals(), 0, 10_000);
+        implementation.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
         // A second initialize of the live proxy fails the same way, as the timelock too.
         _tl();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        store.initialize(address(timelock), _launchGlobals(), 0, 10_000);
+        store.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
     }
 }

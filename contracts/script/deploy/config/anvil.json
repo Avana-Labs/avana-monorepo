@@ -372,6 +372,20 @@
         "usd": 20000000
       },
       {
+        "name": "wstETH-USDC-500",
+        "a": "wstETH",
+        "b": "USDC",
+        "fee": 500,
+        "usd": 8000000
+      },
+      {
+        "name": "wstETH-USDT-500",
+        "a": "wstETH",
+        "b": "USDT",
+        "fee": 500,
+        "usd": 6000000
+      },
+      {
         "name": "cbETH-WETH-500",
         "a": "cbETH",
         "b": "WETH",
@@ -877,6 +891,7 @@
         "secondToleranceBps": 200,
         "tokenCapUsd": "50000000",
         "hubs": [
+          "correlated",
           "volatile"
         ],
         "address": "$world:.tokens.WETH",
@@ -885,6 +900,25 @@
           "alternate": "$world:.feeds.WETH.alternate",
           "standby": "$world:.feeds.WETH.standby",
           "second": "$world:.feeds.WETH.second"
+        }
+      },
+      {
+        "symbol": "wstETH",
+        "isUsdStable": false,
+        "deviationBps": 50,
+        "collateralFactorBps": 8500,
+        "agreementToleranceBps": 200,
+        "secondToleranceBps": 200,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "correlated"
+        ],
+        "address": "$world:.tokens.wstETH",
+        "feeds": {
+          "primary": "$world:.feeds.wstETH.primary",
+          "alternate": "$world:.feeds.wstETH.alternate",
+          "standby": "$world:.feeds.wstETH.standby",
+          "second": "$world:.feeds.wstETH.second"
         }
       }
     ],
@@ -920,6 +954,13 @@
         "spoke": "$aave:.spokes.uniV3Stable.proxy"
       },
       {
+        "label": "uniV3Correlated",
+        "hub": "correlated",
+        "integrationId": 1,
+        "tier": 2,
+        "spoke": "$aave:.spokes.uniV3Correlated.proxy"
+      },
+      {
         "label": "uniV3Volatile",
         "hub": "volatile",
         "integrationId": 1,
@@ -932,6 +973,13 @@
         "integrationId": 2,
         "tier": 1,
         "spoke": "$aave:.spokes.slipStable.proxy"
+      },
+      {
+        "label": "slipCorrelated",
+        "hub": "correlated",
+        "integrationId": 2,
+        "tier": 2,
+        "spoke": "$aave:.spokes.slipCorrelated.proxy"
       },
       {
         "label": "slipVolatile",
@@ -955,6 +1003,27 @@
             {
               "question": "Where does the GHO come from?",
               "answer": "From the stable Hub of Aave V4, through the Uniswap v3 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v3 markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "uniV3Correlated",
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v3-correlated",
+          "name": "GHO on Uniswap v3 (correlated Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's correlated Hub against Uniswap v3 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the correlated Hub of Aave V4, through the Uniswap v3 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
             },
             {
               "question": "Which positions can back it?",
@@ -997,6 +1066,27 @@
             {
               "question": "Where does the USDC come from?",
               "answer": "From the stable Hub of Aave V4, through the Slipstream CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Slipstream markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "slipCorrelated",
+        "symbol": "USDC",
+        "content": {
+          "slug": "usdc-slipstream-correlated",
+          "name": "USDC on Slipstream (correlated Hub)",
+          "symbol": "USDC",
+          "category": "stable",
+          "description": "Borrow USDC from Aave V4's correlated Hub against Slipstream liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the USDC come from?",
+              "answer": "From the correlated Hub of Aave V4, through the Slipstream CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
             },
             {
               "question": "Which positions can back it?",
@@ -1280,6 +1370,139 @@
             }
           ]
         }
+      },
+      {
+        "name": "uni-wstETH-WETH-100",
+        "integrationId": 1,
+        "spoke": "uniV3Correlated",
+        "pool": "wstETH-WETH-100",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3400,
+        "maxLiquidationBonus": 10600,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 230,
+        "slippageAllowanceMinBps": 40,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "wstETH",
+            "asset": "GHO",
+            "primary": [
+              "wstETH-USDC-500",
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "wstETH-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "WETH",
+            "asset": "GHO",
+            "primary": [
+              "GHO-WETH-3000"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "GHO-USDT-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "uniswap-v3-wsteth-weth-0-01",
+          "name": "wstETH/WETH Uniswap v3",
+          "category": "crypto",
+          "venueLabel": "Uniswap v3",
+          "description": "Borrow GHO against a wstETH/WETH liquidity position in the Uniswap v3 pool with fee tier 0.01%.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v3 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v3 CDP Spoke of the correlated Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v3 liquidity position in the wstETH/WETH pool with fee tier 0.01%. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the correlated Hub, up to 35% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
+      },
+      {
+        "name": "slip-wstETH-WETH-cl1",
+        "integrationId": 2,
+        "spoke": "slipCorrelated",
+        "pool": "wstETH-WETH-cl1-g0",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3400,
+        "maxLiquidationBonus": 10600,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 230,
+        "slippageAllowanceMinBps": 40,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "wstETH",
+            "asset": "USDC",
+            "primary": [
+              "wstETH-USDC-500"
+            ],
+            "backup": [
+              "wstETH-WETH-100",
+              "WETH-USDC-500"
+            ]
+          },
+          {
+            "token": "WETH",
+            "asset": "USDC",
+            "primary": [
+              "WETH-USDC-500"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "USDC-USDT-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "slipstream-wsteth-weth-cl1",
+          "name": "wstETH/WETH Slipstream",
+          "category": "crypto",
+          "venueLabel": "Slipstream",
+          "description": "Borrow USDC against a wstETH/WETH liquidity position in the Slipstream pool with tick spacing 1.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Slipstream integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Slipstream CDP Spoke of the correlated Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the pool's own price must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Slipstream liquidity position in the wstETH/WETH pool with tick spacing 1. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "USDC from the correlated Hub, up to 35% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
       }
     ],
     "pools": {
@@ -1291,7 +1514,11 @@
       "USDC-USDT-cl1-g0": "$world:.slipstreamPools['USDC-USDT-cl1-g0']",
       "WETH-USDC-500": "$world:.uniswapPools['WETH-USDC-500']",
       "WETH-USDC-cl100-g0": "$world:.slipstreamPools['WETH-USDC-cl100-g0']",
-      "WETH-USDT-500": "$world:.uniswapPools['WETH-USDT-500']"
+      "WETH-USDT-500": "$world:.uniswapPools['WETH-USDT-500']",
+      "wstETH-USDC-500": "$world:.uniswapPools['wstETH-USDC-500']",
+      "wstETH-USDT-500": "$world:.uniswapPools['wstETH-USDT-500']",
+      "wstETH-WETH-100": "$world:.uniswapPools['wstETH-WETH-100']",
+      "wstETH-WETH-cl1-g0": "$world:.slipstreamPools['wstETH-WETH-cl1-g0']"
     },
     "uniswapV3Factory": "$world:.uniswapV3Factory"
   },

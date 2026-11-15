@@ -14,7 +14,7 @@ import {MockIntegration, MockLPOracle, MockPool} from "../../utils/mocks/Paramet
 /// @title ParameterStoreHarnessBase
 /// @notice Shared state of the ParameterStore logic harnesses: the harness plays the ParameterStore proxy (the shared
 /// ERC-7201 layout, delegatecalls into one logic contract, `TIMELOCK` and `normalDelay()`), over a mocked registry with
-/// one Registered market (USDC/USDT in an address-keyed pool, launch parameters of 1.5) and a mocked LPOracle.
+/// one Registered market (USDC/USDT in an address-keyed pool, default parameters of 1.5) and a mocked LPOracle.
 /// @dev The proxy's own `getOracleConfig` lives in the AdminOracle logic; deploying it beside the subject would pass
 /// the 49,152-byte initcode limit, so the harness answers it with an empty configuration and the mocked LPOracle's
 /// `checkConfig` answers with the failures a handler sets. Every `checkConfig` re-run of the subject still runs.

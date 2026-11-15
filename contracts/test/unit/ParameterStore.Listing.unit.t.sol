@@ -143,22 +143,22 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         pool.setCardinality(150);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.setInitialMarketParams(M, _launchMarketParams());
+        store.setInitialMarketParams(M, _defaultMarketParams());
         pool.setCardinality(151);
         integration.set(true, false, false, ShapeKind.TickRange);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.setInitialMarketParams(M, _launchMarketParams());
+        store.setInitialMarketParams(M, _defaultMarketParams());
         integration.set(true, true, true, ShapeKind.TickRange);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.setInitialMarketParams(M, _launchMarketParams());
+        store.setInitialMarketParams(M, _defaultMarketParams());
         // An AMM protocol without a time-weighted price takes only twapWindow = 0.
         integration.set(false, true, false, ShapeKind.FullPool);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.setInitialMarketParams(M, _launchMarketParams());
-        MarketParams memory noTwap = _launchMarketParams();
+        store.setInitialMarketParams(M, _defaultMarketParams());
+        MarketParams memory noTwap = _defaultMarketParams();
         noTwap.twapWindow = 0;
         _tl();
         store.setInitialMarketParams(M, noTwap);
@@ -172,19 +172,19 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-PSTORE-004, SPEC-CF-004, REQ-CONFIG-015, REQ-CONFIG-020
     function test_TEST_250_initialMarketParamsBounds() public {
         _listMarket();
-        MarketParams memory p = _launchMarketParams();
+        MarketParams memory p = _defaultMarketParams();
         p.consistencyToleranceBps = 9;
         _initialParamsRevert(p, IParameterStoreErrors.LivenessBound.selector);
-        p = _launchMarketParams();
+        p = _defaultMarketParams();
         p.slippageAllowanceBps = 29;
         _initialParamsRevert(p, IParameterStoreErrors.LivenessBound.selector);
-        p = _launchMarketParams();
+        p = _defaultMarketParams();
         p.poolRiskFactor = 4001;
         _initialParamsRevert(p, IParameterStoreErrors.OutOfBounds.selector);
-        p = _launchMarketParams();
+        p = _defaultMarketParams();
         p.minPledgeUsd = 100_000e8 + 1;
         _initialParamsRevert(p, IParameterStoreErrors.OutOfBounds.selector);
-        p = _launchMarketParams();
+        p = _defaultMarketParams();
         p.hardHealthFloor = 0.99e18;
         _initialParamsRevert(p, IParameterStoreErrors.OutOfBounds.selector);
         // Listing margin: CF_LP = ⌊7,500 × 4,000 / 10⁴⌋ = 3,000; 10⁴ − 3,000 = 7,000 > 50 for every route. A route
@@ -212,8 +212,8 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         store.setFeed(address(fUsdcAlt), wide);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.setInitialMarketParams(2, _launchMarketParams());
-        p = _launchMarketParams();
+        store.setInitialMarketParams(2, _defaultMarketParams());
+        p = _defaultMarketParams();
         p.poolRiskFactor = 3999; // CF_LP 2,999: margin 7,001 > 7,000
         _tl();
         store.setInitialMarketParams(2, p);

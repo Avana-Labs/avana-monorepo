@@ -115,7 +115,7 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         assertEq(helper.flashLiquidate(_ghoRequest(D_GHO, D_GHO, 0, 0)), PAYOUT_GHO + PREMIUM_GHO);
     }
 
-    /// @notice The Pool's GHO premium is held to `maxFlashFeeBps` (launch 10) before the loan and in the callback, and
+    /// @notice The Pool's GHO premium is held to `maxFlashFeeBps` (default 10) before the loan and in the callback, and
     /// to the caller's `maxPremium` in the callback.
     // TEST-292 verifies: REQ-HELPER-005, REQ-HELPER-015, SPEC-LIQ-015, Q-135
     function test_TEST_292_ghoPremiumHeldToCapAndMaxPremium() public {
