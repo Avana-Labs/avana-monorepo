@@ -146,7 +146,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         for (uint256 i = 0; i < 3; ++i) {
             uint256 at = _registry().lastBreachAt(BreakerReasons.breachKey(key, temporary[i]));
             if (at == 0 || block.timestamp >= at + recovery) continue;
-            reasons |= temporary[i];
+            reasons = reasons | temporary[i];
             if (at + recovery > until) until = at + recovery;
         }
         // Timestamps plus a recovery of at most 7,200 s fit 64 bits.
