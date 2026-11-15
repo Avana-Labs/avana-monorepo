@@ -19,15 +19,15 @@
     "superseded": "The mutated line changed after aa340fb; re-run needed."
   },
   "counts": {
-    "survivors": 1678,
+    "survivors": 1691,
     "by_class": {
-      "equivalent-or-harmless": 1011,
-      "noise": 50,
-      "real-test-gap": 386,
+      "equivalent-or-harmless": 1020,
+      "noise": 52,
+      "real-test-gap": 388,
       "superseded": 4
     },
     "real_test_gap_test_passed": 386,
-    "real_test_gap_test_not_written": 0,
+    "real_test_gap_test_not_written": 2,
     "not_triaged": 0,
     "test_set_fixed_needs_rerun": 227
   },
@@ -197,9 +197,10 @@
       "test added, passed": 1
     },
     "MarketRegistryDebtChecks": {
-      "equivalent-or-harmless": 10,
-      "real-test-gap": 2,
-      "test added, passed": 2
+      "equivalent-or-harmless": 16,
+      "real-test-gap": 3,
+      "test added, passed": 2,
+      "noise": 2
     },
     "MarketRegistryDriftView": {
       "equivalent-or-harmless": 11,
@@ -211,8 +212,9 @@
       "test added, passed": 6
     },
     "MarketRegistryOracleChecks": {
-      "real-test-gap": 3,
-      "test added, passed": 3
+      "real-test-gap": 4,
+      "test added, passed": 3,
+      "equivalent-or-harmless": 2
     },
     "ParameterStore": {
       "equivalent-or-harmless": 5
@@ -268,6 +270,9 @@
     },
     "TimelockSelectors": {
       "equivalent-or-harmless": 4
+    },
+    "MarketRegistryRouteChecks": {
+      "equivalent-or-harmless": 1
     }
   },
   "not_triaged": {
@@ -18271,11 +18276,242 @@
           "fingerprint": "4e8f5a9199d0dec1"
         }
       ]
+    },
+    {
+      "id": "SM-298",
+      "class": "noise",
+      "mutants": 2,
+      "reason": "The LIR mutant's text is the original line, so the literal was replaced by the same value and nothing changed.",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkMarketsLive",
+          "line_aa340fb": 165,
+          "line_fda9bed": 165,
+          "line_6805212": 165,
+          "mutator": "LIR",
+          "original": "uint256 failed = 0",
+          "mutant": "uint256 failed = 0",
+          "fingerprint": "09d140da96dcc4bf"
+        },
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkMarketsLive",
+          "line_aa340fb": 166,
+          "line_fda9bed": 166,
+          "line_6805212": 166,
+          "mutator": "LIR",
+          "original": "uint256 i = 0",
+          "mutant": "uint256 i = 0",
+          "fingerprint": "13716e715c25173b"
+        }
+      ]
+    },
+    {
+      "id": "SM-299",
+      "class": "equivalent-or-harmless",
+      "mutants": 2,
+      "reason": "A local declared without its initialiser starts at 0, the value the original assigns.",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkMarketsLive",
+          "line_aa340fb": 165,
+          "line_fda9bed": 165,
+          "line_6805212": 165,
+          "mutator": "MVIV",
+          "original": "uint256 failed = 0",
+          "mutant": "uint256 failed",
+          "fingerprint": "46a78cd0685f0057"
+        },
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkMarketsLive",
+          "line_aa340fb": 166,
+          "line_fda9bed": 166,
+          "line_6805212": 166,
+          "mutator": "MVIV",
+          "original": "uint256 i = 0",
+          "mutant": "uint256 i",
+          "fingerprint": "b0b7fffeaf661806"
+        }
+      ]
+    },
+    {
+      "id": "SM-300",
+      "class": "equivalent-or-harmless",
+      "mutants": 2,
+      "reason": "A loop counter or local narrowed to uint128 holds every value it can reach, since the loop runs to the Spoke's market count and maxFlashFeeBps returns a uint16; maxFee * available is still computed in uint256.",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkMarketsLive",
+          "line_aa340fb": 166,
+          "line_fda9bed": 166,
+          "line_6805212": 166,
+          "mutator": "SBR",
+          "original": "uint256 i = 0",
+          "mutant": "uint128 i = 0",
+          "fingerprint": "52559e5dd2a7d804"
+        },
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkFlashAndFee",
+          "line_aa340fb": 132,
+          "line_fda9bed": 132,
+          "line_6805212": 132,
+          "mutator": "SBR",
+          "original": "uint256 maxFee = IParameterStoreViews(_PARAMETER_STORE).maxFlashFeeBps()",
+          "mutant": "uint128 maxFee = IParameterStoreViews(_PARAMETER_STORE).maxFlashFeeBps()",
+          "fingerprint": "7b4f90f33f4ba132"
+        }
+      ]
+    },
+    {
+      "id": "SM-301",
+      "class": "equivalent-or-harmless",
+      "mutants": 1,
+      "reason": "The view copies the market list to memory instead of reading it from storage, and the loop reads the same ids and writes nothing, so only gas changes.",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkMarketsLive",
+          "line_aa340fb": 164,
+          "line_fda9bed": 164,
+          "line_6805212": 164,
+          "mutator": "SBR",
+          "original": "uint256[] storage ids = l.marketsOfSpoke[spoke]",
+          "mutant": "uint256[] memory ids = l.marketsOfSpoke[spoke]",
+          "fingerprint": "07ea139740b21b60"
+        }
+      ]
+    },
+    {
+      "id": "SM-302",
+      "class": "equivalent-or-harmless",
+      "mutants": 3,
+      "reason": "Decoding an answer word as uint128 changes only answers with a bit above 128 set: the original reads them as not zero or not Live and refuses, the mutant reverts in the ABI decoder; the call is refused either way, only the revert data differs. A word that fits in 128 bits decodes and compares the same (PriceState.Live is a small enum value).",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._feeRateZero",
+          "line_aa340fb": 152,
+          "line_fda9bed": 152,
+          "line_6805212": 152,
+          "mutator": "SBR",
+          "original": "zero = ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0",
+          "mutant": "zero = ok && ret.length == 32 && abi.decode(ret, (uint128)) == 0",
+          "fingerprint": "860e6f2ded9447b9"
+        },
+        {
+          "file": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+          "function": "MarketRegistryOracleChecks._oracleLive",
+          "line_aa340fb": 41,
+          "line_fda9bed": 41,
+          "line_6805212": 41,
+          "mutator": "SBR",
+          "original": "(, uint256 state) = abi.decode(ret, (uint256, uint256))",
+          "mutant": "(, uint128 state) = abi.decode(ret, (uint128, uint128))",
+          "fingerprint": "e969cd66f3c3fc90"
+        },
+        {
+          "file": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+          "function": "MarketRegistryOracleChecks._oracleLive",
+          "line_aa340fb": 42,
+          "line_fda9bed": 42,
+          "line_6805212": 42,
+          "mutator": "SBR",
+          "original": "return state == uint256(PriceState.Live)",
+          "mutant": "return state == uint128(PriceState.Live)",
+          "fingerprint": "43095b174ee262da"
+        }
+      ]
+    },
+    {
+      "id": "SM-303",
+      "class": "equivalent-or-harmless",
+      "mutants": 1,
+      "reason": "_listed's last statement is the default, so without `return false` the function returns its zero-initialised bool, which is false.",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryRouteChecks.sol",
+          "function": "MarketRegistryRouteChecks._listed",
+          "line_aa340fb": 132,
+          "line_fda9bed": 132,
+          "line_6805212": 132,
+          "mutator": "CR",
+          "original": "return false",
+          "mutant": "//return false",
+          "fingerprint": "fd4ee7e6e282ffc0"
+        }
+      ]
+    },
+    {
+      "id": "SM-304",
+      "class": "real-test-gap",
+      "mutants": 1,
+      "reason": "_checkFunding's funding-Hub consent check made always true refuses every cross-Hub debt reserve with FundingHubConsentMissing. It survived because no test in test/unit/MarketRegistry* (at aa340fb) lists a cross-Hub debt reserve whose funding Hub consented and expects it to pass. Test to write: open the cross-Hub line and the funding Hub's credit line, list the debt reserve, and assert it is accepted. The next mutation-gate run shows whether a test added since kills it.",
+      "covered_by": null,
+      "test_status": "not written",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryDebtChecks.sol",
+          "function": "MarketRegistryDebtChecks._checkFunding",
+          "line_aa340fb": 49,
+          "line_fda9bed": 49,
+          "line_6805212": 49,
+          "mutator": "MIA",
+          "original": "l.creditLines[def.fundingHub][def.asset].line == 0",
+          "mutant": "true",
+          "fingerprint": "62333c996c2a70be"
+        }
+      ]
+    },
+    {
+      "id": "SM-305",
+      "class": "real-test-gap",
+      "mutants": 1,
+      "reason": "_oracleConfigPasses goes on to checkConfig after the ParameterStore's getOracleConfig call failed. The real LPOracle cannot decode the revert data as a configuration and fails the check too, but an LPOracle that accepts any input would now pass. No test makes getOracleConfig fail with an LPOracle whose checkConfig returns 0. Test to write: mock getOracleConfig to revert and checkConfig to return 0, and expect the market to be refused.",
+      "covered_by": null,
+      "test_status": "not written",
+      "approval": "pending",
+      "found": "third pass (2026-11-15): missed by the first parse of the run logs",
+      "locations": [
+        {
+          "file": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+          "function": "MarketRegistryOracleChecks._oracleConfigPasses",
+          "line_aa340fb": 28,
+          "line_fda9bed": 28,
+          "line_6805212": 28,
+          "mutator": "MIA",
+          "original": "!ok",
+          "mutant": "false",
+          "fingerprint": "9ef3901775d8b11c"
+        }
+      ]
     }
   ],
   "second_pass": {
     "date": "2026-11-15",
     "commit": "6805212",
     "note": "Survivors not reached in the first pass triaged against the source at 6805212 (line_6805212); gap tests of the first pass passed in targeted forge runs; the not-written gaps were written, split or shown equivalent. Kills are confirmed by the next mutation-gate run."
+  },
+  "third_pass": {
+    "date": "2026-11-15",
+    "note": "A full parse of the run 43492416937 logs (multi-line mutants included, matched by contract, mutator and normalised text) found 13 survivors with no entry, all in the MarketRegistry Debt, Oracle and Route checks; SM-298 to SM-305."
   }
 }

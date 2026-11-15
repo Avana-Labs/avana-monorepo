@@ -38,24 +38,26 @@ Every survivor of run 43492416937 now has a class in [contracts/security/slither
 | Class | Mutants |
 |---|---|
 | real test gap, test added and passing | 386 |
-| equivalent or harmless | 1,011 |
-| noise | 50 |
+| real test gap, test to write | 2 |
+| equivalent or harmless | 1,020 |
+| noise | 52 |
 | superseded (the line changed after `aa340fb`) | 4 |
 | test set fixed; needs the next mutation-gate run | 227 |
 | not triaged | 0 |
-| **All** | **1,678** |
+| **All** | **1,691** |
 
 - The first pass's gap tests (14 files) pass in targeted `forge test` runs.
 - The 52 first-pass gaps marked "not written" now have tests, except 8 shown equivalent: `SM-072` (with feeds that follow the Chainlink round rules, a both-stale interval found after a poke that was not failed always ends after the stored `recoveredAt`), part of `SM-020` (a failed read already falls back to the stored value) and part of `SM-029` (`e.quote` is 0 whenever the market is failed).
 - The 393 survivors that pass did not reach (418 by exact text; 25 already matched an entry by the truncated mutant text) were triaged against the source at `6805212`: 214 real gaps, each with a test in a file inside its contract's `mutation-layers.json` test glob, 178 equivalent and 1 noise.
 - The tests were run one targeted file set at a time. Kills are confirmed by the next `mutation-gate` run on `main`, which also triages the 227 `LPOracleCL*` and `LPOracleCalls` survivors against their own tests.
+- A full parse of the run's logs (multi-line mutants included, matched to the entries by contract, mutator and normalized text) found 13 survivors the first parse had missed, all in `MarketRegistryDebtChecks`, `MarketRegistryOracleChecks` and `MarketRegistryRouteChecks` (`SM-298` to `SM-305`): 2 noise, 9 equivalent or harmless and 2 real gaps whose tests are still to write (a cross-Hub debt reserve with funding-Hub consent accepted; a failed `getOracleConfig` refused even when `checkConfig` returns 0).
 - The pass found one defect in `DebtOracle._recordSeen` (`MUT-01` in the register), fixed in [pull request 74](https://github.com/Avana-Labs/avana-monorepo/pull/74).
 
 ### Triage of the earlier run 43492416937
 
 `mutation-gate.yml` run 43492416937 on `main` at `aa340fb` (dispatched 2026-11-13) stalled in the queue: 151 `slither-mutate` jobs finished, all of layer 2.1 (three mutator groups per contract), and 243 never ran; the Necessist jobs are in [../necessist/README.md](../necessist/README.md). `slither-mutate` survivors are report-only in CI.
 
-The finished jobs left 1,678 uncaught mutants. `survivors.txt` lists 1,617 distinct lines because `grep UNCAUGHT` keeps only the last line of a mutant that spans several lines; the triage reads each contract's log instead.
+The finished jobs left 1,678 uncaught mutants by the first parse (1,691 by the full parse of the second pass). `survivors.txt` lists 1,617 distinct lines because `grep UNCAUGHT` keeps only the last line of a mutant that spans several lines; the triage reads each contract's log instead.
 
 Triage, at `fda9bed`: [contracts/security/slither-mutate-triage.json](../../../contracts/security/slither-mutate-triage.json). Each entry gives the file, function, line at `aa340fb` and at `fda9bed`, the mutator, the original and mutated text, a fingerprint, the class and the reason; `approval` is `pending`.
 

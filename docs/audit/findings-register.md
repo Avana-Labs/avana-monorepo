@@ -282,17 +282,17 @@ Failures of the slow CI tier on `main` (deep invariant campaigns, Echidna, Medus
 
 ### 2.2 Mutation-testing survivors
 
-Survivors of the mutation gate on code (`mutation-gate.yml`): `slither-mutate` mutants of `contracts/src` that no test killed, and Necessist removals from `contracts/test` after which the test still passed. A survivor is not a contract defect, so these rows are not counted in section 1 and are not mirrored in 5.3. Source runs: `mutation-gate` 43492416937 on `main` at `aa340fb` (2026-11-13; layer 2.1 `slither-mutate` and 176 Necessist jobs) and 43653570827 at `48864ef` (2026-11-14). Triage: first pass at `fda9bed`, second pass at `6805212` (2026-11-15). The rows below are the groups of [contracts/security/slither-mutate-triage.json](../../contracts/security/slither-mutate-triage.json) (`SM-…`) and [contracts/security/necessist-triage.json](../../contracts/security/necessist-triage.json) (`NE-…`), which list every mutant or removal with its line, text and full reason. Equivalent and noise classes wait for approval (`approval: pending` in the JSON). The `slither-mutate` survivors of `LPOracleCL*`, `LPOracleCalls` and the other contracts whose test set was fixed after the run are triaged after the next run.
+Survivors of the mutation gate on code (`mutation-gate.yml`): `slither-mutate` mutants of `contracts/src` that no test killed, and Necessist removals from `contracts/test` after which the test still passed. A survivor is not a contract defect, so these rows are not counted in section 1 and are not mirrored in 5.3. Source runs: `mutation-gate` 43492416937 on `main` at `aa340fb` (2026-11-13; layer 2.1 `slither-mutate` and 176 Necessist jobs) and 43653570827 at `48864ef` (2026-11-14). Triage: first pass at `fda9bed`, second pass at `6805212` (2026-11-15); a third pass the same day added 13 survivors the first parse of the logs had missed (`MarketRegistry` Debt, Oracle and Route checks). The rows below are the groups of [contracts/security/slither-mutate-triage.json](../../contracts/security/slither-mutate-triage.json) (`SM-…`) and [contracts/security/necessist-triage.json](../../contracts/security/necessist-triage.json) (`NE-…`), which list every mutant or removal with its line, text and full reason. Equivalent and noise classes wait for approval (`approval: pending` in the JSON). The `slither-mutate` survivors of `LPOracleCL*`, `LPOracleCalls` and the other contracts whose test set was fixed after the run are triaged after the next run.
 
 | `slither-mutate` class | Mutants |
 |---|---|
-| equivalent-or-harmless | 1,011 |
-| noise | 50 |
-| real-test-gap | 386 |
+| equivalent-or-harmless | 1,020 |
+| noise | 52 |
+| real-test-gap | 388 |
 | superseded | 4 |
 | test set fixed; needs the next mutation-gate run | 227 |
 | not triaged | 0 |
-| **All survivors** | **1,678** |
+| **All survivors** | **1,691** |
 
 | Necessist class | Removals |
 |---|---|
@@ -611,6 +611,14 @@ Status: "Resolved in verification code" means a test that fails against the muta
 | `SM-295` | `ParameterStoreStorage` | 1 | real-test-gap | A market is unbanded when any token is not a USD stable, the first included; | Resolved in verification code (test added; kill confirmed by the next mutation-gate run) | `test_TEST_250_noBandWhenFirstTokenIsNotStable in test/unit/ParameterStore.OracleInputs.unit.t.sol` |
 | `SM-296` | `ParameterStoreTightenLogic` | 1 | real-test-gap | tightenConsistencyToleranceBps must re-run no LPOracle for a market that is not configured (Cancelled or Closed); | Resolved in verification code (test added; kill confirmed by the next mutation-gate run) | `test_TEST_064_tighteningACancelledMarketRechecksNothing in test/unit/ParameterStore.CheckConfig.unit.t.sol` |
 | `SM-297` | `ParameterStoreViews` | 3 | real-test-gap | getOracleInputs must lay the second leg of a two-leg route at LEG_WORDS after the first; | Resolved in verification code (test added; kill confirmed by the next mutation-gate run) | `test_TEST_250_twoLegRouteServesBothLegs in test/unit/ParameterStore.OracleInputs.unit.t.sol` |
+| `SM-298` | `MarketRegistryDebtChecks` | 2 | noise | The LIR mutant's text is the original line, so the literal was replaced by the same value and nothing changed. | Accepted, approval pending | — |
+| `SM-299` | `MarketRegistryDebtChecks` | 2 | equivalent-or-harmless | A local declared without its initialiser starts at 0, the value the original assigns. | Accepted, approval pending | — |
+| `SM-300` | `MarketRegistryDebtChecks` | 2 | equivalent-or-harmless | A loop counter or local narrowed to uint128 holds every value it can reach, since the loop runs to the Spoke's market count and maxFlashFeeBps returns a uint16; | Accepted, approval pending | — |
+| `SM-301` | `MarketRegistryDebtChecks` | 1 | equivalent-or-harmless | The view copies the market list to memory instead of reading it from storage, and the loop reads the same ids and writes nothing, so only gas changes. | Accepted, approval pending | — |
+| `SM-302` | `MarketRegistryDebtChecks`, `MarketRegistryOracleChecks` | 3 | equivalent-or-harmless | Decoding an answer word as uint128 changes only answers with a bit above 128 set: | Accepted, approval pending | — |
+| `SM-303` | `MarketRegistryRouteChecks` | 1 | equivalent-or-harmless | _listed's last statement is the default, so without `return false` the function returns its zero-initialised bool, which is false. | Accepted, approval pending | — |
+| `SM-304` | `MarketRegistryDebtChecks` | 1 | real-test-gap | _checkFunding's funding-Hub consent check made always true refuses every cross-Hub debt reserve with FundingHubConsentMissing. | Open: test to write (the next mutation-gate run shows whether a test added since kills it) | — |
+| `SM-305` | `MarketRegistryOracleChecks` | 1 | real-test-gap | _oracleConfigPasses goes on to checkConfig after the ParameterStore's getOracleConfig call failed. | Open: test to write (the next mutation-gate run shows whether a test added since kills it) | — |
 
 #### Necessist
 
