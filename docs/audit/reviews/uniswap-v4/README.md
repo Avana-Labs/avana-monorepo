@@ -5,7 +5,7 @@
 | Date | 2026-11-15 |
 | Contracts | `src/amm/uniswap-v4/UniswapV4Integration.sol`, `UniswapV4State.sol`, `IUniswapV4Integration.sol`; the shared base `src/amm/concentrated-liquidity/` (`ClLPVaultBase`, `ClLPVaultCustody`, `ClLPVaultMarkets`, `ClPriceMath`, `ClUnitMath`); `src/oracle/lp-oracle/LPOracleV4.sol`, `LPOracleV4Module.sol`, `LPOracleV4ModuleLogic.sol` and the `LPOracleCL*` code they inherit; `LensFees._v4Fees`; `src/interfaces/external/uniswap-v4/` |
 | Spec | [2.23 Uniswap v4 Integration](../../../spec/02-contracts/23-uniswap-v4-integration.md), [2.2 LP Vault](../../../spec/02-contracts/02-lp-vault.md), [2.19](../../../spec/02-contracts/19-amm-integration-interface.md), [2.10 LP Oracle](../../../spec/02-contracts/10-lp-oracle.md) (v4 and concentrated-liquidity parts); v4-core `e50237c` and v4-periphery `ea2bf2e` under `contracts/dependencies/` |
-| Method | Independent adversarial review from the spec and the code only. One PoC test per demonstrable finding, written against the existing v4 fixtures. The PoCs have not been run (shared machine; no build or test was allowed during the review) |
+| Method | Independent adversarial review from the spec and the code only. One PoC test per demonstrable finding, written against the existing v4 fixtures, not run during the review (shared machine) and run once afterwards (see PoC tests) |
 | Result | No Critical or High. 2 Medium, 2 Low, 2 Informational, 10 spec points. Slot layouts, the action encoding, rounding against the PoolManager, PoolKey binding, the unlock guard and the oracle's market parser held under every attack tried |
 
 ## Findings
@@ -95,7 +95,7 @@ Decided by Josue on 2026-11-15. Regression tests are in `contracts/test/unit/` (
 
 ## PoC tests
 
-[`poc/UniswapV4.Review.unit.t.sol`](poc/UniswapV4.Review.unit.t.sol), to be copied to `test/unit/` and run with `forge test -j 2 --match-path test/unit/UniswapV4.Review.unit.t.sol` (needs the `univ3`, `univ4` and `permit2` profile builds, as the v4 fixtures do). Status: not run yet.
+[`poc/UniswapV4.Review.unit.t.sol`](poc/UniswapV4.Review.unit.t.sol), to be copied to `test/unit/` and run with `forge test -j 2 --match-path test/unit/UniswapV4.Review.unit.t.sol` (needs the `univ3`, `univ4` and `permit2` profile builds, as the v4 fixtures do). Run once on 2026-11-15 against the fixed code (`da5c542`): the V4-01 and V4-03 PoCs now fail, as they should (the unwind succeeds; the oracle of another pool and range is refused at `initialize` with `ConfigCheckFailed(1 << 26)`, module bit 10); the V4-02, V4-04, V4-05 and V4-06 PoCs pass, confirming the behaviours the fix status documents. The regression tests in `contracts/test/unit/` replace the PoCs.
 
 - `UniswapV4ReviewPoC` (on `UniswapV4IntegrationFixture`): `test_POC_V401_blocklistedDepositorBlocksSeizureUnwind`, `test_POC_V402_custodiedPositionCannotBeToppedUp`, `test_POC_V404_twoFeeTiersShareOneReferenceDepth`, `test_POC_V405_wrapAndSweepDeliverStrayBalances`, `test_POC_V406_releaseToDepositorDeltaIncludesTheFees`
 - `LPOracleV4ReviewPoC` (on `LPOracleV4Fixture`): `test_POC_V403_listingAcceptsAnOracleOfAnotherV4PoolAndRange`
