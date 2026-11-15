@@ -12,7 +12,7 @@ The backend the web app reads. This folder is one Convex project (`@avana/convex
 | `convex/ingest/` | Export pull, series pull, pool history, current-value sampler, the mutations that apply them |
 | `convex/listing/` | Listing metadata: fetch, hash check, store |
 | `convex/wallet/`, `kept.ts` | A wallet's accounts and last samples; its older activity on request (`wallet/history:older`: a signed `/export/v1/history` page, checked and returned unstored, 20 requests a minute per wallet, "unavailable" while the indexer reindexes); typed stubs of kept features (rewards, referrals, swap quotes, the in-app assistant) |
-| `convex/lib/` | Pure functions the tests run offline: page numbers, charts, fees, metadata, export checks, event decoding |
+| `convex/lib/` | Pure functions the tests run offline: page numbers, charts, fees, metadata, event decoding; `exportClient.ts` configures the export client of `@avana/export` (signing and page checks) |
 | `convex/auth.config.ts`, `walletAuth.ts`, `rateLimits.ts`, `writeRateLimit.ts`, `codedError.ts` | The web app's SIWE→JWT issuer (only the per-wallet features below use it; protocol queries stay public), the wallet guard, the SIWE route rate limiter and coded errors |
 | `convex/wallet/profiles.ts`, `support.ts`, `fx.ts`, `tokenPrices.ts` | Per-wallet display preferences, Support Center requests, FX rates (open.er-api.com, hourly) and DefiLlama prices of tokens outside the protocol (display only; protocol values use `prices.ts`) |
 | `convex/askAI*.ts`, `convex/lib/askAI/`, `convex.config.ts`, `knowledge/` | Ask AI: threads, turn queue, quotas, the agent (Convex Agent + OpenAI), the market cache (DefiLlama pools, Aave markets), knowledge search over `askAICorpus.generated.ts` (rendered from `knowledge/*.md` by `scripts/render-ask-ai-corpus.mjs`). The wallet tools answer "not available yet" until they read the chain. Components: agent, rag, rate-limiter |
@@ -123,7 +123,7 @@ A Convex cron runs `ingest/pull.pull` for each chain every 30 s on Ethereum and 
 1. Reads the checkpoint `(throughBlock, throughBlockHash)`.
 2. Checks that `throughBlockHash` is still the hash of `throughBlock` over Convex's own RPC (not the indexer's). A mismatch goes to [reorg rebuild](#reorg-rebuild).
 3. Requests `GET /export/v1/pages?chainId&after=throughBlock&limit=500`, signed with the HMAC key from Convex environment variables (`INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET`). A 204 ends the event pages.
-4. Validates the page: known `schemaVersion`; `fromBlock = throughBlock + 1`; `toBlock ≤ finalizedBlock`; records ordered by `(blockNumber, logIndex)` and inside `fromBlock..toBlock`; every record's `blockHash` equal to the page's entry for its block; `pageHash` recomputed from the canonical JSON; `toBlockHash` equal to the hash of `toBlock` over Convex's own RPC.
+4. Validates the page with `@avana/export` (`packages/export`): known `schemaVersion`; `fromBlock = throughBlock + 1`; `toBlock ≤ finalizedBlock`; records ordered by `(blockNumber, logIndex)` and inside `fromBlock..toBlock`; every record's `blockHash` equal to the page's entry for its block; `pageHash` recomputed from the canonical JSON; `toBlockHash` equal to the hash of `toBlock` over Convex's own RPC.
 5. Calls the internal mutation `ingest/apply.applyPage(page)`.
 6. Repeats while pages keep coming, up to 20 pages per run, then pulls series pages the same way.
 

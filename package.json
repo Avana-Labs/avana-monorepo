@@ -8,6 +8,7 @@
   },
   "workspaces": [
     "packages/protocol",
+    "packages/export",
     "services/common",
     "services/indexer",
     "services/keeper",
