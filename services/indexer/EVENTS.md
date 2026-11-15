@@ -93,7 +93,7 @@ The position managers' own events (`IncreaseLiquidity`, `DecreaseLiquidity`, `Co
 | PayoutEscrow | `RemainderClaimed(address token idx, address account idx, address recipient, uint256 amount)` | `escrow_credit` − | C |
 | Flash liquidation helpers | `FlashLiquidated(address caller idx, address recipient idx, address asset idx, uint256 flashAmount, uint256 premium, uint256 keeperOut, uint256 topUp, uint256 payout)` | log | K M |
 
-`SettlementReport` fields: `debtReserveId, debtAsset, debtRepaid, unitsSeized, amountsOut[], recovered, minOut, effectiveSlippageBps, bonusBps, callerFunds, surplus, avanaFee, keeperReward, borrowerSurplus, keeperOut, minPayout, routeMode, routeUsed[], shortfall`. A settlement is valid whoever the caller is (`Q-404`).
+`SettlementReport` fields: `debtReserveId, debtAsset, debtRepaid, unitsSeized, amountsOut[], recovered, minOut, effectiveSlippageBps, bonusBps, callerFunds, surplus, avanaFee, keeperReward, borrowerSurplus, keeperOut, minPayout, routeMode, routeUsed[], shortfall`. A settlement is valid whoever the caller is (`Q-404`). `borrowerSurplus` is always the full surplus `B`: in a liquidation that books a deficit the First-Loss Reserve takes the `DeficitSurplusFunded` amount of the same transaction and the wallet receives the rest (`BorrowerSurplusPaid.amount`), so a consumer that needs what the borrower received subtracts that amount (REQ-SWAP-027).
 
 ## Oracles
 

@@ -23,12 +23,14 @@ interface ILPVaultSwapEvents {
         address indexed caller, address indexed proxy, uint256 indexed marketId, SettlementReport report
     );
 
-    /// @notice Emitted when a liquidation's borrower surplus `B > 0` was delivered to the borrower's wallet or, after a
-    /// failed gas-limited transfer, deposited in the PayoutEscrow credited to it.
+    /// @notice Emitted when a liquidation's borrower surplus `B > 0`, less any part the First-Loss Reserve took
+    /// (`DeficitSurplusFunded`), was delivered to the borrower's wallet or, after a failed gas-limited transfer,
+    /// deposited in the PayoutEscrow credited to it.
     /// @param proxy The liquidated PositionProxy.
     /// @param wallet The borrower's wallet (`AaveAdapter.walletOf(proxy)`).
     /// @param debtAsset The debt asset paid.
-    /// @param amount `B`, base units.
+    /// @param amount `B` less the `DeficitSurplusFunded` amount of the same call (all of `B` when there is none), base
+    /// units.
     /// @param escrowed True when the amount went to the PayoutEscrow.
     /// @custom:spec REQ-SWAP-026, REQ-SWAP-027, REQ-SWAP-076, LIQ-085, Q-337
     event BorrowerSurplusPaid(
