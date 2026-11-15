@@ -17,9 +17,13 @@ run's job list (`gh run view <run> --json jobs > jobs.json`). Output: `README.md
 
 A job that has not finished is listed as pending, one that failed or was cancelled without a report as inconclusive.
 
-    mutation-report.py <artifacts dir> <jobs.json> <run id> <commit> <out dir>
+    mutation-report.py <artifacts dir> <jobs.json> <run id> <commit> <out dir> [<inflated>]
+
+<inflated>: comma-separated contract name patterns whose mutants this run tested without some of their own test
+suites (a test-selection gap in security/mutation-layers.json); their survivors are marked "inflated, rerun pending".
 """
 
+import fnmatch
 import json
 import re
 import sys
@@ -43,6 +47,10 @@ def md(text: str) -> str:
 def main() -> int:
     art, jobs_file, run, commit, out = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4], Path(sys.argv[5])
     jobs = json.loads(jobs_file.read_text(encoding="utf8"))["jobs"]
+    inflated = [p for p in (sys.argv[6] if len(sys.argv) > 6 else "").split(",") if p]
+
+    def mark(contract: str, result: str) -> str:
+        return f"{result} (inflated, rerun pending)" if any(fnmatch.fnmatch(contract, p) for p in inflated) else result
 
     # Per contract: tool -> counters; survivors as rows.
     stats: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -72,7 +80,7 @@ def main() -> int:
                 s["mutate_killed"] += int(caught)
             s["mutate_not_compiled"] += text.count(COMPILE_FAIL)
             for kind, line, orig, mut in UNCAUGHT.findall(text):
-                survivors.append(("slither-mutate", layer, target, f"line {line} ({kind})", f"`{md(orig)}` → `{md(mut)}`", "survived"))
+                survivors.append(("slither-mutate", layer, target, f"line {line} ({kind})", f"`{md(orig)}` → `{md(mut)}`", mark(target, "survived")))
             if job["conclusion"] != "success":
                 inconclusive.append(f"{job['name']} ({job['conclusion']})")
         elif tool == "gambit":
@@ -96,7 +104,7 @@ def main() -> int:
                 s[f"gambit_{result}"] += 1
                 if result in ("survived", "timeout"):
                     p = ops.get(mid, [mid, "?", "?", "?", "?", "?"])
-                    survivors.append(("Gambit", layer, target, f"`{p[2]}` {p[3]} ({p[1]}, mutant {mid})", f"`{md(p[4])}` → `{md(p[5])}`", result))
+                    survivors.append(("Gambit", layer, target, f"`{p[2]}` {p[3]} ({p[1]}, mutant {mid})", f"`{md(p[4])}` → `{md(p[5])}`", mark(target, result)))
             s["gambit_seen"] += 1
             if job["conclusion"] != "success" and not any(s[f"gambit_{r}"] for r in ("killed", "survived", "timeout", "invalid")):
                 inconclusive.append(f"{job['name']} ({job['conclusion']})")
@@ -136,7 +144,8 @@ def main() -> int:
         counted = killed + surv + tout
         for k, v in (("m", counted), ("k", killed), ("s", surv), ("t", tout), ("n", nc)):
             tot[k] += v
-        lines.append(f"| {name} | {layer} | {counted} | {killed} | {surv} | {tout} | {nc} | {rate(killed, counted)} |")
+        flag = " (inflated, rerun pending)" if any(fnmatch.fnmatch(name, p) for p in inflated) else ""
+        lines.append(f"| {name}{flag} | {layer} | {counted} | {killed} | {surv} | {tout} | {nc} | {rate(killed, counted)} |")
     lines.append(f"| **All** | | **{tot['m']}** | **{tot['k']}** | **{tot['s']}** | **{tot['t']}** | **{tot['n']}** | **{rate(tot['k'], tot['m'])}** |")
     lines += ["", "By tool:", "", "| Contract | Layer | slither-mutate killed / tested | Gambit killed / survived / timed out / invalid |", "|---|---|---|---|"]
     for (layer, name), s in sorted(stats.items(), key=lambda kv: (kv[0][0], kv[0][1])):
@@ -150,6 +159,10 @@ def main() -> int:
         nc_tot[1] += passed
         lines.append(f"| {layer} | {', '.join(f'`{f}`' for f in files.split())} | {cand} | {passed} |")
     lines.append(f"| **All** | | **{nc_tot[0]}** | **{nc_tot[1]}** |")
+    if inflated:
+        lines += ["", "Inflated: the mutants of " + ", ".join(f"`{p}`" for p in inflated) + " ran without some of their own test "
+                  "suites in this run (the `tests` globs of `security/mutation-layers.json`, fixed after the run), so their survivors "
+                  "are an upper bound; the mutation gate is re-dispatched for their layers once the fix is on `main`."]
     lines += ["", f"Jobs still running or queued when this was generated: {len(pending)}.", ""]
     if inconclusive:
         lines += ["Inconclusive jobs (failed or cancelled):", ""] + [f"- {j}" for j in inconclusive] + [""]

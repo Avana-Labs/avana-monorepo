@@ -29,4 +29,4 @@ Layer gate (2.1 … 2.6), both kinds (decided 2026-11-10), and every push to `ma
 
 ## Latest result
 
-No campaign run is recorded in this folder; `results/` is empty.
+`mutation-gate` 43653570827 on `main` (commit `48864ef`, dispatched 2026-11-14), recorded as its jobs finish: [results/README.md](results/README.md) (per contract mutants, killed, survived, timed out, not compiled and kill rate; the Necessist table) and [results/survivors.md](results/survivors.md) (every surviving mutant and every removal that left the tests passing). `certoraMutate` did not run (`CERTORA_ENABLED` off); the Certora mutants run with the local Prover through `contracts/script/certora-mutate-local.sh`. In this run the mutants of the LPOracleCL contracts, LPOracleCalls, ParameterStore, ClPriceMath and AaveAdapter ran without some of their own test suites (the `tests` globs of `security/mutation-layers.json`, fixed after the run), so their survivors are marked inflated until the re-dispatch of layers 2.1, 2.2 and 2.5.

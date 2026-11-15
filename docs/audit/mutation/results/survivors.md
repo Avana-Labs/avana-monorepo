@@ -6,17 +6,17 @@
 
 | Tool | Layer | Contract | Location | Change | Result |
 |---|---|---|---|---|---|
-| slither-mutate | 2.1 | LPOracleCL | line 59 (CR) | `revert MarketMismatch(0)` → `//revert MarketMismatch(0)` | survived |
-| slither-mutate | 2.1 | LPOracleCL | line 60 (CR) | `_MODULE_LOGIC = moduleLogic` → `//_MODULE_LOGIC = moduleLogic` | survived |
-| slither-mutate | 2.1 | LPOracleCL | line 65 (RR) | `moduleLogic = _MODULE_LOGIC` → `revert()` | survived |
-| slither-mutate | 2.1 | LPOracleCL | line 81 (RR) | `_forward(_VIEW_LOGIC)` → `revert()` | survived |
-| slither-mutate | 2.1 | LPOracleCL | line 82 (RR) | `return report` → `revert()` | survived |
-| slither-mutate | 2.1 | LPOracleCLInitLogic | line 47 (CR) | `revert NotDelegated()` → `//revert NotDelegated()` | survived |
-| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (CR) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `//failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` | survived |
-| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (LOR) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `failed = ok  \|\|  ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` | survived |
-| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (MIA) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `true` | survived |
-| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (SBR) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `failed = ok && ret.length == 32 ? abi.decode(ret, (uint128)) : type(uint128).max` | survived |
-| slither-mutate | 2.1 | LPOracleCLListingLogic | line 40 (CR) | `revert NotDelegated()` → `//revert NotDelegated()` | survived |
+| slither-mutate | 2.1 | LPOracleCL | line 59 (CR) | `revert MarketMismatch(0)` → `//revert MarketMismatch(0)` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCL | line 60 (CR) | `_MODULE_LOGIC = moduleLogic` → `//_MODULE_LOGIC = moduleLogic` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCL | line 65 (RR) | `moduleLogic = _MODULE_LOGIC` → `revert()` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCL | line 81 (RR) | `_forward(_VIEW_LOGIC)` → `revert()` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCL | line 82 (RR) | `return report` → `revert()` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCLInitLogic | line 47 (CR) | `revert NotDelegated()` → `//revert NotDelegated()` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (CR) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `//failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (LOR) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `failed = ok  \|\|  ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (MIA) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `true` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCLInitLogic | line 63 (SBR) | `failed = ok && ret.length == 32 ? abi.decode(ret, (uint256)) : type(uint256).max` → `failed = ok && ret.length == 32 ? abi.decode(ret, (uint128)) : type(uint128).max` | survived (inflated, rerun pending) |
+| slither-mutate | 2.1 | LPOracleCLListingLogic | line 40 (CR) | `revert NotDelegated()` → `//revert NotDelegated()` | survived (inflated, rerun pending) |
 | slither-mutate | 2.1 | TimelockSelectors | line 98 (MIA) | `isLaunchShortSelector(selector) \|\| isDaoCancelSelector(selector)` → `true` | survived |
 | slither-mutate | 2.1 | TimelockSelectors | line 99 (CR) | `return 0` → `//return 0` | survived |
 
@@ -24,6 +24,53 @@
 
 | Layer | Location | Removed statement |
 |---|---|---|
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:104:9-104:35` | `dt = bound(dt, 0, 50_000);` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:105:15-105:22` | `.poke()` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:105:9-105:23` | `oracle.poke();` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:127:15-127:32` | `.setPokeMinGas(1)` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:127:9-127:33` | `oracle.setPokeMinGas(1);` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:128:11-128:23` | `.stopPrank()` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:128:9-128:24` | `vm.stopPrank();` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:129:9-129:40` | `_situation(kind, uint256(ONE));` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:130:9-130:55` | `gasLimit = bound(gasLimit, 10_000, 1_500_000);` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:135:11-135:31` | `.revertToState(snap)` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:135:9-135:32` | `vm.revertToState(snap);` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:65:9-65:57` | `answer = bound(answer, 95_000_000, 101_000_000);` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:68:9-68:34` | `_situation(kind, answer);` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:75:11-75:31` | `.revertToState(snap)` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:75:9-75:32` | `vm.revertToState(snap);` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:77:9-77:107` | `w[OracleInputsLayout.HEAD_WORDS + token * STRIDE + OracleInputsLayout.TOKEN_WORDS + word] = value;` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:78:11-78:121` | `.mockCall(address(store), abi.encodeCall(store.getOracleInputs, (address(oracle), list, true)), abi.encode(w))` |
+| 2.1 | `test/fuzz/LPOracle.Confirmation.fuzz.t.sol:78:9-78:122` | `vm.mockCall(address(store), abi.encodeCall(store.getOracleInputs, (address(oracle), list, true)), abi.encode(w));` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:54:11-54:44` | `.warp(T0 + bound(dt, 0, 400_000))` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:54:9-54:45` | `vm.warp(T0 + bound(dt, 0, 400_000));` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:57:13-57:75` | `_round(feeds[i], answerClass[i], raw[i], ageClass[i], age[i]);` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:59:30-59:58` | `oracle.setLock(false, true);` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:59:36-59:57` | `.setLock(false, true)` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:60:35-60:81` | `oracle.setConsistency(false, true, 99, false);` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:60:41-60:80` | `.setConsistency(false, true, 99, false)` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:61:35-61:68` | `oracle.setCompositionFails(true);` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:61:41-61:67` | `.setCompositionFails(true)` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:62:35-62:79` | `oracle.setConsistency(true, false, 0, true);` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:62:41-62:78` | `.setConsistency(true, false, 0, true)` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:63:24-63:38` | `oracle.poke();` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:63:30-63:37` | `.poke()` |
+| 2.1 | `test/fuzz/LPOracle.Oracle.fuzz.t.sol:88:9-88:35` | `_pushAll(int256(ONE), t1);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:43:11-43:41` | `.warp(T0 + bound(dt, 0, 7200))` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:43:9-43:42` | `vm.warp(T0 + bound(dt, 0, 7200));` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:46:13-46:65` | `pA.push(int256(ONE), block.timestamp - MAX_AGE - 1);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:46:15-46:64` | `.push(int256(ONE), block.timestamp - MAX_AGE - 1)` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:48:13-48:44` | `aB.push(97e6, block.timestamp);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:48:15-48:43` | `.push(97e6, block.timestamp)` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:50:13-50:70` | `pB.setMode(pB.latestRoundData.selector, ReadMode.Revert);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:50:15-50:69` | `.setMode(pB.latestRoundData.selector, ReadMode.Revert)` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:51:13-51:70` | `aB.setMode(aB.latestRoundData.selector, ReadMode.Revert);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:51:15-51:69` | `.setMode(aB.latestRoundData.selector, ReadMode.Revert)` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:53:9-53:49` | `_second(sA, mode[0], answer[0], age[0]);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:54:9-54:49` | `_second(sB, mode[1], answer[1], age[1]);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:84:11-84:66` | `.setMode(sA.latestRoundData.selector, ReadMode.BurnGas)` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:84:9-84:67` | `sA.setMode(sA.latestRoundData.selector, ReadMode.BurnGas);` |
+| 2.1 | `test/fuzz/LPOracle.ServedViews.fuzz.t.sol:85:9-85:45` | `gas = bound(gas, 50_000, 2_000_000);` |
 | 2.1 | `test/fuzz/LPPriceMath.fuzz.t.sol:105:13-105:44` | `p = bound(p, 0, MAX_ROUTE + 1);` |
 | 2.1 | `test/fuzz/LPPriceMath.fuzz.t.sol:106:13-106:44` | `b = bound(b, 0, MAX_ROUTE + 1);` |
 | 2.1 | `test/fuzz/LPPriceMath.fuzz.t.sol:126:9-126:40` | `q = bound(q, 0, MAX_ROUTE + 1);` |
@@ -130,6 +177,23 @@
 | 2.1 | `test/unit/AvanaTimelock.unit.t.sol:582:21-582:61` | `.executeBatch(t, v, p, bytes32(0), SALT)` |
 | 2.1 | `test/unit/AvanaTimelock.unit.t.sol:639:11-639:42` | `.assume(a != address(timelock))` |
 | 2.1 | `test/unit/AvanaTimelock.unit.t.sol:639:9-639:43` | `vm.assume(a != address(timelock));` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:134:9-134:21` | `v = _view();` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:203:9-203:39` | `_assertUnknown("startedAt 0");` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:204:12-204:46` | `.setStartedAt(block.timestamp + 1)` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:204:9-204:47` | `seq.setStartedAt(block.timestamp + 1);` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:205:9-205:51` | `_assertUnknown("startedAt in the future");` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:208:9-208:44` | `_assertUnknown("a reverting feed");` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:212:9-212:56` | `_assertUnknown("a failing configuration read");` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:213:14-213:78` | `.setMode(store.sequencer.selector, HostileConfig.Mode.Oversized)` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:213:9-213:79` | `store.setMode(store.sequencer.selector, HostileConfig.Mode.Oversized);` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:226:14-226:42` | `.setTimers(5000, 3600, 1800)` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:226:9-226:43` | `store.setTimers(5000, 3600, 1800);` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:234:11-234:31` | `.warp(failedAt + 99)` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:234:9-234:32` | `vm.warp(failedAt + 99);` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:62:13-62:28` | `.setDecimals(8)` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:62:9-62:29` | `pUsd.setDecimals(8);` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:69:13-69:49` | `.push(USDC_USD, block.timestamp + 1)` |
+| 2.1 | `test/unit/DebtOracle.Boundaries.unit.t.sol:69:9-69:50` | `pUsd.push(USDC_USD, block.timestamp + 1);` |
 | 2.1 | `test/unit/LPOracle.Access.unit.t.sol:116:9-116:23` | `p = _params();` |
 | 2.1 | `test/unit/LPOracle.Access.unit.t.sol:118:9-118:32` | `(ok, ret) = _deploy(p);` |
 | 2.1 | `test/unit/LPOracle.Access.unit.t.sol:138:11-138:24` | `.prank(alice)` |
@@ -586,6 +650,119 @@
 | 2.1 | `test/unit/LPOracle.SequencerAnswer.unit.t.sol:126:9-126:34` | `this.measureEvaluation();` |
 | 2.1 | `test/unit/LPOracle.SequencerAnswer.unit.t.sol:128:9-128:38` | `_answer(_sized(up, 1 << 20));` |
 | 2.1 | `test/unit/LPOracle.SequencerAnswer.unit.t.sol:143:70-143:82` | `.startedAt()` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:100:11-100:46` | `.warp(block.timestamp + WINDOW + 1)` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:100:9-100:47` | `vm.warp(block.timestamp + WINDOW + 1);` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:101:9-101:36` | `_setPrices(price0, price1);` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:102:9-102:18` | `_reads();` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:105:9-105:18` | `_reads();` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:136:9-136:39` | `pool = IClPool(address(liar));` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:140:9-140:21` | `pool = real;` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:144:13-144:41` | `liar.lie(lies[i], ticks[i]);` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:144:17-144:40` | `.lie(lies[i], ticks[i])` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:98:9-98:18` | `_reads();` |
+| 2.1 | `test/unit/LPOracle.SpotReads.unit.t.sol:99:9-99:82` | `_swapTo(pool, uint160(uint256(_oracleSqrt(price0, price1)) * 102 / 100));` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:104:11-104:32` | `.push(89_000_000, T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:104:9-104:33` | `pB.push(89_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:105:11-105:32` | `.push(85_000_000, T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:105:9-105:33` | `aB.push(85_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:133:11-133:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:133:9-133:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:145:11-145:40` | `.push(int256(ONE), T1 + 3600)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:145:9-145:41` | `pA.push(int256(ONE), T1 + 3600);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:146:11-146:40` | `.push(int256(ONE), T1 + 3600)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:146:9-146:41` | `aA.push(int256(ONE), T1 + 3600);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:171:9-171:42` | `_assertPokeMatchesReport("Live");` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:172:11-172:32` | `.push(97_000_000, T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:172:9-172:33` | `aA.push(97_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:173:9-173:62` | `_assertPokeMatchesReport("Drifting by disagreement");` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:174:11-174:33` | `.push(int256(ONE), T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:174:9-174:34` | `aA.push(int256(ONE), T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:175:9-175:34` | `_pushAll(89_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:176:9-176:58` | `_assertPokeMatchesReport("Drifting by the band");` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:177:9-177:35` | `_pushAll(int256(ONE), T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:178:15-178:53` | `.setConsistency(true, false, 0, false)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:178:9-178:54` | `oracle.setConsistency(true, false, 0, false);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:179:9-179:82` | `_assertPokeMatchesReport("Drifting by an unavailable consistency check");` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:180:15-180:54` | `.setConsistency(false, false, 0, false)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:180:9-180:55` | `oracle.setConsistency(false, false, 0, false);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:181:15-181:36` | `.setLock(false, true)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:181:9-181:37` | `oracle.setLock(false, true);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:182:9-182:61` | `_assertPokeMatchesReport("Cached by the pool lock");` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:183:15-183:37` | `.setLock(false, false)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:183:9-183:38` | `oracle.setLock(false, false);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:184:15-184:22` | `.poke()` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:184:9-184:23` | `oracle.poke();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:185:9-185:34` | `_pushAll(98_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:186:9-186:68` | `_assertPokeMatchesReport("Cached by the quote-change cap");` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:188:11-188:32` | `.warp(staleAt + 3600)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:188:9-188:33` | `vm.warp(staleAt + 3600);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:189:11-189:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:189:9-189:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:190:11-190:45` | `.push(int256(ONE), staleAt + 3600)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:190:9-190:46` | `pB.push(int256(ONE), staleAt + 3600);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:191:11-191:45` | `.push(int256(ONE), staleAt + 3600)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:191:9-191:46` | `aB.push(int256(ONE), staleAt + 3600);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:215:15-215:22` | `.poke()` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:215:9-215:23` | `oracle.poke();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:219:11-219:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:219:9-219:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:258:14-258:34` | `.setConfig(p.config)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:258:9-258:35` | `store.setConfig(p.config);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:260:9-260:35` | `_pushAll(int256(ONE), T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:264:11-264:33` | `.push(105_000_000, T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:264:9-264:34` | `aA.push(105_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:265:11-265:33` | `.push(105_000_000, T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:265:9-265:34` | `sA.push(105_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:267:11-267:33` | `.push(101_000_000, T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:267:9-267:34` | `aB.push(101_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:268:11-268:33` | `.push(101_000_000, T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:268:9-268:34` | `sB.push(101_000_000, T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:289:11-289:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:289:9-289:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:290:15-290:22` | `.poke()` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:290:9-290:23` | `oracle.poke();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:295:11-295:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:295:9-295:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:298:9-298:45` | `(, t1) = oracle.lastAcceptedPrice();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:301:11-301:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:301:9-301:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:318:15-318:22` | `.poke()` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:318:9-318:23` | `oracle.poke();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:323:11-323:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:323:9-323:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:324:11-324:39` | `.push(99_000_000, T0 + 3600)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:324:9-324:40` | `pA.push(99_000_000, T0 + 3600);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:325:11-325:39` | `.push(99_000_000, T0 + 3600)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:325:9-325:40` | `aA.push(99_000_000, T0 + 3600);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:330:11-330:27` | `.warp(T0 + 7199)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:330:9-330:28` | `vm.warp(T0 + 7199);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:331:11-331:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:331:9-331:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:332:15-332:22` | `.poke()` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:332:9-332:23` | `oracle.poke();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:333:9-333:43` | `(, at) = oracle.priceCheckpoint();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:343:15-343:22` | `.poke()` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:343:9-343:23` | `oracle.poke();` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:348:11-348:31` | `.revertToState(snap)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:348:9-348:32` | `vm.revertToState(snap);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:351:11-351:31` | `.revertToState(snap)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:351:9-351:32` | `vm.revertToState(snap);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:353:11-353:47` | `.push(int256(ONE), T1 + MAX_AGE + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:353:9-353:48` | `pA.push(int256(ONE), T1 + MAX_AGE + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:354:11-354:47` | `.push(int256(ONE), T1 + MAX_AGE + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:354:9-354:48` | `aA.push(int256(ONE), T1 + MAX_AGE + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:358:11-358:33` | `.push(int256(ONE), T1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:358:9-358:34` | `aB.push(int256(ONE), T1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:59:11-59:38` | `.push(int256(ONE), staleAt)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:59:9-59:39` | `pB.push(int256(ONE), staleAt);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:60:11-60:38` | `.push(int256(ONE), staleAt)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:60:9-60:39` | `aB.push(int256(ONE), staleAt);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:64:11-64:32` | `.warp(staleAt + 3599)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:64:9-64:33` | `vm.warp(staleAt + 3599);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:85:11-85:34` | `.roll(block.number + 1)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:85:9-85:35` | `vm.roll(block.number + 1);` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:92:11-92:31` | `.warp(staleB + 3599)` |
+| 2.1 | `test/unit/LPOracle.StateMachine.unit.t.sol:92:9-92:32` | `vm.warp(staleB + 3599);` |
 | 2.1 | `test/unit/LPOracle.States.unit.t.sol:146:15-146:54` | `.setConsistency(false, false, 0, false)` |
 | 2.1 | `test/unit/LPOracle.States.unit.t.sol:146:9-146:55` | `oracle.setConsistency(false, false, 0, false);` |
 | 2.1 | `test/unit/LPOracle.States.unit.t.sol:154:15-154:37` | `.setLock(false, false)` |
