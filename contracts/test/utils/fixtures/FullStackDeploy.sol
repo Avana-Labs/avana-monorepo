@@ -82,8 +82,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     uint32 internal constant BLOCK_TIME = 12;
     uint256 internal constant T0 = 1_762_650_000;
     uint256 internal constant MAX_MARKETS = 64;
-    /// @dev Per-depositor exposure cap on the Hub, 8-decimal USD.
-    uint256 internal constant DEPOSITOR_CAP = 5_000_000e8;
     /// @dev Default `poolShareMaxBps` (TEST-218: 10 %).
     uint16 internal constant POOL_SHARE_MAX_BPS = 1000;
 

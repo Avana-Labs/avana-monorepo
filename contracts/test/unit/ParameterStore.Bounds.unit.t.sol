@@ -403,13 +403,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         address hub3 = makeAddr("hub3");
         registry.setHub(hub2, true);
         registry.setHub(hub3, true);
-        _refuses(abi.encodeCall(store.setInitialHubCaps, (hub2, 0)), oob);
-        _refuses(abi.encodeCall(store.setInitialHubCaps, (hub2, USD_MAX + 1)), oob);
-        assertEq(store.depositorUsdCap(hub2), 0);
-        _accepts(abi.encodeCall(store.setInitialHubCaps, (hub2, USD_MAX)));
-        assertEq(store.depositorUsdCap(hub2), USD_MAX);
-        _accepts(abi.encodeCall(store.setInitialHubCaps, (hub3, 1)));
-        assertEq(store.depositorUsdCap(hub3), 1);
         _refuses(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, 0)), oob);
         _refuses(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, USD_MAX + 1)), oob);
         _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, USD_MAX)));
@@ -427,7 +420,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
             abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, USD_MAX)),
             abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, tokenKey)
         );
-        _refuses(abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), USD_MAX + 1)), oob);
         _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, USD_MAX + 1)), oob);
         // From one below the ceiling, the ceiling itself is one step away and accepted.
         _accepts(abi.encodeCall(store.setInitialMarketCaps, (M, USD_MAX - 1, 0, 1)));
@@ -435,9 +427,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.marketUsdCap(M), USD_MAX);
         address hub2 = makeAddr("hub2");
         registry.setHub(hub2, true);
-        _accepts(abi.encodeCall(store.setInitialHubCaps, (hub2, USD_MAX - 1)));
-        _accepts(abi.encodeCall(store.loosenDepositorUsdCap, (hub2, USD_MAX)));
-        assertEq(store.depositorUsdCap(hub2), USD_MAX);
         _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, USD_MAX - 1)));
         _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, USD_MAX)));
         assertEq(store.tokenUsdCap(hub2, usdt), USD_MAX);
@@ -452,15 +441,12 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.topUpSliceUsd(M), slice);
         _accepts(abi.encodeCall(store.tightenTopUpSliceUsd, (M, 0)));
         assertEq(store.topUpSliceUsd(M), 0);
-        _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 1)));
-        assertEq(store.marketUsdCap(M), 1);
+        _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 10_000e8)));
+        assertEq(store.marketUsdCap(M), 10_000e8);
         _refuses(abi.encodeCall(store.tightenMarketUsdCap, (M, 0)), oob);
-        _accepts(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 1)));
+        _accepts(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000e8)));
         _refuses(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 0)), oob);
-        assertEq(store.tokenUsdCap(address(hub), usdc), 1);
-        _accepts(abi.encodeCall(store.tightenDepositorUsdCap, (address(hub), 1)));
-        _refuses(abi.encodeCall(store.tightenDepositorUsdCap, (address(hub), 0)), oob);
-        assertEq(store.depositorUsdCap(address(hub)), 1);
+        assertEq(store.tokenUsdCap(address(hub), usdc), 10_000e8);
     }
 
     // TEST-272 verifies: REQ-RISK-044, REQ-PSTORE-004
@@ -659,7 +645,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         _refuses(abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenPoolShareMaxBps, (0)), notLooser);
         _refuses(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 0)), notLooser);
-        _refuses(abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenTopUpSliceUsd, (M, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenMinPledgeUsd, (M, USD_MAX)), notLooser);
         _refuses(abi.encodeCall(store.loosenHardHealthFloor, (M, 0)), notLooser);

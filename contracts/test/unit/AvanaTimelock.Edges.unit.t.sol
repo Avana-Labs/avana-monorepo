@@ -332,7 +332,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         assertFalse(off.publicExecution());
         (uint256 normal, uint256 shortSet, uint256 toggled) = _countEvents(address(off));
         assertEq(normal, 1, "NormalDelayChanged(0, d)");
-        assertEq(shortSet, 34, "ShortDelaySelectorSet per listed entry");
+        assertEq(shortSet, 33, "ShortDelaySelectorSet per listed entry");
         assertEq(toggled, 1, "PublicExecutionToggled(false)");
     }
 

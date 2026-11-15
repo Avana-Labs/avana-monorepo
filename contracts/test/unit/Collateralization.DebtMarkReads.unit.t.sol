@@ -174,6 +174,31 @@ contract CollateralizationDebtMarkReadsUnitTest is CollateralizationFixture {
         assertFalse(coll.getMarketDebtFree(vt), "mark unchanged");
     }
 
+    // TEST-272 verifies: REQ-COLL-040
+    /// @notice A read that fails with `InsufficientGas` from inside the Spoke (an LPOracle or DebtOracle starved by the
+    /// caller's gas limit, as a repay sent at an estimated limit can be) reverts with that error even with plenty of gas
+    /// left, so the mark cannot stay set by starvation; any other failure with gas left still changes nothing.
+    function test_TEST_272_oracleStarvedInsideTheReadReverts() public {
+        _mark(aliceProxy);
+        bytes memory read = abi.encodeCall(IAaveV4Spoke.getUserAccountData, (aliceProxy));
+        bytes memory starved =
+            abi.encodeWithSelector(ICollateralizationErrors.InsufficientGas.selector, 12_345, 1_000_000);
+        vm.mockCallRevert(aave.cdpSpoke, read, starved);
+        vm.startPrank(adapter);
+        lock.acquire();
+        vm.expectRevert(starved);
+        coll.markDebtFree(aliceProxy);
+        lock.release();
+        vm.stopPrank();
+        assertFalse(coll.getMarketDebtFree(vt), "mark unchanged");
+        vm.mockCallRevert(aave.cdpSpoke, read, abi.encodeWithSignature("Error(string)", "other"));
+        _markDebtFree(adapter, aliceProxy);
+        assertFalse(coll.getMarketDebtFree(vt), "another failure keeps the mark and does not revert");
+        vm.clearMockedCalls();
+        _markDebtFree(adapter, aliceProxy);
+        assertTrue(coll.getMarketDebtFree(vt), "a full read clears it");
+    }
+
     // ─── Helpers ───
 
     function _mark(

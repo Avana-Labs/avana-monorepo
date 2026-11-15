@@ -20,7 +20,7 @@ import {FeedDef} from "./types/FeedDef.sol";
 import {MarketParams} from "./types/MarketParams.sol";
 
 /// @title ParameterStoreListingLogic
-/// @notice Bodies of the listing-batch setters (a registered market's parameters and caps, a Hub's depositor cap, a (Hub, token) cap, feed definitions, a debt asset's rounding allowance), of each CDP Spoke's liquidation expectations, of the sequencer check and of the coverage ratio. Normal delay.
+/// @notice Bodies of the listing-batch setters (a registered market's parameters and caps, a (Hub, token) cap, feed definitions, a debt asset's rounding allowance), of each CDP Spoke's liquidation expectations, of the sequencer check and of the coverage ratio. Normal delay.
 /// @dev Initial writes neither check nor update `lastLoosenedAt`. Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
 /// `IParameterStoreLogic`.
 /// @custom:spec REQ-PSTORE-004, REQ-PSTORE-006, REQ-PSTORE-012, REQ-PSTORE-022, REQ-PSTORE-023, REQ-PSTORE-026, REQ-PSTORE-028, REQ-PSTORE-034, REQ-PSTORE-032, REQ-RISK-041, REQ-CONFIG-022, REQ-CONFIG-023
@@ -135,20 +135,6 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
     ) private {
         if (newValue > oldValue) emit CapLoosened(capKind, scope, oldValue, newValue, msg.sender);
         else if (newValue < oldValue) emit CapTightened(capKind, scope, oldValue, newValue, msg.sender);
-    }
-
-    /// @inheritdoc IParameterStoreListing
-    /// @custom:spec REQ-PSTORE-026, REQ-RISK-044
-    function setInitialHubCaps(
-        address hub,
-        uint256 initialDepositorUsdCap
-    ) external override {
-        _onlyDelegated();
-        _requireHub(hub);
-        if (_s().depositorUsdCap[hub] != 0) revert NotInListing();
-        if (initialDepositorUsdCap == 0 || initialDepositorUsdCap > USD_CAP_MAX) revert OutOfBounds();
-        _s().depositorUsdCap[hub] = initialDepositorUsdCap;
-        emit CapLoosened("depositorUsdCap", _a(hub), 0, initialDepositorUsdCap, msg.sender);
     }
 
     /// @inheritdoc IParameterStoreListing

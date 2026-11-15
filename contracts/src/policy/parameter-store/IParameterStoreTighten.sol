@@ -103,6 +103,8 @@ interface IParameterStoreTighten {
     ) external;
 
     /// @notice Lowers a market's `marketUsdCap`; existing records are unaffected.
+    /// @dev Reverts `NotStricter` unless below the current value and `OutOfBounds` below $10,000
+    /// (`USD_CAP_TIGHTEN_FLOOR`, 1,000,000,000,000 in 8-decimal USD) or below `topUpSliceUsd`.
     /// @param marketId Market identifier.
     /// @param value New cap, 8-decimal USD.
     /// @custom:spec REQ-RISK-042, REQ-RISK-044
@@ -121,6 +123,8 @@ interface IParameterStoreTighten {
     ) external;
 
     /// @notice Lowers a token's `tokenUsdCap(hub, token)`.
+    /// @dev Reverts `NotStricter` unless below the current value and `OutOfBounds` below $10,000
+    /// (`USD_CAP_TIGHTEN_FLOOR`).
     /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
     /// @param token Underlying pool token.
     /// @param value New cap, 8-decimal USD.
@@ -128,15 +132,6 @@ interface IParameterStoreTighten {
     function tightenTokenUsdCap(
         address hub,
         address token,
-        uint256 value
-    ) external;
-
-    /// @notice Lowers `depositorUsdCap(hub)`.
-    /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
-    /// @param value New cap, 8-decimal USD.
-    /// @custom:spec REQ-RISK-042, REQ-RISK-044
-    function tightenDepositorUsdCap(
-        address hub,
         uint256 value
     ) external;
 

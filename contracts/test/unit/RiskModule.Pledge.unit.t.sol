@@ -222,18 +222,13 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
 
     // TEST-272 verifies: REQ-RISK-079, REQ-RISK-021, SPEC-CAP-002, INV-028
     // Sources: 2.7 REQ-RISK-079 example (tokenUsdCap $10,000,000, $9,500,000 used)
-    function test_TEST_272_tokenAndDepositorCaps() public {
+    function test_TEST_272_tokenCaps() public {
         PledgeCounters memory k = _counters();
         store.setCaps(mid, 100_000_000e8, 100_000e8, 1e8);
         k.tokenUsed[1] = 9_500_000e8;
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
         _pledge(300_000e18, k, false); // $600,000
-        k.tokenUsed[1] = 0;
-        k.depositorUsed = 4_500_000e8;
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("DEPOSITOR")));
-        _pledge(300_000e18, k, false);
         k.tokenUsed = new uint256[](1);
-        k.depositorUsed = 0;
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
         _pledge(TEN_K, k, false);
     }
@@ -271,7 +266,6 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         store.setPoolShare(poolKey, 1000);
         store.setMinPledge(mid, 0);
         store.setCaps(mid, 100_000_000_000e8, 100_000e8, 1e8);
-        store.setDepositorCap(address(hub), 100_000_000_000e8);
         store.setTokenCap(address(hub), address(usdc), 100_000_000_000e8);
         store.setTokenCap(address(hub), address(usdt), 100_000_000_000e8);
         rHub.setSpokeConfig(VT_ASSET, address(spoke), type(uint40).max, 0);

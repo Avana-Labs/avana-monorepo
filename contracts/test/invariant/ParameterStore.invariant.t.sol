@@ -77,7 +77,6 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture {
         assertLe(cap, type(uint128).max);
         assertLe(store.topUpSliceUsd(M), cap, "slice above cap");
         assertGt(store.tokenUsdCap(address(hub), usdc), 0);
-        assertGt(store.depositorUsdCap(address(hub)), 0);
     }
 
     // TEST-225 verifies: REQ-CONFIG-050, REQ-CONFIG-052, REQ-PSTORE-024, REQ-PSTORE-030, REQ-PSTORE-018, REQ-RISK-042

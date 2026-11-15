@@ -66,7 +66,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
 
     /// @notice Body of `IParameterStoreAdmin.initialize`: checks and writes the chain and global values; the
     /// ParameterStore has already run `initializer` and granted the admin roles to `TIMELOCK`.
-    /// @dev `initialDepositorUsdCap` must be 0: depositor caps are per Hub and `setInitialHubCaps` writes each one.
+    /// @dev `initialDepositorUsdCap` must be 0: there is no per-depositor cap.
     /// The sequencer check starts empty (`address(0)`, 0), Ethereum's value; on an L2 the first batch calls
     /// `setSequencer`.
     /// @custom:spec REQ-PSTORE-001, REQ-CONFIG-050, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-023, REQ-PSTORE-030

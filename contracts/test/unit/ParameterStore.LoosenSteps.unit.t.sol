@@ -46,12 +46,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         return keccak256(abi.encode(a, b));
     }
 
-    function _a(
-        address a
-    ) internal pure returns (bytes32) {
-        return bytes32(uint256(uint160(a)));
-    }
-
     function _call(
         bytes memory data
     ) internal returns (bool ok, bytes memory ret) {
@@ -143,11 +137,11 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 4)));
         assertEq(store.marketUsdCap(M), 4);
         // From 2, exactly 3 is the edge.
-        _accepts(abi.encodeCall(store.setInitialHubCaps, (hub2, 2)));
-        bytes32 dep = _key("depositorUsdCap", _a(hub2));
-        _refuses(abi.encodeCall(store.loosenDepositorUsdCap, (hub2, 4)), _tooLarge(dep));
-        _accepts(abi.encodeCall(store.loosenDepositorUsdCap, (hub2, 3)));
-        assertEq(store.depositorUsdCap(hub2), 3);
+        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdc, 2)));
+        bytes32 two = _key("tokenUsdCap", _pair(hub2, usdc));
+        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 4)), _tooLarge(two));
+        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 3)));
+        assertEq(store.tokenUsdCap(hub2, usdc), 3);
         _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, 7)));
         bytes32 tok = _key("tokenUsdCap", _pair(hub2, usdt));
         _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 11)), _tooLarge(tok));
@@ -181,29 +175,26 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     function test_TEST_225_everyStepLimitedSetterIsSpaced() public {
         _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.2e18)));
         uint256 t = block.timestamp;
-        bytes[6] memory first = [
+        bytes[5] memory first = [
             abi.encodeCall(store.loosenHardHealthFloor, (M, 1.18e18)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 110)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 600_000e8)),
-            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8)),
-            abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_100_000e8))
+            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8))
         ];
-        bytes[6] memory second = [
+        bytes[5] memory second = [
             abi.encodeCall(store.loosenHardHealthFloor, (M, 1.16e18)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 120)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 7_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 700_000e8)),
-            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 22_000_000e8)),
-            abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_200_000e8))
+            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 22_000_000e8))
         ];
-        bytes32[6] memory keys = [
+        bytes32[5] memory keys = [
             _key("hardHealthFloor", bytes32(M)),
             _key("slippageAllowanceBps", bytes32(M)),
             _key("marketUsdCap", bytes32(M)),
             _key("topUpSliceUsd", bytes32(M)),
-            _key("tokenUsdCap", _pair(address(hub), usdc)),
-            _key("depositorUsdCap", _a(address(hub)))
+            _key("tokenUsdCap", _pair(address(hub), usdc))
         ];
         for (uint256 i = 0; i < first.length; ++i) {
             assertEq(store.lastLoosenedAt(keys[i]), 0);
@@ -247,9 +238,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         _accepts(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8)));
         _accepts(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdt, 1_500_000e8)));
         _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 1_500_000e8)));
-        _accepts(abi.encodeCall(store.setInitialHubCaps, (hub2, 1_000_000e8)));
-        _accepts(abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_100_000e8)));
-        _accepts(abi.encodeCall(store.loosenDepositorUsdCap, (hub2, 1_500_000e8)));
         // Each is now spaced on its own key only.
         uint256 next = block.timestamp + NORMAL_DELAY;
         _refuses(
@@ -431,7 +419,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         vm.stopPrank();
         bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
         bytes memory notLooser = abi.encodeWithSelector(IParameterStoreErrors.NotLooser.selector);
-        bytes[15] memory same = [
+        bytes[14] memory same = [
             abi.encodeCall(store.loosenHardHealthFloor, (M, 1.1e18)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 100)),
             abi.encodeCall(store.loosenFloorRoundingAllowance, (gho, 1e17)),
@@ -439,7 +427,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
             abi.encodeCall(store.loosenMarketUsdCap, (M, 5_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 500_000e8)),
             abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 20_000_000e8)),
-            abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_000_000e8)),
             abi.encodeCall(store.loosenPoolShareMaxBps, (10_000)),
             abi.encodeCall(store.loosenMinPledgeUsd, (M, 10e8)),
             abi.encodeCall(store.loosenPoolShareMaxBpsOf, (M, store.poolShareMaxBpsOf(key))),

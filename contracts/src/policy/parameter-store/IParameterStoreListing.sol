@@ -9,7 +9,7 @@ import {MarketParams} from "./types/MarketParams.sol";
 
 /// @title IParameterStoreListing
 /// @notice Setters the listing batches of markets, tokens and debt reserves use: initial market parameters and caps,
-/// a Hub's depositor cap, feed definitions, and debt-asset parameters.
+/// feed definitions, and debt-asset parameters.
 /// @dev Every setter requires `APPLICATION_ADMIN` and runs through the timelock at the normal delay.
 interface IParameterStoreListing {
     /// @notice Writes a registered market's parameters, including `minPledgeUsd`.
@@ -41,16 +41,6 @@ interface IParameterStoreListing {
         uint256 initialMarketUsdCap,
         uint256 initialTopUpSliceUsd,
         uint256 initialStressFloorUsd
-    ) external;
-
-    /// @notice Writes a Hub's depositor cap, in the batch of the first `deployCdpSpoke` that names `hub` as home Hub.
-    /// @dev Reverts `NotInListing` if the Hub already has a depositor cap.
-    /// @param hub The Hub.
-    /// @param initialDepositorUsdCap Exposure cap per depositor across every market of the Hub, 8-decimal USD.
-    /// @custom:spec REQ-PSTORE-026
-    function setInitialHubCaps(
-        address hub,
-        uint256 initialDepositorUsdCap
     ) external;
 
     /// @notice Writes the initial exposure cap of a listed token on a Hub that has none yet.

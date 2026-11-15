@@ -1,13 +1,14 @@
 {
   "name": "caps-zero",
-  "description": "tighten the stable Hub's depositor cap to 0: the ParameterStore's floor refuses it",
+  "description": "tighten the stable Hub's USDT cap to 0: the ParameterStore's floor refuses it",
   "via": "timelock",
   "changes": [
     {
       "contract": "ParameterStore",
-      "function": "tightenDepositorUsdCap",
+      "function": "tightenTokenUsdCap",
       "args": {
         "hub": "hub:stable",
+        "token": "token:USDT",
         "value": "0"
       }
     }

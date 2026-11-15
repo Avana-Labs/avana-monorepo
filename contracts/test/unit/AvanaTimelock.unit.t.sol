@@ -119,7 +119,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         SelectorPair[] memory shortList = TimelockShortDelayLists.shortEligible(
             address(parameterStore), address(marketRegistry), address(lpVaultSwap)
         );
-        assertEq(shortList.length, 34);
+        assertEq(shortList.length, 33);
         for (uint256 i; i < shortList.length; ++i) {
             assertTrue(timelock.isShortEligible(shortList[i].target, shortList[i].selector), "eligible");
             assertTrue(timelock.isShortDelaySelector(shortList[i].target, shortList[i].selector), "listed");

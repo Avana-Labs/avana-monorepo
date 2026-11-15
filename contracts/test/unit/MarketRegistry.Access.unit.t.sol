@@ -244,12 +244,11 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     /// added to the MarketRegistry or one of its logic contracts.
     // TEST-032 verifies: REQ-CONFIG-014
     function test_TEST_032_noRiskParameterModeAllowlistOrWalletCapSelectors() public {
-        bytes4[49] memory params = [
+        bytes4[46] memory params = [
             IParameterStoreRiskViews.marketUsdCap.selector,
             IParameterStoreRiskViews.topUpSliceUsd.selector,
             IParameterStoreRiskViews.stressFloorUsd.selector,
             IParameterStoreRiskViews.tokenUsdCap.selector,
-            IParameterStoreRiskViews.depositorUsdCap.selector,
             IParameterStoreRiskViews.poolShareMaxBps.selector,
             IParameterStoreRiskViews.minPledgeUsd.selector,
             IParameterStoreRiskViews.debtAssetParams.selector,
@@ -266,7 +265,6 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             IParameterStoreTighten.tightenMarketUsdCap.selector,
             IParameterStoreTighten.tightenTopUpSliceUsd.selector,
             IParameterStoreTighten.tightenTokenUsdCap.selector,
-            IParameterStoreTighten.tightenDepositorUsdCap.selector,
             IParameterStoreTighten.tightenPoolShareMaxBps.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
             IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
@@ -277,7 +275,6 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             IParameterStoreLoosen.loosenMarketUsdCap.selector,
             IParameterStoreLoosen.loosenTopUpSliceUsd.selector,
             IParameterStoreLoosen.loosenTokenUsdCap.selector,
-            IParameterStoreLoosen.loosenDepositorUsdCap.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,

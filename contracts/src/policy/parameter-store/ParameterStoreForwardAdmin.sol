@@ -236,15 +236,6 @@ abstract contract ParameterStoreForwardAdmin is ParameterStoreRouter, IParameter
     }
 
     /// @inheritdoc IParameterStoreListing
-    /// @custom:spec REQ-PSTORE-026
-    function setInitialHubCaps(
-        address,
-        uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LISTING_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreListing
     /// @custom:spec REQ-RISK-041, REQ-PSTORE-012, REQ-PSTORE-026
     function setInitialTokenCap(
         address,

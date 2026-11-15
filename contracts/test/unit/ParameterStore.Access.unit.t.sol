@@ -256,8 +256,8 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
                 assertEq(ret, unauthorized, "wrong revert");
             }
         }
-        // The 20 tighten setters and setAvanaFeeShareBps.
-        assertEq(allowed, 21);
+        // The 19 tighten setters and setAvanaFeeShareBps.
+        assertEq(allowed, 20);
         // The steward cannot grant its own role or any other.
         vm.prank(jointSafe);
         vm.expectRevert(
@@ -385,7 +385,6 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
             || sel == IParameterStoreTighten.tightenMarketUsdCap.selector
             || sel == IParameterStoreTighten.tightenTopUpSliceUsd.selector
             || sel == IParameterStoreTighten.tightenTokenUsdCap.selector
-            || sel == IParameterStoreTighten.tightenDepositorUsdCap.selector
             || sel == IParameterStoreTighten.tightenPoolShareMaxBps.selector
             || sel == IParameterStoreTighten.tightenMinPledgeUsd.selector
             || sel == IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector
@@ -400,7 +399,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         FeedDef memory fd;
         SecondSource memory ss;
         DebtReserveParams memory dp;
-        c = new bytes[](67);
+        c = new bytes[](64);
         uint256 k;
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenHardHealthFloor, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenSlippageAllowanceBps, (M, 1));
@@ -413,7 +412,6 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenTopUpSliceUsd, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (address(hub), usdc, 1));
-        c[k++] = abi.encodeCall(IParameterStoreTighten.tightenDepositorUsdCap, (address(hub), 1));
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBps, (1));
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenMinPledgeUsd, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBpsOf, (M, 1));
@@ -424,7 +422,6 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenMarketUsdCap, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenTopUpSliceUsd, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenTokenUsdCap, (address(hub), usdc, 1));
-        c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenDepositorUsdCap, (address(hub), 1));
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenPoolShareMaxBps, (1));
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenMinPledgeUsd, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenPoolShareMaxBpsOf, (M, 1));
@@ -453,7 +450,6 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(IParameterStoreAdmin.setStressFloorUsd, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreListing.setInitialMarketParams, (M, mp));
         c[k++] = abi.encodeCall(IParameterStoreListing.setInitialMarketCaps, (M, 1, 1, 1));
-        c[k++] = abi.encodeCall(IParameterStoreListing.setInitialHubCaps, (address(hub), 1));
         c[k++] = abi.encodeCall(IParameterStoreListing.setInitialTokenCap, (address(hub), usdc, 1));
         c[k++] = abi.encodeCall(IParameterStoreListing.setFeed, (usdc, fd));
         c[k++] = abi.encodeCall(IParameterStoreListing.setDebtAssetParams, (gho, dp));

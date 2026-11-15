@@ -156,7 +156,7 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     ) external {
         (uint256 before, uint256 slice) = (_s().marketUsdCap[M], _s().topUpSliceUsd[M]);
         bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenMarketUsdCap, (M, value)));
-        assert(ok == (value < before && value != 0 && value >= slice));
+        assert(ok == (value < before && value >= 10_000e8 && value >= slice));
     }
 
     function tightenSlice(

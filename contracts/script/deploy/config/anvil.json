@@ -107,7 +107,7 @@
   },
   "parameters": {
     "initialPoolShareMaxBps": 10000,
-    "maxMarketCount": 64,
+    "maxMarketCount": 16,
     "keeperFloor": 1,
     "globals": {
       "cachedWindow": 3600,
@@ -840,7 +840,6 @@
       "driftBps": 10,
       "maxAnswerCap": "1000000000000000000"
     },
-    "hubDepositorUsdCap": "2000000",
     "creditLineWhole": 50000000,
     "tokens": [
       {

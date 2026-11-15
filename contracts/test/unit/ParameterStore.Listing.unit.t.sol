@@ -234,11 +234,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         assertEq(store.marketUsdCap(M), 5_000_000e8);
         assertEq(store.topUpSliceUsd(M), 500_000e8);
         assertEq(store.stressFloorUsd(M), 1e8);
-        assertEq(store.depositorUsdCap(address(hub)), 1_000_000e8);
         address h = address(hub);
-        _tl();
-        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
-        store.setInitialHubCaps(h, 1);
         _tl();
         vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
         store.setInitialTokenCap(h, usdc, 1);

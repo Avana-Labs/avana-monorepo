@@ -204,7 +204,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         _requireMarket(marketId);
         uint256 old = _s().marketUsdCap[marketId];
         if (value >= old) revert NotStricter();
-        if (value == 0 || value < _s().topUpSliceUsd[marketId]) revert OutOfBounds();
+        if (value < USD_CAP_TIGHTEN_FLOOR || value < _s().topUpSliceUsd[marketId]) revert OutOfBounds();
         _s().marketUsdCap[marketId] = value;
         emit CapTightened("marketUsdCap", bytes32(marketId), old, value, msg.sender);
     }
@@ -234,24 +234,9 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         _requireHub(hub);
         uint256 old = _s().tokenUsdCap[hub][token];
         if (value >= old) revert NotStricter();
-        if (value == 0) revert OutOfBounds();
+        if (value < USD_CAP_TIGHTEN_FLOOR) revert OutOfBounds();
         _s().tokenUsdCap[hub][token] = value;
         emit CapTightened("tokenUsdCap", _pair(hub, token), old, value, msg.sender);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
-    function tightenDepositorUsdCap(
-        address hub,
-        uint256 value
-    ) external override {
-        _onlyDelegated();
-        _requireHub(hub);
-        uint256 old = _s().depositorUsdCap[hub];
-        if (value >= old) revert NotStricter();
-        if (value == 0) revert OutOfBounds();
-        _s().depositorUsdCap[hub] = value;
-        emit CapTightened("depositorUsdCap", _a(hub), old, value, msg.sender);
     }
 
     /// @inheritdoc IParameterStoreTighten

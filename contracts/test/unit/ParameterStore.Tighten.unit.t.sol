@@ -174,12 +174,30 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenTokenUsdCap(h, usdt, 1);
         _tl();
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, alice));
-        store.tightenDepositorUsdCap(alice, 1);
-        _tl();
-        store.tightenDepositorUsdCap(h, 500_000e8);
+        store.tightenTokenUsdCap(alice, usdc, 1);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.tightenDepositorUsdCap(h, 0);
+        store.tightenTokenUsdCap(h, usdc, 0);
+    }
+
+    // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
+    function test_TEST_272_capTighteningStopsAtTenThousandDollars() public {
+        // The slice goes to 0 first, so only the $10,000 floor refuses the market cap.
+        _tl();
+        store.tightenTopUpSliceUsd(M, 0);
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        store.tightenMarketUsdCap(M, 10_000e8 - 1);
+        _tl();
+        store.tightenMarketUsdCap(M, 10_000e8);
+        assertEq(store.marketUsdCap(M), 10_000e8);
+        address h = address(hub);
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        store.tightenTokenUsdCap(h, usdc, 10_000e8 - 1);
+        _tl();
+        store.tightenTokenUsdCap(h, usdc, 10_000e8);
+        assertEq(store.tokenUsdCap(h, usdc), 10_000e8);
     }
 
     // TEST-272 verifies: REQ-RISK-042, SPEC-CAP-005, Q-383, Q-399, Q-403

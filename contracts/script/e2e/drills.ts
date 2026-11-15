@@ -290,7 +290,7 @@ function switchDrill(forward: string, backward: string | (() => string), want: R
 
 const DRILLS: Record<string, Drill> = {
   // Caps: the ParameterStore refuses a zero cap, so the drill asks for 0 (refused by the limit check), tightens the
-  // stable Hub's depositor cap below a 300k pledge through the risk steward, then loosens it back in ×1.5 steps.
+  // stable Hub's USDT cap below a 300k pledge through the risk steward, then loosens it back in ×1.5 steps.
   async caps(e, c, log) {
     const s = loadState();
     await e.settle();
@@ -298,14 +298,15 @@ const DRILLS: Record<string, Drill> = {
     const zero = changes("caps-zero.json", log);
     c.that("a zero cap is refused before anything is sent", zero.code === 2 && /zero cap/.test(zero.text), zero.text.split("\n").find((l) => /REFUSED/.test(l)) ?? `exit ${zero.code}`);
     mustApply("caps-forward.json", log);
-    c.refused("forward: 300k pledge above the 200k depositor cap", await pledgeProbe(e, s), /CapExceeded/);
+    c.refused("forward: 300k pledge above the 200k USDT cap", await pledgeProbe(e, s), /CapExceeded/);
     c.works("forward: borrow by an existing account", await borrowProbe(e, s.borrower));
     mustApply("caps-back.json", log);
     await e.settle();
     const hub = e.market(M1).hub;
-    const cap = (await e.read(ctx.manifest.avana.parameterStore.address, parameterStoreAbi, "depositorUsdCap", [hub])) as bigint;
+    const usdt = e.token("USDT");
+    const cap = (await e.read(ctx.manifest.avana.parameterStore.address, parameterStoreAbi, "tokenUsdCap", [hub, usdt])) as bigint;
     const prior = JSON.parse(readFileSync(join(out, "changes-caps-forward.json"), "utf8")).changes[0].prior.value;
-    c.that("backward: depositor cap restored", cap === BigInt(prior.$big ?? prior), `${cap} (was ${prior.$big ?? prior})`);
+    c.that("backward: USDT cap restored", cap === BigInt(prior.$big ?? prior), `${cap} (was ${prior.$big ?? prior})`);
     c.works("backward: 300k pledge", await pledgeProbe(e, s));
   },
 

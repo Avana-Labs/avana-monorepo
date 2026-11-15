@@ -311,14 +311,6 @@ abstract contract ParameterStoreViews is ParameterStoreRouter, IParameterStoreVi
     }
 
     /// @inheritdoc IParameterStoreRiskViews
-    /// @custom:spec SPEC-CAP-002, REQ-PSTORE-026
-    function depositorUsdCap(
-        address hub
-    ) external view override returns (uint256 value) {
-        value = _s().depositorUsdCap[hub];
-    }
-
-    /// @inheritdoc IParameterStoreRiskViews
     /// @custom:spec SPEC-CAP-005, Q-399, Q-403
     function poolShareMaxBps() external view override returns (uint16 value) {
         value = _s().poolShareMaxBps;

@@ -159,28 +159,6 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         }
     }
 
-    function loosenDepositorCap(
-        uint256 v
-    ) external {
-        uint256 old = STORE.depositorUsdCap(HUB);
-        v = bound(v, old, old + old / 2 + 2);
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenDepositorUsdCap, (HUB, v)))) {
-            if (v * 10_000 > old * 15_000) ++stepEscaped;
-            _spaced(_key("depositorUsdCap", bytes32(uint256(uint160(HUB)))));
-        }
-    }
-
-    function tightenDepositorCap(
-        uint256 v,
-        bool steward
-    ) external {
-        uint256 old = STORE.depositorUsdCap(HUB);
-        v = bound(v, 0, old + 1);
-        if (_as(_tightener(steward), abi.encodeCall(STORE.tightenDepositorUsdCap, (HUB, v))) && v >= old) {
-            ++wrongDirection;
-        }
-    }
-
     // ─── Market risk values ───
 
     function tightenSlippage(

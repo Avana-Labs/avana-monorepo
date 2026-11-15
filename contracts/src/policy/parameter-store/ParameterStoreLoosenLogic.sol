@@ -182,23 +182,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017, REQ-PSTORE-026
-    function loosenDepositorUsdCap(
-        address hub,
-        uint256 value
-    ) external override {
-        _onlyDelegated();
-        _requireHub(hub);
-        uint256 old = _s().depositorUsdCap[hub];
-        if (value <= old) revert NotLooser();
-        if (value > USD_CAP_MAX) revert OutOfBounds();
-        _step(value * BPS <= old * CAP_STEP_BPS, "depositorUsdCap", _a(hub));
-        _spaceLoosening("depositorUsdCap", _a(hub));
-        _s().depositorUsdCap[hub] = value;
-        emit CapLoosened("depositorUsdCap", _a(hub), old, value, msg.sender);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
     /// @custom:spec REQ-RISK-043, REQ-RISK-044, Q-399, Q-403
     function loosenPoolShareMaxBps(
         uint16 value

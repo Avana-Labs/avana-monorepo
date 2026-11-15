@@ -193,8 +193,6 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         (ok,, s) = _init(g, 0, 10_000);
         assertTrue(ok);
         assertEq(s.poolShareMaxBps(), 10_000);
-        // No Hub has a depositor cap until its first CDP Spoke's batch writes one.
-        assertEq(s.depositorUsdCap(address(hub)), 0);
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-056

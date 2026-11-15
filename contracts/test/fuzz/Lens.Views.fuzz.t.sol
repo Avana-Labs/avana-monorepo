@@ -64,23 +64,19 @@ contract LensViewsFuzzTest is LensFixture {
     function testFuzz_TEST_247_capHeadroomFormula(
         uint256 units,
         uint256 marketCap,
-        uint256 tokenCap,
-        uint256 depositorCap
+        uint256 tokenCap
     ) public {
         units = bound(units, 10e6, 100_000e6);
         _open(alice, aliceProxy, 1, uint128(units));
         marketCap = bound(marketCap, 0, 10_000_000e8);
         tokenCap = bound(tokenCap, 0, 10_000_000e8);
-        depositorCap = bound(depositorCap, 0, 10_000_000e8);
         store.setCaps(MARKET_ID, marketCap, 100_000e8, 1e8);
         store.setTokenCap(aave.hub, address(usdc), tokenCap);
-        store.setDepositorCap(aave.hub, depositorCap);
         CapView memory c = lens.getCapHeadroom(vt, alice);
         uint256 charge = units * 2e8 / 1e6;
         assertEq(c.marketHeadroomUsd, marketCap > charge ? marketCap - charge : 0, "market");
         uint256 usedUsdc = coll.getCounters(vt, alice).tokenUsed[0];
         assertEq(c.tokenHeadroomUsd[0], tokenCap > usedUsdc ? tokenCap - usedUsdc : 0, "USDC");
-        assertEq(c.depositorHeadroomUsd, depositorCap > charge ? depositorCap - charge : 0, "depositor");
     }
 
     // TEST-238 verifies: REQ-LENS-038, SPEC-CAP-001

@@ -38,6 +38,7 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(uint256 marketId => uint256) topUpSliceUsd;
         mapping(uint256 marketId => uint256) stressFloorUsd;
         mapping(address hub => mapping(address token => uint256)) tokenUsdCap;
+        // Retired: the per-depositor cap was removed; never written or read. Kept so later fields keep their slots.
         mapping(address hub => uint256) depositorUsdCap;
         mapping(bytes32 poolKey => uint16) poolShareOverride;
         mapping(address token => uint16) tokenCollateralFactorBps;
@@ -89,6 +90,9 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     uint32 internal constant SEQUENCER_GRACE_MIN = 600;
     uint32 internal constant SEQUENCER_GRACE_MAX = 7200;
     uint256 internal constant USD_CAP_MAX = type(uint128).max;
+    /// @dev The lowest value `tightenMarketUsdCap` and `tightenTokenUsdCap` may set, $10,000 in 8-decimal USD
+    /// (REQ-RISK-042): a tightening cannot shut a market or token to dust; closing one is an offboarding.
+    uint256 internal constant USD_CAP_TIGHTEN_FLOOR = 10_000e8;
     uint16 internal constant SECOND_SOURCE_TOLERANCE_MAX_BPS = 500;
     uint16 internal constant MIN_LIQUIDATION_BONUS_FLOOR = 200;
     uint16 internal constant MAX_QUOTE_CHANGE_BPS = 100;

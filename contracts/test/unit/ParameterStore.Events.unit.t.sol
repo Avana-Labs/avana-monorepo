@@ -207,10 +207,6 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         registry.setHub(hub2, true);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("depositorUsdCap", _a(hub2), 0, 750_000e8, address(timelock));
-        store.setInitialHubCaps(hub2, 750_000e8);
-        _tl();
-        vm.expectEmit(address(store));
         emit IParameterStoreEvents.CapLoosened("tokenUsdCap", _pair(hub2, usdt), 0, 3_000_000e8, address(timelock));
         store.setInitialTokenCap(hub2, usdt, 3_000_000e8);
     }
@@ -243,10 +239,6 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         vm.expectEmit(address(store));
         emit IParameterStoreEvents.CapLoosened("tokenUsdCap", _pair(address(hub), usdc), 20_000_000e8, 30_000_000e8, tl);
         store.loosenTokenUsdCap(address(hub), usdc, 30_000_000e8);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("depositorUsdCap", _a(address(hub)), 1_000_000e8, 1_500_000e8, tl);
-        store.loosenDepositorUsdCap(address(hub), 1_500_000e8);
     }
 
     // TEST-061 verifies: REQ-RISK-043, Q-383, Q-403

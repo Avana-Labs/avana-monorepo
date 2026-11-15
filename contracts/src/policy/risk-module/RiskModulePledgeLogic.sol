@@ -42,7 +42,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     bytes32 internal constant CAP_MARKET = "MARKET";
     bytes32 internal constant CAP_SLICE = "SLICE";
     bytes32 internal constant CAP_TOKEN = "TOKEN";
-    bytes32 internal constant CAP_DEPOSITOR = "DEPOSITOR";
 
     /// @notice Fixes the implementation immutables and the drift and breaker logic.
     /// @param im The per-chain Avana addresses.
@@ -246,9 +245,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
                 // forge-lint: disable-next-line(require-revert-in-loop)
                 revert CapExceeded(CAP_TOKEN);
             }
-        }
-        if (!RiskModuleMath.fits(k.depositorUsed, regular, _store().depositorUsdCap(c.m.hub))) {
-            revert CapExceeded(CAP_DEPOSITOR);
         }
     }
 

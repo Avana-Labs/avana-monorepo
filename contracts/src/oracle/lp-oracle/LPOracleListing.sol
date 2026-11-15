@@ -359,7 +359,23 @@ abstract contract LPOracleListing is LPOracleViews {
         return ok && _marketMatches(ret) ? 0 : LPOracleCodes.CHECK_MARKET;
     }
 
-    /// @dev Decodes the `Market` head words `integration` (4), `tokens` (10), `decimals` (13) and `lpOracle` (14).
+    /// @dev The `Market` head words 5 to 9 (pool, pool identifier, shape kind, lower and upper tick) name the module's
+    /// own market (`_isOwnMarket`); a short answer does not.
+    function _ownMarketWords(
+        bytes memory ret,
+        uint256 head
+    ) private view returns (bool) {
+        uint256[5] memory w;
+        for (uint256 i = 0; i < 5; ++i) {
+            bool ok;
+            (ok, w[i]) = LPOracleCalls.wordAt(ret, head + (5 + i) * WORD);
+            if (!ok) return false;
+        }
+        return _isOwnMarket(w[0], w[1], w[2], w[3], w[4]);
+    }
+
+    /// @dev Decodes the `Market` head words `integration` (4), `pool` (5), `poolId` (6), `shape` (7 to 9), `tokens` (10),
+    /// `decimals` (13) and `lpOracle` (14); the pool, pool identifier and shape must be the module's own market.
     function _marketMatches(
         bytes memory ret
     ) private view returns (bool) {
@@ -377,6 +393,7 @@ abstract contract LPOracleListing is LPOracleViews {
         {
             return false;
         }
+        if (!_ownMarketWords(ret, head)) return false;
         uint256 n = $.tokens.length;
         uint256 count = 0;
         (ok, count) = LPOracleCalls.wordAt(ret, head + tokensAt);

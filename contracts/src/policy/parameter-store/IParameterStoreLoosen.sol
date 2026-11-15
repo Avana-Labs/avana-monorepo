@@ -92,15 +92,6 @@ interface IParameterStoreLoosen {
         uint256 value
     ) external;
 
-    /// @notice Raises `depositorUsdCap(hub)`, to at most 1.5 times the current value.
-    /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
-    /// @param value New cap, 8-decimal USD.
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017
-    function loosenDepositorUsdCap(
-        address hub,
-        uint256 value
-    ) external;
-
     /// @notice Raises `poolShareMaxBps`, the pool-share cap and the concentration gate (Q-399).
     /// @dev Within its hard bounds (`OutOfBounds`).
     /// @param value New maximum share, bps.

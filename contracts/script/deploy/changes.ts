@@ -16,7 +16,7 @@
 //     "restores": "market-breaker-forward",       optional: "$prior" values come from that earlier run
 //     "changes": [
 //       { "contract": "MarketRegistry", "function": "tripMarketBreaker", "args": { "marketId": "market:uni-USDC-USDT-100" } },
-//       { "contract": "ParameterStore", "function": "loosenDepositorUsdCap", "args": { "hub": "hub:stable", "value": "$prior" },
+//       { "contract": "ParameterStore", "function": "loosenTokenUsdCap", "args": { "hub": "hub:stable", "token": "token:USDT", "value": "$prior" },
 //         "steps": true },                        a step-limited loosening split into ×1.5 operations, one per normal delay
 //       { "aave": "spokeConfig", "hub": "hub:stable", "asset": "token:GHO", "spoke": "spoke:uniV3Stable", "set": { "drawCap": 0 } },
 //       { "aave": "reserveConfig", "spoke": "spoke:uniV3Stable", "reserve": "collateral:uni-USDC-USDT-100", "set": { "frozen": true } },
@@ -273,7 +273,6 @@ interface Call {
 const CAPS: Record<string, { view: string; scopeArgs: number }> = {
   MarketUsdCap: { view: "marketUsdCap", scopeArgs: 1 },
   TokenUsdCap: { view: "tokenUsdCap", scopeArgs: 2 },
-  DepositorUsdCap: { view: "depositorUsdCap", scopeArgs: 1 },
   TopUpSliceUsd: { view: "topUpSliceUsd", scopeArgs: 1 },
 };
 
@@ -319,7 +318,7 @@ async function buildCall(c: CallChange, prior: Json | undefined): Promise<Call> 
 /** Limit checks that do not depend on who sends: the ParameterStore's hard bounds and loosening steps. */
 async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
   if (call.target !== STORE) return "";
-  const m = /^(tighten|loosen)(MarketUsdCap|TokenUsdCap|DepositorUsdCap|TopUpSliceUsd)$/.exec(call.fn);
+  const m = /^(tighten|loosen)(MarketUsdCap|TokenUsdCap|TopUpSliceUsd)$/.exec(call.fn);
   if (!m) return "";
   const kind = m[1]!;
   const cap = CAPS[m[2]!]!;
@@ -329,6 +328,10 @@ async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
   if (kind === "tighten") {
     if (value === 0n) {
       throw new Refused(`${call.label}: the ParameterStore refuses a zero cap (OutOfBounds); to stop new exposure use a breaker, a pause or an Aave cap of 0`);
+    }
+    // USD_CAP_TIGHTEN_FLOOR: a market or token cap cannot be tightened below $10,000.
+    if ((cap.view === "marketUsdCap" || cap.view === "tokenUsdCap") && value < 1_000_000_000_000n) {
+      throw new Refused(`${call.label}: below the $10,000 tightening floor (OutOfBounds)`);
     }
     if (value >= current) throw new Refused(`${call.label}: not stricter than the current ${current} (NotStricter)`);
     // A loosening moves at most ×1.5 (⌊1 × 1.5⌋ = 1), so a cap at 1 can never be raised again: refused here.
@@ -804,7 +807,7 @@ async function main() {
 
 /** A step-limited loosening to a value more than one step away: one operation per step of ×LOOSEN_CAP_STEP_BPS, each run after the previous one's normal delay. */
 async function runSteps(name: string, call: Call, log: string[]): Promise<Json> {
-  const m = /^loosen(MarketUsdCap|TokenUsdCap|DepositorUsdCap)$/.exec(call.fn);
+  const m = /^loosen(MarketUsdCap|TokenUsdCap)$/.exec(call.fn);
   if (!m) throw new Refused(`${call.fn} is not a step-limited cap loosening`);
   const cap = CAPS[m[1]!]!;
   const scope = call.args.slice(0, cap.scopeArgs);

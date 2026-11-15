@@ -166,9 +166,10 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
     }
 
     /// @notice With the primary route of a released token disabled through the real timelock and MarketRegistry, the
-    /// preview asks for `BackupOnly`, which settles without touching the primary's pool.
+    /// token keeps a usable backup, so the preview asks for `PrimaryThenBackup`; LPVaultSwap skips the unusable primary
+    /// and settles through the backup without touching the primary's pool.
     // TEST-205 verifies: REQ-LENS-028, REQ-SWAP-022
-    function test_TEST_205_backupOnlyWhenPrimaryUnusable() public {
+    function test_TEST_205_unusablePrimaryIsSkippedForTheBackup() public {
         address proxy = _account(bob, usdcReserveId);
         _depegUsdt(93_000_000);
         _govern(
@@ -177,7 +178,7 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         (, bool usable) = registry.getRoute(mA, address(usdt), address(usdc), 0);
         assertFalse(usable, "the primary USDT -> USDC route is disabled");
         LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
-        assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "backup routes only");
+        assertEq(uint8(p.params.routeMode), uint8(RouteMode.PrimaryThenBackup), "the backup is usable");
         IClPool primaryPool = routePoolOf[address(usdt)][address(usdc)][0];
         IClPool backupPool = routePoolOf[address(usdt)][address(usdc)][1];
         uint256 primaryUsdt = usdt.balanceOf(address(primaryPool));

@@ -209,7 +209,6 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         store.setTokenCollateralFactorBps(usdt, 7500);
         store.setInitialMarketParams(M, _defaultMarketParams());
         store.setInitialMarketCaps(M, 5_000_000e8, 500_000e8, 1e8);
-        store.setInitialHubCaps(address(hub), 1_000_000e8);
         store.setInitialTokenCap(address(hub), usdc, 20_000_000e8);
         vm.stopPrank();
     }
