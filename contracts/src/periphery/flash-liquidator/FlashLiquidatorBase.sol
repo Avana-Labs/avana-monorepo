@@ -488,14 +488,15 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     function _clearStanding(
         Watch memory w
     ) private {
-        // The recipient is read only when a credit stands, and once, outside the claim loop.
+        // The recipient is read only when a credit stands, and once, outside the claim loop. It is never zero (the
+        // ParameterStore refuses a zero feeRecipient and the operator variant a zero FUNDING_SAFE); a claim to it that
+        // fails anyway leaves the credit standing.
         uint256 k = 0;
         while (k < w.count && w.credits[k] == 0) {
             ++k;
         }
         if (k == w.count) return;
         address to = _standingRecipient();
-        if (to == address(0)) return;
         for (uint256 i = k; i < w.count; ++i) {
             if (w.credits[i] == 0) continue;
             // Bounded by the watch list: at most 8 market tokens and their routes' intermediates. `claim` pays the
