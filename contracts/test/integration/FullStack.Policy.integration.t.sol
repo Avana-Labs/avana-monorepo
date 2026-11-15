@@ -97,7 +97,6 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         assertEq(k.regularUsed, charged, "regular budget = the charges booked");
         // About $20,000 each at the LPOracle's $2.00 per vault token (10,000 whole tokens), rounded up.
         assertEq(_record(kB).currentUsdCharge, _charge(UNITS), "charged at the LPOracle price");
-        assertEq(k.depositorUsed, _record(kB).currentUsdCharge, "Bob's depositor budget");
         uint256 used = k.regularUsed;
         assertEq(
             _requiredDelay(address(store), abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (mA, used))),
@@ -124,7 +123,6 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
             PledgeCounters memory afterK = coll.getCounters(vtA, bob);
             assertEq(afterK.regularUsed, before.regularUsed, "regular budget unchanged");
             assertEq(afterK.sliceUsed, before.sliceUsed, "slice unchanged");
-            assertEq(afterK.depositorUsed, before.depositorUsed, "depositor budget unchanged");
             vm.revertToState(snap);
         }
     }

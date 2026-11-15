@@ -185,11 +185,6 @@ export const riskModuleAbi = [
             "internalType": "uint128"
           },
           {
-            "name": "depositorUsed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "poolKey",
             "type": "bytes32",
             "internalType": "bytes32"

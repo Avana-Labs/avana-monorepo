@@ -109,7 +109,7 @@ definition PAUSE_GUARDIAN() returns bytes32 = to_bytes32(0xca16ee6b20db9286cfb1a
 // keccak256("APPLICATION_RISK_STEWARD")
 definition RISK_STEWARD() returns bytes32 = to_bytes32(0x80af594707954d7289f03f44a572035936215b9f928d89bf2ac5f1e37dc483ac);
 
-// The 20 tighten setters and setAvanaFeeShareBps: the selectors the Joint Configuration Safe's
+// The 19 tighten setters and setAvanaFeeShareBps: the selectors the Joint Configuration Safe's
 // APPLICATION_RISK_STEWARD may call beside APPLICATION_ADMIN (REQ-PSTORE-002, REQ-ROLE-117).
 definition stewardSelector(method f) returns bool =
     f.selector == sig:tightenHardHealthFloor(uint256, uint256).selector

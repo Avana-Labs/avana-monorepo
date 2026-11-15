@@ -166,7 +166,6 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         uint256 supply;
         uint128 regularUsed;
         uint128 sliceUsed;
-        uint256 depositorUsed;
         uint256 poolUnits;
         uint256 token0Used;
         uint256 token1Used;
@@ -186,7 +185,6 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
             supply: token2.totalSupply(),
             regularUsed: c.regularUsed,
             sliceUsed: c.sliceUsed,
-            depositorUsed: c.depositorUsed,
             poolUnits: c.poolUnits,
             token0Used: c.tokenUsed[0],
             token1Used: c.tokenUsed[1]
@@ -204,7 +202,6 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         assertEq(a.supply, b.supply, "vault-token supply (mint)");
         assertEq(a.regularUsed, b.regularUsed, "regular cap counter");
         assertEq(a.sliceUsed, b.sliceUsed, "slice counter");
-        assertEq(a.depositorUsed, b.depositorUsed, "depositor cap counter");
         assertEq(a.poolUnits, b.poolUnits, "pool-share counter");
         assertEq(a.token0Used, b.token0Used, "token0 cap counter");
         assertEq(a.token1Used, b.token1Used, "token1 cap counter");
@@ -318,13 +315,13 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         assertEq(nfpm.ownerOf(id), alice, "the position stays with its owner");
         assertEq(coll.recordIdOf(V3_INTEGRATION, bytes32(id)), 0, "no record");
         assertEq(coll.getTotalCredited(vt2), 0, "no credit");
-        assertEq(coll.getCounters(vt2, alice).depositorUsed, before.depositorUsed, "no counter moved");
+        assertEq(coll.getCounters(vt2, alice).regularUsed, before.regularUsed, "no counter moved");
     }
 
     /// @notice One Collateralization serves two markets of two AMM integrations on the same Hub: records, credited
-    /// totals and pending balances are keyed by vault token, so each market sees only its own; the depositor's
-    /// Hub-wide counter is keyed by Hub and carries both markets' charges.
-    /// @dev Kills: a ledger keyed by integration or by Spoke alone, or a depositor counter keyed by market.
+    /// totals and pending balances are keyed by vault token, so each market sees only its own; both markets' counters
+    /// name the same Hub.
+    /// @dev Kills: a ledger keyed by integration or by Spoke alone.
     // TEST-010 verifies: REQ-COLL-030, REQ-COLL-026
     function test_TEST_010_oneCollateralizationServesEveryMarketKeyedByVaultToken() public {
         _pledge(alice, aliceProxy, bytes32(uint256(42)), 3e9);
@@ -344,8 +341,6 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         assertGt(charge2, 0);
         assertEq(c1.hub, aave.hub);
         assertEq(c2.hub, aave.hub);
-        assertEq(c1.depositorUsed, uint256(charge1) + charge2, "the Hub-wide depositor counter holds both charges");
-        assertEq(c2.depositorUsed, c1.depositorUsed, "one counter per (Hub, depositor)");
         assertEq(coll.getPending(vt).units + coll.getPending(vt2).units, 0);
     }
 

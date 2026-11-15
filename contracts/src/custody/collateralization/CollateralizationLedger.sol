@@ -312,16 +312,14 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         return r.credited;
     }
 
-    /// @notice The exposure counters of `depositor`'s pledge into the context's market, `accountRecords` left 0.
+    /// @notice The exposure counters of a pledge into the context's market, `accountRecords` left 0.
     /// @custom:spec REQ-VAULT-014, REQ-VAULT-034, REQ-COLL-026, SPEC-BACK-004
     function _counters(
-        Ctx memory c,
-        address depositor
+        Ctx memory c
     ) internal view returns (PledgeCounters memory counters) {
         counters.hub = c.hub;
         counters.regularUsed = SafeCast.toUint128(marketUsd[c.vaultToken][Bucket.Regular]);
         counters.sliceUsed = SafeCast.toUint128(marketUsd[c.vaultToken][Bucket.Slice]);
-        counters.depositorUsed = depositorUsd[c.hub][depositor];
         counters.poolKey = c.poolKey;
         counters.poolUnits = _poolUnits[c.poolKey];
         uint256 n = c.tokens.length;
