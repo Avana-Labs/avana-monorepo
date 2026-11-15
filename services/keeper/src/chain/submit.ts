@@ -13,8 +13,18 @@ export async function sendPrivate(endpoints: readonly string[], raw: Hex, post: 
   const body = { jsonrpc: "2.0", id: 1, method: "eth_sendRawTransaction", params: [raw] };
   const results = await Promise.allSettled(endpoints.map((url) => post(url, body)));
   const accepted = endpoints.filter((_, i) => results[i]!.status === "fulfilled");
-  if (accepted.length === 0) throw new Error("every private endpoint refused the transaction");
+  if (accepted.length === 0) {
+    const why = endpoints.map((url, i) => `${url}: ${refusal(results[i] as PromiseRejectedResult)}`).join("; ");
+    throw new Error(`every private endpoint refused the transaction: ${why}`);
+  }
   return accepted;
+}
+
+/** The node's reason for refusing a send ("nonce too low", "replacement transaction underpriced"…), on one line. */
+function refusal(r: PromiseRejectedResult): string {
+  const reason: unknown = r.reason;
+  const text = reason instanceof Error ? reason.message : String(reason);
+  return text.split("\n")[0]!.slice(0, 200);
 }
 
 export interface Pending {
