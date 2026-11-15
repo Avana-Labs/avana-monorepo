@@ -19,7 +19,8 @@
       {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/{unit,fuzz}/ClPriceMath.*"},
       {"src": "src/amm/concentrated-liquidity", "files": ["ClLPVault*"], "tests": "test/{unit,integration}/{UniswapV3Integration,SlipstreamIntegration}.*"},
       {"src": "src/amm/uniswap-v3", "tests": "test/{unit,integration}/UniswapV3Integration.*"},
-      {"src": "src/amm/slipstream", "tests": "test/unit/SlipstreamIntegration.*"}
+      {"src": "src/amm/slipstream", "tests": "test/unit/SlipstreamIntegration.*"},
+      {"src": "src/amm/uniswap-v4", "tests": "test/{unit,fuzz}/UniswapV4Integration.*"}
     ],
     "2.3": [
       {"src": "src/flash", "tests": "test/{unit,fuzz}/AaveV3FlashSource.*"}
