@@ -12,8 +12,3 @@ regexes = ['''^\s*"(src|test|script)/[A-Za-z0-9_./-]+\.sol": "[0-9a-f]{64}",?\s*
 description = "Spec traceability comments made only of a check ID and requirement IDs (for example `// TEST-166 verifies: REQ-ACCESS-060, REQ-ACCESS-010`), not credentials. Approved by Josue, 2026-11-13."
 regexTarget = "line"
 regexes = ['''^\s*//+\s*(?:@custom:spec|(?:TEST|PROP|MATH|HYP|QNT|SYM|SIM)-[A-Za-z0-9-]+ verifies:)\s+[A-Z]+(?:-[A-Za-z0-9]+)+(?:,\s*[A-Z]+(?:-[A-Za-z0-9]+)+)*\s*$''']
-
-[[allowlists]]
-description = "Triage entries' covered_by lines, which name the test file and test function that kill a mutant (for example `\"covered_by\": \"test/unit/LPOracle.Access.unit.t.sol:test_TEST_062_pokeMinGasBoundsInclusive (...)\"`), not credentials."
-regexTarget = "line"
-regexes = ['''^\s*"covered_by": "test/[A-Za-z0-9_./-]+\.t\.sol:(test|invariant|check|prove)[A-Za-z0-9_]*\b[^"]*",?\s*$''']
