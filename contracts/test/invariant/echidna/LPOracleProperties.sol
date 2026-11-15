@@ -46,9 +46,17 @@ contract LPOracleEchidnaTarget is LPOracleHarnessPokeLogic {
         return _poke();
     }
 
-    function served() external view returns (PriceState state, uint256 answer, uint256 accepted) {
+    /// @notice The state, served and accepted prices, and from the same evaluation the inputs `SPEC-ORC-017` selects
+    /// from: the fresh and disagreement prices and whether some token disagrees (`pauseActive` or
+    /// `disagreementExpired`, `SPEC-ORC-016`).
+    function served()
+        external
+        view
+        returns (PriceState state, uint256 answer, uint256 accepted, uint256 fresh, uint256 lower, bool disagreeing)
+    {
         Evaluation memory e = _evaluate(true);
-        return (e.state, e.served, uint256(_s().accepted.answer));
+        return
+            (e.state, e.served, uint256(_s().accepted.answer), e.fresh, e.lower, e.pauseActive || e.disagreementExpired);
     }
 
     /// @notice The failure and disagreement timers and the accepted price's timestamp, read in one call.
@@ -189,9 +197,10 @@ contract LPOracleFuzzConfig {
 
 /// @title LPOracleProperties
 /// @notice Echidna and Medusa properties of the LPOracle base (2.10) over `LPOracleHarness`, mocked feeds and
-/// `LPOracleFuzzConfig` as the registry and store. Between transactions: `latestAnswer()` never reverts and is at least 1; a state other than
-/// Live serves at most the accepted price, Expired serves 1 and Cached the accepted price; the accepted price stays
-/// positive and its timestamp never decreases. Inside one transaction: `poke()` moves the stored disagreement start
+/// `LPOracleFuzzConfig` as the registry and store. Between transactions: `latestAnswer()` never reverts and is at least 1;
+/// the served price follows `SPEC-ORC-017` by state (Expired serves 1, Cached the accepted price, Live and Drifting the
+/// fresh price, or the lower price during a disagreement); the accepted price stays positive and its timestamp never
+/// decreases. Inside one transaction: `poke()` moves the stored disagreement start
 /// only to `now` (new episode or route-version change) or to 0, never refreshes the accepted timestamp without a newer
 /// round, and keeps the failure timer once set while the market stays failed.
 /// @dev `property_` functions run in property mode; `publish`, `breakFeed`, `switchStandby` and `pokeAndCheck` run in
@@ -264,7 +273,7 @@ contract LPOracleProperties {
     // ─── Properties (between transactions) ───
 
     function property_latestAnswerAtLeastOne() external view returns (bool) {
-        try ORACLE.served() returns (PriceState, uint256 answer, uint256) {
+        try ORACLE.served() returns (PriceState, uint256 answer, uint256, uint256, uint256, bool) {
             return answer >= 1;
         } catch {
             return false;
@@ -272,12 +281,17 @@ contract LPOracleProperties {
     }
 
     function property_servedByState() external view returns (bool) {
-        (PriceState state, uint256 answer, uint256 accepted) = ORACLE.served();
+        (PriceState state, uint256 answer, uint256 accepted, uint256 fresh, uint256 lower, bool disagreeing) =
+            ORACLE.served();
         if (answer < 1 || accepted < 1) return false;
         if (state == PriceState.Expired) return answer == 1;
         if (state == PriceState.Cached) return answer == accepted;
-        if (state == PriceState.Drifting) return answer <= accepted;
-        return true;
+        // Live or Drifting: SPEC-ORC-017 serves the fresh price, or min(lower, fresh) while some token disagrees, and 1
+        // in place of 0. The accepted price enters only the Cached value: with no disagreement a Drifting market's
+        // inputs are fresh and agree, so after a rally it serves above A (the RiskModule caps borrowing at
+        // min(served, A), REQ-RISK-059).
+        uint256 expected = disagreeing && lower < fresh ? lower : fresh;
+        return answer == (expected == 0 ? 1 : expected);
     }
 
     function property_acceptedTimestampNeverDecreases() external view returns (bool) {

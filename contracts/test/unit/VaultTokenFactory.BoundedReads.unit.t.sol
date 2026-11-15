@@ -174,7 +174,7 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
         coll.setAnswer(ICollateralizationViews.LOCK.selector, abi.encode(lock));
         IVaultTokenFactory f = IVaultTokenFactory(
             deployCode(
-                "VaultTokenFactory.sol:VaultTokenFactory",
+                "VaultTokenFactory.sol:VaultTokenFactory:default",
                 abi.encode(adapter, address(lpVaultSwap), address(coll), address(timelock), address(marketRegistry))
             )
         );

@@ -19,7 +19,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @notice Echidna and Medusa properties of the DebtOracle (2.10). The harness is the oracle's timelock and drives a
 /// one-leg primary, a one-leg alternate and a standby feed through moves, bounds, outages and hostile reads while the
 /// fuzzers advance time. Between transactions: the served price is at least 1 and never reverts; a DebtOracle that is
-/// not Live serves at least its accepted price, exactly it when Cached and the stress price when Expired; `decimals()`
+/// not Live serves at least its accepted price: exactly it when Cached, the stress price when Expired, and the lower
+/// route or the accepted price, whichever is higher, while Drifting (SPEC-ORC-018); `decimals()`
 /// is 8; only the harness holds an admin role. Inside one transaction: a poke with enough gas never reverts and never
 /// moves the accepted timestamp backwards; a feed move or switch leaves a positive served price; an admin grant to
 /// anyone but the timelock reverts.
@@ -115,8 +116,10 @@ contract DebtOracleProperties {
         if (v.state == PriceState.Live) return served == v.quote;
         if (v.state == PriceState.Cached) return served == a;
         if (v.state == PriceState.Expired) return served == (a * 10_500 + 9999) / 10_000;
-        uint256 m = v.primaryValue > v.alternateValue ? v.primaryValue : v.alternateValue;
-        return served == (m > a ? m : a) && v.liquidationPaused;
+        // Drifting (the routes disagree): SPEC-ORC-018 serves max(min(p, b), A). One faulty route must not raise the
+        // price alone, so the lower route is used, and the debt never counts below its accepted price.
+        uint256 lower = v.primaryValue < v.alternateValue ? v.primaryValue : v.alternateValue;
+        return served == (lower > a ? lower : a) && v.liquidationPaused;
     }
 
     function property_decimalsEight() external view returns (bool) {

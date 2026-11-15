@@ -275,7 +275,7 @@ abstract contract RealStackVolatile is RealStackFlows {
         uint256 whole
     ) private returns (address cs) {
         cs = deployCode(
-            "AvanaFirstLossReserve.sol:AvanaFirstLossReserve",
+            "AvanaFirstLossReserve.sol:AvanaFirstLossReserve:default",
             abi.encode(hubV, address(asset), assetId, aave.accessManager, 1_209_600)
         );
         uint24 maxRp = IAaveV4Hub(hubV).MAX_RISK_PREMIUM_THRESHOLD();

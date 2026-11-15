@@ -204,7 +204,10 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             )
         );
         integration = address(uniVault);
-        payoutEscrow = deployCode("PayoutEscrow.sol:PayoutEscrow", abi.encode(lpVaultSwap, address(lock)));
+        // `:default` names the default-profile artifact, the one that ships. Without it `deployCode` takes the copy in
+        // the running test's compiler profile, and a test in another profile (an import with a compilation
+        // restriction) found no copy there and two elsewhere in a narrow build: `multiple matching artifacts found`.
+        payoutEscrow = deployCode("PayoutEscrow.sol:PayoutEscrow:default", abi.encode(lpVaultSwap, address(lock)));
         v3Pool = new MockAaveV3Pool(address(new MockAaveV3AddressesProvider(address(new MockAaveV3ACLManager()))), 5);
         // The FlashLiquidator's constructor reads the MarketRegistry, which is built with its address: it is placed at
         // a fixed address once the registry is installed (`_installLPVaultSwap`).
@@ -242,7 +245,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             deployCode("LPVaultSwapPendingLogic.sol:LPVaultSwapPendingLogic", abi.encode(im)),
             deployCode("LPVaultSwapDeleverageLogic.sol:LPVaultSwapDeleverageLogic", abi.encode(im))
         );
-        address impl = deployCode("LPVaultSwap.sol:LPVaultSwap", abi.encode(im, l));
+        address impl = deployCode("LPVaultSwap.sol:LPVaultSwap:default", abi.encode(im, l));
         deployCodeTo(
             "FlashLiquidator.sol:FlashLiquidator",
             abi.encode(address(v3Pool), lpVaultSwap, address(registry), address(store)),
@@ -279,7 +282,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         m[6] = deployCode("LensMarketsModule.sol:LensMarketsModule", abi.encode(core));
         m[7] = deployCode("LensPositionsModule.sol:LensPositionsModule", abi.encode(core));
         m[8] = deployCode("LensSpeedModule.sol:LensSpeedModule", abi.encode(core));
-        lens = ILens(deployCode("Lens.sol:Lens", abi.encode(m)));
+        lens = ILens(deployCode("Lens.sol:Lens:default", abi.encode(m)));
     }
 
     function _placeholderProxy() private returns (address) {
