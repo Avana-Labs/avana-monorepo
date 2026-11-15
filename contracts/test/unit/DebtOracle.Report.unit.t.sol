@@ -123,4 +123,19 @@ contract DebtOracleReportUnitTest is DebtOracleFixture {
         assertEq(oracle.TIMELOCK(), address(timelock));
         assertEq(oracle.pokeMinGas(), MIN_GAS);
     }
+
+    // TEST-219 verifies: REQ-ORACLE-093, REQ-ORACLE-092
+    /// @notice While Live the report carries the accepted price and its time as `lastAcceptedPrice` stores them, and
+    /// no failure start and no cached-until (both are reported only for a failed asset).
+    function test_TEST_219_reportsAcceptedAndNoFailureWhileLive() public view {
+        DebtPriceView memory v = _view();
+        (uint256 price8, uint64 at) = oracle.lastAcceptedPrice();
+        assertEq(uint8(v.state), uint8(PriceState.Live), "Live");
+        assertGt(price8, 0, "seeded");
+        assertGt(at, 0, "seeded time");
+        assertEq(v.acceptedAnswer, price8, "acceptedAnswer");
+        assertEq(v.acceptedUpdatedAt, at, "acceptedUpdatedAt");
+        assertEq(v.failureStart, 0, "no failure start");
+        assertEq(v.cachedUntil, 0, "no cached-until");
+    }
 }

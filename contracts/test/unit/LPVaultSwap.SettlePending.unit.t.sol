@@ -9,6 +9,7 @@ import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVa
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
+import {MockCLPool} from "../utils/mocks/SwapRouteMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -284,6 +285,78 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         assertEq(usdc.balanceOf(address(skimmer)), skimmerBefore + added, "exactly R pulled");
         assertEq(usdc.balanceOf(address(lvs)), 0, "nothing carried");
         assertEq(usdc.allowance(address(lvs), address(skimmer)), 0, "approval reset");
+    }
+
+    /// @notice A carried amount is reported: below one Hub share the event's `funded` is 0 and its `carried` is `R`.
+    // TEST-170 verifies: REQ-SWAP-066, SPEC-LIQ-014
+    function test_TEST_170_eventFieldsWhenCarried() public {
+        vm.mockCall(aave.hub, abi.encodeWithSelector(IAaveV4Hub.previewAddByAssets.selector), abi.encode(uint256(0)));
+        (uint256 a0, uint256 a1) = _released(kept);
+        uint256 added = a0 + a1 * 9995 / 10_000;
+        uint256 vp = a0 + _ceilDiv(a1 * P_USDT, PRICE_UNIT);
+        uint256[] memory amounts = new uint256[](2);
+        (amounts[0], amounts[1]) = (a0, a1);
+        uint8[] memory used = new uint8[](2);
+        used[1] = 1;
+        vm.expectEmit(true, true, true, true, address(lvs));
+        emit PendingSettlementForwarded(
+            carol,
+            MARKET_ID,
+            address(vt),
+            kept,
+            amounts,
+            address(usdc),
+            added,
+            _floorOf(vp, 30, 2, FLOOR_ROUNDING_ALLOWANCE_USDC),
+            address(usdcCoverage),
+            used,
+            0,
+            added
+        );
+        vm.prank(carol);
+        lvs.settlePending(MARKET_ID, usdcReserveId);
+    }
+
+    /// @notice A recovery exactly at `minPending` settles (`RecoveryBelowFloor` only below it).
+    // TEST-170 verifies: SPEC-LIQ-014, REQ-SWAP-066, REQ-SWAP-071
+    function test_TEST_170_recoveryAtPendingFloor() public {
+        (uint256 a0, uint256 a1) = _released(kept);
+        uint256 minPending = _floorOf(a0 + _ceilDiv(a1 * P_USDT, PRICE_UNIT), 30, 2, FLOOR_ROUNDING_ALLOWANCE_USDC);
+        LVSLyingRoute atFloor = new LVSLyingRoute(address(usdt), address(usdc));
+        usdc.mint(address(atFloor), minPending - a0);
+        atFloor.setOut(minPending - a0);
+        registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(atFloor), true);
+        (,, uint256 added) = lvs.settlePending(MARKET_ID, usdcReserveId);
+        assertEq(added, minPending, "R = minPending");
+    }
+
+    /// @notice `R` and the First-Loss Reserve pull are balance changes: a settlement-asset balance LPVaultSwap already
+    /// held (not a recorded carry) is neither funded nor a `FundingMismatch`, and stays.
+    // TEST-170 verifies: REQ-SWAP-070, REQ-SWAP-071
+    function test_TEST_170_heldBalanceNotFunded() public {
+        uint256 held = 7e6;
+        usdc.mint(address(lvs), held);
+        uint256 coverageBefore = usdcCoverage.fundedBalance();
+        (,, uint256 added) = lvs.settlePending(MARKET_ID, usdcReserveId);
+        assertEq(usdcCoverage.fundedBalance(), coverageBefore + added, "exactly R funded");
+        assertEq(usdc.balanceOf(address(lvs)), held, "the held balance stays");
+    }
+
+    /// @notice With GHO as the settlement asset, a residue of the first pool token (USDC, index 0) goes to
+    /// `feeRecipient` like any other.
+    // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-121, REQ-SWAP-076
+    function test_TEST_170_residueOfFirstTokenToFeeRecipient() public {
+        registry.setSettlementReserve(MARKET_ID, ghoReserveId);
+        (uint256 a0,) = _released(kept);
+        MockCLPool partialFill = _clPool(usdc, gho, 1e12, 1);
+        partialFill.setMaxIn(a0 - 10);
+        registry.setRoute(
+            MARKET_ID, address(usdc), address(gho), 0, address(_route(address(usdc), address(gho), partialFill)), true
+        );
+        uint256 feeUsdc = usdc.balanceOf(feeRecipient);
+        lvs.settlePending(MARKET_ID, ghoReserveId);
+        assertEq(usdc.balanceOf(feeRecipient), feeUsdc + 10, "USDC residue to feeRecipient");
+        assertEq(usdc.balanceOf(address(lvs)), 0, "no USDC kept");
     }
 }
 

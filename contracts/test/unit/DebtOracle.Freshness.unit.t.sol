@@ -258,4 +258,14 @@ contract DebtOracleFreshnessUnitTest is DebtOracleFixture {
         assertEq(v.borrowAllowed, roundAt > restart, "borrow iff the served round is newer than the restart");
         assertFalse(v.liquidationPaused);
     }
+
+    // TEST-276 verifies: SPEC-ORC-019, REQ-ORACLE-002, REQ-ORACLE-003, REQ-ORACLE-092, REQ-ORACLE-054
+    /// @notice A leg's age is `now - updatedAt`: rounds reporting `updatedAt = 1` (a valid, non-zero time far in the
+    /// past) are stale on every route, so the asset is not Live.
+    function test_TEST_276_veryOldRoundIsStale() public {
+        pUsd.setCurrent(USDC_USD, 1);
+        aEth.setCurrent(USDC_ETH, 1);
+        ethUsd.setCurrent(ETH_USD, 1);
+        assertTrue(uint8(_view().state) != uint8(PriceState.Live), "stale everywhere");
+    }
 }
