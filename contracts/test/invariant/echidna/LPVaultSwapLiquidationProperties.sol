@@ -19,6 +19,18 @@ import {PriceState} from "../../../src/types/PriceState.sol";
 /// @notice An ERC-20 with open mint and burn (only the harness's entry points are fuzzed), a per-recipient block that
 /// makes a transfer to that address revert (so a payout goes to the PayoutEscrow), and the four vault-token views
 /// LPVaultSwap reads (`hub`, `spoke`, `marketId`, `isValidProxy`), answered for the one market of the harness.
+// Stand-in errors (custom errors, not strings: the harness's initcode must stay under EIP-3860's limit).
+error Blocked();
+error AlreadySet();
+error Healthy();
+error Dust();
+error LockHeld();
+error NotHolder();
+error BelowMin();
+error DeadRoute();
+error BelowMinOut();
+error NotOwner();
+
 contract LiqToken {
     uint8 public immutable decimals;
     address public immutable hub;
@@ -96,7 +108,7 @@ contract LiqToken {
         address to,
         uint256 amount
     ) private {
-        require(!blocked[to], "blocked");
+        require(!blocked[to], Blocked());
         balanceOf[from] -= amount;
         balanceOf[to] += amount;
     }
@@ -123,7 +135,6 @@ contract LiqWorld {
     LiqToken public vt;
     address public feeRecipient;
     address[2] internal routes;
-    bool[2] internal usable;
 
     /// @notice Price of one X, 8 decimals.
     uint256 public px = 100e8;
@@ -146,10 +157,9 @@ contract LiqWorld {
         address backup,
         address fee
     ) external {
-        require(address(usdc) == address(0), "set");
+        require(address(usdc) == address(0), AlreadySet());
         (usdc, x, vt, feeRecipient, LP_VAULT_SWAP) = (usdc_, x_, vt_, fee, msg.sender);
         routes = [primary, backup];
-        usable = [true, true];
     }
 
     // ─── Harness controls ───
@@ -178,13 +188,6 @@ contract LiqWorld {
         bool frozen
     ) external {
         isFrozenAddress[account] = frozen;
-    }
-
-    function setUsable(
-        uint8 kind,
-        bool ok
-    ) external {
-        usable[kind] = ok;
     }
 
     // ─── Prices ───
@@ -255,7 +258,7 @@ contract LiqWorld {
     ) external {
         uint256 d = debt[user];
         uint256 u = units[user];
-        require(d != 0 && healthFactor(user) < 1e18, "healthy");
+        require(d != 0 && healthFactor(user) < 1e18, Healthy());
         uint256 p = pc();
         uint256 repay = d;
         // Restore amount: (TARGET_HF × debt − collateral × CF) / (TARGET_HF − bonus × CF), in dollars, rounded up.
@@ -273,7 +276,7 @@ contract LiqWorld {
             repay = u * p / 1e18 * 1e4 / bonus / 100;
             if (repay > d) repay = d;
         }
-        require(repay != 0 && seize != 0, "dust");
+        require(repay != 0 && seize != 0, Dust());
         usdc.transferFrom(msg.sender, address(this), repay);
         units[user] = u - seize;
         totalUnits -= seize;
@@ -289,12 +292,12 @@ contract LiqWorld {
     // ─── Lock (LPVaultSwap's side of the two-member Lock) ───
 
     function acquire() external {
-        require(msg.sender == LP_VAULT_SWAP && holder == address(0), "LockHeld");
+        require(msg.sender == LP_VAULT_SWAP && holder == address(0), LockHeld());
         holder = msg.sender;
     }
 
     function release() external {
-        require(msg.sender == holder, "NotHolder");
+        require(msg.sender == holder, NotHolder());
         holder = address(0);
     }
 
@@ -357,7 +360,7 @@ contract LiqWorld {
         address,
         uint8 kind
     ) external view returns (address, bool) {
-        return (routes[kind], usable[kind]);
+        return (routes[kind], true);
     }
 
     // ─── ParameterStore ───
@@ -433,7 +436,7 @@ contract LiqWorld {
     ) external returns (uint256[] memory amounts) {
         amounts = new uint256[](2);
         (amounts[0], amounts[1]) = (u * USDC_PER_VT / 1e18, u * X_PER_VT / 1e18);
-        require(amounts[0] >= mins[0] && amounts[1] >= mins[1], "min");
+        require(amounts[0] >= mins[0] && amounts[1] >= mins[1], BelowMin());
         usdc.mint(msg.sender, amounts[0]);
         x.mint(msg.sender, amounts[1]);
     }
@@ -468,7 +471,7 @@ contract LiqRoute {
     }
 
     function intermediates() external view returns (address[] memory im) {
-        require(!dead, "dead");
+        require(!dead, DeadRoute());
         return im;
     }
 
@@ -478,7 +481,7 @@ contract LiqRoute {
     ) external returns (uint256 out) {
         W.x().transferFrom(msg.sender, address(this), amountIn);
         out = amountIn * W.px() / 1e20 * (1e4 - slip) / 1e4;
-        require(out >= minOut, "minOut");
+        require(out >= minOut, BelowMinOut());
         W.usdc().mint(msg.sender, out);
         totalOut += out;
     }
@@ -492,7 +495,7 @@ contract LiqActor {
         address target,
         bytes calldata data
     ) external returns (bool ok, bytes memory ret) {
-        require(msg.sender == OWNER, "owner");
+        require(msg.sender == OWNER, NotOwner());
         (ok, ret) = target.call(data);
     }
 }
@@ -527,36 +530,28 @@ contract LPVaultSwapLiquidationProperties {
     uint256 internal constant BAD_SPOKE = 16;
     uint256 internal constant BAD_RESTORE = 32;
     uint256 internal constant BAD_REVERT = 64;
-    uint256 internal constant BAD_CLAIM = 128;
 
-    LiqWorld internal immutable W;
-    LiqToken internal immutable USDC;
-    LiqToken internal immutable XT;
-    LiqToken internal immutable VT;
-    LiqRoute internal immutable PRIMARY;
-    LiqRoute internal immutable BACKUP;
-    PayoutEscrow internal immutable ESCROW;
-    address internal immutable LOGIC;
-    LiqActor internal immutable KEEPER;
-    LiqActor internal immutable KEEPER2;
-    LiqActor internal immutable FROZEN;
-    LiqActor internal immutable FEE;
-    LiqActor internal immutable WALLET0;
-    LiqActor internal immutable WALLET1;
-    LiqActor internal immutable WALLET2;
+    // Storage, not immutables: every use of an immutable is a 32-byte push plus a patch in the constructor, and with
+    // the liquidation logic and the escrow inside it this harness's initcode must stay under EIP-3860's 49,152 bytes.
+    LiqWorld internal W;
+    LiqToken internal USDC;
+    LiqToken internal XT;
+    LiqToken internal VT;
+    LiqRoute internal PRIMARY;
+    LiqRoute internal BACKUP;
+    PayoutEscrow internal ESCROW;
+    address internal LOGIC;
+    /// @dev The borrower wallets 0–2, then the fee recipient, the keeper, the second keeper and the frozen caller.
+    LiqActor[7] internal actors;
 
     /// @notice Debt the harness booked per account: opened debt less every `debtRepaid` LPVaultSwap measured, and 0
     /// once the Spoke cleared the rest as a deficit.
     uint256[3] public booked;
     /// @notice Bit set of broken properties (the `BAD_` constants); never reset.
     uint256 public violations;
-    uint256 public liquidationsTried;
-    uint256 public liquidationsDone;
-    /// @notice Calls with no liquidatable account (no liquidation attempted).
-    uint256 public liquidationsSkipped;
-    /// @notice Expected refusals: a frozen caller.
-    uint256 public liquidationsRefused;
-    uint256 public claimsDone;
+    /// @notice Liquidation calls: 0 tried, 1 completed, 2 with no liquidatable account (none attempted), 3 refused as
+    /// expected (a frozen caller). One array, one getter (initcode size).
+    uint256[4] public counts;
     bytes4 public lastFailure;
 
     constructor() {
@@ -566,15 +561,11 @@ contract LPVaultSwapLiquidationProperties {
         VT = new LiqToken(18, address(W));
         PRIMARY = new LiqRoute(W);
         BACKUP = new LiqRoute(W);
-        KEEPER = new LiqActor();
-        KEEPER2 = new LiqActor();
-        FROZEN = new LiqActor();
-        FEE = new LiqActor();
-        WALLET0 = new LiqActor();
-        WALLET1 = new LiqActor();
-        WALLET2 = new LiqActor();
-        W.init(USDC, XT, VT, address(PRIMARY), address(BACKUP), address(FEE));
-        W.setFrozen(address(FROZEN), true);
+        for (uint256 a = 0; a < 7; ++a) {
+            actors[a] = new LiqActor();
+        }
+        W.init(USDC, XT, VT, address(PRIMARY), address(BACKUP), address(actors[3]));
+        W.setFrozen(address(actors[6]), true);
         ESCROW = new PayoutEscrow(address(this), address(W));
         LOGIC = address(
             new LPVaultSwapLiquidationLogic(
@@ -589,15 +580,18 @@ contract LPVaultSwapLiquidationProperties {
                 })
             )
         );
-        // Two accounts at HF 1.5 and 1.1; X then falls so the second is at HF 0.95 and liquidatable.
-        _open(0, 100e18, 15_000);
-        _open(1, 20e18, 11_000);
-        _setHealth(1, 9500);
+        // Two accounts at HF 1.5 and 1.1; X then falls so the second is at HF 0.95 and liquidatable. The values are
+        // `_open(0, 100e18, 15_000)`, `_open(1, 20e18, 11_000)` and `_setHealth(1, 9500)` at the initial vault-token
+        // price of $1,000, written out so the constructor carries no copy of those functions (initcode size).
+        (booked[0], booked[1]) = (53_333_333_333, 14_545_454_545);
+        W.open(_proxy(0), address(actors[0]), 100e18, 53_333_333_333);
+        W.open(_proxy(1), address(actors[1]), 20e18, 14_545_454_545);
+        W.setPx(8_484_848_484);
     }
 
     /// @notice LPVaultSwap's `liquidate`, forwarded to the logic contract by delegatecall with its calldata unchanged.
     fallback() external {
-        require(msg.sig == ILPVaultSwapLiquidation.liquidate.selector, "selector");
+        if (msg.sig != ILPVaultSwapLiquidation.liquidate.selector) revert();
         address logic = LOGIC;
         assembly ("memory-safe") {
             calldatacopy(0, 0, calldatasize())
@@ -620,9 +614,7 @@ contract LPVaultSwapLiquidationProperties {
     function _wallet(
         uint256 i
     ) internal view returns (LiqActor) {
-        if (i == 0) return WALLET0;
-        if (i == 1) return WALLET1;
-        return WALLET2;
+        return actors[i < 3 ? i : 2];
     }
 
     /// @dev Adds `u` vault-token units and the debt that puts this addition at `hfBps` / 10⁴ at the current price.
@@ -678,10 +670,9 @@ contract LPVaultSwapLiquidationProperties {
     ) external {
         uint256 i = who & 3;
         if (i == 3) i = 2;
-        uint256 s = size & 3;
-        uint256 h = health & 3;
-        uint256 u = s == 0 ? 1e18 : (s == 1 ? 10e18 : (s == 2 ? 50e18 : 200e18));
-        uint256 hf = h == 0 ? 11_000 : (h == 1 ? 12_000 : (h == 2 ? 15_000 : 20_000));
+        // Packed tables, 16 bits per entry (initcode size): vault tokens 1, 10, 50, 200; HF 1.1, 1.2, 1.5, 2.0.
+        uint256 u = (0x00C80032000A0001 >> (16 * (size & 3)) & 0xFFFF) * 1e18;
+        uint256 hf = 0x4E203A982EE02AF8 >> (16 * (health & 3)) & 0xFFFF;
         _open(i, u, hf);
     }
 
@@ -696,14 +687,8 @@ contract LPVaultSwapLiquidationProperties {
             for (i = 0; i < 3 && W.debt(_proxy(i)) == 0; ++i) {}
             if (i == 3) return;
         }
-        uint256 t = target & 7;
-        uint256 hf = t == 0
-            ? 7000
-            : (t == 1
-                    ? 8500
-                    : (t == 2
-                            ? 9000
-                            : (t == 3 ? 9500 : (t == 4 ? 9900 : (t == 5 ? 10_200 : (t == 6 ? 12_000 : 16_000))))));
+        // Packed table, 16 bits per entry: HF 0.70, 0.85, 0.90, 0.95, 0.99, 1.02, 1.2, 1.6 (in 10⁻⁴).
+        uint256 hf = 0x3E802EE027D826AC251C232821341B58 >> (16 * (target & 7)) & 0xFFFF;
         _setHealth(i, hf);
     }
 
@@ -731,9 +716,9 @@ contract LPVaultSwapLiquidationProperties {
         address wallet = address(_wallet(i));
         s.keeper = USDC.balanceOf(address(k));
         s.world = USDC.balanceOf(address(W));
-        s.fee = USDC.balanceOf(address(FEE));
+        s.fee = USDC.balanceOf(address(actors[3]));
         s.wallet = USDC.balanceOf(wallet);
-        s.escrowFee = ESCROW.claimable(address(USDC), address(FEE));
+        s.escrowFee = ESCROW.claimable(address(USDC), address(actors[3]));
         s.escrowWallet = ESCROW.claimable(address(USDC), wallet);
         s.routesOut = PRIMARY.totalOut() + BACKUP.totalOut();
         s.units = W.units(p);
@@ -789,10 +774,10 @@ contract LPVaultSwapLiquidationProperties {
         uint8 who,
         uint8 plan
     ) external {
-        ++liquidationsTried;
+        ++counts[0];
         uint256 i = _target(who);
         if (i == 3) {
-            ++liquidationsSkipped;
+            ++counts[2];
             return;
         }
         Run memory run = _prepare(i, plan);
@@ -802,10 +787,10 @@ contract LPVaultSwapLiquidationProperties {
         Snap memory s1 = _snap(run.k, i);
         run.k.exec(address(USDC), abi.encodeCall(LiqToken.approve, (address(this), 0)));
         USDC.setBlocked(address(_wallet(i)), false);
-        USDC.setBlocked(address(FEE), false);
+        USDC.setBlocked(address(actors[3]), false);
 
         if (!ok) {
-            if (run.frozen) ++liquidationsRefused;
+            if (run.frozen) ++counts[3];
             else if (ret.length >= 4) lastFailure = bytes4(ret);
             // A refused liquidation moves nothing.
             bool moved = s1.keeper != s0.keeper || s1.world != s0.world || s1.units != s0.units || s1.debt != s0.debt
@@ -813,7 +798,7 @@ contract LPVaultSwapLiquidationProperties {
             _ensure(BAD_REVERT, !moved);
             return;
         }
-        ++liquidationsDone;
+        ++counts[1];
         _ensure(BAD_FROZEN, !run.frozen);
         _checkResult(abi.decode(ret, (LiquidationResult)), s0, s1, i, run.lp);
     }
@@ -834,14 +819,14 @@ contract LPVaultSwapLiquidationProperties {
         uint256 c = plan & 3;
         uint256 r = (plan >> 2) & 7;
         (RouteMode mode, uint256 shortfallBps, bool blockRecipients) = _routes(r);
-        run.k = r == 6 ? FROZEN : (r == 7 ? KEEPER2 : KEEPER);
+        run.k = r == 6 ? actors[6] : (r == 7 ? actors[5] : actors[4]);
         run.frozen = r == 6;
         LiquidationParams memory lp = run.lp;
         (lp.proxy, lp.marketId, lp.debtReserveId) = (_proxy(i), MARKET, DEBT_RESERVE);
         lp.debtToCover = c == 0 ? d / 4 + 1 : (c == 1 ? d / 2 + 1 : (c == 2 ? d : 2 * d));
         (lp.routeMode, lp.deadline, lp.maxShortfall) = (mode, block.timestamp, d * shortfallBps / 1e4);
         USDC.setBlocked(address(_wallet(i)), blockRecipients);
-        USDC.setBlocked(address(FEE), blockRecipients);
+        USDC.setBlocked(address(actors[3]), blockRecipients);
         uint256 funds = lp.debtToCover + lp.maxShortfall;
         USDC.mint(address(run.k), funds);
         run.k.exec(address(USDC), abi.encodeCall(LiqToken.approve, (address(this), funds)));
@@ -863,9 +848,8 @@ contract LPVaultSwapLiquidationProperties {
             && s1.keeper + res.callerFunds + res.shortfall == s0.keeper + res.keeperOut
             && s1.world - s0.world == res.debtRepaid && s1.routesOut - s0.routesOut + res.amountsOut[0] == res.recovered
             && s1.fee + s1.escrowFee - s0.fee - s0.escrowFee == res.avanaFee
-            && s1.wallet + s1.escrowWallet - s0.wallet - s0.escrowWallet == res.borrowerSurplus
-            && USDC.balanceOf(address(this)) == 0 && XT.balanceOf(address(this)) == 0
-            && VT.balanceOf(address(this)) == 0;
+            && s1.wallet + s1.escrowWallet - s0.wallet - s0.escrowWallet == res.borrowerSurplus;
+        // LPVaultSwap keeping no token is `property_lpVaultSwapHoldsNothing`, checked between transactions.
         _ensure(BAD_MEASURE, good);
         // INV-030 with 2.11: the caller nets at most the keeper reward, which is at most the oracle gain G = V − D.
         // V = mulDiv(c, Pc × 10^6, 10^18 × Pdebt) with Pdebt = 1e8 (SettlementMath.seizedValue), exact here.
@@ -888,32 +872,7 @@ contract LPVaultSwapLiquidationProperties {
     function _actor(
         uint256 a
     ) internal view returns (LiqActor) {
-        if (a == 0) return WALLET0;
-        if (a == 1) return WALLET1;
-        if (a == 2) return WALLET2;
-        if (a == 3) return FEE;
-        if (a == 4) return KEEPER;
-        if (a == 5) return KEEPER2;
-        return FROZEN;
-    }
-
-    /// @notice An escrow claim by a borrower wallet, the fee recipient or a keeper (`who`), of USDC or of X (`tokenX`);
-    /// does nothing when that account has no credit.
-    function claim(
-        uint8 who,
-        bool tokenX
-    ) external {
-        LiqActor a = _actor(who & 7);
-        LiqToken t = tokenX ? XT : USDC;
-        uint256 amount = ESCROW.claimable(address(t), address(a));
-        if (amount == 0) return;
-        uint256 total = ESCROW.totalClaimable(address(t));
-        uint256 before = t.balanceOf(address(a));
-        (bool ok,) = a.exec(address(ESCROW), abi.encodeCall(PayoutEscrow.claim, (address(t), address(a))));
-        bool good = ok && t.balanceOf(address(a)) == before + amount && ESCROW.claimable(address(t), address(a)) == 0
-            && ESCROW.totalClaimable(address(t)) == total - amount;
-        _ensure(BAD_CLAIM, good);
-        ++claimsDone;
+        return actors[a < 7 ? a : 6];
     }
 
     // ─── Properties ───
@@ -943,7 +902,8 @@ contract LPVaultSwapLiquidationProperties {
     }
 
     /// @notice INV-061: for USDC and X, the escrow's total equals the sum of its credits over every account that can
-    /// hold one and is covered by its balance; every claim paid exactly the credit.
+    /// hold one and is covered by its balance. Claims are fuzzed by `PayoutEscrowProperties`; this harness has no claim
+    /// entry point, which kept its initcode under EIP-3860's limit.
     function property_escrowCreditsSum() external view returns (bool) {
         LiqToken[2] memory tokens = [USDC, XT];
         for (uint256 t = 0; t < 2; ++t) {
@@ -954,7 +914,7 @@ contract LPVaultSwapLiquidationProperties {
             uint256 total = ESCROW.totalClaimable(address(tokens[t]));
             if (sum != total || tokens[t].balanceOf(address(ESCROW)) < total) return false;
         }
-        return violations & BAD_CLAIM == 0;
+        return true;
     }
 
     /// @notice INV-030 with 2.11: no caller netted more than the keeper reward, itself within the oracle gain.

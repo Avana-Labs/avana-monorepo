@@ -47,6 +47,11 @@ contract DebtOracleStatesInvariantTest is DebtOracleFixture, HandlerReach {
         _check(r, names, new string[](0), _floors(6, 0), new uint256[](0));
     }
 
+    /// @dev With metering paused a replayed call that runs out of gas never ends here.
+    function _reachMetered() internal pure override returns (bool) {
+        return true;
+    }
+
     function _reached() internal pure override returns (bool[] memory hit) {
         hit = new bool[](0);
     }

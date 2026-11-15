@@ -151,6 +151,12 @@ contract BalancesHandler is Test {
         address user = borrowers[actor % N_BORROWERS];
         uint256 r = reserve % 2;
         uint256 owed = cdp.getUserTotalDebt(debtReserves[r], user);
+        // Steered: with nothing owed on the picked pair, repay the first borrower and reserve that owe something.
+        for (uint256 j = 0; owed == 0 && j < 2 * N_BORROWERS; ++j) {
+            user = borrowers[(actor + j / 2) % N_BORROWERS];
+            r = (reserve + j) % 2;
+            owed = cdp.getUserTotalDebt(debtReserves[r], user);
+        }
         if (owed == 0) revert Skipped();
         amount = bound(amount, 1, owed);
         debts[r].mint(user, amount);

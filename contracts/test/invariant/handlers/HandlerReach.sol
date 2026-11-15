@@ -15,7 +15,7 @@ import {console} from "forge-std/console.sol";
 /// failed; after each run the suite reports which of its target states the run reached. The suite then asserts a
 /// floor on each selector's success rate and on each target's reach, and the logs give the table (`forge test -vv`).
 /// @dev Deterministic: the same seeds every time, so the floors are regression checks on the handler's steering, not
-/// statistics. Gas metering is paused; the replay is far longer than one block.
+/// statistics. Gas metering is paused (`_reachMetered`); the replay is far longer than one block.
 abstract contract HandlerReach is CommonBase {
     /// @dev The accounts `_replayLanded` counts writes to (or, with `_reachExcept`, does not count).
     address[] private _reachSubjects;
@@ -29,6 +29,12 @@ abstract contract HandlerReach is CommonBase {
         uint256 runs;
         // Calls that returned normally but wrote no storage slot of a subject (only with `_replayLanded`).
         uint256[] noop;
+    }
+
+    /// @dev Whether the replay keeps gas metering on. Off by default (the replay is far longer than one block); a suite
+    /// whose calls only end by running out of gas turns it on, so such a call fails instead of running forever.
+    function _reachMetered() internal view virtual returns (bool) {
+        return false;
     }
 
     /// @dev The target states one run reached; called at the end of each replayed run, before the state is reset.
@@ -116,11 +122,29 @@ abstract contract HandlerReach is CommonBase {
         uint256 depth,
         uint256 targets
     ) private returns (Reach memory r) {
-        vm.pauseGasMetering();
+        bool metered = _reachMetered();
+        if (!metered) vm.pauseGasMetering();
         uint256 n = selectors.length;
         (r.ok, r.skipped, r.failed, r.reached, r.runs, r.noop) =
         (new uint256[](n), new uint256[](n), new uint256[](n), new uint256[](targets), runs, new uint256[](n));
         uint256 snapshot = vm.snapshotState();
+        for (uint256 run = 0; run < runs; ++run) {
+            vm.revertToState(snapshot);
+            _replayRun(handler, selectors, skipped, depth, run, r);
+        }
+        vm.revertToState(snapshot);
+        if (!metered) vm.resumeGasMetering();
+    }
+
+    /// @dev Run `run` of the replay: `depth` calls from the current state, counted into `r`.
+    function _replayRun(
+        address handler,
+        bytes4[] memory selectors,
+        bytes4 skipped,
+        uint256 depth,
+        uint256 run,
+        Reach memory r
+    ) private {
         // Each step allocates its calldata, return data and state diff, and none of it is read after the step, so the
         // free memory pointer goes back to this mark after every step; otherwise a replay of 1,600 calls with state
         // diffs ends in `MemoryLimitOOG`.
@@ -128,31 +152,26 @@ abstract contract HandlerReach is CommonBase {
         assembly ("memory-safe") {
             mark := mload(0x40)
         }
-        for (uint256 run = 0; run < runs; ++run) {
-            vm.revertToState(snapshot);
-            uint256 seed = uint256(keccak256(abi.encode("reach", run)));
-            for (uint256 i = 0; i < depth; ++i) {
-                seed = uint256(keccak256(abi.encode(seed)));
-                uint256 k = seed % n;
-                uint256 outcome = _step(handler, selectors[k], skipped, seed);
-                assembly ("memory-safe") {
-                    mstore(0x40, mark)
-                }
-                if (outcome == 0) ++r.ok[k];
-                else if (outcome == 1) ++r.noop[k];
-                else if (outcome == 2) ++r.skipped[k];
-                else ++r.failed[k];
-            }
-            bool[] memory hit = _reached();
-            for (uint256 t = 0; t < targets; ++t) {
-                if (hit[t]) ++r.reached[t];
-            }
+        uint256 seed = uint256(keccak256(abi.encode("reach", run)));
+        for (uint256 i = 0; i < depth; ++i) {
+            seed = uint256(keccak256(abi.encode(seed)));
+            uint256 k = seed % selectors.length;
+            uint256 outcome = _step(handler, selectors[k], skipped, seed);
             assembly ("memory-safe") {
                 mstore(0x40, mark)
             }
+            if (outcome == 0) ++r.ok[k];
+            else if (outcome == 1) ++r.noop[k];
+            else if (outcome == 2) ++r.skipped[k];
+            else ++r.failed[k];
         }
-        vm.revertToState(snapshot);
-        vm.resumeGasMetering();
+        bool[] memory hit = _reached();
+        for (uint256 t = 0; t < r.reached.length; ++t) {
+            if (hit[t]) ++r.reached[t];
+        }
+        assembly ("memory-safe") {
+            mstore(0x40, mark)
+        }
     }
 
     /// @dev One call of the replay: 0 if it changed a counted slot (or nothing is counted), 1 if it returned without
