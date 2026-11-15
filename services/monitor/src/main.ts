@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Process entry: configuration (refused when any recipient has no channel or a chain has no second provider), the
-// ingest and status server, then one round per chain every interval. A failed round is logged and retried on the
-// next interval; /healthz answers 503 once a chain has gone 5 intervals without a successful round, for the external
-// uptime check that watches the monitor itself.
+// ingest, status and metrics server, then one round per chain every interval. A failed round is logged and retried on
+// the next interval; /healthz answers 503 once a chain has gone 5 intervals without a successful round, for the
+// external uptime check that watches the monitor itself.
 
 import { MULTICALL3_ADDRESS } from "@avana/services-common";
 import { type CallResult, type ContractCall, type ViewClient, readChainSnapshot } from "@avana/services-common/views";
@@ -12,7 +12,8 @@ import { AlertBook } from "./alertBook.ts";
 import { type ChainConfig, type ChannelConfig, loadConfig } from "./config.ts";
 import { fileIncidentLog } from "./incidentLog.ts";
 import { KeeperFeed } from "./keeper.ts";
-import { type ChainReads, type ProviderReads, runRound } from "./monitor.ts";
+import { MonitorMetrics } from "./metrics.ts";
+import { type ChainReads, type ProviderReads, RoundError, runRound } from "./monitor.ts";
 import type { RawRpc } from "./probe.ts";
 import { liveFrontend, probesFor } from "./probes.ts";
 import { LivenessBook } from "./liveness.ts";
@@ -87,11 +88,17 @@ const config = loadConfig(process.env);
 const book = new AlertBook();
 const feed = new KeeperFeed(config.keeperInstances);
 const channels = new Map(config.channels.map((c) => [c.name, channelOf(c)]));
-const log = fileIncidentLog(config.incidentLogPath);
 const lastSuccess = new Map<number, number>(config.chains.map((c) => [c.chain.id, Date.now()]));
 
 const liveness = new LivenessBook(config.liveness);
 const probesByChain = new Map(config.chains.map((c) => [c.chain.id, probesFor(c, config, liveFrontend, liveness)]));
+const metrics = new MonitorMetrics(
+  config.chains.map((c) => ({ id: c.chain.id, key: c.chain.key, probes: probesByChain.get(c.chain.id)!.map((p) => p.name) })),
+  config.keeperInstances,
+  config.channels.map((c) => c.name),
+  Math.floor(Date.now() / 1_000),
+);
+const log = metrics.countingLog(fileIncidentLog(config.incidentLogPath));
 const store = fileStateStore(config.statePath);
 const saved = store.load();
 if (saved) {
@@ -100,7 +107,7 @@ if (saved) {
 }
 const safeWatched = new Set([...config.safes].flatMap(([chainId, safes]) => safes.map((x) => `${chainId}|${x.address.toLowerCase()}`)));
 monitorServer(
-  { keeperTokens: config.keeperTokens, statusToken: config.statusToken },
+  { keeperTokens: config.keeperTokens, statusToken: config.statusToken, metricsToken: config.metricsToken },
   feed,
   () => book.open(),
   () => {
@@ -108,6 +115,7 @@ monitorServer(
     return { ok: stale.length === 0, stale };
   },
   { book: liveness, watched: (chainId, safe) => safeWatched.has(`${chainId}|${safe.toLowerCase()}`), now: () => Math.floor(Date.now() / 1_000) },
+  () => metrics.render(book.open(), (name) => feed.lastHeartbeat(name)),
 ).listen(config.port);
 out({ type: "monitor.start", chains: config.chains.map((c) => c.chain.key), channels: config.channels.map((c) => `${c.name}:${c.kind}`), keeperInstances: config.keeperInstances.map((i) => i.name) });
 
@@ -121,17 +129,31 @@ const persist = () => {
 };
 
 for (const c of config.chains) {
-  const reads = chainReads(c);
+  const live = chainReads(c);
+  // The head each round reads, for the keeper heartbeat age.
+  const reads: ChainReads = {
+    ...live,
+    head: async () => {
+      const b = await live.head();
+      metrics.head(c.chain.id, b.number);
+      return b;
+    },
+  };
   const probes = probesByChain.get(c.chain.id)!;
   let running = false;
   const tick = async () => {
     if (running) return; // a slow round is not overlapped by the next one
     running = true;
+    const started = Date.now();
+    const ended = (ok: boolean, failedProbes: readonly string[] = []) =>
+      metrics.round(c.chain.id, { ok, durationSeconds: (Date.now() - started) / 1_000, endedAt: Math.floor(Date.now() / 1_000), failedProbes });
     try {
       const sent = await runRound(reads, { book, feed, probes, routing: config.routing, channels, log });
       lastSuccess.set(c.chain.id, Date.now());
+      ended(true);
       if (sent.length > 0) out({ type: "monitor.round", chain: c.chain.key, notices: sent.length });
     } catch (err) {
+      ended(false, err instanceof RoundError ? err.failures.map((f) => f.probe) : []);
       out({ type: "monitor.roundFailed", chain: c.chain.key, error: err instanceof Error ? err.message : String(err) });
     } finally {
       persist();

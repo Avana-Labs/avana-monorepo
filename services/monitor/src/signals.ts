@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The signals M-01 to M-29 of services/README.md (Monitoring and alerting): what each reads, its warn and page
+// The signals M-01 to M-30 of services/README.md (Monitoring and alerting): what each reads, its warn and page
 // levels, who responds and which playbook of docs/spec/03-operations/06-emergency-operations.md they follow. The router
 // sends each alert to the responders named here, so no time is spent deciding who acts.
 
@@ -77,6 +77,7 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-27", name: "Frontend bundle hash, DNS and hosting change", source: "external", warn: "any", page: "hash mismatch", responders: ["engineering"], playbook: "P-13 (EMG-087)" },
   { id: "M-28", name: "Liquidity leaving a listed pool", source: "snapshot", warn: "−20 % in 1 hour", page: "−40 % in 1 hour", responders: ["riskProviders", "guardians"], playbook: "P-04 (EMG-078)" },
   { id: "M-29", name: "Rate curve per lend asset", source: "snapshot", warn: "any change of a curve's values", page: "GHO baseDrawnRate below the Core Hub GHO base rate", responders: ["aaveDao", "riskProviders"], playbook: "P-10 (EMG-084)" },
+  { id: "M-30", name: "Keeper discovery mismatch", source: "keeper", warn: "any account one discovery source holds and the other lacks", page: "one-sided for KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS (1 hour by default)", responders: ["keeperOnCall"], playbook: "P-08 (EMG-082)" },
 ];
 
 const BY_ID: ReadonlyMap<SignalId, SignalDef> = new Map(SIGNALS.map((s) => [s.id, s]));

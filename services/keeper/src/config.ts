@@ -18,6 +18,7 @@ import {
 import { ABI_HASH } from "@avana/protocol/abis";
 import { type StreamKey, parseStreamKey } from "./discovery/indexerStream.ts";
 import type { LocalKeystore } from "./adapters/localKeystore.ts";
+import { DISCOVERY_PAGE_SECONDS } from "./monitoring/discovery.ts";
 import { parseLargest } from "./monitoring/funding.ts";
 
 export type KeeperMode = "observe" | "active";
@@ -52,6 +53,17 @@ export interface KeeperConfig {
   readonly indexerUrl: string;
   /** The keeper's key for the indexer stream, one of the indexer's INDEXER_EXPORT_KEYS (id:base64secret). */
   readonly indexerKey: StreamKey;
+  /** How long an account may stay one-sided between the discovery sources before M-30 pages, in seconds. */
+  readonly discoveryPageSeconds: number;
+}
+
+/** KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS: a positive whole number of seconds, 3,600 when unset. */
+export function discoveryPageSeconds(env: NodeJS.ProcessEnv): number {
+  const name = "KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS";
+  const raw = optionalEnv(env, name);
+  if (raw === undefined) return DISCOVERY_PAGE_SECONDS;
+  if (!/^\d+$/.test(raw) || Number(raw) === 0 || !Number.isSafeInteger(Number(raw))) throw new Error(`${name} must be a positive integer number of seconds`);
+  return Number(raw);
 }
 
 /**
@@ -144,5 +156,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     metricsPort,
     indexerUrl: requireEnv(env, "KEEPER_INDEXER_URL"),
     indexerKey: parseStreamKey(requireEnv(env, "KEEPER_INDEXER_KEY")),
+    discoveryPageSeconds: discoveryPageSeconds(env),
   };
 }

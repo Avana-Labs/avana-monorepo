@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+#
+# Loads the dashboards of services/dashboards/grafana/dashboards (mounted at /etc/grafana/dashboards) into the folder
+# Avana. They are read-only in Grafana, so the repository stays the source: a change to a JSON file is loaded within a
+# minute.
+
+apiVersion: 1
+
+providers:
+  - name: avana
+    folder: Avana
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /etc/grafana/dashboards

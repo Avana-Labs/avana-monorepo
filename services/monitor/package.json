@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "Avana's monitoring service: the signals M-01 to M-29 at warn and page levels, each with its responder and playbook, confirmed on a second RPC provider before paging, logged with its block.",
+  "description": "Avana's monitoring service: the signals M-01 to M-30 at warn and page levels, each with its responder and playbook, confirmed on a second RPC provider before paging, logged with its block.",
   "type": "module",
   "engines": {
     "node": ">=22.12"

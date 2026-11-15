@@ -157,4 +157,10 @@ describe("loadConfig", () => {
     expect(() => load({ ...base, MONITOR_KEEPER_TOKEN_ETH_PRIMARY: "" })).toThrow(/MONITOR_KEEPER_TOKEN_ETH_PRIMARY/);
     expect(() => load({ ...base, MONITOR_NETWORK_SET: "testnet" })).toThrow(/no chain of the testnet set/);
   });
+
+  it("reads the metrics token, leaves it off when not set, and refuses the status token again", () => {
+    expect(load(base).metricsToken).toBeNull();
+    expect(load({ ...base, MONITOR_METRICS_TOKEN: "mt" }).metricsToken).toBe("mt");
+    expect(() => load({ ...base, MONITOR_METRICS_TOKEN: "st" })).toThrow(/must differ from MONITOR_STATUS_TOKEN/);
+  });
 });

@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Avana Labs
 // The wallet history (EXPORT.md, "Older history"): the logs naming a wallet or one of its attributed proxies, newest
 // first, read from `log_party` and served as export records up to the export's servable block, so a history page never
-// holds a block a reorg can remove. Convex shows these records without storing them.
+// holds a block a reorg can remove. Convex shows these records without storing them. Until the indexer reaches the
+// chain head after a (re)index, `log_party` is incomplete, so no page is served (null; the route answers 503).
 
 import { db } from "ponder:api";
 import schema from "ponder:schema";
@@ -40,7 +41,10 @@ async function keysBelow(chainId: number, parties: readonly HexString[], before:
   return onlyBlock === null ? out.slice(0, limit) : out;
 }
 
-export async function buildHistoryPage(req: HistoryRequest): Promise<HistoryPage> {
+export async function buildHistoryPage(req: HistoryRequest): Promise<HistoryPage | null> {
+  // The Progress row is written only at the realtime head, so its absence means the backfill is still running.
+  const [progress] = await db.select().from(schema.chainProgress).where(eq(schema.chainProgress.chainId, req.chainId));
+  if (!progress) return null;
   const { through } = await servableThrough(req.chainId);
   const cap = through + 1n;
   const before = req.before === null || req.before > cap ? cap : req.before;

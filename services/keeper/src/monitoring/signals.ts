@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Monitoring signals M-01 to M-26 (services/README.md, Monitoring and alerting). The keeper evaluates the ones it
+// Monitoring signals M-01 to M-30 (services/README.md, Monitoring and alerting). The keeper evaluates the ones it
 // already reads each block; the rest run on their stated cadence from indexer events or a daily fork simulation.
 // Every page is confirmed on a second RPC provider at a known block before it is sent (EMG-075).
 
@@ -38,7 +38,7 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-08", name: "Breaker latched or condition true", cadence: "block", inputs: ["Lens.getBreakerStatus", "Lens.getDebtBreakerStatus", "eth_call pokeBreakers"], warn: "every", page: "security freeze latched (reopensAt = max uint64)", responder: "guardians", playbook: "per reason" },
   { id: "M-09", name: "Accounts below HF 1 not liquidated", cadence: "block", inputs: ["Spoke.getUserAccountData", "cache liquidatableSince"], warn: "60 s (5 Ethereum, 30 Base blocks)", page: "300 s (25 Ethereum, 150 Base blocks); 3,600 s escalates", responder: "standby keeper, keeper on-call, guardians", playbook: "P-08 (EMG-082)" },
   { id: "M-10", name: "Liquidation reverts by reason, RouteFailed, share seized", cadence: "event", inputs: ["keeper attempt log", "LPVaultSwap.RouteFailed", "LPVaultSwap.LiquidationSettled"], warn: "1 per market per hour; 10 % seized in 1 h", page: "3 per market per hour; 20 % seized in 1 h", responder: "governance (routes), guardians", playbook: "P-04 (EMG-078)" },
-  { id: "M-11", name: "Route depth at stress size", cadence: "dailyFork", inputs: ["fork simulation", "routeDepthThresholdGho", "buyRouteDepthThresholdGho"], warn: "< 120 %", page: "< 100 %", responder: "governance", playbook: "P-04 (EMG-078)" },
+  { id: "M-11", name: "Route depth at stress size", cadence: "dailyFork", inputs: ["fork simulation", "routeDepthThreshold(marketId, token, debtAsset, kind) in base units of the debt asset"], warn: "< 120 %", page: "< 100 %", responder: "governance", playbook: "P-04 (EMG-078)" },
   { id: "M-12", name: "GSM exposure headroom per token", cadence: "dailyFork", inputs: ["GSM exposure", "market stress size"], warn: "< 2× stress size", page: "< 1×", responder: "risk service providers", playbook: "P-04 (EMG-078)" },
   { id: "M-13", name: "First-Loss Reserve balance", cadence: "block", inputs: ["AvanaFirstLossReserve.totalFunded", "firstLossReserveMinimum"], warn: "< 150 % of minimum", page: "< 100 %", responder: "Avana Labs top-up", playbook: "P-09 (EMG-083)" },
   { id: "M-14", name: "Tail coverage ratio", cadence: "block", inputs: ["Lens.getTailCoverage", "live debt by token"], warn: "< 150 %", page: "< 100 %", responder: "risk service providers, Aave DAO", playbook: "P-09 (EMG-083)" },
@@ -54,4 +54,8 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-24", name: "Pause state and reason, address freeze, standby switch, manual breaker", cadence: "event", inputs: ["PauseStateChanged", "PauseReasonChanged", "AddressFrozen", "StandbyRouteActivated", "BreakerLatched"], warn: "every", page: "—", responder: "every signer", playbook: "per reason" },
   { id: "M-25", name: "Token issuer probes and blocklists", cadence: "block", inputs: ["paused()", "basisPointsRate()", "issuer blocklist events", "PayoutEscrow.RemainderEscrowed to feeRecipient"], warn: "probe change", page: "blocklist of LPVaultSwap, the LPVault, Collateralization or the AaveAdapter", responder: "guardians", playbook: "P-11 (EMG-085)" },
   { id: "M-26", name: "Keeper code-check mismatch", cadence: "block", inputs: ["implementation slots", "runtime code hashes"], warn: "—", page: "every", responder: "keeper on-call", playbook: "P-08 (EMG-082)" },
+  { id: "M-27", name: "Frontend bundle hash, DNS and hosting change", cadence: "external", inputs: ["frontend bundle sha256", "DNS records", "hosting headers"], warn: "any", page: "hash mismatch", responder: "engineering", playbook: "P-13 (EMG-087)" },
+  { id: "M-28", name: "Liquidity leaving a listed pool", cadence: "block", inputs: ["pool liquidity()", "pool liquidity around the current price"], warn: "−20 % in 1 h", page: "−40 % in 1 h", responder: "risk service providers, guardians", playbook: "P-04 (EMG-078)" },
+  { id: "M-29", name: "Rate curve per lend asset", cadence: "block", inputs: ["Hub interest-rate data", "Hub drawn rate", "GHO baseDrawnRate", "Core Hub GHO base rate"], warn: "any change of a curve's values", page: "GHO baseDrawnRate below the Core Hub GHO base rate", responder: "Aave DAO, risk service providers", playbook: "P-10 (EMG-084)" },
+  { id: "M-30", name: "Keeper discovery mismatch", cadence: "block", inputs: ["indexer stream UserProxyCreated", "RPC UserProxyCreated logs on both providers", "KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS"], warn: "any account one source holds and the other lacks", page: "one-sided for KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS (1 h by default)", responder: "keeper on-call", playbook: "P-08 (EMG-082)" },
 ];

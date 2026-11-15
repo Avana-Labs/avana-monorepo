@@ -7,7 +7,7 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 | Path | Contents |
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
-| `monitor/` | The monitoring service: the signals `M-01` to `M-29` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
+| `monitor/` | The monitoring service: the signals `M-01` to `M-30` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
 | `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
 | `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the ParameterStore's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
@@ -75,7 +75,20 @@ export RPC_ANVIL=http://127.0.0.1:8545 RPC_ANVIL_FALLBACK=http://127.0.0.1:8545 
 (cd services/keeper && KEEPER_NETWORK_SET=local KEEPER_MODE=observe ... npx tsx src/main.ts)
 ```
 
-`contracts/script/e2e/services-smoke.sh <manifest>` runs both on a manifest with throwaway kill-switch certificates and checks that the indexer reaches `/ready` and the keeper serves its metrics in observe mode. It then starts a fresh local Convex deployment of `services/convex` (`CONVEX_AGENT_MODE=anonymous npx convex dev`, no account), points it at the indexer's export and at the rehearsal's listing metadata files (`contracts/deployments-local/<network>/listing-content/`, served as `LISTING_CONTENT_URL`), writes the deployment row from the manifest, imports the export and samples the chain; every listed market's pool page and every debt reserve's asset page must then show its on-chain numbers and the text of the listing metadata file its listing operation committed to. The manifest is produced and verified with `npm run manifest` in `packages/protocol` ([`deployments/README.md`](../deployments/README.md)); the services check its ABI hash against `@avana/protocol` and refuse a mismatch.
+`contracts/script/e2e/services-smoke.sh <manifest>` runs both on a manifest with throwaway kill-switch certificates and checks that the indexer reaches `/ready` and the keeper serves its metrics in observe mode. It then starts a fresh local Convex deployment of `services/convex` (`CONVEX_AGENT_MODE=anonymous npx convex dev`, no account), points it at the indexer's export and at the rehearsal's listing metadata files (`contracts/deployments-local/<network>/listing-content/`, served as `LISTING_CONTENT_URL`), writes the deployment row from the manifest, imports the export and samples the chain; every listed market's pool page and every debt reserve's asset page must then show its on-chain numbers and the text of the listing metadata file its listing operation committed to. The manifest is produced and verified with `npm run manifest` in `packages/protocol` ([`deployments/README.md`](../deployments/README.md)); the services refuse a manifest that does not match the release manifest schema (`@avana/protocol/manifest/schema`, every error listed) or whose ABI hash differs from `@avana/protocol`'s.
+
+## Containers
+
+[`Dockerfile`](Dockerfile) builds one image per long-running service from the repository root (`--target indexer`, `keeper` or `monitor`): the workspace's locked dependencies and the TypeScript sources, run as the `node` user with tsx or Ponder, as in CI. No secret, manifest or state is baked in: configuration comes from each service's `.env.example` names, manifests and certificates from read-only mounts, state files from a `/data` volume. Convex is not containerized: `services/convex` deploys to Convex, which runs short functions only, so the indexer (a Ponder process with PostgreSQL), the keeper (a loop every block with KMS signing and a mutual-TLS kill switch) and the monitor (a loop every interval that must keep paging when the app stack is down) run on their own hosts.
+
+[`compose.yaml`](compose.yaml) runs PostgreSQL, the indexer, one keeper and the monitor on one host, for a testnet or a rehearsal against a remote RPC:
+
+```bash
+cp services/indexer/.env.example services/indexer/.env   # and the keeper's and the monitor's; AVANA_MANIFEST=/manifests/<file>
+POSTGRES_PASSWORD=... KEEPER_TLS_DIR=/path/to/keeper-tls docker compose -f services/compose.yaml up --build
+```
+
+Ports are published on 127.0.0.1 only: the indexer on 42069 (export, `/health`, `/ready`), the keeper's kill switch on 9443 and metrics on 9464, the monitor on 9470. Production runs each service on its own host, with the standby keeper on another cloud (see Keeper, Operations).
 
 ## Indexer (`indexer/`)
 
@@ -101,7 +114,7 @@ Rules:
 - Stored debt shares and index snapshots are historical. Displayed health factors and keeper decisions always re-read RPC at a known block.
 - After an upgrade, events are decoded with the ABI that was live for each block range.
 - Start blocks come from the deployment receipts recorded in the manifest. A full reindex completes in under one hour, and the schema is not changed while the application is Frozen or Paused.
-- The indexer supplies the list of every PositionProxy that the Aave DAO's refresh payloads pass to `updateUserRiskPremium` after a `collateralRisk` change (`Q-145`).
+- The indexer supplies the list of every PositionProxy that the Aave DAO's refresh payloads pass to `updateUserRiskPremium` after a `collateralRisk` change (`Q-145`): `/export/v1/premium-refresh` names, per CDP Spoke, the attributed proxies with drawn debt whose last `UpdateUserRiskPremium` predates the last change ([indexer/EXPORT.md](indexer/EXPORT.md#risk-premium-refresh)).
 
 ### Finality and reorgs
 
@@ -271,7 +284,7 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-08 | Any breaker latched or condition true (Lens `getBreakerStatus`, `getDebtBreakerStatus`) | every | any latched security freeze (`reopensAt = type(uint64).max`) | guardians | per reason |
 | M-09 | Accounts below HF 1 not liquidated | 60 s (5 Ethereum blocks, 30 Base blocks) | 300 s (25 Ethereum blocks, 150 Base blocks); 3,600 s escalates to an Emergency Guardian decision on a breaker trip | standby keeper, keeper on-call, guardians | P-08 (`EMG-082`) |
 | M-10 | Liquidation reverts by reason (`RecoveryBelowFloor`, `InsufficientProceeds`, `NoRouteAvailable`, `StalePrice`, `DebtPriceStale`) in keeper simulation or on-chain; `RouteFailed` events; share of a market's collateral seized | 1 revert or `RouteFailed` per market per hour; 10 % seized in 1 hour | 3 per market per hour; 20 % seized in 1 hour | governance (routes), guardians | P-04 (`EMG-078`) |
-| M-11 | Route depth at stress size against `routeDepthThresholdGho` and `buyRouteDepthThresholdGho` (daily fork simulation) | below 120 % | below 100 % | governance | P-04 (`EMG-078`) |
+| M-11 | Route depth at stress size against `routeDepthThreshold(marketId, token, debtAsset, kind)`, in base units of the debt asset (daily fork simulation) | below 120 % | below 100 % | governance | P-04 (`EMG-078`) |
 | M-12 | GSM exposure headroom per token | below 2× the market's stress size | below 1× | risk service providers | P-04 (`EMG-078`) |
 | M-13 | First-Loss Reserve balance; DAO deficit offset balance | below 150 % of `firstLossReserveMinimum`; the offset below 100 % of `daoDeficitOffset` | below 100 % (monitoring alert only; no breaker reads it, `Q-399`) | Avana Labs top-up; Aave DAO top-up of the offset (`Q-410`) | P-09 (`EMG-083`) |
 | M-14 | Tail coverage ratio (`getTailCoverage`, and the live variant from current debt) | below 150 % | below 100 % | risk service providers, Aave DAO | P-09 (`EMG-083`) |
@@ -290,6 +303,7 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-27 | Frontend bundle hash, DNS and hosting change | any | hash mismatch | engineering | P-13 (`EMG-087`) |
 | M-28 | Liquidity leaving a listed pool: the pool's total liquidity (and its liquidity around the current price) per listed market, independent of Avana's share | −20 % in 1 hour | −40 % in 1 hour | risk service providers, guardians | P-04 (`EMG-078`) |
 | M-29 | Rate curve per lend asset: the Hub's interest-rate data and drawn rate; for GHO, `baseDrawnRate` against the Core Hub GHO base rate (`SPEC-HUB-007`) | any change of a curve's values | GHO `baseDrawnRate` below the Core Hub GHO base rate | Aave DAO, risk service providers | P-10 (`EMG-084`) |
+| M-30 | Keeper discovery mismatch: accounts (`UserProxyCreated`) that only one of the keeper's discovery sources holds, the indexer stream or the RPC log backfill over both providers, up to the block both have read | any one-sided account | an account one-sided for `KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS` (1 hour by default) | keeper on-call | P-08 (`EMG-082`) |
 
 Rules:
 

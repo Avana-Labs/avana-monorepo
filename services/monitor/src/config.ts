@@ -35,6 +35,8 @@ export interface MonitorConfig {
   readonly statePath: string;
   readonly port: number;
   readonly statusToken: string;
+  /** The bearer token of GET /metrics (MONITOR_METRICS_TOKEN); null leaves the endpoint off. */
+  readonly metricsToken: string | null;
   readonly keeperInstances: readonly KeeperInstance[];
   readonly keeperTokens: ReadonlyMap<string, string>;
   /** The governance Safes watched on each chain (M-23). */
@@ -130,6 +132,11 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     if (!assetId || !/^\d+$/.test(assetId)) throw new Error(`MONITOR_CORE_HUB_GHO entry ${spec} is not chain:hub:assetId`);
     coreHubGho.set(chainOf(key, "MONITOR_CORE_HUB_GHO", spec), { hub: address(hub, "MONITOR_CORE_HUB_GHO", spec), assetId: BigInt(assetId) });
   }
+  const statusToken = requireEnv(env, "MONITOR_STATUS_TOKEN");
+  const metricsToken = optionalEnv(env, "MONITOR_METRICS_TOKEN") ?? null;
+  // The metrics scraper holds its own token: it must not also read the open alerts in full.
+  if (metricsToken === statusToken) throw new Error("MONITOR_METRICS_TOKEN must differ from MONITOR_STATUS_TOKEN");
+
   const frontendUrl = optionalEnv(env, "MONITOR_FRONTEND_URL");
   if (frontendUrl && !frontendUrl.startsWith("https://")) throw new Error("MONITOR_FRONTEND_URL must be https");
   const frontendChain = optionalEnv(env, "MONITOR_FRONTEND_CHAIN") ?? chains[0]!.chain.key;
@@ -145,7 +152,8 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     incidentLogPath: requireEnv(env, "MONITOR_INCIDENT_LOG"),
     statePath: requireEnv(env, "MONITOR_STATE_PATH"),
     port: optionalEnv(env, "MONITOR_PORT") ? intEnv(env, "MONITOR_PORT") : 9470,
-    statusToken: requireEnv(env, "MONITOR_STATUS_TOKEN"),
+    statusToken,
+    metricsToken,
     keeperInstances,
     keeperTokens,
     safes,

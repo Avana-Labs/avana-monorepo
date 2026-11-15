@@ -3,7 +3,7 @@
 // Test data only: an in-memory chain that answers the snapshot reader's view calls the way the contracts do, so the
 // tests run the real reader (snapshot.ts, discovery.ts) end to end. It holds Hubs with their assets and Spokes, Lend
 // Spokes with their oracles, CDP Spokes with their debt reserves, DAO deficit offsets, the MarketRegistry's records and
-// Hub-to-Hub lines, and the Lens with its speed-limit views. A call to an address or function the chain does not hold
+// Hub-to-Hub lines, and the Lens with its Hub-asset and speed-limit views. A call to an address or function the chain does not hold
 // fails, as it reverts on chain.
 
 import type { CallResult, ContractCall, ViewClient } from "./client.ts";
@@ -201,6 +201,18 @@ function answer(c: FakeChain, call: ContractCall): unknown {
       case "getDebtReserves": {
         const s = c.cdpSpokes.find((x) => eq(args[0], x.spoke))!;
         return s.debtReserves.map((d) => ({ spoke: s.spoke, ...d, price: 10n ** 8n, fixedPrice: false, paused: false, frozen: false, borrowable: true, breakerReasons: 0, pauseState: 0 }));
+      }
+      case "getHubAsset": {
+        // The Hub's totals as the Lens reads them (LensHubAssets.getHubAsset); fields the snapshot reader does not use are 0.
+        const h = c.hubs.find((x) => eq(args[0], x.hub));
+        const a = h?.assets[Number(args[1])];
+        if (!h || !a) throw new CallFailed("UnknownHubAsset");
+        const added = a.slices.reduce((acc, x) => acc + x.added, 0n);
+        return {
+          hub: h.hub, assetId: BigInt(args[1] as bigint), underlying: a.underlying, decimals: a.decimals,
+          added, addedShares: added, drawn: a.drawn, premium: a.premium, owed: a.drawn + a.premium,
+          liquidity: a.liquidity, deficit: 0n, accruedFees: 0n, drawnRateRay: a.drawnRateRay,
+        };
       }
       case "getHubAssetExposure": {
         const h = c.hubs.find((x) => eq(args[0], x.hub))!;

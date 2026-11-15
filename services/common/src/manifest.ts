@@ -5,6 +5,7 @@
 // the services rely on cannot disappear from the schema without a type error here.
 
 import { readFileSync } from "node:fs";
+import { validate } from "@avana/protocol/manifest/schema";
 import type { Address, Hex } from "viem";
 
 /** A contract the services call or index, with the block of its deployment receipt (the indexer's start block). */
@@ -110,11 +111,18 @@ export interface ManifestDebtReserve {
 }
 
 /**
- * Loads one chain's verified manifest and checks it against the ABI hash compiled into the service.
+ * Loads one chain's verified manifest, refuses it unless it matches the release manifest schema of packages/protocol
+ * (every error listed), and checks it against the ABI hash compiled into the service.
  * `expectedAbiHash` comes from packages/protocol's generated ABIs, never from the manifest itself.
  */
 export function loadManifest(path: string, expectedAbiHash: Hex): ServiceManifest {
-  const manifest = JSON.parse(readFileSync(path, "utf8"), reviveBigInt) as ServiceManifest;
+  const text = readFileSync(path, "utf8");
+  const errors = validate(JSON.parse(text));
+  if (errors.length > 0) {
+    const list = errors.map((e) => `  ${e.path}: ${e.message}`).join("\n");
+    throw new Error(`manifest ${path} does not match the release manifest schema:\n${list}`);
+  }
+  const manifest = JSON.parse(text, reviveBigInt) as ServiceManifest;
   if (manifest.abiHash.toLowerCase() !== expectedAbiHash.toLowerCase()) {
     throw new Error(`manifest ${path} has ABI hash ${manifest.abiHash}, the service was built for ${expectedAbiHash}`);
   }

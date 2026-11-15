@@ -90,3 +90,19 @@ export interface HistoryPage {
   /** `before` of the next (older) page; null when no older record exists. */
   readonly next: { readonly before: DecimalString } | null;
 }
+
+/**
+ * `/export/v1/premium-refresh`: the attributed proxies of one CDP Spoke with drawn debt whose last
+ * `UpdateUserRiskPremium` predates the Spoke's last collateral-risk change, read at the indexer's head. The Aave DAO's
+ * refresh payload passes them to `updateUserRiskPremium`.
+ */
+export interface PremiumRefreshList {
+  readonly chainId: number;
+  readonly spoke: HexString;
+  /** The indexer's last handled block when the list was read. */
+  readonly asOfBlock: DecimalString;
+  /** Block of the Spoke's last collateral-risk change; null when none changed since listing (the list is then empty). */
+  readonly riskChangedBlock: DecimalString | null;
+  /** Lower-case, sorted. */
+  readonly proxies: readonly HexString[];
+}

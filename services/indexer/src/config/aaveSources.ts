@@ -17,3 +17,12 @@ export const AAVE_SPOKE_SOURCES = ["AaveSpoke", "AaveSpokeAdded", "AaveSpokeAppr
  * - `AaveHubRecorded`: every Hub the MarketRegistry records (`HubRecorded`), so a Hub recorded later is followed.
  */
 export const AAVE_HUB_SOURCES = ["AaveHub", "AaveHubRecorded"] as const;
+
+/**
+ * - `AvanaFirstLossReserve`: every First-Loss Reserve the MarketRegistry sets (`AvanaFirstLossReserveSet`).
+ * - `DaoDeficitOffset`: every Spoke a manifest Hub adds (`AddSpoke`), decoded with the First-Loss Reserve ABI, so the Aave
+ *   DAO's deficit offset of a (Hub, asset), a First-Loss Reserve the DAO deploys and registers on the Hub, is followed
+ *   from its registration. Avana's own reserves are Hub Spokes too and match both sources; other Spokes emit none of
+ *   these events. Logs are recorded under `AvanaFirstLossReserve.<Event>` with the emitting contract's address.
+ */
+export const FIRST_LOSS_SOURCES = ["AvanaFirstLossReserve", "DaoDeficitOffset"] as const;
