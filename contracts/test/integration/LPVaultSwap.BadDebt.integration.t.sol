@@ -85,6 +85,60 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap neutral");
     }
 
+    /// @notice Audit finding L-01 (fresh audit 2026-11-15): on the call that seizes the last unit and books the leftover
+    /// debt as the Hub's deficit, the borrower surplus `B` funds the First-Loss Reserve of the debt asset's funding Hub
+    /// instead of going to the defaulted borrower, so the reserve that covers the deficit keeps those proceeds.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_deficitSurplusFundsTheFirstLossReserve() public {
+        lpOracle.setAnswer(int256(100_000_000));
+        uint256 deficitSurplus = 0;
+        for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
+            uint256 debt = _debtOf(proxy, usdcReserveId);
+            LiquidationParams memory p = _params(proxy, debt);
+            p.maxShortfall = debt / 5;
+            uint256 deficitBefore = _deficit();
+            uint256 walletBefore = usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob);
+            uint256 reserveBefore = usdcCoverage.fundedBalance();
+            LiquidationResult memory r = _liquidateAs(keeper, p);
+            if (_deficit() > deficitBefore) {
+                assertEq(_suppliedUnits(proxy), 0, "a deficit is booked only once the collateral is gone");
+                assertEq(
+                    usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob), walletBefore, "borrower paid nothing"
+                );
+                assertEq(usdcCoverage.fundedBalance(), reserveBefore + r.borrowerSurplus, "surplus funded the reserve");
+                deficitSurplus += r.borrowerSurplus;
+            } else {
+                assertEq(usdcCoverage.fundedBalance(), reserveBefore, "no deficit, reserve untouched");
+            }
+        }
+        assertGt(deficitSurplus, 0, "the deficit call carried a borrower surplus");
+    }
+
+    /// @notice A reserve that cannot take the surplus never blocks the settlement: with a recorded reserve that holds
+    /// no code (its `fund` moves nothing and returns no data), the deficit call settles and pays `B` to the borrower.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_unusableReserveLeavesTheSurplusWithTheBorrower() public {
+        registry.setAvanaFirstLossReserve(aave.hub, address(usdc), makeAddr("codelessReserve"));
+        lpOracle.setAnswer(int256(100_000_000));
+        uint256 deficitSurplus = 0;
+        for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
+            uint256 debt = _debtOf(proxy, usdcReserveId);
+            LiquidationParams memory p = _params(proxy, debt);
+            p.maxShortfall = debt / 5;
+            uint256 deficitBefore = _deficit();
+            uint256 walletBefore = usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob);
+            LiquidationResult memory r = _liquidateAs(keeper, p);
+            assertEq(
+                usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob),
+                walletBefore + r.borrowerSurplus,
+                "borrower paid B"
+            );
+            if (_deficit() > deficitBefore) deficitSurplus += r.borrowerSurplus;
+        }
+        assertGt(deficitSurplus, 0, "the deficit call carried a borrower surplus");
+        assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap neutral");
+    }
+
     /// @notice A zero repayment is refused `InvalidAmount` even on an insolvent account.
     // TEST-055 verifies: REQ-SWAP-030, REQ-SWAP-077
     function test_TEST_055_zeroRepaymentRefused() public {

@@ -168,7 +168,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         ago[0] = window;
         bytes memory ret;
         (ok, ret) = LPOracleCalls.staticRead(
-            pool, POOL_CALL_GAS, abi.encodeCall(IUniswapV3Pool.observe, (ago)), _OBSERVE_LENGTH + 1
+            pool, OBSERVE_CALL_GAS, abi.encodeCall(IUniswapV3Pool.observe, (ago)), _OBSERVE_LENGTH + 1
         );
         if (!ok || ret.length != _OBSERVE_LENGTH || !_observeShape(ret)) return (false, 0);
         int256 c0 = 0;

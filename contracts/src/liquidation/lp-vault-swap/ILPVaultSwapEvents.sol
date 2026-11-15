@@ -35,6 +35,18 @@ interface ILPVaultSwapEvents {
         address indexed proxy, address indexed wallet, address indexed debtAsset, uint256 amount, bool escrowed
     );
 
+    /// @notice Emitted when a liquidation that booked a deficit paid its borrower surplus `B > 0` into the First-Loss
+    /// Reserve of the debt asset's funding Hub instead of to the borrower (`BorrowerSurplusPaid` is emitted only for a
+    /// rest the reserve did not take).
+    /// @param proxy The liquidated PositionProxy.
+    /// @param firstLossReserve The reserve funded (`MarketRegistry.firstLossReserveOf(fundingHub, debtAsset)`).
+    /// @param debtAsset The debt asset paid.
+    /// @param amount The part of `B` the reserve took, base units (all of `B` from a working reserve).
+    /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
+    event DeficitSurplusFunded(
+        address indexed proxy, address indexed firstLossReserve, address indexed debtAsset, uint256 amount
+    );
+
     /// @notice Emitted when `deleverage` took and repaid a flash loan of the debt asset through the chain's
     /// IFlashSource; a liquidation never emits it.
     /// @param marketId The collateral market.

@@ -14,6 +14,7 @@ import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscro
 import {LVSLPOracleMock, LVSMarketRegistryMock} from "../../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";
 import {MockCLPool} from "../../utils/mocks/SwapRouteMocks.sol";
+import {DeficitFunding} from "./DeficitFunding.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
@@ -145,6 +146,7 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(caller);
         env.usdc.approve(address(env.lvs), debtToCover + maxShortfall);
         Usdc memory before = _usdc(caller, env.wallets[i]);
+        vm.recordLogs();
         vm.prank(caller);
         try env.lvs.liquidate(p) returns (LiquidationResult memory r) {
             _checkBalances(before, _usdc(caller, env.wallets[i]), r, p);
@@ -369,7 +371,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
     /// reconcile, held for `settlePending`)`: `in == out`, LPVaultSwap's USDC is
     /// unchanged and the escrow's rise is exactly the escrowed credit, so no USDC appeared or vanished. The result must
     /// report what the balances show: `D` the Hub's rise, `A` the fee recipient's, `B` the borrower's, `R` the sources'
-    /// fall less Collateralization's rise and `keeperOut − Kf − shortfall` the caller's change. Floor: `R + shortfall >= minOut` and `D <= Kf <=
+    /// fall less Collateralization's rise and `keeperOut − Kf − shortfall` the caller's change. The part of `B` a deficit
+    /// liquidation paid into the First-Loss Reserve (`DeficitSurplusFunded`) reaches the Hub, not the borrower. Floor: `R + shortfall >= minOut` and `D <= Kf <=
     /// debtToCover`, `shortfall <= maxShortfall`.
     function _checkBalances(
         Usdc memory b,
@@ -384,17 +387,18 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         int256 toFee = int256(a.fee + a.feeEscrowed) - int256(b.fee + b.feeEscrowed);
         int256 toBorrower = int256(a.wallet + a.walletEscrowed) - int256(b.wallet + b.walletEscrowed);
         int256 escrowed = int256(a.feeEscrowed + a.walletEscrowed) - int256(b.feeEscrowed + b.walletEscrowed);
+        uint256 funded = DeficitFunding.funded(vm.getRecordedLogs(), address(env.lvs));
         if (
             callerIn + recovered != toHub + toFee + toBorrower || a.lvs != b.lvs || parked < 0
                 || int256(a.escrow) - int256(b.escrow) != escrowed
         ) ++conservationBreaks;
         if (
-            toHub != int256(r.debtRepaid) || toFee != int256(r.avanaFee) || toBorrower != int256(r.borrowerSurplus)
-                || recovered != int256(r.recovered)
+            toHub != int256(r.debtRepaid + funded) || toFee != int256(r.avanaFee)
+                || toBorrower != int256(r.borrowerSurplus) - int256(funded) || recovered != int256(r.recovered)
                 || -callerIn != int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall)
         ) ++reportBreaks;
         if (
-            recovered + int256(r.shortfall) < int256(r.minOut) || toHub > int256(r.callerFunds)
+            recovered + int256(r.shortfall) < int256(r.minOut) || toHub - int256(funded) > int256(r.callerFunds)
                 || r.callerFunds > p.debtToCover || r.shortfall > p.maxShortfall
         ) ++floorBreaks;
     }

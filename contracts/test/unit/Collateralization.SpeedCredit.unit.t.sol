@@ -16,6 +16,7 @@ import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixtu
 /// forge-config: default.isolate = false
 contract CollateralizationSpeedCreditUnitTest is CollateralizationFixture {
     bytes32 internal constant KEY42 = bytes32(uint256(42));
+    bytes32 internal constant KEY43 = bytes32(uint256(43));
     uint128 internal constant UNITS = 5_000_000_000;
 
     function setUp() public {
@@ -55,6 +56,48 @@ contract CollateralizationSpeedCreditUnitTest is CollateralizationFixture {
         vm.prank(adapter);
         coll.releaseForDeleverage(aliceProxy, vt, KEY42, UNITS, new uint256[](2));
         assertEq(riskModule.creditedUsd(), 1_000_000_000_000);
+    }
+
+    /// @notice Audit finding L-02 (fresh audit 2026-11-15): a rescue top-up is never charged to the pledge window
+    /// (REQ-RISK-093), so withdrawing it must credit nothing back; otherwise uncharged rescues wash other users' charges
+    /// out of the window.
+    // TEST-018 verifies: REQ-RISK-093, REQ-RISK-095
+    function test_TEST_018_rescueChargeIsNotCreditedBack() public {
+        riskModule.setRescue(true);
+        _pledge(alice, aliceProxy, KEY43, UNITS);
+        riskModule.setRescue(false);
+        _withdrawUnits(UNITS);
+        vm.prank(adapter);
+        coll.release(aliceProxy, vt, KEY43, UNITS);
+        assertEq(riskModule.creditedUsd(), 0, "nothing was charged, nothing is credited");
+        assertEq(riskModule.withdrawCredits(), 0);
+    }
+
+    /// @notice A record with $10,000 charged to the window and a $10,000 rescue re-credit gives back only the charged
+    /// share of what it releases.
+    // TEST-237 verifies: REQ-RISK-093, REQ-RISK-095, REQ-COLL-014
+    function test_TEST_237_mixedRecordCreditsOnlyItsChargedShare() public {
+        lpVault.addUnits(KEY42, UNITS);
+        riskModule.setRescue(true);
+        vm.startPrank(adapter);
+        lock.acquire();
+        (uint128 added,) = coll.recredit(alice, aliceProxy, vt, KEY42, "", false);
+        token.mint(aliceProxy, added);
+        vm.stopPrank();
+        _supply(aliceProxy, added);
+        vm.prank(adapter);
+        lock.release();
+        riskModule.setRescue(false);
+        _withdrawUnits(UNITS);
+        vm.prank(adapter);
+        coll.releasePartial(aliceProxy, vt, KEY42, UNITS, new uint256[](2));
+        assertEq(riskModule.creditedUsd(), 500_000_000_000, "half of the $10,000 released was charged");
+        vm.prank(adapter);
+        lock.release();
+        _withdrawUnits(UNITS);
+        vm.prank(adapter);
+        coll.release(aliceProxy, vt, KEY42, UNITS);
+        assertEq(riskModule.creditedUsd(), 1_000_000_000_000, "in total exactly the $10,000 charged");
     }
 
     // TEST-018 verifies: REQ-RISK-005, REQ-RISK-093

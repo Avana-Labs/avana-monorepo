@@ -94,9 +94,10 @@ contract FlashLiquidatorResiduesUnitTest is FlashLiquidatorFixture {
     }
 
     // TEST-174 verifies: REQ-HELPER-010
-    /// @notice A credit standing before the call is not this caller's: it stays for `claimEscrowed`, while the new one
-    /// is not merged into it.
-    function test_TEST_174_standingCreditStaysForClaimEscrowed() public {
+    /// @notice A credit standing before the call is not this caller's: the call first claims it to `claimEscrowed`'s
+    /// recipient, so the credit the call creates is the caller's alone and is claimed to it (audit finding L-04, fresh
+    /// audit 2026-11-15: a later caller's residue was merged into the standing credit and went to `feeRecipient`).
+    function test_TEST_174_standingCreditClearedBeforeTheCall() public {
         weth.setBlocked(address(helper), true);
         weth.setBlocked(caller, true);
         lvs.addResidue(weth, 0.4e18);
@@ -104,10 +105,26 @@ contract FlashLiquidatorResiduesUnitTest is FlashLiquidatorFixture {
         assertEq(escrow.claimable(address(weth), address(helper)), 0.4e18, "caller blocked: credit stands");
         weth.setBlocked(caller, false);
         _run(address(helper));
+        assertEq(weth.balanceOf(feeRecipient), 0.4e18, "the standing credit went where claimEscrowed sends it");
+        assertEq(weth.balanceOf(caller), 0.4e18, "the later caller received its own residue");
+        assertEq(escrow.claimable(address(weth), address(helper)), 0, "nothing merged, nothing left");
+    }
+
+    // TEST-174 verifies: REQ-HELPER-010
+    /// @notice When the standing credit cannot be cleared (its recipient cannot receive), it stays for `claimEscrowed`
+    /// and the call never claims it to its own caller.
+    function test_TEST_174_unclearableStandingCreditNeverGoesToTheCaller() public {
+        weth.setBlocked(address(helper), true);
+        weth.setBlocked(caller, true);
+        lvs.addResidue(weth, 0.4e18);
+        _run(address(helper));
+        weth.setBlocked(caller, false);
+        weth.setBlocked(feeRecipient, true);
+        _run(address(helper));
         assertEq(weth.balanceOf(caller), 0, "a standing credit never goes to a later caller");
         assertEq(escrow.claimable(address(weth), address(helper)), 0.8e18, "both credits stand");
-        uint256 claimed = helper.claimEscrowed(address(weth));
-        assertEq(claimed, 0.8e18);
+        weth.setBlocked(feeRecipient, false);
+        assertEq(helper.claimEscrowed(address(weth)), 0.8e18);
         assertEq(weth.balanceOf(feeRecipient), 0.8e18, "to feeRecipient");
     }
 

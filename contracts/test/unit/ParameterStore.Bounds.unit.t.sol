@@ -3,6 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
 import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
@@ -283,6 +285,39 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         _refuses(abi.encodeCall(store.setAvanaFeeShareBps, (5001)), oob);
         _refuses(abi.encodeCall(store.setAvanaFeeShareBps, (10_000)), oob);
         assertEq(store.avanaFeeShareBps(), 5000);
+    }
+
+    /// @notice Audit finding L-03 (fresh audit 2026-11-15): a rise of the fee share must keep LIQ-I1's fee bound
+    /// `s · minLB ≤ (10⁴ − f)(minLB − 10⁴)` on every live market, as activation and `loosenSlippageAllowanceBps` do; a
+    /// cut is always allowed.
+    // TEST-064 verifies: REQ-PSTORE-010, REQ-CONFIG-071
+    function test_TEST_064_feeShareRiseKeepsTheFeeBound() public {
+        uint256 minLb = _minLbNow();
+        assertGt(minLb, 10_000, "fixture bonus");
+        uint256 gain = minLb - 10_000;
+        // Holds at f = 0, fails at f = 5,000.
+        uint256 s = 7500 * gain / minLb;
+        MarketParams memory p = _params();
+        p.slippageAllowanceBps = uint16(s);
+        (bool ok,) = _relist(p);
+        assertTrue(ok, "relist");
+        _accepts(abi.encodeCall(store.setAvanaFeeShareBps, (0)));
+        _activate();
+        uint256 fMax = 10_000 - (s * minLb + gain - 1) / gain;
+        _refuses(abi.encodeCall(store.setAvanaFeeShareBps, (5000)), oob);
+        _refuses(abi.encodeCall(store.setAvanaFeeShareBps, (uint16(fMax + 1))), oob);
+        _accepts(abi.encodeCall(store.setAvanaFeeShareBps, (uint16(fMax))));
+        assertEq(store.avanaFeeShareBps(), fMax);
+        _accepts(abi.encodeCall(store.setAvanaFeeShareBps, (0)));
+    }
+
+    /// @dev `minLB` of market M as the store derives it (latest dynamic key, liquidation bonus factor).
+    function _minLbNow() internal view returns (uint256) {
+        IAaveV4Spoke sp = IAaveV4Spoke(address(spoke));
+        uint256 reserveId = sp.getReserveId(address(hub), IAaveV4Hub(address(hub)).getAssetId(address(vaultToken)));
+        uint32 key = sp.getReserve(reserveId).dynamicConfigKey;
+        uint256 bonus = sp.getDynamicReserveConfig(reserveId, key).maxLiquidationBonus;
+        return 10_000 + (bonus - 10_000) * sp.getLiquidationConfig().liquidationBonusFactor / 10_000;
     }
 
     // ─── maxShortfallBps: [0, 5,000] ───

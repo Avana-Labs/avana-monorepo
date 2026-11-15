@@ -140,6 +140,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         // Balances before anything moves: the payout and the forwarded market tokens are rises over these.
         uint256 assetBefore = asset.balanceOf(address(this));
         Watch memory w = _watch(request.params.marketId, market.tokens, address(asset));
+        _clearStanding(w);
         address payer = _openContext(lender, address(asset), request);
         // Inventory X - F and the SPEC-LIQ-019 shortfall budget; the unused part returns in the payout.
         uint256 prefund = request.params.debtToCover - flashAmount + request.params.maxShortfall;
@@ -217,6 +218,12 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     /// @return recipient `feeRecipient` (public helper) or `FUNDING_SAFE` (operator variant, `SIGNER` only).
     /// @custom:spec REQ-HELPER-010, REQ-HELPER-011
     function _claimRecipient() internal view virtual returns (address recipient);
+
+    /// @notice Where a PayoutEscrow credit already standing when a call starts is claimed before the liquidation: the
+    /// address `claimEscrowed` pays, or `address(0)` to leave it standing. Never reverts.
+    /// @return recipient `feeRecipient`, possibly `address(0)` (public helper), or `FUNDING_SAFE` (operator variant).
+    /// @custom:spec REQ-HELPER-010, REQ-HELPER-011
+    function _standingRecipient() internal view virtual returns (address recipient);
 
     /// @notice The most top-up one call may pull.
     /// @param maxTopUp The request's `maxTopUp`.
@@ -470,11 +477,33 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         ++w.count;
     }
 
+    /// @notice Claims every watched token's PayoutEscrow credit that stands before the liquidation to the address
+    /// `claimEscrowed` pays, then re-reads it, so a credit this call creates is its caller's alone and is never merged
+    /// into one an earlier caller left (REQ-HELPER-010). A credit whose claim fails, or with no such address, keeps
+    /// standing and is left to `claimEscrowed`, as before.
+    /// @param w The watch list; its credits are updated to what still stands.
+    /// @custom:spec REQ-HELPER-010
+    function _clearStanding(
+        Watch memory w
+    ) private {
+        for (uint256 i = 0; i < w.count; ++i) {
+            if (w.credits[i] == 0) continue;
+            address to = _standingRecipient();
+            if (to == address(0)) return;
+            // Bounded by the watch list: at most 8 market tokens and their routes' intermediates.
+            // forge-lint: disable-next-line(calls-loop)
+            try IPayoutEscrow(w.escrow).claim(w.tokens[i], to) {} catch {}
+            // forge-lint: disable-next-line(calls-loop)
+            w.credits[i] = IPayoutEscrow(w.escrow).claimable(w.tokens[i], address(this));
+        }
+    }
+
     /// @notice Sends the recipient the rise of the helper's balance of each watched token (route residues, route
     /// intermediates of a partly filled multi-hop route and dust legs LPVaultSwap paid it), then claims to the
     /// recipient every PayoutEscrow credit of a watched token that this call created: one that was 0 before the call
     /// and is not now (a residue LPVaultSwap could not deliver to the helper). A credit already standing before the
-    /// call, or one whose claim the recipient cannot receive, is left to `claimEscrowed`.
+    /// call and not cleared by `_clearStanding`, or one whose claim the recipient cannot receive, is left to
+    /// `claimEscrowed`.
     /// @param recipient The payout recipient.
     /// @param w The watch list with its balances and credits before the call.
     /// @custom:spec REQ-HELPER-001, REQ-HELPER-008, REQ-HELPER-010
