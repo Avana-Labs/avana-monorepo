@@ -228,8 +228,12 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         uint256 tickUpperWord
     ) internal view override returns (bool own) {
         ClLayout storage c = _cl();
-        // An ABI-encoded int24 is its sign extension to 256 bits.
+        // An ABI-encoded int24 is its sign extension to 256 bits, the two's-complement word of the int256.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 lower = uint256(int256(c.tickLower));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 upper = uint256(int256(c.tickUpper));
         own = poolWord == uint160(c.pool) && poolIdWord == 0 && kindWord == uint256(ShapeKind.TickRange)
-            && tickLowerWord == uint256(int256(c.tickLower)) && tickUpperWord == uint256(int256(c.tickUpper));
+            && tickLowerWord == lower && tickUpperWord == upper;
     }
 }

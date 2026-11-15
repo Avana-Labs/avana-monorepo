@@ -4834,6 +4834,12 @@
       "reason": "The constants are part of the shared LPOracleStorage base; each of the six contracts that inherits it (LPOracleCL, its poke, initialization, listing and view logic contracts and LPOracleCLModuleLogic) uses only the ones its own bodies need, so every constant is unused in some of them. Constants occupy no storage.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: the approved shared-base unused-state entries of MarketRegistryStorage and ParameterStoreStorage (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "49d38224d28d2450",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Pricing-module hook of REQ-ORACLE-103, called through the virtual _isOwnMarket of LPOracleStorage from LPOracleListing._ownMarketWords in the listing logic's checkConfig (REQ-ORACLE-046); Slither does not resolve the call to the override. Covered by TEST-332."
     }
   ]
 }

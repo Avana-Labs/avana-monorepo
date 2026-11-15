@@ -365,7 +365,7 @@ abstract contract LPOracleListing is LPOracleViews {
         bytes memory ret,
         uint256 head
     ) private view returns (bool) {
-        uint256[5] memory w;
+        uint256[5] memory w = [uint256(0), 0, 0, 0, 0];
         for (uint256 i = 0; i < 5; ++i) {
             bool ok;
             (ok, w[i]) = LPOracleCalls.wordAt(ret, head + (5 + i) * WORD);

@@ -12,8 +12,8 @@ import {ICollateralizationDebtMark} from "./ICollateralizationDebtMark.sol";
 /// @notice The indebted mark of an account and the per-market count `closeMarket` reads (Q-355).
 /// @dev The mark moves no charge. A proxy's market is the vault token of its first pledge. `markDebtFree` reads the
 /// Spoke only for a marked account; a failing read with at least `DEBT_MARK_GAS_FLOOR` gas left changes nothing, one with
-/// less reverts `InsufficientGas`, and one whose revert data is `InsufficientGas` (an oracle inside the read starved)
-/// re-raises it, so a caller cannot starve the read or an oracle it reads to keep a mark set. A mark left set by a
+/// less reverts `InsufficientGas`, and so does one whose revert data is `InsufficientGas` (an oracle inside the read
+/// starved), so a caller cannot starve the read or an oracle it reads to keep a mark set. A mark left set by a
 /// failing read, or by a debt that left without an Avana call, is cleared by anyone through the AaveAdapter's
 /// `refreshDebtMark(proxy)`, so a stale mark only delays `closeMarket` and never blocks a repay or a liquidation.
 /// @custom:spec REQ-COLL-038, REQ-COLL-039, REQ-COLL-040, Q-355, Q-396
@@ -49,13 +49,11 @@ abstract contract CollateralizationDebtMark is CollateralizationBase, ICollatera
             uint256 left = gasleft();
             if (left < DEBT_MARK_GAS_FLOOR) revert InsufficientGas(left, DEBT_MARK_GAS_FLOOR);
             // An oracle the Spoke reads reverts `InsufficientGas` below its own gas floor: the caller's limit starved
-            // it, so the whole call reverts with that error instead of keeping the mark (the selector is the same).
+            // it, so the whole call reverts instead of keeping the mark (all Avana `InsufficientGas` share a selector).
+            // The selector is the first four bytes of the revert data.
+            // forge-lint: disable-next-line(unsafe-typecast)
             if (data.length >= 4 && bytes4(data) == InsufficientGas.selector) {
-                // Re-raises the callee's revert data unchanged.
-                // solhint-disable-next-line no-inline-assembly
-                assembly ("memory-safe") {
-                    revert(add(data, 32), mload(data))
-                }
+                revert InsufficientGas(left, DEBT_MARK_GAS_FLOOR);
             }
             return;
         }
