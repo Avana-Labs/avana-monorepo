@@ -44,3 +44,23 @@ export function isReorg(previous: Head | null, next: Head): boolean {
   if (next.number === previous.number + 1n) return next.parentHash !== previous.hash;
   return next.number <= previous.number;
 }
+
+/**
+ * The hashes of the heads processed and of the parents they name, for the last 128 heights. A head at or below the
+ * last processed height whose hash is one of these is late, not a reorg: the block subscription can deliver a missed
+ * block after the newer one that revealed it, and its state is older than the state already processed. Treating it
+ * as a reorg would reset every account's liquidatable clock and return mined transactions to pending.
+ */
+export class ProcessedHeads {
+  private readonly hashes = new Map<bigint, string>();
+
+  record(head: Head): void {
+    this.hashes.set(head.number, head.hash);
+    this.hashes.set(head.number - 1n, head.parentHash);
+    for (const n of this.hashes.keys()) if (n < head.number - 128n) this.hashes.delete(n);
+  }
+
+  isLate(previous: Head | null, head: Head): boolean {
+    return previous !== null && head.number <= previous.number && this.hashes.get(head.number) === head.hash;
+  }
+}

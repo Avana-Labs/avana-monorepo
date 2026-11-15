@@ -108,6 +108,15 @@ describe("runJob", () => {
     expect(lines.at(-1)).toMatchObject({ outcome: "skipped", reason: "helperFrozen" });
   });
 
+  it("sends nothing new for a subject whose transaction is still pending: the follow-up replaces that one", async () => {
+    const d = { ...deps("active", ok), pending: vi.fn((subject: string) => subject === TARGET) };
+    await runJob(job, context(IMPL), d);
+    expect(d.pending).toHaveBeenCalledWith(TARGET);
+    expect(d.simulate).not.toHaveBeenCalled();
+    expect(d.submit).not.toHaveBeenCalled();
+    expect(lines).toEqual([]);
+  });
+
   it("logs a failing candidate and carries on with the next one", async () => {
     const d = deps("active", ok);
     const two: Job<string, string> = {
