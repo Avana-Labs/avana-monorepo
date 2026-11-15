@@ -42,8 +42,8 @@ Run: `../../run_all.sh`, or `../../.venv/bin/python <file>.py` from this folder.
 | `SPEC-CHAIN-001` | `G(n) = 1,310,000 + 240,000 × n` gas units per liquidation of an account with `n` records; record cap 16, so `G(16) = 5,150,000 ≤ 16,777,216 / 2 = 8,388,608` (largest fitting count 29); keeper gas budget `k × G(16)`; no minimum debt (`Q-381`) | none | ch01, ar11 |
 | `SPEC-CAP-009` | borrow capacity `capRay = ⌊totalCollateralValue × RAY × avgCollateralFactor / WAD⌋` (maximum at HF 1.00), recommended `⌊capRay × 100 / 110⌋` (HF 1.10, `Q-398`); the idle test is removed (`Q-396`) | capacity down, recommended down | ar11 |
 | `SPEC-CAP-010` | `Σ drawCap ≤ line`; `line × 10^dec × coverageRatioBps ≤ funded × 10^4` | none | ar11 |
-| `SPEC-CAP-011` | window `(start, prev, curr)`: from `start + 2τ` empty, from `start + τ` `(start + τ, curr, 0)`; a charge passes iff `prev + curr + x ≤ L` | none | ar16 |
-| `SPEC-CAP-012` | `L = min(max, max(min, ⌊rate × sat(D − prev − curr) / 10^4⌋))` | floor | ar16 |
+| `SPEC-CAP-011` | net window `(start, prev, curr)`: from `start + 2τ` empty, from `start + τ` `(start + τ, curr, 0)`; a charge passes iff `prev + curr + x ≤ L`; a credit takes from `curr`, then `prev`, never below 0 | none | ar16 |
+| `SPEC-CAP-012` | `L = min(max, max(min, ⌊rate × B / 10^4⌋))`, `B = sat(D − prev)` fixed when a charge opens the bucket | floor | ar16 |
 | `SPEC-CAP-013` | `amountUsd = ⌈amount × price8 / 10^dec⌉` | ceiling | ar16 |
 
 ## Properties
@@ -264,6 +264,9 @@ Borrow-speed and pledge-speed limits (`Q-411`). Launch values: τ = 21,600 s; bo
 | MATH-AR-85b | every charge inside `[T0, T0 + τ)` leaves the interval total at most the `L` of that check | SPEC-CAP-011 | unbounded integers | PROVED |
 | MATH-AR-85c | the invariant holds before the first charge of the interval | SPEC-CAP-011 | unbounded integers | PROVED |
 | MATH-AR-85d | rolling at a view time and again later gives the same window total as rolling once | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85j | a credit inside `[T0, T0 + τ)` preserves the net window invariant (induction step) | SPEC-CAP-011, REQ-RISK-092, REQ-RISK-093 | unbounded integers | PROVED |
+| MATH-AR-85k | a credit takes exactly `min(y, prev + curr)` and never makes a bucket negative | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85l | with credits, every charge inside `[T0, T0 + τ)` leaves the net interval total at most its `L` | SPEC-CAP-011, REQ-RISK-092, REQ-RISK-093 | unbounded integers | PROVED |
 | MATH-AR-85e | six charges split across times within one τ total at most the last check's `L` | SPEC-CAP-011, REQ-RISK-092 | unbounded integers | PROVED |
 | MATH-AR-85f | over an interval of length τ + 1 two charges of `L` each pass (design: the bound is for τ) | SPEC-CAP-011 | unbounded integers | COUNTEREXAMPLE (deliberate) |
 | MATH-AR-85i | over any 2τ at most `2L` | SPEC-CAP-011 | unbounded integers | PROVED |
@@ -271,8 +274,9 @@ Borrow-speed and pledge-speed limits (`Q-411`). Launch values: τ = 21,600 s; bo
 | MATH-AR-85h | the bucket of a charge starts after `t − τ` | SPEC-CAP-011 | unbounded integers | PROVED |
 | MATH-AR-86a | `min ≤ L ≤ max` whenever `min ≤ max` | SPEC-CAP-012 | rate ≤ 10^4 | PROVED |
 | MATH-AR-86b | `L` never decreases when the base grows | SPEC-CAP-012 | products abstracted as monotone | PROVED |
-| MATH-AR-86c | own charges never raise `L` (`D = D0 + charges`) | SPEC-CAP-012, REQ-RISK-092 | rate ≤ 10^4 | PROVED |
-| MATH-AR-86d | on the raw `D` a split would raise `L` inside the window (why the base subtracts the window) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
+| MATH-AR-86c | inside an opened bucket `L` is the `L` of the window-start base, whatever the live base does | SPEC-CAP-012, REQ-RISK-092 | rate ≤ 10^4 | PROVED |
+| MATH-AR-86d | on the raw `D` a split would raise `L` inside the window (why the base is fixed when the bucket opens) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
+| MATH-AR-86f | on `D` less gross charges a borrow-and-repay would shrink `L` (why repays credit and the base is fixed) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
 | MATH-AR-86e | an unset scope refuses every positive charge | REQ-RISK-096 | — | PROVED |
 | MATH-AR-87a–c | the USD charge is the ceiling, less than one unit above the exact value, products below 2^192 | SPEC-CAP-013 | amounts `< 2^128`, prices `< 2^64` | PROVED |
 | MATH-AR-88a–c | at `moreAt` the window holds exactly what it says; `moreAt` lies after the check and within 2τ | SPEC-CAP-011, REQ-RISK-097 | unbounded integers | PROVED |

@@ -1518,10 +1518,16 @@
     ]
   },
   "ATTACK-206": {
-    "hash": "8be68e8f7739c533",
+    "hash": "c80a98e6115a4603",
     "checks": [
+      "PROP-110",
+      "PROP-111",
+      "TEST-320",
       "TEST-321",
-      "TEST-324"
+      "TEST-322",
+      "TEST-323",
+      "TEST-324",
+      "TEST-326"
     ]
   },
   "BOR-001": {
@@ -16866,7 +16872,7 @@
     ]
   },
   "REQ-COLL-040": {
-    "hash": "e2683d166b1e85e9",
+    "hash": "25c51c8121818fd5",
     "checks": [
       "AaveAdapterCollateralLogic",
       "AaveAdapterExitLogic",
@@ -16883,6 +16889,7 @@
       "TEST-029",
       "TEST-099",
       "TEST-213",
+      "TEST-269",
       "TEST-272"
     ]
   },
@@ -19973,7 +19980,7 @@
     ]
   },
   "REQ-LENS-018": {
-    "hash": "99f0cdfd1fe896ef",
+    "hash": "6f7b645b762c4dd5",
     "checks": [
       "CapView",
       "ILensMarket",
@@ -20111,7 +20118,7 @@
     ]
   },
   "REQ-LENS-028": {
-    "hash": "3139c2fd1b852309",
+    "hash": "8aa540a334f16b12",
     "checks": [
       "FV-LIQ-02",
       "FV-LIQ-06",
@@ -21219,7 +21226,7 @@
     ]
   },
   "REQ-MREG-026": {
-    "hash": "27d1b3e93c827a6a",
+    "hash": "c61f24d78190e984",
     "checks": [
       "FV-CTL-107",
       "FV-CTL-150",
@@ -22118,7 +22125,7 @@
     ]
   },
   "REQ-ORACLE-046": {
-    "hash": "a864590820448b6c",
+    "hash": "548fdbae151c1df8",
     "checks": [
       "ClLPVaultMarkets",
       "IAmmIntegrationHooks",
@@ -23410,7 +23417,7 @@
     ]
   },
   "REQ-PROXY-027": {
-    "hash": "f278601be8d60f7c",
+    "hash": "b14fa44b755f2ed8",
     "checks": [
       "AaveAdapter",
       "AaveAdapterUserLogic",
@@ -24646,7 +24653,7 @@
     ]
   },
   "REQ-PSTORE-026": {
-    "hash": "673c6946592091d9",
+    "hash": "d9e379741f1ad1f6",
     "checks": [
       "IParameterStoreErrors",
       "IParameterStoreListing",
@@ -24860,7 +24867,7 @@
     ]
   },
   "REQ-RISK-005": {
-    "hash": "03491be86d1a3236",
+    "hash": "d68cc73a1932d77c",
     "checks": [
       "IRiskModule",
       "RiskModule",
@@ -24955,7 +24962,7 @@
     ]
   },
   "REQ-RISK-014": {
-    "hash": "fc14de349fdd6c68",
+    "hash": "eb84936802158978",
     "checks": [
       "IRiskModuleChecks",
       "IRiskModuleErrors",
@@ -25076,7 +25083,7 @@
     ]
   },
   "REQ-RISK-026": {
-    "hash": "8b89e83e14aa9d56",
+    "hash": "b47ff4215e9d9a86",
     "checks": [
       "IRiskModuleChecks",
       "MATH-AR-47",
@@ -25231,7 +25238,7 @@
     ]
   },
   "REQ-RISK-042": {
-    "hash": "a864c7a420e8cfef",
+    "hash": "563c5980468ed5dd",
     "checks": [
       "IParameterStoreErrors",
       "IParameterStoreEvents",
@@ -25799,7 +25806,7 @@
     ]
   },
   "REQ-RISK-088": {
-    "hash": "4d9da1b89a92fa23",
+    "hash": "1814ba4d75e97d65",
     "checks": [
       "IMarketRegistryApprovals",
       "IRiskModuleDriftLogic",
@@ -25838,7 +25845,7 @@
     ]
   },
   "REQ-RISK-091": {
-    "hash": "427d53c3999cb578",
+    "hash": "a5a093a1bb7b9e0d",
     "checks": [
       "IRiskModuleBreakerLogic",
       "IRiskModuleChecks",
@@ -25848,7 +25855,7 @@
     ]
   },
   "REQ-RISK-092": {
-    "hash": "7ecfd7751c4baf9b",
+    "hash": "1ab39a780ef37897",
     "checks": [
       "BorrowSpeedInputs",
       "IRiskModuleChecks",
@@ -25870,7 +25877,7 @@
     ]
   },
   "REQ-RISK-093": {
-    "hash": "2a3f95231c5f3f77",
+    "hash": "106150124cce3009",
     "checks": [
       "IRiskModuleChecks",
       "IRiskModuleErrors",
@@ -25888,7 +25895,7 @@
     ]
   },
   "REQ-RISK-094": {
-    "hash": "27894e2a7f49b8b3",
+    "hash": "2e7c13ab7d8e95f6",
     "checks": [
       "TEST-321",
       "TEST-322",
@@ -25897,7 +25904,7 @@
     ]
   },
   "REQ-RISK-095": {
-    "hash": "fadbd0a7494e8149",
+    "hash": "8931a4381a0d6efe",
     "checks": [
       "IRiskModuleChecks",
       "RiskModule",
@@ -28995,7 +29002,7 @@
     ]
   },
   "REQ-VAULT-036": {
-    "hash": "e9eaa5c57539ee2f",
+    "hash": "e4deb45359d79678",
     "checks": [
       "CollateralizationBase",
       "CollateralizationRelease",
@@ -31640,7 +31647,7 @@
     ]
   },
   "SPEC-BRK-007": {
-    "hash": "8585ceca68f680ac",
+    "hash": "530fcb54a05b4a34",
     "checks": [
       "Breaker",
       "IMarketRegistryBreakers",
@@ -31880,7 +31887,7 @@
     ]
   },
   "SPEC-CAP-011": {
-    "hash": "029a04ab865e335e",
+    "hash": "33e99a73a8dfadb8",
     "checks": [
       "IRiskModuleChecks",
       "IRiskModuleViews",
@@ -31903,7 +31910,7 @@
     ]
   },
   "SPEC-CAP-012": {
-    "hash": "8181a04fc01b0061",
+    "hash": "5ec61e1cefc1ffe7",
     "checks": [
       "BorrowSpeedInputs",
       "IRiskModuleChecks",
