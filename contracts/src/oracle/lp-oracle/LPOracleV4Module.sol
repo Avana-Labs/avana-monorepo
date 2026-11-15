@@ -233,7 +233,46 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (bool okP, uint160 sqrtPriceX96,) = _pmSlot0();
         if (!okP || sqrtPriceX96 == 0) failed |= V4_CHECK_POOL;
         if (!_referenceMatches()) failed |= V4_CHECK_REFERENCE;
-        if (!_marketMatches()) failed |= V4_CHECK_MARKET;
+        // The integration's market is the module's: `v4Market(marketId).key` hashes to the stored `PoolId`, and
+        // `clMarket(marketId)` names the stored PoolManager (its `factory` field) and range. Before the integration binds
+        // the market the reads revert and are not counted; from the MarketRegistry's registration on, a failed or
+        // malformed read or any difference sets the bit (`REQ-AMM-V4-007`).
+        (bool okK, bytes memory key) = LPOracleCalls.staticRead(
+            _s().integration,
+            CONFIG_CALL_GAS,
+            abi.encodeCall(IUniswapV4Integration.v4Market, (_s().marketId)),
+            6 * 32 + 1
+        );
+        (bool okM, bytes memory cfg) = LPOracleCalls.staticRead(
+            _s().integration, CONFIG_CALL_GAS, abi.encodeCall(IClIntegration.clMarket, (_s().marketId)), 10 * 32 + 1
+        );
+        if (!okK || !okM) {
+            if (_bound()) failed |= V4_CHECK_MARKET;
+            return failed;
+        }
+        if (key.length != 6 * 32 || cfg.length != 10 * 32) return failed | V4_CHECK_MARKET;
+        // The first five words of `key` are the PoolKey, hashed as the module hashed its own encoding at `initialize`.
+        {
+            uint256[5] memory w;
+            for (uint256 i = 0; i < 5; ++i) {
+                (, w[i]) = LPOracleCalls.wordAt(key, i * 32);
+            }
+            if (keccak256(abi.encode(w)) != _v4().poolId) return failed | V4_CHECK_MARKET;
+        }
+        (, uint256 manager) = LPOracleCalls.wordAt(cfg, 2 * 32);
+        (, uint256 lower) = LPOracleCalls.wordAt(cfg, 7 * 32);
+        (, uint256 upper) = LPOracleCalls.wordAt(cfg, 8 * 32);
+        ClLayout storage c = _cl();
+        // Sign-extended int24 ticks compared as the ABI words the integration returns; no value is lost.
+        if (
+            manager != uint256(uint160(_v4().poolManager))
+                // forge-lint: disable-next-line(unsafe-typecast)
+                || lower != uint256(int256(c.tickLower))
+                // forge-lint: disable-next-line(unsafe-typecast)
+                || upper != uint256(int256(c.tickUpper))
+        ) {
+            failed |= V4_CHECK_MARKET;
+        }
     }
 
     /// @dev The report of `getClPriceState()` with the reference pool's mean tick in the v4 pool's token order and the
@@ -283,38 +322,6 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         if (!ok) return !_bound();
         (bool okW, uint256 word) = LPOracleCalls.wordAt(ret, 5 * 32);
         return ret.length == 6 * 32 && okW && word == uint256(uint160(_cl().pool));
-    }
-
-    /// @dev The integration's market is the module's: `v4Market(marketId).key` hashes to the stored `PoolId`, and
-    /// `clMarket(marketId)` names the stored PoolManager (its `factory` field) and range. Before the integration binds
-    /// the market the reads revert and are not counted; from the MarketRegistry's registration on, a failed or malformed
-    /// read or any difference fails the check.
-    /// @custom:spec REQ-AMM-V4-007, REQ-ORACLE-046, REQ-ORACLE-105
-    function _marketMatches() internal view returns (bool) {
-        Layout storage $ = _s();
-        (bool okK, bytes memory key) = LPOracleCalls.staticRead(
-            $.integration, CONFIG_CALL_GAS, abi.encodeCall(IUniswapV4Integration.v4Market, ($.marketId)), 6 * 32 + 1
-        );
-        (bool okM, bytes memory cfg) = LPOracleCalls.staticRead(
-            $.integration, CONFIG_CALL_GAS, abi.encodeCall(IClIntegration.clMarket, ($.marketId)), 10 * 32 + 1
-        );
-        if (!okK || !okM) return !_bound();
-        if (key.length != 6 * 32 || cfg.length != 10 * 32) return false;
-        bytes32 poolId;
-        // The first five words are the PoolKey, hashed as the module hashed its own encoding at `initialize`.
-        // solhint-disable-next-line no-inline-assembly
-        assembly ("memory-safe") {
-            poolId := keccak256(add(key, 32), 160)
-        }
-        V4Layout storage v = _v4();
-        ClLayout storage c = _cl();
-        (bool ok2, uint256 manager) = LPOracleCalls.wordAt(cfg, 2 * 32);
-        (bool ok7, uint256 lower) = LPOracleCalls.wordAt(cfg, 7 * 32);
-        (bool ok8, uint256 upper) = LPOracleCalls.wordAt(cfg, 8 * 32);
-        return ok2 && ok7 && ok8 && poolId == v.poolId && manager == uint256(uint160(v.poolManager))
-            // Sign-extended int24 ticks compared as the ABI words the integration returns; no value is lost.
-            // forge-lint: disable-next-line(unsafe-typecast)
-            && lower == uint256(int256(c.tickLower)) && upper == uint256(int256(c.tickUpper));
     }
 
     /// @dev The PoolManager's `IS_UNLOCKED` transient slot through `exttload`.
