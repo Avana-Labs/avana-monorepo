@@ -62,7 +62,9 @@ gas_reports = ["*"]
 # The concentrated-liquidity LPVaults carry the shared custody, binding and pricing base plus their AMM protocol's hooks;
 # at 10,000 runs the Slipstream LPVault is within about 140 bytes of EIP-170, and with the unit exponent of SPEC-ORC-005
 # (narrow 18/18-decimal ranges) it was 531 bytes over its 1,024-byte margin at 1,000 runs. At 200 runs both keep the
-# margin. Both deployable files take the same setting so their margins stay alike; everything compiled with them (the
+# margin. Both deployable files take the same setting so their margins stay alike; the Uniswap v4 LPVault, which adds
+# the PoolKey binding and the removal batch, takes 200 runs through via-IR (26,137 bytes in the legacy pipeline,
+# 23,112 through via-IR); everything compiled with them (the
 # shared base, the Uniswap v3 test harness, their test suites) builds with it too, and every other contract keeps the
 # default. certora/conf/LPVault.conf,
 # LPVaultSlipstream.conf, UniswapV3Integration.conf and SlipstreamIntegration.conf compile with the same runs.
@@ -101,6 +103,7 @@ compilation_restrictions = [
   { paths = "test/invariant/handlers/IntegrationHandler.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/liquidation/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/lens/lens/Lens*Module.sol", via_ir = true, optimizer_runs = 200 },
 ]
@@ -476,6 +479,7 @@ compilation_restrictions = [
   { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = false, optimizer_runs = 200 },
 ]
 
 [profile.coverage.fuzz]
