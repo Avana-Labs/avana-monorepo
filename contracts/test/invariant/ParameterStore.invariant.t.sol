@@ -61,7 +61,46 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(33, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](33);
+        bool[] memory check = new bool[](33);
+        floors[0] = 40; // gateRecovery
+        floors[1] = 35; // loosenDepositorCap
+        floors[2] = 15; // loosenHardFloor
+        floors[3] = 45; // loosenMarketCap
+        floors[4] = 80; // loosenPledge
+        floors[5] = 40; // loosenSlice
+        floors[6] = 40; // loosenSlippage
+        floors[7] = 45; // loosenTokenCap
+        floors[8] = 35; // poolShare
+        floors[9] = 20; // restoreSource
+        floors[10] = 75; // setBorrowAge
+        floors[11] = 75; // setConsistency
+        floors[12] = 75; // setFlashFee
+        floors[13] = 65; // setGrace
+        floors[14] = 25; // setMargin
+        floors[15] = 45; // setSlippageFloor
+        floors[16] = 60; // setTolerance
+        floors[17] = 25; // shortfall
+        floors[18] = 80; // stewardLoosens
+        check[18] = true; // stewardLoosens
+        floors[19] = 80; // strangerCalls
+        check[19] = true; // strangerCalls
+        floors[20] = 50; // switchToStandby
+        floors[21] = 60; // tightenBorrowAge
+        floors[22] = 50; // tightenConsistency
+        floors[23] = 80; // tightenDepositorCap
+        floors[24] = 75; // tightenFlashFee
+        floors[25] = 50; // tightenHardFloor
+        floors[26] = 60; // tightenMarketCap
+        floors[27] = 80; // tightenPledge
+        floors[28] = 80; // tightenSlice
+        floors[29] = 45; // tightenSlippage
+        floors[30] = 80; // tightenTokenCap
+        floors[31] = 40; // tightenTolerance
+        floors[32] = 80; // warp
+        check[32] = true; // warp
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

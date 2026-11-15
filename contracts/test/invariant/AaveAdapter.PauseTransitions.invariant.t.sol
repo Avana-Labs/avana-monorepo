@@ -71,7 +71,22 @@ contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture, Handler
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r =
             _replayLanded(address(handler), actions, AaveAdapterPauseHandler.Skipped.selector, 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(11, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](11);
+        bool[] memory check = new bool[](11);
+        floors[0] = 60; // setPause
+        floors[1] = 40; // setFreeze
+        floors[2] = 60; // breakNeighbours
+        floors[3] = 80; // pledge
+        floors[4] = 10; // borrow
+        floors[5] = 5; // withdrawWithDebt
+        floors[6] = 35; // repay
+        floors[7] = 60; // repayAllAndWithdraw
+        floors[8] = 15; // withdrawDebtFree
+        floors[9] = 55; // collectFees
+        floors[10] = 80; // refreshDebtMark
+        check[10] = true; // refreshDebtMark
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

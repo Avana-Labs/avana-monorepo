@@ -150,7 +150,23 @@ contract UniswapV3IntegrationCustodyInvariantTest is ClLPVaultUniswapHooks, ClLP
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(12, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](12);
+        bool[] memory check = new bool[](12);
+        floors[0] = 40; // accrue
+        floors[1] = 80; // attackDirect
+        check[1] = true; // attackDirect
+        floors[2] = 20; // collect
+        floors[3] = 40; // donateLiquidity
+        floors[4] = 80; // movePool
+        floors[5] = 40; // partialRemoval
+        floors[6] = 80; // pledge
+        floors[7] = 65; // pushStray
+        floors[8] = 40; // reconcile
+        floors[9] = 20; // returnStray
+        floors[10] = 40; // seize
+        floors[11] = 35; // withdraw
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

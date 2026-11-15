@@ -56,7 +56,16 @@ contract LensInvariantTest is StdInvariant, LensFixture, HandlerReach {
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(this), address(this));
         Reach memory r = _replayLanded(address(this), actions, bytes4(0), 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(6, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](6);
+        bool[] memory check = new bool[](6);
+        floors[0] = 65; // actBorrow
+        floors[1] = 80; // actDonate
+        floors[3] = 80; // actPledge
+        floors[4] = 80; // actPrice
+        floors[5] = 80; // actWarp
+        check[5] = true; // actWarp
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

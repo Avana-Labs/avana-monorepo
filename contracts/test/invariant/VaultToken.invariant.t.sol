@@ -74,7 +74,20 @@ contract VaultTokenInvariantTest is CollateralizationFixture, HandlerReach {
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r =
             _replayLanded(address(handler), actions, CollateralizationHandler.Skipped.selector, 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(10, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](10);
+        bool[] memory check = new bool[](10);
+        floors[0] = 80; // pledge
+        floors[1] = 55; // withdraw
+        floors[2] = 60; // borrow
+        floors[3] = 50; // repay
+        floors[4] = 80; // setPrice
+        floors[5] = 60; // liquidate
+        floors[6] = 60; // seizeAndKeep
+        floors[7] = 50; // settlePending
+        floors[8] = 45; // partialRemove
+        floors[9] = 60; // recredit
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

@@ -43,7 +43,16 @@ contract DexPathRouteInvariantTest is SwapRouteFixture, HandlerReach {
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(6, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](6);
+        bool[] memory check = new bool[](6);
+        floors[0] = 80; // donate
+        floors[1] = 80; // setMaxIn
+        floors[2] = 75; // setOutputFee
+        floors[3] = 80; // setRate1
+        floors[4] = 80; // setRate2
+        floors[5] = 80; // swap
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

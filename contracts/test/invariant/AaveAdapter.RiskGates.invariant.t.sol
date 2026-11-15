@@ -77,7 +77,21 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(12, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](12);
+        bool[] memory check = new bool[](12);
+        floors[0] = 60; // setPrice
+        floors[1] = 80; // report
+        floors[2] = 80; // debtReport
+        floors[3] = 40; // setBreaker
+        floors[4] = 45; // setOffboarding
+        floors[5] = 35; // setReserveFrozen
+        floors[6] = 40; // setDrift
+        floors[7] = 80; // warp
+        check[7] = true; // warp
+        floors[10] = 80; // repay
+        floors[11] = 80; // pledge
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

@@ -52,7 +52,16 @@ contract AvanaTimelockInvariantTest is TimelockFixture, HandlerReach {
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r =
             _replayLanded(address(handler), actions, TimelockHandler.Skipped.selector, 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(5, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](5);
+        bool[] memory check = new bool[](5);
+        floors[0] = 65; // schedule
+        floors[1] = 25; // execute
+        floors[2] = 15; // cancel
+        floors[3] = 15; // cleanup
+        floors[4] = 80; // warp
+        check[4] = true; // warp
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

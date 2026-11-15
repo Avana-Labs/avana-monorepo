@@ -61,7 +61,18 @@ contract MarketRegistryPauseStateInvariantTest is MarketRegistryFixture, Handler
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(7, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](7);
+        bool[] memory check = new bool[](7);
+        floors[0] = 5; // freeze
+        floors[1] = 10; // pause
+        floors[2] = 5; // unfreeze
+        floors[3] = 15; // unpause
+        floors[4] = 10; // freezeAll
+        floors[5] = 20; // pauseAll
+        floors[6] = 80; // warp
+        check[6] = true; // warp
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

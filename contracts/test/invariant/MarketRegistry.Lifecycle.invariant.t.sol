@@ -50,7 +50,17 @@ contract MarketRegistryLifecycleInvariantTest is Test, HandlerReach {
         Reach memory r = _replayLanded(
             address(handler), actions, MarketRegistryLifecycleHandler.Skipped.selector, 32, 50, 0, own, true
         );
-        _check(r, names, new string[](0), _floors(6, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](6);
+        bool[] memory check = new bool[](6);
+        floors[0] = 50; // list
+        floors[1] = 15; // activate
+        floors[2] = 15; // cancel
+        floors[3] = 5; // offboard
+        floors[4] = 80; // warp
+        check[4] = true; // warp
+        floors[5] = 15; // close
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {

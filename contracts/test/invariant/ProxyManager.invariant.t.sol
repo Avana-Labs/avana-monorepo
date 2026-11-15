@@ -49,7 +49,17 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r =
             _replayLanded(address(handler), actions, ProxyManagerHandler.Skipped.selector, 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(5, 0), new uint256[](0));
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](5);
+        bool[] memory check = new bool[](5);
+        floors[0] = 40; // deploy
+        floors[1] = 80; // strangerDeploy
+        check[1] = true; // strangerDeploy
+        floors[2] = 20; // strangerExecute
+        check[2] = true; // strangerExecute
+        floors[3] = 15; // adapterExecute
+        floors[4] = 40; // setFrozen
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {
