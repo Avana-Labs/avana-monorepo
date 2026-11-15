@@ -25,7 +25,8 @@ Triage file (JSON):
     {
       "excluded_detectors": [{"check": "<detector>", "reason": "<why the detector does not run>"}],
       "accepted": [
-        {"fingerprint": "<from the gate output>", "check": "<detector>", "file": "<path>", "reason": "<why>"},
+        {"fingerprint": "<from the gate output>", "check": "<detector>", "file": "<path>", "reason": "<why>",
+         "reviewedFiles": {"<path>": "<SHA-256 of the file as reviewed>"}},
         {"check": "<detector>", "files": "<glob>", "while": "no-implementation-in-folder", "reason": "<why>"}
       ]
     }
@@ -36,6 +37,15 @@ or a library with functions), so the acceptance ends by itself once the folder h
 non-empty reason. For Slither, `excluded_detectors` must list exactly the detectors in slither.config.json's
 `detectors_to_exclude`, so every disabled detector carries a reason; for Semgrep and 4naly3er, findings of a check
 listed in `excluded_detectors` (Semgrep rule ID, 4naly3er issue title) are dropped before the gate.
+
+`reviewedFiles` (optional) records the SHA-256 of each file a review covered (path from contracts/, hash of the file's
+bytes with LF line endings, as `git show HEAD:contracts/<path> | sha256sum` prints it). When a recorded file has
+changed or is gone, the gate prints "review reopened" with the entry and the file, and a `::warning` annotation in CI;
+it does not fail on it.
+The entry stays accepted until it is re-reviewed, which records the new hash: a reviewed file changes for reasons
+other than the reviewed code (a moved line, another function), the re-review needs an approver, and failing would hold
+every pull request on a review that none of them can give. A malformed `reviewedFiles` (not a path-to-hash map, or a
+hash that is not 64 hexadecimal digits) is a triage error.
 """
 
 from __future__ import annotations
@@ -290,6 +300,42 @@ def accepted_by(finding: dict, entries: list[dict]) -> dict | None:
     return None
 
 
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def file_sha256(path: str) -> str | None:
+    """SHA-256 of a file under contracts/ with LF line endings, so a CRLF checkout hashes as the committed file does;
+    None when the file does not exist."""
+    try:
+        data = (ROOT / path).read_bytes()
+    except OSError:
+        return None
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
+
+
+def reopened_reviews(entries: list[dict]) -> tuple[list[tuple[dict, str, str]], list[str]]:
+    """(entry, file, what changed) for each reviewed file whose hash no longer matches, and errors for malformed
+    `reviewedFiles` records."""
+    reopened, errors = [], []
+    for e in entries:
+        if "reviewedFiles" not in e:
+            continue
+        files = e["reviewedFiles"]
+        if not isinstance(files, dict) or not files:
+            errors.append(f"reviewedFiles is not a non-empty map of path to SHA-256: {e.get('fingerprint', json.dumps(e))}")
+            continue
+        for path, recorded in files.items():
+            if not isinstance(recorded, str) or not SHA256.match(recorded):
+                errors.append(f"reviewedFiles hash of {path} is not a SHA-256: {e.get('fingerprint', '')}")
+                continue
+            now = file_sha256(path)
+            if now is None:
+                reopened.append((e, path, "the file no longer exists"))
+            elif now != recorded:
+                reopened.append((e, path, f"sha256 {recorded[:12]}... reviewed, {now[:12]}... now"))
+    return reopened, errors
+
+
 def check_triage(tool: str, triage: dict) -> list[str]:
     errors = []
     for e in triage.get("accepted", []) + triage.get("excluded_detectors", []):
@@ -326,6 +372,8 @@ def main() -> int:
         report = text if args.tool == "4naly3er" else json.loads(text)
     triage = json.loads(args.triage.read_text(encoding="utf8")) if args.triage.exists() else {}
     errors = check_triage(args.tool, triage)
+    reopened, review_errors = reopened_reviews(triage.get("accepted", []))
+    errors += review_errors
 
     findings = {
         "slither": slither_findings,
@@ -368,13 +416,22 @@ def main() -> int:
     for e in entries:
         if id(e) not in used and "fingerprint" in e:
             lines.append(f"  stale triage entry (no matching finding): {e['fingerprint']} {e.get('check', '')}")
+    for e, path, change in reopened:
+        lines.append(f"  review reopened: {e.get('fingerprint', '')} {e.get('check', '')} ({e.get('function', e.get('file', ''))}): "
+                     f"{path} changed since the review ({change}); re-review the entry and record the new hash")
     for err in errors:
         lines.append(f"  TRIAGE ERROR {err}")
     status = 1 if blocking or errors else 0
-    lines.append(f"{args.tool}: {'FAIL' if status else 'pass'} ({len(blocking)} blocking, {len(accepted)} accepted)")
+    lines.append(
+        f"{args.tool}: {'FAIL' if status else 'pass'} ({len(blocking)} blocking, {len(accepted)} accepted"
+        + (f", {len(reopened)} reviewed file(s) changed since the review" if reopened else "")
+        + ")"
+    )
 
     text = "\n".join(lines)
     print(text)
+    for e, path, change in reopened:
+        print(f"::warning title={args.tool} triage review reopened::{e.get('fingerprint', '')} {e.get('check', '')}: {path} changed since the review ({change})")
     if args.summary:
         args.summary.write_text(text + "\n", encoding="utf8")
     return status
