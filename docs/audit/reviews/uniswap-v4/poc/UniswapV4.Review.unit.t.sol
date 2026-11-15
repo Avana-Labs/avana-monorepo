@@ -21,7 +21,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
 /// @notice Review PoCs on the Uniswap v4 LPVault (production contract, real PoolManager and PositionManager of the
-/// pinned v4 sources, real Lock). None of these tests has been run yet.
+/// pinned v4 sources, real Lock). Run once on 2026-11-15 after the fixes (see the README).
 /// forge-config: default.isolate = false
 contract UniswapV4ReviewPoC is UniswapV4IntegrationFixture {
     address internal recipient = makeAddr("recipient");
@@ -176,7 +176,7 @@ contract UniswapV4ReviewPoC is UniswapV4IntegrationFixture {
     }
 }
 
-/// @notice Review PoC on the Uniswap v4 LPOracle (real `LPOracleV4`, integration stub of the fixture). Not run yet.
+/// @notice Review PoC on the Uniswap v4 LPOracle (real `LPOracleV4`, integration stub of the fixture). Run once after the fixes.
 /// forge-config: default.isolate = false
 contract LPOracleV4ReviewPoC is LPOracleV4Fixture {
     function setUp() public {
