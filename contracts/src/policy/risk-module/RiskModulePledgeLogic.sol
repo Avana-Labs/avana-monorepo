@@ -235,18 +235,9 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     ) internal view returns (uint256 sliceUsd) {
         address[] memory tokens = c.m.tokens;
         if (k.tokenUsed.length != tokens.length) revert CapExceeded(CAP_TOKEN);
-        uint256 marketCap = _store().marketUsdCap(c.marketId);
-        uint256 room = marketCap > k.regularUsed ? marketCap - k.regularUsed : 0;
-        if (c.eligible) {
-            for (uint256 i = 0; i < tokens.length; ++i) {
-                uint256 tokenCap = _store().tokenUsdCap(c.m.hub, tokens[i]);
-                uint256 tokenRoom = tokenCap > k.tokenUsed[i] ? tokenCap - k.tokenUsed[i] : 0;
-                if (tokenRoom < room) room = tokenRoom;
-            }
-        }
         // `split` with no regular use takes `room` as the regular room.
         bool marketOk;
-        (sliceUsd, marketOk) = RiskModuleMath.split(c.charge, 0, room, c.eligible);
+        (sliceUsd, marketOk) = RiskModuleMath.split(c.charge, 0, _regularRoom(c, k, tokens), c.eligible);
         if (!marketOk) revert CapExceeded(CAP_MARKET);
         if (sliceUsd > 0) {
             if (sliceUsd > c.restore) revert SliceNotAvailable();
@@ -255,13 +246,37 @@ contract RiskModulePledgeLogic is RiskModulePreview {
             }
         }
         uint256 regular = c.charge - sliceUsd;
-        if (regular != 0) {
-            for (uint256 i = 0; i < tokens.length; ++i) {
-                if (!RiskModuleMath.fits(k.tokenUsed[i], regular, _store().tokenUsdCap(c.m.hub, tokens[i]))) {
-                    // One token over its cap refuses the whole pledge.
-                    // forge-lint: disable-next-line(require-revert-in-loop)
-                    revert CapExceeded(CAP_TOKEN);
-                }
+        if (regular != 0) _tokenTest(c, k, tokens, regular);
+    }
+
+    /// @dev The market room `K > R ? K - R : 0`; for an eligible top-up, the smallest of it and every token room.
+    function _regularRoom(
+        Ctx memory c,
+        PledgeCounters calldata k,
+        address[] memory tokens
+    ) internal view returns (uint256 room) {
+        uint256 marketCap = _store().marketUsdCap(c.marketId);
+        room = marketCap > k.regularUsed ? marketCap - k.regularUsed : 0;
+        if (!c.eligible) return room;
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            uint256 tokenCap = _store().tokenUsdCap(c.m.hub, tokens[i]);
+            uint256 tokenRoom = tokenCap > k.tokenUsed[i] ? tokenCap - k.tokenUsed[i] : 0;
+            if (tokenRoom < room) room = tokenRoom;
+        }
+    }
+
+    /// @dev `T_i + regular <= tokenUsdCap(hub, token_i)` for every pool token; one token over its cap refuses the
+    /// whole pledge.
+    function _tokenTest(
+        Ctx memory c,
+        PledgeCounters calldata k,
+        address[] memory tokens,
+        uint256 regular
+    ) internal view {
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            if (!RiskModuleMath.fits(k.tokenUsed[i], regular, _store().tokenUsdCap(c.m.hub, tokens[i]))) {
+                // forge-lint: disable-next-line(require-revert-in-loop)
+                revert CapExceeded(CAP_TOKEN);
             }
         }
     }
