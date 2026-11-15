@@ -24,8 +24,9 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
     /// @dev The implementation's `LPOracleCLModuleLogic`.
     address internal immutable _MODULE_LOGIC;
 
-    /// @notice Fixes the module contract; reverts `MarketMismatch(0)` unless it is an `LPOracleCLModuleLogic` with this
-    /// contract's `slot0` layout and chain constants.
+    /// @notice Fixes the module contract; reverts `MarketMismatch(0)` unless it is an `LPOracleCLModuleLogic` (or the
+    /// Uniswap v4 `LPOracleV4ModuleLogic`, which has the same entry points) with this contract's `slot0` layout and
+    /// chain constants.
     /// @param moduleLogic The implementation's `LPOracleCLModuleLogic`.
     /// @custom:spec REQ-ORACLE-080
     constructor(
@@ -34,9 +35,10 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         bytes32 config = keccak256(
             abi.encode(_TIMELOCK, _CHAIN_BLOCK_TIME, _POKE_MIN_GAS_FLOOR, _POKE_MIN_GAS_CEILING, _HAS_SEQUENCER)
         );
+        if (moduleLogic == address(0) || moduleLogic.code.length == 0) revert MarketMismatch(0);
+        bytes32 id = LPOracleCLModuleLogic(moduleLogic).MODULE_ID();
         if (
-            moduleLogic == address(0) || moduleLogic.code.length == 0
-                || LPOracleCLModuleLogic(moduleLogic).MODULE_ID() != keccak256("avana.LPOracleCLModuleLogic.v1")
+            (id != keccak256("avana.LPOracleCLModuleLogic.v1") && id != keccak256("avana.LPOracleV4ModuleLogic.v1"))
                 || LPOracleCLModuleLogic(moduleLogic).SLOT0_WORDS() != _SLOT0_WORDS
                 || LPOracleCLModuleLogic(moduleLogic).logicConfig() != config
         ) revert MarketMismatch(0);

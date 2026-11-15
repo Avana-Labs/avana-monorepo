@@ -90,6 +90,8 @@ compilation_restrictions = [
   { paths = "src/oracle/lp-oracle/LPOracleCLInitLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/oracle/lp-oracle/LPOracleCLViewLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/oracle/lp-oracle/LPOracleCLModuleLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleV4.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "test/invariant/echidna/LPOracleProperties.sol", via_ir = false, optimizer_runs = 200 },
   # These Echidna harnesses deploy the real ParameterStore tighten and loosen logic, or the real LPVaultSwap
   # implementation, in their constructor; at 10,000 runs their initcode passed EIP-3860's 49,152 bytes. Optimizer
