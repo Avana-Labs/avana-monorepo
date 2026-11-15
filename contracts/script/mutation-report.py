@@ -24,6 +24,7 @@ suites (a test-selection gap in security/mutation-layers.json); their survivors 
 """
 
 import fnmatch
+import importlib.util
 import json
 import re
 import sys
@@ -31,9 +32,19 @@ from collections import defaultdict
 from pathlib import Path
 
 KIND = re.compile(r"(Revert|Comment|Tweak) mutants: (\d+) caught of (\d+)")
-UNCAUGHT = re.compile(r"\[(\w+)\] Line (\d+): '(.*)' ==> '(.*)' --> UNCAUGHT")
 COMPILE_FAIL = "ERROR:CryticCompile:'forge' returned non-zero exit code"
 JOB = re.compile(r"^(mutate|gambit|necessist) (\S+) (.+?)(?: \(group (\d)\))?$")
+
+
+def _records():
+    """script/mutation-records.py, which reads a mutant or statement that spans several log lines whole."""
+    spec = importlib.util.spec_from_file_location("mutation_records", Path(__file__).with_name("mutation-records.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+RECORDS = _records()
 
 
 def rate(killed: int, counted: int) -> str:
@@ -79,7 +90,7 @@ def main() -> int:
                 s["mutate_total"] += int(total)
                 s["mutate_killed"] += int(caught)
             s["mutate_not_compiled"] += text.count(COMPILE_FAIL)
-            for kind, line, orig, mut in UNCAUGHT.findall(text):
+            for _, kind, line, orig, mut in RECORDS.uncaught(text):
                 survivors.append(("slither-mutate", layer, target, f"line {line} ({kind})", f"`{md(orig)}` → `{md(mut)}`", mark(target, "survived")))
             if job["conclusion"] != "success":
                 inconclusive.append(f"{job['name']} ({job['conclusion']})")
@@ -118,7 +129,7 @@ def main() -> int:
                 continue
             text = log.read_text(encoding="utf8", errors="replace")
             cand = re.search(r"(\d+) candidates in", text)
-            passed = re.findall(r"^(\S+:\d+:\d+-\d+:\d+): `(.*)` passed$", text, re.M)
+            passed = [(loc, stmt) for _, loc, stmt in RECORDS.necessist_passed(text)]
             necessist.append((layer, files, int(cand.group(1)) if cand else 0, len(passed)))
             necessist_rows.extend((layer, loc, md(stmt)) for loc, stmt in passed)
 
