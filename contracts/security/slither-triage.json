@@ -4950,13 +4950,6 @@
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
-      "fingerprint": "dc7054ed9e2c453c",
-      "check": "assembly",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
-      "reason": "Either the ERC-7201 namespace of avana.storage.LPOracleV4 (one assignment of the compile-time slot), or one mstore that shortens the PositionManager parameter array to the actions pushed; both memory-safe.",
-      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
-    },
-    {
       "fingerprint": "95fcc0d7a8645c99",
       "check": "dead-code",
       "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
@@ -5214,6 +5207,13 @@
       "file": "src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol",
       "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "26f274a534d89536",
+      "check": "assembly",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "One memory-safe mstore in _payload sets the length of the batch's own parameter array, allocated at capacity 10 or 5, to the number of actions pushed, so modifyLiquidities gets one parameter per action. It only shortens the array and never grows it. Measured 2026-11-15: copying into an exact-size array gave 23,644 bytes and sizing each batch from the PoolKey gave 23,607, both inside the 1,024-byte EIP-170 margin; with the mstore the LPVault is 23,509 bytes. Covered by the UniswapV4Integration unit tests of unwind, release, collectFees, the native ETH leg and the V4-01 fallback, and by the v4 removal and whole-account seizure gas tests.",
+      "approval": "approved (Josue, 2026-11-15)"
     }
   ]
 }
