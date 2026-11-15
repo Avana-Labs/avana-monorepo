@@ -10,3 +10,5 @@
 # Anvil test-account key in two commits history keeps; the code now signs from encrypted keystores.
 18f8855a659bd87c3fd8484f82b9465e22bbb873:contracts/script/e2e/scenarios/market.ts:generic-api-key:1317
 abbf40187ecb2c25bba52b59653f7db69542faeb:services/keeper/test/localKey.test.ts:generic-api-key:12
+# Mutation triage text in an unmerged branch; a test name, not a key.
+48fa018556873d59576e08650fa84b1e2e15431b:contracts/security/slither-mutate-triage.json:generic-api-key:8610
