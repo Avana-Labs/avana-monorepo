@@ -8,8 +8,9 @@
 # mutant, with the mutant copied over the file in an isolated copy of contracts/ (the workspace is never mutated).
 # Each mutant ends as
 #
-#   caught       some rule was violated (FAILURE) or failed its sanity check (SANITY_FAIL)
-#   survived     every rule verified
+#   caught       some rule was violated (FAIL in output.json, FAILURE or VIOLATED elsewhere) or failed its sanity
+#                check (SANITY_FAIL)
+#   survived     at least one rule verified and none failed, timed out or ended unknown, and the Prover exited 0
 #   timeout      the run took longer than CERTORA_MUTANT_TIMEOUT seconds, or a rule timed out with none violated
 #   invalid      the mutant did not compile
 #   error        the Prover wrote no report (see the mutant's log)
@@ -70,9 +71,10 @@ verdict() {
   local report
   report=$(find "$1" -maxdepth 3 -path '*/emv-*/Reports/output.json' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
   [ -n "$report" ] || { echo error; return; }
-  python3 -I - "$report" <<'PY'
+  python3 -I - "$report" "$rc" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1], encoding="utf8"))
+rc = int(sys.argv[2])
 leaves = []
 def walk(x):
     if isinstance(x, dict):
@@ -84,11 +86,13 @@ def walk(x):
     elif isinstance(x, str):
         leaves.append(x.upper())
 walk(d.get("rules", d))
-if any(v in ("FAILURE", "VIOLATED", "SANITY_FAIL") for v in leaves):
+# output.json writes a violated rule as FAIL; FAILURE and VIOLATED are kept for other report versions.
+statuses = [v for v in leaves if v in ("SUCCESS", "FAIL", "FAILURE", "VIOLATED", "SANITY_FAIL", "TIMEOUT", "UNKNOWN")]
+if any(v in ("FAIL", "FAILURE", "VIOLATED", "SANITY_FAIL") for v in statuses):
     print("caught")
-elif any(v == "TIMEOUT" for v in leaves):
+elif "TIMEOUT" in statuses:
     print("timeout")
-elif leaves and all(v == "SUCCESS" for v in leaves if v in ("SUCCESS", "FAILURE", "TIMEOUT", "UNKNOWN", "SANITY_FAIL", "VIOLATED")):
+elif statuses and all(v == "SUCCESS" for v in statuses) and rc == 0:
     print("survived")
 else:
     print("error")
