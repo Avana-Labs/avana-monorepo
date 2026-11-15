@@ -326,12 +326,21 @@ contract FlashLiquidatorProperties {
         }
     }
 
-    /// @notice The helper has no ERC-3156 minter callback: `onFlashLoan` reverts with no data.
+    /// @notice The helper has no ERC-3156 minter callback: `onFlashLoan` reverts with no data, whoever it names as the
+    /// initiator (`who`: this caller, the helper, the Pool or LPVaultSwap, every address the helper knows) and whatever
+    /// amount and fee it carries.
+    /// @dev The initiator is one of those four concrete addresses. The first argument's word shares the first 32 bytes of
+    /// calldata with the selector; with it symbolic, hevm 0.58 could not read the selector, explored the helper's other
+    /// functions and stopped partially (security-slow run 43653574421: 34 symbolic-size copies, the iteration bound and
+    /// symbolic SLOADs). The helper has no `onFlashLoan`, so its dispatcher refuses the call whatever the arguments.
     function noMinterCallback(
-        address initiator,
+        uint8 who,
         uint256 amount,
         uint256 fee
     ) external {
+        uint256 k = who & 3;
+        address initiator =
+            k == 0 ? address(this) : (k == 1 ? address(HELPER) : (k == 2 ? address(POOL) : address(LVS)));
         (bool ok, bytes memory ret) = address(HELPER)
             .call(
                 abi.encodeWithSelector(

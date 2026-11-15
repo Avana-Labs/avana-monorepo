@@ -174,7 +174,7 @@ contract FlashLiquidatorFuzzTest is FlashLiquidatorFixture {
             if (i == 2) h.foreignInitiator(initiator);
             if (i == 3) h.foreignInitiator(address(0));
             h.callbackOutsideContext(initiator, amount, fee);
-            h.noMinterCallback(initiator, amount, fee);
+            h.noMinterCallback(uint8(uint160(initiator)), amount, fee);
             _checkProperties(h);
         }
     }
