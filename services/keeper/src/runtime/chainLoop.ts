@@ -3,7 +3,8 @@
 // One chain's loop. Each new head: detect a reorg, read the instance's own status, run every job through the
 // pipeline at that block, follow up pending transactions, then evaluate the block-cadence alerts (M-09, then M-16 and
 // M-17) and report the head as processed (the monitor's heartbeat). Blocks are
-// processed one at a time; a head that arrives during a pass is processed after it, newest first.
+// processed one at a time; a head that arrives during a pass is processed after it. A late head, already behind one
+// processed (a missed block delivered after the newer one), is skipped rather than taken for a reorg.
 
 import { type Address, type PublicClient, decodeFunctionResult, encodeFunctionData } from "viem";
 import { flashLiquidatorAbi } from "@avana/protocol/abis";
@@ -11,7 +12,7 @@ import type { ChainConfig, KeeperConfig } from "../config.ts";
 import type { RetryHint } from "../jobs/failureReasons.ts";
 import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
-import { type Head, isReorg } from "../discovery/stream.ts";
+import { type Head, ProcessedHeads, isReorg } from "../discovery/stream.ts";
 import { breakerPokeJob } from "../jobs/breakerPoke.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
 import { PokeBook, oraclePokeJob } from "../jobs/oraclePoke.ts";
@@ -59,6 +60,7 @@ export function chainLoop(d: ChainLoopDeps) {
   const hints = new Map<string, RetryHint>();
   let poolMismatchPaged = false;
   let previous: Head | null = null;
+  const seen = new ProcessedHeads();
   const reverts = new RevertWindow(BigInt(blocksFor(d.cfg.chain, 3_600)));
   const alert = (signal: `M-${string}`, level: "warn" | "page", subject: string, detail: Readonly<Record<string, string>>) => {
     const blockNumber = previous?.number ?? 0n;
@@ -132,6 +134,7 @@ export function chainLoop(d: ChainLoopDeps) {
   };
 
   return async function onHead(head: Head): Promise<void> {
+    if (seen.isLate(previous, head)) return;
     if (isReorg(previous, head)) {
       await d.onReorg(head);
       // Transactions mined in removed blocks return to pending with their flags and reservations, then the nonce is re-read.
@@ -143,6 +146,7 @@ export function chainLoop(d: ChainLoopDeps) {
     }
     await d.beforePass?.(head);
     previous = head;
+    seen.record(head);
     const ctx: BlockContext = { config: d.cfg, blockNumber: head.number, blockTimestamp: head.timestamp, reader: createChainReader(d.primary, d.cfg.manifest, head.number) };
 
     // The instance's own status: a frozen helper stops submissions and pages; an unregistered one only warns (Q-404).
