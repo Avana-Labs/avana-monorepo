@@ -24654,7 +24654,7 @@
     ]
   },
   "REQ-PSTORE-026": {
-    "hash": "d9e379741f1ad1f6",
+    "hash": "bccb2558086e0063",
     "checks": [
       "IParameterStoreErrors",
       "IParameterStoreListing",
@@ -25224,7 +25224,7 @@
     ]
   },
   "REQ-RISK-041": {
-    "hash": "7255af96f5574bcd",
+    "hash": "b06a3e2541ae7822",
     "checks": [
       "IParameterStoreErrors",
       "IParameterStoreEvents",
