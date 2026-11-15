@@ -31713,7 +31713,7 @@
     ]
   },
   "SPEC-CAP-002": {
-    "hash": "b318dffceee9b9b0",
+    "hash": "6843e5fa71eca164",
     "checks": [
       "FV-CTL-54",
       "FV-CUS-14",
@@ -31731,6 +31731,7 @@
       "RiskModulePledgeLogic",
       "TEST-013",
       "TEST-034",
+      "TEST-230",
       "TEST-272"
     ]
   },
