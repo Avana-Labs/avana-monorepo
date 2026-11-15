@@ -51,12 +51,14 @@ contract LPOracleFuzzHarnessUnitTest is Test {
         h.pokeAndCheck();
         h.publish(25, 1_474_140_149, false);
         LPOracleEchidnaTarget oracle = LPOracleEchidnaTarget(vm.computeCreateAddress(address(h), 11));
-        (PriceState state, uint256 answer, uint256 accepted, uint256 fresh,, bool disagreeing) = oracle.served();
-        // Medusa's trace: Drifting, served 199,999,800 above the accepted 198,999,801, the routes agreeing.
+        (PriceState state, uint256 answer, uint256 accepted, uint256 fresh, uint256 lower, bool disagreeing) =
+            oracle.served();
+        // Medusa's trace: token A's primary at 1.12 disagrees with its alternate at 1.00; under the $1 stable ceiling
+        // the lower and the fresh price are both 199,999,800, served above the accepted 198,999,801.
         assertEq(uint8(state), uint8(PriceState.Drifting), "Drifting");
-        assertFalse(disagreeing, "no disagreement");
-        assertEq(answer, 199_999_800, "fresh price");
-        assertEq(answer, fresh, "served == fresh");
+        assertTrue(disagreeing, "token A's routes disagree");
+        assertEq(answer, 199_999_800, "min(lower, fresh)");
+        assertEq(answer, lower < fresh ? lower : fresh, "min(lower, fresh)");
         assertEq(accepted, 198_999_801, "accepted");
         assertTrue(h.property_servedByState(), "servedByState");
         assertTrue(h.property_latestAnswerAtLeastOne(), "latestAnswerAtLeastOne");
