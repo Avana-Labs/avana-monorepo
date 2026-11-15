@@ -71,8 +71,14 @@ function artifactRuntime(contractsDir: string, artifact: string): { code: string
 }
 
 /** The compiler profile a deployable file is restricted to (script/deploy/lib/DeployBase.sol `_profileOf`). */
-function profileOf(file: string): string {
-  if (file === "Collateralization.sol" || file.startsWith("DebtOracle") || (file.startsWith("LPVaultSwap") && file.endsWith("Logic.sol")) || (file.startsWith("Lens") && file.endsWith("Module.sol"))) {
+export function profileOf(file: string): string {
+  if (
+    file === "Collateralization.sol" ||
+    file === "UniswapV4Integration.sol" ||
+    file.startsWith("DebtOracle") ||
+    (file.startsWith("LPVaultSwap") && file.endsWith("Logic.sol")) ||
+    (file.startsWith("Lens") && file.endsWith("Module.sol"))
+  ) {
     return "collateralization";
   }
   if (file === "UniswapV3Integration.sol" || file === "SlipstreamIntegration.sol") return "clvault";
@@ -108,9 +114,10 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     ...m.avana.operatorHelpers.map((x, i): [string, Immutable] => [`OperatorFlashLiquidator ${i}`, x]),
     ...m.avana.lpVaults.map((x): [string, Immutable] => [`LPVault ${x.integrationId} (${x.kind})`, x]),
     ...m.avana.clOracles.flatMap((x): [string, Immutable][] => [
-      [`LPOracleCL implementation ${x.integrationId}`, x],
-      [`LPOracleCLModuleLogic ${x.integrationId}`, x.moduleLogic],
+      [`LPOracle implementation ${x.integrationId}`, x],
+      [`LPOracle module logic ${x.integrationId}`, x.moduleLogic],
     ]),
+    ...(m.uniswapV4 ? [["Uniswap v4 PoolManager", m.uniswapV4.poolManager] as [string, Immutable]] : []),
   ];
   const upgradeables: [string, Upgradeable][] = [
     ["AaveAdapter", m.avana.aaveAdapter],
@@ -204,9 +211,14 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
   for (const v of m.avana.lpVaults) {
     add(`LPVault ${v.integrationId} TIMELOCK`, (await read(v.address, "TIMELOCK")) === t);
     add(`LPVault ${v.integrationId} MARKET_REGISTRY`, (await read(v.address, "MARKET_REGISTRY")) === m.avana.marketRegistry.address);
+    // A Uniswap v4 LPVault reads the manifest's PoolManager (the address the indexer follows).
+    if (v.kind === "uniswap-v4") {
+      const pm = await read(v.address, "POOL_MANAGER");
+      add(`LPVault ${v.integrationId} POOL_MANAGER`, !!m.uniswapV4 && pm === getAddress(m.uniswapV4.poolManager.address), pm);
+    }
   }
   // Listed markets: vault tokens, routes and LPOracles are the recorded code, and each LPOracle proxy points at its
-  // integration's LPOracleCL implementation; First-Loss Reserves and the DAO deficit offsets are the recorded code.
+  // integration's LPOracle implementation (LPOracleCL, or LPOracleV4 for Uniswap v4); First-Loss Reserves and the DAO deficit offsets are the recorded code.
   for (const mk of m.markets) {
     await compare(`market ${mk.marketId} vault token`, mk.vaultToken.address, mk.vaultToken.codeHash, null);
     for (const [i, r] of mk.routes.entries()) await compare(`market ${mk.marketId} route ${i}`, r.address, r.codeHash, r.artifact);
@@ -220,7 +232,7 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     await compare(`loss layer ${x.hub} ${x.asset}`, x.address, x.codeHash, x.artifact);
   }
 
-  // Each integration is registered with its LPVault and its LPOracleCL implementation as pricing (REQ-CONFIG-016).
+  // Each integration is registered with its LPVault and its LPOracle implementation as pricing (REQ-CONFIG-016).
   const integrationOf = parseAbi(["function integrationOf(uint32 integrationId) view returns (address lpVault, address pricing)"]);
   for (const v of m.avana.lpVaults) {
     const cl = m.avana.clOracles.find((x) => x.integrationId === v.integrationId);

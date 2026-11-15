@@ -580,7 +580,8 @@
               "kind": {
                 "enum": [
                   "uniswap-v3",
-                  "slipstream"
+                  "slipstream",
+                  "uniswap-v4"
                 ]
               }
             },
@@ -979,6 +980,7 @@
               "aave-v4",
               "aave-v3",
               "uniswap-v3",
+              "uniswap-v4",
               "slipstream",
               "token",
               "feed",
@@ -1018,6 +1020,18 @@
         ],
         "additionalProperties": false
       }
+    },
+    "uniswapV4": {
+      "type": "object",
+      "properties": {
+        "poolManager": {
+          "$ref": "#/$defs/immutable"
+        }
+      },
+      "required": [
+        "poolManager"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

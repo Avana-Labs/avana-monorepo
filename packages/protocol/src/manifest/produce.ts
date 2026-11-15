@@ -77,6 +77,20 @@ const CL_ORACLE_LOGICS = ["LPOracleCLPokeLogic", "LPOracleCLInitLogic", "LPOracl
 
 const art = (name: string) => `${name}.sol:${name}`;
 
+/** The artifacts an integration kind deploys (AvanaPeripheryDeploy.sol `_deployLpVault`, AvanaDeploy.sol `_deployClOracles`). */
+export function integrationArtifacts(kind: string): { lpVault: string; lpOracle: string; moduleLogic: string } {
+  switch (kind) {
+    case "uniswap-v3":
+      return { lpVault: art("UniswapV3Integration"), lpOracle: art("LPOracleCL"), moduleLogic: art("LPOracleCLModuleLogic") };
+    case "slipstream":
+      return { lpVault: art("SlipstreamIntegration"), lpOracle: art("LPOracleCL"), moduleLogic: art("LPOracleCLModuleLogic") };
+    case "uniswap-v4":
+      return { lpVault: art("UniswapV4Integration"), lpOracle: art("LPOracleV4"), moduleLogic: art("LPOracleV4ModuleLogic") };
+    default:
+      throw new Error(`unknown integration kind ${kind}`);
+  }
+}
+
 type Json = Record<string, unknown>;
 
 function readJson(path: string): Json {
@@ -213,22 +227,26 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
       daoDeficitOffsets.push({ ...(await imm(a, "DaoDeficitOffset.sol:DaoDeficitOffset")), asset: getAddress(tokens[symbol!]!), hub });
     }
   }
-  const { markets, debtReserves } = await listedMarkets(client, outDir, config, outputs, imm);
-  const hubOf = (tier: number) => hubs.find((h) => h.tier === tier) ?? hubs[0];
-  if (!hubOf(1)) throw new Error("no Aave Hub in the config");
-
   const lpVaultAddrs = avana.lpVaults as string[];
   const ids = avana.integrationIds as number[];
   const kinds = avana.integrationKinds as string[];
+  const kindOf = (integrationId: number) => {
+    const i = ids.findIndex((id) => Number(id) === integrationId);
+    if (i < 0) throw new Error(`integration ${integrationId} is not in the deploy output`);
+    return kinds[i]!;
+  };
+  const { markets, debtReserves } = await listedMarkets(client, outDir, config, outputs, imm, kindOf);
+  const hubOf = (tier: number) => hubs.find((h) => h.tier === tier) ?? hubs[0];
+  if (!hubOf(1)) throw new Error("no Aave Hub in the config");
   const helpersCfg = (at(config, "operatorHelpers") as { signer: string; fundingSafe: string }[]) ?? [];
   const pricing = avana.clOraclePricing as string[];
   const moduleLogics = avana.clOracleModuleLogics as string[];
   const clLogics = avana.clOracleLogics as string[];
   const clOracles = await Promise.all(
     pricing.map(async (a, i) => ({
-      ...(await imm(a, art("LPOracleCL"))),
+      ...(await imm(a, integrationArtifacts(kinds[i]!).lpOracle)),
       integrationId: ids[i]!,
-      moduleLogic: await imm(moduleLogics[i], art("LPOracleCLModuleLogic")),
+      moduleLogic: await imm(moduleLogics[i], integrationArtifacts(kinds[i]!).moduleLogic),
       logics: await Promise.all(
         CL_ORACLE_LOGICS.map(async (name, j) => {
           const address = getAddress(clLogics[4 * i + j]!);
@@ -237,6 +255,7 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
       ),
     })),
   );
+  const uniswapV4 = await uniswapV4PoolManager(client, lpVaultAddrs, kinds, imm);
   const proxyManager = getAddress(avana.proxyManager as string);
   const proxyCreationCodeHash = (await client.readContract({
     address: proxyManager,
@@ -289,7 +308,7 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
       ),
       lpVaults: await Promise.all(
         lpVaultAddrs.map(async (a, i) => ({
-          ...(await imm(a, kinds[i] === "slipstream" ? art("SlipstreamIntegration") : art("UniswapV3Integration"))),
+          ...(await imm(a, integrationArtifacts(kinds[i]!).lpVault)),
           integrationId: ids[i]!,
           kind: kinds[i]!,
         })),
@@ -329,10 +348,32 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
       keepers: ((at(config, "keepers") as unknown[]) ?? []).map((k) => resolveAddress(k, outputs)),
     },
     external,
+    ...(uniswapV4 ? { uniswapV4 } : {}),
   };
   const errors = validate(manifest);
   if (errors.length > 0) throw new Error(`produced manifest fails the schema:\n${errors.map((e) => `  ${e.path}: ${e.message}`).join("\n")}`);
   return manifest;
+}
+
+/**
+ * The PoolManager every Uniswap v4 LPVault reads (`POOL_MANAGER()`), or null without a v4 integration. Third-party
+ * code, so no artifact.
+ */
+async function uniswapV4PoolManager(
+  client: PublicClient,
+  lpVaults: string[],
+  kinds: string[],
+  imm: (a: unknown, artifact: string | null) => Promise<Immutable>,
+): Promise<{ poolManager: Immutable } | null> {
+  const abi = parseAbi(["function POOL_MANAGER() view returns (address)"]);
+  let poolManager: Address | null = null;
+  for (const [i, a] of lpVaults.entries()) {
+    if (kinds[i] !== "uniswap-v4") continue;
+    const pm = getAddress((await client.readContract({ address: getAddress(a), abi, functionName: "POOL_MANAGER" })) as string);
+    if (poolManager && pm !== poolManager) throw new Error(`Uniswap v4 LPVaults name two PoolManagers: ${poolManager}, ${pm}`);
+    poolManager = pm;
+  }
+  return poolManager ? { poolManager: await imm(poolManager, null) } : null;
 }
 
 const VIEWS = parseAbi([
@@ -351,6 +392,7 @@ async function listedMarkets(
   config: Json,
   outputs: (file: string) => Json,
   imm: (a: unknown, artifact: string | null) => Promise<Immutable>,
+  kindOf: (integrationId: number) => string,
 ): Promise<{ markets: Market[]; debtReserves: DebtReserve[] }> {
   if (!existsSync(join(outDir, "listing-markets.json"))) return { markets: [], debtReserves: [] };
   const listing = at(config, "listing") as Json;
@@ -385,8 +427,9 @@ async function listedMarkets(
       integrationId: Number(m.integrationId),
       spoke,
       vaultToken: await imm(vaultToken, "VaultToken.sol:VaultToken"),
-      lpOracle: await upgradeableAt(getAddress(m.lpOracle as string), "LPOracleCL.sol:LPOracleCL"),
+      lpOracle: await upgradeableAt(getAddress(m.lpOracle as string), integrationArtifacts(kindOf(Number(m.integrationId))).lpOracle),
       reserveId: String(reserveId),
+      // address(0) for a Uniswap v4 market, whose pool is a key in the PoolManager.
       pool: getAddress(m.pool as string),
       tokens,
       feeds: tokens.flatMap(feedsOf),
