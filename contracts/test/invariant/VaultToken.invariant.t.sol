@@ -8,6 +8,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollWorld, CollateralizationHandler} from "./handlers/CollateralizationHandler.sol";
 import {VaultTokenAttackerHandler} from "./handlers/VaultTokenAttackerHandler.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title VaultTokenInvariantTest
 /// @notice Hub-side and holder invariants of the real vault token on the real local Aave V4 and the real
@@ -21,7 +22,7 @@ import {VaultTokenAttackerHandler} from "./handlers/VaultTokenAttackerHandler.so
 /// @dev The LPVault, RiskModule and LPOracle are the fixture's mocks; the AaveAdapter and LPVaultSwap are pranked
 /// addresses (their contracts come later).
 /// forge-config: default.isolate = false
-contract VaultTokenInvariantTest is CollateralizationFixture {
+contract VaultTokenInvariantTest is CollateralizationFixture, HandlerReach {
     CollateralizationHandler internal handler;
     VaultTokenAttackerHandler internal attacker_;
 
@@ -60,6 +61,77 @@ contract VaultTokenInvariantTest is CollateralizationFixture {
         actions[8] = CollateralizationHandler.partialRemove.selector;
         actions[9] = CollateralizationHandler.recredit.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, CollateralizationHandler.Skipped.selector, 32, 50, 0, own, true);
+        _check(r, names, new string[](0), _floors(10, 0), new uint256[](0));
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+        (actions, names, kinds) = (new bytes4[](10), new string[](10), new int16[][](10));
+        (actions[0], names[0]) = (CollateralizationHandler.pledge.selector, "pledge");
+        kinds[0] = new int16[](2);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        (actions[1], names[1]) = (CollateralizationHandler.withdraw.selector, "withdraw");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (CollateralizationHandler.borrow.selector, "borrow");
+        kinds[2] = new int16[](2);
+        kinds[2][0] = 256;
+        kinds[2][1] = 256;
+        (actions[3], names[3]) = (CollateralizationHandler.repay.selector, "repay");
+        kinds[3] = new int16[](1);
+        kinds[3][0] = 256;
+        (actions[4], names[4]) = (CollateralizationHandler.setPrice.selector, "setPrice");
+        kinds[4] = new int16[](1);
+        kinds[4][0] = 256;
+        (actions[5], names[5]) = (CollateralizationHandler.liquidate.selector, "liquidate");
+        kinds[5] = new int16[](3);
+        kinds[5][0] = 256;
+        kinds[5][1] = 256;
+        kinds[5][2] = 256;
+        (actions[6], names[6]) = (CollateralizationHandler.seizeAndKeep.selector, "seizeAndKeep");
+        kinds[6] = new int16[](3);
+        kinds[6][0] = 256;
+        kinds[6][1] = 256;
+        kinds[6][2] = 256;
+        (actions[7], names[7]) = (CollateralizationHandler.settlePending.selector, "settlePending");
+        kinds[7] = new int16[](1);
+        kinds[7][0] = 256;
+        (actions[8], names[8]) = (CollateralizationHandler.partialRemove.selector, "partialRemove");
+        kinds[8] = new int16[](3);
+        kinds[8][0] = 256;
+        kinds[8][1] = 256;
+        kinds[8][2] = 256;
+        (actions[9], names[9]) = (CollateralizationHandler.recredit.selector, "recredit");
+        kinds[9] = new int16[](3);
+        kinds[9][0] = 256;
+        kinds[9][1] = 256;
+        kinds[9][2] = 256;
+    }
+
+    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     /// @notice Hub side: the Hub's vault-token balance equals its recorded liquidity for the asset and the sum of the

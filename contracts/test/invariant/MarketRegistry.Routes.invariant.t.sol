@@ -7,12 +7,13 @@ import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.so
 import {RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {MarketRegistryRoutesHandler} from "./handlers/MarketRegistryRoutesHandler.sol";
 import {Test} from "forge-std/Test.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title MarketRegistryRoutesInvariantTest
 /// @notice Swap-route slots under random set, disable and restore calls by the timelock and a guardian: every outcome
 /// matches the model, the two slots of a (market, token, asset) never hold the same route or two routes through a
 /// common venue, a restore never brings back a route the slot did not approve before, and a guardian changes nothing.
-contract MarketRegistryRoutesInvariantTest is Test {
+contract MarketRegistryRoutesInvariantTest is Test, HandlerReach {
     MarketRegistryRoutesHandler internal handler;
     MarketRegistry internal registry;
 
@@ -27,6 +28,50 @@ contract MarketRegistryRoutesInvariantTest is Test {
         actions[2] = MarketRegistryRoutesHandler.disableRoute.selector;
         actions[3] = MarketRegistryRoutesHandler.restoreRoute.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
+        _check(r, names, new string[](0), _floors(3, 0), new uint256[](0));
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+        (actions, names, kinds) = (new bytes4[](3), new string[](3), new int16[][](3));
+        (actions[0], names[0]) = (MarketRegistryRoutesHandler.setRoute.selector, "setRoute");
+        kinds[0] = new int16[](3);
+        kinds[0][0] = 1;
+        kinds[0][1] = 256;
+        kinds[0][2] = 1;
+        (actions[1], names[1]) = (MarketRegistryRoutesHandler.disableRoute.selector, "disableRoute");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 1;
+        kinds[1][1] = 1;
+        (actions[2], names[2]) = (MarketRegistryRoutesHandler.restoreRoute.selector, "restoreRoute");
+        kinds[2] = new int16[](3);
+        kinds[2][0] = 1;
+        kinds[2][1] = 256;
+        kinds[2][2] = 1;
+    }
+
+    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // TEST-054 verifies: REQ-CONFIG-060, REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-012, REQ-MREG-014, Q-151, REQ-ROUTE-017, REQ-ROUTE-018, REQ-ROUTE-019, REQ-ROUTE-021, REQ-ROUTE-038

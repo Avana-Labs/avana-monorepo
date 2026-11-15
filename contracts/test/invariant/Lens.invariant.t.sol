@@ -12,6 +12,7 @@ import {PriceState} from "../../src/types/PriceState.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title LensInvariantTest
 /// @notice Random pledges, borrows of both debt reserves, price moves, donations, time and liquidations sized by the
@@ -19,7 +20,7 @@ import {StdInvariant} from "forge-std/StdInvariant.sol";
 /// account and state without reverting, its record reconciliation equals Collateralization's, its backing check holds
 /// for honest flows, and every liquidation it sized executed exactly as previewed.
 /// forge-config: default.isolate = false
-contract LensInvariantTest is StdInvariant, LensFixture {
+contract LensInvariantTest is StdInvariant, LensFixture, HandlerReach {
     address[2] internal wallets;
     address[2] internal proxies;
     uint256[2] internal nextKey;
@@ -43,6 +44,59 @@ contract LensInvariantTest is StdInvariant, LensFixture {
         selectors[5] = this.actLiquidate.selector;
         targetSelector(FuzzSelector({addr: address(this), selectors: selectors}));
         targetContract(address(this));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(this), address(this));
+        Reach memory r = _replayLanded(address(this), actions, bytes4(0), 32, 50, 0, own, true);
+        _check(r, names, new string[](0), _floors(6, 0), new uint256[](0));
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+        (actions, names, kinds) = (new bytes4[](6), new string[](6), new int16[][](6));
+        (actions[0], names[0]) = (LensInvariantTest.actBorrow.selector, "actBorrow");
+        kinds[0] = new int16[](3);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        kinds[0][2] = 1;
+        (actions[1], names[1]) = (LensInvariantTest.actDonate.selector, "actDonate");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (LensInvariantTest.actLiquidate.selector, "actLiquidate");
+        kinds[2] = new int16[](2);
+        kinds[2][0] = 256;
+        kinds[2][1] = 1;
+        (actions[3], names[3]) = (LensInvariantTest.actPledge.selector, "actPledge");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        (actions[4], names[4]) = (LensInvariantTest.actPrice.selector, "actPrice");
+        kinds[4] = new int16[](1);
+        kinds[4][0] = 256;
+        (actions[5], names[5]) = (LensInvariantTest.actWarp.selector, "actWarp");
+        kinds[5] = new int16[](1);
+        kinds[5][0] = 256;
+    }
+
+    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // ─── actions ───

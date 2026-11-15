@@ -15,7 +15,9 @@ import {Test} from "forge-std/Test.sol";
 /// in which direction, so the suite can check that no call moved a value the wrong way for its role.
 /// @dev Steered: three calls in four write a valid value moved from the stored one in the call's own direction (by a
 /// seed-derived fraction of the room left), so the role rules decide the outcome; the fourth writes an arbitrary value,
-/// which is mostly invalid or in the wrong direction and must be refused. Callers stay random among the three roles.
+/// which is mostly invalid or in the wrong direction and must be refused. Callers are the timelock one time in two, the
+/// Safe three times in eight and the stranger one time in eight. On a steered call the first write of a never-written
+/// value is a loosening by the timelock (only a loosening can set it), and the Safe tightens (it may not loosen).
 contract ParameterStoreSpeedHandler is Test {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
     /// campaign's success count, so the metrics show the calls that did real work.
@@ -140,7 +142,19 @@ contract ParameterStoreSpeedHandler is Test {
     function _who(
         uint8 role
     ) internal view returns (address) {
-        return role % 3 == 0 ? timelock : role % 3 == 1 ? safe : stranger;
+        uint8 r = role % 8;
+        return r < 4 ? timelock : r < 7 ? safe : stranger;
+    }
+
+    /// @dev The caller and direction of a steered call: an unset value (`window == 0`) is first loosened by the
+    /// timelock, and the Safe only tightens.
+    function _steer(
+        address who,
+        bool loosen,
+        uint32 oldWindow
+    ) internal view returns (address, bool) {
+        if (oldWindow == 0) return (timelock, true);
+        return who == safe ? (who, false) : (who, loosen);
     }
 
     function _changed(
@@ -159,6 +173,7 @@ contract ParameterStoreSpeedHandler is Test {
         address who = _who(role);
         MarketSpeedLimits memory old = store.marketSpeedLimits(marketId);
         uint256 h = uint256(keccak256(abi.encode(seed)));
+        if (h % 4 != 0) (who, loosen) = _steer(who, loosen, old.window);
         MarketSpeedLimits memory v = h % 4 == 0 ? _market(seed) : _marketStep(old, loosen, h);
         vm.prank(who);
         (bool ok,) = address(store)
@@ -193,6 +208,7 @@ contract ParameterStoreSpeedHandler is Test {
         address who = _who(role);
         SpeedLimit memory old = store.debtSpeedLimit(hub, asset);
         uint256 h = uint256(keccak256(abi.encode(seed)));
+        if (h % 4 != 0) (who, loosen) = _steer(who, loosen, old.window);
         SpeedLimit memory v = h % 4 == 0 ? _debt(seed) : _debtStep(old, loosen, h);
         vm.prank(who);
         (bool ok,) = address(store)

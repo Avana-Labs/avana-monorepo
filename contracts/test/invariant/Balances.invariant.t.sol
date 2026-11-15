@@ -17,6 +17,7 @@ import {
 } from "../integration/GoldenVectors.integration.t.sol";
 import {Deployments} from "../utils/Deployments.sol";
 import {Test} from "forge-std/Test.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @dev Hub views of aave-v4 a3ef63e this suite reads beyond `IAaveV4Hub`.
 interface IBalancesHubViews {
@@ -201,7 +202,7 @@ contract BalancesHandler is Test {
 /// @notice Debt accounting per debt reserve on the pinned Aave V4 Hub and the standard CDP Spoke Avana deploys, with two
 /// debt reserves (GHO-like, 18 decimals; USDC-like, 6 decimals), a collateral reserve with collateral risk so premium
 /// shares accrue, finite draw caps and a lender who supplies and withdraws on the Lend Spoke.
-contract BalancesInvariantTest is Deployments {
+contract BalancesInvariantTest is Deployments, HandlerReach {
     BalancesHandler internal handler;
     GvToken internal coll;
     GvToken[2] internal debts;
@@ -242,6 +243,36 @@ contract BalancesInvariantTest is Deployments {
         handler.lenderSupply(0, 500_000e18);
         handler.lenderSupply(1, 300_000e6);
         targetContract(address(handler));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, BalancesHandler.Skipped.selector, 32, 50, 0, own, true);
+        _check(r, names, new string[](0), _floors(0, 0), new uint256[](0));
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+        (actions, names, kinds) = (new bytes4[](0), new string[](0), new int16[][](0));
+    }
+
+    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     function _hubCfg(

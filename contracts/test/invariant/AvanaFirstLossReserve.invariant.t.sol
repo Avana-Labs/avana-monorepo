@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {AvanaFirstLossReserveHandler} from "./handlers/AvanaFirstLossReserveHandler.sol";
 import {Test} from "forge-std/Test.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title AvanaFirstLossReserveInvariantTest
 /// @notice Coverage side of TEST-094 on the real local Aave V4 Hub: under random sequences of recorded deficits on
@@ -19,7 +20,7 @@ import {Test} from "forge-std/Test.sol";
 /// liquidation invariant suite, where the deficit is reported by a real liquidation. Here a pranked drawing Spoke
 /// reports it. One Hub is deployed, so "another Hub" is covered by the per-asset instances being bound to their own
 /// `(Hub, assetId)` (TEST-199).
-contract AvanaFirstLossReserveInvariantTest is Test {
+contract AvanaFirstLossReserveInvariantTest is Test, HandlerReach {
     AvanaFirstLossReserveHandler internal handler;
     IAaveV4Hub internal hub;
 
@@ -38,6 +39,36 @@ contract AvanaFirstLossReserveInvariantTest is Test {
         actions[6] = AvanaFirstLossReserveHandler.fund.selector;
         actions[7] = AvanaFirstLossReserveHandler.setAllowlist.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
+        _check(r, names, new string[](0), _floors(0, 0), new uint256[](0));
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+        (actions, names, kinds) = (new bytes4[](0), new string[](0), new int16[][](0));
+    }
+
+    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // TEST-094 verifies: REQ-FLR-019, REQ-FLR-018, REQ-FLR-031, SPEC-FLR-001, INV-042, Q-101, Q-142

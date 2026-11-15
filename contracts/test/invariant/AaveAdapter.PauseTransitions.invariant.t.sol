@@ -8,6 +8,7 @@ import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {AaveAdapterPauseHandler, PauseWorld} from "./handlers/AaveAdapterPauseHandler.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title AaveAdapterPauseTransitionsInvariantTest
 /// @notice The Adapter side of TEST-193: the Hub's pause state and reason, address freezes and a reverting
@@ -16,7 +17,7 @@ import {AaveAdapterPauseHandler, PauseWorld} from "./handlers/AaveAdapterPauseHa
 /// debt mark); no pledge, borrow or withdrawal with debt succeeded in a state that refuses it; the Lock is free; every
 /// market's supply stays backed.
 /// forge-config: default.isolate = false
-contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture {
+contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture, HandlerReach {
     AaveAdapterPauseHandler internal handler;
 
     function setUp() public override {
@@ -57,6 +58,75 @@ contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture {
         actions[9] = AaveAdapterPauseHandler.collectFees.selector;
         actions[10] = AaveAdapterPauseHandler.refreshDebtMark.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, AaveAdapterPauseHandler.Skipped.selector, 32, 50, 0, own, true);
+        _check(r, names, new string[](0), _floors(11, 0), new uint256[](0));
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+        (actions, names, kinds) = (new bytes4[](11), new string[](11), new int16[][](11));
+        (actions[0], names[0]) = (AaveAdapterPauseHandler.setPause.selector, "setPause");
+        kinds[0] = new int16[](1);
+        kinds[0][0] = 8;
+        (actions[1], names[1]) = (AaveAdapterPauseHandler.setFreeze.selector, "setFreeze");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 8;
+        kinds[1][1] = 1;
+        (actions[2], names[2]) = (AaveAdapterPauseHandler.breakNeighbours.selector, "breakNeighbours");
+        kinds[2] = new int16[](2);
+        kinds[2][0] = 1;
+        kinds[2][1] = 1;
+        (actions[3], names[3]) = (AaveAdapterPauseHandler.pledge.selector, "pledge");
+        kinds[3] = new int16[](1);
+        kinds[3][0] = 8;
+        (actions[4], names[4]) = (AaveAdapterPauseHandler.borrow.selector, "borrow");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 8;
+        kinds[4][1] = 256;
+        (actions[5], names[5]) = (AaveAdapterPauseHandler.withdrawWithDebt.selector, "withdrawWithDebt");
+        kinds[5] = new int16[](1);
+        kinds[5][0] = 8;
+        (actions[6], names[6]) = (AaveAdapterPauseHandler.repay.selector, "repay");
+        kinds[6] = new int16[](3);
+        kinds[6][0] = 8;
+        kinds[6][1] = 1;
+        kinds[6][2] = 256;
+        (actions[7], names[7]) = (AaveAdapterPauseHandler.repayAllAndWithdraw.selector, "repayAllAndWithdraw");
+        kinds[7] = new int16[](1);
+        kinds[7][0] = 8;
+        (actions[8], names[8]) = (AaveAdapterPauseHandler.withdrawDebtFree.selector, "withdrawDebtFree");
+        kinds[8] = new int16[](1);
+        kinds[8][0] = 8;
+        (actions[9], names[9]) = (AaveAdapterPauseHandler.collectFees.selector, "collectFees");
+        kinds[9] = new int16[](2);
+        kinds[9][0] = 8;
+        kinds[9][1] = 256;
+        (actions[10], names[10]) = (AaveAdapterPauseHandler.refreshDebtMark.selector, "refreshDebtMark");
+        kinds[10] = new int16[](1);
+        kinds[10][0] = 8;
+    }
+
+    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // TEST-193 verifies: REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-PROXY-032, REQ-PROXY-035, REQ-ADAPTER-071, REQ-ADAPTER-096, REQ-ADAPTER-104, INV-043, INV-044, INV-045, INV-067
