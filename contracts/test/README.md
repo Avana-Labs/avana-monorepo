@@ -105,6 +105,10 @@ Avana deploys its own Aave V4 from `dependencies/aave-v4-a3ef63e/` (commit `a3ef
 
 The concentrated-liquidity LPOracle is tested against real Uniswap v3 pools, not mocks. Build them once with `FOUNDRY_PROFILE=univ3 forge build` (`make build-univ3`): the `univ3` profile compiles the pinned `uniswap-v3-core` release with its own compiler, Solidity 0.7.6, and Uniswap's settings (800 optimizer runs, istanbul, no metadata hash) into `out-univ3/`. Avana's 0.8.28 build never imports these sources. `ClPoolFixture` deploys the factory with `deployCode("out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json")`, creates pools through it (fee 100 is enabled at spacing 1), initializes them, grows their observation buffers and mints, swaps and flashes through `ClPoolActor`, a 0.8 contract that implements the pool callbacks. The NonfungiblePositionManager is not built: periphery needs OpenZeppelin 3.4 for Solidity 0.7, which is not pinned, and the LPOracle reads only the pool. Aerodrome Slipstream sources are not pinned either; the Slipstream `slot0` layout (6 words) is covered by the oracle's unit tests on a pool whose `slot0` returns that layout.
 
+### 3.1b Local Uniswap v4 world (`UniswapV4WorldFixture`, `RealStackUniswapV4`)
+
+The Uniswap v4 LPVault and the v4 LPOracle module are tested against the real Uniswap v4 PoolManager, PositionManager, StateView and Permit2, not mocks. Build them once with `FOUNDRY_PROFILE=univ4 forge build` and `FOUNDRY_PROFILE=permit2 forge build`: the `univ4` profile compiles the pinned v4-core 4.0.0 and v4-periphery 1.0.1 with Uniswap's settings into `out-univ4/`, and the `permit2` profile compiles Permit2 with its own settings into `out-permit2/`. Avana's build never imports these sources. `UniswapV4WorldFixture` deploys them with `deployCode` (WETH is a local `TestWETH9`), builds hookless `PoolKey`s, initializes pools, mints positions through `modifyLiquidities` with Permit2 approvals, and moves the spot price with a `V4PoolActor` that swaps and donates inside the PoolManager's `unlock`; the same actor runs a read inside `unlock` to test the `PoolLocked` guard. Each v4 pool gets its reference Uniswap v3 pool from `ClPoolFixture` (3.1a), with its observation cardinality grown before the first mint. `UniswapV4IntegrationFixture` adds the LPVault with stand-in Avana bindings; `RealStackUniswapV4` adds v4 markets, their LPOracle proxies and a v4 CDP Spoke to the full Aave V4 stack (3.1, 3.2) for the liquidation and gas tests. The fork suite (`fork/UniswapV4Integration.fork.t.sol`) uses the canonical PoolManager and PositionManager on Ethereum.
+
 ### 3.2 Avana on top (`AvanaFixture`, `MarketFixture`)
 
 Avana deploys in the deploy-plan order. Every immutable is wired by address, so contracts that reference each other use predicted addresses and the fixture asserts each predicted address equals the deployed one:
@@ -288,7 +292,7 @@ The ProxyManager and every PositionProxy are immutable, so no proxy code can be 
 
 Every row of 5.1 with the test files under `contracts/test/` that link it: a function is linked when a `// TEST-NNN verifies:` tag line precedes it or its name carries `TEST_NNN_`. The number after each file is how many of its functions link the row; `forge test --match-test 'TEST_NNN_'` runs those named for it. A row no file links yet shows the script or harness that checks it, or the folder and file its test is planned in (folders of the keeper and off-chain rows `TEST-140`–`TEST-149` and `TEST-178` are relative to the repository root, all others to `contracts/test/`). The tagged IDs of each function are in the file, next to the function.
 
-249 rows are linked to test files; 48 are not, of which 13 are checked by a script or harness.
+259 rows are linked to test files; 51 are not, of which 13 are checked by a script or harness.
 
 | ID | Type | Files (`contracts/test/`, linked functions) | Planned, or checked outside `contracts/test/` |
 |---|---|---|---|
@@ -597,6 +601,11 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-325 | unit, fuzz, invariant | `invariant/ParameterStore.Speed.invariant.t.sol` (2), `unit/ParameterStore.Speed.unit.t.sol` (16), `unit/ParameterStore.SpeedRules.unit.t.sol` (6) | — |
 | TEST-326 | integration | `integration/AaveAdapter.Speed.integration.t.sol` (7) | — |
 | TEST-327 | unit | `unit/Lens.Speed.unit.t.sol` (9) | — |
+| TEST-328 | unit | — | planned with the first Uniswap v2 integration in `contracts/src` |
+| TEST-329 | unit | — | planned with the first Curve StableSwap-NG integration in `contracts/src` |
+| TEST-330 | unit | — | planned with the first Balancer integration in `contracts/src` |
+| TEST-331 | unit | `fork/UniswapV4Integration.fork.t.sol` (1), `gas/Liquidation.WholeAccount.UniswapV4.gas.t.sol` (4), `gas/UniswapV4.Removal.gas.t.sol` (3), `integration/MultiMarket.UniswapV4.integration.t.sol` (5), `unit/LPOracleV4.Guards.unit.t.sol` (5), `unit/LPOracleV4.unit.t.sol` (6), `unit/UniswapV4Integration.Guards.unit.t.sol` (9), `unit/UniswapV4Integration.unit.t.sol` (16) | — |
+| TEST-332 | integration | `integration/LPOracleCL.UnitExponent.integration.t.sol` (12) | — |
 
 ## 8. INV map
 

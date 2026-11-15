@@ -21,7 +21,7 @@ The unmodified Aave V4 contracts are not audited here; the deployment check prov
 | Item | Where |
 |---|---|
 | Commit and verification commands | `forge build`, `forge test`, the fork profiles in [`contracts/`](../../contracts/), and `docs/spec/05-verification/run_all.sh` |
-| Pinned versions | Solidity 0.8.28, EVM `cancun`; Aave V4 `a3ef63ea6415d25237a9775bf66e76e9993561c2`; Uniswap v3-core, v3-periphery, gho-core and OpenZeppelin Contracts by commit |
+| Pinned versions | Solidity 0.8.28, EVM `cancun`; Aave V4 `a3ef63ea6415d25237a9775bf66e76e9993561c2`; Uniswap v3-core, v3-periphery, v4-core 4.0.0, v4-periphery 1.0.1, Permit2, gho-core and OpenZeppelin Contracts by commit |
 | Privilege map | [1.4 Permissions and Roles](../spec/01-architecture/04-permissions-and-roles.md) and the role table and restricted-function matrix in [2.15](../spec/02-contracts/15-governance-and-timelock.md) |
 | Deployment and initialization order | `REQ-ACCESS-027` (timelock roles and delays set, every upgradeable contract initialized in its deployment transaction with roles only for the timelock, the deployer left with no role, all before any market is activated) and the listing order in [3.8 Market Lifecycle](../spec/03-operations/08-market-lifecycle.md) |
 | Integration assumptions | [4.3 External Dependencies](../spec/04-security/03-external-dependencies.md); which of them each model or proof assumes is listed under "Verification limitations" in [5.2](../spec/05-verification/02-formal-properties.md) |
@@ -55,7 +55,7 @@ Every check Avana runs, each in its own folder with what it proves, the exact co
 | [`coverage/`](coverage/) | Line and branch coverage, per-contract branch minimum | Every `src/` implementation | CI | No run recorded | — |
 | [`mutation/`](mutation/) | Tests and rules catch injected faults (`slither-mutate`, `certoraMutate`) | The layer's contracts | Layer gate | No run recorded | — |
 | [`necessist/`](necessist/) | Every test statement is needed | The layer's tests | Layer gate | No run recorded | — |
-| [`fork-tests/`](fork-tests/) | Behaviour against the deployed Uniswap v3, Slipstream, Aave V3, GSM, LitePSM and Chainlink code | `test/fork/` | CI, layer gates from 2.2 | No run recorded (needs archive RPC endpoints in `RPC_MAINNET` and `RPC_BASE`) | — |
+| [`fork-tests/`](fork-tests/) | Behaviour against the deployed Uniswap v3, Uniswap v4, Slipstream, Aave V3, GSM, LitePSM and Chainlink code | `test/fork/` | CI, layer gates from 2.2 | No run recorded (needs archive RPC endpoints in `RPC_MAINNET` and `RPC_BASE`) | — |
 | [`z3/`](z3/) | Every spec formula with exact rounding and bit widths | 5 model folders, 52 scripts | `run_all.sh`, spec CI, layer gate | 2026-11-11 | 641 proved, 123 deliberate counterexamples, 131 computed, 0 mismatches, 0 timeouts |
 | [`sympy/`](sympy/) | Algebraic consistency and exact worked examples | 10 scripts | `run_all.sh`, spec CI, layer gate | 2026-11-10 | 230 checks, 229 hold, 1 deliberate wrong reading |
 | [`hypothesis/`](hypothesis/) | Generated sequences against an executable model; invariants after every step | 71 tests | `run_all.sh`, spec CI, layer gate | 2026-11-10 | Every property holds after the `HYP-85` spec fix |

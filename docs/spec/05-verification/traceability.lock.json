@@ -23009,9 +23009,9 @@
     ]
   },
   "REQ-ORACLE-103": {
-    "hash": "08054efaeaf7433d",
+    "hash": "0be4d61b37c225d3",
     "checks": [
-      "ClLPVaultMarkets",
+      "ClNfpmLPVault",
       "IAmmIntegrationHooks",
       "ILPOracle",
       "ILPOracleEvents",
@@ -23025,6 +23025,9 @@
       "LPOracleEval",
       "LPOraclePoke",
       "LPOracleStorage",
+      "LPOracleV4",
+      "LPOracleV4Module",
+      "LPOracleV4ModuleLogic",
       "LPOracleViewLogic",
       "LPPriceMath",
       "MATH-AMM-BAL-PRICE-02",

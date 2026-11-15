@@ -20,6 +20,7 @@ Every contract gets an independent adversarial review as soon as it compiles. Th
 | Swap routes | [swap-routes](swap-routes/) | 2026-11-10 | 0 | 0 | 1 | 3 | 1 | decided (one Low accepted) |
 | Uniswap v3 LPVault (UniswapV3Integration) | [cl-lpvaults](cl-lpvaults/) | 2026-11-11 | 0 | 0 | 0 | 1 (CL-01) | CL-04; spec S1, S6, S8, S9 | fixed (re-checked on main 2026-11-14) |
 | Slipstream LPVault (SlipstreamIntegration) | [cl-lpvaults](cl-lpvaults/) | 2026-11-11 | 0 | 0 | 0 | 2 (CL-01, CL-03) | CL-02, CL-04, CL-05; spec S1–S8 | fixed (re-checked on main 2026-11-14) |
+| Uniswap v4 LPVault and LPOracle module (UniswapV4Integration, UniswapV4State, LPOracleV4) | — | — | — | — | — | — | — | not reviewed yet |
 | DebtOracle | [DebtOracle](DebtOracle/) | 2026-11-11 | 0 | 0 | 0 | 0 | DO-01, DO-02, DO-03; spec S1–S7 | fixed (re-checked on main 2026-11-14) |
 | Flash liquidation helper (FlashLiquidator, OperatorFlashLiquidator) | [FlashLiquidator](FlashLiquidator/) | 2026-11-11 | 0 | 0 | 2 (FL-01, FL-02) | 1 (FL-03) | spec S1–S5 | fixed (re-checked on main 2026-11-14) |
 

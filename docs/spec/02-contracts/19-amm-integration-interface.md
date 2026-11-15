@@ -18,7 +18,7 @@ The interface has five parts:
 | Fees | `collectFees`, `capabilities().feeMode` | Collateralization, for the depositor of record, through the Adapter |
 | Risk metadata | `riskMetadata`, `riskStatus`, `checkReadSafe`, `consistencyDeviation` | RiskModule (range status, pool depth for the pool-share cap), LPOracle (pool lock, consistency check), the Lens |
 
-Implemented by: Uniswap v3 on Ethereum ([2.20](20-uniswap-v3-integration.md)) and Aerodrome Slipstream on Base ([2.21](21-aerodrome-slipstream-integration.md)). The interface also supports Uniswap v2, Curve StableSwap-NG, Balancer weighted and stable pools and Uniswap v4; [2.22](22-amm-integration-readiness.md) gives each one's pricing model, custody shape and the guards it must pass before its first market is listed.
+Implemented by: Uniswap v3 on Ethereum ([2.20](20-uniswap-v3-integration.md)), Uniswap v4 on Ethereum ([2.23](23-uniswap-v4-integration.md)) and Aerodrome Slipstream on Base ([2.21](21-aerodrome-slipstream-integration.md)). The interface also supports Uniswap v2, Curve StableSwap-NG and Balancer weighted and stable pools; [2.22](22-amm-integration-readiness.md) gives each one's pricing model, custody shape and the guards it must pass before its first market is listed.
 
 ## Terms
 

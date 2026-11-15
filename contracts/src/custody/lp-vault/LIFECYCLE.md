@@ -38,6 +38,8 @@ Setup (Base market 3, Aerodrome Slipstream USDC/USDT, tick spacing 1, exact rang
 9. **Collateralization → [`returnPosition`](../../amm/IAmmIntegration.sol#L102)`(keyB)`** when Carol withdraws: the NFT goes back to Carol with every fee it accrued. Event: [`PositionReturned`](ILPVaultEvents.sol#L33).
 10. **AvanaTimelock → [`returnStray`](ILPVault.sol#L41)** for an NFT sent to the LPVault outside a pledge (recorded by `onERC721Received` as [`StrayReceived`](ILPVaultEvents.sol#L49)); normal delay. Event: [`StrayReturned`](ILPVaultEvents.sol#L53). Errors: [`NotTimelock`](ILPVaultErrors.sol#L90), [`NotStray`](ILPVaultErrors.sol#L78).
 
+The Uniswap v4 LPVault runs the same steps through the v4 PositionManager ([Uniswap v4 lifecycle](../../amm/uniswap-v4/LIFECYCLE.md)). Steps 5 to 7 are each one `modifyLiquidities` batch that pays the fees to the depositor before any principal moves, because a v4 decrease pays both in one delta. A native ETH leg arrives as WETH. An account holds at most 12 open records in a v4 market (`REQ-AMM-V4-012`), against 16 for Uniswap v3 and Slipstream.
+
 ## What the UI reads and calls
 
 - Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L47), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L33) (custody and live liquidity per record); direct views [`validatePosition`](../../amm/IAmmIntegration.sol#L136), [`isInCustody`](ILPVault.sol#L49), [`depositorOf`](../../amm/IAmmIntegration.sol#L237), [`unitsOf`](../../amm/IAmmIntegration.sol#L251) (all revert `Locked` while the Lock is held).
@@ -47,4 +49,4 @@ Setup (Base market 3, Aerodrome Slipstream USDC/USDT, tick spacing 1, exact rang
 ## Spec
 
 - [2.2 LP Vault](../../../../docs/spec/02-contracts/02-lp-vault.md): `REQ-VAULT-010`, `REQ-VAULT-031`, `REQ-VAULT-064`–`REQ-VAULT-066`, `REQ-AMM-CORE-007`, `REQ-AMM-CORE-011`, `SPEC-BACK-008`.
-- [2.19 AMM Integration Interface](../../../../docs/spec/02-contracts/19-amm-integration-interface.md), [2.20 Uniswap v3](../../../../docs/spec/02-contracts/20-uniswap-v3-integration.md), [2.21 Aerodrome Slipstream](../../../../docs/spec/02-contracts/21-aerodrome-slipstream-integration.md).
+- [2.19 AMM Integration Interface](../../../../docs/spec/02-contracts/19-amm-integration-interface.md), [2.20 Uniswap v3](../../../../docs/spec/02-contracts/20-uniswap-v3-integration.md), [2.23 Uniswap v4](../../../../docs/spec/02-contracts/23-uniswap-v4-integration.md), [2.21 Aerodrome Slipstream](../../../../docs/spec/02-contracts/21-aerodrome-slipstream-integration.md).
