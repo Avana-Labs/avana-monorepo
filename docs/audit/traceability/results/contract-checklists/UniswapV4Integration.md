@@ -8,7 +8,7 @@ Run results: none given (links only); recorded prover results and Halmos logs ar
 
 - [~] `REQ-AMM-CORE-001` (19-amm-integration-interface.md:68) Every AMM integration MUST implement the functions above with these signatures, and the AMM-neutral core MUST  — PROP-099, TEST-024, TEST-108
 - [~] `REQ-AMM-CORE-002` (19-amm-integration-interface.md:69) Each chain MUST have at most one LPVault per AMM protocol, registered write-once in the VaultTokenFactory as ` — TEST-058, TEST-108, TEST-279
-- [~] `REQ-AMM-CORE-003` (19-amm-integration-interface.md:70) `bindMarket(marketId, pool, poolId, shape, integrationData)` MUST revert with `NotMarketRegistry` unless `msg. — TEST-264, TEST-265, TEST-279, TEST-331
+- [~] `REQ-AMM-CORE-003` (19-amm-integration-interface.md:70) `bindMarket(marketId, pool, poolId, shape, integrationData)` MUST revert with `NotMarketRegistry` unless `msg. — TEST-264, TEST-265, TEST-279, TEST-331, TEST-332
 - [~] `REQ-AMM-CORE-004` (19-amm-integration-interface.md:71) A market MUST have between 2 and `MAX_POOL_TOKENS = 8` tokens, each an ERC-20 with no transfer hook, no rebasi — TEST-264, TEST-265, TEST-306, TEST-331
 - [~] `REQ-AMM-CORE-005` (19-amm-integration-interface.md:72) `receivePosition(marketId, owner, positionKey)` MUST revert with `NotCollateralization` unless `msg.sender ==  — TEST-010, TEST-011, TEST-116, TEST-265, TEST-266, TEST-331
 - [~] `REQ-AMM-CORE-006` (19-amm-integration-interface.md:73) **Exact shape at pledge (`AMMN-RT-01`).** `receivePosition` MUST revert with `PoolMismatch` unless the positio — PROP-083, TEST-010, TEST-011, TEST-217, TEST-331
@@ -118,7 +118,7 @@ Run results: none given (links only); recorded prover results and Halmos logs ar
 - [x] `INV-021` At the end of every transaction: (a) every ERC-20 allowance an Avana contract granted during the transaction i — PROP-016, PROP-068, PROP-080, TEST-021, TEST-054, TEST-080, TEST-092, TEST-170, TEST-177, TEST-215, TEST-232 — test/halmos/AaveV3FlashSource.halmos.t.sol:AaveV3FlashSourceHalmosTest.check_PROP_080_donationNeverForwarded
 - [ ] `INV-022` Calldata built by `packages/protocol` asks a user for only two kinds of approval: an approval of exactly one p
 - [~] `INV-044` The depositor of any open record, including one at 0 credited units, can collect fees with `AaveAdapter.collec — PROP-057, TEST-017, TEST-060, TEST-099, TEST-132, TEST-151, TEST-193
-- [~] `INV-081` Stops never reach exits or liquidation. The application pause state and reason, the market and debt breakers a — PROP-066, TEST-193, TEST-218, TEST-228, TEST-229
+- [~] `INV-081` Stops never reach exits or liquidation. The application pause state and reason, the market and debt breakers a — PROP-066, TEST-193, TEST-218, TEST-228, TEST-229, TEST-237
 - [~] `INV-096` Liquidation stays within one transaction. (a) Each (account, market) holds at most the record cap of the marke — TEST-011, TEST-102, TEST-123, TEST-269, TEST-331
 - [~] `INV-052` The vault tokens, VaultTokenFactory, every LPVault (one per AMM protocol per chain), Collateralization (one pe — PROP-099, TEST-108, TEST-166
 - [x] `INV-054` Every external state-changing entry point of the AaveAdapter and LPVaultSwap either acquires the Lock (outer c — PROP-037, PROP-075, TEST-046, TEST-060, TEST-179 — test/halmos/PegModuleRoute.halmos.t.sol:PegModuleRouteHalmosTest.check_PROP_037_swapOnlyForLPVaultSwapUnderLock

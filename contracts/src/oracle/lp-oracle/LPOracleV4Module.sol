@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
 import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
 import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
@@ -40,8 +39,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
     uint256 internal constant V4_CHECK_POOL = 1 << 8;
     /// @notice Listing bit: the integration's reference pool of the market is not the module's (`REQ-AMM-V4-007`).
     uint256 internal constant V4_CHECK_REFERENCE = 1 << 9;
-    /// @notice Listing bit: the integration's market is not the module's market: another `PoolId`, PoolManager or range
-    /// (`REQ-AMM-V4-007`).
+    /// @notice Listing bit: the integration's PoolManager is not the module's (`REQ-AMM-V4-007`).
     uint256 internal constant V4_CHECK_MARKET = 1 << 10;
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracleV4")) - 1)) & ~bytes32(uint256(0xff)).
@@ -102,6 +100,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (c.pool, c.tickLower, c.tickUpper, c.tickSpacing) = (w.ref, w.lower, w.upper, w.spacing);
         (c.sqrtLower, c.sqrtUpper) = (ClPriceMath.sqrtRatioAtTick(w.lower), ClPriceMath.sqrtRatioAtTick(w.upper));
         c.unitExp = w.unitExp;
+        c.poolId = v.poolId;
     }
 
     /// @dev The checked words of a v4 market encoding.
@@ -233,44 +232,13 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (bool okP, uint160 sqrtPriceX96,) = _pmSlot0();
         if (!okP || sqrtPriceX96 == 0) failed |= V4_CHECK_POOL;
         if (!_referenceMatches()) failed |= V4_CHECK_REFERENCE;
-        // The integration's market is the module's: `v4Market(marketId).key` hashes to the stored `PoolId`, and
-        // `clMarket(marketId)` names the stored PoolManager (its `factory` field) and range. Before the integration binds
-        // the market the reads revert and are not counted; from the MarketRegistry's registration on, a failed or
-        // malformed read or any difference sets the bit (`REQ-AMM-V4-007`).
-        (bool okK, bytes memory key) = LPOracleCalls.staticRead(
-            _s().integration,
-            CONFIG_CALL_GAS,
-            abi.encodeCall(IUniswapV4Integration.v4Market, (_s().marketId)),
-            6 * 32 + 1
+        // The integration's PoolManager is the module's (`REQ-AMM-V4-007`); the `PoolId` and the range are the
+        // MarketRegistry record's, checked by the core (`CHECK_MARKET`, `_isOwnMarket`).
+        (bool okR, bytes memory ret) = LPOracleCalls.staticRead(
+            _s().integration, CONFIG_CALL_GAS, abi.encodeCall(IUniswapV4Integration.POOL_MANAGER, ()), 32 + 1
         );
-        (bool okM, bytes memory cfg) = LPOracleCalls.staticRead(
-            _s().integration, CONFIG_CALL_GAS, abi.encodeCall(IClIntegration.clMarket, (_s().marketId)), 10 * 32 + 1
-        );
-        if (!okK || !okM) {
-            if (_bound()) failed |= V4_CHECK_MARKET;
-            return failed;
-        }
-        if (key.length != 6 * 32 || cfg.length != 10 * 32) return failed | V4_CHECK_MARKET;
-        // The first five words of `key` are the PoolKey, hashed as the module hashed its own encoding at `initialize`.
-        {
-            uint256[5] memory w;
-            for (uint256 i = 0; i < 5; ++i) {
-                (, w[i]) = LPOracleCalls.wordAt(key, i * 32);
-            }
-            if (keccak256(abi.encode(w)) != _v4().poolId) return failed | V4_CHECK_MARKET;
-        }
-        (, uint256 manager) = LPOracleCalls.wordAt(cfg, 2 * 32);
-        (, uint256 lower) = LPOracleCalls.wordAt(cfg, 7 * 32);
-        (, uint256 upper) = LPOracleCalls.wordAt(cfg, 8 * 32);
-        ClLayout storage c = _cl();
-        // Sign-extended int24 ticks compared as the ABI words the integration returns; no value is lost.
-        if (
-            manager != uint256(uint160(_v4().poolManager))
-                // forge-lint: disable-next-line(unsafe-typecast)
-                || lower != uint256(int256(c.tickLower))
-                // forge-lint: disable-next-line(unsafe-typecast)
-                || upper != uint256(int256(c.tickUpper))
-        ) {
+        (bool okW, uint256 manager) = LPOracleCalls.wordAt(ret, 0);
+        if (!okR || !okW || ret.length != 32 || manager != uint256(uint160(_v4().poolManager))) {
             failed |= V4_CHECK_MARKET;
         }
     }

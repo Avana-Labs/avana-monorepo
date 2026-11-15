@@ -51,6 +51,8 @@ contract LPOracleCLRealStoreTest is ParameterStoreFixture {
         realPool = _pool(t0, t1);
         Market memory m = registry.getMarket(M);
         m.pool = address(realPool);
+        // The exact range the oracle is initialized on: its market check binds the pool, shape and ticks.
+        (m.shape.tickLower, m.shape.tickUpper) = (-10, 10);
         registry.setMarket(M, m);
         _listMarket();
         vm.warp(T0);

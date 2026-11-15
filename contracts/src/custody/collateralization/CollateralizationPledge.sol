@@ -93,7 +93,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         marketRecords[vaultToken].push(recordId);
         marketRecordIndex[recordId] = marketRecords[vaultToken].length;
         _credit(c, proxy, credited, charge.rescueUnits);
-        _book(c, depositor, charge);
+        _book(c, charge);
         emit CollateralPledged(
             recordId,
             positionKey,
@@ -166,7 +166,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         r.currentUsdCharge = uint64(rebased);
         r.rescueUnits += rescueUnits;
         _credit(c, r.proxy, added, rescueUnits);
-        _book(c, r.depositor, charge);
+        _book(c, charge);
     }
 
     /// @notice Start of `recredit`: caller and lock, vault token, the open record naming `proxy` and `depositor` in
@@ -209,7 +209,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         // The poke only stores the first observation (Q-199); the RiskModule reads the price state itself.
         // forge-lint: disable-next-line(unused-return)
         ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke();
-        PledgeCounters memory counters = _counters(c, depositor);
+        PledgeCounters memory counters = _counters(c);
         counters.accountRecords = seizureList[proxy][c.vaultToken].length + zeroCreditList[proxy][c.vaultToken].length;
         return IRiskModuleChecks(_RISK_MODULE)
             .checkPledge(depositor, proxy, c.marketId, c.integrationId, positionKey, units, counters, requireRescue);

@@ -59,7 +59,8 @@ interface IParameterStoreLoosen {
         uint256 depthThreshold
     ) external;
 
-    /// @notice Raises a market's `marketUsdCap`.
+    /// @notice Raises a market's `marketUsdCap`, to at most 1.5 times the current value or `USD_CAP_REOPEN_BASE`
+    /// ($1,000), whichever is higher, so a zero cap can reopen.
     /// @dev Reverts `AddCapTooSmall` unless SPEC-CAP-006 still holds with the new value; at most 1.5 times the current
     /// value.
     /// @param marketId Market identifier.
@@ -81,7 +82,9 @@ interface IParameterStoreLoosen {
         uint256 value
     ) external;
 
-    /// @notice Raises a token's `tokenUsdCap(hub, token)`, to at most 1.5 times the current value.
+    /// @notice Raises a token's `tokenUsdCap(hub, token)`, to at most 1.5 times the current value or
+    /// `USD_CAP_REOPEN_BASE` ($1,000), whichever is higher.
+    /// @dev Reverts `LoosenStepTooLarge` for a (Hub, token) pair whose cap `setInitialTokenCap` never wrote.
     /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
     /// @param token Underlying pool token.
     /// @param value New cap, 8-decimal USD.
@@ -89,15 +92,6 @@ interface IParameterStoreLoosen {
     function loosenTokenUsdCap(
         address hub,
         address token,
-        uint256 value
-    ) external;
-
-    /// @notice Raises `depositorUsdCap(hub)`, to at most 1.5 times the current value.
-    /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
-    /// @param value New cap, 8-decimal USD.
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017
-    function loosenDepositorUsdCap(
-        address hub,
         uint256 value
     ) external;
 

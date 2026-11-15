@@ -232,7 +232,7 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture, Cl
         });
         implementation = new ParameterStore(t, r, BLOCK_TIME, hasSequencer, logics);
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (t, _defaultGlobals(), 0, 10_000))
+            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (t, _defaultGlobals(), 10_000))
         );
         require(address(proxy) == predicted, "prediction");
         store = IParameterStore(address(proxy));

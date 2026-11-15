@@ -101,7 +101,6 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         assertEq(k.hub, aave.hub);
         assertEq(k.regularUsed, 1_000_000_000_000, "regular bucket");
         assertEq(k.sliceUsed, 0);
-        assertEq(k.depositorUsed, 1_000_000_000_000, "depositor counter");
         assertEq(k.tokenUsed[0], 1_000_000_000_000, "USDC counter");
         assertEq(k.tokenUsed[1], 1_000_000_000_000, "USDT counter");
         assertEq(k.poolKey, keccak256(abi.encode(INTEGRATION, pool, bytes32(0))));
@@ -261,7 +260,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
 
     // TEST-013 verifies: REQ-VAULT-014, REQ-VAULT-034, REQ-COLL-026, SPEC-BACK-004
     /// @notice `checkPledge` receives the counters before the pledge as arguments, including the account's open
-    /// records, the Hub-keyed token and depositor counters and the pool counter.
+    /// records, the Hub-keyed token counters and the pool counter.
     function test_TEST_013_countersPassedAsArguments() public {
         _pledge(alice, aliceProxy, KEY42, 5_000_000_000);
         lpVault.mintPosition(KEY7, alice, MARKET_ID, 4_000_000_000);
@@ -272,7 +271,6 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
             hub: aave.hub,
             regularUsed: 1_000_000_000_000,
             sliceUsed: 0,
-            depositorUsed: 1_000_000_000_000,
             poolKey: keccak256(abi.encode(INTEGRATION, pool, bytes32(0))),
             poolUnits: 5_000_000_000,
             accountRecords: 1,
@@ -350,8 +348,8 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
 
     // TEST-272 verifies: REQ-COLL-026, REQ-VAULT-034, INV-092, ATTACK-157, Q-295, Q-383
     // Sources: 5.1 TEST-272 (ledger side)
-    /// @notice Two markets of one pool share one pool counter, and the token and depositor counters are keyed by Hub,
-    /// so a pledge in the second market sees the first market's exposure.
+    /// @notice Two markets of one pool share one pool counter, and the token counters are keyed by Hub, so a pledge in
+    /// the second market sees the first market's exposure.
     function test_TEST_272_hubAndPoolKeyedCounters() public {
         _pledge(alice, aliceProxy, KEY42, 5_000_000_000);
         address second = _secondMarketToken();
@@ -360,7 +358,6 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         assertEq(k2.poolKey, k1.poolKey, "same pool, same key");
         assertEq(k2.poolUnits, 5_000_000_000, "pool counter shared across ranges");
         assertEq(k2.tokenUsed[0], 1_000_000_000_000, "USDC counter is per Hub");
-        assertEq(k2.depositorUsed, 1_000_000_000_000, "depositor counter is per Hub");
         assertEq(k2.regularUsed, 0, "market buckets are per market");
         assertEq(coll.poolUnits(k1.poolKey), 5_000_000_000);
     }

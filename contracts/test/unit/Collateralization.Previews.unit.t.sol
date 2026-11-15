@@ -148,14 +148,11 @@ contract CollateralizationPreviewsUnitTest is CollateralizationFixture {
 
     // TEST-097 verifies: REQ-COLL-003, REQ-VAULT-128, REQ-COLL-026
     // Sources: 2.3 REQ-VAULT-128 (getCounters names no proxy, so accountRecords is 0)
-    /// @notice `getCounters` reports the account-free counters (`accountRecords = 0`) for any depositor, a depositor with
-    /// no record reads 0 on its own counter, and an address that is not a registered vault token reverts
-    /// `InvalidVaultToken`.
+    /// @notice `getCounters` reports the account-free counters (`accountRecords = 0`), the same for any depositor, and an
+    /// address that is not a registered vault token reverts `InvalidVaultToken`.
     function test_TEST_097_countersView() public {
         PledgeCounters memory k = coll.getCounters(vt, alice);
         assertEq(k.accountRecords, 0, "no proxy named");
-        assertEq(k.depositorUsed, 1_200_000_000_000, "6e9 units at $2");
-        assertEq(coll.getCounters(vt, bob).depositorUsed, 0);
         assertEq(coll.getCounters(vt, bob).regularUsed, k.regularUsed, "market counters do not depend on the depositor");
         vm.expectRevert(ICollateralizationErrors.InvalidVaultToken.selector);
         coll.getCounters(makeAddr("notAVaultToken"), alice);

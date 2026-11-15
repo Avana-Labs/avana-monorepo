@@ -1,13 +1,15 @@
 {
   "name": "caps-zero",
-  "description": "tighten the stable Hub's depositor cap to 0: the ParameterStore's floor refuses it",
-  "via": "timelock",
+  "description": "the Joint Configuration Safe (risk steward) tightens the stable Hub's USDT cap from $200,000 to 0: new exposure in USDT stops, exits stay open",
+  "via": "direct",
+  "sender": "jointConfigSafe",
   "changes": [
     {
       "contract": "ParameterStore",
-      "function": "tightenDepositorUsdCap",
+      "function": "tightenTokenUsdCap",
       "args": {
         "hub": "hub:stable",
+        "token": "token:USDT",
         "value": "0"
       }
     }

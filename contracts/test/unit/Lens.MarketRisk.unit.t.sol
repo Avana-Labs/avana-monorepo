@@ -41,7 +41,6 @@ contract LensMarketRiskUnitTest is LensFixture {
         assertEq(v.hardHealthFloor, 1.05e18, "hard floor");
         assertEq(v.marketUsdCap, 1_000_000e8, "market cap");
         assertEq(v.topUpSliceUsd, 100_000e8, "top-up slice");
-        assertEq(v.depositorUsdCap, 500_000e8, "the Hub's depositor cap");
         assertEq(v.tokenUsdCaps.length, 2, "one cap per pool token");
         assertEq(v.tokenUsdCaps[0], 300_000e8, "USDC");
         assertEq(v.tokenUsdCaps[1], 250_000e8, "USDT");

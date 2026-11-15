@@ -109,7 +109,7 @@ interface ICollateralizationEvents {
     /// @dev Exits never revert on counter arithmetic; saturation is a bug alarm for monitoring.
     /// @param counterKind Which counter was clamped.
     /// @param hub Hub that scopes the counter (the market's Hub).
-    /// @param key Vault token, pool token or depositor wallet that keys the counter.
+    /// @param key Vault token or pool token that keys the counter.
     /// @param valueBefore Counter value before the subtraction.
     /// @param subtracted Amount that was to be subtracted (USD 8 decimals).
     /// @custom:spec REQ-VAULT-037, REQ-VAULT-127

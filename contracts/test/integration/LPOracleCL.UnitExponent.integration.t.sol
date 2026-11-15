@@ -194,6 +194,38 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
         }
     }
 
+    // TEST-332 verifies: REQ-ORACLE-046, REQ-AMM-CORE-003
+    /// @notice Once registered, the feed's `checkConfig` binds the market record's pool, pool identifier and exact
+    /// shape to the pool and range the feed was initialized with: a record naming another range of the same pool, a
+    /// range one spacing wider, another pool, a pool identifier or another shape kind fails `CHECK_MARKET`, so a feed
+    /// initialized on the wrong range cannot activate the market.
+    function test_TEST_332_registeredRecordMustNameTheFeedsPoolAndRange() public {
+        Listed memory l = _listAndCheck(_daiUsdt(true));
+        int24 spacing = pool.tickSpacing();
+        Market memory m = _record(l.d);
+        m.shape.tickUpper = tickUpper + spacing;
+        registry.setMarketOf(address(oracle), MARKET, m);
+        assertTrue(oracle.checkConfig(_config()) & LPOracleCodes.CHECK_MARKET != 0, "a wider range");
+        m = _record(l.d);
+        (m.shape.tickLower, m.shape.tickUpper) = (tickLower - spacing, tickUpper - spacing);
+        registry.setMarketOf(address(oracle), MARKET, m);
+        assertTrue(oracle.checkConfig(_config()) & LPOracleCodes.CHECK_MARKET != 0, "a shifted range");
+        m = _record(l.d);
+        m.pool = makeAddr("anotherPool");
+        registry.setMarketOf(address(oracle), MARKET, m);
+        assertTrue(oracle.checkConfig(_config()) & LPOracleCodes.CHECK_MARKET != 0, "another pool");
+        m = _record(l.d);
+        m.poolId = bytes32(uint256(1));
+        registry.setMarketOf(address(oracle), MARKET, m);
+        assertTrue(oracle.checkConfig(_config()) & LPOracleCodes.CHECK_MARKET != 0, "a pool identifier");
+        m = _record(l.d);
+        m.shape.kind = ShapeKind.FullPool;
+        registry.setMarketOf(address(oracle), MARKET, m);
+        assertTrue(oracle.checkConfig(_config()) & LPOracleCodes.CHECK_MARKET != 0, "another shape kind");
+        _register(l.d);
+        assertEq(oracle.checkConfig(_config()), 0, "the matching record passes");
+    }
+
     // TEST-332 verifies: SPEC-ORC-005, REQ-ORACLE-105
     /// @notice The unit-exponent bit is not counted before the market is bound (the read reverts and the registry has
     /// not registered the feed), and is counted once it is registered while the LPVault has no such market.
@@ -409,7 +441,13 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
     function _register(
         uint8 d
     ) internal {
-        Market memory m;
+        registry.setMarketOf(address(oracle), MARKET, _record(d));
+    }
+
+    /// @dev The record `_register` writes.
+    function _record(
+        uint8 d
+    ) internal view returns (Market memory m) {
         m.integration = address(vault);
         m.pool = address(pool);
         m.shape = PositionShape(ShapeKind.TickRange, tickLower, tickUpper);
@@ -417,7 +455,6 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
         (m.tokens[0], m.tokens[1]) = (address(token0), address(token1));
         m.decimals = d;
         m.lpOracle = address(oracle);
-        registry.setMarketOf(address(oracle), MARKET, m);
     }
 
     function _valuation() internal view returns (ClUnitMath.Valuation memory) {

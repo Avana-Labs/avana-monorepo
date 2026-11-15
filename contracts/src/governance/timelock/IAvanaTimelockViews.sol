@@ -44,7 +44,7 @@ interface IAvanaTimelockViews {
     /// `tightenSlippageAllowanceBps`, `tightenFloorRoundingAllowance`, `tightenBorrowPriceMaxAge`,
     /// `tightenConsistencyToleranceBps`, `tightenFeedAgreementToleranceBps`, `tightenPoolRiskFactor`,
     /// `tightenRouteDepthThreshold`, `tightenMarketUsdCap`, `tightenTopUpSliceUsd`, `tightenTokenUsdCap`,
-    /// `tightenDepositorUsdCap`, `tightenPoolShareMaxBps`, `tightenPoolShareMaxBpsOf`, `tightenMinPledgeUsd`,
+    /// `tightenPoolShareMaxBps`, `tightenPoolShareMaxBpsOf`, `tightenMinPledgeUsd`,
     /// `tightenBreakerDeficitMax`, `tightenGateRecoverySeconds`, `tightenMaxShortfallBps`, `tightenDebtStressRiseBps` and `tightenMaxFlashFeeBps`. MarketRegistry: `disableRoute`,
     /// `restoreRoute`, `setMarketOffboarding`, `activateMarket`, `cancelRegistration`, `freeze`,
     /// `pause`, `freezeAddress`, `tripMarketBreaker`, `tripDebtBreaker` and `useStandbyRoute`. LPVaultSwap:

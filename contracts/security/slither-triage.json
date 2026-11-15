@@ -1494,11 +1494,20 @@
       "review": "Pattern: bounded loops (view calls only; bounded by the CDP Spoke reserve count, REQ-ADAPTER-051)."
     },
     {
-      "fingerprint": "3c53765f14ccd300",
+      "fingerprint": "2d6063a69c5273da",
       "check": "calls-loop",
       "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
-      "function": "RiskModulePledgeLogic._caps(RiskModulePreview.Ctx,PledgeCounters)",
-      "reason": "ParameterStore.tokenUsdCap view per market token (at most 8), the token caps of SPEC-CAP-002. Covered by TEST-272 (tokenAndDepositorCaps).",
+      "function": "RiskModulePledgeLogic._regularRoom(RiskModulePreview.Ctx,PledgeCounters,address[])",
+      "reason": "ParameterStore.tokenUsdCap view per market token (at most 8), the token rooms that bound an eligible top-up's regular part under SPEC-CAP-002; moved from _caps (entry 3c53765f14ccd300) when the cap check was split. Covered by TEST-272 (zeroTokenCapWithMarketRoomLeavesRescueTopUpsToTheSlice).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops (view calls only; lists that only timelock listings grow, or the market tokens, at most MAX_POOL_TOKENS = 8)."
+    },
+    {
+      "fingerprint": "832fe3f6fe2a8b54",
+      "check": "calls-loop",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "RiskModulePledgeLogic._tokenTest(RiskModulePreview.Ctx,PledgeCounters,address[],uint256)",
+      "reason": "ParameterStore.tokenUsdCap view per market token (at most 8), the token caps of SPEC-CAP-002; moved from _caps (entry 3c53765f14ccd300) when the cap check was split. Covered by TEST-272 (tokenCaps).",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: bounded loops (view calls only; lists that only timelock listings grow, or the market tokens, at most MAX_POOL_TOKENS = 8)."
     },
@@ -4842,6 +4851,12 @@
       "reason": "The constants are part of the shared LPOracleStorage base; each of the six contracts that inherits it (LPOracleCL, its poke, initialization, listing and view logic contracts and LPOracleCLModuleLogic) uses only the ones its own bodies need, so every constant is unused in some of them. Constants occupy no storage.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: the approved shared-base unused-state entries of MarketRegistryStorage and ParameterStoreStorage (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "49d38224d28d2450",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleCLPool.sol",
+      "reason": "Pricing-module hook of REQ-ORACLE-103, called through the virtual _isOwnMarket of LPOracleStorage from LPOracleListing._ownMarketWords in the listing logic's checkConfig (REQ-ORACLE-046); Slither does not resolve the call to the override. Covered by TEST-332."
     },
     {
       "fingerprint": "da01345bc97b837d",

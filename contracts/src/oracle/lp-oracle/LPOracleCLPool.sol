@@ -8,6 +8,7 @@ import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.s
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {SecondSource} from "../../types/SecondSource.sol";
 import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
+import {ShapeKind} from "../../types/ShapeKind.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
 
@@ -35,6 +36,9 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         // Unit exponent `k` of the market's pool (`SPEC-ORC-005`): one vault-token unit is `10^k` liquidity, as in the
         // integration (`IClIntegration.unitExponent`).
         uint8 unitExp;
+        // Uniswap v4: the market's `PoolId`, the pool being keyed by identifier and `pool` holding the reference
+        // Uniswap v3 pool; zero for a pool keyed by address (Uniswap v3, Slipstream).
+        bytes32 poolId;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracleCL")) - 1)) & ~bytes32(uint256(0xff)).
@@ -214,5 +218,29 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         (bool ok2, uint256 len0) = LPOracleCalls.wordAt(ret, 2 * _W);
         (bool ok5, uint256 len1) = LPOracleCalls.wordAt(ret, 5 * _W);
         return ok0 && ok1 && ok2 && ok5 && off0 == 2 * _W && off1 == 5 * _W && len0 == 2 && len1 == 2;
+    }
+
+    /// @dev The record names this implementation's pool, a `TickRange` shape and the exact range stored at `initialize`
+    /// (REQ-ORACLE-046): a pool keyed by address with no pool identifier, or for Uniswap v4 no address and the stored
+    /// `PoolId` (REQ-AMM-V4-007).
+    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-103
+    function _isOwnMarket(
+        uint256 poolWord,
+        uint256 poolIdWord,
+        uint256 kindWord,
+        uint256 tickLowerWord,
+        uint256 tickUpperWord
+    ) internal view override returns (bool own) {
+        ClLayout storage c = _cl();
+        // An ABI-encoded int24 is its sign extension to 256 bits, the two's-complement word of the int256.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 lower = uint256(int256(c.tickLower));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 upper = uint256(int256(c.tickUpper));
+        bytes32 id = c.poolId;
+        bool pool = id == bytes32(0)
+            ? poolWord == uint160(c.pool) && poolIdWord == 0
+            : poolWord == 0 && poolIdWord == uint256(id);
+        own = pool && kindWord == uint256(ShapeKind.TickRange) && tickLowerWord == lower && tickUpperWord == upper;
     }
 }

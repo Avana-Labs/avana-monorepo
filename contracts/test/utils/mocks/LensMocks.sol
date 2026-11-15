@@ -228,7 +228,6 @@ contract LensStoreMock {
     mapping(uint256 => uint256) public topUpSliceUsd;
     mapping(uint256 => uint256) public stressFloorUsd;
     mapping(address => mapping(address => uint256)) public tokenUsdCap;
-    mapping(address => uint256) public depositorUsdCap;
     mapping(bytes32 => uint16) internal _poolShareMax;
     mapping(bytes32 => bool) internal _poolShareSet;
     mapping(uint256 => uint256) public minPledgeUsd;
@@ -302,13 +301,6 @@ contract LensStoreMock {
         uint256 cap
     ) external {
         tokenUsdCap[hub][token] = cap;
-    }
-
-    function setDepositorCap(
-        address hub,
-        uint256 cap
-    ) external {
-        depositorUsdCap[hub] = cap;
     }
 
     function setPoolShareMax(

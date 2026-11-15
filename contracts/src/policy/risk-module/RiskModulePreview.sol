@@ -142,7 +142,6 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         IParameterStore ps = _store();
         p.marketRoomUsd = _room(ps.marketUsdCap(marketId), k.regularUsed);
         p.sliceRoomUsd = _room(ps.topUpSliceUsd(marketId), k.sliceUsed);
-        p.depositorRoomUsd = _room(ps.depositorUsdCap(m.hub), k.depositorUsed);
         p.tokenRoomUsd = new uint256[](m.tokens.length);
         for (uint256 i = 0; i < m.tokens.length; ++i) {
             uint256 used = i < k.tokenUsed.length ? k.tokenUsed[i] : 0;

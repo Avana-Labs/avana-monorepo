@@ -89,28 +89,14 @@ contract LPOracleV4UnitTest is LPOracleV4Fixture {
     }
 
     // TEST-331 verifies: REQ-AMM-V4-007, REQ-ORACLE-105
-    /// @notice Review V4-03: once bound, the integration's market must be the oracle's own: the PoolKey, the
-    /// PoolManager and the range; an oracle of another fee tier, another PoolManager or another range is refused.
-    function test_TEST_331_listingChecksTheIntegrationsMarketIsTheOracles() public {
+    /// @notice Review V4-03: the integration's PoolManager must be the oracle's (module bit 10); the `PoolId` and the
+    /// range are checked against the MarketRegistry's record by the core (`CHECK_MARKET`).
+    function test_TEST_331_listingChecksTheIntegrationsPoolManager() public {
         uint256 bit = (1 << 10) << LPOracleCodes.MODULE_CHECKS_SHIFT;
-        assertEq(oracle.checkConfig(_config()) & bit, 0, "unbound: the reads revert and are not counted");
-        integration.setBound(true);
-        assertEq(oracle.checkConfig(_config()), 0, "the integration's market is the oracle's");
-
-        UniswapV4PoolKey memory other = _v4Key();
-        other.fee = 3000;
-        other.tickSpacing = 60;
-        integration.setMarket(other, address(ref), 0);
-        assertTrue(oracle.checkConfig(_config()) & bit != 0, "another fee tier");
-        integration.setMarket(_v4Key(), address(ref), 0);
-
-        integration.setClMarket(address(0xBEEF), LOWER, UPPER);
+        assertEq(oracle.checkConfig(_config()), 0, "the integration's PoolManager is the oracle's");
+        integration.setPoolManager(address(0xBEEF));
         assertTrue(oracle.checkConfig(_config()) & bit != 0, "another PoolManager");
-        integration.setClMarket(address(pm), LOWER + 10, UPPER);
-        assertTrue(oracle.checkConfig(_config()) & bit != 0, "another lower tick");
-        integration.setClMarket(address(pm), LOWER, UPPER - 10);
-        assertTrue(oracle.checkConfig(_config()) & bit != 0, "another upper tick");
-        integration.setClMarket(address(pm), LOWER, UPPER);
+        integration.setPoolManager(address(pm));
         assertEq(oracle.checkConfig(_config()), 0, "clean again");
     }
 

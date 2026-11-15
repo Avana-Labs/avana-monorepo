@@ -152,12 +152,12 @@ interface ICollateralizationViews {
     ) external view returns (bool debtFree);
 
     /// @notice Returns the exposure counters a pledge into `vaultToken` by `depositor` would touch.
-    /// @dev USD with 8 decimals; the same values `pledge` passes to `checkPledge`. Token and depositor counters are
-    /// keyed by the market's Hub, so they sum every Spoke and market of that Hub on this chain (AMMN-RT-05). The call
-    /// reverts with `Locked` while the lock is held by another address.
+    /// @dev USD with 8 decimals; the same values `pledge` passes to `checkPledge`. Token counters are keyed by the
+    /// market's Hub, so they sum every Spoke and market of that Hub on this chain (AMMN-RT-05). There is no depositor
+    /// counter. The call reverts with `Locked` while the lock is held by another address.
     /// @param vaultToken The market.
-    /// @param depositor The depositor wallet.
-    /// @return counters Hub, market regular and slice counters, depositor counter, pool key and pool units, and
+    /// @param depositor The depositor wallet; unused, since no counter is kept per depositor.
+    /// @return counters Hub, market regular and slice counters, pool key and pool units, and
     /// per-token counters in pool order; `accountRecords` is 0 because no proxy is named (`getOpenRecordCount`).
     /// @custom:spec REQ-VAULT-034, REQ-VAULT-091, REQ-VAULT-128, SPEC-BACK-004, INV-027, Q-369
     function getCounters(

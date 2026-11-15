@@ -48,14 +48,12 @@ contract RiskModuleViewsUnitTest is RiskModuleFixture {
         PledgeCounters memory k = _counters();
         k.regularUsed = 1_000_001e8; // above the $1,000,000 market cap
         k.sliceUsed = 100_000e8; // the whole slice
-        k.depositorUsed = 6_000_000e8; // above the $5,000,000 depositor cap
         k.tokenUsed[0] = 10_000_000e8;
         k.tokenUsed[1] = 9_000_000e8;
         coll.setCounters(k);
         PledgePreview memory p = riskModule.previewPledge(wallet, mid, KEY);
         assertEq(p.marketRoomUsd, 0);
         assertEq(p.sliceRoomUsd, 0);
-        assertEq(p.depositorRoomUsd, 0);
         assertEq(p.tokenRoomUsd[0], 0);
         assertEq(p.tokenRoomUsd[1], 1_000_000e8);
         assertFalse(p.eligible);

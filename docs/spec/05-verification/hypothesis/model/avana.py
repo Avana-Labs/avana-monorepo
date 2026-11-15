@@ -114,7 +114,7 @@ class System(SwapMixin):
         self.freeze_log = {}              # guardian -> [timestamps]
         self.config_drift = False         # Aave risk configuration drift (Q-270)
         self.hostile_swap = False         # an LPVaultSwap version that never settles (Q-201)
-        self.counters_regular, self.counters_slice, self.counters_token, self.counters_depositor = {}, {}, {}, {}
+        self.counters_regular, self.counters_slice, self.counters_token = {}, {}, {}
         self.pending = {}                 # market -> dict(units, amounts {token: raw})
         self.orphan_burned = {}           # ghost: units burned without a debit (Q-257)
         self.unsettled = {}               # ghost: (proxy, market) -> units a faulty LPVaultSwap seized, unreconciled
@@ -578,15 +578,18 @@ class System(SwapMixin):
         R, S = self.counters_regular.get(m, 0), self.counters_slice.get(m, 0)
         room = max(0, self.p.cap_market_usd - R)
         if eligible:
+            # The regular room of an eligible top-up is the smallest of the market and token rooms (SPEC-CAP-002).
+            for t in (mk.t0, mk.t1):
+                room = min(room, max(0, self.p.cap_token_usd - self.counters_token.get(t, 0)))
             sl = max(0, c - room)
             self._rm(S + sl <= self.p.topup_slice_usd, "CapExceeded(SLICE)")
             self._rm(sl <= restore, "SliceAboveRestore")
         else:
             sl = 0
             self._rm(c <= room, "CapExceeded(MARKET)")
-        for t in (mk.t0, mk.t1):
-            self._rm(self.counters_token.get(t, 0) + c - sl <= self.p.cap_token_usd, f"CapExceeded(TOKEN {t})")
-        self._rm(self.counters_depositor.get(wallet, 0) + c - sl <= self.p.cap_depositor_usd, "CapExceeded(DEPOSITOR)")
+        if c - sl > 0:  # the token test applies to the regular part only (SPEC-CAP-002)
+            for t in (mk.t0, mk.t1):
+                self._rm(self.counters_token.get(t, 0) + c - sl <= self.p.cap_token_usd, f"CapExceeded(TOKEN {t})")
         need(c < 2 ** 128 and sl <= c, "InvalidCharge")
         ru = L if rescue else (mul_div(L, sl, c, up=True) if sl > 0 else 0)
         return c, sl, rescue, ru
@@ -597,7 +600,6 @@ class System(SwapMixin):
         self.counters_slice[m] = self.counters_slice.get(m, 0) + sl
         for t in (mk.t0, mk.t1):
             self.counters_token[t] = self.counters_token.get(t, 0) + c
-        self.counters_depositor[wallet] = self.counters_depositor.get(wallet, 0) + c
 
     def _release(self, rec, exited):
         """SPEC-BACK-005: remaining = ceil(V0 × remaining / U0); slice released first; saturating counters; rescue
@@ -613,7 +615,6 @@ class System(SwapMixin):
         rec.charge, rec.slice_charge = rem_charge, rec.slice_charge - rs
         for t in (mk.t0, mk.t1):
             self.counters_token[t] = max(0, self.counters_token.get(t, 0) - released)
-        self.counters_depositor[rec.depositor] = max(0, self.counters_depositor.get(rec.depositor, 0) - released)
         rec.credited = remaining
         rec.rescue_units = min(rec.rescue_units, rec.credited)
         return released

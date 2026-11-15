@@ -97,14 +97,12 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     function test_TEST_272_hubAndSpokeScopesFollowTheRegistry() public {
         address other = makeAddr("otherHub");
         _refuses(
-            abi.encodeCall(store.setInitialHubCaps, (other, 1e8)),
+            abi.encodeCall(store.setInitialTokenCap, (other, address(usdc), 1e8)),
             abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, other)
         );
         vm.prank(address(timelock));
-        store.setInitialHubCaps(address(hub), 1_000_000e8);
-        assertEq(store.depositorUsdCap(address(hub)), 1_000_000e8);
-        vm.prank(address(timelock));
         store.setInitialTokenCap(address(hub), address(usdc), 20_000_000e8);
+        assertEq(store.tokenUsdCap(address(hub), address(usdc)), 20_000_000e8);
         _refuses(
             abi.encodeCall(store.setLiquidationExpectations, (other, 1.1e18, 200)),
             abi.encodeWithSelector(IParameterStoreErrors.UnknownSpoke.selector, other)

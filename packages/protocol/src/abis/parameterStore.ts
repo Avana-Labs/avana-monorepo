@@ -301,25 +301,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "depositorUsdCap",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "disagreementPauseMax",
     "inputs": [],
     "outputs": [
@@ -1022,11 +1003,6 @@ export const parameterStoreAbi = [
         ]
       },
       {
-        "name": "initialDepositorUsdCap",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "initialPoolShareMaxBps",
         "type": "uint16",
         "internalType": "uint16"
@@ -1183,24 +1159,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint16",
         "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "loosenDepositorUsdCap",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -2102,24 +2060,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "setInitialHubCaps",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "initialDepositorUsdCap",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setInitialMarketCaps",
     "inputs": [
       {
@@ -2697,24 +2637,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint16",
         "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "tightenDepositorUsdCap",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],

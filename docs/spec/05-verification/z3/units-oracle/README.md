@@ -51,7 +51,7 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | Pause windows | `pauseActive = D ∧ now < s + pauseMax`; `disagreementExpired = D ∧ now ≥ s + pauseMax` (the same `s`) | none | `SPEC-ORC-016`, `REQ-ORACLE-095` |
 | Full range | `tickLower = (MIN_TICK / s)·s`, `tickUpper = (MAX_TICK / s)·s` | toward zero | `SPEC-BACK-001` |
 | Pledge charge | `usdCharge = mulDiv(c, max(price8, stressFloorUsd), 10^d, Ceil)`; minimum test `pledgeUsd = mulDiv(c, price8, 10^d, Floor)` | up / down | `SPEC-BACK-003`, `SPEC-CAP-001` |
-| Counters at pledge | Regular `+= usdCharge − sliceUsd`, Slice `+= sliceUsd`, token0, token1, depositor `+= usdCharge` | none | `SPEC-BACK-004` |
+| Counters at pledge | Regular `+= usdCharge − sliceUsd`, Slice `+= sliceUsd`, token0, token1 `+= usdCharge` (no depositor counter) | none | `SPEC-BACK-004` |
 | Release on exit | `remainingCharge = mulDiv(V0, remainingUnits, U0, Ceil)`; slice first; saturating counters | up | `SPEC-BACK-005` |
 | Seizure list | largest first at insertion; debit from the head, `take_r = min(rem, credited_r)`, require `rem = 0` | none | `SPEC-BACK-006` |
 | Debit equality | `sharesBefore − sharesAfter = u = supplyBefore − supplyAfter`, with shares = assets at `beginSeizure` | none | `SPEC-BACK-007` |
@@ -180,7 +180,7 @@ Run one script with `../../.venv/bin/python <file>.py`, or every model with `../
 | `MATH-UO-25b` | any split of exits telescopes: released1 + released2 == V0 - c(remaining); a record emptied in two exits releases exactly V0 | `SPEC-BACK-005`, `SPEC-BACK-004` | integers, U0 < 2^120, V0 < 2^128 | PROVED |
 | `MATH-UO-25c` | conservative rounding: V0*r/U0 <= remainingCharge < V0*r/U0 + 1 and remainingCharge <= V0 | `SPEC-BACK-005`, `SPEC-BACK-004` | integers, U0 < 2^120, V0 < 2^128 | PROVED |
 | `MATH-UO-25d` | slice first: Slice and Regular stay >= 0, the slice drops by min(capReleased, Slice), and Regular + Slice drops by exactly capReleased (saturation never clamps) | `SPEC-BACK-005`, `SPEC-BACK-004` | integers, U0 < 2^120, V0 < 2^128 | PROVED |
-| `MATH-UO-25e` | token and depositor counters (>= sum of charges) fall by exactly capReleased; max(counter - capReleased, 0) never clamps | `SPEC-BACK-005`, `SPEC-BACK-004` | integers, U0 < 2^120, V0 < 2^128 | PROVED |
+| `MATH-UO-25e` | token counters (>= sum of charges) fall by exactly capReleased; max(counter - capReleased, 0) never clamps | `SPEC-BACK-005`, `SPEC-BACK-004` | integers, U0 < 2^120, V0 < 2^128 | PROVED |
 | `MATH-UO-26a` | wrong reading (fixed V0 / current U): two half-slices of a record decrement 1.5 x V0, wiping other records out of the counter | `SPEC-BACK-005` | integers | COUNTEREXAMPLE (deliberate) |
 | `MATH-UO-26b` | size of the MATH-UO-26a error for n equal slices | `SPEC-BACK-005` | integers | COMPUTED |
 | `MATH-UO-26c` | wrong reading (floor of V0*x/U0 per exit): three 1-unit exits of a 3-unit record leave a residue in the counter | `SPEC-BACK-005` | integers | COUNTEREXAMPLE (deliberate) |

@@ -169,7 +169,7 @@ abstract contract RealStackVolatile is RealStackFlows {
     }
 
     /// @dev The Hub recorded as Volatile, the Spoke's implementation hash approved and the Spoke recorded, its
-    /// liquidation expectations and the Hub's depositor cap, then the Aave DAO's liquidation configuration.
+    /// liquidation expectations, then the Aave DAO's liquidation configuration.
     function _recordVolatileSpoke() private {
         vm.startPrank(address(timelock));
         registry.recordHub(hubV, RiskTier.Volatile);
@@ -185,7 +185,6 @@ abstract contract RealStackVolatile is RealStackFlows {
             })
         );
         store.setLiquidationExpectations(spokeV, TARGET_HEALTH_FACTOR, 200);
-        store.setInitialHubCaps(hubV, DEPOSITOR_CAP);
         vm.stopPrank();
         vm.prank(aaveDao);
         ICollSpokeConfigurator(aave.spokeConfigurator)
