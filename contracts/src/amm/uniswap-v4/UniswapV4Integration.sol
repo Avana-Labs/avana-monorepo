@@ -387,6 +387,8 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         Market storage market,
         bytes32 positionKey
     ) internal view override returns (bool) {
+        // Only the fields used are read from the fixed external layout.
+        // forge-lint: disable-next-line(unused-return)
         (, uint256 info) = _POSM.getPoolAndPositionInfo(uint256(positionKey));
         if (info & 0xff != 0) revert SubscribedPosition();
         address hooks = _v4Pools[market.poolRef].key.hooks;
@@ -408,7 +410,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @dev `REQ-AMM-V4-004`: the amounts of `SPEC-AMM-V4-003` at the pool's `slot0`, checked against the minimums, then
-    /// one batch: the fee step to `depositor` (when the position has liquidity) and the principal step to `recipient`.
+    /// one batch: the fee step to `depositor` and the principal step to `recipient`.
     /// @custom:spec REQ-AMM-V4-004, SPEC-AMM-V4-003, SPEC-BACK-008
     function _removePrincipal(
         Market storage m,
@@ -421,13 +423,11 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         amounts = _principalAmounts(m, liquidity);
         if (amounts[0] < minAmounts[0]) revert BelowMinimum(0, amounts[0], minAmounts[0]);
         if (amounts[1] < minAmounts[1]) revert BelowMinimum(1, amounts[1], minAmounts[1]);
-        (,,, uint128 live) = _readPosition(positionKey);
-        Batch memory b = _batch(live != 0 ? 10 : 5);
+        // The position holds at least the liquidity removed, so the fee step's zero decrease always has a position.
+        Batch memory b = _batch(10);
         UniswapV4PoolKey storage key = _v4Pools[m.poolRef].key;
-        if (live != 0) {
-            _decrease(b, positionKey, 0, 0, 0);
-            _takeTo(b, key, depositor);
-        }
+        _decrease(b, positionKey, 0, 0, 0);
+        _takeTo(b, key, depositor);
         _decrease(b, positionKey, liquidity, SafeCast.toUint128(minAmounts[0]), SafeCast.toUint128(minAmounts[1]));
         _takeTo(b, key, recipient);
         _run(b);
@@ -568,6 +568,8 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
             revert InvalidPool();
         }
         IUniswapV3Pool p = IUniswapV3Pool(ref);
+        // Zero until the read below sets it; a failed read leaves it zero by design.
+        // forge-lint: disable-next-line(uninitialized-local)
         if (IUniswapV3Factory(_REF_FACTORY).getPool(a, b, fee) != ref || p.token0() != a || p.token1() != b) {
             revert InvalidPool();
         }

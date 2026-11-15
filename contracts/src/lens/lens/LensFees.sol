@@ -139,6 +139,7 @@ abstract contract LensFees is LensBase, ILensFees {
     ) internal view returns (ClFees memory f) {
         _position(f, ILensV3FeeReads(c.positionManager).positions(tokenId));
         ILensV3FeeReads pool = ILensV3FeeReads(c.pool);
+        // Only the fields used are read from the fixed external layout.
         // forge-lint: disable-next-line(unused-return)
         (, f.tick,,,,,) = pool.slot0();
         (f.global[0], f.global[1]) = (pool.feeGrowthGlobal0X128(), pool.feeGrowthGlobal1X128());
@@ -155,6 +156,7 @@ abstract contract LensFees is LensBase, ILensFees {
     ) internal view returns (ClFees memory f) {
         _position(f, ILensSlipstreamFeeReads(c.positionManager).positions(tokenId));
         ILensSlipstreamFeeReads pool = ILensSlipstreamFeeReads(c.pool);
+        // Only the fields used are read from the fixed external layout.
         // forge-lint: disable-next-line(unused-return)
         (, f.tick,,,,) = pool.slot0();
         (f.global[0], f.global[1]) = (pool.feeGrowthGlobal0X128(), pool.feeGrowthGlobal1X128());
@@ -176,7 +178,11 @@ abstract contract LensFees is LensBase, ILensFees {
         ClMarketConfig memory c,
         bytes32 positionKey
     ) internal view {
+        // Only the fields used are read from the fixed external layout.
+        // forge-lint: disable-next-line(unused-return)
         (, bytes32 poolId,,) = integration.marketOf(marketId);
+        // Only the fields used are read from the fixed external layout.
+        // forge-lint: disable-next-line(unused-return)
         (, uint256 info) = ILensV4FeeReads(c.positionManager).getPoolAndPositionInfo(uint256(positionKey));
         // The 25 upper bytes of PositionInfo are the PoolId's first 25 bytes; the ticks sit at bits 8 and 32.
         // forge-lint: disable-next-line(unsafe-typecast)

@@ -2352,6 +2352,62 @@
       "reason": "MarketRegistry.getMarket and the Spoke reads of _minLb are views (STATICCALL), so nothing can re-enter; the market's status and smallest liquidation bonus must be read before the allowance is written, so that an active market keeps the Avana fee intact at that bonus (LIQ-I1, REQ-CONFIG-071). Covered by TEST-245 (floorRaiseRechecksLiveness: 175 bps refused at f = 2,000, admitted at f = 0).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: the approved ParameterStoreListingLogic.setInitialMarketParams entry b5234e90fba60cdc (MarketRegistry.getMarket read before the parameters are written)"
+    },
+    {
+      "fingerprint": "eac4fc504e45b262",
+      "check": "unchecked-return",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "The principal-capped collect of SPEC-BACK-008: it collects exactly the amounts decreaseLiquidity returned, which the LPVault reports; moved unchanged from ClLPVaultCustody by the base split.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "25e745bd9a84b93d",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "1302eba5bc701541",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "6ba33bd61dfdab3a",
+      "check": "reentrancy-state-change",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "ae864f517cc74a35",
+      "check": "reentrancy-state-change",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "e9b808064008904f",
+      "check": "unused-import",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "74bd0ba18ae5e3fe",
+      "check": "unused-import",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "9ec90db7ed7338b8",
+      "check": "contract-locks-ether",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Same as LPOracleCL: the only payable entry point is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by the timelock; no LPOracle function takes or holds ETH.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }
   ]
 }

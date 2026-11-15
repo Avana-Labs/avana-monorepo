@@ -561,6 +561,27 @@
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard in the same expression (assets > amount, value > repaid + premium) or the bisection invariant lo < hi (lo starts at 0, hi at least 1, mid strictly between); an underflow would revert, never wrap. Tests: Lens.DeleverageTo, Lens.Actions (TEST-247).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bb1b2453833a09d9 (Lens checked arithmetic behind a guard)"
+    },
+    {
+      "fingerprint": "8b327e837ec49b4b",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "Signed tick differences of ticks in [MIN_TICK, MAX_TICK] (int256, no underflow possible), or the moved Uniswap v3 observe difference that is taken unchecked by design, as Uniswap does.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "ce884cd78fcd4320",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Signed tick differences of ticks in [MIN_TICK, MAX_TICK] (int256, no underflow possible), or the moved Uniswap v3 observe difference that is taken unchecked by design, as Uniswap does.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "262752b32bd28c53",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Signed tick differences of ticks in [MIN_TICK, MAX_TICK] (int256, no underflow possible), or the moved Uniswap v3 observe difference that is taken unchecked by design, as Uniswap does.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }
   ]
 }

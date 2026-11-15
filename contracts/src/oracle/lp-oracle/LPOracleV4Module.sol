@@ -291,6 +291,8 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         uint256 word;
         if (ok && ret.length == 32) (ok, word) = LPOracleCalls.wordAt(ret, 0);
         else ok = false;
+        // Zero until the read below sets it; a failed read leaves it zero by design.
+        // forge-lint: disable-next-line(uninitialized-local)
         unlocked = word != 0;
     }
 
@@ -308,7 +310,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         if (ok && ret.length == 32) (ok, word) = LPOracleCalls.wordAt(ret, 0);
         else ok = false;
         // Low 160 bits, then the 24-bit two's-complement tick.
-        // forge-lint: disable-next-line(unsafe-typecast)
+        // forge-lint: disable-next-line(unsafe-typecast, uninitialized-local)
         (sqrtPriceX96, tick) = (uint160(word), int24(int256(word >> 160)));
     }
 

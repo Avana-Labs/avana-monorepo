@@ -56,6 +56,13 @@
       "reason": "Informational reminder that the proxy must be initialized: initialize(InitParams) runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-058), and the implementation's constructor (LPOracle, inherited by LPOracleCL) calls _disableInitializers (REQ-ORACLE-080). Covered by TEST-062 (test_TEST_062_initializersLocked, test_TEST_062_initializeChecks).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: same as the Josue-approved DebtOracle (2a1c646e4fe8715c), ParameterStore (0410eb7b4d80fdce) and MarketRegistry (44499e6d1cee9a4b) initialize-target entries; checked: LPOracle's constructor ends with _disableInitializers and the fixtures deploy the proxy with initialize in the ERC1967Proxy constructor."
+    },
+    {
+      "fingerprint": "7639b87d2c57bd78",
+      "check": "initialize-target",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-091), and the implementation's constructor calls _disableInitializers; same as LPOracleCL.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }
   ]
 }

@@ -54,6 +54,8 @@ library UniswapV4State {
         IUniswapV4PoolManager manager,
         bytes32 poolId
     ) internal view returns (uint160 sqrtPriceX96, int24 tick) {
+        // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+        // forge-lint: disable-next-line(calls-loop)
         uint256 word = uint256(manager.extsload(poolStateSlot(poolId)));
         // Low 160 bits, then the 24-bit two's-complement tick above them.
         // forge-lint: disable-next-line(unsafe-typecast)
@@ -89,6 +91,8 @@ library UniswapV4State {
         bytes32 id
     ) internal view returns (PositionState memory p) {
         bytes32 mappingSlot = _offset(poolStateSlot(poolId), POSITIONS_OFFSET);
+        // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+        // forge-lint: disable-next-line(calls-loop)
         bytes32[] memory w = manager.extsload(keccak256(abi.encode(id, mappingSlot)), 3);
         // The struct's first word holds only the uint128 liquidity.
         // forge-lint: disable-next-line(unsafe-typecast)
@@ -122,6 +126,8 @@ library UniswapV4State {
         unchecked {
             if (tick < tickLower) return (lo0 - hi0, lo1 - hi1);
             if (tick >= tickUpper) return (hi0 - lo0, hi1 - lo1);
+            // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+            // forge-lint: disable-next-line(calls-loop)
             bytes32[] memory g = manager.extsload(_offset(state, FEE_GROWTH_GLOBAL0_OFFSET), 2);
             return (uint256(g[0]) - lo0 - hi0, uint256(g[1]) - lo1 - hi1);
         }
@@ -151,6 +157,8 @@ library UniswapV4State {
         int24 tick
     ) private view returns (uint256 g0, uint256 g1) {
         bytes32 slot = keccak256(abi.encode(int256(tick), _offset(state, TICKS_OFFSET)));
+        // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+        // forge-lint: disable-next-line(calls-loop)
         bytes32[] memory w = manager.extsload(_offset(slot, 1), 2);
         (g0, g1) = (uint256(w[0]), uint256(w[1]));
     }

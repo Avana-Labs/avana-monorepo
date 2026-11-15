@@ -48,6 +48,14 @@
         "reason": "previewDeleverageTo returns before sizing when the deleverage limit is 0, and _reaches is then called only with hi from _fullRepayUnits (at least 1: limit, or a mid above lo) and with mid = lo + (hi - lo) / 2 while hi - lo > 1, so mid >= lo + 1 >= 1. The check keeps a zero-unit repayment from counting as reaching the target if another caller is added.",
         "tests": "Lens.DeleverageTo (test_TEST_247_deleverageToWithASixDecimalDebt, test_TEST_247_deleverageToFromBelowOneRaisesTheTargetToOne, test_TEST_247_deleverageToBeyondTheRecordIsUnreachable: units >= 1 reach _reaches)"
       }
+    ],
+    "src/amm/uniswap-v4/UniswapV4Integration.sol": [
+      {
+        "function": "_isEncumbered",
+        "branch": "a hook outside the allowlist reverts HookNotAllowed",
+        "reason": "The market's PoolKey is fixed at bindMarket, which already refuses any hook outside the allowlist, and the allowlist is empty and immutable (only address(0) passes), so the re-check at receivePosition (REQ-AMM-V4-001) can never fail for a bound market. It stays as the defence the spec requires if an allowlist is ever added.",
+        "tests": "TEST-331 test_TEST_331_bindRefusesHookedPools (the same check refusing at bindMarket)"
+      }
     ]
   },
   "files": {
@@ -187,6 +195,11 @@
     "src/lens/lens/LensFees.sol": 80,
     "src/lens/lens/LensHubAssets.sol": 80,
     "src/lens/lens/LensRemoval.sol": 80,
-    "src/lens/lens/LensSizing.sol": 80
+    "src/lens/lens/LensSizing.sol": 80,
+    "src/amm/concentrated-liquidity/ClNfpmLPVault.sol": 94,
+    "src/amm/uniswap-v4/UniswapV4Integration.sol": 80,
+    "src/amm/uniswap-v4/UniswapV4State.sol": 100,
+    "src/oracle/lp-oracle/LPOracleV4.sol": 100,
+    "src/oracle/lp-oracle/LPOracleV4Module.sol": 80
   }
 }

@@ -26,9 +26,6 @@ import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 // solhint-disable comprehensive-interface
 // forge-lint: disable-next-line(missing-inheritance)
 contract LPOracleCLModuleLogic is LPOracleCLModule {
-    /// @dev `MODULE_ID()` of the concentrated-liquidity module.
-    bytes32 internal constant CL_MODULE_ID = keccak256("avana.LPOracleCLModuleLogic.v1");
-
     /// @dev This contract's own address: a call executing here, not in a proxy, is not delegated.
     address private immutable _SELF;
 
@@ -58,7 +55,7 @@ contract LPOracleCLModuleLogic is LPOracleCLModule {
     /// the Uniswap v4 module's own identifier in `LPOracleV4ModuleLogic`.
     /// @return id The module identifier.
     function MODULE_ID() external pure virtual returns (bytes32 id) {
-        id = CL_MODULE_ID;
+        id = keccak256("avana.LPOracleCLModuleLogic.v1");
     }
 
     /// @notice `keccak256(abi.encode(TIMELOCK, CHAIN_BLOCK_TIME, POKE_MIN_GAS_FLOOR, POKE_MIN_GAS_CEILING,

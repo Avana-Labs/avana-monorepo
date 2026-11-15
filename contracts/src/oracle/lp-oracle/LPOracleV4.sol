@@ -52,10 +52,10 @@ contract LPOracleV4 is LPOracleCL, LPOracleV4Module {
     // ─── The v4 module's hooks over the concentrated-liquidity ones ───
 
     function _initMarket(
-        bytes calldata market,
+        bytes calldata marketData,
         address[] memory tokens
     ) internal override(LPOracleStorage, LPOracleCLModule, LPOracleV4Module) returns (bool) {
-        return LPOracleV4Module._initMarket(market, tokens);
+        return LPOracleV4Module._initMarket(marketData, tokens);
     }
 
     function _poolCheck(
