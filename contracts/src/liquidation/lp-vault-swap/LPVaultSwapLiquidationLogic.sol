@@ -251,10 +251,10 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
     /// the fall of LPVaultSwap's balance over the call, at most `amount` (0 when no reserve is recorded, the address
     /// holds no code, `fund` reverts or the reserve takes nothing), and in `c.fundedShares` the reserve shares `fund`
     /// reports. The caller pays `amount - c.funded` to the borrower as for any liquidation and emits the event, so
-    /// nothing stays in LPVaultSwap. Only the 32-byte shares word is read from the return (a larger return is not
-    /// copied) and the revert data is not decoded, so a revert inside `fund` cannot revert the liquidation. A return
-    /// shorter than 32 bytes fails decoding in this frame, outside the `catch`, and does revert it; the recorded
-    /// AvanaFirstLossReserve always returns a `uint256`.
+    /// nothing stays in LPVaultSwap. Only the 32-byte shares word is read from the return (via-IR, this file's release
+    /// pipeline, copies no more of a larger return) and the revert data is not decoded, so a revert inside `fund`
+    /// cannot revert the liquidation. A return shorter than 32 bytes fails decoding in this frame, outside the `catch`,
+    /// and does revert it; the recorded AvanaFirstLossReserve always returns a `uint256`.
     /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
     function _fundReserve(
         Liq memory c,

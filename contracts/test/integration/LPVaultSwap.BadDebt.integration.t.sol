@@ -301,32 +301,52 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         assertGt(split, 0, "a deficit call split B between the reserve and the borrower");
     }
 
-    /// @notice A reserve that returns a huge buffer cannot make the deficit call revert: LPVaultSwap copies no return
-    /// data beyond the 32-byte shares word from `fund`, so each call settles within 16M gas, which the reserve's own
-    /// 8.6M of memory, a liquidation and a 2 MiB copy (about 8.8M more) together would exceed, unoptimized builds included.
+    /// @notice A reserve that returns a huge buffer cannot make the deficit call revert or cost it the copy: LPVaultSwap
+    /// copies no return data beyond the 32-byte shares word from `fund`. From the same state, the deficit call with this
+    /// reserve costs less than 13M gas more than with a reserve that takes the same amount and returns 32 bytes: the
+    /// reserve's own 2 MiB of memory is about 8.6M, and copying it into LPVaultSwap would add about 8.8M more. The bound
+    /// is the release build's: the default profile compiles the LPVaultSwap logic with via-IR, which copies only the
+    /// 32 bytes it decodes. The coverage profile builds it with the unoptimized legacy pipeline, which copies the whole
+    /// return, so there only the settlement itself is checked.
     // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
     function test_TEST_216_hugeReserveReturnDoesNotBlockTheSettlement() public {
         HugeReturnReserve reserve = new HugeReturnReserve(IERC20(address(usdc)));
-        _recordReserve(address(reserve));
+        address plain = address(new PartialReserve(IERC20(address(usdc)), 10_000));
         lpOracle.setAnswer(int256(100_000_000));
         uint256 funded = 0;
+        bool coverageBuild = keccak256(bytes(vm.envOr("FOUNDRY_PROFILE", string("default")))) == keccak256("coverage");
         for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
             uint256 debt = _debtOf(proxy, usdcReserveId);
             LiquidationParams memory p = _params(proxy, debt);
             p.maxShortfall = debt / 5;
             uint256 deficitBefore = _deficit();
+            uint256 snap = vm.snapshotState();
+            _recordReserve(plain);
+            (, uint256 baseline) = _liquidateMeasured(p);
+            vm.revertToState(snap);
+            _recordReserve(address(reserve));
             uint256 heldBefore = usdc.balanceOf(address(reserve));
-            usdc.mint(keeper, p.debtToCover + p.maxShortfall);
-            vm.startPrank(keeper);
-            usdc.approve(address(lvs), p.debtToCover + p.maxShortfall);
-            LiquidationResult memory r = lvs.liquidate{gas: 16_000_000}(p);
-            vm.stopPrank();
+            (LiquidationResult memory r, uint256 used) = _liquidateMeasured(p);
             if (_deficit() > deficitBefore) {
                 assertEq(usdc.balanceOf(address(reserve)), heldBefore + r.borrowerSurplus, "reserve took B");
+                if (!coverageBuild) assertLt(used, baseline + 13_000_000, "the 2 MiB return was not copied");
                 funded += r.borrowerSurplus;
             }
         }
         assertGt(funded, 0, "the deficit call funded the reserve");
+    }
+
+    /// @dev `keeper`'s liquidation with `p` and the gas the call used.
+    function _liquidateMeasured(
+        LiquidationParams memory p
+    ) internal returns (LiquidationResult memory r, uint256 used) {
+        usdc.mint(keeper, p.debtToCover + p.maxShortfall);
+        vm.startPrank(keeper);
+        usdc.approve(address(lvs), p.debtToCover + p.maxShortfall);
+        used = gasleft();
+        r = lvs.liquidate(p);
+        used -= gasleft();
+        vm.stopPrank();
     }
 
     /// @notice An account owing USDC and GHO whose last collateral a USDC liquidation seizes while repaying all of the
