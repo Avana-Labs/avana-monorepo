@@ -188,4 +188,121 @@ contract DebtOracleRecoveryEdgesUnitTest is DebtOracleFixture {
             }
         }
     }
+
+    // ─── Recovery evidence: routes, merges and previous rounds (mutation-gate triage, run 43492416937) ───
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice The both-stale interval ends at the earlier of the two routes' ends: the alternate recovers at
+    /// `T0 + 12,000` and the primary at `T0 + 12,500`, so grace opens recovered at `T0 + 12,000`.
+    function test_TEST_219_bothStaleEndsAtTheEarlierEnd() public {
+        ethUsd.push(ETH_USD, T0 + 12_000);
+        pUsd.push(USDC_USD, T0 + 12_500);
+        vm.warp(T0 + 12_600);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1);
+        assertEq(rec, T0 + 12_000, "min of the two ends");
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice An Invalid route gives no evidence even when one of its legs has a gap: ETH/USD returns at
+    /// `T0 + 20,000` with an answer above its `maxAnswer`, so no grace opens, although the primary's gap and ETH/USD's
+    /// silence are the same as in `test_TEST_219_absentFirstLegGapTakesTheSecond`.
+    function test_TEST_219_invalidRouteGivesNoEvidence() public {
+        vm.warp(T0 + 20_000);
+        ethUsd.push(2e12, T0 + 20_000);
+        pUsd.push(USDC_USD, T0 + 20_000);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "Invalid alternate");
+        assertEq(rec, 0);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-089, REQ-ORACLE-075, REQ-ORACLE-092
+    /// @notice With a daily primary, all three feeds return at `T0 + 92,000`; when either alternate leg's previous-round
+    /// lookup reverts, the alternate gives no evidence and no grace opens, although the other leg's gap overlaps the
+    /// primary's `[T0 + 88,101, T0 + 92,000)` for 3,899 s.
+    function test_TEST_219_unusableLookupOnEitherAlternateLeg() public {
+        store.setFeed(address(pUsd), 8, 0, 1e12, 86_400, 1800);
+        vm.warp(T0 + 92_000);
+        pUsd.push(USDC_USD, T0 + 92_000);
+        aEth.push(USDC_ETH, T0 + 92_000);
+        ethUsd.push(ETH_USD, T0 + 92_000);
+        uint256 snap = vm.snapshotState();
+        aEth.setMode(MockAggregator.getRoundData.selector, MockAggregator.Mode.Revert);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "first leg's lookup reverts");
+        assertEq(rec, 0);
+        vm.revertToState(snap);
+        ethUsd.setMode(MockAggregator.getRoundData.selector, MockAggregator.Mode.Revert);
+        (n, rec) = _graces();
+        assertEq(n, 0, "second leg's lookup reverts");
+        assertEq(rec, 0);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice Disjoint leg gaps keep the one with the later end. A poke at `T0 + 85,000` records a fresh ETH/USD round;
+    /// USDC/ETH then returns at `T0 + 90,000` (gap `[T0 + 88,101, T0 + 90,000)`) and ETH/USD at `T0 + 97,000` (gap
+    /// `[T0 + 90,401, T0 + 97,000)`); with the daily primary's gap `[T0 + 88,101, T0 + 97,000)` the routes were stale
+    /// together for 6,599 s and grace opens at `T0 + 97,000` (the first leg's gap alone would give 1,899 s).
+    function test_TEST_219_disjointLegGapsKeepTheLaterOne() public {
+        store.setFeed(address(pUsd), 8, 0, 1e12, 86_400, 1800);
+        vm.warp(T0 + 85_000);
+        ethUsd.push(ETH_USD, T0 + 85_000);
+        (uint256 n,) = _graces();
+        assertEq(n, 0, "no gap yet");
+        aEth.push(USDC_ETH, T0 + 90_000);
+        ethUsd.push(ETH_USD, T0 + 97_000);
+        pUsd.push(USDC_USD, T0 + 97_000);
+        vm.warp(T0 + 97_010);
+        uint64 rec;
+        (n, rec) = _graces();
+        assertEq(n, 1, "later gap");
+        assertEq(rec, T0 + 97_000);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice Overlapping leg gaps join from the earlier start: USDC/ETH is stale over `[T0 + 88,101, T0 + 92,000)`
+    /// and ETH/USD over `[T0 + 5,301, T0 + 95,000)`, so the alternate was stale from `T0 + 5,301`; with the primary
+    /// stale over `[T0 + 5,301, T0 + 91,000)` grace opens at `T0 + 91,000` (a union from the first leg's start would
+    /// give 2,899 s).
+    function test_TEST_219_overlappingLegGapsJoinFromTheEarlierStart() public {
+        aEth.push(USDC_ETH, T0 + 92_000);
+        ethUsd.push(ETH_USD, T0 + 95_000);
+        pUsd.push(USDC_USD, T0 + 91_000);
+        vm.warp(T0 + 95_010);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1);
+        assertEq(rec, T0 + 91_000);
+    }
+
+    // TEST-220 verifies: REQ-ORACLE-089, SPEC-ORC-014, REQ-ORACLE-075, REQ-ORACLE-092
+    /// @notice Round 1 of phase 0 (round id 1) has no earlier phase either: the gap starts at the recorded round and
+    /// grace opens at `T0 + 11,000`, as for phase 1.
+    function test_TEST_220_firstRoundOfPhaseZeroFallsBackToSeen() public {
+        vm.warp(T0 + 1000);
+        pUsd.push(USDC_USD, T0 + 1000);
+        (uint256 n,) = _graces();
+        assertEq(n, 0);
+        vm.warp(T0 + 11_000);
+        _mockLatest(pUsd, 1, T0 + 11_000);
+        uint64 rec;
+        (n, rec) = _graces();
+        assertEq(n, 1);
+        assertEq(rec, T0 + 11_000);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-089, REQ-ORACLE-075, REQ-ORACLE-092
+    /// @notice A previous round reporting time 0 is unusable: no grace opens, where a gap counted from time 0 would.
+    function test_TEST_219_previousRoundAtTimeZeroIsUnusable() public {
+        vm.warp(T0 + 10_000);
+        pUsd.push(USDC_USD, T0 + 10_000);
+        uint80 previous = pUsd.roundId() - 1;
+        vm.mockCall(
+            address(pUsd),
+            abi.encodeCall(MockAggregator.getRoundData, (previous)),
+            abi.encode(previous, USDC_USD, uint256(0), uint256(0), previous)
+        );
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "previous round at time 0");
+        assertEq(rec, 0);
+    }
 }
