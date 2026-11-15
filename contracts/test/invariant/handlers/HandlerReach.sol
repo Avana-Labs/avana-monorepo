@@ -194,7 +194,7 @@ abstract contract HandlerReach is CommonBase {
     }
 
     /// @dev Whether `accesses` hold a write that changed a slot of one of `subjects` (with `except`: of an account
-    /// not in `subjects`) and was not reverted.
+    /// not in `subjects`), or a contract creation by one, that was not reverted.
     function _changed(
         VmSafe.AccountAccess[] memory accesses,
         address[] memory subjects,
@@ -202,6 +202,14 @@ abstract contract HandlerReach is CommonBase {
     ) private pure returns (bool) {
         for (uint256 a = 0; a < accesses.length; ++a) {
             if (accesses[a].reverted) continue;
+            // A contract created by a counted account is a change even when its constructor writes no slot.
+            if (accesses[a].kind == VmSafe.AccountAccessKind.Create) {
+                bool byListed;
+                for (uint256 s = 0; s < subjects.length; ++s) {
+                    if (accesses[a].accessor == subjects[s]) byListed = true;
+                }
+                if (byListed != except) return true;
+            }
             VmSafe.StorageAccess[] memory st = accesses[a].storageAccesses;
             for (uint256 j = 0; j < st.length; ++j) {
                 if (!st[j].isWrite || st[j].reverted || st[j].previousValue == st[j].newValue) continue;

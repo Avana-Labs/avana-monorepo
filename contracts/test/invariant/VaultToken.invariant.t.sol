@@ -101,8 +101,9 @@ contract VaultTokenInvariantTest is CollateralizationFixture, HandlerReach {
         kinds[2][0] = 256;
         kinds[2][1] = 256;
         (actions[3], names[3]) = (CollateralizationHandler.repay.selector, "repay");
-        kinds[3] = new int16[](1);
+        kinds[3] = new int16[](2);
         kinds[3][0] = 256;
+        kinds[3][1] = 256;
         (actions[4], names[4]) = (CollateralizationHandler.setPrice.selector, "setPrice");
         kinds[4] = new int16[](1);
         kinds[4][0] = 256;

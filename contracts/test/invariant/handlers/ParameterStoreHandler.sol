@@ -226,7 +226,11 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         uint256 v
     ) external {
         uint256 old = STORE.hardHealthFloor(M);
-        v = bound(v, 0.95e18, 1.26e18);
+        // Steered: three calls in four pick a value within one 0.03 step below the current floor (inside the same
+        // 0.95–1.26 range), the only values a loosening accepts; the rest keep the whole range for the refusals.
+        uint256 lo = old > 0.98e18 ? old - 0.03e18 : 0.95e18;
+        if ((v >> 128) % 4 != 0 && old > lo && old <= 1.26e18) v = bound(v, lo, old - 1);
+        else v = bound(v, 0.95e18, 1.26e18);
         if (_as(TIMELOCK, abi.encodeCall(STORE.loosenHardHealthFloor, (M, v)))) {
             uint256 stored = STORE.hardHealthFloor(M);
             if (stored >= old) ++wrongDirection;
