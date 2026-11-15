@@ -141,9 +141,7 @@ abstract contract LPOracleV4Fixture is UniswapV4WorldFixture {
     }
 
     function _deployImplementation() internal returns (LPOracleV4) {
-        address m = address(
-            new LPOracleV4ModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, address(weth))
-        );
+        address m = address(new LPOracleV4ModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, address(weth)));
         LPOracleLogicSet memory logics = LPOracleLogicSet(
             address(new LPOracleCLPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m)),
             address(new LPOracleCLInitLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m)),

@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
-import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
 import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
+import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
+import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {LPOracleCLModule} from "./LPOracleCLModule.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";

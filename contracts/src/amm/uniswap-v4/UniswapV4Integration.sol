@@ -3,13 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IUniswapV4PoolManager, UniswapV4PoolKey} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+import {IUniswapV4PositionManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PositionManager.sol";
 import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {
-    IUniswapV4PoolManager,
-    UniswapV4PoolKey
-} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {IUniswapV4PositionManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PositionManager.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {PositionShape} from "../../types/PositionShape.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
@@ -460,8 +457,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         address depositor
     ) internal override returns (uint256 amount0, uint256 amount1) {
         bytes32 poolId = m.poolRef;
-        bytes32 id =
-            UniswapV4State.positionId(address(_POSM), m.cfg.tickLower, m.cfg.tickUpper, positionKey);
+        bytes32 id = UniswapV4State.positionId(address(_POSM), m.cfg.tickLower, m.cfg.tickUpper, positionKey);
         UniswapV4State.PositionState memory p = UniswapV4State.position(_PM, poolId, id);
         if (p.liquidity == 0) return (0, 0);
         (uint256 in0, uint256 in1) = UniswapV4State.feeGrowthInside(_PM, poolId, m.cfg.tickLower, m.cfg.tickUpper);

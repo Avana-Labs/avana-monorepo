@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
-import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
 import {IntegrationCapabilities} from "../../src/amm/types/IntegrationCapabilities.sol";
 import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
 import {RiskMetadata} from "../../src/amm/types/RiskMetadata.sol";
 import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
+import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
+import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -59,11 +59,23 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
         PoolKey memory hooked = stableKey;
         // Any hook is refused while the allowlist is empty, even one that clears the mask (bit 7 only).
         hooked.hooks = IHooks(address(uint160(0x0080)));
-        _expectBind(hooked, address(stableRef), abi.encodeWithSelector(IUniswapV4Integration.HookNotAllowed.selector, address(0x80)));
+        _expectBind(
+            hooked,
+            address(stableRef),
+            abi.encodeWithSelector(IUniswapV4Integration.HookNotAllowed.selector, address(0x80))
+        );
         hooked.hooks = IHooks(address(uint160(0x0300)));
-        _expectBind(hooked, address(stableRef), abi.encodeWithSelector(IUniswapV4Integration.HookNotAllowed.selector, address(0x300)));
+        _expectBind(
+            hooked,
+            address(stableRef),
+            abi.encodeWithSelector(IUniswapV4Integration.HookNotAllowed.selector, address(0x300))
+        );
         hooked.hooks = IHooks(address(uint160(0x0008)));
-        _expectBind(hooked, address(stableRef), abi.encodeWithSelector(IUniswapV4Integration.HookNotAllowed.selector, address(0x8)));
+        _expectBind(
+            hooked,
+            address(stableRef),
+            abi.encodeWithSelector(IUniswapV4Integration.HookNotAllowed.selector, address(0x8))
+        );
         assertTrue(vault.isAllowedPoolHook(address(0)));
         assertFalse(vault.isAllowedPoolHook(address(0x80)));
     }
@@ -71,7 +83,8 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
     // TEST-331 verifies: REQ-AMM-V4-007, REQ-AMM-V4-009, REQ-AMM-V4-011
     function test_TEST_331_bindRefusesBadPoolsReferencesAndSupplies() public {
         // Uninitialized pool.
-        PoolKey memory fresh = _key(Currency.unwrap(stableKey.currency0), Currency.unwrap(stableKey.currency1), 3000, 60);
+        PoolKey memory fresh =
+            _key(Currency.unwrap(stableKey.currency0), Currency.unwrap(stableKey.currency1), 3000, 60);
         _expectBind(fresh, address(stableRef), abi.encodeWithSelector(InvalidPool.selector));
         // Reference pool of another pair.
         PoolKey memory k = stableKey;
@@ -84,7 +97,8 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
         // A token with a supply of 2^127.
         ClTestToken big = new ClTestToken("BIG", 18);
         big.mint(address(1), 1 << 127);
-        (address a, address b) = address(big) < address(usdc) ? (address(big), address(usdc)) : (address(usdc), address(big));
+        (address a, address b) =
+            address(big) < address(usdc) ? (address(big), address(usdc)) : (address(usdc), address(big));
         PoolKey memory bigKey = _key(a, b, 500, 10);
         pm.initialize(bigKey, 1 << 96);
         IClPool bigRef = IClPool(factory.createPool(a, b, 500));
@@ -92,10 +106,22 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
         // pool != 0 or a wrong id.
         vm.prank(registry);
         vm.expectRevert(InvalidPool.selector);
-        vault.bindMarket(9, address(1), _poolId(k), PositionShape(ShapeKind.TickRange, -10, 10), _bindData(k, address(stableRef), ONE, ONE));
+        vault.bindMarket(
+            9,
+            address(1),
+            _poolId(k),
+            PositionShape(ShapeKind.TickRange, -10, 10),
+            _bindData(k, address(stableRef), ONE, ONE)
+        );
         vm.prank(registry);
         vm.expectRevert(InvalidPool.selector);
-        vault.bindMarket(9, address(0), bytes32(uint256(1)), PositionShape(ShapeKind.TickRange, -10, 10), _bindData(k, address(stableRef), ONE, ONE));
+        vault.bindMarket(
+            9,
+            address(0),
+            bytes32(uint256(1)),
+            PositionShape(ShapeKind.TickRange, -10, 10),
+            _bindData(k, address(stableRef), ONE, ONE)
+        );
     }
 
     // ─── Custody ───
@@ -291,7 +317,9 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
     ) internal {
         vm.prank(registry);
         vm.expectRevert(err);
-        vault.bindMarket(9, address(0), _poolId(key), PositionShape(ShapeKind.TickRange, lower, upper), _bindData(key, ref, ONE, ONE));
+        vault.bindMarket(
+            9, address(0), _poolId(key), PositionShape(ShapeKind.TickRange, lower, upper), _bindData(key, ref, ONE, ONE)
+        );
     }
 
     function _collectAsAdapter(

@@ -50,7 +50,8 @@ abstract contract UniswapV4IntegrationFixture is UniswapV4WorldFixture, ILPVault
         lock = new Lock(adapter, lpVaultSwap);
         usdc = new ClTestToken("USDC", 6);
         usdt = new ClTestToken("USDT", 6);
-        (address a, address b) = address(usdc) < address(usdt) ? (address(usdc), address(usdt)) : (address(usdt), address(usdc));
+        (address a, address b) =
+            address(usdc) < address(usdt) ? (address(usdc), address(usdt)) : (address(usdt), address(usdc));
         stableKey = _key(a, b, 100, 1);
         _initPool(stableKey, ONE, ONE, 6, 6);
         ethKey = _key(address(0), address(usdc), 500, 10);

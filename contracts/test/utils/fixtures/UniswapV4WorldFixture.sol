@@ -286,9 +286,8 @@ abstract contract UniswapV4WorldFixture is ClPoolFixture {
         tokenId = posm.nextTokenId();
         bytes memory actions = abi.encodePacked(A_MINT_POSITION, A_SETTLE_PAIR, A_SWEEP);
         bytes[] memory params = new bytes[](3);
-        params[0] = abi.encode(
-            key, lower, upper, uint256(liquidity), type(uint128).max, type(uint128).max, owner, bytes("")
-        );
+        params[0] =
+            abi.encode(key, lower, upper, uint256(liquidity), type(uint128).max, type(uint128).max, owner, bytes(""));
         params[1] = abi.encode(key.currency0, key.currency1);
         params[2] = abi.encode(Currency.wrap(address(0)), MSG_SENDER);
         uint256 value = Currency.unwrap(key.currency0) == address(0) ? address(this).balance / 2 : 0;
@@ -333,9 +332,7 @@ abstract contract UniswapV4WorldFixture is ClPoolFixture {
         (address t0, address t1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         (uint256 p0, uint256 p1) = tokenA < tokenB ? (pA, pB) : (pB, pA);
         pool = IClPool(factory.createPool(t0, t1, 500));
-        pool.initialize(
-            ClPriceMath.oracleSqrtPrice(p0, p1, ClTestToken(t0).decimals(), ClTestToken(t1).decimals())
-        );
+        pool.initialize(ClPriceMath.oracleSqrtPrice(p0, p1, ClTestToken(t0).decimals(), ClTestToken(t1).decimals()));
         pool.increaseObservationCardinalityNext(cardinality);
         ClTestToken(t0).mint(address(actor), FUND);
         ClTestToken(t1).mint(address(actor), FUND);
