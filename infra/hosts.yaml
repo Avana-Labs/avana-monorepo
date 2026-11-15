@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+#
+# Production hosts of the off-chain services (infra/README.md, Topology). A plan, not a provisioning file: nothing
+# reads it to create resources. Values in <...> are the operator's choice; sizes are the starting point.
+
+clouds:
+  primary: { provider: aws, region: <primary-region> }
+  secondary: { provider: gcp, region: <secondary-region, not the primary's metro> }
+
+hosts:
+  - name: indexer
+    cloud: primary
+    image: services/Dockerfile --target indexer
+    size: { vcpu: 4, memoryGb: 8, diskGb: 50 }
+    chains: [mainnet, base]
+    network: private
+    ports:
+      - { port: 42069, use: "export, keeper stream, /health, /ready", from: [convex-egress-tls-endpoint, keeper-*] }
+    state: none (PostgreSQL)
+    secrets: [DATABASE_URL, INDEXER_EXPORT_KEYS, RPC_* ]
+
+  - name: indexer-postgres
+    cloud: primary
+    service: managed PostgreSQL 17 (multi-zone)
+    size: { vcpu: 4, memoryGb: 16, storageGb: 500 }
+    network: private
+    from: [indexer]
+    config: infra/postgres/indexer.conf
+
+  - name: keeper-mainnet-shard-0
+    cloud: primary
+    image: services/Dockerfile --target keeper
+    size: { vcpu: 2, memoryGb: 4, diskGb: 20 }
+    env: { KEEPER_SHARD: "0", KEEPER_SHARD_COUNT: "2", KEEPER_MODE: active }
+    kms: infra/kms/aws-keeper-key.json
+    network: private
+    ports:
+      - { port: 9443, use: kill switch (mutual TLS), from: [on-call-vpn] }
+      - { port: 9464, use: metrics, from: [monitoring] }
+    state: encrypted volume at /data (halt flag, incident log)
+    secrets: [KEEPER_KMS_KEY_ID_MAINNET, KEEPER_INDEXER_KEY, RPC_MAINNET*, kill-switch TLS files]
+
+  - name: keeper-mainnet-shard-1
+    same_as: keeper-mainnet-shard-0
+    env: { KEEPER_SHARD: "1", KEEPER_SHARD_COUNT: "2", KEEPER_MODE: active }
+
+  - name: keeper-base-shard-0
+    same_as: keeper-mainnet-shard-0
+    secrets: [KEEPER_KMS_KEY_ID_BASE, KEEPER_INDEXER_KEY, RPC_BASE*, kill-switch TLS files]
+
+  - name: keeper-base-shard-1
+    same_as: keeper-base-shard-0
+    env: { KEEPER_SHARD: "1", KEEPER_SHARD_COUNT: "2", KEEPER_MODE: active }
+
+  - name: keeper-standby
+    cloud: secondary
+    image: services/Dockerfile --target keeper
+    size: { vcpu: 2, memoryGb: 4, diskGb: 20 }
+    chains: [mainnet, base]
+    env: { KEEPER_MODE: active }   # no KEEPER_SHARD: the standby covers every account after 60 s
+    kms: infra/kms/gcp-standby-key.yaml
+    network: private (peering link to the primary cloud for the keeper stream, optional)
+    ports:
+      - { port: 9443, use: kill switch (mutual TLS), from: [on-call-vpn] }
+      - { port: 9464, use: metrics, from: [monitoring] }
+    rpc: secondary providers only (infra/rpc/endpoints.yaml)
+
+  - name: monitor
+    cloud: secondary
+    image: services/Dockerfile --target monitor
+    size: { vcpu: 2, memoryGb: 4, diskGb: 20 }
+    chains: [mainnet, base]
+    network: private
+    ports:
+      - { port: 9470, use: alerts intake from keepers, metrics, from: [keeper-*, monitoring] }
+    state: encrypted volume at /data (alert state)
+    rpc: secondary providers with eth_call state overrides
+
+  - name: monitoring
+    cloud: secondary
+    service: Prometheus and Grafana (services/dashboards)
+    network: private
+    from: [on-call-vpn]
+
+  - name: convex-egress-tls-endpoint
+    cloud: primary
+    service: TLS load balancer in front of the indexer's port 42069
+    allow: Convex egress addresses only; paths /export/v1/* only

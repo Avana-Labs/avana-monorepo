@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+#
+# Template of the standby keeper's signers in Google Cloud KMS (infra/README.md, Keeper signing keys, Standby keeper).
+# One key per chain. Placeholders in <...>; the operator creates the key ring and keys, nothing here does.
+#
+# The keeper signs through a `KmsKey` (services/keeper/src/chain/signer.ts). Only the AWS implementation exists today;
+# a Cloud KMS implementation (AsymmetricSign over the digest, DER to r/s/v as in adapters/awsKms.ts) is needed before
+# the standby can sign.
+
+keyRing:
+  project: <secondary-project-id>
+  location: <secondary-region>
+  name: avana-keeper-standby
+
+keys:
+  - name: keeper-standby-mainnet
+    purpose: ASYMMETRIC_SIGN
+    versionTemplate:
+      algorithm: EC_SIGN_SECP256K1_SHA256
+      protectionLevel: HSM
+    labels: { service: avana-keeper, chain: mainnet, role: standby }
+  - name: keeper-standby-base
+    purpose: ASYMMETRIC_SIGN
+    versionTemplate:
+      algorithm: EC_SIGN_SECP256K1_SHA256
+      protectionLevel: HSM
+    labels: { service: avana-keeper, chain: base, role: standby }
+
+iam:
+  # The standby's service account may sign and read the public key, nothing else.
+  - role: roles/cloudkms.signerVerifier
+    members: ["serviceAccount:<keeper-standby-sa>@<secondary-project-id>.iam.gserviceaccount.com"]
+    resource: each key above
+  - role: roles/cloudkms.publicKeyViewer
+    members: ["serviceAccount:<keeper-standby-sa>@<secondary-project-id>.iam.gserviceaccount.com"]
+    resource: each key above
+  # Administrators manage keys but hold no signing role.
+  - role: roles/cloudkms.admin
+    members: ["group:<kms-admins>@<domain>"]
+    resource: keyRing
+
+audit:
+  dataAccessLogs:
+    service: cloudkms.googleapis.com
+    logTypes: [ADMIN_READ, DATA_READ, DATA_WRITE]
+    retention: 1 year
+  alerts:
+    - AsymmetricSign by any principal other than the standby's service account
+    - DestroyCryptoKeyVersion or DisableCryptoKeyVersion on these keys
+
+environment:
+  # The keeper reads the key version's resource name, never key material.
+  KEEPER_KMS_KEY_ID_MAINNET: projects/<secondary-project-id>/locations/<secondary-region>/keyRings/avana-keeper-standby/cryptoKeys/keeper-standby-mainnet/cryptoKeyVersions/1
+  KEEPER_KMS_KEY_ID_BASE: projects/<secondary-project-id>/locations/<secondary-region>/keyRings/avana-keeper-standby/cryptoKeys/keeper-standby-base/cryptoKeyVersions/1
