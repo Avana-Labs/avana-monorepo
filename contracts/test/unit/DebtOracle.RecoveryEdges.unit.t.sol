@@ -8,6 +8,7 @@ import {IDebtOracleEvents} from "../../src/oracle/debt-oracle/IDebtOracleEvents.
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
+import {HostileConfig} from "../utils/mocks/DebtOracleConfigMocks.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -304,5 +305,156 @@ contract DebtOracleRecoveryEdgesUnitTest is DebtOracleFixture {
         (uint256 n, uint64 rec) = _graces();
         assertEq(n, 0, "previous round at time 0");
         assertEq(rec, 0);
+    }
+
+    // ─── Records and gap edges (mutation-gate triage, run 43492416937, second pass) ───
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-031, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice With a two-leg primary `USDC/ETH x ETH/USD` and the hourly USDC/USD as the alternate, a poke at `T0 + 10`
+    /// records both primary legs. At `T0 + 20,000` ETH/USD and USDC/USD publish after their gaps
+    /// `[T0 + 5,301, T0 + 20,000)`: the primary's interval is its second leg's gap, so grace opens at `T0 + 20,000`.
+    function test_TEST_219_secondLegOfATwoLegPrimaryIsRecorded() public {
+        reg.setRoutes(usdc, _route2(address(aEth), address(ethUsd)), _route1(address(pUsd)));
+        vm.warp(T0 + 10);
+        _poke();
+        vm.warp(T0 + 20_000);
+        ethUsd.push(ETH_USD, T0 + 20_000);
+        pUsd.push(USDC_USD, T0 + 20_000);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "the second primary leg's gap");
+        assertEq(rec, T0 + 20_000);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-031, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice A poke whose configuration read fails reads no route and writes no leg record: after it, the primary and
+    /// ETH/USD publish at `T0 + 20,000` after gaps from their records at `T0 - 100`, and grace opens at `T0 + 20,000`.
+    function test_TEST_219_failedConfigurationReadKeepsTheRecords() public {
+        vm.warp(T0 + 1000);
+        store.setMode(store.cachedWindow.selector, HostileConfig.Mode.Revert);
+        _poke();
+        assertEq(uint8(_state()), uint8(PriceState.Cached), "configuration unavailable");
+        store.setMode(store.cachedWindow.selector, HostileConfig.Mode.Normal);
+        vm.warp(T0 + 20_000);
+        ethUsd.push(ETH_USD, T0 + 20_000);
+        pUsd.push(USDC_USD, T0 + 20_000);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "records kept");
+        assertEq(rec, T0 + 20_000);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-031, REQ-ORACLE-089, REQ-ORACLE-092
+    /// @notice A leg whose read reverts keeps its previous record. A poke at `T0 + 1,000` finds the primary's and
+    /// ETH/USD's `latestRoundData` reverting; at `T0 + 20,000` both publish the first round of a new phase whose previous
+    /// phase cannot be read, so each gap starts from the recorded `T0 - 100`, and grace opens at `T0 + 20,000` (a record
+    /// overwritten with time 0 would make the lookup unusable).
+    function test_TEST_219_erroredLegKeepsItsRecord() public {
+        vm.warp(T0 + 1000);
+        pUsd.setMode(MockAggregator.latestRoundData.selector, MockAggregator.Mode.Revert);
+        ethUsd.setMode(MockAggregator.latestRoundData.selector, MockAggregator.Mode.Revert);
+        _poke();
+        pUsd.setMode(MockAggregator.latestRoundData.selector, MockAggregator.Mode.Normal);
+        ethUsd.setMode(MockAggregator.latestRoundData.selector, MockAggregator.Mode.Normal);
+        vm.warp(T0 + 20_000);
+        pUsd.pushNewPhase(USDC_USD, T0 + 20_000, address(0));
+        ethUsd.pushNewPhase(ETH_USD, T0 + 20_000, address(0));
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "gaps from the kept records");
+        assertEq(rec, T0 + 20_000);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-031, REQ-ORACLE-001, REQ-ORACLE-092
+    /// @notice A leg whose `decimals()` read fails is an Error and is not recorded, even though its round decoded: a poke
+    /// at `T0 + 20,000` reads the primary's and ETH/USD's new rounds with `decimals()` reverting; the next poke, with
+    /// `decimals()` readable, still finds both gaps from the records at `T0 - 100` and opens grace at `T0 + 20,000`.
+    function test_TEST_219_unreadableDecimalsLegIsNotRecorded() public {
+        vm.warp(T0 + 20_000);
+        pUsd.push(USDC_USD, T0 + 20_000);
+        ethUsd.push(ETH_USD, T0 + 20_000);
+        pUsd.setMode(MockAggregator.decimals.selector, MockAggregator.Mode.Revert);
+        ethUsd.setMode(MockAggregator.decimals.selector, MockAggregator.Mode.Revert);
+        (uint256 n,) = _graces();
+        assertEq(n, 0, "no route while decimals fail");
+        pUsd.setMode(MockAggregator.decimals.selector, MockAggregator.Mode.Normal);
+        ethUsd.setMode(MockAggregator.decimals.selector, MockAggregator.Mode.Normal);
+        vm.warp(T0 + 20_010);
+        uint64 rec;
+        (n, rec) = _graces();
+        assertEq(n, 1, "gaps from the records before the failed read");
+        assertEq(rec, T0 + 20_000);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-031, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice A leg whose round did not change has no gap, even when that round's timestamp moved: after a poke at
+    /// `T0 + 10` records round 2 of the primary and ETH/USD, both rewrite round 2 with time `T0 + 20,000` and no grace
+    /// opens. A real new round at `T0 + 20,000` instead gives the gap `[T0 + 5,411, T0 + 20,000)` and grace.
+    function test_TEST_219_sameRoundWithANewTimeIsNoGap() public {
+        vm.warp(T0 + 10);
+        pUsd.push(USDC_USD, T0 + 10);
+        ethUsd.push(ETH_USD, T0 + 10);
+        _poke();
+        vm.warp(T0 + 20_000);
+        uint256 snap = vm.snapshotState();
+        pUsd.setCurrent(USDC_USD, T0 + 20_000);
+        ethUsd.setCurrent(ETH_USD, T0 + 20_000);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "same round");
+        assertEq(rec, 0);
+        vm.revertToState(snap);
+        pUsd.push(USDC_USD, T0 + 20_000);
+        ethUsd.push(ETH_USD, T0 + 20_000);
+        (n, rec) = _graces();
+        assertEq(n, 1, "control: new rounds");
+        assertEq(rec, T0 + 20_000);
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice A leg gap that would start at or after its round is no gap. The primary and USDC/ETH return at
+    /// `T0 + 92,000` (gaps from `T0 + 5,301` and `T0 + 88,101`); ETH/USD publishes at `T0 + 87,599` (start
+    /// `T0 + 93,000`, equal to its next round) or `T0 + 88,000` (start `T0 + 93,401`, after it) and again at
+    /// `T0 + 93,000`. The alternate's interval is USDC/ETH's gap, and grace opens at `T0 + 92,000`.
+    function test_TEST_219_legGapStartingAtOrAfterItsRoundIsNoGap() public {
+        uint256[2] memory mids = [T0 + 87_599, T0 + 88_000];
+        uint256 snap = vm.snapshotState();
+        for (uint256 k = 0; k < 2; ++k) {
+            pUsd.push(USDC_USD, T0 + 92_000);
+            aEth.push(USDC_ETH, T0 + 92_000);
+            ethUsd.push(ETH_USD, mids[k]);
+            ethUsd.push(ETH_USD, T0 + 93_000);
+            vm.warp(T0 + 93_010);
+            (uint256 n, uint64 rec) = _graces();
+            assertEq(n, 1, k == 0 ? "start equal to the round" : "start after the round");
+            assertEq(rec, T0 + 92_000);
+            vm.revertToState(snap);
+        }
+    }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-089, REQ-ORACLE-075, REQ-ORACLE-092
+    /// @notice With a daily primary, all three feeds return at `T0 + 92,000` and grace opens there. When USDC/ETH's
+    /// previous round reports the current round's own time, or time 0, that lookup is unusable and the alternate gives no
+    /// evidence, although ETH/USD's gap alone overlaps the primary's for 3,899 s.
+    function test_TEST_219_unusablePreviousTimeOnTheFirstAlternateLeg() public {
+        store.setFeed(address(pUsd), 8, 0, 1e12, 86_400, 1800);
+        vm.warp(T0 + 92_000);
+        pUsd.push(USDC_USD, T0 + 92_000);
+        aEth.push(USDC_ETH, T0 + 92_000);
+        ethUsd.push(ETH_USD, T0 + 92_000);
+        uint80 previous = aEth.roundId() - 1;
+        uint256 snap = vm.snapshotState();
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "control");
+        assertEq(rec, T0 + 92_000);
+        uint256[2] memory times = [T0 + 92_000, 0];
+        for (uint256 k = 0; k < 2; ++k) {
+            vm.revertToState(snap);
+            vm.mockCall(
+                address(aEth),
+                abi.encodeCall(MockAggregator.getRoundData, (previous)),
+                abi.encode(previous, USDC_ETH, times[k], times[k], previous)
+            );
+            (n, rec) = _graces();
+            assertEq(n, 0, k == 0 ? "previous round at the round's time" : "previous round at time 0");
+            assertEq(rec, 0);
+            vm.clearMockedCalls();
+        }
     }
 }
