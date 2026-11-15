@@ -54,6 +54,7 @@ ponder.on("LPVaultSwap:KeeperRemoved", async ({ event, context }) => {
 
 logOnly("LPVaultSwap", [
   "BorrowerSurplusPaid",
+  "DeficitSurplusFunded",
   "FlashLoanUsed",
   "RouteFailed",
   "ResidueReturned",

@@ -82,6 +82,7 @@ The position managers' own events (`IncreaseLiquidity`, `DecreaseLiquidity`, `Co
 |---|---|---|---|
 | LPVaultSwap | `LiquidationSettled(address caller idx, address proxy idx, uint256 marketId idx, SettlementReport report)` | `liquidation` | K C M |
 | LPVaultSwap | `BorrowerSurplusPaid(address proxy idx, address wallet idx, address debtAsset idx, uint256 amount, bool escrowed)` | log | C |
+| LPVaultSwap | `DeficitSurplusFunded(address proxy idx, address firstLossReserve idx, address debtAsset idx, uint256 amount, uint256 shares)` | log | C |
 | LPVaultSwap | `FlashLoanUsed(uint256 marketId idx, address flashSource idx, address asset idx, uint256 amount, uint256 premium)` | log | M |
 | LPVaultSwap | `RouteFailed(uint256 marketId idx, address token idx, address route, bytes4 errorSelector)` | log | K M (`M-10`) |
 | LPVaultSwap | `ResidueReturned(address caller idx, address token idx, uint256 amount, bool escrowed)` | log | M |
