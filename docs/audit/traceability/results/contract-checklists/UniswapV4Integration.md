@@ -8,7 +8,7 @@ Run results: none given (links only); recorded prover results and Halmos logs ar
 
 - [~] `REQ-AMM-CORE-001` (19-amm-integration-interface.md:68) Every AMM integration MUST implement the functions above with these signatures, and the AMM-neutral core MUST  — PROP-099, TEST-024, TEST-108
 - [~] `REQ-AMM-CORE-002` (19-amm-integration-interface.md:69) Each chain MUST have at most one LPVault per AMM protocol, registered write-once in the VaultTokenFactory as ` — TEST-058, TEST-108, TEST-279
-- [~] `REQ-AMM-CORE-003` (19-amm-integration-interface.md:70) `bindMarket(marketId, pool, poolId, shape, integrationData)` MUST revert with `NotMarketRegistry` unless `msg. — TEST-264, TEST-265, TEST-279, TEST-331
+- [~] `REQ-AMM-CORE-003` (19-amm-integration-interface.md:70) `bindMarket(marketId, pool, poolId, shape, integrationData)` MUST revert with `NotMarketRegistry` unless `msg. — TEST-264, TEST-265, TEST-279, TEST-331, TEST-332
 - [~] `REQ-AMM-CORE-004` (19-amm-integration-interface.md:71) A market MUST have between 2 and `MAX_POOL_TOKENS = 8` tokens, each an ERC-20 with no transfer hook, no rebasi — TEST-264, TEST-265, TEST-306, TEST-331
 - [~] `REQ-AMM-CORE-005` (19-amm-integration-interface.md:72) `receivePosition(marketId, owner, positionKey)` MUST revert with `NotCollateralization` unless `msg.sender ==  — TEST-010, TEST-011, TEST-116, TEST-265, TEST-266, TEST-333
 - [~] `REQ-AMM-CORE-006` (19-amm-integration-interface.md:73) **Exact shape at pledge (`AMMN-RT-01`).** `receivePosition` MUST revert with `PoolMismatch` unless the positio — PROP-083, TEST-010, TEST-011, TEST-217, TEST-335

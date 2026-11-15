@@ -90,8 +90,7 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         _contained(tl, abi.encodeCall(store.tightenRouteDepthThreshold, (M, usdc, gho, 0, 1)));
         _contained(tl, abi.encodeCall(store.tightenMarketUsdCap, (M, 4_000_000e8)));
         _contained(tl, abi.encodeCall(store.tightenTopUpSliceUsd, (M, 400_000e8)));
-        _contained(tl, abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 1e8)));
-        _contained(tl, abi.encodeCall(store.tightenDepositorUsdCap, (address(hub), 1e8)));
+        _contained(tl, abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000e8)));
         _contained(tl, abi.encodeCall(store.tightenPoolShareMaxBps, (5000)));
         _contained(tl, abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, 100)));
         _contained(tl, abi.encodeCall(store.tightenMinPledgeUsd, (M, 20e8)));
@@ -107,7 +106,6 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         _contained(tl, abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)));
         _contained(tl, abi.encodeCall(store.loosenTopUpSliceUsd, (M, 600_000e8)));
         _contained(tl, abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8)));
-        _contained(tl, abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_100_000e8)));
         _contained(tl, abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 110)));
         _contained(tl, abi.encodeCall(store.loosenMinPledgeUsd, (M, 1e8)));
         _contained(tl, abi.encodeCall(store.loosenMaxShortfallBps, (2000)));

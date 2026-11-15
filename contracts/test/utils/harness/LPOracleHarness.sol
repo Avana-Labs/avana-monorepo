@@ -106,6 +106,17 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         return _m().listingFailures;
     }
 
+    /// @dev The harness market has no pool or shape of its own: every record's pool and shape are accepted.
+    function _isOwnMarket(
+        uint256,
+        uint256,
+        uint256,
+        uint256,
+        uint256
+    ) internal pure override returns (bool own) {
+        own = true;
+    }
+
     /// @dev The harness market's pool reference (`setOwnPool`); unset (0) names no pool.
     function _isOwnPool(
         bytes32 poolRef

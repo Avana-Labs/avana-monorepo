@@ -119,15 +119,6 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
 
     /// @inheritdoc IParameterStoreTighten
     /// @custom:spec REQ-RISK-042, REQ-RISK-044
-    function tightenDepositorUsdCap(
-        address,
-        uint256
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-RISK-042, REQ-RISK-044
     function tightenPoolShareMaxBps(
         uint16
     ) external override onlyAdminOrSteward {
@@ -213,15 +204,6 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017
     function loosenTokenUsdCap(
         address,
-        address,
-        uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LOOSEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017
-    function loosenDepositorUsdCap(
         address,
         uint256
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {

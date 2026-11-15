@@ -329,7 +329,6 @@ contract LensMarketUnitTest is LensFixture {
         assertEq(c.sliceHeadroomUsd, 100_000e8, "slice untouched");
         assertEq(c.tokens.length, 2, "two tokens");
         assertEq(c.tokens[0], address(usdc), "pool order");
-        assertEq(c.depositorHeadroomUsd, 500_000e8 - 20_000e8, "Alice's charge under the Hub");
         assertEq(c.poolShareMaxBps, 10_000, "no pool-share cap");
         assertEq(c.poolShareBps, 1, "14,000e6 of 1e15 units, rounded up");
         assertEq(c.chargePricePerWholeToken, 2e8, "accepted price above the stress floor");
@@ -404,13 +403,10 @@ contract LensMarketUnitTest is LensFixture {
     function test_TEST_247_headroomFloorsAtZero() public {
         store.setCaps(MARKET_ID, 10_000e8, 0, 1e8);
         store.setTokenCap(aave.hub, address(usdc), 0);
-        store.setDepositorCap(aave.hub, 1e8);
         CapView memory c = lens.getCapHeadroom(vt, alice);
         assertEq(c.marketHeadroomUsd, 0, "market over cap");
         assertEq(c.sliceHeadroomUsd, 0, "no slice");
         assertEq(c.tokenHeadroomUsd[0], 0, "USDC cap 0");
-        assertEq(c.depositorHeadroomUsd, 0, "depositor over cap");
-        assertEq(lens.getCapHeadroom(vt, carol).depositorHeadroomUsd, 1e8, "a new depositor");
     }
 
     // TEST-247 verifies: REQ-LENS-018

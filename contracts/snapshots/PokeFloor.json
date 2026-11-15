@@ -1,6 +1,6 @@
 {
-  "DebtOracle_worstCase_minimumEntryGas": "446951",
-  "DebtOracle_worstCase_used": "443011",
-  "LPOracleCL_twoToken_worstCase_minimumEntryGas": "863631",
-  "LPOracleCL_twoToken_worstCase_used": "861747"
+  "DebtOracle_worstCase_minimumEntryGas": "446906",
+  "DebtOracle_worstCase_used": "442966",
+  "LPOracleCL_twoToken_worstCase_minimumEntryGas": "863677",
+  "LPOracleCL_twoToken_worstCase_used": "861791"
 }

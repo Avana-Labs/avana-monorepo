@@ -42,7 +42,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     bytes32 internal constant CAP_MARKET = "MARKET";
     bytes32 internal constant CAP_SLICE = "SLICE";
     bytes32 internal constant CAP_TOKEN = "TOKEN";
-    bytes32 internal constant CAP_DEPOSITOR = "DEPOSITOR";
 
     /// @notice Fixes the implementation immutables and the drift and breaker logic.
     /// @param im The per-chain Avana addresses.
@@ -225,14 +224,20 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (used >= limit) revert UserReservesLimit();
     }
 
-    /// @dev SPEC-CAP-002 with the slice rule of REQ-RISK-022; returns the slice part.
+    /// @dev SPEC-CAP-002 with the slice rule of REQ-RISK-022; returns the slice part. The regular room of an eligible
+    /// top-up is the smallest of the market room and every token room, and the slice takes the rest, so a token at or
+    /// above its cap (a cap tightened to 0 included) moves a rescue top-up to the slice instead of refusing it. The
+    /// token test applies to the regular part only: Collateralization books a slice top-up's full charge into every
+    /// token counter, so a counter at or above its cap must not refuse a top-up charged entirely to the slice.
     function _caps(
         Ctx memory c,
         PledgeCounters calldata k
     ) internal view returns (uint256 sliceUsd) {
+        address[] memory tokens = c.m.tokens;
+        if (k.tokenUsed.length != tokens.length) revert CapExceeded(CAP_TOKEN);
+        // `split` with no regular use takes `room` as the regular room.
         bool marketOk;
-        (sliceUsd, marketOk) =
-            RiskModuleMath.split(c.charge, k.regularUsed, _store().marketUsdCap(c.marketId), c.eligible);
+        (sliceUsd, marketOk) = RiskModuleMath.split(c.charge, 0, _regularRoom(c, k, tokens), c.eligible);
         if (!marketOk) revert CapExceeded(CAP_MARKET);
         if (sliceUsd > 0) {
             if (sliceUsd > c.restore) revert SliceNotAvailable();
@@ -241,17 +246,38 @@ contract RiskModulePledgeLogic is RiskModulePreview {
             }
         }
         uint256 regular = c.charge - sliceUsd;
-        address[] memory tokens = c.m.tokens;
-        if (k.tokenUsed.length != tokens.length) revert CapExceeded(CAP_TOKEN);
+        if (regular != 0) _tokenTest(c, k, tokens, regular);
+    }
+
+    /// @dev The market room `K > R ? K - R : 0`; for an eligible top-up, the smallest of it and every token room.
+    function _regularRoom(
+        Ctx memory c,
+        PledgeCounters calldata k,
+        address[] memory tokens
+    ) internal view returns (uint256 room) {
+        uint256 marketCap = _store().marketUsdCap(c.marketId);
+        room = marketCap > k.regularUsed ? marketCap - k.regularUsed : 0;
+        if (!c.eligible) return room;
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            uint256 tokenCap = _store().tokenUsdCap(c.m.hub, tokens[i]);
+            uint256 tokenRoom = tokenCap > k.tokenUsed[i] ? tokenCap - k.tokenUsed[i] : 0;
+            if (tokenRoom < room) room = tokenRoom;
+        }
+    }
+
+    /// @dev `T_i + regular <= tokenUsdCap(hub, token_i)` for every pool token; one token over its cap refuses the
+    /// whole pledge.
+    function _tokenTest(
+        Ctx memory c,
+        PledgeCounters calldata k,
+        address[] memory tokens,
+        uint256 regular
+    ) internal view {
         for (uint256 i = 0; i < tokens.length; ++i) {
             if (!RiskModuleMath.fits(k.tokenUsed[i], regular, _store().tokenUsdCap(c.m.hub, tokens[i]))) {
-                // One token over its cap refuses the whole pledge.
                 // forge-lint: disable-next-line(require-revert-in-loop)
                 revert CapExceeded(CAP_TOKEN);
             }
-        }
-        if (!RiskModuleMath.fits(k.depositorUsed, regular, _store().depositorUsdCap(c.m.hub))) {
-            revert CapExceeded(CAP_DEPOSITOR);
         }
     }
 

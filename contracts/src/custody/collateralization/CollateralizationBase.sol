@@ -138,8 +138,6 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     mapping(bytes32 poolKey => uint256) internal _poolUnits;
     /// @notice Exposure per (Hub, market token), USD 8 decimals.
     mapping(address hub => mapping(address token => uint256)) internal tokenUsd;
-    /// @notice Exposure per (Hub, depositor), USD 8 decimals.
-    mapping(address hub => mapping(address depositor => uint256)) internal depositorUsd;
     /// @notice Whether an account has had debt since its last `markDebtFree` (Q-355).
     mapping(address proxy => bool) internal indebted;
     /// @notice Accounts of a market carrying the indebted mark.
@@ -361,11 +359,10 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
         ) revert InvalidCharge();
     }
 
-    /// @notice Books a charge on the market, token and depositor counters (SPEC-BACK-004).
+    /// @notice Books a charge on the market and token counters (SPEC-BACK-004).
     /// @custom:spec REQ-COLL-026, REQ-VAULT-017, REQ-VAULT-034, SPEC-BACK-004
     function _book(
         Ctx memory c,
-        address depositor,
         PledgeCharge memory charge
     ) internal {
         marketUsd[c.vaultToken][Bucket.Regular] += charge.usdCharge - charge.sliceUsd;
@@ -376,7 +373,6 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
             // forge-lint: disable-next-line(costly-loop)
             tokenUsd[c.hub][c.tokens[i]] += charge.usdCharge;
         }
-        depositorUsd[c.hub][depositor] += charge.usdCharge;
     }
 
     /// @notice Charge carried by `remaining` units on a record's basis: `ceil(V0 * remaining / U0)` (SPEC-BACK-005).
@@ -416,9 +412,6 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
             // forge-lint: disable-next-line(costly-loop)
             tokenUsd[c.hub][token] = _satSub(tokenUsd[c.hub][token], released, CounterKind.Token, c.hub, token);
         }
-        address depositor = r.depositor;
-        depositorUsd[c.hub][depositor] =
-            _satSub(depositorUsd[c.hub][depositor], released, CounterKind.Depositor, c.hub, depositor);
     }
 
     /// @notice `max(value - amount, 0)`, emitting `CounterSaturated` when it clamps.

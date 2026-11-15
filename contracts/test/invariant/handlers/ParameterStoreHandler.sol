@@ -106,10 +106,10 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         uint256 v
     ) external {
         uint256 old = STORE.marketUsdCap(M);
-        v = bound(v, old > 0 ? old - 1 : 0, old + old / 2 + 2);
+        v = bound(v, old > 0 ? old - 1 : 0, _loosenCeiling(old));
         if (_as(TIMELOCK, abi.encodeCall(STORE.loosenMarketUsdCap, (M, v)))) {
             if (v <= old) ++wrongDirection;
-            if (v * 10_000 > old * 15_000) ++stepEscaped;
+            if (_capStepBroken(old, v)) ++stepEscaped;
             _spaced(_key("marketUsdCap", bytes32(M)));
         }
     }
@@ -152,33 +152,28 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         uint256 v
     ) external {
         uint256 old = STORE.tokenUsdCap(HUB, USDC);
-        v = bound(v, old, old + old / 2 + 2);
+        v = bound(v, old, _loosenCeiling(old));
         if (_as(TIMELOCK, abi.encodeCall(STORE.loosenTokenUsdCap, (HUB, USDC, v)))) {
-            if (v * 10_000 > old * 15_000) ++stepEscaped;
+            if (_capStepBroken(old, v)) ++stepEscaped;
             _spaced(_key("tokenUsdCap", keccak256(abi.encode(HUB, USDC))));
         }
     }
 
-    function loosenDepositorCap(
-        uint256 v
-    ) external {
-        uint256 old = STORE.depositorUsdCap(HUB);
-        v = bound(v, old, old + old / 2 + 2);
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenDepositorUsdCap, (HUB, v)))) {
-            if (v * 10_000 > old * 15_000) ++stepEscaped;
-            _spaced(_key("depositorUsdCap", bytes32(uint256(uint160(HUB)))));
-        }
+    /// @dev Just above the largest loosening the store admits: 1.5x the old value, or the $1,000 reopen base.
+    function _loosenCeiling(
+        uint256 old
+    ) internal pure returns (uint256) {
+        uint256 step = old + old / 2 + 2;
+        return step > 1000e8 + 2 ? step : 1000e8 + 2;
     }
 
-    function tightenDepositorCap(
-        uint256 v,
-        bool steward
-    ) external {
-        uint256 old = STORE.depositorUsdCap(HUB);
-        v = bound(v, 0, old + 1);
-        if (_as(_tightener(steward), abi.encodeCall(STORE.tightenDepositorUsdCap, (HUB, v))) && v >= old) {
-            ++wrongDirection;
-        }
+    /// @dev A market or token cap loosening breaks its rule when it is above both the $1,000 reopen base
+    /// (USD_CAP_REOPEN_BASE) and 1.5x the old value (REQ-PSTORE-017).
+    function _capStepBroken(
+        uint256 old,
+        uint256 v
+    ) internal pure returns (bool) {
+        return v > 1000e8 && v * 10_000 > old * 15_000;
     }
 
     // ─── Market risk values ───

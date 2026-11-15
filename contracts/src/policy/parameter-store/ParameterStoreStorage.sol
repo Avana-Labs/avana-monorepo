@@ -38,7 +38,6 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(uint256 marketId => uint256) topUpSliceUsd;
         mapping(uint256 marketId => uint256) stressFloorUsd;
         mapping(address hub => mapping(address token => uint256)) tokenUsdCap;
-        mapping(address hub => uint256) depositorUsdCap;
         mapping(bytes32 poolKey => uint16) poolShareOverride;
         mapping(address token => uint16) tokenCollateralFactorBps;
         mapping(address token => uint16) feedAgreementToleranceBps;
@@ -58,6 +57,10 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(address hub => mapping(address asset => SpeedLimit)) debtSpeed;
         // Appended for REQ-ORACLE-056: true for a market with a token that is not USD-pegged, which gets no USD band.
         mapping(uint256 marketId => bool) unbanded;
+        // Appended for REQ-PSTORE-026: true once `setInitialTokenCap` has written the (Hub, token) cap. A cap tightened
+        // to 0 stays set, so it reopens only by `USD_CAP_REOPEN_BASE` and the loosening steps, never by a second
+        // initial write; a pair never set cannot be loosened.
+        mapping(address hub => mapping(address token => bool)) tokenCapSet;
     }
 
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff))`.
@@ -89,6 +92,10 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     uint32 internal constant SEQUENCER_GRACE_MIN = 600;
     uint32 internal constant SEQUENCER_GRACE_MAX = 7200;
     uint256 internal constant USD_CAP_MAX = type(uint128).max;
+    /// @dev The value a `marketUsdCap` or `tokenUsdCap` below it may be loosened to in one step, $1,000 in 8-decimal USD
+    /// (REQ-RISK-043): a cap tightened to 0 (or to dust) reopens to at most $1,000 and then grows by the normal
+    /// ×1.5 steps, since a step from 0 alone could never leave 0.
+    uint256 internal constant USD_CAP_REOPEN_BASE = 1000e8;
     uint16 internal constant SECOND_SOURCE_TOLERANCE_MAX_BPS = 500;
     uint16 internal constant MIN_LIQUIDATION_BONUS_FLOOR = 200;
     uint16 internal constant MAX_QUOTE_CHANGE_BPS = 100;

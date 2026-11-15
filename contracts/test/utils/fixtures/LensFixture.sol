@@ -224,7 +224,6 @@ abstract contract LensFixture is CollateralizationFixture {
         store.setCaps(MARKET_ID, 1_000_000e8, 100_000e8, 1e8);
         store.setTokenCap(aave.hub, address(usdc), 300_000e8);
         store.setTokenCap(aave.hub, address(usdt), 250_000e8);
-        store.setDepositorCap(aave.hub, 500_000e8);
         swapMock.setKeeper(keeper, true, false);
         vault.setDepth(1e15, true);
     }

@@ -93,6 +93,19 @@ check("MATH-GOV-20d",
       [cap == 4_000_000 * 10**8, sl_old == 0, sl_new * 10_000 <= base_sl * 15_000, sl_new > 600_000 * 10**8],
       "PROVED")
 
+# marketUsdCap and tokenUsdCap may be tightened to 0; a loosening admits new <= USD_CAP_REOPEN_BASE (1,000e8) or the
+# 1.5x step. From 0 the first loosening reaches at most 1,000e8 and the second at most 1,500e8.
+BASE = 1_000 * 10**8
+step = lambda o, n: Or(n <= BASE, n * 10_000 <= o * 15_000)
+# MATH-GOV-20 verifies: SPEC-GOV-011, REQ-PSTORE-017
+check("MATH-GOV-20e",
+      "USD cap reopening: from 0, one loosening reaches at most 1,000e8 and two at most 1,500e8; above 1,000e8 the step "
+      "is the plain 1.5x rule",
+      [c0 == 0, c1 > c0, step(c0, c1), c2 > c1, step(c1, c2),
+       Or(c1 > BASE, c2 > 1_500 * 10**8,
+          And(old > BASE, new > BASE, step(old, new), Not(new * 10_000 <= old * 15_000)))],
+      "PROVED")
+
 # MATH-GOV-21: restoring mark (SPEC-GOV-005, REQ-ACCESS-156). The immutable DAO-only cancel set is MarketRegistry
 # restoreRoute, useStandbyRoute, unfreezeAddress and LPVaultSwap addKeeper; membership depends on (target, selector)
 # only, never on arguments. Per call i < n: inSet_i. restoring = n >= 1 and

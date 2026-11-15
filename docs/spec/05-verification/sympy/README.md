@@ -245,7 +245,7 @@ Run: `74 checks: 73 CONSISTENT, 1 INCONSISTENT`, exit 1.
 | SYM-105c | SPEC-UNIT-006: maxLiquidityPerTick(200) ~ 3.83e34 (exact 3.835e34, within one unit of the last stated digit) | `SPEC-UNIT-006` | Holds |
 | SYM-106 | SPEC-BACK-001: trunc(-887272/60)*60 = -887220; spacings 1, 10, 60, 200 give +-887272, +-887270, +-887220, +-887200 | `SPEC-BACK-001` | Holds |
 | SYM-107 | SPEC-BACK-003: NFT 42 charges ceil(5e9*2e8/1e6) = 1e12 at price8 2e8 and 5e11 at the floor when price8 = 9e7 | `SPEC-BACK-003` | Holds |
-| SYM-108 | SPEC-BACK-004: top-up charge 3e11 with slice 2e11 adds $1,000 regular, $2,000 slice, $3,000 per token and depositor | `SPEC-BACK-004` | Holds |
+| SYM-108 | SPEC-BACK-004: top-up charge 3e11 with slice 2e11 adds $1,000 regular, $2,000 slice, $3,000 per token | `SPEC-BACK-004` | Holds |
 | SYM-109a | SPEC-BACK-005: reconciling 1,575,000,000 of NFT 42 leaves 685e9 and releases 315e9 ($3,150) | `SPEC-BACK-005` | Holds |
 | SYM-109b | SPEC-BACK-005: the top-up record leaving in full with slice 2e11: fromSlice = 2e11 and regular drops by 1e11 ($1,000) | `SPEC-BACK-005` | Holds |
 | SYM-110 | SPEC-BACK-006: a third 4e9 NFT goes after NFT 7; a 6e9 debit empties NFT 42 and leaves NFT 7 at 3e9 | `SPEC-BACK-006` | Holds |

@@ -44,14 +44,6 @@ interface IParameterStoreRiskViews {
         address token
     ) external view returns (uint256 value);
 
-    /// @notice Exposure cap per depositor wallet across every market of a Hub on the chain.
-    /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
-    /// @return value 8-decimal USD.
-    /// @custom:spec SPEC-CAP-002, REQ-PSTORE-026
-    function depositorUsdCap(
-        address hub
-    ) external view returns (uint256 value);
-
     /// @notice Maximum Avana share of a pool's harmonic-mean liquidity: the pool-share cap and the concentration gate.
     /// @dev Default 10,000 bps (off, Q-403); per-pool cap optional: `tightenPoolShareMaxBpsOf` sets one and checks
     /// read `poolShareMaxBpsOf(poolKey)`. Replaces the former separate pool-share breaker threshold (Q-399).

@@ -180,16 +180,6 @@ contract ListMarkets is ListingBase {
                 "MR.finalizeIntegrationContracts"
             );
         }
-        for (uint256 h = 0; h < c.aave.hubs.length; ++h) {
-            if (store.depositorUsdCap(c.aave.hubs[h].hub) != 0) continue;
-            uint256 cap = vm.parseUint(_str(".listing.hubDepositorUsdCap")) * 1e8;
-            _add(
-                op,
-                address(store),
-                abi.encodeCall(store.setInitialHubCaps, (c.aave.hubs[h].hub, cap)),
-                "PS.setInitialHubCaps"
-            );
-        }
         _listTokens(op);
         _listDebtAssets(op);
         _recordSpokes(op);

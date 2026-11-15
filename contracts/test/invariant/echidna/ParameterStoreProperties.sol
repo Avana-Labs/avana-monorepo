@@ -69,8 +69,8 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     }
 
     function property_sliceWithinCap() external view returns (bool) {
-        return _s().topUpSliceUsd[M] <= _s().marketUsdCap[M] && _s().marketUsdCap[M] > 0
-            && _s().marketUsdCap[M] <= type(uint128).max;
+        // A market cap may be tightened to 0 and below the slice (REQ-RISK-042); it never exceeds the bound.
+        return _s().marketUsdCap[M] <= type(uint128).max;
     }
 
     function property_poolRiskFactorPositive() external view returns (bool) {
@@ -148,15 +148,15 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     ) external {
         uint256 before = _s().marketUsdCap[M];
         bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenMarketUsdCap, (M, value)));
-        if (ok) assert(value > before && value * 10_000 <= before * 15_000);
+        if (ok) assert(value > before && (value <= 1000e8 || value * 10_000 <= before * 15_000));
     }
 
     function tightenMarketCap(
         uint256 value
     ) external {
-        (uint256 before, uint256 slice) = (_s().marketUsdCap[M], _s().topUpSliceUsd[M]);
+        uint256 before = _s().marketUsdCap[M];
         bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenMarketUsdCap, (M, value)));
-        assert(ok == (value < before && value != 0 && value >= slice));
+        assert(ok == (value < before));
     }
 
     function tightenSlice(

@@ -17,7 +17,7 @@
  * account-market's seizure list in list order) and `zeroCreditList` (its records at 0 credited units; the two hold at most 16
  * together); `accountCredited`, `totalCredited`, `accountRescueUnits`
  * and `pending` keyed by vault token, `Pending` fields `units` and `amounts` (pool order); `marketUsd` keyed by
- * vault token and `Collateralization.Bucket`; `tokenUsd` and `depositorUsd` keyed by Hub. Plain storage. Views revert
+ * vault token and `Collateralization.Bucket`; `tokenUsd` keyed by Hub. Plain storage. Views revert
  * while another member holds the Lock (REQ-VAULT-091), so rules read state directly.
  *
  * Summaries (certora/README.md): every LPVault by the custody model below, keyed by (LPVault, positionKey), whose own
@@ -363,9 +363,6 @@ ghost mapping(uint256 => mathint) sumChargeMarket {
 ghost mapping(address => mapping(address => mathint)) sumChargeToken {
     init_state axiom forall address h. forall address t. sumChargeToken[h][t] == 0;
 }
-ghost mapping(address => mapping(address => mathint)) sumChargeDepositor {
-    init_state axiom forall address h. forall address d. sumChargeDepositor[h][d] == 0;
-}
 ghost mapping(uint256 => mathint) gMarketUsd {
     init_state axiom forall uint256 m. gMarketUsd[m] == 0;
 }
@@ -407,8 +404,6 @@ hook Sload uint128 v records[KEY uint256 id].rescueUnits {
 hook Sstore records[KEY uint256 id].currentUsdCharge uint64 newC (uint64 oldC) {
     sumChargeMarket[gMarket[id]] = sumChargeMarket[gMarket[id]] + newC - oldC;
     addTokenCharge(gMarket[id], newC - oldC);
-    sumChargeDepositor[marketHubOf(gMarket[id])][gDepositor[id]] =
-        sumChargeDepositor[marketHubOf(gMarket[id])][gDepositor[id]] + newC - oldC;
     gCharge[id] = newC;
 }
 
@@ -430,8 +425,6 @@ hook Sstore records[KEY uint256 id].marketId uint32 newM32 (uint32 oldM32) {
     sumChargeMarket[newM] = sumChargeMarket[newM] + gCharge[id];
     addTokenCharge(oldM, 0 - gCharge[id]);
     addTokenCharge(newM, gCharge[id]);
-    sumChargeDepositor[marketHubOf(oldM)][gDepositor[id]] = sumChargeDepositor[marketHubOf(oldM)][gDepositor[id]] - gCharge[id];
-    sumChargeDepositor[marketHubOf(newM)][gDepositor[id]] = sumChargeDepositor[marketHubOf(newM)][gDepositor[id]] + gCharge[id];
     gMarket[id] = newM;
 }
 
@@ -452,9 +445,6 @@ hook Sload address p records[KEY uint256 id].proxy {
 }
 
 hook Sstore records[KEY uint256 id].depositor address newD (address oldD) {
-    address hub = marketHubOf(gMarket[id]);
-    sumChargeDepositor[hub][oldD] = sumChargeDepositor[hub][oldD] - gCharge[id];
-    sumChargeDepositor[hub][newD] = sumChargeDepositor[hub][newD] + gCharge[id];
     gDepositor[id] = newD;
 }
 
@@ -1205,12 +1195,6 @@ invariant marketExposureMatchesRecords(uint256 marketId)
 // PROP-029 verifies: INV-027, Q-158, Q-174, Q-240
 invariant tokenExposureMatchesRecords(address hub, address token)
     to_mathint(currentContract.tokenUsd[hub][token]) == sumChargeToken[hub][token]
-    filtered { f -> !f.isView }
-    { preserved with (env e) { setup(); requireInvariant recordsBeyondNextIdAreEmpty(); } }
-
-// PROP-029 verifies: INV-027, Q-158, Q-174, Q-240
-invariant depositorExposureMatchesRecords(address hub, address depositor)
-    to_mathint(currentContract.depositorUsd[hub][depositor]) == sumChargeDepositor[hub][depositor]
     filtered { f -> !f.isView }
     { preserved with (env e) { setup(); requireInvariant recordsBeyondNextIdAreEmpty(); } }
 

@@ -139,9 +139,9 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         address h = address(hub);
         _tl();
         store.loosenTokenUsdCap(h, usdc, 30_000_000e8);
-        // Another scope (depositor cap of the same Hub) is spaced independently.
+        // Another scope (the market cap) is spaced independently.
         _tl();
-        store.loosenDepositorUsdCap(h, 1_500_000e8);
+        store.loosenMarketUsdCap(M, 7_500_000e8);
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -151,17 +151,26 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
             )
         );
         store.loosenTokenUsdCap(h, usdc, 31_000_000e8);
-        // A pair with no cap cannot be loosened into existence.
-        _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenStepTooLarge.selector, _key("tokenUsdCap", keccak256(abi.encode(h, usdt)))
-            )
+        // A pair with no cap cannot be loosened into existence, not even to the $1,000 reopen base (REQ-PSTORE-026).
+        bytes memory noCap = abi.encodeWithSelector(
+            IParameterStoreErrors.LoosenStepTooLarge.selector, _key("tokenUsdCap", keccak256(abi.encode(h, usdt)))
         );
+        _tl();
+        vm.expectRevert(noCap);
         store.loosenTokenUsdCap(h, usdt, 1);
         _tl();
+        vm.expectRevert(noCap);
+        store.loosenTokenUsdCap(h, usdt, 1000e8);
+        // Its listing then writes the cap it intends, once.
+        _tl();
+        store.setInitialTokenCap(h, usdt, 12_000_000e8);
+        assertEq(store.tokenUsdCap(h, usdt), 12_000_000e8, "the listing's cap");
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        store.setInitialTokenCap(h, usdt, 20_000_000e8);
+        _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.loosenDepositorUsdCap(h, uint256(type(uint128).max) + 1);
+        store.loosenTokenUsdCap(h, usdc, uint256(type(uint128).max) + 1);
     }
 
     // TEST-225 verifies: REQ-RISK-043, SPEC-CAP-005, Q-383, Q-399
