@@ -124,6 +124,9 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     /// @notice Liquidations whose result (direct) or `FlashLiquidated` event (helper) does not report the balance
     /// changes.
     uint256 public reportBreaks;
+    /// @notice Direct liquidations that booked a deficit (REQ-SWAP-027's branch). The USDT floor bounds the steering
+    /// above it here; the branch is reached in LPVaultSwap.invariant and pinned by IntegrationBalanceChecks.unit.
+    uint256 public deficitLiquidations;
     uint256 public livenessFailures;
     uint256 public exitFailures;
     uint256 public exitBlockedByStop;
@@ -432,6 +435,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             IntegrationBalanceChecks.direct(b, a, r, DeficitFunding.funded(vm.getRecordedLogs(), address(env.lvs)));
         if (!conserved) ++conservationBreaks;
         if (!reported) ++reportBreaks;
+        if (a.deficit > b.deficit) ++deficitLiquidations;
     }
 
     /// @dev TEST-104 on balances through the helper, with its `FlashLiquidated` report (IntegrationBalanceChecks.viaHelper).

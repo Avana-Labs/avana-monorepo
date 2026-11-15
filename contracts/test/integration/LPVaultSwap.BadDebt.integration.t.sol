@@ -66,6 +66,10 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         registry.setDebtReserve(aave.cdpSpoke, usdcReserveId, d, true);
     }
 
+    function _ghoDeficit() internal view returns (uint256) {
+        return IAaveV4Hub(aave.hub).getSpokeDeficitRay(ghoAssetId, aave.cdpSpoke);
+    }
+
     function _deficit() internal view returns (uint256) {
         return IAaveV4Hub(aave.hub).getSpokeDeficitRay(usdcAssetId, aave.cdpSpoke);
     }
@@ -148,6 +152,8 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
                     usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob), walletBefore, "borrower paid nothing"
                 );
                 assertEq(usdcCoverage.fundedBalance(), reserveBefore + r.borrowerSurplus, "surplus funded the reserve");
+                assertEq(usdc.allowance(address(lvs), address(usdcCoverage)), 0, "reserve allowance reset");
+                assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
                 deficitSurplus += r.borrowerSurplus;
             } else {
                 assertEq(usdcCoverage.fundedBalance(), reserveBefore, "no deficit, reserve untouched");
@@ -219,6 +225,58 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
             }
         }
         assertGt(funded, 0, "the deficit call funded the reserve");
+    }
+
+    /// @notice An account owing USDC and GHO whose last collateral a USDC liquidation seizes while repaying all of the
+    /// USDC: Aave books the GHO as deficit and the USDC deficit does not move, and `B` still funds the USDC First-Loss
+    /// Reserve rather than the borrower (re-review of audit finding L-01). The borrower reaches this state by sizing
+    /// the USDC debt to the collateral at the bonus; the test finds that size by adjusting the USDC borrow until the
+    /// call empties both the collateral and the USDC debt.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_otherDebtDeficitFundsTheRepaidAssetReserve() public {
+        uint256 snap = vm.snapshotState();
+        uint256 d = 9523e6;
+        bool found;
+        for (uint256 i = 0; i < 16 && !found; ++i) {
+            vm.revertToState(snap);
+            (found, d) = _twoDebtAttempt(makeAddr("carol"), d);
+        }
+        assertTrue(found, "a call emptied the collateral and the USDC debt together");
+    }
+
+    /// @dev Bob's state with `d` of USDC and 9,000 GHO at $1 a unit, then one USDC liquidation of the whole USDC debt.
+    /// Returns whether it emptied both the collateral and the USDC debt (asserting the funding if so), else the next
+    /// USDC borrow to try.
+    function _twoDebtAttempt(
+        address carol,
+        uint256 d
+    ) internal returns (bool found, uint256 next) {
+        (address p,) = _openAccount(carol, 10_000e6, d, 250_000_000);
+        lpOracle.setAnswer(250_000_000);
+        adapter.borrow(p, ghoReserveId, address(gho), 9000e18, carol);
+        lpOracle.setAnswer(100_000_000);
+        uint256[4] memory s0 = [
+            _deficit(),
+            _ghoDeficit(),
+            usdc.balanceOf(carol) + escrow.claimable(address(usdc), carol),
+            usdcCoverage.fundedBalance()
+        ];
+        LiquidationParams memory lp = _params(p, _debtOf(p, usdcReserveId));
+        lp.maxShortfall = lp.debtToCover / 5;
+        LiquidationResult memory r = _liquidateAs(keeper, lp);
+        uint256 left = _suppliedUnits(p);
+        uint256 usdcRise = _deficit() - s0[0];
+        // Collateral left over: the USDC debt was below the collateral at the bonus (10,500, $1 a unit).
+        if (left != 0) return (false, d + left * 10_000 / 10_500 + 1);
+        // USDC debt left over and booked as deficit: the USDC debt was above it.
+        if (usdcRise != 0) return (false, d - usdcRise / 1e27 - 1);
+        assertGt(_ghoDeficit(), s0[1], "the GHO debt became the deficit");
+        assertGt(r.borrowerSurplus, 0, "the call carried a borrower surplus");
+        assertEq(usdc.balanceOf(carol) + escrow.claimable(address(usdc), carol), s0[2], "borrower paid nothing");
+        assertEq(usdcCoverage.fundedBalance(), s0[3] + r.borrowerSurplus, "surplus funded the USDC reserve");
+        assertEq(usdc.allowance(address(lvs), address(usdcCoverage)), 0, "reserve allowance reset");
+        assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
+        return (true, d);
     }
 
     /// @notice A zero repayment is refused `InvalidAmount` even on an insolvent account.

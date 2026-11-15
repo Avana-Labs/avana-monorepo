@@ -36,11 +36,12 @@ interface ILPVaultSwapEvents {
     );
 
     /// @notice Emitted when a liquidation that booked a deficit paid its borrower surplus `B > 0` into the First-Loss
-    /// Reserve of the debt asset's funding Hub instead of to the borrower (`BorrowerSurplusPaid` is not emitted then).
+    /// Reserve of the debt asset's funding Hub instead of to the borrower (`BorrowerSurplusPaid` follows only for a part
+    /// the reserve did not take).
     /// @param proxy The liquidated PositionProxy.
     /// @param firstLossReserve The reserve funded (`MarketRegistry.firstLossReserveOf(fundingHub, debtAsset)`).
     /// @param debtAsset The debt asset paid.
-    /// @param amount `B`, base units.
+    /// @param amount The part of `B` the reserve took, base units (all of `B` from the recorded reserve).
     /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
     event DeficitSurplusFunded(
         address indexed proxy, address indexed firstLossReserve, address indexed debtAsset, uint256 amount

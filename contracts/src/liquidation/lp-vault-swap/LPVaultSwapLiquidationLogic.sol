@@ -64,6 +64,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         uint256[] amounts;
         uint8[] routeUsed;
         Tracked t;
+        bool otherDebt;
         bool deficit;
     }
 
@@ -119,7 +120,10 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         _requireSharesEqualAssets(c.m.hub, c.m.hubAssetId);
         bool inGrace = _checkCollateralPrice(c.m.lpOracle);
         _checkDebtPrice(c.d, p.debtReserveId);
-        c.hf = IAaveV4Spoke(c.m.spoke).getUserAccountData(p.proxy).healthFactor;
+        IAaveV4Spoke.UserAccountData memory account = IAaveV4Spoke(c.m.spoke).getUserAccountData(p.proxy);
+        c.hf = account.healthFactor;
+        // Debt in more than one reserve; nothing before `liquidationCall` changes it (the Lock is held).
+        c.otherDebt = account.borrowCount > 1;
         if (c.hf >= _HF_ONE) revert NotLiquidatable();
         if (inGrace && c.hf >= IParameterStore(_PARAMETER_STORE).graceHealthFactor()) revert GraceHealthFactor();
     }
@@ -140,8 +144,9 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
 
     /// @dev Bonus, fee and prices; `beginSeizure`; `liquidationCall(collateral, debt, proxy, Kf, false)` with an exact
     /// allowance reset to 0; `D` and `c` as deltas (`NothingSeized` if `c == 0`).
-    /// Also records whether the call booked a deficit in the repaid debt asset: the funding Hub's deficit of that asset
-    /// for the Spoke rose over it (REQ-SWAP-027).
+    /// Also records whether the call booked a deficit (REQ-SWAP-027): the funding Hub's deficit of the repaid asset for
+    /// the Spoke rose over it, or an account with debt in several reserves has none left, which only a deficit clears
+    /// (a liquidation repays one reserve).
     /// @custom:spec REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-027, REQ-SWAP-090, SPEC-LIQ-001, SPEC-LIQ-004
     function _seize(
         Liq memory c,
@@ -159,8 +164,8 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         IERC20 vt = IERC20(c.m.vaultToken);
         uint256 units0 = vt.balanceOf(address(this));
         uint256 debt0 = asset.balanceOf(address(this));
-        // Aave reports a deficit to the funding Hub when the call empties the account's last collateral while debt
-        // remains (LiquidationLogic `_evaluateDeficit`); under the Lock only this call can raise it (L-01).
+        // Aave reports a deficit on every remaining debt when the call empties the account's last collateral while
+        // debt remains (LiquidationLogic `_evaluateDeficit`); under the Lock only this call can raise it (L-01).
         IAaveV4Hub hub = IAaveV4Hub(c.d.fundingHub);
         uint256 deficit0 = hub.getSpokeDeficitRay(c.d.hubAssetId, address(spoke));
         asset.forceApprove(address(spoke), c.kf);
@@ -171,7 +176,8 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         c.units = units1 > units0 ? units1 - units0 : 0;
         c.debtRepaid = debt0 > debt1 ? debt0 - debt1 : 0;
         if (c.units == 0) revert NothingSeized();
-        c.deficit = hub.getSpokeDeficitRay(c.d.hubAssetId, address(spoke)) > deficit0;
+        c.deficit = hub.getSpokeDeficitRay(c.d.hubAssetId, address(spoke)) > deficit0
+            || (c.otherDebt && spoke.getUserAccountData(p.proxy).borrowCount == 0);
     }
 
     /// @dev `burnSeized` and `settleSeizure` measured as deltas, then the legs and `R` over the burn, the release and
@@ -230,27 +236,28 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
     /// @dev A liquidation that booked a deficit pays its borrower surplus `B` into the First-Loss Reserve of the debt
     /// asset's funding Hub (`d.firstLossReserve`, the MarketRegistry's `firstLossReserveOf(fundingHub, asset)`, which
     /// it accepts only for a reserve whose `HUB`, `ASSET` and `ASSET_ID` match and never changes) rather than to the
-    /// defaulted borrower (REQ-SWAP-027): exact allowance, `fund(amount)`, allowance reset to 0. That reserve pulls
-    /// exactly `amount` or reverts (`TransferAmountMismatch`). Returns false, moving nothing, when no reserve is
-    /// recorded, the address holds no code or `fund` reverts; the caller then pays `B` to the borrower as for any
-    /// liquidation, so the reserve never blocks a settlement. The return data is not decoded, so a malformed or huge
-    /// return cannot revert the liquidation either.
+    /// defaulted borrower (REQ-SWAP-027): exact allowance, `fund(amount)`, allowance reset to 0. `funded` is the fall
+    /// of LPVaultSwap's balance over the call, at most `amount`: 0 when no reserve is recorded, the address holds no
+    /// code, `fund` reverts or the reserve takes nothing. The caller pays `amount - funded` to the borrower as for any
+    /// liquidation, so the reserve never blocks a settlement and nothing stays in LPVaultSwap. Neither the return
+    /// nor the revert data of `fund` is decoded, so a malformed or huge one cannot revert the liquidation either.
     /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
     function _fundReserve(
         DebtReserveDef memory d,
         address proxy,
         uint256 amount
-    ) private returns (bool funded) {
+    ) private returns (uint256 funded) {
         address reserve = d.firstLossReserve;
-        if (reserve.code.length == 0) return false;
+        if (reserve.code.length == 0) return 0;
         IERC20 asset = IERC20(d.asset);
+        uint256 before = asset.balanceOf(address(this));
         asset.forceApprove(reserve, amount);
-        // No `returns` clause and an empty `catch`: neither the return data nor the revert data is decoded.
-        try IAvanaFirstLossReserve(reserve).fund(amount) {
-            funded = true;
-        } catch {}
+        try IAvanaFirstLossReserve(reserve).fund(amount) {} catch {}
         asset.forceApprove(reserve, 0);
-        if (funded) emit DeficitSurplusFunded(proxy, reserve, d.asset, amount);
+        uint256 balance = asset.balanceOf(address(this));
+        if (balance >= before) return 0;
+        funded = before - balance > amount ? amount : before - balance;
+        emit DeficitSurplusFunded(proxy, reserve, d.asset, funded);
     }
 
     /// @dev Floor, gap and shortfall pull; `keeperOut` and `minPayout`; payouts in order; the event.
@@ -282,10 +289,12 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         if (feeRecipient == address(0)) revert InvalidFeeRecipient();
         uint256[] memory residues = _residues(c.t);
         _deliver(address(asset), feeRecipient, pay.avanaFee);
-        if (pay.borrowerSurplus != 0 && !(c.deficit && _fundReserve(c.d, p.proxy, pay.borrowerSurplus))) {
+        uint256 toWallet = pay.borrowerSurplus;
+        if (toWallet != 0 && c.deficit) toWallet -= _fundReserve(c.d, p.proxy, toWallet);
+        if (toWallet != 0) {
             address wallet = IAaveAdapter(_AAVE_ADAPTER).walletOf(p.proxy);
-            bool escrowed = _deliver(address(asset), wallet, pay.borrowerSurplus);
-            emit BorrowerSurplusPaid(p.proxy, wallet, address(asset), pay.borrowerSurplus, escrowed);
+            bool escrowed = _deliver(address(asset), wallet, toWallet);
+            emit BorrowerSurplusPaid(p.proxy, wallet, address(asset), toWallet, escrowed);
         }
         if (keeperOut != 0) asset.safeTransfer(msg.sender, keeperOut);
         for (uint256 i = 0; i < c.t.count; ++i) {
