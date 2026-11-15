@@ -6,8 +6,11 @@ pragma solidity 0.8.28;
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ISlipstreamIntegration} from "../../amm/slipstream/ISlipstreamIntegration.sol";
+import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
+import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {ClMarketConfig} from "../../amm/types/ClMarketConfig.sol";
 import {FeeMode} from "../../amm/types/FeeMode.sol";
+import {IUniswapV4PoolManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
 import {BackingRecord} from "../../custody/collateralization/types/BackingRecord.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
@@ -15,6 +18,7 @@ import {Market} from "../../types/Market.sol";
 import {ILensFees} from "./ILensFees.sol";
 import {ILensSlipstreamFeeReads} from "./ILensSlipstreamFeeReads.sol";
 import {ILensV3FeeReads} from "./ILensV3FeeReads.sol";
+import {ILensV4FeeReads} from "./ILensV4FeeReads.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensClPosition, LensSlipstreamTick, LensV3Tick} from "./types/LensClReads.sol";
 import {PositionFeesView} from "./types/PositionFeesView.sol";
@@ -34,6 +38,7 @@ abstract contract LensFees is LensBase, ILensFees {
     bytes32 internal constant UNISWAP_V3 = keccak256("UNISWAP_V3");
     /// @dev `AMM_PROTOCOL()` of the Aerodrome Slipstream LPVault.
     bytes32 internal constant AERODROME_SLIPSTREAM = keccak256("AERODROME_SLIPSTREAM");
+    bytes32 internal constant UNISWAP_V4 = keccak256("UNISWAP_V4");
     /// @dev 2^128, the fixed-point base of fee growth.
     uint256 internal constant Q128 = 1 << 128;
 
@@ -101,9 +106,13 @@ abstract contract LensFees is LensBase, ILensFees {
         v.inCustody = v.depositor != address(0);
         bytes32 protocol = integration.AMM_PROTOCOL();
         bool v3 = protocol == UNISWAP_V3;
-        if (!v3 && protocol != AERODROME_SLIPSTREAM) return v;
+        if (!v3 && protocol != AERODROME_SLIPSTREAM && protocol != UNISWAP_V4) return v;
         if (integration.capabilities().feeMode != FeeMode.Separate) return v;
         ClMarketConfig memory c = IClIntegration(m.integration).clMarket(marketId);
+        if (protocol == UNISWAP_V4) {
+            _v4Fees(v, IUniswapV4Integration(m.integration), marketId, c, positionKey);
+            return v;
+        }
         uint256 tokenId = IClIntegration(m.integration).tokenIdOf(positionKey);
         if (!v3) {
             // A Slipstream key names its position manager by generation; only the market's generation matches.
@@ -156,6 +165,34 @@ abstract contract LensFees is LensBase, ILensFees {
     }
 
     /// @dev Copies the position's tokens, pool parameter, range, liquidity, snapshots and owed tokens.
+    /// @dev `REQ-AMM-V4-010`: a v4 position of the market's PoolId and range; its liquidity and last fee growth from the
+    /// PoolManager (owner the PositionManager, salt the token ID), `feeGrowthInside` at the pool's tick and the fees
+    /// `Position.update` would credit, all unchecked as the PoolManager computes them. v4 keeps no `tokensOwed`, so
+    /// `tokensOwed` stays 0 and `amounts` are the accrued fees.
+    function _v4Fees(
+        PositionFeesView memory v,
+        IUniswapV4Integration integration,
+        uint256 marketId,
+        ClMarketConfig memory c,
+        bytes32 positionKey
+    ) internal view {
+        (, bytes32 poolId,,) = integration.marketOf(marketId);
+        (, uint256 info) = ILensV4FeeReads(c.positionManager).getPoolAndPositionInfo(uint256(positionKey));
+        // The 25 upper bytes of PositionInfo are the PoolId's first 25 bytes; the ticks sit at bits 8 and 32.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        if (info == 0 || bytes25(bytes32(info)) != bytes25(poolId)) return;
+        // forge-lint: disable-next-line(unsafe-typecast)
+        if (int24(int256(info >> 8)) != c.tickLower || int24(int256(info >> 32)) != c.tickUpper) return;
+        IUniswapV4PoolManager pm = IUniswapV4PoolManager(c.factory);
+        UniswapV4State.PositionState memory p = UniswapV4State.position(
+            pm, poolId, UniswapV4State.positionId(c.positionManager, c.tickLower, c.tickUpper, positionKey)
+        );
+        (uint256 in0, uint256 in1) = UniswapV4State.feeGrowthInside(pm, poolId, c.tickLower, c.tickUpper);
+        (v.amounts[0], v.amounts[1]) = UniswapV4State.feesOwed(p, in0, in1);
+        v.liquidity = p.liquidity;
+        v.supported = true;
+    }
+
     function _position(
         ClFees memory f,
         LensClPosition memory p
