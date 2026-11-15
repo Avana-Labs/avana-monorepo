@@ -1,10 +1,10 @@
 {
-  "getUserAccountData_16records_1debt": "629437",
-  "getUserAccountData_16records_4debts": "1050154",
-  "getUserAccountData_1records_1debt": "629429",
-  "getUserAccountData_1records_4debts": "1050145",
-  "liquidate_16records_1debt": "6419368",
-  "liquidate_16records_4debts": "7279275",
-  "liquidate_1records_1debt": "3914199",
-  "liquidate_1records_4debts": "4774105"
+  "getUserAccountData_16records_1debt": "629370",
+  "getUserAccountData_16records_4debts": "1049909",
+  "getUserAccountData_1records_1debt": "629362",
+  "getUserAccountData_1records_4debts": "1049900",
+  "liquidate_16records_1debt": "6403499",
+  "liquidate_16records_4debts": "7263050",
+  "liquidate_1records_1debt": "3910975",
+  "liquidate_1records_4debts": "4770525"
 }
