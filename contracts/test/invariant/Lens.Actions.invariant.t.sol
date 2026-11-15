@@ -9,6 +9,7 @@ import {HubAssetView} from "../../src/lens/lens/types/HubAssetView.sol";
 import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 
 /// @title LensActionsInvariantTest
@@ -17,7 +18,7 @@ import {StdInvariant} from "forge-std/StdInvariant.sol";
 /// account Aave reported once the action ran, every removal the Lens sized kept its target, and the Spoke slices of
 /// every Hub asset add up to the Hub.
 /// forge-config: default.isolate = false
-contract LensActionsInvariantTest is StdInvariant, LensFixture {
+contract LensActionsInvariantTest is StdInvariant, LensFixture, HandlerReach {
     uint256 internal constant VIRTUAL = 1e6;
 
     address[2] internal wallets;
@@ -42,6 +43,77 @@ contract LensActionsInvariantTest is StdInvariant, LensFixture {
         selectors[5] = this.actWarp.selector;
         targetSelector(FuzzSelector({addr: address(this), selectors: selectors}));
         targetContract(address(this));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(this), address(this));
+        Reach memory r = _replayLanded(address(this), actions, bytes4(0), 32, 50, 0, own, true);
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](6);
+        bool[] memory check = new bool[](6);
+        floors[0] = 75; // actBorrow
+        floors[1] = 80; // actPledge
+        floors[2] = 80; // actPrice
+        floors[3] = 40; // actRepay
+        floors[4] = 80; // actWarp
+        check[4] = true; // actWarp
+        floors[5] = 25; // actWithdraw
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](6), new string[](6), new int16[][](6));
+        (actions[0], names[0]) = (LensActionsInvariantTest.actBorrow.selector, "actBorrow");
+        kinds[0] = new int16[](3);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        kinds[0][2] = 1;
+        (actions[1], names[1]) = (LensActionsInvariantTest.actPledge.selector, "actPledge");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (LensActionsInvariantTest.actPrice.selector, "actPrice");
+        kinds[2] = new int16[](1);
+        kinds[2][0] = 256;
+        (actions[3], names[3]) = (LensActionsInvariantTest.actRepay.selector, "actRepay");
+        kinds[3] = new int16[](3);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        kinds[3][2] = 1;
+        (actions[4], names[4]) = (LensActionsInvariantTest.actWarp.selector, "actWarp");
+        kinds[4] = new int16[](1);
+        kinds[4][0] = 256;
+        (actions[5], names[5]) = (LensActionsInvariantTest.actWithdraw.selector, "actWithdraw");
+        kinds[5] = new int16[](2);
+        kinds[5][0] = 256;
+        kinds[5][1] = 256;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // ─── actions ───

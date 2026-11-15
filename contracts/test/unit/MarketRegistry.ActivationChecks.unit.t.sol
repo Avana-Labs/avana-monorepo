@@ -181,4 +181,18 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
         _activate();
         assertEq(registry.marketOfReserve(address(spoke), VT_RESERVE), id);
     }
+
+    // TEST-138 verifies: REQ-CONFIG-047, REQ-CONFIG-038
+    /// @notice The LPOracle state read needs at least 64 bytes: a 32-byte answer fails "oracleLive", and an answer of
+    /// exactly 64 bytes whose state word is Live passes.
+    function test_TEST_138_oracleStateAnswerLength() public {
+        vm.mockCall(address(lpo), abi.encodeWithSignature("getPriceState()"), abi.encode(uint256(32)));
+        _expectCheck("oracleLive");
+        vm.mockCall(
+            address(lpo),
+            abi.encodeWithSignature("getPriceState()"),
+            abi.encode(uint256(32), uint256(uint8(PriceState.Live)))
+        );
+        _activate();
+    }
 }

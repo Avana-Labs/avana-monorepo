@@ -457,4 +457,15 @@ contract DebtOracleRoutesUnitTest is DebtOracleFixture {
         assertEq(uint8(v.state), uint8(PriceState.Drifting));
         assertEq(uint256(v.answer), _accepted(), "never below the accepted price");
     }
+
+    // TEST-219 verifies: REQ-ORACLE-092, SPEC-ORC-003
+    /// @notice A stored tolerance above 255 bps is read whole: at 300 bps the configuration read succeeds and the
+    /// report carries 300.
+    function test_TEST_219_toleranceAbove255Read() public {
+        store.setTolerance(usdc, 300);
+        DebtPriceView memory v = _view();
+        assertEq(v.reasons & BIT_CONFIG, 0, "configuration read");
+        assertEq(v.feedAgreementToleranceBps, 300);
+        assertEq(uint8(v.state), uint8(PriceState.Live));
+    }
 }

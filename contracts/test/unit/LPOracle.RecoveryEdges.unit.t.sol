@@ -506,4 +506,85 @@ contract LPOracleRecoveryEdgesUnitTest is LPOracleFixture {
         assertEq(n, 0, "no usable previous time");
         assertEq(rec, 0);
     }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, Q-129, Q-272
+    /// @notice Intervals that only touch give no end time: token A recovers at `T0 + 100,000` after an 11,799-second
+    /// gap, while token B's primary is stale over `[T0 + 88,201, T0 + 110,000)` and its alternate (which also published
+    /// at `T0 + 21,799`) over `[T0 + 110,000, T0 + 115,000)`. B's intersection `[T0 + 110,000, T0 + 110,000)` is empty,
+    /// so `recoveredAt` is A's end, `T0 + 100,000`, not B's `T0 + 110,000`.
+    function test_TEST_042_touchingIntervalsGiveNoEndTime() public {
+        oracle.poke();
+        aB.push(int256(ONE), T0 + 21_799);
+        pA.push(int256(ONE), T0 + 100_000);
+        aA.push(int256(ONE), T0 + 100_000);
+        pB.push(int256(ONE), T0 + 110_000);
+        aB.push(int256(ONE), T0 + 115_000);
+        vm.warp(T0 + 115_060);
+        sA.push(int256(ONE), T0 + 115_060);
+        sB.push(int256(ONE), T0 + 115_060);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "grace opens from token A");
+        assertEq(rec, T0 + 100_000, "token B's empty intersection adds no end");
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-075, REQ-ORACLE-032, Q-129, Q-272
+    /// @notice A leg whose previous round is within `feedMaxAge` of its new round has no gap, even though its recorded
+    /// round is older than that: on the two-leg alternate `aB x xB`, `xB` publishes at `T0 + 10,000` and again at
+    /// `T0 + 98,201` (gap start `T0 + 98,201`, equal to the round) or `T0 + 98,000` (start after the round). The route's
+    /// interval is then `aB`'s gap `[T0 + 88,201, BACK)`, and with the primary's equal gap grace opens at `BACK`.
+    function test_TEST_042_legGapStartingAtOrAfterItsRoundIsEmpty() public {
+        uint256[2] memory ends = [T0 + 98_201, T0 + 98_000];
+        uint256 snap = vm.snapshotState();
+        for (uint256 k = 0; k < 2; ++k) {
+            OracleFeedMock xB = _twoLegAlternate();
+            oracle.poke();
+            xB.push(int256(ONE), T0 + 10_000);
+            pB.push(int256(ONE), BACK);
+            aB.push(int256(ONE), BACK);
+            xB.push(int256(ONE), ends[k]);
+            _freshAAt(T0 + 98_261);
+            (uint256 n, uint64 rec) = _graces();
+            assertEq(n, 1, k == 0 ? "start equal to the round: no gap on xB" : "start after the round: no gap on xB");
+            assertEq(rec, BACK, "recoveredAt = aB's and the primary's end");
+            vm.revertToState(snap);
+        }
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-075, REQ-ORACLE-089, Q-129, Q-272
+    /// @notice On the two-leg alternate `aB x xB`, both legs and the primary recover at `BACK` after the usual gap, so
+    /// grace opens at `BACK`. When `aB`'s previous round reports the current round's time, a later time, or time 0
+    /// (without reverting), that lookup is unusable and the whole route gives no evidence, although `xB`'s gap alone
+    /// would match the primary's.
+    function test_TEST_042_unusablePreviousTimeOnTheFirstLeg() public {
+        uint256 snap = vm.snapshotState();
+        OracleFeedMock xB = _twoLegAlternate();
+        _outage();
+        pB.push(int256(ONE), BACK);
+        aB.push(int256(ONE), BACK);
+        xB.push(int256(ONE), BACK);
+        uint80 prevId = aB.roundId() - 1;
+        uint256 afterSetup = vm.snapshotState();
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "control: every lookup usable");
+        assertEq(rec, BACK);
+        uint256[2] memory times = [BACK, BACK + 1];
+        for (uint256 k = 0; k < 2; ++k) {
+            vm.revertToState(afterSetup);
+            aB.setHistory(prevId, times[k]);
+            (n, rec) = _graces();
+            assertEq(n, 0, k == 0 ? "previous round at the round's time" : "previous round after the round");
+            assertEq(rec, 0);
+        }
+        vm.revertToState(afterSetup);
+        vm.mockCall(
+            address(aB),
+            abi.encodeWithSelector(aB.getRoundData.selector, prevId),
+            abi.encode(prevId, int256(ONE), uint256(0), uint256(0), prevId)
+        );
+        (n, rec) = _graces();
+        assertEq(n, 0, "previous round at time 0");
+        assertEq(rec, 0);
+        vm.clearMockedCalls();
+        vm.revertToState(snap);
+    }
 }

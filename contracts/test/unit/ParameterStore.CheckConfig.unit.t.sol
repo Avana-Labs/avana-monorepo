@@ -530,4 +530,15 @@ contract ParameterStoreCheckConfigUnitTest is ParameterStoreFixture {
         d = _feedDef(86_400, 1800);
         d.feedDeviationThresholdBps = dev;
     }
+
+    // TEST-064 verifies: REQ-PSTORE-009, REQ-CONFIG-051, SPEC-GOV-011
+    /// @notice A tightening of a cancelled market re-runs no LPOracle: its oracle's refusal of the new tolerance does
+    /// not block the write.
+    function test_TEST_064_tighteningACancelledMarketRechecksNothing() public {
+        _accepts(abi.encodeCall(store.setConsistencyToleranceBps, (M2, 60)));
+        oracle2.setFloors(50, 0, 0);
+        registry.setStatus(M2, MarketStatus.Cancelled);
+        _accepts(abi.encodeCall(store.tightenConsistencyToleranceBps, (M2, 40)));
+        assertEq(store.getMarketParams(M2).consistencyToleranceBps, 40);
+    }
 }

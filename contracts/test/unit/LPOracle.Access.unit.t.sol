@@ -283,4 +283,96 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         (ok, ret) = _deploy(_nTokenParams(9));
         assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET), "nine tokens");
     }
+
+    // TEST-062 verifies: REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-018, REQ-ORACLE-099, REQ-ORACLE-090
+    /// @notice A seed evaluation that is not Live reverts `NotLive` with its full reason bitmap: on a sequencer chain
+    /// restarted 10 s ago (in its 3,600 s grace period), with every feed at 0.89 (below the 0.90 band) and token B's
+    /// alternate at 0.86, 100 s old (disagreeing, the lower route), the reasons are bits 2, 3, 9, 10 and 15 exactly.
+    function test_TEST_062_notLiveReportsTheSeedEvaluationReasons() public {
+        withSequencer = true;
+        seqFeed.setRound(2, 0, T0 - 10, T0 - 10);
+        _pushAll(89_000_000, T0);
+        aB.push(86_000_000, T0 - 100);
+        InitParams memory p = _params();
+        LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, true);
+        uint256 reasons = LPOracleCodes.ANY_TOKEN_DISAGREE | LPOracleCodes.USD_BAND | LPOracleCodes.DISAGREEMENT_PAUSE
+            | LPOracleCodes.IN_GRACE | LPOracleCodes.SEQUENCER_GRACE;
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.NotLive.selector, uint8(PriceState.Drifting), reasons));
+        new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (p)));
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-058, REQ-ORACLE-008, SPEC-ORC-003
+    /// @notice The seed evaluation applies each token's agreement tolerance: token A's alternate 100 bps from its
+    /// primary (inside 150 bps) agrees, so the market seeds Live.
+    function test_TEST_062_seedAppliesTheAgreementTolerance() public {
+        aA.push(99_000_000, T0);
+        (bool ok,) = _deploy(_params());
+        assertTrue(ok, "routes within the tolerance agree at the seed");
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-058, REQ-ORACLE-027, SPEC-ORC-013
+    /// @notice A seed evaluation failed by a held pool lock is Cached for the configuration's cached window, so
+    /// `initialize` reverts `NotLive(Cached, POOL_REENTRANCY_LOCKED)`.
+    function test_TEST_062_failedSeedEvaluationIsCachedForTheConfiguredWindow() public {
+        LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
+        LPOracleHarness feed = LPOracleHarness(address(new ERC1967Proxy(address(impl), "")));
+        feed.setLock(false, true);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ILPOracleErrors.NotLive.selector, uint8(PriceState.Cached), LPOracleCodes.POOL_REENTRANCY_LOCKED
+            )
+        );
+        feed.initialize(_params());
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-058, REQ-ORACLE-014, REQ-ORACLE-103
+    /// @notice The seed evaluation passes the configuration's TWAP window and consistency tolerance to the pricing
+    /// module (harness `setExpectedPoolCheckArgs`), so the market seeds Live.
+    function test_TEST_062_seedPoolCheckReceivesTheConfiguredTolerance() public {
+        LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
+        LPOracleHarness feed = LPOracleHarness(address(new ERC1967Proxy(address(impl), "")));
+        feed.setExpectedPoolCheckArgs(1800, 50);
+        feed.initialize(_params());
+        assertEq(uint8(feed.getPriceState().state), uint8(PriceState.Live));
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-031, REQ-ORACLE-058, SPEC-ORC-014
+    /// @notice `initialize` records the round it read on every leg, so recovery evidence covers an outage that starts
+    /// before the first poke.
+    function test_TEST_062_initializeRecordsTheSeenRounds() public view {
+        (address feed, uint80 roundId, uint64 seenAt) = oracle.storedSeen(0, 0, 0);
+        assertEq(feed, address(pA), "token A primary");
+        assertEq(roundId, pA.roundId());
+        assertEq(seenAt, T0);
+        (feed, roundId, seenAt) = oracle.storedSeen(1, 1, 0);
+        assertEq(feed, address(aB), "token B alternate");
+        assertEq(roundId, aB.roundId());
+        assertEq(seenAt, T0);
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-059, REQ-ORACLE-035
+    /// @notice `initialize` emits `PriceSeeded` with the seeded price, its source timestamp and the valuation vector.
+    function test_TEST_062_initializeEmitsTheSeededPrice() public {
+        LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
+        uint256[] memory prices = new uint256[](2);
+        (prices[0], prices[1]) = (ONE, ONE);
+        vm.expectEmit(false, false, false, true);
+        emit ILPOracleEvents.PriceSeeded(int256(SEEDED), uint64(T0), prices);
+        new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (_params())));
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-047, SPEC-ORC-005
+    /// @notice A composition worth less than $1 at every `d` in [6, 18] (one raw unit per 10^18 vault-token units)
+    /// refuses the market with exactly `ConfigCheckFailed(CHECK_VAULT_DECIMALS)`, before any other check runs.
+    function test_TEST_062_noVaultDecimalsRefusesWithThatCheckOnly() public {
+        InitParams memory p = _params();
+        uint256[] memory tiny = new uint256[](2);
+        (tiny[0], tiny[1]) = (1, 1);
+        p.market = abi.encode(tiny);
+        (bool ok, bytes memory ret) = _deploy(p);
+        assertFalse(ok);
+        assertEq(
+            ret, abi.encodeWithSelector(ILPOracleErrors.ConfigCheckFailed.selector, LPOracleCodes.CHECK_VAULT_DECIMALS)
+        );
+    }
 }
