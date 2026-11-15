@@ -7,6 +7,7 @@ import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {RiskStatus} from "../../amm/types/RiskStatus.sol";
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
+import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {DriftReason} from "../../types/DriftReason.sol";
 import {Market} from "../../types/Market.sol";
@@ -27,12 +28,12 @@ import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 /// @title RiskModuleBreakerLogic
 /// @notice Circuit-breaker conditions of markets and debt reserves from live state, and their tripped state with the
 /// MarketRegistry's breach times and latches (SPEC-BRK-002 to SPEC-BRK-008, Q-399).
-/// @dev Views only. Market conditions: `ORACLE` (the market not Live or its borrow gates failing), `POOL_SHARE`
+/// @dev Views only, except `pokeOracles`, whose only state changes are the oracles' own `poke()`. Market conditions: `ORACLE` (the market not Live or its borrow gates failing), `POOL_SHARE`
 /// (SPEC-BRK-002), `POOL_DEPTH` (the time-weighted depth unavailable or 0), `ISSUER` (any pool token's probe,
 /// SPEC-BRK-003) and `CONFIG_DRIFT` (any drift of the market's Spoke, REQ-RISK-078). Debt conditions: `DEFICIT`
-/// (SPEC-BRK-004) and `ISSUER` of the asset. A breaker is tripped by its live reasons, its latched reasons and, while
-/// `block.timestamp < lastBreachAt + gateRecoverySeconds`, every temporary reason: the MarketRegistry keeps one breach
-/// time per key, not the reason it recorded. Every issuer probe read runs with `ISSUER_PROBE_GAS` behind the gas floor
+/// (SPEC-BRK-004) and `ISSUER` of the asset. A breaker is tripped by its live reasons, its latched reasons and each
+/// temporary reason `r` while `block.timestamp < lastBreachAt(breachKey(key, r)) + gateRecoverySeconds`: the
+/// MarketRegistry keeps a breach time per reason, so a recorded `ORACLE` breach recovers `ORACLE` alone (RM-02). Every issuer probe read runs with `ISSUER_PROBE_GAS` behind the gas floor
 /// of REQ-RISK-089; the combined kind makes two reads.
 /// @custom:spec REQ-RISK-065, REQ-RISK-078, REQ-RISK-089, REQ-RISK-091, SPEC-BRK-002, SPEC-BRK-003, SPEC-BRK-004, SPEC-BRK-007, SPEC-BRK-008, Q-241, Q-399
 // View calls and gas-limited probes in loops over at most 8 pool tokens (at most two probe reads each).
@@ -69,6 +70,23 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     }
 
     /// @inheritdoc IRiskModuleBreakerLogic
+    /// @custom:spec REQ-RISK-056, REQ-RISK-091
+    function pokeOracles(
+        uint256 marketId
+    ) external override {
+        Market memory m = _market(marketId);
+        // The pokes store observations only; the conditions read the price state themselves.
+        // forge-lint: disable-next-line(unused-return)
+        ILPOracle(m.lpOracle).poke();
+        uint256[] memory ids = _registry().getDebtReserveIds(m.spoke);
+        for (uint256 i = 0; i < ids.length; ++i) {
+            DebtReserveDef memory d = _registry().getDebtReserve(m.spoke, ids[i]);
+            // forge-lint: disable-next-line(unused-return)
+            if (!d.fixedPrice) IDebtOracle(d.priceSource).poke();
+        }
+    }
+
+    /// @inheritdoc IRiskModuleBreakerLogic
     /// @custom:spec REQ-RISK-091, SPEC-BRK-002, SPEC-BRK-003
     function marketConditions(
         uint256 marketId,
@@ -95,8 +113,10 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         uint256 poolUnits
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
         uint32 live = _marketLive(marketId, unitsGiven, poolUnits);
-        (uint32 latched, uint64 lastBreach) = _registry().marketBreaker(marketId);
-        (reasons, reopensAt) = _tripped(live, latched, lastBreach);
+        // Recovery reads the per-reason breach times, not the latest of any reason.
+        // forge-lint: disable-next-line(unused-return)
+        (uint32 latched,) = _registry().marketBreaker(marketId);
+        (reasons, reopensAt) = _tripped(live, latched, bytes32(marketId));
     }
 
     /// @inheritdoc IRiskModuleBreakerLogic
@@ -106,26 +126,34 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         uint256 debtReserveId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
         uint32 live = _debtLive(spoke, debtReserveId);
-        (uint32 latched, uint64 lastBreach) = _registry().debtBreaker(spoke, debtReserveId);
-        (reasons, reopensAt) = _tripped(live, latched, lastBreach);
+        // As in `marketBreaker`.
+        // forge-lint: disable-next-line(unused-return)
+        (uint32 latched,) = _registry().debtBreaker(spoke, debtReserveId);
+        (reasons, reopensAt) = _tripped(live, latched, _debtKey(spoke, debtReserveId));
     }
 
-    /// @dev Tripped reasons and reopening time (SPEC-BRK-007, SPEC-BRK-008).
+    /// @dev Tripped reasons and reopening time (SPEC-BRK-007, SPEC-BRK-008): live and latched reasons, and each
+    /// temporary reason inside `gateRecoverySeconds` of its own last recorded breach (RM-02).
     function _tripped(
         uint32 live,
         uint32 latched,
-        uint64 lastBreach
+        bytes32 key
     ) internal view returns (uint32 reasons, uint64 reopensAt) {
         uint256 recovery = _store().gateRecoverySeconds();
         reasons = live | latched;
-        uint256 until = uint256(lastBreach) + recovery;
-        bool recovering = lastBreach != 0 && block.timestamp < until;
-        if (recovering) reasons |= BreakerReasons.TEMPORARY;
+        uint256 until = 0;
+        uint32[3] memory temporary = [BreakerReasons.ORACLE, BreakerReasons.POOL_SHARE, BreakerReasons.POOL_DEPTH];
+        for (uint256 i = 0; i < 3; ++i) {
+            uint256 at = _registry().lastBreachAt(BreakerReasons.breachKey(key, temporary[i]));
+            if (at == 0 || block.timestamp >= at + recovery) continue;
+            reasons |= temporary[i];
+            if (at + recovery > until) until = at + recovery;
+        }
         // Timestamps plus a recovery of at most 7,200 s fit 64 bits.
         // forge-lint: disable-next-line(unsafe-typecast)
         if (live & BreakerReasons.TEMPORARY != 0) reopensAt = uint64(block.timestamp + recovery);
         // forge-lint: disable-next-line(unsafe-typecast)
-        else if (recovering) reopensAt = uint64(until);
+        else if (until != 0) reopensAt = uint64(until);
     }
 
     /// @dev Market conditions holding now.

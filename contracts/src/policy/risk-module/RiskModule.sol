@@ -13,7 +13,6 @@ import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
 import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
-import {MarketSpeedLimits} from "../parameter-store/types/MarketSpeedLimits.sol";
 import {IRiskModule} from "./IRiskModule.sol";
 import {IRiskModuleAdmin} from "./IRiskModuleAdmin.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
@@ -27,11 +26,12 @@ import {IRiskModuleViews} from "./IRiskModuleViews.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleConstants} from "./RiskModuleConstants.sol";
 import {RiskModuleSpeed} from "./RiskModuleSpeed.sol";
-import {BorrowSpeedInputs} from "./types/BorrowSpeedInputs.sol";
 import {PledgeCharge} from "./types/PledgeCharge.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 import {RiskModuleLogics} from "./types/RiskModuleLogics.sol";
+import {SpeedScope} from "./types/SpeedScope.sol";
 import {SpeedView} from "./types/SpeedView.sol";
+import {SpeedWindow} from "./types/SpeedWindow.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -42,7 +42,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 /// @dev UUPS implementation behind one fixed ERC-1967 proxy; `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only
 /// by the timelock. Its state is the speed windows in the ERC-7201 namespace `avana.storage.RiskModule.speed`, written
 /// only by the AaveAdapter's `preBorrowCheck` and Collateralization's `checkPledge` (REQ-RISK-095), and the OpenZeppelin
-/// `AccessControl` roles in their ERC-7201 namespace. The check bodies run in six immutable, stateless logic contracts
+/// `AccessControl` roles in their ERC-7201 namespace; the AaveAdapter's `creditRepay` and Collateralization's
+/// `creditWithdraw` take from the windows. The check bodies run in six immutable, stateless logic contracts
 /// by plain calls, because the whole surface does not fit the
 /// 24,576-byte code limit; the logic addresses are implementation immutables whose `logicConfig()` the constructor
 /// checks, so a new logic contract is part of a new implementation and waits the normal delay. The RiskModule itself
@@ -123,7 +124,8 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
             .checkPledge(depositor, proxy, marketId, integrationId, positionKey, units, counters, requireRescue);
         if (!charge.rescue) {
             uint256 booked = uint256(counters.regularUsed) + counters.sliceUsed;
-            _chargePledge(marketId, booked, charge.usdCharge, msg.sender == _COLLATERALIZATION);
+            SpeedWindow memory w = IRiskModuleSpeedLogic(_SPEED_LOGIC).pledgeCharge(marketId, booked, charge.usdCharge);
+            if (msg.sender == _COLLATERALIZATION) _putWindow(SpeedScope.MarketPledge, bytes32(marketId), w);
         }
     }
 
@@ -137,8 +139,44 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         uint256 amount
     ) external override {
         IRiskModuleBorrowLogic(_BORROW_LOGIC).preCheck(proxy, debtReserveId, true);
-        BorrowSpeedInputs memory s = IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowInputs(proxy, debtReserveId, amount);
-        _chargeBorrow(s, amount, msg.sender == _ADAPTER);
+        (uint256 marketId, bytes32 debtKey, SpeedWindow memory m, SpeedWindow memory d) =
+            IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowCharge(proxy, debtReserveId, amount);
+        if (msg.sender == _ADAPTER) _putBorrowWindows(marketId, debtKey, m, d);
+    }
+
+    /// @inheritdoc IRiskModuleChecks
+    /// @custom:spec REQ-RISK-005, REQ-RISK-092, REQ-RISK-095
+    function creditRepay(
+        address proxy,
+        uint256 debtReserveId,
+        uint256 amount
+    ) external override {
+        if (msg.sender != _ADAPTER) revert NotSpeedWriter(msg.sender);
+        (uint256 marketId, bytes32 debtKey, SpeedWindow memory m, SpeedWindow memory d) =
+            IRiskModuleSpeedLogic(_SPEED_LOGIC).repayCredit(proxy, debtReserveId, amount);
+        _putBorrowWindows(marketId, debtKey, m, d);
+    }
+
+    /// @inheritdoc IRiskModuleChecks
+    /// @custom:spec REQ-RISK-005, REQ-RISK-093, REQ-RISK-095
+    function creditWithdraw(
+        uint256 marketId,
+        uint256 usd
+    ) external override {
+        if (msg.sender != _COLLATERALIZATION) revert NotSpeedWriter(msg.sender);
+        SpeedWindow memory w = IRiskModuleSpeedLogic(_SPEED_LOGIC).withdrawCredit(marketId, usd);
+        _putWindow(SpeedScope.MarketPledge, bytes32(marketId), w);
+    }
+
+    /// @dev Stores both borrow windows of a charge or a credit.
+    function _putBorrowWindows(
+        uint256 marketId,
+        bytes32 debtKey,
+        SpeedWindow memory market,
+        SpeedWindow memory debt
+    ) internal {
+        _putWindow(SpeedScope.MarketBorrow, bytes32(marketId), market);
+        _putWindow(SpeedScope.DebtBorrow, debtKey, debt);
     }
 
     /// @inheritdoc IRiskModuleChecks
@@ -197,6 +235,8 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     ) external override returns (uint32 reasons) {
         Market memory m = _market(marketId);
         IRiskModuleBreakerLogic b = IRiskModuleBreakerLogic(_BREAKER_LOGIC);
+        // The conditions are read after the pokes a borrow would make (RM-03).
+        b.pokeOracles(marketId);
         uint32 live = b.marketConditions(marketId, false, 0);
         if (live != 0) _registry().recordBreach(bytes32(marketId), live);
         reasons = live;
@@ -381,10 +421,10 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         uint256 marketId,
         uint256 debtReserveId
     ) external view override returns (SpeedView memory market, SpeedView memory debt) {
-        try IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowInputsOf(marketId, debtReserveId) returns (
-            BorrowSpeedInputs memory s
+        try IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowViews(marketId, debtReserveId) returns (
+            SpeedView memory m, SpeedView memory d
         ) {
-            (market, debt) = _borrowViews(s);
+            (market, debt) = (m, d);
         } catch {
             (market.unavailable, debt.unavailable) = (true, true);
         }
@@ -395,13 +435,20 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     function getPledgeSpeed(
         uint256 marketId
     ) external view override returns (SpeedView memory pledge) {
-        try IRiskModuleSpeedLogic(_SPEED_LOGIC).pledgeInputsOf(marketId) returns (
-            MarketSpeedLimits memory p, uint256 booked
-        ) {
-            pledge = _pledgeView(marketId, p, booked);
+        try IRiskModuleSpeedLogic(_SPEED_LOGIC).pledgeView(marketId) returns (SpeedView memory v) {
+            pledge = v;
         } catch {
             pledge.unavailable = true;
         }
+    }
+
+    /// @inheritdoc IRiskModuleViews
+    /// @custom:spec REQ-RISK-095, REQ-RISK-097, SPEC-CAP-011
+    function getSpeedWindow(
+        SpeedScope scope,
+        bytes32 key
+    ) external view override returns (SpeedWindow memory window) {
+        window = _window(scope, key);
     }
 
     /// @inheritdoc IRiskModuleViews

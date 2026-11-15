@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
+import {IRiskModuleChecks} from "../../policy/risk-module/IRiskModuleChecks.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralizationAdapter} from "./ICollateralizationAdapter.sol";
 import {ICollateralizationUser} from "./ICollateralizationUser.sol";
@@ -38,7 +39,7 @@ abstract contract CollateralizationRelease is
     ) external override {
         (Ctx memory c, uint256 id, BackingRecord storage r) = _prepareExit(vaultToken, positionKey, proxy, units, 0);
         if (units == 0 || units != r.credited) revert UnitsMismatch();
-        _debitRecord(c, r, units);
+        _creditSpeed(c.marketId, _debitRecord(c, r, units));
         emit CollateralReleased(id, positionKey, r.depositor, proxy, vaultToken, units);
         _close(c, id, r);
         _returnPosition(c, positionKey);
@@ -59,6 +60,7 @@ abstract contract CollateralizationRelease is
         if (units == 0) revert UnitsMismatch();
         if (units >= credited) revert PartialRemovalTooLarge(units, credited);
         uint256 released = _debitRecord(c, r, units);
+        _creditSpeed(c.marketId, released);
         remaining = credited - units;
         emit RecordReduced(id, units, released);
         address depositor = r.depositor;
@@ -82,6 +84,7 @@ abstract contract CollateralizationRelease is
             _prepareExit(vaultToken, positionKey, proxy, units, minAmounts.length + 1);
         if (units == 0 || units > r.credited) revert UnitsMismatch();
         uint256 released = _debitRecord(c, r, units);
+        _creditSpeed(c.marketId, released);
         closed = r.credited == 0;
         emit RecordReduced(id, units, released);
         if (closed) {
@@ -148,6 +151,22 @@ abstract contract CollateralizationRelease is
         }
         _withReserve(c);
         _reconcile(c, proxy, _supplied(c, proxy) + units);
+    }
+
+    /// @notice Gives the booked value a withdrawal released back to the market's pledge-speed window (REQ-RISK-093).
+    /// The call has a fixed stipend behind `SPEED_CREDIT_FLOOR` and its failure is ignored, so the RiskModule can never
+    /// stop an exit (REQ-RISK-005); only a caller who sends too little gas for the stipend is refused.
+    /// @custom:spec REQ-RISK-005, REQ-RISK-093
+    function _creditSpeed(
+        uint256 marketId,
+        uint256 usd
+    ) private {
+        if (usd == 0) return;
+        uint256 left = gasleft();
+        if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
+        // A failed credit only leaves the window fuller than the net pledges; it must not block the exit.
+        // solhint-disable-next-line no-empty-blocks
+        try IRiskModuleChecks(_RISK_MODULE).creditWithdraw{gas: SPEED_CREDIT_GAS}(marketId, usd) {} catch {}
     }
 
     /// @notice The open record of `positionKey`, which must belong to `vaultToken` and name `depositor`.

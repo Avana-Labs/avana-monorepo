@@ -86,6 +86,14 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     /// had at least 63 × 50,000 = 3,150,000 gas, above the worst-case `getUserAccountData` of a CDP account.
     uint256 internal constant DEBT_MARK_GAS_FLOOR = 50_000;
 
+    /// @notice Gas given to the RiskModule's `creditWithdraw` after a withdrawal released booked value (REQ-RISK-093).
+    /// Measured at about 21,000 on the full stack (test/gas/RiskModule.SpeedCredit.gas.t.sol); the stipend leaves
+    /// over twice that.
+    uint256 internal constant SPEED_CREDIT_GAS = 60_000;
+
+    /// @notice Gas an exit must hold before the credit call, so the credit always receives its full stipend.
+    uint256 internal constant SPEED_CREDIT_FLOOR = SPEED_CREDIT_GAS + SPEED_CREDIT_GAS / 63 + 10_000;
+
     /// @dev First of five transient slots of the seizure snapshot: `keccak256("avana.collateralization.seizure")`.
     /// Slot +0 `proxy` (non-zero while active), +1 `vaultToken`, +2 `reserveId`, +3 `sharesBefore`, +4 `supplyBefore`.
     uint256 internal constant SEIZURE_SLOT = uint256(keccak256("avana.collateralization.seizure"));

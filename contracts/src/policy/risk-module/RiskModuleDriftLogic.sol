@@ -216,7 +216,9 @@ contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
         IAaveV4Spoke.ReserveConfig memory c = sp.getReserveConfig(m.reserveId);
         if (c.receiveSharesEnabled) return (DriftReason.ReceiveSharesOn, 0);
         if (c.borrowable) return (DriftReason.Borrowable, 0);
-        if (c.paused) return (DriftReason.SpokeHalted, 0);
+        // A paused vault-token reserve is not drift: it stays the market's own containment (REQ-RISK-014). The borrow,
+        // withdraw-with-debt and pledge gates refuse that market (`AaveReservePaused`, `AaveReserveUnavailable`) and no
+        // other market of the Spoke is latched (RM-04).
         if (r.collateralRisk + 1 > s.minThreshold) return (DriftReason.CollateralRiskAboveThreshold, 0);
         return (DriftReason.None, r.dynamicConfigKey);
     }

@@ -215,8 +215,9 @@ library RiskModuleMath {
         e = Math.mulDiv(units, price8 * cfBps * WAD, 10 ** uint256(d) * BPS, Math.Rounding.Ceil);
     }
 
-    /// @notice The price a borrow is held to and a pledge is booked at (REQ-RISK-026, SPEC-ORC-017): `min(fresh,
-    /// accepted)`, the accepted price alone when there is no fresh price (`fresh = 0`, a failed market).
+    /// @notice The price a borrow is held to and a pledge's minimum is tested at (REQ-RISK-026, SPEC-ORC-017): `min(fresh,
+    /// accepted)`, the accepted price alone when there is no fresh price (`fresh = 0`, a failed market). The cap charge
+    /// uses `capPrice`.
     /// @dev The accepted price bounds borrowing only: a rally since the last accepted price adds no borrowing power until
     /// the LPOracle accepts it, while liquidation sees the fresh price. Example: accepted 199,999,899 and fresh
     /// 219,999,899 give 199,999,899; fresh 189,999,899 gives 189,999,899.
@@ -226,6 +227,20 @@ library RiskModuleMath {
         uint256 fresh
     ) internal pure returns (uint256) {
         return fresh != 0 && fresh < accepted ? fresh : accepted;
+    }
+
+    /// @notice The price a pledge's cap charge is booked at (REQ-RISK-026, RM-05): the fresh price, the accepted price
+    /// alone when there is no fresh price (`fresh = 0`, a failed market).
+    /// @dev The caps track the value Aave lends against, which is the served price (`fresh` outside a failure), so a
+    /// rally the accepted price has not caught up with is charged in full and adds no cap room. The minimum and the
+    /// rescue minimum keep `bookingPrice` (`min(fresh, accepted)`). Example: accepted 200,000,000 and fresh 230,000,000
+    /// give 230,000,000; fresh 189,999,899 gives 189,999,899.
+    /// @custom:spec REQ-RISK-026, SPEC-CAP-001
+    function capPrice(
+        uint256 accepted,
+        uint256 fresh
+    ) internal pure returns (uint256) {
+        return fresh != 0 ? fresh : accepted;
     }
 
     /// @notice The health factor after a borrow-side action held to the booking price (REQ-RISK-059, SPEC-CF-005):

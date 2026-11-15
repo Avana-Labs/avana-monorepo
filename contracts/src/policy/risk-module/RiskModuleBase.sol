@@ -135,14 +135,15 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         (price8,) = ILPOracle(lpOracle).lastAcceptedPrice();
     }
 
-    /// @dev The booking price of a pledge (REQ-RISK-026): `min(fresh, accepted)`, from one `getPriceState()` read.
-    function _bookingPrice(
+    /// @dev The cap price of a pledge (REQ-RISK-026, RM-05): the fresh price, from one `getPriceState()` read; the
+    /// accepted price when there is none.
+    function _capPrice(
         address lpOracle
     ) internal view returns (uint256 price8) {
         int256 fresh = ILPOracle(lpOracle).getPriceState().freshAnswer;
         // A positive int256 is cast; a failed market's 0 keeps the accepted price.
         // forge-lint: disable-next-line(unsafe-typecast)
-        price8 = RiskModuleMath.bookingPrice(_accepted(lpOracle), fresh > 0 ? uint256(fresh) : 0);
+        price8 = RiskModuleMath.capPrice(_accepted(lpOracle), fresh > 0 ? uint256(fresh) : 0);
     }
 
     /// @dev The LPOracle's served price, 8 decimals, at least 1.

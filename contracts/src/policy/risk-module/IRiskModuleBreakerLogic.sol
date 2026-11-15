@@ -8,6 +8,17 @@ import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 /// @title IRiskModuleBreakerLogic
 /// @notice Breaker conditions and states of markets and debt reserves (SPEC-BRK-002 to SPEC-BRK-008).
 interface IRiskModuleBreakerLogic is IRiskModuleLogic {
+    /// @notice Pokes the market's LPOracle and the DebtOracle of every debt reserve of its Spoke without a fixed-price
+    /// source, as the pre-checks do (REQ-RISK-056), so `pokeBreakers` evaluates the same refreshed state a borrow
+    /// would (RM-03).
+    /// @dev Anyone; the pokes are permissionless. A poke reverts only below its own gas floor (`InsufficientGas`),
+    /// which reverts the whole `pokeBreakers` instead of recording a breach a starved poke caused.
+    /// @param marketId The market.
+    /// @custom:spec REQ-RISK-056, REQ-RISK-091
+    function pokeOracles(
+        uint256 marketId
+    ) external;
+
     /// @notice Market reasons holding now from live state: `ORACLE`, `POOL_SHARE`, `POOL_DEPTH`, `ISSUER`, `CONFIG_DRIFT`.
     /// @param marketId The market.
     /// @param unitsGiven True when `poolUnits` is the pool's credited units (inside a pledge); false reads
