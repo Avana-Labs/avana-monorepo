@@ -233,8 +233,8 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
     /// defaulted borrower (REQ-SWAP-027): exact allowance, `fund(amount)`, allowance reset to 0. That reserve pulls
     /// exactly `amount` or reverts (`TransferAmountMismatch`). Returns false, moving nothing, when no reserve is
     /// recorded, the address holds no code or `fund` reverts; the caller then pays `B` to the borrower as for any
-    /// liquidation, so the reserve never blocks a settlement. The call copies no return data, so a huge return cannot
-    /// revert the liquidation either.
+    /// liquidation, so the reserve never blocks a settlement. The return data is not decoded, so a malformed or huge
+    /// return cannot revert the liquidation either.
     /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
     function _fundReserve(
         DebtReserveDef memory d,
@@ -245,16 +245,10 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         if (reserve.code.length == 0) return false;
         IERC20 asset = IERC20(d.asset);
         asset.forceApprove(reserve, amount);
-        bytes4 selector = IAvanaFirstLossReserve.fund.selector;
-        // `fund(amount)` encoded in scratch space and called copying no return data: Solidity's own call syntax copies
-        // the whole return buffer, so a reserve returning a huge one could make the liquidation revert on memory
-        // expansion.
-        // solhint-disable-next-line no-inline-assembly
-        assembly ("memory-safe") {
-            mstore(0, selector)
-            mstore(4, amount)
-            funded := call(gas(), reserve, 0, 0, 0x24, 0, 0)
-        }
+        // No `returns` clause and an empty `catch`: neither the return data nor the revert data is decoded.
+        try IAvanaFirstLossReserve(reserve).fund(amount) {
+            funded = true;
+        } catch {}
         asset.forceApprove(reserve, 0);
         if (funded) emit DeficitSurplusFunded(proxy, reserve, d.asset, amount);
     }

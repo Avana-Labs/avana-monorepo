@@ -11,6 +11,15 @@ import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserve
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/// @dev A First-Loss Reserve stand-in whose `fund` always reverts.
+contract RevertingReserve {
+    function fund(
+        uint256
+    ) external pure returns (uint256) {
+        revert("fund");
+    }
+}
+
 /// @dev A First-Loss Reserve stand-in that takes the amount it is funded with, then returns a 2 MiB buffer: copying it
 /// would cost the caller about 8.8M gas of memory expansion.
 contract HugeReturnReserve {
@@ -151,7 +160,20 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     /// no code (its `fund` moves nothing and returns no data), the deficit call settles and pays `B` to the borrower.
     // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
     function test_TEST_216_unusableReserveLeavesTheSurplusWithTheBorrower() public {
-        _recordReserve(makeAddr("codelessReserve"));
+        _surplusStaysWithTheBorrower(makeAddr("codelessReserve"));
+    }
+
+    /// @notice The same with a recorded reserve whose `fund` reverts: the deficit call settles and pays `B` to the
+    /// borrower.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_revertingReserveLeavesTheSurplusWithTheBorrower() public {
+        _surplusStaysWithTheBorrower(address(new RevertingReserve()));
+    }
+
+    function _surplusStaysWithTheBorrower(
+        address reserve
+    ) internal {
+        _recordReserve(reserve);
         lpOracle.setAnswer(int256(100_000_000));
         uint256 deficitSurplus = 0;
         for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
