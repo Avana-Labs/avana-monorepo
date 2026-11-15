@@ -16,7 +16,10 @@ import {Test} from "forge-std/Test.sol";
 /// an independent reading of the gates of 2.7; a pass while a gate is closed is a violation.
 /// @dev Steered: three pre-checks in four first open every gate the handler controls, and half of those then close
 /// exactly one, chosen by the seed, so each gate is tested alone at its boundary; the fourth runs on whatever state the
-/// sequence left. A pre-check refused with every modelled gate open is counted (`refusedWhileClear`).
+/// sequence left. A pre-check refused with every modelled gate open is counted (`refusedWhileClear`). The tokens and
+/// leg feeds the oracle reports are set once in the constructor: an external setter was a fuzz target, and a call that
+/// set every leg feed to address(0) left the RiskModule no feed age to check (an unused leg is skipped, 2.7 step (5)),
+/// so a stale-feed gate the handler closed by warping could not be seen.
 contract RiskModuleHandler is Test {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
     /// campaign's success count, so the metrics show the calls that did real work.
@@ -35,6 +38,9 @@ contract RiskModuleHandler is Test {
         uint256 vtReserve;
         uint256 debtReserve;
         uint256 feedAge;
+        // The two tokens and their leg feeds, as the fixture reports them; fixed for the campaign.
+        address[2] legTokens;
+        address[2] legFeeds;
     }
 
     World internal w;
@@ -246,22 +252,10 @@ contract RiskModuleHandler is Test {
         address[] memory legFeeds = new address[](2);
         uint64[] memory ats = new uint64[](2);
         uint256[] memory quotes = new uint256[](2);
-        (toks[0], toks[1]) = (tokens[0], tokens[1]);
-        (legFeeds[0], legFeeds[1]) = (feeds[0], feeds[1]);
+        (toks[0], toks[1]) = (w.legTokens[0], w.legTokens[1]);
+        (legFeeds[0], legFeeds[1]) = (w.legFeeds[0], w.legFeeds[1]);
         (ats[0], ats[1]) = (_reportAt, _reportAt);
         (quotes[0], quotes[1]) = (1e8, 1e8);
         w.oracle.setTokens(toks, legFeeds, ats, quotes, new uint32[](2));
-    }
-
-    /// @dev The two tokens and their leg feeds, as the fixture reports them.
-    address[2] internal tokens;
-    address[2] internal feeds;
-
-    function setLegs(
-        address[2] calldata t,
-        address[2] calldata f
-    ) external {
-        tokens = t;
-        feeds = f;
     }
 }
