@@ -26,8 +26,8 @@
       "real-test-gap": 388,
       "superseded": 4
     },
-    "real_test_gap_test_passed": 386,
-    "real_test_gap_test_not_written": 2,
+    "real_test_gap_test_passed": 388,
+    "real_test_gap_test_not_written": 0,
     "not_triaged": 0,
     "test_set_fixed_needs_rerun": 227
   },
@@ -199,7 +199,7 @@
     "MarketRegistryDebtChecks": {
       "equivalent-or-harmless": 16,
       "real-test-gap": 3,
-      "test added, passed": 2,
+      "test added, passed": 3,
       "noise": 2
     },
     "MarketRegistryDriftView": {
@@ -213,7 +213,7 @@
     },
     "MarketRegistryOracleChecks": {
       "real-test-gap": 4,
-      "test added, passed": 3,
+      "test added, passed": 4,
       "equivalent-or-harmless": 2
     },
     "ParameterStore": {
@@ -18462,9 +18462,9 @@
       "id": "SM-304",
       "class": "real-test-gap",
       "mutants": 1,
-      "reason": "_checkFunding's funding-Hub consent check made always true refuses every cross-Hub debt reserve with FundingHubConsentMissing. It survived because no test in test/unit/MarketRegistry* (at aa340fb) lists a cross-Hub debt reserve whose funding Hub consented and expects it to pass. Test to write: open the cross-Hub line and the funding Hub's credit line, list the debt reserve, and assert it is accepted. The next mutation-gate run shows whether a test added since kills it.",
-      "covered_by": null,
-      "test_status": "not written",
+      "reason": "_checkFunding's funding-Hub consent check made always true refuses every cross-Hub debt reserve with FundingHubConsentMissing. It survived at aa340fb because no test then listed a cross-Hub debt reserve whose funding Hub consented. Two TEST-273 tests added since enable such a reserve and fail on the mutant (checked by applying it and running them, 2026-11-15).",
+      "covered_by": "test_TEST_273_crossHubDrawCapWithinItsLine in test/unit/MarketRegistry.DebtReserve.unit.t.sol (also test_TEST_273_syncReplacesOnlyItsOwnShareOfTheLine there)",
+      "test_status": "test added, passed",
       "approval": "pending",
       "found": "third pass (2026-11-15): missed by the first parse of the run logs",
       "locations": [
@@ -18485,9 +18485,9 @@
       "id": "SM-305",
       "class": "real-test-gap",
       "mutants": 1,
-      "reason": "_oracleConfigPasses goes on to checkConfig after the ParameterStore's getOracleConfig call failed. The real LPOracle cannot decode the revert data as a configuration and fails the check too, but an LPOracle that accepts any input would now pass. No test makes getOracleConfig fail with an LPOracle whose checkConfig returns 0. Test to write: mock getOracleConfig to revert and checkConfig to return 0, and expect the market to be refused.",
-      "covered_by": null,
-      "test_status": "not written",
+      "reason": "_oracleConfigPasses goes on to checkConfig after the ParameterStore's getOracleConfig call failed. The real LPOracle cannot decode the revert data as a configuration and fails the check too, but an LPOracle that accepts any input would pass. test_TEST_138_oracleAndRouteChecks makes getOracleConfig fail, but its mock LPOracle fails to decode the revert data, so it refuses on the mutant too. The new test answers 0 to any checkConfig input and fails on the mutant (checked by applying it, 2026-11-15).",
+      "covered_by": "test_TEST_138_failedConfigReadRefusedWhateverTheOracleAnswers in test/unit/MarketRegistry.Activation.unit.t.sol",
+      "test_status": "test added, passed",
       "approval": "pending",
       "found": "third pass (2026-11-15): missed by the first parse of the run logs",
       "locations": [

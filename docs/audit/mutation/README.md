@@ -37,8 +37,7 @@ Every survivor of run 43492416937 now has a class in [contracts/security/slither
 
 | Class | Mutants |
 |---|---|
-| real test gap, test added and passing | 386 |
-| real test gap, test to write | 2 |
+| real test gap, test added and passing | 388 |
 | equivalent or harmless | 1,020 |
 | noise | 52 |
 | superseded (the line changed after `aa340fb`) | 4 |
@@ -50,7 +49,7 @@ Every survivor of run 43492416937 now has a class in [contracts/security/slither
 - The 52 first-pass gaps marked "not written" now have tests, except 8 shown equivalent: `SM-072` (with feeds that follow the Chainlink round rules, a both-stale interval found after a poke that was not failed always ends after the stored `recoveredAt`), part of `SM-020` (a failed read already falls back to the stored value) and part of `SM-029` (`e.quote` is 0 whenever the market is failed).
 - The 393 survivors that pass did not reach (418 by exact text; 25 already matched an entry by the truncated mutant text) were triaged against the source at `6805212`: 214 real gaps, each with a test in a file inside its contract's `mutation-layers.json` test glob, 178 equivalent and 1 noise.
 - The tests were run one targeted file set at a time. Kills are confirmed by the next `mutation-gate` run on `main`, which also triages the 227 `LPOracleCL*` and `LPOracleCalls` survivors against their own tests.
-- A full parse of the run's logs (multi-line mutants included, matched to the entries by contract, mutator and normalized text) found 13 survivors the first parse had missed, all in `MarketRegistryDebtChecks`, `MarketRegistryOracleChecks` and `MarketRegistryRouteChecks` (`SM-298` to `SM-305`): 2 noise, 9 equivalent or harmless and 2 real gaps whose tests are still to write (a cross-Hub debt reserve with funding-Hub consent accepted; a failed `getOracleConfig` refused even when `checkConfig` returns 0).
+- A full parse of the run's logs (multi-line mutants included, matched to the entries by contract, mutator and normalized text) found 13 survivors the first parse had missed, all in `MarketRegistryDebtChecks`, `MarketRegistryOracleChecks` and `MarketRegistryRouteChecks` (`SM-298` to `SM-305`): 2 noise, 9 equivalent or harmless and 2 real gaps: the cross-Hub consent mutant is killed by two TEST-273 tests added after `aa340fb`, and a new test refuses a failed `getOracleConfig` even when `checkConfig` returns 0 (each checked by applying the mutant).
 - The pass found one defect in `DebtOracle._recordSeen` (`MUT-01` in the register), fixed in [pull request 74](https://github.com/Avana-Labs/avana-monorepo/pull/74).
 
 ### Triage of the earlier run 43492416937
