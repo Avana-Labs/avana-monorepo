@@ -181,6 +181,15 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         _expectCheck("routes");
     }
 
+    // TEST-138 verifies: REQ-CONFIG-047
+    // A failed getOracleConfig fails "oracleConfig" on its own: the LPOracle's checkConfig answers 0 for any input here,
+    // so only the failed configuration read refuses the market.
+    function test_TEST_138_failedConfigReadRefusedWhateverTheOracleAnswers() public {
+        vm.mockCall(address(lpo), abi.encodePacked(RegistryLPOracleMock.checkConfig.selector), abi.encode(uint256(0)));
+        ps.setOracleConfigReverts(true);
+        _expectCheck("oracleConfig");
+    }
+
     // TEST-245 verifies: REQ-MREG-032, Q-261, REQ-ACCESS-034, REQ-ACCESS-095
     // Sources: 5.1 TEST-245
     function test_TEST_245_activationLiveness() public {

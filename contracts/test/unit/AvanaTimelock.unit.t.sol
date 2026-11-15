@@ -664,4 +664,47 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         _execute(attacker, grant, SALT);
         assertTrue(timelock.hasRole(PROPOSER, bob));
     }
+
+    // TEST-194 verifies: REQ-ACCESS-140, REQ-ACCESS-154, SPEC-GOV-003
+    /// @notice The constructor accepts a normal delay at the lower bound, `MIN_NORMAL_DELAY` (345,600), and records it.
+    function test_TEST_194_constructorAcceptsMinNormalDelay() public {
+        SelectorPair[] memory none = new SelectorPair[](0);
+        AvanaTimelock t = _newTimelock(MIN_NORMAL_DELAY, true, none, none);
+        assertEq(t.normalDelay(), MIN_NORMAL_DELAY);
+    }
+
+    // TEST-194 verifies: SPEC-GOV-003, REQ-ACCESS-154, REQ-ACCESS-125
+    /// @notice `setNormalDelay` accepts any value inside its bounds, not only `MIN_NORMAL_DELAY`: 400,000 and then
+    /// `MAX_DELAY` (432,000) itself, in one self-call batch.
+    function test_TEST_194_setNormalDelayAcceptsInteriorAndUpperBound() public {
+        TimelockFixture.Call[] memory calls = _two(
+            Call(address(timelock), abi.encodeCall(IAvanaTimelockGovernance.setNormalDelay, (400_000))),
+            Call(address(timelock), abi.encodeCall(IAvanaTimelockGovernance.setNormalDelay, (432_000)))
+        );
+        _run(calls, SALT);
+        assertEq(timelock.normalDelay(), 432_000);
+    }
+
+    // TEST-194 verifies: REQ-ACCESS-117, REQ-ACCESS-004
+    /// @notice A batch with fewer payloads than targets is refused with `TimelockInvalidOperationLength` before any
+    /// payload is read.
+    function test_TEST_194_scheduleBatchRefusesFewerPayloadsThanTargets() public {
+        address[] memory t = new address[](2);
+        (t[0], t[1]) = (address(other), address(other));
+        uint256[] memory v = new uint256[](2);
+        bytes[] memory p = new bytes[](1);
+        p[0] = hex"12345678";
+        vm.prank(governanceMultisig);
+        vm.expectRevert(abi.encodeWithSelector(TimelockController.TimelockInvalidOperationLength.selector, 2, 1, 2));
+        timelock.scheduleBatch(t, v, p, bytes32(0), SALT, NORMAL_DELAY);
+    }
+
+    // TEST-194 verifies: REQ-ACCESS-141
+    /// @notice `requiredDelay` refuses fewer targets than payloads, as it refuses more.
+    function test_TEST_194_requiredDelayRevertsOnFewerTargets() public {
+        address[] memory t = new address[](1);
+        bytes[] memory p = new bytes[](2);
+        vm.expectRevert(abi.encodeWithSelector(TimelockController.TimelockInvalidOperationLength.selector, 1, 2, 0));
+        timelock.requiredDelay(t, p);
+    }
 }

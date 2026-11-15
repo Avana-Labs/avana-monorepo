@@ -14,3 +14,15 @@ abbf40187ecb2c25bba52b59653f7db69542faeb:services/keeper/test/localKey.test.ts:g
 48fa018556873d59576e08650fa84b1e2e15431b:contracts/security/slither-mutate-triage.json:generic-api-key:8610
 # The same mutation triage text taken into the triage branch; a test name, not a key.
 eb94547b0cd55254456b1c62ada199b46f16c335:contracts/security/slither-mutate-triage.json:generic-api-key:8610
+# Mutation triage text in contracts/mutation-gap-tests (an intermediate commit, later reworded): test names and a quoted
+# source line (key = r.dynamicConfigKey), not keys. The scan reports one of these lines (redacted); all candidates are listed.
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:13511
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:13601
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:13690
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:13713
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:13825
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:14531
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:14676
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:14699
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:17395
+6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:17396

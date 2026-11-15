@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
 import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
@@ -679,5 +680,55 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         (ok, ret) = _relist(p);
         assertFalse(ok);
         assertEq(ret, live);
+    }
+
+    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-050, REQ-PSTORE-004, REQ-CONFIG-041
+    /// @notice A slippage allowance above 10,000 bps is refused at listing, as 10,000 is.
+    function test_TEST_064_slippageAboveBpsRefusedAtListing() public {
+        MarketParams memory p = _params();
+        p.slippageAllowanceBps = 10_001;
+        (bool ok, bytes memory ret) = _relist(p);
+        assertFalse(ok);
+        assertEq(ret, oob);
+    }
+
+    // TEST-249 verifies: REQ-PSTORE-022, REQ-CONFIG-050
+    /// @notice The expectations bounds hold beyond their edges too: a target health factor below 1 and a bonus above
+    /// 10,000 bps are refused.
+    function test_TEST_249_expectationsRefusedPastBothEdges() public {
+        address s = address(spoke);
+        _refuses(abi.encodeCall(store.setLiquidationExpectations, (s, 0.99e18, 200)), oob);
+        _refuses(abi.encodeCall(store.setLiquidationExpectations, (s, 1.1e18, 10_001)), oob);
+        assertEq(store.aaveTargetHealthFactor(s), 0);
+    }
+
+    // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006
+    /// @notice A zero rounding allowance is refused at the initial write.
+    function test_TEST_246_zeroRoundingAllowanceRefused() public {
+        _refuses(abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(0))), oob);
+    }
+
+    // TEST-272 verifies: REQ-RISK-045, SPEC-CAP-006
+    /// @notice The stress floor's two direction rules: a lowering is allowed with vault-token supply outstanding, and a
+    /// raise skips the Hub `addCap` check (a higher floor only lowers the required `addCap`).
+    function test_TEST_272_stressFloorDirectionRules() public {
+        vaultToken.setSupply(1);
+        _accepts(abi.encodeCall(store.setStressFloorUsd, (M, 0.5e8)));
+        assertEq(store.stressFloorUsd(M), 0.5e8);
+        vaultToken.setSupply(0);
+        _activate();
+        hub.setAddCap(1);
+        _accepts(abi.encodeCall(store.setStressFloorUsd, (M, 2e8)));
+        assertEq(store.stressFloorUsd(M), 2e8);
+    }
+
+    // TEST-272 verifies: SPEC-CAP-006, REQ-RISK-044
+    /// @notice An uncapped Hub `addCap` (`MAX_ALLOWED_SPOKE_CAP`) passes the sizing check whatever the ratio: on an
+    /// Active market a floor of 1 would need 5.5e14 whole tokens, above 2^40 - 1, and the lowering still passes.
+    function test_TEST_272_uncappedAddCapSkipsSizing() public {
+        _activate();
+        hub.setAddCap(type(uint40).max);
+        _accepts(abi.encodeCall(store.setStressFloorUsd, (M, 1)));
+        assertEq(store.stressFloorUsd(M), 1);
     }
 }

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
 import {IMarketRegistryLogic} from "../../src/policy/market-registry/IMarketRegistryLogic.sol";
 import {IMarketRegistryWindDown} from "../../src/policy/market-registry/IMarketRegistryWindDown.sol";
@@ -298,5 +299,24 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         assertEq(latched, 8, "only the implementation's own storage is written");
         (latched,) = registry.marketBreaker(1);
         assertEq(latched, 0, "the proxy's storage is untouched");
+    }
+
+    // TEST-204 verifies: REQ-CONFIG-076, INV-093
+    /// @notice `marketDrift` reads the dynamic configuration at the reserve's latest key: a liquidation fee set only at
+    /// key 1 reports `LiquidationFeeNonZero` though key 0 has none.
+    function test_TEST_204_marketDriftReadsTheLatestKey() public {
+        (, address vt,) = _activeMarket();
+        IAaveV4Spoke.Reserve memory r;
+        (r.underlying, r.hub, r.assetId, r.decimals) = (vt, address(hub), uint16(VT_ASSET), 18);
+        r.dynamicConfigKey = 1;
+        IAaveV4Spoke.ReserveConfig memory c;
+        IAaveV4Spoke.DynamicReserveConfig memory d;
+        (d.collateralFactor, d.maxLiquidationBonus, d.liquidationFee) = (7500, 10_500, 10);
+        spoke.setReserve(VT_RESERVE, r, c, d);
+        MarketRegistryActivationLogic a = MarketRegistryActivationLogic(logics.activation);
+        assertEq(
+            uint8(a.marketDrift(address(spoke), address(hub), vt, VT_RESERVE, VT_ASSET)),
+            uint8(DriftReason.LiquidationFeeNonZero)
+        );
     }
 }

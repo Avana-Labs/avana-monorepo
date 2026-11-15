@@ -11,6 +11,7 @@ import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockLPOracle} from "../utils/mocks/ParameterStoreMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Second-source configuration: every setter that writes it refuses a word the oracles would read as out of
@@ -261,5 +262,30 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         _tl();
         store.setSecondSource(usdc, src, standby);
         assertEq(store.standbySecondSource(usdc).poolRef, bytes32(uint256(8)));
+    }
+
+    // TEST-250 verifies: REQ-PSTORE-029, EMG-103
+    /// @notice With the recorded source in force, `setSecondSource` emits no `SecondSourceSwitched`.
+    function test_TEST_250_setWithoutStandbyEmitsNoSwitch() public {
+        vm.recordLogs();
+        _tl();
+        store.setSecondSource(usdc, _oracleNetwork(network), none);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            assertTrue(
+                logs[i].topics.length == 0 || logs[i].topics[0] != IParameterStoreEvents.SecondSourceSwitched.selector,
+                "no switch event"
+            );
+        }
+        assertFalse(store.onStandby(usdc));
+    }
+
+    // TEST-250 verifies: REQ-PSTORE-029, REQ-PSTORE-009
+    /// @notice Without a standby, `setSecondSource` runs the LPOracle check of the market holding the token once: there
+    /// is no standby configuration to check.
+    function test_TEST_250_setWithoutStandbyChecksOnce() public {
+        vm.expectCall(address(lpOracle), abi.encodeWithSelector(MockLPOracle.checkConfig.selector), 1);
+        _tl();
+        store.setSecondSource(usdc, _oracleNetwork(network), none);
     }
 }

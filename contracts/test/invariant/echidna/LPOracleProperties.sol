@@ -9,15 +9,15 @@ import {PriceState} from "../../../src/types/PriceState.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {LPOracleHarnessPokeLogic} from "../../utils/harness/LPOracleHarness.sol";
+import {LPOracleHarnessPokeLogicBase} from "../../utils/harness/LPOracleHarness.sol";
 import {OracleFeedMock, OracleTokenMock, ReadMode} from "../../utils/mocks/LPOracleMocks.sol";
 
 /// @notice The LPOracle base's evaluation and writing call in one contract with the harness module, for the fuzzers:
 /// the full implementation with its two logic contracts exceeds the 49,152-byte initcode limit of one harness, so this
 /// target seeds its storage directly (the listing path is covered by the unit suites) and exposes `poke` and the served
 /// price without the proxy.
-contract LPOracleEchidnaTarget is LPOracleHarnessPokeLogic {
-    constructor() LPOracleHarnessPokeLogic(address(0x7173), 12, 556_588, 3_000_000, false) {}
+contract LPOracleEchidnaTarget is LPOracleHarnessPokeLogicBase {
+    constructor() LPOracleHarnessPokeLogicBase(address(0x7173), 12, 556_588, 3_000_000, false) {}
 
     /// @notice Stores the market and seeds the accepted price from a Live evaluation.
     function seed(

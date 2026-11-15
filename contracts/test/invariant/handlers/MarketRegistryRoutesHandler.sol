@@ -157,6 +157,13 @@ contract MarketRegistryRoutesHandler is MarketRegistryFixture {
         bool guardian
     ) external {
         uint8 kind = backup ? 1 : 0;
+        // Steered: three calls in four start from the first candidate approved before, so restores can land; the rest
+        // keep the fuzzer's pick for the refusals of a route never approved.
+        if ((pick >> 128) % 4 != 0) {
+            for (uint256 j = 0; j < CANDIDATES && !_approved[kind][_cands[pick % CANDIDATES]]; ++j) {
+                ++pick;
+            }
+        }
         address route = _cands[pick % CANDIDATES];
         bool wasApproved = _approved[kind][route];
         bool expected = !guardian && wasApproved && _fits(kind, route);

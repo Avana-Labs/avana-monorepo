@@ -238,4 +238,14 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         _enable(d);
         _expect(d, _invalid("enabled"));
     }
+
+    // TEST-185 verifies: REQ-MREG-006, REQ-MREG-008
+    /// @notice A price source with fewer than 8 decimals is refused, as one with more is.
+    function test_TEST_185_priceSourceBelowEightDecimalsRefused() public {
+        DebtReserveDef memory d = _def();
+        RegistryFeedMock six = new RegistryFeedMock(6, 1e6);
+        aaveOracle.setSource(USDC_RESERVE, address(six));
+        d.priceSource = address(six);
+        _expect(d, _invalid("priceSource"));
+    }
 }

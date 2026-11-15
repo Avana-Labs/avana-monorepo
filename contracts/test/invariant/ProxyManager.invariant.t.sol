@@ -8,6 +8,7 @@ import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {FreezeRegistryMock} from "../utils/mocks/ProxyMocks.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {ProxyManagerHandler} from "./handlers/ProxyManagerHandler.sol";
 
 /// @title ProxyManagerInvariantTest
@@ -17,7 +18,7 @@ import {ProxyManagerHandler} from "./handlers/ProxyManagerHandler.sol";
 /// and its own unchanged binding, and no second, frozen, stranger or misplaced deployment and no stranger execution
 /// ever succeeded.
 /// @dev The vault-token registry and the Adapter's `proxyOf` records of TEST-089 join this row with the AaveAdapter.
-contract ProxyManagerInvariantTest is AvanaTest {
+contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
     ProxyManagerHandler internal handler;
     ProxyManager internal manager;
     address internal adapter;
@@ -35,6 +36,73 @@ contract ProxyManagerInvariantTest is AvanaTest {
         actions[3] = ProxyManagerHandler.adapterExecute.selector;
         actions[4] = ProxyManagerHandler.setFrozen.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r =
+            _replayLanded(address(handler), actions, ProxyManagerHandler.Skipped.selector, 32, 50, 0, own, true);
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](5);
+        bool[] memory check = new bool[](5);
+        floors[0] = 40; // deploy
+        floors[1] = 80; // strangerDeploy
+        check[1] = true; // strangerDeploy
+        floors[2] = 20; // strangerExecute
+        check[2] = true; // strangerExecute
+        floors[3] = 15; // adapterExecute
+        floors[4] = 40; // setFrozen
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
+        (actions[0], names[0]) = (ProxyManagerHandler.deploy.selector, "deploy");
+        kinds[0] = new int16[](1);
+        kinds[0][0] = 256;
+        (actions[1], names[1]) = (ProxyManagerHandler.strangerDeploy.selector, "strangerDeploy");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 160;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (ProxyManagerHandler.strangerExecute.selector, "strangerExecute");
+        kinds[2] = new int16[](2);
+        kinds[2][0] = 160;
+        kinds[2][1] = 256;
+        (actions[3], names[3]) = (ProxyManagerHandler.adapterExecute.selector, "adapterExecute");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 128;
+        (actions[4], names[4]) = (ProxyManagerHandler.setFrozen.selector, "setFrozen");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 256;
+        kinds[4][1] = 1;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // TEST-089 verifies: REQ-PROXY-051, REQ-PROXY-052, REQ-PROXY-053, REQ-PROXY-099, REQ-PROXY-100, INV-012, INV-064

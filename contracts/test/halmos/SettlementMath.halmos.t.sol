@@ -256,18 +256,88 @@ contract SettlementMathHalmosTest is Test {
     }
 
     // PROP-019 verifies: SPEC-LIQ-019
-    /// @notice Leg slippage: `sLeg = min(9,999, s + min(maxShortfallBps, ⌊maxShortfall × 10⁴ / V⌋))`, with the added
-    /// term 0 when `maxShortfall = 0` or `V = 0`, for every `maxShortfallBps` (the saturating shortcuts are exact). The
-    /// symbolic division times out at the 60 s assertion limit; the 10,000-run fuzz twin is
-    /// `testFuzz_TEST_198_legSlippageBounds` and the differential `testFuzz_TEST_198_differentialLegSlippage`.
-    function check_PROP_019_legSlippage(
+    /// @notice Leg slippage, `sLeg = min(9,999, s + min(maxShortfallBps, ⌊maxShortfall × 10⁴ / V⌋))`, split by case so
+    /// no check divides by a symbolic value: a check with `maxShortfall` and `V` both symbolic ran out of the 5-hour
+    /// budget in run 43677588077 with no counterexample. This case: the added term is 0 when `maxShortfall = 0` or
+    /// `V = 0`, for every `s ≤ 10⁴` and every `maxShortfallBps`.
+    function check_PROP_019_legSlippageNoRelax(
         uint256 s,
         uint256 maxShortfall,
         uint256 value,
         uint256 maxShortfallBps
     ) public pure {
-        vm.assume(s <= BPS && maxShortfall < 2 ** 64 && value < 2 ** 64);
-        uint256 relax = maxShortfall == 0 || value == 0 ? 0 : maxShortfall * BPS / value;
+        vm.assume(s <= BPS && (maxShortfall == 0 || value == 0) && maxShortfall < 2 ** 64 && value < 2 ** 64);
+        assert(SettlementMath.legSlippage(s, maxShortfall, value, maxShortfallBps) == (s > 9999 ? 9999 : s));
+    }
+
+    // PROP-019 verifies: SPEC-LIQ-019
+    /// @notice Leg slippage when `maxShortfall ≥ V > 0`: the quotient is at least 10⁴, so
+    /// `sLeg = min(9,999, s + min(maxShortfallBps, 10⁴))` for every value below `2^64` and every `maxShortfallBps`.
+    function check_PROP_019_legSlippageWide(
+        uint256 s,
+        uint256 maxShortfall,
+        uint256 value,
+        uint256 maxShortfallBps
+    ) public pure {
+        vm.assume(s <= BPS && value != 0 && maxShortfall >= value && maxShortfall < 2 ** 64);
+        uint256 relax = maxShortfallBps < BPS ? maxShortfallBps : BPS;
+        uint256 want = s + relax > 9999 ? 9999 : s + relax;
+        assert(SettlementMath.legSlippage(s, maxShortfall, value, maxShortfallBps) == want);
+    }
+
+    // PROP-019 verifies: SPEC-LIQ-019
+    /// @notice Leg slippage when `0 < maxShortfall < V`, with `s`, `maxShortfall` and `maxShortfallBps` symbolic, at
+    /// `V = 3`. The four `legSlippageQuotient` checks take `V` from a literal (3, 10⁴ where the quotient is
+    /// `maxShortfall` itself, the prime 999,999,937 and `2^64 − 1`, the largest value of the range); the 10,000-run
+    /// fuzz twin `testFuzz_TEST_198_legSlippageBounds` and the differential `testFuzz_TEST_198_differentialLegSlippage`
+    /// cover every `V`.
+    function check_PROP_019_legSlippageQuotientV3(
+        uint256 s,
+        uint256 maxShortfall,
+        uint256 maxShortfallBps
+    ) public pure {
+        _legSlippageQuotient(s, maxShortfall, 3, maxShortfallBps);
+    }
+
+    // PROP-019 verifies: SPEC-LIQ-019
+    /// @notice `check_PROP_019_legSlippageQuotientV3` at `V = 10⁴`.
+    function check_PROP_019_legSlippageQuotientV10000(
+        uint256 s,
+        uint256 maxShortfall,
+        uint256 maxShortfallBps
+    ) public pure {
+        _legSlippageQuotient(s, maxShortfall, 10_000, maxShortfallBps);
+    }
+
+    // PROP-019 verifies: SPEC-LIQ-019
+    /// @notice `check_PROP_019_legSlippageQuotientV3` at `V = 999,999,937`.
+    function check_PROP_019_legSlippageQuotientVPrime(
+        uint256 s,
+        uint256 maxShortfall,
+        uint256 maxShortfallBps
+    ) public pure {
+        _legSlippageQuotient(s, maxShortfall, 999_999_937, maxShortfallBps);
+    }
+
+    // PROP-019 verifies: SPEC-LIQ-019
+    /// @notice `check_PROP_019_legSlippageQuotientV3` at `V = 2^64 − 1`.
+    function check_PROP_019_legSlippageQuotientVMax(
+        uint256 s,
+        uint256 maxShortfall,
+        uint256 maxShortfallBps
+    ) public pure {
+        _legSlippageQuotient(s, maxShortfall, 2 ** 64 - 1, maxShortfallBps);
+    }
+
+    /// @dev `sLeg = min(9,999, s + min(maxShortfallBps, ⌊maxShortfall × 10⁴ / V⌋))` for `0 < maxShortfall < V`.
+    function _legSlippageQuotient(
+        uint256 s,
+        uint256 maxShortfall,
+        uint256 value,
+        uint256 maxShortfallBps
+    ) internal pure {
+        vm.assume(s <= BPS && maxShortfall != 0 && maxShortfall < value);
+        uint256 relax = maxShortfall * BPS / value;
         if (relax > maxShortfallBps) relax = maxShortfallBps;
         uint256 want = s + relax > 9999 ? 9999 : s + relax;
         assert(SettlementMath.legSlippage(s, maxShortfall, value, maxShortfallBps) == want);

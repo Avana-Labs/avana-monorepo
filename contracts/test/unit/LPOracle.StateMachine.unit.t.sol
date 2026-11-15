@@ -5,11 +5,13 @@ pragma solidity 0.8.28;
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {LPOracleHarness, LPOracleHarnessDeployer} from "../utils/harness/LPOracleHarness.sol";
-import {ReadMode} from "../utils/mocks/LPOracleMocks.sol";
+import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @notice The Live / Drifting / Cached / Expired state machine of the LPOracle base (2.10 Price states): one state per
@@ -364,5 +366,97 @@ contract LPOracleStateMachineUnitTest is LPOracleFixture {
         vm.warp(T1 + 7201);
         assertFalse(_state().borrowAllowed, "verification older than 7,200 s");
         assertTrue(_has(_state().reasons, 19));
+    }
+
+    // TEST-039 verifies: REQ-ORACLE-016, REQ-ORACLE-017, REQ-ORACLE-042, REQ-ORACLE-100
+    /// @notice A market failed by the pricing module keeps ANY_TOKEN_ON_ALTERNATE, reports no USD level, the quote
+    /// route's legs and no second source; failed by the lower-route price, it clears bits 2 to 6, 11, 12 and 16 and
+    /// reports no fresh answer.
+    function test_TEST_039_failedMarketReportsNoFreshValues() public {
+        pA.push(0, T1);
+        oracle.setCompositionFails(true);
+        PriceStateView memory v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Cached));
+        assertTrue(_has(v.reasons, 1), "CONFIG_OR_DECIMALS_UNAVAILABLE");
+        assertTrue(_has(v.reasons, 7), "ANY_TOKEN_ON_ALTERNATE is kept when failed");
+        assertEq(v.usdLevel, 0, "no USD level while failed");
+        assertEq(v.tokens[0].legFeeds[0], address(aA), "the quote route's legs");
+        assertEq(v.tokens[0].secondSourceValue, 0, "second sources are not read while failed");
+        oracle.setCompositionFails(false);
+        pA.push(int256(ONE), T1);
+        aB.push(97_000_000, T1);
+        oracle.setCompositionFailsBelow(1, 98_000_000);
+        v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Cached), "the lower-route price failed");
+        assertEq(v.reasons & FAILED_MASK, 0, "bits not evaluated when failed are 0");
+        assertEq(v.freshAnswer, 0, "no fresh answer while failed");
+    }
+
+    // TEST-039 verifies: REQ-ORACLE-017, REQ-ORACLE-042, SPEC-ORC-017
+    /// @notice A failure of the pricing module before the route choice (lock read failed, lock held, composition
+    /// failed) reports token B's quote route, its primary, though its alternate is lower.
+    function test_TEST_039_failureBeforeTheRouteChoiceReportsTheQuoteRoute() public {
+        aB.push(97_000_000, T1);
+        oracle.setLock(true, false);
+        assertEq(_state().tokens[1].legFeeds[0], address(pB), "lock read failed");
+        oracle.setLock(false, true);
+        assertEq(_state().tokens[1].legFeeds[0], address(pB), "lock held");
+        oracle.setLock(false, false);
+        oracle.setCompositionFails(true);
+        assertEq(_state().tokens[1].legFeeds[0], address(pB), "composition failed");
+    }
+
+    // TEST-039 verifies: REQ-ORACLE-017, SPEC-ORC-013, Q-183
+    /// @notice A failed evaluation uses the cached window it read (7,200 s after a change), and a poke stores it for a
+    /// later failed configuration read.
+    function test_TEST_039_cachedWindowFromTheLiveConfiguration() public {
+        OracleConfig memory c = _config();
+        c.cachedWindow = 7200;
+        store.setConfig(c);
+        pB.setMode(pB.latestRoundData.selector, ReadMode.Revert);
+        aB.setMode(aB.latestRoundData.selector, ReadMode.Revert);
+        assertEq(_state().cachedUntil, T1 + 7200, "the window read in this evaluation");
+        oracle.poke();
+        pB.setMode(pB.latestRoundData.selector, ReadMode.Normal);
+        aB.setMode(aB.latestRoundData.selector, ReadMode.Normal);
+        vm.warp(T1 + 60);
+        vm.roll(block.number + 1);
+        oracle.poke();
+        store.setMode(store.getOracleInputs.selector, ReadMode.Revert);
+        PriceStateView memory v = _state();
+        assertEq(v.failureStart, T1 + 60);
+        assertEq(v.cachedUntil, T1 + 60 + 7200, "the window read by the last writing call");
+    }
+
+    // TEST-040 verifies: SPEC-ORC-013, REQ-ORACLE-017
+    /// @notice The mirror of `failureStartsAtTheEarliestStaleToken`: token A, first in pool order, fails first, so the
+    /// failure starts at token A's `staleAt`.
+    function test_TEST_040_failureStartsAtTheEarliestStaleTokenFirstInPoolOrder() public {
+        pA.push(int256(ONE), T0 + 10);
+        aA.push(int256(ONE), T0 + 10);
+        uint256 staleA = T0 + 10 + MAX_AGE + 1;
+        uint256 staleB = T1 + MAX_AGE + 1;
+        vm.warp(staleB + 100);
+        vm.roll(block.number + 1);
+        assertEq(_state().failureStart, staleA, "token A's staleAt");
+    }
+
+    // TEST-040 verifies: SPEC-ORC-013, SPEC-ORC-002, REQ-ORACLE-017
+    /// @notice A two-leg route is Stale from its first stale leg: with token B's alternate `aB x xB` updated at T1 +
+    /// 100 and T1 + 200 and every leg of token B stale, the failure starts at T1 + 100 + feedMaxAge + 1.
+    function test_TEST_040_failureStartFromATwoLegRouteEarliestStaleLeg() public {
+        OracleFeedMock xB = _feed("xB");
+        registry.setRoutes(address(tokenB), _one(address(pB)), _two(address(aB), address(xB)), RouteSlot.None);
+        aB.push(int256(ONE), T1 + 100);
+        xB.push(int256(ONE), T1 + 200);
+        uint256 t = T1 + 200 + MAX_AGE + 11;
+        vm.warp(t);
+        vm.roll(block.number + 1);
+        pA.push(int256(ONE), t);
+        aA.push(int256(ONE), t);
+        PriceStateView memory v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Cached));
+        assertTrue(_has(v.reasons, 8), "SOURCE_TIMESTAMP_FAILURE");
+        assertEq(v.failureStart, T1 + 100 + MAX_AGE + 1, "the alternate's earlier stale leg");
     }
 }
