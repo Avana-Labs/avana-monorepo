@@ -51,7 +51,6 @@ methods {
     function tightenMarketUsdCap(uint256, uint256) external;
     function tightenTopUpSliceUsd(uint256, uint256) external;
     function tightenTokenUsdCap(address, address, uint256) external;
-    function tightenDepositorUsdCap(address, uint256) external;
     function tightenPoolShareMaxBps(uint16) external;
     function tightenPoolShareMaxBpsOf(uint256, uint16) external;
     function tightenMaxShortfallBps(uint16) external;
@@ -124,7 +123,6 @@ definition stewardSelector(method f) returns bool =
     || f.selector == sig:tightenMarketUsdCap(uint256, uint256).selector
     || f.selector == sig:tightenTopUpSliceUsd(uint256, uint256).selector
     || f.selector == sig:tightenTokenUsdCap(address, address, uint256).selector
-    || f.selector == sig:tightenDepositorUsdCap(address, uint256).selector
     || f.selector == sig:tightenPoolShareMaxBps(uint16).selector
     || f.selector == sig:tightenMinPledgeUsd(uint256, uint256).selector
     || f.selector == sig:tightenPoolShareMaxBpsOf(uint256, uint16).selector

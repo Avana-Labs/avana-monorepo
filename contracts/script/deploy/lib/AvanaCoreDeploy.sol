@@ -158,6 +158,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         d.proxy = _proxy(
             "ParameterStore",
             d.implementation,
+            // The third argument is reserved: the slot of the retired per-depositor cap, which must be 0.
             abi.encodeCall(IParameterStoreAdmin.initialize, (p.timelock, c.globals, 0, c.initialPoolShareMaxBps))
         );
     }

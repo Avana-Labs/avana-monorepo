@@ -21,7 +21,8 @@ interface IParameterStoreAdmin {
     /// bounds, `gateRecoverySeconds` within [600, 7,200] included.
     /// @param timelock The Avana timelock.
     /// @param params Initial global parameters, including the breaker thresholds and `maxShortfallBps`.
-    /// @param initialDepositorUsdCap Must be 0: the per-depositor cap is removed (no depositor exposure cap exists).
+    /// @param initialDepositorUsdCap Reserved: the argument of the retired per-depositor cap, kept so the selector and
+    /// the storage slot stay unchanged; must be 0 (`OutOfBounds` otherwise).
     /// @param initialPoolShareMaxBps Initial maximum Avana share of pool liquidity, bps.
     /// @custom:spec REQ-PSTORE-001, REQ-CONFIG-050, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-019, Q-259
     function initialize(

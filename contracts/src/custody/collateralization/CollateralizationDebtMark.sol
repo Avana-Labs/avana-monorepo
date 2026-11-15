@@ -15,7 +15,9 @@ import {ICollateralizationDebtMark} from "./ICollateralizationDebtMark.sol";
 /// less reverts `InsufficientGas`, and so does one whose revert data is `InsufficientGas` (an oracle inside the read
 /// starved), so a caller cannot starve the read or an oracle it reads to keep a mark set. A mark left set by a
 /// failing read, or by a debt that left without an Avana call, is cleared by anyone through the AaveAdapter's
-/// `refreshDebtMark(proxy)`, so a stale mark only delays `closeMarket` and never blocks a repay or a liquidation.
+/// `refreshDebtMark(proxy)`, so a stale mark only delays `closeMarket`. A repay or liquidation sent with too little
+/// gas for the read (or for an oracle the read calls) reverts `InsufficientGas`, and the caller resends it with more
+/// gas; no other failure of the read stops it.
 /// @custom:spec REQ-COLL-038, REQ-COLL-039, REQ-COLL-040, Q-355, Q-396
 abstract contract CollateralizationDebtMark is CollateralizationBase, ICollateralizationDebtMark {
     /// @inheritdoc ICollateralizationDebtMark

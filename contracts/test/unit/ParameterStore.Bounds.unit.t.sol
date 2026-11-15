@@ -443,19 +443,20 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.topUpSliceUsd(M), 0);
         _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 10_000e8)));
         assertEq(store.marketUsdCap(M), 10_000e8);
-        _refuses(abi.encodeCall(store.tightenMarketUsdCap, (M, 0)), oob);
+        _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 0)));
+        assertEq(store.marketUsdCap(M), 0, "a market cap tightens to 0");
         _accepts(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000e8)));
-        _refuses(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 0)), oob);
-        assertEq(store.tokenUsdCap(address(hub), usdc), 10_000e8);
+        _accepts(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 0)));
+        assertEq(store.tokenUsdCap(address(hub), usdc), 0, "a token cap tightens to 0");
     }
 
     // TEST-272 verifies: REQ-RISK-044, REQ-PSTORE-004
-    function test_TEST_272_marketCapNeverBelowTheSlice() public {
-        // Slice 500,000; the cap may fall to the slice but not one unit below it.
-        _refuses(abi.encodeCall(store.tightenMarketUsdCap, (M, 500_000e8 - 1)), oob);
-        _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 500_000e8)));
-        assertEq(store.marketUsdCap(M), 500_000e8);
-        // And the slice may not rise above the cap.
+    function test_TEST_272_marketCapMayGoBelowTheSliceButTheSliceNeverRisesAboveTheCap() public {
+        // Slice 500,000: the cap may fall below it, since the slice admits only rescue top-ups.
+        _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 500_000e8 - 1)));
+        assertEq(store.marketUsdCap(M), 500_000e8 - 1);
+        assertEq(store.topUpSliceUsd(M), 500_000e8, "the slice is left as it was");
+        // A loosening of the slice may not take it above the cap.
         _refuses(abi.encodeCall(store.loosenTopUpSliceUsd, (M, 500_000e8 + 1)), oob);
     }
 

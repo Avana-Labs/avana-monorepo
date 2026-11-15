@@ -105,7 +105,6 @@ interface DecodedMarket {
   hardHealthFloor: bigint;
   marketUsdCap: bigint;
   topUpSliceUsd: bigint;
-  depositorUsdCap: bigint;
   tokenUsdCaps: readonly bigint[];
   addCap: bigint;
   debtReserveIds: readonly bigint[];
@@ -455,7 +454,6 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
         hardHealthFloorWad: s(m.hardHealthFloor),
         marketUsdCap8: s(m.marketUsdCap),
         topUpSliceUsd8: s(m.topUpSliceUsd),
-        depositorUsdCap8: s(m.depositorUsdCap),
         tokenUsdCaps8: m.tokenUsdCaps.map(s),
         addCap: s(m.addCap),
       },

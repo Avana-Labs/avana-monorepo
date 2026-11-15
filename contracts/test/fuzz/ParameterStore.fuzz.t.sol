@@ -120,11 +120,10 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         uint256 v
     ) public {
         uint256 old = store.marketUsdCap(M);
-        uint256 slice = store.topUpSliceUsd(M);
-        bytes memory err = v >= old ? _notStricter() : (v < 10_000e8 || v < slice ? _oob() : bytes(""));
+        // Any lower value is accepted, 0 and values below the slice included (REQ-RISK-042).
+        bytes memory err = v >= old ? _notStricter() : bytes("");
         _expect(abi.encodeCall(store.tightenMarketUsdCap, (M, v)), err);
-        assertGe(store.marketUsdCap(M), store.topUpSliceUsd(M), "cap below slice");
-        assertGe(store.marketUsdCap(M), 10_000e8, "cap below the tightening floor");
+        assertEq(store.marketUsdCap(M), err.length == 0 ? v : old);
     }
 
     // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
@@ -133,7 +132,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
     ) public {
         address h = address(hub);
         uint256 old = store.tokenUsdCap(h, usdc);
-        bytes memory err = v >= old ? _notStricter() : (v < 10_000e8 ? _oob() : bytes(""));
+        bytes memory err = v >= old ? _notStricter() : bytes("");
         _expect(abi.encodeCall(store.tightenTokenUsdCap, (h, usdc, v)), err);
         assertEq(store.tokenUsdCap(h, usdc), err.length == 0 ? v : old);
     }
@@ -254,7 +253,8 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             err = _notLooser();
         } else if (v > USD_MAX) {
             err = _oob();
-        } else if (v * 10_000 > old * 15_000) {
+        } else if (v > 1000e8 && v * 10_000 > old * 15_000) {
+            // At or below USD_CAP_REOPEN_BASE ($1,000) any looser value passes (REQ-PSTORE-017).
             err = abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key);
         }
         _expect(data, err);

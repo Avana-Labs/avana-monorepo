@@ -93,7 +93,7 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     /// @dev The value a `marketUsdCap` or `tokenUsdCap` below it may be loosened to in one step, $1,000 in 8-decimal USD
     /// (REQ-RISK-043): a cap tightened to 0 (or to dust) reopens to at most $1,000 and then grows by the normal
     /// ×1.5 steps, since a step from 0 alone could never leave 0.
-    uint256 internal constant USD_CAP_REOPEN_BASE = 1_000e8;
+    uint256 internal constant USD_CAP_REOPEN_BASE = 1000e8;
     uint16 internal constant SECOND_SOURCE_TOLERANCE_MAX_BPS = 500;
     uint16 internal constant MIN_LIQUIDATION_BONUS_FLOOR = 200;
     uint16 internal constant MAX_QUOTE_CHANGE_BPS = 100;

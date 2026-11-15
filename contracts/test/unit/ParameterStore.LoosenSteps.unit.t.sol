@@ -130,23 +130,47 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
 
     // TEST-225 verifies: REQ-PSTORE-017, REQ-RISK-043
     function test_TEST_225_capStepRoundsNothingUp() public {
-        // From 3, 1.5 × 3 = 4.5: 4 is within one step, 5 is not.
-        _accepts(abi.encodeCall(store.setInitialMarketCaps, (M, 3, 0, 1)));
+        // Above the $1,000 reopen base: from $3,000, 1.5 x 3,000 = 4,500 is the edge.
+        _accepts(abi.encodeCall(store.setInitialMarketCaps, (M, 3000e8, 0, 1)));
         bytes32 key = _key("marketUsdCap", bytes32(M));
-        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 5)), _tooLarge(key));
-        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 4)));
-        assertEq(store.marketUsdCap(M), 4);
-        // From 2, exactly 3 is the edge.
-        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdc, 2)));
+        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 4500e8 + 1)), _tooLarge(key));
+        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 4500e8)));
+        assertEq(store.marketUsdCap(M), 4500e8);
+        // From $2,000, exactly $3,000 is the edge.
+        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdc, 2000e8)));
         bytes32 two = _key("tokenUsdCap", _pair(hub2, usdc));
-        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 4)), _tooLarge(two));
-        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 3)));
-        assertEq(store.tokenUsdCap(hub2, usdc), 3);
-        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, 7)));
+        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 3000e8 + 1)), _tooLarge(two));
+        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 3000e8)));
+        assertEq(store.tokenUsdCap(hub2, usdc), 3000e8);
+        // From $7,000 plus one unit, 1.5 x the old value rounds nothing up: 10,500e8 + 1 passes, + 2 does not.
+        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, 7000e8 + 1)));
         bytes32 tok = _key("tokenUsdCap", _pair(hub2, usdt));
-        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 11)), _tooLarge(tok));
-        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 10)));
-        assertEq(store.tokenUsdCap(hub2, usdt), 10);
+        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 10_500e8 + 2)), _tooLarge(tok));
+        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 10_500e8 + 1)));
+        assertEq(store.tokenUsdCap(hub2, usdt), 10_500e8 + 1);
+    }
+
+    // TEST-225 verifies: REQ-RISK-043, REQ-RISK-042, REQ-PSTORE-017
+    /// @notice (d) A cap at 0 reopens to at most $1,000 in its first loosening and then grows by the normal x1.5 steps,
+    /// one per normal delay; below $1,000 a cap may always reach $1,000.
+    function test_TEST_225_capReopensFromZeroToAThousandThenByNormalSteps() public {
+        _accepts(abi.encodeCall(store.setInitialMarketCaps, (M, 5_000_000e8, 0, 1)));
+        _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 0)));
+        bytes32 key = _key("marketUsdCap", bytes32(M));
+        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 1000e8 + 1)), _tooLarge(key));
+        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 1000e8)));
+        assertEq(store.marketUsdCap(M), 1000e8, "reopened to $1,000");
+        vm.warp(block.timestamp + NORMAL_DELAY);
+        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 1500e8 + 1)), _tooLarge(key));
+        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 1500e8)));
+        assertEq(store.marketUsdCap(M), 1500e8, "then x1.5");
+        // A token cap tightened to $10 reopens straight to $1,000.
+        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdc, 2000e8)));
+        _accepts(abi.encodeCall(store.tightenTokenUsdCap, (hub2, usdc, 10e8)));
+        bytes32 tok = _key("tokenUsdCap", _pair(hub2, usdc));
+        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 1000e8 + 1)), _tooLarge(tok));
+        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 1000e8)));
+        assertEq(store.tokenUsdCap(hub2, usdc), 1000e8);
     }
 
     // TEST-225 verifies: REQ-PSTORE-017

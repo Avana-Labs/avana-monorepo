@@ -929,11 +929,6 @@ export const riskModuleAbi = [
             "internalType": "uint256[]"
           },
           {
-            "name": "depositorRoomUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "poolShareRoomUnits",
             "type": "uint256",
             "internalType": "uint256"

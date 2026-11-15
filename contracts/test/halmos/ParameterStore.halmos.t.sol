@@ -172,8 +172,8 @@ contract ParameterStoreHalmosTest is Test {
         assert(okSlice == (slice < 500_000e8));
         uint256 s = store.topUpSliceUsd(M);
         bool okCap = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (M, cap)));
-        assert(okCap == (cap < 5_000_000e8 && cap >= 10_000e8 && cap >= s));
-        assert(store.topUpSliceUsd(M) <= store.marketUsdCap(M));
+        assert(okCap == (cap < 5_000_000e8));
+        assert(store.topUpSliceUsd(M) == s);
     }
 
     // PROP-042 verifies: REQ-PSTORE-030, REQ-PSTORE-018, REQ-PSTORE-024, Q-399
@@ -218,7 +218,7 @@ contract ParameterStoreHalmosTest is Test {
         uint256 tokenCap
     ) public {
         bool okToken = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (HUB, TOKEN_A, tokenCap)));
-        assert(okToken == (tokenCap < 20_000_000e8 && tokenCap >= 10_000e8));
+        assert(okToken == (tokenCap < 20_000_000e8));
         assert(store.tokenUsdCap(HUB, TOKEN_A) == (okToken ? tokenCap : 20_000_000e8));
     }
 

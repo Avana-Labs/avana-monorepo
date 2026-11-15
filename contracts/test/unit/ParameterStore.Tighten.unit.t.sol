@@ -159,12 +159,9 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         emit IParameterStoreEvents.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
         store.tightenMarketUsdCap(M, 4_000_000e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.tightenMarketUsdCap(M, 400_000e8); // below the 500,000 slice
-        _tl();
-        store.tightenTopUpSliceUsd(M, 0);
-        _tl();
+        // Below the 500,000 slice: the slice only admits rescue top-ups, which reduce risk.
         store.tightenMarketUsdCap(M, 400_000e8);
+        assertEq(store.marketUsdCap(M), 400_000e8);
         address h = address(hub);
         _tl();
         store.tightenTokenUsdCap(h, usdc, 10_000_000e8);
@@ -176,28 +173,36 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, alice));
         store.tightenTokenUsdCap(alice, usdc, 1);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
         store.tightenTokenUsdCap(h, usdc, 0);
+        assertEq(store.tokenUsdCap(h, usdc), 0, "a token cap tightens to 0");
+    }
+
+    // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044
+    /// @notice (a) The market cap tightens from $5,000,000 to $5,000 and then to 0, each step at the short delay; the
+    /// $500,000 slice does not bound it.
+    function test_TEST_272_marketCapTightensFromFiveMillionToFiveThousandThenZero() public {
+        assertEq(store.marketUsdCap(M), 5_000_000e8);
+        uint256[4] memory steps = [uint256(1_000_000e8), 50_000e8, 5000e8, 0];
+        for (uint256 i = 0; i < steps.length; ++i) {
+            _tl();
+            store.tightenMarketUsdCap(M, steps[i]);
+            assertEq(store.marketUsdCap(M), steps[i]);
+        }
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        store.tightenMarketUsdCap(M, 0);
     }
 
     // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
-    function test_TEST_272_capTighteningStopsAtTenThousandDollars() public {
-        // The slice goes to 0 first, so only the $10,000 floor refuses the market cap.
-        _tl();
-        store.tightenTopUpSliceUsd(M, 0);
-        _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.tightenMarketUsdCap(M, 10_000e8 - 1);
-        _tl();
-        store.tightenMarketUsdCap(M, 10_000e8);
-        assertEq(store.marketUsdCap(M), 10_000e8);
+    /// @notice (b) A token cap tightens to $2,000 and then to 0.
+    function test_TEST_272_tokenCapTightensToTwoThousandThenZero() public {
         address h = address(hub);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.tightenTokenUsdCap(h, usdc, 10_000e8 - 1);
+        store.tightenTokenUsdCap(h, usdc, 2000e8);
+        assertEq(store.tokenUsdCap(h, usdc), 2000e8);
         _tl();
-        store.tightenTokenUsdCap(h, usdc, 10_000e8);
-        assertEq(store.tokenUsdCap(h, usdc), 10_000e8);
+        store.tightenTokenUsdCap(h, usdc, 0);
+        assertEq(store.tokenUsdCap(h, usdc), 0);
     }
 
     // TEST-272 verifies: REQ-RISK-042, SPEC-CAP-005, Q-383, Q-399, Q-403
