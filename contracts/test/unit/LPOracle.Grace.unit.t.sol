@@ -176,4 +176,32 @@ contract LPOracleGraceUnitTest is LPOracleFixture {
         assertTrue(v.sequencerReady);
         assertTrue(v.borrowAllowed, "borrowing reopens");
     }
+
+    // TEST-276 verifies: REQ-ORACLE-034, REQ-ORACLE-099, REQ-ORACLE-042
+    /// @notice With no recovery and the sequencer past its grace period, no grace window is open and `graceEndsAt` is 0.
+    function test_TEST_276_noGraceWindowReportsNoEnd() public view {
+        PriceStateView memory v = _state();
+        assertFalse(v.inGrace);
+        assertEq(v.graceEndsAt, 0);
+    }
+
+    // TEST-276 verifies: REQ-ORACLE-099, REQ-ORACLE-034, SPEC-ORC-021
+    /// @notice The mirror of `graceEndsAtTheLaterOfBothWindows`: the sequencer restarted 2,000 s before the recovery,
+    /// so its window ends at back + 1,600 and the price window, ending at back + 1,800, is the later.
+    function test_TEST_276_graceEndsAtThePriceWindowWhenItEndsLater() public {
+        _pokeAt(STALE_AT + 3600);
+        uint256 back = STALE_AT + 5000;
+        vm.warp(back);
+        vm.roll(block.number + 1);
+        _othersAt(back);
+        pB.push(int256(ONE), back);
+        aB.push(int256(ONE), back);
+        oracle.poke();
+        seqFeed.setRound(3, 0, back - 2000, back - 2000);
+        vm.warp(back + 100);
+        PriceStateView memory v = _state();
+        assertTrue(v.inGrace);
+        assertTrue(_has(v.reasons, 15), "SEQUENCER_GRACE");
+        assertEq(v.graceEndsAt, back + 1800, "the price window ends later");
+    }
 }

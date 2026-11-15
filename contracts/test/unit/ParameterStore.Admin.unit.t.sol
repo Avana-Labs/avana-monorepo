@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
@@ -11,6 +12,7 @@ import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockHub, MockSpoke} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Structural setters, the liquidation-liveness check and the standby second source.
 contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
@@ -307,5 +309,55 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         emit IParameterStoreEvents.SecondSourceSwitched(usdc, false, address(timelock));
         store.setSecondSource(usdc, src, standby);
         assertFalse(store.onStandby(usdc));
+    }
+
+    // TEST-245 verifies: REQ-PSTORE-021
+    /// @notice Every Aave read of minLB fails closed in the view: a reverting Hub `getAssetId`, Spoke `getReserve`,
+    /// `getDynamicReserveConfig` or `getLiquidationConfig` makes `liquidationLivenessHolds` return false, not revert.
+    function test_TEST_245_livenessViewFailsClosedOnEveryRead() public {
+        assertTrue(store.liquidationLivenessHolds(address(spoke), M, 1));
+        vm.mockCallRevert(address(hub), abi.encodeWithSelector(MockHub.getAssetId.selector), "hub");
+        assertFalse(store.liquidationLivenessHolds(address(spoke), M, 1), "getAssetId");
+        vm.clearMockedCalls();
+        bytes4[3] memory sels = [
+            MockSpoke.getReserve.selector,
+            MockSpoke.getDynamicReserveConfig.selector,
+            MockSpoke.getLiquidationConfig.selector
+        ];
+        for (uint256 i; i < sels.length; ++i) {
+            vm.mockCallRevert(address(spoke), abi.encodeWithSelector(sels[i]), "spoke");
+            assertFalse(store.liquidationLivenessHolds(address(spoke), M, 1));
+            vm.clearMockedCalls();
+        }
+        assertTrue(store.liquidationLivenessHolds(address(spoke), M, 1));
+    }
+
+    // TEST-245 verifies: REQ-PSTORE-021
+    /// @notice A zero bonus (`maxLiquidationBonus` of 10,000) gives minLB = 10,000, not 0: with no slippage floor and
+    /// no flash fee the inequality holds with equality.
+    function test_TEST_245_zeroBonusHoldsAtZeroFloorAndFee() public {
+        spoke.setBonus(10_000, 0);
+        _tl();
+        store.setSlippageAllowanceMinBps(M, 0);
+        _tl();
+        store.tightenMaxFlashFeeBps(0);
+        assertTrue(store.liquidationLivenessHolds(address(spoke), M, 1));
+    }
+
+    // TEST-245 verifies: REQ-PSTORE-021, REQ-PSTORE-024
+    /// @notice The liveness checks count only enabled debt reserves: with the Spoke's one reserve disabled, raising the
+    /// slippage floor and the flash ceiling on an Active market whose bonus no longer supports them both pass.
+    function test_TEST_245_disabledReservesAreNotChecked() public {
+        _activate();
+        DebtReserveDef memory d = registry.getDebtReserve(address(spoke), 1);
+        d.approved = false;
+        registry.setDebtReserve(address(spoke), d);
+        spoke.setBonus(10_000, 0);
+        _tl();
+        store.setSlippageAllowanceMinBps(M, 50);
+        assertEq(store.getMarketParams(M).slippageAllowanceMinBps, 50);
+        _tl();
+        store.setMaxFlashFeeBps(20);
+        assertEq(store.maxFlashFeeBps(), 20);
     }
 }

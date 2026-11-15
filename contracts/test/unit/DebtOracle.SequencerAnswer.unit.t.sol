@@ -155,4 +155,15 @@ contract DebtOracleSequencerAnswerUnitTest is DebtOracleFixture {
         assertEq(v.answer, before.answer);
         assertTrue(v.borrowAllowed);
     }
+
+    // TEST-275 verifies: SPEC-ORC-021, REQ-ORACLE-099
+    /// @notice A sequencer reported down with a `startedAt` near 2^256 is evaluated, not reverted: the grace end is
+    /// computed only in grace.
+    function test_TEST_275_downSequencerWithHugeStartedAt() public {
+        _answer(abi.encode(uint80(1), int256(1), type(uint256).max, T0 - 7200, uint80(1)));
+        DebtPriceView memory v = _view();
+        assertTrue(v.liquidationPaused, "down pauses liquidation");
+        assertTrue(v.reasons & R_SEQUENCER_DOWN != 0);
+        assertFalse(v.borrowAllowed);
+    }
 }

@@ -10,6 +10,7 @@ import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegis
 import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
 import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
+import {MarketDef} from "../../src/types/MarketDef.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryAaveOracleMock,
@@ -20,7 +21,8 @@ import {
 import {
     RegistryAvanaFirstLossReserveMock,
     RegistryFlashSourceMock,
-    RegistryLPVaultMock
+    RegistryLPVaultMock,
+    RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -352,5 +354,36 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, s));
         registry.deployCdpSpoke(d);
     }
-}
 
+    // TEST-264 verifies: REQ-CONFIG-033, REQ-CONFIG-075
+    /// @notice A market lists only under its Spoke's integration, in both directions and also when the other integration
+    /// has a registered LPVault: integration 2 on the V3 Spoke and V3 on an integration-2 Spoke both revert
+    /// `InvalidIntegration`.
+    function test_TEST_264_listingRefusesAnotherRegisteredIntegration() public {
+        RegistryLPVaultMock v2 = new RegistryLPVaultMock(2, address(collat), lockAddr);
+        v2.setRegistry(address(registry));
+        address[] memory amm = new address[](2);
+        (amm[0], amm[1]) = (address(new RegistryTokenMock(18)), address(new RegistryTokenMock(18)));
+        vm.startPrank(address(timelock));
+        factory.registerIntegration(2, address(v2));
+        registry.registerIntegration(2, address(v2), alice);
+        registry.recordIntegrationContracts(2, amm);
+        registry.finalizeIntegrationContracts(2);
+        registry.recordHub(address(hub2), RiskTier.Correlated);
+        registry.deployCdpSpoke(
+            SpokeDef(false, address(hub2), 2, RiskTier.Correlated, address(spokeImpl), address(oracle2))
+        );
+        vm.stopPrank();
+        MarketDef memory d = _marketDef(makeAddr("vt"), makeAddr("lpo"));
+        d.integrationId = 2;
+        vm.prank(address(timelock));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, 2));
+        registry.listCollateralMarket(d);
+        d = _marketDef(makeAddr("vt"), makeAddr("lpo"));
+        (d.hub, d.spoke) = (address(hub2), address(spoke2));
+        vm.prank(address(timelock));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, V3));
+        registry.listCollateralMarket(d);
+    }
+    // Needs imports in this file: {MarketDef} from "../../src/types/MarketDef.sol" if not present.
+}

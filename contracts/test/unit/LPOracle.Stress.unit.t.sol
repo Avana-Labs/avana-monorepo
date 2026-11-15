@@ -131,4 +131,17 @@ contract LPOracleStressUnitTest is LPOracleFixture {
         sB.setMode(sB.latestRoundData.selector, ReadMode.Short);
         assertGe(oracle.latestAnswer(), 1);
     }
+
+    // TEST-219 verifies: REQ-ORACLE-103, SPEC-ORC-012, SPEC-ORC-015
+    /// @notice While the quote-change cap holds the block, the market is served at the accepted price's timestamp with
+    /// no age limits, whatever the timestamps of the capped rounds.
+    function test_TEST_219_quoteCapServesTheAcceptedTimestamp() public {
+        _pushAll(98_500_000, T0 - 100);
+        PriceStateView memory v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Cached));
+        assertTrue(_has(v.reasons, 18), "QUOTE_CHANGE_CAPPED");
+        assertEq(v.servedUpdatedAt, T0, "the accepted price's timestamp");
+        assertEq(oracle.borrowPriceMaxAge(), 0, "no borrow age while capped");
+        assertEq(oracle.liquidationPriceMaxAge(), 0, "no liquidation age while capped");
+    }
 }

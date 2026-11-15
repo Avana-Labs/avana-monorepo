@@ -5,11 +5,11 @@ pragma solidity 0.8.28;
 
 import {Evaluation, LegEval, TokenEval} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
-import {LPOracleHarnessPokeLogic} from "../utils/harness/LPOracleHarness.sol";
+import {LPOracleHarnessPokeLogicBase} from "../utils/harness/LPOracleHarness.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice Exposes the LPOracle base's state decision and timer writes on symbolic inputs.
-contract LPOracleDecisionHarness is LPOracleHarnessPokeLogic {
+contract LPOracleDecisionHarness is LPOracleHarnessPokeLogicBase {
     struct Inputs {
         bool failed;
         bool disagreeing;
@@ -41,7 +41,7 @@ contract LPOracleDecisionHarness is LPOracleHarnessPokeLogic {
         uint256 reasons;
     }
 
-    constructor() LPOracleHarnessPokeLogic(address(0x7173), 12, 556_588, 3_000_000, false) {}
+    constructor() LPOracleHarnessPokeLogicBase(address(0x7173), 12, 556_588, 3_000_000, false) {}
 
     function _load(
         Inputs memory x

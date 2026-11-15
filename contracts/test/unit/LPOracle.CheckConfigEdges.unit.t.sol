@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
 import {Market} from "../../src/types/Market.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {OracleRoute} from "../../src/types/OracleRoute.sol";
@@ -123,5 +124,79 @@ contract LPOracleCheckConfigEdgesUnitTest is LPOracleFixture {
         m.tokenDecimals = new uint8[](2);
         registry.setMarketOf(address(oracle), MARKET, m);
         assertEq(_check(_config()), 0, "control: both tokens in order");
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-049, REQ-ORACLE-054, SPEC-ORC-019, Q-066, Q-191, Q-322
+    /// @notice Both legs of a two-leg route are checked: with the route `x * y` bounded `[10^4, 10^12]` no leg check
+    /// fails; pinning the second leg at 6 decimals (its aggregator has 8) sets CHECK_LEG_DECIMALS, and a second leg with
+    /// a heartbeat of 0 sets CHECK_HEARTBEAT.
+    function test_TEST_219_secondLegOfATwoLegRouteIsChecked() public {
+        OracleConfig memory c = _twoLeg(1e4, 1e12);
+        uint256 control = _check(c);
+        assertEq(control & LPOracleCodes.CHECK_LEG_DECIMALS, 0, "control: decimals");
+        assertEq(control & LPOracleCodes.CHECK_HEARTBEAT, 0, "control: heartbeat");
+        c.tokens[0].routes[1].legs[1].decimals = 6;
+        assertTrue(_check(c) & LPOracleCodes.CHECK_LEG_DECIMALS != 0, "second leg's decimals");
+        c.tokens[0].routes[1].legs[1].decimals = 8;
+        c.tokens[0].routes[1].legs[1].heartbeat = 0;
+        assertTrue(_check(c) & LPOracleCodes.CHECK_HEARTBEAT != 0, "second leg's heartbeat");
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-051, REQ-ORACLE-053, SPEC-ORC-020, ATTACK-054, Q-184, Q-323
+    /// @notice An oracle-network second source is well formed only when the ParameterStore's feed definition has
+    /// non-zero decimals: token B's second source with a definition of 0 decimals gives CHECK_SECOND_SOURCE; with 8
+    /// decimals it passes.
+    function test_TEST_219_secondSourceDefinitionWithoutDecimals() public {
+        assertEq(_check(_config()), 0, "control");
+        FeedDef memory d = store.getFeed(address(sB));
+        d.decimals = 0;
+        store.setFeed(address(sB), d);
+        assertTrue(_check(_config()) & LPOracleCodes.CHECK_SECOND_SOURCE != 0, "decimals 0");
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-047, REQ-ORACLE-050, Q-066, Q-324
+    /// @notice Before registration the listing shock runs at the current quotes, not at the stored listing prices: the
+    /// pricing module refuses a composition while token A is valued below 1,500,000. At the listing prices (1.00 each)
+    /// the lowered quote of A is 1,000,000, so the shock would fail; with token A now quoted at 1.60 its lowered quote is
+    /// 1,600,000 and CHECK_SHOCK is clear.
+    function test_TEST_219_shockBeforeRegistrationUsesCurrentQuotes() public {
+        oracle.setCompositionFailsBelow(0, 1_500_000);
+        vm.warp(T0 + 60);
+        pA.push(1.6e8, T0 + 60);
+        aA.push(1.6e8, T0 + 60);
+        sA.push(1.6e8, T0 + 60);
+        uint256 failed = _check(_config());
+        assertEq(failed & LPOracleCodes.CHECK_QUOTES, 0, "current quotes read");
+        assertEq(failed & LPOracleCodes.CHECK_SHOCK, 0, "shock at the current quotes holds");
+        pA.push(int256(ONE), T0 + 60);
+        aA.push(int256(ONE), T0 + 60);
+        sA.push(int256(ONE), T0 + 60);
+        assertTrue(_check(_config()) & LPOracleCodes.CHECK_SHOCK != 0, "control: shock at 1.00 fails");
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-047, REQ-ORACLE-048, Q-066, Q-370
+    /// @notice A MarketRegistry that maps this feed to another market id answers exactly CHECK_MARKET, without
+    /// reverting.
+    function test_TEST_219_feedRegisteredForAnotherMarket() public {
+        Market memory m;
+        m.integration = integrationAddr;
+        m.lpOracle = address(oracle);
+        m.decimals = 6;
+        m.tokens = _two(address(tokenA), address(tokenB));
+        m.tokenDecimals = new uint8[](2);
+        registry.setMarketOf(address(oracle), MARKET + 1, m);
+        assertEq(_check(_config()), LPOracleCodes.CHECK_MARKET);
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-046, REQ-ORACLE-049, REQ-ORACLE-017
+    /// @notice The seed evaluation accepts a two-leg route and refuses a route of no leg: the two-leg alternate quotes
+    /// (CHECK_QUOTES clear), and a primary with `legCount = 0` fails the seed (CHECK_QUOTES) besides CHECK_ROUTE_RANGE.
+    function test_TEST_219_seedRouteLegCountBounds() public {
+        assertEq(_check(_twoLeg(1e4, 1e12)) & LPOracleCodes.CHECK_QUOTES, 0, "a two-leg route seeds");
+        OracleConfig memory c = _config();
+        c.tokens[0].routes[0].legCount = 0;
+        uint256 failed = _check(c);
+        assertTrue(failed & LPOracleCodes.CHECK_ROUTE_RANGE != 0, "no leg: route range");
+        assertTrue(failed & LPOracleCodes.CHECK_QUOTES != 0, "no leg: the seed evaluation fails");
     }
 }
