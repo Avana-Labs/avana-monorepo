@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
-import {ProxyCallTarget, ProxyCaller} from "../../utils/mocks/ProxyMocks.sol";
+import {ProxyCaller, ProxyPingTarget} from "../../utils/mocks/ProxyMocks.sol";
 
 /// @title PositionProxyProperties
 /// @notice Echidna and Medusa properties of the PositionProxy (2.5). Between transactions its binding and code never
@@ -13,7 +13,8 @@ import {ProxyCallTarget, ProxyCaller} from "../../utils/mocks/ProxyMocks.sol";
 /// itself with no ETH; every other caller is refused with `OnlyAdapter`; invalid targets are refused with
 /// `InvalidTarget`; revert data passes through, an empty revert becomes `CallFailed`.
 /// @dev The harness is the proxy's `ADAPTER`. `adapterCall`, `outsiderCall`, `invalidTarget` and `revertPassthrough`
-/// are assertion entry points with finite branching for hevm.
+/// are assertion entry points with finite branching for hevm. The target is `ProxyPingTarget`, which records the
+/// caller, value and call count but not the calldata, so the argument of `adapterCall` stays symbolic for hevm.
 contract PositionProxyProperties {
     address internal constant WALLET = address(0xCA201);
     address internal constant SPOKE = address(0x5B0CE);
@@ -21,7 +22,7 @@ contract PositionProxyProperties {
     uint256 internal constant MARKET_ID = 3;
 
     PositionProxy internal immutable PROXY;
-    ProxyCallTarget internal immutable TARGET;
+    ProxyPingTarget internal immutable TARGET;
     ProxyCaller internal immutable OUTSIDER;
     bytes32 internal immutable CODE_HASH;
 
@@ -30,7 +31,7 @@ contract PositionProxyProperties {
 
     constructor() {
         PROXY = new PositionProxy(address(this), WALLET, SPOKE, MARKET_ID);
-        TARGET = new ProxyCallTarget();
+        TARGET = new ProxyPingTarget();
         OUTSIDER = new ProxyCaller();
         CODE_HASH = address(PROXY).codehash;
     }
@@ -57,7 +58,7 @@ contract PositionProxyProperties {
         uint128 x
     ) external {
         uint256 before = TARGET.calls();
-        bytes memory result = PROXY.execute(address(TARGET), abi.encodeCall(ProxyCallTarget.ping, (x)));
+        bytes memory result = PROXY.execute(address(TARGET), abi.encodeCall(ProxyPingTarget.ping, (x)));
         assert(abi.decode(result, (uint256)) == uint256(x) + 1);
         assert(TARGET.lastCaller() == address(PROXY));
         assert(TARGET.lastValue() == 0);
@@ -71,7 +72,7 @@ contract PositionProxyProperties {
     ) external {
         uint256 before = TARGET.calls();
         (bool ok, bytes memory ret) =
-            OUTSIDER.callExecute(address(PROXY), address(TARGET), abi.encodeCall(ProxyCallTarget.ping, (x)));
+            OUTSIDER.callExecute(address(PROXY), address(TARGET), abi.encodeCall(ProxyPingTarget.ping, (x)));
         assert(!ok);
         assert(keccak256(ret) == keccak256(abi.encodeWithSelector(IPositionProxy.OnlyAdapter.selector)));
         assert(TARGET.calls() == before);
@@ -97,21 +98,38 @@ contract PositionProxyProperties {
     }
 
     /// @notice A revert with data passes through unchanged; an empty revert becomes `CallFailed(target)`.
+    /// @dev Each case makes its own call. With one call whose calldata (4 or 36 bytes) and expected revert data were
+    /// chosen by `empty ? ... : ...`, hevm merged the two buffer sizes into one symbolic size and explored the entry
+    /// point only partially ("CopySlice with a symbolically sized region", security-slow run 43653574421).
     function revertPassthrough(
         uint256 code,
         bool empty
     ) external {
-        bytes memory data = empty
-            ? abi.encodeCall(ProxyCallTarget.failEmpty, ())
-            : abi.encodeCall(ProxyCallTarget.failWithError, (code));
-        bytes memory expected = empty
-            ? abi.encodeWithSelector(IPositionProxy.CallFailed.selector, address(TARGET))
-            : abi.encodeWithSelector(ProxyCallTarget.TargetError.selector, code);
-        try PROXY.execute(address(TARGET), data) {
+        if (empty) _revertEmpty();
+        else _revertWithData(code);
+        ++sequences;
+    }
+
+    /// @dev An empty revert of the target comes back as `CallFailed(target)`.
+    function _revertEmpty() internal {
+        try PROXY.execute(address(TARGET), abi.encodeCall(ProxyPingTarget.failEmpty, ())) {
             assert(false);
         } catch (bytes memory reason) {
-            assert(keccak256(reason) == keccak256(expected));
+            assert(
+                keccak256(reason)
+                    == keccak256(abi.encodeWithSelector(IPositionProxy.CallFailed.selector, address(TARGET)))
+            );
         }
-        ++sequences;
+    }
+
+    /// @dev The target's `TargetError(code)` comes back unchanged.
+    function _revertWithData(
+        uint256 code
+    ) internal {
+        try PROXY.execute(address(TARGET), abi.encodeCall(ProxyPingTarget.failWithError, (code))) {
+            assert(false);
+        } catch (bytes memory reason) {
+            assert(keccak256(reason) == keccak256(abi.encodeWithSelector(ProxyPingTarget.TargetError.selector, code)));
+        }
     }
 }
