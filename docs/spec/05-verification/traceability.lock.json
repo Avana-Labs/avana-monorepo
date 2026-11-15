@@ -2190,7 +2190,7 @@
     ]
   },
   "DEP-011": {
-    "hash": "d37fb697737f765d",
+    "hash": "2ef5b218a55eec11",
     "checks": [
       "HYP-22",
       "HYP-55",
@@ -2370,7 +2370,7 @@
     "checks": []
   },
   "DEP-F-019": {
-    "hash": "0ff89d7e86fb492d",
+    "hash": "4623b293ae215966",
     "checks": []
   },
   "DEP-F-020": {
@@ -3887,7 +3887,7 @@
     ]
   },
   "INV-028": {
-    "hash": "0ae444a8c81f9bf3",
+    "hash": "666bc7eda3c8b32e",
     "checks": [
       "FV-CTL-53",
       "FV-CTL-54",
@@ -6102,7 +6102,7 @@
     ]
   },
   "MKT-013": {
-    "hash": "49f2e31099c50805",
+    "hash": "70261aec3f8c7546",
     "checks": [
       "MATH-AR-30",
       "SIM-02B",
@@ -6175,7 +6175,7 @@
     "checks": []
   },
   "MKT-027": {
-    "hash": "407a46c97fea7754",
+    "hash": "cd8acc1b326658dc",
     "checks": [
       "FV-CTL-58"
     ]
@@ -6790,7 +6790,7 @@
     ]
   },
   "Q-055": {
-    "hash": "d1878d996fe6f9e4",
+    "hash": "7781cd44d78ccd04",
     "checks": [
       "HYP-10",
       "HYP-48"
@@ -7777,7 +7777,7 @@
     "checks": []
   },
   "Q-157": {
-    "hash": "52983b3f8033c0ee",
+    "hash": "3d9de26ea2f751ca",
     "checks": [
       "HYP-55",
       "HYP-59",
@@ -8252,7 +8252,7 @@
     "checks": []
   },
   "Q-197": {
-    "hash": "a61b0719ab2018e7",
+    "hash": "e281c96b8ff476a5",
     "checks": [
       "TEST-028"
     ]
@@ -8572,7 +8572,7 @@
     ]
   },
   "Q-220": {
-    "hash": "c97b0519193a863a",
+    "hash": "9526a5ce2ab18f78",
     "checks": []
   },
   "Q-221": {
@@ -9428,7 +9428,7 @@
     ]
   },
   "Q-252": {
-    "hash": "ae99557026f86751",
+    "hash": "6ade5b4d3ef4c29c",
     "checks": [
       "AccountGateStatus",
       "HYP-76",
@@ -10199,7 +10199,7 @@
     ]
   },
   "Q-310": {
-    "hash": "8738eb7dc179574d",
+    "hash": "d3f5bf26faad7fe2",
     "checks": []
   },
   "Q-311": {
@@ -10241,7 +10241,7 @@
     "checks": []
   },
   "Q-317": {
-    "hash": "3ae8244418649ff6",
+    "hash": "1c109e9db2ade223",
     "checks": [
       "HYP-83"
     ]
@@ -10563,7 +10563,7 @@
     ]
   },
   "Q-354": {
-    "hash": "b09e88f9fb1f7e97",
+    "hash": "a04f9a190b8c6dcf",
     "checks": []
   },
   "Q-355": {
@@ -12084,7 +12084,7 @@
     ]
   },
   "REQ-ACCESS-049": {
-    "hash": "7c8b16e0bfc59fae",
+    "hash": "b5e82d682e5eb14b",
     "checks": [
       "TEST-062",
       "TEST-063",
@@ -13315,7 +13315,7 @@
     ]
   },
   "REQ-ACCESS-185": {
-    "hash": "b5114e12bcdd0f58",
+    "hash": "b19b8a431209c3d8",
     "checks": [
       "TEST-062"
     ]
@@ -13588,7 +13588,7 @@
     ]
   },
   "REQ-ADAPTER-023": {
-    "hash": "5f2bab9f03f7d498",
+    "hash": "8edd8c01298f0733",
     "checks": [
       "IRiskModuleChecks",
       "RiskModuleBorrowLogic",
@@ -14550,7 +14550,7 @@
     ]
   },
   "REQ-ADAPTER-095": {
-    "hash": "6647a95a772199b4",
+    "hash": "ade668c291d7f35c",
     "checks": [
       "AaveAdapter",
       "TEST-031",
@@ -15533,7 +15533,7 @@
     "checks": []
   },
   "REQ-ARCH-023": {
-    "hash": "f051a02e3410e8bf",
+    "hash": "bf076f696340f9ac",
     "checks": []
   },
   "REQ-ARCH-024": {
@@ -16853,7 +16853,7 @@
     ]
   },
   "REQ-COLL-038": {
-    "hash": "fdd5310eda1db75e",
+    "hash": "78fcbc3294c95fca",
     "checks": [
       "CollateralizationDebtMark",
       "ICollateralizationDebtMark",
@@ -17531,7 +17531,7 @@
     ]
   },
   "REQ-CONFIG-049": {
-    "hash": "0512529eb25e5c5d",
+    "hash": "507eb4c6b719d70a",
     "checks": [
       "FV-CTL-132",
       "FV-CTL-153",
@@ -19318,7 +19318,7 @@
     "checks": []
   },
   "REQ-HUB-027": {
-    "hash": "e6ff826372ed2f62",
+    "hash": "a9ab41ed220286d7",
     "checks": []
   },
   "REQ-HUB-028": {
@@ -19980,7 +19980,7 @@
     ]
   },
   "REQ-LENS-018": {
-    "hash": "6f7b645b762c4dd5",
+    "hash": "f703eedcbd209e93",
     "checks": [
       "CapView",
       "ILensMarket",
@@ -20515,7 +20515,7 @@
     ]
   },
   "REQ-LENS-057": {
-    "hash": "0d8cb550642e4f94",
+    "hash": "bad6b3b607d7030c",
     "checks": [
       "Lens",
       "LensMarkets",
@@ -24295,7 +24295,7 @@
     ]
   },
   "REQ-PSTORE-004": {
-    "hash": "96c7272be83d4d79",
+    "hash": "b69665b1fdcc6b4b",
     "checks": [
       "IParameterStoreErrors",
       "IParameterStoreEvents",
@@ -24506,7 +24506,7 @@
     ]
   },
   "REQ-PSTORE-017": {
-    "hash": "7880414d48fb83ae",
+    "hash": "7123ab2888c01c68",
     "checks": [
       "FV-CTL-134",
       "FV-CTL-135",
@@ -24515,6 +24515,7 @@
       "IParameterStoreErrors",
       "IParameterStoreLoosen",
       "IParameterStoreViews",
+      "MATH-GOV-20",
       "ParameterStoreForwardRisk",
       "ParameterStoreLoosenLogic",
       "ParameterStoreStorage",
@@ -25028,7 +25029,7 @@
     ]
   },
   "REQ-RISK-021": {
-    "hash": "ba68fc1e4ff5fe30",
+    "hash": "b5168c45092b3ae5",
     "checks": [
       "IRiskModuleChecks",
       "IRiskModuleErrors",
@@ -25238,7 +25239,7 @@
     ]
   },
   "REQ-RISK-042": {
-    "hash": "563c5980468ed5dd",
+    "hash": "6eec4bc36037d1a4",
     "checks": [
       "IParameterStoreErrors",
       "IParameterStoreEvents",
@@ -25269,7 +25270,7 @@
     ]
   },
   "REQ-RISK-044": {
-    "hash": "2455d1cad1fe821d",
+    "hash": "e9f5c8ca873e3f09",
     "checks": [
       "IParameterStoreErrors",
       "IParameterStoreLoosen",
@@ -25541,7 +25542,7 @@
     ]
   },
   "REQ-RISK-066": {
-    "hash": "b1616cc686f619f2",
+    "hash": "84bda3cd6d44a8cf",
     "checks": [
       "FV-CTL-101",
       "FV-CTL-101-EX",
@@ -25729,7 +25730,7 @@
     ]
   },
   "REQ-RISK-079": {
-    "hash": "458bfc5e699217c8",
+    "hash": "f4f4422861059cb5",
     "checks": [
       "FV-CTL-159",
       "ICollateralizationViews",
@@ -25738,7 +25739,7 @@
     ]
   },
   "REQ-RISK-080": {
-    "hash": "b90b46bea25886d3",
+    "hash": "99e54ff4856a74f7",
     "checks": [
       "MATH-CAP-09",
       "TEST-013"
@@ -26255,7 +26256,7 @@
     "checks": []
   },
   "REQ-ROLE-066": {
-    "hash": "8ef9bdce9913d981",
+    "hash": "d1e2719c76c2ef76",
     "checks": []
   },
   "REQ-ROLE-067": {
@@ -26503,7 +26504,7 @@
     "checks": []
   },
   "REQ-ROLE-117": {
-    "hash": "1472cfae48f0b143",
+    "hash": "4b7a234a3f243c05",
     "checks": [
       "AvanaRoles",
       "TEST-062"
@@ -31218,7 +31219,7 @@
     ]
   },
   "SPEC-BACK-005": {
-    "hash": "4e106a0e6ad42590",
+    "hash": "70d87542f7f2c9a6",
     "checks": [
       "BackingRecord",
       "CollateralizationBase",
@@ -31712,7 +31713,7 @@
     ]
   },
   "SPEC-CAP-002": {
-    "hash": "2b1ab23495d04ac2",
+    "hash": "b318dffceee9b9b0",
     "checks": [
       "FV-CTL-54",
       "FV-CUS-14",
@@ -32298,7 +32299,7 @@
     ]
   },
   "SPEC-GOV-011": {
-    "hash": "88639e4e679c1b5f",
+    "hash": "268c4322887ab3a8",
     "checks": [
       "FV-CTL-134",
       "FV-CTL-135",

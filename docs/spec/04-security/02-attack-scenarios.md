@@ -2096,7 +2096,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Field | Value |
 |---|---|
 | Target | RiskModule rescue top-ups, `postHealthCheck` |
-| Objective | Use rescue top-ups, which pass the pool-share cap, the breakers, the address freeze and `Paused(General)`, and slice top-ups, whose slice part sits outside the token and depositor caps, as a route to borrow more than the caps allow |
+| Objective | Use rescue top-ups, which pass the pool-share cap, the breakers, the address freeze and `Paused(General)`, and slice top-ups, whose slice part sits outside the token caps, as a route to borrow more than the caps allow |
 | Affected steps | `DEP` rescue top-up; `BOR`; `WDR` |
 | Prerequisites | An indebted account below `rescueHealthFactor` (1.10) |
 | Attack approach | Top up from the slice to restore HF 1.10, borrow back down to HF 1, repeat; or withdraw a regular record with debt after a rescue top-up |
@@ -2634,10 +2634,10 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Target | Cap counters |
 | Objective | Fill `marketUsdCap`, `tokenUsdCap` or the pool share with debt-free pledges, or pledges carrying a token borrow, so borrowers cannot open accounts |
 | Affected steps | `DEP` |
-| Prerequisites | Capital; several wallets to pass `depositorUsdCap` |
+| Prerequisites | Capital |
 | Attack approach | Pledge debt-free up to the caps and keep earning fees |
 | Impact | Bounded: denial of new pledges in that market until the attacker leaves or governance raises the cap; no loss of funds |
-| Expected protection | `INV-028`, `INV-092`: caps are counted per Hub in one ledger and charged at pledge; there is no idle-collateral mechanism (`Q-396`), so a debt-free position keeps its charge in the market's cap for as long as it stays pledged. This is the accepted risk AMMN-FLOW-16: caps are set at listing (`marketUsdCap`, `tokenUsdCap`, `depositorUsdCap`, `poolShareMaxBps`), monitoring reports each market's cap use by debt-free positions, `depositorUsdCap` limits each wallet, the attacker carries the full price risk of its positions while pledged, and governance can raise a market's cap through the timelock (Source: Q-157, Q-363, Q-384, Q-396) |
+| Expected protection | `INV-028`, `INV-092`: caps are counted per Hub in one ledger and charged at pledge; there is no idle-collateral mechanism (`Q-396`), so a debt-free position keeps its charge in the market's cap for as long as it stays pledged. This is the accepted risk AMMN-FLOW-16: caps are set at listing (`marketUsdCap`, `tokenUsdCap`, `poolShareMaxBps`), monitoring reports each market's cap use by debt-free positions, the attacker carries the full price risk of its positions while pledged, and governance can raise a market's cap through the timelock (Source: Q-157, Q-363, Q-384, Q-396) |
 | Result | Accepted risk (AMMN-FLOW-16, `Q-396`) — owner: Avana governance (cap sizing at listing and monitoring); bound: a liveness loss for new pledges in one market, no loss of funds |
 | Checks | TEST-272, FINDING-232 |
 

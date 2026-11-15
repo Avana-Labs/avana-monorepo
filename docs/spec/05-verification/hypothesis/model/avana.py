@@ -586,7 +586,6 @@ class System(SwapMixin):
             self._rm(c <= room, "CapExceeded(MARKET)")
         for t in (mk.t0, mk.t1):
             self._rm(self.counters_token.get(t, 0) + c - sl <= self.p.cap_token_usd, f"CapExceeded(TOKEN {t})")
-        self._rm(self.counters_depositor.get(wallet, 0) + c - sl <= self.p.cap_depositor_usd, "CapExceeded(DEPOSITOR)")
         need(c < 2 ** 128 and sl <= c, "InvalidCharge")
         ru = L if rescue else (mul_div(L, sl, c, up=True) if sl > 0 else 0)
         return c, sl, rescue, ru

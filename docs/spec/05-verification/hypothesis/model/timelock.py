@@ -54,7 +54,7 @@ TIGHTEN_SETTERS = (  # the compiled ParameterStore tighten selectors (2.15 launc
     "tightenHardHealthFloor", "tightenSlippageAllowanceBps", "tightenFloorRoundingAllowance",
     "tightenBorrowPriceMaxAge", "tightenConsistencyToleranceBps", "tightenFeedAgreementToleranceBps",
     "tightenPoolRiskFactor", "tightenRouteDepthThreshold", "tightenMarketUsdCap", "tightenTopUpSliceUsd",
-    "tightenTokenUsdCap", "tightenDepositorUsdCap", "tightenPoolShareMaxBps", "tightenPoolShareMaxBpsOf",
+    "tightenTokenUsdCap", "tightenPoolShareMaxBps", "tightenPoolShareMaxBpsOf",
     "tightenMinPledgeUsd",
     "tightenBreakerDeficitMax", "tightenGateRecoverySeconds", "tightenMaxShortfallBps", "tightenDebtStressRiseBps",
     "tightenMaxFlashFeeBps",
