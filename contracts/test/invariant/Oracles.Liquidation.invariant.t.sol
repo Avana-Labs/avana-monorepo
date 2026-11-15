@@ -13,6 +13,7 @@ import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {RealOraclesFixture} from "../utils/fixtures/RealOraclesFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title OraclesLiquidationInvariantTest
 /// @notice The oracles' side of the multi-actor suite (5.1 `TEST-215`), of its liquidation postconditions
@@ -26,7 +27,7 @@ import {MockAggregator} from "../utils/mocks/MockAggregator.sol";
 /// forge-config: default.invariant.runs = 32
 /// forge-config: default.invariant.depth = 40
 /// forge-config: default.invariant.fail-on-revert = true
-contract OraclesLiquidationInvariantTest is RealOraclesFixture {
+contract OraclesLiquidationInvariantTest is RealOraclesFixture, HandlerReach {
     OracleEnvHandler internal handler;
 
     function setUp() public {
@@ -35,6 +36,86 @@ contract OraclesLiquidationInvariantTest is RealOraclesFixture {
         OracleFeedMock standbyFeed = _feed("standby", price1);
         handler = new OracleEnvHandler(this, [p0Feed, a0Feed, s0Feed, p1Feed, a1Feed, s1Feed, standbyFeed]);
         targetContract(address(handler));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](10);
+        bool[] memory check = new bool[](10);
+        floors[0] = 55; // liquidate
+        floors[1] = 80; // move
+        floors[2] = 50; // poke
+        floors[3] = 80; // publish
+        floors[4] = 80; // publishDebt
+        floors[5] = 80; // refreshDebt
+        floors[6] = 10; // standby
+        floors[7] = 75; // swap
+        floors[8] = 80; // toggle
+        floors[9] = 80; // warp
+        check[9] = true; // warp
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](10), new string[](10), new int16[][](10));
+        (actions[0], names[0]) = (OracleEnvHandler.liquidate.selector, "liquidate");
+        kinds[0] = new int16[](0);
+        (actions[1], names[1]) = (OracleEnvHandler.move.selector, "move");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (OracleEnvHandler.poke.selector, "poke");
+        kinds[2] = new int16[](0);
+        (actions[3], names[3]) = (OracleEnvHandler.publish.selector, "publish");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        (actions[4], names[4]) = (OracleEnvHandler.publishDebt.selector, "publishDebt");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 256;
+        kinds[4][1] = 256;
+        (actions[5], names[5]) = (OracleEnvHandler.refreshDebt.selector, "refreshDebt");
+        kinds[5] = new int16[](0);
+        (actions[6], names[6]) = (OracleEnvHandler.standby.selector, "standby");
+        kinds[6] = new int16[](0);
+        (actions[7], names[7]) = (OracleEnvHandler.swap.selector, "swap");
+        kinds[7] = new int16[](1);
+        kinds[7][0] = 256;
+        (actions[8], names[8]) = (OracleEnvHandler.toggle.selector, "toggle");
+        kinds[8] = new int16[](1);
+        kinds[8][0] = 256;
+        (actions[9], names[9]) = (OracleEnvHandler.warp.selector, "warp");
+        kinds[9] = new int16[](1);
+        kinds[9][0] = 256;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // ─── Views the handler reads through the fixture ───
