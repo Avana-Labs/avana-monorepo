@@ -113,7 +113,6 @@ library TimelockSelectors {
             || s == IParameterStoreTighten.tightenMarketUsdCap.selector
             || s == IParameterStoreTighten.tightenTopUpSliceUsd.selector
             || s == IParameterStoreTighten.tightenTokenUsdCap.selector
-            || s == IParameterStoreTighten.tightenDepositorUsdCap.selector
             || s == IParameterStoreTighten.tightenPoolShareMaxBps.selector
             || s == IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector
             || s == IParameterStoreTighten.tightenMinPledgeUsd.selector

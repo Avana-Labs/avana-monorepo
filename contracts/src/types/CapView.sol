@@ -25,7 +25,6 @@ struct CapView {
     uint256 sliceHeadroomUsd;
     address[] tokens;
     uint256[] tokenHeadroomUsd;
-    uint256 depositorHeadroomUsd;
     uint256 poolShareBps;
     uint256 poolShareMaxBps;
     uint256 chargePricePerWholeToken;

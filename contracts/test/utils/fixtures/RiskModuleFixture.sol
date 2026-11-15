@@ -288,7 +288,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         poolKey = keccak256(abi.encode(V3, pool, bytes32(0)));
         store.setTokenCap(address(hub), address(usdc), 10_000_000e8);
         store.setTokenCap(address(hub), address(usdt), 10_000_000e8);
-        store.setDepositorCap(address(hub), 5_000_000e8);
         store.setBorrowAge(feedUsdc, FEED_AGE);
         store.setBorrowAge(feedUsdt, FEED_AGE);
         _report(uint64(block.timestamp), 1e8, 1e8);

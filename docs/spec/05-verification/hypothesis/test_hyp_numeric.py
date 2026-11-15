@@ -435,7 +435,7 @@ def test_hyp48_pledge_withdraw_and_fee_cycles(m, seed):
         assert ok and (r["c0"], r["c1"]) == (f0, f1)
         assert s.withdraw("u", tid)[0]
     assert s.counters_regular.get(m, 0) == 0 and s.counters_slice.get(m, 0) == 0
-    assert all(v == 0 for v in s.counters_token.values()) and s.counters_depositor.get("u", 0) == 0
+    assert all(v == 0 for v in s.counters_token.values())
 
 
 # HYP-48 verifies: Q-060, Q-085, Q-159

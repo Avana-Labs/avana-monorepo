@@ -187,7 +187,6 @@ export interface MarketCaps {
   readonly hardHealthFloorWad: DecimalString;
   readonly marketUsdCap8: DecimalString;
   readonly topUpSliceUsd8: DecimalString;
-  readonly depositorUsdCap8: DecimalString;
   /** One per pool token, in pool order: `tokenUsdCap(hub, token)`. */
   readonly tokenUsdCaps8: readonly DecimalString[];
   readonly addCap: DecimalString;

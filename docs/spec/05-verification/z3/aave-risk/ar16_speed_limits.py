@@ -2,15 +2,18 @@
 # Copyright (c) 2026 Avana Labs
 """MATH-AR-85..89 — Borrow-speed and pledge-speed limits (Q-411).
 
-Spec: SPEC-CAP-011 (two-bucket window), SPEC-CAP-012 (clamped limit on the base without the window's own
-charges), SPEC-CAP-013 (units and rounding), REQ-RISK-092..097.
+Spec: SPEC-CAP-011 (two-bucket net-flow window), SPEC-CAP-012 (clamped limit on the window-start base), SPEC-CAP-013
+(units and rounding), REQ-RISK-092..097.
 
 Window of one scope: (start, prev, curr) with window length tau > 0. At a check at time t >= start:
   t >= start + 2 tau      ->  (t, 0, 0)                 reset, both buckets empty
   start + tau <= t < +2tau ->  (start + tau, curr, 0)   one rollover
   otherwise               ->  (start, prev, curr)
-then a charge x passes iff prev' + curr' + x <= L, and curr' += x.
-Limit: L = min(max, max(min, floor(rate * sat(D - prev' - curr') / 10^4))).
+then a charge x passes iff prev' + curr' + x <= L, and curr' += x; a credit y (a repay or a withdrawal) takes
+min(y, curr') from curr' and the rest, up to prev', from prev' (the stored-frame credit of the code equals this on the
+rolled state, and rolling is idempotent, MATH-AR-85d).
+Limit: L = min(max, max(min, floor(rate * B / 10^4))) with B the window-start base: sat(D - prev') read when a charge
+opens the bucket, stored and reused for every later check in that bucket.
 Launch values (1.5): tau = 21,600 s; borrow rate 2,500 bps, $250,000 .. $2,500,000 per market;
 (Hub, asset) 2,500 bps, 500,000 .. 5,000,000 whole tokens; pledge 2,500 bps, $1,000,000 .. $10,000,000.
 """
@@ -70,6 +73,32 @@ sd, pd, cd = roll(t9, s, p, c, tau)
 prove('MATH-AR-85d', 'rolling at a view time t and again at t9 gives the same window total as rolling once at t9',
       [tau > 0, p >= 0, c >= 0, s <= last, last < s + tau, t >= last, t9 >= t], pw + cw == pd + cd)
 
+# Credits. Ghost N, the net amount (charges less credits) made at times >= T0, replaces A; the invariant is Inv with
+# A := N (N may be negative). A credit takes k = min(y, prev' + curr') from the rolled window.
+yv, N = Ints('y N')
+invN = And(tau > 0, p >= 0, c >= 0, s <= last, last < s + tau, last < T0 + tau,
+           Implies(N > 0, last >= T0),
+           Implies(s <= T0, N <= c),
+           Implies(s > T0, And(N <= p + c, s <= T0 + tau)))
+takeC = If(yv < c2, yv, c2)
+restY = yv - takeC
+takeP = If(restY < p2, restY, p2)
+c2k = c2 - takeC
+p2k = p2 - takeP
+N2 = If(t >= T0, N - takeC - takeP, N)
+cstep = [invN, yv >= 0, t >= last, t < T0 + tau]
+# MATH-AR-85 verifies: SPEC-CAP-011, REQ-RISK-092, REQ-RISK-093
+prove('MATH-AR-85j', 'a credit inside [T0, T0 + tau) preserves the net window invariant (induction step)',
+      cstep, And(p2k >= 0, c2k >= 0, s2 <= t, t < s2 + tau,
+                 Implies(s2 <= T0, N2 <= c2k),
+                 Implies(s2 > T0, And(N2 <= p2k + c2k, s2 <= T0 + tau))))
+prove('MATH-AR-85k', 'a credit takes exactly min(y, prev + curr) and never makes a bucket negative',
+      [tau > 0, p >= 0, c >= 0, yv >= 0],
+      And(p2k >= 0, c2k >= 0, takeC + takeP == If(yv < p2 + c2, yv, p2 + c2)))
+NA = If(t >= T0, N + x, N)
+prove('MATH-AR-85l', 'with credits, every charge inside [T0, T0 + tau) leaves the net interval total at most its L',
+      [invN, x >= 0, t >= last, t < T0 + tau, passes], NA <= L)
+
 # Bounded unrolling from an arbitrary rolled state: six charges at non-decreasing times within tau, each against its
 # own limit; the interval total never exceeds the last limit.
 ts = Ints('t1 t2 t3 t4 t5 t6')
@@ -111,7 +140,7 @@ prove('MATH-AR-85h', 'the bucket holding a charge at ta starts after ta - tau, s
       [tau > 0, s9 <= ta, p9 >= 0, c9 >= 0], And(sg <= ta, sg > ta - tau))
 
 # ---------------------------------------------------------------------------
-# MATH-AR-86  SPEC-CAP-012: the clamp and the base without the window's own charges.
+# MATH-AR-86  SPEC-CAP-012: the clamp and the window-start base.
 rate, base, lo, hi = Ints('rate base lo hi')
 lim, side = clamp_limit(rate, base, lo, hi, 'lim')
 b86 = [rate >= 0, rate <= BPS, base >= 0, lo >= 0, hi >= lo] + side
@@ -124,15 +153,21 @@ prove('MATH-AR-86b', 'L never decreases when the base grows (rate >= 0 makes rat
       [lo >= 0, hi >= lo, P1 >= 0, P2 >= P1, q1 * BPS <= P1, P1 < q1 * BPS + BPS, q2 * BPS <= P2, P2 < q2 * BPS + BPS],
       lim2 >= lim1)
 D0, u, y = Ints('D0 used y')
-limA, sideA = clamp_limit(rate, If(D0 + u - u >= 0, D0 + u - u, 0), lo, hi, 'limA')
-limB, sideB = clamp_limit(rate, If(D0 + u + y - (u + y) >= 0, D0 + u + y - (u + y), 0), lo, hi, 'limB')
-prove('MATH-AR-86c', 'own charges never raise L: with D = D0 + window charges, L stays the L of D0 after any split',
-      [rate >= 0, rate <= BPS, D0 >= 0, u >= 0, y >= 0, lo >= 0, hi >= lo] + sideA + sideB, limA == limB)
+# Window-start base: inside a bucket a charge opened with base B, every check uses B whatever the live base D1, D2.
+Bs, D1, D2 = Ints('B D1 D2')
+limA, sideA = clamp_limit(rate, Bs, lo, hi, 'limA')
+limB, sideB = clamp_limit(rate, Bs, lo, hi, 'limB')
+prove('MATH-AR-86c', 'inside an opened bucket L is the L of the window-start base B, whatever the live base does',
+      [rate >= 0, rate <= BPS, Bs >= 0, D1 >= 0, D2 >= 0, lo >= 0, hi >= lo] + sideA + sideB, limA == limB)
 limN1, sN1 = clamp_limit(rate, D0, lo, hi, 'limN1')
 limN2, sN2 = clamp_limit(rate, D0 + u, lo, hi, 'limN2')
-witness('MATH-AR-86d', 'on the raw D a split would grow L inside the window (why the base subtracts prev + curr)',
+witness('MATH-AR-86d', 'on the raw D a split would grow L inside the window (why the base is fixed when the bucket opens)',
         [rate == 2500, D0 == 4_000_000, lo == 0, hi == 10**9, u == 1_000_000] + sN1 + sN2
         + [u <= limN1, u + Int('more') <= limN2, Int('more') > 0])
+limR1, sR1 = clamp_limit(rate, D0, lo, hi, 'limR1')
+limR2, sR2 = clamp_limit(rate, D0 - u, lo, hi, 'limR2')
+witness('MATH-AR-86f', 'on D less gross charges a borrow-and-repay would shrink L (why repays credit and B is fixed)',
+        [rate == 2500, D0 == 4_000_000, lo == 0, hi == 10**9, u == 1_000_000] + sR1 + sR2 + [limR2 < limR1])
 prove('MATH-AR-86e', 'fail closed: an unset scope (all zero) refuses every positive charge',
       [rate == 0, lo == 0, hi == 0, base >= 0] + side + [x > 0], Not(x <= lim))
 # The reference formula of check_PROP_111_ownChargesNeverRaiseTheLimitBaseGrows (contracts/test/halmos/
@@ -142,7 +177,7 @@ prove('MATH-AR-86e', 'fail closed: an unset scope (all zero) refuses every posit
 PF, qF0, qF1 = Ints('PF qF0 qF1')
 limF0 = If(qF0 < lo, lo, If(qF0 > hi, hi, qF0))
 limF1 = If(qF1 < lo, lo, If(qF1 > hi, hi, qF1))
-prove('MATH-AR-86f', 'L(base + 1) >= L(base) for every rate in [0, 10^4] and base >= 0, with rate x (base + 1) = rate x base + rate',
+prove('MATH-AR-86g', 'L(base + 1) >= L(base) for every rate in [0, 10^4] and base >= 0, with rate x (base + 1) = rate x base + rate',
       [rate >= 0, rate <= BPS, PF >= 0, lo >= 0, hi >= lo,
        qF0 * BPS <= PF, PF < qF0 * BPS + BPS, qF1 * BPS <= PF + rate, PF + rate < qF1 * BPS + BPS],
       limF1 >= limF0)
@@ -193,12 +228,12 @@ def L_of(rate_, base_, lo_, hi_):
 
 
 E8 = 10**8
-ex_L = L_of(2500, 4_000_000 * E8 - 600_000 * E8, 250_000 * E8, 2_500_000 * E8)
+ex_L = L_of(2500, 3_400_000 * E8, 250_000 * E8, 2_500_000 * E8)
 ex_avail = ex_L - 600_000 * E8
 ex_usd = -(-(300_000 * 10**6) * 99_990_000 // 10**6)
 # MATH-AR-89 verifies: SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013, BOR-023
-computed('MATH-AR-89a', 'SPEC-CAP-012 example: Spoke debt $4,000,000, $600,000 charged in the window',
-         [('base $3,400,000', 3_400_000 * E8, 4_000_000 * E8 - 600_000 * E8),
+computed('MATH-AR-89a', 'SPEC-CAP-012 example: window-start base $3,400,000, $600,000 borrowed in the window',
+         [('window-start base $3,400,000 (no prev)', 3_400_000 * E8, 3_400_000 * E8 - 0),
           ('L = $850,000', 850_000 * E8, ex_L),
           ('available now $250,000', 250_000 * E8, ex_avail),
           ('300,000 USDC at $0.9999 charges $299,970.00', 29_997_000_000_000, ex_usd),
@@ -206,22 +241,24 @@ computed('MATH-AR-89a', 'SPEC-CAP-012 example: Spoke debt $4,000,000, $600,000 c
           ('new market (D = 0): L = L_min $250,000', 250_000 * E8, L_of(2500, 0, 250_000 * E8, 2_500_000 * E8)),
           ('large market D = $20M: L = L_max $2,500,000', 2_500_000 * E8,
            L_of(2500, 20_000_000 * E8, 250_000 * E8, 2_500_000 * E8))])
-# Timeline: tau = 21,600; $500,000 at t = 0 (start 0), $350,000 at t = 18,000, then at t = 25,000 (one rollover):
-# prev = 850,000, curr = 0, more at 43,200 (prev released).
+# Timeline: tau = 21,600; $500,000 at t = 0 (start 0), $350,000 at t = 18,000, a $100,000 repay at t = 20,000, then at
+# t = 25,000 (one rollover): prev = 750,000, curr = 0, more at 43,200 (prev released).
 s_, p_, c_ = 0, 0, 500_000
-t_ = 18_000
 c_ += 350_000
+c_ -= min(100_000, c_)
 t2_ = 25_000
 s_r, p_r, c_r = (s_ + 21_600, c_, 0) if t2_ >= s_ + 21_600 and t2_ < s_ + 43_200 else (s_, p_, c_)
+cyc = 0
+for _ in range(10):
+    cyc += 100_000
+    cyc -= min(100_000, cyc)
 computed('MATH-AR-89b', 'SPEC-CAP-011 timeline with L = $1,000,000 and tau = 6 h',
-         [('at t = 18,000 the window holds $850,000', 850_000, c_),
-          ('at t = 25,000: start 21,600, prev 850,000, curr 0', (21_600, 850_000, 0), (s_r, p_r, c_r)),
-          ('available at t = 25,000: $150,000', 150_000, 1_000_000 - p_r - c_r),
+         [('after the repay at t = 20,000 the window holds $750,000', 750_000, c_),
+          ('at t = 25,000: start 21,600, prev 750,000, curr 0', (21_600, 750_000, 0), (s_r, p_r, c_r)),
+          ('available at t = 25,000: $250,000', 250_000, 1_000_000 - p_r - c_r),
           ('more at 43,200 (start + tau)', 43_200, s_r + 21_600),
-          ('at 43,200 the full $1,000,000 is available', 1_000_000, 1_000_000 - 0 - 0)])
-computed('MATH-AR-89c', 'pledge example: booked $6,000,000, $1,000,000 pledged in the window, beta 25 %',
-         [('base $5,000,000', 5_000_000, 6_000_000 - 1_000_000),
-          ('P = $1,250,000 (within $1M .. $10M)', 1_250_000 * E8, L_of(2500, 5_000_000 * E8, 1_000_000 * E8, 10_000_000 * E8)),
-          ('available $250,000', 250_000 * E8, L_of(2500, 5_000_000 * E8, 1_000_000 * E8, 10_000_000 * E8) - 1_000_000 * E8)])
+          ('ten $100,000 borrow-and-repay cycles leave the window empty', 0, cyc)])
+computed('MATH-AR-89c', 'pledge example: booked $5,000,000 when the bucket opens, beta 25 %',
+         [('P = $1,250,000 (within $1M .. $10M)', 1_250_000 * E8, L_of(2500, 5_000_000 * E8, 1_000_000 * E8, 10_000_000 * E8))])
 
 finish()

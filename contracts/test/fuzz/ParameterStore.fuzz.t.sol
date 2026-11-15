@@ -120,27 +120,21 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         uint256 v
     ) public {
         uint256 old = store.marketUsdCap(M);
-        uint256 slice = store.topUpSliceUsd(M);
-        bytes memory err = v >= old ? _notStricter() : (v == 0 || v < slice ? _oob() : bytes(""));
+        // Any lower value is accepted, 0 and values below the slice included (REQ-RISK-042).
+        bytes memory err = v >= old ? _notStricter() : bytes("");
         _expect(abi.encodeCall(store.tightenMarketUsdCap, (M, v)), err);
-        assertGe(store.marketUsdCap(M), store.topUpSliceUsd(M), "cap below slice");
-        assertGt(store.marketUsdCap(M), 0);
+        assertEq(store.marketUsdCap(M), err.length == 0 ? v : old);
     }
 
     // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
     function testFuzz_TEST_272_tightenHubCapsModel(
-        uint256 v,
-        bool depositor
+        uint256 v
     ) public {
         address h = address(hub);
-        uint256 old = depositor ? store.depositorUsdCap(h) : store.tokenUsdCap(h, usdc);
-        bytes memory err = v >= old ? _notStricter() : (v == 0 ? _oob() : bytes(""));
-        bytes memory data = depositor
-            ? abi.encodeCall(store.tightenDepositorUsdCap, (h, v))
-            : abi.encodeCall(store.tightenTokenUsdCap, (h, usdc, v));
-        _expect(data, err);
-        uint256 now_ = depositor ? store.depositorUsdCap(h) : store.tokenUsdCap(h, usdc);
-        assertEq(now_, err.length == 0 ? v : old);
+        uint256 old = store.tokenUsdCap(h, usdc);
+        bytes memory err = v >= old ? _notStricter() : bytes("");
+        _expect(abi.encodeCall(store.tightenTokenUsdCap, (h, usdc, v)), err);
+        assertEq(store.tokenUsdCap(h, usdc), err.length == 0 ? v : old);
     }
 
     // TEST-064 verifies: REQ-PSTORE-005, REQ-CONFIG-051, PROP-042
@@ -239,7 +233,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         uint256 v,
         uint8 which
     ) public {
-        which = uint8(bound(which, 0, 2));
+        which = uint8(bound(which, 0, 1));
         old = bound(old, 1, USD_MAX);
         address hub2 = makeAddr("hub2");
         registry.setHub(hub2, true);
@@ -249,10 +243,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             assertTrue(_ok(abi.encodeCall(store.setInitialMarketCaps, (M, old, 0, 1))));
             data = abi.encodeCall(store.loosenMarketUsdCap, (M, v));
             key = _key("marketUsdCap", bytes32(M));
-        } else if (which == 1) {
-            assertTrue(_ok(abi.encodeCall(store.setInitialHubCaps, (hub2, old))));
-            data = abi.encodeCall(store.loosenDepositorUsdCap, (hub2, v));
-            key = _key("depositorUsdCap", bytes32(uint256(uint160(hub2))));
         } else {
             assertTrue(_ok(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, old))));
             data = abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, v));
@@ -263,7 +253,8 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             err = _notLooser();
         } else if (v > USD_MAX) {
             err = _oob();
-        } else if (v * 10_000 > old * 15_000) {
+        } else if (v > 1000e8 && v * 10_000 > old * 15_000) {
+            // At or below USD_CAP_REOPEN_BASE ($1,000) any looser value passes (REQ-PSTORE-017).
             err = abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key);
         }
         _expect(data, err);
@@ -652,14 +643,14 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         uint256 gap
     ) public {
         gap = bound(gap, 0, 2 * NORMAL_DELAY);
-        bytes32 key = _key("depositorUsdCap", bytes32(uint256(uint160(address(hub)))));
+        bytes32 key = _key("tokenUsdCap", keccak256(abi.encode(address(hub), usdc)));
         uint256 t = block.timestamp;
-        assertTrue(_ok(abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_100_000e8))));
+        assertTrue(_ok(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 22_000_000e8))));
         vm.warp(t + gap);
         bytes memory err = gap < NORMAL_DELAY
             ? abi.encodeWithSelector(IParameterStoreErrors.LoosenTooSoon.selector, key, t + NORMAL_DELAY)
             : bytes("");
-        _expect(abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_200_000e8)), err);
+        _expect(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 24_000_000e8)), err);
         assertEq(store.lastLoosenedAt(key), gap < NORMAL_DELAY ? t : t + gap);
     }
 

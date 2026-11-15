@@ -87,17 +87,14 @@ contract LensActionsConfigFuzzTest is LensFixture {
     function testFuzz_TEST_247_marketViewReportsTheSettings(
         uint256 cap,
         uint256 slice,
-        uint256 depositorCap,
         uint256 tokenCap,
         uint256 floor,
         uint256 target
     ) public {
         cap = bound(cap, 1, 1e20);
         slice = bound(slice, 0, cap);
-        (depositorCap, tokenCap, floor) =
-        (bound(depositorCap, 0, 1e20), bound(tokenCap, 0, 1e20), bound(floor, 0, 2e18));
+        (tokenCap, floor) = (bound(tokenCap, 0, 1e20), bound(floor, 0, 2e18));
         store.setCaps(MARKET_ID, cap, slice, 1e8);
-        store.setDepositorCap(aave.hub, depositorCap);
         store.setTokenCap(aave.hub, address(usdt), tokenCap);
         store.setHardHealthFloor(MARKET_ID, floor);
         target = bound(target, 1.01e18, 2e18);
@@ -107,7 +104,6 @@ contract LensActionsConfigFuzzTest is LensFixture {
         MarketView memory v = lens.getMarket(MARKET_ID);
         assertEq(v.marketUsdCap, cap, "market cap");
         assertEq(v.topUpSliceUsd, slice, "slice");
-        assertEq(v.depositorUsdCap, depositorCap, "depositor cap");
         assertEq(v.tokenUsdCaps[1], tokenCap, "USDT cap");
         assertEq(v.hardHealthFloor, floor, "hard floor");
         assertEq(v.targetHealthFactor, target, "target health factor");

@@ -25,8 +25,6 @@ import {VmSafe} from "forge-std/Vm.sol";
 /// @notice The ledger harness with settable exposure counters, to drive a counter below the amount a release
 /// subtracts.
 contract CollateralizationSaturationHarness is CollateralizationLedgerHarness {
-    address public constant DEPOSITOR = address(uint160(0xD0D0));
-
     constructor(
         address adapter,
         address lpVaultSwap,
@@ -35,17 +33,14 @@ contract CollateralizationSaturationHarness is CollateralizationLedgerHarness {
 
     function setCounters(
         uint256 regular,
-        uint256 token0,
-        uint256 depositor
+        uint256 token0
     ) external {
         marketUsd[VT][Bucket.Regular] = regular;
         tokenUsd[HUB][TOKEN0] = token0;
-        depositorUsd[HUB][DEPOSITOR] = depositor;
     }
 
-    function counters() external view returns (uint256 regular, uint256 token0, uint256 token1, uint256 depositor) {
-        return
-            (marketUsd[VT][Bucket.Regular], tokenUsd[HUB][TOKEN0], tokenUsd[HUB][TOKEN1], depositorUsd[HUB][DEPOSITOR]);
+    function counters() external view returns (uint256 regular, uint256 token0, uint256 token1) {
+        return (marketUsd[VT][Bucket.Regular], tokenUsd[HUB][TOKEN0], tokenUsd[HUB][TOKEN1]);
     }
 }
 
@@ -270,7 +265,7 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
     // TEST-011 verifies: REQ-VAULT-092, REQ-VAULT-144, REQ-VAULT-020
     function test_TEST_011_upstreamErrorsPassThroughAndMoveNothing() public {
         lpVault.mintPosition(KEY_A, alice, MARKET_ID, 5_000_000_000);
-        uint256 before = coll.getCounters(vt, alice).depositorUsed;
+        uint256 before = coll.getCounters(vt, alice).regularUsed;
         vm.startPrank(adapter);
         lock.acquire();
         token.addValidProxy(aliceProxy);
@@ -295,7 +290,7 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
         assertEq(lpVault.ownerOf(KEY_A), alice, "position not taken");
         assertEq(coll.recordIdOf(INTEGRATION, KEY_A), 0, "no record");
         assertEq(coll.getTotalCredited(vt), 0, "no credit");
-        assertEq(coll.getCounters(vt, alice).depositorUsed, before, "no counter");
+        assertEq(coll.getCounters(vt, alice).regularUsed, before, "no counter");
 
         // With every upstream answering, `pledge` completes before any supply: the proxy has supplied nothing and
         // Collateralization checks no supply (the Adapter's check runs after the proxy's supply).
@@ -367,31 +362,26 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
     function testFuzz_TEST_097_counterBelowZeroClampsAndEmits(
         uint64 charge,
         uint256 regular,
-        uint256 token0,
-        uint256 depositor
+        uint256 token0
     ) public {
         charge = uint64(bound(charge, 2, type(uint64).max));
         regular = bound(regular, 0, charge - 1);
         token0 = bound(token0, 0, charge - 1);
-        depositor = bound(depositor, 0, charge - 1);
         HarnessLock hl = new HarnessLock();
         CollateralizationSaturationHarness h = new CollateralizationSaturationHarness(adapter, lpVaultSwap, address(hl));
         uint256 id = h.seed(aliceProxy, 1e9, charge, 0, 0);
-        h.setCounters(regular, token0, depositor);
+        h.setCounters(regular, token0);
         address hubAddr = h.HUB();
 
         vm.expectEmit(address(h));
         emit ICollateralizationEvents.CounterSaturated(CounterKind.MarketRegular, hubAddr, h.VT(), regular, charge);
         vm.expectEmit(address(h));
         emit ICollateralizationEvents.CounterSaturated(CounterKind.Token, hubAddr, h.TOKEN0(), token0, charge);
-        vm.expectEmit(address(h));
-        emit ICollateralizationEvents.CounterSaturated(CounterKind.Depositor, hubAddr, h.DEPOSITOR(), depositor, charge);
         h.close(id);
 
-        (uint256 r, uint256 t0, uint256 t1, uint256 d) = h.counters();
+        (uint256 r, uint256 t0, uint256 t1) = h.counters();
         assertEq(r, 0, "market counter clamped");
         assertEq(t0, 0, "token0 counter clamped");
         assertEq(t1, 0, "token1 counter lowered by exactly the charge");
-        assertEq(d, 0, "depositor counter clamped");
     }
 }

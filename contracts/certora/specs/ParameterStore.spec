@@ -51,7 +51,6 @@ methods {
     function tightenMarketUsdCap(uint256, uint256) external;
     function tightenTopUpSliceUsd(uint256, uint256) external;
     function tightenTokenUsdCap(address, address, uint256) external;
-    function tightenDepositorUsdCap(address, uint256) external;
     function tightenPoolShareMaxBps(uint16) external;
     function tightenPoolShareMaxBpsOf(uint256, uint16) external;
     function tightenMaxShortfallBps(uint16) external;
@@ -67,7 +66,7 @@ methods {
     function setGraceHealthFactor(uint256) external;
     function setSlippageAllowanceMinBps(uint256, uint16) external;
     function setInitialMarketParams(uint256, ParameterStore.MarketParams) external;
-    function initialize(address, ParameterStore.GlobalParams, uint256, uint16) external;
+    function initialize(address, ParameterStore.GlobalParams, uint16) external;
 
     function hasRole(bytes32, address) external returns (bool) envfree;
     function getRoleAdmin(bytes32) external returns (bytes32) envfree;
@@ -110,7 +109,7 @@ definition PAUSE_GUARDIAN() returns bytes32 = to_bytes32(0xca16ee6b20db9286cfb1a
 // keccak256("APPLICATION_RISK_STEWARD")
 definition RISK_STEWARD() returns bytes32 = to_bytes32(0x80af594707954d7289f03f44a572035936215b9f928d89bf2ac5f1e37dc483ac);
 
-// The 20 tighten setters and setAvanaFeeShareBps: the selectors the Joint Configuration Safe's
+// The 19 tighten setters and setAvanaFeeShareBps: the selectors the Joint Configuration Safe's
 // APPLICATION_RISK_STEWARD may call beside APPLICATION_ADMIN (REQ-PSTORE-002, REQ-ROLE-117).
 definition stewardSelector(method f) returns bool =
     f.selector == sig:tightenHardHealthFloor(uint256, uint256).selector
@@ -124,7 +123,6 @@ definition stewardSelector(method f) returns bool =
     || f.selector == sig:tightenMarketUsdCap(uint256, uint256).selector
     || f.selector == sig:tightenTopUpSliceUsd(uint256, uint256).selector
     || f.selector == sig:tightenTokenUsdCap(address, address, uint256).selector
-    || f.selector == sig:tightenDepositorUsdCap(address, uint256).selector
     || f.selector == sig:tightenPoolShareMaxBps(uint16).selector
     || f.selector == sig:tightenMinPledgeUsd(uint256, uint256).selector
     || f.selector == sig:tightenPoolShareMaxBpsOf(uint256, uint16).selector
@@ -365,7 +363,7 @@ rule capStepArithmeticFits(mathint cap, mathint value) {
 // PROP-034 verifies: INV-051, Q-226, Q-228
 rule settersNeedApplicationAdmin(method f) filtered {
     f -> !f.isView && !isRoleCall(f) && routerEntry(f)
-        && f.selector != sig:initialize(address, ParameterStore.GlobalParams, uint256, uint16).selector
+        && f.selector != sig:initialize(address, ParameterStore.GlobalParams, uint16).selector
 } {
     env e;
     calldataarg args;

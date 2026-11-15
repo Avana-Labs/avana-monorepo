@@ -16,7 +16,7 @@
 //     "restores": "market-breaker-forward",       optional: "$prior" values come from that earlier run
 //     "changes": [
 //       { "contract": "MarketRegistry", "function": "tripMarketBreaker", "args": { "marketId": "market:uni-USDC-USDT-100" } },
-//       { "contract": "ParameterStore", "function": "loosenDepositorUsdCap", "args": { "hub": "hub:stable", "value": "$prior" },
+//       { "contract": "ParameterStore", "function": "loosenTokenUsdCap", "args": { "hub": "hub:stable", "token": "token:USDT", "value": "$prior" },
 //         "steps": true },                        a step-limited loosening split into ×1.5 operations, one per normal delay
 //       { "aave": "spokeConfig", "hub": "hub:stable", "asset": "token:GHO", "spoke": "spoke:uniV3Stable", "set": { "drawCap": 0 } },
 //       { "aave": "reserveConfig", "spoke": "spoke:uniV3Stable", "reserve": "collateral:uni-USDC-USDT-100", "set": { "frozen": true } },
@@ -273,7 +273,6 @@ interface Call {
 const CAPS: Record<string, { view: string; scopeArgs: number }> = {
   MarketUsdCap: { view: "marketUsdCap", scopeArgs: 1 },
   TokenUsdCap: { view: "tokenUsdCap", scopeArgs: 2 },
-  DepositorUsdCap: { view: "depositorUsdCap", scopeArgs: 1 },
   TopUpSliceUsd: { view: "topUpSliceUsd", scopeArgs: 1 },
 };
 
@@ -319,7 +318,7 @@ async function buildCall(c: CallChange, prior: Json | undefined): Promise<Call> 
 /** Limit checks that do not depend on who sends: the ParameterStore's hard bounds and loosening steps. */
 async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
   if (call.target !== STORE) return "";
-  const m = /^(tighten|loosen)(MarketUsdCap|TokenUsdCap|DepositorUsdCap|TopUpSliceUsd)$/.exec(call.fn);
+  const m = /^(tighten|loosen)(MarketUsdCap|TokenUsdCap|TopUpSliceUsd)$/.exec(call.fn);
   if (!m) return "";
   const kind = m[1]!;
   const cap = CAPS[m[2]!]!;
@@ -327,16 +326,9 @@ async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
   const value = call.args[call.args.length - 1] as bigint;
   const current = (await read(STORE, parameterStoreAbi as Abi, cap.view, scope)) as bigint;
   if (kind === "tighten") {
-    if (value === 0n) {
-      throw new Refused(`${call.label}: the ParameterStore refuses a zero cap (OutOfBounds); to stop new exposure use a breaker, a pause or an Aave cap of 0`);
-    }
     if (value >= current) throw new Refused(`${call.label}: not stricter than the current ${current} (NotStricter)`);
-    // A loosening moves at most ×1.5 (⌊1 × 1.5⌋ = 1), so a cap at 1 can never be raised again: refused here.
-    if (value < 2n) throw new Refused(`${call.label}: a cap of 1 (8-decimal USD) can never be loosened again (one step of ×1.5 from 1 is 1); use at least 2`);
-    if (cap.view === "marketUsdCap") {
-      const slice = (await read(STORE, parameterStoreAbi as Abi, "topUpSliceUsd", scope)) as bigint;
-      if (value < slice) throw new Refused(`${call.label}: below the market's topUpSliceUsd ${slice} (OutOfBounds)`);
-    }
+    // A market or token cap may go to 0 (new exposure stops; exits, repay, liquidation and rescue top-ups stay open);
+    // it reopens to at most USD_CAP_REOPEN_BASE ($1,000) and then by ×1.5 steps.
     return `${cap.view} ${current} -> ${value}; restoring takes ${stepsBetween(value, current)} loosening(s) of ×1.5, one per normal delay`;
   }
   const stepBps = BigInt(await read(STORE, parameterStoreAbi as Abi, "LOOSEN_CAP_STEP_BPS"));
@@ -347,7 +339,9 @@ async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
     const marketCap = (await read(STORE, parameterStoreAbi as Abi, "marketUsdCap", scope)) as bigint;
     if (marketCap / 10n > base) base = marketCap / 10n;
   }
-  if (value * 10_000n > base * stepBps) {
+  // A market or token cap below USD_CAP_REOPEN_BASE may reopen straight to it.
+  const reopen = (cap.view === "marketUsdCap" || cap.view === "tokenUsdCap") && value <= REOPEN_BASE;
+  if (!reopen && value * 10_000n > base * stepBps) {
     throw new Refused(`${call.label}: ${value} is above one step of ×${Number(stepBps) / 10_000} from ${base} (LoosenStepTooLarge)`);
   }
   const scopeWord =
@@ -365,13 +359,14 @@ async function checkLimits(call: Call, executesAt: bigint): Promise<string> {
   return `${cap.view} ${current} -> ${value} (within one step of ×${Number(stepBps) / 10_000})`;
 }
 
+/** USD_CAP_REOPEN_BASE of the ParameterStore: a market or token cap below it reopens straight to it ($1,000). */
+const REOPEN_BASE = 100_000_000_000n;
+
 function stepsBetween(from: bigint, to: bigint): number {
   let n = 0;
-  // ⌊1.5 v⌋ stays at 1 for v = 1; the contract's step check (`value × 10⁴ ≤ v × 15,000`) then allows only v itself.
   for (let v = from; v < to; n++) {
-    const next = (v * 3n) / 2n;
-    if (next <= v) return Number.POSITIVE_INFINITY;
-    v = next;
+    const step = (v * 3n) / 2n;
+    v = step > REOPEN_BASE ? step : REOPEN_BASE;
   }
   return n;
 }
@@ -804,7 +799,7 @@ async function main() {
 
 /** A step-limited loosening to a value more than one step away: one operation per step of ×LOOSEN_CAP_STEP_BPS, each run after the previous one's normal delay. */
 async function runSteps(name: string, call: Call, log: string[]): Promise<Json> {
-  const m = /^loosen(MarketUsdCap|TokenUsdCap|DepositorUsdCap)$/.exec(call.fn);
+  const m = /^loosen(MarketUsdCap|TokenUsdCap)$/.exec(call.fn);
   if (!m) throw new Refused(`${call.fn} is not a step-limited cap loosening`);
   const cap = CAPS[m[1]!]!;
   const scope = call.args.slice(0, cap.scopeArgs);
@@ -815,7 +810,8 @@ async function runSteps(name: string, call: Call, log: string[]): Promise<Json> 
     const current = (await read(STORE, parameterStoreAbi as Abi, cap.view, scope)) as bigint;
     if (current >= target) break;
     if (i >= 64) throw new Error("more than 64 loosening steps");
-    const one = (current * stepBps) / 10_000n;
+    const stepped = (current * stepBps) / 10_000n;
+    const one = stepped > REOPEN_BASE ? stepped : REOPEN_BASE;
     const next = one < target ? one : target;
     const args = [...scope, next];
     const stepCall: Call = { ...call, args, data: encodeFunctionData({ abi: call.abi, functionName: call.fn, args }), label: `ParameterStore.${call.fn}(${show(args).slice(1, -1)})` };

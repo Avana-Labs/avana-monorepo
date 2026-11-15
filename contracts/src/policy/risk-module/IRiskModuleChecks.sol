@@ -44,16 +44,15 @@ interface IRiskModuleChecks {
     /// window charged `usdCharge` against `clamp(β × (regularUsed + sliceUsed − used), P_min, P_max)`
     /// (`PledgeSpeedExceeded`). The integration validated the position at custody (canonical position
     /// manager or pool, exact shape, AMMN-RT-01) and Collateralization refuses a 17th record, so neither is tested here.
-    /// Cap tests use the n-token counters: each pool token's counter and the depositor's counter are keyed by the
-    /// market's home Hub. Reads no pause state or freeze (the Adapter passes `requireRescue`). Uncaught Aave and AMM
-    /// integration errors pass through.
+    /// Cap tests use the n-token counters: each pool token's counter is keyed by the market's home Hub. Reads no pause
+    /// state or freeze (the Adapter passes `requireRescue`). Uncaught Aave and AMM integration errors pass through.
     /// @param depositor The depositor the Adapter named.
     /// @param proxy The depositor's proxy for the market, resolved by the Adapter.
     /// @param marketId MarketRegistry market identifier.
     /// @param integrationId The AMM integration the caller named for the position.
     /// @param positionKey The position, in the integration's key format.
     /// @param units Units to credit: the position's units for a pledge, the added units for a re-credit.
-    /// @param counters Collateralization's current counters for the market, each pool token, the depositor and the
+    /// @param counters Collateralization's current counters for the market, each pool token and the pool, and the
     /// account's record count.
     /// @param requireRescue True under `Paused(General)` or for a frozen depositor: only a rescue top-up passes.
     /// @return charge The USD charge to book, its slice part, the rescue flag and the rescue units.

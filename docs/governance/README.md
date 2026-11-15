@@ -69,7 +69,7 @@ On the first market of a CDP Spoke, step 1 executes before the Avana batch, beca
 4. `HubConfigurator.addSpoke` for the CDP Spoke with the `addCap` from `SPEC-HUB-002` and `drawCap = 0`.
 5. `SpokeConfigurator.addReserve` with the LPOracle feed, the required flags and the three required settings, collateral factor, `maxLiquidationBonus` and `collateralRisk`.
 
-The payload carries the risk service providers' `marketUsdCap`, `tokenUsdCap`, `depositorUsdCap` and `poolRiskFactor` (at most 0.40). After it executes and the live-config check passes (`MKT-024`), the governance Safe schedules `MarketRegistry.activateMarket` at the short delay; activation reverts `ActivationCheckFailed` unless the Aave side matches (`MKT-026`).
+The payload carries the risk service providers' `marketUsdCap`, `tokenUsdCap` and `poolRiskFactor` (at most 0.40). After it executes and the live-config check passes (`MKT-024`), the governance Safe schedules `MarketRegistry.activateMarket` at the short delay; activation reverts `ActivationCheckFailed` unless the Aave side matches (`MKT-026`).
 
 ### Later DAO payloads
 

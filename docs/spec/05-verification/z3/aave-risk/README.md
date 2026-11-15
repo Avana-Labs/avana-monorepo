@@ -26,7 +26,7 @@ Run: `../../run_all.sh`, or `../../.venv/bin/python <file>.py` from this folder.
 | `SPEC-HUB-007` | Aave V4 kinked curve: `u = ⌈drawn × RAY / (liquidity + drawn)⌉`; `rate = base + ⌈⌈before × u / RAY⌉ × RAY / U*⌉` for `u ≤ U*`, else `base + before + ⌈⌈after × (u − U*) / RAY⌉ × RAY / (RAY − U*)⌉`, values in bps × 1e23 (`Q-408`) | up | ar14 |
 | `SPEC-HUB-004` | `threshold ≥ max collateralRisk + 1`; `Σ_i percentMulUp(d_i, r_i) ≤ percentMulUp(Σ d_i, T)` | premium shares up | ar05 |
 | `SPEC-CAP-001` | `usdCharge = ⌈L × max(price8, floor) / 10^d⌉`; `pledgeUsd = ⌊L × price8 / 10^d⌋ ≥ minPledgeUsd` | charge up, value down | ar08 |
-| `SPEC-CAP-002` | `room = max(K − R, 0)`; new pledge `c ≤ room`; top-up `slice = max(c − room, 0)`, `S + slice ≤ Z`; token and depositor tests on `c − slice` | none | ar08 |
+| `SPEC-CAP-002` | `room = max(K − R, 0)`; new pledge `c ≤ room`; top-up `slice = max(c − room, 0)`, `S + slice ≤ Z`; token test on `c − slice`; `K` and `tokenCap` may be 0 | none | ar08 |
 | `SPEC-CAP-003` | `x = ⌈(h_o − hf) D / (WAD RAY)⌉`, `usdToRestore = ⌈x 10^4 / (CF 10^18)⌉`, `restoreBooked = ⌈usdToRestore × max(price8, floor) / served8⌉` | up | ar08 |
 | `SPEC-CAP-004` | `charge(u) = ⌈C0 u / U0⌉`, `release = charge(u_b) − charge(u_a)`, slice first | up on the remaining charge | ar08 |
 | `SPEC-CAP-005` | `(supply + L) × 10^4 ≤ poolShareMaxBps × liqHM` | floored liqHM | ar08 |
@@ -42,8 +42,8 @@ Run: `../../run_all.sh`, or `../../.venv/bin/python <file>.py` from this folder.
 | `SPEC-CHAIN-001` | `G(n) = 1,310,000 + 240,000 × n` gas units per liquidation of an account with `n` records; record cap 16, so `G(16) = 5,150,000 ≤ 16,777,216 / 2 = 8,388,608` (largest fitting count 29); keeper gas budget `k × G(16)`; no minimum debt (`Q-381`) | none | ch01, ar11 |
 | `SPEC-CAP-009` | borrow capacity `capRay = ⌊totalCollateralValue × RAY × avgCollateralFactor / WAD⌋` (maximum at HF 1.00), recommended `⌊capRay × 100 / 110⌋` (HF 1.10, `Q-398`); the idle test is removed (`Q-396`) | capacity down, recommended down | ar11 |
 | `SPEC-CAP-010` | `Σ drawCap ≤ line`; `line × 10^dec × coverageRatioBps ≤ funded × 10^4` | none | ar11 |
-| `SPEC-CAP-011` | window `(start, prev, curr)`: from `start + 2τ` empty, from `start + τ` `(start + τ, curr, 0)`; a charge passes iff `prev + curr + x ≤ L` | none | ar16 |
-| `SPEC-CAP-012` | `L = min(max, max(min, ⌊rate × B / 10^4⌋))`, `B` the window-start base (stored at the bucket's first charge, else `sat(D − prev)`) | floor | ar16 |
+| `SPEC-CAP-011` | net window `(start, prev, curr)`: from `start + 2τ` empty, from `start + τ` `(start + τ, curr, 0)`; a charge passes iff `prev + curr + x ≤ L`; a credit takes from `curr`, then `prev`, never below 0 | none | ar16 |
+| `SPEC-CAP-012` | `L = min(max, max(min, ⌊rate × B / 10^4⌋))`, `B = sat(D − prev)` fixed when a charge opens the bucket | floor | ar16 |
 | `SPEC-CAP-013` | `amountUsd = ⌈amount × price8 / 10^dec⌉` | ceiling | ar16 |
 
 ## Properties
@@ -150,8 +150,10 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 |---|---|---|---|---|
 | MATH-AR-45a–d | charge ≥ value at the booking price and at the floor, ≥ 1; minimum test exact; products `< 2^184` | SPEC-CAP-001, INV-069 | L < 2^120 | PROVED |
 | MATH-AR-45e | 9,999,500,000,000; 5,000,000,000,000; 999,950,000 reverts; 1,000,149,990 passes | SPEC-CAP-001 | d = 6 | COMPUTED |
-| MATH-AR-46a–d | regular budget never exceeded; slice within Z; `R ≤ K`, `S ≤ Z` kept; token counter ≤ cap + slices | SPEC-CAP-002, INV-028 | — | PROVED |
+| MATH-AR-46a–d | regular budget never exceeded; an eligible top-up's regular part within the market and token rooms; slice within Z; `R ≤ K`, `S ≤ Z` kept; token counter ≤ cap + slices | SPEC-CAP-002, INV-028 | — | PROVED |
 | MATH-AR-46e | room $10,000, slice $10,000, R $1,000,000, new-account revert | SPEC-CAP-002 | — | COMPUTED |
+| MATH-AR-46f | zero caps: no new-account pledge passes; a passing top-up at K = 0 or tokenCap = 0 is all slice, within Z | SPEC-CAP-002, REQ-RISK-042 | — | PROVED |
+| MATH-AR-46g | token counter at or above its cap (a zero cap included): an eligible top-up within the slice passes, all slice, whatever the market room; a new-account pledge is refused; a top-up above regular room plus slice room is refused | SPEC-CAP-002, REQ-RISK-042 | — | PROVED |
 | MATH-AR-47a–b | `usdToRestore` restores `h_o`; a top-up within `restoreBooked` has served value < `usdToRestore` + 1 when `served8 ≤ max(price8, floor)` | SPEC-CAP-003, REQ-RISK-066 | `price8 = min(fresh, accepted)` (`REQ-RISK-026`); 47b `served8 ≤ max(price8, floor)` | PROVED |
 | MATH-AR-47g | every state, a served price above the booking basis after a rally included: a top-up within `restoreBooked` has served value < `usdToRestore` + `served8 / max(price8, floor)` units of 1e-8 USD | SPEC-CAP-003, REQ-RISK-026, REQ-RISK-066 | no order between `served8` and `price8` | PROVED |
 | MATH-AR-47h | why 47b needs `served8 ≤ max(price8, floor)`: above the basis the one-unit bound can be exceeded by the rounding of `restoreBooked` (by less than 47g's bound) | SPEC-CAP-003, REQ-RISK-026 | same | COUNTEREXAMPLE (deliberate) |
@@ -264,6 +266,9 @@ Borrow-speed and pledge-speed limits (`Q-411`). Launch values: τ = 21,600 s; bo
 | MATH-AR-85b | every charge inside `[T0, T0 + τ)` leaves the interval total at most the `L` of that check | SPEC-CAP-011 | unbounded integers | PROVED |
 | MATH-AR-85c | the invariant holds before the first charge of the interval | SPEC-CAP-011 | unbounded integers | PROVED |
 | MATH-AR-85d | rolling at a view time and again later gives the same window total as rolling once | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85j | a credit inside `[T0, T0 + τ)` preserves the net window invariant (induction step) | SPEC-CAP-011, REQ-RISK-092, REQ-RISK-093 | unbounded integers | PROVED |
+| MATH-AR-85k | a credit takes exactly `min(y, prev + curr)` and never makes a bucket negative | SPEC-CAP-011 | unbounded integers | PROVED |
+| MATH-AR-85l | with credits, every charge inside `[T0, T0 + τ)` leaves the net interval total at most its `L` | SPEC-CAP-011, REQ-RISK-092, REQ-RISK-093 | unbounded integers | PROVED |
 | MATH-AR-85e | six charges split across times within one τ total at most the last check's `L` | SPEC-CAP-011, REQ-RISK-092 | unbounded integers | PROVED |
 | MATH-AR-85f | over an interval of length τ + 1 two charges of `L` each pass (design: the bound is for τ) | SPEC-CAP-011 | unbounded integers | COUNTEREXAMPLE (deliberate) |
 | MATH-AR-85i | over any 2τ at most `2L` | SPEC-CAP-011 | unbounded integers | PROVED |
@@ -271,10 +276,11 @@ Borrow-speed and pledge-speed limits (`Q-411`). Launch values: τ = 21,600 s; bo
 | MATH-AR-85h | the bucket of a charge starts after `t − τ` | SPEC-CAP-011 | unbounded integers | PROVED |
 | MATH-AR-86a | `min ≤ L ≤ max` whenever `min ≤ max` | SPEC-CAP-012 | rate ≤ 10^4 | PROVED |
 | MATH-AR-86b | `L` never decreases when the base grows | SPEC-CAP-012 | products abstracted as monotone | PROVED |
-| MATH-AR-86c | own charges never raise `L` (`D = D0 + charges`) | SPEC-CAP-012, REQ-RISK-092 | rate ≤ 10^4 | PROVED |
-| MATH-AR-86d | on the raw `D` a split would raise `L` inside the window (why the base subtracts the window) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
+| MATH-AR-86c | inside an opened bucket `L` is the `L` of the window-start base, whatever the live base does | SPEC-CAP-012, REQ-RISK-092 | rate ≤ 10^4 | PROVED |
+| MATH-AR-86d | on the raw `D` a split would raise `L` inside the window (why the base is fixed when the bucket opens) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
+| MATH-AR-86f | on `D` less gross charges a borrow-and-repay would shrink `L` (why repays credit and the base is fixed) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
 | MATH-AR-86e | an unset scope refuses every positive charge | REQ-RISK-096 | — | PROVED |
-| MATH-AR-86f | `L(base + 1) ≥ L(base)` with `rate × (base + 1) = rate × base + rate`: the reference formula of the Halmos check `check_PROP_111_ownChargesNeverRaiseTheLimitBaseGrows`, which proves `SpeedLimitMath.limit` equals it (`PROP-111`) | SPEC-CAP-012 | rate ≤ 10^4; the product a fresh variable | PROVED |
+| MATH-AR-86g | `L(base + 1) ≥ L(base)` with `rate × (base + 1) = rate × base + rate`: the reference formula of the Halmos check `check_PROP_111_ownChargesNeverRaiseTheLimitBaseGrows`, which proves `SpeedLimitMath.limit` equals it (`PROP-111`) | SPEC-CAP-012 | rate ≤ 10^4; the product a fresh variable | PROVED |
 | MATH-AR-87a–c | the USD charge is the ceiling, less than one unit above the exact value, products below 2^192 | SPEC-CAP-013 | amounts `< 2^128`, prices `< 2^64` | PROVED |
 | MATH-AR-87d | `⌊P / 10^d⌋ + (P mod 10^d > 0 ? 1 : 0)` is at least `P / 10^d` and less than one unit above it, for `d` = 6 and 18: the reference formula of the Halmos checks `check_PROP_112_usdChargeIsTheCeilingDec6` and `Dec18`, which prove `SpeedLimitMath.usdOf` equals it (`PROP-112`) | SPEC-CAP-013 | `P < 2^192` | PROVED |
 | MATH-AR-88a–c | at `moreAt` the window holds exactly what it says; `moreAt` lies after the check and within 2τ | SPEC-CAP-011, REQ-RISK-097 | unbounded integers | PROVED |
@@ -341,7 +347,7 @@ The other counterexamples are deliberate: wrong-reading checks (MATH-AR-17a, 22,
 | 2026-11-12 (deactivated Umbrella, `Q-410` amended: `MATH-AR-51h`–`h3` take the Umbrella's `active` flag, `MATH-AR-51h5` added) | `../../.venv/bin/python ar15_loss_layers.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar15 8 | 0 | ar15 2 | 0 | 0 | 0 |
 | 2026-11-12 (booking price `min(fresh, accepted)` and a served price that can exceed it, `SPEC-ORC-017`, `REQ-RISK-026`: `MATH-AR-47b` holds when `served8 ≤ max(price8, floor)`, `47g` bounds every state, `47h` deliberate) | `../../.venv/bin/python ar08_caps.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | 27 | 1 (deliberate) | 9 | 0 | 0 | 0 |
 | 2026-11-15 (Halmos reference formulas: `ar17_halmos_references.py` added, `MATH-AR-90`–`92`, the second part of the split Halmos checks of `PROP-028`, `PROP-030` and `PROP-067`) | `python ar17_halmos_references.py` | Python 3.12, z3-solver 4.13.0 | 120 s per query | ar17 10 | 0 | 0 | 0 | 0 | 0 |
-| 2026-11-15 (Halmos reference formulas: `MATH-AR-86f` and `MATH-AR-87d` added) | `uv run --no-project --with z3-solver==4.13.0 python ar16_speed_limits.py` | Python 3.14.3, z3-solver 4.13.0 | 120 s per query | ar16 20 | 2 (both deliberate) | ar16 3 | 0 | 0 | 0 |
+| 2026-11-15 (Halmos reference formulas: `MATH-AR-86g` and `MATH-AR-87d` added) | `uv run --no-project --with z3-solver==4.13.0 python ar16_speed_limits.py` | Python 3.14.3, z3-solver 4.13.0 | 120 s per query | ar16 20 | 2 (both deliberate) | ar16 3 | 0 | 0 | 0 |
 
 Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 27/1/9/0 (includes MATH-AR-47f, 47g, the deliberate 47h and MATH-AR-51c–d, f; re-run 2026-11-12); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the one-step offboarding target, re-run 2026-11-12); ar13 12/0/5/0 (`MATH-AR-71`–`73`, `MATH-AR-76`, `MATH-AR-77`, the Lens views); ar14 21/0/2/0 (`MATH-AR-74`, `MATH-AR-75`, the rate curve); ar15 8/0/2/0 (`MATH-AR-51e`, `MATH-AR-51h`–`j`, the loss layers and the deactivated-Umbrella case, 2026-11-12); ar17 10/0/0/0 (`MATH-AR-90`–`92`, the Halmos reference formulas, 2026-11-15); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
 

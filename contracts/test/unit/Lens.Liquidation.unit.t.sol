@@ -357,9 +357,15 @@ contract LensLiquidationUnitTest is LensFixture {
         p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
         assertFalse(p.routeUsable[3].usable, "USDT backup unusable");
         assertEq(uint8(p.params.routeMode), uint8(RouteMode.PrimaryThenBackup), "primaries still usable");
+        // USDC's primary down too: each token still has a usable route (USDC its backup, USDT its primary), and only
+        // PrimaryThenBackup settles both.
         reg.setRoute(MARKET_ID, address(usdc), address(debt), 0, address(0), false);
         p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
-        assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "a primary unusable: backups only");
+        assertEq(uint8(p.params.routeMode), uint8(RouteMode.PrimaryThenBackup), "every token has a usable route");
+        // USDC with no usable route at all: neither mode settles; the earlier rule names BackupOnly.
+        reg.setRoute(MARKET_ID, address(usdc), address(debt), 1, address(0), false);
+        p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
+        assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "a token without a route, a primary down");
     }
 
     // TEST-069 verifies: REQ-LENS-016, Q-242

@@ -222,8 +222,8 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
 
     // TEST-097 verifies: REQ-COLL-003, REQ-VAULT-128, INV-027, INV-028, INV-069
     /// @notice Collateralization's counters never exceed the ParameterStore's caps (regular budget within
-    /// `marketUsdCap`, slice within `topUpSliceUsd`, each depositor within `depositorUsdCap`), and every completed
-    /// pledge was worth at least `minPledgeUsd` at the served LPOracle price.
+    /// `marketUsdCap`, slice within `topUpSliceUsd`), and every completed pledge was worth at least `minPledgeUsd` at
+    /// the served LPOracle price.
     function invariant_TEST_097_countersWithinTheStoreCaps() public view {
         assertEq(handler.capViolations(), 0, "a pledge left a counter above its cap");
         assertEq(handler.minPledgeViolations(), 0, "a pledge below the minimum");

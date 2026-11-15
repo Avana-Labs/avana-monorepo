@@ -208,7 +208,8 @@ export default defineSchema({
         hardHealthFloorWad: dec,
         marketUsdCap8: dec,
         topUpSliceUsd8: dec,
-        depositorUsdCap8: dec,
+        // Retired with the per-depositor cap: written by older exports only.
+        depositorUsdCap8: v.optional(dec),
         tokenUsdCaps8: v.array(dec),
         addCap: dec,
       }),

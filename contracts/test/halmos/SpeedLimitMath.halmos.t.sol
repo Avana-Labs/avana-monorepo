@@ -138,7 +138,7 @@ contract SpeedLimitMathHalmosTest is Test {
     // PROP-111 verifies: SPEC-CAP-012, ATTACK-205, ATTACK-206
     /// @notice `limit(rate, min, max, base)` is the reference `min(max, max(min, ⌊rate × base / 10⁴⌋))`, the terms
     /// `Math.mulDiv` forms when the product fits 256 bits, for every rate ≤ 10⁴, `min ≤ max < 2^96` and base ≤ 2^128.
-    /// MATH-AR-86f (`docs/spec/05-verification/z3/aave-risk/ar16_speed_limits.py`) proves with exact integers that the
+    /// MATH-AR-86g (`docs/spec/05-verification/z3/aave-risk/ar16_speed_limits.py`) proves with exact integers that the
     /// reference never decreases when the base grows by 1 (MATH-AR-86b for any larger base). Applied at `d0` and
     /// `d0 + 1`, both at most 2^128, this gives `limit(d0 + 1) ≥ limit(d0)`, the second assertion of the check before the
     /// split. The assumption rules out the 512-bit branch of `mulDiv`: `rate × base ≤ 10⁴ × 2^128 < 2^142`, so it removes

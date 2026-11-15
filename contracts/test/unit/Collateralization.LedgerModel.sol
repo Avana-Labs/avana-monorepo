@@ -340,8 +340,6 @@ abstract contract CollateralizationLedgerModel is CollateralizationFixture {
         assertEq(k.sliceUsed, 0, string.concat(step, ": slice bucket"));
         assertEq(k.tokenUsed[0], charges, string.concat(step, ": USDC counter"));
         assertEq(k.tokenUsed[1], charges, string.concat(step, ": USDT counter"));
-        assertEq(k.depositorUsed, _depositorCharges(alice), string.concat(step, ": alice counter"));
-        assertEq(coll.getCounters(vt, bob).depositorUsed, _depositorCharges(bob), string.concat(step, ": bob counter"));
         assertEq(k.poolUnits, total, string.concat(step, ": pool units"));
         (uint256[] memory ids,) = coll.getMarketRecords(vt, 0, 64);
         assertEq(ids.length, mMarket.length, string.concat(step, ": market record count"));
@@ -382,14 +380,6 @@ abstract contract CollateralizationLedgerModel is CollateralizationFixture {
         assertEq(coll.getAccountCredited(proxy, vt), credited, string.concat(step, ": account credited"));
         // INV-008: supplied shares plus the units kept seizures took equal the credited units.
         assertEq(_shares(proxy) + mKept[proxy], credited, string.concat(step, ": INV-008"));
-    }
-
-    function _depositorCharges(
-        address depositor
-    ) internal view returns (uint256 sum) {
-        for (uint256 i = 0; i < mMarket.length; ++i) {
-            if (mRec[mMarket[i]].depositor == depositor) sum += mRec[mMarket[i]].currentCharge;
-        }
     }
 
     function _mRebaseDown(

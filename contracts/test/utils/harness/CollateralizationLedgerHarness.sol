@@ -84,7 +84,6 @@ contract CollateralizationLedgerHarness is CollateralizationLedger {
         marketUsd[VT][Bucket.Slice] += slice;
         tokenUsd[HUB][TOKEN0] += charge;
         tokenUsd[HUB][TOKEN1] += charge;
-        depositorUsd[HUB][address(uint160(0xD0D0))] += charge;
     }
 
     function debit(

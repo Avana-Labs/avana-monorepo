@@ -1,14 +1,15 @@
 {
   "name": "caps-back",
-  "description": "loosen the depositor cap back to its value, one x1.5 step per normal delay",
+  "description": "reopen the stable Hub's USDT cap from 0 to $1,000, then back to its value in x1.5 steps, one per normal delay",
   "via": "timelock",
   "restores": "caps-forward",
   "changes": [
     {
       "contract": "ParameterStore",
-      "function": "loosenDepositorUsdCap",
+      "function": "loosenTokenUsdCap",
       "args": {
         "hub": "hub:stable",
+        "token": "token:USDT",
         "value": "$prior"
       },
       "steps": true

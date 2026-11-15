@@ -17,7 +17,7 @@ import {OcrAggregatorMock} from "../utils/mocks/ChainlinkCostMocks.sol";
 /// least that, so a poke at `pokeMinGas` never reverts `InsufficientGas` and every read receives its full gas.
 contract LPOraclePokeFloorGasTest is LPOracleGasFixture {
     /// @notice `POKE_MIN_GAS_FLOOR` of a two-token concentrated-liquidity implementation on Ethereum (`SPEC-ORC-023`).
-    uint256 internal constant POKE_MIN_GAS_FLOOR_2 = 900_000;
+    uint256 internal constant POKE_MIN_GAS_FLOOR_2 = 1_000_000;
 
     function setUp() public {
         // Floor 1: the implementation under measurement accepts any entry gas, so the measured minimum is the poke's

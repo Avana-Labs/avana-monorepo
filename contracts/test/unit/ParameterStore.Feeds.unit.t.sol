@@ -504,7 +504,7 @@ contract ParameterStoreFeedsTwapUnitTest is ParameterStoreFixture {
         s = IParameterStore(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 0, 10_000))
+                    address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 10_000))
                 )
             )
         );
