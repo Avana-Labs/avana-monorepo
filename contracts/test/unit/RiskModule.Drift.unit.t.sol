@@ -96,8 +96,9 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         rHub.setActive(VT_ASSET, address(spoke), true, true);
         _expectDrift(mid, DriftReason.SpokeHalted);
         rHub.setActive(VT_ASSET, address(spoke), true, false);
+        // A paused vault-token reserve is not drift: the market's own gates refuse it (REQ-RISK-014).
         _vtConfig(false, false, true);
-        _expectDrift(mid, DriftReason.SpokeHalted);
+        riskModule.checkAaveConfig(address(spoke), _ids());
     }
 
     // TEST-182 verifies: REQ-ADAPTER-063, REQ-ADAPTER-064, REQ-RISK-088

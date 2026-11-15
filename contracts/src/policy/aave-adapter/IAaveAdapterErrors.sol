@@ -173,4 +173,11 @@ interface IAaveAdapterErrors {
     /// @param logic The refused logic contract.
     /// @custom:spec REQ-ADAPTER-004
     error InvalidLogic(address logic);
+
+    /// @notice A repay step reached the RiskModule's speed credit with less gas than its stipend needs, so the credit
+    /// could be starved; the repay reverts instead of skipping it.
+    /// @param gasLeft Gas left before the call.
+    /// @param required `SPEED_CREDIT_FLOOR`.
+    /// @custom:spec REQ-RISK-005, REQ-RISK-092
+    error InsufficientGas(uint256 gasLeft, uint256 required);
 }

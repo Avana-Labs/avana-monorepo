@@ -422,7 +422,15 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256[] memory caps = new uint256[](1);
         caps[0] = g;
         vm.expectCall(address(registry), "", 0);
-        vm.expectCall(address(risk), "", 0);
+        // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.pokeBreakers.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.pokeConfig.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkAaveConfig.selector), 0);
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, ids, caps, _deadline());
         assertEq(lpVault.ownerOf(k1), alice, "exit completed");

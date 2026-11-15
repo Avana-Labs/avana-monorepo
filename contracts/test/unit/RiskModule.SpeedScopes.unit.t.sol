@@ -63,17 +63,17 @@ contract RiskModuleSpeedScopesUnitTest is RiskModuleFixture {
         assertEq(m.used, 150_000 * E8, "the market window counts every reserve");
         assertEq(d.used, 150_000e18, "the (hub2, DAI) window is charged");
         assertEq(g.used, 0, "the (home Hub, GHO) window is not");
-        // DAI room left: 50 % of (400,000 − 150,000) = 125,000 limit, 150,000 used: none.
+        // DAI room left: 50 % of the window-start base 400,000 = 200,000 limit, 150,000 used: 50,000.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IRiskModuleErrors.DebtSpeedExceeded.selector,
                 address(hub2),
                 address(tDai),
-                uint256(0),
+                uint256(50_000e18),
                 uint64(block.timestamp + 2 * TAU)
             )
         );
-        _borrow(DAI_RESERVE, 1e18);
+        _borrow(DAI_RESERVE, 50_001e18);
         // GHO still has its own room under the shared market window.
         _borrow(GHO_RESERVE, 100_000e18);
     }
@@ -118,8 +118,8 @@ contract RiskModuleSpeedScopesUnitTest is RiskModuleFixture {
         riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), TEN_K, k, false);
         coll.setCounters(k);
         SpeedView memory p = riskModule.getPledgeSpeed(mid);
-        // 25 % of ($8,000,000 − $20,000) = $1,995,000.
-        assertEq(p.limit, 1_995_000e8);
+        // 25 % of the window-start base $8,000,000 = $2,000,000.
+        assertEq(p.limit, 2_000_000e8);
         assertEq(p.used, 20_000e8);
     }
 

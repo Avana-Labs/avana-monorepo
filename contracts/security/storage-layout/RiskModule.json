@@ -18,7 +18,7 @@
           "path": "marketBorrow[]",
           "slot": "0",
           "offset": 0,
-          "bytes": "32",
+          "bytes": "64",
           "type": "struct SpeedWindow"
         },
         {
@@ -43,6 +43,20 @@
           "type": "uint96"
         },
         {
+          "path": "marketBorrow[].base",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "31",
+          "type": "uint248"
+        },
+        {
+          "path": "marketBorrow[].opened",
+          "slot": "1",
+          "offset": 31,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
           "path": "debtBorrow",
           "slot": "1",
           "offset": 0,
@@ -53,7 +67,7 @@
           "path": "debtBorrow[]",
           "slot": "0",
           "offset": 0,
-          "bytes": "32",
+          "bytes": "64",
           "type": "struct SpeedWindow"
         },
         {
@@ -78,6 +92,20 @@
           "type": "uint96"
         },
         {
+          "path": "debtBorrow[].base",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "31",
+          "type": "uint248"
+        },
+        {
+          "path": "debtBorrow[].opened",
+          "slot": "1",
+          "offset": 31,
+          "bytes": "1",
+          "type": "bool"
+        },
+        {
           "path": "marketPledge",
           "slot": "2",
           "offset": 0,
@@ -88,7 +116,7 @@
           "path": "marketPledge[]",
           "slot": "0",
           "offset": 0,
-          "bytes": "32",
+          "bytes": "64",
           "type": "struct SpeedWindow"
         },
         {
@@ -111,6 +139,20 @@
           "offset": 20,
           "bytes": "12",
           "type": "uint96"
+        },
+        {
+          "path": "marketPledge[].base",
+          "slot": "1",
+          "offset": 0,
+          "bytes": "31",
+          "type": "uint248"
+        },
+        {
+          "path": "marketPledge[].opened",
+          "slot": "1",
+          "offset": 31,
+          "bytes": "1",
+          "type": "bool"
         }
       ]
     },

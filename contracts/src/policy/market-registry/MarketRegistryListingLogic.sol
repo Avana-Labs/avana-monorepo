@@ -151,7 +151,7 @@ contract MarketRegistryListingLogic is
             // approved route and status of the cancelled registration; its breaker latch and breach time are cleared.
             l.routeEpoch[marketId] += 1;
             delete l.latched[bytes32(marketId)];
-            delete l.lastBreachAt[bytes32(marketId)];
+            _clearBreachTimes(l, bytes32(marketId));
         }
         try IRiskModuleChecks(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
         catch {

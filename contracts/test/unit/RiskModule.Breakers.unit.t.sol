@@ -66,11 +66,11 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         _report(uint64(block.timestamp), 97_000_000, 100_000_000);
         (uint32 reasons, uint64 reopensAt) = riskModule.getBreakerStatus(mid);
         assertEq(reopensAt, start + 600 + 1800);
-        assertEq(reasons, BreakerReasons.TEMPORARY);
+        assertEq(reasons, BreakerReasons.POOL_SHARE, "only the recorded reason recovers");
         vm.warp(start + 600 + 1799);
         _report(uint64(block.timestamp), 97_000_000, 100_000_000);
         vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.TEMPORARY)
+            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_SHARE)
         );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         vm.warp(start + 600 + 1800);
@@ -104,11 +104,9 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         rVault.setDepth(2e13, true);
         oracle.setState(PriceState.Drifting, 1 << 3, false);
         assertEq(riskModule.pokeBreakers(mid), BreakerReasons.ORACLE);
-        // The oracle gate recovers 1,800 s after the last poke that saw it.
+        // The oracle gate recovers 1,800 s after the last poke that saw it, alone.
         oracle.setState(PriceState.Live, 0, true);
-        vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.TEMPORARY)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.ORACLE));
         riskModule.preWithdrawCheck(address(proxy));
     }
 
