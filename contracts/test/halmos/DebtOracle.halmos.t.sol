@@ -167,12 +167,17 @@ contract DebtOracleHalmosTest is Test {
     // (A <= b < 1e12). In each case the route order and validity are fixed, so every comparison deciding the state,
     // the served route and `deviationBps` has one feasible side, and the timestamp and legs asserted are constants:
     // `Below` can only serve A (no legs), `Above` only the primary. The single check with b symbolic over all of
-    // uint40 was cancelled at the 6-hour job limit in run 43492412351 with no result.
+    // uint40 was cancelled at the 6-hour job limit in run 43492412351 with no result. `Below` and `Above` check the
+    // drift assertions on every return and leave the revert case to
+    // `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternate`, which proves over every uint40 that the call
+    // reverts only with `InsufficientGas`. Together they assert what one check with both parts asserts. With both
+    // parts, `Below` and `Above` did not finish in 1 hour (run 43742353540); the drift assertions alone finish in
+    // about 2 minutes (run 43766285060).
     function check_PROP_074_driftingTimestampFollowsAlternateInvalid(
         uint40 bAnswer
     ) public {
         vm.assume(bAnswer == 0 || bAnswer >= MAX_ANSWER);
-        _driftTimestamps(uint40(A), bAnswer);
+        _driftTimestamps(uint40(A), bAnswer, true);
     }
 
     // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
@@ -183,7 +188,7 @@ contract DebtOracleHalmosTest is Test {
         uint32 bAnswer
     ) public {
         vm.assume(bAnswer > 0 && bAnswer < A);
-        _driftTimestamps(uint40(A), uint40(bAnswer));
+        _driftTimestamps(uint40(A), uint40(bAnswer), false);
     }
 
     // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
@@ -193,7 +198,7 @@ contract DebtOracleHalmosTest is Test {
         uint40 bAnswer
     ) public {
         vm.assume(bAnswer >= A && bAnswer < MAX_ANSWER);
-        _driftTimestamps(uint40(A), bAnswer);
+        _driftTimestamps(uint40(A), bAnswer, false);
     }
 
     // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
@@ -201,11 +206,13 @@ contract DebtOracleHalmosTest is Test {
     // served, the accepted timestamp and no legs when A is. Split by branch as the alternate checks, the three ranges
     // together being every uint40: `Invalid` (p = 0 or p >= 1e12), `Below` (0 < p < 0.95) and `Above`
     // (0.95 <= p < 1e12). The lower route is at most 0.95 < A in every case, so a disagreement always serves A.
+    // The revert case of `Below` and `Above` is `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAccepted`,
+    // as for the alternate checks.
     function check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedInvalid(
         uint40 pAnswer
     ) public {
         vm.assume(pAnswer == 0 || pAnswer >= MAX_ANSWER);
-        _driftTimestamps(pAnswer, B_FIXED);
+        _driftTimestamps(pAnswer, B_FIXED, true);
     }
 
     // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
@@ -215,7 +222,7 @@ contract DebtOracleHalmosTest is Test {
         uint32 pAnswer
     ) public {
         vm.assume(pAnswer > 0 && pAnswer < B_FIXED);
-        _driftTimestamps(uint40(pAnswer), B_FIXED);
+        _driftTimestamps(uint40(pAnswer), B_FIXED, false);
     }
 
     // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
@@ -224,16 +231,54 @@ contract DebtOracleHalmosTest is Test {
         uint40 pAnswer
     ) public {
         vm.assume(pAnswer >= B_FIXED && pAnswer < MAX_ANSWER);
-        _driftTimestamps(pAnswer, B_FIXED);
+        _driftTimestamps(pAnswer, B_FIXED, false);
+    }
+
+    // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: the revert case of `check_PROP_074_driftingTimestampFollowsAlternateBelow` and `...Above`, over every
+    // uint40 (it holds the ranges of `Invalid`, `Below` and `Above`): with the drift checks' routes and timestamps,
+    // `getPriceState()` reverts only with `InsufficientGas`. Over every uint40 there is no range assumption, as in
+    // `check_PROP_074_servedDebtPriceAgainstFixedPrimary`, which proves the same of `latestAnswer()`.
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternate(
+        uint40 bAnswer
+    ) public {
+        _driftPush(uint40(A), bAnswer);
+        try oracle.getPriceState() returns (DebtPriceView memory) {}
+        catch (bytes memory err) {
+            _onlyGasRevert(err);
+        }
+    }
+
+    // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: the revert case of `check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedBelow` and `...Above`, as
+    // `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternate`.
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAccepted(
+        uint40 pAnswer
+    ) public {
+        _driftPush(pAnswer, B_FIXED);
+        try oracle.getPriceState() returns (DebtPriceView memory) {}
+        catch (bytes memory err) {
+            _onlyGasRevert(err);
+        }
     }
 
     /// @dev Primary at `T0 - 80`, alternate at `T0 - 50`, accepted `A` at `T0 - 100`.
-    function _driftTimestamps(
+    function _driftPush(
         uint40 pAnswer,
         uint40 bAnswer
     ) internal {
         primary.push(int256(uint256(pAnswer)), T0 - 80);
         alternate.push(int256(uint256(bAnswer)), T0 - 50);
+    }
+
+    /// @dev The drift assertions on every return of `getPriceState()`; with `revertChecked`, also that it reverts
+    /// only with `InsufficientGas` (otherwise a revert is checked by a `driftingTimestampsRevertOnlyForGas` check).
+    function _driftTimestamps(
+        uint40 pAnswer,
+        uint40 bAnswer,
+        bool revertChecked
+    ) internal {
+        _driftPush(pAnswer, bAnswer);
         try oracle.getPriceState() returns (DebtPriceView memory v) {
             if (v.state == PriceState.Drifting) {
                 uint256 p = pAnswer;
@@ -252,7 +297,7 @@ contract DebtOracleHalmosTest is Test {
                 }
             }
         } catch (bytes memory err) {
-            _onlyGasRevert(err);
+            if (revertChecked) _onlyGasRevert(err);
         }
     }
 
