@@ -130,9 +130,6 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     mapping(bytes32 poolKey => uint256) internal _poolUnits;
     /// @notice Exposure per (Hub, market token), USD 8 decimals.
     mapping(address hub => mapping(address token => uint256)) internal tokenUsd;
-    /// @notice Retired: never written or read since the per-depositor cap was removed; kept so the storage layout does
-    /// not change.
-    mapping(address hub => mapping(address depositor => uint256)) internal depositorUsd;
     /// @notice Whether an account has had debt since its last `markDebtFree` (Q-355).
     mapping(address proxy => bool) internal indebted;
     /// @notice Accounts of a market carrying the indebted mark.

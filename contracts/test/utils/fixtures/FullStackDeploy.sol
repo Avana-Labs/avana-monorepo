@@ -377,7 +377,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         ParameterStore impl = new ParameterStore(tl, registryAddr, BLOCK_TIME, false, l);
         AdapterPlaceholder(storeAddr)
             .upgradeToAndCall(
-                address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _globals(), 0, POOL_SHARE_MAX_BPS))
+                address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _globals(), POOL_SHARE_MAX_BPS))
             );
         store = IParameterStore(storeAddr);
     }

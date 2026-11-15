@@ -1003,11 +1003,6 @@ export const parameterStoreAbi = [
         ]
       },
       {
-        "name": "initialDepositorUsdCap",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "initialPoolShareMaxBps",
         "type": "uint16",
         "internalType": "uint16"

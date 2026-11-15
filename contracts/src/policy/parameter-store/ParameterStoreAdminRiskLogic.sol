@@ -66,14 +66,12 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
 
     /// @notice Body of `IParameterStoreAdmin.initialize`: checks and writes the chain and global values; the
     /// ParameterStore has already run `initializer` and granted the admin roles to `TIMELOCK`.
-    /// @dev `initialDepositorUsdCap` must be 0: there is no per-depositor cap.
-    /// The sequencer check starts empty (`address(0)`, 0), Ethereum's value; on an L2 the first batch calls
+    /// @dev The sequencer check starts empty (`address(0)`, 0), Ethereum's value; on an L2 the first batch calls
     /// `setSequencer`.
     /// @custom:spec REQ-PSTORE-001, REQ-CONFIG-050, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-023, REQ-PSTORE-030
     function initialize(
         address,
         GlobalParams calldata params,
-        uint256 initialDepositorUsdCap,
         uint16 initialPoolShareMaxBps
     ) external {
         _onlyDelegated();
@@ -86,7 +84,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
                 || params.maxFlashFeeBps > FLASH_FEE_MAX_BPS || params.avanaFeeShareBps > FEE_SHARE_MAX_BPS
                 || params.feedAgreementMarginBps > BPS || params.gateRecoverySeconds < GATE_RECOVERY_MIN
                 || params.gateRecoverySeconds > GATE_RECOVERY_MAX || params.maxShortfallBps > SHORTFALL_MAX_BPS
-                || initialDepositorUsdCap != 0 || initialPoolShareMaxBps == 0 || initialPoolShareMaxBps > BPS
+                || initialPoolShareMaxBps == 0 || initialPoolShareMaxBps > BPS
         ) revert OutOfBounds();
         _requireFeeRecipient(params.feeRecipient);
         _s().g = params;

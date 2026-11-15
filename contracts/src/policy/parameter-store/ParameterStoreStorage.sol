@@ -38,8 +38,6 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(uint256 marketId => uint256) topUpSliceUsd;
         mapping(uint256 marketId => uint256) stressFloorUsd;
         mapping(address hub => mapping(address token => uint256)) tokenUsdCap;
-        // Retired: the per-depositor cap was removed; never written or read. Kept so later fields keep their slots.
-        mapping(address hub => uint256) depositorUsdCap;
         mapping(bytes32 poolKey => uint16) poolShareOverride;
         mapping(address token => uint16) tokenCollateralFactorBps;
         mapping(address token => uint16) feedAgreementToleranceBps;

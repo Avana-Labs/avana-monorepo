@@ -260,22 +260,8 @@
           "type": "uint256"
         },
         {
-          "path": "depositorUsdCap",
-          "slot": "14",
-          "offset": 0,
-          "bytes": "32",
-          "type": "mapping(address => uint256)"
-        },
-        {
-          "path": "depositorUsdCap[]",
-          "slot": "0",
-          "offset": 0,
-          "bytes": "32",
-          "type": "uint256"
-        },
-        {
           "path": "poolShareOverride",
-          "slot": "15",
+          "slot": "14",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(bytes32 => uint16)"
@@ -289,7 +275,7 @@
         },
         {
           "path": "tokenCollateralFactorBps",
-          "slot": "16",
+          "slot": "15",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => uint16)"
@@ -303,7 +289,7 @@
         },
         {
           "path": "feedAgreementToleranceBps",
-          "slot": "17",
+          "slot": "16",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => uint16)"
@@ -317,7 +303,7 @@
         },
         {
           "path": "secondSource",
-          "slot": "18",
+          "slot": "17",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => struct SecondSource)"
@@ -373,7 +359,7 @@
         },
         {
           "path": "standby",
-          "slot": "19",
+          "slot": "18",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => struct SecondSource)"
@@ -429,7 +415,7 @@
         },
         {
           "path": "onStandby",
-          "slot": "20",
+          "slot": "19",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => bool)"
@@ -443,7 +429,7 @@
         },
         {
           "path": "feeds",
-          "slot": "21",
+          "slot": "20",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => struct FeedDef)"
@@ -534,7 +520,7 @@
         },
         {
           "path": "routeDepth",
-          "slot": "22",
+          "slot": "21",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(bytes32 => uint256)"
@@ -548,7 +534,7 @@
         },
         {
           "path": "floorRoundingAllowance",
-          "slot": "23",
+          "slot": "22",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => uint256)"
@@ -562,7 +548,7 @@
         },
         {
           "path": "breakerDeficitMax",
-          "slot": "24",
+          "slot": "23",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => mapping(address => uint256))"
@@ -583,7 +569,7 @@
         },
         {
           "path": "debtStressRiseBps",
-          "slot": "25",
+          "slot": "24",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => uint16)"
@@ -597,7 +583,7 @@
         },
         {
           "path": "targetHealthFactor",
-          "slot": "26",
+          "slot": "25",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => uint256)"
@@ -611,7 +597,7 @@
         },
         {
           "path": "minLiquidationBonus",
-          "slot": "27",
+          "slot": "26",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => uint16)"
@@ -625,7 +611,7 @@
         },
         {
           "path": "lastLoosenedAt",
-          "slot": "28",
+          "slot": "27",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(bytes32 => uint64)"
@@ -639,7 +625,7 @@
         },
         {
           "path": "marketSpeed",
-          "slot": "29",
+          "slot": "28",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(uint256 => struct MarketSpeedLimits)"
@@ -702,7 +688,7 @@
         },
         {
           "path": "debtSpeed",
-          "slot": "30",
+          "slot": "29",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => mapping(address => struct SpeedLimit))"
@@ -751,7 +737,7 @@
         },
         {
           "path": "unbanded",
-          "slot": "31",
+          "slot": "30",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(uint256 => bool)"
@@ -765,7 +751,7 @@
         },
         {
           "path": "tokenCapSet",
-          "slot": "32",
+          "slot": "31",
           "offset": 0,
           "bytes": "32",
           "type": "mapping(address => mapping(address => bool))"

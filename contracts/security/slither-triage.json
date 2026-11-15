@@ -4864,13 +4864,6 @@
       "reason": "The RiskModule speed credit after each repay step; repayAllAndWithdraw runs one step per debt reserve it names, bounded by the Spoke's per-account reserve limit (REQ-ADAPTER-051). The call has a fixed stipend inside a try/catch, so a failing or slow RiskModule cannot stop the loop (REQ-RISK-005). Covered by TEST-326."
     },
     {
-      "fingerprint": "6b46d2286bfaa3d0",
-      "check": "unused-state",
-      "file": "src/custody/collateralization/CollateralizationBase.sol",
-      "function": "",
-      "reason": "depositorUsd is retired: the per-depositor cap and its counter were removed, so nothing writes or reads it. The mapping stays declared so every later state variable of Collateralization keeps its storage slot."
-    },
-    {
       "fingerprint": "6b2e985cbb17fff9",
       "check": "unused-state",
       "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",

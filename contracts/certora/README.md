@@ -347,7 +347,7 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 | `PROP-026` | Halmos | LPOracle.spec | `agreementCheckIsSymmetric` |
 | `PROP-027` | Certora | LPOracle.spec | `latestAnswerAlwaysServesOnceSeeded` |
 | `PROP-028` | Halmos | Collateralization.spec | `recreditRebasesChargeBasis`, `exitChargeFollowsFixedBasis` |
-| `PROP-029` | Certora | Collateralization.spec | `marketExposureMatchesRecords`, `tokenExposureMatchesRecords`, `depositorExposureMatchesRecords` |
+| `PROP-029` | Certora | Collateralization.spec | `marketExposureMatchesRecords`, `tokenExposureMatchesRecords` |
 | `PROP-030` | Halmos | RiskModule.spec | `pledgeBudgetFitsAddCap`, `partialExitsKeepBookingAboveFloor` |
 | `PROP-031` | Certora | AaveAdapterGates.spec, RiskModule.spec | `borrowEnforcesGates`, `borrowNonceOneSuccessEach`, `borrowNonceChangesOnlyInBorrow`, `borrowIsReachable`, `withdrawLeavingDebtEnforcesFloor`, `removeLiquidityLeavingDebtEnforcesFloor`; `preBorrowCheckCollateralGates`, `preBorrowCheckDebtGates`, `preWithdrawCheckFreshnessGates`, `preWithdrawCheckAllowsFrozenCollateral`, `preBorrowCheckIsReachable` |
 | `PROP-032` | Certora | Collateralization.spec, LPVault.spec, AaveAdapterGates.spec | `exitsMakeNoPolicyCall`; `collectFeesPaysOnlyDepositor`; `repayMakesNoPolicyRead`, `debtFreeWithdrawMakesNoPolicyRead`, `debtFreeRemovalMakesNoPolicyRead`, `repayAllAndWithdrawMakesNoPolicyRead`, `repayAtZeroDebtIsNoop`, `repayIsReachableInEveryPauseState` |

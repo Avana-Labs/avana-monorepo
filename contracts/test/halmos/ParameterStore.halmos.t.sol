@@ -70,9 +70,7 @@ contract ParameterStoreHalmosTest is Test {
         g.maxShortfallBps = 1000;
         store = IParameterStore(
             address(
-                new ERC1967Proxy(
-                    address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (TIMELOCK, g, 0, 10_000))
-                )
+                new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (TIMELOCK, g, 10_000)))
             )
         );
         MockIntegration integration = new MockIntegration();

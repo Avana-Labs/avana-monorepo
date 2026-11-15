@@ -66,7 +66,7 @@ methods {
     function setGraceHealthFactor(uint256) external;
     function setSlippageAllowanceMinBps(uint256, uint16) external;
     function setInitialMarketParams(uint256, ParameterStore.MarketParams) external;
-    function initialize(address, ParameterStore.GlobalParams, uint256, uint16) external;
+    function initialize(address, ParameterStore.GlobalParams, uint16) external;
 
     function hasRole(bytes32, address) external returns (bool) envfree;
     function getRoleAdmin(bytes32) external returns (bytes32) envfree;
@@ -363,7 +363,7 @@ rule capStepArithmeticFits(mathint cap, mathint value) {
 // PROP-034 verifies: INV-051, Q-226, Q-228
 rule settersNeedApplicationAdmin(method f) filtered {
     f -> !f.isView && !isRoleCall(f) && routerEntry(f)
-        && f.selector != sig:initialize(address, ParameterStore.GlobalParams, uint256, uint16).selector
+        && f.selector != sig:initialize(address, ParameterStore.GlobalParams, uint16).selector
 } {
     env e;
     calldataarg args;

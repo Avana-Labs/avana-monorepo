@@ -36,11 +36,9 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     function _init(
         GlobalParams memory g,
-        uint256 depositorCap,
         uint16 poolShare
     ) internal returns (bool ok, bytes memory err, IParameterStore s) {
-        bytes memory data =
-            abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, depositorCap, poolShare));
+        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, poolShare));
         try new ERC1967Proxy(address(impl), data) returns (ERC1967Proxy p) {
             (ok, s) = (true, IParameterStore(address(p)));
         } catch (bytes memory reason) {
@@ -52,7 +50,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         GlobalParams memory g,
         bytes memory expected
     ) internal {
-        (bool ok, bytes memory err,) = _init(g, 0, 10_000);
+        (bool ok, bytes memory err,) = _init(g, 10_000);
         assertFalse(ok, "initialize accepted an out-of-bounds value");
         assertEq(err, expected, "wrong initialize error");
     }
@@ -61,7 +59,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         GlobalParams memory g
     ) internal returns (IParameterStore s) {
         bool ok;
-        (ok,, s) = _init(g, 0, 10_000);
+        (ok,, s) = _init(g, 10_000);
         assertTrue(ok, "initialize refused an in-bounds value");
     }
 
@@ -179,24 +177,18 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-026, REQ-RISK-042, Q-403
-    function test_TEST_242_depositorCapAndPoolShareEdges() public {
+    function test_TEST_242_poolShareEdges() public {
         GlobalParams memory g = _defaultGlobals();
-        (bool ok, bytes memory err, IParameterStore s) = _init(g, 1, 10_000);
+        (bool ok, bytes memory err, IParameterStore s) = _init(g, 0);
         assertFalse(ok);
         assertEq(err, oob);
-        (ok, err,) = _init(g, type(uint256).max, 10_000);
+        (ok, err,) = _init(g, 10_001);
         assertFalse(ok);
         assertEq(err, oob);
-        (ok, err,) = _init(g, 0, 0);
-        assertFalse(ok);
-        assertEq(err, oob);
-        (ok, err,) = _init(g, 0, 10_001);
-        assertFalse(ok);
-        assertEq(err, oob);
-        (ok,, s) = _init(g, 0, 1);
+        (ok,, s) = _init(g, 1);
         assertTrue(ok);
         assertEq(s.poolShareMaxBps(), 1);
-        (ok,, s) = _init(g, 0, 10_000);
+        (ok,, s) = _init(g, 10_000);
         assertTrue(ok);
         assertEq(s.poolShareMaxBps(), 10_000);
     }
@@ -230,7 +222,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         g.cachedWindow = 3600;
         _refused(g, abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, address(0)));
         // The timelock argument is checked before any value.
-        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, g, 1, 0));
+        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, g, 0));
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
         new ERC1967Proxy(address(impl), data);
     }
@@ -240,7 +232,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-023, REQ-ACCESS-153, REQ-ACCESS-150
     function test_TEST_242_initializeGrantsRolesAndEmits() public {
         bytes memory data =
-            abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), _defaultGlobals(), 0, 10_000));
+            abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), _defaultGlobals(), 10_000));
         vm.expectEmit();
         emit IAccessControl.RoleGranted(bytes32(0), address(timelock), address(this));
         vm.expectEmit();
@@ -309,13 +301,13 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-150, REQ-ACCESS-031
     function test_TEST_242_implementationCannotBeInitialized() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
+        impl.initialize(address(timelock), _defaultGlobals(), 10_000);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        implementation.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
+        implementation.initialize(address(timelock), _defaultGlobals(), 10_000);
         // A second initialize of the live proxy fails the same way, as the timelock too.
         _tl();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        store.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
+        store.initialize(address(timelock), _defaultGlobals(), 10_000);
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052
@@ -347,7 +339,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
             adminRisk: address(new ParameterStoreAdminRiskLogic(tl, noCode, BLOCK_TIME, false))
         });
         ParameterStore early = new ParameterStore(tl, noCode, BLOCK_TIME, false, l);
-        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 0, 10_000));
+        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 10_000));
         IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(early), data)));
         assertEq(s.feeRecipient(), feeRecipient);
     }

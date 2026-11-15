@@ -80,13 +80,13 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, Q-259, REQ-ACCESS-150
     function test_TEST_242_initializeRefusesOtherTimelockAndRunsOnce() public {
         ParameterStore impl = new ParameterStore(address(timelock), address(registry), 12, false, logics);
-        bytes memory bad = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, _defaultGlobals(), 0, 10_000));
+        bytes memory bad = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, _defaultGlobals(), 10_000));
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
         new ERC1967Proxy(address(impl), bad);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        store.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
+        store.initialize(address(timelock), _defaultGlobals(), 10_000);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
+        impl.initialize(address(timelock), _defaultGlobals(), 10_000);
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-PSTORE-030, REQ-PSTORE-018
@@ -94,22 +94,21 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         ParameterStore impl = new ParameterStore(address(timelock), address(registry), 12, false, logics);
         GlobalParams memory g = _defaultGlobals();
         g.gateRecoverySeconds = 599;
-        _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.OutOfBounds.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.OutOfBounds.selector);
         g = _defaultGlobals();
         g.graceHealthFactor = 0.89e18;
-        _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.LivenessBound.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.LivenessBound.selector);
         g = _defaultGlobals();
         g.graceDuration = 7201;
-        _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.LivenessBound.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.LivenessBound.selector);
         g = _defaultGlobals();
         g.maxShortfallBps = 5001;
-        _expectInitRevert(impl, g, 0, 10_000, IParameterStoreErrors.OutOfBounds.selector);
-        _expectInitRevert(impl, _defaultGlobals(), 1, 10_000, IParameterStoreErrors.OutOfBounds.selector);
-        _expectInitRevert(impl, _defaultGlobals(), 0, 0, IParameterStoreErrors.OutOfBounds.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.OutOfBounds.selector);
+        _expectInitRevert(impl, _defaultGlobals(), 0, IParameterStoreErrors.OutOfBounds.selector);
         g = _defaultGlobals();
         g.feeRecipient = address(0);
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, address(0)));
-        new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 0, 1)));
+        new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 1)));
         // Initial values read back.
         assertEq(store.gateRecoverySeconds(), 1800);
         assertEq(store.maxShortfallBps(), 1000);
@@ -123,14 +122,11 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
     function _expectInitRevert(
         ParameterStore impl,
         GlobalParams memory g,
-        uint256 dep,
         uint16 share,
         bytes4 err
     ) internal {
         vm.expectRevert(err);
-        new ERC1967Proxy(
-            address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, dep, share))
-        );
+        new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, share)));
     }
 
     // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-CONFIG-058, REQ-PSTORE-029, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-025, REQ-ACCESS-111
@@ -320,7 +316,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         assertEq(refused, calls.length - 1);
         GlobalParams memory g = _defaultGlobals();
         (bool done, bytes memory r) =
-            logics.adminRisk.call(abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 0, 10_000)));
+            logics.adminRisk.call(abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 10_000)));
         assertFalse(done);
         assertEq(r, notDelegated);
         (done, r) = logics.adminOracle.call(abi.encodeWithSignature("getOracleConfig(address)", address(lpOracle)));
