@@ -4,11 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
