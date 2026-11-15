@@ -1471,8 +1471,8 @@ async function failoverDrill(e: Env) {
     await e.rpc("evm_setAutomine", [true]).catch(() => undefined);
     // The keeper's breaker pokes during the crash record a breach on these markets: a latched reason is reset, as the
     // Aave Protocol Guardian would, and the breach keeps the breaker TEMPORARY for the recovery time after it. The
-    // closed gate is recorded, the clock then passes the recovery time, and the gate must be open again, so the
-    // scenarios after this one pledge on these markets again.
+    // closed gate is recorded, the clock then passes the recovery time, the crashed prices are restored, and the gate
+    // must then be open, so the scenarios after this one pledge on these markets again.
     const recovery = BigInt(e.ctx.config.parameters?.globals?.gateRecoverySeconds ?? 1800);
     const riskModule = e.ctx.manifest.avana.riskModule.address as Address;
     const status = async (marketId: bigint) =>
@@ -1493,14 +1493,17 @@ async function failoverDrill(e: Env) {
         await e.advance(Number(lastBreach + recovery - now) + 1);
         notes.push(`clock moved past the ${recovery} s recovery`);
       }
-      const [open, reopensAt] = await status(m.marketId);
-      notes.push(`reasons now ${open}`);
-      if (Number(open) !== 0) breakerFaults.push(`${m.name}: breaker reasons ${open} still set after the recovery (reopening at ${reopensAt})`);
       n[`${m.name}.breaker`] = notes.join("; ");
     }
+    n.restored = await e.settle();
+    for (const m of [um, sm]) {
+      const [open, reopensAt] = await status(m.marketId);
+      n[`${m.name}.breaker`] += `; reasons after the prices are restored ${open}`;
+      if (Number(open) !== 0) breakerFaults.push(`${m.name}: breaker reasons ${open} still set after the recovery and the price restore (reopening at ${reopensAt})`);
+    }
     rmSync(dir, { recursive: true, force: true });
-    // The whole keeper log, kept for reading after a failure.
-    n.log = joinPath(tmpdir(), `keeper-drill-${Date.now()}.log`);
+    // The whole keeper log, kept with the run's logs for reading after a failure.
+    n.log = joinPath(e.ctx.out, "logs", "keeper-drill.log");
     write(n.log, log.map((l) => `${l}\n`).join(""));
   }
 
@@ -1535,7 +1538,7 @@ async function failoverDrill(e: Env) {
     ok = false;
     detail.push(...breakerFaults);
   }
-  if (!ok) detail.push(`keeper log tail: ${log.slice(-3).join(" | ").slice(0, 600)}`);
+  if (!ok) detail.push(`keeper liquidation attempts, last 4: ${log.filter((l) => l.includes('"job":"liquidation"')).slice(-4).join(" | ").slice(0, 1200)}`);
   return { ok, detail: detail.join("; ") };
 }
 
