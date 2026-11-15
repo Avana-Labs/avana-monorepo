@@ -260,6 +260,43 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _pledge(TEN_K, k, false);
     }
 
+    // TEST-272 verifies: REQ-RISK-022, REQ-RISK-042, REQ-RISK-066, SPEC-CAP-002, SPEC-CAP-003
+    /// @notice USDT's token cap tightened to 0 with $500,000 of USDT exposure booked and the market's regular budget
+    /// almost empty: a new-account pledge and a healthy top-up are refused `CapExceeded(TOKEN)`, while an eligible
+    /// top-up within the restore amount is charged entirely to the slice and passes. With token room short of the
+    /// charge, the slice takes the rest; the slice cap still binds.
+    function test_TEST_272_zeroTokenCapLeavesRescueTopUpsToTheSlice() public {
+        store.setTokenCap(address(hub), address(usdt), 0);
+        PledgeCounters memory k = _counters();
+        k.regularUsed = 100_000e8;
+        k.tokenUsed[0] = 500_000e8;
+        k.tokenUsed[1] = 500_000e8;
+        // New account.
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(TEN_K, k, false);
+        // Healthy top-up: not eligible for the slice.
+        _debt(1.2e18, 1000);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(TEN_K, k, false);
+        // Rescue top-up: the whole $20,000 goes to the slice although the market has $900,000 of regular room.
+        _debt(1.02e18, 1_000_000);
+        PledgeCharge memory c = _pledge(TEN_K, k, false);
+        assertEq(c.usdCharge, 20_000e8, "charge");
+        assertEq(c.sliceUsd, 20_000e8, "all in the slice");
+        assertFalse(c.rescue);
+        assertEq(c.rescueUnits, TEN_K, "every unit is a rescue unit");
+        // USDC with $5,000 of room and USDT reopened with $8,000: the regular part is the smaller room.
+        store.setTokenCap(address(hub), address(usdc), 505_000e8);
+        store.setTokenCap(address(hub), address(usdt), 508_000e8);
+        c = _pledge(TEN_K, k, false);
+        assertEq(c.sliceUsd, 15_000e8, "slice takes what the tightest token refuses");
+        assertEq(c.rescueUnits, TEN_K * 3 / 4);
+        // The slice cap still binds.
+        k.sliceUsed = 90_000e8;
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("SLICE")));
+        _pledge(TEN_K, k, false);
+    }
+
     // TEST-034 verifies: REQ-RISK-023, SPEC-CAP-005, REQ-RISK-052
     // Sources: 2.7 SPEC-CAP-005 example (cap 1,000 bps, depth 2e13, U = 1.5e12)
     function test_TEST_034_poolShareCap() public {
