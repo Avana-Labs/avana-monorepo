@@ -1432,10 +1432,33 @@ async function failoverDrill(e: Env) {
       if (hf > hfMax) hfMax = hf;
     }
     const bps = Env.crashBpsFor(hfMax, 85n * 10n ** 16n, 7_000n);
+    // The keeper's startup transactions (an oracle poke per oracle) are mined and handled before the crash: with
+    // automine on, each mines its own block, and blocks still coming during the crash would count against the window.
+    for (let i = 0; i < 20; i++) {
+      const head = await e.ctx.client.getBlockNumber();
+      await keeperAt(head, 15_000);
+      await sleep(1_000);
+      if ((await e.ctx.client.getBlockNumber()) === head) break;
+    }
     const beforeCrash = await e.ctx.client.getBlockNumber();
-    await e.setWeth(bps, [um.lpOracle, sm.lpOracle]);
-    // The crash is several transactions, each mined in its own block: each account's clock starts at the first block
-    // whose state has it below HF 1, as the keeper measures it.
+    // Blocks 12 s apart, mined only by this drill from here on: with automine on, each keeper transaction would mine
+    // its own block and start the next pass, and a breaker poke due every block (REQ-RISK-091) would then mine blocks
+    // without end. The keeper's transactions wait in the mempool for the next block, as on a real chain. The crash is
+    // several transactions, each mined in its own block when the txpool holds one not sent by the keeper; a keeper
+    // transaction sent meanwhile joins that block.
+    await e.rpc("evm_setAutomine", [false]);
+    let crashed = false;
+    const crash = e.setWeth(bps, [um.lpOracle, sm.lpOracle]).finally(() => {
+      crashed = true;
+    });
+    crash.catch(() => undefined);
+    while (!crashed) {
+      const pool = (await e.rpc("txpool_content", [])) as { pending?: Record<string, unknown> };
+      if (Object.keys(pool.pending ?? {}).some((from) => !eq(from, helper.signer))) await e.rpc("evm_mine", []);
+      else await sleep(50);
+    }
+    await crash;
+    // Each account's clock starts at the first block whose state has it below HF 1, as the keeper measures it.
     const afterCrash = await e.ctx.client.getBlockNumber();
     for (const x of accounts) {
       for (let b = beforeCrash + 1n; b <= afterCrash && x.since === null; b++) {
@@ -1447,10 +1470,6 @@ async function failoverDrill(e: Env) {
     const debtAtCrash = await Promise.all(accounts.map((x) => e.debt(x.m, x.a)));
     for (const [i, x] of accounts.entries()) n[`${x.label}.atCrash`] = `HF ${fmt(await e.healthFactor(x.m, x.a), 18)}, debt ${fmt(debtAtCrash[i]!, e.dec(x.m.debtAsset))}`;
 
-    // Blocks 12 s apart, mined only here: with automine on, each keeper transaction would mine its own block and
-    // start the next pass, and a breaker poke due every block (REQ-RISK-091) would then mine blocks without end.
-    // The keeper's transactions wait in the mempool for the next block, as on a real chain.
-    await e.rpc("evm_setAutomine", [false]);
     for (let b = 1; b <= PAGE_AFTER_BLOCKS && accounts.some((x) => x.minedAt === null); b++) {
       if (keeper.exitCode !== null) {
         n.exited = `keeper exited (${keeper.exitCode}) before block +${b}: ${log.filter((l) => l.includes('"keeper.fatal"')).join(" ").slice(0, 300)}`;
