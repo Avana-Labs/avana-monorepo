@@ -457,4 +457,17 @@ contract DebtOracleRecoveryEdgesUnitTest is DebtOracleFixture {
             vm.clearMockedCalls();
         }
     }
+
+    // TEST-219 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-092
+    /// @notice An Invalid route gives no evidence even when one of its legs is Stale: at `T0 + 20,000` the primary
+    /// publishes after its gap from `T0 + 5,301`, USDC/ETH publishes an answer above its `maxAnswer` and ETH/USD is
+    /// still Stale from `T0 + 5,301`. Only a Stale route counts as stale from `staleFrom`, so no grace opens.
+    function test_TEST_219_invalidRouteWithAStaleLegGivesNoEvidence() public {
+        vm.warp(T0 + 20_000);
+        pUsd.push(USDC_USD, T0 + 20_000);
+        aEth.push(2e18, T0 + 20_000);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "Invalid alternate with a Stale leg");
+        assertEq(rec, 0);
+    }
 }
