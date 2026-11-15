@@ -151,14 +151,18 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
             )
         );
         store.loosenTokenUsdCap(h, usdc, 31_000_000e8);
-        // A pair with no cap cannot be loosened into existence.
+        // A pair with no cap reads as 0, like a cap tightened to 0: one loosening reaches at most the $1,000 reopen
+        // base (REQ-PSTORE-017).
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
                 IParameterStoreErrors.LoosenStepTooLarge.selector, _key("tokenUsdCap", keccak256(abi.encode(h, usdt)))
             )
         );
-        store.loosenTokenUsdCap(h, usdt, 1);
+        store.loosenTokenUsdCap(h, usdt, 1000e8 + 1);
+        _tl();
+        store.loosenTokenUsdCap(h, usdt, 1000e8);
+        assertEq(store.tokenUsdCap(h, usdt), 1000e8);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
         store.loosenTokenUsdCap(h, usdc, uint256(type(uint128).max) + 1);
