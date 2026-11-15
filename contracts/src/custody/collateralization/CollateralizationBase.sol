@@ -87,9 +87,9 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     uint256 internal constant DEBT_MARK_GAS_FLOOR = 50_000;
 
     /// @notice Gas given to the RiskModule's `creditWithdraw` after a withdrawal released booked value (REQ-RISK-093).
-    /// Measured at about 21,000 on the full stack (test/gas/RiskModule.SpeedCredit.gas.t.sol); the stipend leaves
-    /// over twice that.
-    uint256 internal constant SPEED_CREDIT_GAS = 60_000;
+    /// Measured at about 34,000 on the full stack, cold (test/gas/RiskModule.SpeedCredit.gas.t.sol); the stipend
+    /// leaves about three times that.
+    uint256 internal constant SPEED_CREDIT_GAS = 100_000;
 
     /// @notice Gas an exit must hold before the credit call, so the credit always receives its full stipend.
     uint256 internal constant SPEED_CREDIT_FLOOR = SPEED_CREDIT_GAS + SPEED_CREDIT_GAS / 63 + 10_000;

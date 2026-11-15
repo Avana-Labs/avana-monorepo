@@ -135,7 +135,7 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         (price8,) = ILPOracle(lpOracle).lastAcceptedPrice();
     }
 
-    /// @dev The cap price of a pledge (REQ-RISK-026, RM-05): the fresh price, from one `getPriceState()` read; the
+    /// @dev The cap price of a pledge (REQ-RISK-026): the fresh price, from one `getPriceState()` read; the
     /// accepted price when there is none.
     function _capPrice(
         address lpOracle

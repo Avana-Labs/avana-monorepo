@@ -247,7 +247,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return keccak256(abi.encode(marketId, token, debtAsset, kind, epoch));
     }
 
-    /// @dev Clears the breach times of breaker `key`: the latest of any temporary reason and each reason's own (RM-02).
+    /// @dev Clears the breach times of breaker `key`: the latest of any temporary reason and each reason's own.
     function _clearBreachTimes(
         Layout storage l,
         bytes32 key

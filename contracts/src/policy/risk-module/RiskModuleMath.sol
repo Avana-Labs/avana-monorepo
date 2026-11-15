@@ -229,7 +229,7 @@ library RiskModuleMath {
         return fresh != 0 && fresh < accepted ? fresh : accepted;
     }
 
-    /// @notice The price a pledge's cap charge is booked at (REQ-RISK-026, RM-05): the fresh price, the accepted price
+    /// @notice The price a pledge's cap charge is booked at (REQ-RISK-026): the fresh price, the accepted price
     /// alone when there is no fresh price (`fresh = 0`, a failed market).
     /// @dev The caps track the value Aave lends against, which is the served price (`fresh` outside a failure), so a
     /// rally the accepted price has not caught up with is charged in full and adds no cap room. The minimum and the

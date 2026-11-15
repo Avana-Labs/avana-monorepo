@@ -18,9 +18,8 @@ library SpeedLimitMath {
     /// @dev Basis points of a rate.
     uint256 internal constant BPS = 10_000;
 
-    /// @notice The window as a check at `nowTs` sees it: empty from `start + 2 × window` (and for a window never
-    /// written, `start = 0`), rolled once from `start + window`, unchanged before. Only an unchanged window keeps the
-    /// stored base; `windowBase` decides whether that base applies.
+    /// @notice The window as a check at `nowTs` sees it: empty from `start + 2 × window`, rolled once from
+    /// `start + window`, unchanged before. Only an unchanged window keeps the stored base and `opened` flag.
     /// @param w The stored window.
     /// @param window The scope's window length, seconds.
     /// @param nowTs The check's timestamp, at least `w.start`.
@@ -32,7 +31,7 @@ library SpeedLimitMath {
         uint256 nowTs
     ) internal pure returns (SpeedWindow memory r) {
         uint256 start = w.start;
-        if (start == 0 || nowTs >= start + 2 * window) {
+        if (nowTs >= start + 2 * window) {
             // Block timestamps stay far below 2^64 seconds.
             // forge-lint: disable-next-line(unsafe-typecast)
             r.start = uint64(nowTs);
@@ -42,7 +41,7 @@ library SpeedLimitMath {
             r.start = uint64(start + window);
             r.prev = w.curr;
         } else {
-            r = SpeedWindow({start: w.start, prev: w.prev, curr: w.curr, base: w.base});
+            r = SpeedWindow({start: w.start, prev: w.prev, curr: w.curr, base: w.base, opened: w.opened});
         }
     }
 
@@ -62,7 +61,7 @@ library SpeedLimitMath {
         SpeedWindow memory r,
         uint256 liveBase
     ) internal pure returns (uint256 base) {
-        if (stored.start != 0 && stored.start == r.start) return stored.base;
+        if (stored.opened && stored.start == r.start) return stored.base;
         uint256 prev = r.prev;
         base = liveBase > prev ? liveBase - prev : 0;
     }
@@ -125,7 +124,11 @@ library SpeedLimitMath {
     ) internal pure returns (SpeedWindow memory w) {
         // curr + x <= prev + curr + x <= L <= max < 2^96 (REQ-PSTORE-035).
         // forge-lint: disable-next-line(unsafe-typecast)
-        w = SpeedWindow({start: r.start, prev: r.prev, curr: uint96(uint256(r.curr) + x), base: base});
+        uint96 curr = uint96(uint256(r.curr) + x);
+        // A base above 2^248 - 1 limits like 2^248 - 1: every limit's max fits uint96.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint248 b = base > type(uint248).max ? type(uint248).max : uint248(base);
+        w = SpeedWindow({start: r.start, prev: r.prev, curr: curr, base: b, opened: true});
     }
 
     /// @notice The stored window after a credit of `x` at `nowTs` (a repay or a withdrawal): taken from the current
@@ -146,9 +149,9 @@ library SpeedLimitMath {
         uint256 nowTs,
         uint256 x
     ) internal pure returns (SpeedWindow memory r) {
-        r = SpeedWindow({start: w.start, prev: w.prev, curr: w.curr, base: w.base});
+        r = SpeedWindow({start: w.start, prev: w.prev, curr: w.curr, base: w.base, opened: w.opened});
         uint256 start = w.start;
-        if (window == 0 || start == 0 || nowTs >= start + 2 * window) return r;
+        if (window == 0 || nowTs >= start + 2 * window) return r;
         uint256 c = r.curr;
         uint256 take = x < c ? x : c;
         // take <= curr < 2^96.

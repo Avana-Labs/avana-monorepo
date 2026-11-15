@@ -182,7 +182,7 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     ) internal view {
         uint256 accepted = _accepted(c.m.lpOracle);
         uint256 price8 = RiskModuleMath.bookingPrice(accepted, c.fresh);
-        // Caps at the fresh price, the minimum at the lower of the two (RM-05).
+        // Caps at the fresh price, the minimum at the lower of the two.
         uint256 capPrice8 = RiskModuleMath.capPrice(accepted, c.fresh);
         uint256 floorUsd = _store().stressFloorUsd(c.marketId);
         c.minPledge = _store().minPledgeUsd(c.marketId);

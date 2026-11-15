@@ -10,7 +10,7 @@ import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 interface IRiskModuleBreakerLogic is IRiskModuleLogic {
     /// @notice Pokes the market's LPOracle and the DebtOracle of every debt reserve of its Spoke without a fixed-price
     /// source, as the pre-checks do (REQ-RISK-056), so `pokeBreakers` evaluates the same refreshed state a borrow
-    /// would (RM-03).
+    /// would.
     /// @dev Anyone; the pokes are permissionless. A poke reverts only below its own gas floor (`InsufficientGas`),
     /// which reverts the whole `pokeBreakers` instead of recording a breach a starved poke caused.
     /// @param marketId The market.

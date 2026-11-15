@@ -37,9 +37,9 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
     /// @dev Session flag: `deleverageRelease` ran.
     uint256 internal constant STEP_RELEASED = 2;
 
-    /// @dev Gas given to the RiskModule's `creditRepay` after a repay step (REQ-RISK-092). Measured at about 64,000 on
-    /// the full stack with a cold market (test/gas/RiskModule.SpeedCredit.gas.t.sol); the stipend leaves twice that.
-    uint256 internal constant SPEED_CREDIT_GAS = 150_000;
+    /// @dev Gas given to the RiskModule's `creditRepay` after a repay step (REQ-RISK-092). Measured at about 104,000 on
+    /// the full stack, cold (test/gas/RiskModule.SpeedCredit.gas.t.sol); the stipend leaves about 2.4 times that.
+    uint256 internal constant SPEED_CREDIT_GAS = 250_000;
     /// @dev Gas a repay step must hold before the credit call: the stipend after the 63/64 rule plus the call's own
     /// cost, so the credit always receives its full stipend and a gas estimate cannot skip it.
     uint256 internal constant SPEED_CREDIT_FLOOR = SPEED_CREDIT_GAS + SPEED_CREDIT_GAS / 63 + 10_000;

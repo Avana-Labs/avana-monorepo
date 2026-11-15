@@ -33,7 +33,7 @@ import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 /// SPEC-BRK-003) and `CONFIG_DRIFT` (any drift of the market's Spoke, REQ-RISK-078). Debt conditions: `DEFICIT`
 /// (SPEC-BRK-004) and `ISSUER` of the asset. A breaker is tripped by its live reasons, its latched reasons and each
 /// temporary reason `r` while `block.timestamp < lastBreachAt(breachKey(key, r)) + gateRecoverySeconds`: the
-/// MarketRegistry keeps a breach time per reason, so a recorded `ORACLE` breach recovers `ORACLE` alone (RM-02). Every issuer probe read runs with `ISSUER_PROBE_GAS` behind the gas floor
+/// MarketRegistry keeps a breach time per reason, so a recorded `ORACLE` breach recovers `ORACLE` alone. Every issuer probe read runs with `ISSUER_PROBE_GAS` behind the gas floor
 /// of REQ-RISK-089; the combined kind makes two reads.
 /// @custom:spec REQ-RISK-065, REQ-RISK-078, REQ-RISK-089, REQ-RISK-091, SPEC-BRK-002, SPEC-BRK-003, SPEC-BRK-004, SPEC-BRK-007, SPEC-BRK-008, Q-241, Q-399
 // View calls and gas-limited probes in loops over at most 8 pool tokens (at most two probe reads each).
@@ -133,7 +133,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     }
 
     /// @dev Tripped reasons and reopening time (SPEC-BRK-007, SPEC-BRK-008): live and latched reasons, and each
-    /// temporary reason inside `gateRecoverySeconds` of its own last recorded breach (RM-02).
+    /// temporary reason inside `gateRecoverySeconds` of its own last recorded breach.
     function _tripped(
         uint32 live,
         uint32 latched,

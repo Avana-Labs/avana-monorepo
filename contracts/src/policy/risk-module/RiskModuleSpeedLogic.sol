@@ -164,10 +164,10 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         debtKey = keccak256(abi.encode(def.fundingHub, def.asset));
         uint256 price8 = IAaveV4Oracle(IAaveV4Spoke(spoke).ORACLE()).getReservePrice(debtReserveId);
         uint256 usd = Math.mulDiv(amount, price8, 10 ** def.decimals);
-        market = _credited(
-            SpeedScope.MarketBorrow, bytes32(marketId), _store().marketSpeedLimits(marketId).window, usd
+        market = _credited(SpeedScope.MarketBorrow, bytes32(marketId), _store().marketSpeedLimits(marketId).window, usd);
+        debt = _credited(
+            SpeedScope.DebtBorrow, debtKey, _store().debtSpeedLimit(def.fundingHub, def.asset).window, amount
         );
-        debt = _credited(SpeedScope.DebtBorrow, debtKey, _store().debtSpeedLimit(def.fundingHub, def.asset).window, amount);
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
@@ -209,7 +209,13 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
     ) external view override returns (SpeedView memory pledge) {
         (MarketSpeedLimits memory p, uint256 booked) = _pledgeInputs(marketId);
         (SpeedWindow memory w, uint256 lim,) = _rolled(
-            SpeedScope.MarketPledge, bytes32(marketId), p.window, p.pledgeRateBps, p.pledgeMinUsd, p.pledgeMaxUsd, booked
+            SpeedScope.MarketPledge,
+            bytes32(marketId),
+            p.window,
+            p.pledgeRateBps,
+            p.pledgeMinUsd,
+            p.pledgeMaxUsd,
+            booked
         );
         pledge = SpeedLimitMath.viewOf(w, p.window, lim);
     }
@@ -238,7 +244,8 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         uint256 window,
         uint256 x
     ) internal view returns (SpeedWindow memory) {
-        return SpeedLimitMath.credit(IRiskModuleViews(msg.sender).getSpeedWindow(scope, key), window, block.timestamp, x);
+        return
+            SpeedLimitMath.credit(IRiskModuleViews(msg.sender).getSpeedWindow(scope, key), window, block.timestamp, x);
     }
 
     /// @dev A market's speed limits and its booked value `regularUsed + sliceUsed`.

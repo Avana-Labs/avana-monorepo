@@ -46,7 +46,7 @@ library BreakerReasons {
     uint32 internal constant SECURITY = ISSUER | CONFIG_DRIFT | DEFICIT;
 
     /// @notice The key under which the MarketRegistry keeps the breach time of one temporary reason of breaker `key`
-    /// (RM-02: per-reason breach times, so a recovery reopens only the reasons actually recorded).
+    /// (per-reason breach times, so a recovery reopens only the reasons actually recorded).
     /// @dev `lastBreachAt(key)` keeps the latest breach of any temporary reason; `lastBreachAt(breachKey(key, r))` the
     /// latest of `r` alone. A hash of the key and the reason bit cannot collide with a market or debt key in practice.
     /// @param key Breaker key.

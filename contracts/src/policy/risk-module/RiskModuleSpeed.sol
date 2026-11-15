@@ -59,5 +59,6 @@ abstract contract RiskModuleSpeed is RiskModuleBase {
         s.prev = w.prev;
         s.curr = w.curr;
         s.base = w.base;
+        s.opened = w.opened;
     }
 }

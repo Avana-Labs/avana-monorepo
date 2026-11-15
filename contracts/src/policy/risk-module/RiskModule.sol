@@ -235,7 +235,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     ) external override returns (uint32 reasons) {
         Market memory m = _market(marketId);
         IRiskModuleBreakerLogic b = IRiskModuleBreakerLogic(_BREAKER_LOGIC);
-        // The conditions are read after the pokes a borrow would make (RM-03).
+        // The conditions are read after the pokes a borrow would make.
         b.pokeOracles(marketId);
         uint32 live = b.marketConditions(marketId, false, 0);
         if (live != 0) _registry().recordBreach(bytes32(marketId), live);

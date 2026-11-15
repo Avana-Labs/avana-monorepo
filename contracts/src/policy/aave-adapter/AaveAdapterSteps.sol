@@ -297,8 +297,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
         // A failed credit only leaves the window fuller than the net debt; it must not block the repay.
         // solhint-disable-next-line no-empty-blocks
-        try IRiskModuleChecks(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {}
-            catch {}
+        try IRiskModuleChecks(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
     }
 
     /// @dev Repay steps of `repay` and `repayAllAndWithdraw` (SPEC-PROXY-003, SPEC-PROXY-007): reads the live debt `D`;

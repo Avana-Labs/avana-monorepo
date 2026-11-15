@@ -63,10 +63,7 @@ interface IRiskModuleSpeedLogic is IRiskModuleLogic {
         address proxy,
         uint256 debtReserveId,
         uint256 amount
-    )
-        external
-        view
-        returns (uint256 marketId, bytes32 debtKey, SpeedWindow memory market, SpeedWindow memory debt);
+    ) external view returns (uint256 marketId, bytes32 debtKey, SpeedWindow memory market, SpeedWindow memory debt);
 
     /// @notice The pledge-speed check of a non-rescue pledge (REQ-RISK-093): the market's pledge window on the base
     /// `bookedUsd`; reverts `PledgeSpeedExceeded`, else returns the window with `usdCharge` added.
@@ -97,10 +94,7 @@ interface IRiskModuleSpeedLogic is IRiskModuleLogic {
         address proxy,
         uint256 debtReserveId,
         uint256 amount
-    )
-        external
-        view
-        returns (uint256 marketId, bytes32 debtKey, SpeedWindow memory market, SpeedWindow memory debt);
+    ) external view returns (uint256 marketId, bytes32 debtKey, SpeedWindow memory market, SpeedWindow memory debt);
 
     /// @notice The market's pledge window after a withdrawal released `usd` of booked value (REQ-RISK-093), credited as
     /// `repayCredit` credits.
