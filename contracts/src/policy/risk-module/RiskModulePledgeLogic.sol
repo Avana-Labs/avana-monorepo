@@ -224,27 +224,17 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (used >= limit) revert UserReservesLimit();
     }
 
-    /// @dev SPEC-CAP-002 with the slice rule of REQ-RISK-022; returns the slice part. The regular room of an eligible
-    /// top-up is the smallest of the market room and every token room, and the slice takes the rest, so a token at or
-    /// above its cap (a cap tightened to 0 included) moves a rescue top-up to the slice instead of refusing it. The
-    /// token test applies to the regular part only: a part of 0 passes whatever the token counter holds.
+    /// @dev SPEC-CAP-002 with the slice rule of REQ-RISK-022; returns the slice part. The token test applies to the
+    /// regular part only: Collateralization books a slice top-up's full charge into every token counter, and a token cap
+    /// may be tightened below the exposure (to 0 included), so a counter at or above its cap must not refuse a top-up
+    /// charged entirely to the slice.
     function _caps(
         Ctx memory c,
         PledgeCounters calldata k
     ) internal view returns (uint256 sliceUsd) {
-        address[] memory tokens = c.m.tokens;
-        if (k.tokenUsed.length != tokens.length) revert CapExceeded(CAP_TOKEN);
-        uint256[] memory tokenRoom = new uint256[](tokens.length);
-        uint256 marketCap = _store().marketUsdCap(c.marketId);
-        uint256 room = marketCap > k.regularUsed ? marketCap - k.regularUsed : 0;
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            uint256 cap = _store().tokenUsdCap(c.m.hub, tokens[i]);
-            tokenRoom[i] = cap > k.tokenUsed[i] ? cap - k.tokenUsed[i] : 0;
-            if (c.eligible && tokenRoom[i] < room) room = tokenRoom[i];
-        }
-        // `split` with no regular use takes `room` as the regular room.
         bool marketOk;
-        (sliceUsd, marketOk) = RiskModuleMath.split(c.charge, 0, room, c.eligible);
+        (sliceUsd, marketOk) =
+            RiskModuleMath.split(c.charge, k.regularUsed, _store().marketUsdCap(c.marketId), c.eligible);
         if (!marketOk) revert CapExceeded(CAP_MARKET);
         if (sliceUsd > 0) {
             if (sliceUsd > c.restore) revert SliceNotAvailable();
@@ -253,11 +243,15 @@ contract RiskModulePledgeLogic is RiskModulePreview {
             }
         }
         uint256 regular = c.charge - sliceUsd;
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            if (regular > tokenRoom[i]) {
-                // One token over its cap refuses the whole pledge.
-                // forge-lint: disable-next-line(require-revert-in-loop)
-                revert CapExceeded(CAP_TOKEN);
+        address[] memory tokens = c.m.tokens;
+        if (k.tokenUsed.length != tokens.length) revert CapExceeded(CAP_TOKEN);
+        if (regular != 0) {
+            for (uint256 i = 0; i < tokens.length; ++i) {
+                if (!RiskModuleMath.fits(k.tokenUsed[i], regular, _store().tokenUsdCap(c.m.hub, tokens[i]))) {
+                    // One token over its cap refuses the whole pledge.
+                    // forge-lint: disable-next-line(require-revert-in-loop)
+                    revert CapExceeded(CAP_TOKEN);
+                }
             }
         }
     }
