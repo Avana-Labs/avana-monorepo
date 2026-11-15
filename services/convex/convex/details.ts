@@ -10,6 +10,8 @@ import { hubAssetKey, interestRateModel, marketAllocation, poolBorrowables, head
 import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
 import type { ChangelogRow, ContractAddressRow, PageScope } from "./lib/uiTypes.ts";
 import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, sliceOf, symbolOf } from "./model.ts";
+import { liquidationTotals } from "./lib/rollups.ts";
+import { liquidationPricing } from "./rollups.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
 
 const contentScope = (s: PageScope) => s;
@@ -126,31 +128,9 @@ export async function readLiquidationRisk(ctx: QueryCtx, w: World, slug: string)
     .query("ingestedLogs")
     .withIndex("by_market", (q) => q.eq("marketKey", `${m.chainId}:${m.marketId}`).gte("at", now - 2 * 86_400_000))
     .collect();
-  const window = (from: number, to: number): LiquidationWindow => {
-    let liquidations = 0;
-    let collateralSeizedUsd = 0;
-    let debtRepaidUsd = 0;
-    let badDebtUsd = 0;
-    for (const l of logs) {
-      if (l.at < from || l.at >= to) continue;
-      if (l.kind === "AaveSpoke.ReportDeficit") {
-        // Deficit in drawn shares, valued at the current drawn index and price of the reserve's Hub asset.
-        const r = w.reserves.find((x) => `${x.chainId}:${x.spoke}:${x.reserveId}` === l.spokeReserveKey);
-        const a = r ? w.assetsByKey.get(hubAssetKey(r)) : undefined;
-        const shares = BigInt(String((l.args as { drawnShares: string }).drawnShares));
-        if (a) badDebtUsd += Number((((shares * BigInt(a.drawnIndexRay)) / 10n ** 27n) * BigInt(a.priceUsd8)) / 10n ** BigInt(a.decimals)) / 1e8;
-        continue;
-      }
-      if (l.kind !== "LPVaultSwap.LiquidationSettled") continue;
-      const report = (l.args as { report: { debtReserveId: string; debtRepaid: string; unitsSeized: string } }).report;
-      liquidations += 1;
-      collateralSeizedUsd += Number((BigInt(report.unitsSeized) * BigInt(m.acceptedPrice)) / 10n ** BigInt(m.vaultDecimals)) / 1e8;
-      const r = w.reserves.find((x) => x.chainId === m.chainId && x.spoke === m.spoke && x.reserveId === String(report.debtReserveId));
-      const a = r ? w.assetsByKey.get(hubAssetKey(r)) : undefined;
-      if (a) debtRepaidUsd += Number((BigInt(report.debtRepaid) * BigInt(a.priceUsd8)) / 10n ** BigInt(a.decimals)) / 1e8;
-    }
-    return { liquidations, collateralSeizedUsd, debtRepaidUsd, badDebtUsd };
-  };
+  // Each event is valued at the price of its hour (rollups.ts), not today's price.
+  const pricing = await liquidationPricing(ctx, w, m, now - 2 * 86_400_000);
+  const window = (from: number, to: number): LiquidationWindow => liquidationTotals(logs as never, from, to, pricing);
   const positions = await ctx.db
     .query("positions")
     .withIndex("by_market", (q) => q.eq("chainId", m.chainId).eq("marketId", m.marketId))

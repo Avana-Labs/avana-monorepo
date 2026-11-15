@@ -574,6 +574,19 @@ export default defineSchema({
    * enforces ONE limit across instances. `resetAt` = epoch ms the window ends.
    */
   /**
+   * One day of a market's liquidations or a Hub asset's revenue (rollups.ts), kept past the 30-day log window.
+   * `day` is the UTC day `YYYY-MM-DD`; `values` are USD amounts and counts.
+   */
+  dailyRollups: defineTable({
+    chainId: v.number(),
+    scopeKind: v.union(v.literal("market"), v.literal("hubAsset")),
+    scopeKey: v.string(),
+    day: v.string(),
+    values: v.record(v.string(), v.number()),
+    updatedAt: v.number(),
+  }).index("by_scope", ["scopeKind", "scopeKey", "day"]),
+
+  /**
    * Transaction progress of a submitted wallet transaction (lib/intents.ts): the hash, the wallet that signed it and a
    * label, never a target, amount or calldata (REQ-ARCH-140).
    */
