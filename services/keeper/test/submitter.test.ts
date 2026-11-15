@@ -12,6 +12,7 @@ import type { TxSigner } from "../src/chain/signer.ts";
 import type { ChainConfig } from "../src/config.ts";
 import type { ChainReader } from "../src/chain/reads.ts";
 import { InventoryBook } from "../src/inventory.ts";
+import { sendPrivate } from "../src/chain/submit.ts";
 import { AboveGasCeiling, type GasPolicy, Submitter } from "../src/runtime/submitter.ts";
 import type { BlockContext, TxPlan } from "../src/types.ts";
 
@@ -196,5 +197,24 @@ describe("follow-ups", () => {
     await s.followUps(ctx(11n), async () => true, () => {});
     expect(s.pending.get(plan.subject)!.hash).toBe(hash);
     expect(lines).toContainEqual(expect.objectContaining({ outcome: "sendRefused", txHash: hash }));
+  });
+});
+
+describe("private send", () => {
+  it("names each endpoint's refusal, so a refused replacement shows why (nonce too low, underpriced, funds)", async () => {
+    const post = vi.fn(async (url: string) => {
+      throw new Error(url === "https://a" ? "nonce too low" : "replacement transaction underpriced");
+    });
+    await expect(sendPrivate(["https://a", "https://b"], "0x01", post)).rejects.toThrow(
+      "every private endpoint refused the transaction: https://a: nonce too low; https://b: replacement transaction underpriced",
+    );
+  });
+
+  it("resolves with the endpoints that accepted when at least one did", async () => {
+    const post = vi.fn(async (url: string) => {
+      if (url === "https://a") throw new Error("down");
+      return "0xhash";
+    });
+    await expect(sendPrivate(["https://a", "https://b"], "0x01", post)).resolves.toEqual(["https://b"]);
   });
 });

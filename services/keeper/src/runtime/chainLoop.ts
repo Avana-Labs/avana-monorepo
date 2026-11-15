@@ -119,6 +119,7 @@ export function chainLoop(d: ChainLoopDeps) {
         return "hfNotConfirmed";
       }
     },
+    pending: (subject) => d.submitter?.pending.has(subject) ?? false,
     page: (signal, detail) =>
       void d.alerts.send({ signal: signal as `M-${string}`, level: "page", chainId, blockNumber: previous?.number ?? 0n, subject: detail.address ?? "", detail }),
   };
