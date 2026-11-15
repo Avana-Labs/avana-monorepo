@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+#
+# RPC endpoints per service and chain (infra/README.md, RPC endpoints). Provider names are placeholders; URLs with
+# API keys live in each cloud's secret store and reach the service as the variables named here.
+#
+# Rules:
+#   - primary and fallback of one service are different companies;
+#   - the standby keeper and the monitor use providers the primaries do not use;
+#   - Convex has its own pair: it checks the export's block hashes against them;
+#   - archive access is needed only by the indexer's backfill and pool history.
+
+providers:
+  a: { name: <provider-a>, archive: true, wss: true }
+  b: { name: <provider-b>, archive: true, wss: true }
+  c: { name: <provider-c>, archive: false, wss: true, stateOverrides: true }
+  d: { name: <provider-d>, archive: false, wss: true, stateOverrides: true }
+  ethereumBuilders: { name: <builder RPCs, comma-separated>, use: private submission only }
+  baseSequencer: { name: <Base sequencer endpoint>, use: private submission only }
+
+services:
+  indexer:
+    mainnet: { RPC_MAINNET: a, RPC_MAINNET_FALLBACK: b, RPC_MAINNET_WS: a }
+    base: { RPC_BASE: a, RPC_BASE_FALLBACK: b, RPC_BASE_WS: a }
+    methods: [eth_getLogs, eth_getBlockByNumber (finalized, latest), eth_call (multicall, pinned block)]
+    budget: backfill bursts; steady state about 1 request per block per chain plus pool-history ranges
+
+  convex:
+    mainnet: { RPC_MAINNET: b, RPC_MAINNET_FALLBACK: a }
+    base: { RPC_BASE: b, RPC_BASE_FALLBACK: a }
+    methods: [eth_getBlockByNumber, eth_call (multicall), eth_getTransactionReceipt, eth_estimateGas, eth_maxPriorityFeePerGas]
+    budget: sampler every 30 s, pull every 10-30 s, intent tracker once a block while intents are open, live reads rate limited per wallet
+
+  keeperPrimary:
+    mainnet: { RPC_MAINNET: a, RPC_MAINNET_FALLBACK: b, RPC_MAINNET_WS: a, RPC_MAINNET_PRIVATE: ethereumBuilders }
+    base: { RPC_BASE: a, RPC_BASE_FALLBACK: b, RPC_BASE_WS: a, RPC_BASE_PRIVATE: baseSequencer }
+    methods: [eth_subscribe (newHeads, logs), eth_call (pinned block), eth_getTransactionCount, eth_sendRawTransaction (private only), eth_getTransactionReceipt]
+    budget: one decision read set per candidate per block; head and log subscriptions
+
+  keeperStandby:
+    mainnet: { RPC_MAINNET: c, RPC_MAINNET_FALLBACK: d, RPC_MAINNET_WS: c, RPC_MAINNET_PRIVATE: ethereumBuilders }
+    base: { RPC_BASE: c, RPC_BASE_FALLBACK: d, RPC_BASE_WS: c, RPC_BASE_PRIVATE: baseSequencer }
+
+  monitor:
+    mainnet: { RPC_MAINNET: d, RPC_MAINNET_FALLBACK: c }
+    base: { RPC_BASE: d, RPC_BASE_FALLBACK: c }
+    methods: [eth_call with state overrides, eth_getBlockByNumber]

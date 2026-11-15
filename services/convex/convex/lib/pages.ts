@@ -126,7 +126,7 @@ export function poolSnapshot(
   debts: readonly MarketReserveDebtRow[],
   reserves: readonly SpokeReserveRow[],
   assets: ReadonlyMap<string, HubAssetRow>,
-  pool24h: { volumeUsd: number; feesUsd: number },
+  pool24h: { volumeUsd: number; feesUsd: number; lpFeeAprPct?: number },
   content: PageContent | null,
 ): MarketSnapshotRow {
   const collateralUsd = Number(BigInt(market.suppliedUsd8)) / 1e8;
@@ -146,8 +146,8 @@ export function poolSnapshot(
     borrowedUsd: debtUsd,
     availableUsd: Number(BigInt(market.marketHeadroomUsd8)) / 1e8,
     utilizationPct: collateralUsd > 0 ? Math.min(100, (debtUsd / collateralUsd) * 100) : 0,
-    // The LP fee APR needs the whole pool's in-range liquidity value, which no view reads yet (an external rate for now).
-    supplyApyPct: 0,
+    // The LP fee APR of the market's range over the last 24 h (lib/windows.ts); 0 before the pool's first swap.
+    supplyApyPct: pool24h.lpFeeAprPct ?? 0,
     borrowAprPct: headAsset ? rayToAprPct(marketBorrowRateRay(headAsset.drawnRateRay, market.collateralRiskBps)) : 0,
     tvlUsd: collateralUsd,
     volumeUsd: pool24h.volumeUsd,

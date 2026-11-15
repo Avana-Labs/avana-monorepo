@@ -6,9 +6,10 @@
 import type { CreditLineRow, HubAssetRow, HubAssetSpokeRow, HubRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "@avana/services-common/views";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { combineSources, sumOver, type StoredPoint } from "./lib/charts.ts";
+import { combineSources, sumOver, type StoredPoint, type Values } from "./lib/charts.ts";
 import { hubLabel } from "./lib/format.ts";
 import { creditLineView } from "./lib/hubViews.ts";
+import { type PoolPricing, lpFeeAprPct } from "./lib/windows.ts";
 import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
 import type { CreditLineView, MarketSnapshotRow, PageContent, PageScope } from "./lib/uiTypes.ts";
 
@@ -120,8 +121,25 @@ export function sliceOf(w: World, r: SpokeReserveRow): (HubAssetSpokeRow & { upd
   return w.slices.find((s) => s.chainId === r.chainId && s.hub === r.hub && s.assetId === r.assetId && s.spoke === r.spoke);
 }
 
-/** Pool volume and fees over the last 24 hourly buckets, valued at the Lend Spoke price of each token (`priceAsset`). */
-export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number): Promise<{ volumeUsd: number; feesUsd: number }> {
+/** USD prices and decimals of a market's two pool tokens; a token with no Hub asset takes the other's price. */
+export function poolPricing(w: World, m: MarketDoc): PoolPricing | null {
+  const assets = m.tokens.map((t) => priceAsset(w, m.chainId, t, m.hub));
+  const known = assets.find((a) => a !== undefined);
+  if (!known) return null;
+  const price = (i: number) => Number(BigInt((assets[i] ?? known).priceUsd8)) / 1e8;
+  return { decimals: [m.tokenDecimals[0] ?? 18, m.tokenDecimals[1] ?? 18], priceUsd: [price(0), price(1)] };
+}
+
+/** The pool's last swap state (price and active liquidity) from its buckets, or null before any swap. */
+export function lastPoolState(buckets: ReadonlyMap<number, Values>): { sqrtPriceX96: string; liquidity: string } | null {
+  let best: number | undefined;
+  for (const [t, v] of buckets) if (v.sqrtPriceX96 !== undefined && (best === undefined || t > best)) best = t;
+  const v = best === undefined ? undefined : buckets.get(best);
+  return v?.sqrtPriceX96 ? { sqrtPriceX96: v.sqrtPriceX96, liquidity: v.liquidity ?? "0" } : null;
+}
+
+/** Pool volume and fees over the last 24 hourly buckets, valued at the Lend Spoke price of each token (`priceAsset`), and the market range's LP fee APR over them. */
+export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number): Promise<{ volumeUsd: number; feesUsd: number; lpFeeAprPct?: number }> {
   const key = `${m.chainId}:${m.pool}`;
   const from = Math.floor(now / 3_600) * 3_600 - 24 * 3_600;
   const rows = await ctx.db
@@ -137,8 +155,14 @@ export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number
   const value = (metric: string) => (Number(sumOver(buckets, `${metric}${side.i}`, from, Number.MAX_SAFE_INTEGER)) / scale) * price;
   // Fees are charged on the input side of each swap, so both tokens' fees count; the other side at the same price.
   const otherFees = Number(sumOver(buckets, `fees${1 - side.i}`, from, Number.MAX_SAFE_INTEGER)) / 10 ** (m.tokenDecimals[1 - side.i] ?? side.asset.decimals);
-  return { volumeUsd: value("volume"), feesUsd: value("fees") + otherFees * price };
+  const pricing = poolPricing(w, m);
+  const state = lastPoolState(buckets);
+  const recent = [...buckets.entries()].filter(([t]) => t >= from).map(([, v]) => v);
+  const lpFeeAprPct = pricing && state ? lpFeeAprPct24h(recent, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.tickLower, tickUpper: m.tickUpper }, pricing) : undefined;
+  return { volumeUsd: value("volume"), feesUsd: value("fees") + otherFees * price, ...(lpFeeAprPct === undefined ? {} : { lpFeeAprPct }) };
 }
+
+const lpFeeAprPct24h = (buckets: readonly Values[], current: { sqrtPriceX96: string; tickLower: number; tickUpper: number }, p: PoolPricing) => lpFeeAprPct(buckets, 1, current, p);
 
 /** Every list row, one per Lend asset, CDP debt reserve and market. */
 export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: PageScope): Promise<MarketSnapshotRow[]> {

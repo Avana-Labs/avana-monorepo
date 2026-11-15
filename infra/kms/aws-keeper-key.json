@@ -1,0 +1,54 @@
+{
+  "_comment": "Template of one primary keeper signer in AWS KMS (infra/README.md, Keeper signing keys). One key per keeper instance and chain. Placeholders in <...>; the operator creates the key, nothing here does.",
+  "keySpec": "ECC_SECG_P256K1",
+  "keyUsage": "SIGN_VERIFY",
+  "origin": "AWS_KMS",
+  "multiRegion": false,
+  "description": "Avana keeper <chain> shard <n> signer",
+  "tags": [
+    { "TagKey": "service", "TagValue": "avana-keeper" },
+    { "TagKey": "chain", "TagValue": "<mainnet|base>" },
+    { "TagKey": "shard", "TagValue": "<n>" }
+  ],
+  "keyPolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "KeyAdministrationWithoutSigning",
+        "Effect": "Allow",
+        "Principal": { "AWS": "arn:aws:iam::<account-id>:role/<key-admin-role>" },
+        "Action": [
+          "kms:Describe*",
+          "kms:Get*",
+          "kms:List*",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:EnableKey",
+          "kms:DisableKey",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion",
+          "kms:PutKeyPolicy"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "KeeperInstanceSignsOnly",
+        "Effect": "Allow",
+        "Principal": { "AWS": "arn:aws:iam::<account-id>:role/<keeper-instance-role>" },
+        "Action": ["kms:Sign", "kms:GetPublicKey"],
+        "Resource": "*",
+        "Condition": {
+          "StringEquals": { "kms:SigningAlgorithm": "ECDSA_SHA_256", "kms:MessageType": "DIGEST" }
+        }
+      },
+      {
+        "Sid": "NoSigningByAnyoneElse",
+        "Effect": "Deny",
+        "NotPrincipal": { "AWS": "arn:aws:iam::<account-id>:role/<keeper-instance-role>" },
+        "Action": "kms:Sign",
+        "Resource": "*"
+      }
+    ]
+  },
+  "audit": "CloudTrail data events for kms:Sign on this key, kept 1 year; an alert on any kms:Sign from another principal, on DisableKey and on ScheduleKeyDeletion."
+}
