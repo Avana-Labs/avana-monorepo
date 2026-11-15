@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
 import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
-import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
@@ -312,6 +312,8 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (bool ok7, uint256 lower) = LPOracleCalls.wordAt(cfg, 7 * 32);
         (bool ok8, uint256 upper) = LPOracleCalls.wordAt(cfg, 8 * 32);
         return ok2 && ok7 && ok8 && poolId == v.poolId && manager == uint256(uint160(v.poolManager))
+            // Sign-extended int24 ticks compared as the ABI words the integration returns; no value is lost.
+            // forge-lint: disable-next-line(unsafe-typecast)
             && lower == uint256(int256(c.tickLower)) && upper == uint256(int256(c.tickUpper));
     }
 

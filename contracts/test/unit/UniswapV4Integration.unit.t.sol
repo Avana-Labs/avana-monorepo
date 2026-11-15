@@ -16,10 +16,10 @@ import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {UniswapV4IntegrationFixture} from "../utils/fixtures/UniswapV4IntegrationFixture.sol";
 import {V4TestSubscriber} from "../utils/fixtures/UniswapV4WorldFixture.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @notice Unit suite of the Uniswap v4 LPVault on the local v4 world: binding guards, custody, the fees-first removal
 /// batch on an ERC-20 pool and a native-ETH pool, the read guard, consistency, depth and wrapped fee growth.
