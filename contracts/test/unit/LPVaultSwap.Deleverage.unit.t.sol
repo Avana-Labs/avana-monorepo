@@ -311,7 +311,8 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
     // TEST-239 verifies: REQ-SWAP-122, REQ-SWAP-124
     function test_TEST_239_noFifthRepayTransfer() public {
         LVSLyingRoute feeSwitch = new LVSLyingRoute(address(usdt), address(usdc));
-        uint256 out = uint256(1_036_000_000) * 9995 / 10_000;
+        // Twice the routed output, so LPVaultSwap holds enough for four fee-bearing transfers.
+        uint256 out = uint256(1_036_000_000) * 9995 / 10_000 * 2;
         usdc.mint(address(feeSwitch), out);
         feeSwitch.setOut(out);
         feeSwitch.setReenter(address(usdc), abi.encodeCall(PayoutToken.setFeeBps, (100)));
