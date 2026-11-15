@@ -263,4 +263,10 @@ interface IRiskModuleErrors {
     /// @param moreAt Time the next charges stop counting, or 0.
     /// @custom:spec REQ-RISK-093, REQ-RISK-096, REQ-RISK-099, Q-411
     error PledgeSpeedExceeded(uint256 marketId, uint256 availableUsd, uint64 moreAt);
+
+    /// @notice `creditRepay` from an address other than the AaveAdapter, or `creditWithdraw` from an address other than
+    /// Collateralization.
+    /// @param caller The caller.
+    /// @custom:spec REQ-RISK-095
+    error NotSpeedWriter(address caller);
 }

@@ -44,9 +44,9 @@ contract SpeedLimitMathHalmosTest is Test {
     ) public pure {
         _tau(tau);
         vm.assume(start <= t1 && t1 <= t2 && uint256(t2) < uint256(t1) + tau && t2 < TIME_MAX);
-        SpeedWindow memory r1 = SpeedLimitMath.roll(SpeedWindow(start, prev, curr), tau, t1);
+        SpeedWindow memory r1 = SpeedLimitMath.roll(SpeedWindow(start, prev, curr, 0, false), tau, t1);
         vm.assume(SpeedLimitMath.fits(r1, l1, x1));
-        SpeedWindow memory r2 = SpeedLimitMath.roll(SpeedLimitMath.add(r1, x1), tau, t2);
+        SpeedWindow memory r2 = SpeedLimitMath.roll(SpeedLimitMath.add(r1, x1, 0), tau, t2);
         vm.assume(SpeedLimitMath.fits(r2, l2, x2));
         assert(uint256(x1) + x2 <= l2);
         assert(SpeedLimitMath.used(r1) + x1 <= l1);
@@ -66,9 +66,9 @@ contract SpeedLimitMathHalmosTest is Test {
     ) public pure {
         _tau(tau);
         vm.assume(start <= t && uint256(later) >= uint256(t) + 2 * uint256(tau) && later < TIME_MAX);
-        SpeedWindow memory r = SpeedLimitMath.roll(SpeedWindow(start, prev, curr), tau, t);
+        SpeedWindow memory r = SpeedLimitMath.roll(SpeedWindow(start, prev, curr, 0, false), tau, t);
         assert(r.start >= start && r.start <= t && uint256(r.start) + tau > t);
-        SpeedWindow memory w = SpeedLimitMath.add(r, x);
+        SpeedWindow memory w = SpeedLimitMath.add(r, x, 0);
         assert(SpeedLimitMath.used(SpeedLimitMath.roll(w, tau, later)) == 0);
     }
 
@@ -78,30 +78,65 @@ contract SpeedLimitMathHalmosTest is Test {
         uint16 rate,
         uint96 lo,
         uint96 hi,
-        uint128 base,
-        uint96 used
+        uint128 base
     ) public pure {
         vm.assume(rate <= 10_000 && lo <= hi);
-        uint256 lim = SpeedLimitMath.limit(rate, lo, hi, base, used);
+        uint256 lim = SpeedLimitMath.limit(rate, lo, hi, base);
         assert(lim >= lo && lim <= hi);
-        assert(SpeedLimitMath.limit(0, 0, 0, base, used) == 0);
+        assert(SpeedLimitMath.limit(0, 0, 0, base) == 0);
     }
 
-    // PROP-111 verifies: SPEC-CAP-012, ATTACK-205
-    /// @notice With `D = D0 + used`, the limit equals the limit of `D0` (own charges never raise it), and it never
-    /// decreases when the base grows.
+    // PROP-111 verifies: SPEC-CAP-012, ATTACK-205, ATTACK-206
+    /// @notice Inside a bucket a charge opened on base `d0`, the limit is the limit of `d0` whatever the live base
+    /// (own charges never raise it, repays never lower it), and it never decreases when the base grows.
     function check_PROP_111_ownChargesNeverRaiseTheLimit(
         uint16 rate,
         uint96 lo,
         uint96 hi,
         uint128 d0,
         uint96 used,
-        uint128 more
+        uint128 live,
+        uint64 t0,
+        uint32 dt
     ) public pure {
-        vm.assume(rate <= 10_000 && lo <= hi);
-        uint256 lim = SpeedLimitMath.limit(rate, lo, hi, d0, 0);
-        assert(SpeedLimitMath.limit(rate, lo, hi, uint256(d0) + used, used) == lim);
-        assert(SpeedLimitMath.limit(rate, lo, hi, uint256(d0) + more, 0) >= lim);
+        vm.assume(rate <= 10_000 && lo <= hi && t0 < TIME_MAX && dt < TAU_MIN);
+        uint256 lim = SpeedLimitMath.limit(rate, lo, hi, d0);
+        assert(SpeedLimitMath.limit(rate, lo, hi, _baseLater(d0, used, live, t0, dt)) == lim);
+        assert(SpeedLimitMath.limit(rate, lo, hi, uint256(d0) + 1) >= lim);
+    }
+
+    /// @dev The window-start base a check sees `dt` after a charge of `used` at `t0` opened the bucket on base `d0`.
+    function _baseLater(
+        uint256 d0,
+        uint256 used,
+        uint256 live,
+        uint64 t0,
+        uint32 dt
+    ) internal pure returns (uint256) {
+        SpeedWindow memory empty;
+        SpeedWindow memory r0 = SpeedLimitMath.roll(empty, TAU_MIN, t0);
+        SpeedWindow memory w = SpeedLimitMath.add(r0, used, SpeedLimitMath.windowBase(empty, r0, d0));
+        SpeedWindow memory r = SpeedLimitMath.roll(w, TAU_MIN, uint256(t0) + dt);
+        return SpeedLimitMath.windowBase(w, r, live);
+    }
+
+    // PROP-111 verifies: SPEC-CAP-011
+    /// @notice A credit never raises `used`, takes exactly `min(x, used)` and never goes below zero.
+    function check_PROP_111_creditTakesAtMostWhatCounts(
+        uint32 tau,
+        uint64 start,
+        uint96 prev,
+        uint96 curr,
+        uint64 t,
+        uint96 x
+    ) public pure {
+        _tau(tau);
+        vm.assume(start <= t && t < TIME_MAX);
+        SpeedWindow memory w = SpeedWindow(start, prev, curr, 0, false);
+        uint256 before = SpeedLimitMath.used(SpeedLimitMath.roll(w, tau, t));
+        uint256 afterCredit = SpeedLimitMath.used(SpeedLimitMath.roll(SpeedLimitMath.credit(w, tau, t, x), tau, t));
+        assert(afterCredit <= before);
+        assert(before - afterCredit == (x < before ? x : before));
     }
 
     // PROP-112 verifies: SPEC-CAP-011, REQ-RISK-097
@@ -116,7 +151,7 @@ contract SpeedLimitMathHalmosTest is Test {
     ) public pure {
         _tau(tau);
         vm.assume(start <= t && t < TIME_MAX);
-        SpeedWindow memory r = SpeedLimitMath.roll(SpeedWindow(start, prev, curr), tau, t);
+        SpeedWindow memory r = SpeedLimitMath.roll(SpeedWindow(start, prev, curr, 0, false), tau, t);
         (uint64 at, uint256 amount) = SpeedLimitMath.moreAt(r, tau);
         if (r.prev > 0) {
             assert(amount == r.prev);

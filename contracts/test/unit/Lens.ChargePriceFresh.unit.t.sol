@@ -9,9 +9,9 @@ import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensChargePriceFreshUnitTest
-/// @notice `getCapHeadroom`'s charge price on the real Collateralization: a pledge is booked at the lower of the fresh
-/// and accepted prices, never below the market's stress floor; a non-positive fresh price (a failed market) leaves
-/// the accepted price.
+/// @notice `getCapHeadroom`'s charge price on the real Collateralization: a pledge's cap charge is booked at the fresh
+/// price, never below the market's stress floor; a non-positive fresh price (a failed market) leaves the accepted
+/// price.
 /// forge-config: default.isolate = false
 contract LensChargePriceFreshUnitTest is LensFixture {
     function setUp() public {
@@ -33,18 +33,17 @@ contract LensChargePriceFreshUnitTest is LensFixture {
         return c.chargePricePerWholeToken;
     }
 
-    /// @notice Accepted $2.00, stress floor $1.00. A fresh $1.80 is below the accepted price, so the charge is $1.80; a
-    /// fresh $0.50 is below the floor, so the charge is the floor $1.00; a fresh $2.40 is above the accepted price,
-    /// so the charge stays $2.00.
-    // TEST-230 verifies: REQ-LENS-018; shared: TEST-230 books a pledge at min(fresh, A) and the Lens previews that same charge price, A after a rally
+    /// @notice Accepted $2.00, stress floor $1.00. A fresh $1.80 gives a $1.80 charge; a fresh $0.50 is below the floor,
+    /// so the charge is the floor $1.00; a fresh $2.40 above the accepted price is charged in full.
+    // TEST-230 verifies: REQ-LENS-018; shared: TEST-230 books a pledge's cap charge at the fresh price and the Lens previews that same charge price
     // TEST-247 verifies: REQ-LENS-018
-    function test_TEST_247_chargePriceIsTheLowerOfFreshAndAccepted() public {
+    function test_TEST_247_chargePriceIsTheFreshPrice() public {
         _fresh(1.8e8);
         assertEq(_charge(), 1.8e8, "fresh below accepted: the fresh price");
         _fresh(0.5e8);
         assertEq(_charge(), 1e8, "fresh below the stress floor: the floor");
         _fresh(2.4e8);
-        assertEq(_charge(), 2e8, "fresh above accepted: the accepted price");
+        assertEq(_charge(), 2.4e8, "fresh above accepted: the fresh price");
         _fresh(2e8);
         assertEq(_charge(), 2e8, "equal: the accepted price");
         vm.clearMockedCalls();

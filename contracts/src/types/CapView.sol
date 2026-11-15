@@ -9,7 +9,7 @@ import {DrawHeadroom} from "../lens/lens/types/DrawHeadroom.sol";
 /// @dev Avana headroom is USD with 8 decimals, `max(0, cap - used)` with counters from Collateralization (keyed by the
 /// market's Hub) and caps from the ParameterStore. `minPledgeUsd` (USD, 8 decimals) is the market's smallest accepted
 /// pledge value. `tokens` and `tokenHeadroomUsd` are in pool order. `poolShareBps` is Avana's share of pool liquidity,
-/// summed over every market of the pool on the chain, against `poolShareMaxBps`, the pool's `poolShareMaxBpsOf(poolKey)`. `chargePricePerWholeToken` is `max(oracle price, stressFloorUsd)` (8 decimals).
+/// summed over every market of the pool on the chain, against `poolShareMaxBps`, the pool's `poolShareMaxBpsOf(poolKey)`. `chargePricePerWholeToken` is `max(fresh price, stressFloorUsd)`, the accepted price standing in for a failed market's fresh price (8 decimals).
 /// `vaultTokenAddHeadroom` (vault-token base units) and each `drawHeadroom` entry (debt-asset base units, one per
 /// approved debt reserve of the market's CDP Spoke) use the Hub's own formulas; a `type(uint40).max` cap reports
 /// `type(uint256).max`. Rounding never overstates headroom.

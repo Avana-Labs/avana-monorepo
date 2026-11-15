@@ -180,17 +180,20 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     function _value(
         Ctx memory c
     ) internal view {
-        uint256 price8 = RiskModuleMath.bookingPrice(_accepted(c.m.lpOracle), c.fresh);
+        uint256 accepted = _accepted(c.m.lpOracle);
+        uint256 price8 = RiskModuleMath.bookingPrice(accepted, c.fresh);
+        // Caps at the fresh price, the minimum at the lower of the two.
+        uint256 capPrice8 = RiskModuleMath.capPrice(accepted, c.fresh);
         uint256 floorUsd = _store().stressFloorUsd(c.marketId);
         c.minPledge = _store().minPledgeUsd(c.marketId);
         c.pledgeUsd = RiskModuleMath.pledgeUsd(c.units, price8, c.m.decimals);
-        c.charge = RiskModuleMath.usdCharge(c.units, price8, floorUsd, c.m.decimals);
+        c.charge = RiskModuleMath.usdCharge(c.units, capPrice8, floorUsd, c.m.decimals);
         uint256 rescueMin = RiskModuleMath.rescueMinimum(c.minPledge);
         if (c.pledgeUsd < rescueMin) revert BelowMinPledge(c.pledgeUsd, rescueMin);
         c.eligible = c.topUp && c.hf < RiskModuleConstants.RESCUE_HEALTH_FACTOR;
         if (c.eligible) {
             uint256 restore = RiskModuleMath.usdToRestore(c.hf, c.debtRay, _latestCf(c.m.spoke, c.m));
-            c.restore = RiskModuleMath.restoreBooked(restore, price8, floorUsd, _served(c.m.lpOracle));
+            c.restore = RiskModuleMath.restoreBooked(restore, capPrice8, floorUsd, _served(c.m.lpOracle));
         }
     }
 

@@ -72,14 +72,15 @@ contract LensSpeedUnitTest is RiskModuleFixture {
         (SpeedView memory m, SpeedView memory d) = riskModule.getBorrowSpeed(mid, USDC_RESERVE);
         assertEq(abi.encode(v.market), abi.encode(m), "market window unchanged");
         assertEq(abi.encode(v.debt), abi.encode(d), "debt window unchanged");
-        // Market room $249,925 at $0.9999 = 249,949.99... USDC; the USDC window (L 600,000, used 600,000) has none.
+        // Market room $250,000 (the limit stays on the window-start base) at $0.9999 = 250,025.0025 USDC; the USDC window
+        // (L 600,000, used 600,000) has none.
         assertEq(d.available, 0);
         assertEq(v.availableNow, 0, "the debt window binds");
         // Loosen the USDC window: now the market room binds, converted down.
         store.setDebtSpeed(address(hub), address(usdc), SpeedLimit(2500, uint32(TAU), 5_000_000e6, 5_000_000e6));
         v = lens.getBorrowSpeed(mid, USDC_RESERVE);
-        assertEq(v.market.available, 249_925 * E8);
-        assertEq(v.availableNow, (249_925 * E8 * 1e6) / 99_990_000, "249,949.994999 USDC, rounded down");
+        assertEq(v.market.available, 250_000 * E8);
+        assertEq(v.availableNow, (250_000 * E8 * 1e6) / 99_990_000, "250,025.002500 USDC, rounded down");
         assertEq(v.moreAt, uint64(T0 + 2 * TAU));
     }
 

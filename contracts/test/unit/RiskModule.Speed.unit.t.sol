@@ -92,32 +92,32 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
 
     // TEST-321 verifies: REQ-RISK-092, REQ-RISK-098, SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013, BOR-023
     function test_TEST_321_workedExampleRevertsWithRoomAndTime() public {
+        // The USDC (Hub, asset) window opened wide, so the market window is the one that binds.
+        store.setDebtSpeed(address(hub), address(usdc), SpeedLimit(2500, uint32(TAU), 5_000_000e6, 5_000_000e6));
         uint256 t0 = block.timestamp;
         _borrowAsAdapter(USDC_RESERVE, 600_000e6);
-        // The Spoke now owes the borrowed 600,000 USDC too: debt $4,000,000, base $3,400,000, L = $850,000.
+        // The Spoke now owes the borrowed 600,000 USDC too, and USDC trades at $0.9999; the limit stays on the
+        // window-start base of $3,400,000: L = $850,000, $250,000 available.
         hub.setOwed(USDC_ASSET, address(spoke), 3_000_000e6, 0);
         aaveOracle.setPrice(USDC_RESERVE, 99_990_000);
         vm.warp(t0 + 100);
         SpeedView memory m = _marketView();
-        // $1,000,000 GHO + 3,000,000 USDC at $0.9999 = $3,999,700; base $3,399,700; L = $849,925.
-        assertEq(m.limit, 849_925 * E8);
-        assertEq(m.available, 249_925 * E8);
+        assertEq(m.limit, 850_000 * E8);
+        assertEq(m.available, 250_000 * E8);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IRiskModuleErrors.BorrowSpeedExceeded.selector, mid, 249_925 * E8, uint64(t0 + 2 * TAU)
+                IRiskModuleErrors.BorrowSpeedExceeded.selector, mid, 250_000 * E8, uint64(t0 + 2 * TAU)
             )
         );
         _borrowAsAdapter(USDC_RESERVE, 300_000e6);
-        // 249,950 USDC charges ⌈249,950 × 0.9999⌉ = $249,925.005 → 24,992,500,500,000 units: one too many.
+        // 250,026 USDC charges ⌈250,026 × 0.9999⌉ = $250,000.9974: one too many; 250,025 USDC is $249,999.9975.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IRiskModuleErrors.BorrowSpeedExceeded.selector, mid, 249_925 * E8, uint64(t0 + 2 * TAU)
+                IRiskModuleErrors.BorrowSpeedExceeded.selector, mid, 250_000 * E8, uint64(t0 + 2 * TAU)
             )
         );
-        _borrowAsAdapter(USDC_RESERVE, 249_950e6);
-        // At $1.00 the example of 2.7 holds exactly: $250,000 of room.
-        aaveOracle.setPrice(USDC_RESERVE, 1e8);
-        assertEq(_marketView().available, 250_000 * E8);
+        _borrowAsAdapter(USDC_RESERVE, 250_026e6);
+        _borrowAsAdapter(USDC_RESERVE, 250_025e6);
     }
 
     // TEST-321 verifies: REQ-RISK-092, REQ-RISK-098
@@ -125,20 +125,20 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         // USDC window: owed 2,400,000 → L = 600,000 USDC; market window has $850,000.
         _borrowAsAdapter(USDC_RESERVE, 500_000e6);
         SpeedView memory d = _debtView();
-        // Own charge left out of the base: 25 % of 1,900,000 = 475,000, below the 500,000 minimum.
-        assertEq(d.limit, 500_000e6);
-        assertEq(d.available, 0);
+        // The limit stays on the window-start base of 2,400,000 USDC.
+        assertEq(d.limit, 600_000e6);
+        assertEq(d.available, 100_000e6);
         uint256 usedBefore = _marketView().used;
         vm.expectRevert(
             abi.encodeWithSelector(
                 IRiskModuleErrors.DebtSpeedExceeded.selector,
                 address(hub),
                 address(usdc),
-                uint256(0),
+                uint256(100_000e6),
                 uint64(block.timestamp + 2 * TAU)
             )
         );
-        _borrowAsAdapter(USDC_RESERVE, 1e6);
+        _borrowAsAdapter(USDC_RESERVE, 100_001e6);
         assertEq(_marketView().used, usedBefore, "a refused borrow charges neither window");
     }
 
@@ -303,8 +303,8 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         assertEq(c.usdCharge, 20_000e8);
         SpeedView memory p = riskModule.getPledgeSpeed(mid);
         assertEq(p.used, 20_000e8);
-        // Base $6,000,000 less the $20,000 charged: L = $1,495,000.
-        assertEq(p.limit, 1_495_000e8);
+        // The window-start base $6,000,000 written with the charge: L = $1,500,000.
+        assertEq(p.limit, 1_500_000e8);
     }
 
     // TEST-322 verifies: REQ-RISK-006, REQ-RISK-095, REQ-RISK-058

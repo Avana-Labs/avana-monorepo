@@ -878,6 +878,14 @@
       "review": "Pattern: specified timestamps (SPEC-ORC-013/014/015/016/019, REQ-ORACLE-032/034 windows and age limits; boundaries fail closed)."
     },
     {
+      "fingerprint": "accce6c295fa1171",
+      "check": "timestamp",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle._recordSeen(DebtOracleStorage.DebtOracleLayout,DebtEvaluation)",
+      "reason": "The flagged comparison, (e.reasons & R_CONFIG_UNAVAILABLE) != 0, tests a reason flag of the evaluation and compares no time; slither flags it because the evaluation struct also holds block and source timestamps. When the configuration read failed, no leg was read and every seen record is kept (REQ-ORACLE-031). Covered by TEST-219 (test/unit/DebtOracle.SeenRecords.unit.t.sol).",
+      "approval": "approved (Josue, 2026-11-15)"
+    },
+    {
       "fingerprint": "f28e7b8b8cf8974b",
       "check": "timestamp",
       "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
@@ -4834,6 +4842,62 @@
       "reason": "The constants are part of the shared LPOracleStorage base; each of the six contracts that inherits it (LPOracleCL, its poke, initialization, listing and view logic contracts and LPOracleCLModuleLogic) uses only the ones its own bodies need, so every constant is unused in some of them. Constants occupy no storage.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: the approved shared-base unused-state entries of MarketRegistryStorage and ParameterStoreStorage (Josue, 2026-11-10, by pattern)"
+    },
+    {
+      "fingerprint": "da01345bc97b837d",
+      "check": "incorrect-equality",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "function": "AaveAdapterSteps._creditSpeed(address,uint256,uint256)",
+      "reason": "`spent == 0` only skips the speed credit when a repay step took nothing; the value is the proxy's measured balance delta, not a balance an outsider can set, and skipping a zero credit changes no window. Covered by TEST-326."
+    },
+    {
+      "fingerprint": "c8b780700217a625",
+      "check": "calls-loop",
+      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "function": "AaveAdapterSteps._creditSpeed(address,uint256,uint256)",
+      "reason": "The RiskModule speed credit after each repay step; repayAllAndWithdraw runs one step per debt reserve it names, bounded by the Spoke's per-account reserve limit (REQ-ADAPTER-051). The call has a fixed stipend inside a try/catch, so a failing or slow RiskModule cannot stop the loop (REQ-RISK-005). Covered by TEST-326."
+    },
+    {
+      "fingerprint": "6b2e985cbb17fff9",
+      "check": "unused-state",
+      "file": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "function": "",
+      "reason": "SPEED_CREDIT_FLOOR is a constant of the shared AaveAdapterStorage, used by the logic contracts' repay step; the router itself runs no repay step. Constants occupy no storage."
+    },
+    {
+      "fingerprint": "6ff9a0c4e5f21a26",
+      "check": "unused-return",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic.marketBreaker(uint256,bool,uint256)",
+      "reason": "Only the latched reasons are read from MarketRegistry.marketBreaker; the recovery of each temporary reason reads its own breach time, lastBreachAt(breachKey(key, reason)) (SPEC-BRK-007). Covered by TEST-228."
+    },
+    {
+      "fingerprint": "23e50b6387ec04e6",
+      "check": "unused-return",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic.debtBreaker(address,uint256)",
+      "reason": "As marketBreaker: the latched reasons are read here and each temporary reason's breach time separately (SPEC-BRK-007). Covered by TEST-228."
+    },
+    {
+      "fingerprint": "d0443f0632026dd4",
+      "check": "unused-return",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic.pokeOracles(uint256)",
+      "reason": "pokeBreakers pokes the market's LPOracle and DebtOracles first, as the pre-checks do (REQ-RISK-056, REQ-RISK-091); a poke stores observations and its returned state is not needed because the breaker conditions read getPriceState themselves. A poke reverts only below its gas floor, which reverts the whole poke. Covered by TEST-228."
+    },
+    {
+      "fingerprint": "9dab0ad1db684460",
+      "check": "calls-loop",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic.pokeOracles(uint256)",
+      "reason": "One getDebtReserve view and one DebtOracle poke per debt reserve of the market's Spoke, bounded by the timelock's listings, as in pokeBreakers' own loop (REQ-RISK-091). Covered by TEST-228."
+    },
+    {
+      "fingerprint": "0f6db76ee53ff4a3",
+      "check": "calls-loop",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "RiskModuleBreakerLogic._tripped(uint32,uint32,bytes32)",
+      "reason": "Three MarketRegistry.lastBreachAt views, one per temporary reason (ORACLE, POOL_SHARE, POOL_DEPTH), a fixed bound; per-reason breach times of SPEC-BRK-007. Covered by TEST-228."
     }
   ]
 }
