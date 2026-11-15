@@ -14,7 +14,7 @@ import {Test} from "forge-std/Test.sol";
 /// `[1, MAX_ROUTE_ANSWER]` (`PROP-026`).
 /// @dev The library is compiled into this contract. Amounts are below `2^128` (a composition of `10^d <= 10^18` units),
 /// prices at most `MAX_ROUTE_ANSWER = 10^18` (normalised answers inside the listing bounds), tolerances `uint16`.
-/// Token decimals are concrete per check (6/6, 18/6 and 18/18 cover the launch pairs), so every division is by a
+/// Token decimals are concrete per check (6/6, 18/6 and 18/18 cover the example pairs), so every division is by a
 /// constant power of ten.
 contract LPPriceMathHalmosTest is Test {
     uint256 internal constant MAX_ROUTE = 1e18;

@@ -12,7 +12,7 @@ import type { Doc } from "../_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "../_generated/server";
 import { type Resolver, decodeRecord } from "../lib/activity.ts";
 import { blockTimes } from "../lib/exportPage.ts";
-import { defaultSlug, hubLabel } from "../lib/format.ts";
+import { assetSlugs, defaultSlug, hubLabel } from "../lib/format.ts";
 
 /** A row of the history table every 1,000 blocks: the rebuild's starting points. */
 const HISTORY_EVERY = 1_000n;
@@ -74,9 +74,21 @@ export const applySnapshot = internalMutation({
     }
     const keepReserves = new Set(s.spokeReserves.map((r) => `${r.spoke}:${r.reserveId}`));
     for (const old of (await ctx.db.query("spokeReserves").collect()).filter((r) => r.chainId === s.chainId && !keepReserves.has(`${r.spoke}:${r.reserveId}`))) await ctx.db.delete(old._id);
+    // Default slugs per (Spoke, Hub, token): the same token drawn from two Hubs on one Spoke gets two pages.
+    const defaults = assetSlugs(
+      s.chainId,
+      await Promise.all(
+        s.spokeReserves.map(async (r) => ({
+          key: `${r.spoke}:${r.reserveId}`,
+          spokeLabel: (await contentSlug(ctx, "spoke", s.chainId, r.spoke)) ?? `spoke-${r.spoke.slice(2, 8)}`,
+          hubLabel: labelOf(r.hub),
+          symbol: await symbol(r.asset),
+          asset: r.asset,
+        })),
+      ),
+    );
     for (const r of s.spokeReserves) {
-      const spokeLabel = (await contentSlug(ctx, "spoke", s.chainId, r.spoke)) ?? `spoke-${r.spoke.slice(2, 8)}`;
-      const slug = (await contentSlug(ctx, "asset", s.chainId, `${r.spoke}:${r.reserveId}`)) ?? defaultSlug.asset(s.chainId, spokeLabel, await symbol(r.asset));
+      const slug = (await contentSlug(ctx, "asset", s.chainId, `${r.spoke}:${r.reserveId}`)) ?? defaults.get(`${r.spoke}:${r.reserveId}`)!;
       const row = { ...r, slug, updatedAt: now };
       const existing = await ctx.db.query("spokeReserves").withIndex("by_key", (q) => q.eq("chainId", r.chainId).eq("spoke", r.spoke).eq("reserveId", r.reserveId)).unique();
       if (existing) await ctx.db.replace(existing._id, row);

@@ -179,7 +179,7 @@ contract SettlementMathHalmosTest is Test {
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
     /// @notice A caller-funded call always settles: with `Kf ≥ D` (Aave pulls `D` out of `Kf`), the gap never exceeds
     /// the floor gap, the top-up is `max(0, minRec − R)` and `keeperPayout` never reverts; the waterfall reads
-    /// `R_f = max(R, minRec)`, so the top-up never counts as surplus beyond the floor. The fee share is the launch
+    /// `R_f = max(R, minRec)`, so the top-up never counts as surplus beyond the floor. The fee share is the default
     /// 2,000 bps (a symbolic share makes the fee product nonlinear; the 10,000-run fuzz twin
     /// `testFuzz_TEST_198_callerFundingAlwaysSettles` covers it).
     function check_PROP_015_gapSettlesWithoutRevert(

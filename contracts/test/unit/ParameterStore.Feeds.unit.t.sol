@@ -504,7 +504,7 @@ contract ParameterStoreFeedsTwapUnitTest is ParameterStoreFixture {
         s = IParameterStore(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _launchGlobals(), 0, 10_000))
+                    address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 0, 10_000))
                 )
             )
         );
@@ -514,7 +514,7 @@ contract ParameterStoreFeedsTwapUnitTest is ParameterStoreFixture {
         IParameterStore s,
         uint32 window
     ) internal returns (bool ok, bytes memory ret) {
-        MarketParams memory p = _launchMarketParams();
+        MarketParams memory p = _defaultMarketParams();
         p.twapWindow = window;
         vm.prank(address(timelock));
         (ok, ret) = address(s).call(abi.encodeCall(s.setInitialMarketParams, (M, p)));

@@ -3,7 +3,8 @@ name: web
 # The web app in webapp/ (`@avana/web`, one package of the npm workspace whose root is the repository's package.json).
 # Every pull request and push to main that changes it, services/convex (the app imports its Convex API), the workspace
 # manifests or this file installs the whole workspace with npm ci from the lock file (lifecycle scripts never run), then
-# runs the app's lint, typecheck, unit tests and a production build. The build needs no secrets: every environment
+# checks that the lock file applies every root `overrides` pin, then runs the app's lint, typecheck, unit tests and a
+# production build. The build needs no secrets: every environment
 # variable may be empty (webapp/.env.example lists them).
 # Tool versions are pinned: Node by .nvmrc, every action by commit SHA (the release tag in the trailing comment),
 # every direct dependency by exact version and every transitive one by the lock file.
@@ -17,6 +18,7 @@ on:
       - "package-lock.json"
       - ".nvmrc"
       - ".github/workflows/web.yml"
+      - ".github/scripts/check-npm-overrides.mjs"
   push:
     branches: [main]
     paths:
@@ -26,6 +28,7 @@ on:
       - "package-lock.json"
       - ".nvmrc"
       - ".github/workflows/web.yml"
+      - ".github/scripts/check-npm-overrides.mjs"
   workflow_dispatch:
 
 concurrency:
@@ -55,6 +58,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: package-lock.json
+
+      - name: Lock file applies the npm overrides
+        working-directory: .
+        run: node .github/scripts/check-npm-overrides.mjs
 
       - name: Install dependencies
         working-directory: .

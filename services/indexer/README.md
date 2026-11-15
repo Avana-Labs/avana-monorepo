@@ -9,8 +9,8 @@ Ponder indexer with a PostgreSQL store for Avana and Aave V4 events on Ethereum 
 | `src/handlers/` | One file per area; every event handler writes the `event_log` row first, except pool swaps, mints and burns, which only feed the pool's series (`pools.ts`); `series.ts` is the hourly sampler |
 | `src/lib/` | Provenance, the log writer, log-only registration, the series writer and the pool series aggregation |
 | `src/config/` | ABIs from `packages/protocol`, the factory events taken from them, and manifest-driven sources |
-| `test/` | Unit tests (vitest): factory events and log-only subscriptions against the ABIs, export authentication, the keeper stream's paging rules and kinds, the snapshot reader's ABI fragments against the generated ABIs, pool series aggregation |
-| `src/api/` | The authenticated export (event pages, series pages, pool history) and the keeper stream, the only HTTP routes besides Ponder's `/health` and `/ready` |
+| `test/` | Unit tests (vitest): the handlers on scripted logs through an in-memory store (`test/harness`; account attribution, debt, custody, reserves and deficit offsets, risk premiums), replay and reorg properties of the whole handler set, event coverage of every followed ABI, factory events and log-only subscriptions against the ABIs, export authentication, the keeper stream's paging rules and kinds, the wallet history's request, parties and paging, the snapshot reader's ABI fragments against the generated ABIs, pool series aggregation |
+| `src/api/` | The authenticated export (event pages, series pages, pool history, wallet history, risk premium refresh list) and the keeper stream, the only HTTP routes besides Ponder's own `/health`, `/ready`, `/status` and `/metrics` (Prometheus, read by `services/dashboards`) |
 
 ## Configuration
 
@@ -27,7 +27,7 @@ Every row that an event writes or changes stores the chain ID, block number, blo
 - **Crash recovery.** A restart with the same `DATABASE_SCHEMA` resumes from Ponder's last checkpoint. A restart with a changed schema or handler code starts a new schema and reindexes from the manifest start blocks; the export switches to the new schema only after `/ready`, so Convex never reads a half-built index.
 - **Full reindex** completes within one hour from the start blocks (services/README.md); the `Progress` block source starts at `latest`, so it adds no historical blocks. The `SeriesSampler` source adds one sample per hour of chain history since the Lens deployment (8,760 a year per chain), each six multicall rounds plus the account reads, against an archive node; Ponder caches these reads, so only the first build of a schema pays them.
 - **Upgrades.** A contract's ABI is the union of every version deployed since its start block, so each block range decodes with the events its implementation emitted; `Upgraded` rows record when each implementation took over.
-- **Replay test.** `TEST-143` replays a fork run, injects Anvil reorgs and compares the tables with RPC reads at the same block. It needs the shared fork environment's manifest, and no workflow runs it yet.
+- **Replay and reorg tests.** `test/replay.test.ts` runs every handler on one scripted history through an in-memory store that applies Ponder's write rules (`test/harness`): delivering every log again, or through every source that follows a Hub, Spoke or reserve, leaves the same tables, and a reorg handled as Ponder does (revert to the common ancestor, run the new branch) leaves exactly the tables of a fresh run over the canonical branch, with no block hash of the dropped branch. They run in CI with the other unit tests (`services.yml`). `TEST-143`, which replays a fork run with Anvil reorgs against RPC reads at the same block, needs the shared fork environment's manifest, and no workflow runs it yet.
 
 ## Running
 

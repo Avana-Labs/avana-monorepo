@@ -26,7 +26,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 // forge-lint: disable-start(calls-loop)
 // KeeperAdded and KeeperRemoved follow the registry's freeze read (a view); the setters are timelock-only.
 // forge-lint: disable-start(reentrancy-events)
-// initialize registers each launch keeper through the same check as addKeeper; a zero or repeated entry must
+// initialize registers each initial keeper through the same check as addKeeper; a zero or repeated entry must
 // revert the initialisation.
 // forge-lint: disable-start(require-revert-in-loop)
 /// @title LPVaultSwap
@@ -50,7 +50,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
 
     /// @notice Fixes the implementation immutables, checks each logic contract and disables initializers on the
     /// implementation itself.
-    /// @param im The per-chain addresses and the keeper floor (`keeperFloor = 1` at launch).
+    /// @param im The per-chain addresses and the keeper floor (for example `keeperFloor = 1`).
     /// @param logics The three logic contracts, each built with `im`.
     /// @custom:spec REQ-SWAP-034, REQ-SWAP-040
     constructor(

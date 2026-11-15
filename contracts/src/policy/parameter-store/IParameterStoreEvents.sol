@@ -98,8 +98,8 @@ interface IParameterStoreEvents {
     /// @param token Pool token sold.
     /// @param debtAsset Debt asset bought.
     /// @param kind 0 primary, 1 backup.
-    /// @param oldValue Previous threshold, 8-decimal USD.
-    /// @param newValue New threshold, 8-decimal USD.
+    /// @param oldValue Previous threshold, base units of `debtAsset`.
+    /// @param newValue New threshold, base units of `debtAsset`.
     /// @custom:spec REQ-CONFIG-070, REQ-PSTORE-007, Q-379
     event RouteDepthThresholdSet(
         uint256 indexed marketId, address token, address debtAsset, uint8 kind, uint256 oldValue, uint256 newValue

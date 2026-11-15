@@ -11,7 +11,8 @@
   "scripts": {
     "start": "tsx src/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:fork": "vitest run test/fork"
   },
   "dependencies": {
     "@avana/protocol": "file:../../packages/protocol",

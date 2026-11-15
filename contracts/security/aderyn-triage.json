@@ -1201,7 +1201,7 @@
       "check": "costly-loop",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
       "function": "LPVaultSwap.initialize",
-      "reason": "Bounded loop over the launch keeper list (at most MAX_KEEPERS = 32), run once in initialize.",
+      "reason": "Bounded loop over the initial keeper list (at most MAX_KEEPERS = 32), run once in initialize.",
       "approval": "pending review (approved pattern)"
     },
     {

@@ -68,11 +68,13 @@ interface IRelistedToken {
 ///   of the config is relisted under its reserved ID with its first vault token and LPOracle); the batch enables
 ///   the debt reserves (`enableDebtReserve`, the debt asset's settlement parameters and, on the first reserve of a
 ///   (Hub, asset), `loosenDebtSpeedLimit`), then per market `deployVaultToken`, `listCollateralMarket`,
-///   `setInitialMarketParams`, `setInitialMarketCaps`, `loosenMarketSpeedLimits` and the primary and backup route of
-///   every pool token into the Spoke's debt asset. `10_AaveListingPayload` (`vault-tokens`) then lists the vault tokens.
+///   `setInitialMarketParams`, `setInitialMarketCaps`, `loosenMarketSpeedLimits`, the primary and backup route of
+///   every pool token into the Spoke's debt asset and each route slot's depth threshold (`tightenRouteDepthThreshold`,
+///   from the route's `depthThreshold` in the config). `10_AaveListingPayload` (`vault-tokens`) then lists the vault
+///   tokens.
 /// - `activate` (short delay): every LPOracle poked Live, then `activateMarket` for each market.
 /// @dev Speed limits fail closed (Q-411): a market or a (Hub, asset) without a written value refuses every pledge or
-/// borrow, so the listing batch writes the launch values (τ 6 h; borrow 25 %, $250k–$2.5M; pledge 25 %, $1M–$10M;
+/// borrow, so the listing batch writes the config values (τ 6 h; borrow 25 %, $250k–$2.5M; pledge 25 %, $1M–$10M;
 /// (Hub, asset) 25 %, 500k–5M tokens). The `markets` operation's salt is keccak256 of the listing metadata file
 /// (`09-market-metadata`), so the operation commits to the pages it adds. Outputs: `listing-oracles.json` and `listing-markets.json` in
 /// `deployments-local/<network>/`, read by the manifest producer and the scenarios.
@@ -898,7 +900,7 @@ contract ListMarkets is ListingBase {
     }
 
     /// @notice `enableDebtReserve` for each configured reserve, the asset's settlement parameters and, on the first
-    /// reserve of a (Hub, asset), its launch borrow-speed limit (written after the reserve exists, `UnknownDebtReserve`
+    /// reserve of a (Hub, asset), its borrow-speed limit (written after the reserve exists, `UnknownDebtReserve`
     /// otherwise).
     function _enableDebtReserves(
         Operation memory op
@@ -1116,6 +1118,7 @@ contract ListMarkets is ListingBase {
                 // again, the deployed route contracts reused.
                 if (existing != address(0) && !m.relisting) {
                     routes[2 * i + kind] = existing;
+                    _depthThreshold(op, m.marketId, rk, tokenIn, asset, kind);
                     continue;
                 }
                 address route = existing != address(0)
@@ -1133,8 +1136,43 @@ contract ListMarkets is ListingBase {
                     abi.encodeCall(registry.setRoute, (m.marketId, tokenIn, asset, kind, route)),
                     "MR.setRoute"
                 );
+                _depthThreshold(op, m.marketId, rk, tokenIn, asset, kind);
             }
         }
+    }
+
+    /// @notice The depth threshold of one route slot (`REQ-ROUTE-006`, `REQ-CONFIG-070`), set in the listing batch by
+    /// `tightenRouteDepthThreshold` after the market's `setInitialMarketParams`. The route's `depthThreshold` (and, for the
+    /// backup, `backupDepthThreshold` when given) is in whole units of the debt asset and is stored in its base units: a
+    /// GHO threshold of 2000000 is 2,000,000 × 10^18. A slot already at or above that value is left as it is (a relisting or
+    /// a rerun); a lower one is `loosenRouteDepthThreshold` at the normal delay, outside the listing. A route without a
+    /// threshold is refused, except on the local anvil network, where the monitor then reports the slot as `noThreshold`.
+    function _depthThreshold(
+        Operation memory op,
+        uint256 marketId,
+        string memory rk,
+        address tokenIn,
+        address asset,
+        uint8 kind
+    ) private view {
+        string memory backupKey = string.concat(rk, ".backupDepthThreshold");
+        string memory key =
+            kind == 1 && vm.keyExistsJson(cfg, backupKey) ? backupKey : string.concat(rk, ".depthThreshold");
+        if (!vm.keyExistsJson(cfg, key)) {
+            require(
+                keccak256(bytes(_network())) == keccak256("anvil"), string.concat("route without depthThreshold: ", rk)
+            );
+            return;
+        }
+        uint256 value = _uint(key) * 10 ** IDecimals(asset).decimals();
+        require(value > 0, string.concat("route depthThreshold is 0: ", rk));
+        if (store.routeDepthThreshold(marketId, tokenIn, asset, kind) >= value) return;
+        _add(
+            op,
+            address(store),
+            abi.encodeCall(store.tightenRouteDepthThreshold, (marketId, tokenIn, asset, kind, value)),
+            "PS.tightenRouteDepthThreshold"
+        );
     }
 
     function _deployRoute(

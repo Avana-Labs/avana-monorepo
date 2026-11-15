@@ -41,7 +41,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
     function setUp() public {
         _setUpWorld();
         // The registry's token stand-ins expose Tether's fee-rate switch, which a route refuses to pay into a pool;
-        // the launch stables here have none, so the read reverts as it does on a token without the switch.
+        // the stables here have none, so the read reverts as it does on a token without the switch.
         _noFeeSwitch(address(usdc));
         _noFeeSwitch(address(usdt));
         _noFeeSwitch(address(gho));

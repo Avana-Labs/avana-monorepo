@@ -31,7 +31,7 @@ import {IParameterStoreSpeed} from "../../src/policy/parameter-store/IParameterS
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
-import {TimelockLaunchLists} from "../utils/fixtures/TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
 import {LVSMarketRegistryMock} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
@@ -40,7 +40,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 
 /// @title AvanaTimelockMatrixUnitTest
 /// @notice The timelock half of the restricted-function matrix of 2.15: for every selector the matrix lists, the
-/// delay class (Short or Normal) the AvanaTimelock built with the launch lists requires, and who can cancel a queued
+/// delay class (Short or Normal) the AvanaTimelock built with the fixed lists requires, and who can cancel a queued
 /// call of it (any canceller, or the Aave governance executor only for restoring and role-change operations). Also
 /// the cancel coverage of every operation type by each canceller, the removal of a guardian, the handover to the Aave
 /// DAO and operations outliving the governance multisig. The role half of each row (which role the target contract
@@ -547,7 +547,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     }
 
     /// @dev Deploys the real LPVaultSwap (three logic contracts, the implementation, the proxy initialised with this
-    /// timelock and one keeper) and a timelock whose launch lists name it, and makes that timelock the fixture's.
+    /// timelock and one keeper) and a timelock whose fixed lists name it, and makes that timelock the fixture's.
     function _realLPVaultSwap() internal returns (ILPVaultSwap lvs) {
         LPVaultSwapImmutables memory im = LPVaultSwapImmutables({
             lock: makeAddr("lock"),
@@ -568,8 +568,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         timelock = _newTimelock(
             NORMAL_DELAY,
             true,
-            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), predicted),
-            TimelockLaunchLists.daoOnlyCancel(address(marketRegistry), predicted)
+            TimelockShortDelayLists.shortEligible(address(parameterStore), address(marketRegistry), predicted),
+            TimelockShortDelayLists.daoOnlyCancel(address(marketRegistry), predicted)
         );
         address[] memory keepers = new address[](1);
         keepers[0] = keeper;

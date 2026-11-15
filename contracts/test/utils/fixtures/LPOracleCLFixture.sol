@@ -128,7 +128,7 @@ contract ClIntegrationStub {
 /// @notice A concentrated-liquidity market on a real Uniswap v3 pool priced by the real `LPOracleCL`: two tokens with
 /// one-leg primary and alternate routes (8-decimal feeds, heartbeat 86,400 s, margin 1,800 s, bounds `[1, 10^18]`) and
 /// an oracle-network second source each, served through the ParameterStore and MarketRegistry mocks (their own suites
-/// test the real ones), launch timers, a 1,800 s TWAP window with 151 observations at 12 s blocks and a 50-tick
+/// test the real ones), default timers, a 1,800 s TWAP window with 151 observations at 12 s blocks and a 50-tick
 /// tolerance. The pool is created two hours before `T0` at the oracle price and holds full-range liquidity.
 abstract contract LPOracleCLFixture is ClPoolFixture {
     uint32 internal constant BLOCK_TIME = 12;

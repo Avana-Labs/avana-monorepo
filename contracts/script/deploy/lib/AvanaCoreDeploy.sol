@@ -14,7 +14,7 @@ import {MarketRegistryImmutables} from "../../../src/policy/market-registry/type
 import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {IRiskModuleAdmin} from "../../../src/policy/risk-module/IRiskModuleAdmin.sol";
 import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {TimelockLaunchLists} from "../../../test/utils/fixtures/TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "../../../test/utils/fixtures/TimelockShortDelayLists.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {ChainInputs, UpgradeableDeployment} from "./DeployTypes.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -62,7 +62,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         p.flashLiquidator = _predict("FlashLiquidator");
     }
 
-    /// @notice Step 1: the timelock with `admin = address(0)` and the launch role table (`REQ-ACCESS-027`).
+    /// @notice Step 1: the timelock with `admin = address(0)` and the initial role table (`REQ-ACCESS-027`).
     function _deployTimelock(
         ChainInputs memory c,
         Predicted memory p
@@ -77,8 +77,8 @@ abstract contract AvanaCoreDeploy is DeployBase {
         address[] memory daoCancellers = new address[](1);
         daoCancellers[0] = c.gov.aaveGovernanceExecutor;
         SelectorPair[] memory shortList =
-            TimelockLaunchLists.shortEligible(p.parameterStore, p.marketRegistry, p.lpVaultSwap);
-        SelectorPair[] memory daoOnly = TimelockLaunchLists.daoOnlyCancel(p.marketRegistry, p.lpVaultSwap);
+            TimelockShortDelayLists.shortEligible(p.parameterStore, p.marketRegistry, p.lpVaultSwap);
+        SelectorPair[] memory daoOnly = TimelockShortDelayLists.daoOnlyCancel(p.marketRegistry, p.lpVaultSwap);
         // The selector pairs of both sets must name the chain's ParameterStore, MarketRegistry and LPVaultSwap
         // (`REQ-ACCESS-155`, `REQ-ACCESS-156`): the predicted proxy addresses.
         GovernedTargets memory targets = GovernedTargets({
@@ -133,7 +133,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
             _proxy("MarketRegistry", d.implementation, abi.encodeCall(IMarketRegistryListing.initialize, (p.timelock)));
     }
 
-    /// @notice ParameterStore: five logic contracts, the router, the proxy with the launch values (`REQ-PSTORE-001`).
+    /// @notice ParameterStore: five logic contracts, the router, the proxy with the initial values (`REQ-PSTORE-001`).
     function _deployParameterStore(
         ChainInputs memory c,
         Predicted memory p

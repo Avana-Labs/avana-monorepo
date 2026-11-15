@@ -23,7 +23,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// Lens's parameters and each other account repays, exits debt-free or removes part of a debt-free record. Asserted:
 /// after the LP removal Avana's pool share the Lens reports is the recomputed `poolUnits / depth` over the pool's real
 /// liquidity (the LPVault's harmonic-mean depth over the TWAP window), and the real RiskModule refuses new borrowing
-/// (`BreakerTripped` with `POOL_SHARE`) exactly when it is above `poolShareMaxBps` (the launch 10 %); every account
+/// (`BreakerTripped` with `POOL_SHARE`) exactly when it is above `poolShareMaxBps` (the default 10 %); every account
 /// below HF 1 is liquidated within the run, every settlement meets its floor on `R + shortfall` with `D <= Kf`, an
 /// account solvent at the bonus never loses health (`INV-076`), and no debt-free exit or repay reverts.
 /// @dev Before the run each pool's outside liquidity is burned down to 19 times Avana's units in it, so Avana's share
@@ -37,7 +37,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 contract CascadeIntegrationTest is RealStackFlows {
     uint256 internal constant N = 100;
     uint256 internal constant MAX_ROUNDS = 12;
-    /// @dev The launch `poolShareMaxBps` (`FullStackDeploy.POOL_SHARE_MAX_BPS`).
+    /// @dev The default `poolShareMaxBps` (`FullStackDeploy.POOL_SHARE_MAX_BPS`).
     uint16 internal constant SHARE_CAP_BPS = POOL_SHARE_MAX_BPS;
     /// @dev Aave's maximum liquidation bonus times the collateral factor: 1.05 x 0.30.
     uint256 internal constant SOLVENT_AT_BONUS_HF = 0.315e18;

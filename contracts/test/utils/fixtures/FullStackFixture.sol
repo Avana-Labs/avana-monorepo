@@ -389,7 +389,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         vm.startPrank(address(timelock));
         registry.enableDebtReserve(aave.cdpSpoke, def);
         store.setDebtAssetParams(def.asset, DebtReserveParams(floorRounding));
-        // Launch borrow-speed limit (IParameterStoreSpeed example for GHO), in the asset's units.
+        // Default borrow-speed limit (IParameterStoreSpeed example for GHO), in the asset's units.
         uint96 unit = uint96(10 ** def.decimals);
         store.loosenDebtSpeedLimit(aave.hub, def.asset, SpeedLimit(2500, 21_600, 500_000 * unit, 5_000_000 * unit));
         vm.stopPrank();
@@ -406,10 +406,10 @@ abstract contract FullStackFixture is FullStackDeploy {
         l[0] = a;
     }
 
-    /// @dev Full range of the pool's tick spacing.
+    /// @dev Full range of the pool's tick spacing (a suite may list narrower ranges by overriding it).
     function _fullRange(
         IClPool p
-    ) internal view returns (int24 lower, int24 upper) {
+    ) internal view virtual returns (int24 lower, int24 upper) {
         int24 s = p.tickSpacing();
         // forge-lint: disable-next-line(divide-before-multiply)
         upper = (ClPriceMath.MAX_TICK / s) * s;

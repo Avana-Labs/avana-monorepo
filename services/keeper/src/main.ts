@@ -8,6 +8,7 @@ import { createServer } from "node:http";
 import { KMSClient } from "@aws-sdk/client-kms";
 import { type Address, type PublicClient, createPublicClient, http, parseAbiItem, webSocket } from "viem";
 import { awsKmsKey } from "./adapters/awsKms.ts";
+import { localKeystoreSigner } from "./adapters/localKeystore.ts";
 import { logAlertSink } from "./adapters/logAlertSink.ts";
 import { monitorSink, teeSink } from "./adapters/monitorSink.ts";
 import { l1DataFee, paysL1DataFee } from "./chain/gas.ts";
@@ -18,7 +19,9 @@ import { getLogsChunked } from "./discovery/backfill.ts";
 import { IndexerStream, applyStreamRecords } from "./discovery/indexerStream.ts";
 import { headWatchdog } from "./discovery/stream.ts";
 import { InventoryBook } from "./inventory.ts";
+import { ChainMetrics, renderMetrics } from "./metrics.ts";
 import type { AlertSink } from "./monitoring/alerts.ts";
+import { DiscoveryWatch, discoveryThrough } from "./monitoring/discovery.ts";
 import { SpendTracker, fundingCheck } from "./monitoring/funding.ts";
 import { chainLoop } from "./runtime/chainLoop.ts";
 import { Submitter } from "./runtime/submitter.ts";
@@ -41,10 +44,14 @@ const config = loadConfig(process.env);
 const safety: SafetyState = { halted: false, codeMismatch: null, frozenHelperChains: new Set() };
 startKillSwitch(config.killSwitch, safety, (halted, by) => process.stdout.write(`${JSON.stringify({ type: "keeper.killSwitch", halted, by })}\n`));
 
+// Metric names and labels are listed in metrics.ts; dashboards depend on them.
+const metrics = new Map(config.chains.map((c) => [c.chain.id, new ChainMetrics()] as const));
 createServer((req, res) => {
   if (req.url !== "/metrics") return void res.writeHead(404).end();
-  const lines = config.chains.map((c) => `keeper_mode{chain="${c.chain.key}",mode="${effectiveMode(config.mode, Boolean(c.kmsKeyId), safety)}"} 1`);
-  res.writeHead(200, { "content-type": "text/plain" }).end(`${lines.join("\n")}\n`);
+  const text = renderMetrics(
+    config.chains.map((c) => ({ chain: c.chain.key, mode: effectiveMode(config.mode, Boolean(c.kmsKeyId || c.localKeystore), safety), metrics: metrics.get(c.chain.id)! })),
+  );
+  res.writeHead(200, { "content-type": "text/plain; version=0.0.4; charset=utf-8" }).end(text);
 }).listen(config.metricsPort);
 
 const post = async (url: string, body: unknown) => {
@@ -66,9 +73,12 @@ async function backfill(cfg: ChainConfig, client: PublicClient, cache: AccountCa
   return toBlock;
 }
 
-/** Accounts only one discovery source holds, up to the block both have read; each is kept and reported (REQ-LENS-004). */
+/**
+ * Accounts only one discovery source holds, up to the block both have read; each is kept and logged after each full
+ * backfill (REQ-LENS-004). M-30 judges the same set at every head (monitoring/discovery.ts).
+ */
 function reportOneSided(cfg: ChainConfig, cache: AccountCache, rpcThrough: bigint, stream: IndexerStream) {
-  const through = rpcThrough < stream.indexedBlock ? rpcThrough : stream.indexedBlock;
+  const through = discoveryThrough(rpcThrough, stream.indexedBlock);
   if (through < 0n) return;
   const oneSided = cache.oneSided(cfg.chain.id, through);
   if (oneSided.length === 0) return;
@@ -85,18 +95,27 @@ for (const cfg of config.chains) {
   // Alerts go to the log and, when configured, to the monitoring service as this chain's instance. An alert raised
   // outside a pass (the Submitter's gas ceiling) carries the last processed head, so the monitor can hold it.
   let lastHead = 0n;
+  const chainMetrics = metrics.get(cfg.chain.id)!;
   const toMonitor = cfg.monitor ? monitorSink(cfg.monitor, { log: line }) : null;
   const sink = toMonitor ? teeSink(logAlertSink, toMonitor) : logAlertSink;
-  const alerts: AlertSink = { send: (a) => sink.send(a.blockNumber === 0n ? { ...a, blockNumber: lastHead } : a) };
+  const alerts: AlertSink = {
+    send: (a) => {
+      const alert = a.blockNumber === 0n ? { ...a, blockNumber: lastHead } : a;
+      chainMetrics.alert(alert);
+      return sink.send(alert);
+    },
+  };
 
   const kms = cfg.kmsKeyId ? awsKmsKey(new KMSClient({}), cfg.kmsKeyId) : null;
-  const signerAddress = kms ? await kms.address() : null;
+  // The KMS signer, or on the local rehearsal network only, an encrypted keystore (config.ts refuses it elsewhere).
+  const signer = kms ? kmsSigner(kms, await kms.address()) : cfg.localKeystore ? await localKeystoreSigner(cfg.localKeystore) : null;
+  const signerAddress = signer ? signer.address : null;
   const helperEntry = signerAddress
     ? cfg.manifest.avana.operatorHelpers.find((h) => h.signer.toLowerCase() === signerAddress.toLowerCase())
     : cfg.manifest.avana.operatorHelpers[0];
   if (!helperEntry) throw new Error(`no operator helper in the manifest for chain ${cfg.chain.id}`);
-  const submitter = kms && signerAddress
-    ? new Submitter(cfg, primary, kmsSigner(kms, signerAddress), inventory, post, helperEntry.fundingSafe, {
+  const submitter = signer
+    ? new Submitter(cfg, primary, signer, inventory, post, helperEntry.fundingSafe, {
         ceilingWei: cfg.gasCeilingWei!,
         l1Fee: paysL1DataFee(cfg.chain) ? (tx) => l1DataFee(primary, tx) : null,
         onCeiling: (detail) =>
@@ -116,7 +135,22 @@ for (const cfg of config.chains) {
   if (first.kind !== "ok") line({ type: "keeper.stream", chainId: cfg.chain.id, event: first.kind, detail: first.kind === "failed" ? first.error : first.finalized });
   const p1 = await backfill(cfg, primary, cache, start, await primary.getBlockNumber());
   const p2 = await backfill(cfg, fallback, cache, start, await fallback.getBlockNumber());
-  reportOneSided(cfg, cache, p1 < p2 ? p1 : p2, stream);
+  // The block both providers' logs have been read to; set again by each full sweep.
+  let rpcThrough = p1 < p2 ? p1 : p2;
+  reportOneSided(cfg, cache, rpcThrough, stream);
+
+  // M-30 at each head, after the stream poll: warns on any one-sided account, pages once one stays one-sided for
+  // KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS, and stops (the monitor then resolves it) once the sources agree.
+  const discovery = new DiscoveryWatch(cfg.chain, config.discoveryPageSeconds);
+  const judgeDiscovery = (head: bigint) => {
+    const through = discoveryThrough(rpcThrough, stream.indexedBlock);
+    const r = discovery.check(through < 0n ? [] : cache.oneSided(cfg.chain.id, through), head, through);
+    chainMetrics.indexedBlock = stream.indexedBlock < 0n ? null : stream.indexedBlock;
+    chainMetrics.rpcThrough = rpcThrough;
+    chainMetrics.accounts = cache.ofChain(cfg.chain.id).length;
+    chainMetrics.oneSided = { indexer: r.indexerOnly, rpc: r.rpcOnly };
+    if (r.alert) void alerts.send(r.alert);
+  };
 
   /** RPC logs from the last finalized block: after a stream failure, a stream reorg or a stalled head subscription. */
   const backfillFromFinalized = async () => {
@@ -153,8 +187,12 @@ for (const cfg of config.chains) {
     onReorg: async () => {
       for (const a of cache.ofChain(cfg.chain.id)) a.liquidatableSince = null;
     },
-    // The indexer stream refreshes the cache before each pass; its reconnect or reorg re-reads RPC logs from finality first.
-    beforePass: pollStream,
+    // The indexer stream refreshes the cache before each pass; its reconnect or reorg re-reads RPC logs from finality
+    // first. The two discovery sources are then compared (M-30).
+    beforePass: async (head) => {
+      await pollStream();
+      judgeDiscovery(head.number);
+    },
     funding: fundingCheck({
       chainId: cfg.chain.id,
       primary,
@@ -169,6 +207,7 @@ for (const cfg of config.chains) {
     }),
     processed: (head) => {
       lastHead = head.number;
+      chainMetrics.processed(head.number);
       toMonitor?.heartbeat(head.number);
     },
   });
@@ -192,7 +231,8 @@ for (const cfg of config.chains) {
     running = running.then(async () => {
       const a = await backfill(cfg, primary, cache, start, await primary.getBlockNumber());
       const b = await backfill(cfg, fallback, cache, start, await fallback.getBlockNumber());
-      reportOneSided(cfg, cache, a < b ? a : b, stream);
+      rpcThrough = a < b ? a : b;
+      reportOneSided(cfg, cache, rpcThrough, stream);
     });
   }, SWEEP_MS);
 }

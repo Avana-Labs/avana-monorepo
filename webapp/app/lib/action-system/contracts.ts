@@ -1,3 +1,5 @@
+import { safeInternalHref } from "@/app/lib/safe-links"
+
 export type ActionProduct = "borrow" | "lend"
 
 export type BorrowActionKind = "borrow" | "repay" | "supply" | "remove" | "claim" | "pledge"
@@ -215,7 +217,6 @@ function normalizeReturnHref(returnHref: string) {
 
 export function resolveActionCloseHref(product: ActionProduct, returnHref?: string) {
   const fallback = ACTION_CLOSE_HREF[product] ?? "/"
-  if (!returnHref) return fallback
-  if (!returnHref.startsWith("/") || returnHref.startsWith("//")) return fallback
-  return normalizeReturnHref(returnHref)
+  const safe = safeInternalHref(returnHref)
+  return safe ? normalizeReturnHref(safe) : fallback
 }

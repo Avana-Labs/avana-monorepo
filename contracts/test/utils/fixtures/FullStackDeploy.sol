@@ -60,12 +60,12 @@ import {FullStackLPVaultMock} from "../mocks/FullStackLPVaultMock.sol";
 import {LPVaultSwapMock} from "../mocks/LPVaultSwapMock.sol";
 import {AaveV4Fixture} from "./AaveV4Fixture.sol";
 import {ClPoolFixture} from "./ClPoolFixture.sol";
-import {TimelockLaunchLists} from "./TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "./TimelockShortDelayLists.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title FullStackDeploy
 /// @notice The Avana core as one chain runs it, on the real local Aave V4 (pinned release): the real AvanaTimelock
-/// (launch short-delay list and DAO-only cancel set naming the real ParameterStore and MarketRegistry), the
+/// (short-delay list and DAO-only cancel set naming the real ParameterStore and MarketRegistry), the
 /// MarketRegistry (six logic contracts), the ParameterStore (five logic contracts), the RiskModule (six logic
 /// contracts) and the AaveAdapter (four logic contracts), each behind its ERC-1967 proxy and initialized by the
 /// timelock, with the real Lock, Collateralization (built from its artifact), VaultTokenFactory and ProxyManager.
@@ -84,7 +84,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     uint256 internal constant MAX_MARKETS = 64;
     /// @dev Per-depositor exposure cap on the Hub, 8-decimal USD.
     uint256 internal constant DEPOSITOR_CAP = 5_000_000e8;
-    /// @dev Launch `poolShareMaxBps` (TEST-218: 10 %).
+    /// @dev Default `poolShareMaxBps` (TEST-218: 10 %).
     uint16 internal constant POOL_SHARE_MAX_BPS = 1000;
 
     AvanaTimelock internal timelock;
@@ -135,7 +135,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             swap = new LPVaultSwapMock(adapter);
             lpVaultSwap = address(swap);
         }
-        timelock = _launchTimelock(storeAddr, registryAddr, lpVaultSwap);
+        timelock = _deployDefaultTimelock(storeAddr, registryAddr, lpVaultSwap);
         address tl = address(timelock);
         lock = new Lock(adapter, lpVaultSwap);
         address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
@@ -226,7 +226,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         return at;
     }
 
-    /// @dev The real LPVaultSwap (router and three logic contracts) behind its proxy, `keeper` its launch operator.
+    /// @dev The real LPVaultSwap (router and three logic contracts) behind its proxy, `keeper` its initial operator.
     function _installLPVaultSwap() private {
         LPVaultSwapImmutables memory im = LPVaultSwapImmutables({
             lock: address(lock),
@@ -296,8 +296,8 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         GovernedTargets targets;
     }
 
-    /// @dev The launch configuration of `REQ-ACCESS-027` (as `TimelockFixture`), bound to the real targets.
-    function _launchTimelock(
+    /// @dev The configuration of `REQ-ACCESS-027` (as `TimelockFixture`), bound to the real targets.
+    function _deployDefaultTimelock(
         address storeAddr,
         address registryAddr,
         address swapAddr
@@ -311,8 +311,8 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         (a.cancellers[0], a.cancellers[1]) = (emergencyGuardian, aaveGuardian);
         a.daoCancellers = new address[](1);
         a.daoCancellers[0] = aaveGovernanceExecutor;
-        a.shortEligible = TimelockLaunchLists.shortEligible(storeAddr, registryAddr, swapAddr);
-        a.daoOnly = TimelockLaunchLists.daoOnlyCancel(registryAddr, swapAddr);
+        a.shortEligible = TimelockShortDelayLists.shortEligible(storeAddr, registryAddr, swapAddr);
+        a.daoOnly = TimelockShortDelayLists.daoOnlyCancel(registryAddr, swapAddr);
         a.targets = GovernedTargets(storeAddr, registryAddr, swapAddr);
         return new AvanaTimelock(
             a.proposers,
@@ -381,7 +381,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         store = IParameterStore(storeAddr);
     }
 
-    /// @dev Launch global values (as `ParameterStoreRegistryFixture`).
+    /// @dev Default global values (as `ParameterStoreRegistryFixture`).
     function _globals() internal view returns (GlobalParams memory g) {
         g.cachedWindow = 3600;
         g.disagreementPauseMax = 3600;

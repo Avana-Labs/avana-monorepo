@@ -9,12 +9,8 @@ import { getAssetHeroFeed } from "@/app/lib/chart-feeds"
 import { useDashboardBorrowLive } from "@/app/dashboard/use-dashboard-borrow-live"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { HeroContractLine } from "@/app/components/hero-contract-line"
-import {
-  buildFeedFromRangeSeries,
-  isPlaceholderHeroContractAddress,
-  isSafeHeroLink,
-  resolveHeroContractAddress,
-} from "@/app/borrow/_detail/lib/hero-chart-feeds"
+import { buildFeedFromRangeSeries, isSafeHeroLink } from "@/app/borrow/_detail/lib/hero-chart-feeds"
+import { openExternal } from "@/app/lib/safe-links"
 import { useAvanaIdentity, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
 import { currentDebtValueUsd6 } from "@/app/lib/borrow-system/model"
 import { buildWalletPositionFeed } from "@/app/lib/chart-feeds/wallet-position-feed"
@@ -40,19 +36,8 @@ export function AssetHeroIdentity({
   className?: string
 }) {
   const { t } = useTranslation()
-  const providedContractAddress =
-    detail.hero.contractAddress && /^0x[a-fA-F0-9]{40}$/i.test(detail.hero.contractAddress)
-      ? detail.hero.contractAddress
-      : null
-  const contractAddress = providedContractAddress ?? resolveHeroContractAddress(detail.id)
-  // A synthetic placeholder (or a purely id-derived fallback address) points at no
-  // real contract — suppress the copy action and the Etherscan link for it.
-  const isPlaceholderContract = !providedContractAddress || isPlaceholderHeroContractAddress(providedContractAddress)
-  const websiteHref = isSafeHeroLink(detail.hero.websiteUrl)
-    ? detail.hero.websiteUrl
-    : isPlaceholderContract
-      ? null
-      : `https://etherscan.io/address/${contractAddress}`
+  const contract = detail.hero.contract ?? null
+  const websiteHref = isSafeHeroLink(detail.hero.websiteUrl) ? detail.hero.websiteUrl : (contract?.explorerHref ?? null)
   const showSymbol =
     detail.hero.symbol.trim().length > 0 &&
     detail.hero.symbol.trim().toLowerCase() !== detail.hero.name.trim().toLowerCase()
@@ -95,32 +80,21 @@ export function AssetHeroIdentity({
                 </span>
               ) : null}
             </div>
-            <HeroContractLine
-              contextLabel="Asset on"
-              chainLabel={detail.hero.chain}
-              address={contractAddress}
-              isPlaceholder={isPlaceholderContract}
-              explorerHref={`https://etherscan.io/address/${contractAddress}`}
-            />
+            <HeroContractLine contextLabel="Asset on" chainLabel={detail.hero.chain} contract={contract} />
           </div>
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 self-center pl-5 lg:flex">
-          <HeroIcon
-            label={t("Website")}
-            onClick={() => {
-              if (!websiteHref) return
-              window.open(websiteHref, "_blank")
-            }}
-          >
+          <HeroIcon label={t("Website")} onClick={() => openExternal(websiteHref)}>
             <Globe className="h-[18px] w-[18px]" />
           </HeroIcon>
           <HeroIcon
             label="X"
             onClick={() =>
-              window.open(
-                detail.hero.xUrl ?? `https://x.com/search?q=${encodeURIComponent(detail.hero.symbol)}`,
-                "_blank",
+              openExternal(
+                isSafeHeroLink(detail.hero.xUrl)
+                  ? detail.hero.xUrl
+                  : `https://x.com/search?q=${encodeURIComponent(detail.hero.symbol)}`,
               )
             }
           >

@@ -10,3 +10,4 @@ export * from "./src/schema/markets.ts";
 export * from "./src/schema/hubs.ts";
 export * from "./src/schema/governance.ts";
 export * from "./src/schema/series.ts";
+export * from "./src/schema/premium.ts";

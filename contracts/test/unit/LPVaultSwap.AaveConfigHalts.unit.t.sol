@@ -160,7 +160,7 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
     /// Ordinary supply and withdrawal of odd amounts keep them equal.
     function test_TEST_055_sharesEqualAssetsHoldsAndItsBreachHalts() public {
         IAaveV4Hub hub = IAaveV4Hub(aave.hub);
-        assertEq(hub.getAddedAssets(vtAssetId), hub.getAddedShares(vtAssetId), "equal at launch");
+        assertEq(hub.getAddedAssets(vtAssetId), hub.getAddedShares(vtAssetId), "equal at the start");
         _openAccount(carol, 1_234_567, 1, 250_000_000);
         assertEq(hub.getAddedAssets(vtAssetId), hub.getAddedShares(vtAssetId), "odd supply keeps them equal");
         vm.mockCall(

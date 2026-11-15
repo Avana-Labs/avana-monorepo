@@ -12,7 +12,7 @@ import {DifferentialTest} from "./utils/DifferentialTest.sol";
 /// @notice FFI differential fuzzing of LPPriceMath against the exact Python reference (integers and fractions only):
 /// every floor, ceiling, comparison, validity bound and saturation of `SPEC-ORC-001` … `SPEC-ORC-023` that the library
 /// implements agrees with the formula written from the spec text, inside the listing bounds and well outside them.
-/// @dev Run with `FOUNDRY_PROFILE=differential forge test`. Inputs are drawn wider than the launch values: signed
+/// @dev Run with `FOUNDRY_PROFILE=differential forge test`. Inputs are drawn wider than the configured values: signed
 /// answers over the whole `int256` range, decimals up to 90 (the `f > 85` and `d > 77` branches), amounts across
 /// `2^128`, prices from 0 to above `MAX_ROUTE_ANSWER`, vectors of 0 to 9 entries with unequal lengths, and `q != p`
 /// for the debt price. Signed values cross FFI as their two's-complement words.

@@ -10,7 +10,7 @@ import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTarge
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
 import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {TimelockLaunchLists} from "../utils/fixtures/TimelockLaunchLists.sol";
+import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
 import {CallRecorder} from "../utils/mocks/CallRecorder.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {Test} from "forge-std/Test.sol";
@@ -55,9 +55,11 @@ contract AvanaTimelockHalmosTest is Test {
         (cancellers[0], cancellers[1]) = (GUARDIAN, AAVE_GUARDIAN);
         address[] memory dao = new address[](1);
         dao[0] = EXECUTOR_DAO;
-        SelectorPair[] memory shortList =
-            TimelockLaunchLists.shortEligible(address(parameterStore), address(marketRegistry), address(lpVaultSwap));
-        SelectorPair[] memory daoList = TimelockLaunchLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
+        SelectorPair[] memory shortList = TimelockShortDelayLists.shortEligible(
+            address(parameterStore), address(marketRegistry), address(lpVaultSwap)
+        );
+        SelectorPair[] memory daoList =
+            TimelockShortDelayLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
         timelock = new AvanaTimelock(
             proposers,
             executors,

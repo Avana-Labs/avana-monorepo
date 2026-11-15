@@ -147,7 +147,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
 
     // TEST-062 verifies: REQ-ORACLE-097, REQ-ORACLE-038, SPEC-ORC-023
     /// @notice Every LPOracle contract's constructor refuses a zero timelock or a zero block time (`MarketMismatch(0)`),
-    /// and a poke floor of 0 or a ceiling below the floor (`PokeMinGasOutOfBounds(ceiling)`); the launch constants
+    /// and a poke floor of 0 or a ceiling below the floor (`PokeMinGasOutOfBounds(ceiling)`); the default constants
     /// (timelock `0x7173`, 12-second blocks, floor 900,000, ceiling 3,000,000) deploy.
     function test_TEST_062_constructorRefusesBadChainConstants() public {
         vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));

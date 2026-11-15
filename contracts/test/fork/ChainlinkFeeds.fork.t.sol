@@ -37,7 +37,7 @@ interface IForkOcrAggregator {
 }
 
 /// @title ChainlinkFeedsForkTest
-/// @notice `TEST-117` against the real Chainlink feeds of the launch tokens and debt assets on the Ethereum and Base
+/// @notice `TEST-117` against the real Chainlink feeds of the listed tokens and debt assets on the Ethereum and Base
 /// forks, the externals the unit tests replace with `MockAggregator`, `EacProxyMock` and `OcrAggregatorMock`. For each
 /// feed: 8 decimals; a positive answer inside the aggregator's own `minAnswer`/`maxAnswer` and, for a stablecoin,
 /// within 5 % of $1; an age within the feed's heartbeat plus the
@@ -60,7 +60,7 @@ contract ChainlinkFeedsForkTest is AvanaTest {
     }
 
     // TEST-117 verifies: Q-238, Q-364
-    function test_TEST_117_ethereumLaunchFeeds() public {
+    function test_TEST_117_ethereumFeeds() public {
         if (!_fork(vm.envOr("RPC_MAINNET", string("")), ForkConstants.mainnetForkBlock())) return;
         Feed[5] memory feeds = [
             Feed("USDC/USD", 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6, 86_400, true),
@@ -75,7 +75,7 @@ contract ChainlinkFeedsForkTest is AvanaTest {
     }
 
     // TEST-117 verifies: Q-238, Q-364
-    function test_TEST_117_baseLaunchFeeds() public {
+    function test_TEST_117_baseFeeds() public {
         if (!_fork(vm.envOr("RPC_BASE", string("")), ForkConstants.baseForkBlock())) return;
         Feed[2] memory feeds = [
             Feed("USDC/USD", 0x7e860098F58bBFC8648a4311b374B1D669a2bc6B, 86_400, true),

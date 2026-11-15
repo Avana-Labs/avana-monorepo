@@ -16,7 +16,7 @@ struct MarketParams {
     uint16 slippageAllowanceMinBps;
     // Pool risk factor, bps (> 0, at most 4,000).
     uint16 poolRiskFactor;
-    // Minimum value of one pledge, 8-decimal USD (launch 10e8, at most 100_000e8).
+    // Minimum value of one pledge, 8-decimal USD (for example 10e8, at most 100_000e8).
     uint256 minPledgeUsd;
     // Optional hard health-factor floor, WAD; 0 = off (default), else within [1e18, 1.25e18] (Q-398).
     uint256 hardHealthFloor;

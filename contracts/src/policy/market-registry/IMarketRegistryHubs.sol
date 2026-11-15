@@ -11,7 +11,7 @@ import {RiskTier} from "./types/RiskTier.sol";
 /// standard Spoke settings.
 /// @dev Writes require `APPLICATION_ADMIN` (the chain's timelock, normal delay). Views never revert; an unknown key
 /// returns zeros, so every check fails closed. A cross-Hub credit line lets a CDP Spoke of one Hub borrow an asset
-/// funded by another Hub on the same chain. Lines are fully specified and off at launch (`crossHubLinesEnabled()` is
+/// funded by another Hub on the same chain. Lines are fully specified and off by default (`crossHubLinesEnabled()` is
 /// false until a timelock operation sets it): the funding Hub owns the cap, this registry sums every line per (funding
 /// Hub, asset), a pause of the funding Hub stops every line it funds, and the sum is capped at that Hub's first-loss
 /// coverage for the asset, so no line can lend more than the coverage that absorbs its losses (AMMN-SM-01,
@@ -213,7 +213,7 @@ interface IMarketRegistryHubs {
         address asset
     ) external view returns (uint256 total);
 
-    /// @notice Whether cross-Hub credit lines are on for the chain (false at launch).
+    /// @notice Whether cross-Hub credit lines are on for the chain (false by default).
     /// @return enabled The switch.
     /// @custom:spec Q-378
     function crossHubLinesEnabled() external view returns (bool enabled);
@@ -235,8 +235,8 @@ interface IMarketRegistryHubs {
     ) external view returns (uint256 marketId, DriftReason reason);
 
     /// @notice Replaces the chain's IFlashSource implementation.
-    /// @dev `APPLICATION_ADMIN`, normal delay. Emits `FlashSourceSet`. The source's `LENDER()` (the Aave V3 Pool at
-    /// launch) joins the protected set of the address freeze with the source itself (REQ-MREG-020). Reverts `InvalidRoute` unless `newSource.LP_VAULT_SWAP() ==
+    /// @dev `APPLICATION_ADMIN`, normal delay. Emits `FlashSourceSet`. The source's `LENDER()` (for example an Aave
+    /// V3 Pool) joins the protected set of the address freeze with the source itself (REQ-MREG-020). Reverts `InvalidRoute` unless `newSource.LP_VAULT_SWAP() ==
     /// LP_VAULT_SWAP` and `isRecordedHub(newSource.LENDER())` is false: `LENDER()` is the pool or Hub that holds the
     /// liquidity the source lends, so a flash Spoke whose Hub funds a listed market is refused even though the Spoke's
     /// own address is no Hub (AMMN N1, Q-386). LPVaultSwap repeats

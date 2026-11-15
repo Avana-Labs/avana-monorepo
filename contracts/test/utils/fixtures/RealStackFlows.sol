@@ -61,7 +61,7 @@ abstract contract RealStackFlows is FullStackMarkets {
     // ─── Listing beyond the fixture ───
 
     /// @notice Lists `token` as the fixture lists USDC and USDT: a primary, alternate and standby one-leg route and an
-    /// oracle-network second source, each an 8-decimal feed at `price8` defined in the ParameterStore, and the launch
+    /// oracle-network second source, each an 8-decimal feed at `price8` defined in the ParameterStore, and the default
     /// feed-agreement tolerance.
     function _listPricedToken(
         ClTestToken token,

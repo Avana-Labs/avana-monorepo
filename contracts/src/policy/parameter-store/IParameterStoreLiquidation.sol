@@ -39,7 +39,7 @@ interface IParameterStoreLiquidation {
     ) external view returns (bool holds);
 
     /// @notice Largest per-leg slippage raise a caller shortfall top-up can buy (SPEC-LIQ-019).
-    /// @return value bps; launch 1,000, within [0, 5,000].
+    /// @return value bps; for example 1,000, within [0, 5,000].
     /// @custom:spec REQ-PSTORE-018, Q-251
     function maxShortfallBps() external view returns (uint16 value);
 

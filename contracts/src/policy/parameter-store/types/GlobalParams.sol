@@ -27,7 +27,7 @@ struct GlobalParams {
     address feeRecipient;
     // Margin added to the feed-agreement lower bound, bps.
     uint16 feedAgreementMarginBps;
-    // Healthy-observation window before a temporary gate reopens, seconds, within [600, 7,200] (launch 1,800).
+    // Healthy-observation window before a temporary gate reopens, seconds, within [600, 7,200] (for example 1,800).
     uint64 gateRecoverySeconds;
     // Largest per-leg slippage raise a caller shortfall top-up can buy, bps, within [0, 5,000].
     uint16 maxShortfallBps;

@@ -210,7 +210,7 @@ contract FlashLiquidatorSwapStandIn {
 /// minter callback reaches no function.
 /// @dev The harness is the caller. The Pool, MarketRegistry and LPVaultSwap are the minimal stand-ins above (with the
 /// unit suite's full mocks, the Lock and the PayoutEscrow the harness's initcode was 60,176 bytes at 200 runs, above
-/// the 49,152-byte limit Medusa enforces); `maxFlashFeeBps` is `MockFlashFeeCap` (10, the launch value). The swap
+/// the 49,152-byte limit Medusa enforces); `maxFlashFeeBps` is `MockFlashFeeCap` (10, the default value). The swap
 /// settles the 2.11 example (`keeperOut = 2,020.8` USDC for `X = F = 1,950` USDC), as in
 /// `test/halmos/FlashLiquidator.halmos.t.sol`. Premiums are bounded to uint64.
 contract FlashLiquidatorProperties {

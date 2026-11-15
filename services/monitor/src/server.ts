@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The ingest endpoint keeper instances (through their log shipper) post to, and the status endpoint. Each instance
-// has its own bearer token; a request may only report for that instance. Bodies are capped at 256 KiB.
+// The ingest endpoint keeper instances (through their log shipper) post to, and the status and metrics endpoints.
+// Each instance has its own bearer token; a request may only report for that instance. Bodies are capped at 256 KiB.
 //
 //   POST /v1/keeper/alerts     { "instance": "...", "alerts": [ <keeper.alert line>, ... ] }
 //   POST /v1/keeper/heartbeat  { "instance": "...", "blockNumber": "123" }
 //   POST /v1/liveness          { "chainId", "safe", "period", "signer", "signature" } (the signature authenticates)
 //   GET  /v1/status            open alerts (status token)
+//   GET  /metrics              the Prometheus text format (metrics token; 404 when MONITOR_METRICS_TOKEN is not set)
 //   GET  /healthz              200, or 503 naming the chains without a recent successful round
 
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -21,6 +22,8 @@ export interface ServerConfig {
   /** Instance name → its bearer token. */
   readonly keeperTokens: ReadonlyMap<string, string>;
   readonly statusToken: string;
+  /** The bearer token of GET /metrics; null turns the endpoint off. */
+  readonly metricsToken?: string | null;
 }
 
 const digest = (s: string) => createHash("sha256").update(s).digest();
@@ -62,7 +65,7 @@ export interface LivenessIngest {
   now(): number;
 }
 
-export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: () => readonly Alert[], health: () => Health = () => ({ ok: true, stale: [] }), liveness?: LivenessIngest): Server {
+export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: () => readonly Alert[], health: () => Health = () => ({ ok: true, stale: [] }), liveness?: LivenessIngest, metrics?: () => string): Server {
   const instances = new Map<string, KeeperInstance>(feed.instances.map((i) => [i.name, i]));
   for (const name of instances.keys()) if (!cfg.keeperTokens.get(name)) throw new Error(`no token for keeper instance ${name}`);
 
@@ -76,6 +79,11 @@ export function monitorServer(cfg: ServerConfig, feed: KeeperFeed, openAlerts: (
       if (req.method === "GET" && req.url === "/v1/status") {
         if (token === null || !same(token, cfg.statusToken)) return json(res, 401, { error: "unauthorized" });
         return json(res, 200, { open: openAlerts().map((a) => ({ ...a, blockNumber: a.blockNumber.toString(10) })) });
+      }
+      if (req.method === "GET" && req.url === "/metrics") {
+        if (!metrics || !cfg.metricsToken) return json(res, 404, { error: "not found" });
+        if (token === null || !same(token, cfg.metricsToken)) return json(res, 401, { error: "unauthorized" });
+        return res.writeHead(200, { "content-type": "text/plain; version=0.0.4; charset=utf-8" }).end(metrics());
       }
       if (req.method === "POST" && req.url === "/v1/liveness") {
         if (!liveness) return json(res, 404, { error: "not found" });

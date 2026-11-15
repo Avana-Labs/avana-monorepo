@@ -63,6 +63,8 @@ logOnly("LPVaultSwap", [
 
 ponder.on("PayoutEscrow:RemainderEscrowed", async ({ event, context }) => {
   const p = await recordLog(event, context, "PayoutEscrow.RemainderEscrowed");
+  // A replayed log (its event_log row already there) must not move a running total again.
+  if (!p.fresh) return;
   const { token, account, amount } = event.args;
   await context.db
     .insert(schema.escrowCredit)
@@ -72,6 +74,8 @@ ponder.on("PayoutEscrow:RemainderEscrowed", async ({ event, context }) => {
 
 ponder.on("PayoutEscrow:RemainderClaimed", async ({ event, context }) => {
   const p = await recordLog(event, context, "PayoutEscrow.RemainderClaimed");
+  // A replayed log (its event_log row already there) must not move a running total again.
+  if (!p.fresh) return;
   const { token, account, amount } = event.args;
   await context.db
     .update(schema.escrowCredit, { chainId: p.chainId, token, account })

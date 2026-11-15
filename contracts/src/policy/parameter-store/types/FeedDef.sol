@@ -11,10 +11,10 @@ pragma solidity 0.8.28;
 /// `MAX_ROUTE_ANSWER`; for an aggregator deployed with a sentinel `maxAnswer`, the bound that does, REQ-ORACLE-049).
 /// Example: an 8-decimal stable feed with aggregator `maxAnswer = 2^176 - 1` and `maxAnswerCap = 10^12` is pinned at
 /// `10^12`. `feedHeartbeat` is the feed's own configured heartbeat (82,800 to 86,400 s for Chainlink
-/// stablecoin feeds, `0 < feedHeartbeat <= 86,400`) and `heartbeatMargin` its freshness margin (launch 1,800 s, at most
-/// `MAX_HEARTBEAT_MARGIN` = 3,600 s). `setFeed` writes `feedMaxAge = liquidationPriceMaxAge = feedHeartbeat +
-/// heartbeatMargin` and `borrowPriceMaxAge <= feedMaxAge`, equal for a new feed; a later `setFeed` keeps a
-/// lower `borrowPriceMaxAge` a tightening wrote (`SPEC-ORC-019`). Example: USDT/USD with
+/// stablecoin feeds, `0 < feedHeartbeat <= 86,400`) and `heartbeatMargin` its freshness margin (for example
+/// 1,800 s, at most `MAX_HEARTBEAT_MARGIN` = 3,600 s). `setFeed` writes `feedMaxAge = liquidationPriceMaxAge =
+/// feedHeartbeat + heartbeatMargin` and `borrowPriceMaxAge <= feedMaxAge`, equal for a new feed; a later `setFeed`
+/// keeps a lower `borrowPriceMaxAge` a tightening wrote (`SPEC-ORC-019`). Example: USDT/USD with
 /// a heartbeat of 86,400 s and a margin of 1,800 s has `feedMaxAge = 88,200` s.
 /// @custom:spec REQ-CONFIG-022, REQ-CONFIG-023, REQ-ORACLE-002, REQ-ORACLE-049, REQ-ORACLE-054, REQ-HUB-104, SPEC-ORC-019, Q-322
 struct FeedDef {

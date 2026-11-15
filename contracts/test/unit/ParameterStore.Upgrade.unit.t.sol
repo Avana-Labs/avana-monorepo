@@ -166,7 +166,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
             if (i == 0) first = block.timestamp;
             assertEq(store.getMarketParams(M).slippageAllowanceBps, steps[i]);
         }
-        // The return took at least three normal delays (15 days at launch) after the tightening.
+        // The return took at least three normal delays (15 days at a 5-day normal delay) after the tightening.
         assertGe(block.timestamp - t0, 3 * NORMAL_DELAY);
         assertEq(block.timestamp - first, 2 * NORMAL_DELAY);
         // A larger step in one operation would have failed at execution.

@@ -1,0 +1,162 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Copyright (c) 2026 Avana Labs
+#
+# The services on one host, for a testnet or a rehearsal against a remote RPC: PostgreSQL, the indexer, one keeper
+# (observe mode unless its .env names a KMS key) and the monitor. From the repository root:
+#
+#   cp services/indexer/.env.example services/indexer/.env   # and the keeper's and monitor's; fill in the values
+#   docker compose -f services/compose.yaml up --build
+#
+# Manifests are read from deployments/verified/ (mounted read-only at /manifests): set AVANA_MANIFEST in each .env to
+# /manifests/<file>. State files, the incident log and the halt flag go to each service's /data volume. Production
+# runs each service on its own host or cloud (a standby keeper on another cloud, services/README.md), not this file.
+#
+# Prometheus and Grafana with the services' dashboards start only with the dashboards profile
+# (services/dashboards/README.md):
+#
+#   MONITOR_METRICS_TOKEN=... GRAFANA_ADMIN_PASSWORD=... docker compose -f services/compose.yaml --profile dashboards up --build
+
+name: avana-services
+
+x-service: &service
+  restart: unless-stopped
+  build:
+    context: ..
+    dockerfile: services/Dockerfile
+  volumes:
+    - ../deployments/verified:/manifests:ro
+
+services:
+  postgres:
+    image: postgres:17.6-bookworm@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: avana
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: indexer
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avana -d indexer"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  indexer:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: indexer
+    env_file: indexer/.env
+    environment:
+      DATABASE_URL: postgres://avana:${POSTGRES_PASSWORD}@postgres:5432/indexer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:42069:42069"
+
+  keeper:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: keeper
+    env_file: keeper/.env
+    environment:
+      KEEPER_INDEXER_URL: http://indexer:42069
+      KEEPER_HALT_STATE_PATH: /data/halt.json
+      KEEPER_KILL_SWITCH_PORT: "9443"
+      KEEPER_METRICS_PORT: "9464"
+      KEEPER_KILL_SWITCH_TLS_CERT: /tls/server.pem
+      KEEPER_KILL_SWITCH_TLS_KEY: /tls/server.key
+      KEEPER_KILL_SWITCH_CLIENT_CA: /tls/client-ca.pem
+    volumes:
+      - ../deployments/verified:/manifests:ro
+      - keeper:/data
+      # The kill switch's server certificate, key and client CA (mutual TLS). Never committed.
+      - ${KEEPER_TLS_DIR:?set KEEPER_TLS_DIR to the folder holding server.pem, server.key and client-ca.pem}:/tls:ro
+    ports:
+      - "127.0.0.1:9443:9443"
+      - "127.0.0.1:9464:9464"
+    depends_on:
+      indexer:
+        condition: service_healthy
+
+  monitor:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+      target: monitor
+    env_file: monitor/.env
+    environment:
+      MONITOR_STATE_PATH: /data/state.json
+      MONITOR_INCIDENT_LOG: /data/incidents.jsonl
+      MONITOR_PORT: "9470"
+      # GET /metrics, read by the dashboards profile's Prometheus with the same value; unset, the endpoint is off.
+      MONITOR_METRICS_TOKEN: ${MONITOR_METRICS_TOKEN:-}
+    volumes:
+      - ../deployments/verified:/manifests:ro
+      - monitor:/data
+    ports:
+      - "127.0.0.1:9470:9470"
+
+  # The dashboards profile. Each container checks its secret at start and exits without it, so the services above
+  # start without these variables.
+  prometheus:
+    image: prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+    profiles: [dashboards]
+    restart: unless-stopped
+    environment:
+      MONITOR_METRICS_TOKEN: ${MONITOR_METRICS_TOKEN:-}
+    # The monitor's token goes to a file only Prometheus's user reads (prometheus.yml, credentials_file).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        test -n "$$MONITOR_METRICS_TOKEN" || { echo "set MONITOR_METRICS_TOKEN (the monitor's /metrics token)" >&2; exit 1; }
+        umask 077
+        printf '%s' "$$MONITOR_METRICS_TOKEN" > /prometheus/monitor-metrics-token
+        exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=30d
+    volumes:
+      - ./dashboards/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    image: grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
+    profiles: [dashboards]
+    restart: unless-stopped
+    environment:
+      # Read when Grafana first creates its database; later changes go through `grafana cli admin reset-admin-password`.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        test -n "$$GF_SECURITY_ADMIN_PASSWORD" || { echo "set GRAFANA_ADMIN_PASSWORD" >&2; exit 1; }
+        exec /run.sh
+    volumes:
+      - ./dashboards/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres:
+  keeper:
+  monitor:
+  prometheus:
+  grafana:

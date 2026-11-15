@@ -60,6 +60,9 @@ export default createConfig({
     LPOracle: { abi: abis.LPOracle, chain: lpOracleSource() },
     DebtOracle: { abi: abis.DebtOracle, chain: debtOracleSource() },
     AvanaFirstLossReserve: { abi: abis.AvanaFirstLossReserve, chain: firstLossReserveSource() },
+    // The Aave DAO's deficit offsets: every Spoke a manifest Hub adds, read for First-Loss Reserve events
+    // (src/config/aaveSources.ts, FIRST_LOSS_SOURCES).
+    DaoDeficitOffset: { abi: abis.AvanaFirstLossReserve, chain: spokeAddedSource() },
     // Aave V4: every Hub and every Lend and CDP Spoke, the manifest's and those listed later (src/config/aaveSources.ts).
     // Spoke events are attributed only to accounts the AaveAdapter and the ProxyManager both announced (TEST-144).
     AaveSpoke: { abi: abis.AaveSpoke, chain: spokeSource() },

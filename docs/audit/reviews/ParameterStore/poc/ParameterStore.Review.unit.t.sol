@@ -35,7 +35,7 @@ contract ParameterStoreReviewPoC is ParameterStoreFixture {
         store.setFeed(address(fUsdtAlt), _feedDef(86_400, 1800));
         store.setTokenCollateralFactorBps(usdc, cf);
         store.setTokenCollateralFactorBps(usdt, cf);
-        MarketParams memory p = _launchMarketParams();
+        MarketParams memory p = _defaultMarketParams();
         p.poolRiskFactor = prf;
         store.setInitialMarketParams(M, p);
         vm.stopPrank();

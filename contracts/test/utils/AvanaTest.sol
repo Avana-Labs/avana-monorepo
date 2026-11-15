@@ -7,7 +7,7 @@ import {Test} from "forge-std/Test.sol";
 
 /// @title AvanaTest
 /// @notice Base contract of every Avana Foundry test: the named actors, the fixture values of 5.1 and bound helpers.
-/// @dev Values are the launch values of 1.5 Parameters (`docs/spec/01-architecture/05-parameters.md`) and the fixture values
+/// @dev Values are the defaults of 1.5 Parameters (`docs/spec/01-architecture/05-parameters.md`) and the fixture values
 /// listed at the top of 5.1 Test Requirements. A test that needs another value sets it in its own setUp, so a change
 /// here moves every suite at once and only through a reviewed edit of this file.
 abstract contract AvanaTest is Test {
@@ -15,7 +15,7 @@ abstract contract AvanaTest is Test {
 
     /// @notice Short delay of the AvanaTimelock, also `getMinDelay()`.
     uint256 internal constant SHORT_DELAY = 43_200;
-    /// @notice Launch normal delay and `MAX_DELAY`.
+    /// @notice Default normal delay and `MAX_DELAY`.
     uint256 internal constant NORMAL_DELAY = 432_000;
     /// @notice Floor of the normal delay.
     uint256 internal constant MIN_NORMAL_DELAY = 345_600;

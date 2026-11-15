@@ -188,7 +188,7 @@ contract LPOracleCLModuleTest is LPOracleCLFixture {
     function test_TEST_306_moduleListingBits() public {
         _deployClMarket(_ethUsdc());
         OracleConfig memory c = _config();
-        assertEq(_checkConfig(c), 0, "launch configuration passes");
+        assertEq(_checkConfig(c), 0, "default configuration passes");
         c.consistencyToleranceBps = 9;
         assertEq(_checkConfig(c), 1 << (SHIFT + 1), "tolerance below 10 ticks");
         c = _config();

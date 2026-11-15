@@ -17,6 +17,8 @@ import {
 } from "@avana/services-common";
 import { ABI_HASH } from "@avana/protocol/abis";
 import { type StreamKey, parseStreamKey } from "./discovery/indexerStream.ts";
+import type { LocalKeystore } from "./adapters/localKeystore.ts";
+import { DISCOVERY_PAGE_SECONDS } from "./monitoring/discovery.ts";
 import { parseLargest } from "./monitoring/funding.ts";
 
 export type KeeperMode = "observe" | "active";
@@ -26,8 +28,10 @@ export interface ChainConfig {
   readonly chain: ChainInfo;
   readonly manifest: ServiceManifest;
   readonly rpc: { readonly primary: string; readonly fallback: string; readonly ws: string; readonly privateSend: readonly string[] };
-  /** Undefined runs this chain in observe-only mode whatever KEEPER_MODE says. */
+  /** Undefined runs this chain in observe-only mode whatever KEEPER_MODE says (unless a local rehearsal key is set). */
   readonly kmsKeyId: string | undefined;
+  /** An encrypted keystore (KEEPER_LOCAL_KEYSTORE_ANVIL), accepted only on the `local` network set: the anvil drills. */
+  readonly localKeystore: LocalKeystore | undefined;
   /** Worst-case wei one transaction may cost (KEEPER_GAS_CEILING_WEI_<CHAIN>); required wherever a signer is set. */
   readonly gasCeilingWei: bigint | undefined;
   /** Largest single debtToCover the chain's caps allow, per debt asset (lower-case), base units: M-16 and M-17. */
@@ -49,6 +53,32 @@ export interface KeeperConfig {
   readonly indexerUrl: string;
   /** The keeper's key for the indexer stream, one of the indexer's INDEXER_EXPORT_KEYS (id:base64secret). */
   readonly indexerKey: StreamKey;
+  /** How long an account may stay one-sided between the discovery sources before M-30 pages, in seconds. */
+  readonly discoveryPageSeconds: number;
+}
+
+/** KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS: a positive whole number of seconds, 3,600 when unset. */
+export function discoveryPageSeconds(env: NodeJS.ProcessEnv): number {
+  const name = "KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS";
+  const raw = optionalEnv(env, name);
+  if (raw === undefined) return DISCOVERY_PAGE_SECONDS;
+  if (!/^\d+$/.test(raw) || Number(raw) === 0 || !Number.isSafeInteger(Number(raw))) throw new Error(`${name} must be a positive integer number of seconds`);
+  return Number(raw);
+}
+
+/**
+ * KEEPER_LOCAL_KEYSTORE_<CHAIN>: the path of an encrypted keystore (`cast wallet import`), with its password in the file
+ * KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE. Refused outside the `local` network set, so no published or test-network keeper
+ * signs with a local key (Q-245); no raw key is ever read from the environment.
+ */
+export function localKeystore(env: NodeJS.ProcessEnv, chain: ChainInfo): LocalKeystore | undefined {
+  const name = `KEEPER_LOCAL_KEYSTORE_${chain.envSuffix}`;
+  const path = optionalEnv(env, name);
+  if (path === undefined) return undefined;
+  if (chain.networkSet !== "local") throw new Error(`${name} is accepted only on the local network set; sign through the KMS`);
+  const passwordFile = optionalEnv(env, "KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE");
+  if (passwordFile === undefined) throw new Error(`${name} needs KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE, the file holding its password`);
+  return { path, passwordFile };
 }
 
 /** A decimal wei amount; a missing or zero ceiling stops startup on a chain that can sign. */
@@ -82,6 +112,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
       privateSend: listEnv(env, rpcEnvName(chain, "PRIVATE")),
     },
     kmsKeyId: optionalEnv(env, `KEEPER_KMS_KEY_ID_${chain.envSuffix}`),
+    localKeystore: localKeystore(env, chain),
     gasCeilingWei: gasCeiling(env, `KEEPER_GAS_CEILING_WEI_${chain.envSuffix}`),
     largestDebtToCover: parseLargest(listEnv(env, `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`), `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`),
     gasDailySpendWei: gasCeiling(env, `KEEPER_GAS_DAILY_SPEND_WEI_${chain.envSuffix}`),
@@ -91,14 +122,16 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
   }));
   if (chains.length === 0) throw new Error(`no verified manifest for any ${set} chain`);
   for (const c of chains) {
+    const signs = Boolean(c.kmsKeyId || c.localKeystore);
+    if (c.kmsKeyId && c.localKeystore) throw new Error(`set KEEPER_KMS_KEY_ID_${c.chain.envSuffix} or KEEPER_LOCAL_KEYSTORE_${c.chain.envSuffix}, not both`);
     // No public-mempool fallback exists: a chain without a private endpoint cannot leave observe-only mode.
-    if (mode === "active" && c.kmsKeyId && c.rpc.privateSend.length === 0) {
+    if (mode === "active" && signs && c.rpc.privateSend.length === 0) {
       throw new Error(`${rpcEnvName(c.chain, "PRIVATE")} is empty; active mode sends only through private order flow`);
     }
     // A signer without a fee ceiling could drain its gas wallet on a fault: refused at startup.
-    if (c.kmsKeyId && c.gasCeilingWei === undefined) throw new Error(`KEEPER_GAS_CEILING_WEI_${c.chain.envSuffix} is required with a signer`);
+    if (signs && c.gasCeilingWei === undefined) throw new Error(`KEEPER_GAS_CEILING_WEI_${c.chain.envSuffix} is required with a signer`);
     // M-17's gas level needs a spend to compare with before 7 days are measured.
-    if (c.kmsKeyId && c.gasDailySpendWei === undefined) throw new Error(`KEEPER_GAS_DAILY_SPEND_WEI_${c.chain.envSuffix} is required with a signer`);
+    if (signs && c.gasDailySpendWei === undefined) throw new Error(`KEEPER_GAS_DAILY_SPEND_WEI_${c.chain.envSuffix} is required with a signer`);
   }
 
   const shard = role === "standby" ? null : { index: intEnv(env, "KEEPER_SHARD"), count: intEnv(env, "KEEPER_SHARD_COUNT") };
@@ -123,5 +156,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     metricsPort,
     indexerUrl: requireEnv(env, "KEEPER_INDEXER_URL"),
     indexerKey: parseStreamKey(requireEnv(env, "KEEPER_INDEXER_KEY")),
+    discoveryPageSeconds: discoveryPageSeconds(env),
   };
 }

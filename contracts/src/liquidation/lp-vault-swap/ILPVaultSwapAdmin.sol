@@ -16,12 +16,12 @@ pragma solidity 0.8.28;
 interface ILPVaultSwapAdmin {
     /// @notice Initializes the proxy storage.
     /// @dev Runs once, atomically with the proxy deployment (later versions run a reinitializer inside
-    /// `upgradeToAndCall`). Grants `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` to `timelock` only. The launch registry
+    /// `upgradeToAndCall`). Grants `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` to `timelock` only. The registry first
     /// holds Avana's own keeper as the committed operator (`KEEPER_FLOOR = 1`, Q-400); others can be added later. The call reverts with
     /// `KeeperFloor` for fewer than `KEEPER_FLOOR` keepers, `TooManyKeepers` above `MAX_KEEPERS` and `InvalidKeeper` for a zero or duplicate
     /// address.
     /// @param timelock The AvanaTimelock.
-    /// @param initialKeepers Committed operators at launch.
+    /// @param initialKeepers Initial committed operators.
     /// @custom:spec REQ-SWAP-032, REQ-SWAP-034, REQ-SWAP-040, Q-226, Q-228
     function initialize(
         address timelock,

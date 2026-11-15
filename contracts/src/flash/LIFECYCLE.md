@@ -1,6 +1,6 @@
 # Flash source lifecycle
 
-The chain's IFlashSource lends LPVaultSwap the debt asset itself for a repay with collateral (`deleverage`), from a lender that is never an Avana Hub (the chain's Aave V3 Pool at launch), checks the premium against `maxFlashFeeBps`, and repays the lender in the same call; LPVaultSwap receives the loan through IFlashReceiver. A liquidation never uses it: `liquidate` is funded by its caller, and a caller without the debt asset borrows through the [flash liquidation helper](../periphery/flash-liquidator/LIFECYCLE.md) (Q-404).
+The chain's IFlashSource lends LPVaultSwap the debt asset itself for a repay with collateral (`deleverage`), from a lender that is never an Avana Hub (for example the chain's Aave V3 Pool), checks the premium against `maxFlashFeeBps`, and repays the lender in the same call; LPVaultSwap receives the loan through IFlashReceiver. A liquidation never uses it: `liquidate` is funded by its caller, and a caller without the debt asset borrows through the [flash liquidation helper](../periphery/flash-liquidator/LIFECYCLE.md) (Q-404).
 
 ```mermaid
 sequenceDiagram
