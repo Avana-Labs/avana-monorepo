@@ -8,6 +8,7 @@ import {PriceState} from "../../src/types/PriceState.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
 import {HostileConfig} from "../utils/mocks/DebtOracleConfigMocks.sol";
+import {MockAggregator} from "../utils/mocks/MockAggregator.sol";
 
 /// @title DebtOracleReportUnitTest
 /// @notice The informational fields of `getPriceState()` (REQ-ORACLE-093: the legs of the served route, their age
@@ -137,5 +138,38 @@ contract DebtOracleReportUnitTest is DebtOracleFixture {
         assertEq(v.acceptedUpdatedAt, at, "acceptedUpdatedAt");
         assertEq(v.failureStart, 0, "no failure start");
         assertEq(v.cachedUntil, 0, "no cached-until");
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-093, REQ-ORACLE-092, REQ-ORACLE-017
+    /// @notice A failed feed-definition read fails the configuration after the route feeds were read; no route is read
+    /// then either: both values 0 and both ages `type(uint64).max`, as for a failed route read.
+    function test_TEST_219_failedFeedDefinitionReportsNoRoute() public {
+        store.clearFeed(address(ethUsd));
+        DebtPriceView memory v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Cached));
+        assertEq(v.primaryValue, 0, "the primary route is not read");
+        assertEq(v.primaryAge, type(uint64).max);
+        assertEq(v.alternateValue, 0);
+        assertEq(v.alternateAge, type(uint64).max);
+    }
+
+    // TEST-276 verifies: REQ-ORACLE-093, SPEC-ORC-002
+    /// @notice A two-leg route with a leg that does not decode reports age `type(uint64).max`, not the age of its other
+    /// leg.
+    function test_TEST_276_undecodedLegReportsNoRouteAge() public {
+        ethUsd.setMode(ethUsd.latestRoundData.selector, MockAggregator.Mode.Revert);
+        DebtPriceView memory v = _view();
+        assertEq(uint8(v.routeUsed), uint8(RouteSlot.Primary));
+        assertEq(v.alternateValue, 0);
+        assertEq(v.alternateAge, type(uint64).max, "a leg that did not decode leaves the route without an age");
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-093, REQ-ORACLE-034
+    /// @notice With no recovery recorded and no sequencer, the report has no grace window: `graceEndsAt` is 0.
+    function test_TEST_219_noRecoveryReportsNoGraceEnd() public view {
+        DebtPriceView memory v = _view();
+        assertEq(v.recoveredAt, 0);
+        assertFalse(v.inGrace);
+        assertEq(v.graceEndsAt, 0);
     }
 }

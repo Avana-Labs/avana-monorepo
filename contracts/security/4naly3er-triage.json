@@ -1599,6 +1599,30 @@
       "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
     },
     {
+      "fingerprint": "b311eb62fe78cae3",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: a block timestamp plus a recovery of at most 7,200 s fits 64 bits."
+    },
+    {
+      "fingerprint": "0a91532916b69f2c",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/SpeedLimitMath.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: add runs only after fits(r, lim, x) with lim at most max < 2^96, so curr + x fits uint96; the base is capped at 2^248 - 1 before its cast."
+    },
+    {
+      "fingerprint": "c6d9b44d930dd1dd",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/SpeedLimitMath.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above: a credit takes at most curr, so curr - take is below curr < 2^96."
+    },
+    {
+      "fingerprint": "4b0332f17265a55a",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/policy/risk-module/SpeedLimitMath.sol",
+      "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above: the credited prev is below prev < 2^96, or 0."
+    },
+    {
       "fingerprint": "8f1c29cec5c4e700",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",

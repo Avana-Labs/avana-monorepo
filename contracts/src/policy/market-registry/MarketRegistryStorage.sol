@@ -16,6 +16,7 @@ import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
 import {IMarketRegistryErrors} from "./IMarketRegistryErrors.sol";
 import {IMarketRegistryEvents} from "./IMarketRegistryEvents.sol";
 import {IMarketRegistrySafetyEvents} from "./IMarketRegistrySafetyEvents.sol";
+import {BreakerReasons} from "./types/Breaker.sol";
 import {DebtReserveDef} from "./types/DebtReserveDef.sol";
 import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
 import {MarketStatus} from "./types/MarketStatus.sol";
@@ -244,6 +245,17 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         uint32 epoch = _s().routeEpoch[marketId];
         if (epoch == 0) return keccak256(abi.encode(marketId, token, debtAsset, kind));
         return keccak256(abi.encode(marketId, token, debtAsset, kind, epoch));
+    }
+
+    /// @dev Clears the breach times of breaker `key`: the latest of any temporary reason and each reason's own.
+    function _clearBreachTimes(
+        Layout storage l,
+        bytes32 key
+    ) internal {
+        delete l.lastBreachAt[key];
+        delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)];
+        delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)];
+        delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)];
     }
 
     /// @dev Breaker key of a debt reserve (REQ-MREG-025).

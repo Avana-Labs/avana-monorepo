@@ -488,4 +488,28 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
             uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(usdt)))), 47))), block.timestamp
         );
     }
+
+    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-036, REQ-MREG-027
+    /// @notice `setPriceSource` stops at the first market that fails its re-check, also when a later market passes, and
+    /// walks markets that do not hold the token without reading past their token list: with two USDC/USDT markets and
+    /// market 1's LPOracle refusing, the change reverts; a change to GHO, held by no market, passes.
+    function test_TEST_231_setPriceSourceFirstFailureWinsAndSkipsOtherTokens() public {
+        (uint256 id1,, RegistryLPOracleMock o1) = _listMarket();
+        PositionShape memory wide = PositionShape(ShapeKind.TickRange, -100, 100);
+        (address vt2, RegistryLPOracleMock o2) = _deployTokenAndOracle(registry.marketCount() + 1, wide);
+        MarketDef memory d2 = _marketDef(vt2, address(o2));
+        d2.shape = wide;
+        vm.prank(address(timelock));
+        uint256 id2 = registry.listCollateralMarket(d2);
+        assertEq(id2, id1 + 1);
+        o1.setFailed(1);
+        (address[] memory p, address[] memory a, address[] memory s) = _routes("usdc2");
+        vm.prank(address(timelock));
+        _expectListing("oracleConfig");
+        registry.setPriceSource(address(usdc), p, a, s);
+        (p, a, s) = _routes("gho2");
+        vm.prank(address(timelock));
+        registry.setPriceSource(address(gho), p, a, s);
+        assertEq(registry.getToken(address(gho)).primaryRoute[0], p[0]);
+    }
 }

@@ -134,11 +134,13 @@ interface ICollateralizationErrors {
     /// @custom:spec REQ-VAULT-007, REQ-COLL-005, REQ-COLL-019, Q-258
     error InvalidDepositor(address depositor);
 
-    /// @notice `markDebtFree`'s Spoke read failed with less than `DEBT_MARK_GAS_FLOOR` gas left, so the failure may be
-    /// gas starvation by the caller rather than a failing read; the whole call reverts instead of keeping a stale mark.
-    /// @param gasLeft Gas left after the failed read.
-    /// @param required `DEBT_MARK_GAS_FLOOR`.
-    /// @custom:spec REQ-COLL-040
+    /// @notice Too little gas for a call whose failure must not be the caller's starvation: `markDebtFree`'s Spoke read
+    /// failed with less than `DEBT_MARK_GAS_FLOOR` left (the whole call reverts instead of keeping a stale mark), or an
+    /// exit reached the RiskModule's speed credit with less than `SPEED_CREDIT_FLOOR` (the exit reverts instead of
+    /// skipping the credit).
+    /// @param gasLeft Gas left at the check.
+    /// @param required `DEBT_MARK_GAS_FLOOR` or `SPEED_CREDIT_FLOOR`.
+    /// @custom:spec REQ-COLL-040, REQ-RISK-093
     error InsufficientGas(uint256 gasLeft, uint256 required);
 
     /// @notice `releasePartial` asked for at least the record's credited units after reconciliation; a full exit is a

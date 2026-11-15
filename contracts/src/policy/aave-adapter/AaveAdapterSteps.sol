@@ -281,6 +281,23 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (IERC20(asset).balanceOf(proxy) != start - amount || IERC20(asset).allowance(proxy, spoke) != 0) {
             revert BalanceDeltaMismatch();
         }
+        _creditSpeed(proxy, debtReserveId, spent);
+    }
+
+    /// @dev Gives the repaid amount back to the RiskModule's borrow-speed windows (REQ-RISK-092). The call has a fixed
+    /// stipend behind `SPEED_CREDIT_FLOOR` and its failure is ignored, so the RiskModule can never stop a repay
+    /// (REQ-RISK-005); only a caller who sends too little gas for the stipend is refused (`InsufficientGas`).
+    function _creditSpeed(
+        address proxy,
+        uint256 debtReserveId,
+        uint256 spent
+    ) internal {
+        if (spent == 0) return;
+        uint256 left = gasleft();
+        if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
+        // A failed credit only leaves the window fuller than the net debt; it must not block the repay.
+        // solhint-disable-next-line no-empty-blocks
+        try IRiskModuleChecks(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
     }
 
     /// @dev Repay steps of `repay` and `repayAllAndWithdraw` (SPEC-PROXY-003, SPEC-PROXY-007): reads the live debt `D`;

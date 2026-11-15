@@ -14,6 +14,7 @@ import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator, OracleConfigReader, OracleConfigSummary} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockAvanaFirstLossReserve, MockPriceSource} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Scope checks of every keyed setter (market, Hub, token, feed, Spoke, debt reserve), the listing-only
 /// setters against every market status, and the zero answers of every view for an unknown key (REQ-PSTORE-011).
@@ -373,5 +374,55 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(d.decimals, 8);
         assertEq(d.minAnswer, 1e6);
         assertEq(d.maxAnswer, 1e12);
+    }
+
+    // TEST-228 verifies: REQ-PSTORE-016
+    /// @notice The deficit bound is the smallest First-Loss Reserve minimum over the asset's reserves funded by the Hub,
+    /// whatever their order: 100,000e18 on the first Spoke binds over 200,000e18 on a second.
+    function test_TEST_228_deficitBoundIsTheSmallestMinimum() public {
+        address spoke2 = makeAddr("spoke2");
+        registry.setSpoke(spoke2, address(hub));
+        MockAvanaFirstLossReserve c2 = new MockAvanaFirstLossReserve();
+        c2.setMinimum(200_000e18);
+        DebtReserveDef memory d = registry.getDebtReserve(address(spoke), 1);
+        d.firstLossReserve = address(c2);
+        registry.setDebtReserve(spoke2, d);
+        _refuses(
+            abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 100_000e18 + 1)),
+            abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector)
+        );
+        _tl();
+        store.loosenBreakerDeficitMax(address(hub), gho, 100_000e18);
+        assertEq(store.breakerDeficitMax(address(hub), gho), 100_000e18);
+    }
+
+    // TEST-246 verifies: REQ-CONFIG-050, Q-397
+    /// @notice The allowance is priced at the highest source over the asset's reserves, whatever their order: with
+    /// $1.00 on the first Spoke and $0.50 on a second, the bound stays 1e18 and 1e18 + 1 is refused.
+    function test_TEST_246_highestPriceBindsWhateverTheOrder() public {
+        address spoke2 = makeAddr("spoke2");
+        registry.setSpoke(spoke2, address(hub));
+        MockPriceSource half = new MockPriceSource();
+        half.setAnswer(0.5e8);
+        DebtReserveDef memory d = registry.getDebtReserve(address(spoke), 1);
+        d.priceSource = address(half);
+        registry.setDebtReserve(spoke2, d);
+        _refuses(
+            abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1e18 + 1))),
+            abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector)
+        );
+        _tl();
+        store.setDebtAssetParams(gho, DebtReserveParams(1e18));
+        assertEq(store.floorRoundingAllowance(gho), 1e18);
+    }
+
+    // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006
+    /// @notice A price source whose read reverts counts as unbounded: any allowance is refused with `OutOfBounds`.
+    function test_TEST_246_revertingPriceSourceRefusesAllowance() public {
+        vm.mockCallRevert(address(ghoPrice), abi.encodeWithSignature("latestAnswer()"), "down");
+        _refuses(
+            abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1))),
+            abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector)
+        );
     }
 }

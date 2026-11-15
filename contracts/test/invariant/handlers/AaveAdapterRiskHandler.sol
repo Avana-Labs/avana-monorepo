@@ -185,6 +185,14 @@ contract AaveAdapterRiskHandler is Test {
         try w.adapter.borrow(w.market, w.ghoReserve, amount, wallet, block.timestamp, 0, n) {
             ++borrowsDone;
             if (!clean) ++uncheckedSuccesses;
+            return;
+        } catch {}
+        // Steered: with every gate open, a borrow refused for its size is tried once more at a quarter of it, so
+        // borrows land on accounts with little room left.
+        if (!clean || amount / 4 < 1e18) return;
+        vm.prank(wallet);
+        try w.adapter.borrow(w.market, w.ghoReserve, amount / 4, wallet, block.timestamp, 0, n) {
+            ++borrowsDone;
         } catch {}
     }
 

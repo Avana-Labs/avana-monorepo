@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SlipstreamIntegrationFixture} from "../utils/fixtures/SlipstreamIntegrationFixture.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {SlipstreamFeesHandler} from "./handlers/SlipstreamFeesHandler.sol";
 
 /// @title SlipstreamIntegrationFeesInvariantTest
@@ -13,7 +14,7 @@ import {SlipstreamFeesHandler} from "./handlers/SlipstreamFeesHandler.sol";
 /// only the depositor of record, and paid every owed amount; no seizure lowered a position's owed fees; for every
 /// position, the fees owed plus the fees paid equal the fees accrued.
 /// forge-config: default.isolate = false
-contract SlipstreamIntegrationFeesInvariantTest is SlipstreamIntegrationFixture {
+contract SlipstreamIntegrationFeesInvariantTest is SlipstreamIntegrationFixture, HandlerReach {
     SlipstreamFeesHandler internal handler;
 
     function setUp() public override {
@@ -29,6 +30,72 @@ contract SlipstreamIntegrationFeesInvariantTest is SlipstreamIntegrationFixture 
         actions[3] = SlipstreamFeesHandler.seize.selector;
         actions[4] = SlipstreamFeesHandler.collect.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r =
+            _replayLanded(address(handler), actions, SlipstreamFeesHandler.Skipped.selector, 32, 50, 0, own, true);
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](5);
+        bool[] memory check = new bool[](5);
+        floors[0] = 55; // pledge
+        floors[1] = 70; // accrue
+        floors[2] = 80; // moveSpot
+        floors[3] = 70; // seize
+        floors[4] = 20; // collect
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
+        (actions[0], names[0]) = (SlipstreamFeesHandler.pledge.selector, "pledge");
+        kinds[0] = new int16[](2);
+        kinds[0][0] = 256;
+        kinds[0][1] = 128;
+        (actions[1], names[1]) = (SlipstreamFeesHandler.accrue.selector, "accrue");
+        kinds[1] = new int16[](3);
+        kinds[1][0] = 256;
+        kinds[1][1] = 128;
+        kinds[1][2] = 128;
+        (actions[2], names[2]) = (SlipstreamFeesHandler.moveSpot.selector, "moveSpot");
+        kinds[2] = new int16[](1);
+        kinds[2][0] = -24;
+        (actions[3], names[3]) = (SlipstreamFeesHandler.seize.selector, "seize");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        (actions[4], names[4]) = (SlipstreamFeesHandler.collect.selector, "collect");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 256;
+        kinds[4][1] = 256;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // TEST-091 verifies: INV-033, REQ-VAULT-064, REQ-VAULT-065, REQ-AMM-CORE-010, Q-030, Q-061

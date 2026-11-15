@@ -176,6 +176,16 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
             // forge-lint: disable-next-line(unsafe-typecast)
             uint64 at = uint64(block.timestamp);
             l.lastBreachAt[key] = at;
+            // Each temporary reason keeps its own breach time, so a recovery reopens only what was recorded.
+            if (temp & BreakerReasons.ORACLE != 0) {
+                l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
+            }
+            if (temp & BreakerReasons.POOL_SHARE != 0) {
+                l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)] = at;
+            }
+            if (temp & BreakerReasons.POOL_DEPTH != 0) {
+                l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
+            }
             emit GateBreached(key, temp, at);
         }
     }

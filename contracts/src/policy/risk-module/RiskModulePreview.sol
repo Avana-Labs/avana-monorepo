@@ -91,7 +91,7 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         (p.reason, units) = _position(m, marketId, depositor, positionKey);
         if (p.reason != bytes4(0)) return p;
         p.usdCharge =
-            RiskModuleMath.usdCharge(units, _bookingPrice(m.lpOracle), _store().stressFloorUsd(marketId), m.decimals);
+            RiskModuleMath.usdCharge(units, _capPrice(m.lpOracle), _store().stressFloorUsd(marketId), m.decimals);
         // The integration's record cap (REQ-AMM-CORE-020), never above the global bound.
         uint256 cap = Math.min(
             IAmmIntegration(m.integration).maxRecordsPerAccountMarket(), AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET

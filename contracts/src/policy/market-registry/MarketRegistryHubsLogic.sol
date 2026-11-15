@@ -307,7 +307,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         delete l.recordedDrawCap[spoke][reserveId];
         bytes32 key = _debtKey(spoke, reserveId);
         delete l.latched[key];
-        delete l.lastBreachAt[key];
+        _clearBreachTimes(l, key);
         delete l.debtReserves[spoke][reserveId];
         _removeId(l.debtReserveIds[spoke], reserveId);
         emit DebtReserveRemoved(spoke, reserveId);

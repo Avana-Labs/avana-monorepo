@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
 import {WindDownState} from "../../src/policy/market-registry/types/WindDownState.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {MarketRegistryLifecycleHandler} from "./handlers/MarketRegistryLifecycleHandler.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -14,7 +15,7 @@ import {Test} from "forge-std/Test.sol";
 /// with time warps: every call follows the status machine, the reverse maps hold exactly the live markets, the Spoke's
 /// live count matches, identifiers are consecutive and reused only by a relisting, and the wind-down threshold stays
 /// between its final value and its start.
-contract MarketRegistryLifecycleInvariantTest is Test {
+contract MarketRegistryLifecycleInvariantTest is Test, HandlerReach {
     MarketRegistryLifecycleHandler internal handler;
     MarketRegistry internal registry;
 
@@ -35,6 +36,75 @@ contract MarketRegistryLifecycleInvariantTest is Test {
         actions[8] = MarketRegistryLifecycleHandler.close.selector;
         actions[9] = MarketRegistryLifecycleHandler.warp.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(
+            address(handler), actions, MarketRegistryLifecycleHandler.Skipped.selector, 32, 50, 0, own, true
+        );
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](6);
+        bool[] memory check = new bool[](6);
+        floors[0] = 50; // list
+        floors[1] = 15; // activate
+        floors[2] = 15; // cancel
+        floors[3] = 5; // offboard
+        floors[4] = 80; // warp
+        check[4] = true; // warp
+        floors[5] = 15; // close
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](6), new string[](6), new int16[][](6));
+        (actions[0], names[0]) = (MarketRegistryLifecycleHandler.list.selector, "list");
+        kinds[0] = new int16[](1);
+        kinds[0][0] = 256;
+        (actions[1], names[1]) = (MarketRegistryLifecycleHandler.activate.selector, "activate");
+        kinds[1] = new int16[](1);
+        kinds[1][0] = 256;
+        (actions[2], names[2]) = (MarketRegistryLifecycleHandler.cancel.selector, "cancel");
+        kinds[2] = new int16[](1);
+        kinds[2][0] = 256;
+        (actions[3], names[3]) = (MarketRegistryLifecycleHandler.offboard.selector, "offboard");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 16;
+        (actions[4], names[4]) = (MarketRegistryLifecycleHandler.warp.selector, "warp");
+        kinds[4] = new int16[](1);
+        kinds[4][0] = 256;
+        (actions[5], names[5]) = (MarketRegistryLifecycleHandler.close.selector, "close");
+        kinds[5] = new int16[](2);
+        kinds[5][0] = 256;
+        kinds[5][1] = 1;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     function _slot(

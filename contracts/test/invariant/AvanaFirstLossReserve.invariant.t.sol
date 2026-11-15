@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {AvanaFirstLossReserveHandler} from "./handlers/AvanaFirstLossReserveHandler.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title AvanaFirstLossReserveInvariantTest
@@ -19,7 +20,7 @@ import {Test} from "forge-std/Test.sol";
 /// liquidation invariant suite, where the deficit is reported by a real liquidation. Here a pranked drawing Spoke
 /// reports it. One Hub is deployed, so "another Hub" is covered by the per-asset instances being bound to their own
 /// `(Hub, assetId)` (TEST-199).
-contract AvanaFirstLossReserveInvariantTest is Test {
+contract AvanaFirstLossReserveInvariantTest is Test, HandlerReach {
     AvanaFirstLossReserveHandler internal handler;
     IAaveV4Hub internal hub;
 
@@ -38,6 +39,71 @@ contract AvanaFirstLossReserveInvariantTest is Test {
         actions[6] = AvanaFirstLossReserveHandler.fund.selector;
         actions[7] = AvanaFirstLossReserveHandler.setAllowlist.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](5);
+        bool[] memory check = new bool[](5);
+        floors[0] = 80; // reportDeficit
+        floors[1] = 20; // cover
+        floors[2] = 80; // warp
+        check[2] = true; // warp
+        floors[3] = 80; // fund
+        floors[4] = 35; // setAllowlist
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
+        (actions[0], names[0]) = (AvanaFirstLossReserveHandler.reportDeficit.selector, "reportDeficit");
+        kinds[0] = new int16[](2);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        (actions[1], names[1]) = (AvanaFirstLossReserveHandler.cover.selector, "cover");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (AvanaFirstLossReserveHandler.warp.selector, "warp");
+        kinds[2] = new int16[](1);
+        kinds[2][0] = 256;
+        (actions[3], names[3]) = (AvanaFirstLossReserveHandler.fund.selector, "fund");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        (actions[4], names[4]) = (AvanaFirstLossReserveHandler.setAllowlist.selector, "setAllowlist");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 256;
+        kinds[4][1] = 1;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // TEST-094 verifies: REQ-FLR-019, REQ-FLR-018, REQ-FLR-031, SPEC-FLR-001, INV-042, Q-101, Q-142
