@@ -11,9 +11,9 @@ import {stdError} from "forge-std/StdError.sol";
 
 /// @title RiskModulePledgeRowsFuzzTest
 /// @notice The reviewed RiskModule's `checkPledge` on the real MarketRegistry (the fixture's market `MID`, 18-decimal
-/// vault token, stress floor $1.00, `minPledgeUsd` $10, `marketUsdCap` $1,000,000, depositor cap $5,000,000): its
-/// rounding sites (TEST-070), its arithmetic at the listing bounds (TEST-071), and that a pledge it admits stays within
-/// the caps and the minimum (TEST-097).
+/// vault token, stress floor $1.00, `minPledgeUsd` $10, `marketUsdCap` $1,000,000): its rounding sites (TEST-070), its
+/// arithmetic at the listing bounds (TEST-071), and that a pledge it admits stays within the caps and the minimum
+/// (TEST-097).
 contract RiskModulePledgeRowsFuzzTest is RiskModuleFixture {
     uint256 internal constant STRESS_FLOOR = 1e8;
 
@@ -69,7 +69,6 @@ contract RiskModulePledgeRowsFuzzTest is RiskModuleFixture {
         store.setCaps(mid, type(uint128).max, 0, STRESS_FLOOR);
         store.setTokenCap(address(hub), address(usdc), type(uint128).max);
         store.setTokenCap(address(hub), address(usdt), type(uint128).max);
-        store.setDepositorCap(address(hub), type(uint128).max);
         store.setMinPledge(mid, 0);
         PledgeCounters memory k = _counters();
         try riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), units, k, false) returns (
@@ -86,12 +85,10 @@ contract RiskModulePledgeRowsFuzzTest is RiskModuleFixture {
     // TEST-097 verifies: INV-027, INV-028, INV-069, REQ-RISK-021, REQ-RISK-057
     // Sources: MATH-UO-25, HYP-10, HYP-55
     /// @notice Whatever the counters Collateralization passes, a pledge the RiskModule admits leaves the market's
-    /// regular counter within `marketUsdCap` and the depositor's within `depositorUsdCap`, and had a value of at least
-    /// `minPledgeUsd` at the served price.
+    /// regular counter within `marketUsdCap` and had a value of at least `minPledgeUsd` at the served price.
     function testFuzz_TEST_097_admittedPledgeStaysWithinTheCaps(
         uint128 units,
         uint256 regularUsed,
-        uint256 depositorUsed,
         uint256 price
     ) public {
         units = uint128(bound(units, 1e18, 600_000e18));
@@ -99,12 +96,10 @@ contract RiskModulePledgeRowsFuzzTest is RiskModuleFixture {
         oracle.setPrices(price, int256(price));
         PledgeCounters memory k = _counters();
         k.regularUsed = uint128(bound(regularUsed, 0, 1_100_000e8));
-        k.depositorUsed = bound(depositorUsed, 0, 5_500_000e8);
         try riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), units, k, false) returns (
             PledgeCharge memory c
         ) {
             assertLe(uint256(k.regularUsed) + c.usdCharge - c.sliceUsd, store.marketUsdCap(mid), "market cap");
-            assertLe(k.depositorUsed + c.usdCharge, store.depositorUsdCap(address(hub)), "depositor cap");
             assertGe(uint256(units) * price / 1e18, store.minPledgeUsd(mid), "minimum value");
         } catch {}
     }

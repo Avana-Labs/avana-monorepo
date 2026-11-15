@@ -53,12 +53,8 @@ contract CollateralizationLedgerInvariantTest is CollateralizationFixture, Handl
     function invariant_TEST_097_countersEqualOpenRecordCharges() public view {
         (, BackingRecord[] memory rs) = coll.getMarketRecords(vt, 0, 64);
         uint256 sum = 0;
-        uint256 aliceSum = 0;
-        uint256 bobSum = 0;
         for (uint256 i = 0; i < rs.length; ++i) {
             sum += rs[i].currentUsdCharge;
-            if (rs[i].depositor == alice) aliceSum += rs[i].currentUsdCharge;
-            if (rs[i].depositor == bob) bobSum += rs[i].currentUsdCharge;
             assertLe(
                 rs[i].currentUsdCharge,
                 _ceilDiv(uint256(rs[i].originalUsdCharge) * rs[i].credited, rs[i].originalUnits),
@@ -69,8 +65,6 @@ contract CollateralizationLedgerInvariantTest is CollateralizationFixture, Handl
         assertEq(uint256(k.regularUsed) + k.sliceUsed, sum, "market buckets");
         assertEq(k.tokenUsed[0], sum, "USDC counter");
         assertEq(k.tokenUsed[1], sum, "USDT counter");
-        assertEq(k.depositorUsed, aliceSum, "alice's counter");
-        assertEq(coll.getCounters(vt, bob).depositorUsed, bobSum, "bob's counter");
     }
 
     // TEST-102 verifies: INV-015, INV-096, REQ-VAULT-025, REQ-VAULT-074, REQ-VAULT-128, REQ-VAULT-129, SPEC-BACK-006

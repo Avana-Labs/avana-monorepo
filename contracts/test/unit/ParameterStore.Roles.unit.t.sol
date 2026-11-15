@@ -16,7 +16,7 @@ import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @notice The role matrix of every ParameterStore setter: the Joint Configuration Safe (`APPLICATION_RISK_STEWARD`)
-/// runs each of the 20 tighten setters and `setAvanaFeeShareBps` at once with the timelock path's checks and its own
+/// runs each of the 19 tighten setters and `setAvanaFeeShareBps` at once with the timelock path's checks and its own
 /// address as `caller`; the guardians hold `useStandbySecondSource` only; the timelock's delay class of every
 /// selector; and who administers each role.
 contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
@@ -180,17 +180,6 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         emit IParameterStoreEvents.CapTightened("tokenUsdCap", scope, 20_000_000e8, 10_000_000e8, safe);
         store.tightenTokenUsdCap(address(hub), usdc, 10_000_000e8);
         _stewardRepeats(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000_000e8)));
-    }
-
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-RISK-042, REQ-PSTORE-026
-    function test_TEST_062_stewardLowersDepositorCap() public {
-        vm.prank(safe);
-        vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapTightened(
-            "depositorUsdCap", bytes32(uint256(uint160(address(hub)))), 1_000_000e8, 500_000e8, safe
-        );
-        store.tightenDepositorUsdCap(address(hub), 500_000e8);
-        _stewardRepeats(abi.encodeCall(store.tightenDepositorUsdCap, (address(hub), 500_000e8)));
     }
 
     // TEST-062 verifies: REQ-PSTORE-002, REQ-RISK-042, Q-403
@@ -474,7 +463,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
     }
 
     function _tightenCalls() internal view returns (bytes[] memory c) {
-        c = new bytes[](20);
+        c = new bytes[](19);
         c[0] = abi.encodeCall(store.tightenHardHealthFloor, (M, 1.1e18));
         c[1] = abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 50));
         c[2] = abi.encodeCall(store.tightenFloorRoundingAllowance, (gho, 1));
@@ -483,18 +472,17 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[5] = abi.encodeCall(store.tightenFeedAgreementToleranceBps, (usdc, 100));
         c[6] = abi.encodeCall(store.tightenPoolRiskFactor, (M, 1));
         c[7] = abi.encodeCall(store.tightenRouteDepthThreshold, (M, usdc, gho, 0, 1));
-        c[8] = abi.encodeCall(store.tightenMarketUsdCap, (M, 1e8));
+        c[8] = abi.encodeCall(store.tightenMarketUsdCap, (M, 10_000e8));
         c[9] = abi.encodeCall(store.tightenTopUpSliceUsd, (M, 0));
-        c[10] = abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 1));
-        c[11] = abi.encodeCall(store.tightenDepositorUsdCap, (address(hub), 1));
-        c[12] = abi.encodeCall(store.tightenPoolShareMaxBps, (1));
-        c[13] = abi.encodeCall(store.tightenMinPledgeUsd, (M, 20e8));
-        c[14] = abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, 1));
-        c[15] = abi.encodeCall(store.tightenMaxFlashFeeBps, (0));
-        c[16] = abi.encodeCall(store.tightenGateRecoverySeconds, (7200));
-        c[17] = abi.encodeCall(store.tightenBreakerDeficitMax, (address(hub), gho, 0));
-        c[18] = abi.encodeCall(store.tightenMaxShortfallBps, (0));
-        c[19] = abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 100));
+        c[10] = abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000e8));
+        c[11] = abi.encodeCall(store.tightenPoolShareMaxBps, (1));
+        c[12] = abi.encodeCall(store.tightenMinPledgeUsd, (M, 20e8));
+        c[13] = abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, 1));
+        c[14] = abi.encodeCall(store.tightenMaxFlashFeeBps, (0));
+        c[15] = abi.encodeCall(store.tightenGateRecoverySeconds, (7200));
+        c[16] = abi.encodeCall(store.tightenBreakerDeficitMax, (address(hub), gho, 0));
+        c[17] = abi.encodeCall(store.tightenMaxShortfallBps, (0));
+        c[18] = abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 100));
     }
 
     /// @dev Every APPLICATION_ADMIN-only selector (loosen, structural, listing, second source, role change, upgrade).
@@ -502,7 +490,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         MarketParams memory mp;
         FeedDef memory fd;
         SecondSource memory ss;
-        c = new bytes[](46);
+        c = new bytes[](44);
         uint256 k;
         c[k++] = abi.encodeCall(store.loosenHardHealthFloor, (M, 0));
         c[k++] = abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 101));
@@ -511,7 +499,6 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8));
         c[k++] = abi.encodeCall(store.loosenTopUpSliceUsd, (M, 600_000e8));
         c[k++] = abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8));
-        c[k++] = abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_100_000e8));
         c[k++] = abi.encodeCall(store.loosenPoolShareMaxBps, (10_000));
         c[k++] = abi.encodeCall(store.loosenMinPledgeUsd, (M, 1));
         c[k++] = abi.encodeCall(store.loosenPoolShareMaxBpsOf, (M, 10_000));
@@ -541,7 +528,6 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(store.setStressFloorUsd, (M, 2));
         c[k++] = abi.encodeCall(store.setInitialMarketParams, (M, mp));
         c[k++] = abi.encodeCall(store.setInitialMarketCaps, (M, 1, 1, 1));
-        c[k++] = abi.encodeCall(store.setInitialHubCaps, (address(hub), 1));
         c[k++] = abi.encodeCall(store.setInitialTokenCap, (address(hub), usdt, 1));
         c[k++] = abi.encodeCall(store.setFeed, (address(fUsdc), fd));
         c[k++] = abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1)));

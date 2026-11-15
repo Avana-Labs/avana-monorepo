@@ -480,7 +480,6 @@ contract FullStackHandler is CommonBase, StdUtils {
         if (k.regularUsed > w.store.marketUsdCap(market) || k.sliceUsed > w.store.topUpSliceUsd(market)) {
             ++capViolations;
         }
-        if (k.depositorUsed > w.store.depositorUsdCap(w.hub)) ++capViolations;
     }
 
     function _refresh() internal {

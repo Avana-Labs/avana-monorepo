@@ -169,7 +169,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         store = IParameterStore(
             address(
                 new ERC1967Proxy(
-                    address(storeImpl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _globals(), 0, 10_000))
+                    address(storeImpl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _globals(), 10_000))
                 )
             )
         );

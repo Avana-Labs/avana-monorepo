@@ -129,7 +129,6 @@ abstract contract LensMarket is LensBase, ILensMarket {
             uint256 used = i < k.tokenUsed.length ? k.tokenUsed[i] : 0;
             c.tokenHeadroomUsd[i] = _room(_store().tokenUsdCap(m.hub, m.tokens[i]), used);
         }
-        c.depositorHeadroomUsd = _room(_store().depositorUsdCap(m.hub), k.depositorUsed);
         c.poolShareMaxBps = _store().poolShareMaxBpsOf(k.poolKey);
         c.poolShareBps = _poolShareBps(marketId, m.integration, k.poolUnits);
         // forge-lint: disable-next-line(unused-return)

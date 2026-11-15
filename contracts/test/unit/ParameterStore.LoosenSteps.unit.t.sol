@@ -46,12 +46,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         return keccak256(abi.encode(a, b));
     }
 
-    function _a(
-        address a
-    ) internal pure returns (bytes32) {
-        return bytes32(uint256(uint160(a)));
-    }
-
     function _call(
         bytes memory data
     ) internal returns (bool ok, bytes memory ret) {
@@ -136,23 +130,47 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
 
     // TEST-225 verifies: REQ-PSTORE-017, REQ-RISK-043
     function test_TEST_225_capStepRoundsNothingUp() public {
-        // From 3, 1.5 × 3 = 4.5: 4 is within one step, 5 is not.
-        _accepts(abi.encodeCall(store.setInitialMarketCaps, (M, 3, 0, 1)));
+        // Above the $1,000 reopen base: from $3,000, 1.5 x 3,000 = 4,500 is the edge.
+        _accepts(abi.encodeCall(store.setInitialMarketCaps, (M, 3000e8, 0, 1)));
         bytes32 key = _key("marketUsdCap", bytes32(M));
-        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 5)), _tooLarge(key));
-        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 4)));
-        assertEq(store.marketUsdCap(M), 4);
-        // From 2, exactly 3 is the edge.
-        _accepts(abi.encodeCall(store.setInitialHubCaps, (hub2, 2)));
-        bytes32 dep = _key("depositorUsdCap", _a(hub2));
-        _refuses(abi.encodeCall(store.loosenDepositorUsdCap, (hub2, 4)), _tooLarge(dep));
-        _accepts(abi.encodeCall(store.loosenDepositorUsdCap, (hub2, 3)));
-        assertEq(store.depositorUsdCap(hub2), 3);
-        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, 7)));
+        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 4500e8 + 1)), _tooLarge(key));
+        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 4500e8)));
+        assertEq(store.marketUsdCap(M), 4500e8);
+        // From $2,000, exactly $3,000 is the edge.
+        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdc, 2000e8)));
+        bytes32 two = _key("tokenUsdCap", _pair(hub2, usdc));
+        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 3000e8 + 1)), _tooLarge(two));
+        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 3000e8)));
+        assertEq(store.tokenUsdCap(hub2, usdc), 3000e8);
+        // From $7,000 plus one unit, 1.5 x the old value rounds nothing up: 10,500e8 + 1 passes, + 2 does not.
+        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdt, 7000e8 + 1)));
         bytes32 tok = _key("tokenUsdCap", _pair(hub2, usdt));
-        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 11)), _tooLarge(tok));
-        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 10)));
-        assertEq(store.tokenUsdCap(hub2, usdt), 10);
+        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 10_500e8 + 2)), _tooLarge(tok));
+        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdt, 10_500e8 + 1)));
+        assertEq(store.tokenUsdCap(hub2, usdt), 10_500e8 + 1);
+    }
+
+    // TEST-225 verifies: REQ-RISK-043, REQ-RISK-042, REQ-PSTORE-017
+    /// @notice (d) A cap at 0 reopens to at most $1,000 in its first loosening and then grows by the normal x1.5 steps,
+    /// one per normal delay; below $1,000 a cap may always reach $1,000.
+    function test_TEST_225_capReopensFromZeroToAThousandThenByNormalSteps() public {
+        _accepts(abi.encodeCall(store.setInitialMarketCaps, (M, 5_000_000e8, 0, 1)));
+        _accepts(abi.encodeCall(store.tightenMarketUsdCap, (M, 0)));
+        bytes32 key = _key("marketUsdCap", bytes32(M));
+        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 1000e8 + 1)), _tooLarge(key));
+        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 1000e8)));
+        assertEq(store.marketUsdCap(M), 1000e8, "reopened to $1,000");
+        vm.warp(block.timestamp + NORMAL_DELAY);
+        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 1500e8 + 1)), _tooLarge(key));
+        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 1500e8)));
+        assertEq(store.marketUsdCap(M), 1500e8, "then x1.5");
+        // A token cap tightened to $10 reopens straight to $1,000.
+        _accepts(abi.encodeCall(store.setInitialTokenCap, (hub2, usdc, 2000e8)));
+        _accepts(abi.encodeCall(store.tightenTokenUsdCap, (hub2, usdc, 10e8)));
+        bytes32 tok = _key("tokenUsdCap", _pair(hub2, usdc));
+        _refuses(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 1000e8 + 1)), _tooLarge(tok));
+        _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 1000e8)));
+        assertEq(store.tokenUsdCap(hub2, usdc), 1000e8);
     }
 
     // TEST-225 verifies: REQ-PSTORE-017
@@ -181,29 +199,26 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     function test_TEST_225_everyStepLimitedSetterIsSpaced() public {
         _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.2e18)));
         uint256 t = block.timestamp;
-        bytes[6] memory first = [
+        bytes[5] memory first = [
             abi.encodeCall(store.loosenHardHealthFloor, (M, 1.18e18)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 110)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 600_000e8)),
-            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8)),
-            abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_100_000e8))
+            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8))
         ];
-        bytes[6] memory second = [
+        bytes[5] memory second = [
             abi.encodeCall(store.loosenHardHealthFloor, (M, 1.16e18)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 120)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 7_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 700_000e8)),
-            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 22_000_000e8)),
-            abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_200_000e8))
+            abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 22_000_000e8))
         ];
-        bytes32[6] memory keys = [
+        bytes32[5] memory keys = [
             _key("hardHealthFloor", bytes32(M)),
             _key("slippageAllowanceBps", bytes32(M)),
             _key("marketUsdCap", bytes32(M)),
             _key("topUpSliceUsd", bytes32(M)),
-            _key("tokenUsdCap", _pair(address(hub), usdc)),
-            _key("depositorUsdCap", _a(address(hub)))
+            _key("tokenUsdCap", _pair(address(hub), usdc))
         ];
         for (uint256 i = 0; i < first.length; ++i) {
             assertEq(store.lastLoosenedAt(keys[i]), 0);
@@ -247,9 +262,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         _accepts(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8)));
         _accepts(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdt, 1_500_000e8)));
         _accepts(abi.encodeCall(store.loosenTokenUsdCap, (hub2, usdc, 1_500_000e8)));
-        _accepts(abi.encodeCall(store.setInitialHubCaps, (hub2, 1_000_000e8)));
-        _accepts(abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_100_000e8)));
-        _accepts(abi.encodeCall(store.loosenDepositorUsdCap, (hub2, 1_500_000e8)));
         // Each is now spaced on its own key only.
         uint256 next = block.timestamp + NORMAL_DELAY;
         _refuses(
@@ -431,7 +443,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         vm.stopPrank();
         bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
         bytes memory notLooser = abi.encodeWithSelector(IParameterStoreErrors.NotLooser.selector);
-        bytes[15] memory same = [
+        bytes[14] memory same = [
             abi.encodeCall(store.loosenHardHealthFloor, (M, 1.1e18)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 100)),
             abi.encodeCall(store.loosenFloorRoundingAllowance, (gho, 1e17)),
@@ -439,7 +451,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
             abi.encodeCall(store.loosenMarketUsdCap, (M, 5_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 500_000e8)),
             abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 20_000_000e8)),
-            abi.encodeCall(store.loosenDepositorUsdCap, (address(hub), 1_000_000e8)),
             abi.encodeCall(store.loosenPoolShareMaxBps, (10_000)),
             abi.encodeCall(store.loosenMinPledgeUsd, (M, 10e8)),
             abi.encodeCall(store.loosenPoolShareMaxBpsOf, (M, store.poolShareMaxBpsOf(key))),

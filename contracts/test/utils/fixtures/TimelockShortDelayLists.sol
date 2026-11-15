@@ -20,10 +20,10 @@ import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParam
 /// @title TimelockShortDelayLists
 /// @notice The AvanaTimelock's short-delay list (= `SHORT_ELIGIBLE`) and DAO-only cancel set of 2.15
 /// ("Delay classes and timing", `REQ-ACCESS-155`, `REQ-ACCESS-156`), built from the interfaces for given target
-/// addresses: 22 ParameterStore tighten setters, 11 MarketRegistry selectors and LPVaultSwap `removeKeeper`; and
+/// addresses: 21 ParameterStore tighten setters, 11 MarketRegistry selectors and LPVaultSwap `removeKeeper`; and
 /// MarketRegistry `restoreRoute`, `useStandbyRoute`, `unfreezeAddress` with LPVaultSwap `addKeeper`.
 library TimelockShortDelayLists {
-    uint256 internal constant SHORT_COUNT = 34;
+    uint256 internal constant SHORT_COUNT = 33;
     uint256 internal constant DAO_COUNT = 4;
 
     function shortEligible(
@@ -31,7 +31,7 @@ library TimelockShortDelayLists {
         address marketRegistry,
         address lpVaultSwap
     ) internal pure returns (SelectorPair[] memory pairs) {
-        bytes4[22] memory ps = [
+        bytes4[21] memory ps = [
             IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
@@ -43,7 +43,6 @@ library TimelockShortDelayLists {
             IParameterStoreTighten.tightenMarketUsdCap.selector,
             IParameterStoreTighten.tightenTopUpSliceUsd.selector,
             IParameterStoreTighten.tightenTokenUsdCap.selector,
-            IParameterStoreTighten.tightenDepositorUsdCap.selector,
             IParameterStoreTighten.tightenPoolShareMaxBps.selector,
             IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,

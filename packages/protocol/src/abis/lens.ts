@@ -1536,11 +1536,6 @@ export const lensAbi = [
             "internalType": "uint256[]"
           },
           {
-            "name": "depositorHeadroomUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "poolShareBps",
             "type": "uint256",
             "internalType": "uint256"
@@ -2711,11 +2706,6 @@ export const lensAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "depositorUsdCap",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "tokenUsdCaps",
             "type": "uint256[]",
             "internalType": "uint256[]"
@@ -2968,11 +2958,6 @@ export const lensAbi = [
           },
           {
             "name": "topUpSliceUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "depositorUsdCap",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -4384,11 +4369,6 @@ export const lensAbi = [
                 "name": "tokenRoomUsd",
                 "type": "uint256[]",
                 "internalType": "uint256[]"
-              },
-              {
-                "name": "depositorRoomUsd",
-                "type": "uint256",
-                "internalType": "uint256"
               },
               {
                 "name": "poolShareRoomUnits",

@@ -144,7 +144,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         (v.targetHealthFactor, v.healthFactorForMaxBonus, v.liquidationBonusFactorBps) =
         (lc.targetHealthFactor, lc.healthFactorForMaxBonus, lc.liquidationBonusFactor);
         v.hardHealthFloor = _store().hardHealthFloor(marketId);
-        v.depositorUsdCap = _store().depositorUsdCap(m.hub);
         v.tokenUsdCaps = new uint256[](m.tokens.length);
         for (uint256 i = 0; i < m.tokens.length; ++i) {
             v.tokenUsdCaps[i] = _store().tokenUsdCap(m.hub, m.tokens[i]);

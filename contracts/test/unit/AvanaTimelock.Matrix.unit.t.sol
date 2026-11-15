@@ -116,7 +116,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function _parameterStoreRows(
         address ps
     ) internal {
-        bytes4[22] memory tighten = [
+        bytes4[21] memory tighten = [
             IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
@@ -128,7 +128,6 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreTighten.tightenMarketUsdCap.selector,
             IParameterStoreTighten.tightenTopUpSliceUsd.selector,
             IParameterStoreTighten.tightenTokenUsdCap.selector,
-            IParameterStoreTighten.tightenDepositorUsdCap.selector,
             IParameterStoreTighten.tightenPoolShareMaxBps.selector,
             IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
@@ -143,7 +142,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
         }
-        bytes4[47] memory normal = [
+        bytes4[46] memory normal = [
             IParameterStoreLoosen.loosenHardHealthFloor.selector,
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
@@ -151,7 +150,6 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreLoosen.loosenMarketUsdCap.selector,
             IParameterStoreLoosen.loosenTopUpSliceUsd.selector,
             IParameterStoreLoosen.loosenTokenUsdCap.selector,
-            IParameterStoreLoosen.loosenDepositorUsdCap.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,

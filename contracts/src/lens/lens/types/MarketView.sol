@@ -15,7 +15,7 @@ import {PriceState} from "../../../types/PriceState.sol";
 /// configuration of REQ-LENS-057: `collateralRiskBps` (the reserve's `collateralRisk`, the risk premium of every account
 /// of the market), `liquidationFeeBps` (latest dynamic configuration), the Spoke's liquidation configuration
 /// (`targetHealthFactor` and `healthFactorForMaxBonus` WAD, `liquidationBonusFactorBps`), `hardHealthFloor` (WAD, 0 =
-/// off), Avana's caps (USD 8 decimals: `marketUsdCap`, `topUpSliceUsd`, the Hub's `depositorUsdCap`, `tokenUsdCaps` per
+/// off), Avana's caps (USD 8 decimals: `marketUsdCap`, `topUpSliceUsd`, `tokenUsdCaps` per
 /// pool token), the Hub's `addCap` of the vault token (whole units, `type(uint40).max` = none) and, per enabled debt
 /// reserve of the Spoke (`debtReserveIds`), `borrowRatesRay = ⌈drawnRate × (10⁴ + collateralRiskBps) / 10⁴⌉`.
 /// @custom:spec REQ-LENS-045, REQ-LENS-057, REQ-LENS-005
@@ -63,7 +63,6 @@ struct MarketView {
     uint256 hardHealthFloor;
     uint256 marketUsdCap;
     uint256 topUpSliceUsd;
-    uint256 depositorUsdCap;
     uint256[] tokenUsdCaps;
     uint256 addCap;
     uint256[] debtReserveIds;

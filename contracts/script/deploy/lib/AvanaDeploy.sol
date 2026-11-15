@@ -11,7 +11,7 @@ import {AvanaDeployment, ChainInputs} from "./DeployTypes.sol";
 /// the deployment tests: predict every address, deploy, then check every prediction and cross-reference.
 abstract contract AvanaDeploy is AvanaPeripheryDeploy {
     /// @notice `POKE_MIN_GAS_FLOOR` and `POKE_MIN_GAS_CEILING` of a two-token concentrated-liquidity LPOracle (1.5).
-    uint32 internal constant CL_POKE_MIN_GAS_FLOOR = 900_000;
+    uint32 internal constant CL_POKE_MIN_GAS_FLOOR = 1_000_000;
     uint32 internal constant CL_POKE_MIN_GAS_CEILING = 3_000_000;
 
     /// @notice Deploys every Avana contract of `c` from the sender, in the deployer's CREATE3 namespace.

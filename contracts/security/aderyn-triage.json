@@ -1034,7 +1034,7 @@
       "check": "require-revert-in-loop",
       "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
       "function": "RiskModulePledgeLogic._caps",
-      "reason": "One token over its USD cap refuses the whole pledge (CapExceeded(TOKEN), SPEC-CAP-002); at most 8 tokens. Covered by TEST-272 (tokenAndDepositorCaps).",
+      "reason": "One token over its USD cap refuses the whole pledge (CapExceeded(TOKEN), SPEC-CAP-002); at most 8 tokens. Covered by TEST-272 (tokenCaps).",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
     },
